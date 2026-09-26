@@ -23,7 +23,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // afterwards -- by the skill's own authored approach (see
             // ResolveDamageSingle) or by HoldActorPosition below -- which is
             // why this is a starting position rather than a fact.
-            NewBeat(actor, target, isCast ? StageApproach.Hold : StageApproach.Lunge);
+            NewBeat(BeatCause.Action, actor, target, isCast ? StageApproach.Hold : StageApproach.Lunge);
 
             if (isCast)
             {
@@ -41,17 +41,21 @@ namespace PrincesPalace.Domain.Combat.Session
         // THE CONSTRUCTOR HALF OF OPENING A BEAT, and nothing else: it builds
         // the beat and makes it the one being recorded. BeginBeat is this plus
         // the action seam below; OpenStatusTickBeat (FightSession.Riders) is
-        // this plus its element, and deliberately NOT the action seam -- a
-        // tick is done to its holder, not by them. Keeping the construction
-        // here is what stops the two openers drifting apart on what a fresh
-        // beat holds. `preSnapshot` is a caller's already-taken snapshot
-        // (a tick captures the vitals before its row lands); null takes one
-        // now.
-        private void NewBeat(CombatantState actor, CombatantState target, StageApproach approach,
+        // this plus its element, and ExpireTransform (FightSession.Talents)
+        // is this plus the revert -- both deliberately NOT the action seam:
+        // a tick is done to its holder and a form runs out on the clock,
+        // neither is something the holder did. Keeping the construction
+        // here is what stops the openers drifting apart on what a fresh
+        // beat holds, and `cause` is required so none of them can forget to
+        // say which it is (CombatBeat.IsAction reads it). `preSnapshot` is a
+        // caller's already-taken snapshot (a tick captures the vitals before
+        // its row lands); null takes one now.
+        private void NewBeat(BeatCause cause, CombatantState actor, CombatantState target, StageApproach approach,
                              Dictionary<CombatantState, Vitals> preSnapshot = null)
         {
             _recordingBeat = new CombatBeat
             {
+                Cause = cause,
                 Actor = actor,
                 Target = target,
                 PreSnapshot = preSnapshot ?? SnapshotVitals(),

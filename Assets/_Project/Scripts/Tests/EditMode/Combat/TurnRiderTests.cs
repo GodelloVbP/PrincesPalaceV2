@@ -129,6 +129,95 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, EnemyTurnsIn(ticks), "neither tick is a turn the enemy took");
         }
 
+        // ---- a form running out is not an action -----------------------------
+        //
+        // Owner, 2026-09-26: "a transform expiring should definitely not be an
+        // action". The expiry beat names its holder as Actor (the stage flashes
+        // over him), and it used to open through BeginBeat -- the action seam
+        // -- so it counted as a turn taken AND told a decaying pool the turn
+        // was not idle.
+        //
+        // THE FIXTURE. Speed 100 against 1, so the hero takes every turn and
+        // no enemy swing ever lands in the numbers. The pool decays 10 on any
+        // turn with no ACTION in it (AnyAction, the reading the expiry used to
+        // satisfy; the Damage reading never heard it). The form has one turn
+        // left, so Begin()'s opening turn start runs it out: the pool ticks
+        // first (50 -> 40, an empty window), then the form expires.
+        private static (FightSession session, CombatantState hero) AFormThatRunsOutAtTheFirstTurnStart()
+        {
+            var hero = new CombatantState("Hero", true, 500, 10, 20, 100);
+            hero.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0, 0, 0)
+            {
+                DecayPerIdleTurn = 10,
+                DecayUnless = PoolDecayTrigger.AnyAction,
+            };
+            hero.PrimaryPool.Gain(50);
+
+            Transformation.Enter(hero, "Black Ram Mode", 1, 0, 0, 0);
+
+            var foe = new CombatantState("Tank", false, 100000, 10, 5, 1);
+            var (session, _, _) = Fight(hero, null, foe);
+            session.Begin();
+            return (session, hero);
+        }
+
+        private static CombatBeat ExpiryIn(IReadOnlyList<CombatBeat> beats) =>
+            beats.SingleOrDefault(b => b.Cause == BeatCause.TransformExpiry);
+
+        [Test]
+        public void AFormRunningOutIsNotAnAction()
+        {
+            var (session, hero) = AFormThatRunsOutAtTheFirstTurnStart();
+
+            Assert.IsNull(hero.Transformation, "fixture: the form ran out at the opening turn start");
+
+            var expiry = ExpiryIn(session.DrainBeats());
+
+            Assert.IsNotNull(expiry, "the form ran out without recording its beat");
+            Assert.AreSame(hero, expiry.Actor, "the stage still flashes over the holder");
+            Assert.IsFalse(expiry.IsAction, "the clock running out is not a turn anybody took");
+            Assert.AreEqual(FightSession.Stances.Idle, expiry.Stances[hero],
+                "and it wears no cast pose, only his own idle");
+        }
+
+        [Test]
+        public void AFormRunningOutDoesNotKeepAnIdlePoolFromDecaying()
+        {
+            var (_, hero) = AFormThatRunsOutAtTheFirstTurnStart();
+            Assert.AreEqual(40, hero.PrimaryPool.Current, "fixture: the opening turn's decay");
+
+            // THE NEXT TURN START'S OWN RULE, asked directly. Every way to
+            // reach that turn start through the session passes through a beat
+            // the hero opens -- an action, or a forfeited turn, which also
+            // counts as one -- and either would keep the pool on its own, so
+            // the only window in which "the expiry kept it" can be seen is
+            // this one: the form has run out and nothing else has happened.
+            hero.PrimaryPool.TickTurnStart();
+
+            Assert.AreEqual(30, hero.PrimaryPool.Current,
+                "the form running out told the pool the turn was not idle");
+        }
+
+        [Test]
+        public void ARealActionOnTheTurnTheFormRanOutStillKeepsThePool()
+        {
+            // The control for the one above: it asserts a decay, which deleting
+            // NotePoolActivity outright would satisfy too.
+            var (session, hero) = AFormThatRunsOutAtTheFirstTurnStart();
+            session.DrainBeats();
+
+            // An item: an action, and never damage, so under AnyAction it is
+            // the one thing keeping the window alive. The hero's next turn
+            // opens inside this call (the foe is too slow to intervene) and
+            // its pool tick judges the turn the form ran out on.
+            Assert.IsTrue(session.UseConsumable("Rag", 0, restoresMana: false));
+
+            Assert.IsTrue(session.DrainBeats().Any(b => b.IsAction && ReferenceEquals(b.Actor, hero)),
+                "the item is an action");
+            Assert.AreEqual(40, hero.PrimaryPool.Current,
+                "an action on the expiry turn stopped counting as activity");
+        }
+
         // ---- Brave: DELETED WITH THE BANK IT SPENT ----------------------------
         //
         // Four tests stood here (holding back banks but cannot spend on

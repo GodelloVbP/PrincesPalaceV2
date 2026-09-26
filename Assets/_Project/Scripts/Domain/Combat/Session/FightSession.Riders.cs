@@ -1015,7 +1015,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // walk in, and Hold is how the vocabulary says so. NewBeat, not
             // BeginBeat -- see BeginStatusTickBeat's header for why a tick
             // must not reach the action seam.
-            NewBeat(isHealing ? victim : null, victim, StageApproach.Hold, pre);
+            NewBeat(BeatCause.StatusTick, isHealing ? victim : null, victim, StageApproach.Hold, pre);
             _recordingBeat.StatusTick = type;
 
             // THE ELEMENT COMES FROM THE STATUS, not from anyone's weapon --

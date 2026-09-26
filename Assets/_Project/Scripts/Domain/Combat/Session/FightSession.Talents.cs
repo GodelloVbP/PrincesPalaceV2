@@ -1025,18 +1025,25 @@ namespace PrincesPalace.Domain.Combat.Session
         // moment, and leaving the form is exactly as much of an event as
         // entering it was. Overruled by the owner, and this is the overrule.
         //
-        // THE TWIN OF THE ENTRY, deliberately, down to opening the same
-        // BeginBeat(actor, actor, isCast: true) the Transform effect opens: one
-        // beat, no target, no amount, the form cleared at its impact instant
-        // under the same white silhouette flash, and a shake floor. What
-        // differs is the pose -- IDLE rather than the entry's authored
-        // `victory`, because he is not doing anything, he is being himself
-        // again, and `hurt` would say the change cost him something it does
-        // not.
+        // THE TWIN OF THE ENTRY ON STAGE: one beat on the holder, rooted
+        // (Hold), no amount, the form cleared at its impact instant under the
+        // same white silhouette flash, and a shake floor. What differs is the
+        // pose -- IDLE rather than the entry's authored `victory`, because he
+        // is not doing anything, he is being himself again, and `hurt` would
+        // say the change cost him something it does not.
+        //
+        // AND NOT AN ACTION, which is where it stops being the entry's twin.
+        // Owner, 2026-09-26: "a transform expiring should definitely not be an
+        // action". It used to open through BeginBeat like the cast that
+        // entered it, and BeginBeat is the action seam -- so a form running
+        // out told a decaying pool the turn was not idle and read as a turn
+        // taken to every IsAction reader. It opens through NewBeat with its
+        // own cause instead, the way a status tick does, and takes no cast
+        // stance (the idle below is the only pose it ever wore).
         //
         // THE EXIT HAPPENS BEFORE CommitBeat, which is what puts the temporary
         // health's disappearance on this beat rather than on whatever played
-        // next: PreSnapshot was taken by BeginBeat with the pool still granted
+        // next: PreSnapshot was taken by NewBeat with the pool still granted
         // and Snapshot is taken by CommitBeat without it, so the bar drops on
         // the frame the ram walks back out.
         //
@@ -1055,7 +1062,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             string name = transformation.DisplayName;
 
-            BeginBeat(actor, actor, isCast: true);
+            NewBeat(BeatCause.TransformExpiry, actor, actor, StageApproach.Hold);
             SetStance(actor, Stances.Idle);
             RecordShake(TransformExitShake);
 
