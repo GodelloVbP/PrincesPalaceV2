@@ -132,8 +132,24 @@ namespace PrincesPalace.Domain.Stats
                 return $"{label}: no scaling authored";
             }
 
+            // Same "STR-B (x1.10)" shape as the unarmed line above: the
+            // score's short name glued to its grade, the multiplier in
+            // parentheses. A bare letter did not survive the UI font -- in
+            // its squared face "D" and "0" are one glyph, so "spell scaling:
+            // D x0.97" read as the number 0 followed by a second number
+            // (QA 2026-09-26). "INT-D" can only be a grade.
             var grade = GradeFor(set, score);
-            return $"{label}: {ScalingGrades.Letter(grade)} x{FormatMultiplier(set.MultiplierFor(scores))}";
+            string multiplier = FormatMultiplier(set.MultiplierFor(scores));
+            string shortName = AbilityScores.ShortName(score);
+            if (grade == ScalingGrade.None)
+            {
+                // The set rides other scores but not this one: say so rather
+                // than print "INT-—", and keep the multiplier, which is
+                // still what the swing or cast applies.
+                return $"{label}: none on {shortName} (x{multiplier})";
+            }
+
+            return $"{label}: {shortName}-{ScalingGrades.Letter(grade)} (x{multiplier})";
         }
 
         // InvariantCulture -- ":0.00" reads the CURRENT culture otherwise

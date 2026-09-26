@@ -58,13 +58,13 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void Strength_WithAWeaponEquipped_ReadsItsGradeAndTheSetsWholeMultiplier()
+        public void Strength_WithAWeaponEquipped_ReadsStrGradeAndTheSetsWholeMultiplier()
         {
             // Grade A on Strength, riding the main hand alone: PerPoint(A) =
             // 0.070, four points over neutral -> 1 + 0.070*4 = 1.28.
             var weaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.A);
 
-            Assert.AreEqual("weapon scaling: A x1.28",
+            Assert.AreEqual("weapon scaling: STR-A (x1.28)",
                 AbilityEffectDescriptions.Strength(Scores(), weaponScaling));
         }
 
@@ -88,7 +88,38 @@ namespace PrincesPalace.Domain.Tests
                 ScalingProfile.None,
                 ScalingProfile.None);
 
-            Assert.AreEqual("spell scaling: S x1.20",
+            Assert.AreEqual("spell scaling: INT-S (x1.20)",
+                AbilityEffectDescriptions.Intelligence(Scores(), skillScaling));
+        }
+
+        [Test]
+        public void Intelligence_BelowNeutral_NamesTheScoreBesideItsGrade_SoDCannotReadAsZero()
+        {
+            // QA 2026-09-26: INT 8 on a D spell printed "spell scaling: D
+            // x0.97", and the UI font draws D and 0 alike. PerPoint(D) =
+            // 0.015, two points UNDER neutral -> 1 - 0.015*2 = 0.97.
+            var scores = new AbilityScoreBlock(strength: 12, dexterity: 10, constitution: 14, wisdom: 12, intelligence: 8, charisma: 10);
+            var skillScaling = new ScalingSet(
+                ScalingProfile.None.With(AbilityScore.Intelligence, ScalingGrade.D),
+                ScalingProfile.None,
+                ScalingProfile.None);
+
+            Assert.AreEqual("spell scaling: INT-D (x0.97)",
+                AbilityEffectDescriptions.Intelligence(scores, skillScaling));
+        }
+
+        [Test]
+        public void Intelligence_WhenTheSpellRidesOnlyOtherScores_SaysNoneOnIntAndKeepsTheCastMultiplier()
+        {
+            // Spell rides WIS at C: PerPoint(C) = 0.030, WIS 20 is ten over
+            // neutral -> 1 + 0.030*10 = 1.30. INT carries no grade, so the
+            // line must not print a dash where the letter goes.
+            var skillScaling = new ScalingSet(
+                ScalingProfile.None.With(AbilityScore.Wisdom, ScalingGrade.C),
+                ScalingProfile.None,
+                ScalingProfile.None);
+
+            Assert.AreEqual("spell scaling: none on INT (x1.30)",
                 AbilityEffectDescriptions.Intelligence(Scores(), skillScaling));
         }
 
