@@ -43,7 +43,10 @@ Triage order, cheapest first:
 - Mechanism, the two 2026-09-18 fixes, and the `.ExitCode` gotcha:
   `docs/INCIDENTS.md` ("Batchmode Unity steals focus").
 - Run `tools/focus_check.ps1` after touching any launch site or either
-  guard function.
+  guard function. It reports two separate results: `FOCUS CHECK` and
+  `COMMAND` (the watched script's exit code). A failed command exits non-zero
+  with its own code even when focus was clean -- a run that died early proves
+  nothing about the guard.
 - A new window-spawning script that skips `Start-FocusGuard` is back to
   pre-2026-09-18 unguarded behavior.
 

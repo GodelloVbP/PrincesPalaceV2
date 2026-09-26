@@ -61,6 +61,15 @@ param(
 #   ... -HeadlessClass Wool -RuntimeFilter RuntimeScreenshotTests
 #   ... -Mode Command -CommandLine '-NoProfile -ExecutionPolicy Bypass -File "..\run_tests_parallel.ps1"' -CommandLabel "full suite"
 #
+# TWO RESULTS, REPORTED SEPARATELY. "FOCUS CHECK" is whether the foreground
+# window was left alone; "COMMAND" is whether the watched command itself
+# succeeded (its exit code). They are independent -- a run that fails at once
+# never gets far enough to steal focus, so a clean focus log over a failed
+# command proves nothing about the guard -- and this used to print only the
+# first: "FOCUS CHECK: ok", exit 0, over a child that had exited non-zero
+# without launching anything. Exit code: the first failed command's own exit
+# code; else 1 when focus was not restored; else 0.
+#
 # Pure ASCII, no BOM -- CLAUDE.md's PowerShell gotcha.
 
 $ErrorActionPreference = "Stop"
@@ -253,7 +262,12 @@ function Watch-Launch {
     Write-Host "=== $Label ==="
     Write-Host ("  {0:yyyy-MM-dd HH:mm:ss.fff}  foreground before: {1}" -f (Get-Date), (Format-WindowDetail $beforeDetail))
 
+    Write-Host "  child: powershell.exe $ArgumentLine"
     $proc = Start-Process -FilePath "powershell.exe" -ArgumentList $ArgumentLine -PassThru -NoNewWindow
+    # Touching .Handle now is what keeps .ExitCode readable after the child
+    # exits: without an open handle PS 5.1's Start-Process -PassThru object
+    # reports an EMPTY exit code once the process is gone.
+    [void]$proc.Handle
 
     Update-ProcCache
     $treePids = Get-DescendantPids -RootPid $proc.Id
@@ -302,6 +316,13 @@ function Watch-Launch {
         Start-Sleep -Milliseconds 150
     }
     $proc.WaitForExit()
+    $exitCode = $proc.ExitCode
+    if ($null -eq $exitCode) { $exitCode = -1 }
+    if ($exitCode -eq 0) {
+        Write-Host "  COMMAND: $Label exited 0."
+    } else {
+        Write-Host "  COMMAND FAILED: $Label exited $exitCode. A command that failed early may never have launched what the focus result is about."
+    }
 
     $after = [PP.FocusCheck.NativeMethods]::GetForegroundWindow()
     $afterDetail = Get-WindowDetail -Hwnd $after
@@ -312,33 +333,33 @@ function Watch-Launch {
         foreach ($d in $windowInventory.Values) { Write-Host ("    {0}" -f (Format-WindowDetail $d $true)) }
     }
 
+    $focusOk = $true
     if ($changeLog.Count -eq 0) {
         Write-Host "  RESULT: no foreground change at all during $Label."
-        return $true
+    } else {
+        Write-Host "  RESULT: $($changeLog.Count) foreground change(s) logged above during $Label."
+        if ($after -eq $before) {
+            Write-Host "  foreground WAS restored to the window it started on -- a transient minimize/restore, not a steal."
+        } else {
+            Write-Host "  FOREGROUND WAS NOT RESTORED by the end of $Label. This is the failure this script exists to catch."
+            $focusOk = $false
+        }
     }
-
-    Write-Host "  RESULT: $($changeLog.Count) foreground change(s) logged above during $Label."
-    if ($after -eq $before) {
-        Write-Host "  foreground WAS restored to the window it started on -- a transient minimize/restore, not a steal."
-        return $true
-    }
-
-    Write-Host "  FOREGROUND WAS NOT RESTORED by the end of $Label. This is the failure this script exists to catch."
-    return $false
+    return [pscustomobject]@{ Label = $Label; FocusOk = $focusOk; ExitCode = [int]$exitCode }
 }
 
-$ok = $true
+$launches = @()
 
 if ($Mode -eq "Headless" -or $Mode -eq "Both") {
     $line = "-NoProfile -ExecutionPolicy Bypass -File `"$ProjectRoot\tools\test.ps1`" $HeadlessClass"
     if ($SkipSync) { $line += " -SkipSync" }
-    $ok = (Watch-Launch -Label "headless: tools/test.ps1 $HeadlessClass" -ArgumentLine $line) -and $ok
+    $launches += Watch-Launch -Label "headless: tools/test.ps1 $HeadlessClass" -ArgumentLine $line
 }
 
 if ($Mode -eq "Runtime" -or $Mode -eq "Both") {
     $line = "-NoProfile -ExecutionPolicy Bypass -File `"$ProjectRoot\tools\screenshot.ps1`" -Runtime -RuntimeFilter $RuntimeFilter"
     if ($SkipSync) { $line += " -SkipSync" }
-    $ok = (Watch-Launch -Label "windowed: tools/screenshot.ps1 -Runtime -RuntimeFilter $RuntimeFilter" -ArgumentLine $line) -and $ok
+    $launches += Watch-Launch -Label "windowed: tools/screenshot.ps1 -Runtime -RuntimeFilter $RuntimeFilter" -ArgumentLine $line
 }
 
 if ($Mode -eq "Command") {
@@ -346,14 +367,24 @@ if ($Mode -eq "Command") {
         Write-Host "-Mode Command requires -CommandLine."
         exit 2
     }
-    $ok = (Watch-Launch -Label $CommandLabel -ArgumentLine $CommandLine) -and $ok
+    $launches += Watch-Launch -Label $CommandLabel -ArgumentLine $CommandLine
 }
+
+$focusFailed = @($launches | Where-Object { -not $_.FocusOk })
+$commandFailed = @($launches | Where-Object { $_.ExitCode -ne 0 })
 
 Write-Host ""
-if ($ok) {
+if ($focusFailed.Count -eq 0) {
     Write-Host "FOCUS CHECK: ok -- foreground was never left on something other than what it started on."
-    exit 0
+} else {
+    Write-Host "FOCUS CHECK: FAILED -- see FOREGROUND WAS NOT RESTORED above. Do not report the guard as fixed."
+}
+if ($commandFailed.Count -eq 0) {
+    Write-Host "COMMAND: ok -- every watched command exited 0."
+} else {
+    foreach ($c in $commandFailed) { Write-Host "COMMAND: FAILED -- $($c.Label) exited $($c.ExitCode)." }
 }
 
-Write-Host "FOCUS CHECK: FAILED -- see FOREGROUND WAS NOT RESTORED above. Do not report the guard as fixed."
-exit 1
+if ($commandFailed.Count -gt 0) { exit $commandFailed[0].ExitCode }
+if ($focusFailed.Count -gt 0) { exit 1 }
+exit 0
