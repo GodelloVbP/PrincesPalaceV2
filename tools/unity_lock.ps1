@@ -251,9 +251,16 @@ function Format-RunnerClaimHolder {
 # in a finally -- or $null after saying why, in which case nothing is held.
 # Process exit releases them too, so a forgotten Exit-RunnerClaim costs the
 # rest of this process's lifetime, never a stale lock.
+#
+# An EMPTY $RunnerPaths is a run that needs no runner (a dotnet-only slice
+# of test.ps1, say): it claims nothing and returns an empty set, never
+# $null, so every caller's "$null -eq" refusal check passes it through.
+# Without AllowEmptyCollection a Mandatory [string[]] refuses @() at
+# binding and the dotnet-only fast loop died before running a single test
+# (regression from 46ffce90). Blank entries are dropped for the same reason.
 function Enter-RunnerClaim {
     param(
-        [Parameter(Mandatory = $true)][string[]]$RunnerPaths,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][AllowNull()][string[]]$RunnerPaths,
         [Parameter(Mandatory = $true)][string]$Tool,
         [int]$WaitSeconds = -1
     )
@@ -261,7 +268,7 @@ function Enter-RunnerClaim {
     $deadline = (Get-Date).AddSeconds($WaitSeconds)
     $claims = @()
 
-    foreach ($path in @($RunnerPaths | Sort-Object -Unique)) {
+    foreach ($path in @($RunnerPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)) {
         $announced = $false
         $lastNote = Get-Date
         while ($true) {
