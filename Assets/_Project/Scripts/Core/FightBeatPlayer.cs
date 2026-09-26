@@ -354,6 +354,16 @@ namespace PrincesPalace
             ResyncForms = resyncForms;
         }
 
+        // THE FIFTH DOOR: the log feed and the spell's impact lead, so a
+        // PlayMode test can pin WHEN a beat's sentence reaches the log against
+        // the beat clock without loading a fight. Same narrow posture as the
+        // doors above: two delegates in, nothing readable back out.
+        public void WireLogForTest(Action<string> pushLine, Func<CombatBeat, float> impactDelayFor)
+        {
+            PushLine = pushLine;
+            ImpactDelayFor = impactDelayFor;
+        }
+
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
         {
             // CLEARED BEFORE THE FLUSH, so the flush below has nobody to notify.
@@ -631,12 +641,30 @@ namespace PrincesPalace
         {
             if (beat == null) return;
 
+            // Its sentence too, if the break came before the impact instant
+            // got to say it -- a round that resolved must not vanish from the
+            // log because its picture failed.
+            Guard(() => LogBeat(beat));
             Guard(() => PaintVitals?.Invoke(beat.Snapshot));
             Guard(() => FadeTheFallen?.Invoke(beat));
             Guard(() =>
             {
                 foreach (var pair in beat.Stances) SetStance?.Invoke(pair.Key, FightSession.Stances.Idle);
             });
+        }
+
+        // Pushes a beat's lines to the log exactly once, whichever of the
+        // impact instant and AbandonBeat reaches it first. Reference equality
+        // on the beat is enough: beats are one object per resolved action and
+        // playback shows them strictly one after another.
+        private CombatBeat _loggedBeat;
+
+        private void LogBeat(CombatBeat beat)
+        {
+            if (beat == null || ReferenceEquals(beat, _loggedBeat)) return;
+            _loggedBeat = beat;
+            if (beat.Messages == null) return;
+            foreach (var line in beat.Messages) PushLine?.Invoke(line);
         }
 
         private static void Guard(Action step)
@@ -762,10 +790,11 @@ namespace PrincesPalace
 
             PaintVitals?.Invoke(beat.PreSnapshot);
 
-            if (beat.Messages != null)
-            {
-                foreach (var line in beat.Messages) PushLine?.Invoke(line);
-            }
+            // THE LOG LINE IS NOT PUSHED HERE ANY MORE -- see LogBeat, called
+            // at the impact instant below. A beat's lines are whole sentences
+            // the session wrote after resolving it ("casts Crownfall on the
+            // Treant for 10!"), so pushing them at the open printed the
+            // damage a whole spell's travel before the spike arrived.
 
             // THE ACTOR'S POSE NOW; EVERYONE ELSE'S AT THE IMPACT INSTANT.
             //
@@ -935,6 +964,14 @@ namespace PrincesPalace
             // spell) or double an authored spell's own impact delay.
             float impact = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
             if (impact > 0f && !staticCharge) yield return new WaitForSeconds(Scaled(impact));
+
+            // THE LOG SAYS IT WHEN THE STAGE SHOWS IT: on the impact frame,
+            // beside the damage number, for every approach -- a spell's
+            // travel, a lunge's cross, a charge's rush and a close-in walk
+            // have all been waited out by this line. Guarded on its own
+            // rather than inside the block below, so a flash or popup that
+            // throws cannot take the sentence down with it.
+            Guard(() => LogBeat(beat));
 
             // The blow lands: the numbers move, the target flashes and the
             // floating figure appears, all on the same frame.

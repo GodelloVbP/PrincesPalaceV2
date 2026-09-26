@@ -147,8 +147,9 @@ namespace PrincesPalace.PlayModeTests
 
             // BOUNDED BY THE TRANSFORM'S OWN LOG LINE, and that bound is the
             // whole difference between this and a test that cannot fail. A
-            // beat's messages are pushed when it OPENS, so while "becomes the"
-            // is the newest line the beat being drawn is the transform's own.
+            // beat's messages are pushed at its IMPACT instant, on the frame
+            // its flash lights, so while "becomes the" is the newest line the
+            // beat being drawn is the transform's own.
             // Without it, the enemy's reply later in the same round -- which
             // flashes Shawn while he is already in the ram's art -- satisfies
             // the assertion, and it did: this test passed against the bug.
@@ -182,7 +183,7 @@ namespace PrincesPalace.PlayModeTests
 
         // LEAVING THE FORM IS AN EVENT TOO -- the owner's overrule of the quiet
         // revert 651c8a79 argued for. The window is bounded by the exit's own
-        // log line: messages are pushed when a beat OPENS, so while that line
+        // log line: messages are pushed at a beat's IMPACT instant, so while that line
         // is the newest one the beat being drawn is the exit's own, which is
         // what stops an enemy's swing at Shawn from satisfying this instead.
         [UnityTest]
@@ -243,7 +244,7 @@ namespace PrincesPalace.PlayModeTests
         private bool ExitLineIsNewest() => NewestLineContains("no longer");
 
         // Whether the newest line the fight has pushed is the one named. Beat
-        // messages are pushed when a beat OPENS, so this is "the beat being
+        // messages are pushed at a beat's IMPACT instant, so this is "the beat being
         // drawn right now is the one that said this" -- the only window
         // narrow enough to attribute a flash to a particular beat from
         // outside the controller.
