@@ -8,8 +8,11 @@
 #   ... -Spell <id> [-Element <DamageType>] [-Launch]
 #   ... -Character <id> [-Launch]
 #
-# Without -Launch every mode writes pictures into tools/screenshots/preview/
-# and never opens a window; with it, the Fight scene is played in the Editor.
+# Without -Launch every mode writes pictures into
+# tools/screenshots/preview/<subject>/ (emptied at the start of each run, so
+# everything in it is from the latest run; <subject> is the filename prefix,
+# e.g. treant, spell_crownfall_vs_treant, character_shawn) and never opens a
+# window; with it, the Fight scene is played in the Editor.
 # What each mode photographs is in its own function's header below.
 #
 # ONE COMMAND, TWO ROUTES, AND THE AUTHOR PICKS NEITHER.
@@ -559,8 +562,34 @@ function Invoke-PreviewCapture {
     Set-Item -Path "Env:$Variable" -Value $Value
     if ($ExtraVariable -ne "") { Set-Item -Path "Env:$ExtraVariable" -Value $ExtraValue }
 
-    $out = Join-Path $Project "tools\screenshots\preview"
-    Write-Host "capturing '$Value' -- pictures land in $out"
+    # ONE FOLDER PER SUBJECT, EMPTIED BEFORE THE RUN, on both sides -- the
+    # screenshot.ps1 -Runtime rule ("nothing stale can survive to be mistaken
+    # for this run's output, because nothing survives the clear"), applied
+    # here. Both folders used to only ever grow: the runner's preview folder
+    # held every earlier run's frames, robocopy carried all of them back into
+    # main's, and the listing below matched by prefix, so an older run's
+    # frame with the same prefix (or a different -Versus's) read as this
+    # run's. Seen 2026-09-26: a QA pass copied stale spear frames as new.
+    #
+    # The RUNNER'S folder is cleared whole: that copy is disposable and only
+    # this fixture writes there. MAIN'S is not -- people park hand-named
+    # archives beside the frames (_before_M6/, _baseline_M0/ ...) -- so only
+    # this subject's own subfolder is emptied, and a -Spell x -Versus rat run
+    # does not delete the -Versus treant run beside it.
+    # An empty prefix would make $out the preview ROOT and the clear below
+    # would take the archives with it; every caller passes one, this makes it
+    # a refusal rather than a deletion if one ever does not.
+    if ([string]::IsNullOrWhiteSpace($Prefix) -or $Prefix -match '[\\/.]') {
+        Write-Host "internal: preview prefix '$Prefix' is not a plain folder name; refusing to clear anything."
+        return 1
+    }
+    $out = Join-Path $Project "tools\screenshots\preview\$Prefix"
+    $runnerOut = Join-Path $runner "tools\screenshots\preview"
+    foreach ($dir in @($out, $runnerOut)) {
+        if (Test-Path $dir) { Get-ChildItem $dir -Force | Remove-Item -Recurse -Force }
+    }
+    New-Item -ItemType Directory -Force -Path $out | Out-Null
+    Write-Host "capturing '$Value' -- pictures land in $out (emptied first)"
 
     # Unity's -testFilter takes a semicolon-separated list of full names.
     $filter = ($Tests | ForEach-Object { "PrincesPalace.PlayModeTests.PreviewCaptureTests.$_" }) -join ";"
@@ -571,16 +600,20 @@ function Invoke-PreviewCapture {
 
     $exit = $LASTEXITCODE
 
-    $runnerOut = Join-Path $runner "tools\screenshots\preview"
+    # Copied back whatever the verdict, as screenshot.ps1 -Runtime does: the
+    # frames a passing test wrote are worth seeing beside a failing one.
     if (Test-Path $runnerOut) {
-        New-Item -ItemType Directory -Force -Path $out | Out-Null
-        robocopy $runnerOut $out /NFL /NDL /NJH /NJS /NP | Out-Null
+        robocopy $runnerOut $out /E /NFL /NDL /NJH /NJS /NP | Out-Null
     }
 
-    Get-ChildItem -Path $out -Filter "$Prefix*.png" -ErrorAction SilentlyContinue |
-        ForEach-Object { Write-Host "  $($_.FullName)" }
+    $pictures = @(Get-ChildItem -Path $out -Recurse -File -Filter "*.png" -ErrorAction SilentlyContinue)
+    foreach ($picture in $pictures) { Write-Host "  $($picture.FullName)" }
 
     if ($exit -ne 0) { return 1 }
+    if ($pictures.Count -eq 0) {
+        Write-Host "the capture passed but wrote no pictures -- nothing to look at."
+        return 1
+    }
     return 0
 }
 

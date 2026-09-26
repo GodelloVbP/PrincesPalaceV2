@@ -970,7 +970,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/preview.ps1 -Spell <id
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/screenshot.ps1 -Runtime -RuntimeFilter SpellRuntimeCaptureTests -Spell <id>
 ```
 
-`preview.ps1` writes four to six sampled stills to `tools/screenshots/preview/`
+`preview.ps1` writes four to six sampled stills to
+`tools/screenshots/preview/spell_<id>[_<element>][_vs_<ids>]/`, a folder emptied
+at the start of each run so it only ever holds the latest run's frames
 (`_before`, `_impact`, `_after`, `_tail`, plus `_flight` when the cast's arrival
 is before its cue and `_ground` when it draws a ground layer). **`-Element`
 picks which element of a choice skill is cast** -- without it the preview takes
@@ -979,7 +981,7 @@ elements always means the first. The name is a `DamageType`, matched
 case-insensitively and checked against that skill's own `elements[]` before
 Unity starts; an element it does not offer is refused with the list of the ones
 it does. The pictures are prefixed `spell_<id>_<element>_` so the four sets sit
-side by side instead of overwriting each other, and the fight log names the
+side by side, one folder each, instead of overwriting each other, and the fight log names the
 element it pressed and whether the ask or the default chose it. `screenshot.ps1
 -Runtime` writes the whole cast as a frame series at 60fps to
 `tools/screenshots/runtime/`, which is the only thing that answers "does it read
