@@ -92,7 +92,6 @@ namespace PrincesPalace
         // ground line -- see RefreshCombatantSprite. Cached because it opens a
         // sprite's pixels, which is far too expensive to do per repaint.
         private static readonly Dictionary<string, float> ContentCentreCache = new Dictionary<string, float>();
-        private static readonly Dictionary<string, float> ContentTopCache = new Dictionary<string, float>();
 
         // ---- the whole stage --------------------------------------------------
 
@@ -1324,7 +1323,6 @@ namespace PrincesPalace
             // per fight costs a few pixel-scans (a handful of enemies, one
             // drawing each) against never risking this again.
             ContentCentreCache.Clear();
-            ContentTopCache.Clear();
             ClearOpaqueBoxCache();
             ClearVfxPaddingCache();
 
@@ -1676,7 +1674,7 @@ namespace PrincesPalace
         // for the measured numbers that found this). The band is the
         // `FootBandHeight` rows starting at the ground line and reaching
         // up; the ground line is authored in canvas-bottom-relative pixels,
-        // which is `textureRect.y` rows above where GetPixels32's own
+        // which is `textureRectOffset.y` rows above where GetPixels32's own
         // bottom-up row 0 sits, so that offset has to be subtracted before
         // the ground line means anything as an index into the pixels
         // GetPixels32 actually returns.
@@ -1694,7 +1692,14 @@ namespace PrincesPalace
             float canvasWidth = sprite.rect.width;
             if (canvasWidth <= 0f) return 0f;
 
-            int bandBottom = Mathf.Clamp(Mathf.RoundToInt(groundLine) - cropY, 0, Mathf.Max(cropHeight - 1, 0));
+            // textureRect is where the crop sits in the TEXTURE (what the
+            // pixel indexing below needs); textureRectOffset is where it sits
+            // in the sprite's own CANVAS (what the ground line and the
+            // returned fraction are measured in). They agree only while the
+            // sprite is the whole texture -- a sub-rect sprite would read the
+            // wrong band with textureRect alone. Same split OpaqueBox makes.
+            var canvasOffset = sprite.textureRectOffset;
+            int bandBottom = Mathf.Clamp(Mathf.RoundToInt(groundLine - canvasOffset.y), 0, Mathf.Max(cropHeight - 1, 0));
             int bandTop = Mathf.Clamp(bandBottom + FootBandHeight, bandBottom, cropHeight);
 
             // GetPixels32, NOT GetPixels -- a byte-per-channel buffer for an
@@ -1722,10 +1727,10 @@ namespace PrincesPalace
 
             if (left > right) return 0f;
 
-            // BACK INTO CANVAS SPACE (+cropX) before dividing by the canvas's
+            // BACK INTO CANVAS SPACE (+canvasOffset.x) before dividing by the canvas's
             // own width -- see this method's own header for why dividing by
             // the trimmed crop's width instead is the bug this replaces.
-            float midpointCanvasX = cropX + (left + right) * 0.5f;
+            float midpointCanvasX = canvasOffset.x + (left + right) * 0.5f;
             return midpointCanvasX / canvasWidth - 0.5f;
         }
 
@@ -1745,50 +1750,25 @@ namespace PrincesPalace
         // not drag the badge up with it, and one more authored number per actor
         // is a number that can rot. The ground line stays authored -- that one is
         // load-bearing enough to be worth the manifest.
+        //
+        // CANVAS SPACE, via the one opaque-box scan the spell layer already
+        // reads (OpaqueBoxForActor, FightController.SpellVfx). This used to be
+        // its own scan that returned the first opaque row counted from the
+        // Tight crop's bottom -- crop space -- while PlaceIntentBadge
+        // subtracts the authored ground line, which is canvas space. Every
+        // trimmed idle put the badge low by exactly its crop's Y offset, the
+        // bug FootBandCentreFraction had in X until 2026-09-07 (AUDIT #79,
+        // INCIDENTS "The ring at canvas centre"). One scan with one
+        // crop-to-canvas mapping, rather than a second copy of both.
         private static float ContentTopForActor(string folder)
         {
-            if (string.IsNullOrWhiteSpace(folder)) return 0f;
-            if (ContentTopCache.TryGetValue(folder, out var cached)) return cached;
-
-            var idle = StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
-            float top = ContentTop(idle);
-            ContentTopCache[folder] = top;
-            return top;
+            var box = OpaqueBoxForActor(folder);
+            return box.HasValue ? box.Value.Box.yMax : 0f;
         }
 
-        private static float ContentTop(Sprite sprite)
-        {
-            if (sprite == null || sprite.texture == null || !sprite.texture.isReadable) return 0f;
-
-            var rect = sprite.textureRect;
-            int cropX = (int)rect.x;
-            int cropY = (int)rect.y;
-            int cropWidth = (int)rect.width;
-            int cropHeight = (int)rect.height;
-
-            // GetPixels32, NOT GetPixels -- see FootBandCentreFraction's own
-            // comment for why this reads the WHOLE texture (GetPixels32 has
-            // no cropped-rect overload) and indexes at the crop's own
-            // texture-space offset. y stays crop-local -- callers read the
-            // return value as an offset from the crop's own bottom, same as
-            // before.
-            var texture = sprite.texture;
-            var pixels = texture.GetPixels32();
-            int textureWidth = texture.width;
-
-            // GetPixels32 is bottom-up, so walking down from the last row finds the
-            // visual TOP on the first opaque hit.
-            for (int y = cropHeight - 1; y >= 0; y--)
-            {
-                int rowStart = (cropY + y) * textureWidth + cropX;
-                for (int x = 0; x < cropWidth; x++)
-                {
-                    if (pixels[rowStart + x].a > AlphaFloorByte) return y + 1;
-                }
-            }
-
-            return 0f;
-        }
+        // Public for the EditMode pin, for the reason every *ForTest seam on
+        // this class is: InternalsVisibleTo names the Editor assembly only.
+        public static float ContentTopForActorForTest(string folder) => ContentTopForActor(folder);
 
     }
 }
