@@ -341,6 +341,59 @@ namespace PrincesPalace.PlayModeTests
                 "still level with the focused row it points at");
         }
 
+        // QA 2026-09-26, round 2: moved to the row's right by the rule above,
+        // the arrow stood a few pixels off the list's scrollbar (the bar is
+        // 8px off the rows). The bar is a keep-clear rect: the marker steps
+        // past it and never comes nearer than 7 units (its 10-unit gap less
+        // the 3-unit bob) at any point of the bob.
+        [UnityTest]
+        public IEnumerator TheMarkerBesideAScrollingList_StandsClearOfItsScrollbar()
+        {
+            yield return LoadFight();
+            yield return BindAnEncounterWithALongSatchel();
+
+            yield return Move(1f);
+            yield return Move(1f);
+            Assert.AreEqual(2, _fight.FocusedVerbForTest, "precondition: the stick reached ITEM");
+            yield return PressSubmit();
+
+            yield return Move(-1f);
+            yield return Move(-1f);
+            yield return Move(-1f);
+
+            var track = Node("SubmenuScrollTrack");
+            Assert.IsTrue(track != null && track.activeInHierarchy,
+                "precondition: the long satchel scrolls, so its bar is drawn");
+
+            var frame = (RectTransform)Marker.transform.parent;
+            var bar = BoxIn(frame, (RectTransform)track.transform);
+            float half = FocusMarkerPlacement.Size * 0.5f;
+
+            // Sample across more than one bob period (1.6s) so the nearest
+            // swing is in the sample, not just wherever frame 20 happened to
+            // land.
+            float nearest = float.MaxValue;
+            float start = Time.unscaledTime;
+            for (int f = 0; f < 600 && Time.unscaledTime - start < 1.8f; f++)
+            {
+                yield return DriveFrame();
+                Assert.IsTrue(Marker.IsShown, "precondition: the marker is drawn");
+
+                var marker = new Rect(Marker.LocalPosition.x - half, Marker.LocalPosition.y - half,
+                    FocusMarkerPlacement.Size, FocusMarkerPlacement.Size);
+                Assert.IsFalse(marker.Overlaps(bar),
+                    $"the marker at {Marker.LocalPosition} overlaps the scrollbar ({bar})");
+
+                float gap = marker.xMin >= bar.xMax ? marker.xMin - bar.xMax
+                    : marker.xMax <= bar.xMin ? bar.xMin - marker.xMax
+                    : 0f;
+                if (marker.yMax > bar.yMin && marker.yMin < bar.yMax && gap < nearest) nearest = gap;
+            }
+
+            Assert.GreaterOrEqual(nearest, 7f - 0.5f,
+                $"the marker came within {nearest} units of the scrollbar ({bar}) -- it crowds the bar");
+        }
+
         private static Rect BoxIn(RectTransform frame, RectTransform target)
         {
             var corners = new Vector3[4];

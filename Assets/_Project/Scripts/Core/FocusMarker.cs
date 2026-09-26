@@ -149,9 +149,9 @@ namespace PrincesPalace
                 new UiVec(canvasRect.rect.center.x, canvasRect.rect.center.y),
                 new UiVec(canvasRect.rect.width, canvasRect.rect.height));
 
-            var edge = EdgeFor(canvasRect, box, frame);
-            var at = FocusMarkerPlacement.Place(box, frame, edge)
-                     + FocusMarkerPlacement.BobOffset(edge, Time.unscaledTime);
+            var spot = SpotFor(canvasRect, box, frame);
+            var edge = spot.Edge;
+            var at = spot.Centre + FocusMarkerPlacement.BobOffset(edge, Time.unscaledTime);
 
             _rect.localPosition = new Vector3(at.X, at.Y, 0f);
             _rect.localRotation = Quaternion.Euler(0f, 0f, FocusMarkerPlacement.RotationFor(edge));
@@ -168,13 +168,14 @@ namespace PrincesPalace
         // after they appeared. The walk is kept cheap instead -- see
         // CollectObstacles.
         private readonly List<UiRect> _obstacles = new List<UiRect>();
+        private readonly List<UiRect> _keepClear = new List<UiRect>();
         private static readonly List<TMP_Text> Texts = new List<TMP_Text>();
         private static Selectable[] _selectables = new Selectable[64];
 
-        private FocusEdge EdgeFor(RectTransform canvasRect, UiRect box, UiRect frame)
+        private FocusSpot SpotFor(RectTransform canvasRect, UiRect box, UiRect frame)
         {
             CollectObstacles(canvasRect, box, frame);
-            return FocusMarkerPlacement.EdgeFor(box, frame, _obstacles);
+            return FocusMarkerPlacement.Resolve(box, frame, _obstacles, _keepClear);
         }
 
         private static readonly FocusEdge[] AllEdges =
@@ -196,11 +197,33 @@ namespace PrincesPalace
         private void CollectObstacles(RectTransform canvasRect, UiRect target, UiRect frame)
         {
             _obstacles.Clear();
+            _keepClear.Clear();
             var root = _canvas == null ? null : _canvas.rootCanvas;
             if (root == null) return;
 
+            // Keep-clear rects (a list's scrollbar, FocusKeepClear) first:
+            // they can step a candidate spot outward, and the occupants
+            // worth testing are the ones near where the marker will REALLY
+            // stand. Few enough (one per visible bar) to test every one; the
+            // same visibility filters as a control, minus the raycast -- a
+            // bar's thumb is drawn over its track, and the track is the lane.
+            var bars = FocusKeepClear.Active;
+            for (int i = 0; i < bars.Count; i++)
+            {
+                var bar = bars[i];
+                if (bar == null) continue;
+
+                var rect = bar.Rect;
+                var barBox = BoxIn(canvasRect, rect);
+                if (barBox.Width <= 0f || barBox.Height <= 0f) continue;
+                if (!IsNeighbour(bar.transform, root)) continue;
+                if (!VisibleThroughEveryClip(canvasRect, rect, barBox)) continue;
+                _keepClear.Add(barBox);
+            }
+
             for (int e = 0; e < AllEdges.Length; e++)
-                _reach[e] = FocusMarkerPlacement.MarkerBox(target, frame, AllEdges[e]);
+                _reach[e] = FocusMarkerPlacement.MarkerBoxAt(
+                    FocusMarkerPlacement.PlaceClear(target, frame, AllEdges[e], _keepClear));
 
             int count = Selectable.allSelectableCount;
             if (_selectables.Length < count) _selectables = new Selectable[count * 2];

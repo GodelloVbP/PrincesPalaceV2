@@ -480,6 +480,10 @@ namespace PrincesPalace
             {
                 var bar = packScrollTrack.gameObject.AddComponent<BarSlider>();
                 bar.Changed = ScrollToFraction;
+
+                // The focus marker steps past the bar instead of crowding it
+                // (FocusKeepClear's header).
+                FocusKeepClear.Mark(packScrollTrack.gameObject);
             }
 
             for (int i = 0; i < packCells.Length; i++)

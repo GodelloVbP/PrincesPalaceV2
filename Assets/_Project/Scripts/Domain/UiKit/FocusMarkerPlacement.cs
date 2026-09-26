@@ -23,6 +23,22 @@ namespace PrincesPalace.Domain.UiKit
         Below,
     }
 
+    // Where the marker stands: the edge (which sets its rotation and bob
+    // direction) and its centre, which is not always Place(edge) -- a
+    // keep-clear rect on that edge steps it outward (FocusMarkerPlacement.
+    // Resolve).
+    public readonly struct FocusSpot
+    {
+        public readonly FocusEdge Edge;
+        public readonly UiVec Centre;
+
+        public FocusSpot(FocusEdge edge, UiVec centre)
+        {
+            Edge = edge;
+            Centre = centre;
+        }
+    }
+
     // WHERE THE ONE FOCUS MARKER GOES, for every screen.
     //
     // Pure arithmetic in canvas space (centre origin, +y UP -- UiVec's own
@@ -94,17 +110,46 @@ namespace PrincesPalace.Domain.UiKit
         // what swings it into a neighbour 8px away. When every edge is
         // occupied the shape's edge stands: something has to be drawn, and
         // the shape's edge is the one the player has learned to expect.
-        public static FocusEdge EdgeFor(UiRect target, UiRect canvas, System.Collections.Generic.IReadOnlyList<UiRect> obstacles)
+        public static FocusEdge EdgeFor(UiRect target, UiRect canvas, System.Collections.Generic.IReadOnlyList<UiRect> obstacles) =>
+            Resolve(target, canvas, obstacles, null).Edge;
+
+        // THE EDGE AND THE SPOT, with the two kinds of neighbour a marker can
+        // meet told apart.
+        //
+        // OCCUPANTS (controls, text) take an edge: a marker drawn over one
+        // reads as selecting it, so that side is out and the next is tried.
+        //
+        // KEEP-CLEAR rects (a list's scrollbar) never take an edge. Nobody
+        // reads an arrow beside a scrollbar as selecting the scrollbar; the
+        // defect is only that the arrow crowds it (QA 2026-09-26: moved to
+        // the right of a skill row by the occupant rule, the arrow stood a
+        // few pixels off the list's bar, which sits 8px from the rows). So
+        // the marker on that edge steps OUTWARD past it and stands off it by
+        // the same Gap it stands off the control -- the bar reads as part of
+        // the list the arrow points into. Turning a scrollbar into an
+        // occupant instead would have taken the right edge too, and with the
+        // verb column on the left and rows above and below, every edge would
+        // be taken and the arrow would drop back onto ITEM.
+        //
+        // Occupants are tested at the STEPPED spot, so stepping past a bar
+        // onto a control still counts as that edge being taken.
+        public static FocusSpot Resolve(UiRect target, UiRect canvas,
+            System.Collections.Generic.IReadOnlyList<UiRect> occupants,
+            System.Collections.Generic.IReadOnlyList<UiRect> keepClear)
         {
             var preferred = EdgeFor(target.Size);
-            if (obstacles == null || obstacles.Count == 0) return preferred;
+            var preferredSpot = new FocusSpot(preferred, PlaceClear(target, canvas, preferred, keepClear));
+            if (occupants == null || occupants.Count == 0) return preferredSpot;
 
             foreach (var edge in Order(preferred))
             {
-                if (IsClear(MarkerBox(target, canvas, edge), obstacles)) return edge;
+                var spot = edge == preferred
+                    ? preferredSpot
+                    : new FocusSpot(edge, PlaceClear(target, canvas, edge, keepClear));
+                if (IsClear(MarkerBoxAt(spot.Centre), occupants)) return spot;
             }
 
-            return preferred;
+            return preferredSpot;
         }
 
         // Opposite side first -- still level with the control, still reads
@@ -115,11 +160,13 @@ namespace PrincesPalace.Domain.UiKit
 
         // Everything the marker can cover at that edge: its box, grown by the
         // bob's reach on every side.
-        public static UiRect MarkerBox(UiRect target, UiRect canvas, FocusEdge edge)
+        public static UiRect MarkerBox(UiRect target, UiRect canvas, FocusEdge edge) =>
+            MarkerBoxAt(Place(target, canvas, edge));
+
+        public static UiRect MarkerBoxAt(UiVec centre)
         {
-            var at = Place(target, canvas, edge);
             float reach = Size + 2f * BobAmplitude;
-            return new UiRect(at, new UiVec(reach, reach));
+            return new UiRect(centre, new UiVec(reach, reach));
         }
 
         private static bool IsClear(UiRect marker, System.Collections.Generic.IReadOnlyList<UiRect> obstacles)
@@ -129,6 +176,44 @@ namespace PrincesPalace.Domain.UiKit
                 if (marker.Overlaps(obstacles[i])) return false;
             }
             return true;
+        }
+
+        // Place(target, canvas, edge), then stepped outward along the edge's
+        // normal past every keep-clear rect its bobbing box touches, to Gap
+        // beyond that rect's far side. Outward only, so a bar can push the
+        // marker away from the control but never onto it; repeated so a
+        // second rect the first step lands on is stepped past too (one pass
+        // per rect is the most that can ever be needed). Clamped last, like
+        // Place itself.
+        public static UiVec PlaceClear(UiRect target, UiRect canvas, FocusEdge edge,
+            System.Collections.Generic.IReadOnlyList<UiRect> keepClear)
+        {
+            var at = Place(target, canvas, edge);
+            if (keepClear == null || keepClear.Count == 0) return at;
+
+            float half = Size / 2f;
+            for (int pass = 0; pass < keepClear.Count; pass++)
+            {
+                bool moved = false;
+                for (int i = 0; i < keepClear.Count; i++)
+                {
+                    var bar = keepClear[i];
+                    if (!MarkerBoxAt(at).Overlaps(bar)) continue;
+
+                    switch (edge)
+                    {
+                        case FocusEdge.Left: at = new UiVec(System.Math.Min(at.X, bar.Left - Gap - half), at.Y); break;
+                        case FocusEdge.Right: at = new UiVec(System.Math.Max(at.X, bar.Right + Gap + half), at.Y); break;
+                        case FocusEdge.Below: at = new UiVec(at.X, System.Math.Min(at.Y, bar.Bottom - Gap - half)); break;
+                        default: at = new UiVec(at.X, System.Math.Max(at.Y, bar.Top + Gap + half)); break;
+                    }
+                    moved = true;
+                }
+
+                if (!moved) break;
+            }
+
+            return Clamp(at, canvas);
         }
 
         // The marker's CENTRE, in the same canvas space `target` and `canvas`

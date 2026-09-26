@@ -227,6 +227,58 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FocusEdge.Left, FocusMarkerPlacement.EdgeFor(row, Canvas, obstacles));
         }
 
+        // ---- a scrollbar beside the list (QA 2026-09-26, round 2) ----------
+        //
+        // The fight's skill list: a 300x50 row at the origin (right edge 150),
+        // ITEM taking its left, and the list's 6-wide bar 8px off its right
+        // edge (158..164). Right of the row the marker would be at 173 and,
+        // with its bob, cover 157..189 -- over the bar. It steps past it to
+        // stand Gap off the bar's far side: 164 + 10 + 13 = 187.
+        [Test]
+        public void AMarkerOnTheScrollbarSide_StepsPastTheBarAndStandsGapOffIt()
+        {
+            var row = Box(0f, 0f, 300f, 50f);
+            var occupants = new[] { Box(-308f, 0f, 300f, 50f) };
+            var bars = new[] { Box(161f, 0f, 6f, 50f) };
+
+            var spot = FocusMarkerPlacement.Resolve(row, Canvas, occupants, bars);
+
+            Assert.AreEqual(FocusEdge.Right, spot.Edge);
+            Assert.AreEqual(187f, spot.Centre.X, 0.001f);
+            Assert.AreEqual(0f, spot.Centre.Y, 0.001f);
+        }
+
+        // A scrollbar never TAKES an edge: with the left free, the shape's
+        // edge stands at -173 exactly as it would with no bar at all.
+        [Test]
+        public void AScrollbarOnTheFarSide_DoesNotMoveTheMarker()
+        {
+            var row = Box(0f, 0f, 300f, 50f);
+            var bars = new[] { Box(161f, 0f, 6f, 50f) };
+
+            var spot = FocusMarkerPlacement.Resolve(row, Canvas, new UiRect[0], bars);
+
+            Assert.AreEqual(FocusEdge.Left, spot.Edge);
+            Assert.AreEqual(-173f, spot.Centre.X, 0.001f);
+        }
+
+        // Stepping past the bar onto a control still counts as that edge
+        // taken: a 20-wide control at 200 (190..210) sits where the stepped
+        // marker (171..203) would land, so the right is out too and the next
+        // edge in order, above, wins: 25 + 10 + 13 = 48.
+        [Test]
+        public void SteppingPastTheBarOntoAControl_TakesThatEdge()
+        {
+            var row = Box(0f, 0f, 300f, 50f);
+            var occupants = new[] { Box(-308f, 0f, 300f, 50f), Box(200f, 0f, 20f, 50f) };
+            var bars = new[] { Box(161f, 0f, 6f, 50f) };
+
+            var spot = FocusMarkerPlacement.Resolve(row, Canvas, occupants, bars);
+
+            Assert.AreEqual(FocusEdge.Above, spot.Edge);
+            Assert.AreEqual(48f, spot.Centre.Y, 0.001f);
+        }
+
         [Test]
         public void TheRightAndBelowEdgesPointBackAtTheControl()
         {

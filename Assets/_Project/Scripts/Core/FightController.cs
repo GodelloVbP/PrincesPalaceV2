@@ -701,6 +701,10 @@ namespace PrincesPalace
             var seek = submenuScrollTrack.gameObject.GetComponent<ListScroll>()
                        ?? submenuScrollTrack.gameObject.AddComponent<ListScroll>();
             seek.Seeked = SeekSubmenuTo;
+
+            // The focus marker steps past the bar instead of crowding it
+            // (FocusKeepClear's header).
+            FocusKeepClear.Mark(submenuScrollTrack.gameObject);
         }
 
         private void WirePlayback()
