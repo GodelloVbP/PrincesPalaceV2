@@ -88,7 +88,7 @@ function Start-UnityQuiet {
         [Parameter(Mandatory = $true)][string[]]$ArgumentList
     )
 
-    if ($ArgumentList -contains "-nographics") {
+    if ($ArgumentList -contains "-nographics" -or (Test-GraphicsOnHiddenDesktop -ArgumentList $ArgumentList)) {
         $desktopName = Get-HeadlessDesktop
         if ($desktopName) {
             $proc = Start-ProcessOnDesktop -FilePath $FilePath -ArgumentList $ArgumentList -Desktop $desktopName
@@ -107,6 +107,55 @@ function Start-UnityQuiet {
     return (Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -PassThru -WindowStyle Minimized)
 }
 
+# --- Graphics launches on the hidden desktop (AUDIT #204) -------------------
+#
+# A BATCHMODE launch WITHOUT -nographics (screenshot.ps1, graphics_tests.ps1,
+# preview.ps1's picture route) is a capture: it renders to a render texture
+# and reads the pixels back, and nobody needs to see its window. Whether such
+# a launch goes to the hidden desktop is decided here, once, for every
+# capture tool, by PP_GRAPHICS_DESKTOP:
+#
+#   unset / anything else -> WinSta0\PPHeadless, like -nographics launches.
+#   "visible" -> the opt-out: the old minimized launch on the owner's
+#                desktop, with Start-FocusGuard handing focus back (measured
+#                2026-09-26: Unity held the foreground 359ms before the
+#                guard won). For a machine where the hidden desktop gets no
+#                graphics device -- the captures then Assert.Ignore "No
+#                graphics device" and the tools exit 1 with no pictures.
+#
+# THE DEFAULT IS HIDDEN BECAUSE IT WAS MEASURED, 2026-09-26, on this
+# machine (RTX 4060 laptop, D3D12): screenshot.ps1 -Runtime and preview.ps1
+# -Spell (the graphics_tests.ps1 route) both ran on PPHeadless under
+# focus_check.ps1 -Mode Command with ZERO foreground changes, an independent
+# EnumWindows probe found no Unity window on the interactive desktop at all
+# (the visible control run had its UnityContainerWndClass window there), the
+# Unity log reported "Direct3D 12 [level 12.2]" on the real GPU, and the
+# frames matched the visible run's to under 1/255 mean difference on a
+# static screen. If CanvasCapture.IsSupported is false there, the captures
+# Ignore and the tools report no pictures and exit 1; a device that exists
+# but renders black was not observed and is not guarded against beyond
+# looking at the frames.
+#
+# An ENVIRONMENT VARIABLE rather than a parameter on each script because the
+# capture tools call each other as child `powershell -File` processes
+# (preview.ps1 -> graphics_tests.ps1), which inherit the environment and
+# nothing else; one variable reaches every launch without threading a switch
+# through three scripts.
+#
+# NEVER a non-batchmode launch: preview.ps1 -Launch opens the interactive
+# Editor for the author to play a fight in, and on a desktop nobody can see
+# that Editor would be useless. That window is the one launch that is
+# supposed to be seen.
+function Test-GraphicsOnHiddenDesktop {
+    param([string[]]$ArgumentList)
+
+    if (-not ($ArgumentList -contains "-batchmode")) { return $false }
+    if ($ArgumentList -contains "-nographics") { return $false }
+
+    $choice = "$env:PP_GRAPHICS_DESKTOP".Trim().ToLowerInvariant()
+    return ($choice -ne "visible")
+}
+
 # --- Headless desktop: give -nographics Unity nowhere to steal focus FROM --
 #
 # A Windows window station (WinSta0 for the interactive session) can hold
@@ -119,10 +168,11 @@ function Start-UnityQuiet {
 # with a 200ms restore guard": stop restoring focus fast, and instead never
 # hand batchmode Unity a desktop the owner is looking at. -nographics is what
 # makes this available -- no real display is needed, so which desktop the
-# process's (invisible, D3D-less) window lives on has no visible-output cost,
-# unlike screenshot.ps1/preview.ps1's windowed launches, which genuinely need
-# the interactive desktop's graphics device and stay on Start-FocusGuard's
-# tree-restore approach untouched.
+# process's (invisible, D3D-less) window lives on has no visible-output cost.
+# (Written 2026-09-18 assuming graphics captures needed the interactive
+# desktop's device; measured false on 2026-09-26 -- see
+# Test-GraphicsOnHiddenDesktop above. Batchmode graphics launches now come
+# here too.)
 #
 # One desktop object, named so a second concurrent tools/ session (see
 # docs/WORKFLOW.md's parallel-session rules) finds the SAME one rather than

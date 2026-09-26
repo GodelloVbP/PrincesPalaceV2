@@ -592,6 +592,23 @@ desktop's graphics device and stay on the tree-restore guard, and any
 `-nographics` launch where `CreateDesktop` fails (logged, not silent) falls
 back to the same minimized launch the tree guard already covered.
 
+A fourth pass (2026-09-26, AUDIT #204) disproved the "genuinely need the
+interactive desktop" assumption above for batchmode captures. A QA pass
+measured `screenshot.ps1 -Runtime` still taking the foreground for 359ms
+before the guard handed it back. Routed through `PPHeadless` on this
+machine (RTX 4060 laptop), Unity still created a Direct3D 12 device on the
+real GPU. `screenshot.ps1 -Runtime` and `preview.ps1 -Spell` (through
+`graphics_tests.ps1`) both logged zero foreground changes under
+`focus_check.ps1 -Mode Command`, and an independent `EnumWindows` probe
+found no Unity window on the interactive desktop at all. A static dossier frame matched a
+visible-desktop run to 0.006/255 mean difference; fight frames stayed within
+~1.3/255, the idle animation. So every batchmode
+launch now goes to `PPHeadless`, `-nographics` or not
+(`Test-GraphicsOnHiddenDesktop`). `PP_GRAPHICS_DESKTOP=visible` opts out
+for a machine where the hidden desktop gets no device. `preview.ps1 -Launch`
+is the one exception: it opens the interactive Editor for someone to use,
+so it stays on the visible desktop behind the tree guard.
+
 Along the way: wrapping the launched pid with `Process.GetProcessById` (the
 obvious way to get a `System.Diagnostics.Process` back from a raw
 `CreateProcess` call) leaves `.ExitCode` permanently broken — .NET

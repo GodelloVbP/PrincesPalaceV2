@@ -35,6 +35,11 @@ Triage order, cheapest first:
   `finally` -- `tools/unity_path.ps1`.
 - Every `-nographics` launch MUST go through `Start-UnityQuiet`, never
   `Start-Process` on `Unity.exe` directly.
+- Every batchmode launch, `-nographics` or not (captures included), runs on
+  the hidden desktop `WinSta0\PPHeadless`, where it cannot take the
+  foreground. Opt out with `$env:PP_GRAPHICS_DESKTOP = 'visible'` (it
+  reaches child scripts) if captures come back with "No graphics device".
+  `preview.ps1 -Launch` (the interactive Editor) always stays visible.
 - Mechanism, the two 2026-09-18 fixes, and the `.ExitCode` gotcha:
   `docs/INCIDENTS.md` ("Batchmode Unity steals focus").
 - Run `tools/focus_check.ps1` after touching any launch site or either
