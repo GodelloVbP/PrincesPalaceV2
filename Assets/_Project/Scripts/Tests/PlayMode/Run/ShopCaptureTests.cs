@@ -5,10 +5,12 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -140,7 +142,8 @@ namespace PrincesPalace.PlayModeTests
         // comparison panel's stats/affix-lines/VS.-equipped delta
         // (ItemDescription.ComparisonBody, via ItemComparisonPanel) are both
         // in the same frame. One click, through the same button a player's
-        // click reaches -- ShopScreenRefusalTests' own pattern.
+        // click reaches -- ShopScreenRefusalTests' own pattern -- with focus
+        // moved onto it first, as a real click or pad press would.
         [UnityTest]
         public IEnumerator CaptureTheShopWithAGearCardSelected()
         {
@@ -179,9 +182,34 @@ namespace PrincesPalace.PlayModeTests
                 ?? gearCards.FirstOrDefault();
             Assert.IsNotNull(card, "the shop rolled no real gear card to select");
 
+            // SOMETHING WORN IN THAT SLOT (QA 2026-09-26). A fresh run's
+            // leader is bare (SaveData.CreateNew), so this shot used to show
+            // the offered item alone with no VS. EQUIPPED section, and a
+            // reader could not tell "never compares" from "nothing to compare
+            // against". ShopComparisonPanelTests pins the behaviour; this puts
+            // a second same-slot item on the leader so the shot shows it.
+            var offered = ContentDatabase.GetItem(card.contentId);
+            var worn = offered == null ? null : ContentDatabase.Items
+                .Where(i => i != null && i.IsEquippable && i.equipSlot == offered.equipSlot && i.id != offered.id)
+                .OrderBy(i => default(AbilityScoreBlock).Meets(i.requirements) ? 0 : 1)
+                .FirstOrDefault();
+            if (worn != null)
+            {
+                var leader = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+                leader.equipment.Set(leader.equipment.ResolveTargetSlot(worn.equipSlot), worn.id);
+            }
+
             var button = Object.FindObjectsByType<Button>(FindObjectsInactive.Include)
                 .FirstOrDefault(b => b.name == $"ShopGearCard{card.index}");
             Assert.IsNotNull(button, $"the shop drew no button named ShopGearCard{card.index}");
+
+            // FOCUS FIRST, THEN THE PRESS -- what a real click does
+            // (Selectable.OnPointerDown selects before onClick fires) and what
+            // a pad Submit implies (it presses the focused card). Invoking
+            // onClick alone left focus on the shop's entry card, and the QA
+            // pass of 2026-09-26 photographed that as "two cards selected".
+            EventSystem.current?.SetSelectedGameObject(button.gameObject);
+            yield return null;
             button.onClick.Invoke();
             yield return null;
 
