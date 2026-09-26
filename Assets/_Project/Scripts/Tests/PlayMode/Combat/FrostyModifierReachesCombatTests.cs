@@ -32,6 +32,10 @@ namespace PrincesPalace.PlayModeTests
     // (EditMode).
     public class FrostyModifierReachesCombatTests
     {
+        // Far past any one swing this suite's gear can land, so the on-hit
+        // riders always meet a live target (AUDIT #46).
+        private const int DurableFoeHealth = 1000000;
+
         private string _root;
 
         [SetUp]
@@ -182,15 +186,14 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             int scaledChance = effects.Best(ModifierEffectType.ChilledOnHitChancePercent);
 
-            if (scaledChance < 100)
-            {
-                Assert.Inconclusive(
-                    $"fixture: content's highest equippable item tier ({item.tier}) only scales frostbite's chill " +
-                    $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
-                    "deterministic assertion -- FrostyModifier_ScalesItsChillChanceByTierAndRiftTier already " +
-                    "pins the scaling formula itself at a lower tier.");
-                return;
-            }
+            // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46): an
+            // Inconclusive here read as green and quietly retired the end-to-end claim.
+            Assert.GreaterOrEqual(scaledChance, 100,
+                $"content's highest equippable item tier ({item.tier}) only scales frostbite's chill " +
+                $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
+                "deterministic assertion -- FrostyModifier_ScalesItsChillChanceByTierAndRiftTier already " +
+                "pins the scaling formula itself at a lower tier." +
+                " This end-to-end test has stopped covering the chill proc; give it a fixture item that guarantees it.");
 
             // The TOUGHEST real enemy content has, by max health -- not just
             // Take(1) (whichever the catalogue happens to list first). This
@@ -199,9 +202,9 @@ namespace PrincesPalace.PlayModeTests
             // hits hard enough to one-shot a low-health early monster before
             // the on-hit rider ever sees a live target (ChilledOnHitChancePercent
             // is correctly gated on target.IsAlive -- see
-            // ApplyModifierOnHitRiders). Picking the tankiest real enemy is
-            // what keeps this a genuine proof of the chill firing, rather
-            // than a coin flip that usually lands on Inconclusive.
+            // ApplyModifierOnHitRiders). The foe's health is raised past any
+            // one swing below, so that no longer depends on which enemy this
+            // picks; the tankiest one is kept so its defences stay real.
             var toughestEnemyId = ContentDatabase.Enemies
                 .OrderByDescending(e => e.Data.BaseStats.maxHealth)
                 .Select(e => e.id)
@@ -221,19 +224,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
 
             session.DamageVarianceRange = 0f;
+            // THE FOE OUTLASTS THE SWING BY FIXTURE, not by luck of content
+            // (AUDIT #46). This used to Assert.Inconclusive whenever the
+            // picked enemy died to one hit, which switched the rider check off
+            // the moment gear or enemy numbers moved. Health is not what is
+            // under test; a live target for the on-hit rider is.
+            foe.MaxHealth = DurableFoeHealth;
+            foe.CurrentHealth = DurableFoeHealth;
             session.Begin();
 
             int foeSpeedBefore = foe.Speed;
             session.ExecuteAttack(foe);
 
-            if (!foe.IsAlive)
-            {
-                Assert.Inconclusive(
-                    "fixture: the real enemy content picked here died to one hit from this hero build, so the " +
-                    "on-hit rider never had a live target to chill (ChilledOnHitChancePercent is gated on " +
-                    "target.IsAlive, correctly -- see ApplyModifierOnHitRiders).");
-                return;
-            }
+            Assert.IsTrue(foe.IsAlive, "fixture: the durable foe died to one swing, so no on-hit rider had a live target");
 
             var chilled = foe.Statuses.SingleOrDefault(s => s.Type == StatusEffectType.Chilled);
             Assert.IsNotNull(chilled, "a guaranteed ChilledOnHitChancePercent proc must land Chilled on the first real hit");

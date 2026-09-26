@@ -95,10 +95,9 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator APreviewThatBuildsAFightAlsoLeavesNoKeyBehind()
         {
             var mob = ContentDatabase.Enemies.FirstOrDefault(e => e != null && e.Data != null);
-            if (mob == null)
-            {
-                Assert.Ignore("no enemies in content, so no fight can be forced.");
-            }
+            Assert.IsNotNull(mob,
+                "content has no enemy with data, so no fight can be forced -- this test has stopped covering " +
+                "the working preview path (AUDIT #46: fail loudly rather than skip)");
 
             FightBootstrap.DevForcedEnemyId = mob.id;
             FightBootstrap.DevForcedEnemyScript = true;

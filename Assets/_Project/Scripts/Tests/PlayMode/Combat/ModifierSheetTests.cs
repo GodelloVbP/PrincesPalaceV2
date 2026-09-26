@@ -31,6 +31,10 @@ namespace PrincesPalace.PlayModeTests
     // what this file exists to protect.
     public class ModifierSheetTests
     {
+        // Far past any one swing this suite's gear can land, so the on-hit
+        // riders always meet a live target (AUDIT #46).
+        private const int DurableFoeHealth = 1000000;
+
         private string _root;
 
         [SetUp]
@@ -326,6 +330,13 @@ namespace PrincesPalace.PlayModeTests
             hero.CurrentHealth = hero.MaxHealth / 2; // headroom for vampiric's lifesteal to actually show
 
             session.DamageVarianceRange = 0f;
+            // THE FOE OUTLASTS THE SWING BY FIXTURE, not by luck of content
+            // (AUDIT #46). This used to Assert.Inconclusive whenever the
+            // picked enemy died to one hit, which switched the rider check off
+            // the moment gear or enemy numbers moved. Health is not what is
+            // under test; a live target for the on-hit rider is.
+            foe.MaxHealth = DurableFoeHealth;
+            foe.CurrentHealth = DurableFoeHealth;
             session.Begin();
 
             session.ExecuteAttack(foe);
@@ -335,14 +346,7 @@ namespace PrincesPalace.PlayModeTests
                 "fixture check: the hero must still hold the turn after one swing, or the foe's own reply could " +
                 "land inside this same window and confound the lifesteal-healed read below");
 
-            if (!foe.IsAlive)
-            {
-                Assert.Inconclusive(
-                    "fixture: the real enemy content picked here died before both on-hit riders could fire -- " +
-                    "the scaled magnitudes above already prove the roll reached combat correctly; this branch " +
-                    "only concerns whether THIS PARTICULAR enemy's health happened to outlast one swing.");
-                return;
-            }
+            Assert.IsTrue(foe.IsAlive, "fixture: the durable foe died to one swing, so no on-hit rider had a live target");
 
             // elementalRaw = max(1, Rounding.AwayFromZero(Attack x Magnitude / 100f))
             //              = max(1, Rounding.AwayFromZero(10 x 20 / 100f))

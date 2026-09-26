@@ -65,11 +65,12 @@ namespace PrincesPalace.PlayModeTests
                 .Where(s => s != null && s.Data != null)
                 .FirstOrDefault(s => Unsupported.Contains(s.Data.Effect));
 
-            if (candidate == null)
-            {
-                Assert.Ignore("no authored skill carries one of the seven effects the preview refuses, " +
-                              "so there is nothing in content to refuse.");
-            }
+            // Fails loudly rather than skipping (AUDIT #46). If the preview
+            // has since learned all seven, trim Unsupported and this test with
+            // it; if content dropped them, the by-name refusal is unread.
+            Assert.IsNotNull(candidate,
+                "no authored skill carries one of the effects the preview refuses, so this test has stopped " +
+                "covering the by-name refusal -- update Unsupported to match PreviewFight, or retire the test");
 
             var plan = PreviewFight.ForSpell(candidate.id);
 

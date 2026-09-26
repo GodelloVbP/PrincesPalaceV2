@@ -150,7 +150,11 @@ namespace PrincesPalace.PlayModeTests
             var weapons = ContentDatabase.Items
                 .Where(i => i != null && i.IsEquippable && i.kind == ItemKind.Weapon)
                 .Take(6).ToList();
-            if (weapons.Count < 2) Assert.Ignore("the content has fewer than two weapons to choose between");
+            // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46):
+            // this used to Ignore itself, which reads as green in a run.
+            Assert.GreaterOrEqual(weapons.Count, 2,
+                "content no longer has two equippable weapons, so there is nothing for the archetypes to " +
+                "choose between -- this test has stopped covering the evaluator; give it a fixture bag");
 
             foreach (var item in weapons)
             {
@@ -241,7 +245,9 @@ namespace PrincesPalace.PlayModeTests
             // unique boss ever killed. If the content ships bosses, the profile
             // must arrive holding embers and must have spent them.
             int budget = ProfilePresets.EmbersFor(ProfilePresets.Mid);
-            if (budget <= 0) Assert.Ignore("the content ships no live boss, so there is no ember budget to spend");
+            Assert.Greater(budget, 0,
+                "content ships no live boss, so the mid profile has no ember budget -- this test has stopped " +
+                "covering talent spending (AUDIT #46: a precondition fails loudly rather than skipping)");
 
             Assert.IsNotEmpty(character.unlockedTalentIds,
                 $"the profile held {budget} embers and kindled nothing");

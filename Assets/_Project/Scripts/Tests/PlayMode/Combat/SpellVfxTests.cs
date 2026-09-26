@@ -619,7 +619,7 @@ namespace PrincesPalace.PlayModeTests
             {
                 layers = new[] { new SpellLayer { id = "per-target", place = "target", path = "Spells/mud_burst" } },
             }, 0, _ => 26);
-            Assume.That(empty.Instances.Count, Is.EqualTo(0),
+            Assert.That(empty.Instances.Count, Is.EqualTo(0),
                 "fixture: a per-target layer with no targets was meant to fan out to nothing");
 
             CastHandle handle = default;
@@ -665,7 +665,7 @@ namespace PrincesPalace.PlayModeTests
 
             var caster = SlotXOf("Shawn");
             var target = SlotXOf("Front");
-            Assume.That(Mathf.Abs(target - caster), Is.GreaterThan(200f),
+            Assert.That(Mathf.Abs(target - caster), Is.GreaterThan(200f),
                 "fixture: the two have to be far enough apart for the flight to be measurable");
 
             // THE CLOCK IS HELD, and read at named instants of the cast rather
@@ -1429,7 +1429,7 @@ namespace PrincesPalace.PlayModeTests
             // 391 opaque of a 616 canvas: if the body is not clearly narrower
             // than the slot, the art never loaded and this measures the
             // fallback instead of the contract.
-            Assume.That(body.Width / slot.rect.width, Is.LessThan(0.8f * Mathf.Abs(slot.localScale.x)),
+            Assert.That(body.Width / slot.rect.width, Is.LessThan(0.8f * Mathf.Abs(slot.localScale.x)),
                 "fixture: the rat's art did not load, so this measures the slot fallback");
 
             HoldTheClockAtTheCast();

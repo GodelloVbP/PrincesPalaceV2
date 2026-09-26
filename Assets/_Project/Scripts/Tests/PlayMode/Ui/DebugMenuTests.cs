@@ -538,11 +538,9 @@ namespace PrincesPalace.PlayModeTests
             for (int i = 0; i < 5; i++) Click("DebugPlusPlusButton");
             yield return null;
 
-            if (!Named("DebugRow0").activeSelf)
-            {
-                Assert.Ignore("fixture: no consumables in content");
-                yield break;
-            }
+            Assert.IsTrue(Named("DebugRow0").activeSelf,
+                "content has no consumables, so the Consumables page has no row to grant -- this test has " +
+                "stopped covering the plus-stepper rule (AUDIT #46: fail loudly rather than skip)");
 
             Save.stockpiledItems.Clear();
 
@@ -568,11 +566,9 @@ namespace PrincesPalace.PlayModeTests
             Select(DebugCategory.Sets);
             yield return null;
 
-            if (!Named("DebugRow0").activeSelf)
-            {
-                Assert.Ignore("fixture: no item sets in content");
-                yield break;
-            }
+            Assert.IsTrue(Named("DebugRow0").activeSelf,
+                "content has no item sets, so the Sets page has no row to grant -- this test has stopped " +
+                "covering the multi-piece grant (AUDIT #46: fail loudly rather than skip)");
 
             int before = Save.stockpiledItems.Sum(e => e.count);
 

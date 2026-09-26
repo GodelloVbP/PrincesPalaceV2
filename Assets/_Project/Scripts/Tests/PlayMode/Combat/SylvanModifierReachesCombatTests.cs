@@ -34,6 +34,10 @@ namespace PrincesPalace.PlayModeTests
     // RootedStatusTests (EditMode).
     public class SylvanModifierReachesCombatTests
     {
+        // Far past any one swing this suite's gear can land, so the on-hit
+        // riders always meet a live target (AUDIT #46).
+        private const int DurableFoeHealth = 1000000;
+
         private string _root;
 
         [SetUp]
@@ -185,15 +189,14 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             int scaledChance = effects.Best(ModifierEffectType.RootChancePercent);
 
-            if (scaledChance < 100)
-            {
-                Assert.Inconclusive(
-                    $"fixture: content's highest equippable item tier ({item.tier}) only scales entangling's root " +
-                    $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
-                    "deterministic assertion -- SylvanModifier_ScalesItsRootChanceByTierAndRiftTier already " +
-                    "pins the scaling formula itself at a lower tier.");
-                return;
-            }
+            // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46): an
+            // Inconclusive here read as green and quietly retired the end-to-end claim.
+            Assert.GreaterOrEqual(scaledChance, 100,
+                $"content's highest equippable item tier ({item.tier}) only scales entangling's root " +
+                $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
+                "deterministic assertion -- SylvanModifier_ScalesItsRootChanceByTierAndRiftTier already " +
+                "pins the scaling formula itself at a lower tier." +
+                " This end-to-end test has stopped covering the root proc; give it a fixture item that guarantees it.");
 
             var toughestEnemyId = ContentDatabase.Enemies
                 .OrderByDescending(e => e.Data.BaseStats.maxHealth)
@@ -214,19 +217,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
 
             session.DamageVarianceRange = 0f;
+            // THE FOE OUTLASTS THE SWING BY FIXTURE, not by luck of content
+            // (AUDIT #46). This used to Assert.Inconclusive whenever the
+            // picked enemy died to one hit, which switched the rider check off
+            // the moment gear or enemy numbers moved. Health is not what is
+            // under test; a live target for the on-hit rider is.
+            foe.MaxHealth = DurableFoeHealth;
+            foe.CurrentHealth = DurableFoeHealth;
             session.Begin();
 
             session.ExecuteAttack(foe);
             var beats = session.DrainBeats();
 
-            if (!foe.IsAlive)
-            {
-                Assert.Inconclusive(
-                    "fixture: the real enemy content picked here died to one hit from this hero build, so the " +
-                    "on-hit rider never had a live target to root (RootChancePercent is gated on " +
-                    "target.IsAlive, correctly -- see ApplyModifierOnHitRiders).");
-                return;
-            }
+            Assert.IsTrue(foe.IsAlive, "fixture: the durable foe died to one swing, so no on-hit rider had a live target");
 
             Assert.IsTrue(StatusEffects.HasRooted(foe.Statuses),
                 "a guaranteed RootChancePercent proc must land Rooted on the first real hit");

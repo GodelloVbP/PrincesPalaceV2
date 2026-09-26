@@ -72,11 +72,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator AForcedCastPressesTheElementItWasAskedForRatherThanTheDefault()
         {
             var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == ElementSkillId);
-            if (skill == null || !skill.Data.HasElementChoice)
-            {
-                Assert.Ignore($"no skill in content offers an element choice ('{ElementSkillId}' is the one " +
-                              "this was written against), so there is nothing to ask for.");
-            }
+            AssertElementSkillStillOffersAChoice(skill);
 
             var elements = skill.Data.Elements;
             string asked = elements[elements.Length - 1].Type.ToString();
@@ -89,14 +85,24 @@ namespace PrincesPalace.PlayModeTests
             yield return CastAndAssert(element: asked, expected: asked);
         }
 
+        // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46).
+        // Both callers used to Ignore themselves here, so renaming or
+        // de-elementing the pinned skill switched this whole class off while
+        // the run stayed green.
+        private static void AssertElementSkillStillOffersAChoice(SkillDefinition skill)
+        {
+            Assert.IsNotNull(skill,
+                $"content no longer has '{ElementSkillId}', the element-choice skill this class is written " +
+                "against -- point ElementSkillId at another skill with elements[]");
+            Assert.IsTrue(skill.Data.HasElementChoice,
+                $"'{ElementSkillId}' no longer offers an element choice, so there is nothing to force -- point " +
+                "ElementSkillId at a skill that does");
+        }
+
         private IEnumerator CastAndAssert(string element, string expected)
         {
             var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == ElementSkillId);
-            if (skill == null || !skill.Data.HasElementChoice)
-            {
-                Assert.Ignore($"no skill in content offers an element choice ('{ElementSkillId}' is the one " +
-                              "this was written against), so there is no depth to get stuck in.");
-            }
+            AssertElementSkillStillOffersAChoice(skill);
 
             var plan = PreviewFight.ForSpell(ElementSkillId, element);
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
