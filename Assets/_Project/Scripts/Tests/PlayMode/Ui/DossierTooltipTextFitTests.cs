@@ -103,10 +103,16 @@ namespace PrincesPalace.PlayModeTests
             var font = LoadFont();
             Assert.IsNotNull(font, $"fixture: {FontPath} must exist -- SceneBuilder generates it at build time");
 
-            var go = new GameObject("DossierTooltipFitProbe");
+            // Under a Canvas: TextMeshProUGUI skips mesh generation without
+            // one, and textInfo then comes back empty -- which would let
+            // lineCount <= capacity pass on NOTHING, the way GradeLetterFaceTests
+            // parents its probe.
+            var go = new GameObject("DossierTooltipFitProbe", typeof(Canvas));
             try
             {
-                var text = go.AddComponent<TextMeshProUGUI>();
+                var child = new GameObject("Text", typeof(RectTransform));
+                child.transform.SetParent(go.transform, false);
+                var text = child.AddComponent<TextMeshProUGUI>();
                 text.font = font;
                 text.fontSize = built.Body.FontSize;
                 text.text = body;
@@ -120,7 +126,9 @@ namespace PrincesPalace.PlayModeTests
                 text.ForceMeshUpdate();
 
                 int lineCount = text.textInfo.lineCount;
-                float lineHeight = lineCount > 0 ? text.textInfo.lineInfo[0].lineHeight : text.fontSize;
+                Assert.Greater(lineCount, 0,
+                    "fixture: TMP produced no mesh -- the fit assertion below would pass on an empty mesh");
+                float lineHeight = text.textInfo.lineInfo[0].lineHeight;
                 int capacity = Mathf.FloorToInt(bodyHeight / lineHeight);
 
                 var preferred = text.GetPreferredValues(body, bodyWidth, 0f);
