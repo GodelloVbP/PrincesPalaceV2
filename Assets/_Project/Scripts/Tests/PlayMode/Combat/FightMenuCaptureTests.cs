@@ -50,6 +50,15 @@ namespace PrincesPalace.PlayModeTests
             go.GetComponent<Button>().onClick.Invoke();
         }
 
+        private static void FillEveryPool(IEnumerable<Domain.Combat.CombatantState> party)
+        {
+            foreach (var member in party)
+            {
+                if (member.PrimaryPool != null) member.PrimaryPool.Current = member.PrimaryPool.Max;
+                if (member.SignaturePool != null) member.SignaturePool.Current = member.SignaturePool.Max;
+            }
+        }
+
         [UnityTest]
         public IEnumerator CaptureTheMenuInEveryStateAPlayerActuallySees()
         {
@@ -88,6 +97,14 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, party.Count, "no character has battle art to capture");
             Assert.AreEqual(3, enemies.Count, "fewer than three enemies have art to capture");
             var built = FightEncounterAdapter.Build(party, enemies, new Domain.Rng.SeededRandom(11));
+
+            // Every pool full BEFORE the bind, so step 3 below does not depend
+            // on what a pool starts at. It did: Shawn opens on 0/10 Wool, his
+            // only skill (Shear) costs 3, and the capture stopped at step 3 with
+            // frames 3-5 never written (QA pass 2026-09-26). A fixture that
+            // wants "a castable skill" has to make one castable, not hope the
+            // content's opening values happen to allow it.
+            FillEveryPool(built.Party);
             _fight.Bind(built.Session, EncounterClass.Normal);
 
             // The party's ART is handed over SEPARATELY from the session, by
@@ -126,6 +143,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(castable, "the actor has no castable skill to open targeting with");
             castable.onClick.Invoke();
             yield return null;
+            // The press must have LANDED, not merely been made: a refused press
+            // leaves the menu where it was and the next shot silently repeats
+            // the previous one.
+            var prompt = _rig.Named("TargetPrompt");
+            Assert.IsNotNull(prompt, "the Fight scene has no TargetPrompt");
+            Assert.IsTrue(prompt.activeInHierarchy, $"pressing {castable.name} did not open targeting");
             yield return _rig.Shoot("3_targeting");
 
             // ITEM, the other submenu, to see whether the two are consistent.
