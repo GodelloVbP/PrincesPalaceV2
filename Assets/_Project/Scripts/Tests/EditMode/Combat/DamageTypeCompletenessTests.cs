@@ -129,6 +129,10 @@ namespace PrincesPalace.Domain.Tests
                     displayName = "Completeness Fixture",
                     maxHealth = 30,
                     weakness = type.ToString(),
+                    // Never the weakness itself: a monster weak to its own
+                    // attackType is refused (AUDIT #145 B6), and the default
+                    // attackType is Physical.
+                    attackType = type == DamageType.Physical ? "Fire" : "Physical",
                 };
 
                 bool ok = EnemyEntryResolver.TryResolveAll(

@@ -299,13 +299,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void OnlyWeaknessGiven_ResistanceIsDerivedAndDoesNotCollide()
         {
+            // Fire, not Physical: Minimal() attacks with the default
+            // Physical, and a weakness to its own attackType is refused
+            // (AUDIT #145 B6) -- which is not what this case is about.
             var entry = Minimal();
-            entry.weakness = "Physical";
+            entry.weakness = "Fire";
 
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
 
-            Assert.AreEqual(new[] { DamageType.Physical }, resolved[0].Affinity.Weaknesses);
-            Assert.IsFalse(resolved[0].Affinity.Resists(DamageType.Physical));
+            Assert.AreEqual(new[] { DamageType.Fire }, resolved[0].Affinity.Weaknesses);
+            Assert.IsFalse(resolved[0].Affinity.Resists(DamageType.Fire));
         }
 
         [Test]

@@ -192,5 +192,49 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNotNull(error);
             StringAssert.Contains("Skill 'gnaw' belongs to unknown owner id 'giant_ratt'", error);
         }
+
+        // ---- 7. a skill's stance names a still its owner has (AUDIT #145 B4) ----
+
+        // Literal stand-in for the runtime loader: which stills exist where.
+        private static readonly HashSet<string> Stills = new HashSet<string>
+        {
+            "Characters/sheep/cast", "Characters/sheep_black_ram/victory", "Enemies/beetle/turtle_up",
+        };
+
+        private static bool Loads(string folder, string stance) => Stills.Contains($"{folder}/{stance}");
+
+        [Test]
+        public void AStanceTheOwnersFolderHasPasses()
+        {
+            Assert.IsNull(CatalogueCrossChecks.SkillStance("barrel_roll", "stance", "turtle_up",
+                new[] { "Enemies/beetle" }, Loads));
+        }
+
+        [Test]
+        public void AStanceOnlyAFormsFolderHasPasses()
+        {
+            // black_ram_mode's victory pose is drawn in the form's folder.
+            Assert.IsNull(CatalogueCrossChecks.SkillStance("black_ram_mode", "windupStance", "victory",
+                new[] { "Characters/sheep", "Characters/sheep_black_ram" }, Loads));
+        }
+
+        [Test]
+        public void AMisspelledStanceIsRefusedNamingTheFieldAndTheFolders()
+        {
+            string error = CatalogueCrossChecks.SkillStance("barrel_roll", "approachStance", "turtle_upp",
+                new[] { "Enemies/beetle" }, Loads);
+
+            Assert.IsNotNull(error);
+            StringAssert.Contains("Skill 'barrel_roll' names approachStance 'turtle_upp', which is not a still in Enemies/beetle",
+                error);
+        }
+
+        [Test]
+        public void NoStanceAuthoredOrNoArtYetIsNotThisRulesBusiness()
+        {
+            Assert.IsNull(CatalogueCrossChecks.SkillStance("shear", "stance", "", new[] { "Characters/sheep" }, Loads));
+            Assert.IsNull(CatalogueCrossChecks.SkillStance("slam", "stance", "slam", new string[0], Loads));
+            Assert.IsNull(CatalogueCrossChecks.SkillStance("slam", "stance", "slam", null, Loads));
+        }
     }
 }

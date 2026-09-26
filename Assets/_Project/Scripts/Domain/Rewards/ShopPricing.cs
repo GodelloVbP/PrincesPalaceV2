@@ -102,6 +102,13 @@ namespace PrincesPalace.Domain.Rewards
         // a switch over skill ids here -- so a sixth spell never needs this
         // file edited. Gate 1 sells no books; the table is here because the
         // price is a pricing fact, and pricing lives in one place.
+        //
+        // MaxBookTier is the top of that table, and SkillEntryResolver
+        // refuses a bookTier above it (AUDIT #145 B3): the default arm below
+        // would otherwise price a `bookTier: 9` as a tier-2 book with nothing
+        // saying so.
+        public const int MaxBookTier = 4;
+
         public static int BookPrice(int bookTier)
         {
             switch (bookTier)

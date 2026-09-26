@@ -214,6 +214,26 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // THE OTHER THREE BASE STATS, AND FAVOR (AUDIT #145 B8).
+            // maxHealth and speed above were refused at <= 0; these were not
+            // checked at all, so a negative defense validated and reached
+            // StatBlock, and a negative princesFavor was clamped to 0 without
+            // a word -- an authored number silently replaced. 0 stays legal
+            // for all four: no base attack or no defense is a real (if odd)
+            // character, and 0 favor is the field's own default.
+            foreach (var (name, value) in new (string, int)[]
+                     {
+                         ("attack", raw.attack), ("physicalDefense", raw.physicalDefense),
+                         ("magicalDefense", raw.magicalDefense), ("princesFavor", raw.princesFavor),
+                     })
+            {
+                if (value < 0)
+                {
+                    error = $"{label}: {name} cannot be negative (got {value}).";
+                    return false;
+                }
+            }
+
             var scores = new AbilityScoreBlock(raw.strength, raw.dexterity, raw.constitution,
                 raw.wisdom, raw.intelligence, raw.charisma);
 
@@ -358,7 +378,7 @@ namespace PrincesPalace.Domain.Content
                 hasSignature ? raw.signatureGainOnAttack : 0,
                 hasSignature ? raw.signatureGainOnDamageTaken : 0,
                 hasSignature && raw.signatureAbsorbsDamage,
-                raw.princesFavor < 0 ? 0 : raw.princesFavor,
+                raw.princesFavor,
                 sortOrder,
                 raw.startsInSquad,
                 raw.squadSlot,

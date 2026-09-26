@@ -4,6 +4,7 @@ using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Progression;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Content
@@ -452,8 +453,43 @@ namespace PrincesPalace.Content
                 }
             }
 
+            // Every folder an owner's stances can be drawn from: its own
+            // sprite folder, plus each transform form a skill it owns grants.
+            // See CatalogueCrossChecks.SkillStance.
+            var stanceFoldersByOwner = new Dictionary<string, List<string>>();
+            void AddStanceFolder(string owner, string folder)
+            {
+                if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(folder)) return;
+                if (!stanceFoldersByOwner.TryGetValue(owner, out var list))
+                {
+                    stanceFoldersByOwner[owner] = list = new List<string>();
+                }
+                if (!list.Contains(folder.Trim())) list.Add(folder.Trim());
+            }
+            foreach (var character in _characters) AddStanceFolder(character.id, character.Data.BattleSpritePath);
+            foreach (var enemy in _enemies) AddStanceFolder(enemy.id, enemy.Data.SpritePath);
             foreach (var skill in _skills)
             {
+                var form = skill.Data.Transform;
+                if (form != null && form.IsAuthored) AddStanceFolder(skill.Data.CharacterId, form.spritePath);
+            }
+
+            foreach (var skill in _skills)
+            {
+                // A STANCE NAMES A STILL THE OWNER HAS (AUDIT #145 B4), asked
+                // through the loader the fight itself uses.
+                stanceFoldersByOwner.TryGetValue(skill.Data.CharacterId ?? "", out var ownerFolders);
+                foreach (var (field, stance) in new (string, string)[]
+                         {
+                             ("stance", skill.Data.Stance),
+                             ("approachStance", skill.Data.ApproachStance),
+                             ("windupStance", skill.Data.WindupStance),
+                         })
+                {
+                    AddIfRefused(errors, CatalogueCrossChecks.SkillStance(skill.id, field, stance, ownerFolders,
+                        (folder, name) => StanceAnimationLibrary.Resolve(folder, name) != null));
+                }
+
                 // Mirrors the grantsStartingItemId check: a skill owned by a
                 // character who does not exist can never be pressed, and the
                 // typo is invisible until someone wonders where the button
@@ -539,10 +575,10 @@ namespace PrincesPalace.Content
                                "int.MaxValue -- bookOnly and unlockLevel cannot both be authored.");
                 }
 
-                if (skill.Data.BookTier < 0)
+                if (skill.Data.BookTier < 0 || skill.Data.BookTier > ShopPricing.MaxBookTier)
                 {
-                    errors.Add($"Skill '{skill.id}' has a negative bookTier ({skill.Data.BookTier}). 0 means not " +
-                               "book-eligible.");
+                    errors.Add($"Skill '{skill.id}' has bookTier {skill.Data.BookTier}, outside 0-" +
+                               $"{ShopPricing.MaxBookTier}. 0 means not book-eligible.");
                 }
 
                 // A free skill that touches a health or mana bar strictly

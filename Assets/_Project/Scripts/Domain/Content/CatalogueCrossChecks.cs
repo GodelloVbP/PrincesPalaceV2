@@ -121,5 +121,40 @@ namespace PrincesPalace.Domain.Content
             return $"Skill '{skillId}' belongs to unknown owner id '{ownerId}'. " +
                    "It must name a character or an enemy.";
         }
+
+        // A skill's stance / approachStance / windupStance names a still in
+        // its owner's art (AUDIT #145 B4). The resolver trims and stores the
+        // string and nothing opened a file, so a typo cost the pose with no
+        // symptom but the actor holding the wrong one.
+        //
+        // `ownerFolders` is every stance folder the owner can be drawn from:
+        // its own sprite folder plus each transform form's (a form skill's
+        // pose lives in the form's folder -- black_ram_mode's `victory` is in
+        // Characters/sheep_black_ram). `stanceLoads(folder, stance)` is the
+        // runtime's own loader in production and a literal in the tests. An
+        // owner with no folder at all has no art yet, which is graceful
+        // degradation rather than a typo, so it is not refused here.
+        public static string SkillStance(string skillId, string field, string stance,
+            IReadOnlyList<string> ownerFolders, System.Func<string, string, bool> stanceLoads)
+        {
+            if (string.IsNullOrWhiteSpace(stance)) return null;
+
+            var folders = new List<string>();
+            foreach (string folder in ownerFolders ?? System.Array.Empty<string>())
+            {
+                if (!string.IsNullOrWhiteSpace(folder)) folders.Add(folder.Trim());
+            }
+
+            if (folders.Count == 0) return null;
+
+            foreach (string folder in folders)
+            {
+                if (stanceLoads(folder, stance)) return null;
+            }
+
+            return $"Skill '{skillId}' names {field} '{stance}', which is not a still in " +
+                   $"{string.Join(" or ", folders)} -- the pose would silently not play. " +
+                   "Check the spelling against the PNG names in that folder.";
+        }
     }
 }

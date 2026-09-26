@@ -298,6 +298,18 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // THE TOP OF THE BAND TOO (AUDIT #145 B3). ShopPricing.BookPrice
+            // has one price per band and a default arm for anything else, so
+            // `bookTier: 9` validated and sold at the tier-2 price, in no
+            // band the schema names.
+            if (raw.bookTier > Rewards.ShopPricing.MaxBookTier)
+            {
+                error = $"{label}: bookTier {raw.bookTier} is above the top price band " +
+                        $"({Rewards.ShopPricing.MaxBookTier}). Bands are 1-{Rewards.ShopPricing.MaxBookTier}; " +
+                        "0 means not book-eligible.";
+                return false;
+            }
+
             int manaCost = raw.manaCost >= 0 ? raw.manaCost : DefaultManaCost;
             int resourceCost = raw.resourceCost >= 0 ? raw.resourceCost : DefaultResourceCost;
             int power = raw.power >= 0 ? raw.power : DefaultPower;

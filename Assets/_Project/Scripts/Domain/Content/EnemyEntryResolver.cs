@@ -195,6 +195,21 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // NOT WEAK TO WHAT IT HITS WITH (AUDIT #145 B6). The bog witch
+            // shipped weak to Poison while attacking with Poison, the one row
+            // off the roster's pattern of resisting its own element, and the
+            // owner re-authored her rather than justify it (#132). Nothing
+            // stopped the next row. Only an AUTHORED weakness is checked: a
+            // derived one is the id hash's guess, and a blank weakness is
+            // not the typo this catches.
+            if (!weaknessWasBlank && weaknesses.Contains(attackType))
+            {
+                error = $"{label}: weakness names {attackType}, which is this monster's own attackType. " +
+                        "A monster is not weak to the element it attacks with -- re-author the weakness (the " +
+                        "roster resists its own element; see AUDIT #132).";
+                return false;
+            }
+
             // Blank means "use the default" (right), but anything non-blank
             // and unrecognised is a hard error rather than a silent fall
             // back to the default: a facing typo renders as a monster
@@ -254,6 +269,21 @@ namespace PrincesPalace.Domain.Content
             if (abilities.Count > 0 && abilities.All(a => a.Weight <= 0f))
             {
                 error = $"{label}: every ability weight is zero, so none can ever be chosen.";
+                return false;
+            }
+
+            // NO PLAIN ATTACK, NO PLAIN-ATTACK STAGING (AUDIT #145 B5, the
+            // golem in #126). attackWeight 0 keeps the plain swing out of the
+            // draw pool (FightEncounterAdapter), so attackHoldsPosition and
+            // attackApproach -- both read only on a plain attack -- would be
+            // authored and never read. The same "no meaning on this row"
+            // refusal SkillEntryResolver makes for fields its effect ignores.
+            if (raw.attackWeight == 0f
+                && (raw.attackHoldsPosition || !string.IsNullOrWhiteSpace(raw.attackApproach)))
+            {
+                string field = raw.attackHoldsPosition ? "attackHoldsPosition" : "attackApproach";
+                error = $"{label}: {field} is authored on a row with attackWeight 0, which never makes a plain " +
+                        "attack -- it would never be read. Drop the field, or give the plain attack a weight.";
                 return false;
             }
 

@@ -506,6 +506,21 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // RULE 7's WIRING (AUDIT #145 B9): BuildAll reads the flag the rule
+        // turns on off the owner's real primary pool. Bjorn's `fury` is
+        // Fixed, so a MaxMana/ManaRegen node on his track would pay nothing
+        // and must be refused; Shawn's pool takes outside bonuses.
+        [Test]
+        public void BuildAllMarksAFixedCapacityPrimaryPoolAsTakingNoManaBonuses()
+        {
+            var contexts = RewardTrackCharacterContext.BuildAll(Pools(), Characters(), Skills());
+
+            Assert.IsFalse(contexts["bear"].PrimaryPoolTakesManaBonuses,
+                "bear's fury is capacityRule Fixed, which PoolPrecedence gives no outside bonus");
+            Assert.IsTrue(contexts["sheep"].PrimaryPoolTakesManaBonuses);
+            Assert.IsTrue(contexts["owl"].PrimaryPoolTakesManaBonuses);
+        }
+
         // Every level pays something -- rule 1 of the resolver, asserted
         // against the shipped content rather than only against a fixture.
         [TestCase("sheep")]

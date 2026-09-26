@@ -52,6 +52,14 @@ namespace PrincesPalace.Domain.Content
         // a fact about the OWNER's pool, not about the skill or the track.
         public bool PrimaryPoolStartsZero;
 
+        // WHETHER THIS CHARACTER'S PRIMARY POOL TAKES OUTSIDE MAX-MANA AND
+        // REGEN BONUSES AT ALL -- rule 7 (AUDIT #145 B9). PoolPrecedence.
+        // Capacity and .GainPerTurn drop every derived bonus on a pool whose
+        // CapacityRule is not WisdomDerived, which is where a track's
+        // MaxMana/ManaRegen totals land. True by default, so a context
+        // built without pools.json (a fixture) keeps the old answer.
+        public bool PrimaryPoolTakesManaBonuses = true;
+
         // Every element this character can already deal at level 1: their
         // own AttackType, plus the type of every damageInstances entry on a
         // skill authored to them with unlockLevel <= 1. Rule 4.
@@ -136,6 +144,8 @@ namespace PrincesPalace.Domain.Content
 
                 bool primaryPoolStartsZero = poolById.TryGetValue(character.PrimaryPoolId ?? "", out var primaryPool)
                     && primaryPool.StartRule == PoolStartRule.Zero;
+                bool primaryPoolTakesManaBonuses = primaryPool == null
+                    || primaryPool.CapacityRule == PoolCapacityRule.WisdomDerived;
 
                 contexts[character.Id] = new RewardTrackCharacterContext
                 {
@@ -143,6 +153,7 @@ namespace PrincesPalace.Domain.Content
                     HasSignatureResource = character.HasSignatureResource,
                     SignatureDisplayName = character.SignatureDisplayName,
                     PrimaryPoolStartsZero = primaryPoolStartsZero,
+                    PrimaryPoolTakesManaBonuses = primaryPoolTakesManaBonuses,
                     Level1DamageTypes = level1Types,
                     SkillDisplayNames = everySkillName,
                     Skills = everySkillContext,
@@ -160,8 +171,9 @@ namespace PrincesPalace.Domain.Content
     // signature-resource rule depends on which character the track belongs
     // to. See docs/archive/PLAN_REWARD_TRACKS.md §4, "the validation rules".
     //
-    // FOUR RULES, DOWN FROM FIVE AT PHASE 4 AND UP ONE SINCE (the P3 fury
-    // addendum below). Every level from StartingLevel+1 to MaxLevel carries
+    // FIVE RULES: four (down from five at Phase 4, then up one for the P3
+    // fury addendum), plus rule 7 from AUDIT #145 B9 -- MaxMana/ManaRegen
+    // refused on a primary pool that ignores outside mana bonuses. Every level from StartingLevel+1 to MaxLevel carries
     // exactly one entry and no entry names a level outside that span (rule
     // 1, which now subsumes rule 2's "the filler counts add up"); a
     // one-shot capability appears at most once (rule 1's second half); a
@@ -437,6 +449,21 @@ namespace PrincesPalace.Domain.Content
                 error = $"{trackLabel}, {where}: FuryStartOfFight is only legal on a character whose primary pool " +
                         "starts at Zero, with an amount above 0 -- it may only raise a zero-start pool, because " +
                         "SkillEntryResolver's free-action exemption reasons from that same start rule.";
+                return false;
+            }
+
+            // RULE 7 (AUDIT #145 B9, the #134 detour made a rule): MaxMana and
+            // ManaRegen feed the derived max-mana and regen totals, and
+            // PoolPrecedence ignores both on a primary pool whose CapacityRule
+            // is not WisdomDerived (Bjorn's `fury` is Fixed). Such a node
+            // would render, be claimed, and pay nothing -- the same
+            // pays-nothing shape rule 5 refuses for a signature reward.
+            if ((reward == TrackReward.MaxMana || reward == TrackReward.ManaRegen)
+                && !context.PrimaryPoolTakesManaBonuses)
+            {
+                error = $"{trackLabel}, {where}: {rawReward} is authored on a character whose primary pool has a " +
+                        "fixed capacity rule, which ignores every outside max-mana and regen bonus -- it would " +
+                        "pay nothing.";
                 return false;
             }
 
