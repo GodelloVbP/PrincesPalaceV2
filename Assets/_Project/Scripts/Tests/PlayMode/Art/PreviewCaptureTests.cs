@@ -334,19 +334,10 @@ namespace PrincesPalace.PlayModeTests
         // photographed exactly none of it.
         private const int TailSamples = 9;
 
-        // How long to wait for the cast to put ANYTHING on screen before giving
-        // up and counting from the press instead. Four seconds of sampled time,
-        // which is several times the longest beat this game has.
+        // How long to wait after the press for the cast it begins. Four
+        // seconds of sampled time, several times the longest wind-up and lunge
+        // this game has; a press that begins no cast in that time fails.
         private const int ReleaseFrameBudget = 120;
-
-        // AND ONE EARLY, BEFORE THE BLOW HAS ANYTHING TO DO WITH IT. Three
-        // samples is 0.10s from the release, which is mid-flight for the
-        // pilot's 0.25s travel -- the only instant at which its core and the
-        // wake riding it are on screen at all. The three frames around the
-        // impact are all past the arrival, so a projectile spell's projectile
-        // was in none of them: "before" means "before the blow", and for a fast
-        // cast that is still after the ball has landed.
-        private const int FlightSample = 3;
 
         private IEnumerator CaptureOneSpell(string id, string element)
         {
@@ -441,7 +432,25 @@ namespace PrincesPalace.PlayModeTests
                 Vfx = PreviewFight.PreviewPresentationOf(plan.Skill, plan.Element),
             });
 
-            int impactSample = Mathf.Max(FlankSamples, Mathf.RoundToInt(impactSeconds / SpellSampleSeconds));
+            var module = fight.PerformancePlayerForTest;
+            Assert.IsNotNull(module, "the fight scene has no performance player");
+
+            // THE CAST THIS PRESS BEGINS, by its handle -- see the anchoring
+            // comment below. Read before the press so the one begun by it is
+            // the first handle that differs.
+            var beforePress = module.LastBegunForTest;
+
+            // THE CUE, AS THE CAST'S OWN SCHEDULE CROSSES IT. Recorded so the
+            // log can say which frame the "_impact" file landed on against the
+            // frame the blow was actually dispatched, instead of assuming.
+            int cueCrossedAt = -1;
+            int frame = 0;
+            var cast = CastHandle.None;
+            System.Action<CastHandle> onCue = h =>
+            {
+                if (cueCrossedAt < 0 && h.Equals(cast)) cueCrossedAt = frame;
+            };
+            module.HitCueCrossedForTest += onCue;
 
             fight.ForceFirstAction(id, plan.Element);
 
@@ -459,47 +468,49 @@ namespace PrincesPalace.PlayModeTests
             string prefix = "spell_" + id +
                 (string.IsNullOrEmpty(plan.Element) ? "" : "_" + plan.Element.ToLowerInvariant()) +
                 (versus.Length > 0 ? "_vs_" + string.Join("-", versus) : "");
-            var wanted = new Dictionary<int, string>
-            {
-                { impactSample - FlankSamples, prefix + "_before.png" },
-                { impactSample, prefix + "_impact.png" },
-                { impactSample + FlankSamples, prefix + "_after.png" },
-                { impactSample + TailSamples, prefix + "_tail.png" },
-            };
 
-            // ADDED LAST AND ONLY IF IT IS ITS OWN INSTANT. A spell whose cue
-            // lands within five samples of the release would collide with
-            // "before", and one picture cannot be two instants: the flanking
-            // frames are the ones that answer "did the blow land with the
-            // number", so they keep the sample.
-            if (!wanted.ContainsKey(FlightSample)) wanted[FlightSample] = prefix + "_flight.png";
+            var wanted = SpellSampleSchedule(impactSeconds)
+                .Select(s => (Name: prefix + "_" + s.Name + ".png", s.CastSeconds))
+                .ToList();
 
-            // SAMPLE ZERO IS THE FRAME THE CAST FIRST DRAWS, not the frame the
-            // button was pressed. Between the two sit the beat's own wind-up,
-            // its stance change and its lunge -- a fixed but unstated number of
-            // frames -- and impactSeconds is measured from the cast's release,
-            // so counting from the press put every sample that many frames
-            // early. Anchoring on "something is on screen" needs no seam and
-            // is the release by definition.
+            // SAMPLE ZERO IS THE FRAME THIS CAST BEGINS, named by its handle.
+            //
+            // AUDIT #207: this used to wait for "any effect renderer showing a
+            // frame", on the theory that nothing is drawn before the release.
+            // Something always was -- every sheep spell logged "0 frames after
+            // the press" -- so the samples were counted from the press, early
+            // by the whole wind-up and lunge, and Crownfall's "_impact" file
+            // showed its spike still in the air (QA read it as a miss). The
+            // handle is the cast itself, whatever else happens to be on screen.
             int waited = 0;
-            while (!AnythingDrawn(fight) && waited < ReleaseFrameBudget)
+            while (waited < ReleaseFrameBudget &&
+                   (module.LastBegunForTest.Equals(beforePress) || !module.LastBegunForTest.IsLive))
             {
                 waited++;
                 yield return null;
             }
 
-            bool anchored = waited < ReleaseFrameBudget;
+            Assert.Less(waited, ReleaseFrameBudget,
+                "'" + id + "' was pressed but never began a cast of its own, so there is no clock to sample on");
+            cast = module.LastBegunForTest;
 
+            // EACH NAMED FRAME IS TAKEN ON THE CAST'S OWN CLOCK, not on a frame
+            // count. HasReached reads the cast's Cursor -- the same authored
+            // seconds its layers are painted from -- so "_impact" is the first
+            // frame at which the cast has reached its hit cue, which is the
+            // frame the layers authored `at: hit` open. A beat's hit-stop
+            // freezes that clock while frames keep running (be9855a0), so a
+            // frame count from the anchor would drift off the blow again the
+            // moment a hold lands; this cannot.
             int observedImpact = -1;
             int groundLit = -1;
             int busyPopups = 0;
-            int sample = 0;
-            int last = wanted.Keys.Max();
+            var takenAt = new Dictionary<string, int>();
 
-            while (sample <= last)
+            while (takenAt.Count < wanted.Count && frame < SpellLoopSafetyFrames)
             {
                 int popups = player.Popups.Count(pp => pp != null && !pp.IsFree);
-                if (observedImpact < 0 && popups > busyPopups) observedImpact = sample;
+                if (observedImpact < 0 && popups > busyPopups) observedImpact = frame;
                 busyPopups = popups;
 
                 // THE GROUND LAYER, WHEN AUTHORED. Only some spells have
@@ -509,41 +520,96 @@ namespace PrincesPalace.PlayModeTests
                 var ground = fight.GroundVfxPlayerForTest;
                 if (groundLit < 0 && ground != null && ground.Image != null && ground.Image.enabled)
                 {
-                    groundLit = sample;
+                    groundLit = frame;
                     CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, prefix + "_ground.png"));
                 }
 
-                if (wanted.TryGetValue(sample, out string name))
+                foreach (var sample in wanted)
                 {
-                    CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, name));
+                    if (takenAt.ContainsKey(sample.Name) || !module.HasReached(cast, sample.CastSeconds)) continue;
+                    takenAt[sample.Name] = frame;
+                    CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, sample.Name));
                 }
 
-                sample++;
+                frame++;
                 yield return null;
             }
 
+            module.HitCueCrossedForTest -= onCue;
             Time.captureFramerate = 0;
 
-            Debug.Log("[PreviewCapture] '" + id + "': impact scheduled at sample " + impactSample +
-                      " (" + impactSeconds.ToString("F3") + "s from ImpactDelayFor), popup observed at sample " +
-                      (observedImpact < 0 ? "never" : observedImpact.ToString()) +
-                      (groundLit < 0 ? ", no ground layer authored" : ", ground layer lit at sample " + groundLit) +
-                      (anchored
-                          ? ", sample 0 = the frame the cast first drew (" + waited + " frames after the press)"
-                          : ", NOTHING WAS EVER DRAWN -- samples counted from the press, so every one of " +
-                            "them is early by the beat's wind-up"));
+            Assert.AreEqual(wanted.Count, takenAt.Count,
+                "'" + id + "': the cast's clock never reached " +
+                string.Join(", ", wanted.Where(w => !takenAt.ContainsKey(w.Name)).Select(w => w.Name)));
 
-            foreach (var name in wanted.Values)
+            string impactFile = wanted.First(w => w.Name.EndsWith("_impact.png")).Name;
+            Debug.Log("[PreviewCapture] '" + id + "': hit cue at " + impactSeconds.ToString("F3") +
+                      "s of the cast's clock; cast began " + waited + " frames after the press; _impact taken at frame " +
+                      takenAt[impactFile] + ", cue crossed at frame " +
+                      (cueCrossedAt < 0 ? "never" : cueCrossedAt.ToString()) + ", popup observed at frame " +
+                      (observedImpact < 0 ? "never" : observedImpact.ToString()) +
+                      (groundLit < 0 ? ", no ground layer authored" : ", ground layer lit at frame " + groundLit));
+
+            foreach (var sample in wanted)
             {
-                Debug.Log("[PreviewCapture] wrote " + Path.Combine(OutputDir, name));
+                Debug.Log("[PreviewCapture] wrote " + Path.Combine(OutputDir, sample.Name) +
+                          " (cast clock " + sample.CastSeconds.ToString("F3") + "s, frame " + takenAt[sample.Name] + ")");
             }
         }
 
-        // Whether the cast has begun drawing -- any effect renderer in either
-        // band showing a frame. The release instant, without a seam for it.
-        private static bool AnythingDrawn(FightController fight) =>
-            fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
-                .Any(p => p != null && p.Image != null && p.Image.enabled);
+        // AUDIT #207's schedule, pinned in literals: every named file is an
+        // instant of the CAST's clock around its own hit cue, so "_impact" is
+        // the blow itself and not the moment a press-anchored count reached.
+        [Test]
+        public void SpellSamplesSitOnTheCastsOwnClockAroundItsCue()
+        {
+            var schedule = SpellSampleSchedule(0.6f);
+            CollectionAssert.AreEqual(new[] { "flight", "before", "impact", "after", "tail" },
+                schedule.Select(s => s.Name).ToArray());
+            CollectionAssert.AreEqual(new[] { 0.3f, 0.53333f, 0.6f, 0.66667f, 0.9f },
+                schedule.Select(s => s.CastSeconds).ToArray(), new FloatWithin(0.0001f));
+
+            // A cue this early leaves no instant between the start and
+            // "before", so there is no flight picture rather than a duplicate.
+            CollectionAssert.AreEqual(new[] { "before", "impact", "after", "tail" },
+                SpellSampleSchedule(0.1f).Select(s => s.Name).ToArray());
+        }
+
+        private sealed class FloatWithin : System.Collections.IComparer
+        {
+            private readonly float _tolerance;
+            public FloatWithin(float tolerance) { _tolerance = tolerance; }
+            public int Compare(object x, object y) =>
+                Mathf.Abs((float)x - (float)y) <= _tolerance ? 0 : ((float)x).CompareTo((float)y);
+        }
+
+        // Frames after the cast begins before the loop gives up. Ten seconds
+        // of sampled time; the tail sits well inside that for any cast.
+        private const int SpellLoopSafetyFrames = 300;
+
+        // WHICH INSTANT OF THE CAST EACH FILE IS, in the cast's own authored
+        // seconds, given its hit cue. before/impact/after/tail sit where they
+        // always did relative to the blow (FlankSamples, TailSamples); only
+        // the clock they are measured on moved. "flight" is halfway from the
+        // cast's start to the blow -- mid-travel for a projectile, mid-fall
+        // for a sky spell -- and is dropped when it would not come before
+        // "before", since one picture cannot be two instants and the flanking
+        // frames are the ones that answer "did the blow land with the number".
+        public static List<(string Name, float CastSeconds)> SpellSampleSchedule(float hitCueSeconds)
+        {
+            float flank = FlankSamples * SpellSampleSeconds;
+            float beforeAt = Mathf.Max(0f, hitCueSeconds - flank);
+
+            var schedule = new List<(string Name, float CastSeconds)>();
+            float flightAt = hitCueSeconds * 0.5f;
+            if (flightAt < beforeAt) schedule.Add(("flight", flightAt));
+
+            schedule.Add(("before", beforeAt));
+            schedule.Add(("impact", hitCueSeconds));
+            schedule.Add(("after", hitCueSeconds + flank));
+            schedule.Add(("tail", hitCueSeconds + TailSamples * SpellSampleSeconds));
+            return schedule;
+        }
 
         // ---- tools/preview.ps1 -Character <id> --------------------------------
 
