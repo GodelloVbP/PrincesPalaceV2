@@ -51,5 +51,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1188f, log.Rect.Width, 0.01f);
             Assert.AreEqual(108f, log.Rect.Height, 0.01f);
         }
+
+        // READABLE ON ANY BACKDROP. QA 2026-09-26 (REPORT 1.6): white log text
+        // over the treant stage's pale canopy was hard to read, and the muted
+        // ENEMIES heading above the plates was not readable at all. Every
+        // label that floats on the stage art with no plate of its own carries
+        // the dark edge; FightFlowTests checks the edge actually draws.
+        [TestCase("MessageLabel")]
+        [TestCase("EnemiesHeading")]
+        [TestCase("EnemiesHint")]
+        public void TextFloatingOnTheStageArtCarriesTheDarkEdge(string name)
+        {
+            var root = UiSolver.Solve(FightScreen.Build().Root, UiFrames.Reference);
+            var label = Find(root, name);
+            Assert.IsNotNull(label, $"no {name} in the fight tree");
+            Assert.IsTrue(label.Source.DrawsOverArt, $"{name} sits on the stage art without the dark edge");
+        }
     }
 }

@@ -216,6 +216,14 @@ namespace PrincesPalace.Domain.UiKit
         // measure at build time.
         public bool Truncates;
 
+        // Label only. A label with no plate of the kit's behind it -- the
+        // fight log, the ENEMIES heading -- whose background is whatever the
+        // stage art and the spells put there. The emitter adds OverArtEdge,
+        // which rings the glyphs in near-black at runtime, because no face
+        // colour contrasts with a pale canopy and a dark trunk at once (QA
+        // 2026-09-26 REPORT 1.6). False leaves the label exactly as before.
+        public bool DrawsOverArt;
+
         // Escape hatches. Both REQUIRE a reason, so every exemption is greppable
         // and reviewable -- in v1 everything was an escape hatch and none of them
         // were enumerable.
@@ -396,6 +404,10 @@ namespace PrincesPalace.Domain.UiKit
         // caption already gets (UiEmitter.WireThemedButton), exposed on the
         // plain Label path for a runtime string with no authored ceiling.
         public UiNode Truncated() { Truncates = true; return this; }
+
+        // Drawn straight on the art, with no kit plate behind it -- see
+        // DrawsOverArt's own comment.
+        public UiNode OverArt() { DrawsOverArt = true; return this; }
 
         // Containers default to FromChildren, which is right almost always. A
         // Fixed size is what a container needs before any child can Fill it --

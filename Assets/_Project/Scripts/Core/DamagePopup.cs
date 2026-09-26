@@ -247,26 +247,15 @@ namespace PrincesPalace
         // not share it. Written on every play rather than once, because the
         // glow's own writes go through the same instance and a TMP material
         // refresh would otherwise be the thing that decides whether it stuck.
-        internal const float OutlineWidth = 0.22f;
-        internal static readonly Color32 OutlineColour = new Color32(10, 7, 16, 235);
-
         //
-        // THE KEYWORD TOO. The fonts are on TMP_SDF-Mobile, whose outline
-        // branch is `#ifdef OUTLINE_ON` -- setting the width alone changes a
-        // number no pixel reads, which is how the first cut of this passed its
-        // property test and drew no edge in the capture. The variant ships
-        // because OnBarCaption's material already enables it on that shader.
-        private void ApplyOutline()
-        {
-            var material = label.fontMaterial;
-            if (material != null && !material.IsKeywordEnabled(ShaderUtilities.Keyword_Outline))
-            {
-                material.EnableKeyword(ShaderUtilities.Keyword_Outline);
-            }
+        // Through OverArtEdge.Apply, the one place that knows the OUTLINE_ON
+        // keyword has to be switched on as well (see its header). Narrower
+        // than the log's edge and no dilate: a 40pt number's strokes are thick
+        // enough to give up half the ring.
+        internal const float OutlineWidth = 0.22f;
+        internal static readonly Color32 OutlineColour = OverArtEdge.EdgeColour;
 
-            label.outlineColor = OutlineColour;
-            label.outlineWidth = OutlineWidth;
-        }
+        private void ApplyOutline() => OverArtEdge.Apply(label, OutlineWidth, dilate: 0f);
 
         // A pure static seam, like every other animator in this project: the
         // curve can be pinned by a test without a scene, a coroutine or a frame.

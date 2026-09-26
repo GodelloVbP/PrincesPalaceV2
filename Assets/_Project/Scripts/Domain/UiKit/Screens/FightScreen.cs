@@ -1035,7 +1035,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // from the same constants, so a wider plate moves the log with it.
             var label = Ui.Label("MessageLabel", UiString.Runtime,
                 new UiVec(LogLabelRight - LogLabelLeft, LogLabelHeight), 20,
-                FightHudPalette.TextPrimary, Place.At(LogLabelLeft, -8f, new UiVec(0f, 0.5f)));
+                FightHudPalette.TextPrimary, Place.At(LogLabelLeft, -8f, new UiVec(0f, 0.5f)))
+                // ON THE ART, NOT A PLATE: the box went (see above) and the
+                // text was left white on whatever the stage put behind it --
+                // QA 2026-09-26 could barely read it over the treant's pale
+                // canopy. The dark edge is what keeps it readable there, over
+                // a dark trunk, and over a spell drawn across it.
+                .OverArt();
 
             BarkPortrait = portrait;
             BarkLabel = label;
@@ -1196,12 +1202,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             yield return Ui.Label("EnemiesHeading", UiStrings.EnemiesHeading,
                 new UiVec(155f, EnemiesHeadingHeight), 12,
                 FightHudPalette.TextMuted,
-                Place.At(PlateFirstX - PlateW * 0.5f, EnemiesHeadingY, new UiVec(0f, 0.5f)));
+                Place.At(PlateFirstX - PlateW * 0.5f, EnemiesHeadingY, new UiVec(0f, 0.5f)))
+                // Above the plates, so on the canopy: muted grey on the
+                // treant stage's pale sky read as nothing at all.
+                .OverArt();
 
             var hint = Ui.Label("EnemiesHint", UiStrings.StandingCount,
                 new UiVec(240f, EnemiesHeadingHeight), 12,
                 FightHudPalette.TextDisabled,
-                Place.At(PlateBlockRight, EnemiesHeadingY, new UiVec(1f, 0.5f)));
+                Place.At(PlateBlockRight, EnemiesHeadingY, new UiVec(1f, 0.5f)))
+                .OverArt();
             EnemiesHint = hint;
             yield return hint;
         }

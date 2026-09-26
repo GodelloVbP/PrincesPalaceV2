@@ -235,6 +235,12 @@ public static class UiEmitter
             text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Ellipsis;
         }
+
+        // OverArt() -- see UiNode.DrawsOverArt. A component rather than a
+        // material written here, because a material built at scene-build time
+        // is not an asset and would not survive the scene save; the component
+        // makes the label's own instance at Awake.
+        if (node.DrawsOverArt) go.AddComponent<OverArtEdge>();
     }
 
     // THE single resolution point for a label's typographic dressing: font

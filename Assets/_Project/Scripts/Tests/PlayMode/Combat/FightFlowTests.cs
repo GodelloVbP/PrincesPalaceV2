@@ -163,6 +163,30 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.DoesNotContain("#0", label.text, "nothing was trimmed, so this did not exercise the fit");
         }
 
+        // THE LOG'S DARK EDGE ACTUALLY DRAWS. QA 2026-09-26: white log text
+        // over the treant's pale canopy was hard to read. A width with no
+        // OUTLINE_ON keyword draws nothing on TMP_SDF-Mobile (DamagePopup's
+        // first cut shipped exactly that), so the keyword is pinned, and the
+        // instance is the label's own -- the shared font material every other
+        // label draws with stays edge-free.
+        [UnityTest]
+        public IEnumerator TheLogCarriesADarkEdgeOnItsOwnMaterial()
+        {
+            yield return LoadFight();
+            _fight.PushLogLineForTest("The forest closes in.");
+            yield return null;
+
+            var label = Named("MessageLabel").GetComponent<TMP_Text>();
+            Assert.IsNotNull(label.GetComponent<OverArtEdge>(), "the scene's log has no OverArtEdge -- rebuild scenes");
+
+            var material = label.fontSharedMaterial;
+            Assert.AreNotSame(label.font.material, material, "the edge was written onto the font's shared material");
+            Assert.IsTrue(material.IsKeywordEnabled(ShaderUtilities.Keyword_Outline), "OUTLINE_ON is off, so no edge draws");
+            Assert.AreEqual(0.4f, material.GetFloat(ShaderUtilities.ID_OutlineWidth), 0.001f);
+            Color edge = material.GetColor(ShaderUtilities.ID_OutlineColor);
+            Assert.Less(edge.r + edge.g + edge.b, 0.3f, "the edge is not dark");
+        }
+
         [UnityTest]
         public IEnumerator ThePlatesReadTheRealEnemies()
         {
