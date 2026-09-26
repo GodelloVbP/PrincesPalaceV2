@@ -203,6 +203,9 @@ if ($Runtime) {
     Write-Host "Capturing the RUNNING game to $runtimeOut ..."
     $proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(
         "-batchmode", "-silent-crashes",
+        # 1920x1080 play-mode view, not batchmode's 4:3 640x480 -- see
+        # Editor/CaptureReferenceScreen.cs.
+        "-ppReferenceScreen",
         "-projectPath", "`"$TestProject`"",
         "-runTests", "-testPlatform", "PlayMode",
         "-testFilter", "PrincesPalace.PlayModeTests.$RuntimeFilter",

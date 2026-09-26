@@ -40,6 +40,14 @@ Triage order, cheapest first:
   foreground. Opt out with `$env:PP_GRAPHICS_DESKTOP = 'visible'` (it
   reaches child scripts) if captures come back with "No graphics device".
   `preview.ps1 -Launch` (the interactive Editor) always stays visible.
+- Capture launches (`graphics_tests.ps1`, so `preview.ps1` and
+  `static_pilot_qa.ps1`; `screenshot.ps1 -Runtime`) pass
+  `-ppReferenceScreen`, and `Editor/CaptureReferenceScreen.cs` sets the
+  play-mode view to `UiFrames.Reference` (1920x1080) before Play. Without
+  it a batchmode Editor plays at 640x480, the canvas solves at 4:3
+  (1920x1440), and every edge-anchored element lands where it would on a
+  4:3 monitor. The log shows `[CaptureReferenceScreen] ... 1920x1080`. The
+  `-nographics` gate does not pass it and still plays at 640x480.
 - Mechanism, the two 2026-09-18 fixes, and the `.ExitCode` gotcha:
   `docs/INCIDENTS.md` ("Batchmode Unity steals focus").
 - Run `tools/focus_check.ps1` after touching any launch site or either

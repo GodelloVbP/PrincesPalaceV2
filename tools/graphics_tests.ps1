@@ -79,6 +79,9 @@ if (Test-Path $results) { Remove-Item $results }
 $unityArgs = @(
     "-projectPath", "`"$Target`"",
     "-batchmode", "-silent-crashes",
+    # Plays at UiFrames.Reference (1920x1080) instead of batchmode's 640x480,
+    # which put every capture on a 4:3 canvas. Editor/CaptureReferenceScreen.cs.
+    "-ppReferenceScreen",
     "-runTests", "-testPlatform", "PlayMode",
     "-testFilter", $Filter,
     "-testResults", "`"$results`"",
