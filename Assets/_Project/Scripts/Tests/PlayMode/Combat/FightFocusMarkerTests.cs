@@ -280,6 +280,77 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Marker.IsShown, "the arrowed-onto row is back in the window, and so is the marker");
         }
 
+        // QA 2026-09-26: the submenu stands 8px from the verb column, so the
+        // arrow drawn LEFT of a focused list row landed on the ITEM / MOVE
+        // verb and read as selecting it. Through the real dispatcher: open
+        // the ITEM list, step to a row level with a verb, and the marker must
+        // cover no verb button (FocusMarkerPlacement.EdgeFor's neighbour
+        // rule moves it to the row's other side).
+        [UnityTest]
+        public IEnumerator TheMarkerBesideAFocusedSubmenuRow_CoversNoVerbButton()
+        {
+            yield return LoadFight();
+            yield return BindAnEncounterWithALongSatchel();
+
+            yield return Move(1f);
+            yield return Move(1f);
+            Assert.AreEqual(2, _fight.FocusedVerbForTest, "precondition: the stick reached ITEM");
+            yield return PressSubmit();
+
+            // Down to the fourth row -- the one level with the ITEM verb in
+            // the QA capture (Rally beside ITEM).
+            yield return Move(-1f);
+            yield return Move(-1f);
+            yield return Move(-1f);
+
+            // Let any open animation settle; the marker re-decides whenever
+            // its target's box moves.
+            for (int i = 0; i < 20; i++) yield return DriveFrame();
+
+            Assert.AreSame(Node("CharacterSkill3").transform, Marker.Target,
+                "precondition: three stick-downs focus the fourth row");
+            Assert.IsTrue(Marker.IsShown, "precondition: the marker is drawn");
+
+            var frame = (RectTransform)Marker.transform.parent;
+            var row = BoxIn(frame, (RectTransform)Node("CharacterSkill3").transform);
+
+            float half = FocusMarkerPlacement.Size * 0.5f;
+            var marker = new Rect(Marker.LocalPosition.x - half, Marker.LocalPosition.y - half,
+                FocusMarkerPlacement.Size, FocusMarkerPlacement.Size);
+
+            // Where the shape rule alone would have drawn it: left of the row.
+            var leftOfRow = new Rect(row.xMin - FocusMarkerPlacement.Gap - FocusMarkerPlacement.Size,
+                row.center.y - half, FocusMarkerPlacement.Size, FocusMarkerPlacement.Size);
+            bool leftWasTaken = false;
+
+            for (int v = 0; v < 4; v++)
+            {
+                var verb = Node($"Verb{v}");
+                if (verb == null || !verb.activeInHierarchy) continue;
+
+                var box = BoxIn(frame, (RectTransform)verb.transform);
+                if (leftOfRow.Overlaps(box)) leftWasTaken = true;
+                Assert.IsFalse(marker.Overlaps(box),
+                    $"the marker at {Marker.LocalPosition} overlaps Verb{v} ({box}) -- it reads as selecting that verb");
+            }
+
+            Assert.IsTrue(leftWasTaken,
+                "precondition: this row is level with a verb, so a marker on its left edge would cover it");
+
+            Assert.AreEqual(row.center.y, Marker.LocalPosition.y, 0.5f,
+                "still level with the focused row it points at");
+        }
+
+        private static Rect BoxIn(RectTransform frame, RectTransform target)
+        {
+            var corners = new Vector3[4];
+            target.GetWorldCorners(corners);
+            var min = frame.InverseTransformPoint(corners[0]);
+            var max = frame.InverseTransformPoint(corners[2]);
+            return Rect.MinMaxRect(Mathf.Min(min.x, max.x), Mathf.Min(min.y, max.y),
+                Mathf.Max(min.x, max.x), Mathf.Max(min.y, max.y));
+        }
+
         // A HOVER CAN OUTLIVE THE MONSTER IT LANDED ON. AddEnemyHover wires
         // PointerEnter straight to OnEnemyHovered with no alive check, so the
         // pointer can still be sitting on a plate/figure whose enemy died

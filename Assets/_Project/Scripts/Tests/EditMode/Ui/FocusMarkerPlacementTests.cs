@@ -163,6 +163,80 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(FocusMarkerPlacement.IsVisibleWithin(Box(300f, 0f, 40f, 40f), Box(0f, 0f, 240f, 300f)));
         }
 
+        // ---- a neighbour on the shape's edge (QA 2026-09-26) ----------------
+        //
+        // The fight's skill rows sit 8px from the verb column: a 300x50 row
+        // at the origin, a 300x50 ITEM button with its right edge at -150-8.
+        // Left of the row the marker's centre is -150 - 10 - 13 = -173 and,
+        // with its 3-unit bob, it covers -189..-157 -- over ITEM's right edge
+        // at -158. So it goes to the right: 150 + 10 + 13 = 173.
+        [Test]
+        public void ARowWhoseLeftIsTakenByAnotherControl_GetsTheMarkerOnItsRight()
+        {
+            var row = Box(0f, 0f, 300f, 50f);
+            var obstacles = new[] { Box(-308f, 0f, 300f, 50f) };
+
+            var edge = FocusMarkerPlacement.EdgeFor(row, Canvas, obstacles);
+            Assert.AreEqual(FocusEdge.Right, edge);
+
+            var at = FocusMarkerPlacement.Place(row, Canvas, edge);
+            Assert.AreEqual(173f, at.X, 0.001f);
+            Assert.AreEqual(0f, at.Y, 0.001f);
+        }
+
+        // Nothing nearby: the shape's edge, exactly as before the rule.
+        [Test]
+        public void WithNoObstacles_TheShapesEdgeStands()
+        {
+            Assert.AreEqual(FocusEdge.Left,
+                FocusMarkerPlacement.EdgeFor(Box(0f, 0f, 300f, 50f), Canvas, new UiRect[0]));
+            Assert.AreEqual(FocusEdge.Above,
+                FocusMarkerPlacement.EdgeFor(Box(0f, 0f, 100f, 150f), Canvas, new UiRect[0]));
+        }
+
+        // The dossier's pack cells: a 100x150 cell, and the NAME of the cell
+        // above ("Gloves") 100x20 centred at y 110. Above the cell the marker
+        // is at 75 + 10 + 13 = 98 and covers 82..114 with its bob -- over the
+        // text's 100..120. The opposite side is below: -98.
+        [Test]
+        public void ACellWhoseTopIsTakenByText_GetsTheMarkerBelowIt()
+        {
+            var cell = Box(0f, 0f, 100f, 150f);
+            var obstacles = new[] { Box(0f, 110f, 100f, 20f) };
+
+            var edge = FocusMarkerPlacement.EdgeFor(cell, Canvas, obstacles);
+            Assert.AreEqual(FocusEdge.Below, edge);
+            Assert.AreEqual(-98f, FocusMarkerPlacement.Place(cell, Canvas, edge).Y, 0.001f);
+        }
+
+        // Left and right both taken, and the rows above and below too (a row
+        // in the middle of a list flanked on both sides): the other axis is
+        // no better, so the shape's edge stands rather than jumping about.
+        [Test]
+        public void WhenEveryEdgeIsTaken_TheShapesEdgeStands()
+        {
+            var row = Box(0f, 0f, 300f, 50f);
+            var obstacles = new[]
+            {
+                Box(-308f, 0f, 300f, 50f),
+                Box(308f, 0f, 300f, 50f),
+                Box(0f, 62f, 300f, 50f),
+                Box(0f, -62f, 300f, 50f),
+            };
+
+            Assert.AreEqual(FocusEdge.Left, FocusMarkerPlacement.EdgeFor(row, Canvas, obstacles));
+        }
+
+        [Test]
+        public void TheRightAndBelowEdgesPointBackAtTheControl()
+        {
+            Assert.AreEqual(180f, FocusMarkerPlacement.RotationFor(FocusEdge.Right), 0.001f);
+            Assert.AreEqual(90f, FocusMarkerPlacement.RotationFor(FocusEdge.Below), 0.001f);
+
+            Assert.AreEqual(-3f, FocusMarkerPlacement.BobOffset(FocusEdge.Right, 0f).X, 0.001f, "toward the control: -x");
+            Assert.AreEqual(3f, FocusMarkerPlacement.BobOffset(FocusEdge.Below, 0f).Y, 0.001f, "toward the control: +y");
+        }
+
         // ---- which way it points ------------------------------------------
 
         [Test]

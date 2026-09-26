@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Domain.UiKit;
 
@@ -146,7 +149,7 @@ namespace PrincesPalace
                 new UiVec(canvasRect.rect.center.x, canvasRect.rect.center.y),
                 new UiVec(canvasRect.rect.width, canvasRect.rect.height));
 
-            var edge = FocusMarkerPlacement.EdgeFor(box.Size);
+            var edge = EdgeFor(canvasRect, box, frame);
             var at = FocusMarkerPlacement.Place(box, frame, edge)
                      + FocusMarkerPlacement.BobOffset(edge, Time.unscaledTime);
 
@@ -154,6 +157,166 @@ namespace PrincesPalace
             _rect.localRotation = Quaternion.Euler(0f, 0f, FocusMarkerPlacement.RotationFor(edge));
             _rect.localScale = Vector3.one;
             _image.enabled = true;
+        }
+
+        // WHICH EDGE, with the neighbours consulted (FocusMarkerPlacement.
+        // EdgeFor's header: a marker on another control reads as selecting
+        // it). Decided EVERY FRAME, not cached: the first version kept its
+        // answer for a quarter second and the capture caught it deciding
+        // while the pack panel was still fading in (its sort tabs at alpha
+        // 0, so not yet neighbours) and then standing on TIER and "+" long
+        // after they appeared. The walk is kept cheap instead -- see
+        // CollectObstacles.
+        private readonly List<UiRect> _obstacles = new List<UiRect>();
+        private static readonly List<TMP_Text> Texts = new List<TMP_Text>();
+        private static Selectable[] _selectables = new Selectable[64];
+
+        private FocusEdge EdgeFor(RectTransform canvasRect, UiRect box, UiRect frame)
+        {
+            CollectObstacles(canvasRect, box, frame);
+            return FocusMarkerPlacement.EdgeFor(box, frame, _obstacles);
+        }
+
+        private static readonly FocusEdge[] AllEdges =
+            { FocusEdge.Left, FocusEdge.Above, FocusEdge.Right, FocusEdge.Below };
+        private readonly UiRect[] _reach = new UiRect[4];
+
+        // Every OTHER control and every piece of text a player can SEE on
+        // the target's root canvas that one of the four candidate marker
+        // boxes would touch: active, enabled, not faded out by a CanvasGroup,
+        // not scrolled out of a clipping window, and not hidden under a
+        // panel drawn over it. The target's own subtree (its label) and its
+        // ancestors (the row a stepper sits in) are not neighbours. Text
+        // counts by its INK (textBounds), not its rect -- a 380-wide label
+        // box holding "ITEM" is not an obstacle 380 wide.
+        //
+        // CHEAP TESTS FIRST: the box overlap is arithmetic, so only a
+        // control or label a candidate marker would actually touch gets the
+        // parent walks, the ink measure and the raycast.
+        private void CollectObstacles(RectTransform canvasRect, UiRect target, UiRect frame)
+        {
+            _obstacles.Clear();
+            var root = _canvas == null ? null : _canvas.rootCanvas;
+            if (root == null) return;
+
+            for (int e = 0; e < AllEdges.Length; e++)
+                _reach[e] = FocusMarkerPlacement.MarkerBox(target, frame, AllEdges[e]);
+
+            int count = Selectable.allSelectableCount;
+            if (_selectables.Length < count) _selectables = new Selectable[count * 2];
+            count = Selectable.AllSelectablesNoAlloc(_selectables);
+
+            for (int i = 0; i < count; i++)
+            {
+                var other = _selectables[i];
+                if (other == null) continue;
+
+                var rect = (RectTransform)other.transform;
+                var otherBox = BoxIn(canvasRect, rect);
+                if (!Reached(otherBox) || !IsNeighbour(other.transform, root)) continue;
+                if (!VisibleThroughEveryClip(canvasRect, rect, otherBox)) continue;
+                if (!DrawnOnTop(other.transform, rect, otherBox, canvasRect, root)) continue;
+                _obstacles.Add(otherBox);
+            }
+
+            root.GetComponentsInChildren(false, Texts);
+            for (int i = 0; i < Texts.Count; i++)
+            {
+                var text = Texts[i];
+                if (text == null || !text.enabled || text.color.a < 0.05f) continue;
+                if (!Reached(BoxIn(canvasRect, text.rectTransform))) continue;
+                if (string.IsNullOrWhiteSpace(text.text) || !IsNeighbour(text.transform, root)) continue;
+
+                var ink = InkIn(canvasRect, text);
+                if (ink.Width <= 0f || ink.Height <= 0f || !Reached(ink)) continue;
+                if (!VisibleThroughEveryClip(canvasRect, text.rectTransform, ink)) continue;
+                if (!DrawnOnTop(text.transform, text.rectTransform, ink, canvasRect, root)) continue;
+                _obstacles.Add(ink);
+            }
+        }
+
+        private bool Reached(UiRect box)
+        {
+            for (int e = 0; e < _reach.Length; e++)
+            {
+                if (_reach[e].Overlaps(box)) return true;
+            }
+            return false;
+        }
+
+        // NOT HIDDEN UNDER ANOTHER PANEL. An overlay leaves what it covers
+        // active -- the dossier's pack sits over column A's own buttons, and
+        // counting those put every edge of a pack cell "occupied" and the
+        // marker back on the sort tabs it should have dodged. So: raycast at
+        // the obstacle's centre, and it is on top when the first thing hit
+        // is the obstacle itself, something inside it, or something it sits
+        // inside (a label on its own plate). Nothing hit at all counts as on
+        // top -- a bare label on the stage has nothing to test against, and
+        // wrongly keeping an obstacle only costs a marker a side.
+        private static readonly List<RaycastResult> Hits = new List<RaycastResult>();
+        private static PointerEventData _probe;
+        private static EventSystem _probeSystem;
+
+        private static bool DrawnOnTop(Transform obstacle, RectTransform rect, UiRect box,
+            RectTransform canvasRect, Canvas root)
+        {
+            var events = EventSystem.current;
+            if (events == null) return true;
+
+            var world = canvasRect.TransformPoint(new Vector3(box.Centre.X, box.Centre.Y, 0f));
+            var camera = root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
+            Vector2 screen = RectTransformUtility.WorldToScreenPoint(camera, world);
+
+            if (_probe == null || _probeSystem != events)
+            {
+                _probe = new PointerEventData(events);
+                _probeSystem = events;
+            }
+            _probe.position = screen;
+
+            Hits.Clear();
+            events.RaycastAll(_probe, Hits);
+            if (Hits.Count == 0 || Hits[0].gameObject == null) return true;
+
+            var top = Hits[0].gameObject.transform;
+            return top == obstacle || top.IsChildOf(obstacle) || obstacle.IsChildOf(top);
+        }
+
+        private static readonly List<CanvasGroup> Groups = new List<CanvasGroup>();
+
+        private bool IsNeighbour(Transform other, Canvas root)
+        {
+            if (!other.gameObject.activeInHierarchy) return false;
+            if (other == _target || other.IsChildOf(_target) || _target.IsChildOf(other)) return false;
+            if (other.IsChildOf(transform)) return false;
+
+            var canvas = other.GetComponentInParent<Canvas>();
+            if (canvas == null || canvas.rootCanvas != root) return false;
+
+            other.GetComponentsInParent(false, Groups);
+            for (int i = 0; i < Groups.Count; i++)
+            {
+                if (Groups[i].alpha < 0.05f) return false;
+                if (Groups[i].ignoreParentGroups) break;
+            }
+
+            return true;
+        }
+
+        private static UiRect InkIn(RectTransform frame, TMP_Text text)
+        {
+            var bounds = text.textBounds;
+            if (bounds.size.x <= 0f || bounds.size.y <= 0f) return BoxIn(frame, text.rectTransform);
+
+            var t = text.rectTransform;
+            var a = frame.InverseTransformPoint(t.TransformPoint(bounds.min));
+            var b = frame.InverseTransformPoint(t.TransformPoint(bounds.max));
+
+            float minX = Mathf.Min(a.x, b.x), maxX = Mathf.Max(a.x, b.x);
+            float minY = Mathf.Min(a.y, b.y), maxY = Mathf.Max(a.y, b.y);
+            return new UiRect(
+                new UiVec((minX + maxX) / 2f, (minY + maxY) / 2f),
+                new UiVec(maxX - minX, maxY - minY));
         }
 
         // DRAWN ABOVE EVERYTHING THE TARGET IS DRAWN WITH, which in uGUI
@@ -209,9 +372,13 @@ namespace PrincesPalace
         // either, and only the corners carry all three. This is the same
         // reasoning UiRect.BoundingBoxAfterRotation already states for the
         // build-time audit, applied at runtime.
+        // One buffer, not one per call: BoxIn runs for every nearby control
+        // and label on every frame the marker is drawn.
+        private static readonly Vector3[] Corners = new Vector3[4];
+
         private static UiRect BoxIn(RectTransform frame, RectTransform target)
         {
-            var corners = new Vector3[4];
+            var corners = Corners;
             target.GetWorldCorners(corners);
 
             float minX = float.MaxValue, minY = float.MaxValue;

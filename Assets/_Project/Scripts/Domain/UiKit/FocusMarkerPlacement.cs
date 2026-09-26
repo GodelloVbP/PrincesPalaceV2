@@ -2,16 +2,25 @@ namespace PrincesPalace.Domain.UiKit
 {
     // Which side of the focused control the marker sits on.
     //
-    // TWO VALUES, not four. The owner's brief asks for "left of list rows and
-    // vertical buttons, above cards, plates, seats, orbs and fight targets",
-    // and those two lists are separated by ONE property of the control: a row
-    // or a button is much wider than it is tall, everything else is not. A
-    // Right and a Below would be a third and fourth rule with nothing in this
-    // project asking for them.
+    // Left and Above are the two the SHAPE picks (EdgeFor(UiVec)): the
+    // owner's brief asks for "left of list rows and vertical buttons, above
+    // cards, plates, seats, orbs and fight targets", and those two lists are
+    // separated by ONE property of the control -- a row or a button is much
+    // wider than it is tall, everything else is not.
+    //
+    // Right and Below exist for one reason only: the shape's edge can be
+    // occupied. A marker drawn over a NEIGHBOURING control reads as
+    // selecting it (QA 2026-09-26: the fight's skill list sits 8px from the
+    // verb column, so the arrow left of a skill row stood on ITEM; the
+    // dossier's arrow above a pack cell stood on the word "Gloves" of the
+    // cell above). EdgeFor(target, canvas, obstacles) moves it to the
+    // opposite side, then to the other axis. No screen authors an edge.
     public enum FocusEdge
     {
         Left,
         Above,
+        Right,
+        Below,
     }
 
     // WHERE THE ONE FOCUS MARKER GOES, for every screen.
@@ -64,7 +73,63 @@ namespace PrincesPalace.Domain.UiKit
         // a consequence of the edge and never a separate decision: sitting on
         // the left it points right (unrotated), sitting above it points down
         // (-90, clockwise in Unity's counter-clockwise-positive convention).
-        public static float RotationFor(FocusEdge edge) => edge == FocusEdge.Left ? 0f : -90f;
+        public static float RotationFor(FocusEdge edge)
+        {
+            switch (edge)
+            {
+                case FocusEdge.Left: return 0f;
+                case FocusEdge.Right: return 180f;
+                case FocusEdge.Below: return 90f;
+                default: return -90f;
+            }
+        }
+
+        // THE EDGE, WITH THE NEIGHBOURS CONSULTED.
+        //
+        // The shape's edge (EdgeFor(UiVec)) unless the marker there would
+        // overlap an obstacle -- another visible control or visible text,
+        // which the caller collects (Core/FocusMarker.cs) -- then the
+        // opposite edge, then the two on the other axis, the first that is
+        // clear. The marker's box is tested WITH its bob, since the bob is
+        // what swings it into a neighbour 8px away. When every edge is
+        // occupied the shape's edge stands: something has to be drawn, and
+        // the shape's edge is the one the player has learned to expect.
+        public static FocusEdge EdgeFor(UiRect target, UiRect canvas, System.Collections.Generic.IReadOnlyList<UiRect> obstacles)
+        {
+            var preferred = EdgeFor(target.Size);
+            if (obstacles == null || obstacles.Count == 0) return preferred;
+
+            foreach (var edge in Order(preferred))
+            {
+                if (IsClear(MarkerBox(target, canvas, edge), obstacles)) return edge;
+            }
+
+            return preferred;
+        }
+
+        // Opposite side first -- still level with the control, still reads
+        // as the same kind of pointer -- then the other axis.
+        private static FocusEdge[] Order(FocusEdge preferred) => preferred == FocusEdge.Left
+            ? new[] { FocusEdge.Left, FocusEdge.Right, FocusEdge.Above, FocusEdge.Below }
+            : new[] { FocusEdge.Above, FocusEdge.Below, FocusEdge.Left, FocusEdge.Right };
+
+        // Everything the marker can cover at that edge: its box, grown by the
+        // bob's reach on every side.
+        public static UiRect MarkerBox(UiRect target, UiRect canvas, FocusEdge edge)
+        {
+            var at = Place(target, canvas, edge);
+            float reach = Size + 2f * BobAmplitude;
+            return new UiRect(at, new UiVec(reach, reach));
+        }
+
+        private static bool IsClear(UiRect marker, System.Collections.Generic.IReadOnlyList<UiRect> obstacles)
+        {
+            for (int i = 0; i < obstacles.Count; i++)
+            {
+                if (marker.Overlaps(obstacles[i])) return false;
+            }
+            return true;
+        }
 
         // The marker's CENTRE, in the same canvas space `target` and `canvas`
         // are given in.
@@ -83,9 +148,14 @@ namespace PrincesPalace.Domain.UiKit
         {
             float half = Size / 2f;
 
-            var at = edge == FocusEdge.Left
-                ? new UiVec(target.Left - Gap - half, target.Centre.Y)
-                : new UiVec(target.Centre.X, target.Top + Gap + half);
+            UiVec at;
+            switch (edge)
+            {
+                case FocusEdge.Left: at = new UiVec(target.Left - Gap - half, target.Centre.Y); break;
+                case FocusEdge.Right: at = new UiVec(target.Right + Gap + half, target.Centre.Y); break;
+                case FocusEdge.Below: at = new UiVec(target.Centre.X, target.Bottom - Gap - half); break;
+                default: at = new UiVec(target.Centre.X, target.Top + Gap + half); break;
+            }
 
             return Clamp(at, canvas);
         }
@@ -148,9 +218,15 @@ namespace PrincesPalace.Domain.UiKit
             double phase = 2.0 * System.Math.PI * unscaledTime / BobPeriod;
             float along = (float)System.Math.Cos(phase) * BobAmplitude;
 
-            // +x moves a left-hand marker toward the control; -y moves an
-            // above marker toward it.
-            return edge == FocusEdge.Left ? new UiVec(along, 0f) : new UiVec(0f, -along);
+            // Positive `along` always moves the marker TOWARD the control:
+            // +x from the left, -x from the right, -y from above, +y from below.
+            switch (edge)
+            {
+                case FocusEdge.Left: return new UiVec(along, 0f);
+                case FocusEdge.Right: return new UiVec(-along, 0f);
+                case FocusEdge.Below: return new UiVec(0f, along);
+                default: return new UiVec(0f, -along);
+            }
         }
     }
 }
