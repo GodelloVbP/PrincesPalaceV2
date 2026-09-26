@@ -67,5 +67,54 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNotNull(label, $"no {name} in the fight tree");
             Assert.IsTrue(label.Source.DrawsOverArt, $"{name} sits on the stage art without the dark edge");
         }
+
+        // AND THE COLOUR HAS TO READ WHERE THE EDGE DOES NOT HELP. The dark
+        // edge carries a label over pale sky; over near-black foliage it
+        // blends into the leaves and only the fill colour is left. QA
+        // 2026-09-26 round 3: "1 STANDING" in TextDisabled (#7F6F98) stayed
+        // dim over the treant canopy with the edge on. #2C3A26 is the lighter
+        // end of that canopy's dark greens, sampled off the 1920x1080 capture
+        // (90th-percentile brightness of the band behind the hint). 4.5:1 is
+        // the WCAG AA floor for text this size.
+        private const string DarkCanopy = "#2C3A26";
+
+        [TestCase("EnemiesHeading")]
+        [TestCase("EnemiesHint")]
+        public void StageTextReadsOverTheDarkCanopy(string name)
+        {
+            var root = UiSolver.Solve(FightScreen.Build().Root, UiFrames.Reference);
+            var label = Find(root, name);
+            Assert.IsNotNull(label, $"no {name} in the fight tree");
+
+            double ratio = Contrast(label.Source.ColorHex, DarkCanopy);
+            Assert.GreaterOrEqual(ratio, 4.5,
+                $"{name} ({label.Source.ColorHex}) is {ratio:F2}:1 against the treant's dark foliage");
+        }
+
+        private static double Contrast(string a, string b)
+        {
+            double la = Luminance(a), lb = Luminance(b);
+            return (System.Math.Max(la, lb) + 0.05) / (System.Math.Min(la, lb) + 0.05);
+        }
+
+        private static double Luminance(string hex)
+        {
+            double Channel(int at)
+            {
+                double c = System.Convert.ToInt32(hex.Substring(at, 2), 16) / 255.0;
+                return c <= 0.03928 ? c / 12.92 : System.Math.Pow((c + 0.055) / 1.055, 2.4);
+            }
+            return 0.2126 * Channel(1) + 0.7152 * Channel(3) + 0.0722 * Channel(5);
+        }
+
+        // The contrast arithmetic itself, pinned on literals so the check
+        // above cannot pass by being wrong: black on white is 21:1, and the
+        // old hint colour on the canopy is the ~2.66:1 that failed.
+        [Test]
+        public void TheContrastCheckMeasuresWhatItClaims()
+        {
+            Assert.AreEqual(21.0, Contrast("#000000", "#FFFFFF"), 0.01);
+            Assert.AreEqual(2.66, Contrast("#7F6F98", DarkCanopy), 0.01);
+        }
     }
 }

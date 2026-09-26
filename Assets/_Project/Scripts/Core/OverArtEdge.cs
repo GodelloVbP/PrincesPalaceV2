@@ -39,7 +39,22 @@ namespace PrincesPalace
         internal const float EdgeWidth = 0.4f;
         internal const float EdgeDilate = 0.3f;
 
-        private void Awake() => Apply(GetComponent<TMP_Text>(), EdgeWidth, EdgeDilate);
+        // SMALL FACES NEED MORE FACE. At 12pt a ChakraPetch stroke is barely
+        // wider than the SDF's own antialiasing ramp, so with the 20pt dilate
+        // no pixel of the face ever reached its full colour: every pixel of
+        // "1 STANDING" was face blended into the dark ring, and it measured
+        // #7D728E on the capture whatever face colour the tree asked for (QA
+        // 2026-09-26 round 3). The heavier dilate thickens the stroke until
+        // its core is solid face again; the ring is unchanged.
+        internal const float SmallFaceBelowPt = 16f;
+        internal const float SmallEdgeDilate = 0.8f;
+
+        private void Awake()
+        {
+            var label = GetComponent<TMP_Text>();
+            if (label == null) return;
+            Apply(label, EdgeWidth, label.fontSize < SmallFaceBelowPt ? SmallEdgeDilate : EdgeDilate);
+        }
 
         public static void Apply(TMP_Text label, float width, float dilate)
         {

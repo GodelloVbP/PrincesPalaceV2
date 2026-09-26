@@ -1201,15 +1201,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // audit refuses. "E N E M I E S" at 12pt bold is well under 155.
             yield return Ui.Label("EnemiesHeading", UiStrings.EnemiesHeading,
                 new UiVec(155f, EnemiesHeadingHeight), 12,
-                FightHudPalette.TextMuted,
+                FightHudPalette.TextSecondary,
                 Place.At(PlateFirstX - PlateW * 0.5f, EnemiesHeadingY, new UiVec(0f, 0.5f)))
-                // Above the plates, so on the canopy: muted grey on the
-                // treant stage's pale sky read as nothing at all.
+                // Above the plates, so on the canopy, which is pale sky in
+                // one place and near-black foliage a few pixels over. The
+                // dark edge (OverArt) carries it over the sky; the colour has
+                // to carry it over the leaves, and TextMuted/TextDisabled do
+                // not (about 3:1 on the treant canopy's dark greens against
+                // TextSecondary's 6:1 -- FightLogBandTests pins it). Heading
+                // and count share it: one line of stage text, one colour.
                 .OverArt();
 
             var hint = Ui.Label("EnemiesHint", UiStrings.StandingCount,
                 new UiVec(240f, EnemiesHeadingHeight), 12,
-                FightHudPalette.TextDisabled,
+                FightHudPalette.TextSecondary,
                 Place.At(PlateBlockRight, EnemiesHeadingY, new UiVec(1f, 0.5f)))
                 .OverArt();
             EnemiesHint = hint;
