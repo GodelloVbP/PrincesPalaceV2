@@ -19,17 +19,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // decides whether the actor crosses the stage or stands still.
         private void BeginBeat(CombatantState actor, CombatantState target, bool isCast = false)
         {
-            _recordingBeat = new CombatBeat
-            {
-                Actor = actor,
-                Target = target,
-                PreSnapshot = SnapshotVitals(),
-                // A cast is rooted and a swing leans in. Either can be
-                // overruled afterwards -- by the skill's own authored approach
-                // (see ResolveDamageSingle) or by HoldActorPosition below --
-                // which is why this is a starting position rather than a fact.
-                Approach = isCast ? StageApproach.Hold : StageApproach.Lunge,
-            };
+            // A cast is rooted and a swing leans in. Either can be overruled
+            // afterwards -- by the skill's own authored approach (see
+            // ResolveDamageSingle) or by HoldActorPosition below -- which is
+            // why this is a starting position rather than a fact.
+            NewBeat(actor, target, isCast ? StageApproach.Hold : StageApproach.Lunge);
 
             if (isCast)
             {
@@ -42,6 +36,27 @@ namespace PrincesPalace.Domain.Combat.Session
             // decayUnless: AnyAction reads it; the shipped rule is the
             // narrower Damage one, reported from the damage funnel instead.
             NotePoolActivity(actor, PoolActivity.Action);
+        }
+
+        // THE CONSTRUCTOR HALF OF OPENING A BEAT, and nothing else: it builds
+        // the beat and makes it the one being recorded. BeginBeat is this plus
+        // the action seam below; OpenStatusTickBeat (FightSession.Riders) is
+        // this plus its element, and deliberately NOT the action seam -- a
+        // tick is done to its holder, not by them. Keeping the construction
+        // here is what stops the two openers drifting apart on what a fresh
+        // beat holds. `preSnapshot` is a caller's already-taken snapshot
+        // (a tick captures the vitals before its row lands); null takes one
+        // now.
+        private void NewBeat(CombatantState actor, CombatantState target, StageApproach approach,
+                             Dictionary<CombatantState, Vitals> preSnapshot = null)
+        {
+            _recordingBeat = new CombatBeat
+            {
+                Actor = actor,
+                Target = target,
+                PreSnapshot = preSnapshot ?? SnapshotVitals(),
+                Approach = approach,
+            };
         }
 
         // BOTH POOLS HEAR IT. Which of them cares is the pool's own authored

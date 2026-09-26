@@ -1011,16 +1011,11 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (victim == null || _recordingBeat != null) return false;
 
-            _recordingBeat = new CombatBeat
-            {
-                Actor = isHealing ? victim : null,
-                Target = victim,
-                PreSnapshot = pre ?? SnapshotVitals(),
-
-                // Nothing crosses the stage for a tick: there is no attacker
-                // to walk in, and Hold is how the vocabulary says so.
-                Approach = StageApproach.Hold,
-            };
+            // Nothing crosses the stage for a tick: there is no attacker to
+            // walk in, and Hold is how the vocabulary says so. NewBeat, not
+            // BeginBeat -- see BeginStatusTickBeat's header for why a tick
+            // must not reach the action seam.
+            NewBeat(isHealing ? victim : null, victim, StageApproach.Hold, pre);
 
             // THE ELEMENT COMES FROM THE STATUS, not from anyone's weapon --
             // StatusEffects.ElementOf is the one home for that question, and
