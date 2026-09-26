@@ -165,6 +165,8 @@ namespace PrincesPalace.Domain.Stats
         // one line to explain why this sword is different from that one.
         // Empty for a profile that scales on nothing, so the caller can drop
         // the line entirely rather than print a label with nothing after it.
+        // Each letter carries ScalingGrades.Display's font tag, so this is
+        // TMP rich text, not plain text.
         public string Describe()
         {
             var parts = new List<(AbilityScore Score, ScalingGrade Grade)>();
@@ -195,7 +197,7 @@ namespace PrincesPalace.Domain.Stats
                     text.Append("  ");
                 }
 
-                text.Append(AbilityScores.ShortName(parts[i].Score)).Append(' ').Append(ScalingGrades.Letter(parts[i].Grade));
+                text.Append(AbilityScores.ShortName(parts[i].Score)).Append(' ').Append(ScalingGrades.Display(parts[i].Grade));
             }
 
             return text.ToString();

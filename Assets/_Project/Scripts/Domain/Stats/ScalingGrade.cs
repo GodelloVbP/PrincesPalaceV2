@@ -63,9 +63,37 @@ namespace PrincesPalace.Domain.Stats
 
         // What the UI prints. An em dash for None, because a blank cell reads
         // as "not filled in yet" while a dash reads as "deliberately nothing".
+        //
+        // PLAIN TEXT: authoring errors and logs. Anything a PLAYER reads goes
+        // through Display below instead.
         public static string Letter(ScalingGrade grade)
         {
             return grade == ScalingGrade.None ? "—" : grade.ToString();
+        }
+
+        // The face every player-facing grade letter is drawn in. Matches the
+        // generated asset name in TmpBootstrap.Typography.cs (the
+        // FunctionalHeading role's face), and Core.GradeFace resolves it at
+        // runtime from the shipped TTF -- see there for why a runtime font.
+        public const string DisplayFontName = "SourceSans3-SemiBold SDF";
+
+        // A grade as the player sees it: the letter in its own face.
+        //
+        // The UI's ChakraPetch draws D and 0, B and 8, S and 5 as one squared
+        // glyph each, so "INT-D" read as "INT-0" and "STR-B" as a stat of 8
+        // (QA 2026-09-26, twice). No wording or colour fixes a glyph -- a
+        // gold 0 is still a 0 -- so the letter swaps face instead, to the
+        // project's own humanist sans, where D is a stemmed bowl and 0 an
+        // oval. Only the letter changes: the score name, the multiplier and
+        // every digit on the line stay in the UI font, which is what makes
+        // the letter stand apart from them.
+        //
+        // The dash for None stays plain: it cannot be mistaken for a digit.
+        public static string Display(ScalingGrade grade)
+        {
+            return grade == ScalingGrade.None
+                ? Letter(grade)
+                : $"<font=\"{DisplayFontName}\">{grade}</font>";
         }
 
         public static ScalingGrade FromIndex(int index)

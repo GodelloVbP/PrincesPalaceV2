@@ -123,7 +123,7 @@ namespace PrincesPalace.Domain.Stats
             {
                 var fallback = CombatMath.UnarmedStrengthScaling;
                 var fallbackGrade = GradeFor(fallback, score);
-                return $"no weapon: unarmed {AbilityScores.ShortName(score)}-{ScalingGrades.Letter(fallbackGrade)} " +
+                return $"no weapon: unarmed {AbilityScores.ShortName(score)}-{ScalingGrades.Display(fallbackGrade)} " +
                        $"(x{FormatMultiplier(fallback.MultiplierFor(scores))})";
             }
 
@@ -137,7 +137,10 @@ namespace PrincesPalace.Domain.Stats
             // parentheses. A bare letter did not survive the UI font -- in
             // its squared face "D" and "0" are one glyph, so "spell scaling:
             // D x0.97" read as the number 0 followed by a second number
-            // (QA 2026-09-26). "INT-D" can only be a grade.
+            // (QA 2026-09-26). Gluing it to the score was not enough either
+            // ("INT-D" still read as "INT-0"), so the letter also goes
+            // through ScalingGrades.Display, which draws it in a face where
+            // D and 0 differ.
             var grade = GradeFor(set, score);
             string multiplier = FormatMultiplier(set.MultiplierFor(scores));
             string shortName = AbilityScores.ShortName(score);
@@ -149,7 +152,7 @@ namespace PrincesPalace.Domain.Stats
                 return $"{label}: none on {shortName} (x{multiplier})";
             }
 
-            return $"{label}: {shortName}-{ScalingGrades.Letter(grade)} (x{multiplier})";
+            return $"{label}: {shortName}-{ScalingGrades.Display(grade)} (x{multiplier})";
         }
 
         // InvariantCulture -- ":0.00" reads the CURRENT culture otherwise
