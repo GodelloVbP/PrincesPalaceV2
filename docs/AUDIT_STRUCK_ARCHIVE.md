@@ -2608,3 +2608,69 @@ working, and it lands on one item modifier that nobody edited. Flagged so a
 later balance pass on `Sylvan` reads the right history — if the modifier looks
 strong, this is when it became so, and the cause is in `CombatActions`, not in
 `modifiers.json`.
+
+### ~~172. OWNER'S CALL: the marker's edge is derived from the control's aspect, not authored per control~~ — resolved in `86abfe67` + `7a2ebe3e`: one general rule (preferred edge by shape, next clear edge if the marker would overlap another control or text; scrollbars stepped past), no per-control overrides
+
+`FocusMarkerPlacement.EdgeFor` puts the marker to the LEFT of anything wider than 1.8:1 and ABOVE
+everything else. That is one rule for every screen, computed from the rect, and it cannot drift --
+the alternative, an edge declared per control, would be roughly a hundred new declarations each of
+which can be forgotten or contradict its neighbour.
+
+The cost, visible in the captures: on Talents the arrow lands on top of the orb's own name label
+(`marker_talents_orb.png`), and on the Reckoning it sits under the "CHOOSE ONE" heading
+(`marker_reckoning_card.png`). Both are legible and neither is wrong, but a control whose label
+hangs above it would be better served by a marker to its left. If the owner wants that, the
+proportionate change is an opt-out on the kit node (a `UiNode.FocusEdge` hint the emitter carries
+through), not a table of exceptions in `FocusMarkerPlacement`.
+
+### ~~202. OWNER'S CALL: the dossier item tooltip's reused comparison panel crosses the Legs-slot mannequin art~~ — fixed in `0660b1bf`: tooltips place around keep-out rects (mannequin, all eight slots, Carried row) and size to content; plate opaque in `f15a5620`
+
+The dossier tooltip now reuses `ItemComparisonPanel` (420x420, font 15) with
+its title left-aligned as the shop's is. Beside the Legs slot the panel
+crosses the mannequin art — the existing 300x480 tooltip already had the same
+overlap there. Owner: accept it, add a title-alignment parameter, or move the
+anchor rule so Legs clears the art.
+
+### ~~203. Hands-on QA still pending for nine landed systems; no runtime captures taken~~ — QA capture pass done 2026-09-26, report at `docs/captures/qa-2026-09-26/REPORT.md`; defects it found fixed in `27e8f67f`, `8ddb135f`, `bee93472`, `8fb2dc9c`, `5b818279`, `8852f19d`, `f3918a88`, `fc5bbd72`, `7bf45849`, `e1328743`, `0660b1bf`, `86abfe67`, `6e6d63f5`, `ce1db1d2`, `d418a31f`, `f15a5620`, `7a2ebe3e`, `29ca1c97`, `f1b49295`, `36c4aca3`, `7a53c8ec`
+
+Attributes panel with pad Left/Right/Submit; fight detail card (compact rows,
+damage-type tag on POWER); five-row skills list; shop comparison panel and
+LB/RB character picker; enemy plates (head-zone icons, ward segment,
+hit-strength recoil tiers); Blackglass Spear / Winter's Rebuke spear layers;
+Thorn Tithe `fit: target`; treant slam and spores. No captures were taken
+because graphics-mode launches steal the owner's focus. Owner: schedule a
+focus-safe QA pass.
+
+**2026-09-26:** a focus-safe QA capture pass is scheduled next in this sweep.
+
+### ~~204. Graphics-mode tooling still steals focus; the hidden-desktop fix is an untested candidate~~ — fixed in `33171e6b`: graphics launches run on the hidden desktop PPHeadless by default (real GPU, Direct3D 12), opt-out `PP_GRAPHICS_DESKTOP=visible`; `focus_check` proof zero foreground changes. Captures now render at 1920x1080 (`d44b0695`). Runner copies claimed, never cleared blind (`46ffce90`, `bf88a7dc`)
+
+`tools/screenshot.ps1 -Runtime`, `graphics_tests.ps1`, and `preview.ps1
+-Launch` all open a focus-stealing window; only `-nographics` launches use the
+hidden desktop (`docs/INCIDENTS.md`, "Batchmode Unity steals focus").
+Candidate fix: route graphics launches through the hidden desktop too, proven
+with `tools/focus_check.ps1`. That proof run itself pops windows, so it needs
+scheduling for when the owner is away.
+
+### ~~205. OWNER'S CALL: a sky strike at a tall target starts under the combat log~~ — resolved by owner rule, fixed in `fc5bbd72`: layers that would reach the log band are shortened about their anchor; the log never overlaps
+
+`place: sky` sits 110 above the taller body, capped at 240. An Elder Treant's
+head reaches ~240 in the front rank, so Winter's Rebuke / Blackglass Spear /
+Crownfall amass at the cap and the spear's upper end crosses the bottom lines
+of the combat-log bark (capture: `spell_winters_rebuke_vs_treant_after.png`).
+Owner: lower `SpellFlight.SkyCeiling`, or accept the overlap for tall mobs.
+
+### ~~207. RECORDED: spell previews anchor sample 0 at the press, so the file labels run early~~ — fixed in `ce1db1d2`: preview samples taken from the cast's own clock
+
+`PreviewCaptureTests.CaptureSpellCast` reports "sample 0 = the frame the cast
+first drew (0 frames after the press)" for every sheep spell tried: something
+is already drawn at the press, so the release anchor never waits. The damage
+popup lands ~8 samples after the scheduled `_impact`, so `_impact.png` shows
+the moment before the blow and `_tail.png` shows the blow. Unfixed.
+
+### ~~211. OWNER'S CALL: intent badge height moved on trimmed idles (from #79) and is unreviewed on screen~~ — reviewed on screen 2026-09-26: rat and beetle badges sit ~50-60px above the body, same gap; treant ~85px (REPORT.md §3). Resolved
+
+#79's fix (`ContentTopForActor` reading `OpaqueBoxForActor`'s measured box)
+moves the intent badge higher on trimmed idles than it sat before. Correct
+by the new measurement, but nobody has looked at it in the running game yet.
+Pending the runtime QA capture pass (#203).
