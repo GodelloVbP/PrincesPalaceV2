@@ -116,7 +116,7 @@ namespace PrincesPalace
 
             // The dialogue stage's half (docs/PLAN_DIALOGUE_STAGE.md D2): the
             // page's backdrop and its lines joined to their speakers.
-            var lines = EventLineView.ListFor(page, id => ContentDatabase.GetCharacter(id)?.Data);
+            var lines = EventLineView.ListFor(page, id => ContentDatabase.GetCharacter(id)?.Data, definition.SpeakerById);
 
             return new EventView(run.eventId, page.Id, page.ArtKey, page.Title, page.Body, false,
                 run.eventResult, effectsLine, choices, page.BackdropKey, lines, definition.HasAnyLines);

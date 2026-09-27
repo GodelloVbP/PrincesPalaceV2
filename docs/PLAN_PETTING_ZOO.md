@@ -146,7 +146,7 @@ dialogue-stage and Spell-VFX sessions, which share the TestRunner.
 | P3 | implementer | Change 4 plus fight transport: `FightEncounterAdapter.cs`, `FightSession.Riders.cs` | P1 and P2 committed |
 | P4 | implementer | `events.json` Zoo (M1 text), `relics.json` Kinship, docs, schema regen | P3 |
 | Gate M1 | verifier | `run_tests_parallel.ps1 -Changed -BuildContent -BuildScenes`, once, on the combined tree | P4 |
-| M2 | owner writes steps 2–10; orchestrator writes the 960×720 set-piece prompt (`Art/Events/petting_zoo/zoo.png`); implementer integrates | Runtime walkthrough capture of every page at the four aspects, while the owner is away | owner text and art |
+| M2 | owner writes steps 2–10; orchestrator writes the 1920×1080 (16:9) set-piece prompt (`Art/Events/petting_zoo/zoo.png`); implementer integrates | Runtime walkthrough capture of every page at the four aspects, while the owner is away | owner text and art |
 
 ## Tests (literal values)
 - **Resolver on the real Zoo definition:** validator-legal, every `goTo` resolves, and every

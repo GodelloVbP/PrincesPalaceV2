@@ -103,6 +103,94 @@ namespace PrincesPalace
             _instance._source.PlayOneShot(clip, GameSettings.SoundVolume * AudioLevels.GainFor(resourcePath));
         }
 
+        // ---- the one looping channel --------------------------------------------
+        //
+        // AMBIENCE: one clip looped under everything else, for as long as a
+        // screen wants it (an event fight's fog and wind,
+        // docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M6). ITS OWN SOURCE, not the
+        // one-shot one: PlayOneShot cannot loop and cannot be stopped without
+        // cutting every effect mixed on it too.
+        //
+        // ONE CHANNEL, not a pool. Nothing wants two beds at once, and a
+        // second StartAmbience replacing the first is exactly what a fight
+        // opening straight after another needs. The same path again keeps the
+        // loop running rather than restarting it.
+        //
+        // At the SOUND volume, read at start and followed live in Update --
+        // the slider moves a playing bed too. Music has no player yet
+        // (GameSettings' own header); ambience is effect sound, not score.
+        //
+        // A missing clip is silence, never an error, the one-shot path's
+        // posture: the channel stops and reports nothing playing.
+        private AudioSource _ambience;
+        private string _ambiencePath = "";
+
+        // What the channel is looping, "" when it is silent. For tests and
+        // for a caller deciding whether to restart.
+        public static string AmbiencePath => _instance != null ? _instance._ambiencePath : "";
+
+        public static bool AmbiencePlaying =>
+            _instance != null && _instance._ambience != null && _instance._ambience.isPlaying;
+
+        public static void StartAmbience(string resourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(resourcePath))
+            {
+                StopAmbience();
+                return;
+            }
+
+            Bootstrap();
+
+            if (_instance._ambiencePath == resourcePath && AmbiencePlaying) return;
+
+            var clip = _instance.ResolveByPath(resourcePath);
+            if (clip == null)
+            {
+                StopAmbience();
+                return;
+            }
+
+            var source = _instance.AmbienceSource();
+            source.clip = clip;
+            source.volume = AmbienceVolumeFor(resourcePath);
+            source.Play();
+            _instance._ambiencePath = resourcePath;
+        }
+
+        public static void StopAmbience()
+        {
+            if (_instance == null) return;
+
+            if (_instance._ambience != null)
+            {
+                _instance._ambience.Stop();
+                _instance._ambience.clip = null;
+            }
+
+            _instance._ambiencePath = "";
+        }
+
+        private static float AmbienceVolumeFor(string resourcePath) =>
+            GameSettings.SoundVolume * AudioLevels.GainFor(resourcePath);
+
+        private AudioSource AmbienceSource()
+        {
+            if (_ambience != null) return _ambience;
+
+            _ambience = gameObject.AddComponent<AudioSource>();
+            _ambience.playOnAwake = false;
+            _ambience.loop = true;
+            _ambience.spatialBlend = 0f;
+            return _ambience;
+        }
+
+        private void Update()
+        {
+            if (_ambience == null || !_ambience.isPlaying) return;
+            _ambience.volume = AmbienceVolumeFor(_ambiencePath);
+        }
+
         // Exposed so a test can assert every Sound value resolves to a real
         // file, rather than discovering a typo'd path by not hearing anything.
         public static AudioClip ClipFor(Sound sound)

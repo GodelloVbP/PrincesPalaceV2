@@ -22,7 +22,7 @@ controller (+ its own parts, for Fight), its tests, and its content data
 |---|---|---|---|
 | Main Menu / Save Slots | `Domain/UiKit/Screens/MainMenuScreen.cs` + `MainMenuAmbience.cs` | `MainMenuController.cs`, `SaveSlotController.cs` | `characters.json` |
 | Run Map | `Domain/UiKit/Screens/MapScreen.cs` | `MapController.cs` + `MapController.Walk.cs` + `MapController.Event.cs` | `enemies.json` (room pools) |
-| Fight (combat) | `Domain/UiKit/Screens/FightScreen.cs` | `FightController.cs` (root) + its 4 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
+| Fight (combat) | `Domain/UiKit/Screens/FightScreen.cs` | `FightController.cs` (root) + its 5 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
 | Rewards / Item Choice ("The Reckoning") | `Domain/UiKit/Screens/ReckoningScreen.cs` (wired as `fight.reckoning` inside the Fight scene via `ScreenRegistry.cs`) | `ReckoningController.cs` | `items.json`, `itemsets.json` |
 | Character Dossier (sheet + bag + paperdoll) | `Domain/UiKit/Screens/CharacterDossierScreen.cs` (wired as a System Menu tab via `ScreenRegistry.cs`). Column A's four rows each open a covering pane: Pack (`BuildPackPanel`), Spells (`BuildSpellsPanel`), Skills (`BuildSkillsPanel` -- read-only, no per-entry Selectable, `DeclareSkills`) and the reward track | `CharacterDossierController.cs` | `characters.json`, `items.json` |
 | Shop / Store | `Domain/UiKit/Screens/ShopScreen.cs` (nested panel inside the Map scene, wired via `ScreenRegistry.cs`; laid out to `docs/handoffs/shop_v2/Shop Screen v2.dc.html`) | `ShopController.cs` | `items.json`, `relics.json`, `skills.json` |
@@ -748,7 +748,7 @@ milliseconds rather than by loading a scene.
 | `FightSession.Items.cs` | using something out of the satchel |
 | `FightSession.Ledger.cs` | damage and kill attribution, settling a death |
 | `FightSession.Outcome.cs` | the payout on a win, what a loss says |
-| `FightSession.Rounds.cs` | round starts (catch-up, `RoundStarted`), the round limit and `EndReason` (None/Defeated/Survived/Fell), the enemy per-round rally, opened-turn counts, Toll of the Flock |
+| `FightSession.Rounds.cs` | round starts (catch-up, `RoundStarted`), the round limit and `EndReason` (None/Defeated/Survived/Fell), the enemy per-round rally, opened-turn counts, Toll of the Flock, and a round's own beat for the screen (`BeatCause.RoundStart`, only with a round limit) |
 | `FightSession.Potency.cs` | the every-Nth-action bonus, and what "harder" is measured against |
 | `FightSession.Relics.cs` | WHEN a relic gets to act — the hooks, in one place |
 | `FightSession.RelicMechanics.cs` | WHAT each relic does — fourteen effects too specific for a shared table |
@@ -873,6 +873,7 @@ are plain logic; only the PAINTING needs Unity.
 | `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
 | `Core/FightController.Hud.cs` | painting, and nothing else -- including `RefreshStatusBox`/`PlaceStatusBox`, the ONE status box (`FightScreen.BuildStatusBox`) that replaced the per-badge `StatusTooltip`: every status on one actor, one row each, hung under that actor |
 | `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place; also where Fight registers/unregisters itself on `NavigationInputModule`'s context stack and implements `IFightNavigationTarget` (see below) -- including `InspectMove`/`InspectStep`/`LeaveInspect`, the pad-only reading position that sits ON TOP of `MenuDepth.Root` and walks a ring of combatants no depth owns |
+| `Core/FightController.Rounds.cs` | an event fight's dressing, off `FightRoundPresentation` (`Domain/UiKit`, built by `EncounterRequest.Presentation`): request-driven backdrop, the top-centre round counter (hidden without a round limit), the per-round toll (`PresentRound`, driven by `CombatBeat.RoundStarted` through `FightBeatPlayer.PresentRound`), the overlay's per-round scale, and `SoundController`'s one looping ambience channel, stopped in `LeaveFight` and `OnDestroy` |
 | `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils; the three "which moment" delegates — `PaintVitals`, `PaintFormation`, `PaintTurnOrder` — all fired from the same per-beat point and all cleared to live state when playback ends; and `StillReeling`, which holds a beat whose actor or target is still coming home from an earlier blow. The reel is 3.2 beats (1.505s) and a beat is 0.75s, so "playback finished" stopped implying "the stage is at rest" — `TravelFor` measures the stand-off against both figures' MARKS, and at this length they are no longer standing on them. Narrow by design (those two figures, not the stage): `AUDIT.md` #183 and #184 |
 | `Domain/Combat/Session/BeatTargetResult.cs` | what one combatant of several took, for a beat that landed on more than one |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |

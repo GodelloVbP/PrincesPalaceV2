@@ -32,6 +32,11 @@ namespace PrincesPalace
         public const float BeatHoldSeconds = 0.45f;
         public const float BeatGapSeconds = 0.3f;
 
+        // A round's own beat (BeatCause.RoundStart): one beat's hold plus its
+        // gap, so a toll reads as a beat of the fight's rhythm rather than a
+        // flicker between two blows. Scaled by the battle speed like the rest.
+        public const float RoundStartHoldSeconds = BeatHoldSeconds + BeatGapSeconds;
+
         // THE SETTLE AFTER THE BLOW, AND IT IS A FLOOR RATHER THAN A REMAINDER.
         //
         // The hold used to be purely what was LEFT of BeatHoldSeconds once the
@@ -261,6 +266,12 @@ namespace PrincesPalace
         internal Action<float> ShakeStage;
 
         internal Action<CombatBeat> FlashTarget;
+
+        // A ROUND STARTED AT THIS BEAT (CombatBeat.RoundStarted): the view
+        // steps its round counter, sounds the toll and steps the overlay. The
+        // view owns what a round looks like; playback owns when -- the moment
+        // the beat that carries the round opens.
+        internal Action<int> PresentRound;
 
         // The attack graphic and the impact burst, for a blow that draws
         // neither for itself.
@@ -721,6 +732,25 @@ namespace PrincesPalace
             // (contract 4).
             AdoptPlayerSpeed();
             BeatStarted?.Invoke(beatIndex, PlayerSpeedMultiplier);
+
+            // THE ROUND, BEFORE ANYTHING ELSE THE BEAT SHOWS: a round that
+            // started inside this beat's recording is a statement about the
+            // moment the beat opens. Guarded -- a missing clip or overlay is
+            // the view's graceful no-op, and a throw in it must not cost the
+            // blow its show.
+            if (beat.RoundStarted > 0) Guard(() => PresentRound?.Invoke(beat.RoundStarted));
+
+            // A ROUND'S OWN BEAT has no actor, no target and nothing landed:
+            // the toll above is the whole of it. It holds long enough for the
+            // counter to be read and the toll to ring before the next beat
+            // opens, and skips every step below, each of which is about a
+            // figure doing something to another.
+            if (beat.Cause == BeatCause.RoundStart)
+            {
+                Guard(() => LogBeat(beat));
+                yield return new WaitForSeconds(Scaled(RoundStartHoldSeconds));
+                yield break;
+            }
 
             // THE PRE-SNAPSHOT, which is the whole reason the session
             // records two.

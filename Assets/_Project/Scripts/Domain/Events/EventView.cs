@@ -89,8 +89,9 @@ namespace PrincesPalace.Domain.Events
     }
 
     // ONE DIALOGUE LINE AS THE STAGE DRAWS IT: the resolved line joined to
-    // its speaker's character record, so the panel never goes looking in
-    // content for a name or a bust folder. Narration carries no speaker,
+    // its speaker's character record or, for an event's own speaker, to its
+    // speakers[] row -- so the panel never goes looking in content for a
+    // name or a bust folder. Narration carries no speaker,
     // and its name, epithet and folder are empty.
     public sealed class EventLineView
     {
@@ -130,7 +131,18 @@ namespace PrincesPalace.Domain.Events
 
         // `character` may be null: a narration line, or a speaker content
         // dropped after the save was written.
-        public static EventLineView From(ResolvedEventLine line, ResolvedCharacter character)
+        public static EventLineView From(ResolvedEventLine line, ResolvedCharacter character) =>
+            From(line, character, null);
+
+        // TWO SPEAKER KINDS, ONE VIEW (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md
+        // 1.3). A party character's name, epithet and bust folder come from
+        // its character record; an event speaker's from its own speakers[]
+        // row. Either way the face is the line's ExpressionName, the bust
+        // file name the build settled -- so the stage loads a merchant's
+        // "grinning" and Shawn's "entranced" down the one path it already
+        // walks (requested, neutral, no bust) and never asks which kind spoke.
+        // `speaker` may be null for the same reason `character` may.
+        public static EventLineView From(ResolvedEventLine line, ResolvedCharacter character, ResolvedEventSpeaker speaker)
         {
             if (line == null) return null;
 
@@ -139,17 +151,30 @@ namespace PrincesPalace.Domain.Events
                 return new EventLineView("", true, "", "", "", DialogueBust.Neutral, line.Side, line.Text);
             }
 
+            string face = !string.IsNullOrEmpty(line.ExpressionName)
+                ? line.ExpressionName
+                : DialogueBust.FileNameOf(line.Expression);
+
+            if (line.IsEventSpeaker)
+            {
+                string speakerName = speaker != null && !string.IsNullOrEmpty(speaker.Name) ? speaker.Name : line.SpeakerId;
+                return new EventLineView(line.SpeakerId, false, speakerName, speaker?.Epithet, speaker?.BustPath,
+                    face, line.Side, line.Text);
+            }
+
             string name = character != null && !string.IsNullOrEmpty(character.DisplayName)
                 ? character.DisplayName
                 : line.SpeakerId;
 
             return new EventLineView(line.SpeakerId, false, name, character?.Epithet, character?.DialogueBustPath,
-                DialogueBust.FileNameOf(line.Expression), line.Side, line.Text);
+                face, line.Side, line.Text);
         }
 
         // Every line of a page, in order; empty for a page without lines
-        // (or no page). `characterById` is the caller's content lookup.
-        public static IReadOnlyList<EventLineView> ListFor(ResolvedEventPage page, Func<string, ResolvedCharacter> characterById)
+        // (or no page). `characterById` is the caller's content lookup;
+        // `speakerById` the open event's own speakers (null: none).
+        public static IReadOnlyList<EventLineView> ListFor(ResolvedEventPage page, Func<string, ResolvedCharacter> characterById,
+            Func<string, ResolvedEventSpeaker> speakerById = null)
         {
             if (page == null || !page.HasLines) return Array.Empty<EventLineView>();
 
@@ -157,8 +182,16 @@ namespace PrincesPalace.Domain.Events
             foreach (var line in page.Lines)
             {
                 if (line == null) continue;
-                var character = line.IsNarration || characterById == null ? null : characterById(line.SpeakerId);
-                lines.Add(From(line, character));
+
+                ResolvedCharacter character = null;
+                ResolvedEventSpeaker speaker = null;
+                if (!line.IsNarration)
+                {
+                    if (line.IsEventSpeaker) speaker = speakerById?.Invoke(line.SpeakerId);
+                    else if (characterById != null) character = characterById(line.SpeakerId);
+                }
+
+                lines.Add(From(line, character, speaker));
             }
 
             return lines;

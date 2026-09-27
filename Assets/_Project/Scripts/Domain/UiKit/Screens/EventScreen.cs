@@ -13,11 +13,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // switches the rest off: a hiddenUntilMet choice takes no row, so the
     // stack never shows a gap.
     //
-    // THE ART FRAME IS 4:3 at ArtWidth x ArtHeight, which is the size art is
-    // commissioned at (docs/EVENTS.md, docs/ART_PIPELINE.md). The image keeps
-    // its aspect inside the frame, so a slightly-off delivery letterboxes
-    // rather than stretches; a missing one leaves the frame empty, never a
-    // white quad (ItemIcons.Apply disables the Image).
+    // THE ART IS 16:9 EVERYWHERE (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.6):
+    // ArtWidth x ArtHeight in the legacy frame here, StageArtWidth x
+    // StageArtHeight as the dialogue stage's set piece, both cut from the one
+    // 1920x1080 commission (docs/EVENTS.md). The image keeps its aspect
+    // inside either, so a slightly-off delivery letterboxes rather than
+    // stretches; a missing one leaves the frame empty, never a white quad
+    // (ItemIcons.Apply disables the Image).
     //
     // Coordinates follow ShopScreen's rule: every Place.At is relative to its
     // immediate parent -- the two columns are screen-absolute, a row's
@@ -64,10 +66,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float MarginY = 60f;
         private const float ColumnGap = 64f;
 
-        // The commissioning size. 4:3 is the plan's call (assumption 6); one
-        // pair of constants if the owner wants portrait instead.
+        // The legacy frame: 16:9 at the width the old 4:3 frame had, so the
+        // text column beside it keeps its left edge and only the frame gets
+        // shorter. Half the 1920x1080 commission.
         public const float ArtWidth = 960f;
-        public const float ArtHeight = 720f;
+        public const float ArtHeight = 540f;
+
+        // The stage's set piece: 16:9, two thirds of the commission. Hung
+        // SetPieceTop under the stage's top edge, its bottom lands at
+        // 1080 - 64 - 720 = 296 above the stage's bottom, clear of the
+        // dialogue box's top at DialogueStageLayout.BoxTop (288). The name
+        // plate straddling the box's top edge does reach into it; that is the
+        // layer order (plate in front), not a collision.
+        public const float StageArtWidth = 1280f;
+        public const float StageArtHeight = 720f;
 
         private const float ArtLeft = -ScreenHalfWidth + MarginX;
         private const float ArtCentreX = ArtLeft + ArtWidth * 0.5f;
@@ -357,7 +369,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string PlateSpriteKey = "UI/Dialogue/dialogue_nameplate.png";
 
         // The set piece hangs from the top of the stage, under the title.
-        private const float SetPieceTop = 64f;
+        public const float SetPieceTop = 64f;
 
         // Inside the box's painted frame (about 26px at the drawn size), with
         // the top inset deeper so the plate's lower third never covers text.
@@ -427,7 +439,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // order, not a collision.
             var setPiece = Ui.Sprite("StageSetPiece", null,
                     Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), new UiVec(0f, -SetPieceTop)),
-                    UiSize.Fixed(ArtWidth, ArtHeight))
+                    UiSize.Fixed(StageArtWidth, StageArtHeight))
                 .AsDecor();
             setPiece.PreserveAspect = true;
             StageSetPiece = setPiece;

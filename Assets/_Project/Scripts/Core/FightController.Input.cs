@@ -958,6 +958,7 @@ namespace PrincesPalace
         // rather than the room.
         internal void LeaveFight()
         {
+            EndPresentation();
             Navigation.Go(RunManager.HasRun ? Navigation.Map : Navigation.Hub);
         }
 
@@ -1829,6 +1830,10 @@ namespace PrincesPalace
         // still on top when the scene goes down.
         private void OnDestroy()
         {
+            // The ambience bed lives on the persistent SoundController, so a
+            // fight scene going down has to take it along (FightController.Rounds).
+            EndPresentation();
+
             if (_navContext == null) return;
 
             NavigationInputModule.Contexts?.Remove(_navContext);

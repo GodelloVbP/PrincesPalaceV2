@@ -254,6 +254,59 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(FightInvariants.Check(session, commands));
         }
 
+        // ---- the round's own beat (M6: the counter, the toll, the overlay) -----------------
+
+        // A fight with a limit records a beat per round started, in order, for
+        // the screen to step its counter on; none for the round that ends it.
+        [Test]
+        public void ALimitedFightRecordsOneRoundBeatPerRoundStarted_AndNoneForTheRoundThatEndsIt()
+        {
+            var session = Build(Hero(), 3, (Foe("Bell"), Source("bell")));
+            var beats = new List<CombatBeat>();
+            session.Begin();
+            beats.AddRange(Drive(session, () => false));
+
+            Assert.AreEqual(FightEndReason.Survived, session.EndReason, "fixture: nobody can die, so the limit ends it");
+            var rounds = beats.Where(b => b.RoundStarted > 0).Select(b => b.RoundStarted).ToList();
+            CollectionAssert.AreEqual(new[] { 1, 2, 3 }, rounds, "rounds 1..3 tolled once each; round 4 never started");
+
+            foreach (var beat in beats.Where(b => b.Cause == BeatCause.RoundStart))
+            {
+                Assert.IsNull(beat.Actor, "a toll is nobody's action");
+                Assert.IsNull(beat.Target);
+                Assert.IsFalse(beat.IsAction);
+                Assert.AreEqual(0, beat.Amount);
+            }
+        }
+
+        // Round 1 starts inside Begin, so its beat is queued before the first
+        // command -- which is what lets the screen show "Toll 1" at once and
+        // skip that beat when it plays.
+        [Test]
+        public void RoundOnesBeatIsQueuedByBegin()
+        {
+            var session = Build(Hero(), 10, (Foe("Bell"), Source("bell")));
+            session.Begin();
+
+            var opening = session.DrainBeats();
+            Assert.AreEqual(1, opening.Count(b => b.Cause == BeatCause.RoundStart));
+            Assert.AreEqual(1, opening.First(b => b.Cause == BeatCause.RoundStart).RoundStarted);
+        }
+
+        // A room fight shows no rounds, and its beat stream is exactly what it
+        // was before rounds had beats.
+        [Test]
+        public void AFightWithoutALimitRecordsNoRoundBeats()
+        {
+            var session = Build(Hero(), 0, (Foe("Rat"), Source("rat")));
+            session.Begin();
+
+            var beats = Drive(session, () => session.Round >= 6);
+
+            Assert.AreEqual(6, session.Round);
+            Assert.IsFalse(beats.Any(b => b.RoundStarted > 0 || b.Cause == BeatCause.RoundStart));
+        }
+
         // ---- the rally -------------------------------------------------------------------
 
         [Test]

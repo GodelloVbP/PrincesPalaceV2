@@ -98,8 +98,37 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             RallyEnemies();
+            RecordRoundStart(round);
 
             RoundStarted?.Invoke(round);
+        }
+
+        // THE TOLL'S OWN BEAT, for the screen: RoundStarted above fires at
+        // resolution time, a whole round before the picture gets there, so the
+        // counter, the toll's sound and the overlay's step ride a beat and play
+        // when playback reaches it (CombatBeat.RoundStarted).
+        //
+        // ONLY WITH A ROUND LIMIT. The counter is a round-limit HUD; a room
+        // fight shows no rounds, and recording a beat per round there would
+        // lengthen every room fight's playback for a picture nobody draws.
+        //
+        // No nesting: a round that starts while a beat is open (a turn
+        // advance inside a recording) is stamped onto that beat rather than
+        // replacing it -- the refusal to nest the flock and the status tick
+        // make. After the rally, so the beat's snapshot is the round's.
+        private void RecordRoundStart(int round)
+        {
+            if (RoundLimit <= 0) return;
+
+            if (_recordingBeat != null)
+            {
+                _recordingBeat.RoundStarted = round;
+                return;
+            }
+
+            NewBeat(BeatCause.RoundStart, null, null, StageApproach.Hold);
+            _recordingBeat.RoundStarted = round;
+            CommitBeat();
         }
 
         // ---- the rally -------------------------------------------------------------

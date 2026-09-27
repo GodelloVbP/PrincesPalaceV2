@@ -607,11 +607,11 @@ provenance the same way every other recipe's do.
    sync back, the committed scene ends up pointing at a Sprite sub-asset
    that doesn't exist in main's copy of the file.
 
-**Event-room page art** (`events.json` → `pages[].artPath`): the panel's art
-frame is **960 x 720 at 1080p, 4:3 landscape** (`EventScreen.ArtWidth` /
-`ArtHeight`, pinned in `EventScreenTests`). Commission at that size or an
-exact multiple (1920 x 1440); the image keeps its aspect, so off-ratio art
-letterboxes rather than stretches. File it in the event's own folder,
+**Event-room page art** (`events.json` → `pages[].artPath`): **16:9,
+commissioned at 1920 x 1080**. It is drawn at 1280 x 720 as the dialogue
+stage's set piece and at 960 x 540 in the line-less layout's frame
+(`EventScreen.StageArtWidth` / `ArtWidth`, pinned in `EventScreenTests`); the
+image keeps its aspect, so off-ratio art letterboxes rather than stretches. File it in the event's own folder,
 `Assets/_Project/Art/Events/<event_id>/<page_id>.png` (e.g.
 `Art/Events/demo_wishing_well/well.png`; the content build refuses art under
 `Art/Events/` filed anywhere else), and write that Assets-relative

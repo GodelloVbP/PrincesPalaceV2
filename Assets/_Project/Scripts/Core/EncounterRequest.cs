@@ -1,6 +1,7 @@
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -12,7 +13,7 @@ namespace PrincesPalace
     // event's `fights` block while RunSnapshot.pendingFight names it. The one
     // producer is RunOrchestrator.CurrentEncounterRequest, and its readers are
     // the build (RunOrchestrator.BuildFight -> RunEncounter.For), the screen's
-    // class (FightBootstrap) and the settlement (RunOrchestrator.SettleFight),
+    // class and presentation (FightBootstrap) and the settlement (RunOrchestrator.SettleFight),
     // which branches on IsEventFight exactly once. Nothing else learns that
     // event fights exist, which is why the bot plays them for free.
     //
@@ -89,8 +90,23 @@ namespace PrincesPalace
         public System.Collections.Generic.IReadOnlyCollection<string> PartyOverride =>
             IsEventFight && EventFight.OverridesParty ? EventFight.PartyIds : null;
 
-        // The fight's own backdrop key, "" for the class default. Read by the
-        // fight screen's presentation (M6).
+        // The fight's own backdrop key, "" for the class default.
         public string BackdropKey => IsEventFight ? EventFight.BackdropKey ?? "" : "";
+
+        // Everything the fight screen dresses this fight in beyond its class
+        // (M6): FightController.Bind reads it once. A room fight is None --
+        // no counter, no overlay, no ambience, the class backdrop.
+        public FightRoundPresentation Presentation =>
+            IsEventFight
+                ? new FightRoundPresentation(
+                    backdropKey: BackdropKey,
+                    roundLimit: RoundLimit,
+                    label: EventFight.RoundLabel,
+                    roundSfxPath: EventFight.RoundSfxPath,
+                    overlayKey: EventFight.RoundOverlayKey,
+                    overlayFromScale: EventFight.RoundOverlayFromScale,
+                    overlayToScale: EventFight.RoundOverlayToScale,
+                    ambiencePath: EventFight.AmbiencePath)
+                : FightRoundPresentation.None;
     }
 }

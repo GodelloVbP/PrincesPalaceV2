@@ -76,6 +76,86 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(lookedUp, "narration names nobody to look up");
         }
 
+        // ---- event speakers (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.3) ---------
+
+        private static ResolvedEventSpeaker Merchant(string bustPath = "Portraits/Dialogue/rat_merchant") =>
+            new ResolvedEventSpeaker("merchant", "Grisk", "Purveyor of Fine Goods", bustPath,
+                new[] { "neutral", "grinning", "hostile" });
+
+        [Test]
+        public void AnEventSpeakersLineCarriesItsOwnNameEpithetFolderAndDeclaredFace_OnEitherSide()
+        {
+            var page = Page(
+                ResolvedEventLine.ForEventSpeaker("merchant", "grinning", DialogueSide.Right, "Everything must go."),
+                ResolvedEventLine.ForEventSpeaker("merchant", "hostile", DialogueSide.Left, "Put it back."));
+            var lookedUpCharacters = new List<string>();
+            var lines = EventLineView.ListFor(page, id => { lookedUpCharacters.Add(id); return null; },
+                id => id == "merchant" ? Merchant() : null);
+
+            Assert.AreEqual("Grisk", lines[0].SpeakerName);
+            Assert.AreEqual("Purveyor of Fine Goods", lines[0].Epithet);
+            Assert.AreEqual("Portraits/Dialogue/rat_merchant", lines[0].BustFolder);
+            Assert.AreEqual("grinning", lines[0].Expression);
+            Assert.AreEqual(DialogueSide.Right, lines[0].Side);
+
+            Assert.AreEqual("hostile", lines[1].Expression);
+            Assert.AreEqual(DialogueSide.Left, lines[1].Side);
+            CollectionAssert.IsEmpty(lookedUpCharacters, "an event speaker is never looked up as a character");
+        }
+
+        // The stage's fallback walk is the same for both kinds: the requested
+        // face, then neutral, then no bust at all -- with the name plate
+        // still carrying the name (contract 15's posture).
+        [Test]
+        public void AnEventSpeakerWithMissingArt_FallsBackToNeutral_ThenToNoBust()
+        {
+            var line = EventLineView.ListFor(
+                Page(ResolvedEventLine.ForEventSpeaker("merchant", "grinning", DialogueSide.Right, "Bargains.")),
+                _ => null, _ => Merchant())[0];
+
+            string onlyNeutral = DialogueBust.FirstAvailable(line.BustFolder, line.Expression,
+                path => path == "Portraits/Dialogue/rat_merchant/neutral");
+            Assert.AreEqual("Portraits/Dialogue/rat_merchant/neutral", onlyNeutral);
+
+            string none = DialogueBust.FirstAvailable(line.BustFolder, line.Expression, _ => false);
+            Assert.AreEqual("", none, "no file on either rung shows no bust");
+            Assert.AreEqual("Grisk", line.SpeakerName);
+
+            var noFolder = EventLineView.ListFor(
+                Page(ResolvedEventLine.ForEventSpeaker("merchant", "neutral", DialogueSide.Left, "...")),
+                _ => null, _ => Merchant(bustPath: ""))[0];
+            Assert.AreEqual("", noFolder.BustFolder);
+            Assert.AreEqual("", DialogueBust.FirstAvailable(noFolder.BustFolder, noFolder.Expression, _ => true),
+                "a speaker with no bustPath has no bust whatever exists");
+        }
+
+        [Test]
+        public void AnEventSpeakerTheEventNoLongerDeclares_KeepsItsIdOnThePlate()
+        {
+            var line = EventLineView.ListFor(
+                Page(ResolvedEventLine.ForEventSpeaker("merchant", "grinning", DialogueSide.Right, "...")),
+                _ => Sheep(), _ => null)[0];
+
+            Assert.AreEqual("merchant", line.SpeakerName);
+            Assert.AreEqual("", line.BustFolder);
+            Assert.AreEqual("", line.Epithet);
+        }
+
+        // Shawn's bell page face: a party character's expression enum member,
+        // loaded down the same folder + file-name path as every other face.
+        [Test]
+        public void ShawnsEntrancedFaceIsTheEntrancedFileInHisOwnFolder()
+        {
+            var line = EventLineView.ListFor(
+                Page(new ResolvedEventLine("sheep", false, DialogueExpression.Entranced, DialogueSide.Left, "The bell...")),
+                id => id == "sheep" ? Sheep() : null)[0];
+
+            Assert.AreEqual("entranced", line.Expression);
+            Assert.AreEqual("Portraits/Dialogue/sheep", line.BustFolder);
+            Assert.AreEqual("Portraits/Dialogue/sheep/entranced",
+                DialogueBust.FirstAvailable(line.BustFolder, line.Expression, _ => true));
+        }
+
         // Contract 15's posture: a speaker content no longer has still gets a
         // name on the plate and simply no bust.
         [Test]

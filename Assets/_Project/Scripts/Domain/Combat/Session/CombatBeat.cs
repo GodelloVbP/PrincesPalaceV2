@@ -55,6 +55,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // damage is theirs), but it is not an action they took, so it notes
         // no pool activity and IsAction is false.
         RelicTrigger,
+
+        // A round started in a fight with a round limit: the bell's toll
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.4). No actor, no target,
+        // nothing landed; RoundStarted carries which round. Room fights have
+        // no limit and never record one, so their beat streams are unchanged.
+        RoundStart,
     }
 
     public sealed class CombatBeat
@@ -454,6 +460,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // every other beat. Whether the beat IS a tick is Cause's question;
         // this only says which one.
         public StatusEffectType? StatusTick;
+
+        // THE ROUND THAT STARTED AT THIS BEAT, 0 on every beat that started
+        // none. Written only in a fight with a round limit
+        // (FightSession.Rounds.RecordRoundStart), where the screen shows the
+        // round: the counter steps, the toll sounds and the overlay closes in
+        // when playback REACHES this beat, not when the round resolved --
+        // resolution runs a whole round ahead of the picture. Usually on a
+        // Cause == RoundStart beat of its own; stamped onto the beat already
+        // being recorded when a round starts inside one, so a round is never
+        // lost and a beat is never split.
+        public int RoundStarted;
 
         // "SOMEBODY TOOK AN ACTION HERE." The question every reader that
         // counts turns is actually asking, and one `Actor != null` stopped

@@ -212,8 +212,19 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   clears it. A pick whose fight has nobody standing in its party is refused
   (`NoFighters`). A `wake` fight fields no second lives. `pays: false` and a
   `wake` loss end on Continue, with no Reckoning and no defeat screen.
-- The fight HUD's round counter, backdrop, round sound and overlay are M6 of
-  `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md`.
+- **On the Fight screen** (`FightRoundPresentation`, off
+  `EncounterRequest.Presentation`): `backdrop` replaces the class backdrop;
+  with a round limit a top-centre counter reads `<roundLabel> N` ("Toll 3";
+  "Round N" when `roundLabel` is empty) and steps as each round's beat plays,
+  never past the limit; `roundSfx` plays at each round start; the overlay is
+  drawn full-frame behind the figures and scales from `fromScale` at round 1
+  to `toScale` at the last round in equal steps; `ambience` loops from the
+  fight's start until it is left. A room fight shows none of it. A missing
+  file hides its layer (overlay), keeps the class backdrop, or stays silent
+  (sounds) -- never an error. Backdrop and overlay files are baked into the
+  Fight scene, so a new file needs `-BuildScenes`. Paint the overlay as a
+  1920x1080 frame with transparency; at scales above 1 its edges leave the
+  screen, so keep what matters near the centre.
 
 ## Art
 
@@ -225,9 +236,12 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   a Resources-style path, and refuses art under `Art/Events/` that is not
   one folder deep in its own event's folder (`EventEntryResolver`). The file
   name is by convention the page id; pages of one event may share a file.
-- **Size:** the frame is **960 x 720** at 1080p (4:3 landscape). Deliver at
-  that size or an exact multiple (1920 x 1440). Off-ratio art is letterboxed,
-  not stretched.
+- **Size:** commission at **1920 x 1080** (16:9). The one file is drawn at
+  **1280 x 720** as the dialogue stage's set piece (hung 64 below the top,
+  clear of the dialogue box) and at **960 x 540** in the line-less layout's
+  frame (`EventScreen.StageArtWidth`/`ArtWidth`). Off-ratio art is
+  letterboxed, not stretched. (4:3 until 2026-09-28; older 960 x 720 art
+  still shows, pillarboxed.)
 - **Missing art** (empty `artPath`, or a file not there yet) shows the empty
   frame. Art is baked into the Map scene, so a new file needs a scene rebuild
   (`tools/run_tests_parallel.ps1 -BuildScenes`).
@@ -320,8 +334,10 @@ speaker  { id, name, epithet, bustPath, expressions[] }
 - **`bustPath`**: a Resources-relative folder holding `<expression>.png` per
   face, like a character's `dialogueBustPath`. Empty, or a missing file, warns
   at build and shows the name plate and text.
-- The build validates speakers now. The stage draws them from M6 of
-  `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md`.
+- The stage draws an event speaker exactly as it draws a party bust, from
+  the line's own face name: the requested face, then `neutral`, then no bust
+  (the plate and text still show). A party character's `entranced` loads the
+  same way, from `<dialogueBustPath>/entranced.png`.
 
 ## Testing a new event
 

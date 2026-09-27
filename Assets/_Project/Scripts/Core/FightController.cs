@@ -602,8 +602,12 @@ namespace PrincesPalace
         // builds it, the way the hub and the map hold their copies.
         [SerializeField] internal SystemMenuController systemMenu;
 
+        // `presentation` is the fight's dressing beyond its class -- an event
+        // fight's backdrop, round counter, overlay and ambience
+        // (FightController.Rounds). Null is a room fight's None.
         public void Bind(FightSession session, EncounterClass encounterClass,
-                         IReadOnlyList<SatchelStack> satchel = null)
+                         IReadOnlyList<SatchelStack> satchel = null,
+                         FightRoundPresentation presentation = null)
         {
             _session = session;
             _encounterClass = encounterClass;
@@ -620,6 +624,10 @@ namespace PrincesPalace
             WireInput();
             WirePlayback();
             ResetStagePresentation();
+
+            // After the class backdrop, which a request-driven one replaces,
+            // and after the session is set, whose opening round it shows.
+            ApplyPresentation(presentation);
 
             // The session existing IS what "Fight is active" meant to the
             // old PollGamepadNavigation guard (_session != null) -- so this
@@ -733,6 +741,7 @@ namespace PrincesPalace
             beatPlayer.ImpactDelayFor = ImpactDelayFor;
             beatPlayer.StopVfx = StopSpellVfx;
             beatPlayer.ShakeStage = ShakeStage;
+            beatPlayer.PresentRound = PresentRound;
         }
 
         // Kicks both stage racks. Playback decides how hard; the view decides

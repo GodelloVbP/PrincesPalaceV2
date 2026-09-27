@@ -78,14 +78,32 @@ namespace PrincesPalace.Domain.Tests
         // (docs/EVENTS.md, docs/ART_PIPELINE.md), and a change here is a
         // change to every brief already sent out.
         [Test]
-        public void TheArtFrameIsA960By720FourByThreeThatKeepsItsAspect()
+        public void TheArtFrameIsA960By540SixteenByNineThatKeepsItsAspect()
         {
             var art = Walk(Tree()).First(n => n.Name == "EventArt");
 
             Assert.AreEqual(960f, art.Size.X);
-            Assert.AreEqual(720f, art.Size.Y);
+            Assert.AreEqual(540f, art.Size.Y);
             Assert.IsTrue(art.PreserveAspect, "a slightly-off delivery would stretch");
             Assert.IsNull(art.SpriteKey, "the art is chosen per page at runtime, never baked into the node");
+        }
+
+        // The stage's set piece is the same 16:9 commission drawn at 1280x720,
+        // hung 64 under the stage's top, so on the 1080-tall reference its
+        // bottom sits at 296 -- above the dialogue box's top at 288
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.6).
+        [Test]
+        public void TheStageSetPieceIs1280By720AndClearsTheDialogueBox()
+        {
+            var piece = Walk(Tree()).First(n => n.Name == "StageSetPiece");
+
+            Assert.AreEqual(1280f, piece.Size.X);
+            Assert.AreEqual(720f, piece.Size.Y);
+            Assert.IsTrue(piece.PreserveAspect);
+            Assert.AreEqual(64f, EventScreen.SetPieceTop);
+            Assert.AreEqual(288f, DialogueStageLayout.BoxTop);
+            Assert.Greater(1080f - EventScreen.SetPieceTop - piece.Size.Y, DialogueStageLayout.BoxTop,
+                "the set piece reaches down into the dialogue box");
         }
 
         [Test]

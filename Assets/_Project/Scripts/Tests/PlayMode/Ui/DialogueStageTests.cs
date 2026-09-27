@@ -204,14 +204,73 @@ namespace PrincesPalace.PlayModeTests
                 },
             };
 
+        // ---- event speakers (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.3, M6) ----------
+
+        private const string SpeakerFixtureId = "dialogue_stage_speaker_fixture";
+        private const string KeeperLine = "Mind the lamp. It remembers every hand that trimmed it.";
+        private const string StrangerLine = "I was never here, and neither were you.";
+        private const string EntrancedLine = "Do you hear it? Somewhere past the fog, a bell.";
+
+        // Two event-local speakers on one page: the keeper, cast right, whose
+        // declared "grim" face has no file and falls back to a real neutral
+        // bust (the bear's folder stands in for commissioned art); and the
+        // stranger, cast left, whose folder does not exist at all -- the name
+        // plate and text with no bust. Shawn's `entranced` has no file yet and
+        // walks the same fallback to his neutral.
+        private static RawEventEntry SpeakerFixture() =>
+            new RawEventEntry
+            {
+                id = SpeakerFixtureId,
+                floors = new[] { 999 },
+                requires = new[] { new RawEventRequirement { kind = "inParty", character = "sheep" } },
+                speakers = new[]
+                {
+                    new RawEventSpeaker
+                    {
+                        id = "keeper", name = "Old Wick", epithet = "Keeper of the Lamp",
+                        bustPath = "Portraits/Dialogue/bear", expressions = new[] { "grim", "neutral" },
+                    },
+                    new RawEventSpeaker
+                    {
+                        id = "stranger", name = "The Stranger", bustPath = "Portraits/Dialogue/no_such_speaker",
+                    },
+                },
+                pages = new[]
+                {
+                    new RawEventPage
+                    {
+                        id = "lamp",
+                        title = "The Lamp Keeper",
+                        body = "B",
+                        cast = new[]
+                        {
+                            new RawEventCastMember { character = "keeper", side = "right" },
+                            new RawEventCastMember { character = "stranger", side = "left" },
+                        },
+                        lines = new[]
+                        {
+                            Line("keeper", KeeperLine, "grim"),
+                            Line("stranger", StrangerLine),
+                            Line("sheep", EntrancedLine, "entranced"),
+                        },
+                        choices = new[]
+                        {
+                            new RawEventChoice { text = "Leave", outcomes = new[] { new RawEventOutcome { goTo = "Leave" } } },
+                        },
+                    },
+                },
+            };
+
         private static RunSnapshot Run => RunManager.Run;
 
         // The Map with the fixture event open on its first page and the
         // panel painted. The walk into the room is EventPanelTests' business;
         // OpenEventForDebug leaves the state a real arrival leaves.
-        private IEnumerator OpenTheStage()
+        private IEnumerator OpenTheStage() => OpenTheStage(StageFixture());
+
+        private IEnumerator OpenTheStage(RawEventEntry fixture)
         {
-            FixtureEvents.Append(StageFixture());
+            FixtureEvents.Append(fixture);
             RunManager.StartRun(11UL);
             Run.gold = 100;
             SaveSlotManager.SaveCurrent();
@@ -237,7 +296,7 @@ namespace PrincesPalace.PlayModeTests
             EventSystem.current.SetSelectedGameObject(null);
             yield return null;
 
-            Assert.IsTrue(RunOrchestrator.OpenEventForDebug(FixtureId), "fixture: the stage event did not open");
+            Assert.IsTrue(RunOrchestrator.OpenEventForDebug(fixture.id), "fixture: the stage event did not open");
             yield return ReopenThePanel();
         }
 
@@ -561,6 +620,42 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreSame(before, after, "the same bust stays on screen");
             Assert.AreNotSame(sprite, after.sprite, "the expression changed");
             Assert.AreEqual(rest, after.rectTransform.anchoredPosition, "no slide: the swap is in place");
+        }
+
+        private TMP_Text PlateName => Find("StageName").GetComponent<TMP_Text>();
+        private TMP_Text PlateEpithet => Find("StageEpithet").GetComponent<TMP_Text>();
+
+        // An event's own speaker stands exactly like a party bust: on its cast
+        // side, mirrored on the right, its own name and epithet on the plate;
+        // with no art on any rung it keeps the plate and loses only the bust.
+        [UnityTest]
+        public IEnumerator AnEventSpeakerShowsOnEitherSide_WithItsPlate_AndMissingArtFallsBack()
+        {
+            yield return OpenTheStage(SpeakerFixture());
+
+            yield return AdvanceTo(KeeperLine);
+            yield return WaitReal(DialoguePlayback.SlideSeconds + 0.05f);
+            var keeper = ActiveBust();
+            Assert.IsNotNull(keeper, "the keeper's missing 'grim' falls back to the neutral in its folder");
+            Assert.AreEqual("neutral", keeper.sprite.name, "the fallback rung, not the requested one");
+            Assert.Less(keeper.rectTransform.localScale.x, 0f, "cast right: mirrored to face inward");
+            Assert.AreEqual("Old Wick", PlateName.text);
+            Assert.IsTrue(PlateEpithet.gameObject.activeSelf, "an epithet shows its line");
+            Assert.AreEqual("Keeper of the Lamp", PlateEpithet.text);
+
+            yield return AdvanceTo(StrangerLine);
+            yield return WaitReal(DialoguePlayback.SlideSeconds + 0.05f);
+            Assert.IsNull(ActiveBust(), "no file on any rung: no bust, and never a white quad");
+            Assert.IsTrue(Find("StageNamePlate").activeSelf, "the plate still says who is talking");
+            Assert.AreEqual("The Stranger", PlateName.text);
+            Assert.IsFalse(PlateEpithet.gameObject.activeSelf, "no epithet authored, no second line");
+
+            yield return AdvanceTo(EntrancedLine);
+            yield return WaitReal(DialoguePlayback.SlideSeconds + 0.05f);
+            var shawn = ActiveBust();
+            Assert.IsNotNull(shawn, "Shawn's 'entranced' walks the same path to his neutral until its art lands");
+            Assert.Greater(shawn.rectTransform.localScale.x, 0f, "a left-side speaker shows as painted");
+            Assert.AreEqual("Shawn", PlateName.text);
         }
 
         // ---- after a pick ---------------------------------------------------------------

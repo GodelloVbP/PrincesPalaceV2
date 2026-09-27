@@ -1067,6 +1067,21 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TargetPrompt =
             UiString.Define("target_prompt", "Choose a target for {0}.", "Choose a target for Boulder Slam.");
 
+        // The fight HUD's round counter, "<roundLabel> N" ("Toll 3"), shown
+        // only in a fight with a round limit (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md
+        // 1.4, M6). The label is content, so its sample is exactly
+        // EventEntryResolver.MaxRoundLabelLength long -- the scene build then
+        // refuses a box that cannot hold the longest label the content build
+        // lets through, at every audited aspect. The number is sampled at
+        // three digits: surviveRounds has no cap, and a three-digit limit is
+        // already a hundred rounds past anything authored.
+        public static readonly UiString FightRoundCounter =
+            UiString.Define("fight.round_counter", "{0} {1}",
+                AtCap("Wolfsong Hour ", Content.EventEntryResolver.MaxRoundLabelLength) + " 999");
+
+        // What the counter says when the fight authored no roundLabel.
+        public static readonly UiString FightRoundDefaultLabel = UiString.Define("fight.round_default", "Round");
+
         // The rework's group-target wording -- revives what was, until the
         // group-target confirm fix, dead copy: nothing routed an AllEnemies
         // skill through Target depth for this to ever be read. It is reachable

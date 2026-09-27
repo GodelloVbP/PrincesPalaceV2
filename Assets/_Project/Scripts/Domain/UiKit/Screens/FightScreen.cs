@@ -56,6 +56,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public UiNode Root;
 
         public NodeRef Background;
+
+        // An event fight's overlay (the flock closing in) and its round
+        // counter (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.4, M6). Both start
+        // hidden; FightController shows them only for a fight with a round
+        // limit.
+        public NodeRef RoundOverlay;
+        public NodeRef RoundCounter;
+
         public NodeRef InitiativeTracker;
         public List<NodeRef> InitiativeIcons = new List<NodeRef>();
         public List<NodeRef> InitiativeRings = new List<NodeRef>();
@@ -372,6 +380,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // whatever their own sibling order down there.
             children.AddRange(s.BuildScrim());
 
+            // Over the painting and its scrim, under every figure: what closes
+            // in round by round closes in BEHIND the fight, in the fog, not in
+            // front of the people in it. Root canvas, like the scrim, so the
+            // nested HUD canvas draws every figure over it whatever its scale.
+            children.Add(s.BuildRoundOverlay());
+
             // BEHIND BOTH RACKS, which is the entire reason it is declared here
             // and not beside the per-target pool three hundred lines down. uGUI
             // draws later siblings on top, so a fault opening in the floor has
@@ -406,6 +420,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             hud.Add(s.BuildInitiativeTracker());
             hud.Add(s.BuildBark());
+            hud.Add(s.BuildRoundCounter());
             hud.AddRange(s.BuildEnemiesHeading());
             hud.AddRange(s.BuildEnemyPlates());
             hud.AddRange(s.BuildPcPlates());
@@ -987,6 +1002,49 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             InitiativeTracker = tracker;
             return tracker;
+        }
+
+        // ---- an event fight's rounds (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M6) ----
+
+        // TOP CENTRE, UNDER THE BARK. The bark's log already spans the top
+        // strip, so the counter hangs one gap below it, in the dead middle
+        // between the two armies -- the same line the initiative tracker
+        // starts on at the left, and nowhere near it: the tracker's six chips
+        // end at x -448 and the counter's box starts at -RoundCounterWidth/2.
+        // The width is measured, not guessed: UiStrings.FightRoundCounter's
+        // sample is a label exactly MaxRoundLabelLength long plus a three-digit
+        // round, and UiAudit refuses the box at any aspect it overflows.
+        public const float RoundCounterWidth = 420f;
+        public const float RoundCounterHeight = 48f;
+        public const int RoundCounterFontSize = 30;
+        public const float RoundCounterGap = 16f;
+
+        private UiNode BuildRoundCounter()
+        {
+            var counter = Ui.Label("RoundCounter", UiStrings.FightRoundCounter,
+                    new UiVec(RoundCounterWidth, RoundCounterHeight), RoundCounterFontSize, FightHudPalette.HeadingGold,
+                    Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), new UiVec(0f, -(BarkHeight + RoundCounterGap))))
+                .Styled(TypographyRole.FunctionalHeading)
+                // On the painting with no plate, the log's own answer to the
+                // same problem (BuildBark): the dark edge reads over fog.
+                .OverArt()
+                .Inactive();
+            RoundCounter = counter;
+            return counter;
+        }
+
+        // Full-frame, keeping the art's aspect, hidden until an event fight
+        // names an overlay. The controller scales it per round
+        // (FightRoundPresentation.OverlayScaleFor) about its centre; at scale
+        // 1 it is exactly the canvas, which is what the audit measures.
+        private UiNode BuildRoundOverlay()
+        {
+            var overlay = Ui.Sprite("RoundOverlay", null, Place.Stretch(), UiSize.Fill)
+                .AsDecor()
+                .Inactive();
+            overlay.PreserveAspect = true;
+            RoundOverlay = overlay;
+            return overlay;
         }
 
         // ---- the dialogue bark (the combat log's home) ------------------------

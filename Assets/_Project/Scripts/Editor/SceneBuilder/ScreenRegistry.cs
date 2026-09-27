@@ -112,6 +112,20 @@ public static class ScreenRegistry
                 fight.eliteBackground = SceneBuilder.LoadSpriteByKey(FightScreen.EliteBackgroundKey);
                 fight.bossBackground = SceneBuilder.LoadSpriteByKey(FightScreen.BossBackgroundKey);
 
+                // Every event fight's own backdrop and round overlay
+                // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M6), WireEvent's bake
+                // for WireEvent's reason: the keys are Assets-relative and
+                // AssetDatabase is the builder's world. A file not there yet
+                // drops out, and the screen keeps the class backdrop or hides
+                // the overlay; dropping the file in needs only a rebuild.
+                var eventFights = ContentDatabase.Events
+                    .Where(e => e != null && e.Data != null && e.Data.Fights != null)
+                    .SelectMany(e => e.Data.Fights)
+                    .Where(f => f != null)
+                    .ToList();
+                fight.fightBackdropArt = BakeKeys(eventFights.Select(f => f.BackdropKey));
+                fight.roundOverlayArt = BakeKeys(eventFights.Select(f => f.RoundOverlayKey));
+
                 // ONE SHAKER PER RACK, not one for the whole screen. The two
                 // stages are separate containers and the HUD is neither of
                 // them, which is the point -- see StageShake on why the
@@ -753,6 +767,15 @@ public static class ScreenRegistry
 
         return shop;
     }
+
+    // Distinct non-empty keys, each with the sprite its file loads; a key
+    // whose file is not there is left out rather than baked as a null.
+    private static IconEntry[] BakeKeys(IEnumerable<string> keys) =>
+        keys.Where(key => !string.IsNullOrEmpty(key))
+            .Distinct()
+            .Select(key => new IconEntry(key, SceneBuilder.LoadSpriteByKey(key)))
+            .Where(entry => entry.Sprite != null)
+            .ToArray();
 
     private static EventController WireEvent(UiEmitResult result, EventScreen screen)
     {

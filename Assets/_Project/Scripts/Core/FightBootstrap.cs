@@ -330,7 +330,11 @@ namespace PrincesPalace
             // reads a multiplier one fight behind the source just installed.
             FightBeatPlayer.AdoptPlayerSpeed();
 
-            fight.Bind(built.Session, RunOrchestrator.CurrentEncounterRequest().Class, RunOrchestrator.BuildSatchel());
+            // The class and the dressing come off the same request the build
+            // did (plan 3.1): an event fight's backdrop, round counter, overlay
+            // and ambience; a room's None.
+            var request = RunOrchestrator.CurrentEncounterRequest();
+            fight.Bind(built.Session, request.Class, RunOrchestrator.BuildSatchel(), request.Presentation);
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);
 
