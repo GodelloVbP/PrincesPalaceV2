@@ -26,8 +26,15 @@ namespace PrincesPalace.PlayModeTests
                 .Where(c => c != null && c.Data != null)
                 .ToDictionary(c => c.Data.Id, c => c.Data.DisplayName);
 
+            // The loaded enemies' slot spans, so a fixture event's `fights`
+            // resolve against real monsters (an empty map refuses them all).
+            var enemies = ContentDatabase.Enemies
+                .Where(e => e != null && e.Data != null && !string.IsNullOrEmpty(e.id))
+                .GroupBy(e => e.id)
+                .ToDictionary(g => g.Key, g => g.First().Data.SlotSpan);
+
             bool ok = EventEntryResolver.TryResolveAll(raws.ToList(), characters, new string[0], relicNames,
-                out var resolved, out var errors);
+                enemies, out var resolved, out var errors);
             Assert.IsTrue(ok, "fixture events do not resolve: " + string.Join("; ", errors ?? new List<string>()));
 
             var events = (List<EventDefinition>)ContentDatabase.Events;

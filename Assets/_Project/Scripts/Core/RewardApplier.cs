@@ -20,9 +20,17 @@ namespace PrincesPalace
         // The report is the whole return value rather than a side effect,
         // because the rewards SCREEN needs before-and-after for its bars -- and
         // "before" stops existing the moment AddExperience mutates in place.
-        public static CombatReward Apply(VictoryRewards.Payout payout, IReadOnlyList<string> fieldedIds)
+        //
+        // `participants`, when given, is who this fight was FOR: squad members
+        // outside it get no row and no experience. An event fight with a
+        // party override (the Bell's Shawn alone) passes its override, so the
+        // members who sat it out are untouched rather than paid as "downed"
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.4: benched XP untouched).
+        // Null is the whole squad, every room fight's rule.
+        public static CombatReward Apply(VictoryRewards.Payout payout, IReadOnlyList<string> fieldedIds,
+            IReadOnlyCollection<string> participants = null)
         {
-            var reward = ApplyUnsaved(payout, fieldedIds);
+            var reward = ApplyUnsaved(payout, fieldedIds, participants);
             SaveSlotManager.SaveCurrent();
             return reward;
         }
@@ -31,7 +39,8 @@ namespace PrincesPalace
         // for several changes -- an event's exp effect
         // (RunOrchestrator.ChooseEventOption). Same loop, same split, same
         // downed-half rule; only who writes differs.
-        internal static CombatReward ApplyUnsaved(VictoryRewards.Payout payout, IReadOnlyList<string> fieldedIds)
+        internal static CombatReward ApplyUnsaved(VictoryRewards.Payout payout, IReadOnlyList<string> fieldedIds,
+            IReadOnlyCollection<string> participants = null)
         {
             var reward = new CombatReward { GoldGained = payout.Gold };
 
@@ -49,6 +58,7 @@ namespace PrincesPalace
             for (int slot = 0; slot < squad.Count; slot++)
             {
                 var character = squad[slot];
+                if (participants != null && !participants.Contains(character.definitionId)) continue;
 
                 // FIELDED is decided by whether the fight actually had them. A
                 // squad member at 0 HP is left out of the encounter, and used to

@@ -188,6 +188,18 @@ namespace PrincesPalace.Domain.Events
         // second press that landed before the repaint the first one caused.
         // Nothing happened; the page the first press opened stays.
         StalePage,
+
+        // The pick's outcome starts an event fight whose party has nobody
+        // standing (an override naming only the fallen or the absent). The
+        // choice should carry an `inParty alive` require; this is the
+        // runtime backstop, so an empty request never reaches an empty stage
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md section 2, item 5).
+        NoFighters,
+
+        // A fight this event started is still waiting to be fought. The
+        // page is the one that launched it; nothing on it is pickable until
+        // the fight settles and moves the event on.
+        FightPending,
     }
 
     public enum EventChoiceOutcome

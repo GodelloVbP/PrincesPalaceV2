@@ -1238,7 +1238,8 @@ by `FightSettlementTests`, which drives the real `FightBootstrap` door.
 
 What each screen kept is exactly its screen work: `MapController` keeps which
 scene to load and the repaint, `FightBootstrap` keeps the placeholder fight and
-the two statics the Reckoning and defeat screens read, `FightController` keeps
+what the Reckoning and defeat screens read (this fight's settlement; the two
+statics remain for tests), `FightController` keeps
 the choice of `UnityEngine.Random` for the offer roll (deliberately unseeded --
 see `PLAN_BALANCE_BOT.md` F3), `ReckoningController` keeps its take-once guard
 and repaint, `RelicDraftController` keeps paging and selection.
@@ -1258,6 +1259,23 @@ are packed over the VISIBLE choices (so row i is not choice i -- it keeps the
 authored index per row), locked rows are `interactable = false` and left off
 its one vertical rail, and its `NavContext` has no Cancel (leaving is always
 an explicit row) but keeps Start for the system menu.
+
+**Event fights and the encounter request (`Core/EncounterRequest.cs`).** Every
+fight is an `EncounterRequest`; `RunOrchestrator.CurrentEncounterRequest()` is
+the one producer: the open event's pending fight (`RunSnapshot.pendingFight`,
+set by a pick whose outcome carries a `fight` effect) or else the room under the
+party. `BuildFight` builds from it (`RunEncounter.For(save, run, request)`:
+authored enemies, party override intersected with `FightersFor`, round limit,
+no second lives on `wake`), `FightBootstrap` takes the class from it, and
+`SettleFight` branches once into `SettleEventFight` (`RunOrchestrator.Event.cs`):
+no room cleared, no leg advanced, `wake` stands the fielded fallen at 1 HP, the
+fight's `onDefeated`/`onSurvived`/`onFell` outcome applies through `ApplyEffect`,
+one write. `EventController.Paint` hands a pending fight to the Fight scene;
+`LeaveFight` returns to the Map, which reopens the event on the result.
+`FightBootstrap` feeds the Reckoning / defeat screen from THIS fight's
+settlement, so `pays: false` and a `wake` loss fall back to Continue. A
+`mayReturn` event is not marked seen on open; `finish` marks it.
+`RunEncounter.Pool()` drops `rollable: false` enemies from room rolls.
 
 ### Two more one-rulebook seams (`Core/EquipmentOps.cs`, `Core/TalentOps.cs`)
 

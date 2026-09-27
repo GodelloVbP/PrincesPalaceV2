@@ -360,6 +360,22 @@ namespace PrincesPalace
         public string eventResult = "";
         public List<EventEffect> eventResultEffects = new List<EventEffect>();
 
+        // THE PENDING ENCOUNTER REQUEST (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md
+        // 3.1): the id of one of the open event's own fights, set by the pick
+        // whose outcome carries a `fight` effect and cleared by the fight's
+        // settlement. While it names a fight, the Fight screen and the bot
+        // build THAT fight instead of a room roll
+        // (RunOrchestrator.CurrentEncounterRequest), and SettleFight settles
+        // it as an event fight: no room cleared, no leg advanced, the event
+        // moved on to its onDefeated / onSurvived / onFell outcome.
+        //
+        // Persisted so a quit mid-fight relaunches the same fight on the same
+        // (step, node) stream. Meaningful only while the event is open;
+        // Reconcile drops one whose event is not. Save version 7 exists
+        // because an older build would settle it as a room fight and skip
+        // its ending.
+        public string pendingFight = "";
+
         // Buffs events granted this run (docs/PLAN_PETTING_ZOO.md): Prince's
         // favor for the run, a full special pool for one leg. One model for
         // both scopes, see EventBuffEntry; read through EventBuffs, never by

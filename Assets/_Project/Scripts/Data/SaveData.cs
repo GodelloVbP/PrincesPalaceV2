@@ -61,7 +61,15 @@ namespace PrincesPalace
         // (PLAN_PROGRESSION_V2.md §6 says so and is the authority for this
         // being acceptable at all); a shipped game would need the other
         // answer.
-        public const int CurrentVersion = 6;
+        // 6 -> 7: an event can start a fight (docs/PLAN_EVENTS_BELL_AND_
+        // CARAVAN.md 3.1, 3.3). No data changes -- RunSnapshot.pendingFight
+        // is additive and an older save reads it empty -- so the step is
+        // empty. The bump exists for the OTHER direction: a build at 6 that
+        // loaded a save holding a pending event fight would build and settle
+        // it as a room fight, clearing the event's room and skipping its
+        // ending. Refusing the newer save (Migrate's `version >
+        // CurrentVersion`) is the safe answer, and only a bump can ask for it.
+        public const int CurrentVersion = 7;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
         // raises this. Matches the id ContentBuilder authors it under —
@@ -540,6 +548,13 @@ namespace PrincesPalace
                 ResetTheLadder();
             }
 
+            // 6 -> 7: nothing to convert (see CurrentVersion). Stated as a
+            // step so the next bump reads the whole ladder, and so a reader
+            // looking for "what did 7 change" finds the answer here.
+            if (version < 7)
+            {
+            }
+
             version = CurrentVersion;
             Reconcile();
 
@@ -837,6 +852,7 @@ namespace PrincesPalace
             ReconcileLearnedSpells(activeRun);
             ReconcileShopStock(activeRun);
             ReconcileOpenEvent(activeRun);
+            ReconcilePendingFight(activeRun);
 
             eventCounters ??= new List<EventCounterEntry>();
             eventCounters.RemoveAll(e => e == null || string.IsNullOrEmpty(e.id));
@@ -1167,6 +1183,29 @@ namespace PrincesPalace
                 run.eventResult = "";
                 run.eventResultEffects.Clear();
                 if (string.IsNullOrEmpty(run.eventPageId)) RunOrchestrator.CloseEventFields(run);
+            }
+        }
+
+        // A PENDING EVENT FIGHT BELONGS TO ITS OPEN EVENT (plan 3.3, Stage
+        // A). After ReconcileOpenEvent has closed anything not under the
+        // party, a request whose event is not open -- or whose event no
+        // longer has that fight -- is dropped rather than fought: with no
+        // event to return to, its ending would have nowhere to land. The
+        // event itself stays on the page that launched it, so the player can
+        // pick again.
+        private static void ReconcilePendingFight(RunSnapshot run)
+        {
+            run.pendingFight ??= "";
+            if (run.pendingFight.Length == 0) return;
+
+            var definition = string.IsNullOrEmpty(run.eventId) ? null : RunOrchestrator.FindEvent(run.eventId);
+            bool eventOpen = definition != null && run.eventNodeId >= 0 && run.eventNodeId == run.currentNodeId;
+            if (!eventOpen || definition.FightById(run.pendingFight) == null)
+            {
+                UnityEngine.Debug.LogWarning(
+                    $"[Reconcile] dropped pending event fight '{run.pendingFight}': its event " +
+                    $"'{run.eventId}' is not open here or no longer has that fight.");
+                run.pendingFight = "";
             }
         }
 

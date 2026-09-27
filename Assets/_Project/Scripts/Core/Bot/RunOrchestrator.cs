@@ -270,25 +270,46 @@ namespace PrincesPalace
 
         // ---- building the fight ---------------------------------------------------
 
-        // The real thing: this room, this squad, this run's seed.
-        public static FightEncounterAdapter.BuiltFight BuildFight()
+        // THE ONE SEAM FOR "WHICH FIGHT" (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md
+        // 3.1). The open event's pending fight when it names one, else the
+        // room under the party. BuildFight builds from it, FightBootstrap
+        // takes the class from it and SettleFight branches on it once -- so
+        // the screen and the bot, which both go through those three, get
+        // event fights without knowing they exist.
+        public static EncounterRequest CurrentEncounterRequest()
         {
             var run = RunManager.Run;
+
+            var fight = PendingEventFightOn(run);
+            if (fight != null)
+            {
+                return EncounterRequest.ForEventFight(RunManager.CurrentNode?.Type ?? RoomType.Event, run.eventId, fight);
+            }
 
             // Entry is the only non-fight room that can reach this path, and
             // only via a direct scene load. Treating an unknown room as a
             // normal fight beats refusing to build one, for the same reason the
             // no-content case degrades rather than throwing.
-            var roomType = RunManager.CurrentNode?.Type ?? RoomType.Fight;
+            return EncounterRequest.ForRoom(RunManager.CurrentNode?.Type ?? RoomType.Fight);
+        }
 
-            var roster = RunEncounter.For(SaveSlotManager.CurrentSave, run, roomType);
+        // The real thing: this room (or this event's fight), this squad, this
+        // run's seed.
+        public static FightEncounterAdapter.BuiltFight BuildFight()
+        {
+            var run = RunManager.Run;
+            var request = CurrentEncounterRequest();
+            var roomType = request.RoomType;
+
+            var roster = RunEncounter.For(SaveSlotManager.CurrentSave, run, request);
             if (roster.IsEmpty)
             {
                 // An empty party here is a squad wipe that should have ended
                 // the run before the map ever offered this room. Saying so is
                 // worth more than an empty stage that looks like a render bug.
+                string what = request.IsEventFight ? $" (event fight '{request.EventFight.Id}')" : "";
                 Debug.LogWarning(
-                    $"[RunOrchestrator] Room {roomType} fielded {roster.PartyIds?.Count ?? 0} party " +
+                    $"[RunOrchestrator] Room {roomType}{what} fielded {roster.PartyIds?.Count ?? 0} party " +
                     $"and {roster.EnemyIds?.Count ?? 0} enemies; the stage stays empty.");
                 return null;
             }
@@ -328,7 +349,14 @@ namespace PrincesPalace
             // THE CHARGE GOES IN BEFORE THE FIGHT OPENS, because Domain cannot
             // ask a save what the squad has earned. What comes back out is
             // session.SecondLivesSpent, folded into the run by SettleFight.
-            built.Session.SecondLifeCharges = SquadTrack.SecondLivesLeft(run);
+            //
+            // None in a `wake` event fight: its loss is survivable already
+            // (EncounterRequest.AllowsSecondLives).
+            built.Session.SecondLifeCharges = request.AllowsSecondLives ? SquadTrack.SecondLivesLeft(run) : 0;
+
+            // BEFORE Begin, which both callers run after this returns: the
+            // session checks the limit at each round start from round 1.
+            built.Session.RoundLimit = request.RoundLimit;
 
             // Damage taken in earlier rooms, carried in. Applied after the
             // build because the adapter constructs from definitions and knows
@@ -412,11 +440,20 @@ namespace PrincesPalace
         // Pinned by FightSettlementTests through the real FightBootstrap door
         // before it moved here, because every line below carries an ordering
         // that once went wrong.
+        //
+        // AN EVENT FIGHT BRANCHES ONCE, below the part both share
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.2, 3.1): the ledger fold,
+        // the HP write-back, second lives and the Amassing Star bank are
+        // identical, and then SettleEventFight replaces "pay, clear the room,
+        // advance the leg" with the event's own rules. A room fight reads the
+        // request as ForRoom and runs every line it always ran, in the order
+        // it always ran them.
         public static FightSettlement SettleFight(FightSession session, bool won)
         {
             if (!RunManager.HasRun) return new FightSettlement(null, null);
 
             var run = RunManager.Run;
+            var request = CurrentEncounterRequest();
 
             // FOLDED BEFORE THE WIN CHECK. What a character did in the fight
             // that killed them is part of the run -- dropping it would make the
@@ -456,13 +493,18 @@ namespace PrincesPalace
             // is least deserved.
             if (run != null && session != null) run.secondLivesUsed += session.SecondLivesSpent;
 
-            var payout = won ? session?.Payout : null;
+            // A `pays: false` event fight pays nothing: no gold, no exp, no
+            // spell drop, and so no Reckoning.
+            var payout = won && request.Pays ? session?.Payout : null;
 
             // GOLD IS NOT PASSED HERE any more. The fight's gold is banked
             // below through RunManager.BankPayout, which is now the one place
             // a run records having earned anything -- so handing it to the
             // ledger too would count the same coin twice.
-            RunLedger.RecordRoom(run, won,
+            //
+            // An event fight clears no room (the event's Leave does), so it
+            // never counts toward roomsCleared; its exp and depth still do.
+            RunLedger.RecordRoom(run, won && !request.IsEventFight,
                 won ? (payout?.Experience ?? 0) : 0,
                 run?.step ?? 0);
 
@@ -484,7 +526,7 @@ namespace PrincesPalace
                 run.bonusDamagePercent += session.BonusDamagePercentEarned;
             }
 
-            if (!won)
+            if (!won && request.EndsRunOnLoss)
             {
                 // A loss ends the RUN, not just the fight. Anything else would
                 // let a player retry the same room until it went their way,
@@ -496,42 +538,10 @@ namespace PrincesPalace
                 return new FightSettlement(null, RunManager.EndRun());
             }
 
+            if (request.IsEventFight) return SettleEventFight(session, won, request, payout);
+
             CombatReward reward = null;
-            if (payout.HasValue)
-            {
-                // GOLD to the run, EXPERIENCE to the characters. Two different
-                // owners with two different lifetimes: the run's gold is spent
-                // inside the run and lost with it, while a level survives.
-                RunManager.BankPayout(payout.Value.Gold);
-
-                // ONE ROLL, THIS FIGHT (docs/PLAN_SHOP.md §1e). Keyed to
-                // (step, node) so quitting mid-reward and returning does not
-                // reroll it -- the same property Treasure and the shop
-                // streams have, for the same reason. Folded into
-                // run.unassignedSpellBooks BEFORE RewardApplier.Apply below,
-                // so the one SaveCurrent() that call already makes is the
-                // save this rides too, rather than a second write.
-                var bookIds = ContentDatabase.Skills
-                    .Where(s => s != null && s.Data.BookTier > 0)
-                    .Select(s => s.id)
-                    .ToList();
-                var spellRng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.step, run.currentNodeId);
-                string droppedSpell = VictoryRewards.RollSpellDrop(bookIds,
-                    session != null && session.IsEliteFight, session != null && session.IsBossFight, spellRng);
-                if (droppedSpell != null)
-                {
-                    run.unassignedSpellBooks ??= new List<string>();
-                    run.unassignedSpellBooks.Add(droppedSpell);
-                }
-
-                reward = RewardApplier.Apply(payout.Value, FieldedIds(session));
-
-                // The fight's own counters, carried onto the reward so the
-                // Reckoning's tally tab has something to read. Without this the
-                // ledger existed, was folded into the run, and was visible only
-                // after you died.
-                if (session?.Ledger != null) reward.Ledger = session.Ledger;
-            }
+            if (payout.HasValue) reward = PayOut(session, run, payout.Value, participants: null);
 
             RunManager.ClearCurrentRoom();
 
@@ -546,6 +556,51 @@ namespace PrincesPalace
             if (RunManager.LegIsOver()) RunManager.AdvanceLeg();
 
             return new FightSettlement(reward, null);
+        }
+
+        // WHAT A WON, PAID FIGHT GIVES: gold banked, one spell-drop roll, and
+        // the experience applied, which persists (RewardApplier.Apply) -- so
+        // this is also the write for anything the settlement already moved in
+        // memory. Extracted unchanged from SettleFight so a paying event fight
+        // pays by the same lines. `participants` narrows who the experience
+        // reaches (an event fight's party override); null is the whole squad,
+        // a room's rule.
+        private static CombatReward PayOut(FightSession session, RunSnapshot run, VictoryRewards.Payout payout,
+            IReadOnlyCollection<string> participants)
+        {
+            // GOLD to the run, EXPERIENCE to the characters. Two different
+            // owners with two different lifetimes: the run's gold is spent
+            // inside the run and lost with it, while a level survives.
+            RunManager.BankPayout(payout.Gold);
+
+            // ONE ROLL, THIS FIGHT (docs/PLAN_SHOP.md §1e). Keyed to
+            // (step, node) so quitting mid-reward and returning does not
+            // reroll it -- the same property Treasure and the shop
+            // streams have, for the same reason. Folded into
+            // run.unassignedSpellBooks BEFORE RewardApplier.Apply below,
+            // so the one SaveCurrent() that call already makes is the
+            // save this rides too, rather than a second write.
+            var bookIds = ContentDatabase.Skills
+                .Where(s => s != null && s.Data.BookTier > 0)
+                .Select(s => s.id)
+                .ToList();
+            var spellRng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.step, run.currentNodeId);
+            string droppedSpell = VictoryRewards.RollSpellDrop(bookIds,
+                session != null && session.IsEliteFight, session != null && session.IsBossFight, spellRng);
+            if (droppedSpell != null)
+            {
+                run.unassignedSpellBooks ??= new List<string>();
+                run.unassignedSpellBooks.Add(droppedSpell);
+            }
+
+            var reward = RewardApplier.Apply(payout, FieldedIds(session), participants);
+
+            // The fight's own counters, carried onto the reward so the
+            // Reckoning's tally tab has something to read. Without this the
+            // ledger existed, was folded into the run, and was visible only
+            // after you died.
+            if (session?.Ledger != null) reward.Ledger = session.Ledger;
+            return reward;
         }
 
         // Which boss died. The run records the enemy it was sent to kill rather

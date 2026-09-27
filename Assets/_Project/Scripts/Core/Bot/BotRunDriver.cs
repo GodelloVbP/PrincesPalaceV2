@@ -696,11 +696,13 @@ namespace PrincesPalace
                 // the leg, so the visit ends in LeaveEvent whatever happens.
                 if (arrival == RunOrchestrator.Arrival.Event)
                 {
+                    bool survived;
                     using (BotPhaseTimers.Measure(BotPhase.RoomResolve))
                     {
-                        VisitEvent(node, result);
+                        survived = VisitEvent(seed, save, node, fightPolicy, runPolicy, roomTrace, result);
                     }
                     result.Trace.Rooms.Add(roomTrace);
+                    if (!survived) return;
                     CaptureWhatTheRunHolds(save, result);
                     continue;
                 }
@@ -746,11 +748,31 @@ namespace PrincesPalace
         // events is a later question, and taking the first open choice is the
         // floor every event must survive.
         //
-        // The visit ALWAYS ends with the room cleared. Anything else is a hit.
-        private static void VisitEvent(DescentNode node, BotRunResult result)
+        // The visit ALWAYS ends with the room cleared, or with the run over in
+        // an `endRun` event fight. Anything else is a hit.
+        //
+        // AN EVENT FIGHT IS PLAYED WHERE IT STARTS (plan M2): a pick that
+        // leaves a request pending hands straight to PlayTheFight, the room
+        // fight's own routine, which builds through the same
+        // CurrentEncounterRequest seam the screen does. Back from it the loop
+        // reads the event again, now on the fight's result. Returns false
+        // when the run ended in the fight.
+        private static bool VisitEvent(ulong seed, SaveData save, DescentNode node,
+            IFightPolicy fightPolicy, IRunPolicy runPolicy, RoomTrace roomTrace, BotRunResult result)
         {
             for (int picks = 0; picks < MaxEventChoices; picks++)
             {
+                if (RunOrchestrator.EventFightPending)
+                {
+                    bool alive = PlayTheFight(seed, save, node, fightPolicy, runPolicy, roomTrace, result);
+                    using (BotPhaseTimers.Measure(BotPhase.SpellAssign))
+                    {
+                        ResolvePendingSpellAssignments(seed, save, runPolicy, roomTrace);
+                    }
+                    if (!alive) return false;
+                    continue;
+                }
+
                 var view = RunOrchestrator.CurrentEvent();
                 if (view == null) break;
 
@@ -795,6 +817,8 @@ namespace PrincesPalace
                 result.Hits.Add(new InvariantHit("EventRoomNotCleared",
                     $"node {node.Id} was still uncleared after its event closed"));
             }
+
+            return true;
         }
 
         // ---- the shop ------------------------------------------------------------
@@ -1230,6 +1254,11 @@ namespace PrincesPalace
             var run = RunManager.Run;
             int step = run.step;
 
+            // Read BEFORE the build and the settlement, which clears an event
+            // fight's request: what a loss does and whether the fight pays
+            // are the request's, not the room's.
+            var request = RunOrchestrator.CurrentEncounterRequest();
+
             FightEncounterAdapter.BuiltFight built;
             using (BotPhaseTimers.Measure(BotPhase.BuildFight))
             {
@@ -1310,7 +1339,7 @@ namespace PrincesPalace
             // potions afterwards would report an empty bag for every dead run.
             CaptureWhatTheRunHolds(save, result);
 
-            if (!won)
+            if (!won && request.EndsRunOnLoss)
             {
                 result.Trace.DeathStep = step;
                 result.Trace.DeathCause = DescribeTheDeath(fightTrace);
@@ -1323,12 +1352,27 @@ namespace PrincesPalace
 
             if (!won)
             {
-                if (RunManager.HasRun)
+                if (request.EndsRunOnLoss)
                 {
-                    result.Hits.Add(new InvariantHit("RunSurvivedALoss",
-                        $"the party lost at step {step} and the run is still standing"));
+                    if (RunManager.HasRun)
+                    {
+                        result.Hits.Add(new InvariantHit("RunSurvivedALoss",
+                            $"the party lost at step {step} and the run is still standing"));
+                    }
+                    return false;
                 }
-                return false;
+
+                // A `wake` event fight: the run goes on, and nothing was paid.
+                if (!RunManager.HasRun)
+                {
+                    result.Hits.Add(new InvariantHit("WakeLossEndedTheRun",
+                        $"event fight '{request.EventFight.Id}' was lost at step {step} under onLoss wake, " +
+                        "and the run ended"));
+                    return false;
+                }
+
+                CaptureWhatTheRunHolds(save, result);
+                return true;
             }
 
             CheckRewardsDidNotGoBackwards(save, goldBefore, levelBefore, expBefore, step, result);
@@ -1343,16 +1387,23 @@ namespace PrincesPalace
                 CollectLevelUps(seed, save, runPolicy, step);
             }
 
-            if (RunManager.HasRun && RunManager.Choices().Count == 0)
+            // A room fight clears its room and may open the next leg; an event
+            // fight does neither (its event's Leave does), so this check is a
+            // room's.
+            if (!request.IsEventFight && RunManager.HasRun && RunManager.Choices().Count == 0)
             {
                 result.Hits.Add(new InvariantHit("StuckAfterWin",
                     $"step {step} node {node.Id} was won and settled, and there is nowhere left to walk; " +
                     "SettleFight is supposed to have advanced the leg"));
             }
 
-            using (BotPhaseTimers.Measure(BotPhase.Offers))
+            // `pays: false` opens no Reckoning, so there is nothing to take.
+            if (request.Pays)
             {
-                Offer(seed, save, node, runPolicy, session, roomTrace, result);
+                using (BotPhaseTimers.Measure(BotPhase.Offers))
+                {
+                    Offer(seed, save, node, runPolicy, session, roomTrace, result);
+                }
             }
 
             CaptureWhatTheRunHolds(save, result);

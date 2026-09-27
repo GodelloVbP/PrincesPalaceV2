@@ -249,6 +249,18 @@ namespace PrincesPalace
 
         private void Paint()
         {
+            // A FIGHT THIS EVENT STARTED goes before any page is painted: the
+            // pick that started it, or a reload that finds it still pending
+            // (the map reopens the event, and the event hands on to the
+            // fight). The Fight screen builds it through
+            // RunOrchestrator.CurrentEncounterRequest; leaving the fight goes
+            // back to the Map, which reopens this panel on the fight's result.
+            if (RunOrchestrator.EventFightPending)
+            {
+                LaunchFight();
+                return;
+            }
+
             var view = RunOrchestrator.CurrentEvent();
             if (view == null)
             {
@@ -691,6 +703,20 @@ namespace PrincesPalace
             // says -- a refusal leaves it unchanged, which repaints the same;
             // a StalePage refusal repaints the page the run is really on.
             Paint();
+        }
+
+        // Not Close(): the event is still open, and Finished would repaint a
+        // map that is about to be unloaded. The scene change takes the panel
+        // with it.
+        private void LaunchFight()
+        {
+            if (_playback != null)
+            {
+                _playback.Close();
+                SnapBusts();
+            }
+
+            Navigation.Go(Navigation.Fight);
         }
 
         private void Close()

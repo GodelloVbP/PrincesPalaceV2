@@ -55,12 +55,26 @@ namespace PrincesPalace
                 || EnemyIds == null || EnemyIds.Count == 0;
         }
 
-        public static Roster For(SaveData save, RunSnapshot run, RoomType roomType)
+        public static Roster For(SaveData save, RunSnapshot run, RoomType roomType) =>
+            For(save, run, EncounterRequest.ForRoom(roomType));
+
+        // THE REQUEST DECIDES WHO AND WHAT; everything else is the room's
+        // code (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.1). An event fight
+        // takes its enemies as authored instead of rolling them, and its
+        // party override is INTERSECTED with the fieldable squad rather than
+        // replacing it -- an override naming someone at 0 HP or out of the
+        // squad fields nobody for that name, never a phantom.
+        //
+        // The stream is the room's own (RngStreams.Fight at step, node), so a
+        // reload mid-fight relaunches the same enemies on the same draws. An
+        // Event node never has a room fight of its own, so nothing else opens
+        // that stream there.
+        public static Roster For(SaveData save, RunSnapshot run, EncounterRequest request)
         {
+            request ??= EncounterRequest.ForRoom(RoomType.Fight);
             var health = HealthByCharacter(run);
 
-            var party = EncounterRoll.FieldableParty(
-                save != null ? save.ActiveSquadIds() : null, health);
+            var party = FightersFor(save, run, request);
 
             // Keyed to WHERE the fight is, not to how many came before it.
             // Position carries the state, so the same room in the same run
@@ -70,10 +84,25 @@ namespace PrincesPalace
                 ? RngStreams.Open(run.runSeed, RngStreams.Fight, run.step, run.currentNodeId)
                 : null;
 
+            // An event fight's enemies are authored, not rolled: no draw is
+            // taken, so its combat starts on the stream's first value.
+            if (request.IsEventFight)
+            {
+                return new Roster
+                {
+                    PartyIds = party,
+                    EnemyIds = (request.EventFight.EnemyIds ?? new string[0]).ToList(),
+                    StartingHealth = health,
+                    IsBoss = false,
+                    IsElite = request.EventFight.Elite,
+                    Rng = rng,
+                };
+            }
+
             // BANDED BY DEPTH. Without the floor the pool is every non-boss
             // enemy at every depth, so a floor-1 room could field a golem --
             // twelve rounds against a starting party, next to a rat's one.
-            var roll = EncounterRoll.Roll(roomType, Pool(), rng, run?.bossEnemyId,
+            var roll = EncounterRoll.Roll(request.RoomType, Pool(), rng, run?.bossEnemyId,
                 RunDepth.FloorFor(run?.legStartStep ?? 0));
 
             return new Roster
@@ -94,11 +123,31 @@ namespace PrincesPalace
         // and the fallback exists precisely so content can outrun art. Keeping
         // the filter would have meant enemies.json quietly deciding the
         // encounter table by which sheets happened to be finished.
-        private static IReadOnlyList<EnemyCandidate> Pool() =>
+        //
+        // ROLLABLE ONLY. An enemy authored `rollable: false` exists for its
+        // event's own fight (the Bellwether) and is kept out of every room
+        // roll here -- the one pool the room roll draws from -- while an
+        // event fight names it directly and never comes through this list.
+        public static IReadOnlyList<EnemyCandidate> Pool() =>
             ContentDatabase.Enemies
-                .Where(e => e != null && !string.IsNullOrEmpty(e.id))
+                .Where(e => e != null && !string.IsNullOrEmpty(e.id) && e.Data.Rollable)
                 .Select(e => new EnemyCandidate(e.id, e.Data.IsBoss, e.Data.AvoidsFrontSlot, e.Data.MinFloor, e.Data.SlotSpan))
                 .ToList();
+
+        // WHO FIGHTS THIS REQUEST: the fieldable squad (standing members, squad
+        // order), narrowed to the override when the request carries one.
+        // Empty is a squad wipe for a room and "nobody to send" for an event
+        // fight; RunOrchestrator refuses the pick that would start the latter.
+        public static IReadOnlyList<string> FightersFor(SaveData save, RunSnapshot run, EncounterRequest request)
+        {
+            var fieldable = EncounterRoll.FieldableParty(
+                save != null ? save.ActiveSquadIds() : null, HealthByCharacter(run));
+
+            var only = request?.PartyOverride;
+            if (only == null) return fieldable;
+
+            return fieldable.Where(only.Contains).ToList();
+        }
 
         // Internal for the event exp effect, which decides "fielded" the way a
         // fight does (RunOrchestrator.Event.cs).

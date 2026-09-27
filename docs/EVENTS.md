@@ -104,7 +104,7 @@ show a caption; `reason` on an event-level or outcome row is ignored.
 | `healPercent` + `character` | 1-100 of that one member's max HP. **Never revives**: a member at 0 stays at 0, and one not in the squad is untouched (no line either way). `character` on any other kind is refused | `Shawn healed 30%`, or `Shawn fully healed` at 100 |
 | `damagePercent` | 1-100; floors at 1 HP, never kills | `Party hurt 10%` |
 | `exp` | split across the party as after a fight | `+50 XP` |
-| `exp` + `character` | all of it to that one member, not split. An unknown id is refused. The run applies this from M2 of `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md` | `+50 XP` |
+| `exp` + `character` | all of it to that one member, not split (half if they are down, as after a fight; none if they are not in the squad). An unknown id is refused | `+50 XP` |
 | `item` | how many of `item` go to the stockpile | `+2 Health Potion` |
 | `counter` | added to `counter` | none |
 | `relic` | ignored. Adds `relic` to the run's relics; already held does nothing (no line). The build refuses an id not in `relics.json` | `Relic: Kinship` |
@@ -150,8 +150,8 @@ this run.
   `finish` there would do nothing, so the build refuses it.
 - The ways out that should not end the event ("Walk away", "Walk on") simply
   carry no `finish`.
-- The build accepts `mayReturn` and `finish` now. The run honours them from
-  M2 of `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md`.
+- The run honours both: opening a `mayReturn` event leaves `eventsSeen`
+  alone, and `finish` adds the event to it wherever it applies.
 
 ## Fights
 
@@ -202,8 +202,17 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   speakers must be guaranteed on every launch that reaches it.
 - **Result text** plays on the stage when the starting page or the result's
   `goTo` page has lines, and then takes the 200 cap.
-- The build validates all of this now. The run builds and settles event
-  fights from M2, and counts rounds from M3, of
+- **At runtime:** the pick that starts a fight saves a pending request
+  (`RunSnapshot.pendingFight`) and the event stays on that page; the Fight
+  screen opens on it, and a quit mid-fight relaunches the same enemies on the
+  same stream. When the fight ends, its result outcome applies (effects,
+  result text, `goTo`) in one save, the request clears, and leaving the fight
+  returns to the Map, which reopens the event on the result and then the page.
+  The room stays uncleared and the leg does not advance; the event's Leave
+  clears it. A pick whose fight has nobody standing in its party is refused
+  (`NoFighters`). A `wake` fight fields no second lives. `pays: false` and a
+  `wake` loss end on Continue, with no Reckoning and no defeat screen.
+- The fight HUD's round counter, backdrop, round sound and overlay are M6 of
   `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md`.
 
 ## Art

@@ -330,7 +330,7 @@ namespace PrincesPalace
             // reads a multiplier one fight behind the source just installed.
             FightBeatPlayer.AdoptPlayerSpeed();
 
-            fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode), RunOrchestrator.BuildSatchel());
+            fight.Bind(built.Session, RunOrchestrator.CurrentEncounterRequest().Class, RunOrchestrator.BuildSatchel());
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);
 
@@ -355,8 +355,16 @@ namespace PrincesPalace
             // Read straight AFTER OnFightEnded has run, which is what populates
             // it. A Func rather than the value, because at subscription time
             // the fight has not happened yet.
-            fight.RewardSource = () => LastReward;
-            fight.SettlementSource = () => LastSettlement;
+            //
+            // THIS FIGHT'S settlement, not the statics. The statics keep the
+            // last value anything assigned, so a fight that settled with no
+            // reward (an event fight with `pays: false`) or with no run ended
+            // (a `wake` loss) read the PREVIOUS fight's: a stale Reckoning, or
+            // a defeat screen for a run still going. Per fight, "nothing"
+            // reads as nothing, and the controller's Continue fallback stands
+            // in (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.2).
+            fight.RewardSource = () => _settled.Reward;
+            fight.SettlementSource = () => _settled.RunEnded;
         }
 
         // The IN-RUN half moved to RunOrchestrator.BuildFight, which is the
@@ -510,20 +518,11 @@ namespace PrincesPalace
             !string.IsNullOrWhiteSpace(definition.Data.BattleSpritePath);
 
     
-        // Which backdrop and which reward multiplier. Reads the ROOM, so an
-        // elite room is elite everywhere at once rather than in each place that
-        // happens to ask.
-        private static EncounterClass EncounterFor(DescentNode node)
-        {
-            if (node == null) return EncounterClass.Normal;
-
-            switch (node.Type)
-            {
-                case RoomType.Boss: return EncounterClass.Boss;
-                case RoomType.EliteFight: return EncounterClass.Elite;
-                default: return EncounterClass.Normal;
-            }
-        }
+        // Which backdrop and which reward multiplier is the ENCOUNTER
+        // REQUEST's answer now (EncounterRequest.Class): the room's type for a
+        // room, the event fight's `elite` for an event fight. This used to
+        // read the node here, which an event fight's node (RoomType.Event)
+        // cannot answer.
 
         // THE SETTLEMENT LIVES IN RunOrchestrator NOW.
         //
@@ -539,9 +538,13 @@ namespace PrincesPalace
         // What is left here is what only a SCREEN needs: the two statics the
         // Reckoning and the defeat screen read back through RewardSource and
         // SettlementSource.
+        // This fight's settlement, for RewardSource / SettlementSource.
+        private RunOrchestrator.FightSettlement _settled;
+
         private void OnFightEnded(bool won)
         {
             var settled = RunOrchestrator.SettleFight(fight.Session, won);
+            _settled = settled;
 
             // ASSIGNED ONLY WHEN THERE IS SOMETHING TO ASSIGN, which is what
             // the two branches this replaces did: a win never touched
