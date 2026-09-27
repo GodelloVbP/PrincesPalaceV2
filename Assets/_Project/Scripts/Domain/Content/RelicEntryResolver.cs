@@ -209,9 +209,18 @@ namespace PrincesPalace.Domain.Content
 
             if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
 
+            // The same two checks every other SpellPresentation goes through
+            // (skills, enemies), not a relic-flavoured copy of them.
+            var vfx = raw.vfx ?? new SpellPresentation();
+            if (!SpellPresentationPaths.Check(label, vfx, out error)) return false;
+            if (!SpellLayerRules.TryCheck(label, vfx, out error)) return false;
+
             resolvedRelic = new ResolvedRelic(raw.id, raw.displayName, raw.description ?? "", effect, sortOrder,
                 raw.iconPath ?? "", rarity, unlockedBy, modifiers, raw.requiresConvergenceAbility,
-                bearer, raw.draftable);
+                bearer, raw.draftable)
+            {
+                Vfx = vfx.Copy(),
+            };
             error = null;
             return true;
         }

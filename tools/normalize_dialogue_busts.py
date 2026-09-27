@@ -85,9 +85,10 @@ CHARACTERS = [
     ("Bear", "bear", "Bjorn"),
 ]
 
-# The six expressions the dialogue stage knows how to show. Order here is
-# also report order, not a ranking.
-EXPRESSIONS = ["neutral", "happy", "annoyed", "nervous", "sad", "surprised"]
+# The seven expressions the dialogue stage knows how to show, the same seven
+# as Domain/Content/DialogueExpression.cs. Order here is also report order,
+# not a ranking.
+EXPRESSIONS = ["neutral", "happy", "annoyed", "nervous", "sad", "surprised", "entranced"]
 
 RECIPE_VERSION = 1
 

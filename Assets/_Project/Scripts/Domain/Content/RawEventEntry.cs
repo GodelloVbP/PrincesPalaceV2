@@ -32,18 +32,20 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventEffect
     {
-        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor or fillSpecialPool.")]
+        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight or finish.")]
         public string kind = "";
-        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it.")]
+        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight and finish refuse it.")]
         public int amount;
         [ContentDoc("The item id granted; required by item.")]
         public string item = "";
         [ContentDoc("The counter id this effect changes; required by counter.")]
         public string counter = "";
-        [ContentDoc("healPercent only, optional: heal just this character id by amount percent of their max HP. Never revives: a member at 0 HP stays at 0. Empty heals the whole squad. Refused on any other kind.")]
+        [ContentDoc("Optional on healPercent and exp: that one character id instead of the whole squad. healPercent never revives (a member at 0 HP stays at 0); exp goes to that member alone rather than being split. Refused on any other kind.")]
         public string character = "";
         [ContentDoc("The relic id (relics.json) added to the run; required by relic. Already held is a no-op.")]
         public string relic = "";
+        [ContentDoc("fight only, required: the id of one of this event's own fights[] to start. Allowed only in an outcome's effects, at most one per outcome, and that outcome's goTo must be empty -- the fight's result outcome decides where the event goes next.")]
+        public string fight = "";
     }
 
     // One branch of a choice, exactly as typed into a choice's `outcomes`
@@ -59,7 +61,7 @@ namespace PrincesPalace.Domain.Content
         public RawEventEffect[] effects = Array.Empty<RawEventEffect>();
         [ContentDoc("The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body, or at MaxLineLength when it plays on the dialogue stage (the choice's page or the goTo page has lines).")]
         public string result = "";
-        [ContentDoc("The next page's id, or the literal 'Leave' (case-insensitive) to close the event.")]
+        [ContentDoc("The next page's id, or the literal 'Leave' (case-insensitive) to close the event. Must be empty on an outcome that carries a fight effect, and only there: the fight's own onDefeated/onSurvived/onFell outcome goes on from it.")]
         public string goTo = "";
     }
 
@@ -114,7 +116,7 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventCastMember
     {
-        [ContentDoc("The character id (characters.json) this row places; must speak on this page.")]
+        [ContentDoc("The character id (characters.json) or event speaker id (the event's speakers[]) this row places; must speak on this page.")]
         public string character = "";
         [ContentDoc("Which screen edge the bust stands against: left or right (case-insensitive). A right-side bust is mirrored so it faces inward.")]
         public string side = "";
@@ -124,9 +126,9 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventLine
     {
-        [ContentDoc("Who says this: a character id (characters.json), or the literal 'narration' (case-insensitive) for an unvoiced line with no bust and no name plate.")]
+        [ContentDoc("Who says this: a character id (characters.json), one of this event's own speakers[] ids, or the literal 'narration' (case-insensitive) for an unvoiced line with no bust and no name plate.")]
         public string speaker = "";
-        [ContentDoc("The speaker's face for this line; empty means neutral. Refused on narration.")]
+        [ContentDoc("The speaker's face for this line. A party character takes a DialogueExpression, empty meaning neutral; an event speaker takes one of its own declared expressions, empty meaning the first it declares. Refused on narration.")]
         public string expression = "";
         [ContentDoc("The line's text; at most EventEntryResolver.MaxLineLength characters, tags included. The only markup allowed is <i>...</i> (lowercase, balanced, not nested); any other tag, <b> included, is refused.")]
         public string text = "";
@@ -136,7 +138,7 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventEntry
     {
-        [ContentDoc("Stable identifier; persisted in the run's eventsSeen list so an event shows at most once per run.")]
+        [ContentDoc("Stable identifier; persisted in the run's eventsSeen list so an event shows at most once per run (a mayReturn event: until a finish effect applies).")]
         public string id = "";
         [ContentDoc("Floor numbers this event may appear on; empty means every floor.")]
         public int[] floors = Array.Empty<int>();
@@ -149,6 +151,81 @@ namespace PrincesPalace.Domain.Content
 
         [ContentDoc("The dialogue stage's full-bleed backdrop, Assets-relative with its extension, baked at scene build like a page's artPath; a page's own backdrop overrides it. Empty means EventEntryResolver.DefaultBackdrop (Assets/_Project/Art/Backgrounds/Dungeon.png). Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/.")]
         public string backdrop = "";
+
+        // ---- Returning events, fights, speakers (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.5) ----
+
+        [ContentDoc("When true, opening this event does not mark it seen: it stays eligible for every later Event node this run until a finish effect applies. False (every event before the Bell) marks it seen the moment it opens. A finish effect on an event without mayReturn is refused.")]
+        public bool mayReturn;
+        [ContentDoc("This event's own speakers: people who belong to the event rather than the party (a merchant, say). A line or cast entry may name one by id; they are always present at their own event.")]
+        public RawEventSpeaker[] speakers = Array.Empty<RawEventSpeaker>();
+        [ContentDoc("Fights this event can start, each named by a fight effect in some outcome. Its result (every enemy down, the round limit reached, or the party down) picks onDefeated, onSurvived or onFell, which apply like any outcome.")]
+        public RawEventFight[] fights = Array.Empty<RawEventFight>();
+    }
+
+    // One row of an event's `speakers` array: a bust on the dialogue stage
+    // that is not a party character.
+    [Serializable]
+    public class RawEventSpeaker
+    {
+        [ContentDoc("Stable id within this event, named by a line's speaker or a cast entry. Refused when it is a character id in characters.json or 'narration'.")]
+        public string id = "";
+        [ContentDoc("The name plate's name; required.")]
+        public string name = "";
+        [ContentDoc("The name plate's second line; optional, capped at CharacterEntryResolver.MaxEpithetLength characters like a character's.")]
+        public string epithet = "";
+        [ContentDoc("Resources-relative folder of this speaker's busts, one PNG per declared expression (<bustPath>/<expression>), the same shape as a character's dialogueBustPath. Empty shows the name plate and text with no bust.")]
+        public string bustPath = "";
+        [ContentDoc("The expressions this speaker has, lowercase letters, digits and underscores (they are bust file names). A line naming one not listed is refused; a line with none takes the first. Empty declares just 'neutral'.")]
+        public string[] expressions = Array.Empty<string>();
+    }
+
+    // One row of an event's `fights` array.
+    [Serializable]
+    public class RawEventFight
+    {
+        [ContentDoc("Stable id within this event, named by a fight effect.")]
+        public string id = "";
+        [ContentDoc("Enemy ids (enemies.json, active) in stage order; at least one, and their slotSpans may not add up past the stage's three slots.")]
+        public string[] enemies = Array.Empty<string>();
+        [ContentDoc("True fights at the elite class (payout multiplier and default backdrop); false at the normal class.")]
+        public bool elite;
+        [ContentDoc("Character ids who fight, overriding the normal fieldable squad; empty means the normal squad. Members not listed sit out untouched. The choice starting it should require one of them alive.")]
+        public string[] party = Array.Empty<string>();
+        [ContentDoc("0 means no round limit. Above 0, reaching round surviveRounds + 1 with someone standing ends the fight as Survived; onSurvived is then required.")]
+        public int surviveRounds;
+        [ContentDoc("The round counter's word ('Toll'), capped at EventEntryResolver.MaxRoundLabelLength characters. Only read with a round limit, so refused without one; empty shows the default.")]
+        public string roundLabel = "";
+        [ContentDoc("What losing does, one of EventFightLoss: endRun (empty; the run ends, as in a room) or wake (the run continues and the fallen fighters stand at 1 HP). onFell is refused on endRun and required on wake.")]
+        public string onLoss = "";
+        [ContentDoc("True pays out like a room fight (gold, spell drop, the Reckoning); false pays nothing and ends on Continue.")]
+        public bool pays = true;
+        [ContentDoc("The fight's backdrop, Assets-relative with its extension, baked at scene build. Empty uses the class's own. Filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/.")]
+        public string backdrop = "";
+        [ContentDoc("Resources-relative sound (no extension) played as each round starts. Only read with a round limit, so refused without one.")]
+        public string roundSfx = "";
+        [ContentDoc("Resources-relative sound (no extension) looped for the whole fight; empty plays none.")]
+        public string ambience = "";
+        [ContentDoc("An image laid over the stage that steps from fromScale to toScale across the round limit; see EventRoundOverlay. Only read with a round limit, so a path without one is refused.")]
+        public EventRoundOverlay roundOverlay = new EventRoundOverlay();
+        [ContentDoc("The outcome when every enemy is down; required. An outcome row without requires (refused here), whose goTo is a page or Leave.")]
+        public RawEventOutcome onDefeated = new RawEventOutcome();
+        [ContentDoc("The outcome when the round limit is reached with someone standing; required when surviveRounds > 0 and refused otherwise.")]
+        public RawEventOutcome onSurvived = new RawEventOutcome();
+        [ContentDoc("The outcome when the fighters fall; required on wake, refused on endRun (the run is over).")]
+        public RawEventOutcome onFell = new RawEventOutcome();
+    }
+
+    // A fight's round overlay. Not a Raw* type: it is a block inside a fight
+    // row, and ArtPathConvention keys its path as "roundOverlay.path".
+    [Serializable]
+    public class EventRoundOverlay
+    {
+        [ContentDoc("The overlay image, Assets-relative with its extension, baked at scene build; filed in this event's own Assets/_Project/Art/Events/<event_id>/. Empty means no overlay.")]
+        public string path = "";
+        [ContentDoc("The overlay's scale at the first round; above 0.")]
+        public float fromScale = 1f;
+        [ContentDoc("The overlay's scale at the last round of the limit; above 0.")]
+        public float toScale = 1f;
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

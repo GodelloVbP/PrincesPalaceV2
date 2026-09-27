@@ -7,7 +7,7 @@ optionally, one picture per page. No code. Field-by-field defaults are in
 ## The shape
 
 ```
-event    { id, floors[], requires[], pages[] }
+event    { id, floors[], requires[], pages[], mayReturn, speakers[], fights[] }
 page     { id, artPath, title, body, choices[] }       first page opens the event
 choice   { text, requires[], hiddenUntilMet, effects[], outcomes[] }   1-4 per page
 outcome  { requires[], effects[], result, goTo }       first match wins
@@ -104,11 +104,14 @@ show a caption; `reason` on an event-level or outcome row is ignored.
 | `healPercent` + `character` | 1-100 of that one member's max HP. **Never revives**: a member at 0 stays at 0, and one not in the squad is untouched (no line either way). `character` on any other kind is refused | `Shawn healed 30%`, or `Shawn fully healed` at 100 |
 | `damagePercent` | 1-100; floors at 1 HP, never kills | `Party hurt 10%` |
 | `exp` | split across the party as after a fight | `+50 XP` |
+| `exp` + `character` | all of it to that one member, not split. An unknown id is refused. The run applies this from M2 of `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md` | `+50 XP` |
 | `item` | how many of `item` go to the stockpile | `+2 Health Potion` |
 | `counter` | added to `counter` | none |
 | `relic` | ignored. Adds `relic` to the run's relics; already held does nothing (no line). The build refuses an id not in `relics.json` | `Relic: Kinship` |
 | `princesFavor` | > 0. Added to the squad's Prince's favor for the rest of the **run**, after the squad's best member (item offers and shop stock rolled from now on; a shelf already rolled is not rerolled) | `+10 Prince's favor` |
 | `fillSpecialPool` | exactly 1. For the rest of this **leg**, each character's special pool (signature, else primary) is full when their turn opens | `Special pools full each turn this leg` |
+| `fight` + `fight` | none (refused). Starts the event's own fight by id; see **Fights** | none |
+| `finish` | none (refused). Marks a `mayReturn` event seen; see **Returning events** | none |
 
 `princesFavor` and `fillSpecialPool` are run buffs (`RunSnapshot.eventBuffs`).
 A run buff ends with the run; a leg buff also ends when the party takes the
@@ -131,8 +134,77 @@ run and is shared by every event, so event A can read what event B counts.
 On arriving at an Event node on floor F, one event is picked at random from
 those whose `floors` contains F (empty means every floor), that have not been
 seen this run, and whose event-level `requires` pass. An event shows at most
-once per run. An empty pool falls back to the old "nothing here" line. Never
-rename an event id once a save exists.
+once per run, unless it is `mayReturn` (next section). An empty pool falls
+back to the old "nothing here" line. Never rename an event id once a save
+exists.
+
+## Returning events
+
+`"mayReturn": true` keeps an event in the pool after it opens. Walk away and
+it can come back at the next Event node, any number of times, with no cap and
+no spacing rule. The event is marked seen only when a `finish` effect applies,
+on a choice, an outcome or a fight result. After that it never rolls again
+this run.
+
+- An event without `mayReturn` is marked seen the moment it opens, as before.
+  `finish` there would do nothing, so the build refuses it.
+- The ways out that should not end the event ("Walk away", "Walk on") simply
+  carry no `finish`.
+- The build accepts `mayReturn` and `finish` now. The run honours them from
+  M2 of `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md`.
+
+## Fights
+
+An event can start a fight and then continue from its result. Each fight is a
+row in the event's `fights`, started by an outcome whose effects include
+`{ "kind": "fight", "fight": "<id>" }`.
+
+```
+fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
+         backdrop, roundSfx, ambience, roundOverlay { path, fromScale, toScale },
+         onDefeated, onSurvived, onFell }
+```
+
+- **Starting one:** the `fight` effect goes in an **outcome's** effects, one
+  per outcome, and that outcome's `goTo` stays **empty**. The fight's result
+  says where the event goes next. The build refuses a `fight` effect in a
+  choice's own effects, two in one outcome, or one beside a `goTo` (`Leave`
+  included). A fight result cannot start another fight. A fight that no
+  outcome starts is refused.
+- **Results** are ordinary outcome rows (`effects`, `result`, `goTo`). They
+  take no `requires`; the build refuses them.
+  - `onDefeated`: every enemy is down. Always required.
+  - `onSurvived`: the round limit passed with someone standing. Required when
+    `surviveRounds > 0` and refused when it is 0.
+  - `onFell`: the fighters fell. Required on `onLoss: wake` and refused on
+    `endRun`, where the run is over.
+- **`enemies`**: active ids from `enemies.json`, in stage order, repeats
+  allowed (`["rat", "rat", "rat"]`). Their `slotSpan`s may add up to at most 3,
+  the stage's slots. An enemy meant only for its event sets `"rollable": false`
+  in `enemies.json` so room fights never roll it.
+- **`party`**: character ids who fight instead of the normal squad. Empty
+  means the normal squad. The others sit out untouched. The choice that starts
+  it should require one of them `alive`.
+- **`surviveRounds`**: 0 means no limit. With a limit, `roundLabel` (the
+  counter's word, at most 12 characters, `MaxRoundLabelLength`), `roundSfx`
+  and `roundOverlay` apply. Without one they are refused, because nothing
+  would read them.
+- **`onLoss`**: `endRun` (empty; the run ends, as in a room) or `wake` (the run
+  goes on and the fallen stand at 1 HP). **`pays`** (default true): a payout,
+  spell drop and Reckoning like a room fight. `false` pays nothing.
+  **`elite`**: the elite class, for payout and default backdrop.
+- **Art and sound:** `backdrop` and `roundOverlay.path` are Assets-relative
+  and baked like page art, filed in the event's own folder (`backdrop` may
+  also use `Art/Backgrounds/`). `roundSfx` and `ambience` are
+  Resources-relative with no extension.
+- **Presence:** each result is an edge from the page that started the fight,
+  carrying whatever that choice and outcome guaranteed. A result page's
+  speakers must be guaranteed on every launch that reaches it.
+- **Result text** plays on the stage when the starting page or the result's
+  `goTo` page has lines, and then takes the 200 cap.
+- The build validates all of this now. The run builds and settles event
+  fights from M2, and counts rounds from M3, of
+  `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md`.
 
 ## Art
 
@@ -155,7 +227,9 @@ rename an event id once a save exists.
 
 At most 4 choices per page; at least one choice per page with no `requires`
 and not `hiddenUntilMet`; the last outcome of a choice has no `requires`;
-every character, item, ability, page and counter named must exist.
+every character, item, relic, enemy, ability, page, counter, fight and speaker
+named must exist. Fights and event speakers have their own rules, in their
+sections.
 
 Text length, in characters. Each cap is the length of the sample the panel's
 box is audited against at every scene build (the samples in `UiStrings` are
@@ -181,10 +255,11 @@ Errors name the event, page, choice where there is one, and the field.
 A page can play dialogue before its choices (`docs/PLAN_DIALOGUE_STAGE.md`).
 A page with no `lines` works exactly as it did before: body and choices shown at once.
 
-- **`lines`**: `[{speaker, expression, text}]`. `speaker` is a character id
-  or `narration` (no bust, no name plate). `expression` is one of neutral,
-  happy, annoyed, nervous, sad or surprised. Empty means neutral, and
-  narration takes none. A missing bust file warns at build and never
+- **`lines`**: `[{speaker, expression, text}]`. `speaker` is a character id,
+  one of the event's own `speakers` (see **Event speakers**), or `narration`
+  (no bust, no name plate). A character's `expression` is one of neutral,
+  happy, annoyed, nervous, sad, surprised or entranced. Empty means neutral,
+  and narration takes none. A missing bust file warns at build and never
   refuses. The line falls back to neutral, then to no bust.
 - **Caps**: 12 lines per page (`MaxLinesPerPage`), 200 characters per line
   (`MaxLineLength`). Tags count toward the 200.
@@ -212,6 +287,32 @@ A page with no `lines` works exactly as it did before: body and choices shown at
   event states which one it uses. The Petting Zoo convention bumps the
   counter in the outcome's effects and gates each outcome on the
   pre-increment value.
+
+## Event speakers
+
+A person who belongs to the event rather than the party (the caravan's
+merchant) is a row in the event's `speakers`:
+
+```
+speaker  { id, name, epithet, bustPath, expressions[] }
+```
+
+- Lines and `cast` entries name it by `id`. It stands on the stage like a
+  party bust: bottom-anchored, name plate (`name` and `epithet`), and a side by
+  `cast` or first appearance, mirrored on the right.
+- **Always present** at its own event. It needs no `requires`, on any page.
+- **`id`** may not be a character id (a line naming it would be ambiguous),
+  `narration`, or a duplicate. `name` is required. `epithet` is capped like a
+  character's (32).
+- **`expressions`**: the faces it has, lowercase letters, digits and
+  underscores, since they are bust file names. A line naming one it did not
+  declare is refused. A line naming none takes the first. An empty list
+  declares just `neutral`. A character's faces stay the fixed list above.
+- **`bustPath`**: a Resources-relative folder holding `<expression>.png` per
+  face, like a character's `dialogueBustPath`. Empty, or a missing file, warns
+  at build and shows the name plate and text.
+- The build validates speakers now. The stage draws them from M6 of
+  `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md`.
 
 ## Testing a new event
 

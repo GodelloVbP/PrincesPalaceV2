@@ -247,10 +247,18 @@ namespace PrincesPalace.Domain.Tests
             var itemIds = ItemIds();
             var relicDisplayNames = RelicIds().ToDictionary(id => id, id => id);
 
+            // Enemies too: an event fight names them and counts their
+            // slotSpan (ContentBuilder.BuildEnemies hands the same map on).
+            var enemySlotSpans = ResolveAllOf<RawEnemyEntry, ResolvedEnemy>(
+                    "enemies.json", ContentDataFiles.ParseFile<RawEnemyFile>(ContentDataFiles.DataPath("enemies.json")).enemies,
+                    EnemyEntryResolver.TryResolveAll)
+                .Where(enemy => enemy.Active)
+                .ToDictionary(enemy => enemy.Id, enemy => enemy.SlotSpan);
+
             bool Resolver(IReadOnlyList<RawEventEntry> entries, out List<ResolvedEventDefinition> resolved,
                           out List<string> errors) =>
                 EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, relicDisplayNames,
-                    out resolved, out errors);
+                    enemySlotSpans, out resolved, out errors);
 
             return Resolve<RawEventEntry, ResolvedEventDefinition>(
                 "events.json", ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events,

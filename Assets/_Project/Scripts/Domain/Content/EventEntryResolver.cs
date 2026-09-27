@@ -57,11 +57,29 @@ namespace PrincesPalace.Domain.Content
         // just before events (relics build first). Its keys are the ids a
         // `relic` effect may name; its values are baked into the effect for
         // the effects line, the same reason character names travel in.
+        //
+        // No enemy catalogue: any event fight is refused for naming an
+        // unknown enemy. Kept for callers whose events start no fight.
         public static bool TryResolveAll(
             IReadOnlyList<RawEventEntry> entries,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
             IReadOnlyDictionary<string, string> relicDisplayNamesById,
+            out List<ResolvedEventDefinition> resolved,
+            out List<string> errors) =>
+            TryResolveAll(entries, characterDisplayNamesById, knownItemIds, relicDisplayNamesById,
+                new Dictionary<string, int>(), out resolved, out errors);
+
+        // `enemySlotSpansById` is every enemy that gets an asset (active),
+        // with its resolved slotSpan: the ids a fight's `enemies` may name
+        // and what they cost of the stage's three slots. enemies.json builds
+        // before events, the same ordering reason relics do.
+        public static bool TryResolveAll(
+            IReadOnlyList<RawEventEntry> entries,
+            IReadOnlyDictionary<string, string> characterDisplayNamesById,
+            IReadOnlyCollection<string> knownItemIds,
+            IReadOnlyDictionary<string, string> relicDisplayNamesById,
+            IReadOnlyDictionary<string, int> enemySlotSpansById,
             out List<ResolvedEventDefinition> resolved,
             out List<string> errors)
         {
@@ -76,7 +94,8 @@ namespace PrincesPalace.Domain.Content
                 for (int i = 0; i < entries.Count; i++)
                 {
                     if (TryResolveOne(entries[i], i, resolved.Count, characterDisplayNamesById, knownItemIds,
-                            relicDisplayNamesById, incrementedCounters, requiredCounters, out var single, out string error))
+                            relicDisplayNamesById, enemySlotSpansById, incrementedCounters, requiredCounters,
+                            out var single, out string error))
                     {
                         resolved.Add(single);
                     }
@@ -118,6 +137,7 @@ namespace PrincesPalace.Domain.Content
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
             IReadOnlyDictionary<string, string> relicDisplayNamesById,
+            IReadOnlyDictionary<string, int> enemySlotSpansById,
             HashSet<string> incrementedCounters,
             List<(string CounterId, string Label)> requiredCounters,
             out ResolvedEventDefinition resolvedEvent, out string error)
@@ -170,11 +190,32 @@ namespace PrincesPalace.Domain.Content
 
             string eventBackdrop = string.IsNullOrWhiteSpace(raw.backdrop) ? DefaultBackdrop : raw.backdrop.Trim();
 
+            var scope = new EventScope
+            {
+                EventId = raw.id,
+                MayReturn = raw.mayReturn,
+                PageIds = pageIds,
+                CharacterDisplayNamesById = characterDisplayNamesById,
+                KnownItemIds = knownItemIds,
+                RelicDisplayNamesById = relicDisplayNamesById,
+                EnemySlotSpansById = enemySlotSpansById,
+                IncrementedCounters = incrementedCounters,
+                RequiredCounters = requiredCounters,
+            };
+
+            // Speakers and fights before pages: a line names a speaker, and
+            // a fight effect names a fight, so both sets must be known first.
+            // A fight's own outcomes only name pages, whose ids already are.
+            if (!TryResolveSpeakers(raw.speakers, eventLabel, scope, out var speakers, out error)
+                || !TryResolveFights(raw.fights, eventLabel, scope, out var fights, out error))
+            {
+                return false;
+            }
+
             var resolvedPages = new List<ResolvedEventPage>(rawPages.Length);
             foreach (var rawPage in rawPages)
             {
-                if (!TryResolvePage(rawPage, raw.id, eventLabel, eventBackdrop, pageIds, characterDisplayNamesById, knownItemIds,
-                        relicDisplayNamesById, incrementedCounters, requiredCounters, out var page, out error))
+                if (!TryResolvePage(rawPage, eventLabel, eventBackdrop, scope, out var page, out error))
                 {
                     return false;
                 }
@@ -182,10 +223,12 @@ namespace PrincesPalace.Domain.Content
                 resolvedPages.Add(page);
             }
 
-            var candidate = new ResolvedEventDefinition(raw.id, sortOrder, floors, requires, resolvedPages.ToArray(), eventBackdrop);
+            var candidate = new ResolvedEventDefinition(raw.id, sortOrder, floors, requires, resolvedPages.ToArray(), eventBackdrop,
+                raw.mayReturn, speakers, fights);
 
             // Needs the whole page graph, so it runs once every page resolved.
-            if (!TryCheckSpeakersPresent(candidate, eventLabel, out error)
+            if (!TryCheckEveryFightStarts(candidate, eventLabel, out error)
+                || !TryCheckSpeakersPresent(candidate, eventLabel, out error)
                 || !TryCheckStagedResults(candidate, eventLabel, out error))
             {
                 return false;
@@ -229,16 +272,11 @@ namespace PrincesPalace.Domain.Content
             return false;
         }
 
-        private static bool TryResolvePage(RawEventPage raw, string eventId, string eventLabel, string eventBackdrop,
-            HashSet<string> pageIds,
-            IReadOnlyDictionary<string, string> characterDisplayNamesById,
-            IReadOnlyCollection<string> knownItemIds,
-            IReadOnlyDictionary<string, string> relicDisplayNamesById,
-            HashSet<string> incrementedCounters,
-            List<(string CounterId, string Label)> requiredCounters,
+        private static bool TryResolvePage(RawEventPage raw, string eventLabel, string eventBackdrop, EventScope scope,
             out ResolvedEventPage resolvedPage, out string error)
         {
             resolvedPage = default;
+            string eventId = scope.EventId;
             string pageLabel = $"{eventLabel} page '{raw.id}'";
 
             if (!WithinCap(pageLabel, "title", raw.title, MaxTitleLength, out error)
@@ -265,8 +303,7 @@ namespace PrincesPalace.Domain.Content
 
             foreach (var rawChoice in rawChoices)
             {
-                if (!TryResolveChoice(rawChoice, eventLabel, raw.id, pageIds, characterDisplayNamesById, knownItemIds,
-                        relicDisplayNamesById, incrementedCounters, requiredCounters, out var choice, out error))
+                if (!TryResolveChoice(rawChoice, eventLabel, raw.id, scope, out var choice, out error))
                 {
                     return false;
                 }
@@ -290,7 +327,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             if (!TryResolveBackdrop(pageLabel, eventId, raw.backdrop, out error)
-                || !TryResolveLines(raw, pageLabel, characterDisplayNamesById, out var cast, out var lines, out error))
+                || !TryResolveLines(raw, pageLabel, scope, out var cast, out var lines, out error))
             {
                 return false;
             }
@@ -303,12 +340,7 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolveChoice(RawEventChoice raw, string eventLabel, string pageId, HashSet<string> pageIds,
-            IReadOnlyDictionary<string, string> characterDisplayNamesById,
-            IReadOnlyCollection<string> knownItemIds,
-            IReadOnlyDictionary<string, string> relicDisplayNamesById,
-            HashSet<string> incrementedCounters,
-            List<(string CounterId, string Label)> requiredCounters,
+        private static bool TryResolveChoice(RawEventChoice raw, string eventLabel, string pageId, EventScope scope,
             out ResolvedEventChoice resolvedChoice, out string error)
         {
             resolvedChoice = default;
@@ -319,15 +351,24 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!TryResolveRequirements(raw.requires, choiceLabel, characterDisplayNamesById,
-                    incrementedCounters, requiredCounters, out var requires, out error))
+            if (!TryResolveRequirements(raw.requires, choiceLabel, scope.CharacterDisplayNamesById,
+                    scope.IncrementedCounters, scope.RequiredCounters, out var requires, out error))
             {
                 return false;
             }
 
-            if (!TryResolveEffects(raw.effects, choiceLabel, characterDisplayNamesById, knownItemIds,
-                    relicDisplayNamesById, incrementedCounters, out var effects, out error))
+            if (!TryResolveEffects(raw.effects, choiceLabel, scope, out var effects, out error))
             {
+                return false;
+            }
+
+            // A fight decides where the event goes next, which only an
+            // outcome can hand over: a choice's effects apply before any
+            // outcome is picked, and its outcomes would still name a goTo.
+            if (effects.Any(e => e.Kind == EventEffectKind.Fight))
+            {
+                error = $"{choiceLabel}: a fight effect is in the choice's own effects -- a fight may only start from " +
+                        "an outcome's effects, whose empty goTo hands the next step to the fight's result.";
                 return false;
             }
 
@@ -364,8 +405,7 @@ namespace PrincesPalace.Domain.Content
             for (int i = 0; i < rawOutcomes.Length; i++)
             {
                 bool isLast = i == rawOutcomes.Length - 1;
-                if (!TryResolveOutcome(rawOutcomes[i], choiceLabel, isLast, pageIds, characterDisplayNamesById,
-                        knownItemIds, relicDisplayNamesById, incrementedCounters, requiredCounters, out var outcome, out error))
+                if (!TryResolveOutcome(rawOutcomes[i], choiceLabel, isLast, scope, false, out var outcome, out error))
                 {
                     return false;
                 }
@@ -378,19 +418,16 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
+        // `isFightResult`: this row is a fight's onDefeated/onSurvived/onFell,
+        // not a choice's outcome (TryResolveFights).
         private static bool TryResolveOutcome(RawEventOutcome raw, string choiceLabel, bool isLastOutcome,
-            HashSet<string> pageIds,
-            IReadOnlyDictionary<string, string> characterDisplayNamesById,
-            IReadOnlyCollection<string> knownItemIds,
-            IReadOnlyDictionary<string, string> relicDisplayNamesById,
-            HashSet<string> incrementedCounters,
-            List<(string CounterId, string Label)> requiredCounters,
+            EventScope scope, bool isFightResult,
             out ResolvedEventOutcome resolvedOutcome, out string error)
         {
             resolvedOutcome = default;
 
-            if (!TryResolveRequirements(raw.requires, choiceLabel, characterDisplayNamesById,
-                    incrementedCounters, requiredCounters, out var requires, out error))
+            if (!TryResolveRequirements(raw.requires, choiceLabel, scope.CharacterDisplayNamesById,
+                    scope.IncrementedCounters, scope.RequiredCounters, out var requires, out error))
             {
                 return false;
             }
@@ -402,8 +439,7 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!TryResolveEffects(raw.effects, choiceLabel, characterDisplayNamesById, knownItemIds,
-                    relicDisplayNamesById, incrementedCounters, out var effects, out error))
+            if (!TryResolveEffects(raw.effects, choiceLabel, scope, out var effects, out error))
             {
                 return false;
             }
@@ -416,6 +452,16 @@ namespace PrincesPalace.Domain.Content
             string goTo = (raw.goTo ?? "").Trim();
             bool isLeave = string.Equals(goTo, LeaveKeyword, StringComparison.OrdinalIgnoreCase);
 
+            int fightEffects = effects.Count(e => e.Kind == EventEffectKind.Fight);
+            if (fightEffects > 0)
+            {
+                if (!TryCheckFightStart(choiceLabel, goTo, fightEffects, isFightResult, out error)) return false;
+
+                // No goTo of its own: the fight's result outcome carries it.
+                resolvedOutcome = new ResolvedEventOutcome(requires, effects, raw.result ?? "", "", false);
+                return true;
+            }
+
             if (!isLeave)
             {
                 if (string.IsNullOrEmpty(goTo))
@@ -424,7 +470,7 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
-                if (!pageIds.Contains(goTo))
+                if (!scope.PageIds.Contains(goTo))
                 {
                     error = $"{choiceLabel}: an outcome's goTo names page '{goTo}', which does not exist in this event.";
                     return false;
@@ -570,14 +616,14 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolveEffects(RawEventEffect[] raw, string label,
-            IReadOnlyDictionary<string, string> characterDisplayNamesById,
-            IReadOnlyCollection<string> knownItemIds,
-            IReadOnlyDictionary<string, string> relicDisplayNamesById,
-            HashSet<string> incrementedCounters,
+        private static bool TryResolveEffects(RawEventEffect[] raw, string label, EventScope scope,
             out EventEffect[] resolved, out string error)
         {
             resolved = Array.Empty<EventEffect>();
+            var characterDisplayNamesById = scope.CharacterDisplayNamesById;
+            var knownItemIds = scope.KnownItemIds;
+            var relicDisplayNamesById = scope.RelicDisplayNamesById;
+            var incrementedCounters = scope.IncrementedCounters;
             if (raw == null || raw.Length == 0)
             {
                 error = null;
@@ -592,16 +638,25 @@ namespace PrincesPalace.Domain.Content
                 if (!Enum.TryParse<EventEffectKind>(row.kind, ignoreCase: true, out var kind))
                 {
                     error = $"{label}: effect kind '{row.kind}' is not a known EventEffectKind " +
-                            "(gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool).";
+                            "(gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, " +
+                            "fight, finish).";
                     return false;
                 }
 
-                // Only healPercent reads `character`. Anywhere else it would
-                // read as "just this member" and quietly hit everyone.
+                // Only healPercent and exp read `character`. Anywhere else it
+                // would read as "just this member" and quietly hit everyone.
                 bool namesCharacter = !string.IsNullOrWhiteSpace(row.character);
-                if (namesCharacter && kind != EventEffectKind.HealPercent)
+                if (namesCharacter && kind != EventEffectKind.HealPercent && kind != EventEffectKind.Exp)
                 {
-                    error = $"{label}: character is only read by a healPercent effect, not by {row.kind}.";
+                    error = $"{label}: character is only read by a healPercent or exp effect, not by {row.kind}.";
+                    return false;
+                }
+
+                // Only a fight reads `fight`; anywhere else it names a fight
+                // that would never start.
+                if (!string.IsNullOrWhiteSpace(row.fight) && kind != EventEffectKind.Fight)
+                {
+                    error = $"{label}: fight is only read by a fight effect, not by {row.kind}.";
                     return false;
                 }
 
@@ -656,7 +711,19 @@ namespace PrincesPalace.Domain.Content
                             return false;
                         }
 
-                        list.Add(EventEffect.Exp(row.amount));
+                        if (!namesCharacter)
+                        {
+                            list.Add(EventEffect.Exp(row.amount));
+                            break;
+                        }
+
+                        if (!TryKnownCharacter(row.character, label, "exp effect", characterDisplayNamesById,
+                                out string paidName, out error))
+                        {
+                            return false;
+                        }
+
+                        list.Add(EventEffect.ExpTo(row.character, paidName, row.amount));
                         break;
 
                     case EventEffectKind.Item:
@@ -732,6 +799,16 @@ namespace PrincesPalace.Domain.Content
                         }
 
                         list.Add(EventEffect.FillSpecialPool());
+                        break;
+
+                    case EventEffectKind.Fight:
+                    case EventEffectKind.Finish:
+                        if (!TryResolveEventControlEffect(row, kind, label, scope, out var control, out error))
+                        {
+                            return false;
+                        }
+
+                        list.Add(control);
                         break;
 
                     default:

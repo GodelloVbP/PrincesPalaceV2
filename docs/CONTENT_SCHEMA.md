@@ -89,16 +89,21 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `attackApproach` | string | `""` | How this monster's plain attack travels when not holding position: lunge (default), close, or charge. | Hold, Lunge, Close, Charge |
 | `stageScale` | float | `0` | A multiplier on this monster's stage size, on top of its slot's own depth scale; 0 means unset and reads as 1. |  |
 | `slotSpan` | int | `0` | How many of the stage's positions this monster occupies; 0 means unset and reads as 1. |  |
+| `rollable` | bool | `true` | Whether room fights may roll this monster; false keeps it out of the room pool while an event fight can still name it. Distinct from active, which builds no asset at all. |  |
+| `rallyPerRound` | RawEnemyRally (below) | (zero -- see RawEnemyRally) | An attack stack this monster gains as each round starts, for the rest of the fight; see RawEnemyRally. Omitted or all zero means none. |  |
 
 ## events.json -- `RawEventEntry`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `id` | string | `""` | Stable identifier; persisted in the run's eventsSeen list so an event shows at most once per run. |  |
+| `id` | string | `""` | Stable identifier; persisted in the run's eventsSeen list so an event shows at most once per run (a mayReturn event: until a finish effect applies). |  |
 | `floors` | int[] | `[]` | Floor numbers this event may appear on; empty means every floor. |  |
 | `requires` | RawEventRequirement[] (below) | `[]` | Event-level requirements; all must pass for this event to be eligible to be rolled at all. |  |
 | `pages` | RawEventPage[] (below) | `[]` | The event's page graph; the first page is where the event opens. |  |
 | `backdrop` | string | `""` | The dialogue stage's full-bleed backdrop, Assets-relative with its extension, baked at scene build like a page's artPath; a page's own backdrop overrides it. Empty means EventEntryResolver.DefaultBackdrop (Assets/_Project/Art/Backgrounds/Dungeon.png). Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/. |  |
+| `mayReturn` | bool | `false` | When true, opening this event does not mark it seen: it stays eligible for every later Event node this run until a finish effect applies. False (every event before the Bell) marks it seen the moment it opens. A finish effect on an event without mayReturn is refused. |  |
+| `speakers` | RawEventSpeaker[] (below) | `[]` | This event's own speakers: people who belong to the event rather than the party (a merchant, say). A line or cast entry may name one by id; they are always present at their own event. |  |
+| `fights` | RawEventFight[] (below) | `[]` | Fights this event can start, each named by a fight effect in some outcome. Its result (every enemy down, the round limit reached, or the party down) picks onDefeated, onSurvived or onFell, which apply like any outcome. |  |
 
 ## items.json -- `RawItemEntry`
 
@@ -190,6 +195,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `requiresConvergenceAbility` | bool | `false` | Whether this relic is only ever offered to a party that already has a convergence/ultimate ability. |  |
 | `bearer` | string | `""` | Optional character id; when set, only that character gets this relic's effect. Refused together with modifiers, which apply party-wide. |  |
 | `draftable` | bool | `true` | Whether this relic can be offered in a relic draft or the shop's relic shelf; false for relics granted another way, such as by an event. |  |
+| `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | Optional presentation played when this relic's effect fires on its own beat; see SpellPresentation. Omitted plays nothing. |  |
 
 ## reward_tracks.json -- `RawRewardTrackEntry`
 
@@ -334,6 +340,14 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 
 Referenced from a field above (an array element or a nested block, such as `vfx`); documented once here rather than once per use.
 
+### `EventRoundOverlay`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `path` | string | `""` | The overlay image, Assets-relative with its extension, baked at scene build; filed in this event's own Assets/_Project/Art/Events/<event_id>/. Empty means no overlay. |  |
+| `fromScale` | float | `1` | The overlay's scale at the first round; above 0. |  |
+| `toScale` | float | `1` | The overlay's scale at the last round of the limit; above 0. |  |
+
 ### `RawDamageInstance`
 
 | Field | Type | Default | Description | Values |
@@ -355,11 +369,18 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `skillId` | string | `""` | A skill id from skills.json this monster may draw. |  |
 | `weight` | float | `1` | The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0. |  |
 
+### `RawEnemyRally`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `attackPercentPerStack` | int | `0` | Attack percent each stack adds (8 = +8%); above 0 when maxStacks is set. |  |
+| `maxStacks` | int | `0` | The most stacks the rally reaches; at least 1 when attackPercentPerStack is set. |  |
+
 ### `RawEventCastMember`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `character` | string | `""` | The character id (characters.json) this row places; must speak on this page. |  |
+| `character` | string | `""` | The character id (characters.json) or event speaker id (the event's speakers[]) this row places; must speak on this page. |  |
 | `side` | string | `""` | Which screen edge the bust stands against: left or right (case-insensitive). A right-side bust is mirrored so it faces inward. | Left, Right |
 
 ### `RawEventChoice`
@@ -376,19 +397,40 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor or fillSpecialPool. | Gold, HealPercent, DamagePercent, Exp, Item, Counter, Relic, PrincesFavor, FillSpecialPool |
-| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it. |  |
+| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight or finish. | Gold, HealPercent, DamagePercent, Exp, Item, Counter, Relic, PrincesFavor, FillSpecialPool, Fight, Finish |
+| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight and finish refuse it. |  |
 | `item` | string | `""` | The item id granted; required by item. |  |
 | `counter` | string | `""` | The counter id this effect changes; required by counter. |  |
-| `character` | string | `""` | healPercent only, optional: heal just this character id by amount percent of their max HP. Never revives: a member at 0 HP stays at 0. Empty heals the whole squad. Refused on any other kind. |  |
+| `character` | string | `""` | Optional on healPercent and exp: that one character id instead of the whole squad. healPercent never revives (a member at 0 HP stays at 0); exp goes to that member alone rather than being split. Refused on any other kind. |  |
 | `relic` | string | `""` | The relic id (relics.json) added to the run; required by relic. Already held is a no-op. |  |
+| `fight` | string | `""` | fight only, required: the id of one of this event's own fights[] to start. Allowed only in an outcome's effects, at most one per outcome, and that outcome's goTo must be empty -- the fight's result outcome decides where the event goes next. |  |
+
+### `RawEventFight`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | `""` | Stable id within this event, named by a fight effect. |  |
+| `enemies` | string[] | `[]` | Enemy ids (enemies.json, active) in stage order; at least one, and their slotSpans may not add up past the stage's three slots. |  |
+| `elite` | bool | `false` | True fights at the elite class (payout multiplier and default backdrop); false at the normal class. |  |
+| `party` | string[] | `[]` | Character ids who fight, overriding the normal fieldable squad; empty means the normal squad. Members not listed sit out untouched. The choice starting it should require one of them alive. |  |
+| `surviveRounds` | int | `0` | 0 means no round limit. Above 0, reaching round surviveRounds + 1 with someone standing ends the fight as Survived; onSurvived is then required. |  |
+| `roundLabel` | string | `""` | The round counter's word ('Toll'), capped at EventEntryResolver.MaxRoundLabelLength characters. Only read with a round limit, so refused without one; empty shows the default. |  |
+| `onLoss` | string | `""` | What losing does, one of EventFightLoss: endRun (empty; the run ends, as in a room) or wake (the run continues and the fallen fighters stand at 1 HP). onFell is refused on endRun and required on wake. | EndRun, Wake |
+| `pays` | bool | `true` | True pays out like a room fight (gold, spell drop, the Reckoning); false pays nothing and ends on Continue. |  |
+| `backdrop` | string | `""` | The fight's backdrop, Assets-relative with its extension, baked at scene build. Empty uses the class's own. Filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/. |  |
+| `roundSfx` | string | `""` | Resources-relative sound (no extension) played as each round starts. Only read with a round limit, so refused without one. |  |
+| `ambience` | string | `""` | Resources-relative sound (no extension) looped for the whole fight; empty plays none. |  |
+| `roundOverlay` | EventRoundOverlay (below) | (zero -- see EventRoundOverlay) | An image laid over the stage that steps from fromScale to toScale across the round limit; see EventRoundOverlay. Only read with a round limit, so a path without one is refused. |  |
+| `onDefeated` | RawEventOutcome (below) | (zero -- see RawEventOutcome) | The outcome when every enemy is down; required. An outcome row without requires (refused here), whose goTo is a page or Leave. |  |
+| `onSurvived` | RawEventOutcome (below) | (zero -- see RawEventOutcome) | The outcome when the round limit is reached with someone standing; required when surviveRounds > 0 and refused otherwise. |  |
+| `onFell` | RawEventOutcome (below) | (zero -- see RawEventOutcome) | The outcome when the fighters fall; required on wake, refused on endRun (the run is over). |  |
 
 ### `RawEventLine`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `speaker` | string | `""` | Who says this: a character id (characters.json), or the literal 'narration' (case-insensitive) for an unvoiced line with no bust and no name plate. |  |
-| `expression` | string | `""` | The speaker's face for this line; empty means neutral. Refused on narration. | Neutral, Happy, Annoyed, Nervous, Sad, Surprised |
+| `speaker` | string | `""` | Who says this: a character id (characters.json), one of this event's own speakers[] ids, or the literal 'narration' (case-insensitive) for an unvoiced line with no bust and no name plate. |  |
+| `expression` | string | `""` | The speaker's face for this line. A party character takes a DialogueExpression, empty meaning neutral; an event speaker takes one of its own declared expressions, empty meaning the first it declares. Refused on narration. | Neutral, Happy, Annoyed, Nervous, Sad, Surprised, Entranced |
 | `text` | string | `""` | The line's text; at most EventEntryResolver.MaxLineLength characters, tags included. The only markup allowed is <i>...</i> (lowercase, balanced, not nested); any other tag, <b> included, is refused. |  |
 
 ### `RawEventOutcome`
@@ -398,7 +440,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `requires` | RawEventRequirement[] (below) | `[]` | Requirements gating this outcome; the last outcome in a choice must have none, so a choice can never fall through with nothing to show. |  |
 | `effects` | RawEventEffect[] (below) | `[]` | Effects applied when this outcome is chosen, in addition to the choice's own effects. |  |
 | `result` | string | `""` | The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body, or at MaxLineLength when it plays on the dialogue stage (the choice's page or the goTo page has lines). |  |
-| `goTo` | string | `""` | The next page's id, or the literal 'Leave' (case-insensitive) to close the event. |  |
+| `goTo` | string | `""` | The next page's id, or the literal 'Leave' (case-insensitive) to close the event. Must be empty on an outcome that carries a fight effect, and only there: the fight's own onDefeated/onSurvived/onFell outcome goes on from it. |  |
 
 ### `RawEventPage`
 
@@ -425,6 +467,16 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `counter` | string | `""` | The counter id this requirement reads; required by counter. |  |
 | `reason` | string | `""` | Optional caption a locked choice shows for this row, replacing the generated one for any kind. Empty means generated (a counter's generated caption is 'Not yet' / 'No longer', never its id). On a choice row it is capped at EventEntryResolver.MaxLockReasonLength characters; event- and outcome-level rows never show it. |  |
 | `alive` | bool | `false` | inParty only: when true the character must also be standing (run health above 0); a downed member fails with the caption 'Requires <name> standing'. Refused on any other kind. |  |
+
+### `RawEventSpeaker`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | `""` | Stable id within this event, named by a line's speaker or a cast entry. Refused when it is a character id in characters.json or 'narration'. |  |
+| `name` | string | `""` | The name plate's name; required. |  |
+| `epithet` | string | `""` | The name plate's second line; optional, capped at CharacterEntryResolver.MaxEpithetLength characters like a character's. |  |
+| `bustPath` | string | `""` | Resources-relative folder of this speaker's busts, one PNG per declared expression (<bustPath>/<expression>), the same shape as a character's dialogueBustPath. Empty shows the name plate and text with no bust. |  |
+| `expressions` | string[] | `[]` | The expressions this speaker has, lowercase letters, digits and underscores (they are bust file names). A line naming one not listed is refused; a line with none takes the first. Empty declares just 'neutral'. |  |
 
 ### `RawModifierEffect`
 

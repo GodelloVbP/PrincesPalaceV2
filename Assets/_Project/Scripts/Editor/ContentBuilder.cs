@@ -132,7 +132,7 @@ public static class ContentBuilder
             var characters = BuildCharacters(pools.Select(p => p.Id).ToList());
             BuildTalents();
             BuildUpgrades();
-            BuildEnemies();
+            var enemySlotSpans = BuildEnemies();
             var itemIds = BuildItems();
             BuildSpellTiers();
             // SKILLS AFTER POOLS AND CHARACTERS, and now for two more
@@ -184,7 +184,9 @@ public static class ContentBuilder
             // earlier would validate against nothing and let a typo'd id
             // through.
             // And after relics: a `relic` effect names one (PLAN_PETTING_ZOO P1).
-            BuildEvents(characters, itemIds, relicDisplayNames);
+            // And after enemies: a fight's `enemies` names them and counts
+            // their slotSpan (PLAN_EVENTS_BELL_AND_CARAVAN 3.5).
+            BuildEvents(characters, itemIds, relicDisplayNames, enemySlotSpans);
         }
         finally
         {
@@ -425,12 +427,14 @@ public static class ContentBuilder
     // text ("Requires Shawn") -- see EventEntryResolver's own header for why
     // that travels in rather than being looked up at runtime.
     private static void BuildEvents(IReadOnlyList<ResolvedCharacter> characters, IReadOnlyCollection<string> itemIds,
-                                    IReadOnlyDictionary<string, string> relicDisplayNames)
+                                    IReadOnlyDictionary<string, string> relicDisplayNames,
+                                    IReadOnlyDictionary<string, int> enemySlotSpans)
     {
         var characterDisplayNames = characters.ToDictionary(c => c.Id, c => c.DisplayName);
 
         bool Resolve(IReadOnlyList<RawEventEntry> entries, out List<ResolvedEventDefinition> resolved, out List<string> errors) =>
-            EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, relicDisplayNames, out resolved, out errors);
+            EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, relicDisplayNames, enemySlotSpans,
+                out resolved, out errors);
 
         var events = Build<RawEventEntry, ResolvedEventDefinition, EventDefinition>(
             "BuildEvents", "Assets/_Project/ContentData/events.json", EventsPath, "events",
@@ -468,14 +472,18 @@ public static class ContentBuilder
                     var line = page.Lines[i];
                     if (line.IsNarration) continue;
 
-                    folders.TryGetValue(line.SpeakerId, out string folder);
-                    string expression = DialogueBust.FileNameOf(line.Expression);
+                    // An event speaker's folder is its own bustPath, and its
+                    // face a name it declared -- ExpressionName either way.
+                    string folder;
+                    if (line.IsEventSpeaker) folder = evt.SpeakerById(line.SpeakerId)?.BustPath ?? "";
+                    else folders.TryGetValue(line.SpeakerId, out folder);
+                    string expression = line.ExpressionName;
                     string found = DialogueBust.FirstAvailable(folder, expression,
                         path => File.Exists($"{ResourcesRoot}{path}.png"));
                     if (found.Length > 0 || !warned.Add($"{line.SpeakerId}/{expression}")) continue;
 
                     string where = string.IsNullOrWhiteSpace(folder)
-                        ? "the character has no dialogueBustPath"
+                        ? (line.IsEventSpeaker ? "the event speaker has no bustPath" : "the character has no dialogueBustPath")
                         : $"neither {ResourcesRoot}{DialogueBust.ResourcePath(folder, expression)}.png nor its neutral fallback exists";
                     Debug.LogWarning($"BuildEvents: event '{evt.Id}' page '{page.Id}' line #{i + 1}: no dialogue bust for " +
                                      $"'{line.SpeakerId}' ({expression}) -- {where}. The line shows its name plate and " +
@@ -528,7 +536,9 @@ public static class ContentBuilder
     // dungeon clear) deliberately resists Fire — the one type no character
     //'s attackType used at the time — after Poison here once silently
     // gutted the Assassin's execute bonus in every single boss fight.
-    private static void BuildEnemies() =>
+    // Returns every enemy that got an asset, with its slotSpan: what an event
+    // fight may name and what it costs of the stage (BuildEvents).
+    private static IReadOnlyDictionary<string, int> BuildEnemies() =>
         Build<RawEnemyEntry, ResolvedEnemy, EnemyDefinition>(
             "BuildEnemies", "Assets/_Project/ContentData/enemies.json", EnemiesPath, "enemies",
             json => JsonUtility.FromJson<RawEnemyFile>(json).enemies,
@@ -540,7 +550,9 @@ public static class ContentBuilder
             // in a disabled one still fails the build rather than lying in
             // wait until it is switched back on -- but no asset is written, so
             // ContentDatabase never sees them and they cannot spawn.
-            include: enemy => enemy.Active);
+            include: enemy => enemy.Active)
+        .Where(enemy => enemy.Active)
+        .ToDictionary(enemy => enemy.Id, enemy => enemy.SlotSpan);
 
     private static void BuildSpellTiers() =>
         Build<RawSpellTierEntry, ResolvedSpellTier, SpellTierDefinition>(

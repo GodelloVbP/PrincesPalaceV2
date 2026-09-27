@@ -21,6 +21,12 @@ namespace PrincesPalace.Domain.Events
         Relic,
         PrincesFavor,
         FillSpecialPool,
+
+        // docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.5, Stage A. Fight starts
+        // one of the event's own fights (FightId); Finish marks a returning
+        // event seen, so it never rolls again this run.
+        Fight,
+        Finish,
     }
 
     // One effect. [Serializable] with public fields for the same reason
@@ -43,9 +49,10 @@ namespace PrincesPalace.Domain.Events
         // The counter id incremented; only Counter reads this.
         public string CounterId = "";
 
-        // HealPercent only, and optional: empty heals the whole squad, a
-        // character id heals that one member and never revives them
-        // (EventHealth.HealedWithoutRevive). The display name is baked in at
+        // HealPercent and Exp, optional: empty means the whole squad. On
+        // HealPercent a character id heals that one member and never revives
+        // them (EventHealth.HealedWithoutRevive); on Exp it pays that member
+        // alone (applied from M2). The display name is baked in at
         // content build for the effects line, the same reason
         // EventRequirement.CharacterDisplayName travels with its id.
         public string CharacterId = "";
@@ -55,6 +62,10 @@ namespace PrincesPalace.Domain.Events
         // the effects line (baked at build, as above).
         public string RelicId = "";
         public string RelicDisplayName = "";
+
+        // Fight only: the id of one of the event's own fights
+        // (ResolvedEventDefinition.FightById).
+        public string FightId = "";
 
         // For the serializer only -- every real instance comes from a
         // factory below.
@@ -81,6 +92,15 @@ namespace PrincesPalace.Domain.Events
             };
         public static EventEffect DamagePercent(int amount) => new EventEffect(EventEffectKind.DamagePercent, amount, "", "");
         public static EventEffect Exp(int amount) => new EventEffect(EventEffectKind.Exp, amount, "", "");
+
+        // Exp to one member rather than split across the party (the Bell's
+        // endings pay Shawn alone). Name baked for the effects line.
+        public static EventEffect ExpTo(string characterId, string characterDisplayName, int amount) =>
+            new EventEffect(EventEffectKind.Exp, amount, "", "")
+            {
+                CharacterId = characterId ?? "",
+                CharacterDisplayName = characterDisplayName ?? "",
+            };
         public static EventEffect ItemGrant(string itemId, int amount = 1) => new EventEffect(EventEffectKind.Item, amount, itemId, "");
         public static EventEffect Counter(string counterId, int amount) => new EventEffect(EventEffectKind.Counter, amount, "", counterId);
 
@@ -97,6 +117,11 @@ namespace PrincesPalace.Domain.Events
         // A run buff (EventBuffs) for the current leg only. Amount carries
         // nothing and is always 1.
         public static EventEffect FillSpecialPool() => new EventEffect(EventEffectKind.FillSpecialPool, 1, "", "");
+
+        public static EventEffect StartFight(string fightId) =>
+            new EventEffect(EventEffectKind.Fight, 0, "", "") { FightId = fightId ?? "" };
+
+        public static EventEffect Finish() => new EventEffect(EventEffectKind.Finish, 0, "", "");
 
         public bool TargetsOneMember => !string.IsNullOrEmpty(CharacterId);
     }

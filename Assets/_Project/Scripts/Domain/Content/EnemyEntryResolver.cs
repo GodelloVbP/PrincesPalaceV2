@@ -297,6 +297,23 @@ namespace PrincesPalace.Domain.Content
             if (!SpellPresentationPaths.Check(label, raw.vfx, out error)) return false;
             if (!SpellLayerRules.TryCheck(label, raw.vfx, out error)) return false;
 
+            // BOTH OR NEITHER. Half a rally is a stack that adds nothing or a
+            // bonus that never stacks -- authored, read, and inert.
+            var rally = raw.rallyPerRound ?? new RawEnemyRally();
+            if (rally.attackPercentPerStack < 0 || rally.maxStacks < 0)
+            {
+                error = $"{label}: rallyPerRound has a negative value (attackPercentPerStack " +
+                        $"{rally.attackPercentPerStack}, maxStacks {rally.maxStacks}).";
+                return false;
+            }
+
+            if ((rally.attackPercentPerStack > 0) != (rally.maxStacks > 0))
+            {
+                error = $"{label}: rallyPerRound needs both attackPercentPerStack and maxStacks above 0, or neither " +
+                        $"(got {rally.attackPercentPerStack} and {rally.maxStacks}) -- half a rally does nothing.";
+                return false;
+            }
+
             var baseStats = new StatBlock(raw.maxHealth, speed, attack,
                 physicalDefense: physicalDefense, magicalDefense: magicalDefense);
             resolvedEnemy = new ResolvedEnemy(raw.id, raw.displayName, baseStats, expReward, currencyReward, raw.isBoss,
@@ -311,7 +328,12 @@ namespace PrincesPalace.Domain.Content
                 appliesStatus, statusMagnitude, statusDuration, raw.avoidsFrontSlot, raw.attackHoldsPosition,
                 raw.minFloor, raw.stageScale, raw.slotSpan,
                 Combat.Session.StageApproaches.Parse(raw.attackApproach, Combat.Session.StageApproach.Lunge),
-                attackType: attackType);
+                attackType: attackType)
+            {
+                Rollable = raw.rollable,
+                RallyAttackPercentPerStack = rally.attackPercentPerStack,
+                RallyMaxStacks = rally.maxStacks,
+            };
             error = null;
             return true;
         }

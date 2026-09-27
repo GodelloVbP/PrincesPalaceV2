@@ -238,7 +238,7 @@ namespace PrincesPalace.Domain.Tests
         public void AnUnknownExpression_IsRefused()
         {
             StringAssert.Contains("line #2: expression 'smug' is not a known DialogueExpression " +
-                                  "(neutral, happy, annoyed, nervous, sad, surprised)",
+                                  "(neutral, happy, annoyed, nervous, sad, surprised, entranced)",
                 Refusal(EventWithLines(Line("sheep", "a"), Line("sheep", "b", "smug"))));
         }
 

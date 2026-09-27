@@ -75,6 +75,13 @@ namespace PrincesPalace.Domain.Content
         // would skip the story that grants it.
         [ContentDoc("Whether this relic can be offered in a relic draft or the shop's relic shelf; false for relics granted another way, such as by an event.")]
         public bool draftable = true;
+
+        // HOW A TRIGGERED RELIC LOOKS when it fires on its own beat (the
+        // Toll of the Flock's ghost sheep), the same SpellPresentation a
+        // skill carries so it plays through the same beat path. Optional:
+        // omitted is SpellPresentation.None and nothing extra plays.
+        [ContentDoc("Optional presentation played when this relic's effect fires on its own beat; see SpellPresentation. Omitted plays nothing.")]
+        public SpellPresentation vfx = new SpellPresentation();
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

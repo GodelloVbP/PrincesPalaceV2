@@ -25,3 +25,23 @@ MonoBehaviour:
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      fit: 
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers: []
+      layerFormat: 0
+      hitCueSeconds: 0

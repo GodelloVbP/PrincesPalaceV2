@@ -31,6 +31,9 @@ MonoBehaviour:
     BreakShieldPoints: 32
     StageScale: 1.45
     SlotSpan: 2
+    Rollable: 1
+    RallyAttackPercentPerStack: 0
+    RallyMaxStacks: 0
     SpritePath: Enemies/treant
     Abilities:
     - SkillId: trunk_slam

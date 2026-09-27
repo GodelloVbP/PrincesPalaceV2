@@ -14,9 +14,9 @@ namespace PrincesPalace.Domain.Content
     // the field cannot name a file the way plateArt or portraitPath do.
     public static class DialogueBust
     {
-        // Six expressions tools/normalize_dialogue_busts.py writes; "neutral"
+        // Seven expressions tools/normalize_dialogue_busts.py writes; "neutral"
         // is also the universal fallback (Fallbacks below), so it is not
-        // just one of the six -- it is the one every character is expected
+        // just one of the seven -- it is the one every character is expected
         // to eventually have.
         public const string Neutral = "neutral";
 

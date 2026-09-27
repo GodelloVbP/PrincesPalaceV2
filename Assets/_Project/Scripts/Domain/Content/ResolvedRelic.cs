@@ -40,6 +40,9 @@ namespace PrincesPalace.Domain.Content
         // bool's default, so no shipped relic silently leaves the draft.
         public bool Draftable = true;
 
+        // See RawRelicEntry.vfx. None when not authored.
+        public SpellPresentation Vfx = new SpellPresentation();
+
         // Whether this relic's EFFECT reaches a combatant with this character
         // id. Modifiers are not asked -- the resolver refuses a bearer on a
         // relic that has any (RelicEntryResolver).

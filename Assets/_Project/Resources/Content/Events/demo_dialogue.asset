@@ -113,6 +113,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The lantern leads you down a stair of old stone. A few coins glint
             on the steps, and at the bottom someone large is already warming his
             paws at it.
@@ -128,6 +129,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The lantern leads you down a stair of old stone. A few coins glint
             on the steps.
           GoTo: quiet
@@ -155,18 +157,24 @@ MonoBehaviour:
         Side: 0
         Text: A lantern sways at the far end of the landing, though no hand holds
           it. Its light is warm, and it is waiting for you.
+        IsEventSpeaker: 0
+        ExpressionName: 
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 1
         Side: 0
         Text: Another reality, another landing. Prince says this one has <i>excellent</i>
           monsters. I believe him about half the time.
+        IsEventSpeaker: 0
+        ExpressionName: happy
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 2
         Side: 0
         Text: The other half, he sends me in first. If that lantern starts talking,
           I am not the one answering it.
+        IsEventSpeaker: 0
+        ExpressionName: annoyed
       - SpeakerId: owl
         IsNarration: 0
         Expression: 0
@@ -174,6 +182,8 @@ MonoBehaviour:
         Text: Hold still, both of you. That lantern burns from the far side of the
           wall, so somebody in the next reality lit it for us. Whoever they are,
           they are expecting company, and they are not a patient host.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
     - Id: bearer
       ArtKey: 
       Title: The Lantern Bearer
@@ -200,11 +210,15 @@ MonoBehaviour:
         Side: 0
         Text: Ha! I knew I smelled lamp oil. Took you long enough. Stand back, little
           ones, this light bites.
+        IsEventSpeaker: 0
+        ExpressionName: happy
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: The lantern gutters once, as if it heard him.
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: quiet
       ArtKey: 
       Title: The Lantern Bearer
@@ -229,6 +243,8 @@ MonoBehaviour:
         Side: 0
         Text: The stair is empty. Whoever lit the lantern has gone on ahead, and
           left the light for you.
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: farewell
       ArtKey: 
       Title: Out of the Dark
@@ -254,9 +270,16 @@ MonoBehaviour:
         Side: 0
         Text: At the end of the stair the lantern goes out, as if it had done its
           job.
+        IsEventSpeaker: 0
+        ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: Somewhere above, a door you never noticed closes softly.
+        IsEventSpeaker: 0
+        ExpressionName: 
     BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+    MayReturn: 0
+    Speakers: []
+    Fights: []

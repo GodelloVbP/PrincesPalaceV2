@@ -97,7 +97,7 @@ namespace PrincesPalace.Domain.Tests
                 out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("character is only read by a healPercent effect", errors[0]);
+            StringAssert.Contains("character is only read by a healPercent or exp effect", errors[0]);
         }
 
         [TestCase(40, 100, 30, 70)]

@@ -25,6 +25,15 @@ namespace PrincesPalace.Domain.Events
     // Negative knowledge ("the earlier outcome failed, so sheep is absent")
     // is deliberately not used: it can only take speakers away, and the
     // check only asks who is certainly present.
+    //
+    // EVENT SPEAKERS AND FIGHTS (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.2,
+    // 1.3). An event's own speakers are seeded into the start page's set, so
+    // every page reached from it carries them: they are always present at
+    // their own event. An outcome that starts a fight has no goTo; each of
+    // that fight's result outcomes is an edge FROM THE LAUNCHING PAGE, with
+    // the launching choice's and outcome's guarantees. A fight does not
+    // change squad membership (an override party benches, never removes), so
+    // nothing is taken away across it.
     public static class EventCastPresence
     {
         // Pages unreachable from the start page have no entry.
@@ -34,7 +43,13 @@ namespace PrincesPalace.Domain.Events
             var start = evt?.StartPage;
             if (start == null) return sets;
 
-            sets[start.Id] = Guaranteed(evt.Requires);
+            var seeded = Guaranteed(evt.Requires);
+            foreach (var speaker in evt.Speakers ?? Array.Empty<ResolvedEventSpeaker>())
+            {
+                if (speaker != null && !string.IsNullOrEmpty(speaker.Id)) seeded.Add(speaker.Id);
+            }
+
+            sets[start.Id] = seeded;
 
             var queue = new Queue<string>();
             var queued = new HashSet<string>(StringComparer.Ordinal);
@@ -59,30 +74,53 @@ namespace PrincesPalace.Domain.Events
 
                     foreach (var outcome in choice.Outcomes ?? Array.Empty<ResolvedEventOutcome>())
                     {
-                        if (outcome == null || outcome.IsLeave || string.IsNullOrEmpty(outcome.GoTo)) continue;
+                        if (outcome == null) continue;
 
                         var edge = new HashSet<string>(viaChoice, StringComparer.Ordinal);
                         edge.UnionWith(Guaranteed(outcome.Requires));
 
-                        bool changed;
-                        if (!sets.TryGetValue(outcome.GoTo, out var existing))
+                        var fight = evt.FightById(outcome.FightId);
+                        if (fight != null)
                         {
-                            sets[outcome.GoTo] = edge;
-                            changed = true;
-                        }
-                        else
-                        {
-                            int before = existing.Count;
-                            existing.IntersectWith(edge);
-                            changed = existing.Count != before;
+                            foreach (var result in fight.Outcomes())
+                            {
+                                var viaResult = new HashSet<string>(edge, StringComparer.Ordinal);
+                                viaResult.UnionWith(Guaranteed(result.Requires));
+                                Flow(result, viaResult, sets, queue, queued);
+                            }
+
+                            continue;
                         }
 
-                        if (changed && queued.Add(outcome.GoTo)) queue.Enqueue(outcome.GoTo);
+                        Flow(outcome, edge, sets, queue, queued);
                     }
                 }
             }
 
             return sets;
+        }
+
+        // One edge into `outcome.GoTo` carrying `edge`: the first edge seeds
+        // the page's set, every later one intersects it.
+        private static void Flow(ResolvedEventOutcome outcome, HashSet<string> edge,
+            Dictionary<string, HashSet<string>> sets, Queue<string> queue, HashSet<string> queued)
+        {
+            if (outcome.IsLeave || string.IsNullOrEmpty(outcome.GoTo)) return;
+
+            bool changed;
+            if (!sets.TryGetValue(outcome.GoTo, out var existing))
+            {
+                sets[outcome.GoTo] = edge;
+                changed = true;
+            }
+            else
+            {
+                int before = existing.Count;
+                existing.IntersectWith(edge);
+                changed = existing.Count != before;
+            }
+
+            if (changed && queued.Add(outcome.GoTo)) queue.Enqueue(outcome.GoTo);
         }
 
         // The characters a list of requirements, all passing, puts in the

@@ -539,5 +539,59 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(Combat.Session.StageApproach.Charge, resolved[0].AttackApproach);
         }
+
+        // ---- rollable and rallyPerRound (PLAN_EVENTS_BELL_AND_CARAVAN 3.2, 3.5) ----
+
+        [Test]
+        public void MinimalEntry_IsRollableWithNoRally()
+        {
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal() }, out var resolved, out _);
+
+            Assert.IsTrue(resolved[0].Rollable);
+            Assert.IsFalse(resolved[0].HasRally);
+            Assert.AreEqual(0, resolved[0].RallyAttackPercentPerStack);
+            Assert.AreEqual(0, resolved[0].RallyMaxStacks);
+        }
+
+        [Test]
+        public void RollableFalseAndARally_ResolveAsAuthored()
+        {
+            var raw = Minimal("bellwether");
+            raw.rollable = false;
+            raw.rallyPerRound = new RawEnemyRally { attackPercentPerStack = 8, maxStacks = 10 };
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { raw }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsFalse(resolved[0].Rollable);
+            Assert.IsTrue(resolved[0].HasRally);
+            Assert.AreEqual(8, resolved[0].RallyAttackPercentPerStack);
+            Assert.AreEqual(10, resolved[0].RallyMaxStacks);
+        }
+
+        [Test]
+        public void Refuses_HalfARally()
+        {
+            var raw = Minimal("bellwether");
+            raw.rallyPerRound = new RawEnemyRally { attackPercentPerStack = 8 };
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { raw }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("rallyPerRound needs both attackPercentPerStack and maxStacks above 0, or neither (got 8 and 0)",
+                string.Join(" | ", errors));
+        }
+
+        [Test]
+        public void Refuses_ANegativeRally()
+        {
+            var raw = Minimal("bellwether");
+            raw.rallyPerRound = new RawEnemyRally { attackPercentPerStack = -8, maxStacks = 10 };
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { raw }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("rallyPerRound has a negative value", string.Join(" | ", errors));
+        }
     }
 }

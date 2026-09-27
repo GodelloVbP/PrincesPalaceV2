@@ -66,6 +66,17 @@ namespace PrincesPalace.Domain.Content
         public float StageScale = 1f;
         public int SlotSpan = 1;
 
+        // See RawEnemyEntry.rollable. The initializer is load-bearing: an
+        // asset built before this field existed reads TRUE, so no shipped
+        // monster silently leaves the room pool.
+        public bool Rollable = true;
+
+        // See RawEnemyEntry.rallyPerRound. Both 0 means no rally.
+        public int RallyAttackPercentPerStack;
+        public int RallyMaxStacks;
+
+        public bool HasRally => RallyAttackPercentPerStack > 0 && RallyMaxStacks > 0;
+
         // Resources-relative FOLDER holding this monster's stance
         // sprites (e.g. "Enemies/golem", which contains idle.png,
         // attack.png and so on). Empty for the many monsters with no art

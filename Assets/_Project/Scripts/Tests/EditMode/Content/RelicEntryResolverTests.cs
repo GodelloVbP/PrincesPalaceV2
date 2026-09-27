@@ -197,5 +197,44 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("bearer 'sheep'", errors[0]);
             StringAssert.Contains("every party member", errors[0]);
         }
+
+        // ---- optional vfx (PLAN_EVENTS_BELL_AND_CARAVAN 3.5) ----------------
+
+        [Test]
+        public void Vfx_IsOptionalAndDefaultsToNothing()
+        {
+            RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, KnownCharacters,
+                out var resolved, out _);
+
+            Assert.AreEqual("", resolved[0].Vfx.path);
+            Assert.AreEqual("", resolved[0].Vfx.sfxPath);
+        }
+
+        [Test]
+        public void Vfx_PassesThroughWhenProvided()
+        {
+            var raw = Relic();
+            raw.vfx = new SpellPresentation { path = "Vfx/ghost_flock", sfxPath = "Audio/Sfx/flock_charge" };
+
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters,
+                out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual("Vfx/ghost_flock", resolved[0].Vfx.path);
+            Assert.AreEqual("Audio/Sfx/flock_charge", resolved[0].Vfx.sfxPath);
+        }
+
+        [Test]
+        public void Refuses_AnAssetsRelativeVfxPath()
+        {
+            var raw = Relic();
+            raw.vfx = new SpellPresentation { path = "Assets/_Project/Resources/Vfx/ghost_flock" };
+
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters,
+                out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("RESOURCES-relative", string.Join(" | ", errors));
+        }
     }
 }

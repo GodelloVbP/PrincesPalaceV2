@@ -108,6 +108,83 @@ namespace PrincesPalace.Domain.Tests
                 EventCastPresence.Guaranteed(requires).OrderBy(id => id).ToArray());
         }
 
+        // ---- fights and event speakers (PLAN_EVENTS_BELL_AND_CARAVAN 3.5) -----
+
+        private static ResolvedEventOutcome StartsFight(string fightId, params EventRequirement[] requires) =>
+            new ResolvedEventOutcome(requires, new[] { EventEffect.StartFight(fightId) }, "", "", false);
+
+        private static ResolvedEventFight Fight(string id, ResolvedEventOutcome onDefeated,
+            ResolvedEventOutcome onFell = null) => new ResolvedEventFight
+        {
+            Id = id,
+            OnDefeated = onDefeated,
+            OnFell = onFell ?? new ResolvedEventOutcome(),
+            HasOnFell = onFell != null,
+        };
+
+        [Test]
+        public void AFightResult_IsAnEdgeFromTheLaunchingPageWithTheLaunchingGuarantees()
+        {
+            // start -choice(sheep)-> outcome(owl) starts `duel`; its onDefeated
+            // goes to `won`, its onFell to `lost`. Both carry {owl, sheep}.
+            var evt = new ResolvedEventDefinition("e", 0, null, null, new[]
+                {
+                    Page("start", Choice(new[] { Sheep }, StartsFight("duel", Owl)), Choice(Leave())),
+                    Page("won", Choice(Leave())),
+                    Page("lost", Choice(Leave())),
+                },
+                fights: new[] { Fight("duel", To("won"), To("lost")) });
+
+            var sets = EventCastPresence.GuaranteedByPage(evt);
+
+            CollectionAssert.AreEqual(new[] { "owl", "sheep" }, At(sets, "won"));
+            CollectionAssert.AreEqual(new[] { "owl", "sheep" }, At(sets, "lost"));
+        }
+
+        [Test]
+        public void AFightResultPage_ReachedOnlyThroughTheFight_HasAnEntry()
+        {
+            var evt = new ResolvedEventDefinition("e", 0, null, null, new[]
+                {
+                    Page("start", Choice(StartsFight("duel")), Choice(Leave())),
+                    Page("won", Choice(Leave())),
+                },
+                fights: new[] { Fight("duel", To("won")) });
+
+            Assert.IsTrue(EventCastPresence.GuaranteedByPage(evt).ContainsKey("won"));
+        }
+
+        [Test]
+        public void TwoLaunchesOfOneFight_IntersectAtItsResultPage()
+        {
+            // Launched once with sheep guaranteed and once with nobody: the
+            // result page guarantees nobody.
+            var evt = new ResolvedEventDefinition("e", 0, null, null, new[]
+                {
+                    Page("start", Choice(StartsFight("duel", Sheep)), Choice(StartsFight("duel")), Choice(Leave())),
+                    Page("won", Choice(Leave())),
+                },
+                fights: new[] { Fight("duel", To("won")) });
+
+            CollectionAssert.AreEqual(new string[0], At(EventCastPresence.GuaranteedByPage(evt), "won"));
+        }
+
+        [Test]
+        public void EventSpeakers_ArePresentOnEveryReachablePage()
+        {
+            var evt = new ResolvedEventDefinition("e", 0, null, new[] { Owl }, new[]
+                {
+                    Page("start", Choice(To("next"))),
+                    Page("next", Choice(Leave())),
+                },
+                speakers: new[] { new ResolvedEventSpeaker("merchant", "Rat Merchant", "", "", new[] { "neutral" }) });
+
+            var sets = EventCastPresence.GuaranteedByPage(evt);
+
+            CollectionAssert.AreEqual(new[] { "merchant", "owl" }, At(sets, "start"));
+            CollectionAssert.AreEqual(new[] { "merchant", "owl" }, At(sets, "next"));
+        }
+
         [Test]
         public void AnUnreachablePage_HasNoEntry()
         {
@@ -177,6 +254,45 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(Resolve(entry, out var errors));
             StringAssert.Contains("event 'zoo' page 'shawn' line #1: speaker 'sheep' is not guaranteed", string.Join(" | ", errors));
+        }
+
+        // Through the resolver: a fight's result page speaks for Shawn only
+        // if the launch guaranteed him.
+        [Test]
+        public void ASpeakerOnAFightResultPage_IsRefusedUnlessTheLaunchGuaranteesThem()
+        {
+            RawEventEntry Entry(params RawEventRequirement[] launchRequires) => new RawEventEntry
+            {
+                id = "bell",
+                pages = new[]
+                {
+                    RawPage("bell", null,
+                        new RawEventChoice
+                        {
+                            text = "Touch the bell", requires = launchRequires,
+                            outcomes = new[]
+                            {
+                                new RawEventOutcome { effects = new[] { new RawEventEffect { kind = "fight", fight = "duel" } } },
+                            },
+                        },
+                        RawChoice(RawTo("Leave"))),
+                    RawPage("endure", SheepSpeaks, RawChoice(RawTo("Leave"))),
+                },
+                fights = new[]
+                {
+                    new RawEventFight { id = "duel", enemies = new[] { "rat" }, onDefeated = RawTo("endure") },
+                },
+            };
+
+            var enemies = new Dictionary<string, int> { ["rat"] = 1 };
+            bool Resolves(RawEventEntry entry, out List<string> errors) =>
+                EventEntryResolver.TryResolveAll(new List<RawEventEntry> { entry }, KnownCharacters, new string[0],
+                    new Dictionary<string, string>(), enemies, out _, out errors);
+
+            Assert.IsFalse(Resolves(Entry(), out var refused));
+            StringAssert.Contains("event 'bell' page 'endure' line #1: speaker 'sheep' is not guaranteed",
+                string.Join(" | ", refused));
+            Assert.IsTrue(Resolves(Entry(RawInParty("sheep")), out var errors), string.Join("; ", errors ?? new List<string>()));
         }
 
         [Test]

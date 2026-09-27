@@ -267,6 +267,28 @@ namespace PrincesPalace.Domain.Content
         // floor to stand on.
         [ContentDoc("How many of the stage's positions this monster occupies; 0 means unset and reads as 1.")]
         public int slotSpan;
+
+        // IN THE ROOM ROLL OR NOT. An event's own monster (the Bellwether)
+        // is fought only where its event puts it, so it has to stay out of
+        // RunEncounter.Pool() while still getting an asset -- which `active`
+        // cannot say, since false writes no asset at all.
+        [ContentDoc("Whether room fights may roll this monster; false keeps it out of the room pool while an event fight can still name it. Distinct from active, which builds no asset at all.")]
+        public bool rollable = true;
+
+        // A fight-long attack stack gained as each round starts
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.2). Both zero means none.
+        [ContentDoc("An attack stack this monster gains as each round starts, for the rest of the fight; see RawEnemyRally. Omitted or all zero means none.")]
+        public RawEnemyRally rallyPerRound = new RawEnemyRally();
+    }
+
+    // An enemy's per-round rally. Both fields or neither.
+    [Serializable]
+    public class RawEnemyRally
+    {
+        [ContentDoc("Attack percent each stack adds (8 = +8%); above 0 when maxStacks is set.")]
+        public int attackPercentPerStack;
+        [ContentDoc("The most stacks the rally reaches; at least 1 when attackPercentPerStack is set.")]
+        public int maxStacks;
     }
 
     // One line of a monster's ability list.

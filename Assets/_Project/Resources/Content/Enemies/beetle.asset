@@ -31,6 +31,9 @@ MonoBehaviour:
     BreakShieldPoints: 16
     StageScale: 1
     SlotSpan: 1
+    Rollable: 1
+    RallyAttackPercentPerStack: 0
+    RallyMaxStacks: 0
     SpritePath: Enemies/beetle
     Abilities:
     - SkillId: shell_up

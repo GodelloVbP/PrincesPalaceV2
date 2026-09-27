@@ -49,11 +49,17 @@ namespace PrincesPalace.Domain.Tests
         // and a page's layer-0 art, named by the plan's data section. Same
         // trade as "Art" above -- the sweep widens by one name rather than the
         // field taking a suffix the owner's spec does not use.
+        //
+        // AND "...Sfx" and "ambience", added 2026-09-28 with event fights
+        // (RawEventFight.roundSfx / .ambience), named by the plan's content
+        // shape. Same trade again: two sound paths the sweep would otherwise
+        // never see, so a wrong convention would fail silently.
         private static bool IsPathShaped(string fieldName) =>
             fieldName.EndsWith("Path") || fieldName.EndsWith("Sheet")
-            || fieldName.EndsWith("Art")
+            || fieldName.EndsWith("Art") || fieldName.EndsWith("Sfx")
             || string.Equals(fieldName, "path", StringComparison.Ordinal)
-            || string.Equals(fieldName, "backdrop", StringComparison.Ordinal);
+            || string.Equals(fieldName, "backdrop", StringComparison.Ordinal)
+            || string.Equals(fieldName, "ambience", StringComparison.Ordinal);
 
         // ONE LEVEL DOWN AS WELL AS ON THE ENTRY ITSELF, reported dotted.
         //

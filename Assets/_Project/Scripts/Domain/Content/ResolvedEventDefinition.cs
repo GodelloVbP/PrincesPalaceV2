@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using PrincesPalace.Domain.Events;
 
 namespace PrincesPalace.Domain.Content
@@ -77,6 +78,13 @@ namespace PrincesPalace.Domain.Content
     // so the runtime reads it rather than recomputing the alternation.
     // Narration carries no speaker, Neutral and Left, none of which the
     // stage reads for it.
+    //
+    // TWO SPEAKER KINDS, ONE FILE-NAME FIELD. A party character's face is a
+    // DialogueExpression; an event speaker's is one of the names its own
+    // speakers[] row declares, which no enum can hold. ExpressionName is the
+    // bust file name for either (DialogueBust.FileNameOf for a character),
+    // so a bust loader joins it with a folder and never branches on which
+    // kind spoke. Expression stays Neutral on an event speaker's line.
     [Serializable]
     public sealed class ResolvedEventLine
     {
@@ -85,6 +93,13 @@ namespace PrincesPalace.Domain.Content
         public DialogueExpression Expression;
         public DialogueSide Side;
         public string Text = "";
+
+        // True when SpeakerId names one of the event's own speakers
+        // (ResolvedEventDefinition.SpeakerById), not a character.
+        public bool IsEventSpeaker;
+
+        // The bust file name for this line's face; empty on narration.
+        public string ExpressionName = "";
 
         public ResolvedEventLine()
         {
@@ -97,6 +112,125 @@ namespace PrincesPalace.Domain.Content
             Expression = expression;
             Side = side;
             Text = text ?? "";
+            ExpressionName = isNarration ? "" : DialogueBust.FileNameOf(expression);
+        }
+
+        // An event speaker's line: the face is one of its declared names.
+        public static ResolvedEventLine ForEventSpeaker(string speakerId, string expressionName, DialogueSide side, string text) =>
+            new ResolvedEventLine(speakerId, false, DialogueExpression.Neutral, side, text)
+            {
+                IsEventSpeaker = true,
+                ExpressionName = expressionName ?? "",
+            };
+    }
+
+    // One of an event's own speakers (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md
+    // 1.3): shown on the stage exactly like a party bust, always present at
+    // its event, never a character.
+    [Serializable]
+    public sealed class ResolvedEventSpeaker
+    {
+        public string Id = "";
+        public string Name = "";
+        public string Epithet = "";
+
+        // Resources-relative folder; DialogueBust.ResourcePath joins it with
+        // an expression name. Empty means no bust art.
+        public string BustPath = "";
+
+        // Declared order; the first is the face of a line that names none.
+        public string[] Expressions = Array.Empty<string>();
+
+        public ResolvedEventSpeaker()
+        {
+        }
+
+        public ResolvedEventSpeaker(string id, string name, string epithet, string bustPath, string[] expressions)
+        {
+            Id = id ?? "";
+            Name = name ?? "";
+            Epithet = epithet ?? "";
+            BustPath = bustPath ?? "";
+            Expressions = expressions ?? Array.Empty<string>();
+        }
+    }
+
+    // What losing an event fight does (RawEventFight.onLoss). Appended,
+    // never inserted: serialized as an int on the EventDefinition asset.
+    public enum EventFightLoss
+    {
+        // The run ends, as a room fight's loss does today.
+        EndRun,
+
+        // The run continues; fielded members at 0 HP stand at 1.
+        Wake,
+    }
+
+    // How an event fight ended, which picks its result outcome.
+    public enum EventFightResult
+    {
+        Defeated,
+        Survived,
+        Fell,
+    }
+
+    // One validated event fight: the content half of an encounter request
+    // (plan 3.1). A result that cannot happen or is not authored has no
+    // outcome: OutcomeFor returns null for it. The Has* flags carry that,
+    // because Unity's serializer never leaves a class-typed field null.
+    [Serializable]
+    public sealed class ResolvedEventFight
+    {
+        public string Id = "";
+        public string[] EnemyIds = Array.Empty<string>();
+        public bool Elite;
+
+        // Empty means the normal fieldable squad.
+        public string[] PartyIds = Array.Empty<string>();
+
+        // 0 means no round limit.
+        public int SurviveRounds;
+        public string RoundLabel = "";
+        public EventFightLoss Loss;
+        public bool Pays = true;
+
+        // Keys baked at scene build (backdrop, overlay) or Resources paths
+        // (sounds), exactly as authored; empty means none / the class default.
+        public string BackdropKey = "";
+        public string RoundSfxPath = "";
+        public string AmbiencePath = "";
+        public string RoundOverlayKey = "";
+        public float RoundOverlayFromScale = 1f;
+        public float RoundOverlayToScale = 1f;
+
+        public ResolvedEventOutcome OnDefeated = new ResolvedEventOutcome();
+        public ResolvedEventOutcome OnSurvived = new ResolvedEventOutcome();
+        public ResolvedEventOutcome OnFell = new ResolvedEventOutcome();
+        public bool HasOnSurvived;
+        public bool HasOnFell;
+
+        public bool HasRoundLimit => SurviveRounds > 0;
+        public bool OverridesParty => PartyIds != null && PartyIds.Length > 0;
+
+        public ResolvedEventOutcome OutcomeFor(EventFightResult result)
+        {
+            switch (result)
+            {
+                case EventFightResult.Defeated: return OnDefeated;
+                case EventFightResult.Survived: return HasOnSurvived ? OnSurvived : null;
+                case EventFightResult.Fell: return HasOnFell ? OnFell : null;
+                default: return null;
+            }
+        }
+
+        // Every result outcome this fight can produce, in result order.
+        public IEnumerable<ResolvedEventOutcome> Outcomes()
+        {
+            foreach (EventFightResult result in Enum.GetValues(typeof(EventFightResult)))
+            {
+                var outcome = OutcomeFor(result);
+                if (outcome != null) yield return outcome;
+            }
         }
     }
 
@@ -154,6 +288,23 @@ namespace PrincesPalace.Domain.Content
             GoTo = goTo ?? "";
             IsLeave = isLeave;
         }
+
+        // The event fight this outcome starts, or "" when it starts none
+        // (the resolver allows at most one, and then GoTo is empty: the
+        // fight's result outcome goes on from here).
+        public string FightId
+        {
+            get
+            {
+                if (Effects == null) return "";
+                foreach (var effect in Effects)
+                {
+                    if (effect != null && effect.Kind == EventEffectKind.Fight) return effect.FightId ?? "";
+                }
+
+                return "";
+            }
+        }
     }
 
     // One validated event -- the shape EventDefinition (Core/Content) stores.
@@ -174,12 +325,19 @@ namespace PrincesPalace.Domain.Content
         // scene build can bake every key an event can show.
         public string BackdropKey = "";
 
+        // See RawEventEntry.mayReturn: opening does not mark it seen; only a
+        // finish effect does.
+        public bool MayReturn;
+        public ResolvedEventSpeaker[] Speakers = Array.Empty<ResolvedEventSpeaker>();
+        public ResolvedEventFight[] Fights = Array.Empty<ResolvedEventFight>();
+
         public ResolvedEventDefinition()
         {
         }
 
         public ResolvedEventDefinition(string id, int sortOrder, int[] floors, EventRequirement[] requires, ResolvedEventPage[] pages,
-            string backdropKey = "")
+            string backdropKey = "", bool mayReturn = false, ResolvedEventSpeaker[] speakers = null,
+            ResolvedEventFight[] fights = null)
         {
             Id = id ?? "";
             SortOrder = sortOrder;
@@ -187,6 +345,31 @@ namespace PrincesPalace.Domain.Content
             Requires = requires ?? Array.Empty<EventRequirement>();
             Pages = pages ?? Array.Empty<ResolvedEventPage>();
             BackdropKey = backdropKey ?? "";
+            MayReturn = mayReturn;
+            Speakers = speakers ?? Array.Empty<ResolvedEventSpeaker>();
+            Fights = fights ?? Array.Empty<ResolvedEventFight>();
+        }
+
+        public ResolvedEventFight FightById(string fightId)
+        {
+            if (Fights == null || string.IsNullOrEmpty(fightId)) return null;
+            foreach (var fight in Fights)
+            {
+                if (fight != null && fight.Id == fightId) return fight;
+            }
+
+            return null;
+        }
+
+        public ResolvedEventSpeaker SpeakerById(string speakerId)
+        {
+            if (Speakers == null || string.IsNullOrEmpty(speakerId)) return null;
+            foreach (var speaker in Speakers)
+            {
+                if (speaker != null && speaker.Id == speakerId) return speaker;
+            }
+
+            return null;
         }
 
         // The page an event opens on. Authored order, first page -- the same

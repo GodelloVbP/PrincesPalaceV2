@@ -57,6 +57,7 @@ MonoBehaviour:
           CharacterDisplayName: 
           RelicId: 
           RelicDisplayName: 
+          FightId: 
         - Kind: 5
           Amount: 1
           Item: 
@@ -65,6 +66,7 @@ MonoBehaviour:
           CharacterDisplayName: 
           RelicId: 
           RelicDisplayName: 
+          FightId: 
         Outcomes:
         - Requires:
           - Kind: 3
@@ -87,6 +89,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: On the tenth coin the well glimmers gold -- your wish is granted.
           GoTo: wish_granted
           IsLeave: 0
@@ -118,6 +121,7 @@ MonoBehaviour:
           CharacterDisplayName: 
           RelicId: 
           RelicDisplayName: 
+          FightId: 
         Outcomes:
         - Requires: []
           Effects: []
@@ -147,6 +151,7 @@ MonoBehaviour:
           CharacterDisplayName: 
           RelicId: 
           RelicDisplayName: 
+          FightId: 
         Outcomes:
         - Requires: []
           Effects: []
@@ -195,6 +200,7 @@ MonoBehaviour:
           CharacterDisplayName: 
           RelicId: 
           RelicDisplayName: 
+          FightId: 
         Outcomes:
         - Requires: []
           Effects: []
@@ -205,3 +211,6 @@ MonoBehaviour:
       Cast: []
       Lines: []
     BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+    MayReturn: 0
+    Speakers: []
+    Fights: []

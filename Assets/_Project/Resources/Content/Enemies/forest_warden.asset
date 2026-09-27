@@ -31,6 +31,9 @@ MonoBehaviour:
     BreakShieldPoints: 11
     StageScale: 1.5
     SlotSpan: 1
+    Rollable: 1
+    RallyAttackPercentPerStack: 0
+    RallyMaxStacks: 0
     SpritePath: Enemies/forest_warden
     Abilities:
     - SkillId: overhead_slam

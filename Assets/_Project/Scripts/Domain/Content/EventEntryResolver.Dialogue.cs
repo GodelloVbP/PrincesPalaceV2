@@ -47,10 +47,10 @@ namespace PrincesPalace.Domain.Content
             return false;
         }
 
-        private static bool TryResolveLines(RawEventPage raw, string pageLabel,
-            IReadOnlyDictionary<string, string> characterDisplayNamesById,
+        private static bool TryResolveLines(RawEventPage raw, string pageLabel, EventScope scope,
             out ResolvedEventCastMember[] cast, out ResolvedEventLine[] lines, out string error)
         {
+            var characterDisplayNamesById = scope.CharacterDisplayNamesById;
             cast = Array.Empty<ResolvedEventCastMember>();
             lines = Array.Empty<ResolvedEventLine>();
 
@@ -71,7 +71,8 @@ namespace PrincesPalace.Domain.Content
 
                 string character = (row.character ?? "").Trim();
                 string castLabel = $"{pageLabel} cast '{character}'";
-                if (!TryKnownCharacter(character, pageLabel, "cast entry", characterDisplayNamesById, out _, out error))
+                if (!scope.Speakers.ContainsKey(character)
+                    && !TryKnownCharacter(character, pageLabel, "cast entry", characterDisplayNamesById, out _, out error))
                 {
                     return false;
                 }
@@ -137,13 +138,26 @@ namespace PrincesPalace.Domain.Content
                     continue;
                 }
 
-                if (!TryKnownCharacter(speaker, lineLabel, "speaker", characterDisplayNamesById, out _, out error))
+                // An event speaker first: its id may never be a character id
+                // (TryResolveSpeakers), so the two lookups cannot both hit.
+                scope.Speakers.TryGetValue(speaker, out var eventSpeaker);
+                if (eventSpeaker == null
+                    && !TryKnownCharacter(speaker, lineLabel, "speaker", characterDisplayNamesById, out _, out error))
                 {
+                    error = $"{error} (Not one of this event's speakers either.)";
                     return false;
                 }
 
                 var expression = DialogueExpression.Neutral;
-                if (expressionText.Length > 0 && !TryParseExactName(expressionText, out expression))
+                string eventExpression = "";
+                if (eventSpeaker != null)
+                {
+                    if (!TryEventSpeakerExpression(eventSpeaker, expressionText, lineLabel, out eventExpression, out error))
+                    {
+                        return false;
+                    }
+                }
+                else if (expressionText.Length > 0 && !TryParseExactName(expressionText, out expression))
                 {
                     error = $"{lineLabel}: expression '{expressionText}' is not a known DialogueExpression (" +
                             string.Join(", ", Enum.GetNames(typeof(DialogueExpression)).Select(n => n.ToLowerInvariant())) + ").";
@@ -159,7 +173,9 @@ namespace PrincesPalace.Domain.Content
                     castOrder.Add(new ResolvedEventCastMember(speaker, lineSide));
                 }
 
-                resolvedLines.Add(new ResolvedEventLine(speaker, false, expression, lineSide, text));
+                resolvedLines.Add(eventSpeaker != null
+                    ? ResolvedEventLine.ForEventSpeaker(speaker, eventExpression, lineSide, text)
+                    : new ResolvedEventLine(speaker, false, expression, lineSide, text));
             }
 
             foreach (string character in declared.Keys)
@@ -292,6 +308,33 @@ namespace PrincesPalace.Domain.Content
                                 $"characters, over the {MaxLineLength}-character cap for a result that plays on the " +
                                 $"dialogue stage ({why}). Shorten it, or move the rest into the destination page's lines.";
                         return false;
+                    }
+
+                    // A fight's results play back on the event once the fight
+                    // ends (plan 1.2): on the launching page's stage, or the
+                    // stage of the page a result goes to.
+                    foreach (var launch in choice.Outcomes)
+                    {
+                        var fight = evt.FightById(launch?.FightId);
+                        if (fight == null) continue;
+
+                        foreach (EventFightResult kind in Enum.GetValues(typeof(EventFightResult)))
+                        {
+                            var result = fight.OutcomeFor(kind);
+                            int length = (result?.Result ?? "").Length;
+                            if (length <= MaxLineLength) continue;
+
+                            var destination = result.IsLeave ? null : evt.PageById(result.GoTo);
+                            string why;
+                            if (page.HasLines) why = $"it starts from page '{page.Id}', which has lines";
+                            else if (destination != null && destination.HasLines) why = $"its goTo page '{destination.Id}' has lines";
+                            else continue;
+
+                            error = $"{eventLabel} fight '{fight.Id}' {ResultFieldName(kind)}: result is {length} characters, " +
+                                    $"over the {MaxLineLength}-character cap for a result that plays on the dialogue stage " +
+                                    $"({why}). Shorten it, or move the rest into the destination page's lines.";
+                            return false;
+                        }
                     }
                 }
             }

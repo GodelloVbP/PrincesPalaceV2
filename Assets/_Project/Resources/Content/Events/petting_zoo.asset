@@ -71,6 +71,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -79,6 +80,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step1_pair
           IsLeave: 0
@@ -114,6 +116,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -122,6 +125,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step1_solo
           IsLeave: 0
@@ -157,6 +161,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -165,6 +170,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step2
           IsLeave: 0
@@ -200,6 +206,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -208,6 +215,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step3
           IsLeave: 0
@@ -243,6 +251,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -251,6 +260,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step4
           IsLeave: 0
@@ -286,6 +296,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -294,6 +305,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step5
           IsLeave: 0
@@ -329,6 +341,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -337,6 +350,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step6
           IsLeave: 0
@@ -372,6 +386,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -380,6 +395,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step7
           IsLeave: 0
@@ -415,6 +431,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -423,6 +440,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step8
           IsLeave: 0
@@ -458,6 +476,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -466,6 +485,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: 
           GoTo: step9
           IsLeave: 0
@@ -501,6 +521,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -509,6 +530,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 6
             Amount: 0
             Item: 
@@ -517,6 +539,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: kinship
             RelicDisplayName: Kinship
+            FightId: 
           Result: 
           GoTo: step10
           IsLeave: 0
@@ -552,6 +575,7 @@ MonoBehaviour:
             CharacterDisplayName: Shawn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 5
             Amount: 1
             Item: 
@@ -560,6 +584,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           - Kind: 6
             Amount: 0
             Item: 
@@ -568,6 +593,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: kinship
             RelicDisplayName: Kinship
+            FightId: 
           Result: 
           GoTo: post_arc
           IsLeave: 0
@@ -613,6 +639,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -638,6 +665,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -663,6 +691,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -688,6 +717,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -713,6 +743,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -738,6 +769,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -763,6 +795,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -788,6 +821,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -813,6 +847,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -838,6 +873,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -852,6 +888,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The peacock looks your strut up and down, then fans its tail in
             grudging approval. The crowd along the fence throws coins.
           GoTo: 
@@ -871,6 +908,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: The fawns eat out of your hand and trail you all the way to the
             gate. Word reaches Prince, who purrs about it for days.
           GoTo: 
@@ -901,6 +939,7 @@ MonoBehaviour:
             CharacterDisplayName: 
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: It's cold, it's crisp, and it goes straight to everyone's head.
             Whatever waits down the road, the party meets it at full strength.
           GoTo: 
@@ -914,6 +953,8 @@ MonoBehaviour:
         Side: 0
         Text: 'Somewhere between two realities, someone has fenced off a paddock
           and hung a sign: PETTING ZOO.'
+        IsEventSpeaker: 0
+        ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
@@ -921,12 +962,16 @@ MonoBehaviour:
         Text: A sheep chews at the rail. A peacock fans its tail at nobody in particular.
           Two fawns nose at an empty trough, and a cooler of cold ones sweats by
           the gate.
+        IsEventSpeaker: 0
+        ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: Prince's contract says nothing about petting zoos. It doesn't forbid
           them either.
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: petter
       ArtKey: Assets/_Project/Art/Events/petting_zoo/zoo.png
       Title: The Sheep Waits
@@ -958,6 +1003,7 @@ MonoBehaviour:
             CharacterDisplayName: Bjorn
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: Bjorn scratches the sheep behind the ears with one enormous claw.
             It leans right into it.
           GoTo: 
@@ -988,6 +1034,7 @@ MonoBehaviour:
             CharacterDisplayName: Odette
             RelicId: 
             RelicDisplayName: 
+            FightId: 
           Result: Odette preens a tuft of the sheep's wool back into place. The sheep
             allows this.
           GoTo: 
@@ -1011,11 +1058,15 @@ MonoBehaviour:
         Side: 0
         Text: The sheep looks your party over and seems unimpressed. It was expecting
           someone woollier.
+        IsEventSpeaker: 0
+        ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: Still, a scratch is a scratch, if anyone cares to give it one.
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step1_pair
       ArtKey: 
       Title: A Sheep?
@@ -1043,31 +1094,43 @@ MonoBehaviour:
         Expression: 5
         Side: 0
         Text: Is that... A sheep?
+        IsEventSpeaker: 0
+        ExpressionName: surprised
       - SpeakerId: owl
         IsNarration: 0
         Expression: 0
         Side: 1
         Text: I presume so.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 3
         Side: 0
         Text: ...
+        IsEventSpeaker: 0
+        ExpressionName: nervous
       - SpeakerId: owl
         IsNarration: 0
         Expression: 0
         Side: 1
         Text: Is that a good or a bad thing?
+        IsEventSpeaker: 0
+        ExpressionName: neutral
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 3
         Side: 0
         Text: I... I don't know...
+        IsEventSpeaker: 0
+        ExpressionName: nervous
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: <i>Shawn proceeds to pet the sheep.</i>
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step1_solo
       ArtKey: 
       Title: A Sheep?
@@ -1093,21 +1156,29 @@ MonoBehaviour:
         Expression: 5
         Side: 0
         Text: Is that... A sheep?
+        IsEventSpeaker: 0
+        ExpressionName: surprised
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 3
         Side: 0
         Text: ...
+        IsEventSpeaker: 0
+        ExpressionName: nervous
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 3
         Side: 0
         Text: I... I don't know how I feel about this.
+        IsEventSpeaker: 0
+        ExpressionName: nervous
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: <i>Shawn proceeds to pet the sheep.</i>
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step2
       ArtKey: 
       Title: The Sheep, Visit 2
@@ -1131,6 +1202,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step3
       ArtKey: 
       Title: The Sheep, Visit 3
@@ -1154,6 +1227,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step4
       ArtKey: 
       Title: The Sheep, Visit 4
@@ -1177,6 +1252,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step5
       ArtKey: 
       Title: The Sheep, Visit 5
@@ -1200,6 +1277,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step6
       ArtKey: 
       Title: The Sheep, Visit 6
@@ -1223,6 +1302,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step7
       ArtKey: 
       Title: The Sheep, Visit 7
@@ -1246,6 +1327,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step8
       ArtKey: 
       Title: The Sheep, Visit 8
@@ -1269,6 +1352,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step9
       ArtKey: 
       Title: The Sheep, Visit 9
@@ -1292,6 +1377,8 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step10
       ArtKey: 
       Title: The Sheep, Visit 10
@@ -1315,11 +1402,15 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: Future visits with Shawn grant Kinship for that run.
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: post_arc
       ArtKey: 
       Title: The Sheep, Again
@@ -1343,9 +1434,16 @@ MonoBehaviour:
         Expression: 0
         Side: 0
         Text: -> placeholder
+        IsEventSpeaker: 0
+        ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
         Text: Future visits with Shawn grant Kinship for that run.
+        IsEventSpeaker: 0
+        ExpressionName: 
     BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+    MayReturn: 0
+    Speakers: []
+    Fights: []

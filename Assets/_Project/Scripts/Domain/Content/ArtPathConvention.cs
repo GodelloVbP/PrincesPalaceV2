@@ -96,6 +96,20 @@ namespace PrincesPalace.Domain.Content
                 // folder with an expression at RUNTIME -- there is no
                 // build-time moment that could bake a specific expression in.
                 { "dialogueBustPath", ArtPathKind.RuntimeLoaded },
+
+                // AN EVENT SPEAKER'S BUST FOLDER (RawEventSpeaker), the same
+                // folder-of-expressions shape as dialogueBustPath and joined
+                // the same way at runtime, so the same convention.
+                { "bustPath", ArtPathKind.RuntimeLoaded },
+
+                // AN EVENT FIGHT'S SOUNDS AND OVERLAY (RawEventFight,
+                // docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.5). The sounds load
+                // at runtime like a spell's sfxPath; the overlay is a layer of
+                // the fight screen baked at scene build like its backdrop
+                // (whose key, "backdrop", is already classified above).
+                { "roundSfx", ArtPathKind.RuntimeLoaded },
+                { "ambience", ArtPathKind.RuntimeLoaded },
+                { "roundOverlay.path", ArtPathKind.EditorBaked },
                 // DOTTED, because the field moved inside a nested block and the
                 // key is what an author types. A spell's presentation is one
                 // "vfx" object now -- see SpellPresentation -- so the JSON reads
