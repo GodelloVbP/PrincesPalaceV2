@@ -23,6 +23,27 @@ namespace PrincesPalace.Domain.Combat.Session
         // without seeing the other is how a relic becomes mandatory.
         public const int SaltLedgerTurns = 1;
 
+        // ---- Bell in the Fog (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.4) ----------
+        //
+        // Toll of the Flock: every TollOfTheFlockEvery-th turn the bearer OPENS
+        // in a fight, a packet of TollOfTheFlockAttackPercent % of their current
+        // attack to every living enemy, times the multiplier while transformed.
+        // Owner's contract: a small bonus, under ~5% of the bearer's damage
+        // untransformed and ~10% on a Black Ram build (measured by the bot, M8a;
+        // these two numbers are what moves).
+        public const int TollOfTheFlockEvery = 3;
+        public const int TollOfTheFlockAttackPercent = 15;
+        public const float TollOfTheFlockTransformMultiplier = 1.5f;
+
+        // Bellwether's Bell: turns added to every Transform the bearer enters,
+        // on top of Wrath's TransformDurationBonus.
+        public const int BellwethersBellTransformTurns = 1;
+
+        // An enemy's per-round rally (RawEnemyEntry.rallyPerRound) is a
+        // FallingOffStacks list under this key whose stacks never fall off
+        // (FightSession.Rounds.RallyStackLifetime).
+        public const string RallyStackKey = "rally_per_round";
+
         // ---- speed relics --------------------------------------------------------
         //
         // The Slippers accumulate and the Pipe does not, which is the whole

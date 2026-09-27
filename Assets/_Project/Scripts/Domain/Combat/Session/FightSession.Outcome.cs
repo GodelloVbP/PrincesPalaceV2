@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace PrincesPalace.Domain.Combat.Session
 {
     // What the fight PAID, and what a loss says.
@@ -124,7 +126,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 // knowing that this makes the relic's absolute value flat with
                 // depth while the base payout climbs; it is a tuning question
                 // for whoever balances the descent, not a wiring one.
-                var earned = VictoryRewards.For(_enemyKits.Values, IsEliteFight, DepthStep);
+                // A SURVIVED fight is a win with enemies still standing (plan
+                // risk R3), and pays for the ones that actually fell. A killed
+                // fight has no standing enemy, so the filter is a no-op there.
+                var earned = VictoryRewards.For(
+                    _enemyKits.Where(pair => !pair.Key.IsAlive).Select(pair => pair.Value),
+                    IsEliteFight, DepthStep);
                 Payout = new VictoryRewards.Payout(earned.Experience, earned.Gold + BountyEarned);
 
                 // NO NUMBERS HERE. The Reckoning expands seconds later saying

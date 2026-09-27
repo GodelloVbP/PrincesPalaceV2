@@ -314,6 +314,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 bonus += StatusEffects.EmpowermentWorth(actor);
             }
 
+            // The per-round rally, for ANY actor that carries stacks: the
+            // stacks are the state, the per-stack figure is the actor's own
+            // authored rally (FightSession.Rounds). Uncapped here -- the cap is
+            // on the stack count, applied as each stack is added.
+            bonus += RallyAttackPercent(actor);
+
             return bonus;
         }
 
@@ -945,7 +951,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 Transformation.Exit(actor);
             }
 
-            int turns = grant.turns + actor.Talents.Best(TalentEffectType.TransformDurationBonus);
+            // THE ONE LINE THAT SIZES A TRANSFORM. Wrath's talent and the
+            // Bellwether's Bell both add here, so each covers any Transform
+            // skill, and they add to each other (plan 2.12).
+            int turns = grant.turns + actor.Talents.Best(TalentEffectType.TransformDurationBonus)
+                        + (HasRelic(actor, RelicEffect.BellwethersBell) ? FightTuning.BellwethersBellTransformTurns : 0);
             var transformation = Transformation.Enter(actor, grant.displayName, turns,
                 grant.attackPercent, grant.speedPercent, grant.temporaryHealthPercent, grant.splashPercent,
                 grant.spritePath, grant.hit);

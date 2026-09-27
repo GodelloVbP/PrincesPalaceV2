@@ -472,6 +472,11 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 PrepareEnemyIntents();
             }
+
+            // A fight that ended inside the opening turn start (a relic's
+            // turn-open packet, a tick) never reached the enemy loop's own
+            // settle. Idempotent, so the ordinary paths pay a comparison.
+            SettleIfOver();
         }
 
         // A plain attack. Resolves the swing, records its beat, and hands the

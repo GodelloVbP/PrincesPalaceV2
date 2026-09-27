@@ -748,6 +748,7 @@ milliseconds rather than by loading a scene.
 | `FightSession.Items.cs` | using something out of the satchel |
 | `FightSession.Ledger.cs` | damage and kill attribution, settling a death |
 | `FightSession.Outcome.cs` | the payout on a win, what a loss says |
+| `FightSession.Rounds.cs` | round starts (catch-up, `RoundStarted`), the round limit and `EndReason` (None/Defeated/Survived/Fell), the enemy per-round rally, opened-turn counts, Toll of the Flock |
 | `FightSession.Potency.cs` | the every-Nth-action bonus, and what "harder" is measured against |
 | `FightSession.Relics.cs` | WHEN a relic gets to act — the hooks, in one place |
 | `FightSession.RelicMechanics.cs` | WHAT each relic does — fourteen effects too specific for a shared table |

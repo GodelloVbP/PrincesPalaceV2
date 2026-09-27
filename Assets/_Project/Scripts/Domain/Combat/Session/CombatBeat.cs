@@ -49,6 +49,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // the entry (the holder flashes back into their own art) but it is
         // the clock, not a choice (owner, 2026-09-26).
         TransformExpiry,
+
+        // A relic fired on its own clock, not on an action: Toll of the
+        // Flock's charge as its bearer's turn opens. Actor is the bearer (the
+        // damage is theirs), but it is not an action they took, so it notes
+        // no pool activity and IsAction is false.
+        RelicTrigger,
     }
 
     public sealed class CombatBeat

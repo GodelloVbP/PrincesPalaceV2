@@ -212,6 +212,10 @@ namespace PrincesPalace.Domain.Combat.Session
             var extraTurnFor = _grantedExtraTurnTo;
             _grantedExtraTurnTo = null;
 
+            // The one advance that opens its turn without GrantTurnStart, so
+            // it starts the rounds it crossed itself, ahead of the open.
+            if (_encounter != null && !_encounter.IsOver) StartPendingRounds();
+
             if (_encounter != null && !_encounter.IsOver)
             {
                 var opening = _encounter.Current;
@@ -362,6 +366,12 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (_encounter == null || _encounter.IsOver) return;
 
+            // Every round the schedule crossed since the last turn opened
+            // starts first, in order -- and the round limit can end the fight
+            // right there, with no turn opened (plan 2.1). FightSession.Rounds.
+            StartPendingRounds();
+            if (_encounter.IsOver) return;
+
             OpenTurnFor(_encounter.Current);
         }
 
@@ -400,8 +410,18 @@ namespace PrincesPalace.Domain.Combat.Session
 
             GainSignatureForTurn(actor);
 
-            // LAST, after everything above -- see FillSpecialPool.
+            // After everything above -- see FillSpecialPool.
             FillSpecialPool(actor);
+
+            // THE BEARER'S TURN OPENS, the relic hook, and the true last step:
+            // after the status ticks (a poison tick that drops him skips it),
+            // the transform tick (a form that ran out this turn gives no
+            // multiplier) and the Cold One fill. Counted here and only here,
+            // so an extra action (ReopenTurnFor) never counts, and a turn a
+            // stun then skips still does -- it opened. FightSession.Rounds.
+            _openedTurns.TryGetValue(actor, out int opened);
+            _openedTurns[actor] = opened + 1;
+            TollOfTheFlock(actor);
         }
 
         // The signature pool's per-turn allowance, with its overflow line.
@@ -427,7 +447,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // RunWideBonusDamagePercent.
         public bool FillsSpecialPoolAtTurnStart { get; set; }
 
-        // THE LAST STEP OF OpenTurnFor, and the order is the contract:
+        // THE LAST POOL STEP OF OpenTurnFor (only the turn-open relic hook,
+        // which spends no pool, follows it), and the order is the contract:
         //
         //   after the primary tick and the Runic ward, so the ward is sized
         //   off the mana the turn really opened with, not off the fill;

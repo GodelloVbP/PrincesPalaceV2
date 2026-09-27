@@ -731,6 +731,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // retaliation hook for the monster side of the fight.
         private bool ResolveEnemyAction(CombatantState enemy)
         {
+            // THE MONSTER'S OWN ATTACK BONUS, summed fresh before anything it
+            // does is sized -- the plain swing's ComputeAttackDamage below and
+            // a real skill's scaled-Attack term alike. Until the per-round rally
+            // (FightSession.Rounds) nothing ever wrote an enemy's
+            // BonusAttackPercent; every shipped monster still sums to 0 here,
+            // since the talent terms need talents and the gift is not spent.
+            RefreshAttackBonus(enemy, spendingGift: false);
+
             // A taunt overrides the AI's own pick entirely. Consumed further
             // down, once the swing has actually happened -- Provoke buys ONE
             // redirected turn, and spending it on a turn the enemy never got to

@@ -218,5 +218,19 @@ namespace PrincesPalace.Domain.Content
         // Authored with a `bearer`, and never drafted (docs/PLAN_PETTING_ZOO.md).
         // APPENDED, not inserted: relic assets serialize this enum as an int.
         Kinship,
+
+        // Every Transform the bearer enters lasts one turn longer, read at the
+        // one line that sizes a transform (FightSession.EnterTransform), so it
+        // covers any Transform skill and adds to Wrath's TransformDurationBonus.
+        // Bell in the Fog's Break reward (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md
+        // 1.4). Authored with a `bearer`, never drafted. Appended.
+        BellwethersBell,
+
+        // On the bearer's 3rd, 6th, 9th... OPENED turn of a fight a ghost flock
+        // hits every living enemy for a share of the bearer's attack, more if
+        // transformed at that instant; credited to nobody. See
+        // FightSession.TollOfTheFlock. Bell in the Fog's Endure reward.
+        // Authored with a `bearer`, never drafted. Appended.
+        TollOfTheFlock,
     }
 }

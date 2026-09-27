@@ -168,8 +168,37 @@ namespace PrincesPalace.Domain.Combat
             return true;
         }
 
-        public bool IsOver => !LivingPlayerParty.Any() || !LivingEnemies.Any();
-        public bool PlayerWon => IsOver && LivingEnemies.Any() == false && LivingPlayerParty.Any();
+        // WHICH ROUND THE SCHEDULE IS IN, 1 from Start. A round is how long a
+        // baseline-speed combatant takes to earn one turn (TurnOrder's own
+        // comment at the increment), so it can move by more than one between
+        // two turns when everyone on the field is slow. FightSession fires its
+        // round-start hook off this and catches up every round it skipped.
+        public int Round => _turnOrder.Round;
+
+        // THE FIGHT WAS OUTLASTED, not won by killing. Set once, by
+        // EndBySurvival, and never cleared. It is the one way a fight can be
+        // over with both sides still standing, which is why IsOver and
+        // PlayerWon read it rather than leaving the caller to remember it.
+        public bool EndedBySurvival { get; private set; }
+
+        // Ends the fight as a win for the party with enemies still standing --
+        // an event fight's round limit (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md
+        // 3.2). Refused (false) once the fight is already over, so a kill or a
+        // wipe that landed first keeps its own ending.
+        public bool EndBySurvival()
+        {
+            if (IsOver) return false;
+
+            EndedBySurvival = true;
+            return true;
+        }
+
+        public bool IsOver => EndedBySurvival || !LivingPlayerParty.Any() || !LivingEnemies.Any();
+
+        // A SURVIVED FIGHT IS A WIN, with a living enemy on the field. Code
+        // downstream that needs "every enemy is dead" must ask LivingEnemies,
+        // not this (risk R3 in that plan).
+        public bool PlayerWon => IsOver && LivingPlayerParty.Any() && (EndedBySurvival || !LivingEnemies.Any());
 
         // The next `count` turns, starting with whoever is acting right now,
         // for the initiative tracker to display.
