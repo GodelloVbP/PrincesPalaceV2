@@ -94,14 +94,10 @@ namespace PrincesPalace.PlayModeTests
                 "the entry is the first orb -- path 0's root, slot 0");
         }
 
-        // OWNER, 2026-09-23, FINAL CORRECTION (supersedes this file's own
-        // earlier "Left/Right name a level's two fixed ends, absolutely"
-        // reading, itself already past the Rail-wrap "Right from Shatter
-        // goes to The Flock" fix and the "continue up the strand"
-        // replacement): Left/Right step ONE LANE AT A TIME within a 3-wide
-        // level -- middle to a side and back -- never a jump straight to
-        // the far side. Right from the middle stone reaches the level's
-        // own right-hand stone...
+        // Left/Right step ONE LANE AT A TIME within a 3-wide level --
+        // middle to a side and back -- never a jump straight to the far
+        // side. Right from the middle stone reaches the level's own
+        // right-hand stone...
         [UnityTest]
         public IEnumerator Right_FromTheCentreStone_ReachesTheLevelsRightStone()
         {
@@ -196,13 +192,13 @@ namespace PrincesPalace.PlayModeTests
         // THE SHATTER/SPLINTERING/FLOCK CASE, checked directly against the
         // restated model rather than assumed: Shatter (slot 13) is the
         // RIGHT-hand stone of the level right after the convergence, so
-        // Right from it now reaches the arrow (proven above via slot 3, the
+        // Right from it reaches the arrow (proven above via slot 3, the
         // same shape one level earlier) -- Splintering (slot 16, the
         // right-hand stone of the NEXT level, directly above Shatter in the
         // same DxSlot +1 lane) is reached by UP alone, in one press:
-        // _skeletonUpChild's lane-preserving pick (owner's later
-        // correction, 2026-09-23: "Up/Down stay in the lane you're in")
-        // sends a chain slot with exactly one child straight to it, and
+        // _skeletonUpChild's lane-preserving pick ("Up/Down stay in the
+        // lane you're in") sends a chain slot with exactly one child
+        // straight to it, and
         // Parents[16] == [13] makes 16 that one child -- there is no
         // "recentre through the level's middle stone" step for a plain
         // chain slot, only for a single-stone level's own Up/Down (Up_
@@ -238,9 +234,9 @@ namespace PrincesPalace.PlayModeTests
                 "DxSlot +1 stone one level up -- lane-preserving, in one press");
         }
 
-        // OWNER, 2026-09-23: "Levels with a single stone (root, convergence,
-        // capstone): ... Left/Right go to the flanking stones of the
-        // adjacent level." The convergence (slot 10) borrows its child
+        // Levels with a single stone (root, convergence, capstone):
+        // Left/Right go to the flanking stones of the adjacent level. The
+        // convergence (slot 10) borrows its child
         // level's (the one right above it) own left/right pair -- the
         // arrows are then reached by pressing again from THAT side stone
         // (Right_FromTheLeftStone_ReachesTheLevelsRightStone and its
@@ -272,11 +268,9 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // The root (slot 0) is the SAME shape as the convergence -- a
-        // single stone feeding a triple -- so it behaves the same way now
-        // (owner, 2026-09-23: "Make the root behave the same way"), rather
-        // than the old direct-to-arrow link JourneyHubToTalentsTests used
-        // to pin (that route is retired; see that file's own update for
-        // Invest's new one).
+        // single stone feeding a triple -- so it behaves the same way,
+        // rather than jumping directly to the page arrow (see
+        // JourneyHubToTalentsTests for Invest's own route).
         [UnityTest]
         public IEnumerator Left_FromTheRoot_ReachesTheLeftChild()
         {
@@ -301,9 +295,8 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // The capstone (slot 20) has nothing ABOVE it, so it borrows from
-        // the level BELOW instead -- the one adjacent 3-wide level it has
-        // (owner, 2026-09-23: "the capstone too if it has a level below
-        // with sides"). Reaching the arrow from here is Left/Right, THEN
+        // the level BELOW instead -- the one adjacent 3-wide level it has.
+        // Reaching the arrow from here is Left/Right, THEN
         // Left/Right again from that side stone, the same second-press
         // rule as everywhere else.
         [UnityTest]
@@ -360,11 +353,9 @@ namespace PrincesPalace.PlayModeTests
                 "Down should follow the skeleton's own Parents back to the root");
         }
 
-        // OWNER, 2026-09-23: "Up/Down stay in the lane (column) you're in
-        // ... the same holds for left and middle." A SIDE stone's Up/Down
-        // must land on the SAME DxSlot one level over, not the centre --
-        // the earlier (now-retired) "recentre on every Up/Down" reading of
-        // this rule would have sent this to Orb0_5 instead.
+        // Up/Down stay in the lane (column) you're in -- the same holds for
+        // left and middle. A SIDE stone's Up/Down must land on the SAME
+        // DxSlot one level over, not the centre.
         [UnityTest]
         public IEnumerator Up_FromASideStone_StaysInLane()
         {
@@ -392,11 +383,9 @@ namespace PrincesPalace.PlayModeTests
                 "Down from a DxSlot -1 stone should land on the DxSlot -1 stone of the level below");
         }
 
-        // Leaving a single-stone level, the stone Up/Down lands on is this
-        // method's own choice (owner, 2026-09-23: "the stone you land on
-        // is up to you, but state it") -- the CENTRE one, the same
-        // convention Up_FromTheRoot_ReachesTheCentreChild already pins for
-        // the root. Proven from BOTH side lanes of the level right after
+        // Leaving a single-stone level, the stone Up/Down lands on is the
+        // CENTRE one, the same convention Up_FromTheRoot_ReachesTheCentreChild
+        // already pins for the root. Proven from BOTH side lanes of the level right after
         // the convergence, in separate tests: both converge on the same
         // stone.
         [UnityTest]
@@ -427,10 +416,9 @@ namespace PrincesPalace.PlayModeTests
                 "land on the convergence itself");
         }
 
-        // OWNER, 2026-09-23: "Give InvestButton another reachable route
-        // (Down from the root ...)" -- the old route (root -> arrow ->
-        // Invest) is retired now that the root's own Left/Right reach tier
-        // 1's stones instead. The root has nothing below it in the tree
+        // InvestButton needs a reachable route now that the root's own
+        // Left/Right reach tier 1's stones instead of the page arrow: Down
+        // from the root. The root has nothing below it in the tree
         // (Parents.Length == 0), so its Down was always unclaimed; it is
         // spent here UNCONDITIONALLY, not only once the root itself is
         // selected -- proven by selecting a DIFFERENT orb (tier 1, still
@@ -471,10 +459,9 @@ namespace PrincesPalace.PlayModeTests
                 "itself selected here, only a different orb was, to prove the link does not depend on it");
         }
 
-        // OWNER, 2026-09-23 (revising the 2026-09-19 hardware play-test call
-        // below): a single Submit on an unkindled star was found to fire too
-        // eagerly on hardware -- the new contract is that the FIRST Submit
-        // on an unkindled star only SELECTS it (shows its detail, same as
+        // A single Submit on an unkindled star must not fire too eagerly:
+        // the contract is that the FIRST Submit on an unkindled star only
+        // SELECTS it (shows its detail, same as
         // Submit on a refused star already did), and a SECOND Submit on that
         // same selected star -- or a Submit on InvestButton, unchanged --
         // is what actually kindles it. The root of path 0 is always
@@ -541,13 +528,12 @@ namespace PrincesPalace.PlayModeTests
                 "Submit on a refused star still selects it, so the panel can say why");
         }
 
-        // OWNER HARDWARE PLAY-TEST, 2026-09-19: "RB LB scrolls you between
-        // different talent trees" -- since reassigned, same hardware round,
-        // to the TRIGGERS (LT/RT are project-wide trigger shortcuts,
-        // ProjectSettings/InputManager.asset's TriggerLeft/TriggerRight,
-        // read by NavigationInputModule.Process, offered to whichever
-        // context is top via NavContext.RaiseTabStep/INavTabStrip), freeing
-        // RB/LB for section/character paging below -- TalentController
+        // LT/RT scroll between talent trees, freeing RB/LB for
+        // section/character paging below. LT/RT are project-wide trigger
+        // shortcuts (ProjectSettings/InputManager.asset's
+        // TriggerLeft/TriggerRight, read by NavigationInputModule.Process,
+        // offered to whichever context is top via
+        // NavContext.RaiseTabStep/INavTabStrip) -- TalentController
         // implements the interface with StepTab as StepPath verbatim, so
         // the trigger and the on-screen paging arrows can never disagree
         // about where a page lands.
@@ -582,9 +568,8 @@ namespace PrincesPalace.PlayModeTests
                 "when Step(...) returns the same index)");
         }
 
-        // OWNER HARDWARE PLAY-TEST, 2026-09-19: "To go to the next character
-        // or prior you can press LT or RT." StepSection is StepCharacter,
-        // verbatim. INavSectionStrip landed after this file's other tests
+        // LT/RT go to the next character or the prior one: StepSection is
+        // StepCharacter, verbatim. INavSectionStrip landed after this file's other tests
         // were written (input-seam agent's own contract,
         // Domain/UiKit/INavCancelClaim.cs) -- driven here the same way the
         // shoulder tests above drive TabNext/TabPrev, through the trigger

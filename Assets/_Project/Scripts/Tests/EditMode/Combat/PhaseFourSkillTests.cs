@@ -21,22 +21,17 @@ namespace PrincesPalace.Domain.Tests
     // still the literal.
     //
     // AND THE WARD RULES. A ward IS A SHIELD -- a pool of points, drained
-    // hit by hit, on a two-turn clock (AUDIT #152, owner's call 2026-09-16).
+    // hit by hit, on a two-turn clock.
     //
-    // TWICE RETUNED, and the second one is the model rather than the numbers.
-    // Phase 4 found the code's ward to be a PERCENT off one hit and pinned it
-    // that way; phase 5 step 0 (2026-09-15) retuned the authored numbers INTO
-    // percentages rather than build the pool, because replacing the ward model
-    // reaches every ward in the game. The owner then decided the pool. So
-    // every ward number below is now SHIELD POINTS: Tuck In 5 a Wool (20 at
+    // Every ward number below is SHIELD POINTS: Tuck In 5 a Wool (20 at
     // four, 32 once level 26's +3 lands), Bulwark 30% of the caster's own max
     // health, Prism Ward 20 plus her spell attack, Fleece Ward 50, Brace 20%
     // of the caster's max health. Wards STACK, and none of the five authors a
     // `wardTurns`, so all five stand for FightTuning.DefaultWardTurns -- one
     // of the wearer's own turns.
-    // Mend is untouched, and Prism Ward's scaling term came BACK with the
-    // model: a spell attack that passes 80 now buys a bigger shield instead of
-    // an immunity.
+    // Mend is untouched, and Prism Ward's scaling term is part of the model:
+    // a spell attack that passes 80 buys a bigger shield instead of an
+    // immunity.
     public class PhaseFourSkillTests
     {
         // ---- the authored numbers, read from skills.json -------------------
@@ -324,9 +319,8 @@ namespace PrincesPalace.Domain.Tests
         // ---- Prism Ward ----------------------------------------------------
 
         // 20 PLUS HER SPELL ATTACK, in shield points, exactly as
-        // PLAN_PROGRESSION_V2 section 5 authored it. It was cut to a flat 40
-        // percent by the step-0 retune and the reason it was cut is gone with
-        // the percent model: a spell attack of 90 used to mean a ward worth
+        // PLAN_PROGRESSION_V2 section 5 authored it. A percent-of-hit model
+        // breaks down here: a spell attack of 90 would mean a ward worth
         // more than 100% of any hit, i.e. one ally immune for eight mana. A
         // pool of 110 points is just a big shield.
         [Test]
@@ -347,11 +341,9 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- Fleece Ward and Brace, the two older wards --------------------
 
-        // BOTH AUTHOR A NUMBER NOW. Neither used to: while WardReductionPercent
-        // WAS the ward, a row could carry nothing but its cost and get its
-        // strength from the tree. The talent is a multiplier over the row's own
-        // pool since the shield model landed, and a multiplier on nothing is
-        // nothing -- which is why SkillEntryResolver refuses a sizeless Ward.
+        // BOTH AUTHOR A NUMBER: the talent is a multiplier over the row's
+        // own pool, and a multiplier on nothing is nothing -- which is why
+        // SkillEntryResolver refuses a sizeless Ward.
         [Test]
         public void FleeceWardIsFiftyShieldPointsForTwoWool()
         {
@@ -410,8 +402,8 @@ namespace PrincesPalace.Domain.Tests
 
         // THE TALENT SCALES THE POOL. sheep_lamb_ward_1 authors 40, so Fleece
         // Ward's 50 becomes 70, and Brace's 52 on Bjorn's own bar becomes 72.
-        // It used to be the LARGER of talent-or-authored, which meant a 40
-        // talent did nothing at all to a 50 ward.
+        // Taking the LARGER of talent-or-authored instead would mean a 40
+        // talent does nothing at all to a 50 ward.
         [Test]
         public void TheWardTalentAddsItsPercentToWhateverTheSkillAuthored()
         {
@@ -539,13 +531,10 @@ namespace PrincesPalace.Domain.Tests
         //
         // PLAN_PROGRESSION_V2.md section 5 stated the rule as "one ward per
         // character, a new ward replaces a smaller one and not a larger one,
-        // absorbs until spent or expired". Phase 4 pinned the first two halves
-        // as real and the third as fiction: a ward was a percentage off one
-        // hit, applied at 999 turns, so nothing absorbed and nothing expired.
-        //
-        // The absorbing half is real now and the one-ward half is GONE (owner,
-        // 2026-09-16): wards stack, and the shield total is the sum. WardTests
-        // owns the model in full; these are the rules as a CAST produces them.
+        // absorbs until spent or expired". The code does not match that
+        // exactly: wards stack instead of one-per-character, and the shield
+        // total is the sum. WardTests owns the model in full; these are the
+        // rules as a CAST produces them.
 
         [Test]
         public void AWardAbsorbsUpToItsPoolAndCarriesTheRestThrough()
@@ -611,9 +600,9 @@ namespace PrincesPalace.Domain.Tests
         // happens are all FightSession's.
         //
         // CAST ON TURN N -> PRESENT AT THE START AND THE END OF N+1 -> GONE AT
-        // THE START OF N+2. The owner's own spelling of it (AUDIT #153), and
-        // this fixture's foe is speed 1 against the hero's 10, so "the next
-        // turn" is the hero's again and every step below is one of his.
+        // THE START OF N+2. This fixture's foe is speed 1 against the hero's
+        // 10, so "the next turn" is the hero's again and every step below is
+        // one of his.
         [Test]
         public void AWardCastOnOneTurnStandsThroughTheWholeOfTheNextOne()
         {

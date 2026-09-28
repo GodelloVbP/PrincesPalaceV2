@@ -515,12 +515,6 @@ namespace PrincesPalace.Domain.Tests
             return (session, hero);
         }
 
-        // BasicSpell (the free "Skill" row every character got after their
-        // authored skills, regardless of what they had learned) was removed
-        // with docs/PLAN_SHOP.md Gate 4 -- SkillRows no longer appends one,
-        // so the two tests that pinned its row and its cost resolution went
-        // with it.
-
         [Test]
         public void AnUnaffordableRowIsShownAndMarked_NeverDropped()
         {
@@ -556,11 +550,11 @@ namespace PrincesPalace.Domain.Tests
         {
             // So it cannot drift from what the skill actually does.
             //
-            // The effect contributes the VERB only. It used to contribute the
-            // enum name, which put "DAMAGEALL  ·  SINGLE" on screen: a word no
-            // player uses, and -- on a single-target skill -- one that flatly
-            // contradicted the reach printed next to it. Targeting is authored
-            // separately and is the only thing entitled to say who is hit.
+            // The effect contributes the VERB only, not the enum name: enum
+            // text like "DAMAGEALL" is not a word a player uses, and on a
+            // single-target skill it would flatly contradict the reach
+            // printed next to it. Targeting is authored separately and is
+            // the only thing entitled to say who is hit.
             var skill = Skill("x", "Firestorm", effect: SkillEffect.DamageAll);
 
             StringAssert.Contains("DAMAGE", FightHudModel.MetaLine(skill));
@@ -698,17 +692,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AnOrdinarySkillShowsPreMitigationDamageNotItsRawPowerField()
         {
-            // POWER used to print `skill.Power` verbatim -- for a skill whose
-            // damage comes from flatAmount instead (mud_burst's actual shape),
-            // that field is 0 and the row reads blank despite the skill
-            // dealing real damage. This pins the fix: the CASTER'S OWN
-            // Attack, scaled and read raw (no DamageScale, fixed 2026-08-26 --
-            // see SkillResolution.Damage's own header), with no target and
-            // therefore no defense subtracted. Hero's Attack is 20 and this
-            // skill spends no signature resource (no Signature is set on the
-            // test hero), so `power: 12` never actually contributes -- which
-            // is the point: the row now reads what the caster's own stats
-            // produce, not the authored constant.
+            // The row shows the CASTER'S OWN Attack, scaled and read raw (no
+            // DamageScale -- see SkillResolution.Damage's own header), with
+            // no target and therefore no defense subtracted -- not
+            // skill.Power verbatim, which for a skill whose damage comes
+            // from flatAmount instead (mud_burst's actual shape) is 0 and
+            // would read blank despite the skill dealing real damage. Hero's
+            // Attack is 20 and this skill spends no signature resource (no
+            // Signature is set on the test hero), so `power: 12` never
+            // actually contributes -- which is the point: the row reads what
+            // the caster's own stats produce, not the authored constant.
             var skill = Skill("a", "Alpha", power: 12);
             var (session, hero) = Fight(skill);
 
@@ -721,9 +714,8 @@ namespace PrincesPalace.Domain.Tests
         // -- which reads as "this does nothing" -- for an ability that makes
         // the fight one monster bigger. Unreachable today (the one authored
         // Summon belongs to an enemy), which is exactly why nothing caught
-        // it. "" now, not "-" -- the 2026-09-22 detail-card rework changed
-        // the convention for an inapplicable POWER row from a printed dash
-        // to an omitted (empty, hidden) one; see PowerLabel's own header.
+        // it. "" not "-": PowerLabel omits (hides) an inapplicable POWER row
+        // rather than printing a dash; see PowerLabel's own header.
         [Test]
         public void ASummonHasNoPreviewableNumberEither()
         {
@@ -734,7 +726,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Palace Passage's card read "SKILL · 0 POWER" (kit-m3 capture):
-        // SwapAllies was appended after the old deny-list and so defaulted to
+        // SwapAllies was appended after the deny-list and so defaulted to
         // "has a power". The class, pinned literally: exactly these eight
         // effects carry a number, every other one -- including any effect
         // added later -- does not.
@@ -820,8 +812,8 @@ namespace PrincesPalace.Domain.Tests
             // authored, so neutral WeaponScaling/the unarmed-STR fallback at
             // Strength 10 contributes 0, and the 1.2x basic-attack
             // coefficient is the only thing that moves it: round(20 * 1.0 *
-            // 1.2) = 24 (no DamageScale multiplies it any more; fixed
-            // 2026-08-26, see ComputeAttackDamage's own header), matching
+            // 1.2) = 24 (no DamageScale multiplies it any more -- see
+            // ComputeAttackDamage's own header), matching
             // exactly what a real Strike against this hero would deal
             // before mitigation.
             var (_, hero) = Fight();
@@ -833,10 +825,10 @@ namespace PrincesPalace.Domain.Tests
                 "it describes THIS actor's swing, not a generic one");
         }
 
-        // Looks a stat up BY KEY, never by index -- panel.Stats is COMPACT
-        // now (2026-09-22 rework #2: a stat that does not apply is not added
-        // at all, so which physical row anything lands on moves with what
-        // else is present). Fails loudly, naming every key actually present,
+        // Looks a stat up BY KEY, never by index -- panel.Stats is COMPACT:
+        // a stat that does not apply is not added at all, so which physical
+        // row anything lands on moves with what else is present. Fails
+        // loudly, naming every key actually present,
         // rather than throwing IndexOutOfRange or silently reading the wrong
         // row's value.
         private static string StatValue(DetailPanel panel, string key)
@@ -875,7 +867,7 @@ namespace PrincesPalace.Domain.Tests
                 "COST and COOLDOWN don't apply to this skill and must be compacted away, not left empty mid-list");
         }
 
-        // ---- the icon rows (2026-09-23 icon rework) -------------------------
+        // ---- the icon rows ----------------------------------------------------
 
         private static DetailIcon IconOf(DetailPanel panel, DetailIconKind kind)
         {
@@ -978,13 +970,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("single", IconOf(panel, DetailIconKind.AreaOfEffect).IconKey);
         }
 
-        // ---- COST and COOLDOWN icons (coordinator pass 2, 2026-09-23) --------
+        // ---- COST and COOLDOWN icons -------------------------------------------
         //
-        // Dropping these two in pass 1 was a real regression, the
-        // coordinator's own call: a player loses cooldown information with
-        // no icon for it. Both reuse the same data the old text Stats rows
-        // (COST/COOLDOWN) already read -- ResourceOrHealthCostLabel and
-        // CooldownIconValue -- just painted as an icon+value cell instead.
+        // Dropping these two would be a real regression: a player loses
+        // cooldown information with no icon for it. Both reuse the same
+        // data the text Stats rows (COST/COOLDOWN) already read --
+        // ResourceOrHealthCostLabel and CooldownIconValue -- just painted as
+        // an icon+value cell instead.
         [Test]
         public void TheCostIconShowsTheResourcePayment()
         {
@@ -1116,14 +1108,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ADetailCardShowsBothItsCostAndItsCooldownWhileWaiting()
         {
-            // The bug this used to pin: mud_burst genuinely has a cooldown
-            // authored in content, and nothing anywhere on the fight screen
-            // ever said so -- the card kept showing its mana cost as though
-            // it were freely castable. The fix used to make COST say the
-            // wait INSTEAD of the cost; the 2026-09-22 rework gives cooldown
-            // its own row so a player can see both facts (what it costs,
-            // when it will be ready again) at once, neither one hiding the
-            // other.
+            // A player must see both facts at once: what a skill costs, and
+            // when it will be ready again while on cooldown. Cooldown gets
+            // its own row rather than replacing COST, so neither fact hides
+            // the other.
             var skill = new ResolvedSkill("cd", "Cooldown Bolt", "Waits between casts.", "hero", 1,
                 SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5,
                 resourceCost: 0, spendsAllResource: false, power: 0, flatAmount: 10,
@@ -1178,12 +1166,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void APowerlessEffectOmitsThePowerRowEntirely()
         {
-            // The rework's rule: a stat that does not apply is OMITTED, never
-            // shown as "-" or "0" -- POWER used to print "-" for Provoke,
-            // Transform and every other effect SkillEffects.HasMagnitude refuses. Rework
-            // #2 goes further: the row is not merely blanked, it is not in
-            // Stats at ALL, so Rally's card is compact rather than an
-            // eight-row card with a hole in the middle of it.
+            // The rule: a stat that does not apply is OMITTED, never shown
+            // as "-" or "0" -- for Provoke, Transform and every other effect
+            // SkillEffects.HasMagnitude refuses. The row is not merely
+            // blanked, it is not in Stats at ALL, so Rally's card is compact
+            // rather than an eight-row card with a hole in the middle of it.
             var provoke = Skill("p", "Rally", effect: SkillEffect.Provoke);
             var (session, hero) = Fight(provoke);
 
