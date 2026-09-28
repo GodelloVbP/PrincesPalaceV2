@@ -118,6 +118,27 @@ namespace PrincesPalace.Domain.Combat.Session
             return new ScheduledStep(entry, step, index, nextIndex);
         }
 
+        // Every pool index some schedule entry plays, for the preview's
+        // showcase (EnemyShowcase.Next). Empty for a monster with no schedule.
+        private static HashSet<int> ScheduledPoolIndices(EnemyKit kit)
+        {
+            var indices = new HashSet<int>();
+            var schedule = kit?.Source?.Schedule;
+            if (schedule == null) return indices;
+
+            foreach (var entry in schedule)
+            {
+                if (entry?.Skills == null) continue;
+                foreach (var id in entry.Skills)
+                {
+                    int index = PoolIndexOf(kit.Abilities, id);
+                    if (index >= 0) indices.Add(index);
+                }
+            }
+
+            return indices;
+        }
+
         private static int PoolIndexOf(IReadOnlyList<EnemyAbility> pool, string skillId)
         {
             if (pool == null || string.IsNullOrEmpty(skillId)) return -1;

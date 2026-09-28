@@ -1,0 +1,23 @@
+{
+  "_notes": [
+    "Dark Chains, the release at the Bellwether (PLAN_BELLWETHER_KIT 1.4). Delivered 3x2 at 512",
+    "(1536x1024; the plan asked 4x2): a void rift, then two chains unspooling to the right and straightening.",
+    "Painted pointing RIGHT; the enemy casts leftward, so the layer's facing auto mirrors it."
+  ],
+  "sheet": "Spells/dark_chains/origin.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false
+}

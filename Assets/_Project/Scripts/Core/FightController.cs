@@ -364,6 +364,15 @@ namespace PrincesPalace
         // callout (FightScreen.EnemyIntentValues/Callouts).
         [SerializeField] internal TMP_Text[] enemyIntentValues;
         [SerializeField] internal TMP_Text[] enemyIntentCallouts;
+
+        // The callout's backing plate, same slot index (FightScreen.
+        // EnemyIntentCalloutPlates, M5).
+        [SerializeField] internal GameObject[] enemyIntentCalloutPlates;
+
+        // The knell's floor figures, one per party SEAT (FightScreen.
+        // PartySeatFigures, PLAN_BELLWETHER_KIT M5): the plate and its text.
+        [SerializeField] internal GameObject[] partySeatFigures;
+        [SerializeField] internal TMP_Text[] partySeatFigureLabels;
         [SerializeField] internal GameObject intentTooltip;
         [SerializeField] internal TMP_Text intentTooltipText;
 

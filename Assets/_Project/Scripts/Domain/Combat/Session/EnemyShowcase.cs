@@ -51,7 +51,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // The index into `pool` this enemy should take now, or -1 for the plain
         // attack -- which is what FightSession.BuildIntent already does with an
         // out-of-range index, so "the abilities are done" needs no second path.
-        public int Next(object enemy, IReadOnlyList<EnemyAbility> pool)
+        //
+        // `scheduled` names the pool indices the monster's schedule plays
+        // (PLAN_BELLWETHER_KIT 3.7). Such an entry is authored at weight 0 so
+        // the draw never takes it, and without this the showcase read that 0
+        // as "cannot be met" and skipped exactly the skills a scheduled kit
+        // is built around (the Bellwether's Chains and Knell). A scheduled
+        // entry plays in its authored place like any other.
+        public int Next(object enemy, IReadOnlyList<EnemyAbility> pool, ICollection<int> scheduled = null)
         {
             if (pool == null || pool.Count == 0)
             {
@@ -74,7 +81,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     continue;
                 }
 
-                if (ability.Weight <= 0f)
+                if (ability.Weight <= 0f && (scheduled == null || !scheduled.Contains(cursor - 1)))
                 {
                     Skip(ability.Label);
                     continue;

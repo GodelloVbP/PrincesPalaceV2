@@ -97,8 +97,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 return;
             }
 
-            RallyEnemies();
-            RecordRoundStart(round);
+            var tolled = RallyEnemies();
+            RecordRoundStart(round, tolled);
 
             RoundStarted?.Invoke(round);
         }
@@ -116,18 +116,71 @@ namespace PrincesPalace.Domain.Combat.Session
         // advance inside a recording) is stamped onto that beat rather than
         // replacing it -- the refusal to nest the flock and the status tick
         // make. After the rally, so the beat's snapshot is the round's.
-        private void RecordRoundStart(int round)
+        //
+        // AND THE TOLL ITSELF, WHEN ONE IS AUTHORED (PLAN_BELLWETHER_KIT 1.7 /
+        // 3.9): every enemy whose rally presents (a stance, a vfx) gets a
+        // RoundStart beat of its own with itself as the actor, so the screen
+        // plays its pose and its ripple at the round's moment. The first such
+        // beat carries the round; with none, the round's beat is the bare one
+        // it always was. In a fight with no limit only the presented tolls
+        // record anything. A round that starts inside an open beat stamps the
+        // round on that beat as before, and its tolls are recorded as their
+        // own beats right after it closes (CommitBeat) -- never nested.
+        private void RecordRoundStart(int round, List<CombatantState> tolled)
         {
-            if (RoundLimit <= 0) return;
+            bool counts = RoundLimit > 0;
+            var presented = new List<CombatantState>();
+            foreach (var enemy in tolled)
+            {
+                var source = SourceFor(enemy)?.Source;
+                if (source != null && source.PresentsRally) presented.Add(enemy);
+            }
+
+            if (!counts && presented.Count == 0) return;
 
             if (_recordingBeat != null)
             {
-                _recordingBeat.RoundStarted = round;
+                if (counts) _recordingBeat.RoundStarted = round;
+                _pendingTolls.AddRange(presented);
                 return;
             }
 
-            NewBeat(BeatCause.RoundStart, null, null, StageApproach.Hold);
+            if (presented.Count == 0)
+            {
+                NewBeat(BeatCause.RoundStart, null, null, StageApproach.Hold);
+                _recordingBeat.RoundStarted = round;
+                CommitBeat();
+                return;
+            }
+
+            for (int i = 0; i < presented.Count; i++)
+            {
+                RecordToll(presented[i], i == 0 && counts ? round : 0);
+            }
+        }
+
+        // Tolls whose round started inside an open beat, recorded by
+        // CommitBeat right after that beat closes.
+        private readonly List<CombatantState> _pendingTolls = new List<CombatantState>();
+
+        private void RecordPendingTolls()
+        {
+            if (_pendingTolls.Count == 0) return;
+
+            var tolls = _pendingTolls.ToList();
+            _pendingTolls.Clear();
+            foreach (var enemy in tolls) RecordToll(enemy, 0);
+        }
+
+        // One enemy's toll: its rally pose and effect on a RoundStart beat.
+        private void RecordToll(CombatantState enemy, int round)
+        {
+            var source = SourceFor(enemy)?.Source;
+            NewBeat(BeatCause.RoundStart, enemy, enemy, StageApproach.Hold);
             _recordingBeat.RoundStarted = round;
+            if (!string.IsNullOrEmpty(source?.RallyStance)) _recordingBeat.Stances[enemy] = source.RallyStance;
+            if (source?.RallyVfx != null) _recordingBeat.Vfx = source.RallyVfx.Copy();
+            _recordingBeat.Messages.Add($"{enemy.Name} tolls. Its rally grows (x{RallyStacksOf(enemy)}).");
             CommitBeat();
         }
 
@@ -137,8 +190,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // stack, up to its cap, and its attack bonus is re-summed on the spot so
         // the telegraph's damage preview reads the new figure too, not only the
         // swing (which re-sums anyway, FightSession.Enemies.ResolveEnemyAction).
-        private void RallyEnemies()
+        // Returns every enemy that rallied, in field order, for the toll's beat.
+        private List<CombatantState> RallyEnemies()
         {
+            var rallied = new List<CombatantState>();
             foreach (var enemy in _encounter.LivingEnemies.ToList())
             {
                 var source = SourceFor(enemy)?.Source;
@@ -147,7 +202,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 FallingOffStacks.AddStack(enemy, FightTuning.RallyStackKey,
                     RallyStackLifetime, source.RallyMaxStacks);
                 RefreshAttackBonus(enemy, spendingGift: false);
+                rallied.Add(enemy);
             }
+
+            return rallied;
         }
 
         // A rally stack is fight-long. FallingOffStacks ages every list once
@@ -170,6 +228,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // How many rally stacks an actor carries. For the HUD and tests.
         public int RallyStacksOf(CombatantState actor) => FallingOffStacks.Count(actor, FightTuning.RallyStackKey);
+
+        // What the rally adds to an actor's attack right now, in percent. For
+        // the rally badge's tooltip.
+        public int RallyAttackPercentOf(CombatantState actor) => actor == null ? 0 : RallyAttackPercent(actor);
 
         // ---- turns opened ----------------------------------------------------------
 

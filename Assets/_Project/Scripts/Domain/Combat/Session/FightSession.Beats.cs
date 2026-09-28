@@ -105,6 +105,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
             _beats.Add(_recordingBeat);
             _recordingBeat = null;
+
+            // A toll whose round started while this beat was open plays as
+            // its own beat right after it (FightSession.Rounds.RecordRoundStart).
+            RecordPendingTolls();
         }
 
         // WHAT EVERY HIT-CUE AUTHOR ADDS TO THE BLOW -- a worn transform's

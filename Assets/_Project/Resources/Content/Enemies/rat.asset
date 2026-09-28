@@ -34,6 +34,27 @@ MonoBehaviour:
     Rollable: 1
     RallyAttackPercentPerStack: 0
     RallyMaxStacks: 0
+    RallyStance: 
+    RallyVfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      fit: 
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers: []
+      layerFormat: 0
+      hitCueSeconds: 0
     SpritePath: Enemies/rat
     Abilities: []
     Schedule: []

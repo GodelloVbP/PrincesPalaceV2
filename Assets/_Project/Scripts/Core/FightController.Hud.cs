@@ -2201,7 +2201,7 @@ namespace PrincesPalace
             // patch; every other count (including "no counter drawn at all")
             // falls through to the ordinary look, so a status ticking from 3
             // to 2 to 1 changes on the one frame that matters and nowhere else.
-            bool emphasise = showNumber && row.Counter == 1;
+            bool emphasise = showNumber && row.Counter == 1 && row.CounterText == null;
             if (parts.Code != null)
             {
                 parts.Code.color = polarity;
@@ -2209,7 +2209,7 @@ namespace PrincesPalace
             }
             if (parts.Counter != null)
             {
-                parts.Counter.SetContent(showNumber ? row.Counter.ToString() : "");
+                parts.Counter.SetContent(showNumber ? row.CounterLabel : "");
                 parts.Counter.color = emphasise ? CounterEmphasis : CounterDefault;
                 parts.Counter.fontStyle = emphasise ? TMPro.FontStyles.Bold : TMPro.FontStyles.Normal;
             }

@@ -97,6 +97,29 @@ returning event and the first event fight.
   fewer, heavier swings spread the floor-1 result, where the bot's Shawn
   barely varies, so one attack point moves floor-1 Endure by ~6 points
   instead of ~20. The per-floor table is in that commit's message.
+- **The Bellwether's kit** (docs/PLAN_BELLWETHER_KIT.md, M5, 2026-09-28).
+  No plain swing (`attackWeight` 0). Every acting turn is **Scratch**
+  (`bellwether_scratch`: a physical lunge in its `attack` pose that leaves
+  Bleed 8 x 3) except its 1st/2nd and 5th/6th, which are the scheduled pair
+  (`schedule`, counted on its own acting turns, never split): **Dark Chains**
+  (`dark_chains`, `extra` pose, Reposition to the front seat, no damage) and
+  then **Death Knell** (`death_knell`, `cast` pose, Void, 110/35/0% of the
+  chained target's max HP at the front/middle/rear seat when it lands,
+  `ignoresDefense` so armour cannot soak the front). Each round's rally plays
+  its `cast` pose with a void ripple (`rallyPerRound.stance`/`vfx`) and its
+  status row shows the stacks as `x3` on `Status/rally.png`. While the knell
+  is committed, its callout sits on a dark plate and each party seat shows the
+  knell's figure on the floor (red lethal, lilac survivable, SAFE). Numbers
+  are M5 start values; M7 tunes them. Art: seven recipes under
+  `Art/Sheets/recipes/` (`bellwether_scratch`, `_drops`,
+  `bellwether_toll_ripple`, `dark_chains_origin`/`_travel`/`_bind`,
+  `death_knell_bell`/`_shockwave`), each recipe's `_notes` saying how the
+  delivered grid differed from the ask. **Sound pending**: no kit sfx is
+  delivered, so every `sfxPath` is empty and the kit is silent -- still owed:
+  the claw rake (dry, wet tail), the bleed tick, the chains (rattle + void
+  whoosh, ~0.8s), the knell (cracked toll, sub-bass, ~2s), the lethal-badge
+  sting, and a toll sfx for the rally ripple (the round's own `toll` still
+  plays in the Bell fight). Captures: `docs/captures/kit-m5/`.
 - **Art and sound** delivered (M9a, 2026-09-28): `fog_clearing.png` (event
   backdrop and fight backdrop), `stump_bell.png` (bell and ask pages),
   `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.35 -> 0.6,

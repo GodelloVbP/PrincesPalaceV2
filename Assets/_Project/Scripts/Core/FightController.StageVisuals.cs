@@ -564,6 +564,8 @@ namespace PrincesPalace
             var enemies = _session.Encounter.Enemies;
             bool readable = _session.IsPlayerTurn && !_isBusy && !_session.IsOver;
 
+            RefreshSeatFigures(readable);
+
             for (int i = 0; i < enemyIntentIcons.Length; i++)
             {
                 var enemy = i < enemies.Count ? enemies[i] : null;
@@ -627,16 +629,79 @@ namespace PrincesPalace
             }
 
             var callout = enemyIntentCallouts != null && i < enemyIntentCallouts.Length ? enemyIntentCallouts[i] : null;
+            var plate = enemyIntentCalloutPlates != null && i < enemyIntentCalloutPlates.Length
+                ? enemyIntentCalloutPlates[i]
+                : null;
             if (callout != null)
             {
                 bool telegraphs = intent.Then != null || intent.DamageBySeat != null;
                 string line = telegraphs ? _session.TelegraphLine(enemy) : "";
                 callout.gameObject.SetActive(line.Length > 0);
+                if (plate != null) plate.SetShown(line.Length > 0);
                 if (line.Length > 0)
                 {
                     callout.SetContent(line);
                     callout.color = Hex(lethal ? Domain.UiKit.FightHudPalette.IntentLethal : Domain.UiKit.FightHudPalette.IntentNumber);
+                    FitCalloutPlate(plate, callout);
                 }
+            }
+        }
+
+        // THE PLATE HUGS ITS TEXT: authored at its widest (FightScreen's
+        // CalloutPlateW), narrowed to the line's own width plus a margin so a
+        // short "Dark Chains! Death Knell next" is not a long empty bar.
+        private static void FitCalloutPlate(GameObject plate, TMPro.TMP_Text callout)
+        {
+            if (plate == null || callout == null) return;
+
+            var rect = (RectTransform)plate.transform;
+            var labelRect = (RectTransform)callout.transform;
+            float widest = labelRect.rect.width + 16f;
+            float wanted = Mathf.Min(widest, callout.GetPreferredValues(callout.text).x + 36f);
+            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Mathf.Max(80f, wanted));
+        }
+
+        // THE KNELL'S FLOOR FIGURES (PLAN_BELLWETHER_KIT M5): what a
+        // seat-sized intent deals at each seat, on the floor under it --
+        // lethal red, survivable lilac, SAFE green -- on the badge's own
+        // readability rule, so they come and go with it. The seat the target
+        // stands in now is drawn a size larger.
+        private void RefreshSeatFigures(bool readable)
+        {
+            if (partySeatFigures == null) return;
+
+            var figures = Domain.Combat.Session.FightHudModel.SeatFiguresFor(_session, readable);
+            for (int seat = 0; seat < partySeatFigures.Length; seat++)
+            {
+                var node = partySeatFigures[seat];
+                if (node == null) continue;
+
+                var figure = seat < figures.Length ? figures[seat] : default;
+                node.SetShown(figure.Shown);
+                if (!figure.Shown) continue;
+
+                var label = partySeatFigureLabels != null && seat < partySeatFigureLabels.Length
+                    ? partySeatFigureLabels[seat]
+                    : null;
+                if (label != null)
+                {
+                    label.SetContent(figure.Text);
+                    label.color = Hex(SeatFigureHex(figure.Style));
+                    label.transform.localScale = Vector3.one * (figure.IsTargetSeat ? 1.2f : 1f);
+                }
+            }
+        }
+
+        private static string SeatFigureHex(Domain.Combat.Session.FightHudModel.SeatFigureStyle style)
+        {
+            switch (style)
+            {
+                case Domain.Combat.Session.FightHudModel.SeatFigureStyle.Lethal:
+                    return Domain.UiKit.FightHudPalette.IntentLethal;
+                case Domain.Combat.Session.FightHudModel.SeatFigureStyle.Safe:
+                    return Domain.UiKit.FightHudPalette.SeatFigureSafe;
+                default:
+                    return Domain.UiKit.FightHudPalette.IntentKnell;
             }
         }
 

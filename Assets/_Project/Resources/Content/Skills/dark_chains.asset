@@ -1,0 +1,292 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: dark_chains
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  data:
+    Id: dark_chains
+    DisplayName: Dark Chains
+    Description: Chains out of nothing drag you to the front of the line.
+    CharacterId: bellwether
+    UnlockLevel: 1
+    Effect: 20
+    Targeting: 0
+    ManaCost: 0
+    ResourceCost: 0
+    SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 1
+    Power: 0
+    FlatAmount: 0
+    IgnoresDefense: 0
+    DamageInstances: []
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      fit: 
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers:
+      - id: rift
+        render: sprite
+        place: caster-centre
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/dark_chains_origin
+        seconds: 0.42
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0.12
+        dx: 0
+        dy: 180
+        scale: 1
+        size: 300
+        fit: 
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0.5
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: chain
+        render: sprite
+        place: caster-centre
+        follow: 0
+        at: release
+        offset: 0.2
+        path: Spells/dark_chains_travel
+        seconds: 0.32
+        fps: 12
+        startFrame: 0
+        until: loop
+        fade: 0
+        dx: 0
+        dy: 180
+        scale: 1
+        size: 300
+        fit: target
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0.4
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0.32
+        travelDelay: 0
+        orient: path
+        artDegrees: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: bind
+        render: sprite
+        place: target-centre
+        follow: 0
+        at: arrival
+        offset: 0
+        path: Spells/dark_chains_bind
+        seconds: 0.3
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0.1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 320
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.12
+        glow: 0.5
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      layerFormat: 1
+      hitCueSeconds: 0.52
+    SortOrder: 41
+    Status: 0
+    HasStatus: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    ScalingAxis: 0
+    QueuePushSlots: 0
+    Transform:
+      displayName: 
+      turns: 0
+      attackPercent: 0
+      speedPercent: 0
+      temporaryHealthPercent: 0
+      splashPercent: 0
+      spritePath: 
+      hit:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          fit: 
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers: []
+          layerFormat: 0
+          hitCueSeconds: 0
+        shake: 0
+        hitStopSeconds: 0
+    CooldownTurns: 0
+    PlayerSelectable: 0
+    Shake: 0
+    Approach: 0
+    Stance: extra
+    ApproachStance: 
+    WindupStance: 
+    SummonEnemyId: 
+    SummonCap: 0
+    IconPath: 
+    AdvanceSlots: 0
+    DamageTypeOverride: 0
+    HasDamageType: 0
+    DamageBySeatMaxHpPercent: 
+    ToSeat: 1
+    HealthCostPercent: 0
+    RequiresStatusType: 0
+    HasRequiresStatus: 0
+    ConsumesStatusType: 0
+    HasConsumesStatus: 0
+    DamageInstancesIfConsumed: []
+    DetonationPercent: 0
+    DetonationSplit: 
+    Reach:
+      Kind: 0
+      RankMask: 0
+    PhysicalMove: 0
+    BookOnly: 0
+    BookTier: 0
+    Elements: []
+    PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

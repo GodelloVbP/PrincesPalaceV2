@@ -34,10 +34,94 @@ MonoBehaviour:
     Rollable: 0
     RallyAttackPercentPerStack: 8
     RallyMaxStacks: 10
+    RallyStance: cast
+    RallyVfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      fit: 
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers:
+      - id: ripple
+        render: sprite
+        place: caster-centre
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/bellwether_toll_ripple
+        seconds: 0.63
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0.15
+        dx: 0
+        dy: 280
+        scale: 1
+        size: 380
+        fit: 
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0.5
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      layerFormat: 1
+      hitCueSeconds: 0.2
     SpritePath: Enemies/bellwether
-    Abilities: []
-    Schedule: []
-    AttackWeight: 1
+    Abilities:
+    - SkillId: bellwether_scratch
+      Weight: 1
+    - SkillId: dark_chains
+      Weight: 0
+    - SkillId: death_knell
+      Weight: 0
+    Schedule:
+    - OnTurns: 0100000005000000
+      Skills:
+      - dark_chains
+      - death_knell
+    AttackWeight: 0
     SkillName: 
     SkillPower: 1.5
     SkillChance: 0.35

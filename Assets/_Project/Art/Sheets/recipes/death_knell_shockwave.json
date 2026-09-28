@@ -1,0 +1,73 @@
+{
+  "_notes": [
+    "Death Knell's ground wave. Asked as 2x4 cells of 1024x512 on a 2048x2048 sheet, and the sheet is",
+    "that size -- but the drawings are NOT on that grid. SEVEN frames (the eighth cell, bottom right, is empty),",
+    "each row's ground line sitting 10-40px ABOVE a 512 boundary with its cracks hanging across it, and the",
+    "generator left faint seam lines baked into the alpha: a full-height vertical at x 1023-1024 and full-width",
+    "horizontals at y ~574-593, ~1103-1121, ~1557-1575 and ~2041-2047. A 512 grid would cut every frame's",
+    "cracks into the next cell and carry a seam line into four of them.",
+    "So: measured rects, one per drawing, 1022 wide (clear of the vertical seam) and 430 tall (the tallest",
+    "band that fits between two horizontal seams, y 1126-1555 for frames 5-6), each ending just above the",
+    "seam below its drawing. base_align puts every frame on one floor (the rows drift 20-40px against their",
+    "rects); content_crop trims to the shared content box so place: formation gets the wave's own wide aspect.",
+    "The sheet also carries a scatter of alpha 1-31 noise pixels (~390k, mean colour a dark grey-violet): left",
+    "alone, as it is invisible and removing it would be repainting."
+  ],
+  "sheet": "Spells/death_knell/shockwave.png",
+  "rects": [
+    [
+      0,
+      143,
+      1022,
+      430
+    ],
+    [
+      1025,
+      143,
+      1022,
+      430
+    ],
+    [
+      0,
+      669,
+      1022,
+      430
+    ],
+    [
+      1025,
+      669,
+      1022,
+      430
+    ],
+    [
+      0,
+      1126,
+      1022,
+      430
+    ],
+    [
+      1025,
+      1126,
+      1022,
+      430
+    ],
+    [
+      0,
+      1610,
+      1022,
+      430
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6"
+  ],
+  "keyed": false,
+  "base_align": true,
+  "content_crop": true
+}

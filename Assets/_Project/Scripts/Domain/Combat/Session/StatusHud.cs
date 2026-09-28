@@ -453,6 +453,22 @@ namespace PrincesPalace.Domain.Combat.Session
                 TransformSortKey());
         }
 
+        // THE RALLY BADGE (PLAN_BELLWETHER_KIT 1.7 / 3.9): a monster that
+        // grows each round shows its stack count as "x3" (Status/rally.png),
+        // never a bare number a player would read as turns left. Fight-long,
+        // so it never counts down. A benefit to its holder, sorted with the
+        // transform (both change what every later swing does).
+        public const string RallyCode = "RLY";
+        public const string RallySlug = "rally";
+
+        public static FightHudModel.StatusRow RallyRow(int stacks, int attackPercent)
+        {
+            string tooltip = $"Rallied x{stacks} -- {Wrap(true, $"+{attackPercent}% attack")} for the rest of the fight. " +
+                             "It grows each round.";
+            return new FightHudModel.StatusRow(RallyCode, RallySlug, tooltip, true, stacks,
+                TransformSortKey(), counterText: "×" + stacks);
+        }
+
         public static FightHudModel.StatusRow SpeedRow(string sourceName, int granted, int turnsLeft)
         {
             bool positive = granted > 0;

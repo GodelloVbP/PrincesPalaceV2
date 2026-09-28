@@ -1078,7 +1078,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // benefit bucket and a fixed table position.
             public readonly int SortKey;
 
-            public StatusRow(string code, string slug, string tooltip, bool isPositive, int counter, int sortKey)
+            // WHAT THE BADGE PRINTS when the number is not a turn count: a
+            // stack count reads "x3", never a bare 3 beside the "3 turns left"
+            // every other badge means (StatusHud.RallyRow). Null means print
+            // Counter as the turn count it is.
+            public readonly string CounterText;
+
+            public StatusRow(string code, string slug, string tooltip, bool isPositive, int counter, int sortKey,
+                             string counterText = null)
             {
                 Code = code;
                 Slug = slug;
@@ -1086,7 +1093,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 IsPositive = isPositive;
                 Counter = counter;
                 SortKey = sortKey;
+                CounterText = counterText;
             }
+
+            // The digits the badge draws, when it draws any.
+            public string CounterLabel => CounterText ?? Counter.ToString();
         }
 
         // Every status effect and every relic-granted speed buff/malus
@@ -1107,6 +1118,68 @@ namespace PrincesPalace.Domain.Combat.Session
         // Drowned Lantern's own mark below -- actor.Statuses needs no
         // session to read at all -- so a future no-session caller (a
         // preview render, a design tool) degrades rather than throws.
+        // ---- the knell's floor figures (PLAN_BELLWETHER_KIT M5) -----------------
+        //
+        // While a seat-sized hit (the Death Knell) is a committed intent, what
+        // it would deal its target at EACH party seat, for the numbers drawn on
+        // the floor where a figure in that seat stands: lethal at or above the
+        // target's current health, survivable below it, SAFE at a 0 seat. The
+        // table is IntentDetailFor's own DamageBySeat -- the live reading the
+        // badge and tooltip use -- so it is re-read after every Move, Passage
+        // or hit; IsTargetSeat marks where the target stands NOW.
+        //
+        // `readable` is the badge's own rule (the player's turn is the one on
+        // screen, nothing is playing): false, or no such intent, is all hidden.
+        public enum SeatFigureStyle { Hidden, Lethal, Survivable, Safe }
+
+        public readonly struct SeatFigure
+        {
+            public readonly SeatFigureStyle Style;
+            public readonly string Text;
+            public readonly bool IsTargetSeat;
+
+            public SeatFigure(SeatFigureStyle style, string text, bool isTargetSeat)
+            {
+                Style = style;
+                Text = text;
+                IsTargetSeat = isTargetSeat;
+            }
+
+            public bool Shown => Style != SeatFigureStyle.Hidden;
+        }
+
+        public const string SeatFigureSafeText = "SAFE";
+
+        public static SeatFigure[] SeatFiguresFor(FightSession session, bool readable)
+        {
+            var figures = new SeatFigure[CombatEncounter.SeatsPerSide];
+            if (session == null || !readable) return figures;
+
+            foreach (var enemy in session.Encounter.LivingEnemies)
+            {
+                var detail = session.IntentDetailFor(enemy);
+                if (!detail.HasValue) continue;
+
+                var intent = detail.Value;
+                var target = intent.Target;
+                if (intent.DamageBySeat == null || target == null || !target.IsAlive || !target.IsPlayerSide) continue;
+
+                for (int seat = 0; seat < figures.Length && seat < intent.DamageBySeat.Length; seat++)
+                {
+                    int amount = intent.DamageBySeat[seat];
+                    var style = amount <= 0 ? SeatFigureStyle.Safe
+                        : amount >= target.CurrentHealth ? SeatFigureStyle.Lethal
+                        : SeatFigureStyle.Survivable;
+                    figures[seat] = new SeatFigure(style,
+                        amount <= 0 ? SeatFigureSafeText : amount.ToString(), seat == intent.TargetSeat);
+                }
+
+                return figures;
+            }
+
+            return figures;
+        }
+
         public static List<StatusRow> StatusRowsFor(FightSession session, CombatantState actor)
         {
             var rows = new List<StatusRow>();
@@ -1148,6 +1221,14 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 rows.Add(StatusHud.TransformRow(actor.Transformation.DisplayName,
                     actor.Transformation.TurnsRemaining, actor.Transformation.IsPermanent));
+            }
+
+            // THE RALLY (PLAN_BELLWETHER_KIT 1.7 / 3.9): a fight-long stack
+            // count, so the badge reads "x3" rather than a turn count.
+            if (session != null)
+            {
+                int rally = session.RallyStacksOf(actor);
+                if (rally > 0) rows.Add(StatusHud.RallyRow(rally, session.RallyAttackPercentOf(actor)));
             }
 
             if (actor.PermanentPhysicalDefenseShred > 0)

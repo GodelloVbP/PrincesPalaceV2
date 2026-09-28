@@ -167,6 +167,12 @@ namespace PrincesPalace.Domain.UiKit
         public const string IntentLethal = "#FF3B3B";
         public const string IntentNumber = "#FFF3E0";
 
+        // The telegraph callout's and the knell floor figures' backing plate
+        // (M5): near-black violet, mostly opaque, so red and lilac text read
+        // over fog, foliage or stone alike. SAFE is the seat markers' green.
+        public const string IntentCalloutPlate = "#120A1AE0";
+        public const string SeatFigureSafe = "#7CF08A";
+
         // --- the fight's own panel art ----------------------------------------
         public const string TargetPromptFill = "#26160AE6";   // 0.90
         public const string TargetPromptBorder = "#FFC45A8C"; // 0.55

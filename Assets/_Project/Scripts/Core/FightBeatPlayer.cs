@@ -37,6 +37,10 @@ namespace PrincesPalace
         // flicker between two blows. Scaled by the battle speed like the rest.
         public const float RoundStartHoldSeconds = BeatHoldSeconds + BeatGapSeconds;
 
+        // How long a pull's chains hold their target before he is dragged
+        // (CombatBeat.PreFormation): the bind's own snap, Dark Chains' 0.3s.
+        public const float PullHoldSeconds = 0.3f;
+
         // THE SETTLE AFTER THE BLOW, AND IT IS A FLOOR RATHER THAN A REMAINDER.
         //
         // The hold used to be purely what was LEFT of BeatHoldSeconds once the
@@ -723,6 +727,24 @@ namespace PrincesPalace
             finished?.Invoke();
         }
 
+        // How long a toll's own effect runs: its longest layer (start offset,
+        // length and fade), or a single block's seconds. Unscaled.
+        internal static float TollSecondsOf(CombatBeat beat)
+        {
+            var vfx = beat?.Vfx;
+            if (vfx == null) return 0f;
+            if (!vfx.HasLayers) return vfx.HasAnimation ? vfx.seconds : 0f;
+
+            float longest = 0f;
+            foreach (var layer in vfx.layers)
+            {
+                if (layer == null) continue;
+                longest = Mathf.Max(longest, layer.offset + layer.seconds + layer.fade);
+            }
+
+            return longest;
+        }
+
         private IEnumerator PlayBeat(CombatBeat beat, int beatIndex)
         {
             // Contract 1: adopted before ANY Scaled/Unscaled call this
@@ -748,6 +770,25 @@ namespace PrincesPalace
             if (beat.Cause == BeatCause.RoundStart)
             {
                 Guard(() => LogBeat(beat));
+
+                // A TOLL THAT PRESENTS (PLAN_BELLWETHER_KIT 1.7): the rallying
+                // monster is the beat's actor, wears its rally pose and plays
+                // its effect for the length of the hold -- or of the effect,
+                // if that runs longer -- then stands down.
+                if (beat.Actor != null)
+                {
+                    string pose = null;
+                    beat.Stances.TryGetValue(beat.Actor, out pose);
+                    if (!string.IsNullOrEmpty(pose)) Guard(() => SetStance?.Invoke(beat.Actor, pose));
+                    if (beat.Vfx != null && beat.Vfx.HasArt) Guard(() => PlayVfx?.Invoke(beat));
+
+                    yield return new WaitForSeconds(Scaled(Mathf.Max(RoundStartHoldSeconds, TollSecondsOf(beat))));
+
+                    if (!string.IsNullOrEmpty(pose))
+                        Guard(() => SetStance?.Invoke(beat.Actor, FightSession.Stances.Idle));
+                    yield break;
+                }
+
                 yield return new WaitForSeconds(Scaled(RoundStartHoldSeconds));
                 yield break;
             }
@@ -771,7 +812,13 @@ namespace PrincesPalace
             // beat's own snapshot rather than from the live lists for the
             // reason the vitals are -- a Move rewrites the party order in
             // place, so live state is the order the ROUND finished on.
-            PaintFormation?.Invoke(beat.Formation);
+            //
+            // UNLESS THE BEAT MOVES SOMEBODY AT ITS IMPACT (Dark Chains, a
+            // drag after a hit -- CombatBeat.PreFormation): then the stage
+            // opens on where everybody stood BEFORE, and the pull is painted at
+            // the impact instant below, so the chains land and THEN he is
+            // dragged, rather than walking to the front before they arrive.
+            PaintFormation?.Invoke(beat.PreFormation ?? beat.Formation);
 
             // AND WHO IS UP NEXT AS OF THIS BEAT, from the same moment and
             // for the same reason -- see PaintTurnOrder's own header. Sent
@@ -1099,6 +1146,19 @@ namespace PrincesPalace
             float stop = HitStopFor(beat);
             if (stop > 0f) yield return new WaitForSeconds(Scaled(stop));
 
+            // THE PULL (see the PreFormation note at the top of the beat): the
+            // chains land, hold while they snap taut, and only then is he
+            // dragged -- painted PullHoldSeconds after the impact rather than
+            // on it, so the bind is seen closing on him where he stood. The
+            // hold is charged to the settle below, so the beat is no longer.
+            float pullHold = 0f;
+            if (beat.PreFormation != null)
+            {
+                pullHold = PullHoldSeconds;
+                yield return new WaitForSeconds(Scaled(pullHold));
+                Guard(() => PaintFormation?.Invoke(beat.Formation));
+            }
+
             // WHAT THE BEAT ACTUALLY SPENT, which is the number the settle
             // has to be sized against -- "the beat got longer" is the
             // failure mode SettleAfter's own header records going
@@ -1124,6 +1184,7 @@ namespace PrincesPalace
             float spent = staticSwing ? StaticSwing.WindupSeconds
                 : staticCharge ? chargeOutSeconds
                 : StillPoseSeconds + boughtWindup;
+            spent += pullHold;
             yield return new WaitForSeconds(Scaled(SettleAfter(spent + stop)));
 
             // Back to idle before the next beat opens, so a pose belongs to

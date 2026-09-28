@@ -1,0 +1,50 @@
+{
+  "_notes": [
+    "Blood droplets for Scratch's emitter, cut by rect out of the SAME sheet (it has no particle row).",
+    "Four isolated teardrops: three from cell 3 (x 1024-1536, y 0-512) and one from cell 4. Each rect is the",
+    "drop's alpha bbox (threshold 40) padded 2px; a few stray alpha-noise pixels and at most 7px of a",
+    "neighbouring fleck ride along -- measured, invisible at particle size. The drop at (1123,227) was",
+    "left out: its rect takes 79px of a neighbouring rake tip; and (1392,63) is a torn rake tip, not a drop.",
+    "Padded onto one 64x80 canvas."
+  ],
+  "sheet": "Spells/bellwether_scratch/sheet.png",
+  "rects": [
+    [
+      1188,
+      142,
+      38,
+      47
+    ],
+    [
+      1332,
+      367,
+      36,
+      56
+    ],
+    [
+      1399,
+      281,
+      59,
+      61
+    ],
+    [
+      384,
+      736,
+      32,
+      65
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": false,
+  "canvas": [
+    64,
+    80
+  ],
+  "base_align": false,
+  "content_crop": false
+}

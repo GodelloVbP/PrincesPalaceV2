@@ -100,6 +100,15 @@ namespace PrincesPalace.Domain.Content
 
         public bool HasRally => RallyAttackPercentPerStack > 0 && RallyMaxStacks > 0;
 
+        // How the toll looks (RawEnemyRally.stance / .vfx): the pose worn and
+        // the effect played on the monster's own round-start beat. Empty and
+        // None mean the rally is presented as before -- the counter only.
+        public string RallyStance = "";
+        public SpellPresentation RallyVfx = new SpellPresentation();
+
+        public bool PresentsRally => HasRally
+                                     && (!string.IsNullOrEmpty(RallyStance) || RallyVfx.HasArt);
+
         // Resources-relative FOLDER holding this monster's stance
         // sprites (e.g. "Enemies/golem", which contains idle.png,
         // attack.png and so on). Empty for the many monsters with no art

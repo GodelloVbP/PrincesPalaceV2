@@ -314,6 +314,21 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // THE TOLL'S PRESENTATION: the same two checks every other vfx
+            // block meets, and refused on a monster that never rallies, where
+            // it would be authored and never read.
+            var rallyVfx = rally.vfx ?? new SpellPresentation();
+            string rallyStance = (rally.stance ?? "").Trim();
+            bool presentsRally = rallyStance.Length > 0 || rallyVfx.HasArt;
+            if (presentsRally && rally.maxStacks <= 0)
+            {
+                error = $"{label}: rallyPerRound authors a stance or vfx but no rally -- it would never be shown.";
+                return false;
+            }
+
+            if (!SpellPresentationPaths.Check(label + " rallyPerRound", rallyVfx, out error)) return false;
+            if (!SpellLayerRules.TryCheck(label + " rallyPerRound", rallyVfx, out error)) return false;
+
             if (!TryResolveSchedule(raw, label, abilities, out var schedule, out error)) return false;
 
             var baseStats = new StatBlock(raw.maxHealth, speed, attack,
@@ -335,6 +350,8 @@ namespace PrincesPalace.Domain.Content
                 Rollable = raw.rollable,
                 RallyAttackPercentPerStack = rally.attackPercentPerStack,
                 RallyMaxStacks = rally.maxStacks,
+                RallyStance = rallyStance,
+                RallyVfx = rallyVfx.Copy(),
                 Schedule = schedule,
             };
             error = null;

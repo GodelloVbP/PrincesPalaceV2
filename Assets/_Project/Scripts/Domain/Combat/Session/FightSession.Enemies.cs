@@ -84,7 +84,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 float roll = _rng?.NextFloat() ?? 0f;
                 var step = Showcase == null ? ScheduledStepFor(enemy) : null;
                 int chosen = Showcase != null
-                    ? Showcase.Next(enemy, pool)
+                    ? Showcase.Next(enemy, pool, ScheduledPoolIndices(kit))
                     : step.HasValue
                         ? step.Value.PoolIndex
                         : EnemyAbilityDraw.Pick(pool, roll);

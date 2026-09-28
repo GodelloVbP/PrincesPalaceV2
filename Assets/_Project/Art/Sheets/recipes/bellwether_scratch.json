@@ -1,0 +1,25 @@
+{
+  "_notes": [
+    "The Bellwether's Scratch (PLAN_BELLWETHER_KIT 1.3, M5). DELIVERED 3x2 at 512 (1536x1024), not the",
+    "plan's 4x3 three-row sheet: one six-drawing timeline -- thin lilac rakes, the white flash where they cross,",
+    "the rakes turning to blood with droplets, then three thinning blood frames. So the slash and the impact",
+    "flash are one folder here: the flash layer is a `still` of f1, the rake a `sprite` of the whole run.",
+    "Real alpha (keyed false). Cut as drawn, one for one."
+  ],
+  "sheet": "Spells/bellwether_scratch/sheet.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false
+}

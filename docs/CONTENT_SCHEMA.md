@@ -385,6 +385,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `attackPercentPerStack` | int | `0` | Attack percent each stack adds (8 = +8%); above 0 when maxStacks is set. |  |
 | `maxStacks` | int | `0` | The most stacks the rally reaches; at least 1 when attackPercentPerStack is set. |  |
+| `stance` | string | `""` | Which of this monster's stance folders it wears while it rallies at a round start; empty means no pose change. Only with a rally. |  |
+| `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | The effect played on the monster as it rallies (a SpellPresentation, layered or single); omitted plays nothing. Only with a rally. |  |
 
 ### `RawEnemyScheduleEntry`
 

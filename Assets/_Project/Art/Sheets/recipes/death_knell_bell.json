@@ -1,0 +1,22 @@
+{
+  "_notes": [
+    "Death Knell's bell over the target (PLAN_BELLWETHER_KIT 1.5): outline ghost, filled bell swinging,",
+    "cracked ring with sound arcs, split ghost. Delivered 3x2 at 512 (1536x1024) as asked."
+  ],
+  "sheet": "Spells/death_knell/bell.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false
+}

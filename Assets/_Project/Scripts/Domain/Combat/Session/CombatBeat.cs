@@ -241,6 +241,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // finished on.
         public BeatFormation Formation = BeatFormation.Empty;
 
+        // WHERE EVERYBODY STOOD BEFORE A PLACEMENT THIS BEAT MAKES AT ITS
+        // IMPACT -- a skill that moves someone (Reposition, a monster's drag
+        // after a hit; FightSession.PlaceBySkill). Null on every other beat.
+        // When set, playback opens on this and paints Formation at the impact
+        // instant, so the move is seen to be the effect of the blow.
+        public BeatFormation PreFormation;
+
         public readonly Dictionary<CombatantState, string> Stances = new Dictionary<CombatantState, string>();
 
         // ---- the actor's other two phases ------------------------------------

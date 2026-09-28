@@ -95,6 +95,13 @@ namespace PrincesPalace.Domain.Tests
             { "spore_cloud", false },
             { "bog_mud_burst", false },
 
+            // The Bellwether's kit (PLAN_BELLWETHER_KIT M5): the rake is a
+            // lunge, so a rooted Bellwether cannot scratch; the chains and the
+            // knell are casts it throws from where it stands.
+            { "bellwether_scratch", true },
+            { "dark_chains", false },
+            { "death_knell", false },
+
             // The spell expansion. All thirteen are casts; these are the
             // twelve landed through milestone E, plus Court in F.
             { "gilded_aegis", false },

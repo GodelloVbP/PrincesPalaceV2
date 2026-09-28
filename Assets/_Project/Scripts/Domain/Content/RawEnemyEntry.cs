@@ -306,6 +306,15 @@ namespace PrincesPalace.Domain.Content
         public int attackPercentPerStack;
         [ContentDoc("The most stacks the rally reaches; at least 1 when attackPercentPerStack is set.")]
         public int maxStacks;
+
+        // HOW A TOLL LOOKS (PLAN_BELLWETHER_KIT 1.7 / 3.9): the stance the
+        // monster wears and the effect it plays as it rallies, recorded on the
+        // round's own beat with the monster as its actor. Both optional; a
+        // rally that authors neither is presented exactly as before.
+        [ContentDoc("Which of this monster's stance folders it wears while it rallies at a round start; empty means no pose change. Only with a rally.")]
+        public string stance = "";
+        [ContentDoc("The effect played on the monster as it rallies (a SpellPresentation, layered or single); omitted plays nothing. Only with a rally.")]
+        public SpellPresentation vfx = new SpellPresentation();
     }
 
     // One line of a monster's ability list.

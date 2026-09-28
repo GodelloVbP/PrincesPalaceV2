@@ -340,8 +340,57 @@
       "rollable": false,
       "rallyPerRound": {
         "attackPercentPerStack": 8,
-        "maxStacks": 10
-      }
+        "maxStacks": 10,
+        "stance": "cast",
+        "vfx": {
+          "layerFormat": 1,
+          "hitCueSeconds": 0.2,
+          "layers": [
+            {
+              "id": "ripple",
+              "render": "sprite",
+              "place": "caster-centre",
+              "at": "release",
+              "path": "Spells/bellwether_toll_ripple",
+              "seconds": 0.63,
+              "until": "once",
+              "size": 380,
+              "facing": "none",
+              "sort": "effects",
+              "glow": 0.5,
+              "fade": 0.15,
+              "dy": 280
+            }
+          ]
+        }
+      },
+      "attackWeight": 0,
+      "abilities": [
+        {
+          "skillId": "bellwether_scratch",
+          "weight": 1
+        },
+        {
+          "skillId": "dark_chains",
+          "weight": 0
+        },
+        {
+          "skillId": "death_knell",
+          "weight": 0
+        }
+      ],
+      "schedule": [
+        {
+          "onTurns": [
+            1,
+            5
+          ],
+          "skills": [
+            "dark_chains",
+            "death_knell"
+          ]
+        }
+      ]
     }
   ]
 }

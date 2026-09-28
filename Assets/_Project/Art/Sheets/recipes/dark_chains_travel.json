@@ -1,0 +1,21 @@
+{
+  "_notes": [
+    "Dark Chains in flight: one run of chain links pointing right, four frames of a slight wave.",
+    "Delivered 2x2 at 512 (1024x1024) as asked. content_crop trims the empty rows so the travelling box is",
+    "the chain's own long thin shape rather than a square of air."
+  ],
+  "sheet": "Spells/dark_chains/travel.png",
+  "grid": [
+    2,
+    2
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": true
+}

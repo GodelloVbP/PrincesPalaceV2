@@ -1,0 +1,48 @@
+{
+  "_notes": [
+    "The Bellwether's toll (PLAN_BELLWETHER_KIT 1.7). Delivered 4x2 at 512 (2048x1024) as asked, but",
+    "SEVEN drawings: cell 8 is empty (the rings are gone by cell 7). A blank last frame would hold nothing on",
+    "screen for an eighth of the layer, so the sequence takes cells 1-7."
+  ],
+  "sheet": "Spells/bellwether_toll_ripple/sheet.png",
+  "grid": [
+    2,
+    4
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6",
+    "f7"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "f0"
+    },
+    {
+      "from": "f1"
+    },
+    {
+      "from": "f2"
+    },
+    {
+      "from": "f3"
+    },
+    {
+      "from": "f4"
+    },
+    {
+      "from": "f5"
+    },
+    {
+      "from": "f6"
+    }
+  ]
+}

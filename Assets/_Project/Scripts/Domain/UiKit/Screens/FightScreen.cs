@@ -114,6 +114,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // telegraph callout above it (see BuildStage).
         public List<NodeRef> EnemyIntentValues = new List<NodeRef>();
         public List<NodeRef> EnemyIntentCallouts = new List<NodeRef>();
+
+        // The callout's dark backing plate (M5), same slot index; the runtime
+        // shows it with the callout and narrows it to the text.
+        public List<NodeRef> EnemyIntentCalloutPlates = new List<NodeRef>();
+
+        // THE KNELL'S FLOOR FIGURES (PLAN_BELLWETHER_KIT M5), one per party
+        // SEAT like PartySeatMarkers: while a seat-sized hit is the committed
+        // intent, what it would deal at each seat, on the floor where a
+        // figure in that seat stands -- lethal red, survivable lilac, SAFE.
+        // Hidden otherwise. The plate and its text.
+        public List<NodeRef> PartySeatFigures = new List<NodeRef>();
+        public List<NodeRef> PartySeatFigureLabels = new List<NodeRef>();
         public List<NodeRef> EnemyFootShadows = new List<NodeRef>();
 
         // The soft bloom UNDER the contact ring (a child of the shadow --
@@ -430,6 +442,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             hud.Add(s.BuildPartySeatMarkers());
             hud.Add(partyStage);
             hud.Add(enemyStage);
+            hud.Add(s.BuildPartySeatFigures());
 
             // A CHILD OF THE STAGE PANEL, appended after BuildStage returns
             // it -- never of the scaled slot node inside it. The slot carries
@@ -763,19 +776,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         .OverArt()
                         .AllowOverflow("the expected damage stands BESIDE the badge, not on its silhouette")
                         .AllowOverlap("a child of the badge; the badge's own hover rim is the only thing it can touch");
+                    //
+                    // ON A DARK PLATE, AT READING SIZE (M5): the M4 capture
+                    // showed 24px red text straight over dark foliage, easy to
+                    // miss on the one line that decides whether Shawn lives.
+                    // The plate is the callout's own backing, sized to its text
+                    // at runtime (FightController.PaintIntentReading), so it
+                    // reads over any backdrop.
+                    var calloutPlate = Ui.Solid($"EnemyIntentCalloutPlate{slot}", FightHudPalette.IntentCalloutPlate,
+                            new UiVec(CalloutPlateW, CalloutPlateH),
+                            Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 0f), new UiVec(0f, 6f)))
+                        .Inactive()
+                        .AsDecor()
+                        .AllowOverflow("the telegraph callout floats ABOVE the badge, like the badge floats above the monster");
                     var callout = Ui.Label($"EnemyIntentCallout{slot}", UiString.Runtime,
-                            new UiVec(420f, 36f), 24, FightHudPalette.IntentNumber,
-                            Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 0f), new UiVec(0f, 4f)))
+                            new UiVec(CalloutPlateW - 16f, CalloutPlateH - 4f), 32, FightHudPalette.IntentNumber,
+                            Place.At(0f, 0f))
                         .OverArt()
-                        .AllowOverflow("the telegraph callout floats ABOVE the badge, like the badge floats above the monster")
-                        .AllowOverlap("a child of the badge; the badge's own hover rim is the only thing it can touch");
+                        .AllowOverflow("the text is centred on a plate the runtime narrows to fit it");
+                    calloutPlate.Children.Add(callout);
                     intent.Children.Add(value);
-                    intent.Children.Add(callout);
+                    intent.Children.Add(calloutPlate);
 
                     while (EnemyIntentValues.Count <= slot) EnemyIntentValues.Add(default);
                     while (EnemyIntentCallouts.Count <= slot) EnemyIntentCallouts.Add(default);
+                    while (EnemyIntentCalloutPlates.Count <= slot) EnemyIntentCalloutPlates.Add(default);
                     EnemyIntentValues[slot] = value;
                     EnemyIntentCallouts[slot] = callout;
+                    EnemyIntentCalloutPlates[slot] = calloutPlate;
 
                     // BY SLOT, never Add(). This loop walks FAR TO NEAR for the
                     // painter's order, so appending builds the list backwards --
@@ -884,6 +912,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 PartySeatMarkers[seat] = marker;
                 children.Add(marker);
+
             }
 
             return Ui.Panel("PartySeatMarkerFrame", Place.At(0f, 0f),
@@ -892,7 +921,61 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverflow("a seat marker stands on the floor line and straddles it, like a figure's contact shadow");
         }
 
+        // ---- the knell's floor figures (PLAN_BELLWETHER_KIT M5) -------------
+        //
+        // One plate per SEAT, centred on the floor line where a figure in that
+        // seat stands (the same FightStageAnchors offset the seat markers use),
+        // so the number reads as "this spot on the floor". A frame of its own,
+        // declared AFTER both stages: a plate behind the party would lose its
+        // middle digits to the feet standing on it. Not a child of the seat
+        // marker, which is up only for an EMPTY seat in a seat pick; a figure
+        // shows on every seat. Centred on the ground line rather than hung
+        // below it: under the front seat, below-the-feet runs into the command
+        // menu (first M5 capture).
+        private UiNode BuildPartySeatFigures()
+        {
+            int count = CombatEncounterSeats;
+            var children = new List<UiNode>();
+            for (int seat = 0; seat < count; seat++)
+            {
+                var offset = FightStageAnchors.SlotOffset(seat, count, mirrored: true);
+                float scale = FightStageAnchors.SlotScale(seat, count);
+
+                var label = Ui.Label($"PartySeatFigure{seat}Label", UiString.Runtime,
+                        new UiVec(SeatFigureW - 12f, SeatFigureH - 4f), 30, FightHudPalette.IntentNumber,
+                        Place.At(0f, 0f))
+                    .OverArt();
+                var figure = Ui.Solid($"PartySeatFigure{seat}", FightHudPalette.IntentCalloutPlate,
+                        new UiVec(SeatFigureW, SeatFigureH),
+                        Place.At(offset.X, offset.Y + SeatFigureLift * scale, new UiVec(0.5f, 0.5f)))
+                    .Inactive()
+                    .AsDecor()
+                    .WithScale(new UiVec(scale, scale))
+                    .AllowOverflow("the rear seat's figure stands at the stage frame's edge exactly as the rear figure's slot does - the frame is a coordinate frame, not a clip region");
+                figure.Children.Add(label);
+                PartySeatFigures.Add(figure);
+                PartySeatFigureLabels.Add(label);
+                children.Add(figure);
+            }
+
+            return Ui.Panel("PartySeatFigureFrame", Place.At(0f, 0f),
+                    UiSize.Fixed(FightStageAnchors.StageSize.X, FightStageAnchors.StageSize.Y), children.ToArray())
+                .AllowOverlap("the knell's floor figures share the stages' one centred frame, which overlaps both stages and the HUD by construction - a transparent coordinate frame, never a surface; each figure is decoration standing on the floor at its seat")
+                .AllowOverflow("a floor figure stands on the floor line at its seat, like a figure's contact shadow");
+        }
+
         private const int CombatEncounterSeats = PrincesPalace.Domain.Party.PartySeat.Count;
+
+        // The telegraph callout's plate, at its widest (the runtime narrows it
+        // to its text).
+        private const float CalloutPlateW = 520f;
+        private const float CalloutPlateH = 50f;
+
+        // The knell's floor figure: its plate, and how far above the seat's
+        // ground line its centre sits (on the floor, over the feet).
+        private const float SeatFigureW = 140f;
+        private const float SeatFigureH = 46f;
+        private const float SeatFigureLift = 4f;
 
         // The party's own contact-ring green, brighter and opaque: a
         // destination has to read on the floor at a glance.

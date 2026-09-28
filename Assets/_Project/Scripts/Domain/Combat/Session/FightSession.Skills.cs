@@ -978,6 +978,14 @@ namespace PrincesPalace.Domain.Combat.Session
         private PlaceOutcome PlaceBySkill(CombatantState actor, ResolvedSkill skill, CombatantState target)
         {
             int seat = skill.ToSeat - 1;
+
+            // Where everybody stood before the pull, so playback can move them
+            // at the impact rather than at the beat's open (CombatBeat.PreFormation).
+            if (_recordingBeat != null && _recordingBeat.PreFormation == null)
+            {
+                _recordingBeat.PreFormation = BeatFormation.Capture(_encounter);
+            }
+
             var outcome = _encounter.PlaceAt(target, seat, out var occupant);
 
             switch (outcome)
