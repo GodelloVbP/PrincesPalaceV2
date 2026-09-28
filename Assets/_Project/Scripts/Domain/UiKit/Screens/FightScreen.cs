@@ -1841,9 +1841,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float PcRowGapX = 4f;
 
         // 5 slots (4 statuses plus the "+N" overflow chip, the same
-        // arrangement the enemy row uses), 20px as the owner asked, right-
-        // aligned so they end where the head zone begins and grow leftwards
-        // into the gap the signature leaves.
+        // arrangement the enemy row uses), right-aligned so they end where
+        // the head zone begins and grow leftwards into the gap the
+        // signature leaves.
         private const float PcStatusBadgeSize = 20f;
 
         // 21, NOT 22: a 1px gap between badges rather than 2, which is what
@@ -1852,11 +1852,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float PcStatusPitch = 21f;
         public const int PcStatusBadgesPerPlate = 5;
 
-        // The party-wide revive charge (RunSettlement's own), which belongs to
-        // no character -- it used to ride the acting card, and there is no
-        // acting card any more. Parked in the free band at the bottom-left of
+        // The party-wide revive charge (RunSettlement's own), which belongs
+        // to no character. Parked in the free band at the bottom-left of
         // the BOTTOM plate: a fixed anchor at the foot of the column, which
-        // is if anything clearer than a badge that moved with the turn.
+        // is clearer than a badge that moved with the turn.
         // THE IDENTITY LINE'S OWN ROW, in the free band the plate already
         // leaves between the bars (-23.5) and the content's bottom inset
         // (-37.85). 13px of label centred at -30.7 sits inside that with half
@@ -1949,12 +1948,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         FightHudPalette.TextPrimary, Place.At(left, PcNameRowY, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left);
 
-                // THE SIGNATURE AS A NUMBER, not sixteen pips. The pip row was
-                // this column's one bespoke widget and the owner's mock-ups
-                // never had it; "Wool 2/10" says the same thing in 96px
-                // instead of 280, which is what buys the badges their row.
-                // Hidden outright when the occupant carries no signature,
-                // which is two thirds of the party.
+                // THE SIGNATURE AS A NUMBER, not sixteen pips: "Wool 2/10"
+                // says the same thing in 96px instead of 280, which is what
+                // buys the badges their row. Hidden outright when the
+                // occupant carries no signature, which is two thirds of the
+                // party.
                 var signature = Ui.Label($"PcPlate{i}Signature", UiStrings.SignatureNamedValue,
                         new UiVec(PcSignatureW, 20f), PcValueFontSize,
                         FightHudPalette.TextSecondary,
@@ -1964,8 +1962,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive();
 
                 // ON THE BAR, and readable on any fill -- which is a
-                // MATERIAL question, not a colour one, and two passes of this
-                // column got that wrong before landing here.
+                // MATERIAL question, not a colour one.
                 //
                 // THE MATERIAL: TypographyRole.OnBarCaption -- TacticalData's
                 // font and size band, with an outline actually switched on
@@ -2005,9 +2002,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .TextAligned(UiTextAlign.Left)
                     .Styled(TypographyRole.OnBarCaption);
 
-                // "+12" WHILE A SHIELD IS UP, HIDDEN AT ZERO -- owner's
-                // playtest ask (2026-09-23): the ward segment (below) showed
-                // no number anywhere on the card. Right-aligned against the
+                // "+12" WHILE A SHIELD IS UP, HIDDEN AT ZERO: without it, the
+                // ward segment (below) showed no number anywhere on the
+                // card. Right-aligned against the
                 // bar's own right edge rather than beside hpValue's own
                 // left-aligned box: PcBarW is 171.85 at the current plate
                 // width (452 * (0.5-0.1904) head zone, 0.0293 rim inset --
@@ -2342,20 +2339,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // number these rows are actually built at.
         private const float SubmenuRowW = FightSubmenuLayout.RowWidth;
 
-        // DERIVED FROM THE FRAME'S FLUSH POSITION, not the other way round,
-        // balance-bot 2026-09-02. SubmenuX used to be the fixed point (25)
-        // and the frame's centre (ContainerX below) was built outward from
-        // it; now the frame's LEFT EDGE is the fixed point (flush against the
-        // verb column's right edge, zero gap) and this is back-solved from
-        // it so the rows/viewport/scrollbar/BACK still land correctly inside
-        // the frame's own measured content inset -- see ContainerX's comment
-        // for why moving one without the other overflows the frame by
-        // exactly the same amount the frame moved.
-        //
-        // Was a flat 25; is now ~38.61, since the frame had to move right by
-        // 13.61px (VerbColumnX + VerbRowW*0.5 + FrameWidth*0.5 versus the old
-        // containerX) to close the 13.61px OVERLAP the wider (post-01bc943)
-        // 3:4 frame had opened with the verb column.
+        // DERIVED FROM THE FRAME'S FLUSH POSITION, not the other way round:
+        // the frame's LEFT EDGE is the fixed point (flush against the verb
+        // column's right edge, zero gap), and this is back-solved from it so
+        // the rows/viewport/scrollbar/BACK land correctly inside the frame's
+        // own measured content inset -- see ContainerX's comment for why
+        // moving one without the other overflows the frame by exactly the
+        // amount the frame moved.
         private static float SubmenuX =>
             ContainerX - FightSubmenuLayout.ContainerWidth * 0.5f + SubmenuRowW * 0.5f
             + FightSubmenuLayout.ContainerPad;
@@ -2370,12 +2360,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // taken off screen, only added, which is what the breadcrumb underneath
         // is naming.
         //
-        // Rows are built at MaxRows and re-anchored at runtime through the SAME
-        // FightSubmenuLayout.RowY the build uses. v1 kept a second copy of these
-        // constants in Core because "Core cannot see Editor-only constants", and
-        // its design preview drew rows at 8-slot positions leaving a gap above
-        // BACK -- a bug that cannot be written now, because there is no second
-        // copy left to disagree with.
+        // Rows are built at MaxRows and re-anchored at runtime through the
+        // SAME FightSubmenuLayout.RowY the build uses -- one copy of these
+        // constants, so the build and the runtime preview cannot disagree
+        // about where a row sits.
         private UiNode BuildSubmenuColumn()
         {
             int count = FightSubmenuLayout.PoolSize;
@@ -2385,25 +2373,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.At(-SubmenuRowW * 0.5f + 24f, 0f))
                     .Inactive();
 
-                // A NAME, AND NOTHING ELSE.
+                // A NAME, AND NOTHING ELSE: a meta line and a right-aligned
+                // cost are also in the detail column two columns over, in
+                // more room and in full sentences, and the list is the place
+                // a player SCANS. Sixteen rows each saying four things is a
+                // table; sixteen rows each saying one thing is a list, and
+                // the detail panel is what the list is for.
                 //
-                // A row used to carry four things: a mark, the name, a meta line
-                // ("DAMAGE - SINGLE") under it, and the cost right-aligned. Every
-                // one of those three extras is also in the detail column two
-                // columns over, in more room and in full sentences, and the list
-                // is the place a player SCANS. Sixteen rows each saying four
-                // things is a table; sixteen rows each saying one thing is a
-                // list, and the detail panel is what the list is for.
-                //
-                // LEFT-ALIGNED now, not centred (balance-bot item 5,
-                // 2026-09-03) -- a single-word-to-short-phrase name centred
-                // in a wide box drifts around as its own length changes,
-                // which reads worse in a scanned list than a name that
-                // starts at the same x every row. The box itself already
-                // carries the clearance off the mark (its left edge sits
-                // 24px clear of the mark's own right edge); TextAlign.Left
-                // is the only change, so that clearance becomes the name's
-                // left margin instead of half its centring slack.
+                // LEFT-ALIGNED, not centred: a single-word-to-short-phrase
+                // name centred in a wide box drifts around as its own length
+                // changes, which reads worse in a scanned list than a name
+                // that starts at the same x every row. The box itself
+                // already carries the clearance off the mark (its left edge
+                // sits 24px clear of the mark's own right edge); TextAlign.
+                // Left is the only change, so that clearance becomes the
+                // name's left margin instead of half its centring slack.
                 var name = Ui.Label($"CharacterSkill{i}Name", UiString.Runtime,
                     new UiVec(SubmenuRowW - 90f, 24f), 18,
                     FightHudPalette.RowNameText, Place.At(21f, 0f))
@@ -2411,7 +2395,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 // 1.02, the gentler of the two: a submenu row is 404 wide with
                 // four columns of text in it, so the press pop would shift all
-                // four. Same split v1 used -- verb rows pop, submenu rows hover.
+                // four -- verb rows pop, submenu rows hover.
                 // PLACED IN COLUMN COORDINATES, inside a content rect whose own
                 // frame is the column's. That is what lets RowY stay exactly
                 // what it was through the whole scroll rework: the rows do not
@@ -2425,12 +2409,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // seam for. Violet: neither branch has its own colour
                 // reservation the way the four verbs do, and it is the kit's
                 // neutral default elsewhere (Relic Draft, the Constellation
-                // screen). 282x40 (was 282x48, balance-bot item 5, 2026-09-03)
-                // is 7.05:1, which the aspect-nearest rule still resolves to
-                // Row6x1 (6.0, ln-distance 0.161 against FiveByOne's 0.344)
-                // on its own -- no .Plate() override needed. ThemedButtonState's
-                // own hover state replaces the manual .Hovers(1.02f) scale-pop
-                // this used to drive.
+                // screen). At 7.05:1, the aspect-nearest rule still resolves
+                // this row to Row6x1 (6.0, ln-distance 0.161 against
+                // FiveByOne's 0.344) on its own -- no .Plate() override
+                // needed. ThemedButtonState's own hover state replaces a
+                // manual .Hovers(1.02f) scale-pop.
                 var row = Ui.Button($"CharacterSkill{i}", UiString.Runtime,
                     new UiVec(SubmenuRowW, FightSubmenuLayout.RowHeight), 1,
                     Place.At(0f, FightSubmenuLayout.RowYInContent(i)))
@@ -2445,18 +2428,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 return row;
             }).ToList();
 
-            // 110 and 150, not 170 each: the rows lost 30% of their width and
-            // the two headers over them were sized for the old span, so they
-            // crossed by 58px. The hint is the wider of the two because it is
-            // the one that grows -- "SHOWING 9 OF 12" when a kit outruns the
-            // window.
-            //
-            // 86, DOWN FROM 110 (FightSubmenuLayout.RowWidth's own comment:
-            // 282 -> 240, ThemedButtonAspectLintTests). The hint keeps its
-            // 150 -- it carries the longer, growing text ("SHOWING 9 OF 12")
-            // -- so the trim comes off the short "S K I L L S" title instead,
-            // same asymmetric split as the previous resize. 86 + 150 = 236,
-            // 4px inside the row's new 240 (was 22px at the old 282).
+            // 86 and 150: the hint is the wider of the two because it is the
+            // one that grows -- "SHOWING 9 OF 12" when a kit outruns the
+            // window -- so the trim comes off the short "S K I L L S" title
+            // instead. 86 + 150 = 236, 4px inside the row's own
+            // FightSubmenuLayout.RowWidth (see its own comment).
             float headerY = FightSubmenuLayout.HeaderY(count);
             var title = Ui.Label("SubmenuTitle", UiStrings.SubmenuSkillsTitle, new UiVec(86f, 20f), 11,
                 FightHudPalette.GoldLight,
@@ -2484,11 +2460,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // rows inside it, and a bar down the right showing how much of the list
         // is on screen.
         //
-        // The rows used to hang on the battlefield with nothing behind them and
-        // nothing bounding them, which was survivable while there were never
-        // more than eight -- the list simply ended. It does not end now, it
-        // scrolls, and a list that scrolls with no edge to scroll against reads
-        // as rows appearing out of the air.
+        // The list scrolls, and a list that scrolls with no edge to scroll
+        // against reads as rows appearing out of the air.
         //
         // THE CONTENT RECT IS THE COLUMN'S OWN COORDINATE FRAME, offset so that
         // a child placed at RowY lands where RowY says. That is the trick that
@@ -2515,12 +2488,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverflow("the content rect holds the whole sixteen-row pool and is deliberately taller than the nine-row window it sits in - that overflow IS the scroll, and SubmenuViewport clips it, which is what makes a list longer than nine rows reachable at all");
             SubmenuContent = content;
 
-            // NOT AT THE CONTAINER'S CENTRE ANY MORE. It was, while the frame
-            // held nothing but the list; the back row sits in the bottom
-            // padding now, so the viewport rides above the container's middle
-            // by half a back row and half a gap. UNCHANGED by the flat frame
-            // below: this is still "offset from the INNER box's own centre"
-            // exactly as it always was, and parenting it under the frame
+            // NOT AT THE CONTAINER'S CENTRE: the back row sits in the bottom
+            // padding, so the viewport rides above the container's middle by
+            // half a back row and half a gap. This is "offset from the
+            // INNER box's own centre", and parenting it under the frame
             // (which sits at FightSubmenuLayout.FrameCentreY, a few pixels
             // off ContainerCentreY -- see that property's own header) shifts
             // the whole block by that same small amount, automatically.
@@ -2571,9 +2542,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // SILVER, not Violet: BACK leaves the branch rather than choosing
             // from it, and Silver is the kit's neutral/utility theme
-            // elsewhere (Options/RunStats/Exits panes). The dead
-            // .Coloured(RowQuiet)/.Hovers() pair is gone -- ThemedButtonState
-            // now owns both the idle tint and the hover feedback.
+            // elsewhere (Options/RunStats/Exits panes). ThemedButtonState
+            // owns both the idle tint and the hover feedback.
             var back = Ui.Button("SubmenuBack", UiString.Runtime,
                     new UiVec(SubmenuRowW, FightSubmenuLayout.BackRowHeight), 1,
                     Place.At(SubmenuX - containerX,
@@ -2586,22 +2556,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ---- the frame, now bare: NO PLATE, NO FILL, NO RIM ------------------
             //
-            // WAS a flat Solid fill plus a hairline Rim (before that, a Violet
-            // 3:4 Ui.Container -- see git blame for that art-inset history).
-            // Owner playtest, 2026-09-23: "remove the container surrounding
-            // it" -- the flat fill still read as a tall purple panel standing
-            // behind buttons that are themed art in their own right and need
-            // no backing plate, and it extended well past the last row/BACK
-            // whenever the actor's kit was short (FrameHeight is sized off
-            // BuildReservationRows' 8-row static reservation, not the real
-            // count -- ResizeSubmenuContainer only shrinks it at runtime).
+            // NO BACKING PLATE: the buttons inside are themed art in their
+            // own right and need none, and a fill would extend past the
+            // last row/BACK whenever the actor's kit is short (FrameHeight
+            // is sized off BuildReservationRows' 8-row static reservation,
+            // not the real count -- ResizeSubmenuContainer only shrinks it
+            // at runtime).
             //
             // SubmenuContainer SURVIVES as a plain, graphic-less Panel: it is
             // still the one thing ResizeSubmenuContainer/AnchorSubmenuRows
             // move and resize (FightController.cs), and the viewport/
             // scrollbar/BACK still ride inside it as children so the whole
-            // block still hides/shows/relayouts as one unit -- only the
-            // painted box that used to fill this rect is gone. A Panel with
+            // block still hides/shows/relayouts as one unit. A Panel with
             // no Image emits no graphic (Ui.Panel's own EmitsNoGraphic), so
             // it takes no UiAudit overlap check against its neighbours
             // whatever height it is built or resized to, and the header
@@ -2622,23 +2588,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ---- column C: the detail panel ----------------------------------------------
 
         // BOTTOM-RIGHT, at the same 40px margin PlateBlockRight and PartyPlate
-        // already use against this screen's edges (see their own comments) --
-        // no longer level with the skill list. It used to sit centred against
-        // the submenu at half the screen's height, with most of that height
-        // empty below a short description; moving it out of the middle of the
-        // battlefield and shrinking it is the actual request, not a like-for-
-        // like reposition.
-        // 2026-09-23 PROPORTION FIX (owner playtest, "way out of
-        // proportion"): 460 was sized for the three-line body-text card the
-        // icon rework (this file's own DetailHFor header) already dropped --
-        // the icon rows/value text this card actually draws need a fraction
-        // of that width, and unlike DetailH (a pure function of row count
-        // since pass 2) DetailW never shrank to match, so the box hugged its
-        // content on one axis and swam in dead space on the other. 260 is
-        // DetailContentLeft's own 22px pad, the widest icon+gap+value row
-        // (28 + 8 + up to ~11 characters at 14pt, "10 STAMINA"-shaped), and
-        // the same pad mirrored on the right -- HUGS, does not merely
-        // shrink: recompute if a longer value string is ever authored.
+        // already use against this screen's edges (see their own comments),
+        // out of the middle of the battlefield rather than centred against
+        // the submenu.
+        //
+        // 260 HUGS THE CONTENT rather than merely bounding it: DetailContentLeft's
+        // own 22px pad, the widest icon+gap+value row (28 + 8 + up to ~11
+        // characters at 14pt, "10 STAMINA"-shaped), and the same pad
+        // mirrored on the right. Recompute if a longer value string is ever
+        // authored.
         // Grows toward the battlefield centre (DetailX is anchored off the
         // screen's own right edge, same as always), so a collision this
         // opens is with the enemy rack, not with anything to its right --
@@ -2653,20 +2611,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ITS OWN HEIGHT RULE, summing what the CONTENT needs directly --
         // top pad, name+kind, the icon rows at their own pitch, bottom pad.
         //
-        // 2026-09-23 ICON REWORK: the body text and its 64px minimum plus
-        // 20px gap are GONE (owner's playtest ask, "remove the flavor/
-        // description body from the card") -- a card that used to reserve
-        // room for three lines of prose plus eight text rows now reserves
-        // room for at most six compact icon rows and nothing else, which is
-        // most of this box's own "dynamic, not a fixed tall rect" ask by
-        // itself. STILL BUILT AT THE POOL'S FULL SIX ROWS, though (the
-        // static tree's own reservation, same reason FightSubmenuLayout's
-        // BuildReservationRows stays at the pool size rather than the
-        // typical case) -- a true per-hover resize (this flat Solid+Rim
-        // fill has no aspect-locked art in the way FightSubmenuLayout's
-        // Container did, so it is SAFE to add, unlike that one) is a real
-        // follow-up this pass ran out of room for; see this file's own
-        // report for that open call.
+        // The card reserves room for at most six compact icon rows and
+        // nothing else, which is most of this box's own "dynamic, not a
+        // fixed tall rect" goal by itself. STILL BUILT AT THE POOL'S FULL
+        // SIX ROWS, though (the static tree's own reservation, same reason
+        // FightSubmenuLayout's BuildReservationRows stays at the pool size
+        // rather than the typical case).
         private const float DetailTopPad = 18f;
         private const float DetailBottomPad = 18f;
         private const float DetailNameBlockH = 46f;
@@ -2680,10 +2630,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float DetailIconSize = 28f;
         public const float DetailIconValueGap = 8f;
 
-        // THE HERO ICON (owner playtest, "the skill icon sized and anchored
-        // as the card's hero, beside the title" -- the DetailIconKind.Element
-        // row is the only one that identifies WHAT the card is describing
-        // rather than a cost/limit on casting it, the same reason
+        // THE HERO ICON, sized and anchored as the card's hero, beside the
+        // title -- the DetailIconKind.Element row is the only one that
+        // identifies WHAT the card is describing rather than a cost/limit
+        // on casting it, the same reason
         // FillDetailIcons already special-cases it (one type per skill, at
         // most). It is NOT a new node: RefreshDetail (FightController.Hud.cs)
         // finds whichever pool slot holds the Element icon for the current
@@ -2696,9 +2646,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float DetailHeroIconSize = 36f;
         private const float DetailHeroGap = 10f;
 
-        // A PURE LAYOUT FUNCTION (coordinator ask, 2026-09-23 pass 2 --
-        // "a dynamic box around it" means resized at runtime, not just built
-        // smaller once): how tall the card is for N VISIBLE icon rows,
+        // A PURE LAYOUT FUNCTION: a dynamic box around the content means
+        // resized at runtime, not just built smaller once. How tall the
+        // card is for N VISIBLE icon rows,
         // clamped to the pool -- the same ContainerHeightFor(count) shape
         // FightSubmenuLayout already uses for its own runtime-resized frame.
         // FightController.Hud.cs's RefreshDetail calls this every repaint
@@ -2730,7 +2680,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // beside (DetailX/DetailW's own header: "a collision this opens is
         // with the enemy rack"). Growing from the CENTRE instead would push
         // this bottom edge down just as often as it pulls the top up, which
-        // is exactly the "fixed tall rect" feel the owner's ask was against.
+        // is exactly the "fixed tall rect" feel this layout avoids.
         private const float DetailFixedBottom = -(540f - DetailBottomMargin);
 
         public static float DetailCentreYFor(int count) => DetailFixedBottom + DetailHFor(count) * 0.5f;
@@ -2823,12 +2773,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // through options lets the player compare without re-hovering, and a
         // tooltip that vanishes the moment the cursor moves cannot be compared
         // against anything.
-        // A DARK, NEAR-OPAQUE PLATE, not panel_violet -- the owner's original
-        // ask was legibility over ornament, and the 2026-09-23 icon rework
-        // keeps the same call ("keep it dark and wide as the last commit
-        // made it") even though the body text that first justified it is
-        // gone. #1D1226F2 is the same near-black-plum the kit's OWN tooltip
-        // already uses (CharacterDossierScreen.BuildTooltip, ReckoningScreen's
+        // A DARK, NEAR-OPAQUE PLATE, not panel_violet: legibility over
+        // ornament. #1D1226F2 is the same near-black-plum the kit's OWN
+        // tooltip already uses (CharacterDossierScreen.BuildTooltip, ReckoningScreen's
         // offer tooltip), so this is the kit's existing "read this" surface,
         // not a new one invented for this card. The hairline Rim
         // (FightHudPalette.Hairline) replaces the ornate frame's own border --
@@ -2874,17 +2821,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.AddRange(rim);
             foreach (var edge in rim) DetailColumnRim.Add(edge);
 
-            // ONE ICON POOL, NOT EIGHT TEXT KEYS (2026-09-23 icon rework).
-            // FightHudModel.DetailPanel.Icons is COMPACT -- only the facts
-            // that apply to whatever is hovered, in DetailIconKind's own
-            // canonical order (FillDetailIcons) -- same "omit rather than
-            // pad" rule the old Stats row pool followed. FightController.
-            // Hud.cs's RefreshDetail sets row i's sprite (by IconKey, via
-            // Resources.Load), value text AND its LOCAL Y (DetailIconRowYFor,
-            // count-aware -- the pass-2 "dynamic box" rework) from panel.
+            // ONE ICON POOL, NOT EIGHT TEXT KEYS. FightHudModel.DetailPanel.
+            // Icons is COMPACT -- only the facts that apply to whatever is
+            // hovered, in DetailIconKind's own canonical order
+            // (FillDetailIcons). FightController.Hud.cs's RefreshDetail sets
+            // row i's sprite (by IconKey, via Resources.Load), value text AND
+            // its LOCAL Y (DetailIconRowYFor, count-aware) from panel.
             // Icons[i] for i < Count, and hides row i entirely past it -- the
             // same fixed-pool/toggle-visibility idiom FightSubmenuLayout's
-            // rows and the old text-row pool this replaces both already use.
+            // rows use.
             for (int i = 0; i < FightHudSpec.DetailIconRows; i++)
             {
                 float y = DetailIconRowYFor(staticCount, i);
@@ -2935,19 +2880,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the status box -----------------------------------------------------
         //
-        // EVERY ACTIVE STATUS ON ONE ACTOR, hung under that actor. The owner's
-        // 2026-09-19 finding, in their words: "the debuff hover is still on the
-        // old container and it is too small, it should bring up a clear box
-        // under the hovered mob."
-        //
-        // WHAT IT REPLACES, and why this is a different object rather than a
-        // bigger one. StatusTooltip was a 300x56 panel placed BESIDE one 36px
-        // badge, showing that one badge's line. Three things follow from
-        // "beside one badge", and no width fixes any of them: it answers for
-        // one status when the question is "what is on this monster", it lands
-        // wherever there happens to be room rather than where the player is
-        // looking, and a pad cannot hover a badge at all -- so on a pad the
-        // feature did not exist.
+        // EVERY ACTIVE STATUS ON ONE ACTOR, hung under that actor -- a box,
+        // not a per-badge tooltip: a tooltip beside one badge answers for
+        // one status when the question is "what is on this monster", it
+        // lands wherever there happens to be room rather than where the
+        // player is looking, and a pad cannot hover a badge at all -- so on
+        // a pad the feature would not exist.
         //
         // THE SOURCE OF TRUTH IS UNCHANGED. A row's text is the same
         // FightHudModel.StatusRow.Tooltip the badge hover showed, so the name,
@@ -2955,10 +2893,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // one place (Domain/Combat/Session/StatusHud.cs) and this screen only
         // lays them out beside the icon the badge already resolves.
         //
-        // EIGHT ROWS is PLAN_STATUS_EFFECT_UI section 6's counted worst case
-        // (a party member under Poison, Vulnerable, Shielded, Regen, Protect,
-        // a speed entry, Stun and Empowered); a ninth becomes a "+N more"
-        // line in the last row, the same overflow rule the badge rows use.
+        // EIGHT ROWS is the counted worst case (a party member under Poison,
+        // Vulnerable, Shielded, Regen, Protect, a speed entry, Stun and
+        // Empowered); a ninth becomes a "+N more" line in the last row, the
+        // same overflow rule the badge rows use.
         public const int StatusBoxRows = 8;
 
         public const float StatusBoxWidth = 460f;
@@ -2983,13 +2921,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float StatusBoxTextWidth =
             StatusBoxWidth - StatusBoxPad * 2f - StatusBoxIconSize - StatusBoxIconGap;
 
-        // THE BUILD-TIME SIZE IS THE WORST CASE, not the common one -- the
-        // opposite choice from the tooltip this replaces, and for a reason
-        // that changed with the object. A tooltip built tall sat as empty
-        // violet under its common one-line body, so it was built short and
-        // grown; this box is positioned from its own measured height every
-        // time it opens (FightController.Hud's RefreshStatusBox), so its
-        // declared size is never a size anyone sees. What the declared size
+        // THE BUILD-TIME SIZE IS THE WORST CASE, not the common one: this box
+        // is positioned from its own measured height every time it opens
+        // (FightController.Hud's RefreshStatusBox), so its declared size is
+        // never a size anyone sees. What the declared size
         // IS for is UiAudit, which solves this screen with no statuses in
         // hand: eight full rows is the largest box the runtime can produce,
         // so auditing that one audits every smaller one.
@@ -3008,9 +2943,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // FightScreenTests walks it against this screen's real geometry at
         // every audited frame without a scene.
         //
-        // UNDER THE ACTOR BY PREFERENCE, FLIPPED ABOVE WHEN IT WOULD NOT FIT.
-        // "Under" is what the owner asked for and is also where a box belongs
-        // when the thing above it is what named it. The flip is reachable,
+        // UNDER THE ACTOR BY PREFERENCE, FLIPPED ABOVE WHEN IT WOULD NOT FIT:
+        // a box belongs under the thing above it that named it. The flip is
+        // reachable,
         // not defensive: the rear enemy slot's badge row bottoms out around
         // y -203 and a full eight-row box needs 186 below that plus the gap,
         // which is past the floor of a 1920x1080 canvas. 16:9 is the binding
