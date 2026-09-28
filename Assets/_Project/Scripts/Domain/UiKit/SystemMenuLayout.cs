@@ -60,18 +60,12 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float ContentCentreY => HalfHeight - BarHeight - ContentHeight * 0.5f;
 
-        // ---- the shared pane ground, bare since 2026-09-07 ------------------------
+        // ---- the shared pane ground, bare -----------------------------------------
         //
-        // WAS a themed 2:1 Container's own measured inset boundary until the
-        // owner called every kit frame inside the system menu ugly and asked
-        // for the bare violet pane the design pass actually specified.
-        // PaneContentHalfWidth/
-        // HalfHeight kept the exact numbers the container's border used to
-        // leave -- 744/357.78, PanelWidth/ContentHeight against the container
-        // kit's old 3.5%/5.5% side/top insets -- so removing the frame moved
-        // no label, card or button in any hosted pane. They are DECLARED now
-        // rather than derived from ContainerArt, because there is no longer
-        // an art asset to measure them from; if a pane's content ever needs
+        // PaneContentHalfWidth/HalfHeight are 744/357.78, PanelWidth/
+        // ContentHeight against a 3.5%/5.5% side/top inset. They are
+        // DECLARED rather than derived from ContainerArt, because there is
+        // no art asset to measure them from; if a pane's content ever needs
         // to reach further into its box, change these two numbers and every
         // hosted pane moves together.
         //

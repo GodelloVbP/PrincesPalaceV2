@@ -10,10 +10,7 @@ namespace PrincesPalace.Domain.UiKit
     //
     // Right and Below exist for one reason only: the shape's edge can be
     // occupied. A marker drawn over a NEIGHBOURING control reads as
-    // selecting it (QA 2026-09-26: the fight's skill list sits 8px from the
-    // verb column, so the arrow left of a skill row stood on ITEM; the
-    // dossier's arrow above a pack cell stood on the word "Gloves" of the
-    // cell above). EdgeFor(target, canvas, obstacles) moves it to the
+    // selecting it. EdgeFor(target, canvas, obstacles) moves it to the
     // opposite side, then to the other axis. No screen authors an edge.
     public enum FocusEdge
     {
@@ -121,9 +118,7 @@ namespace PrincesPalace.Domain.UiKit
         //
         // KEEP-CLEAR rects (a list's scrollbar) never take an edge. Nobody
         // reads an arrow beside a scrollbar as selecting the scrollbar; the
-        // defect is only that the arrow crowds it (QA 2026-09-26: moved to
-        // the right of a skill row by the occupant rule, the arrow stood a
-        // few pixels off the list's bar, which sits 8px from the rows). So
+        // defect is only that the arrow crowds it. So
         // the marker on that edge steps OUTWARD past it and stands off it by
         // the same Gap it stands off the control -- the bar reads as part of
         // the list the arrow points into. Turning a scrollbar into an

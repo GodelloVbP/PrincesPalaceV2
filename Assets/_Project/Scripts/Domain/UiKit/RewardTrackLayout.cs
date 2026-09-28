@@ -12,12 +12,12 @@ namespace PrincesPalace.Domain.UiKit
     // the content rect is deliberately wider than the panel it lives in, and
     // that overflow IS the scroll.
     //
-    // THE DESIGN HANDOFF MEASURES y DOWNWARD FROM THE PANEL'S TOP-LEFT and this
-    // project measures it up from the panel's centre, so every band below is
-    // written as the handoff writes it and converted once, by CentreY. Writing
-    // the converted numbers straight in would make this file uncheckable
-    // against the document it came from -- which is the only reason anybody
-    // would ever open both at once.
+    // docs/handoffs/progression_v2 MEASURES y DOWNWARD FROM THE PANEL'S
+    // TOP-LEFT and this project measures it up from the panel's centre, so
+    // every band below is written as the handoff writes it and converted
+    // once, by CentreY. Writing the converted numbers straight in would
+    // make this file uncheckable against the document it came from --
+    // which is the only reason anybody would ever open both at once.
     //
     // Pure and engine-free, so every coordinate here is pinned by EditMode
     // tests rather than eyeballed in a scene that is regenerated anyway.
@@ -32,18 +32,15 @@ namespace PrincesPalace.Domain.UiKit
         // (402, the raw frame) -- ContentTop is the pane's own declared
         // content half-extent instead (357.78, same as DossierLayout/
         // OptionsLayout/ExitsLayout's HalfHeight -- see SystemMenuLayout.
-        // PaneContentHalfWidth/HalfHeight's own comment; this pane's ground
-        // was a Gold 2:1 Container's own measured inset when that difference
-        // was introduced, balance-bot 2026-09-02, and is a bare Panel now,
-        // owner's call 2026-09-07, but the boundary is the same number
-        // either way). Every yFromTop offset below is still the handoff's
-        // own number, unmoved: changing this one constant shifts the whole
+        // PaneContentHalfWidth/HalfHeight's own comment). Every yFromTop
+        // offset below is still docs/handoffs/progression_v2's own number,
+        // unmoved: changing this one constant shifts the whole
         // rail/card/summary block down together by the inset delta (44.22)
         // without touching any of the ~20 individual offsets.
         public static float ContentTop => SystemMenuLayout.PaneContentHalfHeight;
 
-        // The handoff's coordinate frame, converted: y down from the panel's
-        // top edge becomes y up from its centre.
+        // docs/handoffs/progression_v2's coordinate frame, converted: y
+        // down from the panel's top edge becomes y up from its centre.
         public static float CentreY(float yFromTop) =>
             ContentTop - yFromTop;
 
@@ -59,10 +56,9 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float NodeDiameter = 26f;
 
-        // 40 -> 44, to make room for the plate ring at inset -7 without the
-        // ring crowding the caption above it. The ring is what tells a
-        // milestone from filler at a glance now; size alone was the old answer,
-        // and the brief's own open questions list it as not enough.
+        // Room for the plate ring at inset -7 without the ring crowding the
+        // caption above it. The ring is what tells a milestone from filler
+        // at a glance.
         public const float MilestoneDiameter = 44f;
 
         // The gold hairline plate ringing a milestone's disc, drawn OUTSIDE it:
@@ -210,17 +206,10 @@ namespace PrincesPalace.Domain.UiKit
         // on the rail whose x is not fixed forever, so it is placed at runtime
         // and nothing else is.
         //
-        // A BARE CHEVRON WAS THE FIRST BUILD AND IT FAILED ITS ONE JOB. It sat
-        // in the 14px gap above the caption -- the only clear space left once
-        // the caption block was centred -- which put it 105px above the rail,
-        // at the very top of the band, a 26x14 speck with a hundred pixels of
-        // caption between it and the node it pointed at. The first capture
-        // shows it reading as dust on the band's edge.
-        //
-        // Hanging the caption from a fixed bottom edge opened the space this
-        // actually needs: the strip between the caption's lower edge at 50 and
-        // the disc's own rim. A word plus a line into that gap is unmistakable
-        // where a chevron above the caption was invisible.
+        // Hanging the caption from a fixed bottom edge opens the space this
+        // marker needs: the strip between the caption's lower edge at 50
+        // and the disc's own rim. A word plus a line into that gap is
+        // unmistakable.
         public const float NextMarkTopY = 46f;
         public const float NextLabelHeight = 12f;
         public const float NextLabelGap = 5f;
@@ -348,11 +337,8 @@ namespace PrincesPalace.Domain.UiKit
         // the content panel Ui.SystemMenuPane insets (1488x715.56, not the
         // raw 1600x804 frame), so anchoring them to the raw frame's
         // half-extent put them 30px past the left/right and 18px past the
-        // top/bottom of the box that actually contains them. Substituting
-        // for a painted border was true while this ground was a Gold 2:1
-        // Container (balance-bot, 2026-09-02); it is bare now (owner's call,
-        // 2026-09-07), which makes these hairlines the only thing marking
-        // the pane's edge at all.
+        // top/bottom of the box that actually contains them. These
+        // hairlines are the only thing marking the pane's edge at all.
         public static float CornerCentreX =>
             SystemMenuLayout.PaneContentHalfWidth - CornerInset - CornerArm * 0.5f;
 
@@ -382,9 +368,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float CollectWidth = 260f;
         public const float CloseWidth = 180f;
 
-        // TrackCollectButton/TrackCloseButton now wear a themed kit plate
-        // (owner's HQ-kit instruction, 2026-09-07) in place of the hand-drawn
-        // hairline rim the two used to share at a flat SummaryRowHeight.
+        // TrackCollectButton/TrackCloseButton wear a themed kit plate.
         // static readonly, not const, for the same reason MainMenuScreen.
         // ResetHoldHeight is: Ui.PlateNominalSizeFor is not a compile-time
         // constant. The two land on DIFFERENT plate shapes at their own
@@ -403,15 +387,10 @@ namespace PrincesPalace.Domain.UiKit
         // the figure itself at 40px, a hairline, then where the next reward is
         // and what it is.
         //
-        // ONE LABEL WAS THE FIRST BUILD and it said the same words at one size,
-        // which made the only number on the row that changes -- the one the
-        // whole screen is about -- the same weight as the word in front of it.
-        //
-        // THE REWARD'S NAME IS BACK, and it was removed once for a good reason:
-        // at eighty characters it collided with CLOSE. What has changed is that
-        // it is now a piece with a box of its own, so the audit measures it
-        // against 360px rather than against whatever is left of the row -- and
-        // the longest name the track can say fits that at 12px with room over.
+        // The reward's name has its own box, 360px wide, so the audit
+        // measures it against that rather than against whatever is left of
+        // the row -- the longest name the track can say fits that at 12px
+        // with room over.
         public const float LevelWordWidth = 80f;
         public const int LevelWordFont = 13;
         public const float LevelFigureWidth = 80f;
@@ -459,10 +438,9 @@ namespace PrincesPalace.Domain.UiKit
         // Both buttons keep the same clearance from the panel's own edge,
         // whatever they are labelled.
         //
-        // SystemMenuLayout.PaneContentHalfWidth, NOT PanelWidth * 0.5f
-        // (balance-bot, 2026-09-02) -- these are children of the pane's own
-        // content panel (744 half-width, not the declared 800), and at the
-        // old reference both buttons ran 12px past their own edge of it.
+        // SystemMenuLayout.PaneContentHalfWidth, NOT PanelWidth * 0.5f --
+        // these are children of the pane's own content panel (744
+        // half-width, not the declared 800).
         public static float CollectCentreX =>
             -SystemMenuLayout.PaneContentHalfWidth + SummaryInsetX + CollectWidth * 0.5f;
 
@@ -499,8 +477,8 @@ namespace PrincesPalace.Domain.UiKit
         // enough to read without leaning in.
         //
         // 660 wide at x 470 on a 1600 panel is panel-CENTRED, which is worth
-        // saying out loud because the handoff states it as a left edge and the
-        // two look like different claims.
+        // saying out loud because docs/handoffs/progression_v2 states it as
+        // a left edge and the two look like different claims.
         public const float CardYFromTop = 193f;           // band 118..268
         public const float CardWidth = 660f;
         public const float CardHeight = 150f;
@@ -587,7 +565,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float CardCaptionHeight = 48f;
         public const float CardDividerY = -31f;
 
-        // 22, not the handoff's 32.
+        // 22, not docs/handoffs/progression_v2's 32.
         //
         // A DEVIATION, and a measured one: at 32px the longest reward the track
         // can name -- "YOUR SECOND LIFE RETURNS AT EVERY BOSS" -- runs about
@@ -638,9 +616,9 @@ namespace PrincesPalace.Domain.UiKit
         public static float CardStateTextLeft =>
             CardTextLeft + CardStateDotSize + CardStateDotGap;
 
-        // THE FOOTER ROW CARRIES TWO FACTS, not one, since progression v2
-        // phase 5: what the player's standing with this node is (left, after
-        // the dot) and how many fights the next level is (right).
+        // THE FOOTER ROW CARRIES TWO FACTS, not one: what the player's
+        // standing with this node is (left, after the dot) and how many
+        // fights the next level is (right).
         //
         // THE SAME LINE RATHER THAN A NEW ONE, and the card's own geometry is
         // why. Its content occupies 106 of 150 with 22 of padding above and
@@ -673,15 +651,11 @@ namespace PrincesPalace.Domain.UiKit
         public const float BandBottomFromTop = 502f;
         public const float BandHairlineFromTop = 501f;
 
-        // NOT a fixed 402 any more (balance-bot, 2026-09-02). 402 was "the
-        // panel's own vertical centre" only because CentreY's old reference
-        // (the raw 804-tall frame's own half-height) WAS 402 -- RailYFromTop
-        // being equal to that reference is what made CentreY(RailYFromTop)
-        // land on y=0. Now that the reference is ContentTop (357.78, the
-        // pane's own declared content half-extent), the same identity needs
-        // RailYFromTop to track ContentTop itself: the true vertical centre
-        // of the content panel is exactly ContentTop below its own content
-        // top, whatever that top happens to be.
+        // RailYFromTop tracks ContentTop, not a fixed 402: the true
+        // vertical centre of the content panel is exactly ContentTop below
+        // its own content top (357.78, the pane's own declared content
+        // half-extent), whatever that top happens to be, so
+        // CentreY(RailYFromTop) lands on y=0.
         public static float RailYFromTop => ContentTop;
 
         // The two hairlines stop short of the panel's edge and fade out before
@@ -690,11 +664,9 @@ namespace PrincesPalace.Domain.UiKit
         // junction that makes a drawn line look like a table.
         public const float BandEdgeInsetX = 44f;
 
-        // PaneContentWidth, NOT SystemMenuLayout.PanelWidth (balance-bot,
-        // 2026-09-02) -- these hairlines are children of the pane's own
-        // content panel, 1488 wide rather than the declared 1600 frame; at
-        // the old width they ran 12px past that content panel's own left and
-        // right edges.
+        // PaneContentWidth, NOT SystemMenuLayout.PanelWidth -- these
+        // hairlines are children of the pane's own content panel, 1488
+        // wide rather than the declared 1600 frame.
         public static float BandEdgeWidth =>
             PaneContentWidth - BandEdgeInsetX * 2f;
 
@@ -745,8 +717,8 @@ namespace PrincesPalace.Domain.UiKit
         // use. The brief's sharpest open question was that a player at level 47
         // cannot see level 50 without scrolling; this is the answer to it.
         //
-        // SHIFTED UP 60px (balance-bot, 2026-09-02), UNLIKE every other
-        // yFromTop constant on this screen. The uniform ContentTop delta
+        // SHIFTED UP 60px, UNLIKE every other yFromTop constant on this
+        // screen. The uniform ContentTop delta
         // (44.22) alone is not enough here: the ribbon's old bottom edge
         // (768) already used nearly the whole 804-tall raw panel (36px of
         // clearance), and the pane's own content box is 88.44px shorter than
@@ -969,8 +941,8 @@ namespace PrincesPalace.Domain.UiKit
         // be scannable WITHOUT reading. The ring stands for "a capability",
         // which is what every milestone is.
         //
-        // These are now the SILHOUETTE BRIEF for the art slots in handoff
-        // section 8 rather than the finished look: each one is the ghost glyph
+        // These are the SILHOUETTE BRIEF for the art slots in
+        // docs/handoffs/progression_v2 rather than the finished look: each one is the ghost glyph
         // its slot draws until painted art lands, and the stroke is what that
         // painting has to still read as at 15px.
         //
@@ -1001,16 +973,11 @@ namespace PrincesPalace.Domain.UiKit
         // WHICH PAINTED MEDALLION THE CARD SHOWS for a reward -- OR NULL,
         // which is now a real answer rather than a gap.
         //
-        // NINE OF TWENTY-ONE, AND THE OTHER TWELVE GET WORDS. Phase 4 mapped
-        // every kind onto a picture because RewardTrackScreenTests demanded a
-        // distinct sprite per kind, and said so plainly in its own note: three
-        // of the seven it added were "nearly honest" and the other four (a flat
-        // delta on VULNERABLE, a per-point delta on POISON, all-spell damage on
-        // FEARED, IDENTITY on PROTECT) were "chosen because they are different
-        // from each other and for no other reason". A player could not read the
-        // rail by glyph, and those four came from the STATUS set -- flat cel art
-        // in cool violets -- which on a card whose other slots are painted gold
-        // medallions reads as a bug before it reads as a reward.
+        // NINE OF TWENTY-ONE, AND THE OTHER TWELVE GET WORDS. Not every kind
+        // has an honest medallion: some would only borrow marks from the
+        // STATUS set -- flat cel art in cool violets -- which on a card
+        // whose other slots are painted gold medallions reads as a bug
+        // before it reads as a reward.
         //
         // So the uniqueness rule moves from "a distinct SPRITE per kind" to
         // "a distinct VISUAL per kind", and a kind with no honest medallion
@@ -1025,10 +992,7 @@ namespace PrincesPalace.Domain.UiKit
         //                             ability-score icon and the reward is
         //                             ability-score points.
         //   MaxHealth                 health.png, a heart.
-        //   MaxMana                   mana.png, a potion flask. (Phase 4 had
-        //                             this on eye_unused and gave the flask to
-        //                             a signature-gain node, which is the two
-        //                             the wrong way round.)
+        //   MaxMana                   mana.png, a potion flask.
         //   ManaRegen                 regen.png, a bolt -- the set's own regen
         //                             mark, and mana coming back is the only
         //                             regeneration this game has.
@@ -1140,7 +1104,7 @@ namespace PrincesPalace.Domain.UiKit
         // The hue a reward kind tints its art-slot mat with.
         //
         // THE MAT ONLY, at 2E alpha or below, and only on an unreached node --
-        // handoff section 5. A lit disc is gold metal, and a tint laid over
+        // docs/handoffs/progression_v2. A lit disc is gold metal, and a tint laid over
         // that reads as tarnish, which is the same way the flat-fill disc
         // failed before the gradient replaced it.
         public static string MatTintFor(TrackReward reward)

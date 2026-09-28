@@ -8,22 +8,20 @@ namespace PrincesPalace.Domain.UiKit
     // header), widened from a hover ground into a STANDING panel a screen
     // shows or hides by its own selection state rather than by a pointer.
     //
-    // SHOP PASS (2026-09-22, owner ask #3): the shop needs to show a
-    // selected gear card's stats, its affix lines and the delta against
-    // whatever the picked party character has equipped -- one body string
-    // ItemDescription.ComparisonBody already renders in full. This is
-    // deliberately a shared Domain/UiKit builder rather than a one-off
-    // inside ShopScreen: CharacterDossierScreen's own tooltip has since
-    // been rebuilt onto this SAME shape too (BuildTooltip calls
-    // ItemComparisonPanel.Build with the "DossierTooltip" name prefix; the
-    // old bespoke 300x480 "#1D1226F2" rectangle is retired -- see
-    // BuildTooltip's own header in CharacterDossierScreen.cs). Two callers
-    // today, ShopScreen's ShopDetailPanel and CharacterDossierScreen's
-    // DossierTooltip, both through this one builder, so a third,
-    // screen-local copy of "fill + rim + title + body" would be the exact
-    // duplication this builder exists to close.
+    // The shop needs to show a selected gear card's stats, its affix lines
+    // and the delta against whatever the picked party character has
+    // equipped -- one body string ItemDescription.ComparisonBody already
+    // renders in full. This is deliberately a shared Domain/UiKit builder
+    // rather than a one-off inside ShopScreen: CharacterDossierScreen's own
+    // tooltip is built onto this SAME shape too (BuildTooltip calls
+    // ItemComparisonPanel.Build with the "DossierTooltip" name prefix --
+    // see BuildTooltip's own header in CharacterDossierScreen.cs). Two
+    // callers today, ShopScreen's ShopDetailPanel and
+    // CharacterDossierScreen's DossierTooltip, both through this one
+    // builder, so a third, screen-local copy of "fill + rim + title + body"
+    // would be the exact duplication this builder exists to close.
     //
-    // ROUGHLY SQUARE AND READABLE, in the owner's own words -- ~420x420 and
+    // ROUGHLY SQUARE AND READABLE: ~420x420 and
     // a body font of 15 or larger. Both are CALLER-supplied rather than
     // baked in here: a size and a type scale are content, not shape, and
     // the dossier's own eventual migration needs its own numbers without
@@ -39,7 +37,7 @@ namespace PrincesPalace.Domain.UiKit
         //
         // FULLY OPAQUE. It was #1D1226F2 (95%), and the 5% that got through
         // was enough: over the dossier's pack the bright gear art and the
-        // cell names showed faintly under the tooltip's text (QA 2026-09-26).
+        // cell names showed faintly under the tooltip's text.
         // This panel is a READING surface that stands over art by design --
         // the dossier places it over neighbouring pack cells, the shop over
         // its offer strip -- so nothing may show through it at all.
@@ -95,11 +93,10 @@ namespace PrincesPalace.Domain.UiKit
             // EVERY PART IS ANCHORED TO AN EDGE, not placed at a fixed offset
             // from the centre. The shop shows this panel at its built size and
             // nothing changes; the dossier's hover tooltip sets only the
-            // panel's HEIGHT to fit its text (QA 2026-09-26: a 420x420 box
-            // half empty under a six-line body), and the fill, the rim and
+            // panel's HEIGHT to fit its text, and the fill, the rim and
             // the body follow that one number because they are pinned to the
-            // edges they belong to. Centre offsets would have left the title
-            // floating mid-panel and the rim tracing the old 420 square.
+            // edges they belong to. Centre offsets would leave the title
+            // floating mid-panel and the rim tracing a fixed square instead.
             var parts = new List<UiNode>
             {
                 Ui.Solid(name + "Fill", PlateHex, Place.Stretch(), UiSize.Fixed(size)).AsDecor(),

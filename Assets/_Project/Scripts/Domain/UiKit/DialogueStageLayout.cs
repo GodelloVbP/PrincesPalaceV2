@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.UiKit
     // How one line frames the stage. Derived from the line, never authored.
     // A speaker whose bust failed every fallback (contract 11) is framed
     // centred, as narration is, because there is no face for the box to
-    // stand beside (owner call 2026-09-25) -- but keeps the plate, because
+    // stand beside -- but keeps the plate, because
     // the speaker still has a name (contract 15).
     public enum StageFraming
     {
@@ -63,7 +63,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float BustHeight = 840f;
 
         // The final art is 2560x512 and 960x192, painted at 2x and drawn at
-        // exactly half -- never stretched (owner rule 2026-09-23).
+        // exactly half -- never stretched.
         public const float BoxWidth = 1280f;
         public const float BoxHeight = 256f;
         public const float BoxBottom = 32f;
@@ -88,15 +88,14 @@ namespace PrincesPalace.Domain.UiKit
         public const float BoxTop = BoxBottom + BoxHeight;
         public const float PlateCentreY = BoxTop + PlateRise;
 
-        // The choice rows stand just above the box (owner call 2026-09-25: a
-        // small fixed gap, not a climb over the plate). They clear the plate
+        // The choice rows stand just above the box, a small fixed gap, not
+        // a climb over the plate. They clear the plate
         // SIDEWAYS -- rows at the box's far end, plate at its near end -- so
         // nothing has to stand above the plate's top.
         public const float ChoicesGap = 20f;
         public const float ChoicesBottom = BoxTop + ChoicesGap;
 
-        // The least distance from a screen edge to the focus marker's box
-        // (owner call 2026-09-25: the arrow sat 4-7px from the left edge).
+        // The least distance from a screen edge to the focus marker's box.
         public const float MarkerEdgeMargin = 24f;
 
         // How far left of a row the marker's box can reach: a choice row is

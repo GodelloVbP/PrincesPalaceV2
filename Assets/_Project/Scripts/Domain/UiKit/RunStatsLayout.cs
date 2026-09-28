@@ -24,10 +24,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // THE PANE'S OWN DECLARED CONTENT HALF-EXTENTS, not PaneWidth/
         // PaneHeight * 0.5f -- see SystemMenuLayout.PaneContentHalfWidth/
-        // HalfHeight's own comment. 744/357.78 against the old 800/402; the
-        // ground that boundary used to be a Silver 2:1 Container's painted
-        // border is bare now (owner's call, 2026-09-07), but the numbers are
-        // unchanged so nothing in this pane moved.
+        // HalfHeight's own comment.
         public static float HalfWidth => SystemMenuLayout.PaneContentHalfWidth;
         public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
 

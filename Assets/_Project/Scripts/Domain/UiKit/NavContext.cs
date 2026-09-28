@@ -41,8 +41,8 @@ namespace PrincesPalace.Domain.UiKit
         // press arrived.
         private readonly Func<INavCancelClaim> _claimant;
 
-        // This context's own optional tab strip (INavTabStrip, plan phase 3
-        // item 2) -- a FUNCTION for the same reason `_claimant` is one, even
+        // This context's own optional tab strip (INavTabStrip) -- a
+        // FUNCTION for the same reason `_claimant` is one, even
         // though today's one implementor (SystemMenuController) never
         // changes identity while pushed: a context that grows a second
         // tab-bearing state later should not have to change this shape to
@@ -129,8 +129,8 @@ namespace PrincesPalace.Domain.UiKit
             return claim != null && claim.ClaimSubmit();
         }
 
-        // THE TRIGGER SHORTCUT'S ONLY EFFECT (owner's 2026-09-19 hardware-
-        // round call: LT/RT step tabs), offered to whichever context is top
+        // THE TRIGGER SHORTCUT'S ONLY EFFECT (LT/RT step tabs), offered to
+        // whichever context is top
         // the same way Cancel is (NavigationInputModule's own
         // ordinary-context branch calls both off `topAtStart`). A no-op
         // when this context declares no tab strip -- Hub, RelicDraft, the
@@ -139,8 +139,8 @@ namespace PrincesPalace.Domain.UiKit
         // simply absorbed, not routed anywhere by accident.
         public void RaiseTabStep(int direction) => _tabStrip?.Invoke()?.StepTab(direction);
 
-        // THE SHOULDER SHORTCUT'S ONLY EFFECT (owner's 2026-09-19 hardware-
-        // round call: LB/RB step sections/characters), offered off
+        // THE SHOULDER SHORTCUT'S ONLY EFFECT (LB/RB step
+        // sections/characters), offered off
         // `topAtStart` the same way RaiseTabStep is and absorbed the same
         // way by a context that declares no section strip.
         public void RaiseSectionStep(int direction) => _sectionStrip?.Invoke()?.StepSection(direction);

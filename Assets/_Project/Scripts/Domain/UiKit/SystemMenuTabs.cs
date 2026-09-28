@@ -134,14 +134,12 @@ namespace PrincesPalace.Domain.UiKit
         public static int PaneIndexFor(int tabIndex) =>
             tabIndex < 0 || tabIndex >= All.Count ? 0 : tabIndex;
 
-        // THROWS rather than falling back to 0.
-        //
-        // It used to return 0 for a tab it could not find, which is a silently
-        // wrong answer dressed as a safe one: every miss became "Character &
-        // Inventory", so a caller asking for a tab that no longer existed got a
-        // real screen back and no hint that it had asked for the wrong thing.
-        // Every value of the enum is in All, so this cannot fire without a
-        // genuine bug behind it.
+        // THROWS rather than falling back to 0: returning 0 would be a
+        // silently wrong answer dressed as a safe one, since every miss
+        // would become "Character & Inventory" and a caller asking for a
+        // tab that does not exist would get a real screen back with no
+        // hint that it asked for the wrong thing. Every value of the enum
+        // is in All, so this cannot fire without a genuine bug behind it.
         public static int IndexOf(SystemMenuTab tab)
         {
             for (int i = 0; i < All.Count; i++)

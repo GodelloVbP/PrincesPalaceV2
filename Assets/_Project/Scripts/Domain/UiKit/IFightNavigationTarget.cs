@@ -14,14 +14,11 @@ namespace PrincesPalace.Domain.UiKit
         void OnBackPressed();
 
         // THE HORIZONTAL AXIS, and what a fight does with it AT TWO
-        // DIFFERENT DEPTHS now (the owner's 2026-09-19 call, both halves):
-        // at Root it steps sideways off the verb column onto the actors
-        // themselves, so "what is this monster carrying" is a question a
-        // pad can ask without first committing to ATTACK or a spell; at
-        // Target depth it cycles the rack being picked, the same rack
-        // Up/Down already walk (the follow-up call the same day: "selecting
-        // different mobs with gamepad goes with up down, but it should work
-        // with left right").
+        // DIFFERENT DEPTHS: at Root it steps sideways off the verb column
+        // onto the actors themselves, so "what is this monster carrying" is
+        // a question a pad can ask without first committing to ATTACK or a
+        // spell; at Target depth it cycles the rack being picked, the same
+        // rack Up/Down already walk.
         //
         // A SECOND METHOD RATHER THAN A SECOND ARGUMENT ON MoveFocus, because
         // the two axes do not do the same thing at any depth: vertical walks

@@ -15,8 +15,8 @@ namespace PrincesPalace.Domain.UiKit
     // takes for the offer row itself. The controllers own "which rect is being
     // hovered"; this owns "and therefore where does the box go".
     //
-    // AND IT NEVER LANDS ON ITS OWN SUBJECT (gamepad phase 3b, job 1). The
-    // rule is now: beside if a side has room, flipped if the preferred one
+    // AND IT NEVER LANDS ON ITS OWN SUBJECT. The
+    // rule is: beside if a side has room, flipped if the preferred one
     // does not, under or over the anchor if neither does, and only then
     // clamped-and-overlapping as a stated last resort. Both the pointer and
     // the selection path go through this one method, so a box does not move
@@ -35,8 +35,7 @@ namespace PrincesPalace.Domain.UiKit
         // symmetric (its crest is deeper than its bottom ornament) and a
         // half-height would have to lie about one edge or the other.
         //
-        // THE ANCHOR'S HEIGHT IS TAKEN AS WELL AS ITS WIDTH, since the
-        // gamepad pass (phase 3b, job 1). It is only read by the
+        // THE ANCHOR'S HEIGHT IS TAKEN AS WELL AS ITS WIDTH. It is only read by the
         // never-overlap fallback below, and that fallback is the reason the
         // parameter exists at all: a box cannot be placed clear of a rect
         // whose height it was never told.
@@ -61,13 +60,10 @@ namespace PrincesPalace.Domain.UiKit
             // pushed just far enough to stay inside.
             float beside = Clamp(anchorY, interiorBottom + halfH, interiorTop - halfH);
 
-            // NEITHER SIDE HAS ROOM is where the rule changed for the gamepad
-            // pass: before any clamp, go UNDER the anchor, then OVER it. It
-            // used to clamp x back inside and land ON the anchor -- the exact
-            // failure the pack's own placement comment records ("the box
-            // answering the question was covering the evidence"). Under first
-            // because that is where a tooltip conventionally sits and because
-            // the thing above an anchor is usually what named it.
+            // NEITHER SIDE HAS ROOM: before any clamp, go UNDER the anchor,
+            // then OVER it. Under first because that is where a tooltip
+            // conventionally sits and because the thing above an anchor is
+            // usually what named it.
             float x = Clamp(anchorX, interiorLeft + halfW, interiorRight - halfW);
             float reachY = gap + anchorHeight * 0.5f + halfH;
 
@@ -86,7 +82,7 @@ namespace PrincesPalace.Domain.UiKit
             }
 
             // NONE OF THE FOUR IS CLEAR -- usually because a keep-out rect
-            // (the dossier's mannequin and slots, 2026-09-26) sits where the
+            // (the dossier's mannequin and slots) sits where the
             // box wanted to go. Look further out for the clear position
             // NEAREST the anchor rather than giving up: a box one column
             // further away is better than a box over what it must not hide.

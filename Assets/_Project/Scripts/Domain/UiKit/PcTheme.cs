@@ -5,7 +5,7 @@ namespace PrincesPalace.Domain.UiKit
     // WHAT A PARTY MEMBER'S COLOUR ACTUALLY IS, on every HUD surface that
     // stands for them.
     //
-    // The owner's 2026-09-09 call: every PC gets one colour, worn by every
+    // Every PC gets one colour, worn by every
     // surface that means "this character" -- Shawn Silver, Bjorn Crimson,
     // Odette Blue, and a future PC picks whichever of the kit's six themes
     // suits them. The theme itself is content (characters.json's plateTheme,
