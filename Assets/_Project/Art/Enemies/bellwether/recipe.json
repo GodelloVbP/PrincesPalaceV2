@@ -1,0 +1,35 @@
+{
+  "_readme": "How this actor's stance stills were produced. Replay with `python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Enemies/bellwether/recipe.json`; a replay that does not reproduce the committed PNGs byte for byte means the tool, its libraries or the source sheet moved under it. The recipe describes how the frames are MADE -- how they are used is content, in ContentData/.",
+  "tool": "tools/slice_actor_sheet.py",
+  "toolSha256": "603b1b9f06edc2fbc8e948c20a7aee9df22b95382228c879167883db51d15bd8",
+  "sheet": "Assets/_Project/Art/Enemies/bellwether/sheet_poses.png",
+  "argv": [
+    "--sheet",
+    "Assets/_Project/Art/Enemies/bellwether/sheet_poses.png",
+    "--grid",
+    "4x2",
+    "--stances",
+    "idle,attack,cast,guard,hurt,defeated,extra,-",
+    "--key",
+    "green",
+    "--pocket-max-area",
+    "200",
+    "--delivery-scale",
+    "1.2152777777777777",
+    "--actor",
+    "Enemies/bellwether",
+    "--anchor",
+    "ground_band",
+    "--max-ground-spread",
+    "6"
+  ],
+  "outputFolder": "Assets/_Project/Resources/Enemies/bellwether",
+  "groundLine": 8,
+  "versions": {
+    "python": "3.14.5",
+    "pillow": "12.3.0",
+    "numpy": "2.5.1"
+  },
+  "generatedAt": "2026-09-28T08:45:30+02:00",
+  "sourceSha256": "8B37E0BA60839D8A1C10B804507D0C5CF07B53E7B93D90A352DC9BB3DF93BCBD"
+}

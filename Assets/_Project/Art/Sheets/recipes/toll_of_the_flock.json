@@ -1,0 +1,29 @@
+{
+  "_notes": [
+    "Toll of the Flock (relics.json vfx, one travelling layer): three ghost sheep",
+    "galloping right, drawn on black, so keyed by luminance (keyed: true). Six cells",
+    "on a 3x2 grid of 512px, played once in order across the flight: f0-f4 are the",
+    "gallop, f5 is the flock coming apart into motes, which is why the layer is",
+    "`until: once` with `seconds` 0.75 past a 0.55s travel -- the dissolve lands on",
+    "the target rather than looping mid-air. No sequence: the cells are the frames.",
+    "Wisps in f1 and f2 reach the cell's right and left edges; at the 340px box",
+    "they are a pixel or two of trail and were left. Replayed byte-identical",
+    "2026-09-28 (python tools/slice_spell_sheet.py toll_of_the_flock)."
+  ],
+  "sheet": "Spells/toll_of_the_flock/sheet.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": true,
+  "base_align": false,
+  "content_crop": false
+}

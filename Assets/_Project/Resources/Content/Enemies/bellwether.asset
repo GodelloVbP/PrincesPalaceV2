@@ -34,7 +34,7 @@ MonoBehaviour:
     Rollable: 0
     RallyAttackPercentPerStack: 8
     RallyMaxStacks: 10
-    SpritePath: 
+    SpritePath: Enemies/bellwether
     Abilities: []
     AttackWeight: 1
     SkillName: 

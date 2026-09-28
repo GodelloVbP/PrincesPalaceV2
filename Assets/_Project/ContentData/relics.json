@@ -367,7 +367,7 @@
       "description": "Every transformation Shawn enters lasts one turn longer.",
       "effect": "BellwethersBell",
       "rarity": "rare",
-      "iconPath": "",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/bellwethers_bell.png",
       "bearer": "sheep",
       "draftable": false
     },
@@ -377,11 +377,30 @@
       "description": "Every third turn Shawn takes, a ghost flock charges every enemy. It hits harder while he is transformed.",
       "effect": "TollOfTheFlock",
       "rarity": "rare",
-      "iconPath": "",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/toll_of_the_flock.png",
       "bearer": "sheep",
       "draftable": false,
       "vfx": {
-        "sfxPath": "Audio/Sfx/Events/bell_in_the_fog/flock_charge"
+        "layerFormat": 1,
+        "hitCueSeconds": 0.55,
+        "sfxPath": "Audio/Sfx/Events/bell_in_the_fog/flock_charge",
+        "layers": [
+          {
+            "id": "flock",
+            "render": "sprite",
+            "place": "caster",
+            "at": "release",
+            "path": "Spells/toll_of_the_flock",
+            "seconds": 0.75,
+            "until": "once",
+            "travelSeconds": 0.55,
+            "size": 340,
+            "impactX": 0.9,
+            "impactY": 0.26,
+            "fade": 0.12,
+            "glow": 0.6
+          }
+        ]
       }
     }
   ]

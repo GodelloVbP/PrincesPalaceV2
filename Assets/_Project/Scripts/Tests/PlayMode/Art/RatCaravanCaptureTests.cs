@@ -22,10 +22,10 @@ namespace PrincesPalace.PlayModeTests
     // and page -- each at every UiFrames aspect. Pictures, not assertions:
     // RatCaravanRunTests and CaravanShelfScreenTests pin the behaviour.
     //
-    // No caravan art is delivered yet (M9b), so every set piece shows its
-    // empty frame, the merchant's bust the name-plate fallback on the stage
-    // and PORTRAIT PENDING on the shelf -- the missing-art state is what is
-    // being looked at.
+    // The caravan art is delivered (M9b): road.png behind, caravan.png and
+    // robbed.png as the set pieces, and the merchant's three busts on the
+    // stage and in the shelf's keeper panel. The M9b set is copied to
+    // docs/captures/events-art/.
     //
     // Graphics device only, on the hidden desktop:
     //   tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RatCaravanCaptureTests

@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: Every transformation Shawn enters lasts one turn longer.
     Effect: 33
     SortOrder: 39
-    IconPath: 
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/bellwethers_bell.png
     Rarity: 2
     UnlockedBy: 
     Modifiers: []

@@ -26,10 +26,10 @@ namespace PrincesPalace.PlayModeTests
     // FightRoundCounterTests and DialogueStageTests pin the behaviour; what can
     // only be seen is whether the 1280x720 piece and the counter sit right.
     //
-    // No event art or overlay is authored yet (M7a/M9a), so the set piece is
-    // the Map scene's own baked default backdrop, handed to the panel's art
-    // table under the fixture's key -- a real 16:9 painting at the frame's
-    // real size.
+    // The set piece is the Map scene's own baked default backdrop, handed to
+    // the panel's art table under the fixture's key -- a real 16:9 painting at
+    // the frame's real size. (Written before M9a; the real Bell's delivered
+    // art is captured by BellInTheFogCaptureTests.)
     //
     // Graphics device only, on the hidden desktop:
     //   tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.EventsM6CaptureTests

@@ -238,13 +238,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("Toll 1", Counter.text, "the counter does not depend on the overlay");
         }
 
-        // THE REAL BELL, AS CONTENT AUTHORS IT, BEFORE ITS ART AND SOUND EXIST
-        // (M7a). Its backdrop, overlay, toll and wind name files M9a has not
-        // delivered: the class backdrop stays, the overlay stays hidden, the
-        // bed and the toll are silent, and nothing logs. Only the counter and
-        // its plate show.
+        // THE REAL BELL, AS CONTENT AUTHORS IT, WITH ITS DELIVERED ART AND
+        // SOUND (M9a). The fog clearing replaces the class backdrop, the flock
+        // overlay shows at its authored fromScale, the wind bed loops from the
+        // start, the toll clip resolves, and nothing logs.
         [UnityTest]
-        public IEnumerator TheRealBell_WithNoArtOrSoundYet_ShowsOnlyTheCounter_AndLogsNothing()
+        public IEnumerator TheRealBell_ShowsItsBackdropAndFlock_LoopsTheWind_AndLogsNothing()
         {
             var bell = ContentDatabase.Events.Select(e => e.Data).Single(e => e.Id == "bell_in_the_fog");
             var fight = bell.FightById("bellwether");
@@ -260,16 +259,27 @@ namespace PrincesPalace.PlayModeTests
 
             BindOnly(presentation, fight.SurviveRounds);
             yield return null;
+            float openDeadline = Time.realtimeSinceStartup + 10f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < openDeadline) yield return null;
 
             Assert.AreEqual("Toll 1", Counter.text);
             Assert.IsTrue(Named("RoundCounterPlate").activeSelf);
-            Assert.IsFalse(Named("RoundOverlay").activeSelf, "no flock.png yet: the overlay stays hidden");
-            Assert.AreSame(classSprite, ((Image)backdrop.GetValue(_fight)).sprite,
-                "no fog_clearing.png yet: the class backdrop stands");
-            Assert.IsFalse(SoundController.AmbiencePlaying, "no wind loop yet: silence");
+
+            Assert.IsTrue(Named("RoundOverlay").activeSelf, "flock.png is baked: the overlay shows");
+            Assert.IsNotNull(Overlay.sprite);
+            Assert.AreEqual("flock", Overlay.sprite.texture.name);
+            Assert.AreEqual(0.6f, Overlay.rectTransform.localScale.x, 1e-4f, "round 1 is the authored fromScale");
+
+            var shown = ((Image)backdrop.GetValue(_fight)).sprite;
+            Assert.AreNotSame(classSprite, shown, "fog_clearing.png replaces the class backdrop");
+            Assert.AreEqual("fog_clearing", shown.texture.name);
+
+            Assert.IsTrue(SoundController.AmbiencePlaying, "the wind loop plays from the start");
+            Assert.AreEqual("Audio/Music/Events/bell_in_the_fog/wind", SoundController.AmbiencePath);
+            Assert.IsNotNull(Resources.Load<AudioClip>(presentation.RoundSfxPath), "the toll clip resolves");
 
             yield return AttackAndPlayOut();
-            Assert.AreEqual("Toll 2", Counter.text, "a missing toll sound does not stop the count");
+            Assert.AreEqual("Toll 2", Counter.text);
             LogAssert.NoUnexpectedReceived();
         }
 

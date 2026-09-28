@@ -87,29 +87,33 @@ returning event and the first event fight.
 - **Endure's Leave** has four outcomes on who is standing, so the "only a
   second passed" line comes from whoever is actually there (Bjorn, Odette,
   both, or nobody). It pays nothing; the fight result already did.
-- **The Bellwether** (`enemies.json`, `rollable: false`) has no `spritePath`
-  until M9a: the stage draws the no-art name plate. Tuned in M8a and again
+- **The Bellwether** (`enemies.json`, `rollable: false`) stands on its own
+  seven stills, `Resources/Enemies/bellwether/` (M9a, 2026-09-28), sliced by
+  `Art/Enemies/bellwether/recipe.json` onto one 545x484 canvas, ground line 8,
+  head box in `StanceManifest.json`. Tuned in M8a and again
   with the round-limited attack rate (2026-09-28): HP 150, attack 33, speed
   5, defenses 20/20, rally 8% x 10. Speed 5 rather than 8 is on purpose:
   fewer, heavier swings spread the floor-1 result, where the bot's Shawn
   barely varies, so one attack point moves floor-1 Endure by ~6 points
   instead of ~20. The per-floor table is in that commit's message.
-- **Art and sound** named but not delivered yet (M9a): `fog_clearing.png`
-  (event backdrop and fight backdrop), `stump_bell.png` (bell and ask
-  pages), `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.6 ->
-  1.3), `Audio/Sfx/Events/bell_in_the_fog/toll` (round sfx),
-  `Audio/Music/Events/bell_in_the_fog/wind` (ambience),
-  `Audio/Sfx/Events/bell_in_the_fog/flock_charge` (Toll of the Flock's
-  `vfx.sfxPath`). Every one of those degrades silently while missing.
-- **Relic icons are the exception**: a relic `iconPath` naming a file that is
-  not there yet stops the scene build (the wiring sweep refuses the null
-  sprite in the relic draft and glossary tables). Both Bell relics ship with
-  an empty `iconPath` (the flat accent circle, as Kinship). M9a delivers
-  `Art/Items/Relics/Processed/bellwethers_bell.png` and
-  `toll_of_the_flock.png` and fills the two paths in.
+- **Art and sound** delivered (M9a, 2026-09-28): `fog_clearing.png` (event
+  backdrop and fight backdrop), `stump_bell.png` (bell and ask pages),
+  `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.6 -> 1.3),
+  `Audio/Sfx/Events/bell_in_the_fog/toll` (round sfx),
+  `Audio/Music/Events/bell_in_the_fog/wind` (ambience), and Shawn's
+  `entranced` bust (`normalize_dialogue_busts.py`, recorded in
+  `Art/Portraits/dialogue_recipe.json`).
+- **Relics.** Both icons are in `Art/Items/Relics/Processed/`
+  (`bellwethers_bell.png`, `toll_of_the_flock.png`); a relic `iconPath`
+  naming a missing file stops the scene build, so the build is what proves
+  they resolve. Toll of the Flock's `vfx` is one travelling layer (a ghost
+  flock galloping from Shawn to each struck enemy) cut from
+  `Art/Sheets/recipes/toll_of_the_flock.json` into `Spells/toll_of_the_flock`,
+  with `flock_charge` as its sfx.
 - Pinned by `BellInTheFogEventTests` (content, fast host) and
   `BellInTheFogRunTests` (every page, Endure/Break/Fall through the run, the
-  bot's walk, never rolled).
+  bot's walk, never rolled). Captures: `BellInTheFogCaptureTests`,
+  `docs/captures/events-art/`.
 
 ## The Rat Caravan
 
@@ -150,15 +154,16 @@ merchant shelf and the first event speaker in shipped content.
   no page before it to be hostile on.
 - **Tuning (M8b, 2026-09-28):** see that commit's message for the per-floor
   rob-vs-elite-room win rates.
-- **Art** named, not delivered (M9b): `road.png` (event and fight
+- **Art** delivered (M9b, 2026-09-28): `road.png` (event and fight
   backdrop), `caravan.png` (the three browsing pages), `robbed.png`, and the
   merchant's busts `Resources/Portraits/Dialogue/rat_merchant/{neutral,
-  grinning,hostile}.png`. Missing, the stage shows the name plate, the shelf
-  PORTRAIT PENDING.
+  grinning,hostile}.png` (one 1408x1402 canvas, Shawn's bust format; no
+  source or recipe was delivered for them, so they are not reproducible).
 - Pinned by `RatCaravanEventTests` (content, fast host) and
   `RatCaravanRunTests` (every page and the rob through the run, the bot's
   walk, the `-EventChoice "Rob him"` probe). Captures:
-  `RatCaravanCaptureTests`, `docs/captures/events-m7b/`.
+  `RatCaravanCaptureTests`, `docs/captures/events-m7b/` (before the art) and
+  `docs/captures/events-art/` (with it).
 
 ## Requirements
 

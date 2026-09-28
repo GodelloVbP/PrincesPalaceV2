@@ -71,6 +71,17 @@
             1408,
             1402
           ]
+        },
+        {
+          "expression": "entranced",
+          "output": "sheep/entranced.png",
+          "outputSha256": "7f84bfc51f6e06810eb93ff4acc7b47123b9e5985226b7d78a602e468d88a697",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_entranced.png",
+          "sourceSha256": "9c0a25c43d1100dc8fa45979aef09d94cb6b2e898f79e40fb8ed045185d9dd17",
+          "sourceSize": [
+            1408,
+            1402
+          ]
         }
       ],
       "id": "sheep",
@@ -152,7 +163,9 @@
         }
       ],
       "id": "owl",
-      "missingExpressions": [],
+      "missingExpressions": [
+        "entranced"
+      ],
       "namePrefix": "Odette",
       "sourceFolder": "Owl"
     },
@@ -180,7 +193,8 @@
         "annoyed",
         "nervous",
         "sad",
-        "surprised"
+        "surprised",
+        "entranced"
       ],
       "namePrefix": "Bjorn",
       "sourceFolder": "Bear"
@@ -192,7 +206,8 @@
     "annoyed",
     "nervous",
     "sad",
-    "surprised"
+    "surprised",
+    "entranced"
   ],
   "params": {
     "characters": [

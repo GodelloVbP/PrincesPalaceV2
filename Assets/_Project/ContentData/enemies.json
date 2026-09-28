@@ -335,6 +335,7 @@
       "currencyReward": 18,
       "weakness": "none",
       "resistance": "none",
+      "spritePath": "Enemies/bellwether",
       "active": true,
       "rollable": false,
       "rallyPerRound": {

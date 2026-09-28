@@ -301,7 +301,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- the enemy and the relics -------------------------------------------------
 
         [Test]
-        public void TheBellwether_NeverRolls_RalliesEightPercentToTen_AndHasNoArtYet()
+        public void TheBellwether_NeverRolls_RalliesEightPercentToTen_AndStandsOnItsDeliveredStills()
         {
             var bellwether = RealEventCatalogue.Enemies().Single(e => e.Id == "bellwether");
 
@@ -313,9 +313,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, bellwether.SlotSpan);
             Assert.IsFalse(bellwether.IsBoss);
 
-            // No sprite until M9a: an empty spritePath is the stage's
-            // deliberate "not drawn yet" state (the name-plate fallback).
-            Assert.AreEqual("", bellwether.SpritePath);
+            // M9a delivered its stills (Art/Enemies/bellwether/recipe.json);
+            // the folder's own stance files are pinned by EnemyStageTests.
+            Assert.AreEqual("Enemies/bellwether", bellwether.SpritePath);
         }
 
         [Test]
@@ -330,10 +330,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("sheep", bell.Bearer);
             Assert.IsFalse(bell.Draftable);
             Assert.AreEqual("Every transformation Shawn enters lasts one turn longer.", bell.Description);
-            // Empty until M9a delivers the icon: a named file that is not there
-            // yet is a null sprite, which the scene build's wiring sweep
-            // refuses. Empty is the documented flat-circle fallback.
-            Assert.AreEqual("", bell.IconPath);
+            // M9a delivered both icons. A named file that is not there is a
+            // null sprite, which the scene build's wiring sweep refuses, so the
+            // build itself is what proves these resolve.
+            Assert.AreEqual("Assets/_Project/Art/Items/Relics/Processed/bellwethers_bell.png", bell.IconPath);
 
             Assert.AreEqual("Toll of the Flock", toll.DisplayName);
             Assert.AreEqual(RelicEffect.TollOfTheFlock, toll.Effect);
@@ -342,8 +342,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(
                 "Every third turn Shawn takes, a ghost flock charges every enemy. It hits harder while he is transformed.",
                 toll.Description);
-            Assert.AreEqual("", toll.IconPath);
+            Assert.AreEqual("Assets/_Project/Art/Items/Relics/Processed/toll_of_the_flock.png", toll.IconPath);
             Assert.AreEqual("Audio/Sfx/Events/bell_in_the_fog/flock_charge", toll.Vfx.sfxPath);
+            // The ghost flock (ART_PIPELINE 5b): one travelling layer out of
+            // Spells/toll_of_the_flock, whose recipe SpellVfxRecipeDriftTests reads.
+            Assert.AreEqual(1, toll.Vfx.layerFormat);
+            Assert.AreEqual(1, toll.Vfx.layers.Length);
+            Assert.AreEqual("Spells/toll_of_the_flock", toll.Vfx.layers[0].path);
+            Assert.IsTrue(toll.Vfx.layers[0].Travels, "the flock charges across the stage");
         }
     }
 }
