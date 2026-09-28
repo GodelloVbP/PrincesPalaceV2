@@ -286,8 +286,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator SevenRelicsPageRatherThanLosingTheOnesThatDoNotFit()
         {
             // The shop sells relics with no cap and rerolls its shelf, so a run
-            // past one page is reachable. The rows past the last one used to be
-            // dropped without a word.
+            // past one page is reachable.
             var ids = Enumerable.Range(0, 7).Select(i => "relic_paging_" + i).ToList();
             RunManager.Run.relicIds = new List<string>(ids);
             int perPage = PrincesPalace.Domain.UiKit.Screens.ReckoningScreen.RelicRowCount;

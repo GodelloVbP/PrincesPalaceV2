@@ -8,13 +8,11 @@ namespace PrincesPalace.PlayModeTests
 {
     // The health a run carried in lands on the character it belongs to.
     //
-    // ApplyStartingHealth zips two lists BY INDEX. It used to be handed the ids
-    // the ROLL produced and the combatants the ADAPTER produced, and those two
-    // agree only while every id resolves: Build SKIPS an id that names no
-    // content ("Anything that cannot be found is SKIPPED rather than
-    // substituted" -- its own header), and it skips it in place, so one
-    // unresolvable id in the middle of a squad shifts every combatant after it
-    // one place left against the id list.
+    // ApplyStartingHealth zips two lists BY INDEX: the ids the roll produced
+    // and the combatants the adapter produced. Those two agree only while
+    // every id resolves, since Build skips an id that names no content, in
+    // place -- so one unresolvable id in the middle of a squad shifts every
+    // combatant after it one place left against the id list.
     //
     // That is reachable rather than theoretical: FieldableParty passes the
     // save's squad ids through without asking ContentDatabase whether they

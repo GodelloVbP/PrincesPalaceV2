@@ -15,32 +15,18 @@ namespace PrincesPalace.PlayModeTests
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 2, segment 8: a real
     // pad-driven WIN, and the two reward screens it opens onto.
     //
-    // DEVIATION, NAMED RATHER THAN GUESSED PAST: the brief's own phrase
-    // "fight victory -> reward track" names ONE screen, but the real game
-    // has TWO, and they are not the same thing. The instant a fight is won,
-    // FightController.OpenReckoning shows the RECKONING (an item pick) --
-    // that is what "Move along ... Submit to take one ... Continue" (this
-    // plan's own section 13 checklist, the Victory bullet) actually
-    // describes, and ReckoningGamepadNavigationTests already proves its
-    // rail/ScrollTo-shaped claims at the screen level. The REWARD TRACK
-    // (RewardTrackController, "Move along its rail... ScrollTo followed...
-    // literal level... Submit collect if owed" -- language that only makes
-    // sense against a LEVEL rail, which the Reckoning has none of) is a
-    // different screen entirely, reached from the System Menu's own
-    // Character & Inventory tab (DossierTrackRow), not opened automatically
-    // by a win. Grepped: nothing in FightController/FightBootstrap ever
-    // calls RewardTrackController -- confirmed rather than assumed.
+    // Winning a fight opens the RECKONING (an item pick), proven at the
+    // screen level by ReckoningGamepadNavigationTests. The REWARD TRACK
+    // (RewardTrackController) is a separate screen reached from the System
+    // Menu's Character & Inventory tab, not opened automatically by a win.
     //
-    // So this segment proves BOTH, as two separate journeys sharing one
-    // class: the fight-to-Reckoning path really is one continuous session
-    // (win, take or skip, Continue, land on the Map); the reward track is
-    // reconstructed separately, from the Hub, with a level/claimed state
-    // built to owe something -- crediting that same debt DURING the pad-
-    // driven fight above would mean pinning an exact experience-to-level
-    // threshold this file has no business asserting, and
-    // RewardTrackGamepadNavigationTests already proves the rail/ScrollTo
-    // mechanism itself; what this segment adds is that the SAME real Hub
-    // scene reaches it end to end through the dispatcher.
+    // This class proves both, as two separate journeys: the fight-to-
+    // Reckoning path stays one continuous session (win, take or skip,
+    // Continue, land on the Map); the reward track is reconstructed
+    // separately from the Hub with a level/claimed state built to owe
+    // something, since crediting that debt during the fight above would
+    // mean pinning an exact experience-to-level threshold this file has no
+    // business asserting.
     public class JourneyVictoryToRewardScreensTests : JourneyFixture
     {
         // FightSettlementTests' own seed -- "a run known to generate a leg
@@ -233,13 +219,10 @@ namespace PrincesPalace.PlayModeTests
             yield return MoveDown(); // the tab's own Down lands on the first equipment slot, Head
             AssertSelectedName("DossierSlotHead", "the tab bar's Down should land on the first equipment slot");
 
-            // RE-PATHED, not relaxed, by hardware round 1 item 6: this used to
-            // be Down then one Left, because index pairing sent Necklace's
-            // Left 188 units down the screen to the reward-track row. Now that
-            // a sideways press keeps the player's height, Left from anywhere
-            // in the top half of the loadout reaches the roster pager, which
-            // is what is actually beside it -- so the route to a nav row is
-            // down column A, which is where the nav rows are.
+            // A sideways press keeps the player's height, so Left from
+            // anywhere in the top half of the loadout reaches the roster
+            // pager, which is what is actually beside it -- the route to a
+            // nav row is down column A, which is where the nav rows are.
             //
             // The pager is NOT in this journey's graph: it is hidden for a
             // squad that has nobody else to page to, so the whole of column A
@@ -264,12 +247,12 @@ namespace PrincesPalace.PlayModeTests
             // does, so the ScrollTo assertion below is not racing it.
             yield return new WaitForSecondsRealtime(0.5f);
 
-            // NEW CONTRACT (owner, 2026-09-23): opening the track focuses the
-            // CURRENT level's dot (RewardTrackController.CurrentLevelDot()),
-            // not the track's first dot -- the fixture set every squad
-            // member's level to 12 above, so 12 is that dot, taken as the
-            // fixture's own literal rather than re-derived by calling the
-            // controller's private method from outside it.
+            // Opening the track focuses the CURRENT level's dot
+            // (RewardTrackController.CurrentLevelDot()), not the track's
+            // first dot -- the fixture set every squad member's level to 12
+            // above, so 12 is that dot, taken as the fixture's own literal
+            // rather than re-derived by calling the controller's private
+            // method from outside it.
             const int currentLevel = 12;
             var entryDot = Node($"TrackDot{currentLevel}");
             Assert.IsNotNull(entryDot, "the track has no dot for the fixture's current level");
@@ -305,15 +288,9 @@ namespace PrincesPalace.PlayModeTests
                 "Submit on the collect button should claim through the earned level, exactly once");
             Assert.AreNotEqual(before, character0.claimedTrackLevel, "the claim should actually have happened");
 
-            // ADAPTED, NOT RELAXED. This used to assert that one Cancel from
-            // inside the track closed the whole menu, on the "this pane does
-            // not claim Cancel" rule the pack and spells panels then shared.
-            // The hardware play-test rejected exactly that behaviour, naming
-            // this exact screen pair: "Back (B) should not close a screen but
-            // take you back first (e.g. reward track to character sheet
-            // screen)." The question is the one this test always asked -- what
-            // does one Cancel press cost from in here -- and the answer is now
-            // one level rather than three.
+            // One Cancel press inside the reward track steps back one screen
+            // level, to the character sheet, rather than closing the whole
+            // menu.
             //
             // Node() is GameObject.Find, which sees only active objects, so
             // the panel is held BEFORE the press that deactivates it.

@@ -197,8 +197,8 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- what a load hands the settlement -------------------------------------
 
-        // Settle reads exactly two run lists that Reconcile used to walk past:
-        // bossesKilled and ledger. The boss list is the one that is money --
+        // Settle reads exactly two run lists: bossesKilled and ledger. The
+        // boss list is the one that is money --
         // an ember per boss never killed before, and the id then goes onto
         // save.defeatedBossIds permanently, where DefeatDistinctBosses counts
         // it. A boss renamed in enemies.json between quitting and resuming
@@ -304,12 +304,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, run.roomsCleared, "a room you died in was not cleared");
             Assert.AreEqual(9, run.deepestStep, "but you still got that deep");
 
-            // "And it paid nothing" used to be asserted here off a goldGained
-            // argument. It has moved rather than gone: RecordRoom no longer
-            // takes gold at all, and a lost fight pays nothing because the
-            // orchestrator's BankPayout is on the win side of the branch.
-            // RunManagerTests.TreasureGoldIsGoldTheRunEarned pins the other
-            // half -- that everything which DOES pay counts.
+            // RecordRoom does not take gold at all: a lost fight pays
+            // nothing because the orchestrator's BankPayout is on the win
+            // side of the branch. RunManagerTests.TreasureGoldIsGoldTheRunEarned
+            // pins the other half -- that everything which DOES pay counts.
         }
 
         [Test]

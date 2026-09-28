@@ -11,14 +11,12 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.PlayModeTests
 {
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 2, segment 3: the system
-    // menu mid-fight -- section 3's own transition case (a Cancel that pops
-    // a modal over Fight cannot also reach Fight's own branch the SAME
-    // call), proven end to end rather than only at the dispatcher-fixture
-    // level CancelOpensSystemMenuTests already covers. The fight is
-    // reconstructed the same deterministic way JourneyFightRoundTests does
-    // (see that file's own header for why: NUnit does not guarantee
-    // cross-class order, so every journey segment reconstructs its own
-    // precondition rather than reading a sibling class's leftover state).
+    // menu mid-fight. A Cancel that pops a modal over Fight cannot also
+    // reach Fight's own branch the same call; this proves that end to end
+    // rather than only at the dispatcher-fixture level
+    // (CancelOpensSystemMenuTests). The fight is reconstructed here rather
+    // than read from a sibling class's leftover state, since NUnit does not
+    // guarantee cross-class order.
     public class JourneySystemMenuMidFightTests : JourneyFixture
     {
         private FightController _fight;
@@ -61,15 +59,12 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
-        // Steps the tab strip with the trigger shortcut (phase 3 item 2;
-        // reassigned from the shoulders to the triggers by the owner's
-        // 2026-09-19 hardware-round call) rather than Move -- a required
-        // action in its own right (section 13's own checklist: "stick
-        // across every tab... with the shoulder buttons... as well as
-        // Move"), and the more direct of the two paths this segment could
-        // take. Capped rather than unbounded: a strip that never reaches
-        // Options is this test's own failure to report, not an infinite
-        // loop to hang the suite on.
+        // Steps the tab strip with the trigger shortcut (tab-stepping is on
+        // the triggers, not the shoulders) rather than Move -- a required
+        // action in its own right, and the more direct of the two paths
+        // this segment could take. Capped rather than unbounded: a strip
+        // that never reaches Options is this test's own failure to report,
+        // not an infinite loop to hang the suite on.
         private IEnumerator StepTabsUntilOptions()
         {
             int optionsIndex = SystemMenuTabs.IndexOf(SystemMenuTab.Options);

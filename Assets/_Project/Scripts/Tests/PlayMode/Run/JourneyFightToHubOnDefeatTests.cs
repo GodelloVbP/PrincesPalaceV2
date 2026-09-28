@@ -10,26 +10,14 @@ using PrincesPalace.Domain.Dungeon;
 namespace PrincesPalace.PlayModeTests
 {
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 2, segment 4: finishing
-    // the fight and reaching the Hub -- section 13's own checklist bullet
-    // ("finish or flee the fight the way the game allows on this screen...
-    // confirm the stick reaches whichever one the mouse could").
+    // the fight and reaching the Hub by gamepad, matching what the mouse
+    // can reach.
     //
-    // DEVIATION FROM THE BRIEF'S "win it, or flee", STATED RATHER THAN
-    // GUESSED PAST: FightScreen.cs's own header on BuildVerbColumn records
-    // that Flee/Run was REMOVED, not hidden -- "it never actually fled a
-    // fight... there was no Flee/Run method anywhere in FightSession to wire
-    // it to" -- so there is no flee verb to press. And winning does not
-    // reach the Hub either: FightController.LeaveFight (the one exit both
-    // Reckoning's and Defeat's Dismissed share) is
-    // `Navigation.Go(RunManager.HasRun ? Navigation.Map : Navigation.Hub)`,
-    // and a win leaves the run standing (RunOrchestrator.SettleFight only
-    // calls RunManager.EndRun on a LOSS) -- so a won fight's own Continue
-    // leads back to the Map, not the Hub (that is segment 7's own path, on
-    // the descent's second traversal). A deliberate loss is the one route
-    // this screen actually offers to the Hub, and it is an established,
-    // sanctioned way to reach it in this project's own test suite --
-    // FightSettlementTests' WalkInOn/solo-squad pattern, reused here through
-    // the pad instead of through Button.onClick.
+    // A deliberate loss is the only route this screen offers to the Hub:
+    // FightScreen has no flee verb, and a win returns to the Map instead
+    // (FightController.LeaveFight goes to Map while a run is active). This
+    // drives FightSettlementTests' WalkInOn/solo-squad pattern through the
+    // pad instead of Button.onClick.
     public class JourneyFightToHubOnDefeatTests : JourneyFixture
     {
         // FightSettlementTests' own seed -- "a run known to generate a leg

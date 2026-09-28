@@ -71,8 +71,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(content, "the reward track has no content rect");
             Assert.IsNotNull(viewport, "the reward track has no viewport");
 
-            // 38 and 10, far apart on a forty-level rail -- the pair used to
-            // be 90 and 50, which the progression v2 cap removed.
+            // 38 and 10, far apart on a forty-level rail.
             Press("TrackDot38");
             yield return null;
 

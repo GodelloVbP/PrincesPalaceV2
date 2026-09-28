@@ -179,10 +179,10 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the real petting_zoo --------------------------------------------------------
 
-        // Where the double press was found: on `petter`, "Bjorn pets the sheep"
-        // is index 0 and concludes the event on its result (one choice per
-        // visit, owner 2026-09-25). The second press arrives after the event
-        // has concluded, is refused as StalePage, and spends nothing.
+        // On `petter`, "Bjorn pets the sheep" is index 0 and concludes the
+        // event on its result (one choice per visit). The second press
+        // arrives after the event has concluded, is refused as StalePage,
+        // and spends nothing.
         // NEEDS BUILT CONTENT: petting_zoo in Resources/Content.
         [Test]
         public void PettingZoo_ADoubleBjornPets_IsRefusedAfterTheEventConcludes()

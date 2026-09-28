@@ -8,14 +8,10 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 2, segment 9: the
-    // smallest of the five, and the one this plan's own status header says
-    // depends on wherever segment 8 ends -- reconstructed here from the Hub
-    // directly (the state segment 8's own Reckoning Continue returns to on a
-    // win, and the state every fresh descent starts from) rather than
-    // chained onto that file's own class, for the same cross-class-order
-    // reason every segment in this suite reconstructs its own precondition
-    // (JourneyFightRoundTests' own header).
+    // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 2, segment 9. Starts
+    // from the Hub directly, the state every fresh descent starts from,
+    // rather than chaining onto another segment's class (every segment in
+    // this suite reconstructs its own precondition).
     //
     // The system menu's "Main Menu" tab is ExitsScreen (ExitsController) --
     // three ways out, none on one press (that file's own header). This

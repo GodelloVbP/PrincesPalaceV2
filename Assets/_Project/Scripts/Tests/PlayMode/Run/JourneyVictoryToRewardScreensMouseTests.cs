@@ -280,14 +280,12 @@ namespace PrincesPalace.PlayModeTests
                 "clicking the collect button should claim through the earned level, exactly once");
             Assert.AreNotEqual(before, character0.claimedTrackLevel, "the claim should actually have happened");
 
-            // ADAPTED, NOT RELAXED, alongside its pad twin: hardware round 1
-            // item 5 replaced "Cancel closes the whole menu from any pane"
-            // with "Cancel steps back exactly one level", and the reward
-            // track is the owner's own worked example of it. Still
-            // PressCancel and not a click -- the panel's Close button is the
-            // mouse's own way out and is already covered on the pad path;
-            // what is being proven here is that the ESC a mouse player still
-            // has costs them the same one level it costs a pad player.
+            // Cancel steps back exactly one level rather than closing the
+            // whole menu. Still PressCancel and not a click -- the panel's
+            // Close button is the mouse's own way out and is already
+            // covered on the pad path; what is being proven here is that
+            // the ESC a mouse player still has costs them the same one
+            // level it costs a pad player.
             //
             // Held before the press for the same reason the pad twin holds
             // it: Node() cannot find a deactivated object.

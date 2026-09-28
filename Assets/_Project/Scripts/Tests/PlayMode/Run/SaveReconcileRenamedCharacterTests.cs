@@ -7,7 +7,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // A save whose squad names a character that was renamed out from under it.
     //
-    // The live instance is tonight's placeholder_brawler -> bear rename: a
+    // The live instance is the placeholder_brawler -> bear rename: a
     // profile written before it carries selectedCharacterIds with an id that
     // ContentDatabase no longer resolves. The question this pins is whether
     // Reconcile RE-SEATS the replacement or silently ships a squad of two --
@@ -26,8 +26,7 @@ namespace PrincesPalace.PlayModeTests
     // and names nothing that could ever resolve.
     public class SaveReconcileRenamedCharacterTests
     {
-        // The real one. Any id content no longer carries reproduces the same
-        // shape, and this is the rename that made the case worth pinning.
+        // Any id content no longer carries reproduces the same shape.
         private const string RenamedAwayId = "placeholder_brawler";
 
         [SetUp]

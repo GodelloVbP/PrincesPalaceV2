@@ -11,26 +11,17 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.PlayModeTests
 {
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 3: the mouse-only
-    // regression for segment 1 -- the same journey
-    // JourneyToFirstFightTests proves on the pad, replayed with the mouse
-    // only, to prove phases 1-3 broke nothing for mouse play. Shares this
-    // fixture's own assertion helpers (AssertSelectedName,
-    // AssertFightIsTopWithNoSelection, WaitForScene, WaitUntil, Node) rather
-    // than restating any of their bodies -- only the INTERACTION shape
+    // regression for segment 1, replaying JourneyToFirstFightTests' journey
+    // with the mouse only. Shares that fixture's own assertion helpers
+    // rather than restating their bodies -- only the interaction shape
     // differs between the two files.
     //
-    // WHERE THIS DIFFERS FROM THE PAD VERSION, stated once here rather than
-    // per line: a mouse click reaches a control directly, so every
-    // Move-then-Submit walk in the pad file collapses to one Click on the
-    // final target -- there is no "aim, then confirm" for a pointer. And
-    // entry selection right after a screen opens is not asserted here: which
-    // node the pad's own declared entry would be is a fact about a stick
-    // player who has pressed nothing yet, not about a mouse player who is
-    // about to click whatever they clicked -- section 6's own reselection
-    // rule only matters once a click has actually happened, which is where
-    // this file's own assertions pick back up (model state and the visible
-    // result, same claims the pad file makes about what commits, resolves and
-    // loads).
+    // A mouse click reaches a control directly, so every Move-then-Submit
+    // walk in the pad file collapses to one Click on the final target.
+    // Entry selection right after a screen opens is not asserted here,
+    // since that is a fact about a stick player who has pressed nothing
+    // yet; this file's assertions pick up once a click has happened
+    // (model state and the visible result).
     public class JourneyToFirstFightMouseTests : JourneyFixture
     {
         private string _root;

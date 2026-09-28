@@ -63,16 +63,15 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, stockEntry.riftTier);
         }
 
-        // Item-modifier plan Phase B: the weapon-family modifier axis
-        // collapsed (sturdy/nimble/hallowed/arcane/verdant/heavy/quick/
-        // cunning all gone), so an item id like "sword_sturdy_p5" that a save
-        // could have equipped before this phase no longer resolves through
-        // ContentDatabase at all. Reconcile()'s existing tolerant-prune path
-        // already handles this generically -- the SAME path a renamed/
-        // removed item of any kind goes through, no special-casing added for
-        // weapons specifically (Domain/Equipment/EquipmentLoadout.cs
-        // RemoveEntriesWhere, called from SaveData.Reconcile): the slot is
-        // cleared, and because ContentDatabase.GetItem returns null for the
+        // The weapon-family modifier axis is gone (sturdy/nimble/hallowed/
+        // arcane/verdant/heavy/quick/cunning), so an item id like
+        // "sword_sturdy_p5" no longer resolves through ContentDatabase at
+        // all. Reconcile()'s tolerant-prune path handles this generically --
+        // the SAME path a renamed/removed item of any kind goes through, no
+        // special-casing added for weapons specifically
+        // (Domain/Equipment/EquipmentLoadout.cs RemoveEntriesWhere, called
+        // from SaveData.Reconcile): the slot is cleared, and because
+        // ContentDatabase.GetItem returns null for the
         // orphaned id, it is NOT handed back to the stash (the stash-return
         // branch only runs when the item still resolves under some other
         // classification) -- so the character just ends up unequipped in
