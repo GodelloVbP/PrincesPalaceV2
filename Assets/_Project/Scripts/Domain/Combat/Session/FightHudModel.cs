@@ -700,7 +700,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             AddIfApplicable(panel.Stats, "MANA", ManaCostLabel(skill, primaryTag));
             AddIfApplicable(panel.Stats, "COST", ResourceOrHealthCostLabel(skill, actor, resourceName));
-            AddIfApplicable(panel.Stats, "COOLDOWN", CooldownRowLabel(skill.CooldownTurns, cooldownRemaining));
+            AddIfApplicable(panel.Stats, "COOLDOWN", CooldownRowLabel(FightSession.CooldownTurnsFor(actor, skill), cooldownRemaining));
             AddIfApplicable(panel.Stats, "POWER", PowerLabel(session, actor, skill));
             AddIfApplicable(panel.Stats, "DEFENSE", DefenseLabel(session, actor, skill));
 
@@ -759,7 +759,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 panel.Icons.Add(new DetailIcon(DetailIconKind.Cost, "cost", cost));
             }
 
-            string cooldown = CooldownIconValue(skill.CooldownTurns, cooldownRemaining);
+            string cooldown = CooldownIconValue(FightSession.CooldownTurnsFor(actor, skill), cooldownRemaining);
             if (!string.IsNullOrEmpty(cooldown))
             {
                 panel.Icons.Add(new DetailIcon(DetailIconKind.Cooldown, "cooldown", cooldown));

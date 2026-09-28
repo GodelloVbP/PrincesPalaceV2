@@ -205,6 +205,24 @@ namespace PrincesPalace.Domain.Combat
         // Read at FightSession.ResolveWard. See PlantedShield.
         public readonly PlantedShield PlantedShield = new PlantedShield();
 
+        // PHASE 2, THE ROOT FURY ENGINES. None = the primary pool's authored
+        // flat gains pay, exactly as before; any other kind replaces them for
+        // this combatant. Read at FightSession.NoteDamageForPools and
+        // TickPrimaryPool. See FuryEngine.
+        public readonly FuryEngine FuryEngine = new FuryEngine();
+
+        // The Einherjar tree's seams (EinherjarSeams.cs). Momentum is off
+        // until Enabled; the other two are null = off.
+        public readonly Momentum Momentum = new Momentum();
+        public BattleTrance BattleTrance;
+        public TwinRampageRule TwinRampage;
+
+        // PER-HOLDER SKILL COOLDOWNS, by skill id: when present (> 0) it
+        // replaces the skill's authored cooldownTurns for this combatant only
+        // -- Second Wind granted by the Juggernaut root carries 4 where the
+        // row itself has none. Read by SkillCooldowns.TurnsFor.
+        public readonly Dictionary<string, int> CooldownOverrides = new Dictionary<string, int>();
+
         // Always a real (possibly empty) list rather than nullable — unlike
         // Signature/BreakShield, which are each ONE mechanic a combatant
         // either has or does not, a combatant can pick up any number of

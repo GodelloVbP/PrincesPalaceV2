@@ -186,24 +186,24 @@ namespace PrincesPalace.Domain.Tests
         public void BreakShards_HitTheAttackerWhenTheActionSettles()
         {
             var r = Fight();
-            r.Bjorn.PlantedShield.BreakShardDamage = 25;
+            r.Bjorn.PlantedShield.BreakShards = true;
             r.Session.PlantShield(r.Bjorn);
 
             r.Session.StrikeForTest(r.Foe, r.Bjorn, 280, DamageType.Physical);
             Assert.AreEqual(1000, r.Foe.CurrentHealth, "queued, not dealt mid-swing");
 
             r.Session.SettleShieldReactionsForTest(physicalMove: false);
-            Assert.AreEqual(975, r.Foe.CurrentHealth);
+            Assert.AreEqual(974, r.Foe.CurrentHealth, "20% of the 130 shield: 26");
 
             r.Session.SettleShieldReactionsForTest(physicalMove: false);
-            Assert.AreEqual(975, r.Foe.CurrentHealth, "paid once");
+            Assert.AreEqual(974, r.Foe.CurrentHealth, "paid once");
         }
 
         [Test]
         public void NoShards_WhenTheShieldIsOnlyDented()
         {
             var r = Fight();
-            r.Bjorn.PlantedShield.BreakShardDamage = 25;
+            r.Bjorn.PlantedShield.BreakShards = true;
             r.Session.PlantShield(r.Bjorn);
 
             r.Session.StrikeForTest(r.Foe, r.Bjorn, 140, DamageType.Physical);
@@ -250,7 +250,7 @@ namespace PrincesPalace.Domain.Tests
         public void ARemovedEntry_EndsThePlacementWithoutShards()
         {
             var r = Fight();
-            r.Bjorn.PlantedShield.BreakShardDamage = 25;
+            r.Bjorn.PlantedShield.BreakShards = true;
             r.Session.PlantShield(r.Bjorn);
 
             r.Bjorn.Statuses.Remove(r.Bjorn.PlantedShield.Ward); // Shatter, a dispel
@@ -523,6 +523,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(shield.IsPlaced);
             Assert.IsTrue(shield.CanPlace);
             Assert.AreEqual(0, shield.ThornsPercent + shield.ReflectMagicPercent + shield.BreakShardDamage);
+            Assert.IsFalse(shield.BreakShards);
             Assert.IsFalse(shield.SilenceCasterOnSpellHit || shield.CoversParty || shield.ShortWaitAfterBash);
             Assert.AreEqual(190, r.Bjorn.CurrentHealth);
             Assert.AreEqual(100, r.Ally1.CurrentHealth);

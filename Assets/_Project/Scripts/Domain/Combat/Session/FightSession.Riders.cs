@@ -147,6 +147,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // before the fight-over check for the retaliation's reason.
             SettleShieldReactions(physicalMove);
             if (physicalMove) TriggerPhysicalMoveRetaliation(_encounter.Current);
+            SettleEngineAction(_encounter.Current);
 
             // Read-then-reset up front, unconditionally, so a flag can never
             // leak into a fight that is ending right here or a turn that has
@@ -391,6 +392,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // own header. Scoped to this actor only: another combatant's
             // once-per-turn locks must survive until THEIR turn starts.
             _locks.ResetTurn(actor);
+            StartEngineAction(actor);
 
             TickPrimaryPool(actor);
             ApplyRunicWardConversion(actor);
@@ -528,30 +530,15 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null) return;
 
             _locks.ResetTurn(actor);
+            StartEngineAction(actor);
             TickPrimaryPool(actor);
             ApplyRunicWardConversion(actor);
             RefreshNecklaceSpeed(actor);
         }
 
-        // THE ONE TURN-START TICK FOR THE PRIMARY POOL, and the whole of the
-        // gain/decay rule for it. Was RegenerateMana, which only ever added
-        // ManaRegen; the pool now owns both halves, so widening this to a
-        // resource that decays on an idle turn is authored rather than coded
-        // (ResourcePool.TickTurnStart).
-        //
-        // NOT through CombatMath.RestoreMana, and the difference matters: a
-        // per-turn gain is the pool's own income, not a mana effect, so a
-        // pool that refuses potions still regenerates whatever it authored.
-        //
-        // The per-turn gain for the SIGNATURE pool is deliberately still at
-        // the bottom of GrantTurnStart rather than folded in here: it is
-        // Charisma-scaled and talent-fed (SignaturePerTurnFor), it says
-        // something when it overflows, and moving it would change the order
-        // two pools fill in for no gain.
-        private void TickPrimaryPool(CombatantState actor)
-        {
-            actor?.PrimaryPool?.TickTurnStart();
-        }
+        // TickPrimaryPool, the primary pool's one turn-start tick, lives in
+        // FightSession.FuryEngines since Phase 2 (the Juggernaut engine's
+        // income and its decay switch sit in it).
 
         // Runic's mana->Ward conversion: at the start of the wearer's own
         // turn, whatever mana is sitting UNSPENT (including the regen this
@@ -962,7 +949,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ReportDamageTick(CombatantState actor, StatusEffects.TickRow row, bool ownsBeat,
             Func<int, string> line = null)
         {
-            NoteDamageForPools(null, actor, row.Thrown);
+            NoteDamageForPools(null, actor, row.Thrown, isHit: false);
 
             // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
             // already uses ("attacks X for N damage!" followed by "X's Wool

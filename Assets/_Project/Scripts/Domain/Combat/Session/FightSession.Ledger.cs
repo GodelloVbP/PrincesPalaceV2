@@ -196,6 +196,15 @@ namespace PrincesPalace.Domain.Combat.Session
             int deferred = isHit ? DeferIntoDelayedDamage(target, amount, type) : 0;
             amount -= deferred;
 
+            // BATTLE TRANCE (Einherjar): a share of what would land NOW is
+            // paid with Fury instead -- after the deferral, so the two never
+            // take the same point, and before the egg's lethal check, which
+            // then asks about what is left. Hits only, like the deferral. The
+            // attacker's Dealt row still books the whole blow.
+            int tranced = isHit ? SoakWithBattleTrance(target, amount) : 0;
+            amount -= tranced;
+            deferred += tranced;
+
             // Phoenix Egg, about to hatch: this hit would otherwise be
             // fatal. Intercepted BEFORE Cursed Idol's bonus/CombatMath ever
             // sees it -- the egg replaces the blow entirely rather than
@@ -345,7 +354,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // `actor` may be null and that is the unattributed case, not an error:
         // NotePoolActivity and GrantPrimaryOnDamagingAction are both no-ops on
         // one.
-        private void NoteDamageForPools(CombatantState actor, CombatantState target, int amount)
+        //
+        // `isHit` is false for a status tick's row and a delayed-damage
+        // installment: they are damage the pools hear, not HITS, which is the
+        // distinction the Sentinel engine and Momentum's stack loss read.
+        //
+        // THE PHASE 2 ENGINES (FightSession.FuryEngines): a combatant with a
+        // FuryEngine set is paid by it INSTEAD of the flat gainOnAttack /
+        // gainOnDamageTaken below. Engine None is exactly the old behaviour.
+        private void NoteDamageForPools(CombatantState actor, CombatantState target, int amount, bool isHit = true)
         {
             if (amount <= 0) return;
 
@@ -363,7 +380,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Fired BEFORE CommitBeat, so the Vitals snapshot the HUD replays
             // is the one taken after the gain: the meter moves on the beat
             // that shows the hit, not on the next one.
-            GrantPrimaryOnDamagingAction(actor);
+            if (FlatGainsPay(actor)) GrantPrimaryOnDamagingAction(actor);
 
             // AND gainOnDamageTaken, at the same seam and for the same reason.
             // It used to sit at the enemy's plain-swing verb beside Wool's,
@@ -371,7 +388,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // player-side blow paid the victim nothing. See
             // GrantPrimaryOnDamageTaken for why this one carries no per-turn
             // lock where its gainOnAttack twin does.
-            GrantPrimaryOnDamageTaken(target);
+            if (FlatGainsPay(target)) GrantPrimaryOnDamageTaken(target);
+
+            PayEnginesForDamage(actor, target, amount, isHit);
 
             // AND THE SIGNATURE POOL'S, which was left behind at that same verb
             // when the primary pool's half moved here. It had the identical

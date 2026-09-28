@@ -120,7 +120,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // `attacker` is null exactly when AfterDefences was given none; the
         // untyped overload passes DamageType.Physical, the type its own
         // header says untyped damage is.
-        public delegate int WardResolver(CombatantState target, int damage, CombatantState attacker, DamageType type);
+        //
+        // `incoming` is the blow as it arrived, BEFORE the target's defences:
+        // the outgoing figure after the attacker's own crit (and, on the
+        // untyped path, the execute bonus), ahead of effectiveness, Protect/
+        // Vulnerable, resistance, variance and plating. The Sentinel's Fury
+        // engine is measured on it ("raw incoming", plan section 2), so his
+        // defence investment never cuts his income; the ward step is where
+        // it is handed over because it is the one step that already hears
+        // who struck, and the one every real hit reaches.
+        public delegate int WardResolver(CombatantState target, int damage, CombatantState attacker, DamageType type,
+            int incoming);
 
         // +/-20% by default, so two swings that would otherwise deal the
         // identical number read as a roll rather than a rote calculation.
@@ -352,7 +362,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Protect/Vulnerable and resistance handling above, and what it
             // returns can legitimately be ZERO: a pool that ate the whole hit
             // is not a hit that was merely softened.
-            result = resolveWard == null ? result : resolveWard(target, result, attacker, type);
+            result = resolveWard == null ? result : resolveWard(target, result, attacker, type, raw);
 
             return new Outcome(result, effectiveness, detonated, isCrit: isCrit);
         }
@@ -437,7 +447,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // in the same place the typed overload puts it, just ahead of the
             // ward.
             result = ApplyFlatPhysicalReduction(result, target, DamageType.Physical);
-            result = resolveWard == null ? result : resolveWard(target, result, actor, DamageType.Physical);
+            result = resolveWard == null ? result : resolveWard(target, result, actor, DamageType.Physical, raw);
 
             return new Outcome(result, 1f, 0, isCrit: isCrit);
         }

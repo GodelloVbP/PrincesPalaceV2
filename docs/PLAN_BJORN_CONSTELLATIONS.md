@@ -453,6 +453,16 @@ dotnet-only container. Every item names the file, the change and why.
 - Reward-track bear rows left empty (section 1).
 - `implementer` (Opus 5.5 medium).
 
+**Status (2026-09-28): the engine code is built** as a Domain seam
+(`CombatantState.FuryEngine`, session half `FightSession.FuryEngines.cs`,
+tests `FuryEngineTests` `[D]`); see "Phase 2 engines and the Einherjar seams"
+under the Phase 4 engine-seams subsection for the exposed state and the exact
+wiring. With the engine `None` the flat gains pay exactly as before. What
+remains is Unity-side, `-BuildContent`: the three root `TalentEffectType`
+members that set the engine, the `ArmEngineSeams` line that reads them,
+`pools.json` `fury` `gainOnAttack`/`gainOnDamageTaken` to 0, and the empty
+reward-track rows.
+
 ### Phase 3 — Per-character constellation silhouettes
 
 - `ConstellationLayout.Plots` keyed by (character, path) instead of path;
@@ -731,8 +741,10 @@ null = off).
   and for every ally the wall covered. Reset at each placement.
   `BashPlantedShield(holder)` consumes the shield and returns it. Shield Bash
   deals `base + PlantedShield.BashBonus(absorbed, 30)` (floored).
-- Break: `BreakShardDamage` (0 = off) is dealt as Physical to the attacker
-  whose hit emptied the shield. Only a break by a hit counts. An entry that
+- Break: when `BreakShards` is on, `BreakShardDamage` =
+  `max(1, floor(PlacedPoints x BreakShardPercent / 100))` (default 20%,
+  decided 2026-09-28: 26 for today's 130 shield, 52 for a 260 wall) is dealt
+  as Physical to the attacker whose hit emptied the shield. Only a break by a hit counts. An entry that
   something else removed ends quietly.
 - The ward step learns who struck and with what.
   `DamagePipeline.resolveWard` is now a `WardResolver(target, damage,
@@ -776,8 +788,8 @@ null = off).
     attacker.
   - Thorns answer only when the action was a physical MOVE
     (`CombatActions.IsPhysicalMove`, the nearest thing to "melee" here). A
-    physical-typed arrow or spell is not returned. This reading is open to
-    the owner.
+    physical-typed arrow or spell is not returned. Decided (2026-09-28):
+    "melee" = physical move.
   - Each answer is a hit through `DamagePipeline` (no dodge, crit or
     variance) and then `DealDamage`, with the holder as the source and
     `actorActed: false`. Kill credit counts only on the holder's own turn.
@@ -791,7 +803,8 @@ null = off).
      `FightSession.Skills` resolution and gate the menu on `CanPlace` or
      `IsPlaced`.
   2. Append `TalentEffectType` members: `PlantedShieldBreakShards`
-     (magnitude = damage; the value is not set in the plan yet),
+     (a flag: sets `PlantedShield.BreakShards`; the value is decided, 20%
+     of the placement's size, already the default `BreakShardPercent`),
      `ShieldBashShortWait`, `ShieldwallCoversParty`, `ThornsPercent`
      (15), `ReflectMagicPercent` (15) and `SilenceCasterOnSpellHit`. Set
      them on `actor.PlantedShield` in the `ArmEngineSeams` pass.
@@ -806,9 +819,114 @@ null = off).
   5. Art: a planted-shield sprite with cracked and broken states (read
      `IsPlaced` and `Ward.Magnitude` against the placed size), and the
      Shieldwall visual (one wall across the party, read `IsShieldwall`).
-- Not built: Spellbreaker T3 (reflected damage grants half as Fury),
-  Thornwall T2/T3 (slow; disarm on a physical break), and the root's own
-  per-hit Fury engine (Phase 2).
+- Not built: Spellbreaker T3 (reflected damage grants half as Fury) and
+  Thornwall T2/T3 (slow; disarm on a physical break). The root's own per-hit
+  Fury engine is built now (Phase 2, below).
+
+**Phase 2 engines and the Einherjar seams — `CombatantState.FuryEngine`,
+`Momentum`, `BattleTrance`, `TwinRampage`, `CooldownOverrides`**
+(`FuryEngine.cs`, `EinherjarSeams.cs`; session half
+`FightSession.FuryEngines.cs`; tests `FuryEngineTests`,
+`EinherjarSeamsTests`, `[D]`). All off by default; nothing sets them yet.
+
+- The engine: `actor.FuryEngine.Kind = FuryEngineKind.Sentinel |
+  Einherjar | Juggernaut` (None = today). Any engine REPLACES the pool's
+  flat `gainOnAttack`/`gainOnDamageTaken` for that combatant, in
+  `NoteDamageForPools` (the one pool seam). Fury that talent riders grant
+  through `PrimaryPool.Gain` (Unyielding T3, Bellow T3, Hold the Line T2,
+  Bloodfire) is untouched and still pays under every engine.
+- Sentinel, per HIT taken: `FuryEngine.SentinelFury(raw, maxHP)` =
+  `clamp(floor(raw x 150 / maxHP), 3, 25)` — the same helper Shieldwall
+  uses (`PlantedShield.FuryForAbsorbedHit`). RAW = the blow before his
+  defences: `DamagePipeline.WardResolver` now carries a fifth argument,
+  `incoming` (the outgoing figure after the attacker's crit and execute
+  bonus, before effectiveness, Protect/Vulnerable, resistance, variance and
+  plating); `ResolveWard` holds it for the one pool hearing that follows.
+  Consistent with 4a: a hit an ordinary ward eats whole is not heard, so
+  pays nothing (the held figure is dropped); the planted shield's own
+  hearing pays once on the raw figure; a hit that breaks through pays once
+  (pinned). Status ticks and Ignore Pain installments keep his turn from
+  reading idle but are not hits and pay nothing (decided here: "per hit
+  taken"). Blows with no ward step (splash, relic packets, riders) pay on
+  what they dealt. Decay: the pool's default.
+- Einherjar, per damaging ACTION: `FuryEngine.EinherjarFury(damage, Attack)`
+  = `clamp(floor(damage x 10 / Attack), 5, 30)` on the amount the pools
+  hear (post-defence, post-ward). Once per action for its single largest
+  hit: paid as a top-up on the beat of each hit (a bigger later hit pays
+  the difference), so an area sweep pays exactly its largest hit. The action
+  boundary is the flat gain's own (`OpenTurnFor`/`ReopenTurnFor`, where the
+  OncePerTurn locks reset). Hack: `session.BeginPerHitEngineAction(actor)`
+  before resolving makes every hit of that action pay separately
+  (`FuryEngine.PaysPerHit`, cleared at the post-action seams). Riders inside
+  a Hack action also pay per hit. Nothing for being hit. Decay: default.
+- Juggernaut, per turn start: `FuryEngine.JuggernautFury(hp, maxHP)` =
+  `15 x (1 + 3 t^2)` in integers (100% 15, 75% 20, 50% 35, <=25% 60,
+  floored between; pinned). Paid in `TickPrimaryPool` after the pool's own
+  tick, whose idle decay is skipped (`ResourcePool.TickTurnStart(allowDecay)`).
+  Like `gainPerTurn`, it also pays on an extra action's reopen (AUDIT K8's
+  "income per action taken"). No hit-based income.
+- Momentum (`actor.Momentum`): `Enabled` (T1), `ExtendedStackCap` (8
+  instead of 5) and `CritDamagePerStackBonus` (+5% crit damage per stack)
+  for T2, `IgnoresSmallHits` (T3: a hit under 10% max HP keeps the stack).
+  A turn that dealt damage (on his own turn, as the pools heard it) adds a
+  stack at his turn end; a turn that dealt none resets to 0; each HIT taken
+  removes one. `CritRules.ChanceFor`/`DamagePercentFor` add
+  `CritChanceBonus`/`CritDamageBonus`, so rolls, previews and the bot all
+  see it. `FillToCap()` is Headsplitter T3's hook.
+- Battle Trance (`actor.BattleTrance = new BattleTrance(20 or 30)`):
+  `DoublesWhileTransformed` (T2; read off `CombatantState.Transformation`,
+  Bjorn's only form being Berserk), `ProtectWhenEmptied` (T3,
+  `ProtectPercent` 50, `ProtectTurns` 1, through `ApplyStatusTo` — no
+  hashed file touched). In `LandPacket`, after Ignore Pain's deferral: at or
+  above `ThresholdFury` (50; "above 50" read as the 50+ used everywhere
+  else), `floor(hit x pct / 100)` is paid at 1 Fury per 1% max HP rounded
+  up; if the pool cannot cover it, the soak is what the whole pool covers
+  and the pool empties. Hits only. `session.BattleTranceEmptied` fires when
+  a soak empties the pool. OPEN for the owner: with the 50 threshold, one
+  soak only empties the bar on a very large hit (at 60% in Berserk, a hit
+  of about 83% max HP from 50 Fury), so T3 will be rare as designed.
+- Twin Rampage (`actor.TwinRampage = new TwinRampageRule("rampage", 1f, 1,
+  5)`): a DamageAll cast of that skill id at a full-pool tier (spend 100%)
+  with `Cooldown` closed runs `ResolveDamageAllWithTwin`: the Einherjar
+  engine holds (hits tallied, nothing paid), sweep 1 as cast (own beat),
+  sweep 2 at `SecondSweepMultiplier` (own beat), `StunTurns` of Stun on
+  every living enemy sweep 2 landed on through `ApplyStatusTo` (the CC
+  guard and existing stun rules apply), `Cooldown` opens for 5 of his
+  turns, then the held tally pays once for the action's largest hit. No
+  living enemy after sweep 1 = no second sweep and no cooldown.
+- Per-holder cooldowns: `actor.CooldownOverrides["second_wind"] = 4`
+  replaces the row's `cooldownTurns` for that holder
+  (`FightSession.CooldownTurnsFor`, read by `BeginCooldown` and the HUD's
+  COOLDOWN row and icon).
+- Wiring (Unity session, `-BuildContent`):
+  1. `pools.json` `fury`: `gainOnAttack` 0, `gainOnDamageTaken` 0 (with an
+     engine set they are ignored anyway; zeroing them is what makes "no
+     root, no Fury" true).
+  2. Append `TalentEffectType.FuryEngineSentinel`, `FuryEngineEinherjar`,
+     `FuryEngineJuggernaut` (or one member whose Magnitude is the kind) and
+     set `actor.FuryEngine.Kind` in `ArmEngineSeams` from the root node.
+     The Juggernaut root also sets `CooldownOverrides["second_wind"] = 4`.
+     Roots grant Brace / Hack / Second Wind via `grantsSkillId`.
+  3. Hack: a `skills.json` row (DamageSingle, two hits, 0 Fury, 3-turn
+     cooldown) and a `SkillEffect` member or flag whose resolution calls
+     `BeginPerHitEngineAction(actor)` and then deals the two hits (the
+     two-hit resolution itself is new Unity-side work).
+  4. Momentum rows: T1 `Enabled`, T2 `ExtendedStackCap` +
+     `CritDamagePerStackBonus`, T3 `IgnoresSmallHits`
+     (`TalentEffectType` members, set in `ArmEngineSeams`).
+  5. Battle Trance rows: T1 `new BattleTrance(20)`, T2 Percent 30 +
+     `DoublesWhileTransformed`, T3 `ProtectWhenEmptied`.
+  6. Twin Rampage: the slot-20 node sets `actor.TwinRampage = new
+     TwinRampageRule()`; Rampage moves to the slot-10 convergence
+     (`grantsSkillId`).
+  7. Headsplitter (skill: spends all Fury, min 30, scales with Fury spent and
+     missing health, kill refunds half) and Berserk (a `Transformation` via
+     the existing `TransformGrant` seam, 50 Fury, 50% of both defences into
+     Attack, 10 Fury drain per turn, ends at 0; its "no idle decay" reads
+     naturally off the engine only if the Unity wiring switches the pool's
+     decay for the form) are NOT built here: both are skill/transform rows
+     plus new resolution in hashed `SkillEffect`/`Transformation` files.
+  8. Bot valuations for Hack, Headsplitter and Berserk.
 
 ### Build order — vertical slices per constellation (owner-delegated, 2026-09-28)
 
@@ -928,6 +1046,11 @@ as worthless. Separate plan.
   2026-09-28): when granted by the Juggernaut root, Second Wind has a 4-turn
   cooldown — 60 free Fury per turn at low health would otherwise chain
   near-full heals every turn.
+- Planted-shield break shards (2026-09-28): 20% of the shield's max HP (the
+  placement's size), dealt to the breaking attacker; wired as the default
+  `PlantedShield.BreakShardPercent`.
+- Thornwall "melee" (2026-09-28): a physical MOVE
+  (`CombatActions.IsPhysicalMove`), as 4a built it.
 
 ## 7. Open questions
 

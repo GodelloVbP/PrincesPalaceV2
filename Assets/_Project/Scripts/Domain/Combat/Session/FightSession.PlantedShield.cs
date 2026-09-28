@@ -130,9 +130,15 @@ namespace PrincesPalace.Domain.Combat.Session
         //   3. Bookkeeping: what the shield soaked (Shield Bash), a break
         //      (ends the placement, starts the wait, queues shards), Fury.
         //   4. The reactive hooks are QUEUED for the post-action seam.
-        private int ResolveWard(CombatantState target, int damage, CombatantState attacker, DamageType type)
+        private int ResolveWard(CombatantState target, int damage, CombatantState attacker, DamageType type,
+            int incoming)
         {
             if (target == null) return Math.Max(0, damage);
+
+            // The blow as it arrived, for the Sentinel engine's "raw incoming"
+            // (FightSession.FuryEngines): read by the pool hearing this hit
+            // gets, dropped below if the wards leave nothing to hear.
+            NoteIncomingHit(target, incoming);
 
             var own = target.PlantedShield;
             var ownWard = own.IsPlaced ? own.Ward : null;
@@ -184,6 +190,11 @@ namespace PrincesPalace.Domain.Combat.Session
                     QueueShieldAnswers(wallHolder, attacker, wallAbsorbed, type);
                 }
             }
+
+            // A hit the wards ate whole is not heard by the pools (the planted
+            // shield's own hearing above has already consumed the figure), so
+            // nothing may read it later.
+            if (remaining <= 0) DropIncomingHit(target);
 
             return remaining;
         }

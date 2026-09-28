@@ -48,13 +48,32 @@ namespace PrincesPalace.Domain.Combat.Session
                 : 0;
         }
 
+        // THE COOLDOWN THIS CASTER PAYS for this skill: the holder's own
+        // override when one is set (CombatantState.CooldownOverrides -- Second
+        // Wind under the Juggernaut root), else the row's cooldownTurns. The
+        // one answer BeginCooldown and the HUD's COOLDOWN row both read, so the
+        // label cannot promise a number the cast does not charge.
+        public static int CooldownTurnsFor(CombatantState actor, ResolvedSkill skill)
+        {
+            if (skill == null) return 0;
+
+            if (actor != null && !string.IsNullOrEmpty(skill.Id)
+                && actor.CooldownOverrides.TryGetValue(skill.Id, out int overridden) && overridden > 0)
+            {
+                return overridden;
+            }
+
+            return skill.CooldownTurns;
+        }
+
         // Put on cooldown by CASTING it, not by resolving it. A cast refused for
         // want of mana never reaches this; a cast that resolves into nothing
         // because every target died first still spent the turn and still spends
         // the cooldown.
         private void BeginCooldown(CombatantState actor, ResolvedSkill skill)
         {
-            if (actor == null || skill.CooldownTurns <= 0) return;
+            int turns = CooldownTurnsFor(actor, skill);
+            if (actor == null || turns <= 0) return;
 
             if (!_cooldowns.TryGetValue(actor, out var forActor))
             {
@@ -62,7 +81,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 _cooldowns[actor] = forActor;
             }
 
-            forActor[skill.Id] = skill.CooldownTurns;
+            forActor[skill.Id] = turns;
         }
 
         // ONE TURN OFF EVERYTHING THIS ACTOR IS WAITING ON, at the start of

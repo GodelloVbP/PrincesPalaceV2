@@ -34,12 +34,19 @@ namespace PrincesPalace.Domain.Combat
         public const int MinDamagePercent = 100;
 
         // The chance this attacker actually rolls at. 0 for enemies, always --
-        // see this class' header.
+        // see this class' header. Momentum's live stacks (EinherjarSeams) ride
+        // on top of the total here, the one place a chance is read, so the
+        // roll, the preview and the bot's expected value all see them.
         public static int ChanceFor(CombatantState attacker) =>
-            attacker == null || !attacker.IsPlayerSide ? 0 : ClampChance(attacker.CritChancePercent);
+            attacker == null || !attacker.IsPlayerSide
+                ? 0
+                : ClampChance(attacker.CritChancePercent + attacker.Momentum.CritChanceBonus);
 
+        // Momentum T2's +5% crit damage per stack rides here likewise.
         public static int DamagePercentFor(CombatantState attacker) =>
-            attacker == null ? BaseDamagePercent : Math.Max(MinDamagePercent, attacker.CritDamagePercent);
+            attacker == null
+                ? BaseDamagePercent
+                : Math.Max(MinDamagePercent, attacker.CritDamagePercent + attacker.Momentum.CritDamageBonus);
 
         // A crit landed: the outgoing amount times the attacker's crit damage.
         // Same rounding as every other multiplier in the damage path

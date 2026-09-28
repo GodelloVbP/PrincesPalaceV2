@@ -496,7 +496,9 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
 
                 case SkillEffect.DamageAll:
-                    ResolveDamageAll(actor, skill, resourceSpent, poolTier);
+                    // Twin Rampage wraps the sweep when its rule fires; any
+                    // other DamageAll is exactly ResolveDamageAll.
+                    ResolveDamageAllWithTwin(actor, skill, resourceSpent, poolTier);
                     break;
 
                 case SkillEffect.Reclaim:
@@ -1319,7 +1321,9 @@ namespace PrincesPalace.Domain.Combat.Session
             return -1;
         }
 
-        private void ResolveDamageAll(CombatantState actor, ResolvedSkill skill, int resourceSpent,
+        // Returns every enemy the sweep landed on (dodgers excluded, the
+        // felled included) -- Twin Rampage's second sweep stuns exactly those.
+        private List<CombatantState> ResolveDamageAll(CombatantState actor, ResolvedSkill skill, int resourceSpent,
             PoolTierResolution.Result poolTier = default)
         {
             // THE SAME LABEL THE SINGLE-TARGET PATH USES -- "Rampage",
@@ -1534,6 +1538,7 @@ namespace PrincesPalace.Domain.Combat.Session
             ApplyQueuePushAll(actor, skill, struckAndLanded);
 
             AppendMessage(summary.ToString());
+            return struckAndLanded;
         }
 
         // Balance redesign Phase 3 (D3): the caster's own SkillScaling

@@ -16,6 +16,9 @@ namespace PrincesPalace.Domain.Combat.Session
     //   4e Unstoppable / Unyielding -- CrowdControlGuard, read in RecordStatus
     //   4a Planted shield / Shieldwall -- PlantedShield, read in ResolveWard;
     //                        its session half is FightSession.PlantedShield.cs
+    //   Phase 2 root Fury engines, Momentum, Battle Trance, Twin Rampage --
+    //                        FuryEngine / EinherjarSeams; session half
+    //                        FightSession.FuryEngines.cs
     //
     // Every one is OFF for every combatant until something sets it, so the
     // fight is unchanged for anyone the Juggernaut content never touches.
@@ -167,7 +170,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 thrown += amount;
             }
 
-            NoteDamageForPools(null, actor, thrown);
+            NoteDamageForPools(null, actor, thrown, isHit: false);
 
             if (landed > 0)
             {
@@ -255,6 +258,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // 4a: the planted shield's lifetime, its re-place wait and
             // Shieldwall's per-turn Fury cap (FightSession.PlantedShield).
             AgePlantedShield(actor);
+
+            // Momentum and Twin Rampage's cooldown (FightSession.FuryEngines).
+            AgeFuryEngines(actor);
         }
 
         // ---- seams for tests ---------------------------------------------------
@@ -267,6 +273,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // a whole hit around it -- a real hit's LandPacket runs its own crown
         // check afterwards and would hide whether the HEAL fired it.
         public int ResolveWardForTest(CombatantState target, int damage) =>
-            ResolveWard(target, damage, attacker: null, DamageType.Physical);
+            ResolveWard(target, damage, attacker: null, DamageType.Physical, incoming: damage);
     }
 }

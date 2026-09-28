@@ -52,8 +52,17 @@ namespace PrincesPalace.Domain.Combat
         // holder's turn ends, however many allies it soaks for.
         public int PartyFuryCapPerTurn = 40;
 
-        // Damage dealt to the attacker whose hit broke the shield. 0 = off.
-        public int BreakShardDamage;
+        // Break shards: when on, the attacker whose hit broke the shield takes
+        // BreakShardPercent of the placement's size (PlacedPoints) as
+        // Physical. Decided 2026-09-28: 20% of the shield's max HP, so the
+        // shards grow with the same defences the shield does (130 -> 26 for
+        // today's Bjorn, a 260 wall -> 52). Off until the node sets it.
+        public bool BreakShards;
+        public int BreakShardPercent = 20;
+
+        // Floored, at least 1 while on. Read after the break ends the
+        // placement, which is why PlacedPoints outlives End.
+        public int BreakShardDamage => BreakShards ? Math.Max(1, PercentOf(PlacedPoints, BreakShardPercent)) : 0;
 
         // Thornwall: percent of a physical hit from a physical MOVE (a strike
         // or charge -- CombatActions.IsPhysicalMove, the codebase's
@@ -89,6 +98,10 @@ namespace PrincesPalace.Domain.Combat
         // Everything this placement has soaked, from the holder and from every
         // ally it covered. Shield Bash scales from it; reset at each placement.
         public int AbsorbedThisPlacement { get; private set; }
+
+        // The size the latest placement went up at (the ward's points then).
+        // Kept after the placement ends, for the break shards.
+        public int PlacedPoints { get; private set; }
 
         // Shieldwall Fury paid since the holder's last turn end.
         public int PartyFuryThisTurn { get; internal set; }
@@ -153,6 +166,7 @@ namespace PrincesPalace.Domain.Combat
             Ward = ward;
             IsShieldwall = asShieldwall;
             AbsorbedThisPlacement = 0;
+            PlacedPoints = ward?.Magnitude ?? 0;
             Lifetime.Close();
             Lifetime.Open(LifetimeTurns, onHoldersTurn);
         }
