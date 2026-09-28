@@ -175,3 +175,9 @@ can sweep another session's uncommitted work into a commit. Enforced by
 - `game-feel` skill: UI feedback (tweens, pops, transitions) applies;
   feedback never blocks input or touches simulation state — no global
   `Time.timeScale` hit-stop.
+- `refactoring` skill: its "green baseline, small behaviour-preserving
+  steps" rule applies with this project's gates (`docs/TESTING.md`), not
+  its TypeScript/mutation-testing tooling; per-commit approval is replaced
+  by the orchestrator's review.
+- `save-systems` skill: a checklist only (examples are Godot);
+  `Core/SaveSystem.cs` is the save path.
