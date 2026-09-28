@@ -16,8 +16,8 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // HUNT 2026-09-11, FAMILY B (docs/hunt/SCENARIOS.md rows B1 and B28): the
-    // fight screen switched off and switched back on.
+    // FAMILY B (docs/hunt/SCENARIOS.md rows B1 and B28): the fight screen
+    // switched off and switched back on.
     //
     // B1, THE FINDING. Unity stops every coroutine on a component the moment
     // its GameObject goes inactive, and does not resume them on the way back

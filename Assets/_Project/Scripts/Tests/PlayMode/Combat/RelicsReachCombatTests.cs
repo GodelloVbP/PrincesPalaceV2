@@ -103,14 +103,8 @@ namespace PrincesPalace.PlayModeTests
             // needs pinning before the roster grows.
             var relic = AnEffectRelic();
 
-            // TWO MEMBERS, BUILT FROM ONE CHARACTER.
-            //
-            // This used to take the first two of the roster and assert it got
-            // two, so that "the whole party gets it" could not quietly become
-            // "the only party member gets it". The roster shrank to one on
-            // 2026-08-22 -- the other four characters had no art and no
-            // implementation and were removed -- and the guard fired, correctly,
-            // for a reason with nothing to do with relics.
+            // Two members, built from one character: "the whole party gets
+            // it" cannot quietly become "the only party member gets it".
             //
             // The claim is put the same way instead of being weakened: the
             // adapter builds one combatant per id in the list and pairs kits
@@ -138,18 +132,12 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void ANumericRelicChangesTheStatItNames()
         {
-            // RelicModifiers.Apply had ZERO callers when it was written -- an
-            // entire data-driven table that nothing could ever reach. This is
-            // what stops it drifting back to that.
-            // Picked BY THE STAT IT TOUCHES, and asserted rather than skipped.
-            //
-            // This used to take whichever relic came first in sort order with
-            // any modifier at all, then skip if that one happened not to touch
-            // attack. So whether the test ran depended on content ordering --
-            // and a silent skip is precisely how RelicModifiers.Apply would
-            // drift back to zero callers, which is the one thing this test
-            // exists to prevent. Two relics carry modifiers today and only one
-            // of them is an attack relic.
+            // Picked BY THE STAT IT TOUCHES, and asserted rather than
+            // skipped: a silent skip is exactly how RelicModifiers.Apply,
+            // an entire data-driven table, could drift back to zero
+            // callers, which is the one thing this test exists to prevent.
+            // Two relics carry modifiers and only one of them is an attack
+            // relic.
             var withAttack = ContentDatabase.Relics.FirstOrDefault(r =>
                 r != null && r.Data.Modifiers != null &&
                 r.Data.Modifiers.Any(m => m.Stat == RelicStat.Attack));

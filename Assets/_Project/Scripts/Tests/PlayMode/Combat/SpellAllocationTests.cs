@@ -277,13 +277,13 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // THE PLAIN MELEE CASE (finding review, FightController.SpellVfx.cs
+        // THE PLAIN MELEE CASE (FightController.SpellVfx.cs
         // PlayContactFx/ContactPresentation): every swing that authors no
-        // spell of its own reaches this, so it is the single most-called path
-        // in this file. ContactPresentation used to build a fresh
-        // List<SpellLayer> plus one or two SpellLayer objects on every call
-        // even though there are only ever two possible outputs -- now cached
-        // as two static templates and picked between.
+        // spell of its own reaches this, so it is the single most-called
+        // path in this file. ContactPresentation picks between two cached
+        // static templates rather than building a fresh List<SpellLayer>
+        // plus one or two SpellLayer objects on every call, since there are
+        // only ever two possible outputs.
         //
         // NOT A LITERAL ZERO, and this says why rather than silently
         // widening the assertion: SpellPerformance.Resolve still fans out a

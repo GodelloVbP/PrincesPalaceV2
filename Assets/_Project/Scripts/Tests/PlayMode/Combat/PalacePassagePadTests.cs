@@ -18,15 +18,14 @@ namespace PrincesPalace.PlayModeTests
     // DISPATCHER (plan 1.12; docs/GAMEPAD_NAVIGATION_PLAN.md sections 3 and
     // 10).
     //
-    // WHY THIS FILE EXISTS RATHER THAN A HAND CHECK. Milestone C's own gate
-    // asks the owner to confirm the pad path by hand, and the owner was not
-    // available for this pass. The gamepad plan's answer to exactly that
-    // situation is its section 10 "dispatcher integration" shape: a scripted
-    // BaseInput assigned through BaseInputModule.inputOverride, frames driven
-    // with `yield return null`, and the REAL NavigationInputModule reading it
-    // -- which is the same code a controller reaches, not a stand-in for it.
-    // Section 2 of that plan verifies, API by API, that every value the module
-    // reads goes through that seam.
+    // WHY THIS FILE EXISTS RATHER THAN A HAND CHECK. The gamepad plan's
+    // section 10 "dispatcher integration" shape drives it instead: a
+    // scripted BaseInput assigned through BaseInputModule.inputOverride,
+    // frames driven with `yield return null`, and the REAL
+    // NavigationInputModule reading it -- which is the same code a
+    // controller reaches, not a stand-in for it. Section 2 of that plan
+    // verifies, API by API, that every value the module reads goes through
+    // that seam.
     //
     // WHAT IT THEREFORE DOES AND DOES NOT PROVE. It proves that the presses a
     // pad produces reach the picker, that two of them complete a swap, that
@@ -234,10 +233,9 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator CancelAtTheSecondPickStepsBackOnePickRatherThanOutOfTheMenu()
         {
-            // THE OWNER'S RULE FROM 2026-09-18, applied to a depth that did
-            // not exist then: Cancel steps back ONE level first. A held pick
-            // is a level, so the first Cancel drops it and the rack stays up;
-            // only the second leaves.
+            // Cancel steps back ONE level first. A held pick is a level, so
+            // the first Cancel drops it and the rack stays up; only the
+            // second leaves.
             yield return LoadFightWithThePassage();
             yield return OpenThePicker();
             yield return PressSubmit();

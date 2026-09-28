@@ -13,12 +13,10 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // Balance redesign Phase 5D -- balance validation. This IS the balance
-    // authority from here on (§T's own words): §P's five canonical player
-    // profiles ("Canonical profiles and derived targets"), hand-built as
-    // SYNTHETIC CombatantState fixtures carrying §P's exact stat totals
-    // (never assembled by equipping real items -- §P is explicit that the
-    // fixtures are synthetic precisely so this suite does not depend on
+    // This IS the balance authority: §P's five canonical player profiles
+    // ("Canonical profiles and derived targets"), hand-built as SYNTHETIC
+    // CombatantState fixtures carrying §P's exact stat totals (never
+    // assembled by equipping real items, so this suite does not depend on
     // which set pieces produced them), run through the REAL production
     // combat math (CombatMath.ComputeAttackDamage, DamagePipeline.
     // AfterDefences, DifficultyCurve, StatBlock.ScaledForElite via
@@ -29,51 +27,42 @@ namespace PrincesPalace.PlayModeTests
     // FightEncounterAdapter.Build, which read Resources -- see
     // DepthReachesTheEnemiesTests for the same pattern this file follows.
     //
-    // *** ROOT-CAUSE FIX LANDED (2026-08-26) ***
-    //
-    // §P's own derived-combat-chain table was hand-derived WITHOUT
-    // CombatMath.DamageScale. Proof: feed §P's own "WP x M" figure straight
+    // §P's own derived-combat-chain table is derived WITHOUT
+    // CombatMath.DamageScale: feeding §P's own "WP x M" figure straight
     // into the canonical mitigation equation (damage x 100 / (100 + D),
-    // integer division) with NO further multiplier, and all seven "after
-    // DEF" figures in §P's table reproduce EXACTLY -- e.g. Noob@F1 raw 10
-    // vs hollow_choir's MDEF 25: 10 x 100 / 125 = 8, §P's own pinned 8.
-    // D1 says this explicitly: "DamageScale x5 ... are deleted."
+    // integer division) with NO further multiplier reproduces all seven
+    // "after DEF" figures in §P's table exactly -- e.g. Noob@F1 raw 10 vs
+    // hollow_choir's MDEF 25: 10 x 100 / 125 = 8, §P's own pinned 8.
     //
     // CombatMath.ComputeAttackDamage and ComputeSkillDamage -- the two
     // entry points any real basic attack or spell-tier cast calls
     // (FightSession.cs:275, FightSession.Skills.cs:72/88,
-    // FightSession.Enemies.cs:185/472) -- had still been routing through
-    // Scale() and its x5 DamageScale for two prior implementation passes
-    // (one called removing it out of scope, the other found it already
-    // live and built around it). A THIRD real entry point was found during
-    // this fix and carried the identical bug: SkillResolution.Damage, which
+    // FightSession.Enemies.cs:185/472) -- and SkillResolution.Damage
+    // (FightSession.Skills.cs's ResolveDamageSingle/ResolveDamageAll, which
     // every wool/authored-skill cast without fixed damageInstances resolves
-    // through (FightSession.Skills.cs's ResolveDamageSingle/ResolveDamageAll)
-    // -- also fed DamagePipeline.AfterDefences an x5-inflated figure. All
-    // three now return their raw WP x M (or, for SkillResolution, scaledAttack
-    // + flatAmount + power x resourceSpent) figure floored at 1, never
-    // multiplied. CombatMath.Scale()/DamageScale itself is NOT deleted --
-    // it still serves callers that were never part of the mitigated-combat
-    // path: FightSession.Talents.cs's two unmitigated splash sites (Shatter,
-    // Trample's kill splash), which are deliberately left on the old x5
-    // scale (see CombatMath.Scale's own header for why that is worth a
-    // second look before the next playtest). FightHudModel's POWER and
-    // PreviewBasicSpellPower readouts now call ComputeAttackDamage/
-    // ComputeSkillDamage directly instead of duplicating Scale(ScaledAttack
-    // (...)) by hand, so they can never drift from what a real swing deals
-    // again.
+    // through) all return their raw WP x M (or, for SkillResolution,
+    // scaledAttack + flatAmount + power x resourceSpent) figure floored at
+    // 1, never multiplied by CombatMath.Scale()/DamageScale.
+    // CombatMath.Scale()/DamageScale itself still serves callers outside
+    // the mitigated-combat path: FightSession.Talents.cs's two unmitigated
+    // splash sites (Shatter, Trample's kill splash), deliberately left on
+    // the x5 scale (see CombatMath.Scale's own header for why that is
+    // worth a second look before the next playtest). FightHudModel's POWER
+    // and PreviewBasicSpellPower readouts call ComputeAttackDamage/
+    // ComputeSkillDamage directly instead of duplicating
+    // Scale(ScaledAttack(...)) by hand, so they cannot drift from what a
+    // real swing deals.
     //
     // Below, every one of the seven canonical rows is pinned against what
-    // CombatMath returns POST-FIX (per CLAUDE.md gotcha 5 -- pin the real
-    // output, never a recomputed formula). The after-DEF column now
-    // reproduces §P's own figures exactly in every row (see the proof
-    // above); TTK/bossDmg/hitsToDie are close to but not identical to §P's
-    // own hand-derived figures, because AssertFight's Eff/action always
-    // applies the x1.5 rotation multiplier uniformly, while §P's own table
-    // explicitly gives the Noob row "no rotation" (Eff/action = the raw
-    // after-DEF figure, not x1.5) to represent misplaying the rotation --
-    // that nuance was never mechanized here and still is not; see each
-    // test's own comment for the resulting gap.
+    // CombatMath returns (per CLAUDE.md gotcha 5 -- pin the real output,
+    // never a recomputed formula). The after-DEF column reproduces §P's own
+    // figures exactly in every row (see the proof above); TTK/bossDmg/
+    // hitsToDie are close to but not identical to §P's own hand-derived
+    // figures, because AssertFight's Eff/action always applies the x1.5
+    // rotation multiplier uniformly, while §P's own table explicitly gives
+    // the Noob row "no rotation" (Eff/action = the raw after-DEF figure,
+    // not x1.5) to represent misplaying the rotation -- that nuance is not
+    // mechanized here; see each test's own comment for the resulting gap.
     public class BalanceSheetTests
     {
         private const float NoVariance = 0f;
@@ -294,11 +283,8 @@ namespace PrincesPalace.PlayModeTests
                 expectedBossDmg: 28, expectedHitsToDie: 13);
         }
 
-        // The Dungeon Warden and Throne Colossus fights that stood here were
-        // removed with the bosses themselves (2026-09-04): both were v1
-        // placeholders with no art and no kit, and the Forest Troll is the
-        // roster's boss now. Section P's boss bands are therefore unpinned
-        // until a boss with a real kit is authored to them.
+        // The Forest Troll is the roster's boss; section P's boss bands are
+        // unpinned until a boss with a real kit is authored to them.
 
         // ---- non-boss TTK bands ---------------------------------------------
         //
@@ -330,10 +316,8 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void Trash_RatAtFloorFive_CompetentProfile()
         {
-            // §P's own drift story (2.6 -> 3.6 actions across floors) now
-            // shows up in the real numbers: 3 actions at F1 (above), 4 here
-            // -- the same upward drift §P designed, previously invisible
-            // because DamageScale's x5 flattened both ends to one hit.
+            // §P's own drift story (2.6 -> 3.6 actions across floors) shows
+            // up in the real numbers: 3 actions at F1 (above), 4 here.
             var (rat, affinity, _) = RealEnemy("rat", step: 36);
             Assert.AreEqual(540, rat.MaxHealth, "rat HP at step 36");
 
@@ -384,13 +368,10 @@ namespace PrincesPalace.PlayModeTests
             // FightEncounterAdapter.Build(isElite: true), StatBlock.
             // ScaledForElite).
             //
-            // REAL: 29 -- more than TWO AND A HALF TIMES §P's own ceiling,
-            // the largest single discrepancy this file found post-fix (it
-            // was 36 before the 1.2x basic-attack coefficient
-            // (CombatMath.BasicAttackPowerMultiplier) landed -- the
-            // coefficient closes some of the gap but does not erase it).
-            // Under the live x5 this used to read 7 (deceptively close to
-            // §P's band, for the wrong reason -- the x5 was masking it).
+            // REAL: 29 -- more than TWO AND A HALF TIMES §P's own ceiling.
+            // The 1.2x basic-attack coefficient
+            // (CombatMath.BasicAttackPowerMultiplier) closes some of the
+            // gap but does not erase it.
             // LowTalent@F2's own raw basic: WP 12, M 1.12 (grade C at WIS
             // 14), raw = round(12 * 1.12 * 1.2) = round(16.128) = 16,
             // against a modestly-defended, now-correctly-scaled elite pair
@@ -452,12 +433,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(36, dmgAtT3);
             Assert.AreEqual(47, dmgAtT4);
 
-            // 47 / 36 = 1.30555... -- no longer the exact 1.30 the
-            // pre-coefficient rounded figures (39/30) happened to land on;
-            // rounding each side to a whole number before dividing does not
-            // preserve the unrounded 29/22 = 1.31818... ratio exactly, with
-            // or without the 1.2x coefficient (which itself cancels out of
-            // that unrounded ratio). Still comfortably inside §P's own band.
+            // 47 / 36 = 1.30555...: rounding each side to a whole number
+            // before dividing does not preserve the unrounded 29/22 =
+            // 1.31818... ratio exactly, with or without the 1.2x
+            // coefficient (which itself cancels out of that unrounded
+            // ratio). Still comfortably inside §P's own band.
             double ratio = dmgAtT4 / (double)dmgAtT3;
             Assert.AreEqual(1.305556, ratio, 0.0001, "+1 staff tier, T3 -> T4");
             Assert.GreaterOrEqual(ratio, 1.30, "§P: +1 weapon tier should be worth at least +30% damage");

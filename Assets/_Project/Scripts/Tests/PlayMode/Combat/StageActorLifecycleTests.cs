@@ -15,9 +15,9 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // HUNT 2026-09-11, STAGE MOVERS, FAMILY A (docs/hunt/SCENARIOS.md rows
-    // A2, A3, A4, A5, A6): a second call arriving while the first one's
-    // coroutine is still running.
+    // STAGE MOVERS, FAMILY A (docs/hunt/SCENARIOS.md rows A2, A3, A4, A5,
+    // A6): a second call arriving while the first one's coroutine is still
+    // running.
     //
     // WHY THE INTERRUPTED CASE IS ITS OWN SET OF TESTS. Every one of these
     // five classes stops its previous coroutine and starts another, and

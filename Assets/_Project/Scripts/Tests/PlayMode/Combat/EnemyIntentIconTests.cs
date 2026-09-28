@@ -60,10 +60,7 @@ namespace PrincesPalace.PlayModeTests
 
             var built = FightEncounterAdapter.Build(party, enemies, new Domain.Rng.SeededRandom(11));
 
-            // OPENED like the game opens it. This used to bind without calling
-            // Begin and get its intents anyway, because Bind committed the first
-            // turn's telegraph itself -- a repair that existed only because
-            // Begin had no production caller. FightBootstrap calls Begin now, so
+            // Opened like the game opens it: FightBootstrap calls Begin, so
             // a test that skips it is testing a fight no player can reach.
             built.Session.Begin();
             _fight.Bind(built.Session, EncounterClass.Normal);

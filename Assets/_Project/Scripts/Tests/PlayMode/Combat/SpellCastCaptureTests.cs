@@ -117,13 +117,10 @@ namespace PrincesPalace.PlayModeTests
 
             // EVERY spell that has frames, and all of them read from CONTENT.
             //
-            // They used to be captured through a presentation this file built
-            // by hand, which quietly made the pictures useless for the one
-            // thing they are for: a capture of a fixture is a capture of the
-            // fixture's anchor and the fixture's impact point, not of the
-            // spell's. Both of the placement bugs the impact point exists to
-            // fix were invisible here for exactly that reason, and both were
-            // reported by a player instead.
+            // Captured through the real Shoot fixture rather than a
+            // hand-built presentation: a capture of a fixture is a capture
+            // of the fixture's anchor and the fixture's impact point, not
+            // of the spell's.
             foreach (var skill in animated)
             {
                 yield return Shoot(fight, canvas, hero, foe, skill.id, skill.id);

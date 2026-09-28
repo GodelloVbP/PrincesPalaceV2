@@ -17,9 +17,9 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // HUNT 2026-09-11, FAMILY B for the three spell players (docs/hunt/
-    // SCENARIOS.md rows B16, B17, B18) and C5: switched off mid-cast, and a
-    // scene load mid-cast.
+    // FAMILY B for the three spell players (docs/hunt/SCENARIOS.md rows
+    // B16, B17, B18) and C5: switched off mid-cast, and a scene load
+    // mid-cast.
     //
     // WHAT THE EXISTING SUITE STOPS SHORT OF. SpellRendererAndClockTests
     // asserts that every renderer comes back whole when its cast ENDS -- the

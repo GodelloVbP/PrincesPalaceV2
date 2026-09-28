@@ -6,14 +6,11 @@ using PrincesPalace.Domain.Combat.Session;
 namespace PrincesPalace.PlayModeTests
 {
     // FightBootstrap.enemyCount's [SerializeField] default and the private
-    // FullFormationCount it feeds into "-Formation full" both used to
-    // restate FightHudSpec.StageSlotsPerSide's value (3) as a bare literal --
-    // each with a comment NAMING the const rather than referencing it, which
-    // is exactly the state a comment update to the wrong number, or none at
-    // all, survives silently. Both now reference the const directly; this
-    // pins that the reference resolves to the value it always meant to,
-    // rather than only proving the two sides of a comparison agree with
-    // themselves.
+    // FullFormationCount it feeds into "-Formation full" both reference
+    // FightHudSpec.StageSlotsPerSide directly rather than restating its
+    // value (3) as a bare literal; this pins that the reference resolves to
+    // the value it means to, rather than only proving the two sides of a
+    // comparison agree with themselves.
     public class FightBootstrapFormationCountTests
     {
         [Test]
