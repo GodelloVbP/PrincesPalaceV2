@@ -331,7 +331,12 @@ namespace PrincesPalace
                 // content that named them. Without this the roster was right
                 // and every one of them fought at base stats -- full plate and
                 // nothing swung identically.
-                partyCharacters: SaveSlotManager.CurrentSave?.ActiveSquad());
+                partyCharacters: SaveSlotManager.CurrentSave?.ActiveSquad(),
+                // The round limit goes in AT the build, not onto the session
+                // after it: an enemy's attack rides a different depth rate in
+                // a round-limited fight (DifficultyCurve.ScaleEnemyAttack),
+                // and the build sets Session.RoundLimit from the same value.
+                roundLimit: request.RoundLimit);
 
             if (built == null) return null;
 
@@ -353,10 +358,6 @@ namespace PrincesPalace
             // None in a `wake` event fight: its loss is survivable already
             // (EncounterRequest.AllowsSecondLives).
             built.Session.SecondLifeCharges = request.AllowsSecondLives ? SquadTrack.SecondLivesLeft(run) : 0;
-
-            // BEFORE Begin, which both callers run after this returns: the
-            // session checks the limit at each round start from round 1.
-            built.Session.RoundLimit = request.RoundLimit;
 
             // Damage taken in earlier rooms, carried in. Applied after the
             // build because the adapter constructs from definitions and knows

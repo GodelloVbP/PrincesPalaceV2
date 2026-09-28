@@ -80,8 +80,13 @@ namespace PrincesPalace
         // the fix; the curve itself only needed retuning.
         //
         // Health and attack take DIFFERENT rates because the player's own two
-        // axes grow at different speeds. See DifficultyCurve.
-        private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite)
+        // axes grow at different speeds. See DifficultyCurve. A fight with a
+        // round limit is the exception, and it is decided in the curve, not
+        // here: its attack rides the health rate (DifficultyCurve.
+        // ScaleEnemyAttack), because a fixed-length fight does not grow
+        // longer with depth the way a room fight does.
+        private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite,
+                                                  int roundLimit)
         {
             var stats = definition.Data.BaseStats;
             if (isElite)
@@ -121,7 +126,7 @@ namespace PrincesPalace
                 DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
                 ContentDatabase.BuildPrimaryPool(ContentDatabase.ManaPoolId,
                     ScalingProfile.NeutralScores, null, manaRegen: 0),
-                DifficultyCurve.ScaleAttack(stats.attack, depthStep),
+                DifficultyCurve.ScaleEnemyAttack(stats.attack, depthStep, roundLimit),
                 stats.speed);
 
             // PHASE 5B (D6): enemy defenses no longer depth-scale at all --
@@ -445,7 +450,14 @@ namespace PrincesPalace
             // A kit is built fresh for each fight and dies with it, which is
             // exactly the lifetime a preview wants. Null on every other path,
             // including the whole of the real game.
-            IReadOnlyList<string> previewExtraSkillIds = null)
+            IReadOnlyList<string> previewExtraSkillIds = null,
+
+            // The fight's round limit (EncounterRequest.RoundLimit), 0 for
+            // none. One fact, read twice here: the session ends on it, and
+            // every enemy's attack -- summons included -- picks its depth
+            // rate by it (DifficultyCurve.ScaleEnemyAttack). 0 on every room
+            // fight and the tooling path, which is the attack rate unchanged.
+            int roundLimit = 0)
         {
             var party = new List<CombatantState>();
             var kits = new List<PlayerKit>();
@@ -506,7 +518,7 @@ namespace PrincesPalace
                 var definition = ContentDatabase.Enemies.FirstOrDefault(e => e.id == id);
                 if (definition == null) continue;
 
-                enemies.Add(ToCombatant(definition, depthStep, isElite));
+                enemies.Add(ToCombatant(definition, depthStep, isElite, roundLimit));
                 enemyKits.Add(EnemyKitFor(definition, isElite));
             }
 
@@ -529,13 +541,17 @@ namespace PrincesPalace
                     return false;
                 }
 
-                state = ToCombatant(definition, depthStep, isElite);
+                state = ToCombatant(definition, depthStep, isElite, roundLimit);
                 kit = EnemyKitFor(definition, isElite);
                 return true;
             }
 
             var session = new FightSession(encounter, kits, enemyKits, rng, isBoss, isElite,
                 summonFactory: SummonFactory);
+
+            // Set before Begin, which every caller runs after this returns:
+            // the session checks the limit at each round start from round 1.
+            session.RoundLimit = roundLimit;
 
             // Mechanic (d): whatever Amassing Star has banked onto the run
             // so far applies to THIS fight too, not just the ones after the

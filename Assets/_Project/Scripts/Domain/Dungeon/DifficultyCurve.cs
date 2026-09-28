@@ -125,6 +125,35 @@ namespace PrincesPalace.Domain.Dungeon
         // assembled for a fight, for where the old scaling call was removed.
         public static int ScaleAttack(int amount, int step) => Scale(amount, step, AttackPermillePerStep);
 
+        // ENEMY ATTACK IN A FIGHT WITH A ROUND LIMIT (FightSession.RoundLimit,
+        // an event fight's `surviveRounds`) rides its OWN rate, 5.3% a step,
+        // between the attack rate and the health rate.
+        //
+        // WHY NOT THE ATTACK RATE. A room fight's danger is its length times
+        // its attack, and it stays flat across the descent (M8a: room-fight
+        // damage taken sits at ~5% of party max HP on every floor). A fight
+        // that ends after N rounds whatever anyone's health is has no length
+        // to grow, so on 3.8% alone the player's toughness (health, defenses,
+        // the heals a deeper kit carries) outgrows it: M8a held the Bell's
+        // Bellwether at one attack and median Shawn HP at Endure climbed
+        // 8% -> 58% across floors 1-5.
+        //
+        // WHY NOT THE HEALTH RATE, which was the first answer: 7.5% overshoots
+        // the other way. Measured on the Bell (2026-09-28, attack 20, every
+        // other number as M8a): Endure 92/77/54/38/10 % on floors 1-5, where
+        // the attack rate gave 93/93/94/92/88. The player's toughness grows at
+        // roughly 5-6% a step against one hitter, not 7.5%; 5.3% is the rate
+        // that held the Bell's Endure between 60% and 85% on all five floors
+        // (the tuning table is in the commit that set it). A pinned tuning
+        // value like the two above: when a second round-limited fight says it
+        // is wrong, it moves, here and in DifficultyCurveTests, together.
+        //
+        // roundLimit <= 0 (every room fight) is ScaleAttack exactly.
+        public static int ScaleEnemyAttack(int amount, int step, int roundLimit) =>
+            roundLimit > 0 ? Scale(amount, step, RoundLimitedAttackPermillePerStep) : ScaleAttack(amount, step);
+
+        private const int RoundLimitedAttackPermillePerStep = 53;
+
         // A break shield is a pool, so it chews like health.
         public static int ScaleShield(int amount, int step) => Scale(amount, step, HealthPermillePerStep);
 

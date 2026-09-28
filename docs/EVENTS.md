@@ -88,8 +88,12 @@ returning event and the first event fight.
   second passed" line comes from whoever is actually there (Bjorn, Odette,
   both, or nobody). It pays nothing; the fight result already did.
 - **The Bellwether** (`enemies.json`, `rollable: false`) has no `spritePath`
-  until M9a: the stage draws the no-art name plate. First-guess stats and
-  their reasoning are in M7a's commit message; M8a tunes them.
+  until M9a: the stage draws the no-art name plate. Tuned in M8a and again
+  with the round-limited attack rate (2026-09-28): HP 150, attack 33, speed
+  5, defenses 20/20, rally 8% x 10. Speed 5 rather than 8 is on purpose:
+  fewer, heavier swings spread the floor-1 result, where the bot's Shawn
+  barely varies, so one attack point moves floor-1 Endure by ~6 points
+  instead of ~20. The per-floor table is in that commit's message.
 - **Art and sound** named but not delivered yet (M9a): `fog_clearing.png`
   (event backdrop and fight backdrop), `stump_bell.png` (bell and ask
   pages), `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.6 ->
@@ -237,6 +241,17 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   counter's word, at most 12 characters, `MaxRoundLabelLength`), `roundSfx`
   and `roundOverlay` apply. Without one they are refused, because nothing
   would read them.
+- **Depth in a round-limited fight.** Enemies scale with depth as in a room
+  (health 7.5% a step, break shields likewise, defenses not at all), except
+  **attack, which rides 5.3% a step instead of 3.8%** whenever
+  `surviveRounds > 0` (`DifficultyCurve.ScaleEnemyAttack`, applied where the
+  fight is built from its request). A room fight's danger grows with its
+  length; a fight that ends after N rounds has no length to grow, so on the
+  room rate it gets easier every floor (M8a: the Bell's median Endure HP
+  8% -> 58% over floors 1-5). The health rate overshot (Bell Endure
+  92% -> 10%). Author a round-limited enemy's `attack` for floor 1; the rate
+  carries it down. Summons called in during the fight follow the same rule.
+  Room fights and `surviveRounds: 0` event fights are unchanged.
 - **`onLoss`**: `endRun` (empty; the run ends, as in a room) or `wake` (the run
   goes on and the fallen stand at 1 HP). **`pays`** (default true): a payout,
   spell drop and Reckoning like a room fight. `false` pays nothing.

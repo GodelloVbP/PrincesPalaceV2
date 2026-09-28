@@ -93,6 +93,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expected, DifficultyCurve.ScaleAttack(amount, step));
         }
 
+        // A ROUND-LIMITED FIGHT'S ENEMY ATTACK rides 53 permille, a room
+        // fight's the attack rate's 38. Hand-floored literals: 33 x 1.053^17 =
+        // 79.40, 33 x 1.053^33 = 181.41, 33 x 1.038^17 = 62.21, 33 x 1.038^33
+        // = 112.99 (33 is the Bellwether's authored attack; steps 17 and 33 are
+        // where the bot meets it on floors 3 and 5).
+        [TestCase(33, 17, 10, 79)]
+        [TestCase(33, 33, 10, 181)]
+        [TestCase(33, 33, 1, 181)]
+        [TestCase(33, 0, 10, 33)]
+        public void ScaleEnemyAttack_WithARoundLimit_RidesTheRoundLimitedRate(int amount, int step, int roundLimit, int expected)
+        {
+            Assert.AreEqual(expected, DifficultyCurve.ScaleEnemyAttack(amount, step, roundLimit));
+        }
+
+        [TestCase(33, 17, 62)]
+        [TestCase(33, 33, 112)]
+        [TestCase(10, 8, 13)]
+        public void ScaleEnemyAttack_WithNoRoundLimit_IsTheAttackRate(int amount, int step, int expected)
+        {
+            Assert.AreEqual(expected, DifficultyCurve.ScaleEnemyAttack(amount, step, 0));
+            Assert.AreEqual(expected, DifficultyCurve.ScaleEnemyAttack(amount, step, -1), "a negative limit is no limit");
+        }
+
         [Test]
         public void Scaling_NeverRegressesAsTheRunGoesDeeper()
         {
