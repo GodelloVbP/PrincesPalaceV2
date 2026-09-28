@@ -262,15 +262,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // column that is always there and says what to do with it is furniture.
         private UiNode BuildPanel()
         {
-            // A PLAIN PANEL, NOT THE VIOLET 9:16 KIT FRAME -- the owner
-            // called it out on 2026-09-19 ("remove the purple container as
-            // well, it looks like shit"), the same call that took the
-            // themed frame off every System Menu pane on 2026-09-07 (see
-            // Ui.SystemMenuPane's own header). ContainerContent is still
-            // what places content below: called against a Container-shaped
-            // holder with no frame sprite child, it falls back to Container
-            // kind and applies the exact same measured inset the violet art
-            // used to sit inside, so every row authored against
+            // A PLAIN PANEL, NOT THE VIOLET 9:16 KIT FRAME -- see
+            // Ui.SystemMenuPane's own header for the same call on every
+            // System Menu pane. ContainerContent is still what places
+            // content below: called against a Container-shaped holder with
+            // no frame sprite child, it falls back to Container kind and
+            // applies the same measured inset the frame's art would sit
+            // inside, so every row authored against
             // PanelHeaderY..PanelRespecY keeps its place -- the chrome is
             // gone, the layout region it framed is not.
             var frame = Ui.Panel("TalentPanelColumn",
@@ -282,10 +280,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Hidden outright while there is one character -- see
             // TalentController.Refresh, and the reason written there.
             //
-            // WHERE THE HEADER ROW USED TO CARRY A NAME. TalentCharacterName
-            // sat here and is gone (owner, 2026-09-19: the header text
-            // duplicated what the pager and the sky itself already say) --
-            // the pager alone still heads the column.
+            // The pager alone heads the column: a name label here would
+            // duplicate what the pager and the sky itself already say.
             var characterPager = Ui.Pager(
                 "PrevCharacterButton",
                 Place.At(-ConstellationLayout.PanelInnerWidth * 0.5f + 20f,
@@ -299,13 +295,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             parts.Add(characterPager.Prev);
             parts.Add(characterPager.Next);
 
-            // TalentPathName ("CONSTELLATION x OF x - x KINDLED") is gone
-            // too, for the same 2026-09-19 pass -- it was the second of the
-            // two places this panel printed "KINDLED" (the kicker below is
-            // the other, and is the one that survives, since it also carries
-            // the other five states a star can be in). PanelPathY is no
-            // longer read by anything; the rows beneath it (kicker down)
-            // still stack off PanelHeaderY exactly as before.
+            // The kicker below is the only place this panel prints the
+            // state, since it also carries the other five states a star can
+            // be in, not only "KINDLED".
             var detailName = Ui.Label("TalentDetailName", UiString.Runtime,
                     new UiVec(ConstellationLayout.PanelInnerWidth, 96f), 38, "#EDE6FF",
                     Place.At(0f, ConstellationLayout.PanelNameY))
@@ -375,10 +367,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ---- the ember count ------------------------------------------------
             //
-            // TalentMeterTrack/TalentMeterFill -- the committed-over-earned bar --
-            // are gone (owner, 2026-09-19: "the weird yellow line at the
-            // bottom"). The count itself stays; PaintMeter's own header says
-            // why nothing replaced the bar.
+            // No committed-over-earned bar: the count itself is enough;
+            // PaintMeter's own header says why nothing replaced the bar.
             var meter = Ui.Label("TalentEmberCount", UiString.Runtime,
                     new UiVec(ConstellationLayout.PanelInnerWidth, 22f), 12, "#8E7FB0",
                     Place.At(0f, ConstellationLayout.PanelMeterY + 24f))
@@ -482,11 +472,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- putting out every ember ---------------------------------------------
         //
-        // A CONFIRMATION, WHICH THIS SCREEN DID NOT HAVE. One click used to
-        // clear every path in all three constellations. The handoff settled both
-        // halves of it: the respec stays FREE -- charging for it taxes
-        // experimenting with a system whose whole point is experimenting -- and
-        // it asks first.
+        // A CONFIRMATION: clearing every path in all three constellations is
+        // one click, and asks first. The handoff settled the other half
+        // too: the respec stays FREE -- charging for it taxes experimenting
+        // with a system whose whole point is experimenting.
         private UiNode BuildRespecDialog()
         {
             var title = Ui.Label("RespecDialogTitle", UiStrings.TalentRespecTitle,
@@ -521,19 +510,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             RespecCancelButton = cancel;
             RespecConfirmButton = confirm;
 
-            // Violet, 3:2 KIT CONTAINER (owner's HQ-kit instruction,
-            // 2026-09-07), replacing the procedural proc:card_ground panel.
-            // The card's own working shape is 780x320 (aspect 2.44), well
-            // past ThreeByTwo's 1.5 -- so the box is grown, not just
-            // reskinned: width holds at the original 780 (its content's own
-            // horizontal need, title/body's 700px width, is the binding
-            // edge), and ContainerSizeForWidth derives the matching 520
-            // height off ThreeByTwo's exact aspect. That leaves real spare
-            // room above/below title and the button row (they still sit at
-            // their old y, unmoved) rather than a tight fit -- a nearer
-            // ratio (TwoByOne, 21.9% off vs ThreeByTwo's 62.5%) would have
-            // cost far less growth, but the owner named ThreeByTwo for this
-            // site specifically.
+            // Violet, 3:2 KIT CONTAINER. The card's own working shape is
+            // 780x320 (aspect 2.44), well past ThreeByTwo's 1.5 -- so the
+            // box is grown rather than reskinned: width holds at 780 (its
+            // content's own horizontal need, title/body's 700px width, is
+            // the binding edge), and ContainerSizeForWidth derives the
+            // matching 520 height off ThreeByTwo's exact aspect. That
+            // leaves real spare room above/below title and the button row
+            // (they still sit at their original y, unmoved) rather than a
+            // tight fit.
             var cardSize = Ui.ContainerSizeForWidth(ContainerRatio.ThreeByTwo, 780f);
             var card = Ui.Container("RespecDialogCard", ButtonTheme.Violet, ContainerRatio.ThreeByTwo,
                 Place.At(0f, 0f), cardSize);
@@ -739,9 +724,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float angle = (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI);
 
             // A HAIRLINE UNTIL IT IS LIT -- see ConstellationLayout.EdgeDimWidth
-            // for the measurement and for what happened to the ten-wide version
-            // this used to be. The weight argument moved to the glow, which is
-            // where it was always true.
+            // for the measurement. The weight argument lives on the glow,
+            // which is where it is always true.
             var edge = Ui.Solid($"Edge{path}_{parent}_{slot}", EdgeDim,
                     Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f),
                     UiSize.Fixed(length, ConstellationLayout.EdgeDimWidth))
