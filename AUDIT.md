@@ -2521,3 +2521,448 @@ selection to follow focus instead.
 as an icon with no label. Both stand as authored. Filed so a later pass does
 not read their absence from the fix list as an oversight.
 
+
+## UI/UX audit, 2026-09-28
+
+A code-and-capture audit (no live build available in this container; findings
+drawn from source under `Assets/_Project/Scripts/` and existing captures
+under `docs/captures/`), severity-ordered, filed as ready-to-run briefs.
+Re-confirms without duplicating #44, #45, #80, #81, #84, #92, #104, #146,
+#164, #166, #167, #173, #178, #179, #198, #199, #212, #213, #214. Each entry
+below ends with a `Route:` line naming the agent and verification gate, and a
+`Blocked:` line where the fix cannot land until another branch merges.
+
+### 219. Three buttons end a run on a single press, unlike the System Menu's hold
+
+`Core/MapController.cs:169-177` (`abandonButton`), `Core/HubController.cs:155-159`
+(`mainMenuButton`), and `Core/MainMenuController.cs:78-84` (`exitButton`) all
+call `RunManager.EndRun()` straight from `onClick`. The System Menu's Exits
+pane states the house rule for exactly this cost in its own header comment
+(`Domain/UiKit/Screens/ExitsScreen.cs:11-16`): "TWO GESTURES, NOT ONE" — the
+two lesser exits arm-then-fire, abandon is a 1.2s hold (`HoldFillMath`,
+used from `ExitsScreen.cs` around line 209). These three callers are outside
+that pane and skip the gesture entirely, so a single misclick anywhere on
+the map, hub or main menu throws away a run. Fix the class, not the
+instance: route every `EndRun()` caller outside Exits through the same
+hold/confirm, and add a test that enumerates `EndRun()` call sites so a new
+one can't reintroduce this.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 220. A failed save is invisible outside the shop
+
+`Core/SaveSystem.cs` `Save()` (139-183) only `Debug.LogError`s a write
+failure (line 183) — nothing player-visible. Only the shop path surfaces it
+today (`Core/ShopController.cs:308-309`, `ShopOutcome.AppliedNotPersisted`).
+`Domain/Events/EventView.cs` defines the same outcome for events
+(`EventChoiceOutcome.AppliedNotPersisted`, line 252, raised at line 284), but
+`Core/EventController.cs` never references it — a failed write during an
+event choice reaches no one. Fix: one shared player-visible notice for any
+caller of `SaveSystem.Save()` that fails, not a per-screen special case.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 221. The fight never tells the player what a skill does
+
+`Domain/UiKit/Screens/FightScreen.cs:351` — the 2026-09-23 icon rework
+removed `DetailBody`, the text description, in favour of "ICON ROWS, NOT
+TEXT". `docs/captures/qa-2026-09-26/fixed/round2/FightSubmenu_SixSkills.png`
+shows the result: "Rally / SKILL / 3 MP" with no hint of what Rally does.
+`docs/captures/kit-m3/passage_a_seat_pick_focus_middle_16x9.png` shows the
+same problem on the icon rows themselves — "3T", an arrow and a dot with no
+caption or value. #218 already records that the *damage-type* icon stays
+label-less by design; it says nothing about the missing effect text, which
+is the bigger gap. Fix: a one-line effect description per skill, plus
+captions for the icon rows.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+Blocked: until claude/peaceful-fermat-gfw0ig merges (it owns Domain/Combat/**
+and FightHudModel, which this needs data from).
+
+### 222. The combat log is illegible over bright stage art
+
+`FightScreen.cs` `BuildBark()` (1318-1350): the log's own comment says "NO
+BOX" — `MessageLabel` is plain 20px text in `FightHudPalette.TextPrimary`
+(`#F4EBFF`) with no plate behind it, laid directly over the canopy art. The
+"ENEMIES" heading and the "1 STANDING" line share the same treatment.
+`docs/captures/qa-2026-09-26/fixed/log-and-preview/spell_crownfall_vs_treant_before.png`
+shows near-white text vanishing into a light background. Fix: a TMP
+underlay/outline or a soft gradient scrim behind the text, not the slab plate
+the comment already rules out.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 223. Text is too small everywhere, and there is no readability option
+
+Sizes found: 9px (`CharacterDossierScreen.cs:1116`), 12px
+(`FightScreen.cs:1021` `PcStatusCounterFontSize`, `:1980`
+`PcIdentityFontSize`, `:2353`, `:2675`), 13px (`MapScreen.cs:494`,
+`GlossaryScreen.cs:280`, `ExitsScreen.cs:152`). `Domain/UiKit/Typography.cs:7-8`
+says its roles are "Not wired into any Ui.Label/Ui.Button call yet" — the
+vocabulary exists but nothing calls it. `Domain/UiKit/OptionRows.cs:60-77`
+lists text size and tooltip delay among the settings that were designed but
+never built ("neither value exists"); there is also no colourblind,
+reduced-flash or shake option anywhere in the settings tree. Fix: wire
+Typography roles through the call sites with a 16px floor, then add a
+text-scale option — this reshapes how every screen picks its font size, so it
+needs an atomic, ordered rollout across the UiKit tree.
+
+Route: senior (Escalation: cross-layer); gate: tools/run_tests_parallel.ps1
+-Changed -BuildScenes.
+
+### 224. OWNER'S CALL: damage types differ by hue only
+
+`FightHudPalette.cs` (188-232): `DamageTypeNature` (`#5FA24A`, line ~200) and
+`DamageTypePoison` (`#A8E63C`, line ~208) sit a single hue apart with no
+shape, icon-shape or label difference, and no colourblind mode exists
+anywhere in the settings tree (see #223). #218 already keeps the damage-type
+badge icon-only by design — this is the one level further down: even the
+icon's colour-only distinction may not read for every player. Owner: decide
+whether damage types need a shape/label redundancy on top of colour, or
+whether icon-only-by-colour stands.
+
+### 225. OWNER'S CALL: no single rule for confirming irreversible actions
+
+Confirmation gestures are inconsistent by feature: two-press for shop
+buy/leave and the Exits pane's lesser exits; a 1.2s hold for Exits' abandon
+and (per #219) nowhere else yet; a single press with no confirmation for shop
+sell (`Core/ShopController.cs:432-458` `SellRow`), a Reckoning offer pick
+(`Domain/UiKit/Screens/ReckoningScreen.cs`, `OfferButtons` at line 176, wired
+at 1075), an event choice (`Core/EventController.cs:706-746` `Press`), and
+map travel (`Core/MapController.cs:739-762` `OnNodePressed`). Owner: a
+proposed rule is that anything that spends or loses something confirms, and
+anything that only pays out doesn't — needs a decision before #219's fix (or
+any new confirm gesture) is generalized to these.
+
+### 226. The map gives no information to choose a route with
+
+`Core/MapController.cs` `Caption(RoomType)` (723-737) — a node shows only its
+room-type caption and icon, no tooltip or preview of what's inside. Per
+`HANDOVER.md:38-46`, only the current leg is visible: the per-tile ground
+glow and open-room beacon pulse were both cut at hand-off ("a lot of wiring
+for polish"), hover highlighting was never ported from v1, and `BeaconPulse`
+exists in `Core/BeaconPulse.cs` unused by the map. The "you are here" marker
+is a flat 18x18 solid square (`Domain/UiKit/Screens/MapScreen.cs:516-519`),
+which `HANDOVER.md:47-48` itself calls out as looking like what it is — a
+placeholder. Pressing an unreachable node is silently ignored
+(`MapController.cs:747` walk-guard, `752` node-lookup guard, `759` legality
+guard, no feedback on any of the three). Fix: node preview/tooltip, a hover
+cue, and a visible refusal on an illegal press.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 227. No onboarding, and the glossary is reachable only from the Hub
+
+`Core/HubController.cs` `SetGlossary(bool)` (466-470), called only from the
+hub's relics button (line 145) — it takes no entry id, so nothing elsewhere
+in the game can deep-link into it, and there is no first-run hint anywhere in
+the codebase. Unexplained jargon reaches the player throughout: the raw
+attribute letters STR/DEX/CON/WIS/INT/CHA are never spelled out
+(`Domain/UiKit/UiStrings.cs:456-461`), the runtime-built scaling line reads
+"unarmed STR-B (x1.10)" (`Domain/Stats/AbilityEffectDescriptions.cs:126,135`;
+capture `docs/captures/qa-2026-09-26/fixed/round2/Dossier_attributes.png`),
+plus "ELIGIBLE 9/9" (`UiStrings.cs:802`), "Focus / turn" (`UiStrings.cs:483`),
+"WOOL" (`UiStrings.cs:1017`), "TIER" (`UiStrings.cs:783`), "SCALES"
+(`UiStrings.cs:1120`), and the fight submenu's bare "3T". Fix: an in-context
+glossary entry point plus first-run hints for these terms.
+
+Route: implementer (feature); gate: tools/run_tests_parallel.ps1 -Changed
+-BuildScenes.
+
+### 228. Nothing signals the start of the player's turn
+
+`Domain/Combat/Session/FightSession.Riders.cs` `OpenTurnFor` (381-425) opens a
+turn with no log line, sound cue or acting-combatant highlight raised
+anywhere in the method — a grep across `FightSession*.cs` for a turn-start
+message found none. The player has to infer whose turn it is from the
+initiative strip alone (see #246 on why that strip is hard to read). Fix:
+raise a turn-open signal from `OpenTurnFor` and give the HUD side something
+to react to.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
+Blocked: until claude/peaceful-fermat-gfw0ig merges (it owns
+Domain/Combat/Session/FightSession.Riders.cs) for the Domain half; the HUD
+half can proceed independently.
+
+### 229. Input during a beat is dropped, and beats can't be skipped
+
+`Core/FightController.Input.cs:22` — `CanAct` gates every input handler on
+`!_isBusy` with no queue behind it, so a click made mid-beat is simply lost,
+not buffered. There is no click-to-skip or fast-forward anywhere in the
+input code (grep across `FightController.Input.cs` found none), and Battle
+Speed only takes effect on the next fight, not the current one
+(`Core/GameSettings.cs:168-173`, `SetBattleSpeed`'s own comment: "takes
+effect the next time a fight adopts... PlayerSpeedSource"). Fix: buffer one
+pending input during a beat, and add a skip/fast-forward affordance.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 230. No low-HP warning
+
+`Core/FightController.Hud.cs` `SetFill`/`SetFillFraction` (3262-3281) sets a
+bar's fill fraction with no threshold branch at all — colour is fixed via
+`FightHudPalette.HpBright` (referenced at `FightController.Hud.cs:1722`,
+`1738`) regardless of how low the value is. No recolour, pulse or sound
+triggers as HP drops.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 231. OWNER'S CALL: almost nothing makes a sound
+
+`Core/Sound.cs:15-27` defines exactly three sounds (`ButtonClick`,
+`PressPlay`, `StartupIntro`) in the enum the whole audio system parses
+against — purchase, reward collect, level-up, refusal and tab/page change all
+play silently. There is no music: `Core/GameSettings.cs:14-18`'s own comment
+says "MusicVolume is still stored and surfaced only... no music yet for it to
+drive," and the Options row for it already carries a note saying so
+(`Domain/UiKit/OptionRows.cs:88-91`) rather than being hidden. Owner: keep
+showing a slider for a feature that doesn't exist yet (with its honest note),
+or hide it until there's music to drive. This needs audio assets either way.
+
+### 232. Large HP values break the enemy plate
+
+`docs/captures/kit-m4/knell_b_knell_front_lethal_16x9.png` shows
+"99982/1000" wrapping "00" onto a second line on the enemy HP plate. The
+value is composed at runtime, so `UiAudit`'s static multi-aspect solve never
+sees a boss-sized number and can't catch this at build time. Fix: abbreviate
+(100k) or auto-size the HP text, and add a boss-sized sample to whichever fit
+audit exercises this plate so it's caught going forward.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 233. Event choices show no per-choice outcome
+
+`Core/EventController.cs` `PaintRows` (656-704) paints each row from
+`choice.Text`, `choice.Enabled` and `choice.LockReason` only — nothing
+previews what picking a choice does. Only the page's one shared effects line
+previews anything, and it isn't per-choice. May need new content fields to
+carry a per-choice preview string.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes;
+content changes may need -BuildContent too.
+
+### 234. Placeholder text reaches players
+
+Three strings ship as live UI copy: "CONTENT TO COME"
+(`Domain/UiKit/UiStrings.cs:1230`), "PORTRAIT PENDING" (`UiStrings.cs:740`),
+"Art pending" (`UiStrings.cs:1428`). House style is graceful degradation on
+missing content (CLAUDE.md) — the element should hide, not announce its own
+absence. (The stale "(... not built yet.)" room messages are being fixed
+separately on this branch, per the brief — not duplicated here.)
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 235. A transformation line hard-codes "he"
+
+`Domain/Combat/Session/FightSession.Talents.cs:1056` — "This is what he is
+now." misgenders any non-male character undergoing this transform.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed.
+Blocked: until claude/peaceful-fermat-gfw0ig merges (it owns
+Domain/Combat/Session/FightSession.Talents.cs).
+
+### 236. OWNER'S CALL: one name per concept, inconsistently
+
+HP vs Health (`UiStrings.cs:463` `StatMaxHealth` = "Health", `:1018` `HpTag` =
+"HP"); Defense vs DEF vs resistance (`UiStrings.cs:489-492`
+`StatPhysicalDefense`/`StatMagicalDefense` both print "... DEF"; other prose
+in relics.json/items.json content uses "defence"/"resistance"); Descent vs
+Run; "Victory!" in the combat log vs "THE RECKONING" as the screen title; and
+Gold formatted as "60 G", "60 GOLD" or "Gold: 60" with thousands separators
+in only one spot. Owner picks the glossary — after which the sweep is
+mechanical.
+
+Route (after the call): implementer; gate: tools/run_tests_parallel.ps1
+-Changed -BuildScenes -BuildContent.
+
+### 237. Combat refusals give no reason
+
+`Domain/Combat/Session/FightSession.cs:500` — "{x} is out of reach."; `:627`
+and `:640` — "{x} is rooted."; `Domain/Combat/Session/FightSession.Skills.cs:239`
+— "cannot pay for {skill}." None of the three say what would fix the
+situation (move closer, wait out the root, free up the resource).
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed.
+Blocked: until claude/peaceful-fermat-gfw0ig merges (it owns
+Domain/Combat/Session/FightSession.cs and FightSession.Skills.cs).
+
+### 238. Status effects and crits have no on-body feedback
+
+A status applying or expiring shows only as a combat-log line — no
+on-body flash, icon pop or motion (grep across `FightController.Hud.cs` and
+`DamagePopup.cs` found nothing tied to status apply/expire).
+`Core/DamagePopup.cs` (108-135) has exactly three presentations —
+`Play` (damage/heal number), `PlayMiss`, `PlayAbsorbed` — none crit-aware, so
+a critical hit reads identically to a normal one.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
+Blocked: until claude/peaceful-fermat-gfw0ig merges (the content branch adds
+CritRules that this needs to key off of).
+
+### 239. Damage numbers are dropped when six are in flight
+
+`Core/FightBeatPlayer.cs:1282` — `PopNumber`'s own comment: "every one still
+in flight; the number is dropped, not queued." A multi-target beat that
+outruns the popup pool loses numbers outright instead of queueing them.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 240. Every transition is a hard cut
+
+`Core/FightController.Input.cs:1415-1459` — the killing blow opens Reckoning
+or Defeat directly against `OnPlaybackFinished`'s existing dismissal logic,
+with no beat of its own. `Core/Navigation.cs:29-38` `Go()` is a plain
+`SceneManager.LoadScene`, with no fade or loading indicator, so every
+navigation between screens is an instant cut.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 241. The relic draft doesn't show relics already held
+
+`Core/RelicDraftController.cs` `Paint()` (178-247) renders only the three
+offers on the table — nothing shows what the party already carries, so a
+player can't tell if an offer duplicates or synergizes with what they have.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 242. Unbuilt hub buildings are dimmed with no reason given
+
+`Core/HubController.cs` `DimTheUnbuilt()` (108-126) — the method's own
+header comment states the problem: a still-building's press is "deliberate,
+so a press that produces nothing reads as a broken button." The button is
+dimmed and made non-interactable, but nothing tells the player why.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed; add
+-BuildScenes if a caption node is added.
+
+### 243. The dossier attributes modal fights the player
+
+Capture `docs/captures/qa-2026-09-26/fixed/round2/Dossier_attributes.png`:
+the "+" buttons render roughly 10px wide at the far right of the row, about
+1100px from the stat labels they belong to. The modal doesn't show the stat
+preview it should — `CharacterDossierScreen.cs:1294` builds a
+`DossierStatPreview{i}` node, but the capture shows the dim behind the modal
+weak enough that the character sheet and a "MAIN MEN..." label bleed
+through it. Capture `Dossier_tooltip_topleft.png` shows the preview reading
+"> 338  280" — new value before old, with ">" reading as a greater-than sign
+rather than a change arrow; it should read "280 -> 338".
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 244. Shop layout problems
+
+Capture `docs/captures/shop-fixes/after/Shop_gear_selected.png`: "SHOPKEEPER"
+heads a character picker plus item detail in one panel; relic rows show
+rarity only, no other distinguishing info; there are two buy paths in the
+same screen (the price chip "CONFIRM · 46 G" and a separate BUY button);
+"2000 G" (the player's purse) has no label identifying what it is. A
+successful purchase is silent by design — `Core/ShopController.cs:295-299`'s
+own comment: "NOTHING IS SAID ABOUT A SUCCESS... a line confirming what the
+screen just showed is noise." At minimum a sound or a flash on the card
+would close the gap without adding a text line back.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 245. Fight command column reads bottom-up, and a refusal reason may not render
+
+The verb column lists 1 ATTACK at the bottom and 4 MOVE at the top —
+reversed reading order. In
+`docs/captures/qa-2026-09-26/fixed/round2/FightSubmenu_SixSkills.png`, MOVE
+is dimmed and "Iron Cleave" is greyed with no visible cost or refusal reason,
+although `FightHudModel`'s cost column is meant to carry one. Needs
+verification on a live build (not available in this container) before
+concluding whether the data is missing or just not rendered.
+
+Route: implementer (verify on a live build first).
+
+### 246. The initiative strip is portraits only
+
+`Domain/UiKit/Screens/FightScreen.cs` `BuildInitiativeTracker` (1163-1230):
+no ally/enemy marker, no HP indicator, and identical portraits are
+indistinguishable from each other; dark enemy portraits vanish against
+foliage backgrounds (see the knell capture in #232). This is also why #228's
+missing turn-start cue is hard to compensate for — the strip that should
+show whose turn is next doesn't carry enough information to read at a
+glance.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 247. OWNER'S CALL: HUD plates sit far from the figures they describe
+
+The enemy plate sits top-right, roughly 700px from the enemy body it
+describes; the party plate sits bottom-left, similarly far from the party
+figures. A layout call, not a bug — owner to decide whether plates should
+move nearer their figures or stay in the fixed HUD band.
+
+### 248. Swapping party members shows no stat comparison
+
+`Domain/UiKit/Screens/PartyScreen.cs` has no tooltip or comparison node at
+all (grep for `Tooltip`/`Compare` in the file returns nothing) — unlike the
+Reckoning offer tooltip and the dossier item tooltip, both of which preview a
+stat change before the player commits.
+
+Route: implementer.
+
+### 249. Wide and narrow aspects show seams
+
+`docs/captures/events-m6/m6_f_fight_longest_label_21x9.png`: a garbled
+floating label reading "Wolfsong Hou 1" and the ground art visibly ending in
+a rectangle about 250px in from each edge at 21:9. `m6_c_shawn_entranced_fallback_4x3.png`:
+the event background's lower third is a mirrored copy of the upper art with
+a visible seam at 4:3.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 250. Battle Speed's default doesn't match its own label
+
+`Domain/Combat/Session/BattleSpeed.cs:52` (`Multiplier => Display /
+TodaysPaceDisplay`) and `:66-69` (the four preset rows 0.5/1/1.5/2):
+`TodaysPaceDisplay` is 1.5 — the row labelled "1.5x" is the one that
+reproduces the fight's actual shipped pace (multiplier 1.0). `DefaultDisplay`
+(line 40) is 1, so the fight now opens on the row labelled "1x", which
+actually runs at a multiplier of 0.67 — slower than what shipped before this
+table existed. A player who wants "the speed it's always been" has to pick
+1.5x, not the default.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 251. Separators and casing drift
+
+Separators: `"->"` (`UiStrings.cs:1411`), em dash (`:1154`, `:1387`,
+`:1397`), plain hyphen (`:288`, `:672`), and middot (`:355`, `:745`) all do
+the same job of joining two clauses or a label and a value in different
+places. Casing: "Close" (`:496`) vs "CLOSE" (`:155`, `:1361`); "Back" (`:46`)
+vs "BACK" (`:984`) across different screens with no apparent rule for which
+gets which.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 252. Combat-log tone slips
+
+`Domain/Combat/Session/FightSession.Outcome.cs:183` — "Not yet." sits beside
+"Victory!"/"The party falls." elsewhere in the same log. Guard text at
+`FightSession.Skills.cs:1015` reads "Whoever stands there is rooted, and {x}
+does not move." `FightSession.Enemies.cs:1213` — "{x} should be down. {x}
+refuses." Each is a register shift from the rest of the log's phrasing.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed.
+Blocked: until claude/peaceful-fermat-gfw0ig merges (it owns
+Domain/Combat/Session/FightSession.Outcome.cs, FightSession.Skills.cs and
+FightSession.Enemies.cs).
+
+### 253. Redundant back hints
+
+`Domain/UiKit/UiStrings.cs:1105` — `SubmenuHint` = "ESC TO GO BACK" is shown
+as a header above a BACK row that is already itself labelled with the ESC
+key (see `docs/captures/qa-2026-09-26/fixed/round2/FightSubmenu_SixSkills.png`).
+The same information appears twice in the same submenu.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 254. The map's only nudge to assign spell books is a 16px line
+
+`Domain/UiKit/Screens/MapScreen.cs:204-208` — `MapPendingBookLabel` is a
+16px text line and the map's only signal that a spell book is waiting to be
+assigned; easy to miss against the rest of the screen.
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
