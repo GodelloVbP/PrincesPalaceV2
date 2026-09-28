@@ -59,8 +59,7 @@ namespace PrincesPalace.Domain.Tests
 
             // No scalingAxis: damageInstances replace the Attack-scaled
             // formula entirely (skills.json's own _readme, and
-            // SkillEntryResolver's refusal if both are authored together --
-            // AUDIT hunt 2026-09-11, d6a7ed0c).
+            // SkillEntryResolver's refusal if both are authored together).
             StringAssert.DoesNotContain("scalingAxis", entry);
 
             // No aftereffects at all: no burn, no stun, no status, no DoT. The
@@ -87,13 +86,8 @@ namespace PrincesPalace.Domain.Tests
         // THE TWO LAYERS SHARE ONE IMPACT INSTANT, and the content is where
         // that is settled.
         //
-        // WHAT M6 CHANGED, AND WHAT IT DID NOT. Until M6 this read: the ground
-        // sheet and the eruption sheet are both cut to nine frames peaking on
-        // five, so Cinderfault authors impactFrame ONCE and leaves
-        // groundImpactFrame/groundSeconds unset, and the presentation's
-        // fallbacks make the second layer inherit the first's numbers. The
-        // claim is unchanged -- one instant, stated once, for both layers --
-        // but the mechanism is no longer an inheritance between two blocks. The
+        // The claim is one instant, stated once, for both layers, but the
+        // mechanism is not an inheritance between two blocks. The
         // spell authors two LAYERS that both open at release and both run
         // 0.78s, and the cue is a number in seconds rather than a frame index,
         // which is the coupling the layered format exists to remove.
@@ -113,9 +107,9 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/cinderfault_impact\"", entry);
 
             // ONE CUE, AUTHORED, and it is HALF the instant the pre-layer
-            // block landed on: (0.78s x 5/9) / 2, the owner's 2026-09-19
-            // "the animation is too slow ... more like a POP".
-            // SpellBaselineTimingTests holds both equalities against the old
+            // block landed on: (0.78s x 5/9) / 2, chasing the feel of
+            // "more like a POP".
+            // SpellBaselineTimingTests holds both equalities against the same
             // expression; here it is the file's own text, so an edit to the
             // number has to pass both.
             StringAssert.Contains("\"hitCueSeconds\": 0.21666667", entry);
@@ -130,17 +124,15 @@ namespace PrincesPalace.Domain.Tests
             // BOTH LAYERS OPEN AT RELEASE AND RUN 0.39s. That is what makes
             // their peaks land together -- matching starts and matching
             // durations over two nine-frame sheets, rather than one field
-            // being read twice. The number itself is half what it was until
-            // 2026-09-19; what this test owns is that the two agree, so a
-            // retune that moved one and not the other fails here.
+            // being read twice. What this test owns is that the two agree,
+            // so a retune that moved one and not the other fails here.
             StringAssert.Contains("\"at\": \"release\"", entry);
             StringAssert.Contains("\"seconds\": 0.39", entry);
             StringAssert.DoesNotContain("\"seconds\": 0.78", entry);
 
             // THE FAULT FOLLOWS THE RANK. The enemies stand on a diagonal
             // (FightStageAnchors: 300,-218 -> 660,-125) and the fault is the
-            // line they stand on, so it spans rather than lying level --
-            // owner, 2026-09-19, "the line ... should follow the mobs".
+            // line they stand on, so it spans rather than lying level.
             StringAssert.Contains("\"align\": \"span\"", entry);
         }
 
@@ -293,9 +285,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(6, before[2] - foes[2].CurrentHealth, "resists both: round(5 x 0.5)=3 + 3");
         }
 
-        // AND THE VIEW IS TOLD ALL THREE. One beat used to carry one Amount --
-        // the largest single hit -- so the player was shown 25 over one enemy
-        // and nothing over the two that took 20 and 10. See BeatTargetResult.
+        // AND THE VIEW IS TOLD ALL THREE: a beat must not carry only one
+        // Amount -- the largest single hit -- or the player would be shown
+        // 25 over one enemy and nothing over the two that took 20 and 10.
+        // See BeatTargetResult.
         [Test]
         public void TheBeatCarriesEachEnemysOwnNumber()
         {
@@ -516,12 +509,13 @@ namespace PrincesPalace.Domain.Tests
         // field authored on a neighbouring skill cannot satisfy an assertion
         // about this one.
         //
-        // BY BRACE DEPTH RATHER THAN BY THE NEXT `"id":`, which is what this
-        // did until M6. A layered vfx block gives its layers ids of their own,
-        // so the first `"id"` after the skill's is now `"fault"` INSIDE this
-        // record -- the old slice ended there and threw away everything from
-        // the vfx block to bookTier, quietly turning three StringAssert.Contains
-        // into assertions about text that was no longer being read.
+        // BY BRACE DEPTH RATHER THAN BY THE NEXT `"id":`. A layered vfx
+        // block gives its layers ids of their own, so the first `"id"`
+        // after the skill's is `"fault"` INSIDE this
+        // record -- slicing to the next `"id"` would end there and throw away
+        // everything from the vfx block to bookTier, quietly turning three
+        // StringAssert.Contains into assertions about text that is not
+        // being read.
         private static string CinderfaultEntry()
         {
             string json = File.ReadAllText(SkillsJsonPath());

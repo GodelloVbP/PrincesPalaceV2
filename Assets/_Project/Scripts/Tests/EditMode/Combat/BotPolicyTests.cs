@@ -25,8 +25,8 @@ namespace PrincesPalace.Domain.Tests
                 .ToList();
 
             var encounter = new CombatEncounter(new[] { hero }, foes);
-            // TestSkills.RangedPacket stands in for the old free basic spell
-            // so a target behind the front rank is reachable at all -- Attack is
+            // TestSkills.RangedPacket is what makes a target behind the
+            // front rank reachable at all -- Attack is
             // front-rank-only (see FightSession.CanReachEnemy), and with
             // more than one foe that is the only way this fixture can show
             // GreedyAggressive choosing BETWEEN targets rather than being

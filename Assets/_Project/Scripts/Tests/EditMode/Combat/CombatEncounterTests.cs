@@ -41,7 +41,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.Throws<ArgumentException>(() => new CombatEncounter(new[] { player }, Array.Empty<CombatantState>()));
         }
 
-        // ---- FrontEnemy (Phase 6) --------------------------------------------
+        // ---- FrontEnemy --------------------------------------------
 
         [Test]
         public void FrontEnemy_IsTheFirstEnemyByConstructionOrder()
@@ -210,9 +210,8 @@ namespace PrincesPalace.Domain.Tests
 
             // Tracks Current's side, always — asserted as an invariant rather
             // than by advancing once and expecting the enemy. A speed-10
-            // player against a speed-1 enemy now genuinely acts several times
-            // in a row, so "advance once, it must be theirs" was only ever
-            // true under the old fixed rotation.
+            // player against a speed-1 enemy genuinely acts several times
+            // in a row, so "advance once, it must be the enemy" does not hold.
             bool enemyEverActed = false;
             for (int i = 0; i < 30; i++)
             {

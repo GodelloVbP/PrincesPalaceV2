@@ -162,7 +162,7 @@ namespace PrincesPalace.Domain.Tests
                 "a corpse takes no fresh status -- ApplySkillStatus is gated on IsAlive");
         }
 
-        // The tooltip the owner asked for, word for word, read out of
+        // The tooltip's exact wording, read out of
         // skills.json rather than off the fixture above -- asserting the
         // fixture's own string against itself would pass whatever the game
         // actually ships.

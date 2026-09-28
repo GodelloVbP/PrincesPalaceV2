@@ -4,8 +4,8 @@ using PrincesPalace.Domain.Combat;
 namespace PrincesPalace.Domain.Tests
 {
     // Every fixture here opts INTO absorption (absorbsDamage: true), which
-    // is no longer the default and is no longer how Wool is authored — the
-    // talent rework made wool a spend-only resource (handoff §2). These
+    // is not the default and is not how Wool is authored — Wool is a
+    // spend-only resource (docs/handoffs/talent_tree §2). These
     // tests are kept, and kept passing, because the soak rules themselves
     // are unchanged, tuned, and the shape any future armour-flavoured
     // signature resource will use. WoolDoesNotSoakDamageByDefault below is
