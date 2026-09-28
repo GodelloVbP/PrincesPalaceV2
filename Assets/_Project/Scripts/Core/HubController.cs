@@ -32,10 +32,8 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text startRunCaption;
         [SerializeField] internal Button[] unbuiltButtons;
 
-        // The overarching menu Cancel now opens (docs/GAMEPAD_NAVIGATION_PLAN.md
-        // section 3/4) -- the job SystemMenuController's own now-deleted Escape
-        // poll used to do independently, racing HubController's. One context,
-        // one Cancel handler, HandleEscape below.
+        // The overarching menu Cancel now opens (docs/GAMEPAD_NAVIGATION_PLAN.md):
+        // one context, one Cancel handler, HandleEscape below.
         [SerializeField] internal SystemMenuController systemMenu;
 
         // THE TEST SEAM FOR THE DESCENT TRANSITION'S OWN CLOCK, the same
@@ -47,11 +45,10 @@ namespace PrincesPalace
 
         private bool _descending;
 
-        // The hub's own place on the navigation stack (plan section 4) --
-        // pushed once in Start() and never popped while this scene is
-        // loaded, since the hub is not a modal that opens and closes, it is
-        // the scene's own base context. Registered here (not a selectable
-        // set of its own yet -- the hub's buildings are phase 3's rollout)
+        // The hub's own place on the navigation stack -- pushed once in
+        // Start() and never popped while this scene is loaded, since the
+        // hub is not a modal that opens and closes, it is the scene's own
+        // base context. Registered here (not a selectable set of its own)
         // so its Cancel handler runs through the ONE dispatch point instead
         // of a raw Update() poll, and so C/I/F1 below can ask "am I still
         // top" instead of firing under a modal that has since covered them.
@@ -170,26 +167,23 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            // systemMenu, NOT cancel (the owner's 2026-09-19 call: Start
-            // opens the menu, B does not). The hub is a ROOT -- there is no
-            // level above it to step back to -- so its Cancel is deliberately
-            // nothing at all rather than a second way to reach the menu.
+            // systemMenu, NOT cancel: Start opens the menu, B does not.
+            // The hub is a ROOT -- there is no level above it to step back
+            // to -- so its Cancel is deliberately nothing at all rather
+            // than a second way to reach the menu.
             _navContext = new NavContext(entry: StartRunButtonGameObject, selectables: Selectables(),
                 cancel: null, systemMenu: HandleEscape);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
-        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) ----------------
         //
         // THE HUB'S REAL SHAPE IS FOUR STAGED BUILDINGS AND A GATE, NOT A TAB
-        // BAR -- and, since the hardware play-test, not a 2x2 Grid either.
-        //
-        // The Grid this replaces was keyed on each building's HubAnchors
-        // depth/lateral signs (far row Talents/Relics over near row
-        // Principality/CharacterSheet). Those signs are a STAGING fact, not a
-        // screen-position fact, and on screen the composition they produce is
-        // a horseshoe, not two rows -- captured and measured rather than
-        // reasoned about, tools/screenshots/HubPanel.png, canvas centres:
+        // BAR OR A 2x2 GRID: a Grid keyed on each building's HubAnchors
+        // depth/lateral signs treats a STAGING fact as a screen-position
+        // fact, and on screen the composition it produces is a horseshoe,
+        // not two rows -- captured and measured rather than reasoned about,
+        // tools/screenshots/HubPanel.png, canvas centres:
         //
         //     MainMenuButton        x -830  y  480   (top-left corner chrome)
         //     TalentsBuilding       x -349  y  328
@@ -198,46 +192,24 @@ namespace PrincesPalace
         //     CharacterSheetBuilding x 628  y  121
         //     StartRunGate          x    0  y -160   (dead centre, largest)
         //
-        // The Grid's row wrap is what the owner actually hit: Relics and
-        // Talents were row-mates, so Right off Relics wrapped the whole way
-        // across the screen to Talents instead of continuing to Character
-        // Sheet, which is the nearest thing to its right by a long way.
-        //
         // LEFT/RIGHT IS ONE WRAPPING RING over the five staged controls,
-        // ordered by their actual HubAnchors x -- not hand-typed, and not
-        // the owner's 2026-09-18 verbatim phrasing either, after both were
-        // tried and both left a defect on the pad.
-        //
-        // ROUND 1 (a9f89ebe) hand-typed the ring in the order the owner's
-        // words gave it -- "from the gate, Left goes Principality then
-        // Talents" -- over screen-x, on the theory that stated words beat a
-        // heuristic. They do not both describe the same ring: by x, the
-        // thing left of the gate is Talents (-349), not Principality (-673),
-        // so that order made Left OVERSHOOT the nearer building on the first
-        // press and land back on it, reading as "middle", on the second.
-        // That is 2026-09-19's own report -- "press left twice you are left
-        // middle" -- against the exact build that quoted the owner's words
-        // back at her.
-        //
-        // ROUND 2 (here) sorts the ring by HubAnchors.PositionFor(...).X
-        // (and HubAnchors.Gate.X for the gate, which is not a staged Plot)
-        // instead of by either hand-typed order, so a Left/Right press
+        // sorted by HubAnchors.PositionFor(...).X (and HubAnchors.Gate.X for
+        // the gate, which is not a staged Plot), so a Left/Right press
         // always steps to the next nearest thing on screen and a future
-        // Depth/Lateral change in HubAnchors moves the ring with it rather
-        // than silently reintroducing this defect. The owner's other
-        // expectation -- Right off Relics reaches CharacterSheet -- was
-        // already the x-order answer and is unchanged; only the left arm's
-        // two buildings swap.
+        // Depth/Lateral change in HubAnchors moves the ring with it. A row-
+        // wrapped Grid, or a ring ordered by hand instead of by x, can
+        // overshoot the nearer building or wrap past a screen neighbour
+        // that is right there.
         //
         // UP/DOWN IS THE COLUMN each control stands in, top to bottom by
         // screen y, clamped at both ends: a vertical Move never crosses the
-        // gate's own axis, which is what a single y-ordered list of all six
-        // would have made it do (Relics down to Talents is 20px of y and
-        // 645px of x -- a sideways jump wearing a vertical press).
-        // MainMenuButton stays out of the ring: it is corner chrome, not part
-        // of the composition, and it is already the leftmost thing on screen,
-        // so Left/Right off it have nowhere to go. It keeps its column link
-        // to Talents, the building nearest it, exactly as before.
+        // gate's own axis, which a single y-ordered list of all six would
+        // make it do (Relics down to Talents is 20px of y and 645px of x --
+        // a sideways jump wearing a vertical press). MainMenuButton stays
+        // out of the ring: it is corner chrome, not part of the composition,
+        // and it is already the leftmost thing on screen, so Left/Right off
+        // it have nowhere to go. It keeps its column link to Talents, the
+        // building nearest it.
         //
         // ENTRY is the gate, not "the first tab's first control" -- there is
         // no first tab. It is the screen's own stated primary action.
@@ -297,12 +269,9 @@ namespace PrincesPalace
                     RuntimeNavWiring.Link(characterSheet, UiNavDirection.Down, gate),
                 });
 
-            // NOTHING PAINTS PAD FOCUS ON THIS SCREEN ANY MORE. The five
-            // WireBuildingHalo calls that used to stand here are gone with
-            // the halos themselves (hardware round 1: "the selector on the
-            // start descent is huge and looks weird" -- a glow sized to a
-            // 620x620 gate is a 620x620 selector). Core/FocusMarker.cs, the
-            // one arrow, is the whole answer now and needs no wiring from
+            // NOTHING PAINTS PAD FOCUS ON THIS SCREEN. A glow sized to a
+            // 620x620 gate would be a 620x620 selector, so Core/FocusMarker.cs,
+            // the one arrow, is the whole answer and needs no wiring from
             // any screen: it reads the settled selection straight off the
             // dispatcher.
             //
@@ -366,11 +335,11 @@ namespace PrincesPalace
         // be the thing that opens it.
         private void Update()
         {
-            // GATED ON TOP OF STACK (plan section 4/11): a modal covering the
+            // GATED ON TOP OF STACK: a modal covering the
             // hub -- the system menu, the glossary, the relic draft, the
             // debug menu itself -- must not also see C/I/F1 land underneath
-            // it. None of these three push their own context yet (that is
-            // phase 3's rollout), so "top" here means "nothing else pushed
+            // it. None of these three push their own context yet, so
+            // "top" here means "nothing else pushed
             // on top of the hub's own base context" -- which the debug menu,
             // glossary and relic draft all currently achieve by covering the
             // hub WITHOUT pushing a context of their own, so this guard is
@@ -396,9 +365,8 @@ namespace PrincesPalace
 
             if (characterOverlayPanel == null) return;
 
-            // C is the sheet and I is the bag, now that they are two panes.
-            // Both used to open whichever pane happened to be up last, which
-            // made I a second key for the same thing.
+            // C is the sheet and I is the bag: two panes, two keys, rather
+            // than one key that reopens whichever pane was last up.
             if (Input.GetKeyDown(KeyCode.C))
             {
                 ToggleCharacterOverlay(inventory: false);
@@ -415,25 +383,23 @@ namespace PrincesPalace
             // SystemMenuController's own separate poll for the same key.
         }
 
-        // This IS the hub's NavContext.Cancel handler now (registered in
+        // This IS the hub's NavContext.Cancel handler (registered in
         // RegisterNavContext), called once a frame by the ONE dispatch point
         // rather than raced against a second poll.
         //
-        // SIMPLIFIED (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3, AUDIT.md
-        // #158): the debug menu, the glossary and the relic draft each push
-        // their own NavContext now (RelicDraftController/GlossaryController/
+        // The debug menu, the glossary and the relic draft each push their
+        // own NavContext (RelicDraftController/GlossaryController/
         // DebugMenuController), so while any of them is open it -- not the
-        // hub -- is top of stack, and this handler never runs at all; the
+        // hub -- is top of stack, and this handler never runs; the
         // dispatcher calls THEIR context's own Cancel instead (Close for the
         // first two, a deliberate no-op for the draft -- see
         // RelicDraftController.RefreshNavigation's own header). What is left
-        // here is exactly the one thing that was never one of those three
-        // branches: open the overarching menu, the job SystemMenuController's
-        // own now-deleted poll used to do.
+        // here is exactly the one thing that is never one of those three
+        // branches: open the overarching menu.
         // Named for the key that still reaches it -- escape binds the
         // SystemMenu axis as well as Cancel -- but it is the START button's
-        // handler now, wired as the context's `systemMenu` rather than its
-        // `cancel`. Nothing about what it does changed.
+        // handler, wired as the context's `systemMenu` rather than its
+        // `cancel`.
         public void HandleEscape()
         {
             SystemMenuController.OpenFromRoot(systemMenu);
@@ -499,10 +465,10 @@ namespace PrincesPalace
         // when it is pressed with no run, which is a state the design does not
         // have.
         //
-        // The press itself only starts the MOCK-UP transition below; every
-        // rule this comment used to describe (seeding a fresh run, skipping a
-        // drafted relic on resume) now lives in EnterTheDescent, which the
-        // transition calls once it has finished playing.
+        // The press itself only starts the MOCK-UP transition below; run
+        // setup (seeding a fresh run, skipping a drafted relic on resume)
+        // lives in EnterTheDescent, which the transition calls once it has
+        // finished playing.
         private void StartOrResumeRun()
         {
             if (_descending) return; // one gate press, not a queue of them
