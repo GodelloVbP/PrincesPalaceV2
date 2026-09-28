@@ -8,7 +8,7 @@ namespace PrincesPalace.Domain.Tests
     // that the named font/material assets actually exist and render with
     // these colours -- is TypographyAssetTests (PlayMode), since resolving
     // a TMP_FontAsset/Material needs AssetDatabase, which EditMode's
-    // Domain-only asmdef cannot reference (CODE_STANDARDS.md 5).
+    // Domain-only asmdef cannot reference (docs/CODE_STANDARDS.md "Layering").
     public class TypographyRoleTests
     {
         [Test]

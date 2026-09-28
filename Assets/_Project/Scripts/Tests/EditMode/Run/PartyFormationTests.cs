@@ -793,7 +793,7 @@ namespace PrincesPalace.Domain.Tests
 
         // ================================================================
         // Invariants -- checked after a scripted run of commands, not
-        // formula-derived (CODE_STANDARDS.md SS8: never recompute the thing
+        // formula-derived (CLAUDE.md gotcha 5: never recompute the thing
         // under test to build the expected value).
         // ================================================================
 

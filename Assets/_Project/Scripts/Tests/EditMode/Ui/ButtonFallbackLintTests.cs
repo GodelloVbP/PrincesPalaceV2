@@ -14,7 +14,7 @@ namespace PrincesPalace.Domain.Tests
     // own branch, `sprite = Chromeless ? null : SpriteKey empty ? ButtonSprite()
     // : LoadSpriteByKey(SpriteKey)`. Restated here rather than referenced,
     // because UiEmitter lives in the Editor assembly and this suite (Domain-
-    // only, per docs/CODE_STANDARDS.md #1) cannot see it.
+    // only, per docs/CODE_STANDARDS.md "Layering") cannot see it.
     //
     // Every screen is built straight from its own static Build(), not through
     // ScreenRegistry -- that registry is Editor-only (UnityEditor/UnityEngine

@@ -9,13 +9,13 @@ namespace PrincesPalace
     // which sums to the handoff's 2.4s while giving the fade itself a
     // distinct, readable duration rather than dividing 2.4s in half.
     //
-    // NOT StageDeathFade, checked first per CODE_STANDARDS SS2's reuse-first
+    // NOT StageDeathFade, checked first per .claude/rules/ui.md's reuse-first
     // registry: that component fades THREE sibling Images together on the
     // fight beat's scaled clock (FightBeatPlayer.Scaled) and exists on a
     // combat slot, not a menu pane -- adopting it here would mean carrying a
     // beat dependency this pane has no reason to have, for a component that
     // only ever drives one CanvasGroup. Not BeaconPulse or the Ambient-motion
-    // curves either (CODE_STANDARDS SS2): those are unbounded loops (a
+    // curves either (.claude/rules/ui.md): those are unbounded loops (a
     // pulse, a flicker), and this is a one-shot with a start and an end. A
     // straight linear fade needs no eased curve of its own.
     //

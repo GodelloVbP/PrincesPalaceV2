@@ -232,7 +232,7 @@ namespace PrincesPalace.PlayModeTests
 
             var slots = OccupiedPartySlots();
 
-            // ASSERTED, NOT SKIPPED (docs/CODE_STANDARDS.md Sec8): a bootstrap
+            // ASSERTED, NOT SKIPPED (.claude/rules/tests.md): a bootstrap
             // that quietly seats fewer than three would make every other
             // claim this fixture photographs meaningless, and a skip here
             // would let that drift go unnoticed indefinitely.
@@ -380,7 +380,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheScene();
 
-            // Two frames, per docs/CODE_STANDARDS.md Sec8: Start() runs one
+            // Two frames, per .claude/rules/tests.md: Start() runs one
             // frame after SetActive, and RefreshUi is what writes these.
             yield return null;
             yield return null;

@@ -12,7 +12,7 @@ namespace PrincesPalace.PlayModeTests
     // used to come back counted from the bottom of the sprite's Tight crop
     // instead, so every trimmed idle parked its badge low by exactly the
     // crop's Y offset -- the same class of bug the foot ring had in X
-    // (INCIDENTS "The ring at canvas centre").
+    // (.claude/rules/ui.md "Sprites").
     //
     // A LITERAL PIN, not a re-scan (CLAUDE.md gotcha 5): a test that re-read
     // the sprite's pixels through textureRect would share the production

@@ -9,7 +9,7 @@ the same functions plus three redeclared constants. That is the setup for a
 silent drift: a fix to `best_cut`'s tie-breaking in one slicer would leave the
 other on the old behaviour, with nothing to say so.
 
-Per `docs/CODE_STANDARDS.md` section 2, the second copy-paste of a pattern is
+Per `docs/CODE_STANDARDS.md` "Reuse", the second copy-paste of a pattern is
 the signal to promote it. This is that promotion, for the cell-cutting layer
 only -- anchoring, keying and canvas composition stay with whichever slicer
 owns them, because those genuinely differ.

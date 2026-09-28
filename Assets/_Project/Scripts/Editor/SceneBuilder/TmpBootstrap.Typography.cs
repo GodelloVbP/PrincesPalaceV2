@@ -20,7 +20,7 @@ using UnityEngine;
 // class actually drawn at that weight, not a faked outline-thickened glyph.
 public static partial class TmpBootstrap
 {
-    // Private to this topic -- see CODE_STANDARDS.md 4 on partial-class rules.
+    // Private to this topic -- see docs/CODE_STANDARDS.md "Partial classes".
     // Font/material output paths and atlas settings are shared with the rest
     // of TmpBootstrap and live in the root file as TypographyMaterialDir /
     // TypographyAtlasSize / TypographyAtlasPadding / TypographyRenderMode /

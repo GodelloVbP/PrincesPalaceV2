@@ -72,8 +72,8 @@ namespace PrincesPalace.Domain.Combat
         // on the Stack side now, but ApplyWard stays their one entry point for
         // a reason this method cannot serve: it is the only place that knows a
         // ward of non-positive points is a no-op rather than an entry.
-        // Throwing is the tier-1 version of that rule (CODE_STANDARDS section
-        // 9) -- the API cannot express the mistake -- and it costs nothing.
+        // Throwing is the tier-1 version of that rule (docs/CODE_STANDARDS.md
+        // "Comments") -- the API cannot express the mistake -- and it costs nothing.
         public static ActiveStatus Apply(List<ActiveStatus> statuses, StatusEffectType type, int magnitude, int turns, CombatantState source = null)
         {
             if (type == StatusEffectType.Shielded)
@@ -163,7 +163,7 @@ namespace PrincesPalace.Domain.Combat
         // `statusMagnitude: 1` for a Stun, a number nothing reads, purely to
         // satisfy the required-and-positive rule. Velvet Shackles' Rooted made
         // the second one, which is the project's own two-use bar for turning a
-        // workaround into a rule (docs/CODE_STANDARDS.md 10).
+        // workaround into a rule (docs/CODE_STANDARDS.md "Build the model").
         //
         // NOT THE SAME LINE StackPolicyOf DRAWS, although it nearly is.
         // Empowered refreshes rather than stacking and yet carries a real

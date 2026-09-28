@@ -31,7 +31,7 @@ namespace PrincesPalace.PlayModeTests
 
         // The harness's own handle on the Image the flash writes. StageHitFlash
         // .image is `internal` and InternalsVisibleTo is granted to the Editor
-        // assembly ONLY (docs/CODE_STANDARDS.md 4a), so a PlayMode test reads
+        // assembly ONLY (.claude/rules/ui.md "Wiring"), so a PlayMode test reads
         // the colour off the Image it built rather than reaching into the
         // component -- which is the rule working, not a workaround for it.
         private Image _image;

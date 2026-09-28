@@ -50,7 +50,7 @@ namespace PrincesPalace.Domain.UiKit
         // fallback. A theme with no row is a programmer error -- the enum has
         // six values and every one of them is answered here -- and Domain
         // throws on programmer error rather than returning a plausible wrong
-        // answer (docs/CODE_STANDARDS.md Sec5). PcThemeTests walks
+        // answer (docs/CODE_STANDARDS.md "Functions"). PcThemeTests walks
         // Enum.GetValues and asserts every value has a row, so a seventh
         // theme added to ButtonTheme fails a test rather than throwing
         // mid-fight the first time someone authors it.

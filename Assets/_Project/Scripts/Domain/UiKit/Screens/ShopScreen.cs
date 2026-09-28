@@ -305,7 +305,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef NextCharacterButton;
 
         // THE ONE BOX FOR "WHAT THE SHOP IS TELLING THE PLAYER RIGHT NOW"
-        // (docs/CODE_STANDARDS.md §10 -- one authoritative place, not a
+        // (docs/CODE_STANDARDS.md "Build the model" -- one authoritative place, not a
         // second box next to the first one). The old one-line
         // "ShopDetailLabel" retires: ShopDetailPanelBody carries the
         // refusal/empty-selection/relic/book-description text it used to

@@ -122,7 +122,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- the rules, proved by breaking them ------------------------------
         //
         // A validation nobody has watched refuse anything is a validation that
-        // might be scanning nothing -- CODE_STANDARDS §8's vacuity guard. Each
+        // might be scanning nothing -- .claude/rules/tests.md's vacuity guard. Each
         // of these mutates a COPY of the real file and asserts the refusal.
 
         private static RawLevelCurveEntry[] Authored() =>

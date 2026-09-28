@@ -86,7 +86,7 @@ GIT_GLOBALS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
 
 ADVICE = (
     "Stage by explicit path instead: `git add <path> [<path>...]`.\n"
-    "See CLAUDE.md 'Never git add -A' and docs/WORKFLOW.md section 3."
+    "See CLAUDE.md 'Staging'."
 )
 
 

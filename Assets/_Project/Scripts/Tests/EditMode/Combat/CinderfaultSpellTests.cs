@@ -447,7 +447,7 @@ namespace PrincesPalace.Domain.Tests
         // the kit's copy and the cast's copy are the same spell as far as the
         // wait is concerned. A static cache would have been the other way to get
         // that, and it would have been a mutable static in a test class with no
-        // reset seam, which is the shape CODE_STANDARDS section 7 refuses.
+        // reset seam, which is the shape docs/CODE_STANDARDS.md "Statics and lifetime" refuses.
         private static ResolvedSkill Cinderfault() => ResolveCinderfault();
 
         private static ResolvedSkill ResolveCinderfault()

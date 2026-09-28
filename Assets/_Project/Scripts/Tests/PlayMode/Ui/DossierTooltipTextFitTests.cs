@@ -29,8 +29,8 @@ namespace PrincesPalace.PlayModeTests
     // csproj header: "the split is read off the csproj", and Resources.Load
     // is one of the three named reasons a class stays Unity-only). Loading
     // the font straight off AssetDatabase by path, the way TypographyAssetTests
-    // does, rather than through TmpBootstrap/SceneBuilder -- CODE_STANDARDS.md
-    // 1's reference direction (PlayMode never points at Editor).
+    // does, rather than through TmpBootstrap/SceneBuilder -- docs/CODE_STANDARDS.md
+    // "Layering" reference direction (PlayMode never points at Editor).
     //
     // WORST CASE, not a typical one: a Convergent (3-slot) candidate rolled
     // three DIFFERENT affixes from what is already worn (also Convergent), on

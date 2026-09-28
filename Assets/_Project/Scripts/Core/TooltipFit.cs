@@ -13,7 +13,7 @@ namespace PrincesPalace
     //
     // Not on Domain/UiKit/TooltipPlacement.cs, which answers the related but
     // separate question of WHERE a tooltip sits -- that file is engine-free
-    // (CODE_STANDARDS.md's layering rule, `Domain/` carries no UnityEngine
+    // (docs/CODE_STANDARDS.md "Layering", `Domain/` carries no UnityEngine
     // reference at all), and this needs RectTransform/TMP_Text to measure a
     // real mesh.
     public static class TooltipFit

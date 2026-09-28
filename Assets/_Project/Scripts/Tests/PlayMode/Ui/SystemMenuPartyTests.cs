@@ -22,7 +22,7 @@ namespace PrincesPalace.PlayModeTests
     // back, and reaches the model's decisions through an actual scene.
     //
     // CONTENT-SHAPE LIMIT, stated rather than hidden behind a skip
-    // (CODE_STANDARDS SS8): characters.json authors exactly three characters
+    // (.claude/rules/tests.md): characters.json authors exactly three characters
     // and the formation has exactly three seats, so every character is
     // always seated and no roster card is ever benched -- with today's
     // content there is no way to drive a genuinely benched card through the
@@ -236,7 +236,7 @@ namespace PrincesPalace.PlayModeTests
         //
         // Driven through PartyDragSource's own PUBLIC IBeginDragHandler/
         // IEndDragHandler methods, reached off the scene the same way TextOf/
-        // IsActive already reach a node -- CODE_STANDARDS SS4a's own rule
+        // IsActive already reach a node -- .claude/rules/ui.md's own rule
         // ("PlayMode tests drive the UI through scenes and public API like a
         // player does") is why this cannot reach PartyController's internal
         // seatDragSources/cardDragSources arrays directly.
@@ -511,7 +511,7 @@ namespace PrincesPalace.PlayModeTests
             float floorY = PartyLayout.FeetLine - PartyLayout.ColumnButtonCentreY;
 
             // Resources/StanceManifest.json's own "Characters/sheep" entry --
-            // pinned as a literal per CODE_STANDARDS SS5 rather than re-read
+            // pinned as a literal per CLAUDE.md gotcha 5 rather than re-read
             // from the asset, so this cannot become a tautology against the
             // very file it is checking.
             const float shawnGroundLine = 43f;

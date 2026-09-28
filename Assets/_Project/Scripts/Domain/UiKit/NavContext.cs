@@ -5,7 +5,7 @@ namespace PrincesPalace.Domain.UiKit
 {
     // One entry on the NavContextStack -- a screen, a modal, or Fight's own
     // membership marker. Engine-free by construction (docs/CODE_STANDARDS.md
-    // section 1): a Button or a GameObject is an opaque `object` handle here,
+    // "Layering"): a Button or a GameObject is an opaque `object` handle here,
     // supplied and interpreted by the caller (NavigationInputModule, in
     // Core), never inspected by this class.
     //
@@ -190,7 +190,7 @@ namespace PrincesPalace.Domain.UiKit
         // rule. The other half needs to know whether the remembered node is
         // still usable (shown, not destroyed), which is an engine question
         // this class cannot ask and must not pretend to
-        // (docs/CODE_STANDARDS.md section 1), so the whole rule is stated
+        // (docs/CODE_STANDARDS.md "Layering"), so the whole rule is stated
         // once in NavigationInputModule.SelectionFor and never a second time
         // here. Null is a legal answer at both halves: a context whose whole
         // group emptied has nothing to reselect (section 6's screen-level

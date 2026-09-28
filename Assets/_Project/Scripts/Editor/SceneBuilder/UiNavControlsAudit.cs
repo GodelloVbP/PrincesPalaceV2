@@ -21,7 +21,7 @@ using PrincesPalace.Domain.UiKit;
 // NO LONGER OPT-IN. It used to return clean whenever the screen had no
 // UiNavDeclaration, which was every screen, always -- a check that never ran.
 // Its own vacuity is worth stating plainly rather than hiding
-// (docs/CODE_STANDARDS.md section 8): most of this project's custom
+// (.claude/rules/tests.md): most of this project's custom
 // actionable components (BarSlider, HoldToConfirm, ListScroll, RailScroll)
 // are AddComponent'd by their controller at RUNTIME, where no build-time scan
 // can see them, so today this fires on the build-time Attach<T> path only.

@@ -164,7 +164,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // Two settle frames: Start() runs one frame after a fresh scene's
-        // objects activate (CODE_STANDARDS.md Sec8).
+        // objects activate (.claude/rules/tests.md).
         private static IEnumerator LoadPlain(string scene)
         {
             yield return SceneManager.LoadSceneAsync(scene, LoadSceneMode.Single);

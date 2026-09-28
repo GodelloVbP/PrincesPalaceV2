@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.Tests
     // cannot be constructed outside the session, which Domain's layering does
     // not allow for a static helper every test also calls. So: a source scan,
     // scoped by judgement, with a vacuity guard, exactly as
-    // CODE_STANDARDS section 9 describes.
+    // docs/CODE_STANDARDS.md "Comments" describes.
     public class StatusSeamTests
     {
         private const int MinimumFilesExpected = 40;

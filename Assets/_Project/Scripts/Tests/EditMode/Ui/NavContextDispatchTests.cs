@@ -6,7 +6,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // WHAT A NAVCONTEXT DOES WITH A PRESS IT WAS HANDED, provable without a
     // scene because NavContext is engine-free by construction
-    // (docs/CODE_STANDARDS.md section 1). NavContextStackTests owns which
+    // (docs/CODE_STANDARDS.md "Layering"). NavContextStackTests owns which
     // context is top; this owns what that context does once it is.
     //
     // Three presses share one shape -- Cancel, the shoulders' tab step, the

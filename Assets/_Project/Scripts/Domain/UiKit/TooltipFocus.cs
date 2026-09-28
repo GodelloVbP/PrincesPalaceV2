@@ -28,7 +28,7 @@ namespace PrincesPalace.Domain.UiKit
     //   A context is pushed above, or the    -> force close (ForceClose),
     //     screen's own context is popped        whatever owned it.
     //
-    // Pure C# and engine-free (docs/CODE_STANDARDS.md section 1): a node is
+    // Pure C# and engine-free (docs/CODE_STANDARDS.md "Layering"): a node is
     // an opaque handle this class only ever compares by REFERENCE and hands
     // back, the same bargain NavContext makes for its Selectables. Reference
     // equality rather than Equals on purpose -- a UnityEngine.Object that has

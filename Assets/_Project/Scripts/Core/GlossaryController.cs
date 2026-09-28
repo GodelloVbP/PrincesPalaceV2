@@ -101,7 +101,7 @@ namespace PrincesPalace
 
         // ONE implementation, shared by the Close button's own click and
         // this context's Cancel handler -- a lambda duplicated on both would
-        // be the two-copies-of-one-rule docs/CODE_STANDARDS.md section 10
+        // be the two-copies-of-one-rule docs/CODE_STANDARDS.md "Build the model"
         // forbids the moment either one changed.
         private void Close() => gameObject.SetActive(false);
 

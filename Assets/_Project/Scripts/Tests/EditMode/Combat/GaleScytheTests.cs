@@ -33,7 +33,7 @@ namespace PrincesPalace.Domain.Tests
     //     LEVEL is a handful of points -- a real move that crosses nobody yet.
     //     An order-based assertion would pass whether the delay landed on the
     //     right enemy, the wrong one, or nobody at all, which is the failure
-    //     mode CODE_STANDARDS section 8 calls a test that covers nothing.
+    //     mode .claude/rules/tests.md calls a test that covers nothing.
     //
     // (2) THE TEST'S SWEEP IS A FREE ACTION. An ordinary cast ends the turn,
     //     and AdvanceAfterAction then ticks every charge forward until

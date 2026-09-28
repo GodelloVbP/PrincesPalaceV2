@@ -30,7 +30,7 @@ namespace PrincesPalace.Domain.Tests
     // needing Unity's JsonUtility.
     public class PhysicalMoveAuditTests
     {
-        // THE VACUITY GUARD (docs/CODE_STANDARDS.md 8). 23 rows land on the
+        // THE VACUITY GUARD (.claude/rules/tests.md). 23 rows land on the
         // damage pipeline today -- 22 that author `effect` and
         // `placeholder_shawn_capstone`, which authors none and so takes
         // SkillEffect's own default of DamageSingle, exactly as the resolver

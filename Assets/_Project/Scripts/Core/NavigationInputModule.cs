@@ -512,7 +512,7 @@ namespace PrincesPalace
         // remembered node if its id is still declared) and deliberately not
         // the half it cannot -- whether that node is still usable is an
         // engine question, and a Domain type has no business asking it
-        // (docs/CODE_STANDARDS.md section 1). Hidden or destroyed both fall
+        // (docs/CODE_STANDARDS.md "Layering"). Hidden or destroyed both fall
         // back to the entry: Talent's invest button and RewardTrack's collect
         // button are the two controls in this project that genuinely vanish
         // on a state change, and a remembered selection pointing at one of

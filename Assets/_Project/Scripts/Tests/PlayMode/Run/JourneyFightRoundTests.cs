@@ -127,7 +127,7 @@ namespace PrincesPalace.PlayModeTests
                 "one confirmed attack on the hovered enemy should have lowered its health");
 
             // LITERAL, pinned rather than recomputed from the damage formula
-            // under test (docs/CODE_STANDARDS.md's own formula-pinning
+            // under test (CLAUDE.md gotcha 5's formula-pinning
             // rule) -- SeededRandom(3) against this exact hero/enemy pair.
             // MOVED FROM 6 TO 8: CombatMath.BasicAttackPowerMultiplier
             // (1.2x on a player's plain swing, landed concurrently with this

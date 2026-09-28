@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.Tests
     // The pure halves of an event choice that RunOrchestrator.Event.cs leans
     // on: the gate that greys / refuses / hides a choice, the heal/damage
     // arithmetic, and the effects line. Every expected value is a literal
-    // (docs/CODE_STANDARDS.md 8).
+    // (CLAUDE.md gotcha 5).
     public class EventRoomRulesTests
     {
         private static ResolvedEventChoice Choice(EventRequirement[] requires, EventEffect[] effects,

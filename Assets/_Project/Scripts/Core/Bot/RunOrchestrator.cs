@@ -37,7 +37,7 @@ namespace PrincesPalace
     // Static and stateless, exactly like RunManager and RunLedger, and for the
     // same reason: the SAVE is the state, and a second copy held here would be
     // a second thing that can disagree with the disk.
-    // Split across files (CODE_STANDARDS §4): this root file owns the
+    // Split across files (docs/CODE_STANDARDS.md "Partial classes"): this root file owns the
     // class declaration and everything a run has always done,
     // RunOrchestrator.Shop.cs owns the shop's own mutations and
     // RunOrchestrator.Event.cs the event room's -- one topic per file.

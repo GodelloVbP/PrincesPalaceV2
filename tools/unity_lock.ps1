@@ -104,7 +104,7 @@ function Clear-StaleUnityLock {
 # --- Runner claims: one session per runner copy, for the WHOLE of its use ----
 #
 # WHY THE HARNESS LOCKS AT ALL. Two sessions share the runner copies
-# (WORKFLOW.md section 4). AUDIT #110 is what an unlocked launch costs: the
+# (docs/WORKFLOW.md "Parallel sessions"). AUDIT #110 is what an unlocked launch costs: the
 # second session's Unity dies on "another Unity instance is running with this
 # project open" and the run reports off whatever the previous run left on
 # disk. The first fix, Test-RunnerFree (this file, 2026-09-11 to 2026-09-26),

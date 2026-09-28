@@ -16,7 +16,7 @@ namespace PrincesPalace.Domain.Tests
     // every bound array the way UiWiringSweep does) needs provenance -- which
     // DECLARED node list a bound array's elements actually came from -- and
     // that only exists inside ScreenRegistry.cs's own Wire steps, which this
-    // suite (Domain-only, per docs/CODE_STANDARDS.md #1) cannot reference or
+    // suite (Domain-only, per docs/CODE_STANDARDS.md "Layering") cannot reference or
     // edit under this session's shared-tree rules. So this is the mechanical
     // half: every `.Select(...).ToArray()` assignment in ScreenRegistry.cs
     // must EITHER sit inside a screen that registers CountBindings, OR sit in

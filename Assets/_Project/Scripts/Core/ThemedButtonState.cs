@@ -39,8 +39,8 @@ namespace PrincesPalace
     //
     // Glow/Plate/GlowRect are assigned by UiEmitter once Visuals' children
     // exist (WireThemedButton), the same [SerializeField] builder-wired shape
-    // every other controller reference in this project uses (CODE_STANDARDS.md
-    // 4a) -- public rather than internal because FightFlowTests (a separate
+    // every other controller reference in this project uses (.claude/rules/ui.md
+    // "Wiring") -- public rather than internal because FightFlowTests (a separate
     // assembly with no InternalsVisibleTo grant) asserts against the real
     // GlowRect/Plate rects rather than reading them through reflection. This
     // component itself creates no GameObjects (UiKitLintTests' OnlyTheEmitter

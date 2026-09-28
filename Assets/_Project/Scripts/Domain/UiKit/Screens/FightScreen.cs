@@ -3193,7 +3193,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // ordinary row (FightController.Hud's StatusBoxRowText): the
                 // baked colour is never seen -- the box is Inactive until a
                 // paint has run -- and two different answers to "what colour
-                // is a row" is the restatement CODE_STANDARDS section 6 is
+                // is a row" is the restatement docs/CODE_STANDARDS.md "Values" is
                 // about.
                 var text = Ui.Label($"StatusBoxText{i}", UiString.Runtime,
                         new UiVec(StatusBoxTextWidth, StatusBoxRowMaxHeight), StatusBoxFontSize,

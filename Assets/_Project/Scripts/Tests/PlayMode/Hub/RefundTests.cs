@@ -10,7 +10,7 @@ namespace PrincesPalace.PlayModeTests
     // screen show it.
     //
     // PlayMode, not EditMode: Character is save-shaped mutable state in Core
-    // (Data/Character.cs), and CODE_STANDARDS.md §1 draws the EditMode line at
+    // (Data/Character.cs), and docs/CODE_STANDARDS.md "Layering" draws the EditMode line at
     // Domain only -- an EditMode test cannot reference it.
     public class RefundTests
     {

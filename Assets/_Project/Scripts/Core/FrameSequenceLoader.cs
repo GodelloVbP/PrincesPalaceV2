@@ -11,7 +11,7 @@ namespace PrincesPalace
     // "{path}/f{i}" until null, each with its own cache, its own MaxFrames
     // and its own copy of the comment explaining why Resources.LoadAll is
     // wrong here. Three copies of an eight-line loop is what
-    // docs/CODE_STANDARDS.md section 2 names as the moment to promote.
+    // docs/CODE_STANDARDS.md "Reuse" names as the moment to promote.
     //
     // ONLY frame discovery is shared. The three PLAYBACK classes stay
     // separate on purpose, and HubBuildingAnimator's own header argues the

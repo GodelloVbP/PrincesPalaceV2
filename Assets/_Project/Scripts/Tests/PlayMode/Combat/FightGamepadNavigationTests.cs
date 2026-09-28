@@ -474,7 +474,7 @@ namespace PrincesPalace.PlayModeTests
 
             var enemy = built.Session.Encounter.Enemies[0];
 
-            // ASSERTED, NOT ASSUMED (CODE_STANDARDS section 8): the row count
+            // ASSERTED, NOT ASSUMED (.claude/rules/tests.md): the row count
             // below is a literal, so a fixture that started carrying statuses
             // of its own has to fail here rather than quietly change what the
             // literal means.
@@ -910,7 +910,7 @@ namespace PrincesPalace.PlayModeTests
             var enemy = built.Session.Encounter.Enemies[0];
             var member = built.Session.Encounter.PlayerParty[0];
 
-            // ASSERTED, NOT ASSUMED (CODE_STANDARDS section 8): every row
+            // ASSERTED, NOT ASSUMED (.claude/rules/tests.md): every row
             // count below is a literal, so a fixture that started carrying
             // statuses of its own fails here rather than quietly changing
             // what those literals mean.

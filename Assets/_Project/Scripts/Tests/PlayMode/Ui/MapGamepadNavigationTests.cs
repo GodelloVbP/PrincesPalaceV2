@@ -21,7 +21,7 @@ namespace PrincesPalace.PlayModeTests
     // (MapNode0, MapLayout.Rows == 3 so IndexFor(0,0) == 0) with three
     // choices at depth 1, slots 0/1/2, ids 1/2/3 -- MapNode3/MapNode4/MapNode5.
     // Literal from here on, never recomputed from RunManager.Choices() in the
-    // assertions themselves (docs/CODE_STANDARDS.md's own formula-pinning rule).
+    // assertions themselves (CLAUDE.md gotcha 5's formula-pinning rule).
     public class MapGamepadNavigationTests
     {
         private string _root;

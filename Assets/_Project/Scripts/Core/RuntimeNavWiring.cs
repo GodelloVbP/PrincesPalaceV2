@@ -28,7 +28,7 @@ namespace PrincesPalace
     // A build-time write would therefore be correct for no frame the player
     // ever sees: every one of those surfaces rewires on its own repaint, so
     // the build-time links are overwritten before first use. Keeping both
-    // paths is the parallel implementation CODE_STANDARDS section 10
+    // paths is the parallel implementation docs/CODE_STANDARDS.md "Build the model"
     // forbids, and between the two only this one can express a runtime fact
     // -- so the build-time declaration path (ScreenDef.Nav, UiNavWiring,
     // UiAudit.CheckNavigable) is deleted rather than kept for a consumer that

@@ -214,7 +214,7 @@ namespace PrincesPalace
         // ---- status badges: consts and runtime state (S9's review) ---------------
         //
         // Moved here from FightController.Hud.cs, which built and paints
-        // this system but is a PART file -- CODE_STANDARDS.md section 4
+        // this system but is a PART file -- docs/CODE_STANDARDS.md "Partial classes"
         // reserves consts and runtime state for the root file of a
         // MonoBehaviour partial class, methods only for its parts, because
         // the scene/inspector GUID binding is anchored to this file alone.

@@ -14,7 +14,7 @@ namespace PrincesPalace.Domain.Tests
     // the numbers actually authored in skills.json, and once against what
     // the fight does with them.
     //
-    // LITERALS, NOT RECOMPUTED FORMULAS (CODE_STANDARDS §8). Every expected
+    // LITERALS, NOT RECOMPUTED FORMULAS (CLAUDE.md gotcha 5). Every expected
     // value below is typed out. Where a number has a derivation worth
     // knowing -- Rampage being 70% of Slam, Second Wind being a full heal at
     // a full bar -- the derivation is in the comment and the assertion is

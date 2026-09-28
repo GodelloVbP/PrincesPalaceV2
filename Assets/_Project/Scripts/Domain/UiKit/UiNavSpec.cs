@@ -37,8 +37,8 @@ namespace PrincesPalace.Domain.UiKit
     // things are Domain UiNodes or live UnityEngine.UI.Selectables. Before
     // this, Core carried its OWN copy of the prev/next math (RuntimeNav
     // Wiring.Chain) purely because these types named UiNode, which put the
-    // one rule in two places -- exactly what docs/CODE_STANDARDS.md section
-    // 10 forbids. TNode is never inspected here, only ordered and handed
+    // one rule in two places -- exactly what docs/CODE_STANDARDS.md
+    // "Build the model" forbids. TNode is never inspected here, only ordered and handed
     // back, so Domain stays engine-free (section 1) while Core is free to
     // instantiate these with Selectable.
     //

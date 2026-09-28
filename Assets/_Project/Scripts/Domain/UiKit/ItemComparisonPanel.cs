@@ -27,7 +27,7 @@ namespace PrincesPalace.Domain.UiKit
     // a body font of 15 or larger. Both are CALLER-supplied rather than
     // baked in here: a size and a type scale are content, not shape, and
     // the dossier's own eventual migration needs its own numbers without
-    // this file changing under it (docs/CODE_STANDARDS.md §10, "no
+    // this file changing under it (docs/CODE_STANDARDS.md "Build the model", "no
     // configurability without a demonstrated purpose" -- this one already
     // has its second, named caller).
     public static class ItemComparisonPanel

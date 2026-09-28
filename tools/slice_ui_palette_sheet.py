@@ -20,7 +20,7 @@ once each has an alpha channel:
   from white instead of green dominance.
 
 Reuses `force_sprite_import` from `key_green_screen.py` rather than a second
-copy -- see CLAUDE.md CODE_STANDARDS section 2 on promoting the second
+copy -- see docs/CODE_STANDARDS.md "Reuse" on promoting the second
 copy-paste, except here it's avoided instead of committed.
 """
 

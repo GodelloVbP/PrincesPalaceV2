@@ -14,7 +14,7 @@ namespace PrincesPalace.PlayModeTests
     // EnemyStanceCaptureTests reads a generated sheet -- not through
     // SceneBuilder.FontFor/MaterialFor, which live in the Editor assembly
     // and are not a reference PlayMode tests are allowed to take
-    // (CODE_STANDARDS.md 1: reference direction only ever points toward
+    // (docs/CODE_STANDARDS.md "Layering": reference direction only ever points toward
     // Domain, never toward Editor).
     public class TypographyAssetTests
     {

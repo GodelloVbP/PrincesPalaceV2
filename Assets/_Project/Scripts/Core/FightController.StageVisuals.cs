@@ -1891,9 +1891,9 @@ namespace PrincesPalace
         // Tight crop's bottom -- crop space -- while PlaceIntentBadge
         // subtracts the authored ground line, which is canvas space. Every
         // trimmed idle put the badge low by exactly its crop's Y offset, the
-        // bug FootBandCentreFraction had in X until 2026-09-07 (AUDIT #79,
-        // INCIDENTS "The ring at canvas centre"). One scan with one
-        // crop-to-canvas mapping, rather than a second copy of both.
+        // bug FootBandCentreFraction had in X (.claude/rules/ui.md "Sprites").
+        // One scan with one crop-to-canvas mapping, rather than a second
+        // copy of both.
         private static float ContentTopForActor(string folder)
         {
             var box = OpaqueBoxForActor(folder);

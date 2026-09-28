@@ -122,7 +122,7 @@ namespace PrincesPalace.PlayModeTests
             _hub.SetDebugMenu(true);
 
             // Start() runs one frame AFTER SetActive, so the listeners do not
-            // exist yet (CODE_STANDARDS section 5).
+            // exist yet (.claude/rules/tests.md).
             yield return null;
             yield return null;
         }

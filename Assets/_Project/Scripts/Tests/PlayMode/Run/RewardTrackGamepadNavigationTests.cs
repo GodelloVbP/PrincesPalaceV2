@@ -91,7 +91,7 @@ namespace PrincesPalace.PlayModeTests
             row.onClick.Invoke();
 
             // TWICE. Start() runs one frame after SetActive(true), not
-            // synchronously -- docs/CODE_STANDARDS.md section 5.
+            // synchronously -- .claude/rules/tests.md.
             yield return null;
             yield return null;
 

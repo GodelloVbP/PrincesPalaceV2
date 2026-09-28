@@ -166,7 +166,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // ButtonPlateArt.AspectError/NominalSizeFor's own arithmetic, pinned
-        // against literal expected values per docs/CODE_STANDARDS.md #8 --
+        // against literal expected values per CLAUDE.md gotcha 5 --
         // never recomputed from the method under test. Each case is a real
         // shape ButtonPlateArtTests already pins ShapeFor to, so this only
         // adds the error/nominal-size half.

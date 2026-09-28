@@ -14,7 +14,7 @@ namespace PrincesPalace.PlayModeTests
     //
     // Reads the real MainMenu scene rather than calling UiEmitter directly:
     // UiEmitter lives in PrincesPalace.Editor, which no test assembly may
-    // reference (CODE_STANDARDS.md 1, the same reason TypographyAssetTests
+    // reference (docs/CODE_STANDARDS.md "Layering", the same reason TypographyAssetTests
     // loads its assets by AssetDatabase path instead of through
     // SceneBuilder.FontFor/MaterialFor). This is the PlayMode half of that
     // same split: what the Editor-only resolver actually produced, seen the

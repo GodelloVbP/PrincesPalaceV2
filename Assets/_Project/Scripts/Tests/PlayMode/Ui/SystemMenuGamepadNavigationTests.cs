@@ -134,8 +134,8 @@ namespace PrincesPalace.PlayModeTests
                 "base context along with the menu's");
         }
 
-        // Pinned to literal expected values (docs/CODE_STANDARDS.md section
-        // 8) -- never recomputed from the production formula under test.
+        // Pinned to literal expected values (CLAUDE.md gotcha
+        // 5) -- never recomputed from the production formula under test.
         //
         // One press per test because each test pins one row and one
         // direction, not because two presses could not be chained: the 0.1s

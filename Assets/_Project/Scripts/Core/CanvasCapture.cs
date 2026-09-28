@@ -11,7 +11,7 @@ namespace PrincesPalace
     // reason: `ScreenshotTool` (Edit Mode) and the PlayMode capture fixture
     // must produce BYTE-COMPARABLE images, and the only way to guarantee
     // that is one implementation. Tests/PlayMode cannot reference Editor —
-    // see docs/CODE_STANDARDS.md §1 — so the shared code has to sit here.
+    // see docs/CODE_STANDARDS.md "Layering" — so the shared code has to sit here.
     //
     // The Edit Mode tool answers "does the art and layout look right." This
     // being callable from a PlayMode test answers the question the project

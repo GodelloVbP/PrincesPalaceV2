@@ -44,7 +44,7 @@ namespace PrincesPalace.PlayModeTests
     // owner, not a fixture bug: if hover is meant to read here, a hover
     // channel has to exist before it can be told apart from selection.
     //
-    // CONTENT-SHAPE LIMIT, stated rather than hidden (CODE_STANDARDS SS8):
+    // CONTENT-SHAPE LIMIT, stated rather than hidden (.claude/rules/tests.md):
     // characters.json authors three characters, so the roster is three cards,
     // all of them seated -- there is no "fifth card" to hover as section 8's
     // wording imagines. A roster card is hovered instead; it is still a slot

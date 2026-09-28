@@ -47,7 +47,7 @@ namespace PrincesPalace.PlayModeTests
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             // Two settle frames: OnEnable fires synchronously with the scene
             // load, Start (FightBootstrap's own) one frame later --
-            // CODE_STANDARDS.md Sec8.
+            // .claude/rules/tests.md.
             yield return null;
             yield return null;
 
@@ -88,7 +88,7 @@ namespace PrincesPalace.PlayModeTests
 
             // ZERO SETTLE FRAMES: OnEnable fires synchronously with the
             // scene load, Start (FightBootstrap's own) one frame later --
-            // CODE_STANDARDS.md Sec8 -- so this is the value as it stands
+            // .claude/rules/tests.md -- so this is the value as it stands
             // the instant every OnEnable in the load has run and no Start
             // has. The sentinel must still be here.
             Assert.AreEqual(2f, FightBeatPlayer.PlayerSpeedMultiplier, 1e-5f,

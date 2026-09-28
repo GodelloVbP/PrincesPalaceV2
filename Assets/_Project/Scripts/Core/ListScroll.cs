@@ -22,8 +22,8 @@ namespace PrincesPalace
     // caller decides which it is by which delegate it sets: attached to the
     // viewport only Scrolled is wired, attached to the track only Seeked is.
     // A third copy of the same twenty lines was the alternative, and
-    // CODE_STANDARDS section 2 names three copies as the moment to promote --
-    // this is the promotion arriving one copy early, because the two existing
+    // docs/CODE_STANDARDS.md "Reuse" makes a second copy the moment to promote --
+    // this is that promotion, made now because the two existing
     // ones are horizontal and neither could have taken a vertical caller
     // without growing an axis flag.
     //

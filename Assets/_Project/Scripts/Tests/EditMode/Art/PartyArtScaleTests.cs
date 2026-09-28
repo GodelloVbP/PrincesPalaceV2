@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.Tests
     // being taller on the fight stage).
     public class PartyArtScaleTests
     {
-        // PINNED LITERALS (CODE_STANDARDS SS5) -- 150 / 500 = 0.3 by hand,
+        // PINNED LITERALS (CLAUDE.md gotcha 5) -- 150 / 500 = 0.3 by hand,
         // not by re-deriving the formula under test.
         [Test]
         public void TheTallestCanvasSetsTheScale()

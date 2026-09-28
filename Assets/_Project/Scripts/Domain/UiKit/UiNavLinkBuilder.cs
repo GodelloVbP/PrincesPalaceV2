@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.UiKit
     // header explains why), so the same algorithm serves a Domain UiNode tree
     // and Core's live UnityEngine.UI.Selectables without either the algorithm
     // or Domain's engine-free boundary bending (docs/CODE_STANDARDS.md
-    // sections 1 and 10). RuntimeNavWiring is a thin adapter over this, not a
+    // "Layering" and "Build the model"). RuntimeNavWiring is a thin adapter over this, not a
     // second implementation of it.
     public static class UiNavLinkBuilder
     {

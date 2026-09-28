@@ -604,7 +604,7 @@ Write-Host ""
 # trick the Unity regex below uses, for the same reason.
 $dotnetJob = $null
 # PER INVOCATION, not one fixed name. This was "domain-tests-run.log"
-# flat, and $env:TEMP is per USER -- so two sessions (WORKFLOW.md section 4
+# flat, and $env:TEMP is per USER -- so two sessions (docs/WORKFLOW.md "Parallel sessions"
 # plans for exactly two) overwrote each other's transcript. The verdict
 # survived that, because it comes from the job's own exit code; two other
 # things did not. The summary line PRINTED was whichever run wrote last,

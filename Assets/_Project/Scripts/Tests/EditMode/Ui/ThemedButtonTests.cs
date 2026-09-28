@@ -13,7 +13,7 @@ namespace PrincesPalace.Domain.Tests
     // reaches the HoverScale/ButtonPressAnimator branch below it), so what is
     // worth pinning is the DECISION recorded on the node, not the GameObjects
     // an Editor-only emitter produces from it -- Tests/EditMode can only
-    // reference Domain (see CODE_STANDARDS.md 1), so UiEmitter itself is not
+    // reference Domain (see docs/CODE_STANDARDS.md "Layering"), so UiEmitter itself is not
     // reachable from here at all.
     public class ThemedButtonTests
     {

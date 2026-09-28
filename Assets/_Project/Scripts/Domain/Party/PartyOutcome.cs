@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.Party
 
     // What a command did, as DATA rather than a string. Display copy lives in
     // UiStrings (a UiKit/Ui-package concern; Domain never authors
-    // user-facing text -- see CODE_STANDARDS.md's UiString rule), so this
+    // user-facing text -- see .claude/rules/ui.md's UiString rule), so this
     // hands back a KIND plus the up-to-two names a toast template needs to
     // fill in ("{Actor} takes the Front seat", "{Actor} swaps places with
     // {Other}"). Seat is the seat the toast is about when the kind cares --

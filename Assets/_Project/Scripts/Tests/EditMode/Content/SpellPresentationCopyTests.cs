@@ -18,7 +18,7 @@ namespace PrincesPalace.Domain.Tests
     // guards nothing but the fields somebody thought of twice.
     //
     // These two kill the CLASS rather than the instance, which is
-    // docs/CODE_STANDARDS.md section 9's T1 rung: the pin walks the type by
+    // the T1 rung of docs/CODE_STANDARDS.md "Comments": the pin walks the type by
     // reflection, so a field added and not copied fails on the next run with
     // its own name in the message and nobody has to remember anything.
     public class SpellPresentationCopyTests

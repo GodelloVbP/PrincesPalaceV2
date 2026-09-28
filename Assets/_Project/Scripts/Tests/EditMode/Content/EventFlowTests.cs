@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.Tests
         // (counter min 10 max 10) goes to a special page, and whose last,
         // unconditional outcome loops back to the same page. Built by hand
         // here rather than read from events.json, so the assertions are
-        // pinned against literal values (docs/CODE_STANDARDS.md 8), not
+        // pinned against literal values (CLAUDE.md gotcha 5), not
         // against whatever the content file happens to say today.
         private static ResolvedEventPage WellPage()
         {

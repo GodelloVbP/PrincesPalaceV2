@@ -21,7 +21,7 @@ namespace PrincesPalace
     //
     // Core rather than Domain/UiKit, unlike the rest of the navigation types:
     // the answer is a live UnityEngine.UI.Selectable, and Domain carries no
-    // UnityEngine reference at all (docs/CODE_STANDARDS.md section 1).
+    // UnityEngine reference at all (docs/CODE_STANDARDS.md "Layering").
     public interface INavPaneEntry
     {
         // Null is a legal answer -- "I have nothing to offer right now, use

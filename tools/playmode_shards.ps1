@@ -6,7 +6,7 @@
 # WHY. PlayMode was 338s in one Unity process while EditMode finished in 23s
 # beside it, so the gate's wall clock WAS the PlayMode process. It is split by
 # FIXTURE (test class), never by test: a fixture loads its scene once and
-# shares it across its tests (docs/TESTING.md "Shared scenes in PlayMode"), so
+# shares it across its tests (.claude/rules/tests.md "Shared scenes in PlayMode"), so
 # a fixture cut in two would pay its scene twice and, worse, run half its
 # tests against a scene state they were never written for.
 #

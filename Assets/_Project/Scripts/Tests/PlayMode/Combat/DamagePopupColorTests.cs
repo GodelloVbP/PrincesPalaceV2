@@ -82,7 +82,7 @@ namespace PrincesPalace.PlayModeTests
         // The colour off whichever popup the last click set running. Real
         // component read (GetComponentInChildren<TMP_Text>), not the
         // internal `label` field DamagePopup itself uses -- PlayMode has no
-        // InternalsVisibleTo grant, by design (see CODE_STANDARDS.md 3/4a).
+        // InternalsVisibleTo grant, by design (see .claude/rules/ui.md "Wiring").
         private Color ActivePopupColor()
         {
             var player = Object.FindAnyObjectByType<FightBeatPlayer>();

@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.Tests
     // Every DamageType member has its OWN colour token, pinned by literal --
     // not by calling ForDamageType and comparing it to itself, which would
     // pass even if the switch mapped every member to the same string. See
-    // CODE_STANDARDS.md section 5 on why a recomputed expectation is a
+    // CLAUDE.md gotcha 5 on why a recomputed expectation is a
     // tautology.
     public class FightHudPaletteDamageTypeTests
     {

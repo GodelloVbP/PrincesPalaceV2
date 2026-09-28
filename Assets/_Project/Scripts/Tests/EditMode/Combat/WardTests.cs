@@ -452,7 +452,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE GENERIC APPLY REFUSES THIS STATUS OUTRIGHT -- tier 1 of
-        // CODE_STANDARDS section 9, the API refusing to express the mistake.
+        // docs/CODE_STANDARDS.md "Comments", the API refusing to express the mistake.
         // Apply MERGES a second application into the first, which is the exact
         // opposite of what a ward does, and it would silently turn two
         // 20-point shields into one.

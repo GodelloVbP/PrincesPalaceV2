@@ -107,7 +107,7 @@ namespace PrincesPalace.Domain.Progression
         // What `amount` more experience does to a level/exp pair.
         //
         // THE WHOLE LEVEL-UP LOOP, moved down from Character so it can be
-        // pinned without a save, a scene or Unity -- CODE_STANDARDS §1's
+        // pinned without a save, a scene or Unity -- docs/CODE_STANDARDS.md "Layering",
         // "arithmetic to Domain, wrapper stays". Character.AddExperience is
         // now that wrapper and does nothing else.
         //

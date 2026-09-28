@@ -10,7 +10,7 @@ namespace PrincesPalace.PlayModeTests
     // Domain is engine-free and cannot see FightBeatPlayer's constants, so the
     // ceiling on a layer's ending is a literal there with its derivation
     // written beside it -- which is a restated value, and
-    // docs/CODE_STANDARDS.md section 9 says the strongest form available for
+    // docs/CODE_STANDARDS.md "Comments" says the strongest form available for
     // one of those is a test that fails when the claim stops being true.
     //
     // The claim is a bracket, and both ends carry weight:

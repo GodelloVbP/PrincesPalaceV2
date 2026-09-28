@@ -85,8 +85,8 @@ namespace PrincesPalace.PlayModeTests
             _hub.SetDebugMenu(true);
 
             // Start() runs one frame after SetActive, so the row buttons'
-            // own onClick listeners do not exist yet (CODE_STANDARDS
-            // section 5, same wait DebugMenuTests.OpenTheMenu takes).
+            // own onClick listeners do not exist yet (.claude/rules/tests.md;
+            // same wait DebugMenuTests.OpenTheMenu takes).
             yield return null;
             yield return null;
         }

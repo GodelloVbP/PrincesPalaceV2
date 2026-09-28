@@ -13,7 +13,7 @@ namespace PrincesPalace.Domain.Tests
     // UiAudit never looks at their colour.
     public class PcThemeTests
     {
-        // THE VACUITY GUARD (docs/CODE_STANDARDS.md Sec8): PcTheme.For throws
+        // THE VACUITY GUARD (.claude/rules/tests.md): PcTheme.For throws
         // on an unhandled theme rather than falling back, which is the right
         // posture for Domain but pushes the discovery to runtime. This walks
         // the enum so a seventh ButtonTheme fails here, at build time, in the
