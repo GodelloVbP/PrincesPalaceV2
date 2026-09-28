@@ -35,10 +35,10 @@ namespace PrincesPalace
     // WAITING, not the clock stopping, and battle speed divides durations
     // rather than touching timeScale. So nothing on this stage has a
     // timeScale drop to survive, and the one it does meet is a pause it must
-    // stop for. The walk, the punch and the stage kick used to step by
-    // unscaledDeltaTime and so played on behind an open menu while the lunge
-    // beside them froze -- and under a capture's pinned captureDeltaTime
-    // they ran at wall speed, which that pin does not reach (TESTING.md).
+    // stop for: Time.deltaTime everywhere here means every move on this
+    // stage pauses and resumes together, and holds to a capture's pinned
+    // captureDeltaTime rather than running at wall speed under it
+    // (TESTING.md).
     // Idle breath and hover are the deliberate exception, and they live in
     // FightController.StageVisuals, not here: ambient, not beat-driven
     // (PLAN_BATTLE_SPEED contract 9).
@@ -256,23 +256,17 @@ namespace PrincesPalace
 
         // Re-reads the mark and the scale from where the slot ACTUALLY is now.
         //
-        // THE BUG THIS EXISTS FOR. These were captured in Awake and never
-        // again, which quietly assumed a slot never moves. It moves constantly:
-        // FightController.AnchorOne re-spreads and re-scales the live
-        // slots from FightStageAnchors every time the live count changes, so
-        // that two rats occupy the two ENDS of the formation rather than
-        // crowding its first two positions -- and an enemy dying re-lays every
-        // survivor.
-        //
-        // From that moment the animator was returning each figure to where its
-        // slot used to be, and multiplying its stretch onto the scale the slot
-        // used to have. Both are absolute writes at the end of a tween, so the
-        // figure did not drift -- it SNAPPED to a stale mark the instant a
-        // lunge finished, and did it again on every swing. That is the
-        // "sprites constantly get misplaced".
-        //
-        // It bit on the first encounter too, not only after a death: the slots
-        // are anchored during setup, which is after Awake.
+        // A slot does not stay fixed after Awake: FightController.AnchorOne
+        // re-spreads and re-scales the live slots from FightStageAnchors
+        // every time the live count changes, so that two rats occupy the
+        // two ENDS of the formation rather than crowding its first two
+        // positions -- an enemy dying re-lays every survivor, and the slots
+        // are anchored during setup too, which is after Awake. Caching the
+        // mark and scale once in Awake and reusing them would return each
+        // figure to a stale mark and multiply its stretch onto a stale
+        // scale -- both are absolute writes at the end of a tween, so the
+        // figure would SNAP to the wrong place the instant a lunge
+        // finished, and again on every swing after.
         //
         // THE READING FORM: takes the rect as it stands to be where the figure
         // belongs. Right for Awake, where the scene's own values are the
@@ -313,12 +307,12 @@ namespace PrincesPalace
         // The authoritative form: the caller states the mark and the size, and
         // this puts the figure on them.
         //
-        // TOLD, NOT SHOWN, which is the difference that matters. AnchorOne
-        // used to assign the rect and then call the parameterless overload to
-        // have it read back what had just been written -- two writers agreeing
-        // by convention about the order they run in. That convention was
-        // invisible, and a breath running between the two halves would have
-        // broken it silently. One writer cannot be got out of order.
+        // TOLD, NOT SHOWN, which is the difference that matters: assigning
+        // the rect directly and then calling the parameterless overload to
+        // read back what was just written would be two writers agreeing by
+        // convention about the order they run in. That convention would be
+        // invisible, and a breath running between the two halves would break
+        // it silently. One writer cannot be got out of order.
         public void Rehome(Vector2 mark, Vector3 baseScale)
         {
             if (_rect == null) _rect = transform as RectTransform;
@@ -912,9 +906,9 @@ namespace PrincesPalace
         }
 
         // Outbound uses ease-OUT (fast off the mark, decelerating into the
-        // target) rather than the symmetrical smoothstep this used to use.
-        // Smoothstep eases IN as well, so the strike began slowly — which is
-        // exactly what made it read as gliding rather than striking.
+        // target) rather than a symmetrical smoothstep: smoothstep eases IN
+        // as well, which would make the strike begin slowly and read as
+        // gliding rather than striking.
         private IEnumerator TweenOut(Vector2 from, Vector2 to, float seconds)
         {
             // The TRAIL is dropped on the OUTBOUND leg only -- that is the
