@@ -1,6 +1,7 @@
 # Plan: Bjorn's three constellations (Sentinel, Einherjar, Juggernaut)
 
-Status: DESIGN + PLAN ONLY. No code has been written against this.
+Status: DESIGN + PLAN, all decisions closed 2026-09-28. No code yet. Next
+step: Phase 1 (crit system).
 Source: owner design session, 2026-09-28. Every number below is a FIRST
 VALUE for the balance bot (`tools/bot.ps1`), not a tuned one.
 
@@ -255,7 +256,7 @@ Unstoppable for 2 turns (cannot be affected by crowd control). It is the
 |---|---|---|---|
 | **Unyielding** (L: 11/14/17) — CC passive | When crowd control is attempted on him, he negates it and gains +speed and +25% damage for 2 turns. 4-turn cooldown. | Cooldown 3 turns. | The trigger also grants 20 Fury. |
 | **Ignore Pain** (C: 12/15/18) — delayed damage | 20% of every hit is not taken now but spread over the next 3 turns as damage over time. | 30%. | Healing reduces the pending delayed damage before it restores health. |
-| **Blood Price** (R: 13/16/19) — control over his own health | When short on Fury, skills can be paid with health instead: 1 Fury = 0.5% max HP. | Health-paid skills deal +15% damage. | Cheat death, once per fight: lethal damage leaves him at 1 HP and fills Fury to 100. Reuses the existing `CheatDeathOncePerFight` `TalentEffect` — no new kind needed. |
+| **Blood Price** (R: 13/16/19) — control over his own health | When short on Fury, skills can be paid with health instead: 1 Fury = 0.5% max HP. Health payment cannot take him below 1 HP, and self-payment never triggers cheat death. | Health-paid skills deal +15% damage. | Cheat death, once per fight: lethal damage leaves him at 1 HP and fills Fury to 100. Reuses the existing `CheatDeathOncePerFight` `TalentEffect` — no new kind needed. |
 
 Unyielding vs Unstoppable (owner decision): while Unstoppable is active,
 Unstoppable blocks the crowd control and Unyielding neither fires nor
@@ -282,6 +283,10 @@ edge case to exclude.
   full health, the opposite of the tree.
 - Second Wind becomes a nuke under this (Second Wind is granted by the
   Juggernaut root); the missing-health cap bounds it.
+- Ignore Pain T3 vs Cursed Blood (owner-delegated, 2026-09-28): under
+  Cursed Blood, heals convert first and do not clear delayed damage —
+  Ignore Pain T3's "healing reduces the pending delayed damage" does not
+  apply to a heal that Cursed Blood has converted to enemy damage.
 
 ---
 
@@ -334,10 +339,16 @@ table. Every phase below is a separate issue with one owner. Gates per
 - Routing: `fixer` for the plots data (the `Plots` keying and the three
   layout entries); `implementer` if the layout contract itself changes.
 
-### Phase 4 — Combat mechanics (one issue each, in this order)
+### Phase 4 — Combat mechanics (mechanics reference, 4a-4h)
+
+Every issue that adds a utility skill also adds its bot valuation for it
+(closes review finding 2: non-damage skills otherwise score 0 and Phase 6
+cannot evaluate Sentinel or Juggernaut).
 
 Routing 4a-4h: triage at launch; default `fixer` for content-on-existing-
-effects, `implementer` for new mechanics.
+effects, `implementer` for new mechanics. This table is the mechanics
+reference; build order (which rows land when) is the vertical-slice plan
+below, not top-to-bottom through this table.
 
 | # | Mechanic | Used by | Notes |
 |---|---|---|---|
@@ -350,36 +361,69 @@ effects, `implementer` for new mechanics.
 | 4g | Momentum stacks, Fury soak, Berserk (reuse `Transformation`), Headsplitter, Twin Rampage | Einherjar | After phase 1. |
 | 4h | Hold the Line, Bellow upgrades, Gorge, Unbroken skills | Sentinel, Juggernaut | Mostly content on existing effects. |
 
-### Phase 5 — Content
+### Build order — vertical slices per constellation (owner-delegated, 2026-09-28)
 
-`talents.json` (63 rows, slots per the tables above) and `skills.json`;
-remove the placeholder kit rows that the trees replace; `-BuildContent`.
-Also remove the `bear_bulwark` skill row (Bulwark is dropped, owner,
-2026-09-28, third pass). Routing: `fixer`.
+Closes review finding 8: not all mechanics, then all content, then
+balance. After Phases 1-3, build one constellation fully — its mechanics,
+its content, its bot pass — before starting the next. Order: Einherjar
+(Slice A), then Juggernaut (Slice B), then Sentinel (Slice C, since the
+shared Ward pool in 4a is the newest mechanic).
+
+Each slice is: its Phase 4 mechanics rows (below) + Phase 5 content for
+that constellation + a Phase 6 bot pass for it, before the next slice's
+mechanics start.
+
+- **Slice A — Einherjar**: mechanics 4g, plus the Einherjar-relevant parts
+  of 4h. Content: Einherjar's 21 `talents.json` rows plus Hack. Bot pass:
+  Einherjar vs the reworked reward track.
+- **Slice B — Juggernaut**: mechanics 4b, 4c, 4d, 4e, plus the
+  Juggernaut-relevant parts of 4h (Gorge, Unbroken skills). Content:
+  Juggernaut's 21 `talents.json` rows plus Second Wind's `grantsSkillId`
+  wiring. Bot pass: Juggernaut vs the reworked reward track.
+- **Slice C — Sentinel**: mechanics 4a, 4f, plus the Sentinel-relevant
+  parts of 4h (Hold the Line, Bellow upgrades). Content: Sentinel's 21
+  `talents.json` rows plus Brace/Plant the Shield's `grantsSkillId` wiring.
+  Bot pass: Sentinel vs the reworked reward track.
+
+`talents.json` (63 rows total across the three slices) and `skills.json`;
+remove the placeholder kit rows that the trees replace, and the
+`bear_bulwark` skill row (Bulwark is dropped, owner, 2026-09-28, third
+pass); `-BuildContent`. Routing: `fixer`.
 
 Save compatibility, verified in code (2026-09-28): removed talent ids are
 dropped silently on load (`SaveData.Reconcile`), and spent embers are
 summed from unlocked ids, so removing `placeholder_brawler_ward_root`
 effectively refunds those embers on next load — no migration step needed.
 
-### Phase 6 — Balance
+A reuse pass runs before content authoring for each slice (closes review
+finding 1): map each node to an existing `TalentEffect` kind where it fits
+(`CheatDeathOncePerFight`, `IgnoreDefensePercent` for Slam T3,
+`ExecuteDamageBonusPercent` for Headsplitter T2, `TransformExtendOnKill`,
+`ProvokedDamageReductionPercent`), and trim nodes that only exist to
+differ from an existing one.
 
-`tools/bot.ps1` per constellation, and each against the reworked reward
-track. Every number in this doc is up for change here.
+`tools/bot.ps1` per slice's constellation, and each against the reworked
+reward track once its content is in. Every number in this doc is up for
+change here. Every issue that adds a utility skill also adds its bot
+valuation for it (same rule as Phase 4's intro).
 
 ### Phase 7 — Art
 
 Planted shield (intact + broken), Shieldwall, Berserk battle sprite,
 Cursed Blood VFX, three constellation backgrounds. Pipeline:
-`docs/ART_PIPELINE.md`.
+`docs/ART_PIPELINE.md`. Runs alongside the slice that needs it, not as a
+separate final phase; placeholders are acceptable meanwhile (graceful
+degradation, per `CLAUDE.md` conventions).
 
 ### Parallel track — enemy roster
 
 Owner confirmed the roster will grow to support these trees. Today:
 1 enemy crowd-control ability (Forest Warden `grapple`), 1 enemy area
-attack (Treant `spore_cloud`), poison as the only damage over time. Until
-that grows, Spellbreaker's silence, Unyielding, Unbroken's Unstoppable and
-Ignore Pain see little use. Separate plan.
+attack (Treant `spore_cloud`), poison as the only damage over time. This
+track must land its crowd-control and caster additions before the Slice B
+(Juggernaut) and Slice C (Sentinel) balance passes, or the bot reads
+Spellbreaker's silence, Unyielding, Unbroken's Unstoppable and Ignore Pain
+as worthless. Separate plan.
 
 ---
 
@@ -408,27 +452,48 @@ Ignore Pain see little use. Separate plan.
 - Engine pick is mandatory (owner, 2026-09-28, third pass): Bjorn cannot
   enter a fight without a chosen root; the Talents screen (or first hub
   visit) forces the choice.
+- `TalentEffect` reuse (owner-delegated, 2026-09-28, review finding 1): a
+  reuse pass runs before content authoring for each slice, mapping each
+  node to an existing kind where it fits and trimming nodes that only
+  exist to differ; see the Phase 5/build-order section.
+- Bot valuations for utility skills (owner-delegated, 2026-09-28, review
+  finding 2): every issue that adds a utility skill also adds its bot
+  valuation for it, so Phase 6 can evaluate Sentinel and Juggernaut.
+- Blood Price near-zero health (owner-delegated, 2026-09-28, review
+  finding 6): health payment cannot take him below 1 HP; self-payment
+  never triggers cheat death.
+- Ignore Pain T3 vs Cursed Blood (owner-delegated, 2026-09-28, review
+  finding 7): under Cursed Blood, heals convert first and do not clear
+  delayed damage.
+- Build order (owner-delegated, 2026-09-28, review finding 8): vertical
+  slices per constellation after Phases 1-3 — Einherjar, then Juggernaut,
+  then Sentinel — each slice bundling its Phase 4 mechanics, Phase 5
+  content and a Phase 6 bot pass.
+- Enemy-roster track sequencing (owner-delegated, 2026-09-28, review
+  finding 10): the crowd-control and caster additions land before the
+  Slice B and Slice C balance passes.
+- Twin Rampage second sweep (review finding 11): no work needed — verified
+  in code that party-applied Stun on enemies already uses `HasStun` at
+  enemy turn.
 
 ## 7. Open questions
 
-1. Names still placeholders: Iron Retort, Thornwall, Spellbreaker, Plant
-   the Shield, Bloodfire, Battle Trance, Twin Rampage, Thick Blood, Wrath,
-   Gorge, Unbroken, Unyielding.
+None. Working names are adopted; renaming is cosmetic.
 
 ---
 
-## 8. Review findings (2026-09-28), pending owner
+## 8. Review findings (2026-09-28), all decided
 
 | # | Finding | Recommendation |
 |---|---|---|
-| 1 | `TalentEffect` is a CLOSED enum (Type/Magnitude/Threshold only, ~35 kinds, each wired inline at its mechanic). The 60 non-root nodes here need roughly 40+ new kinds; the plan did not budget this. | A reuse pass before Phase 5 mapping each node to an existing kind where it fits (`CheatDeathOncePerFight`, `IgnoreDefensePercent` for Slam T3, `ExecuteDamageBonusPercent` for Headsplitter T2, `TransformExtendOnKill`, `ProvokedDamageReductionPercent`), and trim nodes that only exist to be different. |
-| 2 | The balance bot scores actions by previewed damage; non-damage skills score 0 (`SkillResolution` returns 0 for Provoke, Transform, Ward-type utility). Brace, Bellow, Hold the Line, Plant the Shield, Berserk, Unbroken, Cursed Blood would be ignored, so Phase 6 cannot evaluate Sentinel or Juggernaut. | Add bot valuations for each new utility skill in the same issue that adds the skill. |
+| 1 | `TalentEffect` is a CLOSED enum (Type/Magnitude/Threshold only, ~35 kinds, each wired inline at its mechanic). The 60 non-root nodes here need roughly 40+ new kinds; the plan did not budget this. | A reuse pass before Phase 5 mapping each node to an existing kind where it fits (`CheatDeathOncePerFight`, `IgnoreDefensePercent` for Slam T3, `ExecuteDamageBonusPercent` for Headsplitter T2, `TransformExtendOnKill`, `ProvokedDamageReductionPercent`), and trim nodes that only exist to be different. DECIDED (Claude recommendation, owner-delegated): a reuse pass runs before Phase 5, mapping each node to an existing kind where it fits and trimming nodes that only exist to differ. Moved to section 6; added as an explicit step at the start of the Phase 5/build-order section. |
+| 2 | The balance bot scores actions by previewed damage; non-damage skills score 0 (`SkillResolution` returns 0 for Provoke, Transform, Ward-type utility). Brace, Bellow, Hold the Line, Plant the Shield, Berserk, Unbroken, Cursed Blood would be ignored, so Phase 6 cannot evaluate Sentinel or Juggernaut. | Add bot valuations for each new utility skill in the same issue that adds the skill. DECIDED (Claude recommendation, owner-delegated): every issue that adds a utility skill also adds its bot valuation for it. Moved to section 6; added to Phase 4's intro and to Phase 6. |
 | 3 | Sentinel cannot act as a tank on turn 1: Fury starts at 0 and only comes from being hit, while Bellow (20), Plant the Shield (30) and Hold the Line (40) all cost Fury. | Bellow costs 0 with a 3-turn cooldown. DECIDED (owner): Bellow costs 0 Fury, 3-turn cooldown. Moved to section 6. |
 | 4 | Brace (root) and Plant the Shield (convergence) are two Ward buttons. | The convergence upgrades Brace into Plant the Shield instead of adding a second button. DECIDED (owner): confirmed as recommended; no second button. Moved to section 6. |
 | 5 | "Juggernaut gets Fury from no other source" conflicts with Fury-granting nodes in other trees he can still buy (Bellow T3, Hold the Line T2, Bloodfire). | Those still pay; the rule means "no hit-based income", nothing more. DECIDED (owner): confirmed as recommended. Moved to section 6. |
-| 6 | Blood Price health cost: no rule for paying near 0 health. | Cannot pay below 1 HP; self-payment never triggers cheat death. |
-| 7 | Ignore Pain T3 vs Cursed Blood: order undefined. | Under Cursed Blood, heals convert first and do not clear delayed damage. |
-| 8 | Phase order builds all mechanics, then all content, then balance. | Vertical slices per constellation after Phases 1-3: Einherjar first (exercises the crit system, mostly existing seams), then Juggernaut, then Sentinel (shared Ward pool is the newest mechanic). |
+| 6 | Blood Price health cost: no rule for paying near 0 health. | Cannot pay below 1 HP; self-payment never triggers cheat death. DECIDED (Claude recommendation, owner-delegated): health payment cannot take him below 1 HP; self-payment never triggers cheat death. Moved to section 6; added to the Blood Price row in section 4. |
+| 7 | Ignore Pain T3 vs Cursed Blood: order undefined. | Under Cursed Blood, heals convert first and do not clear delayed damage. DECIDED (Claude recommendation, owner-delegated): under Cursed Blood, heals convert first and do not clear delayed damage. Moved to section 6; added to the Cursed Blood section. |
+| 8 | Phase order builds all mechanics, then all content, then balance. | Vertical slices per constellation after Phases 1-3: Einherjar first (exercises the crit system, mostly existing seams), then Juggernaut, then Sentinel (shared Ward pool is the newest mechanic). DECIDED (Claude recommendation, owner-delegated): vertical slices after Phases 1-3 — Einherjar, then Juggernaut, then Sentinel — each slice bundling its Phase 4 mechanics, Phase 5 content and a Phase 6 bot pass. Moved to section 6; section 5 restructured accordingly. |
 | 9 | Existing saves / new players: a Bjorn with no root has no Fury and only Slam. | The Talents screen (or first hub visit) forces the engine pick; until then Bjorn is flagged in the party UI. DECIDED (owner): the engine pick is MANDATORY — Bjorn cannot enter a fight without a chosen root. Moved to section 6. |
-| 10 | Several branches react to enemy behaviour the roster barely has (crowd control, magic casts). | The enemy-roster track lands before Sentinel/Juggernaut balance, or the bot reads those branches as worthless. |
-| 11 | Twin Rampage second sweep: keep 1x + 1-turn stun. | Verify party-applied Stun on enemies uses `HasStun` at enemy turn (it does per the 2026-09-28 read), so no new work there. |
+| 10 | Several branches react to enemy behaviour the roster barely has (crowd control, magic casts). | The enemy-roster track lands before Sentinel/Juggernaut balance, or the bot reads those branches as worthless. DECIDED (Claude recommendation, owner-delegated): the enemy-roster track lands its crowd-control and caster additions before the Slice B and Slice C balance passes. Moved to section 6; the "Parallel track" paragraph updated. |
+| 11 | Twin Rampage second sweep: keep 1x + 1-turn stun. | Verify party-applied Stun on enemies uses `HasStun` at enemy turn (it does per the 2026-09-28 read), so no new work there. DECIDED (Claude recommendation, owner-delegated): no work needed — already verified. Moved to section 6. |
