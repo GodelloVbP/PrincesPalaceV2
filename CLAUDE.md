@@ -168,3 +168,10 @@ can sweep another session's uncommitted work into a commit. Enforced by
   directly, edit `Domain/UiKit/Screens/` and `ScreenRegistry.cs` instead.
 - `anti-ui-slop` skill: inert (no UIZZE MCP); its "never report missing
   evidence" policy is not followed — missing evidence gets reported.
+- `game-ui-ux` skill: its Inspector-setup examples (CanvasScaler, anchors,
+  Navigation) are overridden by rule 1 — apply its principles through
+  `Domain/UiKit/Screens/` + `ScreenRegistry.cs`; `UiAudit` already enforces
+  multi-aspect layout.
+- `game-feel` skill: UI feedback (tweens, pops, transitions) applies;
+  feedback never blocks input or touches simulation state — no global
+  `Time.timeScale` hit-stop.
