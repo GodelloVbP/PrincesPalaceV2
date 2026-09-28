@@ -6,13 +6,11 @@ namespace PrincesPalace
     // Resolves a stage stance ("Enemies/rat/attack") into the one drawing that
     // IS that stance.
     //
-    // ONE DRAWING, NEVER A SEQUENCE. This used to probe for an f0..fN frame
-    // folder first and fall back to a flat file; the frame folders are gone
-    // from every actor in the game and the policy that removed them
-    // (docs/STANCE_SHEET_SPEC.md) says why: an image model redraws a creature
-    // rather than moving it, so six frames of one pose are six illustrations
-    // that disagree. A pose that cannot drift is one that has nothing to drift
-    // between, and the motion is carried by the transform instead -- see
+    // ONE DRAWING, NEVER A SEQUENCE: the policy (docs/STANCE_SHEET_SPEC.md)
+    // says why -- an image model redraws a creature rather than moving it,
+    // so six frames of one pose are six illustrations that disagree. A pose
+    // that cannot drift is one that has nothing to drift between, and the
+    // motion is carried by the transform instead -- see
     // StaticSwing and Domain/Stage/BreathCurve.
     //
     // Spell VFX and the house's contact effects are a different question and

@@ -118,8 +118,7 @@ namespace PrincesPalace
         //
         // PartyScreen's own GlowNeutral is private (the build-time default
         // every seat starts on); these three are the runtime states a glow
-        // can move to, read off the handoff's own "Ground-glow accents"
-        // token table the same way PartyScreen's constants were.
+        // can move to.
         private const string GlowNeutral = "#B4AA9629";     // rgba(180,170,150,.16)
         private const string GlowOccupied = "#5FE07A8C";    // rgba(95,224,122,.55)
         private const string GlowHighlighted = "#E8C07AB3"; // rgba(232,192,122,.70)
@@ -404,11 +403,8 @@ namespace PrincesPalace
         // something carried they resolve it (place, swap, move, or cancel on
         // a re-click). One path for the mouse and the pad, not two that have
         // to be kept agreeing.
-        // NOTHING LEFT TO WIRE. This method used to attach a SelectIndex to
-        // every seat and card so each could paint its own gold halo when the
-        // stick landed on it; hardware round 1 retired that halo outright
-        // ("the gold halo (e.g. in party screen) is way too strong") in
-        // favour of the one arrow Core/FocusMarker.cs draws for every screen.
+        // NOTHING LEFT TO WIRE: Core/FocusMarker.cs draws the one arrow for
+        // every screen, so no seat or card needs its own SelectIndex halo.
         //
         // KEPT AS AN EMPTY, CALLED METHOD rather than deleted, because it is
         // the named place this screen's navigation wiring goes and the next
@@ -417,10 +413,8 @@ namespace PrincesPalace
         {
         }
 
-        // THE LINKS ROW (plan phase 3, item 3 -- the phase 2 gap this plan's
-        // own status header named: "Party's Send-to-bench link is not in a
-        // nav group yet, so benching mid-carry is mouse-only"). cancelLink/
-        // benchLink sit in the header, above both rails, and PaintHeader
+        // THE LINKS ROW: cancelLink/benchLink sit in the header, above both
+        // rails, and PaintHeader
         // (just above whichever caller reaches this) already hides them
         // outright unless something is being carried -- RuntimeNavWiring.
         // Group drops a null member but NOT an inactive one, so this filters
@@ -639,14 +633,13 @@ namespace PrincesPalace
             SaveSlotManager.SaveCurrent();
         }
 
-        // THE SEAT LIST THE SAVE CARRIES (AUDIT #93, owner's call 2026-09-11).
+        // THE SEAT LIST THE SAVE CARRIES.
         //
-        // This used to be `SeatIds.Where(id => id != null)`, and the filter was
-        // the bug: PartyFormation leaves a hole where a seat is vacated because
-        // "POSITIONS ARE MECHANICAL, not cosmetic -- seat 0 is the front rank
-        // enemy melee concentrates on", and dropping the hole moved everybody
-        // behind it one rank forward. Bench the front-ranker, reload, and Mid
-        // was the melee magnet the player never put there.
+        // PartyFormation leaves a hole where a seat is vacated because
+        // "POSITIONS ARE MECHANICAL, not cosmetic -- seat 0 is the front
+        // rank enemy melee concentrates on", so filtering out a vacated seat
+        // instead of keeping its hole would move everybody behind it one
+        // rank forward.
         //
         // An empty seat is SaveData.EmptySeat in place. The TRAILING ones go:
         // a hole says something only when somebody sits behind it, and keeping
@@ -1264,9 +1257,8 @@ namespace PrincesPalace
 
         // ART LOADS AT RUNTIME, off the same folder the fight stage uses --
         // see FightController.StanceSpriteFor ("Art loads from
-        // Resources/Characters/<id>, never from the handoff's sprites").
-        // "idle" is the only stance a menu screen
-        // ever has reason to ask for.
+        // Resources/Characters/<id>"). "idle" is the only stance a menu
+        // screen ever has reason to ask for.
         private static Sprite ArtFor(string id)
         {
             var definition = ContentDatabase.GetCharacter(id);
