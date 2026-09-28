@@ -1,14 +1,15 @@
 #!/bin/sh
 #
-# Pre-commit gate. Three checks, all of which turn a rule that CLAUDE.md could
+# Pre-commit gate. Four checks, all of which turn a rule that CLAUDE.md could
 # only ask for into one the repo enforces.
 #
 # Runtime is a few milliseconds for the first two: one `git ls-files` and one
 # awk pass for the pairing check, plus one grep per staged .ps1. The third
 # only fires when Domain/ or the EditMode tests are staged, and costs ~2s warm
-# (a `dotnet build`, not a test run). It does not run tests - the test gate
-# stays `tools/run_tests_parallel.ps1`, deliberately, because a 4-minute
-# pre-commit hook is a hook people learn to bypass.
+# (a `dotnet build`, not a test run). The fourth only fires when a .cs file is
+# staged and is one diff plus a small Python pass. None of this runs tests -
+# the test gate stays `tools/run_tests_parallel.ps1`, deliberately, because a
+# 4-minute pre-commit hook is a hook people learn to bypass.
 #
 # Install (per clone, since core.hooksPath is local config and not committed):
 #
@@ -168,6 +169,38 @@ then
             fail "  file that needs one is a layering violation instead: Domain"
             fail "  is noEngineReferences by asmdef, so move it to Core/."
         fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 4. A staged C# comment on an ADDED line never carries an ISO date.
+#
+# CLAUDE.md's "How to work": comments say why, present tense; history and
+# dates go in the commit message. Existing lines are never flagged, only
+# lines this commit adds - the rest of the tree has not been swept, and a
+# line that was already fine yesterday does not need re-justifying today.
+#
+# No bypass flag: unlike the PowerShell-ASCII check above, there is no
+# legitimate exception to carve out here - a date belongs in the commit
+# message, full stop.
+#
+# Skipped, with a warning, when python3 is not on PATH - same degradation
+# as check 3's dotnet requirement.
+# ---------------------------------------------------------------------------
+
+if git diff --cached --name-only --diff-filter=ACMR -- '*.cs' | grep -q .
+then
+    if command -v python3 > /dev/null 2>&1; then
+        COMMENT_LOG="$TMPDIR_HOOK/comment-history.log"
+        if ! git diff --cached -U0 -- '*.cs' \
+            | python3 "$(dirname "$0")/comment_history.py" > "$COMMENT_LOG"
+        then
+            fail "pre-commit: a staged comment carries a date."
+            fail ""
+            sed 's/^/  /' "$COMMENT_LOG" >&2
+        fi
+    else
+        printf 'pre-commit: python3 not found, skipping comment-history check\n' >&2
     fi
 fi
 

@@ -26,3 +26,9 @@ paths:
 - A tool that can overwrite art refuses anything registered in
   `Assets/_Project/Art/Sheets/hand_assembled.json`.
 - Test a destructive tool on a throwaway copy first, never on live data.
+- `tools/githooks/comment_history.py` enforces CLAUDE.md's "comments say why,
+  present tense" on added `*.cs` comment lines carrying an ISO date; runs
+  inside `tools/githooks/pre-commit`, or standalone via
+  `git diff --cached -U0 -- '*.cs' | python3 tools/githooks/comment_history.py`.
+- `tools/check_comment_only_diff.py` guards a comment-sweep commit so no code
+  line slips in: `python3 tools/check_comment_only_diff.py [--cached | rev..rev]`.
