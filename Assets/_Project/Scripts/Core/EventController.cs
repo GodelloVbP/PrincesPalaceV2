@@ -592,13 +592,10 @@ namespace PrincesPalace
             _backdropCoveredFor = canvas;
         }
 
-        // THE COVER FOLLOWS THE STAGE, not just the paint. It was solved once
-        // when a page painted, so a stage resized under an open event (a
-        // window resize, a fullscreen toggle, the capture rig's aspect sweep)
-        // kept the old aspect's size: at 4:3 a 16:9 cover left 180px of bare
-        // ground above and below it and the set piece hung into that band;
-        // at 21:9 it left bars down both sides. Re-solved on the frame the
-        // stage's rect changes.
+        // THE COVER FOLLOWS THE STAGE, not just the paint: re-solved on every
+        // frame the stage's rect changes, so a stage resize under an open
+        // event (a window resize, a fullscreen toggle, the capture rig's
+        // aspect sweep) never leaves the cover sized to a stale aspect.
         private Vector2 _backdropCoveredFor;
 
         private void KeepBackdropCovered()

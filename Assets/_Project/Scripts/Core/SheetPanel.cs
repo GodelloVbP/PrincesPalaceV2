@@ -16,13 +16,10 @@ namespace PrincesPalace
     // in common, and inheritance for one shared behaviour would be the wrong
     // shape entirely.
     //
-    // It opens the system menu's dossier, which replaced the paperdoll this
-    // used to raise. That swap was the whole of the migration: the three owners
-    // still call the same two methods with the same arguments, and only what
-    // their panel field points at changed. Rewiring C, I, Escape and the hub's
-    // building to address the menu directly was the first attempt, and it was
-    // strictly more work for the same result -- it dragged three controllers
-    // and their tests along to reach a screen this seam already reached.
+    // It opens the system menu's dossier: the three owners call the same
+    // two methods with the same arguments, and only what their panel field
+    // points at differs, so retargeting what this seam opens changes all
+    // three at once rather than rewiring each caller separately.
     internal static class SheetPanel
     {
         public static bool IsOpen(GameObject panel) => panel != null && panel.activeSelf;
@@ -40,18 +37,15 @@ namespace PrincesPalace
         private static SystemMenuTab TabFor(bool inventory) =>
             SystemMenuTab.CharacterInventory;
 
-        // THE SWITCH-VS-CLOSE RULE IS BACK, retargeted at the pack rather than
-        // at a tab. It genuinely had nothing left to switch between for the
-        // stretch between the tab merge and the pack argument being wired to
-        // anything -- the comment above used to say so correctly. Now that I
-        // and C each mean a real state (pack up / pack down), the rule they
-        // were written for applies again: pressing the SAME key a second time
-        // closes the sheet, pressing the OTHER key while it is open switches
-        // to that key's pack state instead of closing it. A plain
-        // `!panel.activeSelf` toggle got this wrong in exactly the way that
-        // rule exists to prevent -- opening with I, then pressing C to see
-        // the pack go down, closed the whole sheet instead, because closed-
-        // vs-open was the only state it was checking.
+        // THE SWITCH-VS-CLOSE RULE, retargeted at the pack rather than at a
+        // tab: I and C each mean a real state (pack up / pack down), so
+        // pressing the SAME key a second time closes the sheet, and pressing
+        // the OTHER key while it is open switches to that key's pack state
+        // instead of closing it. A plain `!panel.activeSelf` toggle gets this
+        // wrong in exactly the way this rule exists to prevent -- opening
+        // with I, then pressing C to see the pack go down, would close the
+        // whole sheet instead, since closed-vs-open is the only state it
+        // would be checking.
         public static void Toggle(GameObject panel, bool inventory)
         {
             if (panel == null) return;

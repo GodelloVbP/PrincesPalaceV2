@@ -10,9 +10,9 @@ namespace PrincesPalace
     // UnityEngine.UI.Navigation.Explicit. It computes no neighbour itself.
     //
     // WHY NAVIGATION IS WIRED AT RUNTIME AND NOT AT SCENE-BUILD TIME.
-    // Phase 2 step A built the other half -- a UiNavDeclaration hung off
-    // ScreenDef, resolved by UiAudit.CheckNavigable and written by a
-    // build-time UiNavWiring pass -- and it never gained a single consumer.
+    // The build-time half -- a UiNavDeclaration hung off ScreenDef,
+    // resolved by UiAudit.CheckNavigable and written by a build-time
+    // UiNavWiring pass -- never gained a single consumer.
     // The evidence, screen by screen, is that the navigable set is a RUNTIME
     // fact everywhere this phase touches:
     //   - SystemMenu's tab strip: the scene carries five tabs, a context
@@ -46,8 +46,7 @@ namespace PrincesPalace
     // UnityEngine.UI.Selectable/Navigation are spelled out in full
     // throughout: PrincesPalace.Navigation (Core/Navigation.cs, the
     // map/graph state type) sits in this same namespace and would otherwise
-    // shadow the UI one -- phase 1's own hazard list calls this out
-    // explicitly.
+    // shadow the UI one.
     public static class RuntimeNavWiring
     {
         // A group of live Selectables, with the nulls dropped. A caller
@@ -72,14 +71,11 @@ namespace PrincesPalace
             return new UiNavLink<UnityEngine.UI.Selectable>(from, direction, to);
         }
 
-        // Both halves of a hand-emitted link in one call. Added after a
-        // gamepad-nav audit (2026-09-19) found the class of bug this exists
-        // to close: MapController wrote choice[i-1] -Down-> choice[i] and
-        // never its reverse, so Up did nothing on a screen where Down
-        // worked -- one line forgotten among several near-identical ones, in
-        // a file whose several other calls to Link already hand-paired both
-        // directions correctly. A caller that wants a two-way edge asks for
-        // one and gets both; there is nothing left to forget.
+        // Both halves of a hand-emitted link in one call, closing the class
+        // of bug where one direction of a pair is hand-written and its
+        // reverse goes forgotten among several near-identical calls. A
+        // caller that wants a two-way edge asks for one and gets both;
+        // there is nothing left to forget.
         //
         // Not a replacement for one-way Link -- most of this file's callers
         // (a Rail's foot down into a footer, a tab's Down into its pane)

@@ -42,14 +42,12 @@ namespace PrincesPalace
         // renders one frame, reads the pixels back, and puts the canvas back
         // exactly as found.
         //
-        // This used to say "every canvas in this project is ScreenSpaceOverlay",
-        // which was true of v1 and is not true here: SceneBuilder.CreateCanvas
-        // builds ScreenSpaceCamera canvases so URP post-processing can reach the
-        // UI at all. The swap below is therefore no longer about rescuing an
-        // Overlay canvas that has no camera -- it is about pointing whatever
-        // camera the canvas already uses at a texture we can read. Doing it
-        // unconditionally is deliberate: it costs nothing on a camera canvas and
-        // still works if one is ever switched back.
+        // SceneBuilder.CreateCanvas builds ScreenSpaceCamera canvases so URP
+        // post-processing can reach the UI, so the swap below is about
+        // pointing whatever camera the canvas already uses at a texture we
+        // can read -- not about rescuing an Overlay canvas with no camera.
+        // Doing it unconditionally is deliberate: it costs nothing on a
+        // camera canvas and still works if one is ever switched back.
         // ZERO MEANS "THE REFERENCE STAGE", because a default parameter has to
         // be a compile-time constant and the stage is now read from UiFrames --
         // which is the right trade: one statement of the frame, resolved here,

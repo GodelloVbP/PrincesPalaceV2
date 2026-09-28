@@ -138,17 +138,11 @@ namespace PrincesPalace
                     iconId: s.id))
                 .ToList();
 
-        // PRICED IN THE CASTER'S OWN RESOURCE, not in "MANA".
-        //
-        // This was the last literal "MANA" left outside the fight HUD, and the
-        // change 52793e1b made everywhere else says why it cannot stay: "BOTH
-        // TAGS COME FROM THE CASTER, not from this file. 'MP' used to be a
-        // literal here, which was true only for as long as every caster spent
-        // mana: `manaCost` means 'spent from the primary pool'." The glossary
-        // has the owner in hand and was the one surface that never got the
-        // message -- inert today only because Bjorn's slam and brace are
-        // manaCost 0, and pools.json's own note promises the balance pass that
-        // ends that.
+        // PRICED IN THE CASTER'S OWN RESOURCE, not in "MANA": both tags come
+        // from the caster, not from this file, since `manaCost` means "spent
+        // from the primary pool" and that pool differs per caster. Inert
+        // today only because Bjorn's slam and brace are manaCost 0, and
+        // pools.json's own note promises the balance pass that ends that.
         //
         // FALLS BACK TO A BARE NUMBER on a blank tag, which is the same
         // fallback FightHudModel.CostLabel already uses: a number with no unit

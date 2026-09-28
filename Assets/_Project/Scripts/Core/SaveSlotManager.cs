@@ -149,10 +149,8 @@ namespace PrincesPalace
             //
             // SettleOnOpening above reaches CurrentSave -> SaveSystem.Load ->
             // missing file -> SaveData.CreateNew(), and that instance is what
-            // _cached holds from here on. This line used to build a SECOND
-            // one and write that, so "a brand new slot is written immediately"
-            // was kept by an object nobody was holding, and the first
-            // SaveCurrent() overwrote the file with the other one.
+            // _cached holds from here on, so this writes the same object
+            // rather than building a second one that nobody else holds.
             //
             // Nothing observable comes of it today: both are built from the
             // same ContentDatabase by a deterministic method, so they are

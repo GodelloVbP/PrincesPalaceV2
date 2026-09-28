@@ -207,8 +207,8 @@ namespace PrincesPalace
         // these same entries, so a character restored here fields again in the
         // next room.
         //
-        // HERE RATHER THAN IN RoomResolver, which is where it used to live, so
-        // that a rest room and the end of a leg heal by the same code. Two
+        // HERE RATHER THAN IN RoomResolver, so that a rest room and the end
+        // of a leg heal by the same code. Two
         // implementations of "restore the party" is exactly the kind of pair
         // that drifts, and one of them would have been the one nobody tested.
         //
@@ -331,12 +331,9 @@ namespace PrincesPalace
         // that just moved under it.
         //
         // The run stores current health as an ABSOLUTE number per character,
-        // and the maximum it is a fraction of is computed from the character --
-        // so anything that changes the maximum silently changes the fraction.
-        // Equipping a +20 max health item at 50 of 100 left the run holding 50
-        // against a new maximum of 120, and the bar grew a tail of empty at the
-        // end that no amount of resting could fill in that fight. Taking the
-        // item off again did not give it back: the old value simply clamped.
+        // and the maximum it is a fraction of is computed from the character
+        // -- so anything that changes the maximum would silently change the
+        // fraction if the absolute value were left untouched.
         //
         // THE FRACTION IS THE RIGHT THING TO PRESERVE rather than the delta,
         // and the argument is the equip/unequip cycle rather than taste. Adding
@@ -375,18 +372,13 @@ namespace PrincesPalace
         // TAKES THE BUILT FIGHT, not a party and a list of ids, and that is the
         // whole of the fix rather than a tidy-up.
         //
-        // This used to be handed the ids the ROLL produced and zip them against
-        // the combatants the ADAPTER produced. Those two lists are the same
-        // length only while every id resolves: Build skips an unknown id in
-        // place, so one squad member whose content was renamed shifts every
-        // combatant after them one position left, and the next character walks
-        // into the room on the missing one's carried health. Clamping to the
-        // shorter list -- which is what the old code did, and what its comment
-        // claimed prevented exactly this -- only stops the overrun, not the
-        // transposition.
-        //
-        // Since BuiltFight.PartyIds is built in the same loop as Party, there is
-        // no longer a mismatched pair a caller could hand over.
+        // Build skips an unknown id in place, so a party-ids list and a
+        // combatants list built separately can silently go out of alignment
+        // when a squad member's content was renamed: every combatant after
+        // it shifts one position left, and the next character walks into the
+        // room on the missing one's carried health. Since BuiltFight.PartyIds
+        // is built in the same loop as Party, there is no mismatched pair a
+        // caller could hand over.
         public static void ApplyStartingHealth(
             FightEncounterAdapter.BuiltFight built,
             IReadOnlyDictionary<string, int> startingHealth)

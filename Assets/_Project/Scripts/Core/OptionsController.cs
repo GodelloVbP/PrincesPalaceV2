@@ -24,12 +24,10 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] rowHovers;
 
         // Attached at build time (ScreenRegistry.WireOptions), one per
-        // RowHovers node -- the ONE component now handling that node's
-        // movement and hover (plan section 7), replacing the old plain
-        // Panel + runtime-added HoverIndex. Parallel to rowHovers rather
-        // than replacing it: rowHovers stays because UiAutoBind already
-        // binds it by name, and Fade() below still wants the plain
-        // GameObject for its Image lookup.
+        // RowHovers node: the component handling that node's movement and
+        // hover. Parallel to rowHovers rather than replacing it: rowHovers
+        // stays because UiAutoBind already binds it by name, and Fade()
+        // below still wants the plain GameObject for its Image lookup.
         [SerializeField] internal OptionRow[] rows;
 
         // Two dense sets, each carrying the GameSettings key its controls drive.
@@ -87,11 +85,10 @@ namespace PrincesPalace
                 rowHovers[i].SetActive(true);
                 Fade(rowHovers[i], 0f);
 
-                // OptionRow is the ONE component handling this row's movement
-                // and hover now (plan section 7) -- attached at build time
-                // (ScreenRegistry.WireOptions), not runtime-added the way
-                // HoverIndex used to be, since RuntimeNavWiring.Apply below
-                // needs every row's Selectable to already exist.
+                // OptionRow is the component handling this row's movement and
+                // hover, attached at build time (ScreenRegistry.WireOptions)
+                // rather than runtime-added, since RuntimeNavWiring.Apply
+                // below needs every row's Selectable to already exist.
                 if (rows == null || i >= rows.Length || rows[i] == null) continue;
                 int index = i;
                 rows[index].HoverChanged = entered => Fade(rowHovers[index], entered ? HoverAlpha : 0f);
@@ -107,8 +104,8 @@ namespace PrincesPalace
                     : delta => SetSlider(key, Mathf.Clamp01(SliderValue(key) + delta * SliderStep));
             }
 
-            // A List group, clamp (plan section 5/7's owner default) -- Up/Down
-            // steps row to row, never wrapping past the first or last card.
+            // A List group, clamp: Up/Down steps row to row, never wrapping
+            // past the first or last card.
             RuntimeNavWiring.Apply(RuntimeNavWiring.Group("optionsRows", UiNavGroupKind.List, rows));
 
             for (int i = 0; sliderTracks != null && i < sliderTracks.Length; i++)
@@ -145,8 +142,7 @@ namespace PrincesPalace
 
         // UnityEngine.UI.Navigation spelled out in full: PrincesPalace.
         // Navigation (the map/graph state type) sits in this same
-        // namespace and would otherwise shadow it -- phase 1's own hazard
-        // list calls this out explicitly.
+        // namespace and would otherwise shadow it.
         private static void SetNoNavigation(Selectable selectable)
         {
             if (selectable == null) return;
