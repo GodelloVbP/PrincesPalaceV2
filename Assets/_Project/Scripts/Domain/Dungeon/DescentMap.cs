@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.Dungeon
     // room linked forward to one or two in the next column, entry on the far
     // left and the boss alone on the far right.
     //
-    // A layered DAG rather than the free graph the floor used to be, and the
+    // A layered DAG rather than a free graph, and the
     // difference is the whole design. A graph lets a player wander, backtrack
     // and eventually see everything, so no choice costs anything. Layers make
     // depth strictly forward: taking one branch means the other is gone, which
@@ -153,14 +153,12 @@ namespace PrincesPalace.Domain.Dungeon
         // run, so it dominates; the rest are the reasons to prefer one branch
         // over another.
         //
-        // EliteFight is deliberately NOT in this table. It used to be (weight
-        // 14), on the reasoning that a forced elite every 8 steps was a floor
-        // rather than the only source — but with no minimum-depth guard, that
-        // let one roll as early as the very first column, directly reachable
-        // from the entry. A level-1 squad facing two Elite-scaled monsters
-        // before earning a single level or a single piece of gear is not a
-        // hard start, it is a wall — confirmed by an actual playtest that
-        // could not survive the first room. Elites are exclusively the
+        // EliteFight is deliberately not in this table: with no
+        // minimum-depth guard, a rolled elite could land as early as the
+        // very first column, directly reachable from the entry. A level-1
+        // squad facing two Elite-scaled monsters before earning a single
+        // level or a single piece of gear is not a hard start, it is a wall.
+        // Elites are exclusively the
         // ForcedTypeAt cadence now (step ≡ EliteOffsetInLeg within each leg),
         // so the player's first one always arrives after real levelling room
         // to prepare.

@@ -57,12 +57,10 @@ namespace PrincesPalace.Domain.Rewards
         //   Boss             10   .200     80.0%    16.00%    3.20%    0.80%
         //   Boss        20 (cap)  .220     78.0%    17.16%    3.78%    1.06%
         //
-        // THE CEILING ROW IS THE STEP CAP, NOT A REACHABLE FAVOR. It used to
-        // read "55 (cap)" on the claim that 55 was the highest Favor a real
-        // save could carry -- Shawn's authored 4 plus 51 off the reward
-        // track. THE TRACK NO LONGER GRANTS FAVOR AT ALL: TrackReward has no
-        // Favor member, and ItemOfferRoll.FavorOf states the surviving rule
-        // as "TWO SOURCES ONLY ... authored-plus-live, full stop".
+        // The ceiling row is the step cap, not a reachable Favor. The reward
+        // track grants no Favor at all: TrackReward has no Favor member, and
+        // ItemOfferRoll.FavorOf states the rule as "two sources only ...
+        // authored-plus-live, full stop".
         //
         // What a save can actually reach today is Shawn's authored 4
         // (characters.json, still the only authored princesFavor) plus the
@@ -70,7 +68,7 @@ namespace PrincesPalace.Domain.Rewards
         // magnitude is 2, scaled by ModifierMagnitude.Scale, so it is 6 on a
         // mid-ladder tier-5 Ordinary piece and 37 at the very top of both
         // axes (tier 10, Convergent): a realistic ceiling near 10 and an
-        // absolute one of 41, both well under the old 55.
+        // absolute one of 41.
         //
         // The per-row arithmetic below is unchanged and still exact -- each
         // row is P(k) at that step chance. What moved is only which rows a

@@ -74,10 +74,9 @@ namespace PrincesPalace.Domain.Bot
             // ONE ALLY PER ALLY-FACING SKILL, before anything below ranks
             // anything. LegalActions offers a ward or a gift once per eligible
             // squadmate -- the player's own menu -- and this archetype has no
-            // opinion about which squadmate; AllyTargetSelection carries the
-            // rules that used to live in the engine. Narrowing here rather
-            // than teaching every score to break the tie keeps that judgement
-            // in one place.
+            // opinion about which squadmate; AllyTargetSelection carries those
+            // rules. Narrowing here rather than teaching every score to break
+            // the tie keeps that judgement in one place.
             legal = AllyTargetSelection.Narrow(session, actor, legal);
 
             var livingEnemies = session.Encounter.LivingEnemies.ToList();
@@ -116,15 +115,13 @@ namespace PrincesPalace.Domain.Bot
         }
 
         // The skill id for every Skill EXCEPT a damaging one -- null only for
-        // DamageSingle/DamageAll (and for every non-Skill action). A heal
-        // used to be excluded here too, on the theory that ScoreOf's own cap
-        // (missing HP/mana) already made it honest; it does not, when the
-        // party is taking roughly as much chip damage as the heal restores
-        // each turn -- "missing" never runs out, so a heal that is genuinely
-        // converting HP every single cast can still win the pick forever and
-        // enemy HP never moves (seeds across the 20260902-013421 batch: 183
-        // rows, all woolgathering, all repeated past any plausible "still
-        // buying something" count). Folding it into the same guard as the
+        // DamageSingle/DamageAll (and for every non-Skill action). A heal is
+        // included here too, not excluded on the theory that ScoreOf's own
+        // cap (missing HP/mana) already makes it honest: it does not, when
+        // the party is taking roughly as much chip damage as the heal
+        // restores each turn -- "missing" never runs out, so a heal that is
+        // genuinely converting HP every single cast can still win the pick
+        // forever and enemy HP never moves. Folding it into the same guard as the
         // effects ScoreOf cannot preview at all is the fix: real or not, a
         // repeat that never gets interrupted by an actual damaging pick is
         // exactly the shape the guard exists to catch.
@@ -216,9 +213,8 @@ namespace PrincesPalace.Domain.Bot
                         // "restores HP" without re-deriving `effect`, which
                         // this already has) and is capped the same way, in
                         // its own unit -- missing PARTY mana rather than
-                        // missing party HP, which also fixes the "wrong
-                        // unit" quirk this branch used to warn about rather
-                        // than merely documenting it.
+                        // missing party HP, so the guard is not comparing
+                        // mana restored against HP missing.
                         int previewed = session.PreviewSkillPower(actor, option.Skill);
                         int missing;
                         if (effect == SkillEffect.RestorePartyMana)
@@ -476,11 +472,9 @@ namespace PrincesPalace.Domain.Bot
         // A section holding nothing this archetype would buy at any price it
         // can pay -- no scoring gear it can afford in the gear section, no
         // affordable relic or book in the other two -- that has not been
-        // rerolled yet and whose reroll it can pay for. The book section
-        // used to be skipped here (it rolled NO OFFER until gate 3); now
-        // that it draws real content, an affordable book counts the same
-        // way an affordable relic does -- no Score to rank it by, so its
-        // mere presence is what "worth keeping" means.
+        // rerolled yet and whose reroll it can pay for. An affordable book
+        // counts the same way an affordable relic does -- no Score to rank
+        // it by, so its mere presence is what "worth keeping" means.
         private static int DeadSectionWorthRerolling(ShopView shop)
         {
             foreach (int section in new[] { ShopStock.GearSection, ShopStock.RelicSection, ShopStock.BookSection })

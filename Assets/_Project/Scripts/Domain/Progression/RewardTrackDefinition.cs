@@ -12,14 +12,11 @@ namespace PrincesPalace.Domain.Progression
     // character -- the shared cadence, the state arithmetic; this class
     // holds the part that does, which reward sits at which level.
     //
-    // AUTHORED, NOT DERIVED, since progression v2 phase 4. A track used to
-    // be DESCRIBED -- ten milestones plus a "filler mix" of (reward,
-    // amount, count) rows that InterleaveMix/Spread laid across the levels
-    // nobody had named -- and both of those are gone with the mix: the
-    // 40-level table (PLAN_PROGRESSION_V2.md §4) names a reward at every
-    // level from 2 to MaxLevel, so there is nothing left to compute a
-    // placement for and no second way for a level to acquire a reward. See
-    // RawTrackLevel's own header for what the old shape could not express.
+    // Authored, not derived: the 40-level table (PLAN_PROGRESSION_V2.md
+    // §4) names a reward at every level from 2 to MaxLevel, so there is
+    // nothing to compute a placement for and no second way for a level to
+    // acquire a reward. See RawTrackLevel's own header for what a
+    // described-and-interleaved shape could not express.
     // Every entry is a TrackEntry rather than a bare (TrackReward, int)
     // tuple, because TrackEntry carries the authored selectors -- Against,
     // SkillId, Resource, IdentityKind -- a track needs beyond reward and
@@ -68,9 +65,8 @@ namespace PrincesPalace.Domain.Progression
         // none today) is one signature away rather than a breaking change
         // to every caller.
         //
-        // WRITTEN OUT IN FULL, one row per level, since progression v2
-        // phase 4 retired the filler mix. It pays only what a character
-        // nobody has designed can certainly receive: health, stat points,
+        // Written out in full, one row per level. It pays only what a
+        // character nobody has designed can certainly receive: health, stat points,
         // the two utilities, and the identity stretch. No signature reward
         // (the character may have no signature resource), no mana reward
         // (their primary pool may refuse mana), no UnlockSkill (there is no
@@ -419,12 +415,9 @@ namespace PrincesPalace.Domain.Progression
             return total;
         }
 
-        // InterleaveMix AND Spread ARE GONE (progression v2 phase 4). They
-        // were the whole of "described, then derived": a largest-deficit
-        // interleave over the filler mix, then a Bresenham spread across
-        // whichever levels no milestone had claimed. Nothing computes a
-        // placement any more -- every level names its own reward, including
-        // DefaultLevels above -- so keeping them would have left two ways
-        // for a level to acquire a reward and only one of them reachable.
+        // InterleaveMix and Spread are gone: nothing computes a placement
+        // any more -- every level names its own reward, including
+        // DefaultLevels above -- so keeping them would leave two ways for a
+        // level to acquire a reward and only one of them reachable.
     }
 }
