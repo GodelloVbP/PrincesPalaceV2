@@ -2,32 +2,27 @@ using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.Progression
 {
-    // PHASE 3's node-kind validator (docs/handoffs/progression_v2/
+    // The node-kind validator (docs/handoffs/progression_v2/
     // PLAN_PROGRESSION_V2.md §7 phase 3). Pure over a materialised
     // RewardTrackDefinition -- no ContentDatabase, no character catalogue --
     // so it needs no per-track selector like RewardTrackEntryResolver's
-    // rules 4/5 and is safe to call from BOTH the resolver (content-build
+    // rules 4/5 and is safe to call from both the resolver (content-build
     // time, the established "mirrored" pattern) and
     // ContentDatabase.Validation (load time, for a hand-authored asset that
-    // never passed through the resolver) as the SAME function rather than a
-    // restated copy -- one implementation, two call sites, per CODE_STANDARDS
-    // §10.
+    // never passed through the resolver) as the same function rather than a
+    // restated copy -- one implementation, two call sites, per
+    // docs/CODE_STANDARDS.md "Reuse".
     //
-    // UNGUARDED SINCE PHASE 4. Phase 3 shipped these rules switched off
-    // behind a LegacyMaxLevel == 100 check, because reward_tracks.json was
-    // still the hundred-level milestone/filler content and applying
-    // combat-stretch rules to it would have refused every track outright.
-    // Phase 4 replaced that content with the authored 40-level table these
-    // rules were written for, so the guard is gone and every track built
-    // from JSON is checked.
+    // Unguarded: every track built from reward_tracks.json is checked
+    // against these rules, which are written for the authored 40-level
+    // table.
     public static class RewardTrackNodeValidation
     {
         // Levels 3, 10 and 20 -- literal per the plan's own contract #5
         // ("the node after an ability at 3, 10, 20 is a choice"), not
-        // derived from RewardTrack.MilestoneLevels. That array is phase 2's
+        // derived from RewardTrack.MilestoneLevels. That array is the
         // EXP-curve milestone list and may hold entirely different numbers;
-        // this rule is about the ability ladder's own fixed shape, a
-        // decision the plan made once in its Phase 0 sign-off, independent
+        // this rule is about the ability ladder's own fixed shape, independent
         // of where the milestone geometry lands.
         private static readonly int[] AbilityThenChoiceLevels = { 3, 10, 20 };
 

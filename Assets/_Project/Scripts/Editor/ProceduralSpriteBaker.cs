@@ -276,21 +276,18 @@ public static class ProceduralSpriteBaker
             return Stroke(d, 0.11f);
         });
 
-        // THE DISC ITSELF, and it is a gradient rather than a flat fill.
+        // The disc itself is a gradient rather than a flat fill, because a
+        // flat gold disc reads as tarnish the moment anything is laid over
+        // it -- a flat fill has no light in it for a texture to be light on.
+        // This bakes the light in -- one specular highlight at 32% across and
+        // 24% down, falling to a dark rim -- and every state is that one
+        // sprite under a different tint: dark violet for a level to come,
+        // gold for one reached, near white for the player's own.
         //
-        // The rail used to draw proc:solid_circle tinted per state: a flat
-        // #F2DB9E coin. Design's finding was that a flat gold disc reads as
-        // TARNISH the moment anything is laid over it, because a flat fill has
-        // no light in it for a texture to be light ON. This bakes the light in
-        // -- one specular highlight at 32% across and 24% down, falling to a
-        // dark rim -- and every state is that one sprite under a different
-        // tint: dark violet for a level to come, gold for one reached, near
-        // white for the player's own.
-        //
-        // WHITE-ISH RATHER THAN WHITE, which is the constraint a single tinted
-        // sprite imposes: Image.color multiplies, so a value ramp can darken a
-        // hue but cannot bend it. The handoff's pale disc runs #FFFFFF to
-        // #CFC2E8, a shift toward violet that a grey ramp cannot make; the
+        // White-ish rather than white, which is the constraint a single
+        // tinted sprite imposes: Image.color multiplies, so a value ramp can
+        // darken a hue but cannot bend it. The target pale disc runs #FFFFFF
+        // to #CFC2E8, a shift toward violet that a grey ramp cannot make; the
         // controller tints it #F2ECFF instead and the rim lands near #C4BFD0.
         // Close, and the alternative is three baked discs to carry three hues.
         BakeShaded("disc_metal", Size, (nx, ny) =>
@@ -343,19 +340,15 @@ public static class ProceduralSpriteBaker
             return Stroke(Mathf.Abs(dist - Radius), HalfWidth);
         });
 
-        // THE NEXT CARET IS GONE, and unlike track_tick above it is not kept.
-        //
-        // It was a chevron pointing down at the node under it, and the argument
-        // for the shape was sound: an arrow that points away from what it marks
-        // points at the panel's edge instead. What killed it was where it had
-        // to live. A centred caption block left one clear strip in the band,
-        // 14px tall and a hundred pixels above the rail, so the caret sat there
-        // -- and at 26x14, a hundred pixels from its node, it read as dust.
-        //
-        // The mark that replaced it is the word NEXT over a fading hairline,
-        // which needs no sprite of its own beyond track_drop. track_tick stays
-        // baked because its shape is shared with the seal pip and is the most
-        // reusable mark in the set; a chevron pointing down is neither.
+        // No next-caret sprite, unlike track_tick above: a chevron pointing
+        // down at its node would sit in the one clear strip a centred
+        // caption block leaves in the band, 14px tall and a hundred pixels
+        // above the rail, and at 26x14 that far from its node it reads as
+        // dust. The mark used instead is the word NEXT over a fading
+        // hairline, which needs no sprite of its own beyond track_drop.
+        // track_tick stays baked because its shape is shared with the seal
+        // pip and is the most reusable mark in the set; a chevron pointing
+        // down is neither.
 
         // THE SEAL PIP'S GOLD HALF: a hairline ring at the rim with the claimed
         // check inside it. Drawn OVER a dark disc, which is solid_circle tinted
@@ -452,7 +445,7 @@ public static class ProceduralSpriteBaker
     // filter -- the hue rotation -- was cut in its own handoff (§12), so
     // nothing here needs a shader.
     //
-    // FOUR STAR FIELDS AS FOUR TEXTURES, not seventy-eight nodes. The design
+    // Four star fields as four textures, not seventy-eight nodes. The design
     // authors 28 + 20 + 18 + 12 individual stars because a div is what it has;
     // a baked field pans and twinkles as one Image and reads identically at
     // 1px per star. The property the design actually cares about -- that the
@@ -689,11 +682,12 @@ public static class ProceduralSpriteBaker
 
     // THE CHECK, as one shape with two customers.
     //
-    // track_tick draws it whole and the seal pip knocks it out of a disc, and
-    // the two used to carry the same four coordinates independently. Four
-    // magic numbers copied once is how the short stroke and the long one drift
-    // apart -- and a tick whose arms disagree between two sprites is the kind
-    // of thing nobody looks at twice and everybody half-notices.
+    // track_tick draws it whole and the seal pip knocks it out of a disc,
+    // sharing this one method rather than each carrying the same four
+    // coordinates independently: four magic numbers copied once is how the
+    // short stroke and the long one drift apart -- and a tick whose arms
+    // disagree between two sprites is the kind of thing nobody looks at
+    // twice and everybody half-notices.
     private static float CheckMark(float nx, float ny, float halfWidth)
     {
         float d = Mathf.Min(
@@ -746,12 +740,12 @@ public static class ProceduralSpriteBaker
         // The channel. Dark, with the light caught along its top lip so it
         // reads as cut into the panel rather than drawn on top of it.
         //
-        // The body used to run 0.10..0.22, which is nearly black BEFORE the
-        // Reckoning multiplies it by a dark violet tint -- the two darknesses
-        // compounded to roughly #08060E and the bar read as a hole punched in
-        // the panel rather than as a groove cut into it. Raised so the tint has
-        // something to colour: the shading still does the recessing, but the
-        // result stays recognisably a surface.
+        // Raised well above black so the Reckoning's dark violet tint has
+        // something to colour: a body near-black before that multiply
+        // compounds to roughly #08060E, and the bar reads as a hole punched
+        // in the panel rather than as a groove cut into it. The shading
+        // still does the recessing, but the result stays recognisably a
+        // surface.
         BakeGradient("bar_track", 64, y =>
         {
             // Light bouncing off the floor of the groove, and the highlight
@@ -1151,15 +1145,15 @@ public static class ProceduralSpriteBaker
         Debug.Log($"[ProceduralSpriteBaker] baked {path}");
     }
 
-    // THE IMPORTER SETTINGS EVERY BAKED SPRITE NEEDS, applied whether or not the
-    // PNG itself changed.
+    // The importer settings every baked sprite needs, applied whether or not
+    // the PNG itself changed.
     //
-    // Outside the byte-compare above, deliberately: the compare exists to stop
-    // an unchanged PNG churning in git, and it used to skip the import block
-    // with it. That made the settings unfixable -- changing what a baked sprite
-    // should be imported as did nothing to the twenty-odd already on disk,
-    // because their pixels had not moved.
-    // THE SPRITES DRAWN AS BARS rather than as shapes, which is the one set
+    // Outside the byte-compare above, deliberately: the compare exists to
+    // stop an unchanged PNG churning in git, and skipping the import block
+    // along with it would make the settings unfixable -- changing what a
+    // baked sprite should be imported as would do nothing to the sprites
+    // already on disk, because their pixels have not moved.
+    // The sprites drawn as bars rather than as shapes, which is the one set
     // mipmaps must not be turned on for.
     //
     // A mip level is chosen from the LARGER of the two axis derivatives, so a

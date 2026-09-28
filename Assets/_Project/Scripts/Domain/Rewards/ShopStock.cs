@@ -193,18 +193,14 @@ namespace PrincesPalace.Domain.Rewards
     {
         // ---- what the shelves hold ------------------------------------------
         //
-        // Ten cards down to §7.1 point 3's six, revised again 2026-09-03 (c)
-        // against gate 1's own numbers (docs/handoffs/shop_v2/GAP_AUDIT.md,
-        // "Gate exit checks -> Gate 1"): even a policy that buys every
-        // affordable, positive-scoring card on a 3/1/2 shelf left runs with
-        // 6-9x the pre-shop median gold at death, so the shelf was the
-        // binding constraint, not price. Widened to 4 gear / 3 books / 3
-        // relics -- ten offers again, but no longer ten offers priced
-        // against a shelf nobody could empty. The book count no longer
-        // matches "one card because the pool is five" (that reasoning is
-        // superseded, not wrong on its own terms); gate 3 is what tests
-        // whether three book cards against a five-entry pool reads as
-        // repetitive once real content rolls there.
+        // Ten cards, against gate 1's own numbers
+        // (docs/handoffs/shop_v2/GAP_AUDIT.md, "Gate exit checks -> Gate 1"):
+        // even a policy that buys every affordable, positive-scoring card on
+        // a 3/1/2 shelf left runs with 6-9x the pre-shop median gold at
+        // death, so the shelf is the binding constraint, not price. 4 gear /
+        // 3 books / 3 relics is ten offers priced against a shelf nobody can
+        // empty. Gate 3 is what tests whether three book cards against a
+        // five-entry pool reads as repetitive once real content rolls there.
         //
         // This is also the UI design: the five-panel grid's Gear / Spell
         // Books / Relics panels each show exactly this many cards (§3f).
@@ -218,7 +214,7 @@ namespace PrincesPalace.Domain.Rewards
 
         // ---- where they sit -------------------------------------------------
         //
-        // ONE ORDER, EVERYWHERE: gear, books, relics. It is the reading order
+        // One order, everywhere: gear, books, relics. It is the reading order
         // of the shelf and the index into RunSnapshot.shopRerollsUsed, and
         // the two being the same array position is the point -- a second
         // order would be a second thing to keep in step.
@@ -227,7 +223,7 @@ namespace PrincesPalace.Domain.Rewards
         public const int RelicSection = 2;
         public const int SectionCount = 3;
 
-        // A MERCHANT SHELF'S OWN SECTION (plan 3.4), outside SectionCount on
+        // A merchant shelf's own section (plan 3.4), outside SectionCount on
         // purpose: SectionCount is the room shop's three shelves and the
         // length of its reroll array, and a merchant shelf neither has a
         // reroll nor is ever the room shop. Its cards show in the panel the
@@ -238,22 +234,20 @@ namespace PrincesPalace.Domain.Rewards
 
         // ---- how many decisions one visit can want ---------------------------
         //
-        // DERIVED, NOT TYPED. A headless caller has to bound a shop visit --
+        // Derived, not typed. A headless caller has to bound a shop visit --
         // a policy that never says leave is a hang and nothing times it out
-        // (docs/PLAN_SHOP.md 2g) -- and the bound was a hand-written 12
-        // justified against a six-card shelf. The shelf became ten cards on
-        // 2026-09-03 and the justification did not follow: buying every card
-        // (10), rerolling every section once (3) and the Leave that ends the
-        // visit (1) is already 14, so a policy doing nothing unusual was
-        // being cut off and the cut recorded as a finding. It sits here
-        // rather than in the caller precisely so the shelf and its bound
-        // cannot drift apart again: change a count above and this moves with
-        // it.
+        // (docs/PLAN_SHOP.md 2g) -- and a hand-written bound has to track the
+        // shelf: buying every card (10), rerolling every section once (3) and
+        // the Leave that ends the visit (1) is already 14, so a bound tied to
+        // an older, smaller shelf would cut off a policy doing nothing
+        // unusual. It sits here rather than in the caller precisely so the
+        // shelf and its bound cannot drift apart: change a count above and
+        // this moves with it.
         //
-        // SELL HEADROOM IS THE ONE JUDGEMENT IN IT, and it is PROVISIONAL.
+        // Sell headroom is the one judgement in it, and it is provisional.
         // Selling is unbounded in principle -- a bag can hold more rows than a
         // shelf has cards -- so no arithmetic derives it and a number has to
-        // be chosen. MEASURED rather than guessed: with the ceiling lifted far
+        // be chosen. Measured rather than guessed: with the ceiling lifted far
         // out of the way, 2,050 shop visits across two archetypes over a
         // 200-run batch peaked at 24 decisions in one visit, so 10 would be
         // exactly the observed maximum and this leaves two above it -- the
@@ -262,7 +256,7 @@ namespace PrincesPalace.Domain.Rewards
         // higher ceiling costs nothing on a visit that does not need it.
         //
         // The real question behind the number -- how many sales one visit
-        // SHOULD be allowed -- is the owner's, and this is a bound, not an
+        // should be allowed -- is the owner's, and this is a bound, not an
         // answer to it.
         public const int SellHeadroom = 12;
 
@@ -312,9 +306,8 @@ namespace PrincesPalace.Domain.Rewards
         // expensive shelf, not a hang (assumption 11).
         public const int AffordabilityRedraws = 8;
 
-        // "BETTER-QUALITY, MORE EXPENSIVE STOCK" (owner ask, 2026-09-22).
-        //
-        // The gear shelf targets one tier ABOVE the map's own floor tier,
+        // Better-quality, more expensive stock: the gear shelf targets one
+        // tier above the map's own floor tier,
         // capped at whatever content actually goes up to -- a shop is a
         // reason to have gold, not a mirror of what a fight already pays at
         // this depth. Kept as a target-tier OFFSET rather than a second
@@ -323,7 +316,7 @@ namespace PrincesPalace.Domain.Rewards
         // higher on that same table than a fight reward would.
         public const int GearTierBoost = 1;
 
-        // NO BARE COMMONS: every gear entry on the shelf carries at least a
+        // No bare commons: every gear entry on the shelf carries at least a
         // +1 or one rolled affix. Enforced the same way the affordability
         // floor is -- a bounded re-draw of the one axis that changed, never
         // a second roll shape -- so `rollOne` stays the single seam the shop
@@ -364,7 +357,7 @@ namespace PrincesPalace.Domain.Rewards
             // fight and browsing must not beat winning, assumption 7) and it
             // is already baked into `rollOne`; what this needs from depth is
             // only which tier band to stock -- one rung above a fight's own
-            // floor tier (GearTierBoost, owner ask 2026-09-22), capped at
+            // floor tier (GearTierBoost), capped at
             // whatever content actually goes up to.
             int targetTier = Math.Min(RarityTable.FloorTier(depthStep) + GearTierBoost, maxTier);
             var chosen = ItemOfferTable.Choose(
@@ -419,13 +412,13 @@ namespace PrincesPalace.Domain.Rewards
             }
         }
 
-        // NO BARE COMMONS (assumption/owner ask 2026-09-22): a +0, no-affix
-        // copy is never handed back. Re-draws the SAME candidate through the
-        // SAME `rollOne` seam up to QualityRedraws times -- never a special
-        // "just add a modifier" path, which would be a second way to build
-        // an ItemOffer that the fight reward's own draw does not share.
+        // No bare commons: a +0, no-affix copy is never handed back.
+        // Re-draws the same candidate through the same `rollOne` seam up to
+        // QualityRedraws times -- never a special "just add a modifier"
+        // path, which would be a second way to build an ItemOffer that the
+        // fight reward's own draw does not share.
         //
-        // FORCED, NOT LEFT EXPENSIVE, when the redraws run out: unlike the
+        // Forced, not left expensive, when the redraws run out: unlike the
         // affordability floor (which accepts an expensive shelf as the
         // honest answer when nothing prices low enough), a shop that ships a
         // bare common because the RNG happened to whiff four times in a row

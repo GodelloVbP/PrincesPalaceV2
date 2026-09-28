@@ -18,19 +18,17 @@ namespace PrincesPalace.Domain.Stage
     // MassLeft/MassRight are where the BODY is: see MassFraction.
     public readonly struct OpaqueSpan
     {
-        // HOW MUCH OF A COLUMN HAS TO BE FILLED for that column to count as
+        // How much of a column has to be filled for that column to count as
         // body rather than as something sticking out of it. Per column of the
         // drawing, count the opaque rows; the tallest column is the figure at
         // its thickest, and a column carrying less than this share of that is
         // not the edge of anything worth standing off from.
         //
-        // WHAT IT EXCLUDES, which is the whole reason it exists (owner,
-        // 2026-09-15: "the attacker must push into the target's body, not stop
-        // at the outermost pixel"): a horn, a tail, a raised weapon, a
-        // wingtip. Bjorn's hammer head used to stop 12px from the TIP of the
-        // beetle's horn, about a body's width in front of the beetle itself.
+        // What it excludes, which is the whole reason it exists: the
+        // attacker must push into the target's body, not stop at the
+        // outermost pixel -- a horn, a tail, a raised weapon, a wingtip.
         //
-        // 0.35 RATHER THAN ANYTHING ELSE, and the beetle's own idle is what
+        // 0.35 rather than anything else, and the beetle's own idle is what
         // chose it. Its body falls off a cliff at canvas x 273 (0.44 of the
         // tallest column) and its horn trails out to 338 at 0.18..0.33, so
         // every threshold at or below 0.30 keeps the horn (0.30 puts the edge
@@ -79,51 +77,37 @@ namespace PrincesPalace.Domain.Stage
         }
     }
 
-    // WHERE AN ATTACKER STOPS.
+    // Where an attacker stops.
     //
-    // The rule this replaces was "travel a fixed FRACTION of the X gap between
-    // the two slot marks" -- 0.70 for a swing, 0.78 for a walk-in, 0.86 for a
-    // charge. Two things are wrong with a fraction, and the owner reported
-    // both of them in one breath (2026-09-09):
-    //
-    //   "when attacking from the middle and backline, when you go in for a
-    //   hit, you stop earlier and not in front of the enemy" -- the residual
-    //   is a FRACTION OF THE GAP, so an attacker from the back slot leaves
-    //   30% of a 1400px gap on the table (420px, a body and a half) where the
-    //   same 30% of a front-slot gap is 200. The stopping distance grew with
-    //   the distance travelled, which is exactly backwards: how close you
-    //   have to be to hit something does not depend on how far away you
-    //   started.
-    //
-    //   "Slam for Bjorn clips into the enemy when he goes in" -- a fraction
-    //   knows nothing about how far the ATTACKER'S weapon reaches. Bjorn's
-    //   slam draws the hammer 237px past his own canvas centre where his idle
-    //   reaches 155, so a distance eyeballed against an idle puts the hammer
-    //   inside the target. On the front slot against the beetle the old 0.78
-    //   put his hammer head 266 stage pixels PAST the beetle's near edge.
+    // Not a fixed fraction of the X gap between the two slot marks: a
+    // fraction's residual grows with the distance travelled, which is
+    // exactly backwards -- an attacker from the back slot would leave 30% of
+    // a 1400px gap on the table (420px, a body and a half) where the same 30%
+    // of a front-slot gap is 200, so how close you have to be to hit
+    // something would depend on how far away you started. A fraction also
+    // knows nothing about how far the attacker's weapon reaches: Bjorn's
+    // slam draws the hammer 237px past his own canvas centre where his idle
+    // reaches 155, so a distance eyeballed against an idle puts the hammer
+    // inside the target.
     //
     // So the distance is derived from the two bodies instead: back the target
     // off by its own near-edge extent, back the attacker off by the forward
     // reach of the drawing it will be wearing, and leave a small authored gap
-    // between them. Nothing in it refers to where the attacker started, which
-    // is the whole fix for the first complaint.
+    // between them. Nothing in it refers to where the attacker started.
     //
-    // AND IT IS THE BODY, NOT THE OUTERMOST PIXEL (owner, 2026-09-15). Closing
-    // to the tight alpha box means closing to whatever sticks furthest out of
-    // the drawing, which on this roster is a horn, a tail, a raised weapon or
-    // a wingtip -- so Bjorn's hammer stopped 12px short of the tip of the
-    // beetle's horn, about a body's width in front of the beetle. Both edges
-    // in the arithmetic below are therefore OpaqueSpan's MASS edges, on the
-    // attacker as well as the target. The consequence is deliberate and is not
-    // the clipping the second complaint was about: weapons overlap the body
-    // they are hitting at the moment of impact, which is what a blow landing
-    // looks like. What must not overlap is the two BODIES, and closing mass
-    // edge to mass edge with a gap between them is exactly the statement that
-    // they do not.
+    // And it is the body, not the outermost pixel: closing to the tight
+    // alpha box means closing to whatever sticks furthest out of the
+    // drawing, which on this roster is a horn, a tail, a raised weapon or a
+    // wingtip. Both edges in the arithmetic below are therefore OpaqueSpan's
+    // mass edges, on the attacker as well as the target. Weapons overlapping
+    // the body they are hitting at the moment of impact is deliberate --
+    // that is what a blow landing looks like. What must not overlap is the
+    // two bodies, and closing mass edge to mass edge with a gap between them
+    // is exactly the statement that they do not.
     //
-    // ALSO Y. The old offset was X-only, so a back-rank attacker swung from
-    // its own row at its own depth -- level with the target's head rather than
-    // in front of it. The stand-off lands on the TARGET's ground line.
+    // Also Y, not X-only: a back-rank attacker swinging from its own row at
+    // its own depth would land level with the target's head rather than in
+    // front of it, so the stand-off lands on the target's ground line.
     // Deliberately not also re-scaling the attacker to the target's depth:
     // the animator composes scale from breath, punch and stretch, and a fourth
     // writer on it is a bigger change than this one is buying. A figure that
