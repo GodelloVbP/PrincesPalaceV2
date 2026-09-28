@@ -15,7 +15,7 @@ namespace PrincesPalace
     //
     // With a run, the room decides: RunEncounter fields the whole surviving
     // squad against enemies rolled from the fight stream for this node. That
-    // is the real game, and it is what the header below used to promise.
+    // is the real game.
     //
     // Without one, the placeholder still stands -- opening the Fight scene
     // directly has to produce a playable, LOOK-THE-SAME-EVERY-TIME fight or
@@ -196,26 +196,18 @@ namespace PrincesPalace
         }
 
         // ALL SEVEN KEYS, READ AND CLEARED IN ONE ACT, BEFORE ANYTHING CAN
-        // REFUSE OR RETURN.
+        // REFUSE OR RETURN: consuming keys individually, at each site that
+        // reads one, would leave a key behind whenever the read that follows
+        // it refuses or returns early -- a spell preview whose plan is
+        // REFUSED, say, would leave ForcedFirstAction set, and the next
+        // fight opened in that Editor session would force-cast a skill
+        // nobody asked for with nothing on screen saying why. The same
+        // per-site consumption would also leave keys behind across every
+        // fight while a RUN is in progress (RunOrchestrator.BuildFight never
+        // consumes them) and on any throw during the build.
         //
-        // Five of them used to be consumed inside BuildPlaceholderFight and
-        // the sixth -- DevForcedFirstAction -- after the null check on what
-        // that returned. So a spell preview whose plan was REFUSED (an
-        // unsupported effect, no character carrying the resource it spends)
-        // returned null from there, took the early return in Start, and left
-        // ForcedFirstAction set: the next fight opened in that Editor session
-        // force-cast a skill nobody had asked for, with nothing on screen
-        // saying why. The refusal had been reported correctly and then leaked
-        // anyway.
-        //
-        // Two more holes closed by the same move. The placeholder path was the
-        // only one that consumed anything, so a key set while a RUN was in
-        // progress (RunOrchestrator.BuildFight, not BuildPlaceholderFight)
-        // survived every fight until the Editor was closed; and a throw
-        // anywhere in the build left the keys behind too.
-        //
-        // "One preview, one fight" is the rule, and it is now true whatever
-        // happens next.
+        // "One preview, one fight" is the rule, and reading and clearing
+        // together is what makes it true whatever happens next.
         private static DevForcedPreview ConsumeDevForced()
         {
 #if UNITY_EDITOR
@@ -359,12 +351,11 @@ namespace PrincesPalace
             // Banked the moment the last beat has PLAYED, not when the player
             // dismisses the screen.
             //
-            // This used to wait for the dismissal, on the reasoning that
-            // crediting a payout before the player has seen it makes the number
-            // arrive from nowhere. The Reckoning inverts that: it is the thing
-            // that shows them the number, and it cannot show what has not been
-            // computed. The player still sees the credit and the screen at the
-            // same instant -- only the internal ordering moved.
+            // This is not gated on the dismissal: waiting for it would make
+            // the number arrive from nowhere once the Reckoning shows it,
+            // since the Reckoning is the thing that shows the player the
+            // number and cannot show what has not been computed. The player
+            // still sees the credit and the screen at the same instant.
             fight.FightEnded += OnFightEnded;
 
             // Read straight AFTER OnFightEnded has run, which is what populates
@@ -534,19 +525,18 @@ namespace PrincesPalace
 
     
         // Which backdrop and which reward multiplier is the ENCOUNTER
-        // REQUEST's answer now (EncounterRequest.Class): the room's type for a
-        // room, the event fight's `elite` for an event fight. This used to
-        // read the node here, which an event fight's node (RoomType.Event)
-        // cannot answer.
+        // REQUEST's answer (EncounterRequest.Class): the room's type for a
+        // room, the event fight's `elite` for an event fight -- an event
+        // fight's node (RoomType.Event) cannot answer this.
 
-        // THE SETTLEMENT LIVES IN RunOrchestrator NOW.
+        // THE SETTLEMENT LIVES IN RunOrchestrator.
         //
-        // Every rule that used to be written out here -- fold the ledger,
-        // write HP back, spend second lives, record the room and the boss, end
-        // the run on a loss, bank gold and apply experience on a win, clear
-        // the room, advance the leg -- moved to RunOrchestrator.SettleFight
-        // unchanged, comments and all. The bot has to obey the same rules and
-        // a second copy of them would measure itself rather than the game
+        // Folding the ledger, writing HP back, spending second lives,
+        // recording the room and the boss, ending the run on a loss,
+        // banking gold and applying experience on a win, clearing the room,
+        // advancing the leg -- all of it lives in RunOrchestrator.SettleFight.
+        // The bot has to obey the same rules and a second copy of them
+        // would measure itself rather than the game
         // (docs/PLAN_BALANCE_BOT.md F2); FightSettlementTests pins the
         // behaviour through this same door.
         //
@@ -601,12 +591,11 @@ namespace PrincesPalace
             bool used = fight.Session?.UseConsumable(item.displayName, item.amount,
                 item.effect == ItemEffect.RestoreMana, pressed.IsFake) ?? false;
 
-            // NOT SPENT UNLESS IT WAS USED, and this line used to run whatever
-            // the session did with the press. A mana potion pressed by a
-            // character whose pool refuses mana effects was deleted from the
-            // stockpile and written to disk for a bar that never moved -- the
-            // session refuses that press outright now (it costs no turn either)
-            // and says so by returning false.
+            // NOT SPENT UNLESS IT WAS USED: the session refuses a press it
+            // cannot act on (a mana potion against a pool that refuses mana
+            // effects, say -- it costs no turn either) and says so by
+            // returning false, rather than deleting the stack from the
+            // stockpile and writing it to disk for a bar that never moved.
             //
             // The stack is only worth re-reading when one actually left it.
             if (!used) return;
