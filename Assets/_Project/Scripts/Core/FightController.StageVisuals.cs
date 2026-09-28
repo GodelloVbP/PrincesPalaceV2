@@ -143,6 +143,16 @@ namespace PrincesPalace
                 playerSide ? _session.Encounter.PlayerParty : _session.Encounter.Enemies);
         }
 
+        // The party's seat list for the same moment, from the SAME source
+        // OrderOf picked (a recorded formation with a party, else live), so
+        // the order and the seats can never come from two different beats.
+        private IReadOnlyList<CombatantState> PartyFieldToShow()
+        {
+            if (_playingFormation != null && _playingFormation.Party.Count > 0) return _playingFormation.PartyField;
+
+            return _session.Encounter.PartyField;
+        }
+
         // WHETHER THIS FIGURE IS STILL ON ITS FEET, as far as the stage knows.
         //
         // Busy-aware, and that is the whole of it: while a round plays only
@@ -210,7 +220,7 @@ namespace PrincesPalace
 
             DrawSide(OrderOf(playerSide: true), partySlots, partySprites, partyActorAnimators,
                      partyHitFlashes, partyNameplates, _partySlotPlaced, StageSide.Left,
-                     mirrored: true, null);
+                     mirrored: true, null, field: PartyFieldToShow());
         }
 
         // ONE SIDE: where each figure stands, and what it is wearing.
@@ -227,11 +237,21 @@ namespace PrincesPalace
                               RectTransform[] slots, Image[] sprites, StageActorAnimator[] animators,
                               StageHitFlash[] flashes, TMPro.TMP_Text[] nameplates, bool[] placed,
                               StageSide side, bool mirrored, System.Func<CombatantState, float> presence,
-                              Vector2[] marks = null)
+                              Vector2[] marks = null, IReadOnlyList<CombatantState> field = null)
         {
             if (slots == null) return;
 
-            // ---- where they stand, by rank ---------------------------------
+            // ---- where they stand, by rank or by seat ------------------------
+            //
+            // TWO RULES FOR TWO SIDES (PLAN_BELLWETHER_KIT 1.1/R1). The enemy
+            // side has no seats: rank r of the n still holding a place, spread
+            // over the whole line, as it always was. The PARTY side stands in
+            // seats of three -- `field` is its seat list -- so a duo's second
+            // member is drawn in the middle rather than at the far end, and a
+            // lone Shawn who stepped back is drawn in the seat he stepped to.
+            // A full party with no empty seat draws exactly as rank r of 3.
+            // HoldsRank is the "holds a place" rule for both, so a corpse
+            // keeps its seat (and the line waits) until its fade has finished.
             _ranked.Clear();
             for (int i = 0; i < order.Count; i++)
             {
@@ -239,14 +259,19 @@ namespace PrincesPalace
             }
 
             int count = _ranked.Count > slots.Length ? slots.Length : _ranked.Count;
-            for (int rank = 0; rank < count; rank++)
+            if (field != null) count = System.Math.Min(CombatEncounter.SeatsPerSide, slots.Length);
+
+            for (int held = 0; held < _ranked.Count; held++)
             {
-                int slot = SlotIndexOf(_ranked[rank]);
+                int rank = field != null ? FieldSeating.SeatIn(field, _ranked[held], HoldsRank) : held;
+                if (rank < 0 || rank >= count) continue;
+
+                int slot = SlotIndexOf(_ranked[held]);
                 if (slot < 0 || slot >= slots.Length || slots[slot] == null) continue;
 
                 var offset = FightStageAnchors.SlotOffset(rank, count, mirrored);
                 float scale = FightStageAnchors.SlotScale(rank, count)
-                              * (presence?.Invoke(_ranked[rank]) ?? 1f);
+                              * (presence?.Invoke(_ranked[held]) ?? 1f);
 
                 var mark = new Vector2(offset.X, offset.Y);
 

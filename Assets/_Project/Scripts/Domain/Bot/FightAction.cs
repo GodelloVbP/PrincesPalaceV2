@@ -119,8 +119,9 @@ namespace PrincesPalace.Domain.Bot
         //
         // WHAT GUARANTEES THIS LIST IS NEVER EMPTY IS NOW ATTACK, not the
         // pass action. Hold Back used to be unconditionally legal and carried
-        // the guarantee on its own; Move does not, because a solo party has
-        // nowhere to step and a rooted character cannot step at all. The
+        // the guarantee on its own; Move does not, because a rooted character
+        // cannot step at all (a solo one can step into an empty seat since
+        // field seats, PLAN_BELLWETHER_KIT 1.1, but not while rooted). The
         // guarantee moved to Attack: on a live player turn the opposing rank
         // 0 always exists and is always melee-reachable (Provoke aside, and
         // Provoke is player-side -- a provoked ENEMY is still reachable, it

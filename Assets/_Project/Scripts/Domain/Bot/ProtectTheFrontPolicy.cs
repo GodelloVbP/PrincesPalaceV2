@@ -71,18 +71,23 @@ namespace PrincesPalace.Domain.Bot
             float mine = HealthFraction(actor);
             if (mine >= RetreatBelowHealthFraction) return false;
 
-            // "BEHIND" IS LIST ORDER, and only the living count -- the same
-            // reading CanMove itself uses when it steps over a corpse to find
-            // the partner. Anyone at all behind who is in better shape is
-            // enough: the swap is with the NEAREST living ally, so which one
-            // is healthiest does not change what the command would do.
-            var party = session.Encounter.PlayerParty;
-            bool passedActor = false;
+            // "BEHIND" IS BY SEAT, and only the living count. A step back is
+            // only a retreat when it TRADES: stepping into an empty seat
+            // leaves the actor rank 0 among the living and still the one
+            // melee lands on (PLAN_BELLWETHER_KIT 1.1). With a trade on offer,
+            // anyone at all behind who is in better shape is enough -- the
+            // trade is with the next seat back, so which one is healthiest
+            // does not change what the command would do. In a full party the
+            // next seat back is always occupied, so this reads as it always
+            // did.
+            var encounter = session.Encounter;
+            int seat = encounter.SeatOf(actor);
+            if (encounter.OccupantOf(seat + 1) == null) return false;
 
-            foreach (var member in party)
+            foreach (var member in encounter.PlayerParty)
             {
-                if (ReferenceEquals(member, actor)) { passedActor = true; continue; }
-                if (!passedActor || !member.IsAlive) continue;
+                if (ReferenceEquals(member, actor)) continue;
+                if (encounter.SeatOf(member) <= seat) continue;
 
                 if (HealthFraction(member) > mine) return true;
             }

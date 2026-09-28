@@ -574,8 +574,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- move ----------------------------------------------------------
         //
-        // Trade field places with the nearest living ally in one direction,
-        // and END THE TURN doing it. This replaced Hold Back, which banked an
+        // Go one seat forward or back, and END THE TURN doing it. This replaced Hold Back, which banked an
         // action for a later free turn: a turn spent on tempo, for a turn
         // spent on position. The tank swap it buys is only worth a turn
         // because enemy melee now concentrates on rank 0 the same way the
@@ -588,11 +587,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // The ONE legality query -- the verb row, the bot's legal menu and
         // Move itself all read this, so a row can never offer a move the
         // command then refuses.
+        //
+        // ONE SEAT, THROUGH THE ONE PLACEMENT RULE (PLAN_BELLWETHER_KIT 1.1).
+        // The actor goes to the next seat forward or back: trading with its
+        // occupant, or stepping into it when it is empty -- in every fight,
+        // so a lone Shawn can walk front -> middle -> rear and back. Where
+        // "nearest living ally" used to be the partner, the seat is now the
+        // unit; with no empty seat in front of anyone (every full party) the
+        // two are the same trade.
         public bool CanMove(CombatantState actor, MoveDirection direction)
         {
-            if (!TryFindMovePartner(actor, direction, out _, out int partnerIndex)) return false;
-            if (StatusEffects.HasRooted(actor.Statuses)) return false;
-            return !StatusEffects.HasRooted(_encounter.PlayerParty[partnerIndex].Statuses);
+            if (!TryMoveSeat(actor, direction, out int seat)) return false;
+            return _encounter.CanPlaceAt(actor, seat, out _) == PlaceOutcome.Placed;
         }
 
         // Returns false for a refusal that spent nothing -- checked BEFORE
@@ -602,82 +608,77 @@ namespace PrincesPalace.Domain.Combat.Session
             var actor = Current;
             if (actor == null) return false;
 
-            // ROOTED IS ONE RULE, READ OFF BOTH SIDES OF THE SWAP. Rooted
-            // means "cannot change field position", and a swap changes two --
-            // so a rooted partner refuses the move just as a rooted actor
-            // does, and says the same sentence about whichever one it is.
+            // ROOTED IS ONE RULE, READ OFF BOTH ENDS. Rooted means "cannot
+            // change field position", and a trade changes two -- so a rooted
+            // occupant refuses the move just as a rooted actor does, and says
+            // the same sentence about whichever one it is. The actor's own
+            // root is named before "nowhere to go", as it always was.
             if (StatusEffects.HasRooted(actor.Statuses))
             {
                 AppendMessage($"{actor.Name} is rooted.");
                 return false;
             }
 
-            if (!TryFindMovePartner(actor, direction, out int actorIndex, out int partnerIndex))
+            if (!TryMoveSeat(actor, direction, out int seat))
             {
                 AppendMessage($"{actor.Name} has nowhere to move {WordFor(direction)}.");
                 return false;
             }
 
-            var other = _encounter.PlayerParty[partnerIndex];
-            if (StatusEffects.HasRooted(other.Statuses))
+            var outcome = _encounter.CanPlaceAt(actor, seat, out var other);
+            if (outcome == PlaceOutcome.OccupantRooted)
             {
                 AppendMessage($"{other.Name} is rooted.");
                 return false;
             }
 
+            if (outcome != PlaceOutcome.Placed) return false;
+
             BeginBeat(actor, null);
             SetStance(actor, Stances.Idle);
 
-            _encounter.SwapPartySlots(actorIndex, partnerIndex);
-            AppendMessage($"{actor.Name} steps {WordFor(direction)}, trading places with {other.Name}.");
+            _encounter.PlaceAt(actor, seat, out other);
 
-            // BOTH figures moved, and the note is fired for both -- Sparring
-            // Buckler pays the acting character for an action that changed
-            // ANY position, Sparring Saber pays only the one who chose to
-            // move (mover == actingCharacter). See NoteDeliberateMove.
+            if (other != null)
+            {
+                AppendMessage($"{actor.Name} steps {WordFor(direction)}, trading places with {other.Name}.");
+            }
+            else
+            {
+                AppendMessage($"{actor.Name} steps {WordFor(direction)} into the empty {SeatWord(seat)}.");
+            }
+
+            // BOTH figures moved on a trade, and the note is fired for both --
+            // Sparring Buckler pays the acting character for an action that
+            // changed ANY position, Sparring Saber pays only the one who chose
+            // to move (mover == actingCharacter). See NoteDeliberateMove.
             NoteDeliberateMove(actor, actor);
-            NoteDeliberateMove(other, actor);
+            if (other != null) NoteDeliberateMove(other, actor);
 
             CommitBeat();
             AdvanceAfterAction();
             return true;
         }
 
-        // Who this actor would trade places with, and where both of them
-        // stand in the party list. CORPSES ARE STEPPED OVER: the swap is with
-        // the nearest LIVING ally in that direction, so a dead front-ranker
-        // does not wall the character behind it in.
-        //
-        // Returns list INDICES, not living ranks -- SwapPartySlots reorders
-        // the list, and the list is the thing ranks are computed from.
-        private bool TryFindMovePartner(CombatantState actor, MoveDirection direction,
-                                        out int actorIndex, out int partnerIndex)
+        // The seat one step from the actor's own, or false when that runs off
+        // the field (front going forward, rear going back) or the actor is not
+        // a living party member. Enemies never reach here with a seat: the
+        // enemy AI has no Move, and an enemy is not on the party field.
+        private bool TryMoveSeat(CombatantState actor, MoveDirection direction, out int seat)
         {
-            actorIndex = -1;
-            partnerIndex = -1;
+            seat = -1;
+            if (actor == null || !actor.IsPlayerSide) return false;
 
-            // Not the player's side means no move: the enemy AI has no Move
-            // and this is also what stops an enemy turn reaching it.
-            if (actor == null || !actor.IsPlayerSide || !actor.IsAlive) return false;
+            int from = _encounter.SeatOf(actor);
+            if (from < 0) return false;
 
-            var party = _encounter.PlayerParty;
-            for (int i = 0; i < party.Count; i++)
-            {
-                if (ReferenceEquals(party[i], actor)) { actorIndex = i; break; }
-            }
-
-            if (actorIndex < 0) return false;
-
-            int step = direction == MoveDirection.Forward ? -1 : 1;
-            for (int i = actorIndex + step; i >= 0 && i < party.Count; i += step)
-            {
-                if (!party[i].IsAlive) continue;
-                partnerIndex = i;
-                return true;
-            }
-
-            return false;
+            seat = from + (direction == MoveDirection.Forward ? -1 : 1);
+            return seat >= 0 && seat < CombatEncounter.SeatsPerSide;
         }
+
+        // The seat as the log says it.
+        internal static string SeatWord(int seat) =>
+            seat == PrincesPalace.Domain.Party.PartySeat.Front ? "front" : seat == PrincesPalace.Domain.Party.PartySeat.Middle ? "middle" : "rear";
 
         private static string WordFor(MoveDirection direction) =>
             direction == MoveDirection.Forward ? "forward" : "back";

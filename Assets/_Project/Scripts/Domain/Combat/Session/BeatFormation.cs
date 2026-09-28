@@ -17,7 +17,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // played out three beats later.
     //
     // COPIED, NOT REFERENCED. ToArray() at capture time, never a live list and
-    // never a deferred LINQ enumeration -- FightSession.SwapPartySlots writes
+    // never a deferred LINQ enumeration -- CombatEncounter.PlaceAt writes
     // the party list in place, so a beat holding a reference to it would hold
     // the CURRENT order under a different name, and a deferred query would
     // evaluate against whatever the list holds when the view first asks.
@@ -39,19 +39,31 @@ namespace PrincesPalace.Domain.Combat.Session
     public sealed class BeatFormation
     {
         public static readonly BeatFormation Empty =
-            new BeatFormation(Array.Empty<CombatantState>(), Array.Empty<CombatantState>());
+            new BeatFormation(Array.Empty<CombatantState>(), Array.Empty<CombatantState>(),
+                              Array.Empty<CombatantState>());
 
         private readonly CombatantState[] _party;
+        private readonly CombatantState[] _partyField;
         private readonly CombatantState[] _enemies;
 
-        private BeatFormation(CombatantState[] party, CombatantState[] enemies)
+        private BeatFormation(CombatantState[] party, CombatantState[] partyField, CombatantState[] enemies)
         {
             _party = party;
+            _partyField = partyField;
             _enemies = enemies;
         }
 
         public IReadOnlyList<CombatantState> Party => _party;
         public IReadOnlyList<CombatantState> Enemies => _enemies;
+
+        // THE PARTY'S SEATS AT THIS BEAT (PLAN_BELLWETHER_KIT 3.1): the same
+        // members as Party, in the same order, with a null per stored empty
+        // seat (CombatEncounter.PartyField). The stage counts seats off it
+        // with FieldSeating and its own "holds a place" rule (a corpse holds
+        // its seat until it has faded), so a lone Shawn who stepped back is
+        // drawn in the seat he stepped to, and a line closes up only once the
+        // body is gone. Copied for the same reason Party is.
+        public IReadOnlyList<CombatantState> PartyField => _partyField;
 
         // The side a combatant belongs to, asked the way every caller actually
         // asks it -- off CombatantState.IsPlayerSide rather than by picking a
@@ -62,7 +74,8 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (encounter == null) return Empty;
 
-            return new BeatFormation(ToArray(encounter.PlayerParty), ToArray(encounter.Enemies));
+            return new BeatFormation(ToArray(encounter.PlayerParty), ToArray(encounter.PartyField),
+                                     ToArray(encounter.Enemies));
         }
 
         // Hand-copied rather than System.Linq's ToArray, only because this is

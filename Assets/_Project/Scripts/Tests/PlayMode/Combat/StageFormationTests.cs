@@ -76,6 +76,10 @@ namespace PrincesPalace.PlayModeTests
         private static readonly Vector2 PartyNearMark = new Vector2(-320f, -218f);
         private static readonly Vector2 PartyFarMark = new Vector2(-810f, -64f);
 
+        // The middle of the party's three seats, FightStageAnchorsTests'
+        // ThePartyLineIsSteeperThanTheEnemyLine literals.
+        private static readonly Vector2 PartyMiddleMark = new Vector2(-565f, -141f);
+
         // A mark is arrived at or it is not; the walk lands on the exact value
         // rather than easing asymptotically into it (StageActorAnimator.Gliding
         // assigns the goal outright on its last frame).
@@ -208,8 +212,10 @@ namespace PrincesPalace.PlayModeTests
             // The opening formation, and the identity that has to survive it.
             Assert.AreEqual("Vanguard", TextOf("Party0Nameplate"));
             Assert.AreEqual("Reserve", TextOf("Party1Nameplate"));
-            AssertMark("Party0Slot", PartyNearMark, "Vanguard opens at rank 0");
-            AssertMark("Party1Slot", PartyFarMark, "Reserve opens at rank 1");
+            // A DUO STANDS IN SEATS OF THREE (PLAN_BELLWETHER_KIT R1): the
+            // second member is drawn in the middle, not at the far end.
+            AssertMark("Party0Slot", PartyNearMark, "Vanguard opens in the front seat");
+            AssertMark("Party1Slot", PartyMiddleMark, "Reserve opens in the middle seat");
 
             var fade0 = Named("Party0Slot").GetComponent<StageDeathFade>();
             var fade1 = Named("Party1Slot").GetComponent<StageDeathFade>();
@@ -246,7 +252,7 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(new[] { reserve, vanguard },
                 _fight.Session.Encounter.PlayerParty.ToList(), "the move landed in the model");
 
-            AssertMark("Party0Slot", PartyFarMark, "Vanguard's own slot walked back to rank 1");
+            AssertMark("Party0Slot", PartyMiddleMark, "Vanguard's own slot walked back to the middle seat");
             AssertMark("Party1Slot", PartyNearMark, "Reserve's own slot walked up to rank 0");
 
             // ---- and identity did not ---------------------------------------
@@ -407,6 +413,54 @@ namespace PrincesPalace.PlayModeTests
         // Runs the round out, recording the four moments the first test is
         // about: when the party was mid-cross, when the enemy's lunge left its
         // mark, which party slot flashed, and where the number popped.
+        // ---- 3: a lone Shawn walks the three seats and is drawn at each -------
+
+        [UnityTest]
+        public IEnumerator ALoneShawnIsDrawnInEachSeatHeStepsTo()
+        {
+            yield return LoadScene();
+
+            // PLAN_BELLWETHER_KIT 1.1 / M1: seats are real in a solo fight.
+            // Front -> middle -> rear by Move BACK, then FORWARD to the middle,
+            // each drawn at that seat's mark (FightStageAnchorsTests' literals).
+            var shawn = new CombatantState("Shawn", true, 5000, 30, 40, 10);
+            var foe = new CombatantState("Ogre", false, 5000, 10, 1, 5);
+
+            StandUp(new[] { shawn }, new[] { foe });
+            yield return null;
+
+            AssertMark("Party0Slot", PartyNearMark, "a lone Shawn opens in the front seat");
+
+            // The same fixed-rate clock the other two cases record on, so the
+            // frame budget is a budget of game time and not of machine speed.
+            Time.captureDeltaTime = SampleSeconds;
+
+            yield return StepAndSettle(row: "CharacterSkill1", "BACK");
+            Assert.AreEqual(1, _fight.Session.Encounter.SeatOf(shawn));
+            AssertMark("Party0Slot", PartyMiddleMark, "one step back is the middle seat");
+
+            yield return StepAndSettle(row: "CharacterSkill1", "BACK");
+            Assert.AreEqual(2, _fight.Session.Encounter.SeatOf(shawn));
+            AssertMark("Party0Slot", PartyFarMark, "two steps back is the rear seat");
+
+            yield return StepAndSettle(row: "CharacterSkill0", "FORWARD");
+            Assert.AreEqual(1, _fight.Session.Encounter.SeatOf(shawn));
+            AssertMark("Party0Slot", PartyMiddleMark, "and forward again to the middle");
+        }
+
+        // Opens the Move column (verb 3), presses one direction row and waits
+        // out the round it resolves.
+        private IEnumerator StepAndSettle(string row, string label)
+        {
+            Click("Verb3");
+            Assert.AreEqual(label, TextOf(row + "Name"), $"{row} of the move column should be {label}");
+            Click(row);
+
+            for (int frame = 0; frame < FrameBudget && _fight.IsBusy; frame++) yield return null;
+            Assert.IsFalse(_fight.IsBusy, $"the {label} round never finished inside {FrameBudget} frames");
+            yield return null;
+        }
+
         private IEnumerator Watch(Trace trace, string enemySlotOwner,
                                   CombatantState front, CombatantState back)
         {

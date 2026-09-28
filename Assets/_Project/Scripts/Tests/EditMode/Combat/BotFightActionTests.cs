@@ -47,20 +47,22 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void LegalActions_SoloPartyOneOnOne_OffersAttackAndNoMoveAtAll()
+        public void LegalActions_SoloPartyOneOnOne_OffersAttackAndMoveBackOnly()
         {
-            // THE NEVER-EMPTY GUARANTEE, at its narrowest. A one-member party
-            // has nowhere to step, so neither Move is legal -- and the list is
-            // still non-empty because Attack on the front enemy always is.
-            // This is exactly the case Hold Back used to cover for free.
+            // THE NEVER-EMPTY GUARANTEE, at its narrowest: Attack on the front
+            // enemy is always legal. A one-member party used to have no Move
+            // at all; with field seats (PLAN_BELLWETHER_KIT 1.1) it can step
+            // back into the empty middle, and still not forward off the front.
             var (session, hero, foe) = OneOnOne();
 
             var legal = FightAction.LegalActions(session, session.Current, System.Array.Empty<SatchelStack>());
 
             Assert.IsTrue(legal.Any(a => a.Kind == FightActionKind.Attack && a.Target == foe),
                 "a lone reachable foe must offer an Attack");
-            Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Move),
-                "a solo party has no ally to trade places with, in either direction");
+            Assert.IsTrue(legal.Any(a => a.Kind == FightActionKind.Move && a.MoveDirection == MoveDirection.Back),
+                "the empty middle seat is a legal step back");
+            Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Move && a.MoveDirection == MoveDirection.Forward),
+                "nothing is in front of the front seat");
             Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Skill),
                 "no skills were granted, so none should be offered");
             Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Item),

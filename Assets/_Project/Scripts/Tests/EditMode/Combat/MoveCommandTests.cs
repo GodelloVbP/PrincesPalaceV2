@@ -39,17 +39,21 @@ namespace PrincesPalace.Domain.Tests
                 .Concat(session.DrainImmediateMessages());
 
         [Test]
-        public void ASoloPartyCanMoveNeitherWay()
+        public void ASoloPartyCanStepBackButNotForwardFromTheFront()
         {
+            // Field seats (PLAN_BELLWETHER_KIT 1.1, owner 2026-09-28): the
+            // empty middle is a legal step in every fight. This case used to
+            // pin "a solo party can move neither way"; FieldSeatTests walks
+            // the whole line.
             var lone = Member("Lone", 10);
             var session = Fight(lone);
 
             Assert.IsFalse(session.CanMove(lone, MoveDirection.Forward));
-            Assert.IsFalse(session.CanMove(lone, MoveDirection.Back));
+            Assert.IsTrue(session.CanMove(lone, MoveDirection.Back));
 
-            Assert.IsFalse(session.Move(MoveDirection.Back));
+            Assert.IsFalse(session.Move(MoveDirection.Forward));
             Assert.AreSame(lone, session.Current, "a refused move spends no turn");
-            Assert.IsTrue(Messages(session).Any(m => m.Contains("nowhere to move back")));
+            Assert.IsTrue(Messages(session).Any(m => m.Contains("nowhere to move forward")));
         }
 
         [Test]
@@ -82,8 +86,10 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreSame(mover, session.Current);
             Assert.IsFalse(session.CanMove(mover, MoveDirection.Forward),
-                "there is no LIVING ally ahead, only a body");
-            Assert.IsFalse(session.CanMove(mover, MoveDirection.Back));
+                "there is no LIVING ally ahead, only a body -- and a body holds no seat, " +
+                "so the mover already stands in the front one");
+            Assert.IsTrue(session.CanMove(mover, MoveDirection.Back),
+                "the empty middle behind the lone survivor is a legal step (field seats, 2026-09-28)");
 
             // With a third member behind, forward is still refused and back is
             // the live direction -- and the corpse's own list slot never moves.

@@ -1016,7 +1016,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // free action.
         //
         // REUSES Move's WHOLE MECHANISM and adds nothing to it: the same
-        // SwapPartySlots, the same NoteDeliberateMove pair with the acting
+        // placement rule (CombatEncounter.PlaceAt), the same NoteDeliberateMove pair with the acting
         // character named, and the same recomputed-not-stored formation
         // (CombatEncounter.LivingRankOf). What differs from Move is only who
         // chooses the pair and what it costs, and both of those were settled
@@ -1047,7 +1047,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // skill has authored a stance), so the manual Idle is gone too.
             RecordSpellPresentation(skill);
 
-            if (!_encounter.SwapPartySlots(first, second)) return;
+            // THE ONE PLACEMENT RULE (CombatEncounter.PlaceAt): the first pick
+            // goes to the second's seat, trading with it -- today's swap,
+            // exactly. M3 lets the second pick be an empty seat.
+            if (_encounter.PlaceAt(targets[0], _encounter.SeatOf(targets[1]), out _) != PlaceOutcome.Placed) return;
 
             AppendMessage($"{targets[0].Name} and {targets[1].Name} step through and trade places.");
 

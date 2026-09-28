@@ -21,20 +21,49 @@ namespace PrincesPalace.Domain.Combat
         private readonly List<CombatantState> _enemies;
 
         // A LIST for the same reason _enemies is one, plus a second: the
-        // party's list ORDER is its field formation now, and Move reorders
-        // it in place (SwapPartySlots). Never grows or shrinks -- a Move
-        // swaps two slots and nothing else on this side ever adds or removes.
+        // party's list ORDER is its field formation, and a placement reorders
+        // it in place (PlaceAt). Never grows or shrinks. Always exactly the
+        // non-null entries of _field, in _field's order -- SyncPartyFromField
+        // is the one writer.
         private readonly List<CombatantState> _party;
+
+        // THE PARTY'S SIDE OF THE FIELD, holes included (PLAN_BELLWETHER_KIT
+        // 1.1/3.1). Every party member, living or dead, plus a null for each
+        // EMPTY SEAT that has somebody standing behind it. A seat is counted
+        // off this list: every null and every LIVING member takes the next
+        // seat, a corpse takes none.
+        //
+        // WHY HOLES ARE ENTRIES AND CORPSES ARE SKIPPED. That one counting
+        // rule gives both halves of 1.1 with no death hook anywhere: a member
+        // falling stops counting, so everyone behind moves forward one seat
+        // ("the line closes up"), while an empty seat a Move opened keeps
+        // counting until somebody steps into it. Trailing holes are never
+        // stored -- a seat past the last entry is simply empty.
+        //
+        // Seats are STORED (in the position of the holes), ranks are still
+        // COMPUTED (LivingRankOf, unchanged). With no hole in front of anyone
+        // the two are the same number, which is every full-party fight.
+        private readonly List<CombatantState> _field;
+
+        // How many seats the party side has, open or empty. Fixed at three
+        // (PartySeat.Count), the stage's own slot count.
+        public const int SeatsPerSide = PrincesPalace.Domain.Party.PartySeat.Count;
 
         public IReadOnlyList<CombatantState> PlayerParty => _party;
         public IReadOnlyList<CombatantState> Enemies => _enemies;
 
+        // The field as FieldSeating reads it: members in formation order with
+        // a null per stored empty seat. For the view's per-beat copy
+        // (BeatFormation) and for tests; rules ask SeatOf.
+        public IReadOnlyList<CombatantState> PartyField => _field;
+
         public CombatEncounter(IEnumerable<CombatantState> playerParty, IEnumerable<CombatantState> enemies)
         {
             _party = playerParty.ToList();
+            _field = new List<CombatantState>(_party);
             _enemies = enemies.ToList();
 
-            if (PlayerParty.Count == 0 || _enemies.Count == 0)
+            if (_party.Count == 0 || _enemies.Count == 0)
             {
                 throw new ArgumentException("A CombatEncounter needs at least one combatant on each side.");
             }
@@ -110,8 +139,10 @@ namespace PrincesPalace.Domain.Combat
         // COMPUTED, NEVER STORED, and that is the whole design: death
         // compresses the ranks behind the corpse with no bookkeeping to keep
         // in sync, and the list order itself only ever changes through
-        // SwapPartySlots. A stored rank is a second copy of a fact the list
-        // already holds.
+        // PlaceAt. A stored rank is a second copy of a fact the list already
+        // holds. RANK IS NOT SEAT: an empty seat in front of a member counts
+        // for SeatOf and not here, which is what keeps a lone character
+        // reachable by melee wherever he stands (PLAN_BELLWETHER_KIT 1.1).
         public int LivingRankOf(CombatantState combatant)
         {
             if (combatant == null || !combatant.IsAlive) return -1;
@@ -128,23 +159,171 @@ namespace PrincesPalace.Domain.Combat
             return -1;
         }
 
-        // Two party members trade places on the field. The ONE thing that
-        // reorders the party list.
+        // ---- field seats (PLAN_BELLWETHER_KIT 1.1 / 3.1) ---------------------------
+        //
+        // WHICH SEAT THIS COMBATANT STANDS IN, 0 = front, 1 = middle, 2 = rear
+        // (Party.PartySeat). -1 for null, the dead and the absent, the same
+        // sentinel LivingRankOf uses.
+        //
+        // THE PARTY'S IS STORED, AN ENEMY'S IS ITS RANK. Enemies never move,
+        // so an enemy's seat is its living rank and nothing new is kept for
+        // them. A party member's seat can differ from its rank only when an
+        // empty seat stands in front of it -- a lone Shawn who stepped back
+        // is in seat 1 or 2 and still rank 0.
+        //
+        // WHAT READS WHICH. Close-range reach, Provoke and "the front rank"
+        // read LivingRankOf (a lone character is always reachable wherever he
+        // stands). Seats decide placement on the stage, Move, Palace Passage,
+        // Reposition and damage-by-seat effects.
+        public int SeatOf(CombatantState combatant)
+        {
+            if (combatant == null || !combatant.IsAlive) return -1;
+            if (!combatant.IsPlayerSide) return LivingRankOf(combatant);
+
+            return FieldSeating.SeatIn(_field, combatant, IsAliveHolder);
+        }
+
+        // The living party member in `seat`, or null when it is empty (or out
+        // of range).
+        public CombatantState OccupantOf(int seat)
+        {
+            if (seat < 0 || seat >= SeatsPerSide) return null;
+
+            foreach (var member in _party)
+            {
+                if (SeatOf(member) == seat) return member;
+            }
+
+            return null;
+        }
+
+        // CAN `member` BE PLACED IN `seat` RIGHT NOW? The one legality rule for
+        // every change of field position -- Move, Palace Passage and
+        // Reposition all ask this, so none of them can disagree about Rooted
+        // or about what an empty seat allows. `occupant` is who would be
+        // traded with, null for an empty seat.
+        //
+        // ROOTED IS READ OFF BOTH ENDS: Rooted means "cannot change field
+        // position", and a trade changes two. Member first, so a caller that
+        // reports the refusal names the same figure Move always named.
+        public PlaceOutcome CanPlaceAt(CombatantState member, int seat, out CombatantState occupant)
+        {
+            occupant = null;
+
+            int from = member != null && member.IsPlayerSide ? SeatOf(member) : -1;
+            if (from < 0) return PlaceOutcome.NotOnTheField;
+            if (seat < 0 || seat >= SeatsPerSide || seat == from) return PlaceOutcome.NoSuchSeat;
+
+            if (StatusEffects.HasRooted(member.Statuses)) return PlaceOutcome.MemberRooted;
+
+            occupant = OccupantOf(seat);
+            if (occupant != null && StatusEffects.HasRooted(occupant.Statuses)) return PlaceOutcome.OccupantRooted;
+
+            return PlaceOutcome.Placed;
+        }
+
+        // PUTS `member` IN `seat`: trades with whoever stands there, or steps
+        // into it when it is empty. The ONE writer of field position. Refuses
+        // (and changes nothing) for exactly what CanPlaceAt refuses.
         //
         // NEVER TOUCHES _turnOrder, deliberately. Field position and turn
         // order are two different things that both used to be called
         // "position": a Move changes where you stand, not when you act, and
         // wiring it into the schedule would make stepping back also cost (or
         // gain) initiative, which nothing in the design says it should.
+        //
+        // A CORPSE KEEPS ITS LIST ENTRY. The two field entries swap (member
+        // and occupant, or member and the hole), so a dead member's place in
+        // PlayerParty never moves -- what MoveCommandTests.CorpsesAreStepped
+        // OverAndKeepTheirListSlot has always pinned.
+        public PlaceOutcome PlaceAt(CombatantState member, int seat, out CombatantState occupant)
+        {
+            var outcome = CanPlaceAt(member, seat, out occupant);
+            if (outcome != PlaceOutcome.Placed) return outcome;
+
+            DropExcessHoles();
+
+            int from = _field.IndexOf(member);
+            int to = FieldIndexOfSeat(seat);
+
+            _field[from] = _field[to];
+            _field[to] = member;
+
+            TrimTrailingHoles();
+            SyncPartyFromField();
+            return PlaceOutcome.Placed;
+        }
+
+        // Two party members trade field entries by PlayerParty index, with no
+        // rule applied -- the raw mechanism under PlaceAt's trade, kept public
+        // for fixtures that need to rewrite the formation directly. Game code
+        // changes position through PlaceAt only.
         public bool SwapPartySlots(int a, int b)
         {
             if (a == b) return false;
             if (a < 0 || b < 0 || a >= _party.Count || b >= _party.Count) return false;
 
-            var held = _party[a];
-            _party[a] = _party[b];
-            _party[b] = held;
+            int fa = _field.IndexOf(_party[a]);
+            int fb = _field.IndexOf(_party[b]);
+
+            var held = _field[fa];
+            _field[fa] = _field[fb];
+            _field[fb] = held;
+
+            SyncPartyFromField();
             return true;
+        }
+
+        private static readonly Func<CombatantState, bool> IsAliveHolder = c => c.IsAlive;
+
+        // The _field index that seat `seat` is counted at, appending holes
+        // when the seat lies past the last stored entry (an implicit empty
+        // seat becomes an explicit one).
+        private int FieldIndexOfSeat(int seat)
+        {
+            while (true)
+            {
+                int counted = 0;
+                for (int i = 0; i < _field.Count; i++)
+                {
+                    var entry = _field[i];
+                    if (entry != null && !entry.IsAlive) continue;
+                    if (counted == seat) return i;
+                    counted++;
+                }
+
+                _field.Add(null);
+            }
+        }
+
+        // A revival (Second Life) can bring back a member whose seat a hole
+        // was also holding, leaving more holders than seats. The frontmost
+        // surplus holes go -- the same ones FieldSeating skips when counting,
+        // so this only makes the stored list agree with what was read.
+        private void DropExcessHoles()
+        {
+            int excess = FieldSeating.ExcessHoles(_field, IsAliveHolder);
+            for (int i = 0; i < _field.Count && excess > 0;)
+            {
+                if (_field[i] == null) { _field.RemoveAt(i); excess--; }
+                else i++;
+            }
+        }
+
+        private void TrimTrailingHoles()
+        {
+            while (_field.Count > 0 && _field[_field.Count - 1] == null) _field.RemoveAt(_field.Count - 1);
+        }
+
+        // In place, never a new list: PlayerParty hands out _party itself and
+        // callers hold it across a whole fight.
+        private void SyncPartyFromField()
+        {
+            _party.Clear();
+            foreach (var entry in _field)
+            {
+                if (entry != null) _party.Add(entry);
+            }
         }
 
         // Adds a combatant to the ENEMY side mid-fight — a summon, so far
