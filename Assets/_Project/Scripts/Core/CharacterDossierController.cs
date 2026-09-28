@@ -71,12 +71,9 @@ namespace PrincesPalace
         [SerializeField] internal Image[] unassignedSelections;
         [SerializeField] internal Image[] unassignedIcons;
 
-        // The skills panel (owner bug report, 2026-09-19: "Skills in the
-        // char menu, when you click on it, nothing happens" -- there was no
-        // skillsRow field here for UiAutoBind to fill, and no pane to open).
-        // Same row+panel+close shape as Spells above, but read-only: NO
-        // per-entry Button field, because nothing in this pane takes a
-        // press -- see DeclareSkills.
+        // The skills panel: same row+panel+close shape as Spells above, but
+        // read-only -- no per-entry Button field, because nothing in this
+        // pane takes a press -- see DeclareSkills.
         [SerializeField] internal Button skillsRow;
         [SerializeField] internal TMP_Text skillsChevron;
         [SerializeField] internal GameObject skillsPanel;
@@ -131,10 +128,10 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] attributeValues;
         [SerializeField] internal TMP_Text[] attributeKeys;
 
-        // The attributes panel (owner item: "dedicated attributes screen
-        // showing stat effects, with mouse/gamepad allocation and
-        // reallocation") -- see CharacterDossierScreen.AttributesPanel's own
-        // comment for the shape. attributesRow opens it, the same
+        // The attributes panel: a dedicated screen showing stat effects, with
+        // mouse/gamepad allocation and reallocation -- see
+        // CharacterDossierScreen.AttributesPanel's own comment for the
+        // shape. attributesRow opens it, the same
         // row-that-opens-a-panel idiom Pack/Spells/Skills/Track's own rows
         // already use.
         [SerializeField] internal Button attributesRow;
@@ -349,36 +346,25 @@ namespace PrincesPalace
             if (attributesRow != null) attributesRow.onClick.AddListener(() => ShowAttributes(true));
             if (attributesCloseButton != null) attributesCloseButton.onClick.AddListener(() => ShowAttributes(false));
 
-            // AUDIT.md #160: wired above the lockedForFight guard, same
-            // reasoning as AttachHovers just above it -- the fight's own
-            // locked copy of this sheet still takes Move/Submit (equipping is
-            // what is barred, not looking), so it should still show where the
-            // stick is standing.
-            // THE THREE WireSelectHalos CALLS THAT STOOD HERE ARE GONE
-            // (hardware round 1: "a player can't see where they're going in
-            // the character sheets screen: no obvious selectors" -- a soft
-            // glow the size of a cell was never going to be one). The arrow
-            // Core/FocusMarker.cs draws needs nothing from this screen.
-            //
-            // The SelectIndex components those calls used to create are
-            // still created, by AttachHovers/TooltipFocusRouter.Register a
-            // few lines above -- the tooltip rides the same component and is
-            // untouched by this. That is also why the halo subscription was
-            // a `+=` rather than a `=`, and why removing it is a removal
-            // rather than a replacement.
+            // Wired above the lockedForFight guard, same reasoning as
+            // AttachHovers just above it -- the fight's own locked copy of
+            // this sheet still takes Move/Submit (equipping is what is
+            // barred, not looking), so it should still show where the stick
+            // is standing. The arrow Core/FocusMarker.cs draws needs nothing
+            // from this screen; the SelectIndex components that back the
+            // tooltip are created by AttachHovers/TooltipFocusRouter.Register
+            // a few lines above.
 
             // Clicking equips; clicking a worn slot takes it off. A screen that
-            // could only put gear ON would be a trap, so both gestures exist --
-            // the same pair the old sheet had.
+            // could only put gear ON would be a trap, so both gestures exist.
             //
             // Not attached at all in a fight, rather than attached and refused:
             // a button that visibly does nothing invites the player to press it
             // again, and there is nowhere on this screen to explain why.
             if (lockedForFight) return;
 
-            // THE "+" PER SCORE, which is what Character.Invest's own comment
-            // has always described and what nothing ever built (AUDIT #53).
-            // Below the lockedForFight guard for the same reason the equip
+            // The "+" per score, which is what Character.Invest's own comment
+            // describes. Below the lockedForFight guard for the same reason the equip
             // handlers are: a stat point spent mid-battle would change the
             // fight the sheet is describing.
             //
@@ -527,11 +513,11 @@ namespace PrincesPalace
             }
         }
 
-        // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b, item 1) -------
+        // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) -------
         //
         // FOUR GROUPS AND THE LINKS BETWEEN THEM, rewired at runtime like
-        // every other surface in this phase (RuntimeNavWiring's own header
-        // has the argument): which pack cells hold anything is a function of
+        // every other gamepad-navigable surface (RuntimeNavWiring's own
+        // header has the argument): which pack cells hold anything is a function of
         // the bag and the scroll offset, and whether the pack is open decides
         // what column A even is.
         //
@@ -597,9 +583,9 @@ namespace PrincesPalace
                 RuntimeNavWiring.Group("dossierSlotsLeft", UiNavGroupKind.List, leftFile),
                 RuntimeNavWiring.Group("dossierSlotsRight", UiNavGroupKind.List, rightFile),
 
-                // CLAMPED, against the owner's wrap-a-Grid-row default (plan
-                // section 12.3), and the same reason applies to the pack grid
-                // below: this group hands off SIDEWAYS to its neighbour
+                // CLAMPED, against the default wrap-a-Grid-row behaviour, and
+                // the same reason applies to the pack grid below: this group
+                // hands off SIDEWAYS to its neighbour
                 // (Left out of column 0 reaches the loadout), and a row that
                 // also wraps would have to answer Left twice. A group that is
                 // the last one on its axis wraps; one with somewhere to go
@@ -609,9 +595,9 @@ namespace PrincesPalace
             };
 
             // THE ATTRIBUTES PANEL'S OPENER, never once in any navigable
-            // group or link -- "there is no way to allocate stat points with
-            // the gamepad" (owner's hardware playtest, 2026-09-23) traced to
-            // exactly this: the modal itself (DeclareAttributes) is a fully
+            // group or link -- there was no way to allocate stat points with
+            // the gamepad, traced to exactly this: the modal itself
+            // (DeclareAttributes) is a fully
             // worked pad surface -- entry focused, Close reachable, every
             // row's own Left/Right spend/refund (AttributeRow.OnMove) -- and
             // nothing could ever open it, because attributesRow sat outside
@@ -661,8 +647,8 @@ namespace PrincesPalace
             }
 
             // FOUR STATES, not three -- DossierSkillsPanel joins Pack and
-            // Spells (owner bug report, 2026-09-19). Same opaque-cover-of-
-            // column-A shape as the other two, checked before falling back
+            // Spells. Same opaque-cover-of-column-A shape as the other two,
+            // checked before falling back
             // to the column-A rows so at most one of the three is ever
             // considered.
             if (IsPackShown) DeclarePack(groups, links, leftFile);
@@ -677,12 +663,8 @@ namespace PrincesPalace
         // pager (a Rail of two, hidden entirely for a one-character squad)
         // over the four live nav rows, top to bottom as drawn.
         //
-        // THE SKILLS ROW USED TO BE MISSING HERE (owner bug report,
-        // 2026-09-19: "Skills in the char menu, when you click on it,
-        // nothing happens") -- it carried no onClick at all, so a Move that
-        // landed on it was a Submit that did nothing. It opens
-        // DossierSkillsPanel now, the same row+panel+close shape Spells and
-        // Pack already use.
+        // The skills row opens DossierSkillsPanel, the same row+panel+close
+        // shape Spells and Pack already use.
         private void DeclareColumnARows(List<UiNavGroup<Selectable>> groups,
             List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
         {
@@ -711,12 +693,10 @@ namespace PrincesPalace
         // under the panel's own Close button, over a 2-wide grid of whatever
         // cells currently hold an item.
         //
-        // CLOSE IS IN THE GRAPH. It used to be the ONLY way out on a stick,
-        // because this pane claimed no Cancel at all; ClaimCancel below now
-        // steps back out of the pack for free (hardware round 1 item 5), and
-        // Close stays anyway -- it is the mouse's own way out, drawn on the
-        // panel, and a control the eye can see has to be a control a Move can
-        // reach.
+        // CLOSE IS IN THE GRAPH even though ClaimCancel below also steps back
+        // out of the pack for free: Close is the mouse's own way out, drawn
+        // on the panel, and a control the eye can see has to be a control a
+        // Move can reach.
         private void DeclarePack(List<UiNavGroup<Selectable>> groups,
             List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
         {
@@ -851,9 +831,9 @@ namespace PrincesPalace
             return attributesCloseButton;
         }
 
-        // Column A while the skills panel covers it (owner bug report,
-        // 2026-09-19) -- the character's talent-granted kit, read-only.
-        // Same "cover it, own the graph while covered" spine handoff
+        // Column A while the skills panel covers it -- the character's
+        // talent-granted kit, read-only. Same "cover it, own the graph while
+        // covered" spine handoff
         // DeclarePack/DeclareSpells use, but NO group of entries to
         // declare: a skill is something the character already has, not
         // something a press here does anything with, and giving each row a
@@ -956,8 +936,7 @@ namespace PrincesPalace
         // the axis being crossed. It is true for Party, whose seats and roster
         // cards are drawn in matching rows. It is false for every use of it on
         // this screen, because column A and the loadout have completely
-        // different vertical extents, and the result is what the owner
-        // reported. Measured off the solved layout rather than guessed at:
+        // different vertical extents. Measured off the solved layout rather than guessed at:
         //
         //     column A            the loadout
         //     pager   y  114      Head      y  260
@@ -986,10 +965,8 @@ namespace PrincesPalace
         // cell; only one of them can be what that cell steps back to.
         //
         // The rect's CENTRE in world space, never RectTransform.position,
-        // which is the PIVOT -- the distinction AUDIT.md #162 cost five
-        // instrumented reproductions to name. Nothing on this screen is
-        // pivoted off-centre today; reading the centre means nothing has to
-        // stay that way.
+        // which is the PIVOT. Nothing on this screen is pivoted off-centre
+        // today; reading the centre means nothing has to stay that way.
         private static void PairAcross(List<UiNavLink<Selectable>?> links,
             IReadOnlyList<Selectable> from, IReadOnlyList<Selectable> to,
             UiNavDirection toward, UiNavDirection back)
@@ -1170,9 +1147,8 @@ namespace PrincesPalace
         // panels are tested innermost first -- only one of the four can be
         // open at a time (the track row is only reachable with column A's
         // rows showing, which means the pack, the books and the skills pane
-        // are not), but stating the order costs nothing and means the fourth
-        // level this comment used to predict -- now landed, skills below --
-        // cannot quietly invert it, nor can a fifth.
+        // are not), but stating the order costs nothing and means a fourth or
+        // fifth panel cannot quietly invert it.
         bool INavCancelClaim.ClaimCancel()
         {
             // Checked FIRST, innermost of the five: it is reachable only
@@ -1340,10 +1316,9 @@ namespace PrincesPalace
                 ? RunOrchestrator.ReplaceSpell(character.definitionId, skillId, slot)
                 : RunOrchestrator.LearnSpell(character.definitionId, skillId, slot);
 
-            // THE RESULT IS READ NOW (AUDIT #116). It used to be consulted for
-            // `.Applied` alone, so AlreadyKnown -- the refusal docs/PLAN_SHOP
-            // 2d names as the moment the player finds out they bought a
-            // duplicate -- happened and the screen did not move.
+            // The full result is read, not just `.Applied`, so AlreadyKnown
+            // -- the moment the player finds out they picked a duplicate --
+            // is surfaced rather than silently swallowed.
             if (result.Applied)
             {
                 _selectedUnassignedRow = -1;
@@ -1524,7 +1499,7 @@ namespace PrincesPalace
             RefreshNavigation();
         }
 
-        // ---- skills (owner bug report, 2026-09-19) --------------------------------
+        // ---- skills --------------------------------
 
         // Read by RefreshNavigation's own four-way branch, same shape and
         // same reason IsPackShown/IsSpellsShown already have.
@@ -1770,8 +1745,8 @@ namespace PrincesPalace
             RefreshSkills();
         }
 
-        // The bag, through the SAME BagView the old sheet sorted with -- the
-        // ordering rules are not worth a second opinion.
+        // The bag, sorted through BagView -- the ordering rules are not worth
+        // a second opinion.
         private IReadOnlyList<BagItem> _bag = new List<BagItem>();
 
         // Which ordering the player chose, and how far down the list the
@@ -1805,10 +1780,10 @@ namespace PrincesPalace
 
         // SCROLLING REBINDS, IT DOES NOT REBUILD.
         //
-        // Both of these used to call RefreshPack, which re-reads the save,
-        // resolves every entry through ContentDatabase and re-sorts the whole
-        // bag -- to move a window by two indices, at mouse-wheel frequency.
-        // The bag has not changed; only which slice of it is on screen has.
+        // RefreshPack re-reads the save, resolves every entry through
+        // ContentDatabase and re-sorts the whole bag -- too costly to call at
+        // mouse-wheel frequency just to move a window by two indices. The
+        // bag has not changed; only which slice of it is on screen has.
         public void Scroll(int rows)
         {
             int before = _scroll;
@@ -1877,11 +1852,8 @@ namespace PrincesPalace
 
             BindPackWindow();
 
-            // CAPACITY IS NO LONGER A THING THIS SCREEN HAS. The grid used to be
-            // 24 cells against a save that could hold more, so the footer had to
-            // say "24 of 27" and admit that three were unreachable. The list
-            // scrolls now, so every item is reachable and the footer is simply
-            // how many are carried.
+            // The list scrolls, so every item is reachable and the footer is
+            // simply how many are carried, not a capacity count.
             if (carriedValue != null) carriedValue.SetContent(_bag.Count.ToString());
         }
 
@@ -2302,11 +2274,11 @@ namespace PrincesPalace
         // What this character's next level is worth, under the bar that says
         // how far away it is.
         //
-        // THE TRACK WAS PAYABLE BEFORE IT WAS LEGIBLE. Levels grant Favor, stat
-        // points, extra starting relics and a wider item offer, and until this
-        // line existed nothing on any screen said so -- a player could pass
-        // level 25 and find themselves drafting two relics with no way to learn
-        // why, which reads as a bug rather than as a reward.
+        // Levels grant Favor, stat points, extra starting relics and a wider
+        // item offer; this line is what says so on screen -- without it, a
+        // player could pass level 25 and find themselves drafting two relics
+        // with no way to learn why, which reads as a bug rather than as a
+        // reward.
         //
         // Reads `level` directly rather than the claim watermark, because it is
         // describing the track and not the payout: what level 30 gives is the
@@ -2426,13 +2398,14 @@ namespace PrincesPalace
 
         // What a stat reads as RIGHT NOW, from the model.
         //
-        // The equip preview needs the same number the row is showing, and it
-        // used to get it by int.TryParse-ing the label's rendered text. That
-        // works only for as long as every stat renders as a bare integer: the
-        // moment one gains a separator, a unit or a percent sign the parse
-        // fails silently, falls back to 0, and the preview prints a confident
-        // wrong total. Signature gain ALREADY renders as "-" when a character
-        // has no signature resource, so the failure case was live.
+        // The equip preview needs the same number the row is showing, read
+        // from the model directly rather than by int.TryParse-ing the
+        // label's rendered text: that only works while every stat renders as
+        // a bare integer, and the moment one gains a separator, a unit or a
+        // percent sign the parse would fail silently, fall back to 0, and
+        // print a confident wrong total. Signature gain already renders as
+        // "-" when a character has no signature resource, so the failure
+        // case is live.
         //
         // False means there is no number to show, which is a different thing
         // from zero and the reason this is not just an int.
@@ -2567,9 +2540,8 @@ namespace PrincesPalace
             // worn from the pack.
             //
             // The "measure max health before the swap, rescale carried health
-            // after it" pair that used to sit around this call is inside
-            // EquipmentOps.Equip now -- three screens and the bot each had
-            // their own copy of it. Nothing about the move changed.
+            // after it" pair lives inside EquipmentOps.Equip, shared across
+            // every screen and the bot rather than duplicated per caller.
             if (!EquipmentOps.Equip(save, character, item.Instance, item.Slot, item.IsEquippable))
             {
                 return;
@@ -2577,7 +2549,7 @@ namespace PrincesPalace
 
             // WRITTEN IMMEDIATELY. Gear that vanishes because the game closed
             // between an equip and a save is the least forgivable thing this
-            // screen could do -- the old sheet said so and it still holds.
+            // screen could do.
             SaveSlotManager.SaveCurrent();
             Refresh();
 
@@ -2599,8 +2571,8 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (character?.equipment == null || save == null) return;
 
-            // Scales carried health both ways -- see EquipmentOps.Unequip,
-            // which carries the symmetry note this call site used to.
+            // Scales carried health both ways -- see EquipmentOps.Unequip's
+            // own symmetry note.
             if (!EquipmentOps.Unequip(save, character, EquipmentSlots.All[index]))
             {
                 return;
@@ -2745,13 +2717,10 @@ namespace PrincesPalace
                 return;
             }
 
-            // PLUS, NOT JUST THE ITEM: found while wiring the DMG line
-            // (D7.2) -- this used to call CardSummary(item) with no plus at
-            // all, so an equipped slot's OWN hover silently showed the
-            // unhoned figure for every stat, weapon included. Pre-existing
-            // and out of D7's scope to have gone looking for, but the DMG
-            // line this phase adds would have made it worse (a honed sword's
-            // card understating its own damage), not merely stayed wrong.
+            // PLUS, NOT JUST THE ITEM: an equipped slot's own hover has to
+            // read the honed figure for every stat, weapon included, not the
+            // base card -- a honed sword's card understating its own damage
+            // is worse than merely showing a stale figure.
             int plus = character.equipment?.GetPlus(slot) ?? 0;
 
             // ITEM-MODIFIER PLAN PHASE E: read BEFORE anything displaces this
@@ -2852,9 +2821,9 @@ namespace PrincesPalace
             tooltip.SetShown(true);
         }
 
-        // AS TALL AS ITS TEXT, not the 420 it was built at (QA 2026-09-26:
-        // both captured item tooltips were about half empty under their
-        // text). Only the panel's height moves -- ItemComparisonPanel pins
+        // As tall as its text, not the built height, or the panel sits about
+        // half empty under its text for most items. Only the panel's height
+        // moves -- ItemComparisonPanel pins
         // its fill, rim, title and body to the panel's edges, so they follow
         // -- and it never grows past the built size, which
         // DossierTooltipTextFitTests already proves holds the worst-case
@@ -2906,7 +2875,7 @@ namespace PrincesPalace
             // ended up 339px off the panel they belong to.
             Vector2 local = parent.InverseTransformPoint(near.TransformPoint(Vector3.zero));
 
-            // NEVER OVER THE LOADOUT (owner, 2026-09-26): the mannequin, the
+            // NEVER OVER THE LOADOUT: the mannequin, the
             // slots and the Carried row are keep-outs, so a pack item beside
             // the loadout opens under or over its own cell instead of across
             // the figure it is being weighed against. DossierLayout owns the

@@ -1849,13 +1849,13 @@ namespace PrincesPalace
         // two cursors MoveFocus already maintains. Kept beside it so the two
         // cannot drift into disagreeing about where the pad is.
         //
-        // TWO WAYS THE PAD CAN BE ON AN ACTOR, and they are different
+        // Two ways the pad can be on an actor, and they are different
         // questions rather than one with a flag. At Target depth the pad is
-        // CHOOSING one, and the box is a side effect of the choice. While
-        // inspecting it is only READING one, at Root, with nothing pending --
-        // the owner's 2026-09-19 call, and the reason the horizontal axis now
-        // reaches this method at all (InspectMove above,
-        // NavigationInputModule.ProcessFight for the axis read).
+        // choosing one, and the box is a side effect of the choice. While
+        // inspecting it is only reading one, at Root, with nothing pending --
+        // the reason the horizontal axis reaches this method at all
+        // (InspectMove above, NavigationInputModule.ProcessFight for the
+        // axis read).
         internal CombatantState FocusedActor()
         {
             if (_session == null || _isBusy) return null;
@@ -1900,10 +1900,9 @@ namespace PrincesPalace
 
         // THE FIGURE ON THE BATTLEFIELD, not the plate in the corner.
         //
-        // The owner asked for "a small hovering arrow for the thing you're
-        // targeting", and while a target is being chosen the thing being
-        // targeted is the monster, not its HUD readout twenty rows away at
-        // the top of the screen. The hit areas exist for exactly this window
+        // While a target is being chosen, the thing being targeted is the
+        // monster, not its HUD readout twenty rows away at the top of the
+        // screen. The hit areas exist for exactly this window
         // -- RefreshEnemyPlates shows them only while picking ("the figure is
         // a target only while one is being chosen") -- so asking for one and
         // taking the plate when it is not up is the same question answered
@@ -1959,9 +1958,9 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            // systemMenu, NOT Cancel (the owner's 2026-09-19 call): Start
-            // reaches the overarching menu from inside a fight, and B is
-            // left meaning one thing only -- step back a level.
+            // systemMenu, not Cancel: Start reaches the overarching menu
+            // from inside a fight, and B is left meaning one thing only --
+            // step back a level.
             _navContext = NavContext.ForFight(this, systemMenu: OpenSystemMenu);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
@@ -1998,8 +1997,8 @@ namespace PrincesPalace
         // into the two independently-reasoned cases this replaces -- see
         // FightGamepadNavigationTests for the literal indices this pins.
         //
-        // STILL LIVE, not superseded by CycleTargetFromPad (2026-09-19): the
-        // at<0 branch below is exactly right for a DIRECT MoveFocus(int)/
+        // Still live, not superseded by CycleTargetFromPad: the at<0 branch
+        // below is exactly right for a DIRECT MoveFocus(int)/
         // CycleTarget(delta) call -- the only kind FightGamepadNavigationTests'
         // MovingFocusAtTargetDepthCyclesTheHoveredLivingEnemy/
         // AFirstPreviousPressAtTargetDepthLandsOnTheLastLivingEnemy and every
@@ -2061,10 +2060,9 @@ namespace PrincesPalace
             }
         }
 
-        // ONE CYCLING RULE FOR BOTH TARGET RACKS AND BOTH AXES (the owner's
-        // 2026-09-19 follow-up: "selecting different mobs with gamepad goes
-        // with up down, but it should work with left right"). `delta` is
-        // DEPTH-SPACE: +1 steps one slot DEEPER (the living/pickable list's
+        // ONE CYCLING RULE FOR BOTH TARGET RACKS AND BOTH AXES: gamepad
+        // target selection works with left/right as well as up/down.
+        // `delta` is DEPTH-SPACE: +1 steps one slot DEEPER (the living/pickable list's
         // next index -- further right on stage for the enemy rack, further
         // left for the mirrored ally one), -1 steps one slot nearer.
         //
@@ -2089,7 +2087,7 @@ namespace PrincesPalace
         // enemy rack -- see InspectMove's own header).
         private void CycleTarget(int delta) => CycleTarget(delta, fromPad: false);
 
-        // THE PAD-ONLY ENTRY POINT (2026-09-19, the gate's own find): a pad
+        // THE PAD-ONLY ENTRY POINT: a pad
         // player's first press at Target depth has to read as one step FROM
         // enemy/plate 0, not as CycleTarget's own "first press lands ON
         // index 0" rule -- FocusedElement/ConfirmFocus already treat no
@@ -2180,14 +2178,12 @@ namespace PrincesPalace
             return pickable;
         }
 
-        // ---- inspecting, which costs no verb (the owner, 2026-09-19) ----------
+        // ---- inspecting, which costs no verb ----------
         //
-        // "In a fight, how does a player hover over a mob or a PC to check
-        // (de)buffs? (gamepad)" -- and until this, they could not. Fight's
-        // three depths are the verb column, a submenu list and a target rack,
-        // and only the last one stands on an actor, so the pad reached a
-        // monster only by first pressing A on ATTACK or a spell. Reading a
-        // monster is not choosing to hit it.
+        // Fight's three depths are the verb column, a submenu list and a
+        // target rack, and only the last one stands on an actor, so without
+        // this the pad could reach a monster only by first pressing A on
+        // ATTACK or a spell. Reading a monster is not choosing to hit it.
         //
         // NOT A FOURTH MenuDepth. MenuDepth belongs to FightMenuState, which
         // is the domain model of what the player is COMMITTING to -- every
@@ -2307,19 +2303,13 @@ namespace PrincesPalace
             return ring;
         }
 
-        // ---- the character-select ring (owner playtest, 2026-09-23) --------------
+        // ---- the character-select ring --------------
         //
-        // "While picking a target, left/right should walk the formation
-        // spatially -- party on the left, mobs on the right -- and never
-        // jump to the command menu." Y/Triangle (EnterCharacterSelect)
-        // starts on the front party member (PartyInspectRing()[0], per
-        // CharacterSelectStartsOnTheFrontLivingPartyMember), and until now
-        // Left/Right there only ever walked PartyInspectRing() -- so Left
-        // off the front member fell all the way through StepInspectRing's
-        // -1 and landed back on the verb column (the bug: "LEFT goes back
-        // to the Attack command button"), and Right could never leave the
-        // party at all ("RIGHT goes to the player party" -- nowhere new to
-        // go, because the enemies were never part of this ring).
+        // Left/right walks the formation spatially -- party on the left,
+        // mobs on the right -- and never jumps to the command menu.
+        // Y/Triangle (EnterCharacterSelect) starts on the front party member
+        // (PartyInspectRing()[0], per
+        // CharacterSelectStartsOnTheFrontLivingPartyMember).
         //
         // ONE FLAT LIST IN SCREEN ORDER, LEFT TO RIGHT: the party, DEEPEST
         // FIRST, then the enemies, FRONT FIRST. The party has to reverse
@@ -2329,9 +2319,8 @@ namespace PrincesPalace
         // the party's own RIGHTMOST member, one step from the first enemy.
         // Walking this list forward (Right) from the front party member
         // therefore lands on the front enemy, and walking it backward
-        // (Left) from the front party member lands on plate 1 -- the
-        // second party member, "party position 2" in the owner's own words
-        // -- exactly the two presses the playtest pinned.
+        // (Left) from the front party member lands on plate 1, the second
+        // party member.
         private List<InspectStop> CharacterSelectRing()
         {
             var party = PartyInspectRing();
@@ -2363,8 +2352,8 @@ namespace PrincesPalace
         }
 
         // THE CHARACTER-SELECT RING'S OWN RULE -- CLAMPED, NOT LEFT/WRAPPED,
-        // and that is the whole fix (owner playtest, 2026-09-23: "never jump
-        // to the command menu"). StepInspectRing's -1-means-the-verb-column
+        // so a press at either end never jumps to the command menu.
+        // StepInspectRing's -1-means-the-verb-column
         // convention exists FOR the plain Root inspect ring on purpose (its
         // own header: "the verb column is the stop before the first
         // monster") -- Y/Triangle's character-select ring is a different
@@ -2382,12 +2371,10 @@ namespace PrincesPalace
         }
 
         // The horizontal axis' whole meaning in a fight. At a submenu it
-        // still does what it always did, which is nothing -- a skill or
-        // item LIST is walked by Up/Down alone. At Root it walks the inspect
-        // ring, unchanged below. AT TARGET DEPTH (the owner's 2026-09-19
-        // follow-up, "selecting different mobs with gamepad goes with up
-        // down, but it should work with left right") it now cycles the rack
-        // exactly like Up/Down do, through the same CycleTargetFromPad
+        // does nothing -- a skill or item LIST is walked by Up/Down alone.
+        // At Root it walks the inspect ring, unchanged below. At Target
+        // depth it cycles the rack exactly like Up/Down do, through the same
+        // CycleTargetFromPad
         // IFightNavigationTarget.MoveFocus's own Target branch uses -- see
         // that method's own header for the shared "+1 is deeper" convention
         // this translates into.
@@ -2594,13 +2581,12 @@ namespace PrincesPalace
         // A FIGURE TARGET HAS TWO REASONS TO BE ON SCREEN AND ONLY ONE OF
         // THEM TAKES CLICKS.
         //
-        // `live` is the old reason and the only one that was ever there: a
-        // pick is open and this figure is one of its marks. `perched` is the
-        // new one: the pad is inspecting and the marker has to stand
-        // somewhere. Without it the marker fell back to the plate in the
-        // corner while PlaceStatusBox drew the box under the figure on the
-        // battlefield, which is one actor indicated at two ends of the
-        // screen.
+        // `live` is one reason: a pick is open and this figure is one of its
+        // marks. `perched` is the other: the pad is inspecting and the
+        // marker has to stand somewhere. Without it the marker falls back to
+        // the plate in the corner while PlaceStatusBox draws the box under
+        // the figure on the battlefield, which is one actor indicated at two
+        // ends of the screen.
         //
         // RAYCASTING FOLLOWS `live` ALONE, and that is the whole safety of
         // this. A hit area is a NoChrome Button -- a transparent Image that
