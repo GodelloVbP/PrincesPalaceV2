@@ -575,6 +575,139 @@ below, not top-to-bottom through this table.
 | 4g | Momentum stacks, Fury soak, Berserk (reuse `Transformation`), Headsplitter, Twin Rampage | Einherjar | After phase 1. |
 | 4h | Hold the Line, Bellow upgrades, Gorge, Unbroken skills | Sentinel, Juggernaut | Mostly content on existing effects. |
 
+#### Phase 4 engine seams — built in cloud, wiring handoff (2026-09-28)
+
+Rows 4b, 4c, 4d and 4e are built as Domain seams, commit `601be17`. Each one
+is switched per combatant by state on `CombatantState`, and each is off for
+everyone until something sets it. Nothing sets any of them yet. The
+`TalentEffectType`/`SkillEffect` members that will set them are
+content-hashed (`ContentInputHash`), so they land in the Unity session with
+`-BuildContent`. The session half of all four is in
+`Domain/Combat/Session/FightSession.EngineSeams.cs`. The tests are
+`HealConversionTests`, `DelayedDamagePoolTests`, `BloodPriceTests` and
+`CrowdControlTests`, all `[D]`.
+
+**Shared: `TurnWindow`** (`Domain/Combat/TurnWindow.cs`). It counts a span
+of the holder's own turns. It ages at the holder's turn END
+(`TickStatusesAtTurnEnd` → `AgeEngineWindows`), and the end of the turn it
+was opened on is skipped, the same rule as the `AtTurnEnd` status family.
+So "for 2 turns" means two full turns of the holder, whichever side opened
+it. Opening it again never shortens it.
+
+**4b Cursed Blood — `CombatantState.HealConversion`** (`HealConversion.cs`).
+
+- How it works: while `HealConversion.Window` is open,
+  `FightSession.HealAndCount` restores nothing. It deals the EFFECTIVE heal
+  (the heal capped by missing health) as a typed `Void` hit to every living
+  enemy, through `DamagePipeline.AfterDefences` and then `DealDamage`.
+  Resistance and wards still apply; there is no variance, dodge or crit. The
+  holder gets kill credit only on his own turn.
+- It is the first thing the funnel does, so Ignore Pain T3 never sees a heal
+  that has been converted.
+- Regen ticks, lifesteal and Mending Fleece's ward-break heal were outside
+  the funnel. They are now routed into it through `StatusEffects.HealSink`.
+  All in-fight heals now convert. Revives and a transformation's temporary
+  health are not heals.
+- One-liner: `session.OpenCursedBlood(holder, turns)`.
+- Wiring:
+  1. Append `SkillEffect.CursedBlood` (or a generic `OpenHealConversion`)
+     to `SkillEffect.cs`.
+  2. Add its case to `FightSession.Skills` resolution, calling
+     `OpenCursedBlood(actor, skill.StatusDuration)` (2).
+  3. Add the `skills.json` row `bjorn_cursed_blood`: 50 Fury, once per
+     fight, `grantsSkillId` from the ultimate talent node (slot 20).
+  4. Add a bot valuation for it (Phase 4 intro rule).
+- Open presentation point: a converted Regen tick deals its enemy damage
+  inside the Regen tick's own beat. The lines are correct, but the view shows
+  a heal beat on Bjorn. A dedicated beat is the view session's call.
+
+**4c Ignore Pain — `CombatantState.DelayedDamage`** (`DelayedDamagePool.cs`,
+null = off).
+
+- Where it applies (decided): after the ward and every defence, before
+  health. It takes effect in `FightSession.LandPacket`, after Kinship and a
+  hatched shell, and before the Phoenix Egg's lethal check.
+- Only hits are deferred. Status ticks and the pool's own payments go
+  through `DealStatusTickPacket` and are never deferred again.
+- Deferral is `floor(hit × Percent / 100)`.
+- Each hit is its own tranche. A tranche pays `ceil(remaining / turnsLeft)`
+  at each of the holder's turn starts (20 over 3 turns is 7, 7, 6).
+  Payment happens in `TickStatuses`, after the DoT rows and before Regen,
+  with its own beat and line. Payments are damage, so cheat death still
+  answers them.
+- `HealsReducePool` (T3) makes a heal pay down the pool, oldest tranche
+  first, before it restores health. It never does this under Cursed Blood.
+- One-liner, set at fight start:
+  `actor.DelayedDamage = new DelayedDamagePool(percent, 3, healsReducePool: t3)`.
+- Wiring:
+  1. Append `TalentEffectType.DelayedDamagePercent` (Magnitude = percent,
+     Threshold = turns) and `TalentEffectType.HealReducesDelayedDamage` to
+     `TalentEffect.cs`.
+  2. Add a fight-start pass (e.g. `ArmEngineSeams(actor)` called from
+     `FightSession.Begin` for each party member) that sets the pool from
+     `Talents.Best(...)`.
+  3. Talent rows: Ignore Pain T1 = 20, T2 = 30, T3 = the flag.
+
+**4d Blood Price — `CombatantState.ShortfallHealthPermille`**
+(`BloodPrice.cs`, 0 = off, 5 = 0.5% max HP per point).
+
+- `SkillResolution.CanAfford` is the one affordability check. The menu's
+  `Affordable`, every bot, `CanCastToSeat` and the cast refusal all call it.
+  It counts the skill's own health cost plus the shortfall against a single
+  1 HP floor: a cast that would go below it is refused, not clamped.
+- Rounding: `ceil(shortfall × maxHP × permille / 1000)`.
+- `CastCore` charges the pool what it holds and writes the rest straight to
+  health. That write never reaches `ApplyDamageDetailed`, so cheat death,
+  wards, deferral and the ledger never see it. Cheat death stays loaded.
+- One-liner, set at fight start: `actor.ShortfallHealthPermille = 5`.
+- Wiring:
+  1. Append `TalentEffectType.ShortfallPaidInHealthPermille` (Magnitude 5).
+  2. Set the field from it in the same `ArmEngineSeams` pass.
+  3. Blood Price T3 reuses `CheatDeathOncePerFight`; its "fills Fury to 100"
+     half is new work in `CombatMath.ApplyDamageDetailed`'s cheat-death
+     branch (session side).
+- Not built:
+  - T2 "health-paid skills deal +15%". This needs the cast to remember that
+    it was blood-paid. `CastCore` has `bloodPaid` in scope, which is the
+    place to hook it.
+  - The HUD cost label still shows only the Fury cost. Showing the health
+    price when short is a view decision.
+
+**4e Crowd control — `CrowdControl.IsCrowdControl` and
+`CombatantState.CrowdControl` (`CrowdControlGuard`)** (`CrowdControl.cs`).
+
+- The CC statuses are Stun, Feared, Rooted and Chilled.
+- The block is in `FightSession.RecordStatus`, which every status reaches:
+  `ApplyStatusTo`, `ApplyChilled`'s direct callers, and Court of Whispers'
+  fear, which is now rerouted through it. It runs after hard-control
+  recovery.
+- `ApplyStatusTo` now returns whether the status landed. The four call sites
+  that announced a status unconditionally now announce it only when it
+  landed.
+- Unstoppable blocks the attempt first, so Unyielding neither fires nor
+  starts its cooldown.
+- Unyielding negates the attempt. It then:
+  - opens `UnyieldingSurge`, which gives +`SpeedPercent` speed under the
+    speed-buff key `"Unyielding"` and +`DamagePercent` through
+    `AttackBonusFor`;
+  - starts `UnyieldingCooldown`;
+  - adds `FuryGain` to the primary pool.
+- One-liners:
+  - `session.OpenUnstoppable(holder, 2)` from Unbroken's resolution.
+  - At fight start:
+    `actor.CrowdControl.Unyielding = new UnyieldingRule(cooldownTurns: 4 or 3, speedPercent: 20, damagePercent: 25, furyGain: 0 or 20)`.
+- The speed percent is a placeholder (20). The plan says "+speed" with no
+  number.
+- Wiring:
+  1. Append `SkillEffect.Unbroken` (it opens `Regen` 15% for 2 turns
+     through `ApplyStatusTo`, then calls `OpenUnstoppable`, 2 turns).
+  2. Append `TalentEffectType.UnyieldingCooldownTurns` (T1 = 4, T2 = 3)
+     and `TalentEffectType.UnyieldingFuryGain` (T3 = 20).
+  3. Set the rule in `ArmEngineSeams`.
+  4. Add a bot valuation for Unbroken.
+- Enemy-roster track reminder (review finding 10): CC-applying enemies are
+  what make 4e testable in a real fight.
+
 ### Build order — vertical slices per constellation (owner-delegated, 2026-09-28)
 
 Closes review finding 8: not all mechanics, then all content, then
