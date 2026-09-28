@@ -2,38 +2,30 @@ namespace PrincesPalace.Domain.Stats
 {
     // Turns the six ability scores into things combat actually reads.
     //
-    // PHASE 2 OF THE BALANCE REDESIGN (see the plan's D2): this file used to
-    // be piecewise -- linear inside a character's own authored range, then
-    // quadratic (pools) or root-shaped (rates) on whatever gear piled on top,
-    // because gear used to hand out hundreds of ability-score points and a
-    // flat rate that size would have gone supernova. Gear no longer works
-    // that way (see GearScaling's own header for the current budget), so the
-    // piecewise split -- CharacterBand, Pool, Rate, and the AttackBonus they
-    // fed -- is gone. Every derivation below is a single straight line
-    // through zero at score 10, for every score at every value, forever.
+    // Every derivation below is a single straight line through zero at score
+    // 10, for every score at every value: a flat rate stays honest because
+    // gear's ability-score budget is bounded (see GearScaling's own header),
+    // so nothing here needs a piecewise curve to avoid going supernova on a
+    // heavily-geared character.
     //
-    // THE DESIGN RULE, unchanged from before this rewrite and still the
-    // reason this can ship without rebalancing anything else: every
-    // derivation is a function of (score - 10) and returns an exact zero at
-    // 10. A character nobody has authored scores for derives nothing at all.
+    // The design rule, and the reason this can ship without rebalancing
+    // anything else: every derivation is a function of (score - 10) and
+    // returns an exact zero at 10. A character nobody has authored scores
+    // for derives nothing at all.
     //
     // Engine-free and pure, so the whole layer is unit-testable in EditMode
     // with no scene and no ScriptableObject -- which is the point of Domain.
     //
-    // STRENGTH AND INTELLIGENCE DERIVE NOTHING HERE, and that is deliberate,
-    // not a gap this file forgot to fill. Both used to feed a stat directly
-    // (STR -> Attack, and before that a since-deleted INT -> SkillPowerBonus)
-    // and both were deleted for the same reason: weapon/spell GRADES already
-    // answer "how hard do I hit", via ScalingProfile reading STR/INT off the
-    // caster at the moment of the swing/cast (see CombatMath.ScaledAttack /
-    // ComputeSkillDamage). A second, uncoordinated answer to the same
-    // question here would double-dip exactly the way the old AttackBonus did
+    // Strength and Intelligence derive nothing here, and that is deliberate,
+    // not a gap this file forgot to fill: weapon/spell GRADES already answer
+    // "how hard do I hit", via ScalingProfile reading STR/INT off the caster
+    // at the moment of the swing/cast (see CombatMath.ScaledAttack /
+    // ComputeSkillDamage, and FightEncounterAdapter.ToCombatant /
+    // WeaponPower.DisplayDamage for where that reaches an enemy). A second,
+    // uncoordinated answer to the same question here would double-dip
     // against weapon scaling. STR and INT are real ability scores that do
     // real things -- they just do them at the weapon/spell layer, not here.
-    // That wiring is Phase 3 (D3), landed: WeaponPower/ScalingProfile read
-    // STR/INT off the wielder at the moment of the swing/cast (see
-    // FightEncounterAdapter.ToCombatant and WeaponPower.DisplayDamage).
-    // Raising STR or INT still moves nothing THIS FILE returns, and that
+    // Raising STR or INT still moves nothing this file returns, and that
     // stays permanent rather than a placeholder: SheetStats.FedBy leaves
     // both rows unlit for the same reason, on purpose, not as a gap to
     // close later.
@@ -63,8 +55,8 @@ namespace PrincesPalace.Domain.Stats
         public const int SpeedDivisor = 2;
         public const int SignatureGainDivisor = 4;
 
-        // FLOOR-DIVISION CONVENTION, PINNED HERE BECAUSE IT IS A REAL
-        // DECISION, NOT AN ACCIDENT OF C#'S `/` OPERATOR.
+        // Division convention pinned here because it is a real decision, not
+        // an accident of C#'s `/` operator.
         //
         // "+1 Speed per 2 points" (and "+1 signature gain per 4") has to mean
         // something specific below neutral, where the division no longer
@@ -75,16 +67,12 @@ namespace PrincesPalace.Domain.Stats
         //
         // The plan's own worked example settles it: Shawn's DEX 7 (d = -3)
         // is specified to derive -1 Speed, not -2. That is truncation toward
-        // zero -- which is ALSO exactly what C#'s built-in integer `/`
+        // zero -- which is also exactly what C#'s built-in integer `/`
         // already does, so the code below is plain `d / divisor` with no
-        // helper method standing in for it. (This is the opposite choice
-        // from the old FloorDiv2 this file used to carry, which deliberately
-        // took mathematical floor to keep the old classic-RPG modifier
-        // symmetric around 10.5. That helper served a different, now-deleted
-        // formula; it does not carry over.)
+        // helper method standing in for it.
         //
         // Worth being honest about the one place this bites: it makes the
-        // penalty side of these two derivations very slightly SHALLOWER than
+        // penalty side of these two derivations very slightly shallower than
         // the bonus side would mirror (score 9, d=-1, truncates to 0 instead
         // of flooring to -1 -- a below-neutral point can cost nothing right
         // at the boundary where an above-neutral point already pays). That
@@ -165,11 +153,10 @@ namespace PrincesPalace.Domain.Stats
         // The StatBlock-shaped contributions as one block, so callers add
         // once rather than remembering which of the six scores land here.
         //
-        // Attack is deliberately 0: Strength no longer derives it (see this
+        // Attack is deliberately 0: Strength does not derive it (see this
         // file's header) -- weapon power reaches Attack at the
-        // FightEncounterAdapter seam instead, starting Phase 3 (D3). Until
-        // that lands, a character's basic Attack is whatever their base
-        // stats and gear say, unmoved by Strength.
+        // FightEncounterAdapter seam instead. A character's basic Attack is
+        // whatever their base stats and gear say, unmoved by Strength.
         //
         // MaxMana and SignatureGain are NOT here even though Wisdom and
         // Charisma derive them -- see MaxManaBonus/SignatureGainBonus above
