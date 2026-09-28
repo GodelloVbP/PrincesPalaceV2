@@ -79,7 +79,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> EnemyHitAreas = new List<NodeRef>();
 
         // The same thing over the PARTY figures, live only while an ALLY is
-        // being picked (AUDIT #147). Same node, same rule, built by the same
+        // being picked. Same node, same rule, built by the same
         // loop -- clicking the character you mean to help is what a player
         // tries first, exactly as clicking the monster is.
         //
@@ -164,14 +164,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef EnemiesHint;
         public List<NodeRef> EnemyPlates = new List<NodeRef>();
 
-        // The Crimson TwoByOne container frame's own Art sprite (owner's
-        // HQ-kit instruction, 2026-09-07), added alongside EnemyPlates
-        // rather than in place of it: EnemyPlates is now NoChrome (a
-        // transparent, always-alpha-0 click target, see BuildEnemyPlates),
-        // so FightController.Hud's RefreshEnemyPlates tints THIS Image for
-        // the elite/boss dress and the out-of-reach dim it used to apply to
-        // enemyPlates[i].targetGraphic -- tinting the chromeless button's own
-        // Image would tint something the player can never see.
+        // The Crimson TwoByOne container frame's own Art sprite, added
+        // alongside EnemyPlates rather than in place of it: EnemyPlates is
+        // NoChrome (a transparent, always-alpha-0 click target, see
+        // BuildEnemyPlates), so FightController.Hud's RefreshEnemyPlates
+        // tints THIS Image for the elite/boss dress and the out-of-reach dim
+        // -- tinting the chromeless button's own Image would tint something
+        // the player can never see.
         public List<NodeRef> EnemyPlateFrames = new List<NodeRef>();
         public List<NodeRef> EnemyPlateIcons = new List<NodeRef>();
         public List<NodeRef> EnemyPlateNames = new List<NodeRef>();
@@ -208,18 +207,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // FightScreenTests pins every one of these lists by literal node
         // name for exactly that reason.
         //
-        // PartyPlate/PartyName/PartyHpFill/PartyMpFill/PartyHpTag/PartyMpTag/
-        // PartyMpShade/PartyMpRims/PartyCardRims/PartyBuffIcons/WoolRow/
-        // WoolPips and the whole Roster* family are GONE (2026-09-10). They
-        // were two anatomies for one idea -- see BuildPcPlates' own header --
-        // and the acting character is a highlight on their own plate now
+        // The party column has one anatomy, not two: see BuildPcPlates' own
+        // header. The acting character is a highlight on their own plate
         // rather than a promotion to a taller card.
-        // BUTTONS, not panels, since AUDIT #147: a ward, a gift and every
-        // single-ally skill authored after them are confirmed by clicking the
-        // squadmate, on the plate that already IS that squadmate. Nothing
-        // about the card's drawing changed -- the click target is the plate
-        // node itself, NoChrome so it paints none of its own -- which is the
-        // same shape the enemy plates have carried all along.
+        // BUTTONS, not panels: a ward, a gift and every single-ally skill
+        // are confirmed by clicking the squadmate, on the plate that already
+        // IS that squadmate. Nothing about the card's drawing changed -- the
+        // click target is the plate node itself, NoChrome so it paints none
+        // of its own -- which is the same shape the enemy plates have
+        // carried all along.
         public List<NodeRef> PcPlates = new List<NodeRef>();
 
         // The ally-pick marker, one per plate: the enemy plates' own 12px
@@ -268,11 +264,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PcWardFills = new List<NodeRef>();
 
         // "+12" beside the HP value while a shield is up, hidden at zero --
-        // owner's playtest ask (2026-09-23), see PcPlate{i}HpWardFill's own
-        // build-site comment. Right-aligned against the bar's own right
-        // edge, mirroring hpValue's left-aligned margin, so the two never
-        // contest the same pixels regardless of how many digits either one
-        // carries.
+        // see PcPlate{i}HpWardFill's own build-site comment. Right-aligned
+        // against the bar's own right edge, mirroring hpValue's left-aligned
+        // margin, so the two never contest the same pixels regardless of how
+        // many digits either one carries.
         public List<NodeRef> PcWardValues = new List<NodeRef>();
 
         public List<NodeRef> PcMpValues = new List<NodeRef>();
@@ -348,12 +343,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef DetailName;
         public NodeRef DetailKind;
 
-        // ICON ROWS, NOT TEXT (2026-09-23 icon rework) -- DetailBody and the
-        // DetailStatKeys/DetailStatValues/DetailDamageType text-row pool
-        // this replaced are gone from the built tree; see BuildDetailColumn's
-        // own header. One pool of icon+value pairs, sized to
-        // FightHudSpec.DetailIconRows, the same fixed-pool/toggle-visibility
-        // idiom the old row pool used.
+        // ICON ROWS, NOT TEXT -- see BuildDetailColumn's own header. One
+        // pool of icon+value pairs, sized to FightHudSpec.DetailIconRows,
+        // the same fixed-pool/toggle-visibility idiom a text-row pool would
+        // use.
         public List<NodeRef> DetailIconImages = new List<NodeRef>();
         public List<NodeRef> DetailIconValues = new List<NodeRef>();
 
@@ -721,10 +714,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // Sized to the figure's own footprint rather than the slot,
                 // which the runtime resizes to the real sprite: a wide box on a
                 // narrow monster is the same blocker in a smaller costume.
-                // BOTH RACKS NOW (AUDIT #147). It used to be `!mirrored`, i.e.
-                // enemies only, because allies were never targets; the guard
-                // is the CALLER's list now, so a stage side gets figure
-                // targets exactly when it was handed somewhere to record them.
+                // BOTH RACKS: the guard is the CALLER's list, so a stage
+                // side gets figure targets exactly when it was handed
+                // somewhere to record them.
                 UiNode hitArea = null;
                 if (hitAreas != null)
                 {
@@ -990,22 +982,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // them without this screen handing out a second set of NodeRefs for
         // parts nobody outside the badge needs addressed individually.
         //
-        // FRAME SHAPE, AND WHAT THIS PACKAGE DID NOT BUILD. Section 3 wants a
-        // smooth rounded outline for a benefit and clipped corners with a top
-        // notch for a detriment, drawn as UI geometry. This worktree cannot
-        // boot the Editor to bake a new proc: shape (ProceduralSpriteBaker is
-        // a menu item), and no shipped sprite already draws a clipped-corner
-        // badge frame, so no THIRD child was added here for it. Glyph is the
-        // one visible layer in Phase 1 (no status art has landed yet -- see
-        // the plan's section 9) and stays that way once art lands, so it is
-        // also where the frame belongs: Package C can tint Glyph by holder
-        // polarity (FightHudPalette.IntentHeal / HpBright, already used
-        // elsewhere on this controller) and, for the geometry half, rotate
-        // Glyph's own RectTransform -- an ordinary runtime call, not a DSL
-        // feature -- rather than the whole badge, which would tilt Code and
-        // Counter with it. Said here rather than guessed at silently: this is
-        // the smallest thing that survives UiAudit with the tree as declared,
-        // not a claim that it is the final visual.
+        // NO THIRD CHILD FOR THE FRAME SHAPE: no shipped sprite draws a
+        // clipped-corner badge frame, so Glyph -- the one visible layer
+        // until status art lands -- carries both the polarity tint
+        // (FightHudPalette.IntentHeal / HpBright) and, by rotating its own
+        // RectTransform rather than the whole badge, the frame's geometry;
+        // rotating the badge itself would tilt Code and Counter with it.
         // The counter's floor, as fractions of the badge. See BuildStatusBadge.
         public const float CounterBoxWidth = 0.8f;
         public const float CounterBoxHeight = 0.6f;
@@ -1034,20 +1016,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var counterPin = Place.Pin(new UiVec(1f, 0f), new UiVec(1f, 0f), new UiVec(-1f, 1f));
 
             // A SMALL DARK PATCH BEHIND THE DIGIT, same corner pin as Counter
-            // itself -- section 2's last-tick emphasis (PLAN_STATUS_EFFECT_UI.md
-            // section 3/9 Phase 3) needs somewhere to grow when a counter
-            // reaches 1, and a bare digit floating over the glyph's own art
-            // has no floor under it to grow at all. AsDecor: it must never
-            // steal the badge Button's own click/hover, which is how
+            // itself: a bare digit floating over the glyph's own art has no
+            // floor under it to grow at all. AsDecor: it must never steal
+            // the badge Button's own click/hover, which is how
             // Core/HoverIndex.cs finds this badge in the first place.
             //
-            // SIZED FOR "x10", NOT FOR ONE DIGIT. A stack count (the Bellwether's
-            // rally, "x5") is three glyphs, and at the old 9px on a 12px patch
-            // it was barely legible at 16:9 (kit-m5 capture). The patch and the
-            // label now share one box, CounterBoxWidth/Height of the badge, so
-            // the digits sit centred on their own floor; it covers the glyph's
-            // bottom-right corner, which is the trade for a count read at a
-            // glance.
+            // SIZED FOR "x10", NOT FOR ONE DIGIT. A stack count (the
+            // Bellwether's rally, "x5") is three glyphs, so the patch and
+            // the label share one box, CounterBoxWidth/Height of the badge,
+            // and the digits sit centred on their own floor; it covers the
+            // glyph's bottom-right corner, which is the trade for a count
+            // read at a glance.
             var counterBox = new UiVec(size * CounterBoxWidth, size * CounterBoxHeight);
             var counterPatch = Ui.Solid("CounterPatch", "#0A0611CC", counterBox, counterPin)
                 .AsDecor();
@@ -1214,12 +1193,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     ring, icon, label);
             });
 
-            // Pushed down below BarkHeight (plus a gap) now that the combat log
-            // sits flush against the true top of the screen instead of 58px
-            // short of it -- the two used to clear each other by a few pixels
-            // at the log's old position; a log actually flush to the top would
-            // otherwise draw over these icons, since BuildBark is added as a
-            // later sibling and later siblings paint over earlier ones.
+            // Pushed down below BarkHeight (plus a gap): the combat log sits
+            // flush against the true top of the screen, and BuildBark is
+            // added as a later sibling, so without this offset the log would
+            // draw over these icons -- later siblings paint over earlier ones.
             var tracker = Ui.Row("InitiativeTracker",
                 Place.Pin(new UiVec(0f, 1f), new UiVec(0f, 1f), new UiVec(28f, -(BarkHeight + 16f))),
                 FightStageAnchors.InitiativeIconGap, UiAlign.Centre, entries);
@@ -1315,17 +1292,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float LogLabelHeight = 108f;
         private const float LogLabelRight = PlateFirstX - PlateW * 0.5f - PlateGap;
 
-        // NO BOX. Used to be a plain black plate the full width of the screen
-        // -- a placeholder the comment here admitted was never meant to ship
-        // -- and it read as a slab dropped over the battlefield. The log now
-        // floats: same position, same reach, just nothing painted behind it.
-        //
-        // Still a Panel rather than the label sitting bare at the top level,
-        // because the portrait and the label need one parent to be pinned and
-        // sized together. A colourless Panel emits no Image at all
-        // (UiNode.EmitsNoGraphic), so this costs nothing to draw and cannot
-        // intercept a click either -- the AsDecor below is about UiAudit's
-        // overlap check, not about hiding a graphic that no longer exists.
+        // NO BOX: the log floats over the battlefield with nothing painted
+        // behind it. Still a Panel rather than the label sitting bare at
+        // the top level, because the portrait and the label need one
+        // parent to be pinned and sized together. A colourless Panel emits
+        // no Image at all (UiNode.EmitsNoGraphic), so this costs nothing to
+        // draw and cannot intercept a click either -- the AsDecor below is
+        // only for UiAudit's overlap check.
         private UiNode BuildBark()
         {
             var portrait = Ui.Sprite("BarkPortrait", null, new UiVec(56f, 56f), Place.At(-880f, -8f)).Inactive();
@@ -1336,22 +1309,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // unclamped, so a box too short for its own text was the other half
             // of "pops in one go and overflows."
             //
-            // ENDS BEFORE THE ENEMY COLUMN, not at the screen's right edge. At
-            // 1780 wide it ran to x 960, straight across the ENEMIES heading and
-            // the plate stack: QA 2026-09-26 caught "...It's not very
-            // effective." printed into the heading at x~1390 and a long line
-            // sliding under the plates. AsDecor below kept the clicks right and
-            // did nothing for the reading. The right edge is now the plate
-            // block's left edge (the heading's too) less one plate gap, derived
-            // from the same constants, so a wider plate moves the log with it.
+            // ENDS BEFORE THE ENEMY COLUMN, not at the screen's right edge,
+            // so a long line cannot run across the ENEMIES heading or slide
+            // under the plates. The right edge is the plate block's left
+            // edge (the heading's too) less one plate gap, derived from the
+            // same constants, so a wider plate moves the log with it.
             var label = Ui.Label("MessageLabel", UiString.Runtime,
                 new UiVec(LogLabelRight - LogLabelLeft, LogLabelHeight), 20,
                 FightHudPalette.TextPrimary, Place.At(LogLabelLeft, -8f, new UiVec(0f, 0.5f)))
-                // ON THE ART, NOT A PLATE: the box went (see above) and the
-                // text was left white on whatever the stage put behind it --
-                // QA 2026-09-26 could barely read it over the treant's pale
-                // canopy. The dark edge is what keeps it readable there, over
-                // a dark trunk, and over a spell drawn across it.
+                // ON THE ART, NOT A PLATE: with no box behind it, the label
+                // has to stay readable over whatever the stage draws behind
+                // it. The dark edge keeps it legible over a pale canopy, a
+                // dark trunk, or a spell drawn across it.
                 .OverArt();
 
             BarkPortrait = portrait;
@@ -1374,65 +1343,37 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- enemy plates ------------------------------------------------------
 
-        // HALF THE SIZE, AND TWO ABREAST. 400x104 stacked three deep was a
-        // column of cards down a quarter of the screen's height for information
-        // that is a name, a number and a bar. At 200x56 in two columns the same
-        // three plates occupy two rows in the same width, and the space that
-        // buys goes back to the battlefield they are describing.
+        // HALF THE SIZE, AND TWO ABREAST: 200x56 in two columns puts three
+        // plates in two rows within the same width a single stacked column
+        // would need three times as tall, and the freed height goes back to
+        // the battlefield the plates describe.
         //
-        // GROWN FROM 200 TO 220 (owner's HQ-kit instruction, 2026-09-07): the
-        // Crimson TwoByOne frame's own content inset eats 3.5% of PlateW off
-        // each side, which at the old 200 left only 186px of usable width
-        // where the icon/name/tag/hp row was already sharing 196 with zero
-        // slack (see PlateContentHalfWidth and the row's own "2px gaps"
-        // comment below) -- 220 gives back a content half-width of 102.3,
-        // just over the original un-inset 100, so the row's own margins and
-        // gaps need no further change.
-        // GROWN AGAIN, 220 -> 260 (owner, 2026-09-10): "enemy names keep
-        // truncating". They did, and not by a little -- the name box was 72px
-        // at 11pt, where "Ironback Beetle" measures ~79 and
-        // FightHudModel.DisplayNames appends " 2" onto a duplicate on top of
-        // that, so the COMMON case was an ellipsis. The pass that put BRK
-        // into the name row is what had squeezed it there.
-        //
-        // 40px of extra width buys 37 of content (the frame's 3.5% inset
-        // takes the rest), and the name row spends all of it: BRK moves down
-        // to the bar row, so the name has the whole span left of the HP value
-        // -- 118px at 14pt, which fits every authored name plus its
-        // duplicate suffix. Truncated() stays as the backstop for a boss name
-        // nobody has authored yet.
+        // 260, not the plate's own 200: the Crimson TwoByOne frame's content
+        // inset eats 3.5% of PlateW off each side, and the name column needs
+        // enough of what is left over for the longest authored name plus the
+        // " 2" duplicate suffix FightHudModel.DisplayNames appends, at 14pt,
+        // without truncating -- Truncated() stays only as the backstop for a
+        // boss name nobody has authored yet.
         private const float PlateW = 260f;
 
-        // GROWN FROM 64 TO 110 (owner's HQ-kit instruction, 2026-09-07):
-        // EnemyPlate wears a Crimson TwoByOne container frame now instead of
-        // the flat panel_crimson.png sprite, and this is PlateW's (220) own
-        // exact TwoByOne match. PlatePitch below grows with it (76 to 122)
-        // to keep the two rows from overlapping.
+        // 110, not 64: EnemyPlate wears a Crimson TwoByOne container frame,
+        // and this is PlateW's exact TwoByOne match. PlatePitch below grows
+        // with it so the two plate rows do not overlap.
         //
-        // RESOLVED 2026-09-08, by finally running the tool. Growing PlateH
-        // drops the bottom row's lower edge from 284 to 215, and the tallest
-        // actor's head at the near slot reaches 149 -- 66 units of daylight
-        // against the 12 this layout is toleranced to, so the conversion
-        // shipped inside its own band. It took a repair to get that answer:
-        // tools/measure_stage.py had been reading PlateH as a literal and a
-        // PlateX that no longer exists, and it assumed one column where the
-        // stack has had two, so it exited on a parse failure rather than
-        // measuring anything.
+        // tools/measure_stage.py is the tool that confirms the tallest
+        // actor's head still clears the bottom row's lower edge by this
+        // layout's tolerance; keep it in sync when either PlateW or PlateH
+        // changes.
         private static readonly UiVec PlateSize = Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, PlateW);
         private static float PlateH => PlateSize.Y;
 
         // The USABLE half-width inside the Crimson frame's own content
         // inset (3.5% of PlateW off each side for TwoByOne), not PlateW's
-        // own half-width -- the icon/name/hp row was authored against the
-        // bare plate rect with a 4px margin, and at the original PlateW=200
-        // the container's inset ate more than that (7px), putting the icon
-        // 3px past the frame's own left edge (caught by UiAudit's
-        // ChildContainment at build) and closing the name/tag gap into an
-        // overlap besides -- PlateW grew to 220 to buy that room back (see
-        // its own comment), and every "left"/"rowRight" style margin below
-        // is measured off this content half-width instead, which restores
-        // the original 4px margins against the box content
-        // actually has to live in.
+        // own half-width: the frame's inset eats more than the row's
+        // authored margins account for, so every "left"/"rowRight" style
+        // margin below is measured off this content half-width instead --
+        // otherwise a child sits past the frame's own edge (UiAudit's
+        // ChildContainment) or the name/tag gap closes into an overlap.
         private static float PlateContentHalfWidth =>
             PlateSize.X * (0.5f - Ui.ContainerContentInset(ContainerRatio.TwoByOne).Left);
         private const float PlateGap = 16f;
@@ -1493,13 +1434,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float EnemiesHeadingHeight = 24f;
 
         // 6px clear of the plate stack's own top edge -- DERIVED from PlateH
-        // now rather than the restated literal "+50" this replaces (392+50
-        // was only ever "PlateFirstY + PlateH*0.5 + 6 + 12" with PlateH=64
-        // baked in by hand). Growing PlateH (owner's HQ-kit instruction,
-        // 2026-09-07 -- see PlateH's own comment) moved the plate stack's
-        // top edge up into where the restated "+50" still put the heading,
-        // an overlap UiAudit caught at build; deriving it instead means the
-        // next PlateH change cannot silently reopen the same collision.
+        // rather than a restated literal, so a PlateH change cannot silently
+        // reopen the heading/plate overlap UiAudit catches at build.
         private const float EnemiesHeadingGap = 6f;
 
         private static float EnemiesHeadingY =>
@@ -1549,24 +1485,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AsDecor();
 
-                // Everything else starts to the right of the icon. 6px rather
-                // than the old 8: see PlateIconSize's own comment for where
-                // the reclaimed width goes.
+                // Everything else starts to the right of the icon: see
+                // PlateIconSize's own comment for where the reclaimed width
+                // goes.
                 float textLeft = left + 6f + PlateIconSize;
 
                 // The right edge of the row, matching hp's own Place.At
-                // below -- named once so the tag can be pinned off it without
-                // restating the margin. 4px rather than the old 8: same
-                // reclaim as textLeft above.
+                // below -- named once so the tag can be pinned off it
+                // without restating the margin.
                 float rowRight = PlateContentHalfWidth - 4f;
 
-                // TWO ROWS, NOT THREE. The status line that used to sit
-                // between these retired to the stage rows under each figure
-                // (see EnemyStatusLine's own header) and left a blank 12px
-                // band where it had been. The name/HP row and the bar are
-                // now centred as a block in the full 64px -- 11px of margin
-                // above and below -- rather than sitting where the old
-                // three-row split left them.
+                // TWO ROWS, NOT THREE: the status line retired to the stage
+                // rows under each figure (see EnemyStatusLine's own header).
+                // The name/HP row and the bar are centred as a block in the
+                // full 64px, with equal margin above and below.
                 //
                 // TopY/BarY ARE LOAD-BEARING TOGETHER, and the HP box's
                 // height is the third term: topY - hpHalf must equal
@@ -1574,36 +1506,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // must match, which is two equations in two unknowns.
                 // Re-solve them BOTH whenever either box's height moves.
                 //
-                // RE-SOLVED for the 2026-09-22 bar bump -- hp still 34 tall,
-                // bar now 9 (up from 7, "if the audit allows" -- UiAudit is
-                // what caught the first, height-only attempt at this: it
-                // moved the bar's own half-height without re-running either
-                // equation, and TheEnemyPlateTopRowAndBarAreCentredWithNo
-                // BlankBand caught the resulting 1px asymmetry), plate
-                // half-height 65:
-                //   barY = -topY - 12.5   (equal outer margins, barHalf 4.5)
-                //   topY - barY = 29.5    (the 8px gap, barHalf 4.5)
-                // giving topY 8.5 (from 7.5) and barY -21 (unmoved), with
-                // 39.5 of margin above and below -- down 1 from 40.5, which
-                // is the whole 2px the bar grew split evenly across both
-                // margins.
+                // Solved as two equations in two unknowns, hp half-height
+                // 4.5, bar half-height 4.5, plate half-height 65:
+                //   barY = -topY - 12.5   (equal outer margins)
+                //   topY - barY = 29.5    (the 8px gap between the rows)
+                // giving topY 8.5 and barY -21.
                 const float topY = 8.5f;
                 const float barY = -21f;
 
-                // 72 WIDE, 11PT RATHER THAN THE OLD 86/13PT: BRK now lives
-                // INSIDE this row (see the tag below), and the row has to
-                // share its 100px of free width (textLeft..hpLeft) between
-                // the name, the tag and two 2px gaps.
+                // 72 WIDE, 11PT: BRK lives INSIDE this row (see the tag
+                // below), and the row shares its 100px of free width
+                // (textLeft..hpLeft) between the name, the tag and two 2px
+                // gaps.
                 //
                 // NOT AUTOSIZED: this label has no Role, so ApplyTypography's
                 // no-role branch sets a literal fontSize and returns without
-                // touching enableAutoSizing. The old 86/13pt box had no slack
-                // to give: cutting the box to 72 at 13pt wrapped "Stone Golem"
-                // onto two lines (caught by capture, both empirically against
-                // tools/screenshots/runtime/status_rows_rest.png -- Domain has
-                // no font metric to derive this from, see UiTextFitAudit's own
-                // header on why), so the font dropped to 11pt with it, which
-                // bought the box back its headroom for that case.
+                // touching enableAutoSizing. 13pt at this box width wraps
+                // "Stone Golem" onto two lines (empirically, against
+                // tools/screenshots/runtime/status_rows_rest.png -- Domain
+                // has no font metric to derive this from, see
+                // UiTextFitAudit's own header on why), so 11pt is what buys
+                // the box its headroom for that case.
                 //
                 // Still not enough for a long boss name -- "The Hollow Choir"
                 // measures ~83px and "Ironback Beetle" ~79px at 11pt against
@@ -1659,18 +1582,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // than UiAudit refusing each pair.
                 Ui.Layered(ghostFill, fill, wardFill);
 
-                // BRK'S ONLY REMAINING HOME, and it has moved DOWN a row
-                // (2026-09-10). Phase 3 retired every other status to the
-                // stage rows under each figure (see EnemyStatusLine's own
-                // header) and left this node carrying nothing but the break
-                // tag, at which point it was folded into the name row's
-                // right end. That is what cost the name its width: at 11pt
-                // in 72px the common case was an ellipsis, which is the
-                // complaint this pass answers. The tag rides the HP BAR's
-                // row now, right-aligned against the same rowRight, and the
-                // bar gives up 28px of its right end for it -- a 7px bar
-                // losing a tenth of its length is a far smaller loss of
-                // information than a name the player cannot read.
+                // BRK'S ONLY REMAINING HOME: every other status retired to
+                // the stage rows under each figure (see EnemyStatusLine's
+                // own header), leaving this node carrying nothing but the
+                // break tag. The tag rides the HP BAR's row, right-aligned
+                // against the same rowRight, so the name row keeps its full
+                // width instead of splitting it with the tag; the bar gives
+                // up 28px of its right end for it -- a 7px bar losing a
+                // tenth of its length is a far smaller loss of information
+                // than a name the player cannot read.
                 //
                 // SetContent("") when the enemy is not broken (the normal
                 // case) renders nothing, so the tag still needs no separate
@@ -1682,21 +1602,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .TextAligned(UiTextAlign.Right);
 
                 // Starts where the name does and stops short of the BRK tag
-                // that now shares its row -- 24px for the tag plus a 4px
-                // gap. The bar used to hug rowRight itself; it cannot any
-                // more without drawing under the tag, and a bar that ran
-                // under a tag would read as a full bar rather than as a
-                // shorter one.
+                // that shares its row -- 24px for the tag plus a 4px gap.
+                // A bar that ran under the tag would read as a full bar
+                // rather than a shorter one.
                 float barLeft = textLeft;
                 float barRight = rowRight - 24f - 4f;
                 float barCentreX = (barLeft + barRight) * 0.5f;
                 float barWidth = barRight - barLeft;
 
-                // 9 PX, UP FROM 7 (this pass, "if the audit allows" -- it
-                // does: the row's own 11px of margin above/below (see
-                // topY/barY's header) absorbs 2px with room left, and
-                // UiAudit's four-aspect sweep is the gate that would have
-                // said otherwise).
+                // 9 PX: the row's own 11px of margin above/below (see
+                // topY/barY's header) has room for it, and UiAudit's
+                // four-aspect sweep is the gate that would say otherwise.
                 var bar = Ui.Panel($"EnemyPlate{i}Bar",
                         Place.At(barCentreX, barY), UiSize.Fixed(barWidth, 9f), ghostFill, fill, wardFill)
                     .Coloured(FightHudPalette.Track);
@@ -1709,15 +1625,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AllowOverflow("the reticle is deliberately OUTSIDE the plate - a marker in the margin, not a badge on the card");
 
-                // THE BREAK METER, INSIDE the plate, one row under the HP bar
-                // (QA 2026-09-26). It used to hang in the 12px gutter below
-                // the frame under an AllowOverflow, from when the plate was
-                // 64px tall and packed; at 130 the two rows sit centred with
-                // 39.5px of margin under the bar, so the reason for leaving
-                // the frame was gone and the meter read as belonging to
-                // nothing -- or to the plate below. Same fill mechanism the
-                // HP bar uses (SetFill), same width and x, BreakMeterGap
-                // under it. It sits in the bottom margin rather than joining
+                // THE BREAK METER, INSIDE the plate, one row under the HP
+                // bar: the plate has 39.5px of margin under the bar, so
+                // there is no need to hang the meter outside the frame,
+                // where it would read as belonging to nothing -- or to the
+                // plate below. Same fill mechanism the HP bar uses
+                // (SetFill), same width and x, BreakMeterGap under it. It
+                // sits in the bottom margin rather than joining
                 // the centred block because it is shown only for an elite or
                 // boss (a BreakShield); re-centring on its presence would
                 // move every ordinary plate's rows for a row they never show.
@@ -1742,10 +1656,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 EnemyPlateBreakTracks.Add(breakTrack);
                 EnemyPlateBreakFills.Add(breakFill);
 
-                // CRIMSON, 2:1 KIT CONTAINER (owner's HQ-kit instruction,
-                // 2026-09-07) as the frame, replacing panel_crimson.png --
-                // the mirror of the party plate's own Container(Blue,
-                // TwoByOne), and the same frame+chromeless-click-target shape
+                // CRIMSON, 2:1 KIT CONTAINER as the frame, replacing
+                // panel_crimson.png -- the mirror of the party plate's own
+                // Container(Blue, TwoByOne), and the same
+                // frame+chromeless-click-target shape
                 // RelicDraftScreen's cards use. The frame carries every piece
                 // of content as its ContainerContent; the button itself stays
                 // the click/hover target, NoChrome so it paints nothing of
@@ -1775,24 +1689,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the three PC plates -------------------------------------------------
         //
-        // ONE PLATE PER CHARACTER, ALWAYS (owner, 2026-09-10). This replaces
-        // the party plate and the two roster cards outright, and it is a
-        // change of MODEL rather than of layout: the column used to be "the
-        // acting character, drawn big, plus whoever else is alive, drawn
-        // small", so a character's card changed size, position and anatomy
-        // every time the turn passed to them. It is now three identical
-        // plates that never move, each one permanently a particular
-        // character's, and ACTING is a highlight on their own plate.
+        // ONE PLATE PER CHARACTER, ALWAYS: three identical plates that never
+        // move, each one permanently a particular character's, and ACTING is
+        // a highlight on their own plate rather than a promotion to a
+        // different, bigger card.
         //
         // WHY THAT IS THE RIGHT MODEL AND NOT JUST A TIDIER ONE. Identity is
-        // the art now: the owner drew three leather strips, each with its
-        // character's head embossed at the right end, so a plate IS Shawn or
-        // Bjorn or Odette the way a portrait is. A card that promoted the
-        // acting member to a different, bigger card had to redraw that
-        // identity in a second anatomy -- two ledgers, two sets of node
-        // names, two paint routines, and the roster half structurally unable
-        // to show what the party half could (the transform strip's own
-        // removal note one revision ago is the same lesson). Three fixed
+        // the art: three leather strips, each with its character's head
+        // embossed at the right end, so a plate IS Shawn or Bjorn or Odette
+        // the way a portrait is. Promoting the acting member to a different
+        // card would mean redrawing that identity in a second anatomy -- two
+        // ledgers, two sets of node names, two paint routines. Three fixed
         // plates need one ledger, one paint routine and one array shape, and
         // a fourth party member costs a plate and a PNG rather than a third
         // card language.
@@ -1804,12 +1711,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the head owns) is measured art and lives in PcPlateArt. This file
         // owns only the arrangement of rows on it.
         //
-        // LEGIBILITY IS THE POINT OF THE PASS. The owner's screenshot at
-        // 1080p had roster values at 9pt, party values at 10pt and enemy
-        // names at 10pt, which is unreadable rather than merely small. Names
-        // are 16pt here, every number 14pt, and both bars 20px tall with
-        // their numbers drawn ON them -- which is what the extra width (452,
-        // up from 380) is spent on, not on more rows.
+        // LEGIBILITY IS THE POINT: names are 16pt, every number 14pt, and
+        // both bars 20px tall with their numbers drawn ON them -- which is
+        // what the column's width is spent on, not on more rows.
         public const float PcPlateWidth = 452f;
 
         // NOT A LITERAL, and this is the one number on the column that must
@@ -1819,9 +1723,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // own rect and nothing would fail. 452 / 5.6111 = 80.55.
         public static float PcPlateHeight => PcPlateWidth / PcPlateArt.Aspect;
 
-        // LEFT EDGE STAYS AT -920, which is where every card in this column
-        // has started since the HUD pass before this one. The right edge
-        // moves out to -468 with the extra width.
+        // LEFT EDGE STAYS AT -920; the right edge moves with PcPlateWidth.
         private const float PcPlateCentreX = -920f + PcPlateWidth * 0.5f;
 
         private const float PcPlateGap = 4f;
@@ -1837,11 +1739,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private static float PcPlatePitchY => PcPlateHeight + PcPlateGap;
 
-        // THE HARD CONSTRAINT, unchanged from the roster stack this replaces:
-        // the stack's TOP EDGE must not rise into the party stage. The middle
-        // party figure's foot ring already touches this column and the stage
-        // draws OVER the HUD, so a taller stack puts feet on roster text.
-        // Three plates at 80.55 plus two 4px gaps is 249.7 against the 290
+        // THE HARD CONSTRAINT: the stack's TOP EDGE must not rise into the
+        // party stage. The middle party figure's foot ring already touches
+        // this column and the stage draws OVER the HUD, so a taller stack
+        // puts feet on plate text. Three plates at 80.55 plus two 4px gaps
+        // is 249.7 against the 290
         // the budget allows, and FightScreenTests pins both the budget and
         // the literal the stack actually reaches.
         public static float PcPlateStackTopY =>
@@ -1880,8 +1782,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float PcNameRowY = 13.5f;
         private const float PcNameRowH = 24f;
 
-        // 20, the owner's own floor for "a proper HP bar, not a red stripe",
-        // and the number FightScreenTests pins as >=. Ui.Meter's sheen and
+        // 20 is the floor for "a proper HP bar, not a red stripe", and the
+        // number FightScreenTests pins as >=. Ui.Meter's sheen and
         // shade bands are FRACTIONAL (40%/25% of the bar), so 20 still shows
         // both separately.
         private const float PcBarRowY = -13.5f;
@@ -1891,32 +1793,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the pool half.
         private const float PcBarGutter = 4f;
 
-        // 16pt names, 14pt numbers -- the owner's sizes, stated once here.
-        // Everything on this column reads one of these two.
+        // 16pt names, 14pt numbers, stated once here. Everything on this
+        // column reads one of these two.
         private const int PcNameFontSize = 16;
         private const int PcValueFontSize = 14;
 
         // 88 and 126 are UiTextFitAudit's own measurements of "9999/9999"
         // (76.4) and "FURY 9999/9999" (115.9) plus a margin.
         //
-        // THESE USED TO BE THE WIDTH OF A CHIP as well as of a caption. The
-        // owner asked for the numbers ON the bars, and drawn straight onto a
-        // full HP fill in TacticalData they were barely readable -- "280/280"
-        // against HpBright measured about 1.5:1 off party_formation's 4:3
-        // frame, against WCAG AA's 4.5:1 -- so the first two passes put each
-        // caption on a dark quad and then, when that quad read as an empty
-        // track, on an outlined dark quad. Both were the same mistake in two
-        // sizes: a chip on a meter is a shape the player has to be taught not
-        // to read as a value, and the second capture of it still showed a
-        // full HP bar as half drained.
-        //
-        // The treatment the captions actually wanted was a heavier MATERIAL,
-        // and the note here used to say so and decline to build one, because
-        // TacticalData's authored outline is switched off (width 0.07, no
-        // OUTLINE_ON keyword) and Fonts/Materials/ was the owner's
-        // uncommitted work. TypographyRole.OnBarCaption is that role now: a
-        // NEW preset beside the six rather than an edit to any of them, so
-        // nothing the owner is holding moves.
+        // The numbers are drawn ON the bars, straight onto the fill -- a
+        // chip or a dark quad behind them is a shape the player has to be
+        // taught not to read as a value, and a chip over a full HP bar reads
+        // as half drained. TypographyRole.OnBarCaption is a heavier MATERIAL
+        // instead: a preset beside the others rather than an edit to any of
+        // them, so it changes nothing else that uses them.
         private const float PcHpValueW = 88f;
         private const float PcPoolValueW = 126f;
 
