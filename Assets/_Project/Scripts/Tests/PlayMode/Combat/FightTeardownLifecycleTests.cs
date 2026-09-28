@@ -16,9 +16,9 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // HUNT 2026-09-11, FAMILY C (docs/hunt/SCENARIOS.md rows C1, C2, C3, C6)
-    // plus A7 and A22: a scene load arriving while the stage is mid-flight,
-    // and the two pooled things that survive it.
+    // FAMILY C (docs/hunt/SCENARIOS.md rows C1, C2, C3, C6) plus A7 and
+    // A22: a scene load arriving while the stage is mid-flight, and the
+    // two pooled things that survive it.
     //
     // C6 IS AUDIT #106, and the scenario row says to reproduce it rather than
     // work around it. The call chain is one long straight line with no branch
@@ -244,12 +244,10 @@ namespace PrincesPalace.PlayModeTests
             _fight.RefreshUi();
             yield return null;
 
-            // ONE PREDICATE for "at rest", read by the wait, the assertion and
-            // the hold check alike (AUDIT #165). The wait used to stop on a
-            // float literal (`> 1.001f`) while the assertion allowed a double
-            // tolerance (`1.0 +/- 0.001d`); 1.001f widens to 1.00100004673,
-            // which is past 1.0010000000475, so a lerp frame landing in that
-            // 4.7e-8 sliver ended the wait and then failed the assertion.
+            // One predicate for "at rest" (AtRestScale), read by the wait,
+            // the assertion and the hold check alike, so none of the three
+            // can disagree with the others on a float/double tolerance
+            // mismatch.
             float deadline = Time.realtimeSinceStartup + 5f;
             while (!AtRestScale(rect) && Time.realtimeSinceStartup < deadline) yield return null;
 

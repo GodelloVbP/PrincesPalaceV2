@@ -18,16 +18,14 @@ namespace PrincesPalace.PlayModeTests
     // FightBootstrap.OnFightEnded is the rulebook: fold the ledger, write HP
     // back, spend second lives, record the room and the boss, end the run on a
     // loss, bank gold and apply experience on a win, clear the room, advance
-    // the leg. Every line of it carries a comment about an ordering that once
-    // went wrong, and nothing asserted any of it -- FightAfterTheEliteTests
-    // enters a room through the real door but stops at "the player can still
-    // press something".
+    // the leg. FightAfterTheEliteTests enters a room through the real door
+    // but stops at "the player can still press something".
     //
-    // These exist because that rulebook is about to be MOVED into
-    // RunOrchestrator (docs/PLAN_BALANCE_BOT.md F2, Phase 1), so that a
-    // headless balance bot and the screens share one copy of it rather than
-    // two that drift. A behaviour-preserving extraction needs the behaviour
-    // written down first; that is all this file is.
+    // This rulebook is due to move into RunOrchestrator
+    // (docs/PLAN_BALANCE_BOT.md F2, Phase 1), so that a headless balance
+    // bot and the screens share one copy of it rather than two that drift.
+    // A behaviour-preserving extraction needs the behaviour written down
+    // first; that is all this file is.
     //
     // WHY THE FIGHTS ARE PLAYED RATHER THAN FORCED. FightEnded is raised from
     // FightController.OnPlaybackFinished, not from FightSession -- so driving
@@ -339,12 +337,12 @@ namespace PrincesPalace.PlayModeTests
         // #46 (a session never Begun) coming back -- it happens partway
         // through, and only in the fights where a revive happens.
         //
-        // Left alone deliberately. These tests exist to pin what the END of a
-        // fight does to the run before that code is moved (Phase 1), and fixing
-        // a combat-turn bug in the same breath is how a "behaviour-preserving"
-        // change stops being one. The finding belongs to whoever picks up the
-        // turn machinery; what is needed HERE is only that the error does not
-        // fail an assertion about gold.
+        // Left alone deliberately. These tests exist to pin what the END of
+        // a fight does to the run before that code is moved (Phase 1), and
+        // fixing a combat-turn bug in the same breath is how a
+        // "behaviour-preserving" change stops being one; what is needed
+        // HERE is only that the error does not fail an assertion about
+        // gold.
         //
         // ignoreFailingMessages rather than LogAssert.Expect: Expect would
         // REQUIRE the stall, so the day somebody fixes it these two tests would
@@ -364,7 +362,7 @@ namespace PrincesPalace.PlayModeTests
         // ... [not] a within-run curve") and FightEncounterAdapter (maxHealth
         // = stats.maxHealth + AbilityDerivation.MaxHealthBonus(scores)). A
         // character left at raw `level = N` fights with a level-1 statline
-        // whatever N is, which is why level 200 and level 90 used to be
+        // whatever N is, so level 200 and level 90 would otherwise be
         // indistinguishable here.
         //
         // THE CLAIM IS THE WHOLE OF IT:

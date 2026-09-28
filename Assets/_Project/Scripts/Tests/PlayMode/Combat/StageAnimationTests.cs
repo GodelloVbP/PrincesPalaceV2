@@ -240,12 +240,13 @@ namespace PrincesPalace.PlayModeTests
         // minute and then obvious.
         //
         // AnchorStageSlots re-homes a slot every time the live count changes,
-        // which on a fight with summons or deaths is often. It used to assign
-        // the rect and have the animator read it straight back -- correct only
-        // while nothing else wrote localScale between the two. The breath
-        // writes it every frame, so a re-home landing mid-breath would have
-        // taken base x 1.02 as the base, and the next one base x 1.02 x 1.02,
-        // and the figure would grow a couple of percent per re-home for the
+        // which on a fight with summons or deaths is often. Assigning the
+        // rect and letting the animator read it straight back is correct
+        // only while nothing else writes localScale between the two. The
+        // breath writes it every frame, so a re-home landing mid-breath
+        // would take base x 1.02 as the base, and the next one base x 1.02
+        // x 1.02, and the figure would grow a couple of percent per
+        // re-home for the
         // rest of the encounter.
         [UnityTest]
         public IEnumerator ReHomingAFigureMidBreathDoesNotFoldTheBreathIntoItsSize()
@@ -459,12 +460,11 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the pause holds the stage ------------------------------------------
 
-        // THE SYSTEM MENU PAUSES WITH Time.timeScale = 0, and every move on the
-        // stage has to stop with it -- the walk, the punch and the kick used to
-        // step by unscaledDeltaTime and played on behind the menu while the
-        // lunge beside them froze. Hit-stop and battle speed never touch
-        // timeScale (StageActorAnimator's header), so there is no stop this
-        // must survive.
+        // The system menu pauses with Time.timeScale = 0, and every move on
+        // the stage stops with it -- the walk, the punch and the kick step
+        // by scaledDeltaTime like the lunge beside them. Hit-stop and
+        // battle speed never touch timeScale (StageActorAnimator's
+        // header), so there is no stop this must survive.
         //
         // Two halves: started DURING a pause (nothing moves off its first
         // pose, stated as literals), and caught MID-FLIGHT by one (nothing
@@ -556,9 +556,9 @@ namespace PrincesPalace.PlayModeTests
         // THE POOL HOLDS FIVE, AND A CHARGE SHEDS MORE THAN FIVE INSIDE ONE
         // FADE. 900px over 0.18s at 60fps drops a ghost nearly every frame
         // and each lives 0.14s, so the sixth reuses the first while it is
-        // still fading. Its old FadeGhost used to keep running: two
-        // coroutines on one Image, and the older one ended first and switched
-        // the freshly placed ghost off four frames into its new life.
+        // still fading. A reused Image may only ever run one FadeGhost
+        // coroutine at a time, or the older one would end first and switch
+        // the freshly placed ghost off partway into its new life.
         //
         // PINNED AS A LITERAL LIFETIME. At a pinned 1/60s frame a 0.14s fade
         // writes on its emit frame and eight more (t = 0 .. 8/60 < 0.14), and

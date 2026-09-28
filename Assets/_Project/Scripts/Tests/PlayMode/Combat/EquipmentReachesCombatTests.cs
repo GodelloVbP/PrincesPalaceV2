@@ -57,14 +57,12 @@ namespace PrincesPalace.PlayModeTests
         // called today. Weapons and armour both qualify; what matters is that
         // its bonus is non-zero, or the test would pass on a no-op.
         //
-        // ATTACK ONLY COUNTS FOR A WEAPON -- balance redesign Phase 3 (D3).
-        // Gear no longer grants flat Attack at all (EffectiveStats zeroes a
-        // worn item's attack contribution now), so an Equipment-kind piece
-        // whose only authored line is "attack N" (itemsets.json's leather
-        // gloves, still authored -- Phase 4 rewrites that schema) moves
-        // nothing any more and would make this helper pick a no-op fixture.
-        // A live main-hand WEAPON still moves Attack, just via WeaponPower
-        // instead of the deleted gear-summing path, so it still qualifies.
+        // Attack only counts for a weapon: EffectiveStats zeroes a worn
+        // item's attack contribution, so an Equipment-kind piece whose only
+        // authored line is "attack N" (itemsets.json's leather gloves)
+        // moves nothing and would make this helper pick a no-op fixture. A
+        // live main-hand WEAPON still moves Attack, via WeaponPower, so it
+        // still qualifies.
         private static ItemDefinition AStatItem()
         {
             return ContentDatabase.Items.FirstOrDefault(i =>
@@ -102,9 +100,8 @@ namespace PrincesPalace.PlayModeTests
             var gearedState = BuildFor(geared).Party[0];
 
             var bonus = item.StatBonusAt(0);
-            // A weapon still moves Attack (via WeaponPower), a non-weapon
-            // item's attack bonus does not (Phase 3, D3) -- see AStatItem's
-            // own header.
+            // A weapon still moves Attack (via WeaponPower); a non-weapon
+            // item's attack bonus does not -- see AStatItem's own header.
             bool attackShouldMove = item.kind == ItemKind.Weapon && bonus.attack != 0;
             bool moved =
                 (attackShouldMove && gearedState.Attack != bareState.Attack)
@@ -189,12 +186,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(expected.magicalDefense, state.MagicalDefense);
         }
 
-        // Phase 2 of the balance redesign (D2) made every ability derivation
-        // signed and unclamped, then added exactly two floors on top of the
-        // general one at EffectiveStats' single clamp point: max health and
-        // speed must never reach 0, because a 0-max-health combatant is dead
-        // before the fight starts and 0 Speed can never take a turn. This is
-        // a realistic path to it, not a synthetic one: a heavily negative
+        // EffectiveStats' single clamp point holds two floors on top of the
+        // general one: max health and speed must never reach 0, because a
+        // 0-max-health combatant is dead before the fight starts and 0
+        // Speed can never take a turn. This is a realistic path to it, not
+        // a synthetic one: a heavily negative
         // Constitution/Dexterity investment (still floored at 0 by
         // AbilityScoreBlock's own clamp, same as any other ability score) can
         // cancel out a low-HP/low-speed character's base figures exactly, and
@@ -216,12 +212,12 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the spell ladder ----------------------------------------------
 
-        // KitFor took SpellTiers.OrderByDescending(level).First() with no level
-        // filter at all, so a level 1 character cast the endgame tier. The bug
-        // predates BasicSpell's removal (docs/PLAN_SHOP.md Gate 4); the ladder
-        // itself (SpellTierDefinition, TierAtLevel) is unchanged by that cut --
-        // it still scales SkillPowerMultiplier for every fixed-damage skill,
-        // it just no longer also names a free "Skill" action.
+        // KitFor filters SpellTiers by the character's level rather than
+        // taking OrderByDescending(level).First() outright, so a level 1
+        // character cannot cast the endgame tier. The ladder
+        // (SpellTierDefinition, TierAtLevel) scales SkillPowerMultiplier
+        // for every fixed-damage skill; it does not also name a free
+        // "Skill" action (docs/PLAN_SHOP.md Gate 4).
         [Test]
         public void TheSpellTierNeverOutrunsTheCharactersLevel()
         {

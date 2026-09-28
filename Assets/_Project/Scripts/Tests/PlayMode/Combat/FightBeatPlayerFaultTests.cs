@@ -21,11 +21,11 @@ namespace PrincesPalace.PlayModeTests
     // IsPlaying stuck true and the callback never fired: every verb dead
     // until the scene was left, and the watchdog built for it could not fire.
     //
-    // Each test throws from a different kind of step that used to be
-    // unguarded -- the top of the beat, the actor's opening pose, and a
-    // NESTED enumerator (CloseIn) that Unity runs as a coroutine of its own --
-    // and pins the same invariant: the next beat still plays, IsPlaying goes
-    // false, and the finish fires exactly once.
+    // Each test throws from a different kind of step -- the top of the
+    // beat, the actor's opening pose, and a NESTED enumerator (CloseIn)
+    // that Unity runs as a coroutine of its own -- and pins the same
+    // invariant: the next beat still plays, IsPlaying goes false, and the
+    // finish fires exactly once.
     //
     // Bare fixtures, no scene, the shape FightBeatPlayerFixtureTests set.
     public class FightBeatPlayerFaultTests

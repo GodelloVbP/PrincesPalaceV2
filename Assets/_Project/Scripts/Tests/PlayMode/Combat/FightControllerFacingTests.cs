@@ -14,21 +14,11 @@ using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // BUG HUNT FINDING 1 (2026-09-10): FightController.FacingOf never read
-    // ResolvedCharacter.BattleSpriteFacing for a party combatant -- it fell
-    // straight through SourceFor (enemy-only, see FightSession.Enemies.cs's
-    // own note) to a hardcoded SpriteFacing.Right, with a comment claiming
-    // that fallback was unreachable for a content-backed combatant. False
-    // for the whole party: every one of them hit it, on every repaint. All
-    // three shipped characters (sheep/bear/owl) happen to be authored
-    // "Right" -- the same value as the hardcoded fallback -- so the bug
-    // produced the correct picture by coincidence and stayed invisible.
-    //
-    // The fix threads BattleSpriteFacing through PlayerKit
-    // (Domain/Combat/Session/CombatantKit.cs) the same seam PlateArt already
-    // travels through, rather than a parallel array threaded beside
-    // FightEncounterAdapter.PartyArt -- FacingOf now reads it off
-    // FightSession.KitFor(combatant) for the party side.
+    // FightController.FacingOf reads ResolvedCharacter.BattleSpriteFacing
+    // for a party combatant off FightSession.KitFor(combatant), through
+    // PlayerKit (Domain/Combat/Session/CombatantKit.cs) -- the same seam
+    // PlateArt travels through -- rather than SourceFor (enemy-only, see
+    // FightSession.Enemies.cs's own note) or a hardcoded SpriteFacing.Right.
     //
     // AGAINST A HAND-BUILT SESSION, not real content: every shipped
     // character is authored Right, so proving the Left case needs a kit

@@ -730,8 +730,8 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(4242UL);
             RunManager.Run.learnedSpells.Add(
                 new LearnedSpellEntry { characterId = CharacterId, skillId = SkillId, slot = 0 });
-            // A second, genuinely different book -- static_fleece before
-            // 2026-09-15 (AUDIT #150 removed it), frost_flare now.
+            // A second, genuinely different book (AUDIT #150: not
+            // static_fleece).
             GiveOneUnassignedCopy("frost_flare");
 
             SaveSlotManager.CurrentSave.Reconcile();

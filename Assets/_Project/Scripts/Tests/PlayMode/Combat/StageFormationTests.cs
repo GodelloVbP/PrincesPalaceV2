@@ -60,19 +60,17 @@ namespace PrincesPalace.PlayModeTests
         // re-derives the formula it is checking asserts only that arithmetic is
         // deterministic (CLAUDE.md gotcha 5).
         //
-        // Far.X 565 -> 660, 2026-09-09: the party-overlap fix in
-        // FightStageAnchors (see Far's own comment) widened the far anchor.
+        // Far.X 660: the party-overlap fix in FightStageAnchors (see Far's
+        // own comment) widened the far anchor.
         private static readonly Vector2 NearMark = new Vector2(300f, -218f);
         private static readonly Vector2 FarMark = new Vector2(660f, -125f);
 
-        // THE PARTY'S OWN FORMATION, not the enemy's mirrored. It stopped
-        // being a mirror in Y on 2026-09-09 (the roster plates stand on the
-        // party's half of the floor and the middle slot of a shared,
-        // shallower line landed inside them), and in X later the same day:
-        // -360/-720 -> -320/-810, because three party bipeds 197-228px wide
-        // at a 180px slot pitch overlapped by a third each and read as one
-        // clump. PartyRetreat, the single scalar these two used to be
-        // derived from, is gone -- see FightStageAnchors.PartyNearX.
+        // THE PARTY'S OWN FORMATION, not the enemy's mirrored: the roster
+        // plates stand on the party's half of the floor, so Y is not a
+        // mirror of the enemy line, and X is spread to -320/-810 because
+        // three party bipeds 197-228px wide at a 180px slot pitch would
+        // otherwise overlap by a third each and read as one clump -- see
+        // FightStageAnchors.PartyNearX.
         private static readonly Vector2 PartyNearMark = new Vector2(-320f, -218f);
         private static readonly Vector2 PartyFarMark = new Vector2(-810f, -64f);
 
@@ -355,18 +353,14 @@ namespace PrincesPalace.PlayModeTests
 
                 if (fadedFrame < 0 && body <= 0.001f) fadedFrame = frame;
 
-                // THE WALK HAS BEGUN when the animator has a new goal, not when
-                // the figure has visibly moved. The walk used to run on the
-                // UNSCALED clock, which captureDeltaTime does not pin: at an
-                // idle machine's ~1ms real frames its first step was under
-                // MarkTolerance and was seen a frame or more later, and under
-                // load a ~20ms real frame moved it past tolerance on the very
-                // frame it began -- so "has it moved" measured the machine,
-                // not the order. It steps by engine time now (see
-                // StageActorAnimator's header), but the goal is still the
-                // earlier and exact signal: Mark is the goal the moment
-                // GlideTo is called, on the fixed beat clock the fade also
-                // runs on.
+                // THE WALK HAS BEGUN when the animator has a new goal, not
+                // when the figure has visibly moved: the walk steps by
+                // engine time (see StageActorAnimator's header), pinned by
+                // captureDeltaTime, but Mark is the goal the moment GlideTo
+                // is called, on the fixed beat clock the fade also runs on
+                // -- the earlier and exact signal, rather than "has it
+                // moved", which would depend on how much of a step a given
+                // frame covers.
                 if (slideStarted < 0 &&
                     (survivorAnimator.IsGliding ||
                      Vector2.Distance(survivorAnimator.Mark, FarMark) > MarkTolerance))
@@ -383,12 +377,8 @@ namespace PrincesPalace.PlayModeTests
             // AT OR AFTER, not strictly after: the walk is handed its goal on
             // the same beat-clock frame the fade writes its last zero, so the
             // first frame drawn with the survivor walking already shows no
-            // corpse. The old strict ">" only held because the old detector
-            // (visible movement past MarkTolerance, on the unscaled clock)
-            // lagged the real start by a frame or more on an idle machine; a
-            // loaded machine closed that lag and failed it. What is pinned is
-            // unchanged: no sampled frame has the body visible while the
-            // survivor is on its way.
+            // corpse. What is pinned: no sampled frame has the body visible
+            // while the survivor is on its way.
             Assert.GreaterOrEqual(slideStarted, fadedFrame,
                 $"the survivor left rank 1 on frame {slideStarted}, before the body had finished " +
                 $"fading on frame {fadedFrame} -- it walked through a corpse that was still on screen");
