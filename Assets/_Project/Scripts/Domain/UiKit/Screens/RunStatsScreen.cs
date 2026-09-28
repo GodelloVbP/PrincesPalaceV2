@@ -53,10 +53,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 children.Add(BuildCard(screen, groups, groups[i], i));
             }
 
-            // BARE, not a kit container (owner's call, 2026-09-07 -- every
-            // frame inside the system menu read as ugly). This pane sits on
-            // the shared SystemMenuFill with no ground of its own, same as
-            // the dossier always did.
+            // BARE, not a kit container. This pane sits on the shared
+            // SystemMenuFill with no ground of its own, same as the
+            // dossier.
             var ground = Ui.SystemMenuPane("RunStatsPane", "RunStatsPaneContent",
                 new UiVec(RunStatsLayout.PaneWidth, RunStatsLayout.PaneHeight), children.ToArray());
 

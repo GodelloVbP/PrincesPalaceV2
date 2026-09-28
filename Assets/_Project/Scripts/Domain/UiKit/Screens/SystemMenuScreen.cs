@@ -190,13 +190,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ---- the panes -------------------------------------------------------
             //
             // One per tab, all stacked in the same box, all but one switched
-            // off. The pane is the FULL content area rather than an inset one,
-            // and every hosted screen is authored AT that size rather than
-            // inset into it. The dossier used to be placed at its handover's
-            // 1360x766 and centred, which cost 118px of dead margin a side and
-            // left its columns stopping short of the floor -- it read as a
-            // small screen inside a big empty one. Every pane fills the box
-            // now; see DossierLayout's header for why scaling could not.
+            // off. The pane is the FULL content area rather than an inset
+            // one, and every hosted screen is authored AT that size rather
+            // than inset into it -- centring a smaller screen inside a
+            // bigger box reads as a small screen inside a big empty one;
+            // see DossierLayout's header for why scaling could not fix that
+            // instead.
             var paneChildren = new List<UiNode>();
             var owners = SystemMenuTabs.PaneOwners;
 
@@ -287,9 +286,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             // ALTERNATIVES, not a pile. Every pane is the same box and the
-            // controller switches one on; declaring that exempts them from each
-            // other and leaves them checked against the bar above and the
-            // lintel, which the old blanket AllowOverlap did not.
+            // controller switches one on; declaring that exempts them from
+            // each other, not from the bar above and the lintel, which they
+            // still stay checked against.
             Ui.Exclusive(paneChildren);
 
             var content = Ui.Panel("SystemMenuContent",

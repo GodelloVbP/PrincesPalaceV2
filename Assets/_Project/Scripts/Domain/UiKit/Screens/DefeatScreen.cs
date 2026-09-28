@@ -21,12 +21,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // CRIMSON, 3:2 KIT CONTAINER -- the frame's own box, not PanelWidth/
         // PanelHeight. Those two stay matched to the Reckoning's for
         // ItIsTheSameSizeAsTheReckoning (the screen's overall footprint);
-        // the FRAME wears real art now, so its own height is derived to hit
-        // the kit's 3:2 aspect exactly. Since the 2026-09-07 repin that
-        // aspect IS 1.5 (the art is 1536x1024 at true nominal), so this lands
-        // back on 896 -- the number the flat-coloured panel used before the
-        // kit's spliced 1.49 pushed it to 902.01. Width unchanged (1344,
-        // pinned by DefeatScreenTests); height moves 902.01 -> 896.
+        // the FRAME wears real art, so its own height is derived to hit the
+        // kit's 3:2 aspect exactly (the art is 1536x1024 at true nominal, so
+        // this lands on 896). Width is fixed at 1344, pinned by
+        // DefeatScreenTests.
         public const float FrameHeight = PanelWidth / ContainerArt.ContainerAspect3x2;
 
         // Matches the Reckoning's, for the same reason: fixed at build time, so
