@@ -68,8 +68,11 @@ the root is free. What is NOT there yet:
   Second Wind and Hack come from whichever root the player picks, not from
   the base kit. Einherjar's bottom-left branch upgrades Slam.
   - Rampage: OUT of the base kit, Einherjar convergence.
-  - Bulwark: still open, see section 7.
+  - Bulwark (`bear_bulwark`): removed (owner, 2026-09-28, third pass).
   - `placeholder_brawler_ward_root` (the one current bear talent): removed.
+- **Engine pick is mandatory** (owner, 2026-09-28, third pass): Bjorn cannot
+  enter a fight without a chosen root; the Talents screen (or first hub
+  visit) forces the choice.
 
 ---
 
@@ -91,14 +94,15 @@ today `unlockLevel 1`), via `grantsSkillId` at `unlockLevel: 999`.
 |---|---|---|---|
 | **Iron Retort** (L: 1/4/7) — defense into damage | His physical hits gain flat damage = 10% of (Defense + Magical Defense above his base stats). Elemental resistances do not count. | 20% | 30% |
 | **Hold the Line** (C: 2/5/8) — active party buff | Unlocks the skill: 40 Fury, every ally gains +Defense and +Magical Defense for 2 turns. | 3 turns; Bjorn gains 5 Fury each time an ally is hit while it is active. | Cast also cleanses one debuff from each ally. |
-| **Bellow** (R: 3/6/9) | Unlocks Bellow (existing `Provoke` effect), 20 Fury. | Passive: enemies prefer Bjorn as a target even without Bellow. | Bellow grants 10 Fury per enemy provoked. |
+| **Bellow** (R: 3/6/9) | Unlocks Bellow (existing `Provoke` effect), 0 Fury, 3-turn cooldown (owner, 2026-09-28, third pass). | Passive: enemies prefer Bjorn as a target even without Bellow. | Bellow grants 10 Fury per enemy provoked. |
 
 "Above his base stats" (40 / 12 today) means only gear, relics and
 talents add damage, so a fresh Bjorn is not a damage dealer by default.
 
 ### Convergence — Plant the Shield (slot 10)
 
-Replaces Brace for a Sentinel. Bjorn sets his shield down in front of
+Upgrades the root-granted Brace into the planted shield; same button
+(owner, 2026-09-28, third pass). Bjorn sets his shield down in front of
 himself (needs art: planted sprite + cracked/broken state).
 
 - Shield HP = `2 x (Defense + Magical Defense) + 10% max HP` (about 130 on
@@ -204,13 +208,16 @@ Momentum, Headsplitter and Berserk tiers.
 
 ## 4. Juggernaut (low-health bruiser) — bear silhouette
 
-Owner: "maybe a bear". Proposal: a paw print. Root at the heel of the main
-pad, bottom branches inside the pad, convergence at the top of the pad,
-the three top branches running up into three toes, the ultimate as the
-largest centre toe. Owner to confirm or pick a bear head instead.
+Silhouette decided (owner, 2026-09-28, third pass): a paw print. Root at
+the heel of the main pad, bottom branches inside the pad, convergence at
+the top of the pad, the three top branches running up into three toes, the
+ultimate as the largest centre toe.
 
-**Root — engine (slot 0).** Fury per turn, from nothing else:
-`15 x (1 + 3 x t^2)`, `t = clamp((1 - HP%) / 0.75, 0, 1)`.
+**Root — engine (slot 0).** Fury per turn, with no hit-based income:
+`15 x (1 + 3 x t^2)`, `t = clamp((1 - HP%) / 0.75, 0, 1)`. Fury-granting
+nodes bought in other trees (Bellow T3, Hold the Line T2, Bloodfire) still
+pay — the rule only rules out earning Fury from taking or dealing hits
+(owner, 2026-09-28, third pass).
 
 | HP | Fury / turn |
 |---|---|
@@ -261,15 +268,20 @@ way down, and the cheat death makes Cursed Blood survivable.
 ### Ultimate — Cursed Blood (slot 20)
 
 Skill. Cost 50 Fury, once per fight. For 2 turns Bjorn cannot be healed.
-Every heal that would land on him (his regen, Gorge, Unbroken, an ally's
-heal, his share of a party heal) is dealt as damage to every enemy instead,
-damage type **Void** (exists in `DamageType`, rarely resisted).
+Every heal that would land on him — his regen (Thick Blood), Gorge,
+**Unbroken's regen included**, an ally's heal, his share of a party heal —
+is dealt as damage to every enemy instead, damage type **Void** (exists in
+`DamageType`, rarely resisted). ALL healing and regen on Bjorn converts,
+with no exceptions (owner, 2026-09-28, third pass): Unbroken stacking with
+Cursed Blood is the intended combo Cursed Blood is tuned around, not an
+edge case to exclude.
 
 - Converts the EFFECTIVE heal: capped by his missing health at that
   moment. Since he cannot heal during it, his missing health stays put and
   each heal converts in full. A raw-heal version would reward being at
   full health, the opposite of the tree.
-- Second Wind becomes a nuke under this; the missing-health cap bounds it.
+- Second Wind becomes a nuke under this (Second Wind is granted by the
+  Juggernaut root); the missing-health cap bounds it.
 
 ---
 
@@ -342,7 +354,8 @@ effects, `implementer` for new mechanics.
 
 `talents.json` (63 rows, slots per the tables above) and `skills.json`;
 remove the placeholder kit rows that the trees replace; `-BuildContent`.
-Routing: `fixer`.
+Also remove the `bear_bulwark` skill row (Bulwark is dropped, owner,
+2026-09-28, third pass). Routing: `fixer`.
 
 Save compatibility, verified in code (2026-09-28): removed talent ids are
 dropped silently on load (`SaveData.Reconcile`), and spent embers are
@@ -385,15 +398,20 @@ Ignore Pain see little use. Separate plan.
 - Juggernaut: Ignore Pain delays damage; Unyielding kept as designed;
   Blood Price chosen for the open branch; Unyielding does not fire under
   Unstoppable.
+- Sentinel turn-1 Fury (owner, 2026-09-28, third pass): Bellow costs 0
+  Fury, 3-turn cooldown.
+- Brace vs Plant the Shield (owner, 2026-09-28, third pass): the
+  convergence upgrades Brace into Plant the Shield; no second button.
+- "Juggernaut gets Fury from no other source" (owner, 2026-09-28, third
+  pass): confirmed to mean no hit-based income only — Fury-granting nodes
+  bought in other trees (Bellow T3, Hold the Line T2, Bloodfire) still pay.
+- Engine pick is mandatory (owner, 2026-09-28, third pass): Bjorn cannot
+  enter a fight without a chosen root; the Talents screen (or first hub
+  visit) forces the choice.
 
 ## 7. Open questions
 
-1. Juggernaut silhouette: paw print (proposed) or bear head?
-2. Bulwark (ally shield): keep, fold into a tree (Hold the Line /
-   Juggernaut), or drop?
-3. Does Unbroken's regen convert under Cursed Blood? (The obvious combo;
-   either tune Cursed Blood around it or exclude it.)
-4. Names still placeholders: Iron Retort, Thornwall, Spellbreaker, Plant
+1. Names still placeholders: Iron Retort, Thornwall, Spellbreaker, Plant
    the Shield, Bloodfire, Battle Trance, Twin Rampage, Thick Blood, Wrath,
    Gorge, Unbroken, Unyielding.
 
@@ -405,12 +423,12 @@ Ignore Pain see little use. Separate plan.
 |---|---|---|
 | 1 | `TalentEffect` is a CLOSED enum (Type/Magnitude/Threshold only, ~35 kinds, each wired inline at its mechanic). The 60 non-root nodes here need roughly 40+ new kinds; the plan did not budget this. | A reuse pass before Phase 5 mapping each node to an existing kind where it fits (`CheatDeathOncePerFight`, `IgnoreDefensePercent` for Slam T3, `ExecuteDamageBonusPercent` for Headsplitter T2, `TransformExtendOnKill`, `ProvokedDamageReductionPercent`), and trim nodes that only exist to be different. |
 | 2 | The balance bot scores actions by previewed damage; non-damage skills score 0 (`SkillResolution` returns 0 for Provoke, Transform, Ward-type utility). Brace, Bellow, Hold the Line, Plant the Shield, Berserk, Unbroken, Cursed Blood would be ignored, so Phase 6 cannot evaluate Sentinel or Juggernaut. | Add bot valuations for each new utility skill in the same issue that adds the skill. |
-| 3 | Sentinel cannot act as a tank on turn 1: Fury starts at 0 and only comes from being hit, while Bellow (20), Plant the Shield (30) and Hold the Line (40) all cost Fury. | Bellow costs 0 with a 3-turn cooldown. |
-| 4 | Brace (root) and Plant the Shield (convergence) are two Ward buttons. | The convergence upgrades Brace into Plant the Shield instead of adding a second button. |
-| 5 | "Juggernaut gets Fury from no other source" conflicts with Fury-granting nodes in other trees he can still buy (Bellow T3, Hold the Line T2, Bloodfire). | Those still pay; the rule means "no hit-based income", nothing more. |
+| 3 | Sentinel cannot act as a tank on turn 1: Fury starts at 0 and only comes from being hit, while Bellow (20), Plant the Shield (30) and Hold the Line (40) all cost Fury. | Bellow costs 0 with a 3-turn cooldown. DECIDED (owner): Bellow costs 0 Fury, 3-turn cooldown. Moved to section 6. |
+| 4 | Brace (root) and Plant the Shield (convergence) are two Ward buttons. | The convergence upgrades Brace into Plant the Shield instead of adding a second button. DECIDED (owner): confirmed as recommended; no second button. Moved to section 6. |
+| 5 | "Juggernaut gets Fury from no other source" conflicts with Fury-granting nodes in other trees he can still buy (Bellow T3, Hold the Line T2, Bloodfire). | Those still pay; the rule means "no hit-based income", nothing more. DECIDED (owner): confirmed as recommended. Moved to section 6. |
 | 6 | Blood Price health cost: no rule for paying near 0 health. | Cannot pay below 1 HP; self-payment never triggers cheat death. |
 | 7 | Ignore Pain T3 vs Cursed Blood: order undefined. | Under Cursed Blood, heals convert first and do not clear delayed damage. |
 | 8 | Phase order builds all mechanics, then all content, then balance. | Vertical slices per constellation after Phases 1-3: Einherjar first (exercises the crit system, mostly existing seams), then Juggernaut, then Sentinel (shared Ward pool is the newest mechanic). |
-| 9 | Existing saves / new players: a Bjorn with no root has no Fury and only Slam. | The Talents screen (or first hub visit) forces the engine pick; until then Bjorn is flagged in the party UI. |
+| 9 | Existing saves / new players: a Bjorn with no root has no Fury and only Slam. | The Talents screen (or first hub visit) forces the engine pick; until then Bjorn is flagged in the party UI. DECIDED (owner): the engine pick is MANDATORY — Bjorn cannot enter a fight without a chosen root. Moved to section 6. |
 | 10 | Several branches react to enemy behaviour the roster barely has (crowd control, magic casts). | The enemy-roster track lands before Sentinel/Juggernaut balance, or the bot reads those branches as worthless. |
 | 11 | Twin Rampage second sweep: keep 1x + 1-turn stun. | Verify party-applied Stun on enemies uses `HasStun` at enemy turn (it does per the 2026-09-28 read), so no new work there. |
