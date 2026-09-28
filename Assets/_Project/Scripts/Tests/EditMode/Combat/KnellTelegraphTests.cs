@@ -56,9 +56,10 @@ namespace PrincesPalace.Domain.Tests
         // many turns between two of its; driven until the chains have pulled
         // him to the front and the knell is committed.
         private static (FightSession session, CombatantState shawn, CombatantState bell) ToTheKnell(
-            int[] table = null, int magicalDefense = 0, bool ignoresDefense = false)
+            int[] table = null, int magicalDefense = 0, bool ignoresDefense = false,
+            int health = 1000, float variance = 0f, ulong seed = 5)
         {
-            var shawn = new CombatantState("Shawn", true, 1000, 40, 20, 30) { MagicalDefense = magicalDefense };
+            var shawn = new CombatantState("Shawn", true, health, 40, 20, 30) { MagicalDefense = magicalDefense };
             var bell = new CombatantState("Bell", false, 100000, 0, 0, 1);
             var encounter = new CombatEncounter(new[] { shawn }, new[] { bell });
             Assert.AreEqual(PlaceOutcome.Placed, encounter.PlaceAt(shawn, 2, out _));
@@ -68,9 +69,9 @@ namespace PrincesPalace.Domain.Tests
                 {
                     new PlayerKit("sheep", CharacterRole.Support, new[] { Passage() }, null, DamageType.Physical),
                 },
-                new List<EnemyKit> { BellKit(table ?? KnellTable, ignoresDefense) }, new SeededRandom(5))
+                new List<EnemyKit> { BellKit(table ?? KnellTable, ignoresDefense) }, new SeededRandom(seed))
             {
-                DamageVarianceRange = 0f,
+                DamageVarianceRange = variance,
             };
             session.Begin();
 
@@ -192,6 +193,44 @@ namespace PrincesPalace.Domain.Tests
             var knell = session.SourceFor(bell).Abilities[2].Skill;
             session.ResolveSkillForTest(bell, knell, shawn);
             Assert.AreEqual(825, shawn.CurrentHealth, "the badge's 175 is what landed");
+        }
+
+        // THE LANDED KNELL IS THE BADGE, UNDER THE LIVE VARIANCE (M7 bug). With
+        // the shipped +-20% roll on, a 280-health Shawn's front knell landed
+        // anywhere from 246 to 370 while the badge said 308. A seat-sized hit
+        // is a fixed share of the bar: 110% of 280 = 308 at the front, 35% =
+        // 98 in the middle, on every seed.
+        [Test]
+        public void UnderLiveVariance_TheKnellLandsItsBadgeOnEverySeed(
+            [Values(1UL, 2UL, 3UL, 4UL, 5UL, 6UL, 7UL, 8UL, 9UL, 10UL, 11UL, 12UL)] ulong seed)
+        {
+            var (session, shawn, bell) = ToTheKnell(ignoresDefense: true, health: 280,
+                variance: DamagePipeline.DefaultVarianceRange, seed: seed);
+            Assert.AreEqual(308, session.IntentDamageFor(bell));
+            var knell = session.SourceFor(bell).Abilities[2].Skill;
+            session.DrainBeats();
+            session.DrainImmediateMessages();
+
+            session.ResolveSkillForTest(bell, knell, shawn);
+
+            var messages = session.DrainBeats().SelectMany(b => b.Messages)
+                .Concat(session.DrainImmediateMessages()).ToList();
+            CollectionAssert.Contains(messages, "Bell uses Death Knell on Shawn for 308 damage!");
+            Assert.IsFalse(shawn.IsAlive);
+        }
+
+        [Test]
+        public void UnderLiveVariance_TheMiddleKnellLandsItsBadgeOnEverySeed(
+            [Values(1UL, 2UL, 3UL, 4UL, 5UL, 6UL, 7UL, 8UL, 9UL, 10UL, 11UL, 12UL)] ulong seed)
+        {
+            var (session, shawn, bell) = ToTheKnell(ignoresDefense: true, health: 280,
+                variance: DamagePipeline.DefaultVarianceRange, seed: seed);
+            Assert.IsTrue(session.CastSkillToSeat(0, shawn, 1));
+            Assert.AreEqual(98, session.IntentDamageFor(bell));
+
+            session.ResolveSkillForTest(bell, session.SourceFor(bell).Abilities[2].Skill, shawn);
+
+            Assert.AreEqual(182, shawn.CurrentHealth);
         }
 
         [Test]

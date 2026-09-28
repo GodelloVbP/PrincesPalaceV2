@@ -62,6 +62,12 @@ def a_run(seed, archetype, depth, capped=False, relics=None, replayed=True, matc
             # only" rule a rule the fixture can actually break.
             "won": not (i == 2 and not capped),
             "payoutGold": 0 if (i == 2 and not capped) else 20 + 2 * i,
+            # The Bellwether's knells (knells_json): every run steps a middle
+            # knell in its second fight and survives it; even seeds also take
+            # an unanswered front knell in the fight that ends the run.
+            "knells": ([{"seat": 1, "survived": True, "answeredBy": "step"}] if i == 1 else [])
+                      + ([{"seat": 0, "survived": False, "answeredBy": "none"}]
+                         if i == 2 and seed % 2 == 0 else []),
         })
 
     return {
@@ -457,6 +463,32 @@ class MergeTests(unittest.TestCase):
 
         for value in equip.values():
             self.assertGreaterEqual(value, 0)
+
+    def test_knells_are_counted_per_seat_with_deaths_and_answer_shares(self):
+        # Per cell: six middle knells (all survived, all stepped) and three
+        # front knells from seeds 2/4/6 (all fatal, none answered).
+        for directory in (self.single, self.split):
+            knells = self.merged(directory)["cells"][0]["knells"]
+            self.assertEqual(9, knells["landed"])
+            self.assertEqual(3, knells["deaths"])
+            self.assertEqual({"landed": 3, "deaths": 3}, knells["bySeat"]["front"])
+            self.assertEqual({"landed": 6, "deaths": 0}, knells["bySeat"]["middle"])
+            self.assertEqual({"landed": 0, "deaths": 0}, knells["bySeat"]["rear"])
+            self.assertEqual(0.3333, knells["answeredBy"]["none"])
+            self.assertEqual(0.6667, knells["answeredBy"]["step"])
+            self.assertEqual(0, knells["answeredBy"]["passage"])
+
+    def test_a_cell_with_no_knells_reports_null_shares_not_zero(self):
+        knells = bot_merge.knells_json([{"knells": []}, {}])
+        self.assertEqual(0, knells["landed"])
+        self.assertEqual({"none": None, "step": None, "passage": None}, knells["answeredBy"])
+        self.assertEqual({"landed": 0, "deaths": 0}, knells["bySeat"]["middle"])
+
+    def test_a_seat_past_the_rear_counts_as_rear(self):
+        knells = bot_merge.knells_json([{"knells": [{"seat": 4, "survived": True, "answeredBy": "passage"}]}])
+        self.assertEqual({"landed": 1, "deaths": 0}, knells["bySeat"]["rear"])
+        self.assertEqual(1, knells["answeredBy"]["passage"])
+
 
 def num_or_float(value):
     return bot_merge.num(value)

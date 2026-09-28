@@ -97,20 +97,31 @@ returning event and the first event fight.
   fewer, heavier swings spread the floor-1 result, where the bot's Shawn
   barely varies, so one attack point moves floor-1 Endure by ~6 points
   instead of ~20. The per-floor table is in that commit's message.
+  **Retuned with the kit at M7 (2026-09-28): attack 40, speed 6**, the rest
+  unchanged. Speed went back up one because at 5 a deeper Shawn often had
+  two turns between the chains and the knell and walked to the rear, so the
+  knell stopped mattering past floor 2 (median Endure HP 35-38% on floors
+  3-5); at 6 the pair lands closer together on every floor. Floor 1 is still
+  a cliff (every archetype plays the scripted fight alike): one attack point
+  there is ~4-8 Endure points. Per-floor table in the M7 commit message.
 - **The Bellwether's kit** (docs/PLAN_BELLWETHER_KIT.md, M5, 2026-09-28).
   No plain swing (`attackWeight` 0). Every acting turn is **Scratch**
   (`bellwether_scratch`: a physical lunge in its `attack` pose that leaves
-  Bleed 8 x 3) except its 1st/2nd and 5th/6th, which are the scheduled pair
+  Bleed 5 x 3) except its 1st/2nd and 5th/6th, which are the scheduled pair
   (`schedule`, counted on its own acting turns, never split): **Dark Chains**
   (`dark_chains`, `extra` pose, Reposition to the front seat, no damage) and
-  then **Death Knell** (`death_knell`, `cast` pose, Void, 110/35/0% of the
+  then **Death Knell** (`death_knell`, `cast` pose, Void, 130/20/0% of the
   chained target's max HP at the front/middle/rear seat when it lands,
-  `ignoresDefense` so armour cannot soak the front). Each round's rally plays
+  `ignoresDefense` so armour cannot soak the front). The knell rolls **no
+  damage variance** (M7): it is a fixed share of the bar and the badge is
+  exact. Typed magical resistance (Darrow's Buckler's +25 is x0.8), Protect/
+  Vulnerable, a ward (Magical Shield halves it) and dodge still apply; front
+  is 130 rather than 110 so the Buckler alone cannot save a full-HP Shawn. Each round's rally plays
   its `cast` pose with a void ripple (`rallyPerRound.stance`/`vfx`) and its
   status row shows the stacks as `x3` on `Status/rally.png`. While the knell
   is committed, its callout sits on a dark plate and each party seat shows the
   knell's figure on the floor (red lethal, lilac survivable, SAFE). Numbers
-  are M5 start values; M7 tunes them. Art: seven recipes under
+  are M7's (Scratch flatAmount 0, Bleed 5 x 3, knell 130/20/0). Art: seven recipes under
   `Art/Sheets/recipes/` (`bellwether_scratch`, `_drops`,
   `bellwether_toll_ripple`, `dark_chains_origin`/`_travel`/`_bind`,
   `death_knell_bell`/`_shockwave`), each recipe's `_notes` saying how the

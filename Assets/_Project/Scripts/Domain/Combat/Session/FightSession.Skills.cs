@@ -892,12 +892,20 @@ namespace PrincesPalace.Domain.Combat.Session
                     baseAmount = PoolTierResolution.ApplyDamageMultiplier(baseAmount, poolTier);
                 }
 
+                // NO VARIANCE ON A SEAT-SIZED HIT. Its base is a fixed share
+                // of the target's own bar and the telegraph promises that
+                // share (the lethal badge is "number >= current HP"); the
+                // +-20% roll made the Bell's 308 front knell land anywhere in
+                // 246-370, so a badge could read "not lethal" and kill (M7).
+                // Typed resistance, Protect/Vulnerable, ward and dodge still
+                // apply -- the preview shows the first two, the tooltip's
+                // "about" covers the last two.
                 var outcome = DamagePipeline.AfterDefences(
                     baseAmount,
                     actor, target,
                     attackType: castType,
                     affinity: AffinityOf(target),
-                    varianceRange: DamageVarianceRange,
+                    varianceRange: skill.HasDamageBySeat ? 0f : DamageVarianceRange,
                     rng: _rng,
                     resolveWard: ResolveWard,
                     ignoresDefense: skill.IgnoresDefense,

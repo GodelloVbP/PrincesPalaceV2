@@ -215,7 +215,7 @@ MonoBehaviour:
     SortOrder: 40
     Status: 14
     HasStatus: 1
-    StatusMagnitude: 8
+    StatusMagnitude: 5
     StatusDuration: 3
     Requirements:
       strength: 0

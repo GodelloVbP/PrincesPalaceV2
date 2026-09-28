@@ -25,7 +25,7 @@ namespace PrincesPalace.Domain.Bot
     //      action, so the runner asks again and the archetype still acts;
     //   2. the target itself holding the turn: a plain Move one seat
     //      (either way) when that seat saves at least
-    //      StepMinSavingOfMaxHp of the target's max health.
+    //      StepMinSavingPercentOfMaxHp of the target's max health.
     //
     // Otherwise nothing, and the archetype chooses as it always did. Any
     // party member: the target is whoever the intent names, and the Passage
@@ -37,9 +37,15 @@ namespace PrincesPalace.Domain.Bot
     public static class TelegraphAnswer
     {
         // A turn-ending step back is worth it when it saves at least this
-        // share of the target's max health (plan 3.10, assumed). The Passage
+        // percent of the target's max health (plan 3.10, assumed). The Passage
         // has no threshold: it is free, and any saving is a saving.
-        public const float StepMinSavingOfMaxHp = 0.25f;
+        //
+        // 15, not M6's 25 (M7): it must sit BELOW the knell's middle entry
+        // (20) or the bot stops one seat short -- it would take middle -> rear
+        // for granted as "not worth a turn" while the badge says "Step back"
+        // and a player steps. An int percent so the ceiling is exact (0.15f
+        // times 1000 is 150.00001 and would ceil to 151).
+        public const int StepMinSavingPercentOfMaxHp = 15;
 
         // The command that answers the telegraph, or null for "let the
         // archetype choose". `legal` is the actor's full legal list, and the
@@ -85,7 +91,7 @@ namespace PrincesPalace.Domain.Bot
                 // 2. The target's own step, only while no Passage answers.
                 if (kind == TelegraphAnswerKind.Passage || !ReferenceEquals(actor, target)) continue;
 
-                int threshold = (int)System.Math.Ceiling(target.MaxHealth * StepMinSavingOfMaxHp);
+                int threshold = (target.MaxHealth * StepMinSavingPercentOfMaxHp + 99) / 100;
                 foreach (var action in legal)
                 {
                     if (action.Kind != FightActionKind.Move) continue;

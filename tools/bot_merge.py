@@ -585,8 +585,48 @@ def cell_json(runs, cap):
         "itemEquipRate": equip_rate(r.get("rooms", []) for r in runs),
         "shop": shop_json(runs),
         "spellAcquisition": spell_acquisition_json(runs, cap),
+        "knells": knells_json(fights),
     }
     return out
+
+
+KNELL_SEATS = ("front", "middle", "rear")
+KNELL_ANSWERS = ("none", "step", "passage")
+
+
+def knells_json(fights):
+    """The seat-sized hits (the Bellwether's Death Knell) this cell's fights saw.
+
+    Per seat as it LANDED: how many landed and how many the target did not
+    survive -- the M7 contract is written per seat (front kills, middle is
+    survivable, rear is nothing), so pooling seats would hide the only split
+    that matters. answeredBy is the share of landed knells the shared
+    telegraph answer stepped or passaged away from, which under
+    -NoTelegraphAnswer is all "none" by construction. A seat past the rear
+    (a party member shoved further back than three) counts as rear, the same
+    reading SeatSizedDamageBase makes. Shares are null when nothing landed:
+    0.0 would claim "never answered", which no knell happened to test.
+    """
+    rows = [k for f in fights for k in (f.get("knells") or [])]
+    by_seat = {}
+    for index, name in enumerate(KNELL_SEATS):
+        in_seat = [k for k in rows
+                   if min(max(k.get("seat", 0), 0), len(KNELL_SEATS) - 1) == index]
+        by_seat[name] = {
+            "landed": len(in_seat),
+            "deaths": sum(1 for k in in_seat if not k.get("survived", True)),
+        }
+    answered = {
+        name: (num(share(sum(1 for k in rows if k.get("answeredBy", "none") == name), len(rows)))
+               if rows else None)
+        for name in KNELL_ANSWERS
+    }
+    return {
+        "landed": len(rows),
+        "deaths": sum(1 for k in rows if not k.get("survived", True)),
+        "bySeat": by_seat,
+        "answeredBy": answered,
+    }
 
 
 def _mean_by(rows, key_of, value_of):

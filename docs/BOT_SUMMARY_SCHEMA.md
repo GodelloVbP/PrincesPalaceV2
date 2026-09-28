@@ -414,7 +414,8 @@ probe batch is read from its shard files. Refused together with `-Career`.
   chooses, a committed seat-sized intent (the Death Knell) is answered with
   a ready Palace Passage to the cheapest seat (a free action; the archetype
   then acts), else the target's own one-seat Move when it saves at least
-  25% of max health (`TelegraphAnswer.StepMinSavingOfMaxHp`).
+  15% of max health (`TelegraphAnswer.StepMinSavingPercentOfMaxHp`; 25 at
+  M6, lowered at M7 to sit under the knell's 20% middle entry).
   `-NoTelegraphAnswer` turns it off (`noTelegraphAnswer` in `batch.json`).
   Palace Passage is also in every archetype's legal list since M6, so
   RandomLegal can pick it (`Skill:palace_passage`) any time.
@@ -570,6 +571,16 @@ mismatch on any one independent run would, keyed by that life's own
         "depthZeroBooksAtLeg2": 9,
         "depthSomeBooksAtLeg2": 14,
         "shopVisitsShowingUnaffordableBookShare": 0.18
+      },
+      "knells": {
+        "landed": 382,
+        "deaths": 103,
+        "bySeat": {
+          "front": { "landed": 0, "deaths": 0 },
+          "middle": { "landed": 344, "deaths": 103 },
+          "rear": { "landed": 38, "deaths": 0 }
+        },
+        "answeredBy": { "none": 0, "step": 1, "passage": 0 }
       }
     }
   ],
@@ -889,6 +900,23 @@ describe, and `batch.shopPolicies` lists every mode present.
   comparison is against the same point in the run.
 - `depthVariance`: population variance of depth per mode. A shop that does
   not move the median but widens the spread is a shop that is swinging runs.
+
+**`cells[].knells`** — the seat-sized enemy hits (the Bellwether's Death
+Knell, `PLAN_BELLWETHER_KIT.md` M7) this cell's fights saw, pooled from every
+fight's `knells` rows (`KnellTrace` above). One batch is one floor under
+`-ForceEventFloor`, so a per-floor table is one batch per floor.
+- `landed` / `deaths`: knells written (a knell the fight's end cancelled is
+  never written) and how many the target did not survive (`survived: false`;
+  a later Bleed tick is not the knell's kill).
+- `bySeat.front|middle|rear`: the same two counts split by the seat the target
+  stood in when it landed. The M7 contract is per seat, so this is the split
+  to read: front deaths on the `-NoTelegraphAnswer` cell, middle deaths on the
+  answering cell. A seat past the rear counts as rear, as
+  `SeatSizedDamageBase` reads it. Rear knells are "passes over", 0 damage.
+- `answeredBy.none|step|passage`: share of landed knells the shared telegraph
+  answer left alone, stepped back from, or passaged away from. All `none`
+  under `-NoTelegraphAnswer` by construction. `null` (not 0) when no knell
+  landed in the cell.
 
 ### Partial batches
 

@@ -242,6 +242,8 @@ magnitude/duration, Bellwether attack last. The round-limited depth rate (5.3%/s
   the second knell (rally ~+24% vs ~+64%, so the spread is the hard part; M2 sized the knell off max HP, 3.4).
   **No-answer Endure <= 5%.** Black Ram and
   with-book reported, no contract. Per-floor table in the commit message.
+- **Landed (2026-09-28):** knell 130/20/0 with no variance roll (the +-20% roll was the M6 208-480 spread), Bleed
+  5 x 3, Bellwether attack 40 and speed 6, step threshold 15%. Schedule unchanged. Tables and misses in the M7 commit.
 
 **M8: Art and sound (owner assets; implementer integrates).** Recipes `keyed: false` for every sheet (5);
 `tools/slice_spell_sheet.py --new <id>`, §5b vfx blocks, icons via `STATUS_ICON_PROMPTS.md`; `-Runtime` captures of
@@ -306,4 +308,5 @@ Sheets under `Art/Sheets/Spells/<id>/`, frames cut to `Resources/Spells/<id>*/`.
 2. **Scratch marks** on hit only. Persistent marks while bleeding need status-on-body visuals, which do not exist.
 3. **Knell sizing fallback** (R2): attack-scaled (default) or a percent of the target's max HP if M7 cannot hold both
    the front and middle bars.
-4. Gap-fills: chains deal no damage; the pair repeats on turns 5/6; bot steps back at >= 25% max-HP saving.
+4. Gap-fills: chains deal no damage; the pair repeats on turns 5/6; bot steps back at >= 15% max-HP saving (25 until
+   M7, lowered to sit under the 20% middle knell so the bot takes the second step a player would).

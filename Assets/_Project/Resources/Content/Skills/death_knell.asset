@@ -217,7 +217,7 @@ MonoBehaviour:
     AdvanceSlots: 0
     DamageTypeOverride: 10
     HasDamageType: 1
-    DamageBySeatMaxHpPercent: 6e0000002300000000000000
+    DamageBySeatMaxHpPercent: 820000001400000000000000
     ToSeat: 0
     HealthCostPercent: 0
     RequiresStatusType: 0

@@ -17,8 +17,8 @@ MonoBehaviour:
     DisplayName: The Bellwether
     BaseStats:
       maxHealth: 150
-      speed: 5
-      attack: 33
+      speed: 6
+      attack: 40
       manaRegen: 0
       physicalDefense: 20
       magicalDefense: 20

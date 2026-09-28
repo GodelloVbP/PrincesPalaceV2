@@ -124,18 +124,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void AStepBack_NeedsASavingOfAQuarterOfMaxHealth()
+        public void AStepBack_NeedsASavingOfFifteenPercentOfMaxHealth()
         {
-            // 20% of 1000 at the front, nothing behind: 200 saved, under 250.
-            var (under, shawnUnder, _) = ToTheKnell(withPassage: false, table: new[] { 20, 0, 0 });
+            // 14% of 1000 at the front, nothing behind: 140 saved, under 150.
+            var (under, shawnUnder, _) = ToTheKnell(withPassage: false, table: new[] { 14, 0, 0 });
             Assert.IsNull(TelegraphAnswer.Choose(under, shawnUnder, Legal(under, shawnUnder), out _));
 
-            // 25%: exactly 250 saved, which is enough.
-            var (at, shawnAt, _) = ToTheKnell(withPassage: false, table: new[] { 25, 0, 0 });
+            // 15%: exactly 150 saved, which is enough.
+            var (at, shawnAt, _) = ToTheKnell(withPassage: false, table: new[] { 15, 0, 0 });
             var answer = TelegraphAnswer.Choose(at, shawnAt, Legal(at, shawnAt), out var kind);
             Assert.AreEqual(TelegraphAnswerKind.Step, kind);
             Assert.AreEqual(MoveDirection.Back, answer.Value.MoveDirection);
-            Assert.AreEqual(0.25f, TelegraphAnswer.StepMinSavingOfMaxHp);
+            Assert.AreEqual(15, TelegraphAnswer.StepMinSavingPercentOfMaxHp);
         }
 
         [Test]

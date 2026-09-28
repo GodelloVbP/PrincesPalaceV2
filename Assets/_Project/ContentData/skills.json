@@ -1675,7 +1675,7 @@
       "playerSelectable": false
     },
     {
-      "_comment": "THE BELLWETHER'S KIT, M5 (docs/PLAN_BELLWETHER_KIT.md 1.3). Every turn that is not the Chains/Knell pair: a physical rake that leaves Bleed (the monster-level rider cannot carry it -- it would bleed on the knell too, plan 2.8). The most-seen effect in the kit: a six-drawing rake (lilac tips, white flash, blood) opened oversized at the hit, the flash held a beat on top with bloom, and blood drops thrown down along the swipe. The sheet arrived 3x2 with no separate flash or particle row, so the flash is a still of its frame 2 and the drops are cut by rect (recipes bellwether_scratch, bellwether_scratch_drops). Start values; M7 tunes flatAmount and the Bleed.",
+      "_comment": "THE BELLWETHER'S KIT, M5 (docs/PLAN_BELLWETHER_KIT.md 1.3). Every turn that is not the Chains/Knell pair: a physical rake that leaves Bleed (the monster-level rider cannot carry it -- it would bleed on the knell too, plan 2.8). The most-seen effect in the kit: a six-drawing rake (lilac tips, white flash, blood) opened oversized at the hit, the flash held a beat on top with bloom, and blood drops thrown down along the swipe. The sheet arrived 3x2 with no separate flash or particle row, so the flash is a still of its frame 2 and the drops are cut by rect (recipes bellwether_scratch, bellwether_scratch_drops). M7: flatAmount 0 and Bleed 5 x 3 (was 8); the Bellwether's attack (40) carries Scratch's weight because it rides the depth rate and a flat Bleed does not.",
       "id": "bellwether_scratch",
       "displayName": "Scratch",
       "description": "A hoof-claw raked across you. It keeps bleeding after.",
@@ -1689,7 +1689,7 @@
       "approach": "lunge",
       "stance": "attack",
       "appliesStatus": "Bleed",
-      "statusMagnitude": 8,
+      "statusMagnitude": 5,
       "statusDuration": 3,
       "vfx": {
         "layerFormat": 1,
@@ -1832,7 +1832,7 @@
       "playerSelectable": false
     },
     {
-      "_comment": "THE BELLWETHER'S KIT, M5 (plan 1.5). The acting turn after Dark Chains resolved: a Void hit sized by the SEAT the chained target stands in when it lands -- 110% of his max health at the front, 35% in the middle, nothing at the rear (damageBySeatMaxHpPercent, M2). ignoresDefense true by the orchestrator's call, so a defence build cannot soak a front knell; Void affinity, Protect/Vulnerable, ward and dodge still apply. A bell swings in the air over him and cracks on the hit; a void wave rolls across the floor under him from the Bellwether's side. The wave is a `target` layer rather than the plan's `formation`: a formation box spans only the STRUCK bodies, so under one lone Shawn it came out a hand's width wide and unreadable (M5 capture). Start values; M7 tunes.",
+      "_comment": "THE BELLWETHER'S KIT, M5 (plan 1.5). The acting turn after Dark Chains resolved: a Void hit sized by the SEAT the chained target stands in when it lands -- 130% of his max health at the front, 20% in the middle, nothing at the rear (damageBySeatMaxHpPercent, M2). ignoresDefense true by the orchestrator's call, so a defence build cannot soak a front knell; Void affinity, Protect/Vulnerable, ward and dodge still apply. A bell swings in the air over him and cracks on the hit; a void wave rolls across the floor under him from the Bellwether's side. The wave is a `target` layer rather than the plan's `formation`: a formation box spans only the STRUCK bodies, so under one lone Shawn it came out a hand's width wide and unreadable (M5 capture). M7: front 130 (not 110) so a +25 magical resistance (x0.8) alone cannot save a full-HP Shawn; middle 20 (not 35) so the second knell after Scratch wear is heavy, not a coin flip. No variance roll (FightSession.Skills: a seat-sized hit is exact).",
       "id": "death_knell",
       "displayName": "Death Knell",
       "description": "The bell tolls for whoever stands nearest. Step back.",
@@ -1843,8 +1843,8 @@
       "manaCost": 0,
       "damageType": "Void",
       "damageBySeatMaxHpPercent": [
-        110,
-        35,
+        130,
+        20,
         0
       ],
       "ignoresDefense": true,

@@ -12,7 +12,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // THE BELLWETHER'S KIT AS BUILT (docs/PLAN_BELLWETHER_KIT.md M5): the
     // shipped content rows, not fixtures -- the schedule, Scratch's Bleed, the
-    // chains' pull and the knell's 110/35/0 by seat through defence. Engine
+    // chains' pull and the knell's 130/20/0 by seat through defence. Engine
     // behaviour for the same pieces is pinned with fixtures in
     // BellwetherKitMechanicsTests / EnemyScheduleTests; this pins that the
     // content says what the plan says. NEEDS BUILT CONTENT.
@@ -119,21 +119,23 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(20000, shawn.CurrentHealth, "the chains deal nothing");
         }
 
+        // M7's table. The session keeps the SHIPPED variance on purpose: the
+        // knell rolls none, so the literal holds on the live 20% range too.
         [TestCase(0, 0)]
-        [TestCase(1, 650)]
+        [TestCase(1, 800)]
         [TestCase(2, 1000)]
-        public void TheKnellDeals110_35_0PercentOfMaxHealthBySeat_ThroughAnyDefence(int seat, int left)
+        public void TheKnellDeals130_20_0PercentOfMaxHealthBySeat_ThroughAnyDefence(int seat, int left)
         {
             var knell = Skill("death_knell");
             Assert.AreEqual("cast", knell.Stance);
             Assert.AreEqual(DamageType.Void, knell.OwnDamageType);
             Assert.IsTrue(knell.IgnoresDefense);
-            CollectionAssert.AreEqual(new[] { 110, 35, 0 }, knell.DamageBySeatMaxHpPercent);
+            CollectionAssert.AreEqual(new[] { 130, 20, 0 }, knell.DamageBySeatMaxHpPercent);
 
             var shawn = new CombatantState("Shawn", true, 1000, 10, 20, 10) { MagicalDefense = 500, PhysicalDefense = 500 };
             var bell = new CombatantState("The Bellwether", false, 100000, 0, 0, 1);
             var session = new FightSession(new CombatEncounter(new[] { shawn }, new[] { bell }), null, null,
-                new SeededRandom(1)) { DamageVarianceRange = 0f };
+                new SeededRandom(1));
             session.Begin();
             if (seat > 0) Assert.AreEqual(PlaceOutcome.Placed, session.Encounter.PlaceAt(shawn, seat, out _));
 

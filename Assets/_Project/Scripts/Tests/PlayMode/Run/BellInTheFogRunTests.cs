@@ -322,9 +322,9 @@ namespace PrincesPalace.PlayModeTests
         // A ROUND-LIMITED FIGHT'S ENEMY ATTACK rides DifficultyCurve's
         // round-limited rate (5.3% a step), and the SAME enemy built for a room
         // fight at the same depth rides the attack rate (3.8%). Literals, hand-
-        // floored: the Bellwether's authored 33 x 1.053^17 = 79.40, x 1.038^17
-        // = 62.21. Health rides the health rate either way: 150 x 1.075^17 =
-        // 512.90.
+        // floored: the Bellwether's authored 40 (M7) x 1.053^17 = 96.24, x
+        // 1.038^17 = 75.41. Health rides the health rate either way: 150 x
+        // 1.075^17 = 512.90.
         [Test]
         public void TheBellwethersAttack_RidesTheRoundLimitedRate_TheSameEnemyInARoomDoesNot()
         {
@@ -332,14 +332,14 @@ namespace PrincesPalace.PlayModeTests
             Run.step = 17;
 
             var bell = Bellwether(TouchTheBell());
-            Assert.AreEqual(79, bell.Attack, "the round-limited fight's attack");
+            Assert.AreEqual(96, bell.Attack, "the round-limited fight's attack");
             Assert.AreEqual(512, bell.MaxHealth);
 
             var room = FightEncounterAdapter.Build(new[] { "sheep" }, new[] { "bellwether" },
                 new Domain.Rng.SeededRandom(1UL), depthStep: 17);
             Assert.AreEqual(0, room.Session.RoundLimit);
             var roomBellwether = room.Session.Encounter.Enemies.Single();
-            Assert.AreEqual(62, roomBellwether.Attack, "a room fight's attack is the attack rate, unchanged");
+            Assert.AreEqual(75, roomBellwether.Attack, "a room fight's attack is the attack rate, unchanged");
             Assert.AreEqual(512, roomBellwether.MaxHealth);
         }
 
