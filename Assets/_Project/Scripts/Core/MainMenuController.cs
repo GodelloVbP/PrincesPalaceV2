@@ -37,8 +37,8 @@ namespace PrincesPalace
 
         // Cross-controller: the two controllers this screen splits between
         // (Play/Exit/Continue here, the slot list itself on SaveSlotController)
-        // share ONE NavContext, owned here (docs/GAMEPAD_NAVIGATION_PLAN.md
-        // phase 3a, screen 2). Assigned by ScreenRegistry's MainMenu Wire step,
+        // share ONE NavContext, owned here (docs/GAMEPAD_NAVIGATION_PLAN.md).
+        // Assigned by ScreenRegistry's MainMenu Wire step,
         // not auto-bound: SaveSlotController is not one of the five types
         // UiAutoBind has a typed lookup for.
         [SerializeField] internal SaveSlotController saveSlotController;
@@ -124,7 +124,7 @@ namespace PrincesPalace
 
         private static void Toggle(GameObject panel) => panel.SetActive(!panel.activeSelf);
 
-        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) ----------------
         //
         // ONE CONTEXT FOR THE WHOLE SCENE, reconfigured rather than pushed a
         // second time whenever the save-slot modal opens or closes -- exactly
@@ -251,7 +251,7 @@ namespace PrincesPalace
 
         // Continue (when shown) sits above Play/Exit, top to bottom on
         // screen (MainMenuScreen's own comment: "Continue sits ABOVE the
-        // column") -- a List, clamp (the owner default for List), no wrap:
+        // column") -- a List, clamp, no wrap:
         // there is nothing below Exit or above Continue to step onto.
         private IEnumerable<Button> MainMenuSelectables()
         {
@@ -365,7 +365,7 @@ namespace PrincesPalace
         }
 
         // Yes then No, left to right (ResetConfirmButtons' own Row order) --
-        // a Rail, wrap by the owner default. Entry is forced to No rather
+        // a Rail, wrap by default. Entry is forced to No rather
         // than following the Rail's own first member: the destructive
         // button needs a HELD press to do anything at all (HoldToConfirm is
         // pointer-only, see its own header -- a stray gamepad Submit on Yes

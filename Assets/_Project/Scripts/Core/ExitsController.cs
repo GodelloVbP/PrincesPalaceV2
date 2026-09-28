@@ -161,7 +161,7 @@ namespace PrincesPalace
             WireNavigation(withAbandon);
         }
 
-        // A List, clamp (the owner default) -- Title then Quit, top to
+        // A List, clamp -- Title then Quit, top to
         // bottom (ExitsLayout's own index order, matching ExitIndexTitle/
         // ExitIndexQuit), plus the abandon hold as a third row only when the
         // descent it would end still exists -- the same "walk what's
@@ -171,8 +171,8 @@ namespace PrincesPalace
         // time, since withAbandon is exactly what ApplyContext just
         // recomputed.
         //
-        // No Cancel claim here (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b,
-        // AUDIT.md #159's sibling note): the mouse path has no way to back
+        // No Cancel claim here (docs/GAMEPAD_NAVIGATION_PLAN.md): the
+        // mouse path has no way to back
         // out of an armed exit either, other than waiting out ArmSeconds or
         // pressing the other exit -- so falling through to
         // SystemMenuController's own Cancel (closing the whole menu) is

@@ -8,23 +8,15 @@ namespace PrincesPalace
     // (UiEmitter.EmitButton) rather than per-button, same reasoning as the
     // shared font and button sprite.
     //
-    // Owner's call, 2026-09-23: "hovering makes things pop out a bit and get
-    // bigger. That is fun for a website but not a game." NO HOVER EFFECT AT
-    // ALL any more -- this used to lerp localScale up to HoverScale on
-    // OnPointerEnter the same way it lerped down on press; that half is
-    // gone, along with the Enter/Exit-driven hover bookkeeping it needed.
-    // Every unthemed button's hover/focus feedback is the rim now
+    // NO HOVER EFFECT: hover/focus feedback is the rim
     // (Ui.ApplyHoverBox/Core/HoverBox.cs, built by default -- see
     // Ui.Button's own header), attached alongside THIS component, not
-    // instead of it (second pass, same date): a colour dim on press and a
-    // box on hover/focus answer two different gestures and do not fight
-    // each other the way the old scale-pop and rim both would have.
+    // instead of it: a colour dim on press and a box on hover/focus answer
+    // two different gestures and do not fight each other.
     //
-    // The press feedback ALSO used to be a localScale pop (down to
-    // PressScale) and is now a plate dim instead -- the same
-    // ThemedButtonState idiom (Pressed dims the plate, no transform change)
-    // rather than a second "shrink" reading as a second flavour of the pop
-    // the owner just asked to have removed everywhere. Colour, not
+    // The press feedback is a plate dim -- the same ThemedButtonState idiom
+    // (Pressed dims the plate, no transform change) rather than a "shrink"
+    // reading as a second flavour of the same gesture. Colour, not
     // Animator/AnimationClip: this project has no tweening library, and one
     // named transition (idle/pressed) does not need one.
     //
