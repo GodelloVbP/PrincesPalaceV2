@@ -21,7 +21,7 @@ namespace PrincesPalace.Domain.Economy
     //   Relics  dormant. Nothing awards them and nothing sells for them right
     //           now; the type is kept because the concept has a job coming and
     //           deleting it would only mean re-adding it. Do NOT wire this to
-    //           a boss drop — that was the old model and Embers replaced it.
+    //           a boss drop — Embers are the reward for that instead.
     //
     // Gold appears on BOTH wallets, which is deliberate: RunState's copy is the
     // at-risk stake and SaveData's is the banked total, and EndRun moves one

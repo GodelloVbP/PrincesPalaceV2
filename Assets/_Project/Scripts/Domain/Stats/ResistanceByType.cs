@@ -37,13 +37,8 @@ namespace PrincesPalace.Domain.Stats
         public int Nature;
         public int Poison;
 
-        // ADDED FOR THE ITEM-MODIFIER PLAN'S PHASE C: Astral (Arcane) typed
-        // resistance is one of the six elemental-family modifiers, and until
-        // this field existed `For`/`With` silently dropped anything rolled
-        // against Arcane -- the struct's own header used to read "Arcane
-        // exists in the enum and nothing deals it yet" as the justification
-        // for having no field, which stopped being true the moment a real,
-        // droppable modifier could grant resistance to it. Zero for every
+        // Astral (Arcane) typed resistance is one of the six
+        // elemental-family modifiers. Zero for every
         // relic and every modifier authored before this field existed, same
         // as every other stat this codebase adds fields to.
         public int Arcane;

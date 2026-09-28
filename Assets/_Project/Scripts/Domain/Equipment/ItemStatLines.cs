@@ -167,11 +167,9 @@ namespace PrincesPalace.Domain.Equipment
         // A member with no movement still gets a line saying so. Dropping them
         // would make the box change height per hover and, worse, read as though
         // that character had not been considered.
-        // ITEM-MODIFIER PLAN PHASE E: `ModifierLines` used to be one list
-        // shared by the whole squad, printed once above every member's own
-        // block -- correct back when a roll was the same fact for everyone.
-        // PHASE F makes it per-member instead: each line is now coloured
-        // against what THAT member currently has equipped in the slot (a
+        // `ModifierLines` IS PER-MEMBER, not one list shared by the whole
+        // squad: each line is coloured against what THAT member currently
+        // has equipped in the slot (a
         // gain, a loss, or unchanged -- see Core.ItemDescription's
         // ModifierComparisonLines), so two members can legitimately see
         // different colours, or a different set of lines outright, for the

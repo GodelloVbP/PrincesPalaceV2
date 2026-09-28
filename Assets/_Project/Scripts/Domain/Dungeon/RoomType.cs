@@ -9,14 +9,12 @@ namespace PrincesPalace.Domain.Dungeon
     // the moment it is picked on the map.
     //
     // ItemSpawn currently has no weight, so nothing generates it. That is a
-    // gap rather than a decision: the sweep that used to assert every value
-    // was reachable belonged to MapGeneratorTests and went with the grid map.
+    // gap rather than a decision: no sweep asserts every value is reachable.
     public enum RoomType
     {
         // Column 0 of every floor, and ONLY column 0 — never generated as a
-        // middle room, so unlike the old workaround (typing the entrance as
-        // Rest and special-casing its label) an entry room simply cannot show
-        // up anywhere but where it belongs. See DescentMapGenerator.Generate.
+        // middle room, so an entry room simply cannot show up anywhere but
+        // where it belongs. See DescentMapGenerator.Generate.
         Entry,
 
         Fight,

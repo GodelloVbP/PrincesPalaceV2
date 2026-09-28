@@ -4,8 +4,8 @@ using PrincesPalace.Domain.Stats;
 namespace PrincesPalace.Domain.Events
 {
     // The read surface EventRequirement.Evaluate and EventRoll need, and
-    // nothing else -- no save, no ContentDatabase, no RunSnapshot. Phase 2
-    // wires a real implementation over RunSnapshot/SaveData/ContentDatabase;
+    // nothing else -- no save, no ContentDatabase, no RunSnapshot. The real
+    // implementation wires over RunSnapshot/SaveData/ContentDatabase;
     // EditMode tests here hand it a small fake instead, which is the whole
     // point of the interface existing at this layer rather than one level up.
     public interface IEventContext

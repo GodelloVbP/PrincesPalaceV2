@@ -11,10 +11,9 @@ namespace PrincesPalace.Domain.Stats
     // authorable. That is why the enum is worth keeping in step with
     // StatBlock rather than letting the struct be the only list.
     //
-    // Defense (the old single generic mitigation stat) is GONE. Physical
-    // Defense and Magical Defense — formerly PhysicalResistance and
-    // MagicalResistance, renamed rather than re-added — are now the only
-    // defensive stats a combatant carries. See DamagePipeline.AfterDefences
+    // Defense, the single generic mitigation stat, does not exist. Physical
+    // Defense and Magical Defense are the only defensive stats a
+    // combatant carries. See DamagePipeline.AfterDefences
     // for the one place they are read.
     public enum StatType
     {

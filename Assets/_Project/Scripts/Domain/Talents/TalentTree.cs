@@ -43,18 +43,16 @@ namespace PrincesPalace.Domain.Talents
 
     // A character's whole tree, slot by slot.
     //
-    // THIS IS THE SEAM THAT WAS MISSING, and its absence is why kindling an
-    // orb did nothing at all. The screen minted its own ids --
-    // "sheep.p0.s0" -- and wrote those into unlockedTalentIds, while every
-    // consumer of that list matches against the ids in talents.json
-    // ("sheep_ram_root"). Nothing translated, so 294 authored talents were
-    // unreachable: an ember was spent, an orb lit, and no effect was ever
-    // applied.
+    // THIS IS THE SEAM: the screen's own ids ("sheep.p0.s0") and the ids
+    // every consumer matches against in talents.json ("sheep_ram_root") are
+    // different namespaces, and this type is what translates between them.
+    // Without it an ember spent and an orb lit would apply no effect,
+    // because nothing would match unlockedTalentIds against a real talent.
     //
-    // The graph itself needed no fixing. talents.json declares its own
+    // The graph itself needs no fixing. talents.json declares its own
     // prerequisites and they agree with TalentSkeleton.Parents exactly, for
     // all 294 -- so the shape the screen walks and the shape combat checks are
-    // already the same shape, and only the names were wrong.
+    // the same shape, and only the names differ.
     public sealed class TalentTree
     {
         // Empty, so a character whose content is missing entirely still draws

@@ -4,8 +4,7 @@ using PrincesPalace.Domain.Combat;
 namespace PrincesPalace.Domain.Stats
 {
     // WHAT ONE ABILITY SCORE ACTUALLY DOES, in the exact numbers the game
-    // reads -- the attributes panel's one job (owner item: "showing stat
-    // effects"). Every figure below is READ off AbilityDerivation/ScalingSet
+    // reads -- the attributes panel's one job. Every figure below is READ off AbilityDerivation/ScalingSet
     // by calling the real method, never a restated constant, so a retuned
     // rate or divisor cannot leave the panel's own prose lying about it
     // (CLAUDE.md gotcha #5's twin -- a comment can drift from a formula the
@@ -136,8 +135,8 @@ namespace PrincesPalace.Domain.Stats
             // score's short name glued to its grade, the multiplier in
             // parentheses. A bare letter did not survive the UI font -- in
             // its squared face "D" and "0" are one glyph, so "spell scaling:
-            // D x0.97" read as the number 0 followed by a second number
-            // (QA 2026-09-26). Gluing it to the score was not enough either
+            // D x0.97" reads as the number 0 followed by a second number.
+            // Gluing it to the score was not enough either
             // ("INT-D" still read as "INT-0"), so the letter also goes
             // through ScalingGrades.Display, which draws it in a face where
             // D and 0 differ.

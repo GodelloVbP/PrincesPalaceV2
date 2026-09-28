@@ -17,8 +17,8 @@ namespace PrincesPalace.Domain.Events
     // there. Loops iterate to a fixpoint; sets only ever shrink once seeded,
     // so the walk terminates.
     //
-    // PRESENCE IS SQUAD MEMBERSHIP ONLY. A knocked-out member may speak
-    // (owner, 2026-09-25), so a future `alive` requirement guarantees
+    // PRESENCE IS SQUAD MEMBERSHIP ONLY. A knocked-out member may speak,
+    // so a future `alive` requirement guarantees
     // nothing extra here. Nothing an event does changes the squad
     // mid-event, which is what lets a guarantee carry across pages.
     //

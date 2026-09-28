@@ -1,6 +1,6 @@
 namespace PrincesPalace.Domain.Stats
 {
-    // THE damage number -- balance redesign Phase 3 (D3).
+    // THE damage number.
     //
     //     WP = round(attackAtTier x (1 + 0.15 x plus))
     //

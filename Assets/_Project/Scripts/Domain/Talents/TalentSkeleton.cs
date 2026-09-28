@@ -6,8 +6,8 @@ using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.Talents
 {
-    // The FIXED per-path node graph every talent path shares (Talent Tree
-    // v2, 2026-08-02): a single root, a 3x3 grid climbing to one
+    // The FIXED per-path node graph every talent path shares: a single
+    // root, a 3x3 grid climbing to one
     // convergence, then a 3-way branch climbing to the capstone. Slot index
     // (0-20) is what talents.json's `row` field addresses -- this table is
     // the ONLY place the shape itself is defined. The screen uses it to
@@ -17,9 +17,10 @@ namespace PrincesPalace.Domain.Talents
     //
     // DESCRIBED AS THE ROWS IT IS MADE OF, and derived from there.
     //
-    // Depth, DxSlot, Kind and Parents used to be four hand-aligned arrays of
-    // 21 entries. Nothing tied them together: a slot moved in one and not the
-    // others would not fail to compile and would not look wrong -- it would
+    // Depth, DxSlot, Kind and Parents are derived from Rows rather than
+    // stored as four separate hand-aligned arrays: nothing would tie four
+    // arrays together, so a slot moved in one and not the others would not
+    // fail to compile and would not look wrong -- it would
     // quietly draw an orb in the wrong place, or unlock a node from the wrong
     // parent, or price it as the wrong role. And the same shape is what
     // talents.json is authored against, 294 talents addressed by (column, row),

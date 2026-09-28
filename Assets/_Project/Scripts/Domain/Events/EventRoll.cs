@@ -9,12 +9,12 @@ namespace PrincesPalace.Domain.Events
     // event is eligible on floor F when its Floors list contains F (empty
     // means every floor), it has not been seen this run, and its event-level
     // Requires all pass. Empty pool returns "" rather than throwing -- the
-    // caller (RunOrchestrator.Event.cs, phase 2) falls through to today's
+    // caller (RunOrchestrator.Event.cs) falls through to today's
     // RoomResolver.Resolve path when that happens.
     public static class EventRoll
     {
         // The caller passes `rng` (a stream keyed to (runSeed, step, nodeId)
-        // in phase 2 -- RngStreams.Event, deliberately not shared with
+        // -- RngStreams.Event, deliberately not shared with
         // Treasure's stream, see plan contract 3) rather than this method
         // owning a seed, so the pick stays reproducible from whatever state
         // the caller is already threading through a run.
