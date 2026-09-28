@@ -117,7 +117,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 
@@ -130,7 +130,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 
@@ -152,13 +152,13 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
             Click("Slot1Button");
             Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 
@@ -171,13 +171,13 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
             Click("Slot0Button");
             Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 
@@ -232,14 +232,14 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
             Click("Slot0Button");
             Click("Slot1Button");
             Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 
@@ -262,12 +262,12 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
             Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 
@@ -286,7 +286,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
             Click("Slot4Button");
@@ -315,7 +315,7 @@ namespace PrincesPalace.PlayModeTests
             Click("PlayButton");
 
             // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 

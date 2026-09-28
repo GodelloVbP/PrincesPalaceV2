@@ -369,7 +369,7 @@ namespace PrincesPalace.Domain.Party
         // asking to drop a card the model was never told the id of -- not a
         // state a player can reach through the UI, so it throws rather than
         // returning a blocked toast (Domain throws on programmer error;
-        // CODE_STANDARDS.md SS5).
+        // docs/CODE_STANDARDS.md "Functions").
         public PartyOutcome Drop(PartySelectionSource from, int targetSeat)
         {
             if (Mode == PartyMode.ViewOnly)

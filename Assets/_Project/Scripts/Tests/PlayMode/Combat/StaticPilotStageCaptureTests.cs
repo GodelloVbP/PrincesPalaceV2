@@ -210,7 +210,7 @@ namespace PrincesPalace.PlayModeTests
 
             session.Begin();
 
-            // ASSERTED RATHER THAN SKIPPED PAST (docs/CODE_STANDARDS.md §8): if
+            // ASSERTED RATHER THAN SKIPPED PAST (.claude/rules/tests.md "Writing tests"): if
             // initiative ever stops going on Speed the witch's beat is not in
             // the queue and this fixture would quietly photograph an empty
             // stage.

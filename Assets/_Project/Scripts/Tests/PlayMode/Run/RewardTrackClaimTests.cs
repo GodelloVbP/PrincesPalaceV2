@@ -101,7 +101,7 @@ namespace PrincesPalace.PlayModeTests
             row.onClick.Invoke();
 
             // TWICE. Start() runs one frame after SetActive(true), not
-            // synchronously -- docs/CODE_STANDARDS.md section 5, and clicking a
+            // synchronously -- .claude/rules/tests.md "Writing tests", and clicking a
             // button before it has had that frame is the flake this avoids.
             yield return null;
             yield return null;

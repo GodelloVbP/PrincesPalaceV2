@@ -815,7 +815,7 @@ namespace PrincesPalace.Domain.UiKit
         // TalentPrev/TalentNext are gone -- nothing talent-specific was left.
         //
         // WHAT DELIBERATELY DOES NOT MOVE is the decoration, and this is the
-        // CODE_STANDARDS SS2 line about a helper you are entitled to bypass.
+        // .claude/rules/ui.md "Existing helpers (use before writing one)" line about a helper you are entitled to bypass.
         // The seven disagree: the relic draft and the shop start all three
         // nodes inactive, three sites mark the label AsDecor and the shop's is
         // not decor at all, two style the label as TacticalData. Baking any of

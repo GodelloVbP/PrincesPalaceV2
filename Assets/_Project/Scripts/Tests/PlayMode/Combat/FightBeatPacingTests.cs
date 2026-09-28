@@ -53,7 +53,7 @@ namespace PrincesPalace.PlayModeTests
         // THE FLOOR under a plain rush's out-tween, pinned as a literal rather
         // than read off FightBeatPlayer's own private constant -- the private
         // copy is what this test exists to hold honest, so reading it back
-        // would make the assertion a tautology (docs/CODE_STANDARDS.md #8).
+        // would make the assertion a tautology (CLAUDE.md gotcha 5).
         private const float ChargeWindupFloorSeconds = 0.18f;
 
         // MEASURED ON THE BEAT'S OWN CLOCK, at a pinned frame length. The

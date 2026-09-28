@@ -153,7 +153,7 @@ namespace PrincesPalace
 
         // Chooses which collected title shows. No validation here that
         // `level` actually names a collected Title node -- Character has no
-        // ContentDatabase/track to check against (CODE_STANDARDS §1: content
+        // ContentDatabase/track to check against (docs/CODE_STANDARDS.md "Layering": content
         // concepts do not belong in the save-shaped Data layer), so the
         // caller (Core.CharacterIdentity) is expected to have already
         // confirmed `level` is one of CollectedIdentity's own Title entries
@@ -261,7 +261,7 @@ namespace PrincesPalace
         // DEPTH IS PASSED IN rather than read off RunManager here. This is
         // the save-shaped Data layer; RunManager is Core, and a save object
         // reaching for the live run to answer a question about itself is the
-        // dependency CODE_STANDARDS §1 exists to keep out. The caller holds
+        // dependency docs/CODE_STANDARDS.md "Layering" exists to keep out. The caller holds
         // the answer already -- in a run it is the run's step, in the hub it
         // is 0.
         public int FightsToNextLevel(int depthStep)
@@ -284,7 +284,7 @@ namespace PrincesPalace
         // What is left here is the save-side wrapper: fetch the table, apply,
         // copy the three fields back. The loop moved so a career's worth of
         // level-ups can be pinned under `dotnet test` without a save, a scene
-        // or Unity -- CODE_STANDARDS §1's "arithmetic to Domain, wrapper
+        // or Unity -- docs/CODE_STANDARDS.md "Layering"'s "arithmetic to Domain, wrapper
         // stays" -- and so that the cap at RewardTrack.MaxLevel is enforced
         // in exactly one place rather than wherever experience happens to be
         // added.

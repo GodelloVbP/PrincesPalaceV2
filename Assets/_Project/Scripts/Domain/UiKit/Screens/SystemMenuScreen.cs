@@ -68,7 +68,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // partyRosterCardCount defaults to 3, matching how many characters
         // characters.json authors today -- a COMPATIBILITY default, not a
-        // design choice (CODE_STANDARDS.md 5): ScreenRegistry, which builds
+        // design choice (docs/CODE_STANDARDS.md "Functions"): ScreenRegistry, which builds
         // this with no argument, is out of scope for the package that added
         // the parameter, so the
         // default keeps every existing caller compiling. Wiring the REAL

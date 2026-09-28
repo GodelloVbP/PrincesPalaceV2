@@ -33,7 +33,7 @@ namespace PrincesPalace.PlayModeTests
     // proving "the interrupted beat's impact lands when its ORIGINAL pace
     // predicts" by computing FightBeatPlayer.Scaled(...) and checking a
     // measured time against it would recompute the very formula under test
-    // (CODE_STANDARDS.md Sec8's tautology rule -- a test that used the same
+    // (CLAUDE.md gotcha 5's tautology rule -- a test that used the same
     // arithmetic on both sides would still pass if that arithmetic were
     // wrong). What actually GUARANTEES the impact lands on schedule is that
     // FightBeatPlayer.PlayerSpeedMultiplier -- the one number Scaled/Unscaled

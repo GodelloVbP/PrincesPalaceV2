@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Tests
     // reward_tracks.json stopped resolving and every test here -- all three
     // walk every content type through ResolvedByFolder -- failed at the same
     // first line. That was a class-level, dated, greppable disable rather
-    // than a skip keyed to content shape (CODE_STANDARDS §8's distinction),
+    // than a skip keyed to content shape (.claude/rules/tests.md "Writing tests"'s distinction),
     // and phase 4, which rewrote the three tracks, is what removes it.
     public class ContentStampIdsTests
     {

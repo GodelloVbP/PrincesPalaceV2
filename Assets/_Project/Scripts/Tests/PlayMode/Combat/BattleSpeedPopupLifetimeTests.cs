@@ -102,11 +102,11 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadAndBind();
 
             // expectedLife is a LITERAL per row, not FightBeatPlayer.Scaled(0.85f)
-            // called here -- CODE_STANDARDS Sec8 refuses recomputing the
+            // called here -- CLAUDE.md gotcha 5 refuses recomputing the
             // production formula to build a test's own expected value, because
             // a test that used the same arithmetic on both sides would still
             // pass if that arithmetic were wrong (the Mathf.RoundToInt /
-            // Math.Round divergence Sec8 cites is exactly this shape). Pinned
+            // Math.Round divergence gotcha 5 cites is exactly this shape). Pinned
             // by hand at BeatSpeedMultiplier 1 (this fixture never touches
             // it): Pace = BeatSpeedMultiplier * playerSpeed, and
             // 0.85s / Pace is 2.55 at player 1/3 and 0.6375 at player 4/3.

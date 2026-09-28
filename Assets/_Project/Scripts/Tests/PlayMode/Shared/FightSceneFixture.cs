@@ -16,7 +16,7 @@ namespace PrincesPalace.PlayModeTests
     // Art) defines its own local, private LoadFight-shaped coroutine, none
     // of them shared. Retrofitting all of them onto one helper is an
     // unrelated multi-file refactor with its own risk and review burden
-    // (docs/WORKFLOW.md Sec4's freeze protocol would apply), so this file
+    // (docs/WORKFLOW.md "Parallel sessions"'s freeze protocol would apply), so this file
     // is new -- built for T4/T5/T6/T8, the fixtures this plan actually
     // needs to be deterministic, rather than a repo-wide consolidation.
     //
@@ -38,7 +38,7 @@ namespace PrincesPalace.PlayModeTests
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             // Two settle frames, the convention every existing Fight-scene
             // fixture already uses: Start() runs one frame after a fresh
-            // scene's objects activate (CODE_STANDARDS.md Sec8), and
+            // scene's objects activate (.claude/rules/tests.md "Writing tests"), and
             // FightBootstrap.Start is exactly the Start() this is waiting
             // out.
             yield return null;

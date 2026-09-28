@@ -34,7 +34,7 @@ namespace PrincesPalace.PlayModeTests
     //
     // THE PATH IS A LITERAL. ContactCues.ImpactBurstPath is the constant this
     // string duplicates, and ContactCues is internal with InternalsVisibleTo
-    // naming the Editor assembly only (docs/CODE_STANDARDS.md section 4a), so a
+    // naming the Editor assembly only (.claude/rules/ui.md "Wiring"), so a
     // PlayMode fixture reaches the literal or reaches nothing.
     //
     // NEITHER LAYER AUTHORS sort, until OR facing, also deliberately: this is
