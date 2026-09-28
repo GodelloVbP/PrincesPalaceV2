@@ -36,7 +36,7 @@ debt), and a struck finding gets its number removed.
 - Save & run lifecycle: #87, #102, #112, #123, #220, #255
 - Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
-- Tooling / tests / workflow: #94, #95, #96, #98, #103, #137, #164, #263
+- Tooling / tests / workflow: #94, #95, #96, #98, #103, #137, #164, #263, #269
 - Balance / economy: #37, #41, #82, #83, #85
 - Recorded decisions, not debt: #200, #201, #208, #215, #216, #217, #218
 
@@ -2858,3 +2858,20 @@ finds nothing but one incidental comment mention of "CrowdControl" in
 filed as a numbered finding here.
 
 ### ~~268. Docs/workflow drift found and fixed the same day~~ — fixed in `35915668`: CLAUDE.md's fragment sentence at :63, the commit-gate rule restated three times (WORKFLOW.md §5 now points at TESTING.md), CODE_MAP.md's `SelectHaloPainter` self-contradiction, `ItemComparisonPanel.cs`'s stale "next thing due to be rebuilt" header, and the archive index's five-doc gap
+
+### 269. Sixteen content-hashed files cite deleted docs in comments
+
+`ContentInputHash` hashes these files' comments, so their stale citations
+(`docs/archive/*`, numbered `CODE_STANDARDS` sections) could not be fixed
+without a content rebuild: `Core/Content/ContentDatabase.cs:972`,
+`ContentDatabase.Effective.cs:287`, `ContentDatabase.Validation.cs:686`,
+`RewardTrackDefinitionAsset.cs:39`; `Domain/Combat/ModifierEffect.cs:94`,
+`SkillEffect.cs:295`, `Session/StageApproach.cs:51`;
+`Domain/Content/RawRewardTrackEntry.cs:6`, `ResolvedRewardTrack.cs:9,98`,
+`ResolvedSkill.cs:605`, `ResolvedSpellTier.cs:28`,
+`RewardTrackEntryResolver.cs:15,73,172`, `SpellLayerRules.cs:14`;
+`Domain/Progression/RewardTrack.cs:25,204,248,311,341`;
+`Editor/ContentBuilder.cs:166` (paths under `Assets/_Project/Scripts/`).
+Fix: rewrite them present-tense (drop the citation or name the live doc
+section) and run `-BuildContent` in the same commit.
+Route: fixer on Windows; gate `-Changed -BuildContent`.
