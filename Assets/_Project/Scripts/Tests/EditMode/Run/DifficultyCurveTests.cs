@@ -10,8 +10,7 @@ namespace PrincesPalace.Domain.Tests
         // 1.075^step here would assert only that the method is deterministic
         // (CLAUDE.md gotcha 5, AUDIT.md #18).
         //
-        // PHASE 5B (D6) RETUNE: 77 -> 75 permille. Step 8 is one leg/floor,
-        // 80 is the whole gear ladder.
+        // Step 8 is one leg/floor, 80 is the whole gear ladder.
         [TestCase(0, 1.000f)]
         [TestCase(8, 1.783f)]
         [TestCase(16, 3.181f)]
@@ -22,11 +21,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expected, DifficultyCurve.HealthMultiplier(step), expected * 0.001f);
         }
 
-        // PHASE 5B (D6) RETUNE: 52 -> 38 permille -- the attack rate moved
-        // further than health's did, because enemy DEFENSE came off the
-        // depth curve entirely in the same retune (see ScaleAttack's own
-        // header) and the old 52 was tuned for a world where a growing
-        // defense partly absorbed it.
+        // The attack rate moves further than health's does, because enemy
+        // DEFENSE is off the depth curve entirely (see ScaleAttack's own
+        // header): with no growing defense partly absorbing it, the attack
+        // multiplier alone has to carry more of the climb.
         [TestCase(0, 1.000f)]
         [TestCase(8, 1.348f)]
         [TestCase(16, 1.816f)]
@@ -36,14 +34,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expected, DifficultyCurve.AttackMultiplier(step), expected * 0.001f);
         }
 
-        // GEOMETRIC, and this replaces an assertion that said the opposite.
-        //
-        // It used to read "TheCurveIsLinear_NotCompounding", and it was right
-        // for the game it was written in: a fully honed top-tier set was worth
-        // about 4x a starting one, so a compounding dungeon outran the player.
-        // GearScaling and AbilityDerivation together now put a geared
-        // character's power at orders of magnitude across the ladder. A
-        // straight line is no longer a difficulty curve.
+        // GEOMETRIC. GearScaling and AbilityDerivation together put a
+        // geared character's power at orders of magnitude across the
+        // ladder, so a straight line is not a difficulty curve.
         [Test]
         public void TheCurveCompounds_RatherThanClimbingInAStraightLine()
         {
@@ -174,30 +167,22 @@ namespace PrincesPalace.Domain.Tests
         // DifficultyCurve's own two rates drifting apart by an order of
         // magnitude.
         //
-        // ROUTED THROUGH CombatMath.AfterResistance (fixed 2026-08-26) --
-        // `Swings` used to hand-roll the mitigation division itself
-        // (`Math.Max(1, raw * 100 / (100 + defense))`), deliberately NOT
-        // going through CombatMath.ComputeAttackDamage, because that function
-        // still multiplied by CombatMath.DamageScale (x5) at the time this
-        // was written, and this file has no authority over the weapon model
-        // that constant belonged to. ComputeAttackDamage no longer scales at
-        // all (see its own header), so that reason is gone -- but this test
-        // still constructs no real weapon/CombatantState (that stays Phase
-        // 3/4's job), so it now calls the real AfterResistance function
-        // directly instead of duplicating its formula by hand, which is the
-        // "route through the actual production function" this file can offer
-        // without adopting the weapon model wholesale.
+        // ROUTED THROUGH CombatMath.AfterResistance, not
+        // CombatMath.ComputeAttackDamage: this file has no authority over
+        // the weapon model, and constructing a real weapon/CombatantState
+        // stays Phase 3/4's job, so it calls the real AfterResistance
+        // function directly instead of duplicating its formula by hand,
+        // which is the "route through the actual production function" this
+        // file can offer without adopting the weapon model wholesale.
         //
-        // PHASE 5B (D6): the golem's own defense is now UNSCALED at every
-        // depth (defense no longer rides DifficultyCurve at all) -- only its
-        // HEALTH pool (via ScaleHealth) changes with step. `playerRawDamage`
-        // stands in for the player's own weapon-driven progression, which
-        // this file has no authority to compute (that is Phase 3/4's
-        // WeaponDamageTests/WeaponEntryResolverTests); the same two
-        // magnitude-only literals from before the D3 weapon-model rewrite
-        // are kept here because this test only needs a "grows a lot" input,
-        // not an exact figure -- neither was ever on the DamageScale path,
-        // so neither needed to change when that bug was fixed.
+        // The golem's own defense is UNSCALED at every depth (defense does
+        // not ride DifficultyCurve at all) -- only its HEALTH pool (via
+        // ScaleHealth) changes with step. `playerRawDamage` stands in for
+        // the player's own weapon-driven progression, which this file has
+        // no authority to compute (that is Phase 3/4's
+        // WeaponDamageTests/WeaponEntryResolverTests); these are
+        // magnitude-only literals, kept here because this test only needs a
+        // "grows a lot" input, not an exact figure.
         [Test]
         public void AGolemTakesAboutTheSameOrderOfMagnitudeOfSwingsAtEveryDepth()
         {
@@ -219,9 +204,7 @@ namespace PrincesPalace.Domain.Tests
 
         // The canonical mitigation equation (D1/DamagePipeline's own header),
         // via the real CombatMath.AfterResistance rather than a hand-rolled
-        // copy of its formula -- see the header above for why this no longer
-        // needs to dodge CombatMath.ComputeAttackDamage. Defense is passed
-        // through UNSCALED, per D6.
+        // copy of its formula. Defense is passed through UNSCALED, per D6.
         private static float Swings(int health, int defense, int playerRawDamage, int step)
         {
             int hit = CombatMath.AfterResistance(playerRawDamage, defense);
@@ -229,21 +212,13 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE MISSING HALF OF THE INVARIANT ABOVE. AGolemTakesAboutTheSame...
-        // pins player-attacks-enemy; this pins enemy-attacks-player, which is
-        // exactly the gap a user report walked through under the OLD (pre-D6)
-        // cadence and formula: Dungeon Warden's authored attack scaled to
-        // 2.25x at step 16 -- the EARLIEST a boss room could appear under the
-        // old StepsPerBoss=16 -- for a devastating hit against a starting
-        // player's flat `Defense` stat, back when that single subtractive
-        // stat existed.
-        //
-        // PHASE 5B (D6) REWRITE: the earliest a boss can appear is now step 8
-        // (DescentMapGenerator: boss forced at step ≡ 0 mod 8), `Defense` no
-        // longer exists (split into PhysicalDefense/MagicalDefense), and
-        // mitigation is the canonical percentage equation, not the old
-        // subtractive one. `bossAttack`/`startingPlayerDefense` are still
-        // hand-authored magnitude stand-ins (this file has no authority over
-        // real enemy or gear content, D5/D4's job respectively) — the two
+        // pins player-attacks-enemy; this pins enemy-attacks-player: the
+        // earliest a boss can appear is step 8 (DescentMapGenerator: boss
+        // forced at step ≡ 0 mod 8), and mitigation is the canonical
+        // percentage equation against PhysicalDefense/MagicalDefense.
+        // `bossAttack`/`startingPlayerDefense` are hand-authored magnitude
+        // stand-ins (this file has no authority over real enemy or gear
+        // content, D5/D4's job respectively) — the two
         // pairs below are chosen to sit in the same neighbourhood as §P's own
         // "Noob @F1" profile (PDEF 34, MDEF 8) and its earliest-boss row
         // (hollow_choir @ step 8), without asserting this test is that pin.

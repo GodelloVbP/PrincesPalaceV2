@@ -9,31 +9,19 @@ using UnityEngine.UI;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // Phase 3a of docs/GAMEPAD_NAVIGATION_PLAN.md: the hub's real shape is
+    // docs/GAMEPAD_NAVIGATION_PLAN.md: the hub's real shape is
     // four staged buildings and a gate (HubAnchors), not a tab bar -- see
     // HubController.WireNavigation's own header for the RING and the two
     // columns this pins, and for the measured screen positions they were
     // authored from.
     //
-    // The 2x2 Grid this file used to pin was REJECTED BY THE OWNER on real
-    // hardware ("when I'm top right on relics and I go to the right with the
-    // joystick, it doesn't take me to character sheet but to talents"), so
-    // the tests that encoded it are adapted rather than deleted: each still
-    // asks about the same pair of controls, against the answer the owner
-    // actually wants.
-    //
-    // ROUND 2 (2026-09-19): the ring's Left/Right assertions below are
-    // adapted again. Round 1 (a9f89ebe) hand-typed the ring in the order the
-    // owner's words gave it literally -- "Left goes Principality then
-    // Talents" -- which this file pinned verbatim. On real screen x, though,
-    // Talents (-349) sits BETWEEN Principality (-673) and the gate (0), so
-    // that order made Left overshoot Talents and land back on it on the
-    // second press -- exactly the follow-up report ("press left twice you
-    // are left middle"). HubController.WireNavigation now sorts the ring by
-    // each control's actual x instead of by hand, so Left off the gate
-    // reaches Talents (the nearer one) before Principality. See
-    // HubRingAdjacencyTests (EditMode) for the same claim pinned without a
-    // scene.
+    // HubController.WireNavigation sorts the ring by each control's actual
+    // x rather than by hand: Talents (-349) sits BETWEEN Principality
+    // (-673) and the gate (0), so hand-ordering them "Principality then
+    // Talents" would make Left overshoot Talents and land back on it on the
+    // second press. Sorting by x makes Left off the gate reach Talents (the
+    // nearer one) before Principality. See HubRingAdjacencyTests (EditMode)
+    // for the same claim pinned without a scene.
     // Driven through the REAL production dispatcher (scripted BaseInput via
     // inputOverride, `yield return null`, assert resulting state), the same
     // shape SystemMenuGamepadNavigationTests already established for this
@@ -112,13 +100,12 @@ namespace PrincesPalace.PlayModeTests
                 "the gate is the hub's stated primary action (HubScreen's own comment) and its declared entry");
         }
 
-        // ---- the owner's own two expectations, pinned literally ------------
+        // ---- pinned literally, nearest first ---------------------------------
         //
         // Left steps to the nearest building on screen, then the next
-        // nearest -- Talents (x -349) before Principality (x -673). Round 1
-        // pinned the owner's words ("Left goes to Principality, then Left
-        // again to Talents") verbatim instead, which put the farther
-        // building first; this is the 2026-09-19 correction.
+        // nearest -- Talents (x -349) before Principality (x -673): putting
+        // the farther building first is the overshoot bug this guards
+        // against.
         [UnityTest]
         public IEnumerator Left_FromTheGate_ReachesTalents_ThenPrincipality()
         {
@@ -254,7 +241,7 @@ namespace PrincesPalace.PlayModeTests
                 "from Talents, the building nearest it on screen");
         }
 
-        // The required action (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3's own
+        // The required action (docs/GAMEPAD_NAVIGATION_PLAN.md's own
         // per-screen test list): CharacterSheetButton's Submit, not the
         // gate's -- StartRunButton's own action is an unscripted-length
         // coroutine ending in a real scene load (BeginDescentTransition ->

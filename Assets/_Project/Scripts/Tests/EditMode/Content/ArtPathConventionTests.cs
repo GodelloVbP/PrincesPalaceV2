@@ -34,10 +34,10 @@ namespace PrincesPalace.Domain.Tests
         // would be the stutter the nesting removed. The sweep found
         // "vfx.sfxPath" and missed "vfx.path" until this said so.
         //
-        // AND "Art", added 2026-09-10 with RawCharacterEntry.plateArt. That
+        // AND "Art", from RawCharacterEntry.plateArt. That
         // field is a Resources path like portraitPath beside it and could
         // have been called plateArtPath -- but it is the character's PLATE,
-        // one authored thing, and the owner names it that way. Widening the
+        // one authored thing, and the content spec names it that way. Widening the
         // sweep is the cheaper half of that choice and strictly the safer
         // one: a future `conceptArt` holding a path is now seen and refused
         // until it is classified, where before it would have been invisible
@@ -45,15 +45,15 @@ namespace PrincesPalace.Domain.Tests
         // NOT a path is the false positive, and the fix for one is to
         // classify it or rename it, which is what the sweep is for.
         //
-        // AND "backdrop", added 2026-09-25 with the dialogue stage: an event's
-        // and a page's layer-0 art, named by the plan's data section. Same
-        // trade as "Art" above -- the sweep widens by one name rather than the
-        // field taking a suffix the owner's spec does not use.
+        // AND "backdrop": an event's and a page's layer-0 art, named by the
+        // plan's data section. Same trade as "Art" above -- the sweep widens
+        // by one name rather than the field taking a suffix the content
+        // spec does not use.
         //
-        // AND "...Sfx" and "ambience", added 2026-09-28 with event fights
-        // (RawEventFight.roundSfx / .ambience), named by the plan's content
-        // shape. Same trade again: two sound paths the sweep would otherwise
-        // never see, so a wrong convention would fail silently.
+        // AND "...Sfx" and "ambience" (RawEventFight.roundSfx / .ambience),
+        // named by the plan's content shape. Same trade again: two sound
+        // paths the sweep would otherwise never see, so a wrong convention
+        // would fail silently.
         private static bool IsPathShaped(string fieldName) =>
             fieldName.EndsWith("Path") || fieldName.EndsWith("Sheet")
             || fieldName.EndsWith("Art") || fieldName.EndsWith("Sfx")
@@ -63,25 +63,21 @@ namespace PrincesPalace.Domain.Tests
 
         // ONE LEVEL DOWN AS WELL AS ON THE ENTRY ITSELF, reported dotted.
         //
-        // A raw entry's path fields used to all be flat. SpellPresentation moved
-        // six of them into a nested "vfx" block, and a sweep that only looked at
-        // the entry's own fields stopped seeing two of them -- which made the
-        // reverse test below declare "vfx.path" orphaned while the resolver was
-        // checking it on every skill in the game.
+        // A sweep that only looked at the entry's own fields would miss
+        // SpellPresentation's nested "vfx" block -- which would make the
+        // reverse test below declare "vfx.path" orphaned while the resolver
+        // is checking it on every skill in the game.
         //
-        // ARRAYS TOO, since a presentation's layers are one. The walk used to
-        // stop at arrays outright and descend exactly one level, which was
-        // right while the only nesting was a flat "vfx" block -- and became a
-        // blind spot the moment that block gained SpellLayer[]: the two paths a
-        // layer carries would have read as unclassified to the resolver and as
-        // orphans to the reverse test, with neither able to see the other's
-        // half.
+        // ARRAYS TOO, since a presentation's layers are one: a walk that
+        // stopped at arrays and descended exactly one level would leave the
+        // two paths a SpellLayer carries reading as unclassified to the
+        // resolver and as orphans to the reverse test, with neither able to
+        // see the other's half.
         //
         // BOUNDED RATHER THAN ARBITRARY. MaxDepth stops the walk, and the chain
         // of types already visited on the way down is what makes a self-
         // referencing DTO terminate rather than recurse forever -- the cycle
-        // check the old "one level" comment correctly said a deeper walk would
-        // need.
+        // check a deeper walk needs.
         private const int MaxDepth = 4;
 
         private static List<(string Type, string Field)> PathFieldsOnRawEntries()
@@ -313,10 +309,9 @@ namespace PrincesPalace.Domain.Tests
             // rule was shared. Re-asserted here so routing them through
             // ArtPathConvention cannot have quietly loosened either.
             //
-            // BOTH ARE RuntimeLoaded NOW, so both reject an Assets/ path --
-            // portraitPath was the baked one until 2026-09-06 and this case was
-            // its mirror image. Sharing a convention is not the same as being
-            // unchecked, which is the thing this test is here to notice.
+            // BOTH ARE RuntimeLoaded, so both reject an Assets/ path.
+            // Sharing a convention is not the same as being unchecked,
+            // which is the thing this test is here to notice.
             var portrait = MinimalCharacter();
             portrait.portraitPath = "Assets/_Project/Resources/Portraits/sheep.png";
             var battle = MinimalCharacter();
@@ -358,11 +353,11 @@ namespace PrincesPalace.Domain.Tests
                 intelligence = 8,
                 charisma = 8,
 
-                // Required since 2026-09-10, and checked BEFORE the two path
-                // fields in TryResolveOne -- so without it every case here
-                // would refuse for a theme reason and the StringAssert on
-                // "portraitPath" would fail, which is the wrong-reason
-                // masquerade this method's own header is about.
+                // Checked BEFORE the two path fields in TryResolveOne -- so
+                // without it every case here would refuse for a theme
+                // reason and the StringAssert on "portraitPath" would fail,
+                // which is the wrong-reason masquerade this method's own
+                // header is about.
                 plateTheme = "Blue",
             };
         }

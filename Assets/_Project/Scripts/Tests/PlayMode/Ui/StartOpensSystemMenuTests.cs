@@ -13,15 +13,14 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // AUDIT.md #155, closed and then RE-AIMED by the owner's 2026-09-19
-    // call: reaching the system menu from a root screen is Start's job, not
+    // Reaching the system menu from a root screen is Start's job, not
     // Cancel's. The map and the fight are where that is worth proving,
     // because they are the two roots whose Cancel used to carry it.
     //
     // THE PAIRING IS THE POINT, not either half alone: Start opens the menu
-    // at any fight depth, and B no longer does at any depth. A test for only
+    // at any fight depth, and B does not at any depth. A test for only
     // the first would still pass with B opening the menu as well, which is
-    // exactly the behaviour the owner asked to be rid of.
+    // exactly the behaviour this guards against.
     //
     // Driven through the REAL dispatcher (scripted BaseInput via
     // inputOverride, `yield return null`, assert resulting state), never a
@@ -185,10 +184,8 @@ namespace PrincesPalace.PlayModeTests
                 "Cancel inside a target pick belongs to OnBackPressed's existing step-back, not to the menu");
 
             // PROVEN BY WHAT A MOVE DOES, rather than by reading a private
-            // depth. The old proof -- "a second Cancel finds nothing to
-            // consume and opens the menu" -- died with the owner's call, so a
-            // depth probe replaces it: at Root a vertical flick walks the
-            // VERB column, inside a target pick it walks the enemy row.
+            // depth: at Root a vertical flick walks the VERB column, inside
+            // a target pick it walks the enemy row.
             int verbBefore = _fight.FocusedVerbForTest;
             yield return MoveVerticalFrame();
 
@@ -231,13 +228,11 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheMap();
 
-            // Phase 3a's rollout (docs/GAMEPAD_NAVIGATION_PLAN.md,
-            // MapController.RefreshNavLinks): the map now declares a real
-            // Graph -- explicit links only, off RunManager.Choices() -- so
-            // this is no longer the "nothing to remember" case an earlier
-            // draft of this test pinned. Seed 4242's entry is its current
-            // node's first reachable choice, MapNode3 (depth 1, slot 0) --
-            // literal, pinned the same way MapGamepadNavigationTests pins it.
+            // MapController.RefreshNavLinks: the map declares a real
+            // Graph -- explicit links only, off RunManager.Choices().
+            // Seed 4242's entry is its current node's first reachable
+            // choice, MapNode3 (depth 1, slot 0) -- literal, pinned the
+            // same way MapGamepadNavigationTests pins it.
             var entry = GameObject.Find("MapNode3");
             Assert.IsNotNull(entry, "seed 4242 should still produce a choice at depth 1, slot 0");
 

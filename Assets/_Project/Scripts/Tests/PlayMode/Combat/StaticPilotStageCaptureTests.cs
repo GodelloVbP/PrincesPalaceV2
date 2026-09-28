@@ -65,11 +65,11 @@ namespace PrincesPalace.PlayModeTests
         // half of the pilot's four questions ("does the actor return cleanly
         // to formation?") that a shorter window cannot answer.
         //
-        // AND IT STAYS 42 FRAMES, deliberately, even though since 2026-09-19
-        // the strip no longer reaches the end of the STRUCK figure's reel: a
-        // hit figure dwells 0.81s at full extent and takes another 0.64s to
+        // AND IT STAYS 42 FRAMES, deliberately, even though the strip does
+        // not reach the end of the STRUCK figure's reel: a hit figure
+        // dwells 0.81s at full extent and takes another 0.64s to
         // spring home (FightBeatPlayer's RecoilDwellSeconds and
-        // RecoilReturnSeconds, the owner's "4x as slow"), which lands 45
+        // RecoilReturnSeconds, "4x as slow"), which lands 45
         // frames past the impact. Frame-for-frame comparability with every
         // strip taken before it is the stated reason this fixture names one
         // fixed subject at all, and a longer strip would forfeit that for
@@ -92,9 +92,9 @@ namespace PrincesPalace.PlayModeTests
         private CombatantState _hero;
         private CombatantState _witch;
 
-        // RESOLVED FROM CONTENT, NOT READ OFF THE STAGE. The stage can no
-        // longer be trusted to still be idle by the time anything asks it:
-        // Bind starts the witch's swing itself now (the fix this fixture
+        // RESOLVED FROM CONTENT, NOT READ OFF THE STAGE. The stage cannot be
+        // trusted to still be idle by the time anything asks it:
+        // Bind starts the witch's swing itself (the fix this fixture
         // exists to exercise), synchronously, so a live read taken after
         // Bind returns can already be mid-pose-change. The library's own
         // resolution is the ground truth CombatBeat itself falls back to
@@ -106,10 +106,10 @@ namespace PrincesPalace.PlayModeTests
         // fight test in this suite sets a multiplier in its own [SetUp], and a
         // leaked 60x would silently turn this capture into four frames.
         //
-        // BeatSpeedMultiplier == 1 no longer
-        // guarantees Pace == 1 by itself -- FightBootstrap can install a
+        // BeatSpeedMultiplier == 1 does not
+        // guarantee Pace == 1 by itself -- FightBootstrap can install a
         // settings-backed PlayerSpeedMultiplier on top of it -- so both are
-        // pinned now.
+        // pinned.
         [SetUp]
         public void RealTime()
         {
@@ -410,14 +410,14 @@ namespace PrincesPalace.PlayModeTests
             // and nine more frames of a figure easing home buys nothing to
             // look at.
             //
-            // IT IS A COUNTABLE NUMBER OF FRAMES NOW, which it was not when
-            // the reel's dwell was a WaitForSeconds: that ignored the pinned
-            // captureDeltaTime the tweens either side of it obeyed, so the
-            // struck figure sat 45px off its mark for all 72 frames of a 2.4s
-            // strip and no frame count could have contained it. The dwell
-            // steps by Time.deltaTime like everything else on the beat clock
-            // as of 2026-09-19, so the tail below is bounded rather than a
-            // race -- the deadline is a backstop, not the mechanism.
+            // IT IS A COUNTABLE NUMBER OF FRAMES: the dwell steps by
+            // Time.deltaTime like everything else on the beat clock -- not a
+            // WaitForSeconds, which would ignore the pinned captureDeltaTime
+            // the tweens either side of it obey and would leave the struck
+            // figure 45px off its mark for all 72 frames of a 2.4s strip,
+            // which no frame count could contain -- so the tail below is
+            // bounded rather than a race -- the deadline is a backstop, not
+            // the mechanism.
             //
             // APPENDED TO THE RECORDING BUT NOT TO THE STRIP: onFrame is not
             // called here, so the pictures on disk are exactly the 42 the
@@ -446,9 +446,9 @@ namespace PrincesPalace.PlayModeTests
             && Vector2.Distance(s.PartyAt, rec.PartyAnimator.Home) <= MarkTolerance;
 
         // THE SWINGER IS DONE, WHICH IS NOT THE SAME AS THE STAGE BEING AT
-        // REST -- and since 2026-09-19 the two are far apart. A struck figure
+        // REST -- the two are far apart. A struck figure
         // reels for 1.505s (FightBeatPlayer's RecoilDwellSeconds plus
-        // RecoilReturnSeconds, the owner's "4x as slow"), and the witch's
+        // RecoilReturnSeconds, "4x as slow"), and the witch's
         // NEXT turn opens about 1.2s after the last one, so the party member
         // she hit is still shoved back when she winds up again: waiting for
         // the whole stage before calling Flush meant the window could never
@@ -468,7 +468,7 @@ namespace PrincesPalace.PlayModeTests
         // frame of HER beat and nothing after it belongs to the pilot.
         // AtRest above still carries the claim the fixture exists to make,
         // that the struck figure comes home too, and SettledFrame still looks
-        // for it; the reel just lands a good 30 frames later than it used to.
+        // for it, a good 30 frames into the reel.
         private static bool SwingOver(Recording rec, Sample s) =>
             s.EnemyStanceSprite == rec.IdleSprite
             && Vector2.Distance(s.EnemyAt, rec.EnemyAnimator.Home) <= MarkTolerance;
@@ -492,10 +492,9 @@ namespace PrincesPalace.PlayModeTests
         // "idle" is the drawing the witch wore before the beat opened; the
         // two numbers after it are how far SHE stood from her mark and how
         // far the figure she hit stood from ITS mark. The second one was
-        // added 2026-09-19: with the reel four times longer than it was, the
-        // struck figure is the half of the stage that decides whether this
-        // window is long enough, and a timeline that only showed the swinger
-        // could not say why a settle never arrived.
+        // The struck figure is the half of the stage that decides whether
+        // this window is long enough, and a timeline that only showed the
+        // swinger could not say why a settle never arrived.
         private static string Timeline(Recording rec)
         {
             var line = new StringBuilder();

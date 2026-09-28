@@ -11,9 +11,9 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Finding 2 (code review, pre-2026-09-06): Feared and Marked were added
+    // Feared and Marked were added
     // to StatusEffectType but never wired into every place a status becomes
-    // player-facing. That finding's four checks widened here for
+    // player-facing. These four checks cover
     // PLAN_STATUS_EFFECT_UI.md's Package A: the merged StatusHud code/slug/
     // tooltip table (section 4) replacing StatusBadge's three-letter switch
     // and PillCode's disagreeing two-letter one, and the counter sentinel
@@ -50,10 +50,9 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- one badge per type, however many instances ------------------------
 
-        // WARDS SOLVED THIS FIRST and every other status joined them on
-        // 2026-09-20. Three poisons drawing three PSN pills would each tell a
-        // third of the story, and the badge a player glances at would be the
-        // weakest of the three rather than the total.
+        // ONE BADGE, ALWAYS: three poisons drawing three PSN pills would
+        // each tell a third of the story, and the badge a player glances at
+        // would be the weakest of the three rather than the total.
         [Test]
         public void ThreePoisonInstances_DrawOneBadge_WhoseTooltipCarriesTheSum()
         {
@@ -227,7 +226,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // SEVERAL WARDS ARE ONE BADGE, showing the total, with the soonest
-        // clock in the tooltip. Wards stack (owner, 2026-09-16), and three SHD
+        // clock in the tooltip. Wards stack, and three SHD
         // pills each telling the player a fraction of what they are behind is
         // the thing that rule would otherwise have cost the HUD.
         [Test]
@@ -309,10 +308,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.GreaterOrEqual(FightTuning.MagicalShieldDurationTurns, StatusHud.SentinelTurns);
 
             // NO WARD SENTINEL IS LEFT. Ordinary wards run a real one-turn
-            // clock since the shield model (AUDIT #152) and the three relic
-            // wards ride MagicalShieldDurationTurns, already asserted above.
-            // The Golden Fleece no longer authors a duration at all -- it is
-            // read off the ward's own caster every tick
+            // clock, and the three relic wards ride MagicalShieldDurationTurns,
+            // already asserted above. The Golden Fleece does not author a
+            // duration at all -- it is read off the ward's own caster every tick
             // (StatusEffects.NeverExpires), which is what the sibling test
             // AWardOffTheClockReadsAsTheRestOfTheFight covers on the badge.
         }
@@ -450,15 +448,13 @@ namespace PrincesPalace.Domain.Tests
                 $"expected exactly one MRK row, found {rows.Count(r => r.Code == StatusHud.CodeFor(StatusEffectType.Marked))}");
         }
 
-        // ---- the enemy plate's text line (Phase 3: retired to BRK only) -----------
+        // ---- the enemy plate's text line, retired to BRK only ------------------
         //
-        // PLAN_STATUS_EFFECT_UI.md section 9, Phase 3: "two surfaces for one
-        // fact" on the enemy plate is retired -- every status now reads only
+        // PLAN_STATUS_EFFECT_UI.md section 9: "two surfaces for one
+        // fact" on the enemy plate is retired -- every status reads only
         // off the enemy's own stage row (BuildEnemyStatusRows), and this line
         // keeps just the one fact with no other surface, the break prefix.
-        // The doubly-marked-pill and Lantern-only-mark coverage this section
-        // used to pin no longer applies: EnemyStatusLine does not walk
-        // StatusRowsFor (or IsMarked) at all any more.
+        // EnemyStatusLine does not walk StatusRowsFor (or IsMarked) at all.
 
         // A broken enemy still shows BRK -- the one always-shown fact this
         // line exists to guarantee, since no badge in the stage row
@@ -475,9 +471,8 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // An unbroken enemy carrying a full house -- more than the stage
-        // row's own real capacity of four -- shows NOTHING on the plate.
-        // This used to be the case that filled the line with three pills and
-        // a "+2" chip; now every one of those five statuses reads only off
+        // row's own real capacity of four -- shows NOTHING on the plate:
+        // every one of those five statuses reads only off
         // the badge row standing under the enemy's own figure.
         [Test]
         public void NonBrokenEnemyWithFiveStatusesShowsNothingOnThePlate()
@@ -496,8 +491,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the same Tags node, sharing its one spare slot with the ward -----
         //
-        // Playtest 2026-09-23: a shielded enemy showed no number for it
-        // anywhere on the plate. EnemyPlateTagLine reuses BRK's own "the one
+        // A shielded enemy must show its ward count somewhere on the plate.
+        // EnemyPlateTagLine reuses BRK's own "the one
         // slot this row has spare" (EnemyStatusLine's own header) rather than
         // opening a second box -- see that method's own header for why BRK
         // wins when both are true at once.
