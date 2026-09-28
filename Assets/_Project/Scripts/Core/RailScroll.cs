@@ -36,8 +36,8 @@ namespace PrincesPalace
         // most common way a scrolled panel feels broken.
         public Action Grabbed;
 
-        // The wheel's own delta is in notches, not pixels, and 1.4 is the
-        // handoff's multiplier over whatever the platform reports.
+        // The wheel's own delta is in notches, not pixels; 1.4 converts that
+        // into a comparable scroll distance.
         private const float WheelGain = 1.4f;
 
         // A trackpad reports both axes at once and a mouse wheel reports only

@@ -89,8 +89,7 @@ namespace PrincesPalace
         private const float FadeSeconds = 0.12f;
 
         // SELECTED HALO. "Selected" = SetMenuState(Open) or SetMenuState
-        // (Primary), or the button carrying real ISelectHandler focus - the
-        // three cases item 1 of the 2026-09-03 handoff calls out together.
+        // (Primary), or the button carrying real ISelectHandler focus.
         // The glow rect itself grows past the plate's edges (not just a
         // brighter alpha) so a halo shows all the way around the plate, not
         // only a brighter ring the same size as it. Public for the same
@@ -379,12 +378,12 @@ namespace PrincesPalace
             if (Plate != null) Plate.color = Interactable ? MenuStatePlateTint() : DisabledTint;
         }
 
-        // THE SELECTION-PAINT SEAM, replacing the hand-copied "GetComponent
+        // THE SELECTION-PAINT SEAM, avoiding hand-copied "GetComponent
         // <ThemedButtonState>(); SetMenuState if found, else fall back to a
-        // flat colour" loops that used to live at FightController.Hud's verb
-        // and submenu columns, GlossaryController's rail and row list,
-        // DebugMenuController's filter row, and SaveSlotController's slot
-        // list. `selected` picks between `selectedState` (Open, the common
+        // flat colour" loops at FightController.Hud's verb and submenu
+        // columns, GlossaryController's rail and row list, DebugMenuController's
+        // filter row, and SaveSlotController's slot list. `selected` picks
+        // between `selectedState` (Open, the common
         // case) and Idle -- a caller with a THIRD live state (SaveSlotController's
         // Primary for a filled slot, FightController's Primary for the
         // unhighlighted first verb) computes its own ThemedMenuState first

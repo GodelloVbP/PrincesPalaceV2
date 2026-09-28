@@ -3,11 +3,10 @@ using UnityEngine;
 
 namespace PrincesPalace
 {
-    // The Party pane's toast, fading rather than P3's hard show/hide -- the
-    // handoff's own copy: "confirms every committed action ... then fades
-    // after ~2.4s." Split as HOLD (2.0s at full alpha) then FADE (0.4s to 0),
-    // which sums to the handoff's 2.4s while giving the fade itself a
-    // distinct, readable duration rather than dividing 2.4s in half.
+    // The Party pane's toast, fading rather than a hard show/hide. Split as
+    // HOLD (2.0s at full alpha) then FADE (0.4s to 0), giving the fade
+    // itself a distinct, readable duration rather than dividing a flat
+    // 2.4s in half.
     //
     // NOT StageDeathFade, checked first per .claude/rules/ui.md's reuse-first
     // registry: that component fades THREE sibling Images together on the

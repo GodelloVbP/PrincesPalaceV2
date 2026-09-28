@@ -58,9 +58,8 @@ namespace PrincesPalace
         private static readonly Color HealColor = new Color(0.42f, 0.86f, 0.45f, 1f);
 
         // The physical fallback if FightHudPalette's own hex ever failed to
-        // parse -- kept as the literal DamagePopup always showed before
-        // FightHudPalette.ForDamageType existed, so a bad hex string degrades
-        // to the old flat red rather than to ColorUtility's own magenta.
+        // parse, so a bad hex string degrades to a plain red rather than to
+        // ColorUtility's own magenta.
         private static readonly Color PhysicalFallback = new Color(0.93f, 0.26f, 0.24f, 1f);
 
         // PHASE D1: a dodge's own colour -- neither the alarm-red of damage
@@ -233,11 +232,10 @@ namespace PrincesPalace
 
         // ---- the edge that keeps a number readable on anything ------------------
         //
-        // QA 2026-09-26: Winter's Rebuke's "-4" (Ice, a pale green-white face)
-        // landed on the white-blue impact burst and the struck body's own white
-        // hit flash, and could barely be read. The number is already the LAST
-        // sibling (FightScreen.BuildDamagePopups), so nothing draws over it --
-        // what it lacked was contrast against a background it cannot choose.
+        // The number is already the LAST sibling (FightScreen.BuildDamagePopups),
+        // so nothing draws over it -- what it lacks is contrast against a
+        // background it cannot choose: a pale element colour can land on an
+        // equally pale impact burst or hit flash and be barely readable.
         // Every element colour in FightHudPalette is light-to-mid, and a spell
         // or a flash can put white, violet or black under any of them, so the
         // only edge that separates them all is a dark one.

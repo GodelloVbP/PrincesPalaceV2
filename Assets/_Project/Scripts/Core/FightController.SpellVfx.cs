@@ -214,10 +214,10 @@ namespace PrincesPalace
         // Public, so a test can assert the plain-swing case without reflection.
         // NO LONGER A FUNCTION OF PNGs ON DISK, for a spell that authors its cue
         // in seconds. A pre-layer block still derives it from impactFrame over
-        // the frame count -- exactly the expression that used to live here --
-        // because changing that would retime five shipped spells whose art went
-        // momentarily unreadable. Both derivations live in SpellPerformance,
-        // which is the only thing in the program that reads layerFormat at run time.
+        // the frame count, because changing that would retime five shipped
+        // spells whose art would go momentarily unreadable. Both derivations
+        // live in SpellPerformance, which is the only thing in the program
+        // that reads layerFormat at run time.
         public float ImpactDelayFor(CombatBeat beat) => ResolveCast(beat)?.HitCueSeconds ?? 0f;
 
         // Every layer of this beat's cast, fanned out to the targets it struck,
@@ -441,25 +441,18 @@ namespace PrincesPalace
                 aim = AimAtBody(body.Value, parent, targetRect, centred);
             }
 
-            // A NON-TRAVELLING `caster` OR `caster-centre` PLACEMENT used to
-            // mean "the slot's own origin" or "the slot's own middle" --
-            // exactly what AimPoint just computed above. Both now mean the
-            // caster's own cast point instead, when one is authored: the
-            // model is that an authored castPoint IS where every cast leaves
-            // that actor's body, not just the ones that happen to travel.
-            // Found missing when prismatic_orb's caster-centre `charge` layer
-            // kept forming at Odette's slot centre -- her spine, roughly --
-            // while the travelling `core` layer right behind it (routed
-            // through CasterCastPoint below regardless of `place`, since it
-            // only checks Travels) left correctly from her book. One seam,
-            // one rule, or a caster-centre effect and a travelling one on the
-            // same cast disagree about where "the caster" is.
+            // A NON-TRAVELLING `caster` OR `caster-centre` PLACEMENT means the
+            // caster's own cast point, when one is authored: the model is
+            // that an authored castPoint IS where every cast leaves that
+            // actor's body, not just the ones that happen to travel. One
+            // seam, one rule, or a caster-centre effect and a travelling one
+            // on the same cast would disagree about where "the caster" is.
             //
             // CasterCastPoint falls back to that same AimPoint answer
             // verbatim for every actor that authors nothing, which is every
             // actor but the two this feature was written for -- so
             // `caster-centre` for an unauthored actor keeps meaning the
-            // figure's own centre exactly as before.
+            // figure's own centre.
             if (fromCaster && casterRect != null)
             {
                 aim = CasterCastPoint(caster, casterRect, parent, aim);
@@ -840,14 +833,12 @@ namespace PrincesPalace
         // THE BOX LAID ALONG THE RANK, which is what a crack in the floor
         // actually is.
         //
-        // THE RANK IS A DIAGONAL AND ALWAYS HAS BEEN. FightStageAnchors runs
-        // the enemy line (300, -218) -> (660, -125) and the party's
-        // (320, -218) -> (810, -64), so a drawing spanning three bodies covers
-        // 93 units of rise it was drawing none of. The level branch above puts
-        // the whole sheet on the MEAN ground line, so the fault opened half a
-        // rank's rise below the back body's feet and the same distance above
-        // the front one's. Owner, 2026-09-19: the line "should follow the mobs,
-        // who stand in a diagonal line".
+        // THE RANK IS A DIAGONAL. FightStageAnchors runs the enemy line
+        // (300, -218) -> (660, -125) and the party's (320, -218) -> (810, -64),
+        // so a drawing spanning three bodies covers 93 units of rise. The
+        // level branch above puts the whole sheet on the MEAN ground line,
+        // so the fault opens half a rank's rise below the back body's feet
+        // and the same distance above the front one's.
         //
         // LEFT TO RIGHT, NOT STRUCK ORDER. FormationSpan's own header gives the
         // reason -- an angle taken from the struck walk would be 180 degrees
@@ -974,13 +965,12 @@ namespace PrincesPalace
             var targetRect = SlotFor(beat.Target);
             if (targetRect == null) return;
 
-            // THROUGH THE SAME ALLOCATOR AS EVERY OTHER CAST, which is a change
-            // and a necessary one. This used to take pool members 0 and 1 by
-            // index, safe only because the beat player calls it exclusively for
-            // beats with no authored VFX -- and once a tail is allowed to
-            // outlive the beat that cast it, member 0 can still be holding a
-            // spell from the previous round when the next melee blow lands.
-            // Borrowing it then would steal a live renderer.
+            // THROUGH THE SAME ALLOCATOR AS EVERY OTHER CAST: taking pool
+            // members 0 and 1 by index would only be safe as long as no tail
+            // outlives the beat that cast it, and once one is allowed to,
+            // member 0 can still be holding a spell from the previous round
+            // when the next melee blow lands. Borrowing it then would steal
+            // a live renderer.
             //
             // A PRESENTATION RATHER THAN TWO DIRECT CALLS, because the arc and
             // the burst ARE two sprite layers on the target: one mirrored by
@@ -1291,11 +1281,9 @@ namespace PrincesPalace
         // below -- which is why its ground spike erupted around the target's
         // midriff instead of under their feet.
         //
-        // Measured off the sheet's own dimensions rather than assumed, because
-        // the assumption is exactly what broke: this comment used to say the
-        // frames "are a fixed 512x512 square", true of the only two spells that
-        // existed when it was written and false the moment an enemy VFX was cut
-        // at a different aspect.
+        // Measured off the sheet's own dimensions rather than assumed, since
+        // frame size varies by spell and an assumed fixed size would be
+        // wrong for a sheet cut at a different aspect.
         //
         // TWO: THE ART'S OWN BOTTOM MARGIN, at full extent. An earlier version
         // corrected only the letterbox, reasoning that a frame's bottom margin
@@ -1329,15 +1317,14 @@ namespace PrincesPalace
         // as a fraction of frame height -- the LANDED effect at its fullest
         // extent.
         //
-        // NOT the whole sheet, though it used to be, and that was the bug:
-        // lightning_bolt's pre-impact travel frames (a thin descending bolt
-        // tip) happen to touch the canvas floor harder than the actual impact
-        // burst (a wide starburst that never reaches as low) ever does, so
-        // scanning from frame 0 measured the wind-up's ground line and applied
-        // it to the landed effect -- the strike rendered floating above
-        // whatever it hit instead of on it. Starting the scan one frame before
-        // impactFrame (rather than exactly at it) keeps a frame of lead-in
-        // margin without reintroducing the travel frames that caused this.
+        // NOT the whole sheet: scanning from frame 0 would let a spell's
+        // pre-impact travel frames (lightning_bolt's thin descending bolt
+        // tip, say, which can touch the canvas floor harder than its actual
+        // impact burst -- a wide starburst that never reaches as low -- ever
+        // does) set the landed effect's ground line, floating the strike
+        // above whatever it hit instead of on it. Starting the scan one
+        // frame before impactFrame (rather than exactly at it) keeps a
+        // frame of lead-in margin without reintroducing those travel frames.
         //
         // Public rather than internal: InternalsVisibleTo names the EDITOR
         // assembly only, and the sheet-margin maths is the part of this file
