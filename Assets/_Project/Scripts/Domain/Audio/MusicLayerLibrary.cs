@@ -76,8 +76,7 @@ namespace PrincesPalace.Domain.Audio
         public MusicLayerSet Fallback => Get(_fallbackId);
 
         // What the Hub and the main menu play. Falls through to the fallback
-        // when the manifest does not name one — the handoff leaves "does the
-        // hub share floor 1's set" open, and this is what makes the answer a
+        // when the manifest does not name one, which makes the answer a
         // one-line manifest edit rather than a code change.
         public MusicLayerSet Hub => Get(_hubId) ?? Fallback;
 

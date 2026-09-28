@@ -11,9 +11,8 @@ namespace PrincesPalace.Domain.Stage
     // a canvas is cut for an actor's tallest pose: the golem's idle leaves 62
     // of its 461 rows empty above its head, the rat's canvas runs 616 wide
     // around a 391-wide rat that sits 38px left of centre. Aiming at the
-    // slot's middle and sizing off its rect therefore placed and sized every
-    // effect by padding. Owner, 2026-09-23: Court of Whispers "does not scale
-    // with the mob's height/width".
+    // slot's middle and sizing off its rect would place and size every
+    // effect by padding rather than by the mob's own height/width.
     //
     // THE IDLE DRAWING'S OPAQUE BOX, measured by Core (Domain cannot read a
     // texture) and handed in here in canvas pixels, up from the canvas's
@@ -107,14 +106,10 @@ namespace PrincesPalace.Domain.Stage
 
         // ---- a tail lands ON the target; it never replaces it ---------------
         //
-        // QA 2026-09-26: Winter's Rebuke's and Blackglass Spear's impact stills
-        // (authored 320, i.e. 1.14 rat-bodies) and Crownfall's shatter (340,
-        // 1.21) were fitted to an Elder Treant at 1.63x -- 520-555 unit
-        // starbursts over a 360 x 457 body, canopy to roots gone, and the
-        // damage number sitting on the burst. The authored sizes were tuned on
-        // a rat, where "a bit bigger than the body" reads as a hit; the rule
-        // they were reaching for is relative to the body, so it is stated
-        // relative to the body.
+        // A size authored against one body does not translate to another at
+        // a fixed absolute size -- "a bit bigger than the body" only reads
+        // as a hit when it is actually relative to the body, so the rule is
+        // stated relative to the body.
         //
         // THREE QUARTERS OF THE BODY'S LARGER EXTENT, whatever was authored.
         // The burst then covers the struck middle and leaves the outline --

@@ -55,10 +55,9 @@ namespace PrincesPalace.Domain.DebugMenu
     // bag moves the browsing problem to the place that can afford to solve
     // it, and leaves the bag showing only what was deliberately asked for.
     //
-    // GENERALISED for the category rail (2026-09-23): what used to be one
-    // flat kind filter is now a CATEGORY plus one optional SUB-FILTER, the
-    // sub-filter's meaning decided by the category rather than restated
-    // per-item. RowsPerPage doubled to 24 and laid out 2 columns x 12 rows
+    // A CATEGORY plus one optional SUB-FILTER, not one flat kind filter,
+    // the sub-filter's meaning decided by the category rather than restated
+    // per-item. RowsPerPage is 24 laid out 2 columns x 12 rows
     // (Columns/RowsPerColumn below) rather than one column of 12, because
     // ~260 items behind a single-column pager was still a lot of paging even
     // after the category rail narrows the list.

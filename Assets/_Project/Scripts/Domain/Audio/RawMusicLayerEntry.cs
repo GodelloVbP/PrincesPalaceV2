@@ -7,10 +7,10 @@ namespace PrincesPalace.Domain.Audio
     // Resolved one to be used, and MusicLayerResolver is the only thing that
     // crosses between them.
     //
-    // TWO DEVIATIONS FROM THE HANDOFF'S EXAMPLE JSON, both forced by
+    // TWO DEVIATIONS FROM THE ORIGINAL EXAMPLE JSON, both forced by
     // JsonUtility and both worth stating where an author will read them.
     //
-    // The handoff writes `tiers` and `floors` as OBJECTS keyed by name
+    // The original design writes `tiers` and `floors` as OBJECTS keyed by name
     // ("ambient": [0,1] and "1": "floor_1"). JsonUtility cannot deserialise a
     // dictionary at all — not `Dictionary<K,V>`, not an arbitrary-keyed object
     // — so both become ARRAYS of little records here. That is also the shape
@@ -64,8 +64,7 @@ namespace PrincesPalace.Domain.Audio
         public float gain = 1f;
 
         // A one-shot fired over the top when this set first reaches its Boss
-        // tier. Optional, and the answer to the handoff's open question about
-        // where the boss intro goes: a sting keeps the drama without the
+        // tier. Optional: a sting keeps the drama without the
         // scheduling complexity of an intro every stem has to queue behind.
         public string stingPath = "";
 

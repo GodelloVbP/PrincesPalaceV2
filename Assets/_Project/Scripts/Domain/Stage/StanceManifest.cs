@@ -9,10 +9,9 @@ namespace PrincesPalace.Domain.Stage
     // PATHS rather than in Sprites, so the defaulting rules can be tested in
     // EditMode without a texture, a Resources folder, or a running scene.
     //
-    // TWO NUMBERS PER ACTOR AND NOTHING PER STANCE. It used to carry per-stance
-    // frame timing as well (secondsPerFrame, impactFrame, soundFrame, loop,
-    // endHold, returns); every stance is a single drawing now, and a still has
-    // nothing to time. See docs/STANCE_SHEET_SPEC.md.
+    // TWO NUMBERS PER ACTOR AND NOTHING PER STANCE: every stance is a
+    // single drawing, and a still has nothing to time. See
+    // docs/STANCE_SHEET_SPEC.md.
     public sealed class StanceManifest
     {
         // No ground line authored means the canvas bottom IS the ground, i.e.

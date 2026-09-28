@@ -13,9 +13,7 @@ namespace PrincesPalace.Domain.Stage
     // sides and has been since the depth line stopped being level. A layer
     // spanning that rank with an axis-aligned box describes a horizontal strip
     // of floor nobody is standing on: correct at the midpoint and wrong by half
-    // the rank's rise at both ends. Cinderfault's fault was drawn exactly that
-    // way, which is what the owner saw (2026-09-19, "the line ... should follow
-    // the mobs, who stand in a diagonal line").
+    // the rank's rise at both ends.
     //
     // ENGINE-FREE, in Domain, for the same reason CastPointPlacement is: every
     // line of it is arithmetic over two points, so it is pinnable with literal

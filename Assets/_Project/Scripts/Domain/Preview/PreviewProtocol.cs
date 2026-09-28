@@ -172,7 +172,7 @@ namespace PrincesPalace.Domain.Preview
                 "the Editor is in Play mode -- exit Play mode first, then re-run preview.ps1");
 
         // WRITING THE RESULT IS THE ONE STEP THAT CANNOT BE ALLOWED TO FAIL
-        // QUIETLY, and until 2026-09-08 it was the only one that could.
+        // QUIETLY.
         //
         // The watcher publishes a result by writing Temp/pp_result.tmp and
         // File.Replace-ing it onto Temp/pp_result.json. preview.ps1 reads that

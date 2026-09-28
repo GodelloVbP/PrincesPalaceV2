@@ -9,16 +9,11 @@ namespace PrincesPalace.Domain.Stage
     // in EditMode with literal numbers and FightController.Hud only has to
     // turn the answer into a Sprite.
     //
-    // WHY THIS EXISTS (QA 2026-09-26): the first version cropped the top
-    // EnemyIconHeadZoneFrac of the whole CANVAS, full width. Every idle still
-    // sits on a padded shared canvas (slice_actor_sheet.py), so that band was
-    // mostly empty air: the beetle, standing in the bottom 60% of an 830x413
-    // canvas, got a band with nothing in it; the rat's band held one ear tip,
-    // and a 616px-wide strip fitted into a 34px square came out ~34x6 --
-    // the grey sliver the capture shows. Two errors, and this fixes both:
-    // the crop is measured on the figure (its opaque box, or an authored
-    // head), and it is SQUARE, so the icon fills its 34x34 box instead of
-    // letterboxing to a strip.
+    // THE CROP IS MEASURED ON THE FIGURE (its opaque box, or an authored
+    // head), not on the whole CANVAS: every idle still sits on a padded
+    // shared canvas (slice_actor_sheet.py), so a crop of the canvas alone
+    // would mostly be empty air. And it is SQUARE, so the icon fills its
+    // 34x34 box instead of letterboxing to a strip.
     public static class EnemyIconCrop
     {
         // The crop, as a square clamped inside the canvas. Clamping can make
