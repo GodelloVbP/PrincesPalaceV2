@@ -43,23 +43,20 @@ namespace PrincesPalace
         // emptiness expressed in its contents.
         public bool hasRun;
 
-        // WHETHER THE PARTY HAS ACTUALLY GONE DOWN, which is a different
+        // Whether the party has actually gone down, which is a different
         // question from `hasRun` and the one most callers mean.
         //
-        // A run EXISTS from the moment the descent gate rolls the relic draft,
-        // and that draft is offered IN THE HUB and deliberately survives
+        // A run exists from the moment the descent gate rolls the relic draft,
+        // and that draft is offered in the hub and deliberately survives
         // leaving and coming back (RelicDraftTests pins it). So `hasRun` is
         // true while the player is standing in the hub with nothing under way
         // -- SystemMenuController's `inDescent` comment states exactly this,
-        // and had to carry a second flag because of it.
+        // and had to carry a second flag because of it: a caller reading
+        // `hasRun` alone treats the two alike, so the hub's Main Menu button
+        // on a drafted-but-unwalked run would strip every roster character's
+        // gear and the whole stockpile and count a lifetimeRunsEnded.
         //
-        // RunManager.EndRun read `hasRun` and treated the two alike, so the
-        // hub's Main Menu button on a drafted-but-unwalked run stripped every
-        // roster character's gear and the whole stockpile and counted a
-        // lifetimeRunsEnded -- the same symptom 95c0b8b3 fixed for the
-        // no-run-at-all case, reached through the door that guard left open.
-        //
-        // DERIVED, not a fourth serialized flag. Three fields already record
+        // Derived, not a fourth serialized flag. Three fields already record
         // "the party moved": `step` leaves 0 only through RunManager.MoveTo,
         // `roomsCleared` and `clearedNodeIds` only through a room that
         // finished. A flag would be a fourth thing to write and a fourth
@@ -67,7 +64,7 @@ namespace PrincesPalace
         // predate it as false anyway -- which is the right answer for an
         // in-flight run only by luck.
         //
-        // NOT what SystemMenuController asks. That is "is THIS SCENE part of a
+        // Not what SystemMenuController asks. That is "is this scene part of a
         // descent", answered at build time, and it is true on the map at the
         // entry node -- where this is still false because nothing has moved
         // yet. Two honest questions, deliberately not merged.
@@ -91,56 +88,46 @@ namespace PrincesPalace
 
         public int gold;
 
-        // `grantedGold` used to sit here, with a header claiming "EndRun
-        // subtracts this back out before banking, so a run resumed without it
-        // would convert the free head start into permanent Gold on retreat -- a
-        // straight reintroduction of P0 #1, the infinite money printer, through
-        // the back door."
-        //
-        // None of that was true. A tree-wide grep found exactly one hit: the
-        // declaration. Neither EndRun nor RunSettlement mentioned it, and there
-        // is no banking left to subtract from -- a run's gold is forfeited
-        // whole (RunSettlement.cs, GoldLost). The "start with N gold" reward it
-        // was for does not exist.
+        // `grantedGold` is gone: a tree-wide grep found exactly one hit, the
+        // declaration. Neither EndRun nor RunSettlement read or wrote it, and
+        // there is no banking left to subtract from -- a run's gold is
+        // forfeited whole (RunSettlement.cs, GoldLost). The "start with N
+        // gold" reward it was for does not exist.
         //
         // Deleted rather than re-commented, because the hazard was not the
-        // field, it was a stated safety mechanism that would be TRUSTED. The
-        // next person adding a head-start reward would have read that header as
-        // "already handled" and shipped the money printer it describes. An
-        // absent field asks the question; a lying one answers it wrong.
+        // field, it was a stated safety mechanism that would be trusted. The
+        // next person adding a head-start reward could read a stale header as
+        // "already handled" and ship a money printer. An absent field asks
+        // the question; a lying one answers it wrong.
         //
-        // Nothing on disk carries a meaning for it: JsonUtility ignores a field
-        // it cannot map, so an old save's `grantedGold: 0` simply drops, and
-        // there was never a non-zero one to drop.
+        // Nothing on disk carries a meaning for it: JsonUtility ignores a
+        // field it cannot map, so an old save's `grantedGold: 0` simply
+        // drops, and there was never a non-zero one to drop.
 
         public List<InventoryEntry> inventory = new List<InventoryEntry>();
         public List<RunHealthEntry> currentHealth = new List<RunHealthEntry>();
 
         // ---- the run's own history ------------------------------------------
         //
-        // Stored HERE rather than accumulated in memory. The reason this used
-        // to give -- "a run survives quitting to the main menu and coming
-        // back" -- is not true of this build and the correction matters,
-        // because it is the premise every run-scoped prune in SaveData.Reconcile
-        // rests on. RunManager says the opposite in as many words: "A RUN DOES
-        // NOT SURVIVE THE PROCESS ... Deliberately not a resume." Boot settles
-        // whatever is in slot 0, EnterSlot settles every other slot before its
-        // first scene, and every in-process route to the main menu goes through
-        // EndRun -- so nothing ever loads a run and plays it.
+        // Stored here rather than accumulated in memory. A run does not
+        // survive the process -- Boot settles whatever is in slot 0,
+        // EnterSlot settles every other slot before its first scene, and
+        // every in-process route to the main menu goes through EndRun, so
+        // nothing ever loads a run and plays it; that is the premise every
+        // run-scoped prune in SaveData.Reconcile rests on.
         //
-        // What IS true, and is reason enough for these to be stored: the death
-        // screen draws after EndRun has already replaced the snapshot, so the
-        // totals have to survive the fight that ends the run and reach
-        // RunSettlement, which reads them one last time on the way out. The
-        // rest is PLUMBING KEPT READY for the day a resume is built; it costs
-        // a few fields on disk and is not a claim that a resume exists.
+        // What justifies storing these: the death screen draws after EndRun
+        // has already replaced the snapshot, so the totals have to survive
+        // the fight that ends the run and reach RunSettlement, which reads
+        // them one last time on the way out. The rest is plumbing kept ready
+        // for the day a resume is built; it costs a few fields on disk and is
+        // not a claim that a resume exists.
         //
         // Every field below is a running total written after each fight.
-        //
-        // Nothing here is read by combat. It exists so the run can be described
-        // afterwards, which is a thing the game previously could not do at all:
-        // experience is applied per fight and saved immediately, so there was
-        // no before-state left anywhere to diff against.
+        // Nothing here is read by combat. It exists so the run can be
+        // described afterwards: experience is applied per fight and saved
+        // immediately, so there is no before-state left anywhere to diff
+        // against otherwise.
 
         public int goldEarned;
         public int expEarned;
@@ -162,9 +149,9 @@ namespace PrincesPalace
 
         // ---- relics ------------------------------------------------------------
         //
-        // Drafted at the start of a descent and GONE when it ends -- which is
+        // Drafted at the start of a descent and gone when it ends -- which is
         // why they live here rather than on SaveData. Nothing about a relic is
-        // permanent progression; what persists is the ACHIEVEMENT that unlocked
+        // permanent progression; what persists is the achievement that unlocked
         // it, on the save, and the pool re-offers it every run afterwards.
         //
         // A list rather than a single id, deliberately. Only one is drafted
@@ -181,7 +168,7 @@ namespace PrincesPalace
 
         // How many item-offer rerolls this descent has spent.
         //
-        // DEAD WEIGHT, KEPT RATHER THAN DELETED. Nothing sets this above zero
+        // Dead weight, kept rather than deleted. Nothing sets this above zero
         // any more, but removing the field would drop the value JsonUtility
         // already wrote for an in-flight run on an old save, for no gain.
         //
@@ -192,7 +179,7 @@ namespace PrincesPalace
 
         // Whether this descent guarantees a rest on the step before each boss.
         //
-        // NOTHING GRANTS THIS TODAY. RunManager.StartRun leaves this at its
+        // Nothing grants this today. RunManager.StartRun leaves this at its
         // default (false) rather than reading the squad. The field and the
         // generator parameter it feeds both stay, so a future reward can
         // wire back into StartRun without DescentMap changing at all.
@@ -281,27 +268,23 @@ namespace PrincesPalace
 
         // Which generator produced shopStock (ShopStock.StockVersion).
         //
-        // A RECORD, NOT A GATE, and the difference matters enough to say. This
-        // header used to read as though something enforced a rule with it --
-        // "an open shop from an older build is left exactly as it was rolled
-        // and the new generator applies at the next node: a shop that
-        // reshuffles itself because the game updated is a free reroll granted
-        // by a patch note." The rule does hold, and nothing reads this field to
-        // make it hold: it holds because the shelf is STORED. EnsureShopStock
-        // returns early when ShopIsOpen, so an existing shelf is never
-        // re-rolled whatever version produced it.
+        // A record, not a gate, and the difference matters enough to say. The
+        // rule "an open shop from an older build is left exactly as it was
+        // rolled, and the new generator applies at the next node" does hold,
+        // but nothing reads this field to make it hold: it holds because the
+        // shelf is stored. EnsureShopStock returns early when ShopIsOpen, so
+        // an existing shelf is never re-rolled whatever version produced it.
         //
         // Written in three places (EnsureShopStock, LeaveShop, and both of
         // SaveData.ReconcileShopStock's discard paths) and compared in none.
-        // ReconcileShopStock is the one place that WOULD enforce it, and it
-        // never looks -- so a future version of that method deciding to re-roll
-        // a stale shelf would read the old header as "already handled".
+        // ReconcileShopStock is the one place that would enforce it, and it
+        // never looks -- worth stating plainly so a future version of that
+        // method does not read this field's presence as "already handled".
         //
         // Kept rather than deleted, unlike grantedGold above: this one is
         // written to every save that has a shop open, a test asserts it after a
         // roll, and "which generator made this shelf" is a real fact worth
-        // having on disk the day the shelf format changes. What was wrong was
-        // the header, not the field. Filed as AUDIT #112.
+        // having on disk the day the shelf format changes. Filed as AUDIT #112.
         //
         // ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled
         // pins the rule itself against the storage, rather than against this.

@@ -84,9 +84,7 @@ namespace PrincesPalace.Domain.Talents
             NotEnoughEmbers,
         }
 
-        // THE IDS COME FROM THE TREE, and that is the whole of this file's
-        // correction. This used to mint its own -- "sheep.p0.s0" -- and write
-        // them into the save, where nothing matched them: every consumer of
+        // The ids come from the tree, never minted locally: every consumer of
         // unlockedTalentIds looks for the ids in talents.json. See TalentTree.
         //
         // `embers` is the WALLET -- what this character holds right now.
@@ -109,25 +107,19 @@ namespace PrincesPalace.Domain.Talents
 
             if (unlocked != null && unlocked.Contains(here.Id)) return Refusal.AlreadyTaken;
 
-            // THE ALLEGIANCE, WHICH NOTHING WAS CHECKING.
+            // The allegiance. Without it both of Shawn's roots could be lit
+            // for nothing, and TalentEffects sums every unlocked talent with
+            // no allegiance filter -- two wool engines at once against
+            // abilities priced at 7-8 is an economy this project treats as
+            // load-bearing.
             //
-            // Same story as the gate below, one rule further along.
-            // ContentDatabase.AllegianceRootOf and IsBlockedByAllegiance have
-            // held this since the content layer was written and were folded
-            // into MeetsGates, which has never had a caller. TalentPage
-            // replaced the screen's colouring pass and carried across five
-            // refusals, not this one -- so both of Shawn's roots could be lit,
-            // for nothing, and TalentEffects sums every unlocked talent with no
-            // allegiance filter. Two wool engines at once against abilities
-            // priced at 7-8 is the economy the handoff calls load-bearing.
+            // In Domain rather than in Content, because the rule needs to
+            // hold for the screen, the bot and Frontier alike, and only this
+            // layer is beneath all three. Everything it needs is in hand: the
+            // tree carries all three paths, and a root is a slot the skeleton
+            // gives no parents.
             //
-            // IN DOMAIN RATHER THAN IN CONTENT, because the rule needs to hold
-            // for the screen, the bot and Frontier alike, and only this layer
-            // is beneath all three. Everything it needs is in hand: the tree
-            // carries all three paths, and a root is a slot the skeleton gives
-            // no parents.
-            //
-            // ONLY THE ROOT, and only somebody ELSE'S root: the engine is
+            // Only the root, and only somebody else's root: the engine is
             // exclusive, the tree is not. A player sworn on path 0 may still
             // climb path 1 for its nodes -- they simply never get its
             // generation rule.
@@ -157,39 +149,27 @@ namespace PrincesPalace.Domain.Talents
             // two to walk and the one this layer can see.
             if (!MeetsPrerequisites(tree, path, slot, unlocked)) return Refusal.PrerequisiteMissing;
 
-            // THE GATE, WHICH NOTHING WAS CHECKING.
-            //
-            // ContentDatabase.MinSpentMet has held this rule since the content
-            // layer was written, and its comment names four callers that agree
-            // on it -- "the talent screen's colouring pass, its click handler
-            // and its tests". It has none. TalentPage replaced that pass and
-            // did not carry the gate across, which left the two orbs whose cost
-            // is zero costing nothing at all the moment their parents lit.
-            //
-            // In practice the parent chain nearly always pays it: a merge needs
+            // The gate, from ContentDatabase.MinSpentMet. In practice the
+            // parent chain nearly always pays it on its own: a merge needs
             // all three tiers beneath it, which is ten orbs by the time the
-            // 9-gate applies. That near-redundancy is why it went unnoticed,
-            // and is also why turning it on is safe.
+            // 9-gate applies. That near-redundancy is why checking it here
+            // costs nothing on the common path.
             if (here.MinSpent > 0 && SpentOn(tree, path, unlocked) < here.MinSpent)
             {
                 return Refusal.Gated;
             }
 
-            // THE CAP, WHICH NOTHING ON THE PLAYER'S PATH WAS CHECKING.
+            // The cap. ContentDatabase.EmberSpendCap is 30 and its header
+            // spends a paragraph on what that number buys -- the deep, wide
+            // and fused archetypes the ember economy is measured on.
             //
-            // ContentDatabase.EmberSpendCap is 30 and its header spends a
-            // paragraph on what that number buys -- the deep, wide and fused
-            // archetypes the ember economy is measured on. Every enforcement of
-            // it lived in the balance bot's preset builder, which clamped what
-            // it GRANTED so the question was never asked; the screen asked the
-            // wallet, which is shared, uncapped, and accumulates across runs.
-            //
-            // BEFORE THE WALLET, and the same test as the wallet uses: cost
-            // against what is left. A free stone stays free at the cap, exactly
-            // as ContentDatabase.MeetsGates already said ("OrbCost(talent) <=
-            // EmbersLeftFor(character)") -- the convergence and the capstone
-            // were paid for with a gate, not with embers, and a spent budget
-            // does not take back a gate already met.
+            // Checked before the wallet, and the same test as the wallet
+            // uses: cost against what is left. A free stone stays free at the
+            // cap, exactly as ContentDatabase.MeetsGates already says
+            // ("OrbCost(talent) <= EmbersLeftFor(character)") -- the
+            // convergence and the capstone are paid for with a gate, not with
+            // embers, and a spent budget does not take back a gate already
+            // met.
             if (budget < here.Cost) return Refusal.BudgetSpent;
 
             if (embers < here.Cost) return Refusal.NotEnoughEmbers;
@@ -253,24 +233,21 @@ namespace PrincesPalace.Domain.Talents
 
             foreach (int parent in parents)
             {
-                // THE ROOT IS A SHARED GATEWAY, NOT A PER-PATH GATE. A
+                // The root is a shared gateway, not a per-path gate. A
                 // tier-1 stone's one parent is always that path's own root
                 // (TalentSkeleton: "triple above a single, each of the
-                // three hangs off that single"), and checking THAT
-                // specific root's id cannot ever pass once a different
-                // root is sworn -- AllegianceSworn refuses the unsworn
-                // one forever, which made every stone above it
-                // permanently unreachable, whatever points were spent
-                // (owner playtest, 2026-09-23: "after Fragile Lamb every
-                // stone beyond Black Ram is unreachable"). "The engine is
-                // exclusive, the tree is not" (AllegianceSworn's own
-                // header) means the oath itself -- ANY root, not
-                // specifically this parent's -- is what a tier-1 stone
-                // actually needs. No special case for the refused root
-                // versus an untaken one: every root parent is checked the
-                // same way, and it is still correct for the SWORN path's
-                // own tier-1 stones, since their own root is one of the
-                // roots "any" covers.
+                // three hangs off that single"), and checking that
+                // specific root's id can never pass once a different root
+                // is sworn -- AllegianceSworn refuses the unsworn one
+                // forever, which would make every stone above it
+                // permanently unreachable. "The engine is exclusive, the
+                // tree is not" (AllegianceSworn's own header) means the
+                // oath itself -- any root, not specifically this parent's
+                // -- is what a tier-1 stone actually needs. No special case
+                // for the refused root versus an untaken one: every root
+                // parent is checked the same way, and it is still correct
+                // for the sworn path's own tier-1 stones, since their own
+                // root is one of the roots "any" covers.
                 if (IsRoot(parent))
                 {
                     if (!AnyRootSworn(tree, unlocked)) return false;
@@ -307,17 +284,15 @@ namespace PrincesPalace.Domain.Talents
         public static bool IsRoot(int slot) =>
             slot >= 0 && slot < TalentSkeleton.SlotCount && TalentSkeleton.Parents[slot].Length == 0;
 
-        // WHETHER ONE EDGE -- from parentSlot to childSlot, on ONE path --
-        // should draw lit. BOTH endpoints must be invested on THAT path: the
+        // Whether one edge -- from parentSlot to childSlot, on one path --
+        // should draw lit. Both endpoints must be invested on that path: the
         // child alone is not enough, because a merge or capstone slot
         // (TalentPage.MeetsPrerequisites) authors more than one incoming edge
-        // for the same child and only requires ONE of them met, so a
-        // child-only test lights every strand into it, including the one the
-        // player never climbed (owner's hardware playtest, 2026-09-23 --
-        // "the unchosen path still lights up with an energy beam to a
-        // kindled star").
+        // for the same child and only requires one of them met, so a
+        // child-only test would light every strand into it, including the
+        // one the player never climbed.
         //
-        // IN DOMAIN, not the screen: the rule is "are both ends of THIS
+        // In Domain, not the screen: the rule is "are both ends of this
         // specific edge unlocked", which needs nothing Core has that Domain
         // does not, and stating it here is what let TalentEdgeLightingTests
         // pin it without a scene.
