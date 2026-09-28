@@ -5,26 +5,23 @@ using PrincesPalace.Domain.Equipment;
 
 namespace PrincesPalace.Domain.UiKit.Screens
 {
-    // The character sheet, rebuilt to the "Dossier" handover: identity and pack
-    // on the left, a mannequin with its slots in the middle, the numbers on the
-    // right.
+    // The character sheet ("Dossier"): identity and pack on the left, a
+    // mannequin with its slots in the middle, the numbers on the right.
     //
     // REPLACES CharacterOverlayScreen, and lives inside the system menu's
     // Character and Inventory panes rather than being its own modal -- the two
     // tabs are two doors into this one screen, exactly as C and I are today.
     //
-    // Authored AT the menu's 1600x804 content pane and filling it. It used to
-    // sit at the handover's own 1360x766, centred, which left 118px of dead
-    // margin a side and all three columns stopping short of the floor. Nothing
-    // scales: DossierLayout re-proportions the columns and scales the loadout
-    // stage as one unit, which is what the handover's rule was protecting.
+    // Authored AT the menu's 1600x804 content pane and filling it. Nothing
+    // scales: DossierLayout re-proportions the columns and scales the
+    // loadout stage as one unit.
     //
-    // WHAT IS NOT HERE, and why: the handover's Dodge, Carried, Shop prices and
-    // Party morale rows are gone. None of them exists in this game -- there is
-    // no dodge, no carry weight, no price modifier and no morale -- and printing
-    // four numbers with no source would be four lies a player cannot check. The
-    // stat list is built from SheetStats.Derived instead, so it is exactly the
-    // stats that are real, and adding one later is one entry there.
+    // WHAT IS NOT HERE, and why: no Dodge, Carried, Shop prices or Party
+    // morale rows. None of them exists in this game -- there is no dodge,
+    // no carry weight, no price modifier and no morale -- and printing four
+    // numbers with no source would be four lies a player cannot check. The
+    // stat list is built from SheetStats.Derived instead, so it is exactly
+    // the stats that are real, and adding one later is one entry there.
     public sealed class CharacterDossierScreen
     {
         public const string PortraitKey = "UI/CharacterOverlay/Processed/armour_stand.png";
@@ -71,10 +68,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PackRow;
         public NodeRef PackChevron;
 
-        // The skills panel (owner bug report, 2026-09-19: "Skills in the char
-        // menu, when you click on it, nothing happens" -- SkillsRow above
-        // carried no onClick and there was no pane for it to open). Same
-        // row+panel+close shape Spells and Pack already use, but read-only:
+        // The skills panel: same row+panel+close shape Spells and Pack
+        // already use, but read-only:
         // no per-entry Button, see CharacterDossierController.DeclareSkills.
         public NodeRef SkillsChevron;
         public NodeRef SkillsPanel;
@@ -115,21 +110,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PackCounts = new List<NodeRef>();
         public List<NodeRef> PackRarityTicks = new List<NodeRef>();
 
-        // NO PER-CELL FOCUS HALOS ON THIS SCREEN ANY MORE. Three groups
-        // carried one each (the pack cells here, the paperdoll's slots, the
-        // ability-score cells) -- AUDIT.md #160's answer to "a NoChrome cell
-        // answers gamepad focus with nothing at all". It was the right
-        // problem and the wrong shape: the owner played it on a pad and
-        // reported "a player can't see where they're going in the character
-        // sheets screen: no obvious selectors", because a soft radial glow
-        // the same footprint as a cell, over an icon and a name, is not a
-        // selector -- it is a tint. Core/FocusMarker.cs's arrow is, and it is
-        // the same arrow on every screen.
+        // NO PER-CELL FOCUS HALOS ON THIS SCREEN: a soft radial glow the
+        // same footprint as a cell, over an icon and a name, is not a
+        // selector -- it is a tint. Core/FocusMarker.cs's arrow is, and it
+        // is the same arrow on every screen.
 
-        // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, inset within the
-        // icon's own bounds (see BuildPack's own comment on why) rather than
-        // bleeding past the cell the way the Reckoning's halo/burst do --
-        // the pack cell has almost no padding left to bleed into.
+        // The RiftTier ring, inset within the icon's own bounds (see
+        // BuildPack's own comment on why) rather than bleeding past the
+        // cell the way the Reckoning's halo/burst do -- the pack cell has
+        // almost no padding left to bleed into.
         public List<NodeRef> PackRiftGlows = new List<NodeRef>();
 
         // The name beside each icon, which two-abreast rows have room for and
@@ -150,7 +139,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SlotLabels = new List<NodeRef>();
         public List<NodeRef> SlotRarityTicks = new List<NodeRef>();
 
-        // ITEM-MODIFIER PLAN PHASE E: see PackRiftGlows' own comment.
+        // See PackRiftGlows' own comment.
         public List<NodeRef> SlotRiftGlows = new List<NodeRef>();
         public List<NodeRef> SlotBlockedCaptions = new List<NodeRef>();
 
@@ -166,9 +155,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The compact grid's own opener -- see BuildColumnC's own comment.
         public NodeRef AttributesRow;
 
-        // The attributes panel (owner item: "dedicated attributes screen
-        // showing stat effects, with mouse/gamepad allocation and
-        // reallocation"). A fifth Ui.Modal-covered state, same
+        // The attributes panel: a fifth Ui.Modal-covered state, same
         // row+panel+close shape Pack/Spells/Skills/Track already use, except
         // this one covers the WHOLE dossier rather than column A alone --
         // its content (six rows of numbers AND prose) does not fit column
@@ -235,15 +222,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var children = new List<UiNode>();
 
-            // ITS OWN GROUND, restored -- the same flat #120a18 fill this pane
-            // drew before 2f3ccd0's container, back again since the outer
-            // Blue 2:1 frame that replaced it is gone (balance-bot item 2,
-            // 2026-09-03). This pane opens over the hub and the fight, and a
-            // transparent sheet lets a painted background read straight
-            // through the numerals. The DossierVeil "light from above" wash
-            // is NOT reinstated with it -- it was a hierarchy fix for a flat
-            // field of equal-weight columns, and column A's own Blue 3:4 card
-            // already gives this pane the hierarchy it needs.
+            // ITS OWN GROUND: a flat #120a18 fill. This pane opens over the
+            // hub and the fight, and a transparent sheet would let a painted
+            // background read straight through the numerals. The
+            // DossierVeil "light from above" wash is NOT reinstated with
+            // it: column A's own Blue 3:4 card already gives this pane the
+            // hierarchy it needs.
             children.Add(Ui.Solid("DossierGround", Ground,
                     new UiVec(DossierLayout.Width, DossierLayout.Height), Place.At(0f, 0f))
                 .AsDecor());
@@ -292,16 +276,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Skills/Track do.
             children.Add(screen.BuildAttributesPanel());
 
-            // NO OUTER FRAME (balance-bot item 2, 2026-09-03) -- the Blue 2:1
-            // container 2f3ccd0 wrapped this pane in was "the big blue
-            // container": a second frame around column A's own Blue 3:4
-            // card, reading as one frame nested in another rather than one
-            // clear card. Column A keeps its card; this pane goes back to a
-            // bare panel the size of the content area, same as before that
-            // commit and same as the flat ground it briefly replaced (no veil
-            // reinstated either -- the system menu's own pane background
-            // already grounds this, which is what let the veil be dropped
-            // for the container's border in the first place).
+            // NO OUTER FRAME: a frame around column A's own Blue 3:4 card
+            // would read as one frame nested in another rather than one
+            // clear card. Column A keeps its card; this pane is a bare
+            // panel the size of the content area -- no veil either, since
+            // the system menu's own pane background already grounds it.
             var pane = Ui.Panel("CharacterDossier", Place.At(0f, 0f),
                 UiSize.Fixed(DossierLayout.Width, DossierLayout.Height), children.ToArray());
 
@@ -311,13 +290,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- column A: identity ---------------------------------------------------
 
-        // GRAPHIC-LESS since 2026-09-07 (owner's call: every kit frame inside
-        // the system menu read as ugly). Column A kept a Blue 3:4 Container
-        // here until then; the RECT survives at the exact same size and place
-        // -- DossierLayout.ColumnAFrameHeight still derives from the 3:4
-        // aspect it was authored to fill, ColumnATop/ColumnABottom still
-        // measure against it -- only the painted border and the separate
-        // inset content panel are gone. The identity content (portrait, name,
+        // GRAPHIC-LESS: no painted border, no separate inset content panel.
+        // The RECT still matters -- DossierLayout.ColumnAFrameHeight still
+        // derives from the 3:4 aspect it was authored to fill,
+        // ColumnATop/ColumnABottom still measure against it. The identity
+        // content (portrait, name,
         // pager, XP, nav rows) is a direct child of this one panel now, at
         // cx = 0 (column A's own centre, not the dossier's), the same
         // convention BuildPackPanel already uses for content that lives on a
@@ -351,10 +328,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             CharacterName = name;
             yield return name;
 
-            // The roster arrows the old sheet had. The handover does not show
-            // them -- it draws one character -- but the game has five and no
-            // other way to reach them from here, so dropping them would be a
-            // capability regression dressed as a redesign.
+            // The roster arrows: this screen draws one character, but the
+            // game has five and no other way to reach them from here.
             var pager = Ui.Pager(
                 "DossierPrevCharacter",
                 Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 17f, DossierLayout.NameCentreY),
@@ -403,9 +378,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             yield return BuildNavRow("Pack", UiStrings.OverlayPack, DossierLayout.PackRowCentreY);
         }
 
-        // LEFT AS THE HAIRLINE LIST THEY ARE (owner's HQ-kit instruction,
-        // 2026-09-07, with the checked-and-declined exception the
-        // instruction itself allows for). 380x56 rows are 6.79:1, nearest
+        // LEFT AS THE HAIRLINE LIST THEY ARE. 380x56 rows are 6.79:1, nearest
         // Row6x1's 6:1 -- but the honest resize is 380x63.3, and stacking
         // four of those (NavRowHeight applied four times from
         // ColumnABottom) pushes the topmost row's (Spells) top edge to
@@ -495,21 +468,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(170f, 22f), 13, TextFaint,
                 Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
 
-            // SILVER THEMED PLATE, small, at nominal aspect (owner's HQ-kit
-            // instruction, 2026-09-07) -- the flat NoChrome box this drew was
-            // 110x28 (3.93:1), past every plate shape's own tolerance
-            // (ThemedButtonAspectLintTests). HEIGHT kept, not width, this
-            // time -- Ui.PlateNominalSizeFor's own width-fixed shrink (110
-            // wide -> 22 tall) cleared the lint but left "CLOSE" at font
-            // size 15 needing 81.1x27.9, which a 22-tall box cannot hold
-            // (UiTextFitAudit, a scene-build check the dotnet lint suite
-            // does not run). FiveByOne at the UNCHANGED 28 tall resolves to
-            // 140 wide instead -- same shape ShapeFor already picks for
-            // this aspect, solved for the axis that was already proven to
-            // fit the caption. Right-aligned off its own half-width now
-            // rather than the old literal 55, so a caller changing this
-            // size again cannot silently misalign it against the column's
-            // right edge the way a stale literal would.
+            // SILVER THEMED PLATE, small, at nominal aspect: the flat
+            // NoChrome box this drew was 110x28 (3.93:1), past every plate
+            // shape's own tolerance (ThemedButtonAspectLintTests). HEIGHT
+            // kept, not width -- Ui.PlateNominalSizeFor's own width-fixed
+            // shrink (110 wide -> 22 tall) clears the lint but leaves
+            // "CLOSE" at font size 15 needing 81.1x27.9, which a 22-tall box
+            // cannot hold (UiTextFitAudit, a scene-build check the dotnet
+            // lint suite does not run). FiveByOne at the UNCHANGED 28 tall
+            // resolves to 140 wide instead -- same shape ShapeFor already
+            // picks for this aspect, solved for the axis that was already
+            // proven to fit the caption. Right-aligned off its own
+            // half-width, so a caller changing this size cannot silently
+            // misalign it against the column's right edge the way a stale
+            // literal would.
             var closeShape = Ui.PlateShapeFor(110f, 28f);
             var closeSize = new UiVec(28f * Ui.PlateAspect(closeShape), 28f);
             var close = Ui.Button("DossierPackClose", UiStrings.OverlayPackClose, closeSize, 15,
@@ -536,10 +508,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                           + DossierLayout.PackSortButtonWidth * (i + 0.5f);
 
                 // SILVER THEMED PLATE, like GlossaryScreen.BuildCategory's own
-                // rail tabs (owner's HQ-kit instruction, 2026-09-07) -- the
-                // flat NoChrome box this drew was 84x32 (2.625:1), past
-                // Legacy's own tolerance (ThemedButtonAspectLintTests).
-                // Width kept, height down to Legacy's honest 28.
+                // rail tabs: the flat NoChrome box this drew was 84x32
+                // (2.625:1), past Legacy's own tolerance
+                // (ThemedButtonAspectLintTests). Width kept, height down to
+                // Legacy's honest 28.
                 // ThemedPlate, not Themed(), because a hand-declared Caption
                 // is what GlossaryScreen's own comment recommends for a row
                 // that would otherwise fight a generated <button>Label for
@@ -603,8 +575,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(12f, 12f),
                     Place.At(-cellW * 0.5f + 9f, cellH * 0.5f - 9f)).Inactive().AsDecor();
 
-                // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring. Sized to the
-                // ICON itself (not larger) and centred on it -- proc:ring_
+                // THE RIFTTIER RING. Sized to the ICON itself (not larger)
+                // and centred on it -- proc:ring_
                 // hairline draws its stroke well inside its own bounds (see
                 // ProceduralSpriteBaker's own Radius 0.94), so this reads as
                 // a thin coloured frame around the art without needing an
@@ -624,9 +596,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // whole point of the change: beside a 44px icon this had about
                 // 110px, and a generated item's name does not fit in 110px at a
                 // size anyone can read.
-                // 15px, up from 11. The cell is twice the height it was and the
-                // name owns the surplus, so the old size left it small text
-                // floating in a large box -- which reads as worse, not better.
+                // 15PX: the cell is tall enough that the name owns the
+                // surplus, and a small size would leave the text floating in
+                // a large box, which reads as worse than filling it.
                 var name = Ui.Label($"DossierPackName{i}", UiString.Runtime,
                         new UiVec(cellW - 12f, DossierLayout.PackNameHeight), 15, Text,
                         Place.At(0f, DossierLayout.PackNameCentreY))
@@ -691,9 +663,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The PANEL sits over column A; its CHILDREN are relative to the
             // panel, hence cx = 0 above. Collapsing both onto one variable put
             // the whole pack in the middle of the screen, over the loadout.
-            // Height * 0.5f no longer clears the outer container's own
-            // content box (balance-bot, 2026-09-02) -- HalfHeight * 2f is the
-            // box this panel is actually a child of now.
+            // HalfHeight * 2f, not Height * 0.5f: HalfHeight * 2f is the box
+            // this panel is actually a child of.
             var panel = Ui.Sprite("DossierPackPanel", null,
                     Place.At(DossierLayout.ColumnACentreX, 0f),
                     UiSize.Fixed(DossierLayout.ColumnAWidth, DossierLayout.HalfHeight * 2f))
@@ -732,10 +703,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(170f, 22f), 13, TextFaint,
                 Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
 
-            // SILVER THEMED PLATE, small, at nominal aspect (owner's HQ-kit
-            // instruction, 2026-09-07) -- same shape, same height-fixed
-            // solve, and same reason as DossierPackClose above (that
-            // comment has the UiTextFitAudit numbers this avoids).
+            // SILVER THEMED PLATE, small, at nominal aspect -- same shape,
+            // same height-fixed solve, and same reason as DossierPackClose
+            // above (that comment has the UiTextFitAudit numbers this
+            // avoids).
             var spellsCloseShape = Ui.PlateShapeFor(110f, 28f);
             var spellsCloseSize = new UiVec(28f * Ui.PlateAspect(spellsCloseShape), 28f);
             var close = Ui.Button("DossierSpellsClose", UiStrings.OverlayPackClose, spellsCloseSize, 15,
@@ -888,9 +859,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AsDecor();
 
-                // NOT .Inactive(): it used to be, and nothing ever activated
-                // it, so every unassigned row was an empty box a player had
-                // to click blind. The row itself is what starts hidden.
+                // NOT .Inactive(): nothing activates it on its own, so an
+                // inactive icon would leave every unassigned row an empty
+                // box a player had to click blind. The row itself is what
+                // starts hidden.
                 float rowNameLeft = rowIconX + rowIconSize * 0.5f + rowIconGap;
                 float rowNameRight = DossierLayout.ContentAWidth * 0.5f - 12f;
                 var name = Ui.Label($"DossierUnassigned{i}Name", UiString.Runtime,
@@ -925,7 +897,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return panel;
         }
 
-        // ---- column A, covered: skills (owner bug report, 2026-09-19) -------------
+        // ---- column A, covered: skills ---------------------------------------
 
         // How many entries show at once. Same "a window, not the whole
         // thing" posture UnassignedVisibleCount above takes, sized against
@@ -1176,10 +1148,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             float cx = DossierLayout.ColumnCCentreX;
 
-            // WAS a plain decorative label. Now the opener for the
-            // attributes panel (owner item: "dedicated attributes screen
-            // showing stat effects") -- same rect, same text, so promoting
-            // it costs the header row no new space. Same row+panel shape as
+            // The opener for the attributes panel: same rect, same text as
+            // a plain label would use, so this costs the header row no new
+            // space. Same row+panel shape as
             // Pack/Spells/Skills/Track's own openers (DeclareColumnARows'
             // own header), just this one lives in column C instead of A
             // because that is where the thing it opens already is.
@@ -1208,8 +1179,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             yield return unspent;
 
             // Six generic cells. Which attribute lands where is decided per
-            // character at runtime -- the handover wants them highest-first so
-            // the shape of the build reads off the first row.
+            // character at runtime, highest-first, so the shape of the
+            // build reads off the first row.
             for (int i = 0; i < SheetStats.Abilities.Length; i++)
             {
                 int row = i / 3;
@@ -1316,10 +1287,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the attributes panel (modal) ----------------------------------------------
         //
-        // "Dedicated attributes screen showing stat effects, with
-        // mouse/gamepad allocation and reallocation" -- the owner item this
-        // panel exists for. Six rows, one per ability score, EACH row
-        // showing the score, the invested points, and what it does in
+        // A dedicated attributes screen showing stat effects, with
+        // mouse/gamepad allocation and reallocation. Six rows, one per
+        // ability score, EACH row showing the score, the invested points,
+        // and what it does in
         // numbers pulled from AbilityEffectDescriptions (Domain/Stats) --
         // the same derivation functions combat itself reads, never a
         // restated figure. Rows are painted by
@@ -1418,11 +1389,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         UiSize.Fixed(DossierLayout.AttributesContentWidth, DossierLayout.AttributesRowHeight - 2f))
                     .NoChrome();
 
-                // ACTIVE in the tree. They were built .Inactive() and nothing
-                // ever switched them on -- PaintAttributesPanel only sets
-                // their text -- so all six rows drew blank (QA 2026-09-26
-                // #203.1). The modal itself is what starts hidden; its
-                // labels have no state in which they should be off.
+                // ACTIVE in the tree: PaintAttributesPanel only sets their
+                // text, never their active state, so a label built
+                // .Inactive() here would draw blank forever. The modal
+                // itself is what starts hidden; its labels have no state in
+                // which they should be off.
                 var name = Ui.Label($"DossierAttrRowName{i}", UiString.Runtime,
                         new UiVec(textWidth, 20f), 16, Text, Place.At(textCx, nameY))
                     .AsDecor()
@@ -1483,13 +1454,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the shared tooltip --------------------------------------------------------
 
-        // OWNER ITEM (2026-09-22): "readable, roughly square item tooltips
-        // replacing the purple rectangles". The bespoke 300x480 sliver above
-        // (its own history is in git log, not restated here) is retired in
-        // favour of ItemComparisonPanel -- the shop's own reference shape,
-        // #1D1226F2 fill + Ui.Rim hairline at ~420x420, title font 20, body
-        // font 15 -- rather than a second hand-tuned rectangle. ONE builder,
-        // two callers: ShopScreen's ShopDetailPanel and this DossierTooltip.
+        // READABLE, ROUGHLY SQUARE item tooltips: built from
+        // ItemComparisonPanel -- the shop's own reference shape, #1D1226F2
+        // fill + Ui.Rim hairline at ~420x420, title font 20, body font 15 --
+        // rather than a second hand-tuned rectangle. ONE builder, two
+        // callers: ShopScreen's ShopDetailPanel and this DossierTooltip.
         //
         // The name prefix IS the node-name contract: ItemComparisonPanel.Build
         // emits "<prefix>", "<prefix>Title" and "<prefix>Body", so passing
