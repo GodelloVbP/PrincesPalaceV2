@@ -43,19 +43,13 @@ namespace PrincesPalace
 
         // THE SETTLE AFTER THE BLOW, AND IT IS A FLOOR RATHER THAN A REMAINDER.
         //
-        // The hold used to be purely what was LEFT of BeatHoldSeconds once the
-        // stance had been paid for, and back when a stance was six drawings at
-        // 0.08s it cost 0.48s against a 0.45s budget -- so `remaining > 0f`
-        // was never true and an animated blow got NO pause at all. Blows ran
-        // into each other with nothing between them and the damage number had
-        // no still frame to be read against.
-        //
-        // The sheets are gone and the floor stays, because the arithmetic that
-        // produced that bug has not: a heavy blow's hit-stop is taken out of
-        // this same remainder (see `remaining` below), so a big enough hit can
-        // still spend the whole budget and leave nothing to read the number
-        // against. A floor rather than a bigger budget, which would make every
-        // light beat sit longer doing nothing.
+        // A pure "what's left of BeatHoldSeconds once the stance is paid for"
+        // remainder can hit zero or go negative once a heavy blow's hit-stop
+        // is also taken out of it (see `remaining` below), leaving an
+        // animated blow no pause at all: blows would run into each other
+        // with nothing between them and the damage number no still frame to
+        // be read against. A floor rather than a bigger budget, which would
+        // make every light beat sit longer doing nothing.
         public const float MinSettleSeconds = 0.16f;
 
         // WHAT A STILL POSE COSTS AGAINST THE BEAT BUDGET, for every beat that
@@ -196,12 +190,11 @@ namespace PrincesPalace
         // standing without knowing anything about stages or slots.
         internal Func<CombatantState, RectTransform> SlotFor;
 
-        // SlotFor's twin for the animator that lives on that slot. Lunge,
-        // RecoilOne and Punch used to call SlotFor and then GetComponent
-        // the result to find one -- the view already knows which array
-        // holds it (ScreenRegistry populated it at build time), so this
-        // hands it over the same door SlotFor uses rather than making
-        // playback re-derive it through the transform.
+        // SlotFor's twin for the animator that lives on that slot. The view
+        // already knows which array holds it (ScreenRegistry populated it at
+        // build time), so this hands it over the same door SlotFor uses
+        // rather than making playback derive it through the transform via
+        // SlotFor + GetComponent.
         internal Func<CombatantState, StageActorAnimator> AnimatorFor;
 
         // Paints a set of vitals. Called TWICE per beat -- once with what stood
@@ -383,10 +376,10 @@ namespace PrincesPalace
             // CLEARED BEFORE THE FLUSH, so the flush below has nobody to notify.
             //
             // This playback supersedes the last one, and the caller is about to
-            // be told when THIS one ends. Letting Flush fire the old callback
-            // here would clear the controller's busy flag a frame after it set
-            // it, and the player could act in the middle of the round they just
-            // started.
+            // be told when THIS one ends. Letting Flush fire the previous
+            // callback here would clear the controller's busy flag a frame
+            // after it set it, and the player could act in the middle of the
+            // round they just started.
             _onFinished = null;
             Supersede();
 
@@ -405,16 +398,16 @@ namespace PrincesPalace
         // END of the round about to be drawn -- and handing the stage to it
         // paints the round's outcome on the frame before its first beat opens.
         //
-        // The formation and the turn queue got away with it: PlayBeats' very
-        // first act is to paint both from beat 1, on the same frame, so the
-        // leak was overwritten before anything rendered. The FORMS did not,
-        // because a form is only repainted at a transform's impact instant --
-        // so ResyncForms here put Shawn in the Black Ram's skin from the
-        // opening frame of the beat that was supposed to turn him into it,
-        // and WearForm then found the folder it was about to wear already
-        // worn, took its "nothing actually changed" early return, and never
-        // flashed. "Shawn doesn't have a flash when he transforms": not the
-        // flash, the resync in front of it.
+        // The formation and the turn queue get away with reading live state
+        // early: PlayBeats' very first act is to paint both from beat 1, on
+        // the same frame, so an early read is overwritten before anything
+        // renders. Forms do not, because a form is only repainted at a
+        // transform's impact instant -- ResyncForms reading live state here
+        // would put an actor in a transformed form from the opening frame of
+        // the beat that is supposed to turn them into it, and WearForm would
+        // then find the folder it is about to wear already worn, take its
+        // "nothing actually changed" early return, and never flash the
+        // transform.
         //
         // So this stops the coroutine and puts the borrowed popups back --
         // everything a supersede genuinely needs -- and leaves the stage
@@ -455,10 +448,9 @@ namespace PrincesPalace
 
         // Stops playback dead and puts every borrowed thing back.
         //
-        // Reclaiming the popups here is the point. v1's Flush left them running,
-        // and its DamagePopup.Clear had no call sites at all, so an abandoned
-        // fight leaked one popup per in-flight number out of a pool of six that
-        // is never refilled.
+        // Reclaiming the popups here is the point: without it an abandoned
+        // fight leaks one popup per in-flight number out of a pool of six
+        // that is never refilled.
         public void Flush()
         {
             Supersede();
@@ -475,13 +467,13 @@ namespace PrincesPalace
             PaintTurnOrder?.Invoke(null);
             ResyncForms?.Invoke();
 
-            // AND WHOEVER WAS WAITING IS TOLD, which it never was.
+            // AND WHOEVER WAS WAITING IS TOLD.
             //
             // FightController sets _isBusy before Play and clears it ONLY in
-            // this callback, and _isBusy is half of CanAct. So a playback
-            // stopped rather than finished left the controller busy for the
-            // rest of the fight: every verb dead, every click ignored, nothing
-            // on screen saying why. "The buttons just dont work."
+            // this callback, and _isBusy is half of CanAct. Without this, a
+            // playback stopped rather than finished would leave the
+            // controller busy for the rest of the fight: every verb dead,
+            // every click ignored, nothing on screen saying why.
             //
             // Same capture-null-invoke as the normal completion path, so a
             // callback that reaches back into this player cannot be run twice.
@@ -490,8 +482,8 @@ namespace PrincesPalace
             finished?.Invoke();
         }
 
-        // SUPERSEDING A PLAYBACK AND ABANDONING A FIGHT ARE TWO THINGS, and
-        // Flush used to be both.
+        // SUPERSEDING A PLAYBACK AND ABANDONING A FIGHT ARE TWO THINGS, kept
+        // as two separate methods rather than one.
         //
         // Flush runs from Play, which is the start of the NEXT round -- so
         // stopping every visual there is what killed a tail the instant the
@@ -501,8 +493,8 @@ namespace PrincesPalace
         //
         // TWO NAMES RATHER THAN Flush(bool endingTheFight). A bool that selects
         // the behaviour rather than being the state is refused by
-        // docs/CODE_STANDARDS.md section 5, and `Flush(true)` at a call site
-        // would tell a reader nothing.
+        // docs/CODE_STANDARDS.md "Functions", and `Flush(true)` at a call
+        // site would tell a reader nothing.
         public void EndFight()
         {
             Flush();
@@ -874,18 +866,15 @@ namespace PrincesPalace
 
             // THE ACTOR'S POSE NOW; EVERYONE ELSE'S AT THE IMPACT INSTANT.
             //
-            // The beat records a stance for every combatant it mentions,
-            // and all of them used to be applied here, when the beat
-            // opened. For the one taking the blow that is the wrong
-            // moment: the victim wore its "hurt" drawing through the
-            // attacker's whole wind-up, so a figure flinched from a swing
-            // that had not left its mark. Invisible while a still-drawing
-            // attacker had no wind-up at all (impact WAS the opening
-            // instant); a whole crouch-and-cross of pre-emptive flinching
-            // once StaticSwing gave it one, and longer still for any spell
-            // with a travel time. Cause has to come before effect on the
-            // stage as well as in the log, which is the same argument the
-            // two snapshots make.
+            // The beat records a stance for every combatant it mentions.
+            // Applying all of them when the beat opens is wrong for the one
+            // taking the blow: the victim would wear its "hurt" drawing
+            // through the attacker's whole wind-up, flinching from a swing
+            // that has not left its mark yet -- a whole crouch-and-cross of
+            // pre-emptive flinching for a StaticSwing wind-up, and longer
+            // still for any spell with a travel time. Cause has to come
+            // before effect on the stage as well as in the log, which is the
+            // same argument the two snapshots make.
             //
             // The actor is different: its stance IS the wind-up, so it has
             // to be worn from the first frame. PoseVictims below is the
@@ -941,11 +930,10 @@ namespace PrincesPalace
             // PlayMode tests that sampled exactly one frame after the click,
             // which is the only reason it was caught at all.
             //
-            // THOSE TESTS NOW POLL FOR THE IMPACT WITH A DEADLINE instead,
-            // because a Lunge has since gained a real wind-up (StaticSwing)
-            // and lands a frame or two later on purpose. The trap above is
-            // still a trap; it is only no longer one that a
-            // frame-after-the-click sample would catch, so a new
+            // The PlayMode tests covering this poll for the impact with a
+            // deadline rather than sampling a fixed frame, because a Lunge's
+            // own wind-up (StaticSwing) makes it land a frame or two later on
+            // purpose. The trap above is still a trap, and a new
             // unconditional yield here has to be caught by reading, not by
             // the suite.
 
@@ -1091,17 +1079,14 @@ namespace PrincesPalace
 
                 PaintVitals?.Invoke(beat.Snapshot);
 
-                // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT.
-                //
-                // It used to fire beside PlayVfx, which put a spell's own
-                // sound a whole impact delay ahead of the blow it describes
-                // -- half a second early for Frost Flare, and the wrong half
-                // second, because the number, the flash and the recoil all
-                // happen here. The comment that defended the old position
-                // gave one reason: a spell with a sound but no frames should
-                // still be audible. It still is -- ImpactDelayFor returns 0
-                // for a beat with no frames, so a frames-less cast reaches
-                // this line on the same frame it used to.
+                // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT --
+                // firing it beside PlayVfx would put a spell's own sound a
+                // whole impact delay ahead of the blow it describes, since
+                // the number, the flash and the recoil all happen here. A
+                // spell with a sound but no frames is still audible:
+                // ImpactDelayFor returns 0 for a beat with no frames, so a
+                // frames-less cast reaches this line on the same frame it
+                // would have from the top of the beat.
                 SoundController.PlayClip(beat.Vfx.sfxPath);
 
                 ShowAmount(beat);
@@ -1265,11 +1250,11 @@ namespace PrincesPalace
         // ONE NUMBER, WHEREVER IT CAME FROM. Both paths above end here, so the
         // headroom arithmetic has one home rather than one per path.
         //
-        // ABOVE THE FIGURE, not on it. This used to spawn at the slot's own
-        // centre, which is the middle of the combatant -- so the number rose
-        // out from behind the sprite it was describing and spent its first
-        // frames, the opaque ones, hidden by it. Starting a head above means
-        // the whole punch is visible and the rise carries it clear rather than
+        // ABOVE THE FIGURE, not on it: spawning at the slot's own centre
+        // (the middle of the combatant) would have the number rise out from
+        // behind the sprite it is describing, spending its first frames --
+        // the opaque ones -- hidden by it. Starting a head above means the
+        // whole punch is visible and the rise carries it clear rather than
         // into view.
         //
         // MEASURED OFF THE SLOT rather than a constant: enemy and party slots
@@ -1367,10 +1352,10 @@ namespace PrincesPalace
             // ASKED OF WHETHER ANYTHING LANDS ON THE TARGET, not of HasArt.
             // HasArt also counts a bare `groundPath` -- a fault opening under
             // the whole formation -- which puts nothing on the STRUCK target's
-            // own body. Reading that as "brings its own art" left a legacy
+            // own body. Reading that as "brings its own art" would leave a
             // ground-only spell with no impact language on the target at all:
-            // no house arc (this used to say so) and no per-target art of its
-            // own (there is none). HasPerTargetArt is the same question
+            // no house arc and no per-target art of its own (there is none).
+            // HasPerTargetArt is the same question
             // `path` alone always answered for a pre-layer block, generalised
             // to a layer with a per-target placement.
             return beat.Vfx == null || !beat.Vfx.HasPerTargetArt;
@@ -1477,9 +1462,9 @@ namespace PrincesPalace
         // about which direction the stage runs in.
         //
         // A STAND-OFF POINT, NOT A FRACTION OF THE GAP -- see
-        // Domain/Stage/StageStandOff for the two owner-reported symptoms that
-        // killed the fractions (stopping a body short from the back rank, and
-        // Bjorn's hammer inside whatever he slammed). Everything about WHERE
+        // Domain/Stage/StageStandOff for why a fraction of the gap breaks
+        // (stopping a body short from the back rank, or landing a hammer
+        // inside whatever it slammed). Everything about WHERE
         // is arithmetic over two measured bodies, which is in Domain and
         // pinned there; everything about WHICH DRAWING to measure is here,
         // because only playback knows what the actor will be wearing when it
@@ -1488,8 +1473,9 @@ namespace PrincesPalace
         {
             // The same trigger the wind-up and the contact effects read
             // (CrossesToATarget): a beat with nobody else to reach does not
-            // travel, and self-targeting used to fall through to a zero-length
-            // "cross" only because the two marks happened to be identical.
+            // travel, so self-targeting is caught here rather than left to
+            // fall through to a zero-length "cross" just because the two
+            // marks happen to be identical.
             if (beat == null || !CrossesToATarget(beat)) return (null, Vector2.zero);
 
             var from = SlotFor?.Invoke(beat.Actor);
@@ -1632,10 +1618,8 @@ namespace PrincesPalace
                     if (result.Amount <= 0) continue;
 
                     // A sweep's BeatTargetResult carries no per-target
-                    // Absorbed today (a known gap -- see the handoff
-                    // report), so this path always classifies off the raw
-                    // amount alone, same as it always implicitly did before
-                    // HitStrength existed.
+                    // Absorbed, so this path classifies off the raw amount
+                    // alone.
                     RecoilOne(beat, result.Target, result.Amount, absorbed: 0, missed: result.Missed);
                 }
 
@@ -1773,35 +1757,26 @@ namespace PrincesPalace
             }
         }
 
-        // THE THREE TRAVEL FRACTIONS ARE GONE -- 0.35/0.70 here, 0.78 on
-        // Close, 0.86 on Charge -- and StageStandOff (Domain/Stage) carries
-        // the reasoning that retired them. In short: a fraction of the gap
-        // leaves a residual that GROWS with the gap, so the same swing
-        // stopped a body short from the back rank and looked fine from the
-        // front one, and a fraction knows nothing about how far the
-        // attacker's own weapon reaches, so Bjorn's slam went through
-        // whatever he was slamming.
+        // NO TRAVEL FRACTIONS: a target position is a stand-off point (see
+        // StageStandOff, Domain/Stage), never a fraction of the gap. A
+        // fraction of the gap leaves a residual that GROWS with the gap, so
+        // the same swing stops a body short from the back rank and looks
+        // fine from the front one, and a fraction knows nothing about how
+        // far the attacker's own weapon reaches, so a slam can go through
+        // whatever it is slamming.
         //
-        // THE 0.35 LEAN WAS ALREADY DEAD when it went. Lunge chose between
-        // 0.35 and 0.70 on `staticSwing`, which is IsStaticSwing -- "a Lunge
-        // that crosses to a target" -- and TravelFor moves nothing for a beat
-        // that does NOT cross to a target, because the actor and the target
-        // are then the same figure on the same mark. So every lunge that
-        // moved at all took the 0.70 branch; 0.35 was reachable only by beats
-        // whose offset was zero either way. `staticSwing` still decides the
-        // anticipation LEAD, which is a real distinction and the only one it
-        // was ever making here.
+        // `staticSwing` decides only the anticipation LEAD; TravelFor moves
+        // nothing for a beat that does not cross to a target, because the
+        // actor and the target are then the same figure on the same mark.
 
-        // RecoilDistance (the flat 45px every struck figure used to slide) is
-        // GONE -- see HitStrength.HeavyDistance, which restates the same
-        // 45px as the top of the new three-tier table rather than a second
-        // literal this file could drift from it.
+        // RecoilDistance (the flat 45px every struck figure slides) restates
+        // as HitStrength.HeavyDistance, the top of the three-tier table,
+        // rather than a second literal this file could drift from.
 
         // ---- how long a struck figure reels ----------------------------------
         //
-        // "Reeling happens way too fast: it should happen 4x as slow" (owner,
-        // 2026-09-19). A reel is three legs and the slowdown is spread over
-        // the two that are MOTION:
+        // A reel is three legs and the slowdown is spread over the two that
+        // are MOTION:
         //
         //   PUSH OUT, StageActorAnimator.LungeSeconds, 0.055s -- UNCHANGED.
         //   It is what puts the body where the flash and the damage number
@@ -1811,12 +1786,12 @@ namespace PrincesPalace
         //   DWELL, below, 0.2025s -> 0.81s. The motionless beat at full
         //   extent.
         //
-        //   SPRING BACK, 0.16s -> 0.64s. The recovery, and the leg the first
-        //   attempt at this left alone -- which is why that attempt made the
-        //   reel four times LONGER without making anything about it four
-        //   times SLOWER. All of its extra time was a figure standing still,
-        //   and "too fast" is a complaint about velocity. This is the leg the
-        //   eye actually reads as the flinch easing off.
+        //   SPRING BACK, 0.16s -> 0.64s. The recovery -- stretching the dwell
+        //   alone would make the reel four times LONGER without making
+        //   anything about it four times SLOWER, since that extra time is a
+        //   figure standing still and "too fast" is a complaint about
+        //   velocity. This is the leg the eye actually reads as the flinch
+        //   easing off.
         //
         // IN BEATS, NOT IN SECONDS, and that is the other half of the fix.
         // The dwell was always a fraction of BeatHoldSeconds; replacing it
@@ -1830,13 +1805,13 @@ namespace PrincesPalace
         // move from a flinch.
         private const float ReelSlowdown = 4f;
 
-        // The dwell was 0.45 of a beat.
+        // The dwell is 0.45 of a beat.
         public const float RecoilDwellBeats = 0.45f * ReelSlowdown;
 
-        // The spring-back was StageActorAnimator's flat ReturnSeconds, 0.16s,
+        // The spring-back is StageActorAnimator's flat ReturnSeconds, 0.16s,
         // which is this much of a 0.45s beat. Written as the arithmetic
         // rather than as 1.4222f so the number cannot be read as arbitrary:
-        // it is the old constant, in beats, times four.
+        // it is that constant, in beats, times four.
         public const float RecoilReturnBeats = (0.16f / BeatHoldSeconds) * ReelSlowdown;
 
         // THE AUTHORED LENGTHS, before the preset. 0.81s and 0.64s.
