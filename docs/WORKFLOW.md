@@ -126,13 +126,10 @@ tokens; the average worker turn carries ~212K tokens of context):
 The implementer runs focused tests while editing. Once editing is stable,
 one verifier runs the selected change-class gate exactly once, in one
 foreground call, and reports the state it verified (HEAD sha + uncommitted file
-list). `docs/TESTING.md` is the canonical gate matrix. Game/runtime/editor,
-content, generated artifact, test, and dependency changes require the Unity
-gate, `run_tests_parallel.ps1 -Changed`: the impacted slice, promoted to the
-full run by its own rules (the report says which). The full run, no flag,
-before any release/merge the owner names. Agent/workflow prose or
-configuration alone uses the focused policy gate and does not run Unity. Prefer a fresh verifier when the owner's context
-is already large.
+list). `docs/TESTING.md` is canonical for which gate a change class requires
+and when it promotes to the full run — do not restate that selection here;
+if it drifts from this file, fix `docs/TESTING.md`. Prefer a fresh verifier
+when the owner's context is already large.
 
 Rerun the gate WHEN: files relevant to the selected gate changed after its
 snapshot; a failure was fixed; the earlier result was incomplete or invalid.
@@ -245,7 +242,7 @@ must restart to pick up a change to either.
 | Add an art kit, or change a keying/delivery convention | `docs/ART_PIPELINE.md` |
 | Fix an `AUDIT.md` finding | `AUDIT.md` (strike it, cite the commit) |
 | Add a panel to `SceneBuilder` | `ScreenshotTool.cs`'s `KnownPanels` + `screenshot.ps1` usage text |
-| Change a test command or its timing | `docs/TESTING.md` |
+| Change a test command or its timing | `docs/TESTING.md`, and `CLAUDE.md`'s Verification summary if the flags it names changed |
 | Change test-tooling behavior otherwise | that tool's own header comment |
 | Exclude a test file from the dotnet host (or back) | `tools/domain-tests/README.md`'s exclusion table |
 | Add/change a `Raw*Entry` field | `[ContentDoc]` on it; run `tools/content_schema.ps1`; commit `docs/CONTENT_SCHEMA.md` |

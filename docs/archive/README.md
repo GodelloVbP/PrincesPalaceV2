@@ -43,6 +43,11 @@ within each batch.
 | `docs/GAMEPAD_NAVIGATION_RESEARCH.md` | Active |
 | `docs/handoffs/progression_v2/` | Its own status line says phases 4-6 are "held until" three owner decisions land — not landed |
 | `docs/handoffs/talent_tree/` (v1, vine layout) | `talent_tree_v2` (already archived) says it "replaces the hero-switcher vine tree" — v1 was superseded before build rather than landed; the archival rule as written covers "feature landed," not "superseded pre-build," so this is the owner's call |
+| `docs/PLAN_PETTING_ZOO.md` | Rev 3. Own status line targets two unmet milestones (M1 prototype, M2 shipped) for Q2; only the dialogue-stage sub-piece it coordinates with is noted landed (2026-09-25), not the plan itself |
+| `docs/PLAN_DIALOGUE_STAGE.md` | "Status: Revision 2, 2026-09-25 ... Approved for implementation" — approved, not shipped |
+| `docs/PLAN_EVENTS_BELL_AND_CARAVAN.md` | Rev 2, 2026-09-27. Ships in two unstarted stages (A the Bell, B the Caravan); no landed marker |
+| `docs/PLAN_SPELL_EXPANSION.md` | "Stage 1b of the owner's thirteen-spell brief," re-verified against code this pass but not marked shipped; numbers are explicitly `prototype`/tuning, not final |
+| `docs/OWNER_DECISIONS_2026-09-26.md` | Decisions digest, not a phase-gated plan — 67 of 80 items still **Open** per its own summary table; kept live on purpose |
 
 ## Archived earlier (best-effort description, not re-verified this pass)
 

@@ -60,7 +60,8 @@ Workers cannot launch agents. `senior` REQUIRES a brief with a line
 - `two-failed-cycles` (fallback) — an implementer already failed two
   correction cycles on this same issue.
 
-scoped to only that portion, or it refuses — see `docs/WORKFLOW.md` §6.
+The brief must name exactly one of these in an `Escalation: <criterion>`
+line, or `senior` refuses — see `docs/WORKFLOW.md` §6.
 `unknown-cause` is removed; there is no generic "difficult" criterion.
 Max three active agents
 at once. One owner per issue — no duplicates, no replacement launch without
@@ -94,6 +95,10 @@ there. `Raw*Entry` fields, defaults, and the enum names they parse against:
 ---
 
 ## Verification
+
+`docs/TESTING.md` is canonical for gate selection; this is a short summary
+and must agree with it word-for-word on the flags below — if they drift,
+fix `docs/TESTING.md` and bring this back in line with it.
 
 - Iterate: `tools/test.ps1 <area>` or `tools/test.ps1 -Changed`.
 - Select the commit gate by change class in `docs/TESTING.md`. Game/runtime,

@@ -279,27 +279,29 @@ dispatcher's own next-frame rule cannot do it here, since
 the whole panel regardless of visibility, so a row hidden behind a panel it
 just opened still counts as "declared".
 
-**Phase 4, item 1** (`65ad5325`, `AUDIT.md` #160 closed): the dossier's pack
-cells, equipment slots and ability-score cells, and the Reckoning's offer
-cards, gain a selected-visual -- the four gamepad_phase3 captures #160 cited
-never showed WHERE the stick stood, only that a tooltip was open. The three
+**Phase 4, item 1** (`65ad5325`, `AUDIT.md` #160 closed, later superseded --
+see `Core/SelectHaloPainter.cs` is GONE, above): the dossier's pack cells,
+equipment slots and ability-score cells, and the Reckoning's offer cards,
+gained a selected-visual -- the four gamepad_phase3 captures #160 cited never
+showed WHERE the stick stood, only that a tooltip was open. The three
 dossier groups are `.NoChrome()` with no `ThemedButtonState` of their own, so
-each cell gets its OWN `Core/SelectHaloPainter.cs` halo now
+at the time each cell got its OWN `Core/SelectHaloPainter.cs` halo
 (`CharacterDossierScreen.PackCellHalos`/`SlotHalos`/`AttributeCellHalos`,
 wired in `CharacterDossierController.WireSelectHalos`) -- Hub's per-button
 shape, not Party's shared-index-then-repaint one, since nothing here needs a
-tracked "which index is lit" state. The pack's sort tabs and the pack/spells
-Close buttons were named in the brief too but turned out to already answer
-`ISelectHandler` focus for free (`.ThemedPlate()`/`.Themed()` already wires a
-`ThemedButtonState`, `UiEmitter.WireThemedButton`), so they were left alone --
-a second halo behind an already-themed button would have been a duplicate
-treatment. The Reckoning gets no new node at all: `ReckoningScreen.BuildOffer`
-carries its own "NO PLATE" design note, so `ReckoningController.PaintOffers`
-brightens the card's EXISTING rarity halo to
-`Max(rarity alpha, ThemedButtonState.SelectedGlowAlpha)` instead. Both wirings
-use `select.Changed +=`, not `=` -- every one of these cells already carries a
-`SelectIndex` from `TooltipFocusRouter.Register` (job 1), and `Changed` is a
-plain multicast `Action` a `=` would have silently stolen from the tooltip.
+tracked "which index is lit" state. The Reckoning got no new node: instead
+`ReckoningController.PaintOffers` brightened the card's existing rarity halo
+to `Max(rarity alpha, ThemedButtonState.SelectedGlowAlpha)`. Both of those
+per-cell halo treatments are gone now, rejected on hardware play-test along
+with the rest of `SelectHaloPainter`: the `WireSelectHalos` calls in
+`CharacterDossierController` were removed (comment there says why), and the
+Reckoning's card brightening went with it. The `SelectIndex` components these
+wirings rode (`TooltipFocusRouter.Register`, job 1) are untouched and still
+serve the tooltip; what shows focus itself today, for both screens, is the
+one shared `Core/FocusMarker.cs` arrow. The pack's sort tabs and the
+pack/spells Close buttons were never in scope for a halo either way -- they
+already answer `ISelectHandler` focus for free (`.ThemedPlate()`/`.Themed()`
+already wires a `ThemedButtonState`, `UiEmitter.WireThemedButton`).
 
 **Phase 4, item 2, segments 1-4** (`4f3cf2fc`, `d59d0963`, `e1f6cdf7` --
 `docs/GAMEPAD_NAVIGATION_PLAN.md`'s own status header has the per-segment

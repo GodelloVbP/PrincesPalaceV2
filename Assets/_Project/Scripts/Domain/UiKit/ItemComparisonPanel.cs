@@ -13,11 +13,15 @@ namespace PrincesPalace.Domain.UiKit
     // whatever the picked party character has equipped -- one body string
     // ItemDescription.ComparisonBody already renders in full. This is
     // deliberately a shared Domain/UiKit builder rather than a one-off
-    // inside ShopScreen: CharacterDossierScreen's own tooltip
-    // (BuildTooltip, 300x480, "#1D1226F2") is the next thing due to be
-    // rebuilt onto this SAME shape, so a second, ShopScreen-local copy of
-    // "fill + rim + title + body" would be the exact duplication this
-    // builder exists to close before it is ever written.
+    // inside ShopScreen: CharacterDossierScreen's own tooltip has since
+    // been rebuilt onto this SAME shape too (BuildTooltip calls
+    // ItemComparisonPanel.Build with the "DossierTooltip" name prefix; the
+    // old bespoke 300x480 "#1D1226F2" rectangle is retired -- see
+    // BuildTooltip's own header in CharacterDossierScreen.cs). Two callers
+    // today, ShopScreen's ShopDetailPanel and CharacterDossierScreen's
+    // DossierTooltip, both through this one builder, so a third,
+    // screen-local copy of "fill + rim + title + body" would be the exact
+    // duplication this builder exists to close.
     //
     // ROUGHLY SQUARE AND READABLE, in the owner's own words -- ~420x420 and
     // a body font of 15 or larger. Both are CALLER-supplied rather than
