@@ -633,45 +633,23 @@ namespace PrincesPalace.Domain.Combat.Session
         // shown blank despite dealing real damage. FightSession.PreviewSkillPower
         // is the actual pre-mitigation figure for every skill shape (fixed
         // packets, flat, or resource-scaled) with no target and no RNG spent.
-        // "-" rather than a printed "0" for the effects SkillResolution.Amount
-        // has no number for at all (Provoke, Transform, BuffParty, Summon, the
-        // three Gifts) -- their preview is a real 0, but showing "0 POWER" on
-        // the card reads as "this does nothing" for an ability that redirects
-        // aggro, transforms the caster, adds a monster to the field, or hands
-        // an ally a status/resource. Same idiom ScalingLabelForSkill below
-        // already uses for "no answer here". Ward and Shatter DO have a number
-        // (talent-authored; see SkillResolution.Amount) and print it like any
-        // other skill.
+        // NOTHING for the effects SkillResolution.Amount has no number for at
+        // all (Provoke, Transform, Summon, the Gifts, SwapAllies, Reposition,
+        // ...) -- their preview is a real 0, but "0 POWER" on the card reads
+        // as "this does nothing" for an ability that redirects aggro, moves
+        // an ally, or adds a monster to the field. Which effects have a
+        // number is SkillEffects.HasMagnitude, an allow-list: this used to be
+        // a private deny-list here, and every effect appended after it
+        // (Palace Passage's SwapAllies among them) printed "0 POWER" until
+        // someone noticed. Ward and Shatter DO have a number (talent-authored;
+        // see SkillResolution.Amount) and print it like any other skill.
         //
-        // SUMMON WAS MISSING FROM THIS LIST and is unreachable today: the one
-        // authored Summon (roar) belongs to the forest_warden, and
-        // DetailForSkill is only ever built from a player's kit. It is on the
-        // list because the list is meant to be COMPLETE -- the header above
-        // states the rule it belongs under, and the day a player skill summons
-        // anything the card would otherwise promise "0 POWER" for a fight that
-        // is about to be one monster bigger.
-        private static bool HasNoPreviewablePower(SkillEffect effect) => effect switch
-        {
-            SkillEffect.Provoke => true,
-            SkillEffect.Transform => true,
-            SkillEffect.BuffParty => true,
-            SkillEffect.Summon => true,
-            SkillEffect.GiftMana => true,
-            SkillEffect.GiftFury => true,
-            SkillEffect.GiftHaste => true,
-            SkillEffect.Enthrall => true,
-            _ => false,
-        };
-
-        // "" (never "0" or "-") for a skill with no previewable power at
-        // all -- see HasNoPreviewablePower's own header for why 0 lies here.
-        // The dash used to carry that meaning; the rework's rule ("a stat
-        // that does not apply is omitted, never shown as - or 0") means the
-        // whole POWER row is now absent instead, so this returns "" and lets
-        // DetailForSkill leave the row out.
+        // "" (never "0" or "-"): the rework's rule ("a stat that does not
+        // apply is omitted, never shown as - or 0") means the whole POWER row
+        // is absent, so this returns "" and lets DetailForSkill leave it out.
         public static string PowerLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
         {
-            if (HasNoPreviewablePower(skill.Effect)) return "";
+            if (!SkillEffects.HasMagnitude(skill.Effect)) return "";
             return session == null ? "0" : session.PreviewSkillPower(actor, skill).ToString();
         }
 
@@ -719,13 +697,22 @@ namespace PrincesPalace.Domain.Combat.Session
             panel.Stats.Add(("SCALES", ScalingLabelForSkill(session, actor, skill)));
             panel.DamageType = DamageTypeLabel(session, actor, skill);
             FillDetailIcons(panel, session, actor, skill, resourceName, cooldownRemaining);
-            panel.Note = PowerNote(PowerLabel(session, actor, skill));
+            panel.Note = SkillNote(PowerLabel(session, actor, skill), skill.FreeAction);
             return panel;
         }
 
-        // "45 POWER", or blank for a skill with nothing to preview.
-        private static string PowerNote(string power) =>
-            string.IsNullOrEmpty(power) ? "" : $"{power} POWER";
+        // What the kind line says after "SKILL": "45 POWER" for a skill with a
+        // number; for one without, "FREE ACTION" when that is what it is --
+        // the one fact about a utility skill that changes how a turn is
+        // planned, and which the card otherwise only states in prose -- and
+        // nothing at all otherwise. Never both: the kind line is audited
+        // against DetailKindSkill's sample width, and a damaging free action
+        // (none is authored) would say so in its description.
+        public static string SkillNote(string power, bool freeAction)
+        {
+            if (!string.IsNullOrEmpty(power)) return $"{power} POWER";
+            return freeAction ? "FREE ACTION" : "";
+        }
 
         // What the card's kind line prints: Kind, then the panel's Note when
         // it has one. See DetailPanel.Note for why the note exists at all.
@@ -1041,7 +1028,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 panel.Icons.Add(new DetailIcon(DetailIconKind.Scaling, scaling.ToLowerInvariant(), scaling));
             }
 
-            panel.Note = PowerNote(actor == null ? "" : CombatMath.ComputeAttackDamage(actor, null).ToString());
+            panel.Note = SkillNote(actor == null ? "" : CombatMath.ComputeAttackDamage(actor, null).ToString(), freeAction: false);
             return panel;
         }
 

@@ -4,11 +4,16 @@
     "that size -- but the drawings are NOT on that grid. SEVEN frames (the eighth cell, bottom right, is empty),",
     "each row's ground line sitting 10-40px ABOVE a 512 boundary with its cracks hanging across it, and the",
     "generator left faint seam lines baked into the alpha: a full-height vertical at x 1023-1024 and full-width",
-    "horizontals at y ~574-593, ~1103-1121, ~1557-1575 and ~2041-2047. A 512 grid would cut every frame's",
-    "cracks into the next cell and carry a seam line into four of them.",
-    "So: measured rects, one per drawing, 1022 wide (clear of the vertical seam) and 430 tall (the tallest",
-    "band that fits between two horizontal seams, y 1126-1555 for frames 5-6), each ending just above the",
-    "seam below its drawing. base_align puts every frame on one floor (the rows drift 20-40px against their",
+    "horizontals at y ~578-583, ~1107-1111, ~1561-1566 and ~2044-2047 -- and the vertical seam also runs down the",
+    "sheet's OWN outer edges: x 0-2 and x 2045-2047 are full-height lines too (M5 missed these two; the left",
+    "cells' x 0 column carried one into frames 1, 3, 5 and 7, and it showed beside the wave in the kit-m5",
+    "capture, mirrored to its right). A 512 grid would cut every frame's cracks into the next cell and carry a",
+    "seam line into four of them.",
+    "So: measured rects, one per drawing, 1018 wide at x 3 and x 1026 (clear of all three verticals: 0-2,",
+    "1021-1025, 2045-2047) and 430 tall (the tallest band that fits between two horizontal seams, y 1126-1555",
+    "for frames 5-6), each ending just above the seam below its drawing. Re-measured 2026-09-28 by scanning every",
+    "output frame for a column or row more than 30%/60% covered, not by eye on one capture.",
+    "base_align puts every frame on one floor (the rows drift 20-40px against their",
     "rects); content_crop trims to the shared content box so place: formation gets the wave's own wide aspect.",
     "The sheet also carries a scatter of alpha 1-31 noise pixels (~390k, mean colour a dark grey-violet): left",
     "alone, as it is invisible and removing it would be repainting."
@@ -16,45 +21,45 @@
   "sheet": "Spells/death_knell/shockwave.png",
   "rects": [
     [
-      0,
+      3,
       143,
-      1022,
+      1018,
       430
     ],
     [
-      1025,
+      1026,
       143,
-      1022,
+      1018,
       430
     ],
     [
-      0,
+      3,
       669,
-      1022,
+      1018,
       430
     ],
     [
-      1025,
+      1026,
       669,
-      1022,
+      1018,
       430
     ],
     [
-      0,
+      3,
       1126,
-      1022,
+      1018,
       430
     ],
     [
-      1025,
+      1026,
       1126,
-      1022,
+      1018,
       430
     ],
     [
-      0,
+      3,
       1610,
-      1022,
+      1018,
       430
     ]
   ],

@@ -65,13 +65,14 @@ MonoBehaviour:
         startFrame: 0
         until: once
         fade: 0.15
-        dx: 0
-        dy: 280
+        opacity: 0.5
+        dx: 20
+        dy: 30
         scale: 1
-        size: 380
+        size: 640
         fit: 
         facing: none
-        sort: effects
+        sort: ground
         align: 
         punch: 0
         glow: 0.5

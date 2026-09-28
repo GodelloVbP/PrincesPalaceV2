@@ -352,14 +352,17 @@
               "place": "caster-centre",
               "at": "release",
               "path": "Spells/bellwether_toll_ripple",
+              "_comment": "A ripple, not a target: drawn BEHIND the Bellwether (sort ground) at half strength, centred on its bell (caster-centre is its castPoint, the chest front by the bell; dx/dy move it back and up onto the bell in the cast pose -- facing none, so dx is screen-right, toward its back), and big enough that the outer rings clear its body. At 380 over the chest on the effects band it read as an opaque bullseye hiding the body (kit-m5 capture).",
               "seconds": 0.63,
               "until": "once",
-              "size": 380,
+              "size": 640,
               "facing": "none",
-              "sort": "effects",
+              "sort": "ground",
+              "opacity": 0.5,
               "glow": 0.5,
               "fade": 0.15,
-              "dy": 280
+              "dx": 20,
+              "dy": 30
             }
           ]
         }

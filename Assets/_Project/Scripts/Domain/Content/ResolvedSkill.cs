@@ -329,10 +329,10 @@ namespace PrincesPalace.Domain.Content
         // "costs nothing at all" is asked once.
         public bool CostsResource => ResourceCost > 0 || SpendsAllResource;
 
-        // Whether this skill deals damage at all -- the same gate
-        // FightHudModel's SCALES/POWER rows already use (HasNoPreviewablePower/
-        // ScalingLabelForSkill), repeated here rather than duplicated a third
-        // time for the damage-type row those two rows sit beside.
+        // Whether this skill deals damage at all -- the gate FightHudModel's
+        // SCALES row (ScalingLabelForSkill) and damage-type row read. Not the
+        // POWER row's: a heal or a ward has a number without dealing damage
+        // (SkillEffects.HasMagnitude).
         public bool IsDamaging => SkillEffects.IsDamagePipeline(Effect);
 
         // The damage type THIS SKILL authors directly -- only ever answerable

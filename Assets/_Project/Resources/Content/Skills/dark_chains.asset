@@ -63,8 +63,9 @@ MonoBehaviour:
         startFrame: 0
         until: once
         fade: 0.12
-        dx: 0
-        dy: 180
+        opacity: 1
+        dx: 130
+        dy: 0
         scale: 1
         size: 300
         fit: 
@@ -116,8 +117,9 @@ MonoBehaviour:
         startFrame: 0
         until: loop
         fade: 0
+        opacity: 1
         dx: 0
-        dy: 180
+        dy: 0
         scale: 1
         size: 300
         fit: target
@@ -169,6 +171,7 @@ MonoBehaviour:
         startFrame: 0
         until: once
         fade: 0.1
+        opacity: 1
         dx: 0
         dy: 0
         scale: 1

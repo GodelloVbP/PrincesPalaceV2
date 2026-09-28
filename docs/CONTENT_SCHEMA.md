@@ -616,6 +616,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `startFrame` | int | `0` | Which frame the layer starts on, counting from 1; 0 means frame 1. |  |
 | `until` | string | `""` | End policy: once, loop or hold. Blank means once. A travelling layer ends at its arrival whatever this says. | Once, Loop, Hold |
 | `fade` | float | `0` | Seconds of alpha ramp-out after the layer's end; 0 means cut. Capped at SpellLayerRules.MaxFadeSeconds. |  |
+| `opacity` | float | `1` | How opaque the layer is drawn, 0-1, for its whole life; multiplies the fade-out. 1 (the default) is the sheet as painted. Refused at or below 0 and above 1. |  |
 | `dx` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `dy` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |

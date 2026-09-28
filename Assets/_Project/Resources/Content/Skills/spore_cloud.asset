@@ -63,6 +63,7 @@ MonoBehaviour:
         startFrame: 0
         until: 
         fade: 0
+        opacity: 1
         dx: 0
         dy: 0
         scale: 1

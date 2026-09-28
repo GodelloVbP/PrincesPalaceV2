@@ -696,7 +696,8 @@ namespace PrincesPalace
                 var at = held.P0 + (drop.Position - held.P0) * fit;
                 particleRenderer.Show(member, frames[drop.Frame],
                     new Vector2(at.X, at.Y),
-                    ParticleSize * drop.Scale * fit, drop.Alpha, drop.Rotation);
+                    ParticleSize * drop.Scale * fit, drop.Alpha * SpellFrameCursor.OpacityOf(instance.Layer),
+                    drop.Rotation);
             }
         }
 

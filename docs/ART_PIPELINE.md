@@ -846,6 +846,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | `startFrame` | `1` | Which frame of the folder it opens on, counting from 1. Range-checked against the folder. |
 | `until` | `once` | `once`, `loop`, `hold`. Describes what the sheet does while it is alive, never how long it lives. |
 | `fade` | `0` | Seconds of alpha ramp after the layer's end. Capped at `SpellLayerRules.MaxFadeSeconds`. |
+| `opacity` | `1` | How solid the layer is drawn for its whole life, above 0 and at most 1; multiplies the fade (and an emitter's particles). For a wash drawn over a body -- the Bellwether's toll ripple is `0.5` on `sort: ground` so its rings never hide the figure they ring from. Not a brightness: that is `glow`. |
 | `travelSeconds` | `0` | Non-zero makes the layer a projectile, crossing from its anchor to the target. Only a caster word or `sky` has somewhere to leave from. |
 | `orient` | `none` | `path` turns the drawing so `artDegrees` lies along its flight, with the impact point riding the line from launch to aim. Travelling layers only. |
 | `artDegrees` | `0` | Which way the drawing points as painted, degrees anticlockwise from +x. Read only by `orient: path`. |

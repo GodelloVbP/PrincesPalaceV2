@@ -63,6 +63,7 @@ MonoBehaviour:
         startFrame: 0
         until: once
         fade: 0.3
+        opacity: 1
         dx: 0
         dy: 0
         scale: 1
@@ -116,6 +117,7 @@ MonoBehaviour:
         startFrame: 2
         until: hold
         fade: 0.08
+        opacity: 1
         dx: 0
         dy: 0
         scale: 1
@@ -169,6 +171,7 @@ MonoBehaviour:
         startFrame: 0
         until: 
         fade: 0
+        opacity: 1
         dx: 0
         dy: 0
         scale: 1

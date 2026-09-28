@@ -61,6 +61,7 @@ namespace PrincesPalace.Domain.Tests
                     startFrame = 2,
                     until = "loop",
                     fade = 0.1f,
+                    opacity = 0.45f,
                     dx = -70f,
                     dy = 12f,
                     scale = 0.85f,

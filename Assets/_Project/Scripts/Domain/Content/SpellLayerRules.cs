@@ -292,6 +292,16 @@ namespace PrincesPalace.Domain.Content
                              "and 0 means the first.");
             }
 
+            // ABOVE ZERO, AT MOST ONE. Zero would be a layer that is scheduled,
+            // pooled and timed and draws nothing -- delete it instead; above
+            // one cannot be drawn (alpha clamps) and would read as "brighter",
+            // which is what `glow` is for.
+            if (!(layer.opacity > 0f) || layer.opacity > 1f)
+            {
+                problems.Add($"{at}.opacity {Num(layer.opacity)} must be above 0 and at most 1; 1 is the sheet " +
+                             "as painted, and brightness past it is `glow`.");
+            }
+
             if (layer.fade > MaxFadeSeconds)
             {
                 problems.Add($"{at}.fade {Num(layer.fade)} is longer than the {Num(MaxFadeSeconds)}s a " +

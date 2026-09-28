@@ -181,13 +181,28 @@ namespace PrincesPalace.Domain.Combat.Presentation
             return 1f + layer.punch * remaining * remaining;
         }
 
+        // THE FADE-OUT, TIMES THE LAYER'S AUTHORED OPACITY. Opacity scales the
+        // whole curve rather than capping it, so a half-opaque ripple still
+        // fades from its own half to nothing over the same `fade` seconds.
         private static float AlphaAt(SpellLayerInstance instance, float age, float lifetime)
         {
-            if (age <= lifetime) return 1f;
+            float opacity = OpacityOf(instance.Layer);
+            if (age <= lifetime) return opacity;
             if (instance.FadeSeconds <= 0f) return 0f;
 
             float into = (age - lifetime) / instance.FadeSeconds;
-            return into >= 1f ? 0f : 1f - into;
+            return into >= 1f ? 0f : (1f - into) * opacity;
+        }
+
+        // The authored opacity, clamped to what can be drawn. Content refuses
+        // anything outside (0, 1] (SpellLayerRules); the clamp is for a layer
+        // built in code, and a null layer draws as painted. Public so the
+        // emitter path multiplies its particles by the same number.
+        public static float OpacityOf(SpellLayer layer)
+        {
+            if (layer == null) return 1f;
+            float opacity = layer.opacity;
+            return opacity < 0f ? 0f : opacity > 1f ? 1f : opacity;
         }
 
         private static int NextIndex(int index, int first, int frameCount, bool loops)

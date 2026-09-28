@@ -1782,6 +1782,7 @@
             "place": "caster-centre",
             "at": "release",
             "path": "Spells/dark_chains_origin",
+            "_comment": "Opens in FRONT of the Bellwether, on the side facing its target: caster-centre is its castPoint (the chest front, by the bell), and the rift is painted a fifth of the way across its frame with the chains running on, so dx 130 puts the rift just past it, by the raised forward hand, and the chains out toward the target. At dy 180 off the slot's middle it sat on the far side of the body and its chains ran back through the torso (kit-m5 capture).",
             "seconds": 0.42,
             "until": "once",
             "size": 300,
@@ -1789,7 +1790,7 @@
             "sort": "effects",
             "glow": 0.5,
             "fade": 0.12,
-            "dy": 180
+            "dx": 130
           },
           {
             "id": "chain",
@@ -1804,12 +1805,12 @@
             "travelSeconds": 0.32,
             "orient": "path",
             "artDegrees": 0,
+            "_comment": "No offset: a travelling layer leaves the caster's castPoint -- where the rift opens -- and an offset would ride the whole flight and land it beside the target instead of on him.",
             "size": 300,
             "fit": "target",
             "facing": "auto",
             "sort": "effects",
-            "glow": 0.4,
-            "dy": 180
+            "glow": 0.4
           },
           {
             "id": "bind",

@@ -67,6 +67,17 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Seconds of alpha ramp-out after the layer's end; 0 means cut. Capped at SpellLayerRules.MaxFadeSeconds.")]
         public float fade;
 
+        // HOW SOLID THE WHOLE LAYER IS, for the whole of its life. A wash --
+        // a ripple, an aura, a floor glow -- is painted opaque on its sheet
+        // because the sheet cannot know what it will be drawn over; drawn
+        // over a body at full strength it hides the body (the Bellwether's
+        // toll ripple read as a bullseye on its chest). Authored here rather
+        // than baked into the frames because it is a fact about the CAST,
+        // not the drawing: the same sheet may be a solid burst in one spell
+        // and a ghost in another. Multiplies the fade, never replaces it.
+        [ContentDoc("How opaque the layer is drawn, 0-1, for its whole life; multiplies the fade-out. 1 (the default) is the sheet as painted. Refused at or below 0 and above 1.")]
+        public float opacity = 1f;
+
         [ContentDoc("Local offset from the anchor, in reference-frame units.")]
         public float dx;
         [ContentDoc("Local offset from the anchor, in reference-frame units.")]
@@ -177,6 +188,7 @@ namespace PrincesPalace.Domain.Content
             startFrame = startFrame,
             until = until,
             fade = fade,
+            opacity = opacity,
             dx = dx,
             dy = dy,
             scale = scale,

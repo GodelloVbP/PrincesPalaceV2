@@ -162,6 +162,7 @@ MonoBehaviour:
           startFrame: 0
           until: once
           fade: 0.0333
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -215,6 +216,7 @@ MonoBehaviour:
           startFrame: 0
           until: loop
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -268,6 +270,7 @@ MonoBehaviour:
           startFrame: 0
           until: hold
           fade: 0.08
+          opacity: 1
           dx: -112
           dy: 0
           scale: 0.65
@@ -321,6 +324,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -382,6 +386,7 @@ MonoBehaviour:
           startFrame: 2
           until: once
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -435,6 +440,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -517,6 +523,7 @@ MonoBehaviour:
           startFrame: 0
           until: once
           fade: 0.0333
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -570,6 +577,7 @@ MonoBehaviour:
           startFrame: 0
           until: loop
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -623,6 +631,7 @@ MonoBehaviour:
           startFrame: 0
           until: hold
           fade: 0.1
+          opacity: 1
           dx: -118
           dy: 0
           scale: 0.7
@@ -676,6 +685,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -729,6 +739,7 @@ MonoBehaviour:
           startFrame: 2
           until: once
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -782,6 +793,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -856,6 +868,7 @@ MonoBehaviour:
           startFrame: 0
           until: once
           fade: 0.0333
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -909,6 +922,7 @@ MonoBehaviour:
           startFrame: 0
           until: loop
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -962,6 +976,7 @@ MonoBehaviour:
           startFrame: 0
           until: hold
           fade: 0.08
+          opacity: 1
           dx: -96
           dy: 0
           scale: 0.55
@@ -1015,6 +1030,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -1068,6 +1084,7 @@ MonoBehaviour:
           startFrame: 2
           until: once
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -1121,6 +1138,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -1195,6 +1213,7 @@ MonoBehaviour:
           startFrame: 0
           until: once
           fade: 0.0333
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -1248,6 +1267,7 @@ MonoBehaviour:
           startFrame: 0
           until: loop
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -1301,6 +1321,7 @@ MonoBehaviour:
           startFrame: 0
           until: hold
           fade: 0.08
+          opacity: 1
           dx: -115
           dy: 0
           scale: 0.6
@@ -1354,6 +1375,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -1407,6 +1429,7 @@ MonoBehaviour:
           startFrame: 2
           until: once
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1
@@ -1460,6 +1483,7 @@ MonoBehaviour:
           startFrame: 0
           until: 
           fade: 0
+          opacity: 1
           dx: 0
           dy: 0
           scale: 1

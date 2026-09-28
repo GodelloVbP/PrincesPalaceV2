@@ -1006,6 +1006,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Counter with it. Said here rather than guessed at silently: this is
         // the smallest thing that survives UiAudit with the tree as declared,
         // not a claim that it is the final visual.
+        // The counter's floor, as fractions of the badge. See BuildStatusBadge.
+        public const float CounterBoxWidth = 0.8f;
+        public const float CounterBoxHeight = 0.6f;
+
+        // The stack/turn count's type size on each surface. The enemy row's
+        // badge is 36px and its 18px count reads "x10" inside a 28.8x21.6
+        // floor; the party plate's badge is 20px and 12px is the most a 16x12
+        // floor holds. Were 9 and 8, which the kit-m5 capture showed as
+        // specks, and a first pass at 15/11 still read small at 1:1. The
+        // floor covers most of the glyph's lower half: the frame's colour
+        // still says buff or harm, and the count is the fact that changes.
+        public const int EnemyStatusCounterFontSize = 18;
+        public const int PcStatusCounterFontSize = 12;
+
         private UiNode BuildStatusBadge(string name, float x, float y, float size,
             int codeFontSize, int counterFontSize)
         {
@@ -1026,11 +1040,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // has no floor under it to grow at all. AsDecor: it must never
             // steal the badge Button's own click/hover, which is how
             // Core/HoverIndex.cs finds this badge in the first place.
-            var counterPatch = Ui.Solid("CounterPatch", "#0A0611CC", new UiVec(size * 0.34f, size * 0.34f),
-                    counterPin)
+            //
+            // SIZED FOR "x10", NOT FOR ONE DIGIT. A stack count (the Bellwether's
+            // rally, "x5") is three glyphs, and at the old 9px on a 12px patch
+            // it was barely legible at 16:9 (kit-m5 capture). The patch and the
+            // label now share one box, CounterBoxWidth/Height of the badge, so
+            // the digits sit centred on their own floor; it covers the glyph's
+            // bottom-right corner, which is the trade for a count read at a
+            // glance.
+            var counterBox = new UiVec(size * CounterBoxWidth, size * CounterBoxHeight);
+            var counterPatch = Ui.Solid("CounterPatch", "#0A0611CC", counterBox, counterPin)
                 .AsDecor();
 
-            var counter = Ui.Label("Counter", UiString.Runtime, new UiVec(size * 0.5f, size * 0.4f),
+            var counter = Ui.Label("Counter", UiString.Runtime, counterBox,
                 counterFontSize, FightHudPalette.TextPrimary, counterPin);
 
             // ONE BADGE, four layers -- same shape as the initiative badge's
@@ -1124,7 +1146,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 for (int i = 0; i < EnemyStatusBadgesPerRow; i++)
                 {
                     float x = offset.X + (i - EnemyStatusBadgesPerRow / 2) * EnemyStatusPitch;
-                    var badge = BuildStatusBadge($"EnemyStatusBadge{slot}_{i}", x, y, EnemyStatusBadgeSize, 11, 9)
+                    var badge = BuildStatusBadge($"EnemyStatusBadge{slot}_{i}", x, y, EnemyStatusBadgeSize, 11,
+                            EnemyStatusCounterFontSize)
                         .AllowOverflow(EnemyStatusOverflowReason);
                     EnemyStatusBadges.Add(badge);
                     yield return badge;
@@ -2229,7 +2252,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 {
                     float x = lastCentre - (PcStatusBadgesPerPlate - 1 - k) * PcStatusPitch;
                     var badge = BuildStatusBadge($"PcStatusBadge{i}_{k}", x, PcNameRowY,
-                        PcStatusBadgeSize, 9, 8);
+                        PcStatusBadgeSize, 9, PcStatusCounterFontSize);
                     PcStatusBadges.Add(badge);
                     children.Add(badge);
                 }

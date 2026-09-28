@@ -185,6 +185,11 @@
       "spritePath": "Enemies/bellwether",
       "groundLine": 8,
       "groundLineSource": "slicer",
+      "castPoint": {
+        "dx": 61,
+        "dy": 369
+      },
+      "_castPointNote": "The chest front beside the bell, by eye, on Enemies/bellwether/cast.png at canvas pixel (440, 215) -- 758x593 canvas, groundLine 8, so dx = 440 - 758/2 = 61 and dy = (593 - 1 - 215) - 8 = 369. The same point sits on the chest front just behind the raised forward hand in extra.png (the chains pose). Authored 2026-09-28 because Dark Chains' rift and the toll ripple were placed off the slot's middle and landed on the far side of the body: the chains' rift opened behind it and its chains ran back through the torso, and the ripple sat over the chest. Every caster-anchored layer of this actor now leaves from here.",
       "head": {
         "dx": 68,
         "dy": 492,

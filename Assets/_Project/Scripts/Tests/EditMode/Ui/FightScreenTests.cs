@@ -1563,6 +1563,29 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- status badges (PLAN_STATUS_EFFECT_UI, package B) -----------------
 
+        // A STACK COUNT READS AT A GLANCE (kit-m5 capture: the rally's "x5"
+        // was a speck at 9px on a 12px patch). Literal sizes: the enemy
+        // badge is 36, so its count floor is 36 x 0.8 = 28.8 by
+        // 36 x 0.6 = 21.6 at 18px; the party plate's is 20, so 16 by 12
+        // at 12px. The patch and the digits share that one box.
+        [Test]
+        public void StatusCountersAreSizedToReadAStackCount()
+        {
+            var root = UiSolver.Solve(Screen().Root, UiFrames.Reference);
+
+            var enemyCounter = Find(Find(root, "EnemyStatusBadge0_0"), "Counter");
+            var enemyPatch = Find(Find(root, "EnemyStatusBadge0_0"), "CounterPatch");
+            Assert.AreEqual(18, enemyCounter.Source.FontSize);
+            Assert.AreEqual(28.8f, enemyCounter.Rect.Width, 0.01f);
+            Assert.AreEqual(21.6f, enemyCounter.Rect.Height, 0.01f);
+            Assert.AreEqual(enemyCounter.Rect, enemyPatch.Rect, "the digits sit on their own floor");
+
+            var pcCounter = Find(Find(root, "PcStatusBadge0_0"), "Counter");
+            Assert.AreEqual(12, pcCounter.Source.FontSize);
+            Assert.AreEqual(16f, pcCounter.Rect.Width, 0.01f);
+            Assert.AreEqual(12f, pcCounter.Rect.Height, 0.01f);
+        }
+
         [Test]
         public void StatusBadgeListsAreSizedAndNamedAsThePlanFixes()
         {

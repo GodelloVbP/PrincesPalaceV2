@@ -222,6 +222,31 @@ namespace PrincesPalace.Domain.Combat
         public static bool IsDamagePipeline(SkillEffect effect) =>
             effect == SkillEffect.DamageSingle || effect == SkillEffect.DamageAll;
 
+        // WHETHER A CAST OF THIS EFFECT HAS A QUANTITY -- damage dealt,
+        // health or mana restored, a ward's size, a shatter's hit. The
+        // effects SkillResolution.Amount computes a number for, and no others.
+        //
+        // AN ALLOW-LIST, NOT A DENY-LIST. The detail card used to keep its own
+        // list of effects with NO number (Provoke, Transform, ...), and every
+        // effect appended after it defaulted to "has a power": SwapAllies
+        // (Palace Passage), Reposition, Hasten, Reclaim and Afflict all
+        // printed "0 POWER" on the card. A new effect now has no magnitude
+        // until it is added here, which is the safe default -- an omitted
+        // POWER row reads as "not that kind of skill", a printed 0 reads as
+        // "this does nothing".
+        public static bool HasMagnitude(SkillEffect effect) => effect switch
+        {
+            SkillEffect.DamageSingle => true,
+            SkillEffect.DamageAll => true,
+            SkillEffect.HealSelf => true,
+            SkillEffect.HealParty => true,
+            SkillEffect.HealSingle => true,
+            SkillEffect.RestorePartyMana => true,
+            SkillEffect.Ward => true,
+            SkillEffect.Shatter => true,
+            _ => false,
+        };
+
         // HOW MANY TARGETS A CAST OF THIS EFFECT HAS TO CARRY, and the one
         // place that answer lives (plan 1.12).
         //

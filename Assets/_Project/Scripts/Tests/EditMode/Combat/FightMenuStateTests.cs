@@ -715,7 +715,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("20", FightHudModel.PowerLabel(session, hero, skill));
         }
 
-        // The HasNoPreviewablePower list is meant to be COMPLETE: every
+        // SkillEffects.HasMagnitude is meant to be COMPLETE: every
         // effect SkillResolution.Amount has no number for at all. Summon was
         // missing from it, so a summon's card would have promised "0 POWER"
         // -- which reads as "this does nothing" -- for an ability that makes
@@ -731,6 +731,60 @@ namespace PrincesPalace.Domain.Tests
             var (session, hero) = Fight(summon);
 
             Assert.AreEqual("", FightHudModel.PowerLabel(session, hero, summon));
+        }
+
+        // Palace Passage's card read "SKILL · 0 POWER" (kit-m3 capture):
+        // SwapAllies was appended after the old deny-list and so defaulted to
+        // "has a power". The class, pinned literally: exactly these eight
+        // effects carry a number, every other one -- including any effect
+        // added later -- does not.
+        [Test]
+        public void OnlyTheEffectsWithAQuantityHaveAMagnitude()
+        {
+            var withNumber = new[]
+            {
+                SkillEffect.DamageSingle, SkillEffect.DamageAll, SkillEffect.HealSelf, SkillEffect.HealParty,
+                SkillEffect.HealSingle, SkillEffect.RestorePartyMana, SkillEffect.Ward, SkillEffect.Shatter,
+            };
+
+            foreach (SkillEffect effect in System.Enum.GetValues(typeof(SkillEffect)))
+            {
+                Assert.AreEqual(withNumber.Contains(effect), SkillEffects.HasMagnitude(effect), effect.ToString());
+            }
+        }
+
+        [Test]
+        public void AFreeUtilitySkillSaysFreeActionAndNoPower()
+        {
+            var passage = new ResolvedSkill("palace_passage", "Palace Passage", "Move an ally.", "hero", 1,
+                SkillEffect.SwapAllies, SkillTargeting.SingleAlly, 7, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0, freeAction: true);
+            var (session, hero) = Fight(passage);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, passage);
+
+            Assert.AreEqual("", FightHudModel.PowerLabel(session, hero, passage));
+            Assert.IsFalse(HasStat(panel, "POWER"));
+            Assert.AreEqual("SKILL  ·  FREE ACTION", FightHudModel.DetailKindLine(panel));
+        }
+
+        [Test]
+        public void AUtilitySkillThatIsNotFreeSaysOnlySkill()
+        {
+            var chains = Skill("chains", "Dark Chains", effect: SkillEffect.Reposition);
+            var (session, hero) = Fight(chains);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, chains);
+
+            Assert.AreEqual("SKILL", FightHudModel.DetailKindLine(panel));
+        }
+
+        [Test]
+        public void ADamagingSkillKeepsItsPowerOnTheKindLine()
+        {
+            Assert.AreEqual("45 POWER", FightHudModel.SkillNote("45", freeAction: false));
+            Assert.AreEqual("45 POWER", FightHudModel.SkillNote("45", freeAction: true));
+            Assert.AreEqual("", FightHudModel.SkillNote("", freeAction: false));
         }
 
         [Test]
@@ -1126,7 +1180,7 @@ namespace PrincesPalace.Domain.Tests
         {
             // The rework's rule: a stat that does not apply is OMITTED, never
             // shown as "-" or "0" -- POWER used to print "-" for Provoke,
-            // Transform and the rest of HasNoPreviewablePower's list. Rework
+            // Transform and every other effect SkillEffects.HasMagnitude refuses. Rework
             // #2 goes further: the row is not merely blanked, it is not in
             // Stats at ALL, so Rally's card is compact rather than an
             // eight-row card with a hole in the middle of it.
