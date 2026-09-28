@@ -148,7 +148,41 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, Resolved(Caravan(shelf)).Shelves[0].Sections.Length);
         }
 
+        [Test]
+        public void ATitleAndAKeeper_Resolve_AndDefaultToEmpty()
+        {
+            var plain = Resolved(Caravan()).Shelves[0];
+            Assert.AreEqual("", plain.Title);
+            Assert.AreEqual("", plain.KeeperId);
+
+            var shelf = Wares();
+            shelf.title = " The Rat Caravan ";
+            shelf.keeper = "merchant";
+            var entry = Caravan(shelf);
+            entry.speakers = new[] { new RawEventSpeaker { id = "merchant", name = "Mister Pockets" } };
+            var resolved = Resolved(entry).Shelves[0];
+            Assert.AreEqual("The Rat Caravan", resolved.Title);
+            Assert.AreEqual("merchant", resolved.KeeperId);
+        }
+
         // ---- the shelf block ---------------------------------------------------------
+
+        [Test]
+        public void ATitleOverTheCap_IsRefused()
+        {
+            var shelf = Wares();
+            shelf.title = new string('W', 29);
+            StringAssert.Contains("shelf 'wares': title is 29 characters, over the 28-character cap",
+                Refusal(Caravan(shelf)));
+        }
+
+        [Test]
+        public void AKeeperThatIsNotAnEventSpeaker_IsRefused()
+        {
+            var shelf = Wares();
+            shelf.keeper = "owl";
+            StringAssert.Contains("keeper 'owl' is not one of this event's speakers", Refusal(Caravan(shelf)));
+        }
 
         [Test]
         public void AShelfWithNoId_IsRefused()

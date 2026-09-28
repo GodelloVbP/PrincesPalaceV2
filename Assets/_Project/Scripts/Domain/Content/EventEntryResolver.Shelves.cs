@@ -22,6 +22,9 @@ namespace PrincesPalace.Domain.Content
     //   - a section that is not 'gear', or named twice. Books and relics are
     //     named in the refusal: they carry no item instance, so a fake
     //     could not apply to them (plan 6.2).
+    //   - a title over the page-title cap (the shelf screen's title box is
+    //     audited at it); a keeper that is not one of the event's speakers
+    //     (the screen draws the keeper's bust and plate from that row).
     //   - a shelf/takeShelf effect with no shelf, or an unknown one; `shelf`
     //     or `reveal` on another kind (it would read as meaning something);
     //     an amount on shelf; a negative takeShelf amount.
@@ -108,8 +111,18 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
+                if (!WithinCap(label, "title", row.title, MaxTitleLength, out error)) return false;
+
+                string keeper = (row.keeper ?? "").Trim();
+                if (keeper.Length > 0 && !scope.Speakers.ContainsKey(keeper))
+                {
+                    error = $"{label}: keeper '{keeper}' is not one of this event's speakers -- the shelf screen " +
+                            "shows the keeper's bust and name plate, so it must be a declared speaker.";
+                    return false;
+                }
+
                 list.Add(new ResolvedEventShelf(id, row.priceFactorPercent, row.fakeShare, sections.ToArray(),
-                    row.consumableCount));
+                    row.consumableCount, (row.title ?? "").Trim(), keeper));
             }
 
             shelves = list.ToArray();

@@ -88,6 +88,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ascender/descender overruns is sized from that measurement rather
         // than from the font size, which is what the audit exists to force.
         private const float TitleHeight = 80f;
+        // Wide enough for a merchant shelf's title at its content cap
+        // (UiStrings.ShopShelfTitle); the grid starts below it.
+        private const float TitleWidth = 1200f;
         private const float TitleGap = 28f;
         private const float ColGap = 24f;
         private const float RowGap = 24f;
@@ -320,6 +323,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // sells no relics) can stand it down. The book panel's header is
         // repainted instead: it shows a merchant's consumables.
         public NodeRef RelicPanel;
+
+        // The screen's title (SHOP, or a merchant shelf's own) and the
+        // merchant's panel in the relic panel's slot (BuildMerchantPanel).
+        public NodeRef Title;
+        public NodeRef MerchantPanel;
+        public NodeRef MerchantName;
+        public NodeRef MerchantEpithet;
+        public NodeRef MerchantBust;
+        public NodeRef MerchantBustPending;
+        public NodeRef MerchantNote;
+
         public NodeRef RelicHeader;
         public NodeRef RelicReroll;
         public NodeRef RelicRerollLabel;
@@ -344,9 +358,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // is for. Opaque now, per the design: see FightHudPalette.
             children.Add(Ui.Solid("ShopBackground", Ground, Place.Stretch(), UiSize.Fill).AsDecor());
 
-            children.Add(Ui.Label("ShopTitle", UiStrings.ShopTitle, new UiVec(600f, TitleHeight), 56,
+            // SHOP in a room shop; a merchant shelf's own title (content,
+            // capped at MaxTitleLength) otherwise, so the box is measured at
+            // that cap rather than at four letters.
+            var title = Ui.Label("ShopTitle", UiStrings.ShopShelfTitle, new UiVec(TitleWidth, TitleHeight), 56,
                     TitleText, Place.At(0f, TitleCentreY))
-                .Styled(TypographyRole.CeremonialTitle));
+                .Styled(TypographyRole.CeremonialTitle);
+            screen.Title = title;
+            children.Add(title);
 
             // Row 1: RELICS, SPELL BOOKS, SHOPKEEPER.
             var relicPanel = screen.BuildShelf("Relic", UiStrings.ShopSectionRelics,
@@ -355,6 +374,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 screen.RelicCards);
             screen.RelicPanel = relicPanel;
             children.Add(relicPanel);
+
+            // The same slot on a merchant shelf, which sells no relics: the
+            // keeper. Only one of the two is ever shown (ShopController), so
+            // they overlap by design.
+            children.Add(screen.BuildMerchantPanel());
 
             children.Add(screen.BuildShelf("Book", UiStrings.ShopSectionBooks,
                 Col2CentreX, Row1CentreY, NarrowColWidth, ShopStock.BookCount,
@@ -376,6 +400,75 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             screen.Root = Ui.Panel("ShopPanel", UiSize.Fill, children).Inactive();
             return screen;
+        }
+
+        // ---- the merchant's panel ---------------------------------------------
+        //
+        // A merchant shelf's keeper, in the relic panel's slot (Col1, Row1):
+        // the name as the header, the bust on the left (or PORTRAIT PENDING
+        // while the art is not delivered -- an unexplained hole photographs
+        // as a bug), the epithet and a line on the shelf's fakes on the
+        // right. Built inactive; ShopController shows it instead of the relic
+        // panel on a merchant shelf.
+        private const float MerchantBustWidth = 200f;
+        private const float MerchantTextGap = 20f;
+        private const float MerchantEpithetHeight = 64f;
+        private const float MerchantNoteGap = 16f;
+        private const float MerchantNoteHeight = 120f;
+
+        private UiNode BuildMerchantPanel()
+        {
+            var parts = PanelFrame("ShopMerchantPanel", UiString.Runtime, NarrowColWidth, out MerchantName, null);
+            MerchantName.Node.Truncated();
+
+            float innerHalf = NarrowColWidth * 0.5f - PanelPad;
+            float bustCentreX = -innerHalf + MerchantBustWidth * 0.5f;
+            float contentCentreY = (ContentTop + ContentBottom) * 0.5f;
+            var bustSize = new UiVec(MerchantBustWidth, ContentHeight);
+
+            var pendingLabel = Ui.Label("ShopMerchantBustPendingLabel", UiStrings.ShopKeeperPending,
+                    new UiVec(MerchantBustWidth - 24f, 64f), 18, QuietText, Place.At(0f, 0f))
+                .Styled(TypographyRole.Body);
+            var pending = Ui.OutlineBox("ShopMerchantBustPending", Place.At(bustCentreX, contentCentreY), bustSize,
+                null, PanelRim, new[] { pendingLabel });
+            MerchantBustPending = pending;
+            parts.Add(pending);
+
+            // Shares the PORTRAIT PENDING box's slot; only one is ever shown.
+            var bust = Ui.Sprite("ShopMerchantBust", null, Place.At(bustCentreX, contentCentreY), UiSize.Fixed(bustSize))
+                .AsDecor()
+                .Inactive();
+            bust.PreserveAspect = true;
+            MerchantBust = bust;
+            parts.Add(bust);
+
+            float textLeft = -innerHalf + MerchantBustWidth + MerchantTextGap;
+            float textWidth = innerHalf - textLeft;
+            float textCentreX = textLeft + textWidth * 0.5f;
+
+            var epithet = Ui.Label("ShopMerchantEpithet", UiStrings.EventEpithet,
+                    new UiVec(textWidth, MerchantEpithetHeight), 20, MetaText,
+                    Place.At(textCentreX, ContentTop - MerchantEpithetHeight * 0.5f))
+                .Styled(TypographyRole.Body)
+                .TextAligned(UiTextAlign.TopLeft);
+            MerchantEpithet = epithet;
+            parts.Add(epithet);
+
+            float noteTop = ContentTop - MerchantEpithetHeight - MerchantNoteGap;
+            var note = Ui.Label("ShopMerchantNote", UiStrings.ShopFakesHidden,
+                    new UiVec(textWidth, MerchantNoteHeight), 20, DetailText,
+                    Place.At(textCentreX, noteTop - MerchantNoteHeight * 0.5f))
+                .Styled(TypographyRole.Body)
+                .TextAligned(UiTextAlign.TopLeft);
+            MerchantNote = note;
+            parts.Add(note);
+
+            var panel = Ui.Panel("ShopMerchantPanel", Place.At(Col1CentreX, Row1CentreY),
+                    UiSize.Fixed(NarrowColWidth, RowHeight), parts)
+                .Inactive()
+                .AllowOverlap("the relic panel's slot: a room shop shows the relics, a merchant shelf this, never both");
+            MerchantPanel = panel;
+            return panel;
         }
 
         // ---- panels -----------------------------------------------------------

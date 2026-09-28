@@ -1114,6 +1114,217 @@
       ]
     },
     {
+      "id": "rat_caravan",
+      "mayReturn": true,
+      "floors": [],
+      "requires": [],
+      "backdrop": "Assets/_Project/Art/Events/rat_caravan/road.png",
+      "speakers": [
+        {
+          "id": "merchant",
+          "name": "Mister Pockets",
+          "epithet": "Dealer in Nearly Everything",
+          "bustPath": "Portraits/Dialogue/rat_merchant",
+          "expressions": [ "neutral", "grinning", "hostile" ]
+        }
+      ],
+      "shelves": [
+        {
+          "id": "caravan",
+          "title": "The Rat Caravan",
+          "keeper": "merchant",
+          "priceFactorPercent": 70,
+          "fakeShare": 3,
+          "sections": [ "gear" ],
+          "consumableCount": 2
+        }
+      ],
+      "pages": [
+        {
+          "id": "caravan",
+          "artPath": "Assets/_Project/Art/Events/rat_caravan/caravan.png",
+          "title": "The Rat Caravan",
+          "body": "",
+          "cast": [ { "character": "merchant", "side": "right" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "A wagon squats across the road, painted in six colours of peeling. Its wheels come from three different carts. None of them match, and all of them squeak." },
+            { "speaker": "merchant", "expression": "grinning", "text": "Customers! Don't be shy. Everything on the wagon is for sale, and a surprising amount of it was for sale before I found it." },
+            { "speaker": "merchant", "expression": "grinning", "text": "Blades, boots, tonics. Seventy on the shop's hundred, because I never paid the shop's hundred either. Or anything." },
+            { "speaker": "merchant", "expression": "neutral", "text": "Now, some of it's real and some of it isn't. I know which is which. That, friends, is the one thing on this wagon that's not for sale." },
+            { "speaker": "narration", "expression": "", "text": "Behind the wagon, something with a great many teeth shifts its weight and goes on pretending to be asleep." }
+          ],
+          "choices": [
+            {
+              "text": "Browse",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "shelf", "shelf": "caravan" } ], "result": "", "goTo": "after_browse" }
+              ]
+            },
+            {
+              "text": "Browse with Odette",
+              "requires": [
+                { "kind": "inParty", "character": "owl", "alive": true }
+              ],
+              "hiddenUntilMet": true,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "shelf", "shelf": "caravan", "reveal": true } ], "result": "", "goTo": "after_odette" }
+              ]
+            },
+            {
+              "text": "Rob him",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "fight", "fight": "rat_pack" } ], "result": "", "goTo": "" }
+              ]
+            },
+            {
+              "text": "Walk on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "\"Come back when you're richer!\" he calls after you. \"Or less observant. I'm not fussy.\"", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "after_browse",
+          "artPath": "Assets/_Project/Art/Events/rat_caravan/caravan.png",
+          "title": "The Rat Caravan",
+          "body": "",
+          "cast": [ { "character": "merchant", "side": "right" } ],
+          "lines": [
+            { "speaker": "merchant", "expression": "neutral", "text": "Pleasure doing business. Mostly mine, but I like to think a little of it rubbed off on you." },
+            { "speaker": "merchant", "expression": "neutral", "text": "No refunds, mind. Not a policy. I just won't be here." }
+          ],
+          "choices": [
+            {
+              "text": "Walk on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "\"Tell your friends!\" he calls after you. \"Tell them I was somewhere else.\"", "goTo": "Leave" }
+              ]
+            },
+            {
+              "text": "Look again",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "shelf", "shelf": "caravan" } ], "result": "", "goTo": "after_browse" }
+              ]
+            },
+            {
+              "text": "Rob him",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "fight", "fight": "rat_pack" } ], "result": "", "goTo": "" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "after_odette",
+          "artPath": "Assets/_Project/Art/Events/rat_caravan/caravan.png",
+          "title": "The Rat Caravan",
+          "body": "",
+          "cast": [
+            { "character": "owl", "side": "left" },
+            { "character": "merchant", "side": "right" }
+          ],
+          "lines": [
+            { "speaker": "owl", "expression": "annoyed", "text": "That one is a fake. The rivets are painted on. So is that one: the leather is bread crust, varnished." },
+            { "speaker": "merchant", "expression": "grinning", "text": "Sharp eyes! You'd do well in the trade. Well, not in my end of it." },
+            { "speaker": "owl", "expression": "neutral", "text": "I have marked every fake for you. Buy the rest if you must, and count your fingers after." },
+            { "speaker": "merchant", "expression": "neutral", "text": "So the unmarked ones are real, then. Probably. I'd stake your life on it." }
+          ],
+          "choices": [
+            {
+              "text": "Walk on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "\"Bring the owl back sometime!\" he calls after you. \"Actually, don't.\"", "goTo": "Leave" }
+              ]
+            },
+            {
+              "text": "Look again",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "shelf", "shelf": "caravan" } ], "result": "", "goTo": "after_browse" }
+              ]
+            },
+            {
+              "text": "Rob him",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "fight", "fight": "rat_pack" } ], "result": "", "goTo": "" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "robbed",
+          "artPath": "Assets/_Project/Art/Events/rat_caravan/robbed.png",
+          "title": "A Lighter Wagon",
+          "body": "",
+          "cast": [ { "character": "merchant", "side": "right" } ],
+          "lines": [
+            { "speaker": "merchant", "expression": "hostile", "text": "Fine. Take it. Take the lot. I'll only steal it back off someone worse than you, and they'll have worse taste." },
+            { "speaker": "merchant", "expression": "hostile", "text": "And the piece that went under the wheel in all that? That was the good one. The real one. Probably." },
+            { "speaker": "narration", "expression": "", "text": "He hitches the empty wagon and rattles off into the trees, swearing in a language made mostly of squeaks. The road is quieter without him." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        }
+      ],
+      "fights": [
+        {
+          "id": "rat_pack",
+          "enemies": [ "rat", "rat", "rat" ],
+          "elite": true,
+          "party": [],
+          "surviveRounds": 0,
+          "onLoss": "endRun",
+          "pays": true,
+          "backdrop": "Assets/_Project/Art/Events/rat_caravan/road.png",
+          "onDefeated": {
+            "effects": [
+              { "kind": "takeShelf", "shelf": "caravan", "amount": 1 },
+              { "kind": "finish" }
+            ],
+            "result": "His guard rats scatter squeaking into the ditch. You help yourselves to the wagon.",
+            "goTo": "robbed"
+          }
+        }
+      ]
+    },
+    {
       "id": "demo_dialogue",
       "floors": [999],
       "requires": [

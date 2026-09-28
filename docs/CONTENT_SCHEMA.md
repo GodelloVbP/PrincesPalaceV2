@@ -480,6 +480,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `fakeShare` | int | `0` | How many cards are fake: max(1, round(cards / fakeShare)), so 3 is a third (1, 1, 2, 2 of 3, 4, 5, 6 cards). 0 means none. A fake looks and sells like the genuine card; fake gear falls apart after 3 fights worn, a fake consumable does nothing when used. |  |
 | `sections` | string[] | `[]` | Which room-shop shelves this stock rolls, each at most once: 'gear' (the room shop's gear roll: same candidates, tier band and affixes). Books and relics are refused -- they carry no item instance, so a fake could not apply. |  |
 | `consumableCount` | int | `0` | How many consumable cards (items.json consumables, drawn without repeats) sit beside the sections' cards; 0 up to ShopStock.ConsumableCount (3). |  |
+| `title` | string | `""` | The shelf screen's title in place of the room shop's SHOP, capped like a page title (EventEntryResolver.MaxTitleLength). Empty shows the keeper's name, else SHOP. |  |
+| `keeper` | string | `""` | One of this event's own speakers: who keeps the shelf. The shelf screen shows their bust (first declared expression), name and epithet in the panel the room shop gives its relics. Empty leaves that panel with the title and the fakes note only. |  |
 
 ### `RawEventSpeaker`
 

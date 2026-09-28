@@ -183,6 +183,10 @@ namespace PrincesPalace.Domain.Content
         public string[] sections = Array.Empty<string>();
         [ContentDoc("How many consumable cards (items.json consumables, drawn without repeats) sit beside the sections' cards; 0 up to ShopStock.ConsumableCount (3).")]
         public int consumableCount;
+        [ContentDoc("The shelf screen's title in place of the room shop's SHOP, capped like a page title (EventEntryResolver.MaxTitleLength). Empty shows the keeper's name, else SHOP.")]
+        public string title = "";
+        [ContentDoc("One of this event's own speakers: who keeps the shelf. The shelf screen shows their bust (first declared expression), name and epithet in the panel the room shop gives its relics. Empty leaves that panel with the title and the fakes note only.")]
+        public string keeper = "";
     }
 
     // One row of an event's `speakers` array: a bust on the dialogue stage

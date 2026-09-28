@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
@@ -84,6 +85,17 @@ namespace PrincesPalace
         // the book panel shows its consumable cards under its own header.
         [SerializeField] internal TMP_Text bookHeader;
         [SerializeField] internal GameObject relicPanel;
+
+        // ...and the title and the relic panel's slot say who is selling: the
+        // shelf's own title for SHOP, and the keeper's panel (bust or PORTRAIT
+        // PENDING, name, epithet, a line on the fakes) where the relics were.
+        [SerializeField] internal TMP_Text title;
+        [SerializeField] internal GameObject merchantPanel;
+        [SerializeField] internal TMP_Text merchantName;
+        [SerializeField] internal TMP_Text merchantEpithet;
+        [SerializeField] internal Image merchantBust;
+        [SerializeField] internal GameObject merchantBustPending;
+        [SerializeField] internal TMP_Text merchantNote;
 
         [SerializeField] internal Button relicReroll;
         [SerializeField] internal TMP_Text relicRerollLabel;
@@ -487,6 +499,46 @@ namespace PrincesPalace
             SetShown(packButton, !merchant);
             if (bookHeader != null)
                 bookHeader.Set(merchant ? UiStrings.ShopSectionConsumables : UiStrings.ShopSectionBooks);
+
+            var front = merchant ? RunOrchestrator.ShelfInFront : null;
+            SetShown(merchantPanel, front != null);
+            PaintTitle(front);
+            if (front != null) PaintMerchant(front);
+        }
+
+        private void PaintTitle(MerchantShelfFront front)
+        {
+            if (title == null) return;
+            if (front == null || string.IsNullOrEmpty(front.Title)) title.Set(UiStrings.ShopTitle);
+            else title.Set(UiStrings.ShopShelfTitle, front.Title);
+        }
+
+        // The keeper's bust loads as the dialogue stage's does: the face,
+        // then neutral, then none -- and none shows PORTRAIT PENDING.
+        private void PaintMerchant(MerchantShelfFront front)
+        {
+            if (merchantName != null) merchantName.SetContent(front.KeeperName);
+            if (merchantEpithet != null) merchantEpithet.SetContent(front.KeeperEpithet);
+
+            if (merchantNote != null)
+            {
+                SetShown(merchantNote, front.HasFakes);
+                merchantNote.Set(front.Revealed ? UiStrings.ShopFakesMarked : UiStrings.ShopFakesHidden);
+            }
+
+            Sprite sprite = null;
+            string path = DialogueBust.FirstAvailable(front.KeeperBustFolder, front.KeeperExpression,
+                candidate => (sprite = Resources.Load<Sprite>(candidate)) != null);
+            if (string.IsNullOrEmpty(path)) sprite = null;
+
+            if (merchantBust != null)
+            {
+                merchantBust.sprite = sprite;
+                merchantBust.preserveAspect = true;
+                SetShown(merchantBust, sprite != null);
+            }
+
+            SetShown(merchantBustPending, sprite == null);
         }
 
         private static void SetShown(Component component, bool shown)

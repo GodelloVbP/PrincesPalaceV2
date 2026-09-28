@@ -1,0 +1,454 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a04c8e410f566d4c95baac0a724b55d, type: 3}
+  m_Name: rat_caravan
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
+  data:
+    Id: rat_caravan
+    SortOrder: 3
+    Floors: 
+    Requires: []
+    Pages:
+    - Id: caravan
+      ArtKey: Assets/_Project/Art/Events/rat_caravan/caravan.png
+      Title: The Rat Caravan
+      Body: 
+      Choices:
+      - Text: Browse
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 11
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: 
+            ShelfId: caravan
+            Reveal: 0
+          Result: 
+          GoTo: after_browse
+          IsLeave: 0
+      - Text: Browse with Odette
+        Requires:
+        - Kind: 0
+          CharacterId: owl
+          CharacterDisplayName: Odette
+          Ability: 0
+          Min: 0
+          HasMin: 0
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 1
+          AuthoredReason: 
+        HiddenUntilMet: 1
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 11
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: 
+            ShelfId: caravan
+            Reveal: 1
+          Result: 
+          GoTo: after_odette
+          IsLeave: 0
+      - Text: Rob him
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 9
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: rat_pack
+            ShelfId: 
+            Reveal: 0
+          Result: 
+          GoTo: 
+          IsLeave: 0
+      - Text: Walk on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: '"Come back when you''re richer!" he calls after you. "Or less
+            observant. I''m not fussy."'
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      Cast:
+      - CharacterId: merchant
+        Side: 1
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: A wagon squats across the road, painted in six colours of peeling.
+          Its wheels come from three different carts. None of them match, and all
+          of them squeak.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Customers! Don't be shy. Everything on the wagon is for sale, and a
+          surprising amount of it was for sale before I found it.
+        IsEventSpeaker: 1
+        ExpressionName: grinning
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Blades, boots, tonics. Seventy on the shop's hundred, because I never
+          paid the shop's hundred either. Or anything.
+        IsEventSpeaker: 1
+        ExpressionName: grinning
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Now, some of it's real and some of it isn't. I know which is which.
+          That, friends, is the one thing on this wagon that's not for sale.
+        IsEventSpeaker: 1
+        ExpressionName: neutral
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Behind the wagon, something with a great many teeth shifts its weight
+          and goes on pretending to be asleep.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    - Id: after_browse
+      ArtKey: Assets/_Project/Art/Events/rat_caravan/caravan.png
+      Title: The Rat Caravan
+      Body: 
+      Choices:
+      - Text: Walk on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: '"Tell your friends!" he calls after you. "Tell them I was somewhere
+            else."'
+          GoTo: 
+          IsLeave: 1
+      - Text: Look again
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 11
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: 
+            ShelfId: caravan
+            Reveal: 0
+          Result: 
+          GoTo: after_browse
+          IsLeave: 0
+      - Text: Rob him
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 9
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: rat_pack
+            ShelfId: 
+            Reveal: 0
+          Result: 
+          GoTo: 
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      Cast:
+      - CharacterId: merchant
+        Side: 1
+      Lines:
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Pleasure doing business. Mostly mine, but I like to think a little
+          of it rubbed off on you.
+        IsEventSpeaker: 1
+        ExpressionName: neutral
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: No refunds, mind. Not a policy. I just won't be here.
+        IsEventSpeaker: 1
+        ExpressionName: neutral
+    - Id: after_odette
+      ArtKey: Assets/_Project/Art/Events/rat_caravan/caravan.png
+      Title: The Rat Caravan
+      Body: 
+      Choices:
+      - Text: Walk on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: '"Bring the owl back sometime!" he calls after you. "Actually,
+            don''t."'
+          GoTo: 
+          IsLeave: 1
+      - Text: Look again
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 11
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: 
+            ShelfId: caravan
+            Reveal: 0
+          Result: 
+          GoTo: after_browse
+          IsLeave: 0
+      - Text: Rob him
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 9
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: rat_pack
+            ShelfId: 
+            Reveal: 0
+          Result: 
+          GoTo: 
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      Cast:
+      - CharacterId: owl
+        Side: 0
+      - CharacterId: merchant
+        Side: 1
+      Lines:
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 2
+        Side: 0
+        Text: 'That one is a fake. The rivets are painted on. So is that one: the
+          leather is bread crust, varnished.'
+        IsEventSpeaker: 0
+        ExpressionName: annoyed
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Sharp eyes! You'd do well in the trade. Well, not in my end of it.
+        IsEventSpeaker: 1
+        ExpressionName: grinning
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 0
+        Side: 0
+        Text: I have marked every fake for you. Buy the rest if you must, and count
+          your fingers after.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: So the unmarked ones are real, then. Probably. I'd stake your life
+          on it.
+        IsEventSpeaker: 1
+        ExpressionName: neutral
+    - Id: robbed
+      ArtKey: Assets/_Project/Art/Events/rat_caravan/robbed.png
+      Title: A Lighter Wagon
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      Cast:
+      - CharacterId: merchant
+        Side: 1
+      Lines:
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Fine. Take it. Take the lot. I'll only steal it back off someone worse
+          than you, and they'll have worse taste.
+        IsEventSpeaker: 1
+        ExpressionName: hostile
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: And the piece that went under the wheel in all that? That was the good
+          one. The real one. Probably.
+        IsEventSpeaker: 1
+        ExpressionName: hostile
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: He hitches the empty wagon and rattles off into the trees, swearing
+          in a language made mostly of squeaks. The road is quieter without him.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+    MayReturn: 1
+    Speakers:
+    - Id: merchant
+      Name: Mister Pockets
+      Epithet: Dealer in Nearly Everything
+      BustPath: Portraits/Dialogue/rat_merchant
+      Expressions:
+      - neutral
+      - grinning
+      - hostile
+    Fights:
+    - Id: rat_pack
+      EnemyIds:
+      - rat
+      - rat
+      - rat
+      Elite: 1
+      PartyIds: []
+      SurviveRounds: 0
+      RoundLabel: 
+      Loss: 0
+      Pays: 1
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      RoundSfxPath: 
+      AmbiencePath: 
+      RoundOverlayKey: 
+      RoundOverlayFromScale: 1
+      RoundOverlayToScale: 1
+      OnDefeated:
+        Requires: []
+        Effects:
+        - Kind: 12
+          Amount: 1
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+          ShelfId: caravan
+          Reveal: 0
+        - Kind: 10
+          Amount: 0
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+          ShelfId: 
+          Reveal: 0
+        Result: His guard rats scatter squeaking into the ditch. You help yourselves
+          to the wagon.
+        GoTo: robbed
+        IsLeave: 0
+      OnSurvived:
+        Requires: []
+        Effects: []
+        Result: 
+        GoTo: 
+        IsLeave: 0
+      OnFell:
+        Requires: []
+        Effects: []
+        Result: 
+        GoTo: 
+        IsLeave: 0
+      HasOnSurvived: 0
+      HasOnFell: 0
+    Shelves:
+    - Id: caravan
+      PriceFactorPercent: 70
+      FakeShare: 3
+      Sections: 00000000
+      ConsumableCount: 2
+      Title: The Rat Caravan
+      KeeperId: merchant

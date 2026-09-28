@@ -44,6 +44,24 @@ namespace PrincesPalace
         // and a reload.
         public static bool ShelfInFrontIsRevealed => OpenShelfOn(RunManager.Run)?.revealed ?? false;
 
+        // Who is selling, for the shelf screen's title and keeper panel; null
+        // when the stock in front is the room shop (or nothing).
+        public static MerchantShelfFront ShelfInFront
+        {
+            get
+            {
+                var run = RunManager.Run;
+                var stock = OpenShelfOn(run);
+                if (stock == null) return null;
+
+                var evt = FindEvent(run.eventId);
+                var recipe = evt?.ShelfById(stock.shelfId);
+                var keeper = evt?.SpeakerById(recipe?.KeeperId);
+                return new MerchantShelfFront(recipe?.Title, keeper, recipe != null && recipe.FakeShare > 0,
+                    stock.revealed);
+            }
+        }
+
         private static MerchantShelfStock OpenShelfOn(RunSnapshot run)
         {
             if (!EventIsOpenOn(run) || string.IsNullOrEmpty(run.pendingShelf)) return null;

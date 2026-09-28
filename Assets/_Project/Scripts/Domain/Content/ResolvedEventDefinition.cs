@@ -274,17 +274,26 @@ namespace PrincesPalace.Domain.Content
         public int[] Sections = Array.Empty<int>();
         public int ConsumableCount;
 
+        // What the shelf screen says about who is selling: its title ("" =
+        // the keeper's name, else the room shop's SHOP) and the event
+        // speaker keeping it ("" = nobody named).
+        public string Title = "";
+        public string KeeperId = "";
+
         public ResolvedEventShelf()
         {
         }
 
-        public ResolvedEventShelf(string id, int priceFactorPercent, int fakeShare, int[] sections, int consumableCount)
+        public ResolvedEventShelf(string id, int priceFactorPercent, int fakeShare, int[] sections, int consumableCount,
+            string title = "", string keeperId = "")
         {
             Id = id ?? "";
             PriceFactorPercent = priceFactorPercent;
             FakeShare = fakeShare;
             Sections = sections ?? Array.Empty<int>();
             ConsumableCount = consumableCount;
+            Title = title ?? "";
+            KeeperId = keeperId ?? "";
         }
     }
 

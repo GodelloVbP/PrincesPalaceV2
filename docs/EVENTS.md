@@ -111,6 +111,55 @@ returning event and the first event fight.
   `BellInTheFogRunTests` (every page, Endure/Break/Fall through the run, the
   bot's walk, never rolled).
 
+## The Rat Caravan
+
+`rat_caravan` (`docs/PLAN_EVENTS_BELL_AND_CARAVAN.md` 1.5) is the first
+merchant shelf and the first event speaker in shipped content.
+
+> **DRAFT COPY (M7b, 2026-09-28).** Every line, result and title, the
+> merchant's name ("Mister Pockets") and his epithet ("Dealer in Nearly
+> Everything") are a first draft written to the brief: sly, comic, slightly
+> shady, and he never pretends the goods are genuine. The owner rewrites
+> them. The tests pin page ids, choice texts, speakers, faces and effects,
+> never the prose, so a rewrite breaks nothing inside the caps.
+
+- **Graph.** `caravan` (Browse / Browse with Odette / Rob him / Walk on)
+  opens with the merchant on the right, grinning through the pitch and
+  neutral when he admits some of it is fake. Browse opens the shelf and
+  lands on `after_browse` (neutral, "no refunds"); Browse with Odette
+  (`inParty owl alive`, hidden until met) opens it with the fakes marked and
+  lands on `after_odette`, where Odette names the fakes and the merchant
+  grins about it. Both after-pages offer Walk on / Look again / Rob him --
+  **Walk on first**, so a first-available bot never loops. Look again is a
+  plain `shelf` to `after_browse`; the marks stay (they are the stock's).
+  Every Walk on leaves on the merchant's parting shot with no `finish`, so
+  the caravan comes back at a later Event node with the same stock.
+- **One deviation from the plan's graph:** Browse with Odette goes to its
+  own `after_odette` page rather than `after_browse`, because Odette's
+  spotting of the fakes needs a page to be said on (a result beat is
+  narration only). Its rows are `after_browse`'s.
+- **Shelf `caravan`**: 70%, a third fake, the gear roll plus two
+  consumables, titled "The Rat Caravan", kept by `merchant`.
+- **Fight `rat_pack`**: three `rat`s (slot span 1 each, the stage's three
+  slots), elite, the normal squad, no round limit, `endRun`, pays. The
+  Reckoning plays, then `onDefeated`: `takeShelf` 1 + `finish`, a result
+  line (the effects line under it names every card taken and the one "Lost
+  in the scuffle"), then `robbed`, where the merchant is hostile and
+  leaves. Its Leave is silent. The merchant's hostile face is on `robbed`
+  only: a pick that starts a fight goes straight to the fight, so there is
+  no page before it to be hostile on.
+- **Tuning (M8b, 2026-09-28):** see that commit's message for the per-floor
+  rob-vs-elite-room win rates.
+- **Art** named, not delivered (M9b): `road.png` (event and fight
+  backdrop), `caravan.png` (the three browsing pages), `robbed.png`, and the
+  merchant's busts `Resources/Portraits/Dialogue/rat_merchant/{neutral,
+  grinning,hostile}.png`. Missing, the stage shows the name plate, the shelf
+  PORTRAIT PENDING.
+- Pinned by `RatCaravanEventTests` (content, fast host) and
+  `RatCaravanRunTests` (every page and the rob through the run, the bot's
+  walk, the `-EventChoice "Rob him"` probe). Captures:
+  `RatCaravanCaptureTests`, `docs/captures/events-m7b/`.
+
 ## Requirements
 
 One flat row, `{ kind, character, alive, ability, min, max, counter, reason }`. A list is AND.
@@ -298,7 +347,7 @@ stock that belongs to the **event**, not the node. Each is a row in the
 event's `shelves`, opened by a `shelf` effect and robbed by `takeShelf`.
 
 ```
-shelf  { id, priceFactorPercent, fakeShare, sections[], consumableCount }
+shelf  { id, priceFactorPercent, fakeShare, sections[], consumableCount, title, keeper }
 effect { "kind": "shelf", "shelf": "<id>", "reveal": false }
 effect { "kind": "takeShelf", "shelf": "<id>", "amount": 1 }
 ```
@@ -344,6 +393,13 @@ effect { "kind": "takeShelf", "shelf": "<id>", "amount": 1 }
   `finish`, which would roll a fresh stock nobody sees.
 - **The shelf screen** is the shop's: gear in the gear panel, consumables in
   the book panel under CONSUMABLES, and no relics, rerolls or pack.
+  **`title`** (capped like a page title, 28) replaces SHOP; empty, the
+  keeper's name does, then SHOP. **`keeper`** names one of the event's own
+  `speakers`: the relic panel's slot shows that speaker's bust (first
+  declared face, then neutral, else PORTRAIT PENDING), name and epithet, and
+  -- when `fakeShare` is above 0 -- "Some of these are fakes..." or, once
+  revealed, "The fakes are marked FAKE." The build refuses a keeper that is
+  not a speaker of the event.
 - **At runtime** the pick saves `RunSnapshot.pendingShelf` (so a quit on the
   shelf comes back to it); while it is set the event refuses picks
   (`ShelfOpen`). The bot runs the shop's buying loop on it and then leaves.

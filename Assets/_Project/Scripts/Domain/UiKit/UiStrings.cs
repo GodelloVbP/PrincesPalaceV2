@@ -695,6 +695,18 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopSectionConsumables =
             UiString.Define("shop.section_consumables", "CONSUMABLES");
 
+        // A merchant shelf's title (its content `title`, else its keeper's
+        // name) in SHOP's place, measured at the page-title cap the content
+        // build holds it to. The keeper panel in the relic panel's slot says
+        // whether the shelf stocks fakes and whether they are marked.
+        public static readonly UiString ShopShelfTitle =
+            UiString.Define("shop.shelf_title", "{0}",
+                AtCap("The Caravan of Mister Pockets ", Content.EventEntryResolver.MaxTitleLength));
+        public static readonly UiString ShopFakesHidden =
+            UiString.Define("shop.fakes_hidden", "Some of these are fakes. Which ones is not for sale.");
+        public static readonly UiString ShopFakesMarked =
+            UiString.Define("shop.fakes_marked", "The fakes are marked FAKE.");
+
         // The two panels in the design's right-hand column. "SHOP" twice over
         // -- once as the screen's title, once as the actions panel's own
         // caption -- is the prototype's own wording, and the two are separate
