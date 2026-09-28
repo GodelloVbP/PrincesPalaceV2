@@ -195,6 +195,19 @@ namespace PrincesPalace.Domain.Combat
         //
         // APPENDED, never inserted -- generated assets store this ordinal.
         Enthrall,
+
+        // ONE PARTY MEMBER, PUT IN THE AUTHORED SEAT (ResolvedSkill.ToSeat),
+        // trading with whoever stands there -- Dark Chains (docs/
+        // PLAN_BELLWETHER_KIT.md 1.4/3.5). Resolved through
+        // CombatEncounter.PlaceAt, the one writer of field position, so a
+        // Rooted target or occupant holds and nothing moves. No damage of
+        // its own; the row's appliesStatus, if any, lands as on an Afflict.
+        //
+        // PARTY-SIDE TARGETS ONLY: enemies have no seats to be moved
+        // between. SkillEntryResolver refuses a row aimed anywhere else.
+        //
+        // APPENDED, never inserted -- generated assets store this ordinal.
+        Reposition,
     }
 
     // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier

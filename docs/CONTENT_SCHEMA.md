@@ -81,7 +81,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `active` | bool | `true` | Whether this monster can actually spawn; false benches the entry without deleting it. |  |
 | `facing` | string | `"right"` | Which way this monster's art is drawn in its source file, so the stage knows whether to mirror it. | Left, Right |
 | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | VFX played over the target when this monster's skill lands; see SpellPresentation. |  |
-| `appliesStatus` | string | `""` | Which StatusEffectType this monster's basic attack or skill applies to whoever it hits, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared, Burn, Thorned |
+| `appliesStatus` | string | `""` | Which StatusEffectType this monster's basic attack or skill applies to whoever it hits, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared, Burn, Thorned, Bleed |
 | `statusMagnitude` | int | `-1` | The magnitude of the applied status; required together with appliesStatus. |  |
 | `statusDuration` | int | `-1` | How many of the afflicted combatant's own turns the applied status lasts; required together with appliesStatus. |  |
 | `avoidsFrontSlot` | bool | `false` | Whether this monster is never placed in the front stage slot when the room's other picks give an alternative. |  |
@@ -215,7 +215,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `iconPath` | string | `""` | Editor-time path to this skill's icon (Assets/_Project/Art/...); empty means no art, and the slot hides rather than showing a placeholder. Used today only by bookOnly skills, whose spell-book art carries the glyph baked in. |  |
 | `characterId` | string | `""` | The character this skill belongs to; required so it is never offered to everyone. |  |
 | `unlockLevel` | int | `-1` | The character level this skill becomes available at; see notes for the bookOnly exception. |  |
-| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle, Reclaim, Hasten, SwapAllies, Afflict, Enthrall |
+| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle, Reclaim, Hasten, SwapAllies, Afflict, Enthrall, Reposition |
 | `targeting` | string | `""` | Which SkillTargeting this hits; defaults to whatever the effect implies. | SingleEnemy, AllEnemies, Self, Party, SingleAlly |
 | `manaCost` | int | `-1` | Mana spent to cast; a skill must cost this and/or resourceCost. |  |
 | `resourceCost` | int | `-1` | How much of the owner's signature resource a cast consumes. |  |
@@ -233,7 +233,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `cooldownTurns` | int | `0` | How many of the caster's own turns must pass before this skill can be cast again; 0 means no cooldown. |  |
 | `playerSelectable` | bool | `true` | Whether a player ever picks this from a menu, as against a monster-only skill drawn by weighted chance. |  |
 | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | How the skill looks and sounds when it resolves; see SpellPresentation. |  |
-| `appliesStatus` | string | `""` | Which StatusEffectType this skill applies on landing, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared, Burn, Thorned |
+| `appliesStatus` | string | `""` | Which StatusEffectType this skill applies on landing, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared, Burn, Thorned, Bleed |
 | `statusMagnitude` | int | `-1` | The magnitude of the applied status; required together with appliesStatus. |  |
 | `statusDuration` | int | `-1` | How many of the afflicted combatant's own turns the applied status lasts; required together with appliesStatus. |  |
 | `requires` | string[] | `[]` | '<ability score> <amount>' lines gating whether this skill can be cast at all. |  |
@@ -263,6 +263,9 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `detonationPercent` | int | `0` | The premium percent a Reclaim effect's detonation is marked up by; required and positive on a Reclaim row, meaningless elsewhere. |  |
 | `detonationSplit` | string[] | `[]` | The ordered DamageType names a Reclaim effect's consumed total is split across, odd point to the first; required together with detonationPercent. |  |
 | `advanceSlots` | int | `0` | How many places earlier in the turn queue this skill moves its target; required and positive on a Hasten row, meaningless elsewhere. |  |
+| `damageType` | string | `""` | The DamageType this skill's Attack-scaled or seat-sized damage is dealt as, over the caster's own attackType; empty means the caster's. Refused on damageInstances rows and on effects that deal no damage. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
+| `damageBySeatMaxHpPercent` | int[] | `[]` | [front, middle, rear] percent of the TARGET's max health dealt by the seat it stands in when the hit lands; replaces the Attack formula. 0 = no hit at that seat. DamageSingle only; exactly three entries, each 0-1000. |  |
+| `toSeat` | int | `0` | The 1-based party seat (1 front, 2 middle, 3 rear) a Reposition puts its target in, trading with any occupant; required on Reposition, optional on a monster's DamageSingle (moves the target after a landed hit). Party-side targets only. |  |
 
 ## spells.json -- `RawSpellTierEntry`
 

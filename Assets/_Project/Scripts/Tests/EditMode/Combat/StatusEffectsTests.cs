@@ -849,7 +849,8 @@ namespace PrincesPalace.Domain.Tests
             // and covered by their own assertions in NewDotTests.
             foreach (var type in all.Where(t => t != StatusEffectType.Poison
                                               && t != StatusEffectType.Burn
-                                              && t != StatusEffectType.Thorned))
+                                              && t != StatusEffectType.Thorned
+                                              && t != StatusEffectType.Bleed))
             {
                 Assert.IsNull(StatusEffects.ElementOf(type),
                     $"{type} answered with an element; if it deals damage now, say which in ElementOf");

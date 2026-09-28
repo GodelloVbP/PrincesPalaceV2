@@ -121,6 +121,13 @@ elemental spell. Seam: the `castType` read in the single- and all-target resolve
 amount by the target's seat (party) or rank (enemies) at resolution; 0 = no hit. Uses: the knell; a player "cleave
 that fades down the line"; a front-crushing enemy slam. Sits beside `reachSlots` (which *gates* by rank) as the one
 "scales by rank" rule. Seam: one multiplier step after `SkillResolution.Amount`, shared by resolution and preview.
+**Amended at M2 (orchestrator, 2026-09-28): percent of the target's max health, not a multiplier on the Attack
+formula.** R2 below is unsolvable with attack scaling (front must kill a full-HP Shawn on knell 1 while middle spares
+a >= 60%-HP one on knell 2, with the rally growing ~+24% -> ~+64% between them), so the field is
+`damageBySeatMaxHpPercent` [front, middle, rear] (each 0..1000, 0 = no hit): the base is that percent of the
+target's max HP, read by `SeatOf` at resolution. It replaces the Attack formula (no attack, rally, pool tier), then
+meets the skill's `damageType` affinity, defence (unless `ignoresDefense`), Protect/Vulnerable, ward and dodge.
+Seam: `FightSession.SeatSizedDamageBase`, read by the resolution and `PreviewSkill`. Start values are M5 content.
 
 **3.5 `Reposition` effect.** `SkillEffect.Reposition` + `toSeat` (1-based, like `reachSlots`), player-side targets
 only (enemies never move). Uses: Dark Chains; a knockback to the rear; a player "call to the front". Seam: its
@@ -141,7 +148,7 @@ at an existing seam, no scripting language. Next use: a boss with a fixed opener
 **3.8 Intent carries what the player needs.** `EnemyIntent` gains `DamageBySeat` (set only for a damage-by-rank skill)
 and `Then` (label of the next scheduled step). One accessor, `IntentDamageFor(enemy)`, reads the target's current
 seat; badge, lethal style, tooltip and bot all read it. Kinds, derived in `KindFor` like the rest: **Bleed** (skill
-applies Bleed), **Pull** (effect Reposition), **Knell** (skill has `damageByRankPercent`: "where you stand decides").
+applies Bleed), **Pull** (effect Reposition), **Knell** (skill has `damageBySeatMaxHpPercent`: "where you stand decides").
 Icons `Intent/bleed`, `Intent/pull`, `Intent/knell`, text fallbacks BLD / PULL / KNL. **Lethal** is a presentation
 state of any damage badge (number >= target's current HP), not a kind.
 
@@ -174,7 +181,7 @@ One owner each; `[D]` loop and `tools/test.ps1 <area>` to iterate; commit on `to
 
 **M2: Bleed, skill damageType, damage by rank, Reposition (implementer).**
 - `StatusEffect.cs:174-197` (type), `:244-256` (`Armoured`); `StatusEffects.cs:981-1017`, `:1031-1047`;
-  `StatusHud.cs:121-145`, `:200-215`, `:224-244`. `RawSkillEntry.cs` (`damageType`, `damageByRankPercent`, `toSeat`)
+  `StatusHud.cs:121-145`, `:200-215`, `:224-244`. `RawSkillEntry.cs` (`damageType`, `damageBySeatMaxHpPercent`, `toSeat`)
   + `SkillEntryResolver` refusals (rank list length 3, 0..1000; `toSeat` 1..3; Reposition only at a player-side
   target). `FightSession.Skills.cs:785-790` and `:1676` (cast type), `:425` (Reposition arm),
   `FightSession.Enemies.cs:402-423` (`PreviewSkill`). `docs/CONTENT_SCHEMA.md` regen.
@@ -209,7 +216,7 @@ One owner each; `[D]` loop and `tools/test.ps1 <area>` to iterate; commit on `to
 
 **M5: The Bellwether's kit, presented (implementer).** Content: `skills.json` `bellwether_scratch` (DamageSingle,
 melee, physicalMove, Bleed, stance `attack`, layered vfx), `dark_chains` (Reposition, `toSeat` 1, Void, stance
-`extra`), `death_knell` (DamageSingle, Void, `damageByRankPercent` [100,30,0], stance `cast`); `enemies.json:325-345`
+`extra`), `death_knell` (DamageSingle, Void, `damageBySeatMaxHpPercent` (values M5/M7), stance `cast`); `enemies.json:325-345`
 (`attackWeight` 0, abilities, `schedule`, `rallyPerRound.stance`/`vfx`). Code: `FightSession.Rounds.cs:119-151`
 (rally presentation on the round beat; a round starting inside an open beat records the toll as its own beat right
 after it), `FightHudModel.cs:1084-1170` (`RallyRow`). Missing vfx folders degrade to none until M8.
@@ -232,7 +239,8 @@ magnitude/duration, Bellwether attack last. The round-limited depth rate (5.3%/s
 - Done when, per floor: **answering, no book**: Endure 60-85%, median Shawn HP at Endure <= 30% (the shipped
   contract). **Knell at the front** (measured on the no-answer cell, per knell): kills a Shawn who entered it at full
   HP in >= 90%. **Knell in the middle** (answering cell): never kills a Shawn at >= 60% HP, for both the first and
-  the second knell (rally ~+24% vs ~+64%, so the spread is the hard part). **No-answer Endure <= 5%.** Black Ram and
+  the second knell (rally ~+24% vs ~+64%, so the spread is the hard part; M2 sized the knell off max HP, 3.4).
+  **No-answer Endure <= 5%.** Black Ram and
   with-book reported, no contract. Per-floor table in the commit message.
 
 **M8: Art and sound (owner assets; implementer integrates).** Recipes `keyed: false` for every sheet (5);
@@ -282,8 +290,9 @@ Sheets under `Art/Sheets/Spells/<id>/`, frames cut to `Resources/Spells/<id>*/`.
 - **R1 Seat model ripple (M1).** Duo and post-death trios are drawn at seats of three (middle, not the far end);
   RandomLegal batches shift with the new moves. Full-party tests unmodified is the check.
 - **R2 The knell's middle/front spread.** One power must kill at the front on the first knell (rally ~+24%) yet leave
-  a 60%-HP Shawn alive in the middle on the second (~+64%), across builds and floors. If M7 cannot hit both with
-  attack scaling, the fallback is a knell sized off the target's max HP (a new skill field); owner call 3.
+  a 60%-HP Shawn alive in the middle on the second (~+64%), across builds and floors. **Taken at M2** (orchestrator):
+  the knell is sized off the target's max HP (`damageBySeatMaxHpPercent`, 3.4), so the rally cannot move it; owner
+  call 3 is settled that way unless the owner reverses it.
 - **R3 The bot answers perfectly.** It reads exact numbers every time; a human misreads. The contract cell is a plain
   step back, the least a player must do; the lethal badge exists so a human does at least that.
 - **R4** Palace Passage is a tier-2 book most floor-1 Shawns lack; the contract is set without it. **R5** A round can

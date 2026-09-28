@@ -77,7 +77,7 @@ namespace PrincesPalace.PlayModeTests
         public void EveryStatusIconResolvesToArtworkThatActuallyLoaded()
         {
             var paths = AllResourcePaths().ToList();
-            Assert.AreEqual(16, paths.Count, "expected fourteen statuses plus two speed presentations");
+            Assert.AreEqual(17, paths.Count, "expected fifteen statuses plus two speed presentations");
 
             var awaitingArtPaths = AwaitingArt
                 .Select(t => FightHudModel.StatusBadgeIcons.ResourceFor(t))

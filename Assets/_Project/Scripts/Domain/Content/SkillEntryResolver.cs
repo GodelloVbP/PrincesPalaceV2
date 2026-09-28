@@ -211,7 +211,11 @@ namespace PrincesPalace.Domain.Content
                     || (raw.detonationSplit != null && raw.detonationSplit.Length > 0)
                     // AND MILESTONE C'S ONE, same reason once more: a
                     // stand-in may not quietly author a turn-order advance.
-                    || raw.advanceSlots != 0;
+                    || raw.advanceSlots != 0
+                    // AND THE BELLWETHER KIT'S THREE (M2), same reason.
+                    || !string.IsNullOrWhiteSpace(raw.damageType)
+                    || (raw.damageBySeatMaxHpPercent != null && raw.damageBySeatMaxHpPercent.Length > 0)
+                    || raw.toSeat != 0;
 
                 if (authorsAnEffectField)
                 {
@@ -756,6 +760,12 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!TryResolveBellwetherFields(raw, label, effect, targeting, instances,
+                    out var ownDamageType, out var damageBySeat, out error))
+            {
+                return false;
+            }
+
             // AN AFFLICT IS ITS STATUS AND NOTHING ELSE (plan 2.10, milestone
             // D), so a row that authors none is a cast that spends mana, plays
             // a beat and changes nothing -- the same shape the Hasten refusal
@@ -884,8 +894,166 @@ namespace PrincesPalace.Domain.Content
                 raw.percentOfCasterMaxHealth, raw.wardTurns, raw.iconPath ?? "",
                 raw.healthCostPercent, requiresStatus, consumesStatus, instancesIfConsumed,
                 raw.detonationPercent, detonationSplit,
-                raw.advanceSlots, raw.physicalMove);
+                raw.advanceSlots, raw.physicalMove,
+                ownDamageType, damageBySeat, raw.toSeat);
             error = null;
+            return true;
+        }
+
+        // The ceiling on one damageBySeatMaxHpPercent entry: ten times the
+        // target's bar is already a typo, not a design.
+        public const int MaxSeatPercent = 1000;
+
+        // THE BELLWETHER KIT'S THREE FIELDS (docs/PLAN_BELLWETHER_KIT.md M2):
+        // damageType, damageBySeatMaxHpPercent, toSeat. Every refusal is the
+        // house shape -- a field that would resolve cleanly and then be read
+        // by nothing, or read into a cast that visibly does nothing.
+        private static bool TryResolveBellwetherFields(RawSkillEntry raw, string label, SkillEffect effect,
+            SkillTargeting targeting, DamageInstance[] instances,
+            out DamageType? ownDamageType, out int[] damageBySeat, out string error)
+        {
+            ownDamageType = null;
+            damageBySeat = Array.Empty<int>();
+            error = null;
+
+            // ---- damageType ------------------------------------------------
+            if (!string.IsNullOrWhiteSpace(raw.damageType))
+            {
+                if (!TryParseDamageType(raw.damageType, out var parsed))
+                {
+                    error = $"{label}: damageType '{raw.damageType}' isn't valid. Valid options: " +
+                            $"{string.Join(", ", Enum.GetNames(typeof(DamageType)))}, Frost.";
+                    return false;
+                }
+
+                if (!SkillEffects.IsDamagePipeline(effect))
+                {
+                    error = $"{label}: damageType types a skill's damage, and a {effect} deals none -- " +
+                            "the field would be read by nothing.";
+                    return false;
+                }
+
+                if (instances.Length > 0)
+                {
+                    error = $"{label}: damageType has no meaning beside damageInstances -- each packet " +
+                            "already carries its own type.";
+                    return false;
+                }
+
+                ownDamageType = parsed;
+            }
+
+            // ---- damageBySeatMaxHpPercent ----------------------------------
+            var seats = raw.damageBySeatMaxHpPercent ?? Array.Empty<int>();
+            if (seats.Length > 0)
+            {
+                if (effect != SkillEffect.DamageSingle)
+                {
+                    error = $"{label}: damageBySeatMaxHpPercent sizes a single hit by where its one target " +
+                            $"stands, and a {effect} is not one.";
+                    return false;
+                }
+
+                if (seats.Length != CombatEncounter.SeatsPerSide)
+                {
+                    error = $"{label}: damageBySeatMaxHpPercent has {seats.Length} entries; it needs exactly " +
+                            $"{CombatEncounter.SeatsPerSide} -- [front, middle, rear].";
+                    return false;
+                }
+
+                for (int i = 0; i < seats.Length; i++)
+                {
+                    if (seats[i] < 0 || seats[i] > MaxSeatPercent)
+                    {
+                        error = $"{label}: damageBySeatMaxHpPercent entry #{i + 1} is {seats[i]}; each is a " +
+                                $"percent of the target's max health, 0-{MaxSeatPercent}.";
+                        return false;
+                    }
+                }
+
+                if (seats.All(percent => percent == 0))
+                {
+                    error = $"{label}: damageBySeatMaxHpPercent is 0 at every seat -- a hit that never lands.";
+                    return false;
+                }
+
+                if (instances.Length > 0)
+                {
+                    error = $"{label}: damageBySeatMaxHpPercent and damageInstances both say what the hit " +
+                            "deals -- author one.";
+                    return false;
+                }
+
+                bool authorsPoolTiers = raw.poolTiers != null && raw.poolTiers.Length > 0;
+                if (raw.power > 0 || raw.flatAmount > 0 || !string.IsNullOrWhiteSpace(raw.scalingAxis)
+                    || authorsPoolTiers)
+                {
+                    error = $"{label}: a seat-sized hit is a percent of the target's max health -- power, " +
+                            "flatAmount, scalingAxis and poolTiers are never read by it.";
+                    return false;
+                }
+
+                damageBySeat = (int[])seats.Clone();
+            }
+
+            // ---- toSeat ----------------------------------------------------
+            if (raw.toSeat != 0)
+            {
+                if (effect != SkillEffect.Reposition && effect != SkillEffect.DamageSingle)
+                {
+                    error = $"{label}: toSeat is where a Reposition (or a monster's DamageSingle) puts its " +
+                            $"target, and a {effect} moves nobody.";
+                    return false;
+                }
+
+                if (raw.toSeat < 1 || raw.toSeat > CombatEncounter.SeatsPerSide)
+                {
+                    error = $"{label}: toSeat is {raw.toSeat}; seats are 1-{CombatEncounter.SeatsPerSide} " +
+                            "(1 front, 2 middle, 3 rear).";
+                    return false;
+                }
+
+                // PARTY-SIDE TARGETS ONLY: enemies never move. A monster's
+                // SingleEnemy is a party member; a player's Reposition must
+                // aim at its own side; a player's damage row hits enemies,
+                // so it cannot carry a seat at all.
+                bool reachesAPartyMember;
+                if (!raw.playerSelectable)
+                {
+                    reachesAPartyMember = targeting == SkillTargeting.SingleEnemy;
+                }
+                else
+                {
+                    reachesAPartyMember = effect == SkillEffect.Reposition
+                        && (targeting == SkillTargeting.SingleAlly || targeting == SkillTargeting.Self);
+                }
+
+                if (!reachesAPartyMember)
+                {
+                    error = $"{label}: toSeat moves a party member, and this row's {targeting} target is not " +
+                            "one -- enemies have no seats to move between. A monster row aims SingleEnemy; a " +
+                            "player Reposition aims SingleAlly or Self; a player damage row cannot carry toSeat.";
+                    return false;
+                }
+            }
+            else if (effect == SkillEffect.Reposition)
+            {
+                error = $"{label}: a Reposition skill needs a toSeat (1 front, 2 middle, 3 rear) -- the seat " +
+                        "IS the spell.";
+                return false;
+            }
+
+            // A Reposition deals no damage of its own; a row authoring some
+            // would be read by nothing.
+            if (effect == SkillEffect.Reposition
+                && (instances.Length > 0 || raw.power > 0 || raw.flatAmount > 0))
+            {
+                error = $"{label}: a Reposition moves its target and deals no damage -- power, flatAmount " +
+                        "and damageInstances are never read by it. A pull that also hits is a monster " +
+                        "DamageSingle with toSeat.";
+                return false;
+            }
+
             return true;
         }
 

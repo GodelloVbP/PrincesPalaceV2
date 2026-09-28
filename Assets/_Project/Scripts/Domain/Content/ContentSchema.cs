@@ -66,6 +66,7 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawSkillEntry), nameof(RawSkillEntry.scalingAxis))] = typeof(Combat.ScalingAxis),
                 [(typeof(RawSkillEntry), nameof(RawSkillEntry.appliesStatus))] = typeof(Combat.StatusEffectType),
                 [(typeof(RawSkillEntry), nameof(RawSkillEntry.approach))] = typeof(Combat.Session.StageApproach),
+                [(typeof(RawSkillEntry), nameof(RawSkillEntry.damageType))] = typeof(Stats.DamageType),
                 [(typeof(RawDamageInstance), nameof(RawDamageInstance.type))] = typeof(Stats.DamageType),
                 [(typeof(RawEnemyEntry), nameof(RawEnemyEntry.attackType))] = typeof(Stats.DamageType),
                 [(typeof(RawEnemyEntry), nameof(RawEnemyEntry.weakness))] = typeof(Stats.DamageType),

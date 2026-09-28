@@ -434,6 +434,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     ResolveEnthrall(actor, skill);
                     break;
 
+                case SkillEffect.Reposition:
+                    ResolveReposition(actor, skill, target);
+                    break;
+
                 case SkillEffect.HealSelf:
                 {
                     BeginBeat(actor, actor, isCast: true);
@@ -747,6 +751,16 @@ namespace PrincesPalace.Domain.Combat.Session
             // since drained.
             string castLabel = PoolTierResolution.Label(skill.DisplayName, poolTier);
 
+            // A SEAT-SIZED HIT THAT SIZES TO NOTHING WHERE THE TARGET STANDS
+            // (plan 1.5: the rear seat of the knell) is no hit at all -- no
+            // dodge roll, no number, no riders, no hit-taken gains. The beat
+            // is already open, so the cast still plays.
+            if (skill.HasDamageBySeat && SeatSizedDamageBase(skill, target) <= 0)
+            {
+                AppendMessage($"{castLabel} passes over {target.Name}.");
+                return;
+            }
+
             // CROWNFALL'S PACKET SWAP (plan 2.4, 1.8): A READ, never a
             // consume -- Marks.IsMarked-shaped, run BEFORE the roll so the
             // choice of packet list cannot itself depend on anything the
@@ -784,18 +798,30 @@ namespace PrincesPalace.Domain.Combat.Session
                 // The cast type is read ONCE and handed to both the scaling
                 // axis and the effectiveness check, which is what guarantees
                 // they can never disagree about which element this cast is.
-                var castType = ActorAttackType(actor) ?? DamageType.Physical;
+                var castType = CastTypeOf(actor, skill);
+                DeclareOwnDamageType(skill, castType);
 
                 // THE BASE, held so the charge can be measured against it
                 // rather than against whatever the pipeline turns it into.
-                int baseAmount = SkillResolution.Amount(skill.Effect, actor, target, skill.Power,
-                    skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+                // A seat-sized hit's base is the target's own bar
+                // (SeatSizedDamageBase) -- no attack, rally or tier touches it.
+                int baseAmount;
+                if (skill.HasDamageBySeat)
+                {
+                    baseAmount = SeatSizedDamageBase(skill, target);
+                }
+                else
+                {
+                    baseAmount = SkillResolution.Amount(skill.Effect, actor, target, skill.Power,
+                        skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
 
-                // THE FURY TIER'S MULTIPLIER, applied to the skill's own
-                // computed damage and BEFORE defences -- so a x4 slam is a x4
-                // RAW hit, not a x4 hit after the target's armour already
-                // took its cut. See PoolTierResolution.ApplyDamageMultiplier.
-                baseAmount = PoolTierResolution.ApplyDamageMultiplier(baseAmount, poolTier);
+                    // THE FURY TIER'S MULTIPLIER, applied to the skill's own
+                    // computed damage and BEFORE defences -- so a x4 slam is a
+                    // x4 RAW hit, not a x4 hit after the target's armour
+                    // already took its cut. See
+                    // PoolTierResolution.ApplyDamageMultiplier.
+                    baseAmount = PoolTierResolution.ApplyDamageMultiplier(baseAmount, poolTier);
+                }
 
                 var outcome = DamagePipeline.AfterDefences(
                     baseAmount,
@@ -823,7 +849,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // Through the shared tail rather than its own copy of it, so a
             // character skill's kill earns the same riders a plain attack's
             // does. A swing is a swing.
-            ApplyFinalDamage(actor, target, damage, CombatActions.IsPhysicalMove(skill));
+            ApplyFinalDamage(actor, target, damage, CombatActions.IsPhysicalMove(skill),
+                skill.HasFixedDamage ? (DamageType?)null : CastTypeOf(actor, skill));
 
             // STEP 6 OF 2.4: the consume, on a LANDED hit only -- both dodge
             // arms above already returned before this line, and a lethal hit
@@ -850,7 +877,108 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 ApplySkillStatus(skill, target, actor);
                 ApplyQueuePush(actor, skill, target);
+
+                // A monster's hit that also drags (toSeat on a DamageSingle):
+                // the same placement Reposition makes, after the hit landed.
+                if (skill.ToSeat > 0) PlaceBySkill(actor, skill, target);
             }
+        }
+
+        // DARK CHAINS AND EVERY REPOSITION AFTER IT (plan 1.4/3.5,
+        // SkillEffect.Reposition). One party member put in the authored seat,
+        // no damage; the row's appliesStatus, if any, lands as on an Afflict.
+        // No dodge roll: with no damage instance nothing enters the pipeline.
+        private void ResolveReposition(CombatantState actor, ResolvedSkill skill, CombatantState target)
+        {
+            if (target == null) return;
+
+            BeginBeat(actor, target, isCast: true);
+            RecordSpellPresentation(skill);
+            PlaceBySkill(actor, skill, target);
+
+            if (target.IsAlive) ApplySkillStatus(skill, target, actor);
+        }
+
+        // THE ONE PLACEMENT A SKILL MAKES, through CombatEncounter.PlaceAt --
+        // the rule Move and Palace Passage already share, so Rooted holds at
+        // either end here exactly as it does there. Returns what PlaceAt said.
+        //
+        // AN ENEMY MOVING A PARTY MEMBER IS NOT THE PARTY'S DELIBERATE MOVE
+        // (plan 1.4): NoteDeliberateMove is paid only when a party member
+        // cast it, the way Palace Passage pays its caster.
+        private PlaceOutcome PlaceBySkill(CombatantState actor, ResolvedSkill skill, CombatantState target)
+        {
+            int seat = skill.ToSeat - 1;
+            var outcome = _encounter.PlaceAt(target, seat, out var occupant);
+
+            switch (outcome)
+            {
+                case PlaceOutcome.Placed:
+                    AppendMessage(occupant != null
+                        ? $"{target.Name} is dragged to the {SeatWord(seat)}, trading places with {occupant.Name}."
+                        : $"{target.Name} is dragged to the {SeatWord(seat)}.");
+                    if (actor != null && actor.IsPlayerSide)
+                    {
+                        NoteDeliberateMove(target, actor);
+                        if (occupant != null) NoteDeliberateMove(occupant, actor);
+                    }
+                    break;
+                case PlaceOutcome.MemberRooted:
+                    AppendMessage($"{target.Name} is rooted and does not move.");
+                    break;
+                case PlaceOutcome.OccupantRooted:
+                    AppendMessage($"{occupant?.Name ?? "Whoever stands there"} is rooted, and {target.Name} does not move.");
+                    break;
+                case PlaceOutcome.NoSuchSeat:
+                    // Already in that seat (plan 2.5: chains on a Shawn who
+                    // is already front move nothing).
+                    AppendMessage($"{target.Name} already stands at the {SeatWord(seat)}.");
+                    break;
+                default:
+                    // NotOnTheField: an enemy, or nobody alive to move.
+                    break;
+            }
+
+            return outcome;
+        }
+
+        // THE BASE OF A SEAT-SIZED HIT (ResolvedSkill.DamageBySeatMaxHpPercent,
+        // plan 3.4 as amended): the entry for the seat `target` stands in NOW,
+        // as a percent of the target's own max health, rounded away from zero
+        // and floored at 1. 0 means no hit -- a 0 entry, a dead or absent
+        // target, or a skill that is not seat-sized. An enemy's seat is its
+        // living rank (CombatEncounter.SeatOf); a rank past the rear reads the
+        // rear entry.
+        //
+        // PUBLIC: the resolution, the telegraph (PreviewSkill) and M4's intent
+        // badge all read this one figure, so none can size the hit differently.
+        public int SeatSizedDamageBase(ResolvedSkill skill, CombatantState target)
+        {
+            if (skill == null || !skill.HasDamageBySeat || target == null) return 0;
+
+            int seat = _encounter.SeatOf(target);
+            if (seat < 0) return 0;
+
+            var table = skill.DamageBySeatMaxHpPercent;
+            int percent = table[System.Math.Min(seat, table.Length - 1)];
+            if (percent <= 0) return 0;
+
+            return System.Math.Max(1, Rounding.AwayFromZero(target.MaxHealth * (percent / 100f)));
+        }
+
+        // THE TYPE A SKILL'S ATTACK-SCALED (OR SEAT-SIZED) DAMAGE IS DEALT
+        // AS: the skill's own damageType when it authors one, else the
+        // caster's attackType, else Physical. The one reading every
+        // resolver, preview and card label shares (plan 3.3).
+        public DamageType CastTypeOf(CombatantState actor, ResolvedSkill skill) =>
+            skill?.OwnDamageType ?? ActorAttackType(actor) ?? DamageType.Physical;
+
+        // A skill that types its own damage paints its own beat -- the
+        // controller's actor paint would otherwise colour the Void knell's
+        // popup as its Physical caster's swing (CombatBeat.DeclareDamageType).
+        private void DeclareOwnDamageType(ResolvedSkill skill, DamageType castType)
+        {
+            if (skill.OwnDamageType.HasValue) _recordingBeat?.DeclareDamageType(castType);
         }
 
         // ASHEN RECKONING (plan 2.5, SkillEffect.Reclaim). No packet of its
@@ -1112,7 +1240,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // The caster's own type does not change per target, so this reads
             // once -- same reasoning as the single-target branch.
-            var castType = ActorAttackType(actor) ?? DamageType.Physical;
+            var castType = CastTypeOf(actor, skill);
+            DeclareOwnDamageType(skill, castType);
 
             // One beat shows one number, so an AOE reports its largest single
             // hit rather than a total that matches no one enemy's HP drop --
@@ -1255,7 +1384,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // KitFor(actor)?.AttackType -> SourceFor(actor)?.Source.
                 // AttackType -> Physical) -- so this still counts as the
                 // CAST's type, not the caster's swing, exactly as before.
-                ApplyFinalDamage(actor, enemy, landed, CombatActions.IsPhysicalMove(skill));
+                ApplyFinalDamage(actor, enemy, landed, CombatActions.IsPhysicalMove(skill), castType);
 
                 RecordTargetResult(enemy, landed);
                 struckAndLanded.Add(enemy);
@@ -1463,7 +1592,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     ? (actor.PrimaryPool?.Current ?? 0)
                     : resourceSpent;
 
-                var castType = ActorAttackType(actor) ?? DamageType.Physical;
+                var castType = CastTypeOf(actor, skill);
 
                 return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
                     skill.FlatAmount, pointsSpent, skill.IgnoresDefense, castType, skill.ScalingAxis,

@@ -115,6 +115,10 @@ MonoBehaviour:
     IconPath: Assets/_Project/Art/Items/SpellBooks/Frost Flare/Frost Flare - Spell
       Book - 48x48.png
     AdvanceSlots: 0
+    DamageTypeOverride: 0
+    HasDamageType: 0
+    DamageBySeatMaxHpPercent: 
+    ToSeat: 0
     HealthCostPercent: 0
     RequiresStatusType: 0
     HasRequiresStatus: 0

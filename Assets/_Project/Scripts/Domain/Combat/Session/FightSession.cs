@@ -595,10 +595,19 @@ namespace PrincesPalace.Domain.Combat.Session
         // "nearest living ally" used to be the partner, the seat is now the
         // unit; with no empty seat in front of anyone (every full party) the
         // two are the same trade.
-        public bool CanMove(CombatantState actor, MoveDirection direction)
+        public bool CanMove(CombatantState actor, MoveDirection direction) =>
+            MoveOutcome(actor, direction) == PlaceOutcome.Placed;
+
+        // WHY A MOVE IS (OR IS NOT) LEGAL, for a reader that has to say so --
+        // the Move rows' cost column. Same order Move's own refusals speak in:
+        // the actor's root first (it holds in every direction), then "no seat
+        // that way", then the placement rule's answer for the seat itself.
+        public PlaceOutcome MoveOutcome(CombatantState actor, MoveDirection direction)
         {
-            if (!TryMoveSeat(actor, direction, out int seat)) return false;
-            return _encounter.CanPlaceAt(actor, seat, out _) == PlaceOutcome.Placed;
+            if (actor == null || !actor.IsPlayerSide || _encounter.SeatOf(actor) < 0) return PlaceOutcome.NotOnTheField;
+            if (StatusEffects.HasRooted(actor.Statuses)) return PlaceOutcome.MemberRooted;
+            if (!TryMoveSeat(actor, direction, out int seat)) return PlaceOutcome.NoSuchSeat;
+            return _encounter.CanPlaceAt(actor, seat, out _);
         }
 
         // Returns false for a refusal that spent nothing -- checked BEFORE
@@ -768,12 +777,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // and pay out whatever a kill owes on top of the ledger's own row.
         // The row and the rider flag are DealDamage's, not this method's --
         // see SettleDeath (FightSession.Ledger.cs) for why they moved.
-        private void ApplyFinalDamage(CombatantState actor, CombatantState target, int damage, bool physicalMove)
+        private void ApplyFinalDamage(CombatantState actor, CombatantState target, int damage, bool physicalMove,
+            DamageType? castType = null)
         {
             // Read once and reused below for the modifier riders -- see
             // ApplyModifierOnHitRiders' own header on why a rider needs to
-            // know what element THIS hit already was.
-            var hitType = AttackTypeOf(actor);
+            // know what element THIS hit already was. `castType` is a skill
+            // that types its own damage (ResolvedSkill.OwnDamageType, via
+            // CastTypeOf): the ledger and the riders hear the Void knell as
+            // Void, not as its Physical caster's swing.
+            var hitType = castType ?? AttackTypeOf(actor);
             DealDamage(actor, target, damage, hitType, KillCredit.Attacker);
             RecordBeatAmount(damage);
             SetStance(target, target.IsAlive ? Stances.Hurt : Stances.Defeated);

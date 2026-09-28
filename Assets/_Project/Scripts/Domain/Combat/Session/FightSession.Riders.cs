@@ -685,7 +685,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // already uses for a fixed packet. The caster is never consulted
             // again after this line; every later tick and every retaliation
             // reads the stored figure off the entry itself.
-            if (type == StatusEffectType.Burn || type == StatusEffectType.Thorned)
+            if (type == StatusEffectType.Burn || type == StatusEffectType.Thorned
+                || type == StatusEffectType.Bleed)
             {
                 magnitude = SnapshotDotMagnitude(magnitude, source);
             }
@@ -1112,6 +1113,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // whole physical action through CastSkill/ExecuteAttack.
         public void TriggerPhysicalMoveRetaliationForTest(CombatantState actor) =>
             TriggerPhysicalMoveRetaliation(actor);
+
+        // ONE SKILL RESOLVED AS `actor`, through the same door an enemy's
+        // drawn ability takes (ResolveEnemyAction -> ResolveCharacterSkill,
+        // nothing paid) -- for a test that wants a monster skill's resolution
+        // (the Bellwether kit's seat-sized hit, Reposition) without steering
+        // the weighted draw and the turn order onto it. The beat it opened is
+        // committed, as the turn would, so DrainBeats sees its messages.
+        public void ResolveSkillForTest(CombatantState actor, ResolvedSkill skill, CombatantState target)
+        {
+            ResolveCharacterSkill(actor, skill, new[] { target }, 0);
+            CommitBeat();
+        }
 
     }
 }

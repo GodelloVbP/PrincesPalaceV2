@@ -211,6 +211,12 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.Enthrall:
                     return 0;
 
+                // A seat, not a quantity -- the same answer Hasten and
+                // SwapAllies give above. The enemy telegraph asks this for
+                // every skill (PreviewSkill), so the answer must exist.
+                case SkillEffect.Reposition:
+                    return 0;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }

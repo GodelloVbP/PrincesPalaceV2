@@ -457,6 +457,23 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(foe.Statuses.Any(s => s.Type == StatusEffectType.Feared));
                 Assert.IsTrue(caster.Statuses.Any(s => s.Type == StatusEffectType.Vulnerable));
             }),
+
+            new Row(SkillEffect.Reposition, "the chosen ally stands in the authored seat", () =>
+            {
+                var caster = Hero("Caster", speed: 30);
+                var ally = Hero("Ally", speed: 8);
+                var encounter = new CombatEncounter(new[] { caster, ally }, new[] { Foe() });
+                var skill = new ResolvedSkill("coverage", "Call to the Front", "", "hero", 1,
+                    SkillEffect.Reposition, SkillTargeting.SingleAlly, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0, toSeat: 1);
+                var session = Session(encounter, Kit(skill));
+
+                Assert.AreEqual(1, encounter.SeatOf(ally), "fixture: the ally opens in the middle");
+                Assert.IsTrue(session.CastSkill(0, ally), "the cast was refused");
+
+                Assert.AreEqual(0, encounter.SeatOf(ally), "the ally was not put in the front seat");
+                Assert.AreEqual(1, encounter.SeatOf(caster), "and the occupant took the ally's seat");
+            }),
         };
 
         // ---- the four consumers, one case per member -----------------------
@@ -613,6 +630,16 @@ namespace PrincesPalace.Domain.Tests
             if (effect == SkillEffect.Hasten)
             {
                 raw.advanceSlots = 2;
+            }
+
+            // A Reposition IS its seat, so the row must name one. And its
+            // default SingleEnemy is only a party member when a MONSTER casts
+            // it (the resolver refuses a player row aimed at an enemy), which
+            // is Dark Chains' own shape.
+            if (effect == SkillEffect.Reposition)
+            {
+                raw.toSeat = 1;
+                raw.playerSelectable = false;
             }
 
             // An Afflict IS its status, exactly as BuffParty above is, so the

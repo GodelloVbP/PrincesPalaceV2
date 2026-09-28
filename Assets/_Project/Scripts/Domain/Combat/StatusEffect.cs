@@ -195,6 +195,17 @@ namespace PrincesPalace.Domain.Combat
         //
         // FOURTEENTH. Thorn Tithe is its one author today.
         Thorned,
+
+        // Burn's shape, Physical-typed, and ARMOURED: each tick meets the
+        // holder's physical defence as well as their Physical affinity
+        // (StatusEffects.MitigationOf answers Armoured) -- on a hit's curve,
+        // with no ward, no Protect/Vulnerable and no variance, floor 1. The
+        // snapshot rule is Burn's (FightSession.ApplyStatusTo), and it
+        // stacks like every other DoT.
+        //
+        // FIFTEENTH, Bellwether kit M2 (docs/PLAN_BELLWETHER_KIT.md 1.3/3.2).
+        // Any skill, monster rider or weapon modifier applies it by name.
+        Bleed,
     }
 
     // WHEN A STATUS'S COUNTER MOVES -- the one question that decides how an
@@ -253,6 +264,13 @@ namespace PrincesPalace.Domain.Combat
         // no flat defense, no typed resistance stat, no ward, no Protect/
         // Vulnerable, no variance. Burn and Thorned both answer this.
         AffinityOnly,
+
+        // AffinityOnly plus the holder's full defence against ElementOf(type)
+        // -- CombatMath.TotalDefense read on the same R/(R+100) curve a hit
+        // meets (CombatMath.AfterResistance), floor 1. Still no ward, no
+        // Protect/Vulnerable, no variance: armour is a property of the
+        // wearer, those three are properties of a swing. Bleed answers this.
+        Armoured,
     }
 
     // WHAT A SECOND APPLICATION DOES. Owner's decision, 2026-09-20 -- "the

@@ -55,6 +55,8 @@ namespace PrincesPalace.Domain.Tests
             // assets depend on; the plan's ordering was not.
             { "Afflict", 18 },
             { "Enthrall", 19 },
+            // Bellwether kit M2.
+            { "Reposition", 20 },
         };
 
         private static readonly Dictionary<string, int> SkillTargetingOrdinals = new Dictionary<string, int>
@@ -83,6 +85,8 @@ namespace PrincesPalace.Domain.Tests
             // Milestone E.
             { "Burn", 12 },
             { "Thorned", 13 },
+            // Bellwether kit M2.
+            { "Bleed", 14 },
         };
 
         private static readonly Dictionary<string, int> DamageTypeOrdinals = new Dictionary<string, int>

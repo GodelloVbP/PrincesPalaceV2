@@ -544,6 +544,39 @@ namespace PrincesPalace.Domain.Content
         // which is a content error rather than a cheap spell.
         [ContentDoc("How many places earlier in the turn queue this skill moves its target; required and positive on a Hasten row, meaningless elsewhere.")]
         public int advanceSlots;
+
+        // ---- Bellwether kit M2 (docs/PLAN_BELLWETHER_KIT.md 3.3-3.5) ------
+
+        // THE TYPE THIS SKILL'S DAMAGE IS DEALT AS, over the caster's own
+        // attackType -- a Void knell from a Physical ram. Only on an
+        // Attack-scaled (or seat-sized) damage row: fixed damageInstances
+        // already carry a type per packet, and a row that deals nothing has
+        // nothing to type.
+        [ContentDoc("The DamageType this skill's Attack-scaled or seat-sized damage is dealt as, over the caster's own attackType; empty means the caster's. Refused on damageInstances rows and on effects that deal no damage.")]
+        public string damageType = "";
+
+        // [front, middle, rear], each a PERCENT OF THE TARGET'S MAX HEALTH,
+        // picked by the seat the target stands in when the hit resolves
+        // (CombatEncounter.SeatOf; an enemy's seat is its living rank, and a
+        // rank past the rear reads the rear entry). Replaces the Attack/power
+        // formula entirely, like damageInstances: no attack, rally or pool
+        // tier scales it. It still meets affinity (damageType), defence
+        // (unless ignoresDefense), Protect/Vulnerable, ward and dodge. 0 at a
+        // seat means no hit there at all: no number, no riders.
+        //
+        // PERCENT OF MAX HEALTH, NOT A MULTIPLIER ON THE ATTACK FORMULA, by
+        // the orchestrator's call (plan R2, recorded in 3.4): one power could
+        // not both kill a full-health target at the front on the first knell
+        // and spare a 60%-health one in the middle on the second while the
+        // caster's rally grows ~+24% -> ~+64% between them.
+        [ContentDoc("[front, middle, rear] percent of the TARGET's max health dealt by the seat it stands in when the hit lands; replaces the Attack formula. 0 = no hit at that seat. DamageSingle only; exactly three entries, each 0-1000.")]
+        public int[] damageBySeatMaxHpPercent = Array.Empty<int>();
+
+        // 1-BASED, like reachSlots: 1 front, 2 middle, 3 rear. Where a
+        // Reposition puts its target (required there), or where a monster's
+        // DamageSingle drags the target it landed on (optional there).
+        [ContentDoc("The 1-based party seat (1 front, 2 middle, 3 rear) a Reposition puts its target in, trading with any occupant; required on Reposition, optional on a monster's DamageSingle (moves the target after a landed hit). Party-side targets only.")]
+        public int toSeat;
     }
 
     // One tier of a poolTiers ladder -- see RawSkillEntry.poolTiers.

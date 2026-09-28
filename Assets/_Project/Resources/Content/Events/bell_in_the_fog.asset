@@ -579,7 +579,7 @@ MonoBehaviour:
       AmbiencePath: Audio/Music/Events/bell_in_the_fog/wind
       RoundOverlayKey: Assets/_Project/Art/Events/bell_in_the_fog/flock.png
       RoundOverlayFromScale: 0.35
-      RoundOverlayToScale: 0.8
+      RoundOverlayToScale: 0.6
       RoundOverlayPivotX: 0.5
       RoundOverlayPivotY: 0.15
       RoundOverlayAnchorX: 0.5

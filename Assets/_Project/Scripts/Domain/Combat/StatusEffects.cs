@@ -192,6 +192,7 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Feared:
                 case StatusEffectType.Burn:
                 case StatusEffectType.Thorned:
+                case StatusEffectType.Bleed:
                     return true;
 
                 // A gate or a token. It is on or it is not, and the only
@@ -986,6 +987,7 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Poison: return DamageType.Poison;
                 case StatusEffectType.Burn: return DamageType.Fire;
                 case StatusEffectType.Thorned: return DamageType.Nature;
+                case StatusEffectType.Bleed: return DamageType.Physical;
 
                 // Everything else on the list changes a number, skips a turn
                 // or absorbs a hit. None of them deal damage of their own, so
@@ -1015,6 +1017,11 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Thorned:
                     return StatusMitigation.AffinityOnly;
 
+                // A cut meets armour (Bellwether kit 3.2): defence and
+                // affinity, on a hit's curve.
+                case StatusEffectType.Bleed:
+                    return StatusMitigation.Armoured;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type,
                         "StatusEffects.MitigationOf was asked about a status with no element to mitigate -- "
@@ -1030,17 +1037,29 @@ namespace PrincesPalace.Domain.Combat
         // this applies MitigationOf(type) -- affinity only, for the new DoTs,
         // nothing at all for Poison -- rounds away from zero and floors at 1,
         // the same shape CombatMath.ApplyEffectiveness already uses for a
-        // typed hit.
+        // typed hit. `holder` is read only by Armoured, for its defence.
         private static int MitigatedTickAmount(int magnitude, StatusEffectType type, DamageType element,
-            ElementalAffinity affinity)
+            ElementalAffinity affinity, CombatantState holder)
         {
             switch (MitigationOf(type))
             {
                 case StatusMitigation.None:
                     return magnitude;
                 case StatusMitigation.AffinityOnly:
+                {
                     float multiplier = CombatMath.EffectivenessMultiplier(element, affinity);
                     return CombatMath.ApplyEffectiveness(magnitude, multiplier);
+                }
+                case StatusMitigation.Armoured:
+                {
+                    // The order a typed hit uses (DamagePipeline.AfterDefences):
+                    // affinity first, then the defence curve. No attacker, so
+                    // no penetration term; the source is usually gone by now.
+                    float multiplier = CombatMath.EffectivenessMultiplier(element, affinity);
+                    int afterAffinity = CombatMath.ApplyEffectiveness(magnitude, multiplier);
+                    return CombatMath.AfterResistance(afterAffinity,
+                        CombatMath.TotalDefense(holder, element, null, ignoresDefense: false));
+                }
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type,
                         "StatusEffects.MitigatedTickAmount has no arithmetic for this mitigation kind.");
@@ -1155,7 +1174,7 @@ namespace PrincesPalace.Domain.Combat
                 if (status.Type != type || status.Magnitude <= 0) continue;
                 any = true;
 
-                int amount = MitigatedTickAmount(status.Magnitude, type, element.Value, affinity);
+                int amount = MitigatedTickAmount(status.Magnitude, type, element.Value, affinity, combatant);
                 int before = combatant.CurrentHealth;
                 absorbed += sink != null
                     ? sink(combatant, amount, element.Value)
@@ -1188,6 +1207,7 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Regen:
                 case StatusEffectType.Burn:
                 case StatusEffectType.Thorned:
+                case StatusEffectType.Bleed:
                     return StatusClock.AtTick;
 
                 // Spent, not aged. ConsumeStun (Stun and Feared),

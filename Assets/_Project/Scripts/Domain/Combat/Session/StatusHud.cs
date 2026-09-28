@@ -139,6 +139,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Feared: return "FER";
                 case StatusEffectType.Burn: return "BRN";
                 case StatusEffectType.Thorned: return "THN";
+                case StatusEffectType.Bleed: return "BLD";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(type), type,
                         "StatusHud has no three-letter code for this status -- a badge would otherwise print nothing.");
@@ -205,6 +206,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Marked:
                 case StatusEffectType.Burn:
                 case StatusEffectType.Thorned:
+                case StatusEffectType.Bleed:
                     return Bucket.Harm;
                 case StatusEffectType.Provoked:
                 case StatusEffectType.Chilled:
@@ -240,6 +242,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // collide with a new one.
                 case StatusEffectType.Burn: return 15;
                 case StatusEffectType.Thorned: return 16;
+                case StatusEffectType.Bleed: return 17;
                 default: return 98;
             }
         }
@@ -335,6 +338,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     return $"Burn -- {Wrap(positive, $"{magnitude} damage each turn start")}{stacks}, {duration}";
                 case StatusEffectType.Thorned:
                     return $"Thorned -- {Wrap(positive, $"{magnitude} damage each turn start, and again after a physical move")}{stacks}, {duration}";
+                // "before armour": the badge sums the stored snapshots, and a
+                // Bleed tick then meets the holder's physical defence.
+                case StatusEffectType.Bleed:
+                    return $"Bleed -- {Wrap(positive, $"{magnitude} physical damage each turn start, before armour")}{stacks}, {duration}";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(summary), summary.Type,
                         "StatusHud has no tooltip for this status -- a badge would otherwise show nothing on hover.");

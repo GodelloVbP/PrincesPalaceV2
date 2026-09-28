@@ -363,6 +363,22 @@ namespace PrincesPalace.Domain.Combat.Session
             };
         }
 
+        // THE COST COLUMN NAMES WHAT IS STOPPING THE MOVE: a rooted actor or
+        // a rooted occupant is not "no room" -- there is a seat, and the root
+        // is what holds (the same reason the skill rows say "Rooted" ahead of
+        // a cost). Public so a test can read the caption without a row.
+        public static string MoveCostCaption(FightSession session, CombatantState actor, MoveDirection direction)
+        {
+            var outcome = session == null ? PlaceOutcome.NotOnTheField : session.MoveOutcome(actor, direction);
+            switch (outcome)
+            {
+                case PlaceOutcome.Placed: return UiStrings.MoveCostEndsTurn.Template;
+                case PlaceOutcome.MemberRooted:
+                case PlaceOutcome.OccupantRooted: return UiStrings.MoveCostRooted.Template;
+                default: return UiStrings.MoveCostNoRoom.Template;
+            }
+        }
+
         private static SubmenuRow MoveRow(FightSession session, CombatantState actor,
             MoveDirection direction, string label, string meta)
         {
@@ -371,7 +387,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // ENDS THE TURN is the cost, and the row says so -- Move is the
             // only command in the menu that spends a whole turn for no number
             // anywhere, and a blank cost column would read as "free".
-            return new SubmenuRow(label, meta, legal ? "ENDS TURN" : "NO ROOM",
+            return new SubmenuRow(label, meta, MoveCostCaption(session, actor, direction),
                 canPay: legal, meetsRequirement: true, manaCost: 0);
         }
 
@@ -467,6 +483,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 // on the next row that shares the arm.
                 case SkillEffect.Afflict: return "AFFLICT";
                 case SkillEffect.Enthrall: return "ENTHRALL";
+                // Dark Chains and any later pull or knockback: the target is
+                // put in a seat. Not "MOVE" or "SWAP" for the reason Hasten's
+                // own line gives.
+                case SkillEffect.Reposition: return "PULL";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
                         "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +
@@ -849,8 +869,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 return skill.DamageInstances.Select(i => i.type).Distinct().ToArray();
             }
 
+            // A skill that types its own damage answers without a caster.
+            if (skill.OwnDamageType.HasValue) return new[] { skill.OwnDamageType.Value };
+
             if (session == null || actor == null) return System.Array.Empty<DamageType>();
-            return new[] { session.ActorAttackType(actor) ?? DamageType.Physical };
+            return new[] { session.CastTypeOf(actor, skill) };
         }
 
         // The skill's damage type, as a display string: "Fire", "Arcane", a
@@ -906,7 +929,10 @@ namespace PrincesPalace.Domain.Combat.Session
             if (skill.HasFixedDamage) return "-";
             if (skill.Effect != SkillEffect.DamageSingle && skill.Effect != SkillEffect.DamageAll) return "-";
 
-            var castType = session.ActorAttackType(actor) ?? DamageType.Physical;
+            // Sized off the target's max health, so no ability score rides it.
+            if (skill.HasDamageBySeat) return "-";
+
+            var castType = session.CastTypeOf(actor, skill);
             var axis = skill.ScalingAxis == ScalingAxis.Auto ? ScalingAxes.For(castType) : skill.ScalingAxis;
             var set = axis == ScalingAxis.Weapon ? actor.WeaponScaling
                     : axis == ScalingAxis.Spell ? actor.SkillScaling

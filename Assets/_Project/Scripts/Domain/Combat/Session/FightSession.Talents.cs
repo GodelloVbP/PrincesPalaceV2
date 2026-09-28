@@ -584,6 +584,33 @@ namespace PrincesPalace.Domain.Combat.Session
                     return true;
                 }
 
+                // A PLAYER'S REPOSITION that could not move anyone is refused
+                // before payment, like the Passage above -- through the same
+                // placement rule the resolution will use. (A monster's
+                // Reposition never reaches this: it pays nothing, and its
+                // rooted fizzle is the resolution's own message.)
+                case SkillEffect.Reposition:
+                {
+                    var outcome = _encounter.CanPlaceAt(target, skill.ToSeat - 1, out var occupant);
+                    switch (outcome)
+                    {
+                        case PlaceOutcome.Placed:
+                            return true;
+                        case PlaceOutcome.MemberRooted:
+                            refusal = $"{target.Name} is rooted.";
+                            return false;
+                        case PlaceOutcome.OccupantRooted:
+                            refusal = $"{occupant.Name} is rooted.";
+                            return false;
+                        case PlaceOutcome.NoSuchSeat:
+                            refusal = $"{target.Name} already stands at the {SeatWord(skill.ToSeat - 1)}.";
+                            return false;
+                        default:
+                            refusal = $"{skill.DisplayName} needs an ally on the field.";
+                            return false;
+                    }
+                }
+
                 default:
                     return true;
             }

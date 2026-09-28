@@ -171,6 +171,32 @@ namespace PrincesPalace.Domain.Content
         // "unauthored".
         public int AdvanceSlots;
 
+        // ---- Bellwether kit M2 (docs/PLAN_BELLWETHER_KIT.md 3.3-3.5) ------
+
+        // See RawSkillEntry.damageType. THE PAIR THAT REPLACES A NULLABLE,
+        // for the reason RequiresStatusType/HasRequiresStatus below give:
+        // Unity cannot serialise Nullable<T>. Read through OwnDamageType.
+        public DamageType DamageTypeOverride;
+        public bool HasDamageType;
+
+        // The type this skill's Attack-scaled (or seat-sized) damage is
+        // dealt as, over the caster's own attackType; null means "ask the
+        // caster" (FightSession.CastTypeOf is the one reader that combines
+        // the two). Never set on a fixed-packet skill -- packets carry their
+        // own types.
+        public DamageType? OwnDamageType => HasDamageType ? (DamageType?)DamageTypeOverride : null;
+
+        // See RawSkillEntry.damageBySeatMaxHpPercent: [front, middle, rear],
+        // percent of the TARGET's max health, read by the target's seat at
+        // resolution. Empty for every skill but a seat-sized one.
+        public int[] DamageBySeatMaxHpPercent = Array.Empty<int>();
+
+        public bool HasDamageBySeat => DamageBySeatMaxHpPercent != null && DamageBySeatMaxHpPercent.Length > 0;
+
+        // See RawSkillEntry.toSeat. 1-based, like Reach's slots; 0 for every
+        // skill that moves nobody.
+        public int ToSeat;
+
         // ---- milestone B: consumption and health payment (plan §4) -------
 
         // Percent of the CASTER'S OWN max health paid as a cost, ceiling-
@@ -487,8 +513,15 @@ namespace PrincesPalace.Domain.Content
             // APPENDED LAST OF ALL AGAIN (milestone D: the physical-action
             // restriction), same positional-argument reason every block above
             // gives.
-            bool physicalMove = false)
+            bool physicalMove = false,
+            // APPENDED LAST OF ALL AGAIN (Bellwether kit M2), same
+            // positional-argument reason every block above gives.
+            DamageType? damageType = null, int[] damageBySeatMaxHpPercent = null, int toSeat = 0)
         {
+            HasDamageType = damageType.HasValue;
+            DamageTypeOverride = damageType ?? default;
+            DamageBySeatMaxHpPercent = damageBySeatMaxHpPercent ?? Array.Empty<int>();
+            ToSeat = toSeat;
             PhysicalMove = physicalMove;
             AdvanceSlots = advanceSlots;
             IconPath = iconPath ?? "";

@@ -407,10 +407,22 @@ namespace PrincesPalace.Domain.Combat.Session
             var against = heals ? enemy : target;
             if (against == null) return 0;
 
-            var castType = ActorAttackType(enemy) ?? DamageType.Physical;
+            var castType = CastTypeOf(enemy, skill);
 
-            int raw = SkillResolution.Amount(skill.Effect, enemy, against,
-                skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense, castType, skill.ScalingAxis);
+            // A seat-sized hit previews off the seat the target stands in NOW
+            // -- the same figure the resolution will size from, and 0 where
+            // it would pass over.
+            int raw;
+            if (skill.HasDamageBySeat)
+            {
+                raw = SeatSizedDamageBase(skill, against);
+                if (raw <= 0) return 0;
+            }
+            else
+            {
+                raw = SkillResolution.Amount(skill.Effect, enemy, against,
+                    skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense, castType, skill.ScalingAxis);
+            }
 
             if (heals) return raw;
 
