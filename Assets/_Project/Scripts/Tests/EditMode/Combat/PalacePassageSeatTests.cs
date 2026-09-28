@@ -254,17 +254,20 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void LegalActionsDoesNotYetOfferThePassage()
+        public void LegalActionsOffersThePassage_OncePerLegalSeat()
         {
-            // M6 decides WHEN a bot takes it (PLAN_BELLWETHER_KIT 3.10); until
-            // then the legal menu every policy (RandomLegal included) picks
-            // from is unchanged.
+            // Since M6 (PLAN_BELLWETHER_KIT 3.10) the legal menu carries every
+            // seat-destination cast, so RandomLegal can pick one; WHEN a
+            // thinking bot takes it is TelegraphAnswer's rule.
             var shawn = Member("Shawn", 30);
             var session = Fight(shawn);
 
             var legal = FightAction.LegalActions(session, shawn, System.Array.Empty<SatchelStack>());
+            var passages = legal.Where(a => a.Kind == FightActionKind.Skill).ToList();
 
-            Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Skill), "a Passage reached the legal menu");
+            CollectionAssert.AreEqual(new[] { 1, 2 }, passages.Select(a => a.DestinationSeat).ToList(),
+                "a solo Shawn at the front is offered the two empty seats, once each");
+            Assert.IsTrue(passages.All(a => a.Target == shawn && a.SkillIndex == 0));
         }
     }
 }

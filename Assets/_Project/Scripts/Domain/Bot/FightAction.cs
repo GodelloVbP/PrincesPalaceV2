@@ -220,17 +220,15 @@ namespace PrincesPalace.Domain.Bot
                 // AllyTargetSelection states what is preferred. That split is
                 // what keeps RandomLegal genuinely uniform over the real menu
                 // rather than over a menu somebody already narrowed for it.
-                // A SEAT-DESTINATION CAST (Palace Passage) IS NOT OFFERED HERE
-                // YET. The action can carry it since PLAN_BELLWETHER_KIT M3
-                // (DestinationSeat; SeatDestinationActions below lists every
-                // legal one through the session's own CanCastToSeat), but
-                // WHEN a policy should take a free reposition is M6's
-                // telegraph answer (3.10). Offering it to every archetype
-                // before that would change every balance number for a reason
-                // no policy was written to weigh.
+                // A SEAT-DESTINATION CAST (Palace Passage) IS OFFERED BELOW,
+                // not here: SeatDestinationActions lists one action per
+                // traveller per seat through the session's own
+                // CanCastToSeat (PLAN_BELLWETHER_KIT M6). WHEN a bot takes it
+                // is TelegraphAnswer's rule; RandomLegal may take it any time,
+                // and the scoring archetypes see a non-damaging skill.
                 //
-                // SKIPPED, NOT OFFERED-AND-REFUSED: Milestone B shipped a skill
-                // the bot could pick and the session always refused, and
+                // EVERY MULTI-PICK CAST IS SKIPPED HERE, NOT OFFERED-AND-
+                // REFUSED: Milestone B shipped a skill the bot could pick and the session always refused, and
                 // BalanceBotSmokeTests found it as a 60-command STALL. An
                 // action the legal menu never contains cannot stall anything.
                 if (SkillEffects.PicksRequired(option.Skill.Effect) > 1) continue;
@@ -291,6 +289,8 @@ namespace PrincesPalace.Domain.Bot
                 }
             }
 
+            actions.AddRange(SeatDestinationActions(session, actor));
+
             // BOTH DIRECTIONS ASKED SEPARATELY -- CanMove is the same query
             // the verb row reads, so a row the menu would refuse never
             // reaches a policy either.
@@ -311,9 +311,9 @@ namespace PrincesPalace.Domain.Bot
         // per ready Palace Passage, per eligible traveller, per seat the
         // session would accept (occupied or empty, never the traveller's own).
         // Asked through FightSession.CanCastToSeat, the refusal list the cast
-        // itself runs, so nothing here can be refused on Apply. Not part of
-        // LegalActions until M6 (see the skip there); `actor` must be the
-        // session's Current, as for every command.
+        // itself runs, so nothing here can be refused on Apply. Part of
+        // LegalActions since M6; `actor` must be the session's Current, as
+        // for every command (any other actor gets none).
         public static IReadOnlyList<FightAction> SeatDestinationActions(FightSession session, CombatantState actor)
         {
             var actions = new List<FightAction>();

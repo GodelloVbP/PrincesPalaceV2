@@ -167,11 +167,14 @@ namespace PrincesPalace.Editor.Bot
             o.Probe.NoTransform = ArgInt(args, "-botNoTransform", 0) != 0;
             o.Probe.GrantRelicIds = SplitList(Arg(args, "-botGrantRelic", ""));
             o.Probe.GrantTalentIds = SplitList(Arg(args, "-botGrantTalent", ""));
+            o.Probe.GrantBookIds = SplitList(Arg(args, "-botGrantBook", ""));
+            o.Probe.NoTelegraphAnswer = ArgInt(args, "-botNoTelegraphAnswer", 0) != 0;
 
             if (o.Career && !o.Probe.IsEmpty)
             {
                 throw new ArgumentException("-botCareer does not take the probe flags (-botForceEvent, -botEventChoice, " +
-                                            "-botNoTransform, -botGrantRelic, -botGrantTalent)");
+                                            "-botNoTransform, -botGrantRelic, -botGrantTalent, -botGrantBook, " +
+                                            "-botNoTelegraphAnswer)");
             }
 
             if (o.ReplayShare < 0) o.ReplayShare = 0;
@@ -1053,6 +1056,8 @@ namespace PrincesPalace.Editor.Bot
             sb.Append("\"noTransform\":").Append(o.Probe.NoTransform ? "true" : "false").Append(",\n");
             sb.Append("\"grantRelicIds\":").Append(StrList(o.Probe.GrantRelicIds)).Append(",\n");
             sb.Append("\"grantTalentIds\":").Append(StrList(o.Probe.GrantTalentIds)).Append(",\n");
+            sb.Append("\"grantBookIds\":").Append(StrList(o.Probe.GrantBookIds)).Append(",\n");
+            sb.Append("\"noTelegraphAnswer\":").Append(o.Probe.NoTelegraphAnswer ? "true" : "false").Append(",\n");
             sb.Append("\"elapsedSeconds\":").Append(Num(elapsed)).Append("\n");
             sb.Append("}\n");
             return sb.ToString();
@@ -1074,6 +1079,28 @@ namespace PrincesPalace.Editor.Bot
             sb.Append(',').Append(K("ShawnTransformed")).Append(f.ShawnTransformed ? "true" : "false");
             sb.Append(',').Append(K("ShawnDamageDealt")).Append(f.ShawnDamageDealt);
             sb.Append(',').Append(K("FlockDamage")).Append(f.FlockDamage);
+
+            // One object per seat-sized hit that landed (KnellTrace), the
+            // same PascalCase/camelCase split as the fields above.
+            sb.Append(',').Append(K("Knells")).Append('[');
+            for (int i = 0; i < f.Knells.Count; i++)
+            {
+                var k = f.Knells[i];
+                if (i > 0) sb.Append(',');
+                sb.Append('{');
+                sb.Append(K("EnemyId")).Append(Str(k.EnemyId));
+                sb.Append(',').Append(K("ActingTurn")).Append(k.ActingTurn);
+                sb.Append(',').Append(K("Round")).Append(k.Round);
+                sb.Append(',').Append(K("TargetId")).Append(Str(k.TargetId));
+                sb.Append(',').Append(K("Seat")).Append(k.Seat);
+                sb.Append(',').Append(K("Damage")).Append(k.Damage);
+                sb.Append(',').Append(K("HpBefore")).Append(k.HpBefore);
+                sb.Append(',').Append(K("AnsweredBy")).Append(Str(k.AnsweredBy));
+                sb.Append(',').Append(K("Survived")).Append(k.Survived ? "true" : "false");
+                sb.Append('}');
+            }
+
+            sb.Append(']');
         }
 
         private static string Num(double v)

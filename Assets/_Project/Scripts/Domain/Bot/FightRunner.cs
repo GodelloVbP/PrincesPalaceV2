@@ -83,7 +83,7 @@ namespace PrincesPalace.Domain.Bot
         public static List<InvariantHit> Play(
             FightSession session, IFightPolicy policy, IReadOnlyList<SatchelStack> satchel,
             SeededRandom rng, FightTrace traceOut, Action<ItemInstance> onItemUsed = null,
-            TransformUse transformUse = TransformUse.PolicyDecides)
+            TransformUse transformUse = TransformUse.PolicyDecides, bool answerTelegraphs = true)
         {
             var hits = new List<InvariantHit>();
             if (session == null || policy == null || rng == null) return hits;
@@ -114,6 +114,10 @@ namespace PrincesPalace.Domain.Bot
             int previousPartyHp = int.MaxValue;
             int commandsSinceProgress = 0;
 
+            // Seat-sized intents committed and not yet landed, for the knell
+            // trace; keyed by the enemy that committed one.
+            var pendingKnells = new Dictionary<CombatantState, PendingKnell>();
+
             while (!session.IsOver && session.IsPlayerTurn && commands < HardCommandCap)
             {
                 var actor = session.Current;
@@ -126,8 +130,13 @@ namespace PrincesPalace.Domain.Bot
                     break;
                 }
 
-                legal = TransformsOffered(session, actor, legal, transformUse, out FightAction? transformNow);
-                var action = transformNow ?? policy.Choose(session, actor, legal, rng);
+                if (traceOut != null) NotePendingKnells(session, pendingKnells);
+                int roundBefore = session.Round;
+
+                var action = ChooseCommand(session, actor, policy, legal, rng, transformUse, answerTelegraphs,
+                    out var answered);
+                if (answered != TelegraphAnswerKind.None) NoteAnswer(session, pendingKnells, actor, action, answered);
+
                 string label = TraceLabel(session, actor, action);
                 FightAction.Apply(session, action);
                 commands++;
@@ -158,7 +167,8 @@ namespace PrincesPalace.Domain.Bot
                 // attached to a headless session), so an undrained list
                 // would only ever grow for the rest of the fight.
                 float poolTierFired = 0f;
-                foreach (var beat in session.DrainBeats())
+                var drained = session.DrainBeats();
+                foreach (var beat in drained)
                 {
                     if (beat != null && ReferenceEquals(beat.Actor, actor)
                         && beat.PoolTierDamageMultiplier > poolTierFired)
@@ -180,6 +190,8 @@ namespace PrincesPalace.Domain.Bot
                         PrimaryPoolAfter = actor?.CurrentMana ?? 0,
                     });
                 }
+
+                if (traceOut != null) RecordLandedKnells(session, pendingKnells, drained, roundBefore, traceOut);
 
                 if (traceOut != null)
                 {
@@ -231,6 +243,149 @@ namespace PrincesPalace.Domain.Bot
             if (traceOut != null) traceOut.Turns = commands;
 
             return hits;
+        }
+
+        // ONE PLAYER COMMAND, chosen the way Play chooses it: the telegraph
+        // answer first (TelegraphAnswer, unless `answerTelegraphs` is off --
+        // the bot's -NoTelegraphAnswer), then the TransformUse filter, then
+        // the policy. `answered` says whether the answer supplied it. Public
+        // so a test can take one decision without playing a whole fight.
+        public static FightAction ChooseCommand(
+            FightSession session, CombatantState actor, IFightPolicy policy, IReadOnlyList<FightAction> legal,
+            SeededRandom rng, TransformUse transformUse, bool answerTelegraphs, out TelegraphAnswerKind answered)
+        {
+            answered = TelegraphAnswerKind.None;
+            if (answerTelegraphs)
+            {
+                var answer = TelegraphAnswer.Choose(session, actor, legal, out answered);
+                if (answer.HasValue) return answer.Value;
+            }
+
+            legal = TransformsOffered(session, actor, legal, transformUse, out FightAction? transformNow);
+            return transformNow ?? policy.Choose(session, actor, legal, rng);
+        }
+
+        // ---- the knell trace ----------------------------------------------------
+
+        private sealed class PendingKnell
+        {
+            public int TurnsBefore;
+            public CombatantState Target;
+            public TelegraphAnswerKind Answer;
+        }
+
+        private static void NotePendingKnells(FightSession session, Dictionary<CombatantState, PendingKnell> pending)
+        {
+            foreach (var enemy in session.Encounter.LivingEnemies)
+            {
+                if (pending.ContainsKey(enemy)) continue;
+                var intent = session.IntentDetailFor(enemy);
+                if (intent?.DamageBySeat == null) continue;
+
+                pending[enemy] = new PendingKnell
+                {
+                    TurnsBefore = session.ActingTurnsOf(enemy),
+                    Target = intent.Value.Target,
+                };
+            }
+        }
+
+        // The answer is credited to every pending knell aimed at the one it
+        // moved; a Passage outranks a step taken earlier against the same one.
+        private static void NoteAnswer(FightSession session, Dictionary<CombatantState, PendingKnell> pending,
+            CombatantState actor, FightAction action, TelegraphAnswerKind answered)
+        {
+            var moved = answered == TelegraphAnswerKind.Passage ? action.Target : actor;
+            foreach (var entry in pending)
+            {
+                if (!ReferenceEquals(session.IntentDetailFor(entry.Key)?.Target, moved)) continue;
+                if (entry.Value.Answer == TelegraphAnswerKind.Passage) continue;
+                entry.Value.Answer = answered;
+            }
+        }
+
+        // A pending knell has landed once its enemy has taken another acting
+        // turn: the committed intent is what that turn resolved (a stunned
+        // turn is not an acting turn, and the pair is never split, plan 1.6).
+        // Read off that enemy's first action beat in this command's drain.
+        private static void RecordLandedKnells(FightSession session, Dictionary<CombatantState, PendingKnell> pending,
+            IReadOnlyList<CombatBeat> drained, int roundBefore, FightTrace trace)
+        {
+            List<CombatantState> done = null;
+            foreach (var entry in pending)
+            {
+                var enemy = entry.Key;
+                int turns = session.ActingTurnsOf(enemy);
+                if (turns <= entry.Value.TurnsBefore)
+                {
+                    if (!enemy.IsAlive || session.IsOver) (done = done ?? new List<CombatantState>()).Add(enemy);
+                    continue;
+                }
+
+                (done = done ?? new List<CombatantState>()).Add(enemy);
+
+                int round = roundBefore;
+                CombatBeat knell = null, before = null;
+                foreach (var beat in drained)
+                {
+                    if (beat == null) continue;
+                    if (beat.RoundStarted > 0) round = beat.RoundStarted;
+                    if (beat.IsAction && ReferenceEquals(beat.Actor, enemy))
+                    {
+                        knell = beat;
+                        break;
+                    }
+
+                    before = beat;
+                }
+
+                // No beat of its own (a knell that struck nobody may open
+                // none): the target it was committed against.
+                var target = knell?.Target ?? entry.Value.Target;
+                int seat = SeatIn(knell?.Formation, target);
+                if (seat < 0) seat = SeatIn(before?.Formation, target);
+                if (seat < 0 && target != null) seat = session.Encounter.SeatOf(target);
+
+                int hpBefore = target != null && knell?.PreSnapshot != null
+                               && knell.PreSnapshot.TryGetValue(target, out var pre)
+                    ? pre.Health
+                    : target?.CurrentHealth ?? 0;
+                bool survived = target != null && knell?.Snapshot != null
+                                && knell.Snapshot.TryGetValue(target, out var post)
+                    ? post.Health > 0
+                    : target != null && target.IsAlive;
+
+                trace.Knells.Add(new KnellTrace
+                {
+                    EnemyId = enemy.Name ?? "",
+                    ActingTurn = turns,
+                    Round = round,
+                    TargetId = target?.Name ?? "",
+                    Seat = seat,
+                    Damage = knell == null || knell.Missed || knell.IsHealing ? 0 : knell.Amount,
+                    HpBefore = hpBefore,
+                    AnsweredBy = entry.Value.Answer == TelegraphAnswerKind.Passage ? "passage"
+                        : entry.Value.Answer == TelegraphAnswerKind.Step ? "step" : "none",
+                    Survived = survived,
+                });
+            }
+
+            if (done != null)
+            {
+                foreach (var enemy in done) pending.Remove(enemy);
+            }
+        }
+
+        private static int SeatIn(BeatFormation formation, CombatantState target)
+        {
+            if (formation == null || target == null) return -1;
+            var field = formation.PartyField;
+            for (int i = 0; i < field.Count; i++)
+            {
+                if (ReferenceEquals(field[i], target)) return i;
+            }
+
+            return -1;
         }
 
         // THE SAME REPAIR FightController.RescueAStalledEnemyTurn MAKES, and

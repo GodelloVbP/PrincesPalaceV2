@@ -89,6 +89,43 @@ namespace PrincesPalace.Domain.Bot
         // Names of every party member seen wearing a Transform after a command
         // (FightRunner). ShawnTransformed is read off it.
         public List<string> TransformedActors = new List<string>();
+
+        // One row per seat-sized enemy hit that resolved this fight (the
+        // Bellwether's Death Knell), in the order they landed. FightRunner.
+        public List<KnellTrace> Knells = new List<KnellTrace>();
+    }
+
+    // ONE SEAT-SIZED HIT, as it landed (PLAN_BELLWETHER_KIT M6). Written by
+    // FightRunner off the beat the enemy's committed intent opened; a knell
+    // cancelled by the fight ending first is never written.
+    public sealed class KnellTrace
+    {
+        public string EnemyId;
+
+        // The enemy's acting turn that resolved it (FightSession.ActingTurnsOf,
+        // counted after it: the Bellwether's first knell is turn 2).
+        public int ActingTurn;
+
+        // FightSession.Round when it landed.
+        public int Round;
+
+        public string TargetId;
+
+        // The target's seat as it landed, 0 = front.
+        public int Seat;
+
+        // The beat's pre-ward amount, 0 for a rear seat or a miss.
+        public int Damage;
+
+        // The target's health just before it landed.
+        public int HpBefore;
+
+        // "none" / "step" / "passage": what the telegraph answer
+        // (TelegraphAnswer) did about it after it was committed. "none"
+        // under -NoTelegraphAnswer, even if the archetype moved on its own.
+        public string AnsweredBy = "none";
+
+        public bool Survived;
     }
 
     // One thing the bot put on, between rooms.

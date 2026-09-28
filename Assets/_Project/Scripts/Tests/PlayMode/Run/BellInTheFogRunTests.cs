@@ -476,15 +476,10 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void BlackRamBuild_TransformsWhenReady_AndNoTransformNeverDoes()
         {
-            // BLOCKED ON M6, said rather than left red: since M5 the Bellwether
-            // opens with Dark Chains and then a Death Knell that kills a
-            // front-seated Shawn outright (110% of max health), and today's bot
-            // does not answer a telegraph -- the answer is M6's (plan 3.10). So
-            // every floor-1 Bell fight ends on the knell before a Ram has the
-            // Fury to transform. M6 lifts this Ignore when the bot steps back.
-            Assert.Ignore("Blocked on PLAN_BELLWETHER_KIT M6: the bot does not answer the knell yet, " +
-                          "so the Ram dies on the Bellwether's 2nd acting turn before it can transform.");
-
+            // Since M5 the Bellwether's 2nd acting turn is a Death Knell that
+            // kills a front-seated Shawn outright (110% of max health); the
+            // bot lives through it only because it answers the telegraph
+            // (TelegraphAnswer, PLAN_BELLWETHER_KIT M6), which is on here.
             var ram = BellOnFloorOne();
             ram.GrantTalentIds.Add("sheep_ram_converge");
             var ramRuns = ForcedBellRuns(ram, 3);
@@ -503,6 +498,36 @@ namespace PrincesPalace.PlayModeTests
             {
                 Assert.IsFalse(r.result.Trace.Fights.Any(f => f.ShawnTransformed || f.TransformedActors.Count > 0),
                     $"seed {r.seed}: -NoTransform still transformed");
+            }
+        }
+
+        // -GrantBook palace_passage: Shawn carries the Passage into the Bell and
+        // the knell trace says he answered with it; -NoTelegraphAnswer leaves
+        // every knell unanswered.
+        [Test]
+        public void GrantBook_PassageAnswersTheKnell_AndNoTelegraphAnswerNeverDoes()
+        {
+            var book = BellOnFloorOne();
+            book.GrantBookIds.Add("palace_passage");
+            var bookRuns = ForcedBellRuns(book, 3);
+            foreach (var r in bookRuns)
+            {
+                Assert.IsFalse(r.result.Hits.Any(h => h.Name.StartsWith("GrantedBook")),
+                    $"seed {r.seed}: " + string.Join(" | ", r.result.Hits.Select(h => h.ToString())));
+            }
+
+            var knells = bookRuns.Where(r => r.fight != null).SelectMany(r => r.fight.Knells).ToList();
+            Assert.IsNotEmpty(knells, "no knell landed in three Bell fights with the book");
+            Assert.IsTrue(knells.Any(k => k.AnsweredBy == "passage" && k.Seat == 2),
+                "the Passage never took Shawn to the rear: " +
+                string.Join(", ", knells.Select(k => $"{k.AnsweredBy}@{k.Seat}")));
+
+            var off = BellOnFloorOne();
+            off.NoTelegraphAnswer = true;
+            foreach (var r in ForcedBellRuns(off, 3))
+            {
+                if (r.fight == null) continue;
+                Assert.IsTrue(r.fight.Knells.All(k => k.AnsweredBy == "none"), $"seed {r.seed}");
             }
         }
 

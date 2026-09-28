@@ -185,7 +185,8 @@ namespace PrincesPalace
         // WHAT A TUNING BATCH PINS DOWN that a plain batch leaves to the dice
         // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M8a). Every field empty/off is
         // exactly a plain run. tools/bot.ps1's -ForceEvent / -ForceEventFloor /
-        // -EventChoice / -NoTransform / -GrantRelic / -GrantTalent.
+        // -EventChoice / -NoTransform / -GrantRelic / -GrantTalent / -GrantBook /
+        // -NoTelegraphAnswer.
         public sealed class BotProbe
         {
             // ForceEventId with ForceEventFloor 0: every Event room opens this
@@ -216,9 +217,20 @@ namespace PrincesPalace
             // sheep_ram_converge" is a Black Ram build.
             public List<string> GrantTalentIds = new List<string>();
 
+            // Spell books taught and slotted when the run opens, free: each
+            // on the character its skill names (characterId), else the first
+            // fielded character with a free slot. "-GrantBook palace_passage"
+            // is Shawn with the Passage (PLAN_BELLWETHER_KIT M6).
+            public List<string> GrantBookIds = new List<string>();
+
+            // The telegraph answer off (FightRunner answerTelegraphs false):
+            // the archetype alone decides, as before M6.
+            public bool NoTelegraphAnswer;
+
             public bool IsEmpty =>
                 string.IsNullOrEmpty(ForceEventId) && string.IsNullOrEmpty(EventChoiceText) && !NoTransform
-                && GrantRelicIds.Count == 0 && GrantTalentIds.Count == 0;
+                && GrantRelicIds.Count == 0 && GrantTalentIds.Count == 0 && GrantBookIds.Count == 0
+                && !NoTelegraphAnswer;
         }
 
         // The probe of the run in flight: set by PlayRun for its own duration
@@ -627,6 +639,7 @@ namespace PrincesPalace
             }
 
             GrantRelics(result);
+            GrantBooks(save, result);
 
             // DRESS BEFORE WALKING IN. A player opens the character sheet on
             // the way out of the hub and wears the best of what they own; the
@@ -985,6 +998,48 @@ namespace PrincesPalace
                 }
 
                 if (!run.relicIds.Contains(id)) run.relicIds.Add(id);
+            }
+
+            SaveSlotManager.SaveCurrent();
+        }
+
+        // Each book bought for nothing and learned into a free slot, the two
+        // steps a player takes (shop, then the dossier) through the same
+        // RunOrchestrator.LearnSpell the bot's own assignment pass uses.
+        private static void GrantBooks(SaveData save, BotRunResult result)
+        {
+            if (_probe == null || _probe.GrantBookIds.Count == 0) return;
+
+            var run = RunManager.Run;
+            run.unassignedSpellBooks ??= new List<string>();
+            foreach (string id in _probe.GrantBookIds)
+            {
+                var skill = ContentDatabase.GetSkill(id);
+                if (skill == null)
+                {
+                    result.Hits.Add(new InvariantHit("GrantedBookMissing", $"-GrantBook '{id}' is not in the built content"));
+                    continue;
+                }
+
+                string owner = skill.Data.CharacterId;
+                var learner = save.ActiveSquad().FirstOrDefault(c =>
+                    c != null && (string.IsNullOrEmpty(owner) || c.definitionId == owner)
+                    && RunOrchestrator.CanLearn(c.definitionId) >= 0);
+                if (learner == null)
+                {
+                    result.Hits.Add(new InvariantHit("GrantedBookUnlearned",
+                        $"-GrantBook '{id}': no fielded character {owner} has a free slot"));
+                    continue;
+                }
+
+                run.unassignedSpellBooks.Add(id);
+                var learned = RunOrchestrator.LearnSpell(learner.definitionId, id,
+                    RunOrchestrator.CanLearn(learner.definitionId));
+                if (!learned.Applied)
+                {
+                    run.unassignedSpellBooks.Remove(id);
+                    result.Hits.Add(new InvariantHit("GrantedBookUnlearned", $"-GrantBook '{id}': {learned.Outcome}"));
+                }
             }
 
             SaveSlotManager.SaveCurrent();
@@ -1544,7 +1599,8 @@ namespace PrincesPalace
                 result.Hits.AddRange(FightRunner.Play(
                     session, fightPolicy, RunOrchestrator.BuildSatchel(), fightRng, fightTrace,
                     RunOrchestrator.SpendConsumable,
-                    _probe != null && _probe.NoTransform ? TransformUse.Never : TransformUse.WhenReady));
+                    _probe != null && _probe.NoTransform ? TransformUse.Never : TransformUse.WhenReady,
+                    answerTelegraphs: _probe == null || !_probe.NoTelegraphAnswer));
             }
 
             fightTrace.EndReason = session.EndReason.ToString();

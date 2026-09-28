@@ -204,6 +204,30 @@ FightTrace
   TransformedActors string[] -- names of every party member seen wearing a
                         Transform after a command (in memory only, not
                         written to either file; ShawnTransformed is read off it)
+  Knells        KnellTrace[] -- one per seat-sized enemy hit that landed
+                        this fight (the Bellwether's Death Knell), in order;
+                        written to both files (camelCase `knells` in
+                        runs.jsonl). A knell the fight's end cancelled is
+                        not written.
+
+KnellTrace (PLAN_BELLWETHER_KIT M6; FightRunner, off the enemy's action beat)
+  EnemyId       string -- the enemy's combatant name
+  ActingTurn    int    -- its acting turn that resolved it (ActingTurnsOf
+                          after it: the Bellwether's first knell is 2, its
+                          second 6)
+  Round         int    -- FightSession.Round when it landed
+  TargetId      string -- who it struck (the chained target)
+  Seat          int    -- the target's seat as it landed, 0 = front
+  Damage        int    -- the beat's pre-ward amount; 0 at the rear or on a
+                          miss
+  HpBefore      int    -- the target's health just before it landed
+  AnsweredBy    string -- "none" / "step" / "passage": what the shared
+                          telegraph answer (Domain/Bot/TelegraphAnswer.cs)
+                          did about it after it was committed; always "none"
+                          under -NoTelegraphAnswer, even when an archetype
+                          moved on its own
+  Survived      bool   -- the target was alive when the beat closed (a
+                          later Bleed tick is not the knell's kill)
 
 TurnTrace
   ActorId       string -- combatant id issuing this command
@@ -359,7 +383,8 @@ EquipTrace
 ### Tuning probes (M8a)
 
 `tools/bot.ps1 -ForceEvent <id> [-ForceEventFloor <n>] [-EventChoice <text>]
-[-NoTransform] [-GrantRelic <ids>] [-GrantTalent <ids>]`
+[-NoTransform] [-GrantRelic <ids>] [-GrantTalent <ids>] [-GrantBook <ids>]
+[-NoTelegraphAnswer]`
 (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M8a; the exact rules are
 `BotRunDriver.BotProbe`'s header). Each shard's `batch.json` records them as
 `forceEvent`, `forceEventFloor`, `eventChoice`, `noTransform`,
@@ -380,6 +405,19 @@ probe batch is read from its shard files. Refused together with `-Career`.
   earlier batch.
 - `-GrantTalent` kindles the talent and every prerequisite, free, on its
   owner: `sheep_ram_converge` is the Black Ram build.
+- `-GrantBook <ids>` (M6 of docs/PLAN_BELLWETHER_KIT.md) teaches and slots
+  each spell book, free, when the run opens: on the character its skill
+  names (`characterId`), else the first fielded one with a free slot. A
+  missing id or no free slot is a `GrantedBookMissing` /
+  `GrantedBookUnlearned` hit. `batch.json` records `grantBookIds`.
+- The telegraph answer is ON in every batch since M6: before any archetype
+  chooses, a committed seat-sized intent (the Death Knell) is answered with
+  a ready Palace Passage to the cheapest seat (a free action; the archetype
+  then acts), else the target's own one-seat Move when it saves at least
+  25% of max health (`TelegraphAnswer.StepMinSavingOfMaxHp`).
+  `-NoTelegraphAnswer` turns it off (`noTelegraphAnswer` in `batch.json`).
+  Palace Passage is also in every archetype's legal list since M6, so
+  RandomLegal can pick it (`Skill:palace_passage`) any time.
 
 ### `RunTrace.Hash()` and this change
 

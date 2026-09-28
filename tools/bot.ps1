@@ -47,12 +47,18 @@ param(
     #   -GrantRelic <ids>       comma-separated; added after the relic draft.
     #   -GrantTalent <ids>      comma-separated; kindled free with every
     #                           prerequisite, e.g. sheep_ram_converge = Black Ram.
+    #   -GrantBook <ids>        comma-separated spell books, taught and slotted
+    #                           free when the run opens, e.g. palace_passage.
+    #   -NoTelegraphAnswer      the shared telegraph answer (step back / Passage
+    #                           before a seat-sized hit) off; the archetype alone.
     [string]$ForceEvent = "",
     [int]$ForceEventFloor = 0,
     [string]$EventChoice = "",
     [switch]$NoTransform,
     [string]$GrantRelic = "",
-    [string]$GrantTalent = ""
+    [string]$GrantTalent = "",
+    [string]$GrantBook = "",
+    [switch]$NoTelegraphAnswer
 )
 
 # Runs a balance-bot batch headlessly, across one or several Unity instances.
@@ -330,9 +336,10 @@ else {
     Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$ArchetypesLabel], profiles [$Profiles],"
     Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy, across $($shardList.Count) shard(s)."
 }
-if ($ForceEvent -or $EventChoice -or $NoTransform -or $GrantRelic -or $GrantTalent) {
+if ($ForceEvent -or $EventChoice -or $NoTransform -or $GrantRelic -or $GrantTalent -or $GrantBook -or $NoTelegraphAnswer) {
     Write-Host "Probe: force event [$ForceEvent] floor $ForceEventFloor, event choice [$EventChoice], no transform $NoTransform,"
-    Write-Host "       grant relic [$GrantRelic], grant talent [$GrantTalent]."
+    Write-Host "       grant relic [$GrantRelic], grant talent [$GrantTalent], grant book [$GrantBook],"
+    Write-Host "       no telegraph answer $NoTelegraphAnswer."
 }
 
 # ---- launch ------------------------------------------------------------------
@@ -384,6 +391,8 @@ foreach ($shard in $shardList) {
     if ($NoTransform) { $unityArgs += @("-botNoTransform", "1") }
     if ($GrantRelic) { $unityArgs += @("-botGrantRelic", $GrantRelic) }
     if ($GrantTalent) { $unityArgs += @("-botGrantTalent", $GrantTalent) }
+    if ($GrantBook) { $unityArgs += @("-botGrantBook", $GrantBook) }
+    if ($NoTelegraphAnswer) { $unityArgs += @("-botNoTelegraphAnswer", "1") }
 
     Write-Host "  shard $($shard.Index): seeds $($shard.Seed)..$($shard.Seed + $shard.Runs - 1) in $($shard.Path)"
     $shard.Process = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
