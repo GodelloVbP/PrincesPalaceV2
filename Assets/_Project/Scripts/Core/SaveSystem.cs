@@ -11,11 +11,10 @@ namespace PrincesPalace
 
         // Test-only escape hatch. Null in every shipped build; when a test
         // sets it, PathForSlot writes there instead of the real
-        // Application.persistentDataPath (AUDIT.md #23 — the PlayMode suite
-        // used to delete the developer's real save_slot_0.json after every
-        // test, having no spare slot of its own to use instead). Public
-        // rather than internal so GameplayTestBase (a different asmdef) can
-        // reach it without an InternalsVisibleTo entry.
+        // Application.persistentDataPath, so the PlayMode suite never
+        // touches a developer's real save files. Public rather than
+        // internal so GameplayTestBase (a different asmdef) can reach it
+        // without an InternalsVisibleTo entry.
         public static string RootOverride;
 
         // BOT-ONLY: THE SLOT LIVES IN RAM AND NEVER REACHES THE DISK.
@@ -128,14 +127,13 @@ namespace PrincesPalace
         // ever replaces the real one, and the rename itself is a single
         // filesystem operation rather than an in-place overwrite.
         //
-        // RETURNS WHETHER THE WRITE LANDED. It used to return void, and the
-        // failure above was therefore visible only in the console: a shop
-        // purchase could mutate the run in memory, fail to reach the disk,
-        // and tell the player nothing. The caller can now say so
-        // (RunOrchestrator's ShopResult.AppliedNotPersisted). Still does not
+        // RETURNS WHETHER THE WRITE LANDED, so a caller can tell a shop
+        // purchase mutated the run in memory but failed to reach disk
+        // (RunOrchestrator's ShopResult.AppliedNotPersisted) rather than the
+        // failure only ever showing up in the console. Still does not
         // THROW -- the exception is caught here on purpose, because a torn
         // save is a worse answer than a logged one -- so a caller that
-        // ignores the bool behaves exactly as it did before this change.
+        // ignores the bool is unaffected.
         public static bool Save(SaveData data, int slot)
         {
             if (InMemory)

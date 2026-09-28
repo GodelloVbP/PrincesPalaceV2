@@ -34,14 +34,11 @@ namespace PrincesPalace
 
         // Pixels at full strength.
         //
-        // WAS 14, AND 14 WAS TOO POLITE. The reasoning behind it was sound as
-        // far as it went -- the nearest slots sit at x +/-470 and a figure is
-        // ~400px wide, so double figures registers -- but "registers" is a
-        // lower bar than "hits", and against a 1080-tall stage this was a
-        // twitch. Raised on request after the first pass read as no different
-        // from no shake at all. The threshold the old note was protecting
-        // (where the eye starts tracking the movement rather than the blow) is
-        // real and is nearer 45-50px on this stage; 30 sits well under it.
+        // The nearest slots sit at x +/-470 and a figure is ~400px wide, so
+        // double figures registers -- but "registers" is a lower bar than
+        // "hits" against a 1080-tall stage. The threshold where the eye
+        // starts tracking the movement rather than the blow is nearer
+        // 45-50px on this stage; 30 sits well under it.
         private const float MaxPixels = 30f;
 
         // Vertical is deliberately smaller. The stage recedes along a fake

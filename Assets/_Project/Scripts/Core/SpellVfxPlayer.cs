@@ -11,12 +11,12 @@ namespace PrincesPalace
     // that owns it -- a spell's seconds is authored in skills.json beside its
     // damage, which is where someone tuning the spell is looking.
     //
-    // WHAT IT NO LONGER OWNS, and why that is the whole point: the clock, the
-    // schedule and the flight. This used to run a coroutine per cast off its
-    // own wall-clock stamp, which is a second orchestrator -- a scheduler
-    // advancing a cast on one clock beside a renderer advancing its frames on
-    // another. SpellPerformancePlayer owns both now and hands this the answer:
-    // which sprite, which one is fading up over it, how far, and where.
+    // WHAT IT DOES NOT OWN, and why that matters: the clock, the schedule
+    // and the flight. A coroutine per cast off its own wall-clock stamp
+    // would be a second orchestrator -- a scheduler advancing a cast on one
+    // clock beside a renderer advancing its frames on another.
+    // SpellPerformancePlayer owns both and hands this the answer: which
+    // sprite, which one is fading up over it, how far, and where.
     //
     // Frames are discovered and cached by FrameSequenceLoader, shared with
     // StanceAnimationLibrary.
@@ -110,11 +110,8 @@ namespace PrincesPalace
 
         // EVERYTHING THIS MEMBER CARRIES, PUT BACK. A pool member handed on
         // with a mirror, a tint or a size left on it is how the next cast
-        // inherits a bug from the last one -- which is why two defensive
-        // SetFacing(1f) calls used to exist at the call sites, each with a
-        // comment saying "a pool member keeps whatever facing the last thing to
-        // use it left behind". One code path owns restoration now, so there is
-        // nowhere else to get it wrong.
+        // inherits a bug from the last one. One code path owns restoration,
+        // so there is nowhere else to get it wrong.
         public void StopImmediately()
         {
             IsPlaying = false;

@@ -99,10 +99,9 @@ namespace PrincesPalace
 
         // Overwrites `characterId`'s existing `slot` with `skillId`. The
         // book that WAS in that slot returns to run.unassignedSpellBooks
-        // rather than being destroyed (§7.1 point 5 -- the original design's
-        // REPLACING/struck-through-name language is withdrawn with it): a
-        // full character never has to be told what they are giving up
-        // forever, only which slot they are handing this one instead.
+        // rather than being destroyed: a full character never has to be
+        // told what they are giving up forever, only which slot they are
+        // handing this one instead.
         public static ShopResult ReplaceSpell(string characterId, string skillId, int slot)
         {
             // 1. VALIDATE.

@@ -11,18 +11,13 @@ namespace PrincesPalace
     // beside whatever the pad has focused, on every screen, driven from one
     // place (NavigationInputModule).
     //
-    // What it replaces, and why it is one object rather than a treatment per
-    // screen: every screen that had a pad-focus visual at all grew its own
+    // ONE OBJECT RATHER THAN A TREATMENT PER SCREEN: a per-screen halo
     // (Hub's building halos, Party's seat/card halos, the Dossier's cell
-    // halos, the Reckoning's brightened offer halo), three screens had none
-    // (Talents, Options, Fight), and the owner's hardware play-test rejected
-    // the halo on both counts at once -- "the selector on the start descent
-    // is huge and looks weird", "the gold halo (e.g. in party screen) is way
-    // too strong", "a player can't see where they're going in the character
-    // sheets screen". A glow scaled to the control is as big as the control,
-    // so it cannot be small on a 620x620 building and visible on a 96x96 orb;
-    // a marker of fixed size beside the control is the same size everywhere by
-    // construction.
+    // halos, the Reckoning's brightened offer halo) is scaled to its
+    // control, so it cannot be small on a 620x620 building and visible on a
+    // 96x96 orb; a marker of fixed size beside the control is the same size
+    // everywhere by construction, and a screen with no halo of its own
+    // (Talents, Options, Fight) gets one for free.
     //
     // A SCENE ROOT FIXTURE, built by SceneBuilder beside the camera, the
     // global Volume, the canvas and the EventSystem -- not a node in any
@@ -135,11 +130,9 @@ namespace PrincesPalace
 
             // SCROLLED OUT OF ITS OWN WINDOW. A row a list has clipped away is
             // still active, still focused, and still has a rect -- it is just
-            // not drawn. Pointing at it put the arrow in empty stage space
-            // beside no row (QA 2026-09-26, the fight's twelve-potion list
-            // wheeled two notches down with Potion 1 still focused). Every
-            // enabled RectMask2D above the target is a window it can be
-            // scrolled out of, whichever screen it is on.
+            // not drawn. Pointing at it would put the arrow in empty stage
+            // space beside no row. Every enabled RectMask2D above the target
+            // is a window it can be scrolled out of, whichever screen it is on.
             if (!VisibleThroughEveryClip(canvasRect, _target, box))
             {
                 _image.enabled = false;
