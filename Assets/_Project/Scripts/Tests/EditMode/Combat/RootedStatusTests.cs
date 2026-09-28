@@ -73,11 +73,11 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the enemy action-selection gate -----------------------------------
 
-        // AUDIT #148: this committed swing turns illegal by resolution time
+        // This committed swing turns illegal by resolution time
         // (Rooted lands on the enemy between its intent being drawn and that
-        // intent resolving) used to redraw a fresh ability from the pool --
-        // even one the player was never shown, undoing the very thing Root
-        // was spent to stop. The owner's call: Root reliably cancels the
+        // intent resolving) and must not redraw a fresh ability from the pool
+        // -- even one the player was never shown, which would undo the very
+        // thing Root is spent to stop. Root reliably cancels the
         // swing it caught. Full stop, whether or not a legal skill exists.
         [Test]
         public void RootedEnemyWithACommittedPlainSwing_VoidsTheAttack_EvenWithALegalSkillAvailable()
@@ -146,15 +146,14 @@ namespace PrincesPalace.Domain.Tests
 
             // UNLIKE Stun (ConsumeStun removes it outright, spent on the
             // skip), Rooted decays by TURN COUNT like Chilled/Protect -- and
-            // since plan D1 that count moves at the END of the bearer's turn.
-            // A 5-turn Rooted reads 4 here: the forfeited turn WAS the
+            // that count moves at the END of the bearer's turn. A 5-turn
+            // Rooted reads 4 here: the forfeited turn WAS the
             // monster's turn, and it has ended by the time this line runs.
             //
-            // IT READ 5 UNTIL MILESTONE D, and that was the bug rather than
-            // the rule. The turn-end clock only ran inside AdvanceAfterAction,
-            // which no monster turn and no skipped turn reaches, so a rooted
-            // monster forfeited, aged nothing, and forfeited again for ever --
-            // a root that fed itself. See FightSession.EndTurnStatusesForCurrent.
+            // The turn-end clock must run for a forfeited turn too, not only
+            // inside AdvanceAfterAction, or a rooted monster forfeits, ages
+            // nothing, and forfeits again for ever -- a root that feeds
+            // itself. See FightSession.EndTurnStatusesForCurrent.
             var rooted = monster.Statuses.SingleOrDefault(s => s.Type == StatusEffectType.Rooted);
             Assert.IsNotNull(rooted, "a forfeited turn must not erase the turns of Rooted still owed -- " +
                                       "that would make forfeiting the turn Rooted's OWN escape hatch");
@@ -165,14 +164,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void RootedEnemyWithNoLegalSkill_TelegraphsAForfeit_NotAFakeAttack()
         {
-            // PHASE D3 FIX. BuildIntent's own -1 fallback (FightSession.Enemies.cs)
-            // used to swing regardless of WHY the draw came back empty, so this
-            // exact fixture -- Rooted, no abilities authored at all -- was
-            // telegraphed a full-power "Attack" with a real damage preview on
-            // the player's turn, and then had that very turn silently forfeited
-            // once AutoResolveEnemyTurns actually reached it (see the test
-            // above, which proves the RESOLUTION half already worked). The
-            // player planned around damage that was a lie.
+            // BuildIntent's own -1 fallback (FightSession.Enemies.cs) must
+            // not swing regardless of WHY the draw came back empty: this
+            // exact fixture -- Rooted, no abilities authored at all -- must
+            // not be telegraphed a full-power "Attack" with a real damage
+            // preview on the player's turn only to have that very turn
+            // silently forfeited once AutoResolveEnemyTurns actually reaches
+            // it (see the test above, which proves the RESOLUTION half
+            // already works). The player must not plan around a lie.
             //
             // Rooted is applied BEFORE Begin(), unlike the resolution test
             // above -- Begin() commits the opening telegraph at its own tail
@@ -377,9 +376,8 @@ namespace PrincesPalace.Domain.Tests
 
             // The literal, not FightTuning.RootOnHitTurns read back at
             // itself -- if the on-hit call site ever stops passing that
-            // constant through, this is what turns red. ONE since plan D1
-            // moved Rooted to the turn-end clock, where 1 affects the same one
-            // turn the old turn-start 2 affected.
+            // constant through, this is what turns red. Rooted runs off the
+            // turn-end clock, where 1 affects exactly one turn.
             Assert.AreEqual(1, rooted.TurnsRemaining,
                 "the on-hit proc must apply Rooted for exactly FightTuning.RootOnHitTurns (1) turn");
         }

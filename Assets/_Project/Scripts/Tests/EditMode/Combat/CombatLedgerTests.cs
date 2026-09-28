@@ -99,7 +99,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void OverkillIsNotCountedAsDamageTaken()
         {
-            // AUDIT #124a, owner's call 2026-09-11. CombatLedger's own header
+            // AUDIT #124. CombatLedger's own header
             // says DamageTaken is "what reached this combatant's HEALTH", and
             // 490 of a 500-point blow on a 10-HP rat reached nothing at all.
             //

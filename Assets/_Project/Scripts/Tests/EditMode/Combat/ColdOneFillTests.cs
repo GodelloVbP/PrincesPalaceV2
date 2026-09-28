@@ -178,7 +178,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(80, hero.PrimaryPool.Current, "the extra action is the same turn: no refill");
         }
 
-        // ACCEPTED INTERACTION (owner 2026-09-25), pinned so it stays visible:
+        // ACCEPTED INTERACTION, pinned so it stays visible:
         // ReopenTurnFor re-runs the Runic conversion on the mana left of the
         // turn's fill. Opening: 40 mana -> ward 10, then the fill. The bolt
         // costs 20 and kills; the Bloodlust action converts what is left.

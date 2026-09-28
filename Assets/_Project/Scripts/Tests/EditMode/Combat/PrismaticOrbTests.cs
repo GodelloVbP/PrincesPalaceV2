@@ -155,8 +155,8 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(water.Vfx.HasLayers,
                 "the element's layered block did not reach the cast at all");
-            // Was 5: 2026-09-09 SpellLayerFixtures.Water() gained a "charge"
-            // layer ahead of "core", matching skills.json's Water block.
+            // SpellLayerFixtures.Water() has a "charge" layer ahead of
+            // "core", matching skills.json's Water block.
             Assert.AreEqual(6, water.Vfx.layers.Length);
 
             // AND A COPY, never the catalogue's own object -- the same rule the
@@ -432,8 +432,9 @@ namespace PrincesPalace.Domain.Tests
 
             // SLICED BY BRACE DEPTH, not by "the text up to the next id".
             // A layer carries an `id` of its own -- the pilot's Water element
-            // declares five -- so the old scan stopped inside the orb's own vfx
-            // block and every assertion below would have been made against a
+            // declares five -- so a scan by "the text up to the next id"
+            // would stop inside the orb's own vfx
+            // block and every assertion below would be made against a
             // third of the record.
             string entry = JsonBlocks.ObjectsInArray(json, "skills")
                 .FirstOrDefault(s => JsonBlocks.String(s, "id") == "prismatic_orb");

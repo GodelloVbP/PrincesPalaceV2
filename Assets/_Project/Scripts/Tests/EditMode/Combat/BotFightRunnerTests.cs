@@ -188,9 +188,9 @@ namespace PrincesPalace.Domain.Tests
 
         // THE REGRESSION THIS WHOLE CHANGE IS FOR. A slow win is not a stall.
         // A Mid GreedyDefensive at the floor-3 boss took 201 commands to bring
-        // a Throne Colossus from 794 HP to 35 -- winning the whole way -- and
-        // the old flat 200-command cap called it stuck and truncated the run
-        // into a death, 3,220 times in one batch.
+        // a Throne Colossus from 794 HP to 35 -- winning the whole way -- so
+        // a flat 200-command cap must not call that stuck and truncate the
+        // run into a death.
         [Test]
         public void Play_AGrindingButWinningFight_IsNotReportedAsStuck()
         {
@@ -199,7 +199,7 @@ namespace PrincesPalace.Domain.Tests
             //
             // Foe health raised from 900 to 1200 for the 1.2x basic-attack
             // coefficient (CombatMath.BasicAttackPowerMultiplier): hero's
-            // swing is round(4 * 1.0 * 1.2) = 5, not the old 4, so 900 HP
+            // swing is round(4 * 1.0 * 1.2) = 5, so 900 HP
             // would finish in 180 commands -- under the 200 floor this test
             // exists to clear. 1200 / 5 = 240 commands, comfortably past it.
             var hero = Fighter("Hero", true, maxHealth: 5000, attack: 4, speed: 10);
