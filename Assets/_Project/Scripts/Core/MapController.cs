@@ -77,9 +77,9 @@ namespace PrincesPalace
         [SerializeField] internal Sprite treasureIcon;
 
         // What state a room is in, which is the only thing its tint says. Five
-        // rather than the three the flat plates used: "cleared" and "never
-        // reachable" used to render identically dim, so a leg's history was
-        // unreadable the moment it had one.
+        // rather than three, so "cleared" and "never reachable" don't render
+        // identically dim, which would make a leg's history unreadable the
+        // moment it had one.
         private enum TileState { Current, Walked, Open, Ahead, Closed }
 
         // A whole-tile colour MULTIPLY, applied to the painted tree and its icon
@@ -168,10 +168,8 @@ namespace PrincesPalace
 
             abandonButton.onClick.AddListener(() =>
             {
-                // EndRun settles the books itself. This call used to discard
-                // the run without paying it, so walking away from a descent
-                // threw away every ember its bosses had earned -- silently,
-                // because a discarded snapshot looks the same either way.
+                // EndRun settles the books itself, so walking away from a
+                // descent still pays out every ember its bosses have earned.
                 RunManager.EndRun();
                 Navigation.Go(Navigation.Hub);
             });
@@ -181,14 +179,13 @@ namespace PrincesPalace
 
         // The same two keys as the hub and the fight, so "what am I wearing" is
         // one gesture wherever the player is standing.
-        // The map's own base context (plan section 4/11), mirroring
-        // HubController's -- pushed once, never popped while this scene is
-        // loaded. No Selectables yet (node-button navigation is the Graph
-        // group phase 3's rollout gives Map), but its Cancel is live: with
-        // nothing else up, Cancel opens the system menu, exactly as it does
-        // on the hub and exactly as the deleted Escape poll used to do here
-        // (AUDIT.md #155). It also lets C/I below ask "am I still top"
-        // instead of firing underneath a modal that covers the map.
+        // The map's own base context, mirroring HubController's -- pushed
+        // once, never popped while this scene is loaded. No Selectables yet
+        // (node-button navigation is the Graph group RefreshNavLinks below
+        // gives Map), but its Cancel is live: with nothing else up, Cancel
+        // opens the system menu, exactly as it does on the hub. It also
+        // lets C/I below ask "am I still top" instead of firing underneath
+        // a modal that covers the map.
         private NavContext _navContext;
 
         // The overarching menu this screen's Cancel opens, assigned by
@@ -231,10 +228,10 @@ namespace PrincesPalace
         }
 
         // Map's START, called once a frame by the ONE dispatch point when
-        // this context is top (the owner's 2026-09-19 call moved this off
-        // Cancel). The map has nothing of its own to back out of -- there is
-        // no submenu depth here the way there is in a fight -- so its Cancel
-        // is now nothing at all, and this is the only way in. Once the menu
+        // this context is top. The map has nothing of its own to back out
+        // of -- there is no submenu depth here the way there is in a fight
+        // -- so its Cancel is nothing at all, and this is the only way in.
+        // Once the menu
         // IS open its own context sits above this one, so a second Start
         // reaches the menu's own handler, never this.
         private void HandleSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
@@ -388,7 +385,7 @@ namespace PrincesPalace
         }
 
         // ---- gamepad navigation: the Graph shape (docs/GAMEPAD_NAVIGATION_PLAN.md
-        // phase 3, section 5's "Graph (Map, links from MapController.
+        // section 5's "Graph (Map, links from MapController.
         // Refresh())") -------------------------------------------------------
         //
         // UiNavSpec has no Graph enum member -- UiNavLinkBuilder's own header
@@ -404,10 +401,9 @@ namespace PrincesPalace
         // one before it (choices at one transition differ only in Slot, which
         // is vertical -- MapLayout.ClearingRowY's own ordering, ascending
         // Slot is top-to-bottom on screen), and Left from every choice back
-        // to current. No wrap: an owner call already settled this ("Map
-        // follows reachability", plan section 12.3) -- there is nothing to
-        // wrap TO, since a leg's branching factor is whatever the generator
-        // gave it this transition.
+        // to current. No wrap: "Map follows reachability" -- there is
+        // nothing to wrap TO, since a leg's branching factor is whatever the
+        // generator gave it this transition.
         //
         // Entry is the current node's first reachable choice, not current
         // itself: current's own button is never interactable (isReachable is
@@ -437,9 +433,8 @@ namespace PrincesPalace
                 for (int i = 1; i < choiceButtons.Count; i++)
                 {
                     // Down steps to the next choice; Up steps back to the one
-                    // before it. The reverse used to be left out here (AUDIT:
-                    // gamepad Up did nothing on the Map, Down worked) --
-                    // LinkBoth now makes that omission impossible to repeat.
+                    // before it. LinkBoth makes writing only one direction of
+                    // this pair impossible.
                     links.AddRange(RuntimeNavWiring.LinkBoth(choiceButtons[i - 1], UiNavDirection.Down, choiceButtons[i]));
                     links.Add(RuntimeNavWiring.Link(choiceButtons[i], UiNavDirection.Left, currentButton));
                 }
@@ -536,11 +531,10 @@ namespace PrincesPalace
                 {
                     if (!positions.TryGetValue(nextId, out var to)) continue;
 
-                    // LOOKED UP, not counted. This used to be a counter
-                    // incremented per link, which the walk then had to
-                    // reproduce exactly -- including that a node with no
-                    // position skips its links WITHOUT advancing the count.
-                    // Two loops agreeing by coincidence is not agreement.
+                    // LOOKED UP, not counted: a shared seed dictionary means
+                    // the walk and the trail-build agree on a link's jitter
+                    // by construction rather than by two loops incrementing
+                    // a counter identically.
                     int seed = seeds.TryGetValue(LinkKey(node.Id, nextId), out var s) ? s : 1;
 
                     // The pool is sized to the worst case a leg can generate,
@@ -752,10 +746,10 @@ namespace PrincesPalace
             if (node == null) return;
 
             // Legality is checked BEFORE the walk rather than by MoveTo after
-            // it. MoveTo is still the authority and still refuses -- but a
-            // rejected move used to cost nothing, and now it would cost a walk
-            // to a room the party is not allowed to enter, followed by a
-            // silent refusal on arrival.
+            // it. MoveTo is still the authority and still refuses -- but
+            // checking after the walk would cost a walk to a room the party
+            // is not allowed to enter, followed by a silent refusal on
+            // arrival.
             if (!RunManager.Choices().Any(choice => choice.Id == node.Id)) return;
 
             _walk = StartCoroutine(WalkAndArrive(node));

@@ -63,13 +63,11 @@ namespace PrincesPalace
                 hover.Changed = OnHover;
 
                 // Selecting a node is a distinct action from hovering it
-                // (plan section 7): the module drives this one through
-                // Move alone, calling the same ScrollTo(level) a mouse
-                // hover already triggers through OnHover above -- one
-                // input (Move) moves selection, selection alone drives the
-                // reveal, so there is no second poll left to double-drive
-                // it the way the deleted raw LeftArrow/RightArrow poll
-                // (formerly PollKeys, see Update() below) used to risk.
+                // The module drives this one through Move alone, calling
+                // the same ScrollTo(level) a mouse hover already triggers
+                // through OnHover above -- one input (Move) moves
+                // selection, selection alone drives the reveal, so there is
+                // no second poll that could double-drive it.
                 var select = dots[i].gameObject.GetComponent<SelectIndex>()
                              ?? dots[i].gameObject.AddComponent<SelectIndex>();
                 select.Index = level;
@@ -86,13 +84,11 @@ namespace PrincesPalace
         //
         // Down from every disc is the ribbon, Down from the ribbon is the
         // footer, and Up walks the same edges back. EVERY SELECTABLE THIS
-        // PANEL OWNS IS NAMED HERE. Before this only the discs and collect's
-        // Up were Explicit; the ribbon and CLOSE were left at Unity's
+        // PANEL OWNS IS NAMED HERE, Explicit rather than left to Unity's
         // Automatic, which navigates by screen position with no idea this
-        // panel is drawn OVER the dossier -- so a Move from CLOSE walked
+        // panel is drawn OVER the dossier -- so a Move could otherwise walk
         // onto a dossier row sitting underneath, and the focus marker and A
-        // then belonged to a control the player could not see (owner's
-        // hardware report, 2026-09-24: "fake hovers and fake buttons").
+        // would belong to a control the player could not see.
         // Explicit with nothing further in a direction is a wall, which is
         // what the panel's edge is.
         //
@@ -296,15 +292,12 @@ namespace PrincesPalace
             // maximum, and a run that is carrying their current health has to
             // be told, or the bar grows a permanently empty tail.
             //
-            // THE READ ORDER IS WHAT MAKES THIS WORK, and it stopped being
-            // incidental when max health stopped being a stored field.
-            // EffectiveStats now sums the track's MaxHealth entries at levels
-            // <= claimedTrackLevel, so `maxBefore` is a photograph taken
-            // BEFORE the claim moves the watermark on the next line and
-            // `EffectiveStats` inside ScaleCarriedHealth is one taken after.
-            // The delta between the two is exactly what the old
-            // bonusMaxHealth += used to produce. Reading maxBefore any later
-            // silently makes the scale a no-op.
+            // THE READ ORDER IS WHAT MAKES THIS WORK: EffectiveStats sums
+            // the track's MaxHealth entries at levels <= claimedTrackLevel,
+            // so `maxBefore` is a photograph taken BEFORE the claim moves
+            // the watermark on the next line, and `EffectiveStats` inside
+            // ScaleCarriedHealth is one taken after. Reading maxBefore any
+            // later silently makes the scale a no-op.
             int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
 
             if (!character.ClaimTrackRewards(RewardTracks.For(character), throughLevel)) return;
@@ -325,8 +318,7 @@ namespace PrincesPalace
             // Sound is an enum of meanings whose every value is asserted to
             // resolve to a file that exists, so "collect" would be a new value,
             // a new case in SoundLibrary.PathOf and a clip nobody has recorded
-            // -- and the suite would go red until it was. The design handoff
-            // specifies no audio; when it does, that is the shape of the change.
+            // -- and the suite would go red until it was.
         }
 
         // ---- hovering ---------------------------------------------------------
@@ -395,12 +387,11 @@ namespace PrincesPalace
         // also the right shape: the ambient cues are four lines of arithmetic
         // over Time.time, and four coroutines that never finish would be four
         // objects doing the same work with more ceremony.
-        // The raw LeftArrow/RightArrow poll that used to live here is gone
-        // (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2, step C: "deleted
-        // outright, not gated") -- keyboard arrow support survives for
-        // free, because the stock "Horizontal" axis already binds
-        // left/right (InputManager.asset), now driving ordinary Selectable
-        // navigation across the Rail WireNodes just wired instead of a
+        // No raw LeftArrow/RightArrow poll lives here: keyboard arrow
+        // support comes for free, because the stock "Horizontal" axis
+        // already binds left/right (InputManager.asset), driving ordinary
+        // Selectable navigation across the Rail WireNodes just wired
+        // instead of a
         // second, raw pixel-scroll poll racing it. Selecting a disc reveals
         // it through the exact same ScrollTo(level) a mouse hover already
         // calls (SelectIndex.Changed, wired in WireNodes) -- one input

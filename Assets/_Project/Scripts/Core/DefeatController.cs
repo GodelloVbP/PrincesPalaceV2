@@ -38,7 +38,7 @@ namespace PrincesPalace
         private bool _wired;
         private Coroutine _animation;
 
-        // Pushed once per Show() (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b),
+        // Pushed once per Show() (docs/GAMEPAD_NAVIGATION_PLAN.md),
         // popped on OnDisable rather than on either button's own handler:
         // both Dismissed and InspectRequested end in a scene change
         // (LeaveFight / Navigation.Go(Hub)), and OnDisable is what actually

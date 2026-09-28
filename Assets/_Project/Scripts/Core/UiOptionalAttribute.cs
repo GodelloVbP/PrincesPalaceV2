@@ -13,10 +13,9 @@ namespace PrincesPalace
     // But a few fields are genuinely per-scene, where wiring a placeholder
     // just to keep the sweep quiet would put a lie in the scene to satisfy
     // a test. Currently unused -- SystemMenuController's escapeConsumers
-    // was the field that forced this into existence and was deleted with it
-    // (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2, step B: the menu no longer
-    // polls Escape per-scene at all) -- kept rather than removed since the
-    // shape it names is a real one and will recur.
+    // was the field that forced this into existence and was deleted with
+    // it -- kept rather than removed since the shape it names is a real
+    // one and will recur.
     //
     // Carries a REASON for the same purpose AllowOverlap and AllowOverflow do:
     // an exemption that has to be written out is one that can be read back and

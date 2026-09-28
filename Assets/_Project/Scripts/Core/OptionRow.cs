@@ -18,9 +18,9 @@ namespace PrincesPalace
     // Stepper row. OptionsController.Wire supplies one delegate per row,
     // closed over that row's own key and kind, so this stays a pure input
     // adapter and every GameSettings binding stays exactly where it already
-    // lived. HoverChanged is the same shape HoverIndex.Changed used to be,
-    // just per-instance instead of index-keyed, since each row now owns its
-    // own component instance rather than sharing one dispatcher.
+    // lived. HoverChanged is per-instance rather than index-keyed, since
+    // each row owns its own component instance rather than sharing one
+    // dispatcher.
     public class OptionRow : UnityEngine.UI.Selectable
     {
         public System.Action<int> OnLeftRight;
