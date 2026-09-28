@@ -35,7 +35,8 @@ namespace PrincesPalace.Content
 
         // Listed by the character's own roster order (ResolvedCharacter.SortOrder,
         // captured onto this record by ContentBuilder.BuildRewardTracks),
-        // not by any order authored in reward_tracks.json itself.
+        // not by any order authored in reward_tracks.json itself -- see
+        // docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point table.
         public int SortOrder => data != null ? data.SortOrder : 0;
     }
 }

@@ -3,8 +3,9 @@ using System;
 namespace PrincesPalace.Domain.Content
 {
     // ONE LEVEL'S REWARD, exactly as typed into reward_tracks.json's
-    // "levels" array. See RewardTrackEntryResolver for what each field is
-    // validated against.
+    // "levels" array. See docs/archive/PLAN_REWARD_TRACKS.md §4 for the authoring
+    // format and RewardTrackEntryResolver for what each field is validated
+    // against.
     //
     // EVERY LEVEL IS AUTHORED NOW. Until progression v2 phase 4 a track was
     // DESCRIBED rather than levelled: twelve milestone rows plus a "filler

@@ -969,7 +969,8 @@ namespace PrincesPalace.Content
             // AvailableSkillsFor calls EnsureLoaded() at :238 above and reads
             // a track) would find _characters already non-null at the guard
             // on this method's first line and return before ever assigning
-            // this field.
+            // this field. See docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point
+            // table for the citation this mirrors.
             _rewardTracks = LoadOrdered<RewardTrackDefinitionAsset>(RewardTrackResourcePath);
 
             // LAST, and that is the whole of the guard above: everything this
