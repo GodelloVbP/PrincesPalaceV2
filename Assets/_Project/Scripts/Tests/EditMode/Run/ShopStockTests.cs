@@ -149,8 +149,8 @@ namespace PrincesPalace.EditModeTests
         {
             // Four real book ids (skills.json's bookOnly rows), not that this
             // test reads the catalogue at all -- RollBooks only sees the
-            // candidate list below. static_fleece/golden_fleece were removed
-            // 2026-09-15 (AUDIT #150); frost_flare/cinderfault stand in.
+            // candidate list below. static_fleece/golden_fleece are gone
+            // (AUDIT #150); frost_flare/cinderfault stand in.
             var candidates = new List<ShopStock.BookCandidate>
             {
                 new ShopStock.BookCandidate("mud_burst", 1),
@@ -194,8 +194,8 @@ namespace PrincesPalace.EditModeTests
 
             foreach (var entry in shelf)
             {
-                // Pinned against ShopPricingTests' own literal (2026-09-22
-                // retable, GearBase/GearPerTier 21/5), not against a
+                // Pinned against ShopPricingTests' own literal (GearBase/
+                // GearPerTier 21/5), not against a
                 // recomputed formula: a tier-2, +2, one-affix piece is 79
                 // gold. The candidate pool is all tier 2, so the tier-boosted
                 // TARGET this rolls against (RollGear's own concern) cannot
@@ -206,8 +206,8 @@ namespace PrincesPalace.EditModeTests
             }
         }
 
-        // "GEAR ROLLS ONE TIER ABOVE THE MAP'S FLOOR TIER" (owner ask,
-        // 2026-09-22). A pool spanning tiers 0-4 at a depth whose floor tier
+        // "GEAR ROLLS ONE TIER ABOVE THE MAP'S FLOOR TIER". A pool spanning
+        // tiers 0-4 at a depth whose floor tier
         // is 0 (depthStep 8) should draw from AROUND tier 1, not tier 0 --
         // proven by asserting NONE of the drawn candidates undercut the old,
         // un-boosted target.
@@ -244,8 +244,8 @@ namespace PrincesPalace.EditModeTests
                 "the shelf reached a tier the boosted band should not cover.");
         }
 
-        // "EVERY GEAR ENTRY CARRIES AT LEAST A +1 OR ONE MODIFIER" (owner
-        // ask, 2026-09-22). `Hone(0)` is the stand-in every OTHER test in
+        // "EVERY GEAR ENTRY CARRIES AT LEAST A +1 OR ONE MODIFIER".
+        // `Hone(0)` is the stand-in every OTHER test in
         // this file uses for "nothing rolled" -- proving the shelf refuses
         // to ship it bare is the point of THIS test, not a reason to avoid
         // the stand-in the others already share.

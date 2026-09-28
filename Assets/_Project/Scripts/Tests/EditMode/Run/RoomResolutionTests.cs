@@ -18,10 +18,8 @@ namespace PrincesPalace.EditModeTests
     {
         private static SeededRandom Rng(ulong seed) => new SeededRandom(seed);
 
-        // The sweep RoomType.cs says went missing with the grid map: "the sweep
-        // that used to assert every value was reachable belonged to
-        // MapGeneratorTests and went with the grid map". Adding a room type and
-        // forgetting to resolve it is exactly the silent gap this catches.
+        // Adding a room type and forgetting to resolve it is exactly the
+        // silent gap this catches.
         [Test]
         public void EveryRoomTypeResolvesToSomethingDeliberate()
         {

@@ -17,10 +17,8 @@ namespace PrincesPalace.EditModeTests
     // what a step-8 shop stocks, tier 1 a step-24 shop and tier 2 a step-40
     // shop, under RarityTable.FloorTier's current /16 divisor.
     //
-    // RETABULATED 2026-09-22 (owner ask, "better-quality, more expensive
-    // stock"): GearBase 20->21, GearPerTier 4->5. Every literal below is the
-    // NEW formula's own output, not the old table with a delta applied --
-    // recomputed and pinned fresh, per this file's own header rule.
+    // Every literal below is ShopPricing's own formula output, recomputed
+    // and pinned fresh, per this file's own header rule.
     public class ShopPricingTests
     {
         // tier, plus, riftTier, price
@@ -159,11 +157,11 @@ namespace PrincesPalace.EditModeTests
         }
 
         // Assumption 11's anchor has to be reachable, or the floor it
-        // guarantees is a guarantee that never fires. UPDATED 2026-09-22: a
-        // tier-0, +0, no-affix piece is no longer a legal roll at all
+        // guarantees is a guarantee that never fires. A tier-0, +0, no-affix
+        // piece is not a legal roll at all
         // (ShopStock.ApplyQualityFloor, "no bare commons") -- the cheapest
-        // gear that CAN exist is now a tier-0, +1 piece, and the anchor was
-        // raised to sit exactly on that new floor (see
+        // gear that CAN exist is a tier-0, +1 piece, and the anchor sits
+        // exactly on that floor (see
         // ShopPricing.NormalFightPayoutAnchor's own comment).
         [Test]
         public void TheAffordabilityAnchorIsAboveTheCheapestGearThatCanExist()

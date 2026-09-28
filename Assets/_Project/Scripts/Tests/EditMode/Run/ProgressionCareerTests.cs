@@ -9,8 +9,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // A WHOLE CAREER, RUN BY RUN, THROUGH THE REAL LEVEL-UP CODE.
     //
-    // docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §3's career table is
-    // the phase-2 pin: the exact level AND remainder a player sits on after
+    // This pins the exact level AND remainder a player sits on after
     // each of a fixed sequence of runs, plus the two knockout trajectories and
     // the stuck-player one. A cost table can look reasonable row by row and
     // still put the first ability nine fights late or level 30 six runs early;
@@ -218,7 +217,7 @@ namespace PrincesPalace.Domain.Tests
         // 3 says a run that dies on leg 2 earns at least three levels, and it
         // does even for a player who is knocked out at both bosses. 576
         // against the 560 that level 5 costs -- a margin of 16, one thin
-        // fight, which is worth the owner knowing.
+        // fight.
         [Test]
         public void KnockedOutAtEveryBossStillReachesLevelFiveOnRunOne()
         {
@@ -259,10 +258,9 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the stuck player ---------------------------------------------------
         //
-        // Never past leg 3, so 1,221 a run forever. The track does not fix the
-        // wall and the plan does not claim it does -- phase 6 evaluates it
-        // with one named lever. What is pinned here is how slowly it goes, so
-        // the lever is evaluated against a number rather than a feeling.
+        // Never past leg 3, so 1,221 a run forever. The track does not fix
+        // this wall on its own. What is pinned here is how slowly it goes, so
+        // any future fix is evaluated against a number rather than a feeling.
 
         private static IEnumerable<int> StuckCareer(int runs) => Enumerable.Repeat(Leg3Death, runs);
 

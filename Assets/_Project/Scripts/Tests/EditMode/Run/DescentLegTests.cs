@@ -231,12 +231,10 @@ namespace PrincesPalace.Domain.Tests
                 "A boss should only ever appear where the step forces one");
         }
 
-        // EliteFight used to ALSO be in the weighted table (mid-leg elites
-        // were "extra, not a replacement" for the forced cadence) — reverted
-        // after a playtest with a fresh, level-1 squad couldn't survive an
-        // Elite rolling as the very first room. It is exclusively
-        // ForcedTypeAt's cadence now; this is the mirror of
-        // MidLegRooms_StillRollNormally above, guarding the reversal the same
+        // EliteFight is exclusively ForcedTypeAt's cadence, never the
+        // weighted mid-leg table -- a fresh, level-1 squad cannot survive an
+        // Elite rolling as the very first room. This is the mirror of
+        // MidLegRooms_StillRollNormally above, guarding that exclusion the
         // way that test guards the rooms that are still meant to roll.
         [Test]
         public void EliteFight_NeverRollsMidLeg_OnlyAtTheForcedCadence()

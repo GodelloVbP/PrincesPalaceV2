@@ -121,8 +121,7 @@ namespace PrincesPalace.Domain.Tests
             }
 
             // 29 filler levels against 10 milestones -- if this ever inverts,
-            // the rail has lost its landmarks. Was 87 against 12 before
-            // progression v2 phase 2 cut the cap from 100 to 40.
+            // the rail has lost its landmarks.
             Assert.AreEqual(29, filler);
             Assert.Greater(RewardTrackLayout.MilestoneDiameter, RewardTrackLayout.NodeDiameter);
         }
@@ -138,16 +137,12 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // ---- the bands ------------------------------------------------------------
-        //
-        // Handoff section 1, checked against the numbers as the handoff states
-        // them, so this file can be read beside that document.
 
         [Test]
         public void TheBandsSitWhereTheHandoffPutsThem()
         {
             // Panel 1600x804, y measured down from the PANE's own content
-            // top now (balance-bot, 2026-09-02) -- not the raw panel
-            // top-left the handoff states it against. Each of these four
+            // top -- not the raw panel top-left. Each of these four
             // moves by exactly the same delta (-44.22, ContentTop's drop
             // from 402 to 357.78, SystemMenuLayout.PaneContentHalfHeight's
             // own declared inset): the yFromTop constants themselves (43,
@@ -171,14 +166,8 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(0f, RewardTrackLayout.BandCentreY + RewardTrackLayout.RailOffsetY, 0.001f);
 
-            // 38.22, was -6 (balance-bot, 2026-09-02) -- RailYFromTop is no
-            // longer the fixed 402 that happened to equal the old CentreY
-            // reference; it now tracks ContentTop itself (see its own
-            // comment), so RailOffsetY reduces to -BandCentreY exactly. The
-            // sign flip is real, not a typo: the band moved from just below
-            // the true centre (BandCentreY was +6) to just above it
-            // (-38.22) once the pane's own content inset pulled ContentTop
-            // down.
+            // RailYFromTop tracks ContentTop (see its own comment), so
+            // RailOffsetY reduces to -BandCentreY exactly.
             Assert.AreEqual(38.22f, RewardTrackLayout.RailOffsetY, 0.001f);
         }
 
@@ -291,8 +280,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BothButtonsKeepTheSameClearanceFromThePanelsEdge()
         {
-            // The pane's own declared content half-width now (balance-bot,
-            // 2026-09-02), not the raw panel's -- see CollectCentreX/
+            // The pane's own declared content half-width, not the raw
+            // panel's -- see CollectCentreX/
             // CloseCentreX's own comment.
             float half = SystemMenuLayout.PaneContentHalfWidth;
 

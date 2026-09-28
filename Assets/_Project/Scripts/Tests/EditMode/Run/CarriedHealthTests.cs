@@ -3,9 +3,10 @@ using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Equipping something that raises max health used to leave current health
-    // where it was, so the bar grew a permanently empty tail at the end. These
-    // pin the rule that replaced it and the two properties that make it safe.
+    // Equipping something that raises max health carries current health
+    // forward proportionally rather than leaving it where it was, which
+    // would grow a permanently empty tail at the end of the bar. These
+    // pin that rule and the two properties that make it safe.
     //
     // EVERY EXPECTED VALUE IS A LITERAL, never the formula written out a second
     // time. A test that recomputes what it is checking passes whatever the

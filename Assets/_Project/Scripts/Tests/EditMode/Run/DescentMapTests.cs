@@ -211,10 +211,10 @@ namespace PrincesPalace.Domain.Tests
         // Every kind of room should actually turn up. A weight table that
         // silently never produces one of its entries is dead content.
         //
-        // EliteFight is excluded on purpose — it is no longer in the weighted
+        // EliteFight is excluded on purpose — it is not in the weighted
         // table at all (see MiddleRooms' own comment), only ForcedTypeAt's
-        // cadence, and every leg this fixture generates (8..16) DOES cross
-        // that forced-elite step now (D6: step ≡ 4 mod 8, so step 12 within
+        // cadence, and every leg this fixture generates (8..16) crosses
+        // that forced-elite step (step ≡ 4 mod 8, so step 12 within
         // this range) — it just isn't asserted here because it is not a
         // rolled type. DescentLegTests covers both halves of the elite
         // question directly: that it still shows up at the cadence, and that

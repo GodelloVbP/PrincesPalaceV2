@@ -71,12 +71,9 @@ namespace PrincesPalace.Domain.Tests
         // THE REASON Spread() exists rather than filling from level 2 upward.
         //
         // A naive fill packs everything into the front of the track and leaves
-        // the back half -- the half a player grinds hardest for -- empty. That
-        // WAS visible as a shortfall (87 filler levels, 50 rewards to put in
-        // them) and is not any more: since the cap came down to 40 the default
-        // mix sums to exactly the 29 filler levels there are, so what this
-        // asserts now is that the whole back half pays rather than that most
-        // of it does.
+        // the back half -- the half a player grinds hardest for -- empty. The
+        // default mix sums to exactly the 29 filler levels there are, so what
+        // this asserts is that the whole back half pays.
         //
         // Kept rather than deleted, because the shortfall comes straight back
         // the moment a kind is added to the mix without a matching count, and
@@ -185,22 +182,16 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(isSignatureReward, RewardTrack.IsSignatureReward(reward));
         }
 
-        // A CHOICE NODE IS WORTH FOUR POINTS, everywhere -- the plan's own
-        // bundle size (PLAN_PROGRESSION_V2.md §4) and the exact number
+        // A CHOICE NODE IS WORTH FOUR POINTS, everywhere -- the exact number
         // RewardTrackNodeValidation refuses any other value for.
         //
-        // The bundle USED TO be ten, sized to exactly one
-        // AbilityDerivation.CharacterBand -- the edge past which a point
-        // stopped paying a flat rate and started paying the square of the
-        // excess, making the tenth point the last "cheap" one. Phase 2 of the
-        // balance redesign (D2) deleted that piecewise curve: every derivation
-        // is a straight line now, so there is no band edge left for a bundle
-        // to be sized to, which is why four is a pacing decision rather than
-        // a formula one.
+        // AbilityDerivation is a straight line, with no band edge for a
+        // bundle to be sized to, which is why four is a pacing decision
+        // rather than a formula one.
         //
-        // What is left to assert is simpler and still true: every point,
-        // inside the old band or past it, is worth exactly the same amount --
-        // a flat line has no cliff, by construction. Pinned as a literal
+        // What is left to assert is simpler and still true: every point
+        // is worth exactly the same amount -- a flat line has no cliff, by
+        // construction. Pinned as a literal
         // (gotcha 5) rather than computed, so a future formula change has to
         // touch this number on purpose.
         [Test]
@@ -333,11 +324,10 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // 52 stat points across the whole track: 13 Choice nodes at 4 each.
-        // Was 24 under phase 2's filler mix, and 50 while the cap was 100.
         //
         // Under the 60 that would be six scores' worth of ten points each --
         // ten no longer names a formula band (AbilityDerivation.CharacterBand
-        // is gone, Phase 2/D2), but it is still the natural per-score unit
+        // is gone), but it is still the natural per-score unit
         // this milestone grants, and staying under six of them is the right
         // side of that line: a track generous enough to max every score would
         // leave a fully-levelled character with no decision left about where

@@ -8,9 +8,9 @@ namespace PrincesPalace.Domain.Tests
 {
     // Floor 1 is a sweep, and stays one.
     //
-    // The pool used to be every non-boss enemy at every depth, so a floor-1
-    // room could field a golem: twelve rounds against the starting party, next
-    // to a rat's one, decided by nothing but the roll.
+    // Each enemy's minFloor gates it out of earlier depths, so a floor-1
+    // room cannot field a golem: twelve rounds against the starting party,
+    // next to a rat's one, decided by nothing but the roll.
     public class EnemyBandTests
     {
         private static readonly EnemyCandidate Rat = new EnemyCandidate("rat", minFloor: 1);

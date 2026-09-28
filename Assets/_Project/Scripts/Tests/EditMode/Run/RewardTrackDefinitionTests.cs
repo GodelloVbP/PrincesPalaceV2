@@ -13,14 +13,10 @@ namespace PrincesPalace.Domain.Tests
         // read via CollectedTotal rather than GrantedBetween -- it is not a
         // grant (RewardTrackTests.OnlyStatPointIsAGrant).
         //
-        // REPINNED BY PROGRESSION V2 PHASE 4, which rewrote the generated
-        // default from a ten-milestone/filler-mix description into an
-        // explicit 39-row table (the filler mix itself is gone -- see
-        // RawTrackLevel). It pays more than the old one did because the
-        // authored floors it now obeys are higher than the interim filler
-        // amounts were: a Choice node is worth exactly 4 and a MaxHealth
-        // Bump at least 30, both of which RewardTrackNodeValidation
-        // enforces on every authored track. This is still the placeholder
+        // The default track is an explicit 39-row table (see RawTrackLevel):
+        // a Choice node is worth exactly 4 and a MaxHealth Bump at least 30,
+        // both of which RewardTrackNodeValidation enforces on every
+        // authored track. This is still the placeholder
         // for a character nobody designed one for, and every character on
         // the roster has a real track.
         [Test]
@@ -103,8 +99,7 @@ namespace PrincesPalace.Domain.Tests
 
         // What has not been reached yet is not collected. SecondLife is the
         // one kind on the default track that can only ever appear at its
-        // single milestone (level 25 since progression v2 phase 2 repointed
-        // the cadence; it was 90) -- rule 3
+        // single milestone (level 25) -- rule 3
         // refuses a one-shot capability as filler, so unlike MaxHealth (which
         // also lands as filler well before level 10) there is no earlier
         // entry that could make this pass by accident.
@@ -152,7 +147,7 @@ namespace PrincesPalace.Domain.Tests
         // forgot to read its own selector cannot pass by accident on a blank
         // fallback.
         //
-        // CardVisualKeyFor, NOT CardArtKeyFor, since phase 5: the card draws a
+        // CardVisualKeyFor, NOT CardArtKeyFor: the card draws a
         // medallion for the nine kinds that have an honest one and a word for
         // the twelve that do not, so "has a card art key" is no longer the
         // question -- "has something to draw" is. See RewardTrackScreenTests

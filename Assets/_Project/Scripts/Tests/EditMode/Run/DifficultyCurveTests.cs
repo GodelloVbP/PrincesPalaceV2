@@ -161,7 +161,7 @@ namespace PrincesPalace.Domain.Tests
         // the same count. §P's own non-boss TTK bands say trash attrition is
         // meant to DRIFT UP across floors by design (rat 2.6 @F1 -> 3.6 @F5),
         // so this is deliberately a wide sanity bound, not the tight §P
-        // literal pin -- that pin is BalanceSheetTests' job (Phase 5D), which
+        // literal pin -- that pin is BalanceSheetTests' job, which
         // asserts the exact per-row bands against real content and the real
         // weapon-driven damage pipeline. This test only has to catch
         // DifficultyCurve's own two rates drifting apart by an order of
@@ -170,7 +170,7 @@ namespace PrincesPalace.Domain.Tests
         // ROUTED THROUGH CombatMath.AfterResistance, not
         // CombatMath.ComputeAttackDamage: this file has no authority over
         // the weapon model, and constructing a real weapon/CombatantState
-        // stays Phase 3/4's job, so it calls the real AfterResistance
+        // is out of scope for this file, so it calls the real AfterResistance
         // function directly instead of duplicating its formula by hand,
         // which is the "route through the actual production function" this
         // file can offer without adopting the weapon model wholesale.
@@ -179,8 +179,8 @@ namespace PrincesPalace.Domain.Tests
         // not ride DifficultyCurve at all) -- only its HEALTH pool (via
         // ScaleHealth) changes with step. `playerRawDamage` stands in for
         // the player's own weapon-driven progression, which this file has
-        // no authority to compute (that is Phase 3/4's
-        // WeaponDamageTests/WeaponEntryResolverTests); these are
+        // no authority to compute (that is
+        // WeaponDamageTests/WeaponEntryResolverTests' job); these are
         // magnitude-only literals, kept here because this test only needs a
         // "grows a lot" input, not an exact figure.
         [Test]

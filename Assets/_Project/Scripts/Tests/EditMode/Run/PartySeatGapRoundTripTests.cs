@@ -14,14 +14,9 @@ namespace PrincesPalace.Domain.Tests
     // type's own header says "POSITIONS ARE MECHANICAL, not cosmetic: seat 0
     // is the front rank enemy melee concentrates on".
     //
-    // save.selectedCharacterIds USED TO BE A COMPACT LIST with no notion of an
-    // index: PartyController.Persist wrote `SeatIds.Where(id => id != null)`,
-    // so the hole closed on the way to disk and everybody behind it moved one
-    // seat forward -- Mid became the melee magnet the player did not put
-    // there. Owner's call, 2026-09-11 (AUDIT #93, answered together with
-    // #118): the SAVE learns to carry the hole. An empty front rank is a
-    // formation the player can choose, so the list is a seat list, and an
-    // empty seat is the empty string in place.
+    // The save carries the hole: an empty front rank is a formation the
+    // player can choose, so the list is a seat list, and an empty seat is
+    // the empty string in place.
     //
     // WHY "" AND NOT null: JsonUtility serialises a null element of a
     // List<string> as "" and reads it back as "", so a null hole would not

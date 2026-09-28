@@ -6,8 +6,7 @@ using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // PHASE 3's seven new reward kinds and the node-kind validator (docs/
-    // handoffs/progression_v2/PLAN_PROGRESSION_V2.md §7 phase 3), pinned at
+    // The reward kinds and the node-kind validator, pinned at
     // the Domain layer -- the only layer runnable from this worktree (see
     // tools/test.ps1's own refusal of Unity-hosted classes from a linked
     // worktree). ContentDatabase.BuildPrimaryPool/BuildSignatureResource and
