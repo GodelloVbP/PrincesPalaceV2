@@ -23,9 +23,9 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void AfterEach() => SharedScene.AfterTest();
 
-        // ADAPTED for gamepad-navigation phase 2, step B: SystemMenuController
-        // no longer polls Escape itself at all -- Open()/Close() are ordinary
-        // method calls, pushing/popping a NavContext (plan section 3/4), so
+        // SystemMenuController does not poll Escape itself at all --
+        // Open()/Close() are ordinary method calls, pushing/popping a
+        // NavContext (plan section 3/4), so
         // there is no "is it listening" precondition left to guard. What
         // still matters, and what these two now check instead: the
         // controller exists and can be opened from closed in every scene
@@ -62,17 +62,12 @@ namespace PrincesPalace.PlayModeTests
 
         // CANCEL, WITH SOMETHING ELSE ALREADY UP.
         //
-        // RE-ADAPTED for gamepad-navigation phase 3, item 1 (docs/
-        // GAMEPAD_NAVIGATION_PLAN.md, AUDIT.md #158): this used to be
-        // HubController.HandleEscape's own job -- a priority branch that
-        // checked the glossary/debug-menu/relic-draft panels itself and
-        // closed whichever was open before ever considering the system
-        // menu. That branch is gone now that GlossaryController (and
-        // DebugMenuController, and RelicDraftController) push their OWN
-        // NavContext on open: while the glossary is up it, not the hub, is
-        // top of the stack, so the real dispatcher calls the GLOSSARY's own
-        // Cancel handler (GlossaryController.Close) and never reaches
-        // HandleEscape at all -- GlossaryGamepadNavigationTests'
+        // GlossaryController (and DebugMenuController, and
+        // RelicDraftController) push their OWN NavContext on open: while
+        // the glossary is up it, not the hub, is top of the stack, so the
+        // real dispatcher calls the GLOSSARY's own Cancel handler
+        // (GlossaryController.Close) and never reaches HandleEscape at all
+        // -- GlossaryGamepadNavigationTests'
         // Cancel_ClosesTheGlossary_AndTheGateIsReselected proves that
         // through the real dispatcher, the only place this claim can still
         // be tested honestly.
@@ -81,8 +76,8 @@ namespace PrincesPalace.PlayModeTests
         // HandleEscape itself no longer knows the glossary exists, so
         // calling it directly no longer closes a glossary a caller happened
         // to switch on by hand -- it only ever opens the system menu, full
-        // stop. A regression that resurrected the old branch (or a new one
-        // like it) would fail this by closing the glossary here too.
+        // stop. A regression that reintroduced a priority branch like that
+        // would fail this by closing the glossary here too.
         [UnityTest]
         public IEnumerator HandleEscapeNoLongerKnowsAboutTheGlossary_ItOnlyEverOpensTheMenu()
         {
@@ -105,7 +100,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // The other half: with nothing else up, Cancel must still open it.
-        // A guard that fixed the old race by never opening would pass the
+        // A guard that fixed a race by never opening at all would pass the
         // test above and be useless.
         [UnityTest]
         public IEnumerator CancelWithNothingElseUpOpensTheMenu()
@@ -178,8 +173,9 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // Silent-wrong-answer guard. IndexOf used to return 0 for anything it
-        // could not find, so every miss came back as Character & Inventory.
+        // Silent-wrong-answer guard: if IndexOf ever fell back to returning
+        // 0 for anything it could not find, every miss would come back as
+        // Character & Inventory instead of throwing.
         [Test]
         public void EveryTabInTheEnumIsInTheTable()
         {
@@ -240,16 +236,15 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator InADescentTheBarGainsTheTwoRunTabs()
         {
-            // ON THE MAP, not in the hub with hasRun poked true.
+            // ON THE MAP, not in the hub with hasRun poked true: a run
+            // exists from the moment the relic draft is rolled, and that
+            // draft is offered in the HUB and deliberately survives leaving
+            // and coming back -- so "a run exists" is true while the player
+            // stands in the hub with no descent under way, and Floor map
+            // and Run statistics would show up on a screen with no floor to
+            // name.
             //
-            // That is what this test used to do, and it was asserting the wrong
-            // rule. A run exists from the moment the relic draft is rolled, and
-            // that draft is offered in the HUB and deliberately survives
-            // leaving and coming back -- so "a run exists" was true while the
-            // player stood in the hub with no descent under way, and Floor map
-            // and Run statistics showed up on a screen with no floor to name.
-            //
-            // The tab set is a property of the scene now, so this asks the
+            // The tab set is a property of the scene, so this asks the
             // scene.
             yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
             yield return null;

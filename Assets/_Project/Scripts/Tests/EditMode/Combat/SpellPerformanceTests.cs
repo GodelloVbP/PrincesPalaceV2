@@ -53,12 +53,11 @@ namespace PrincesPalace.Domain.Tests
         {
             var performance = Resolve(SpellLayerFixtures.Water());
 
-            // 2026-09-09: a caster-side "charge" layer was added ahead of
-            // "core", holding the beat for 0.1667s (offset on "core" and every
-            // follower) before the core opens and starts flying -- so every
-            // instant below that used to read off release now reads off
-            // release + 0.1667, moved by hand together with the numbers in
-            // skills.json and SpellLayerFixtures.Water().
+            // A caster-side "charge" layer opens ahead of "core", holding
+            // the beat for 0.1667s (offset on "core" and every follower)
+            // before the core opens and starts flying -- so every instant
+            // below reads off release + 0.1667, moved by hand together with
+            // the numbers in skills.json and SpellLayerFixtures.Water().
             //
             // Travels 0.25s with no hold, so it ends at its arrival however
             // many times it looped its six frames getting there.
@@ -79,11 +78,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.7243923f, Named(performance, "splash").EndSeconds, 1e-5f);
 
             // A burst at the hit cue plus the longest life it can throw. Cue
-            // moved from 0.327 to 0.25 (arrival exactly, not arrival plus two
-            // contact frames) in the 2026-09-08 second battle-speed pass, then
-            // from 0.25 to 0.4167 (+0.1667, the charge) in the 2026-09-09
-            // charge pass -- 0.4167+0.34=0.7567, still under the shed's own
-            // 0.7967s clear, so the shed remains the last layer standing.
+            // is arrival exactly (release + 0.4167, charge included), not
+            // arrival plus two contact frames -- 0.4167+0.34=0.7567, still
+            // under the shed's own 0.7967s clear, so the shed remains the
+            // last layer standing.
             Assert.AreEqual(0.4167f, Named(performance, "spray").StartSeconds, 1e-5f);
             Assert.AreEqual(0.7567f, Named(performance, "spray").EndSeconds, 1e-5f);
 
@@ -97,9 +95,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var performance = Resolve(SpellLayerFixtures.Cinderfault(), targets: 3);
 
-            // HALVED 2026-09-19 (0.78 -> 0.39, cue 0.43333334 -> 0.21666667)
-            // on the owner's "the animation is too slow ... more like a POP".
-            // What this test owns is unchanged and is not the numbers: both
+            // What this test owns is not the numbers themselves: both
             // layers open together and end together, so their peaks share an
             // instant. A retune that halved one and not the other fails here.
             Assert.AreEqual(0f, Named(performance, "fault").StartSeconds, 1e-5f);
@@ -137,8 +133,8 @@ namespace PrincesPalace.Domain.Tests
 
             var performance = Resolve(water);
 
-            // Was 0.25: 2026-09-09 "core" (and its followers) opens 0.1667s
-            // after release now, for the charge ahead of it.
+            // "core" (and its followers) opens 0.1667s after release, for
+            // the charge ahead of it.
             Assert.AreEqual(0.4167f, Named(performance, "wake").EndSeconds, 1e-5f);
         }
 
@@ -150,8 +146,8 @@ namespace PrincesPalace.Domain.Tests
 
             var performance = Resolve(water);
 
-            // Was 0.25f base: 2026-09-09 the charge pushed "core"'s own ending
-            // to 0.4167 (see EveryLayerOfTheWaterPilotEndsAtAStatedInstant).
+            // The charge pushes "core"'s own ending to 0.4167 (see
+            // EveryLayerOfTheWaterPilotEndsAtAStatedInstant).
             Assert.AreEqual(0.4167f + SpellLayerRules.MaxFadeSeconds,
                 Named(performance, "wake").ClearedSeconds, 1e-5f);
         }
@@ -170,8 +166,8 @@ namespace PrincesPalace.Domain.Tests
             var splashes = performance.Instances.Where(i => i.Layer.id == "splash").ToList();
 
             Assert.AreEqual(3, splashes.Count, "a target-placed layer draws once per struck target");
-            // Was 0.25: 2026-09-09 the charge holds "core" (and its arrival)
-            // 0.1667s later than release.
+            // The charge holds "core" (and its arrival) 0.1667s later than
+            // release.
             Assert.AreEqual(0.4167f, performance.ArrivalSeconds, 1e-5f);
             foreach (var splash in splashes) Assert.AreEqual(0.4167f, splash.StartSeconds, 1e-5f);
             CollectionAssert.AreEquivalent(new[] { 0, 1, 2 }, splashes.Select(s => s.TargetIndex).ToList());
@@ -278,7 +274,7 @@ namespace PrincesPalace.Domain.Tests
 
             CollectionAssert.AreEqual(new[]
             {
-                // "charge" added 2026-09-09, ahead of "core": cast-level
+                // "charge" opens ahead of "core": cast-level
                 // (caster-centre, not per-target), so TargetIndex is -1 and it
                 // draws once however many targets were struck.
                 ("charge", -1),
@@ -344,8 +340,8 @@ namespace PrincesPalace.Domain.Tests
             var water = SpellLayerFixtures.Water();
             foreach (var layer in water.layers) layer.path = "Spells/does_not_exist";
 
-            // Was 0.25: 2026-09-09 the charge pushed the fixture's authored
-            // hitCueSeconds to 0.4167 (see the fixture's own comment).
+            // The charge pushes the fixture's authored hitCueSeconds to
+            // 0.4167 (see the fixture's own comment).
             Assert.AreEqual(0.4167f, Resolve(water).HitCueSeconds, 1e-5f);
         }
 

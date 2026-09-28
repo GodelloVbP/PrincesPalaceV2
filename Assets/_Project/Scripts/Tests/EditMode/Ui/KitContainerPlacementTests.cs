@@ -17,15 +17,14 @@ namespace PrincesPalace.Domain.Tests
     // stays in its own file -- this covers only the two facts every row
     // shares.
     //
-    // FIVE ROWS WENT: RunStatsPane, OptionsPane, ExitsPane and
-    // DossierColumnAFrame on 2026-09-07 (the owner called every kit frame
-    // inside the system menu ugly, and Exits/Options/Party/RunStats/
-    // RewardTrack/DossierColumnAFrame are plain Panels now -- Ui.SystemMenuPane,
-    // CharacterDossierScreen.BuildColumnAFrame -- with no theme/ratio/inset for
-    // this test to pin), TalentPanelColumn on 2026-09-19 for the same reason
-    // (Cases() has that row's own note), and DraftFrame on 2026-09-23 (same
-    // reason again, that row's own note). PartyPane and RewardTrackPanel
-    // were never rows here to begin with --
+    // RunStatsPane, OptionsPane, ExitsPane, DossierColumnAFrame,
+    // TalentPanelColumn and DraftFrame are not rows here: those screens
+    // use plain Panels or flat Solid-fill-plus-Rim panels instead of a
+    // themed Container, so there is no theme/ratio/inset left for this
+    // test to pin (Ui.SystemMenuPane, CharacterDossierScreen.
+    // BuildColumnAFrame, TalentScreen.BuildPanel, RelicDraftScreen.
+    // Build().Frame -- Cases() has each row's own note). PartyPane and
+    // RewardTrackPanel were never rows here to begin with --
     // SystemMenuScreenTests.NoSystemMenuNodeUsesAContainerOrFlagBannerSprite
     // is the mechanised form of the rule that replaces all of them.
     public class KitContainerPlacementTests
@@ -43,12 +42,9 @@ namespace PrincesPalace.Domain.Tests
         // ratio, container width, container height).
         private static IEnumerable Cases()
         {
-            // TalentPanelColumn/Violet/NineBySixteen WENT (2026-09-19): the
-            // owner called the violet frame ugly, the same call that took
-            // RunStatsPane/OptionsPane/ExitsPane/DossierColumnAFrame off this
-            // list on 2026-09-07 (see this class's own header) -- the column
-            // is a plain Panel now (TalentScreen.BuildPanel), with no
-            // theme/ratio art for either row below to pin.
+            // TalentPanelColumn: the column is a plain Panel now
+            // (TalentScreen.BuildPanel), with no theme/ratio art for either
+            // row below to pin.
 
             yield return new TestCaseData(
                 (System.Func<UiNode>)(() => DefeatScreen.Build().Frame.Node),
@@ -56,33 +52,27 @@ namespace PrincesPalace.Domain.Tests
                 DefeatScreen.PanelWidth, DefeatScreen.FrameHeight)
                 .SetName("DefeatFrame/Crimson/ThreeByTwo");
 
-            // PartyPlate/Blue/TwoByOne is GONE (2026-09-10). The fight HUD's
-            // party card is a flat Ui.OutlineBox now, not a kit container --
-            // FightScreen.BuildPartyPlate's own header has the measured
-            // reason. The 2x1 PNG itself still has two live users
-            // (EnemyPlate*Frame, GlossaryFrame) and is still pinned against
-            // its own art by UiKitAspectPinTests.
+            // PartyPlate/Blue/TwoByOne: the fight HUD's party card is a flat
+            // Ui.OutlineBox now, not a kit container -- FightScreen.
+            // BuildPartyPlate's own header has the measured reason. The 2x1
+            // PNG itself still has two live users (EnemyPlate*Frame,
+            // GlossaryFrame) and is still pinned against its own art by
+            // UiKitAspectPinTests.
 
-            // SubmenuContainer/Violet/ThreeByFour WENT (2026-09-23, coordinator
-            // pass 2): PreserveAspect off (tried first) stopped the frame
-            // rendering narrower than its own rows, but Type.Simple's
-            // non-uniform stretch squashed the painted border hard at 1-3
-            // rows -- the same "stretched and looks bad" complaint that took
-            // DraftFrame off this list the same day (see that row's own
-            // note, just above the HQ-kit section below). FightScreen.
+            // SubmenuContainer/Violet/ThreeByFour: FightScreen.
             // BuildSubmenuFrame is a flat Solid-fill-plus-Rim panel now
             // (RelicDraftScreen's own DraftFrameFill/DraftFrame idiom), with
-            // no theme/ratio/inset for this row to pin.
+            // no theme/ratio/inset for this row to pin -- a PreserveAspect
+            // container would render narrower than its own rows at low
+            // counts, and Type.Simple's non-uniform stretch would squash
+            // the painted border hard at 1-3 rows.
 
-            // DraftFrame/Violet/ThreeByTwo WENT (2026-09-23): the owner called
-            // it out by name -- "it's stretched and looks bad and the inside
-            // is not black, it's more leathery" -- the same complaint that
-            // took RunStatsPane/OptionsPane/ExitsPane/DossierColumnAFrame off
-            // this list on 2026-09-07. RelicDraftScreen.Build().Frame is a
-            // flat Solid-fill-plus-Rim panel now (SystemMenuScreen's own
-            // frame idiom), with no theme/ratio/inset for this row to pin.
+            // DraftFrame/Violet/ThreeByTwo: RelicDraftScreen.Build().Frame
+            // is a flat Solid-fill-plus-Rim panel now (SystemMenuScreen's
+            // own frame idiom), with no theme/ratio/inset for this row to
+            // pin.
 
-            // ---- HQ-kit conversions (owner's instruction, 2026-09-07) ----
+            // ---- HQ-kit conversions -------------------------------------------
 
             yield return new TestCaseData(
                 (System.Func<UiNode>)(() => Walk(HubScreen.Build().Root).First(n => n.Name == "CurrencyPlate")),
