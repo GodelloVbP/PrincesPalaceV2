@@ -16,18 +16,18 @@ namespace PrincesPalace.PlayModeTests
     // THE THIRD MOMENT, END TO END: earned, collected, active.
     //
     // docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §6 names three and
-    // the gap between the last two is the one nothing could see: "active (from
-    // the next fight; the kit is built once per fight)". Everything about that
-    // sentence is provable only by playing two fights, and until now nothing
-    // did -- RewardTrackClaimTests collects through the panel but against a
-    // hand-set save with no encounter either side of it.
+    // the gap between the last two is the one nothing else can see: "active
+    // (from the next fight; the kit is built once per fight)". That is
+    // provable only by playing two fights -- RewardTrackClaimTests collects
+    // through the panel but against a hand-set save with no encounter
+    // either side of it.
     //
-    // WHAT THIS ACTUALLY DRIVES. A real run, a real room, the real verbs until
-    // the enemy is down, the real settlement (FightBootstrap.OnFightEnded is
-    // what pays the experience at all), the real system menu opened inside the
-    // Fight scene, the real node pressed, and then a second real room. Every
-    // link in that chain has been wrong at some point and none of them is
-    // reachable by asserting against a session built by hand.
+    // What this drives: a real run, a real room, the real verbs until the
+    // enemy is down, the real settlement (FightBootstrap.OnFightEnded is
+    // what pays the experience at all), the real system menu opened inside
+    // the Fight scene, the real node pressed, and then a second real room --
+    // none of that chain is reachable by asserting against a session built
+    // by hand.
     //
     // THE ONE DIAL IS EXPERIENCE, NOT LEVEL. FightSettlementTests steers its
     // outcomes by levelling a squad to 90, and that is exactly what this test

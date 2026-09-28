@@ -11,16 +11,11 @@ namespace PrincesPalace.PlayModeTests
     // -- and true/false force it either way. BalanceBotRunner.RunBatch is the
     // one place that forces it on (and back to null) today.
     //
-    // WHO THE THREE ARE IS READ FROM CONTENT HERE, not spelled out. These
-    // assertions used to carry the literal list { sheep, placeholder_brawler,
-    // owl } and describe it as "characters.json's own file order" -- which was
-    // true, and was the bug: a character appended to the file was in the
-    // roster and unfieldable, one inserted third silently benched somebody,
-    // and this test failed on the id rather than on the rule. characters.json
-    // flags its three starters now (startsInSquad/squadSlot, refused by
-    // CharacterEntryResolver unless exactly three do), so what is asserted is
-    // that a fresh save fields WHOEVER IS FLAGGED, in slot order. Adding a
-    // character stops being a test edit.
+    // Who the three are is read from content here, not spelled out.
+    // characters.json flags its three starters (startsInSquad/squadSlot,
+    // refused by CharacterEntryResolver unless exactly three do), so what is
+    // asserted is that a fresh save fields WHOEVER IS FLAGGED, in slot
+    // order. Adding a character stops being a test edit.
     //
     // PlayMode, not EditMode: SaveData and ContentDatabase are both Core
     // types, and PrincesPalace.Domain.Tests.asmdef (EditMode) references only
@@ -159,11 +154,9 @@ namespace PrincesPalace.PlayModeTests
                 "and the empty seats are filled from content's own starting squad");
         }
 
-        // AUDIT #118. A squad shorter than the cap is not evidence that the cap
-        // grew. The player benches a member from the party screen, Persist
-        // writes the short seat list, and the next load used to hand the
-        // benched character straight back -- in the REAR seat, because that is
-        // where TopUpOrder lands.
+        // A squad shorter than the cap is not evidence that the cap grew.
+        // The player benches a member from the party screen, and Persist
+        // writes the short seat list.
         //
         // squadSizeSeen is what the top-up reads instead of the count: it tops
         // up only the seats the CAP opened, and a cap that has not moved opens

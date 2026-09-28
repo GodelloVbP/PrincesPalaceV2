@@ -76,10 +76,8 @@ namespace PrincesPalace.PlayModeTests
         // The Hub's own ring is the fixture: gate -> Up ->
         // PrincipalityBuilding (the left arm above it) -> Right ->
         // TalentsBuilding (the ring's next member by screen x,
-        // HubGamepadNavigationTests' own pinned claim -- Right rather than
-        // Left since 2026-09-19's ring-by-x fix put Principality ahead of
-        // Talents instead of behind it). It was the 2x2 Grid until the
-        // hardware play-test rejected that shape.
+        // HubGamepadNavigationTests' own pinned claim: Principality sits
+        // ahead of Talents by screen x, so Right reaches it).
         [UnityTest]
         public IEnumerator BackgroundClick_RestoresTheRememberedNodeSameFrame_NextMoveAdvancesToTheLiteralNeighbour()
         {
@@ -379,20 +377,19 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- (e) pad-selected stepper row, mouse-clicked stepper button --------
         //
-        // THE REAL FINDING BEHIND THIS TEST: OptionsController.cs's own
-        // comment on stepPrev/stepNext claims a click "does nothing to the
-        // row's own remembered focus, since OnPointerDown never calls
-        // SetSelectedGameObject for a None-mode Selectable" -- true as far
-        // as it goes, but incomplete. Navigation.Mode.None only stops the
-        // CLICKED button from being reselected; PointerInputModule's own
-        // DeselectIfSelectionChanged still nulls whatever WAS selected
-        // (the row) the instant the click's target differs from it, mode
-        // or no mode. Before this pass's fix to NavigationInputModule.cs
-        // (rule (a) above), that null fell back to the context's Entry --
-        // a real, previously-unproven regression this mouse-driven test is
-        // the first to exercise (every earlier stepper test drives the
-        // adjustment through the pad's own Right press on the row, never a
-        // raycasted click on the button beside it).
+        // OptionsController.cs's own comment on stepPrev/stepNext claims a
+        // click "does nothing to the row's own remembered focus, since
+        // OnPointerDown never calls SetSelectedGameObject for a None-mode
+        // Selectable" -- true as far as it goes, but incomplete.
+        // Navigation.Mode.None only stops the CLICKED button from being
+        // reselected; PointerInputModule's own DeselectIfSelectionChanged
+        // still nulls whatever WAS selected (the row) the instant the
+        // click's target differs from it, mode or no mode. Rule (a) above
+        // covers that null falling back to the context's Entry -- this
+        // mouse-driven test is the one to exercise it (every earlier
+        // stepper test drives the adjustment through the pad's own Right
+        // press on the row, never a raycasted click on the button beside
+        // it).
         [UnityTest]
         public IEnumerator PadSelectsAStepperRow_MouseClicksItsButton_ValueSteps_FocusUnchanged_ThenPadAdjustsTheSameRow()
         {
@@ -522,8 +519,8 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Click(Node("Verb0")); // the mouse's own click fires OnVerbPressed(0) -> OpenAttack -> targeting
 
-            // A FRESH TARGET PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY
-            // now (owner's 2026-09-19 hardware-round call), not -1.
+            // A fresh target pick hovers the front living enemy explicitly,
+            // not -1.
             Assert.AreEqual(0, fight.HoveredEnemyIndexForTest,
                 "the click should have opened targeting on the front living enemy already hovered");
             Assert.IsNull(EventSystem.current.currentSelectedGameObject,

@@ -92,9 +92,9 @@ namespace PrincesPalace.PlayModeTests
 
             yield return PressSubmit(); // ATTACK at Root skips straight to targeting
 
-            // A FRESH TARGET PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY
-            // now (owner's 2026-09-19 hardware-round call), not -1 -- Up at
-            // Target depth opens the hovered enemy's intent instead of
+            // A fresh target pick hovers the front living enemy explicitly,
+            // not -1 -- Up at Target depth opens the hovered enemy's
+            // intent instead of
             // cycling (FightGamepadNavigationTests'
             // FirstPressOnAFreshTargetPickTreatsEnemyZeroAsHovered pins the
             // same rule directly), so this round cycles with DOWN instead.
