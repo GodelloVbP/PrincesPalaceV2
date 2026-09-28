@@ -37,14 +37,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef StartRunCaption;
         public NodeRef World;
 
-        // NO GAMEPAD-FOCUS HALOS HERE ANY MORE (hardware round 1, the
-        // owner's visual findings; Core/FocusMarker.cs's own header). This
-        // screen carried five -- one per building plus the gate -- each a
-        // radial glow sized to the control it sat behind, which is why the
-        // owner's verdict on the gate's was "the selector on the start
-        // descent is huge and looks weird": the gate is 620x620, so its
-        // selector was too. The one arrow marker replaces all five and is
-        // the same size on every screen by construction.
+        // NO GAMEPAD-FOCUS HALOS HERE: see Core/FocusMarker.cs's own header.
+        // A radial glow sized to the control it sits behind scales with
+        // that control -- on the gate (620x620) it would be huge. The one
+        // arrow marker replaces that per-control sizing and is the same
+        // size on every screen by construction.
 
         // The character overlay lives in the hub permanently and hidden.
         // Declared LAST so it draws over everything it dims.
@@ -177,15 +174,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var glossary = GlossaryScreen.Build();
             screen.Glossary = glossary;
 
-            // Gold, 5:1 KIT CONTAINER (owner's HQ-kit instruction,
-            // 2026-09-07) -- not the flat #2C1C42E0 panel this replaces.
-            // Width kept at the old panel's 520 (ContainerSizeForWidth
+            // Gold, 5:1 KIT CONTAINER. Width holds at 520; ContainerSizeForWidth
             // derives the matching 104 height from FiveByOne's own 5.0
-            // aspect, up from the flat panel's 90 -- 520/90 missed 5.0 by
-            // 15.6%, more than ValidateContainerAspect's 5% tolerance
-            // allows). CurrencyLabel's own 500x80 box still clears the kit's
-            // measured content inset at the new height with room to spare,
-            // so it needed no change.
+            // aspect. CurrencyLabel's own 500x80 box clears the kit's
+            // measured content inset at that height with room to spare.
             var currencyPlate = Ui.Container("CurrencyPlate", ButtonTheme.Gold, ContainerRatio.FiveByOne,
                 Place.At(620f, 470f), Ui.ContainerSizeForWidth(ContainerRatio.FiveByOne, 520f));
             Ui.ContainerContent(currencyPlate, ContainerRatio.FiveByOne, "CurrencyPlateContent", currency);

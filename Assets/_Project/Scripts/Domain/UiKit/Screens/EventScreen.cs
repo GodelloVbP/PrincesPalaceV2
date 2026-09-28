@@ -50,7 +50,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // runtime share one home for each colour.
         public const string ChoiceTextHex = ChoiceText;
 
-        // A muted lilac that still reads on the row (owner call 2026-09-25).
+        // A muted lilac that still reads on the row.
         // TextMuted (#8A7AA0) measured 3.3:1 against the row fill in the
         // captures -- the camera's grade darkens it below its authored
         // 5.0:1 -- and read as a smudge. This is 8.1:1 authored and about
@@ -66,9 +66,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float MarginY = 60f;
         private const float ColumnGap = 64f;
 
-        // The legacy frame: 16:9 at the width the old 4:3 frame had, so the
-        // text column beside it keeps its left edge and only the frame gets
-        // shorter. Half the 1920x1080 commission.
+        // The legacy frame: 16:9 at the width a 4:3 frame would have, so
+        // the text column beside it keeps its left edge and only the frame
+        // is shorter. Half the 1920x1080 commission.
         public const float ArtWidth = 960f;
         public const float ArtHeight = 540f;
 
@@ -124,9 +124,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             rows <= 0 ? 0f : rows * RowHeight + (rows - 1) * RowGap;
 
         // A row's label alone is centred in the row; with a lock reason the
-        // two are centred as a pair, label above (owner call 2026-09-25: a
-        // single line at the top of an 80px row left a hole under it).
-        // Row-local y, read by EventController when it paints a row.
+        // two are centred as a pair, label above -- a single line at the
+        // top of an 80px row leaves a hole under it. Row-local y, read by
+        // EventController when it paints a row.
         private const float RowPairHeight = RowTextHeight + RowPairGap + RowLockHeight;
 
         public static float ChoiceTextY(bool withLock) =>
@@ -378,8 +378,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float LinePadBottom = 28f;
         public const float LineWidth = DialogueStageLayout.BoxWidth - LinePadX * 2f;
         public const float LineHeight = DialogueStageLayout.BoxHeight - LinePadTop - LinePadBottom;
-        // 32 (owner call 2026-09-25: at 26 a 200-character line filled two
-        // of the box's five lines). The result beat binds, not the line: a
+        // 32: the result beat binds, not the line: a
         // cap-length result plus its effects line wraps to four lines, about
         // 175 of the 180 available at 32, and overflows at 34. The line at
         // the cap alone is three. DialogueStageTextFitTests measures both in
