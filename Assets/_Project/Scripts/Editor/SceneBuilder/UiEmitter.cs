@@ -392,14 +392,12 @@ public static class UiEmitter
         // no press feedback" is not a state that can be reached by
         // forgetting.
         //
-        // NOT mutually exclusive with the hover/focus rim any more (owner's
-        // 2026-09-23 second pass): ButtonPressAnimator no longer scales, it
-        // dims the plate on press, and HoverBox only ever shows the static
-        // rim on hover/focus -- a colour change and a box toggle answer two
-        // different gestures (press vs hover/focus) and do not fight each
-        // other the way the old scale-pop and rim both would have. So every
-        // unthemed button gets BOTH now: the rim by default (Ui.Button) and
-        // the press dim here.
+        // Not mutually exclusive with the hover/focus rim: ButtonPressAnimator
+        // dims the plate on press rather than scaling it, and HoverBox only
+        // ever shows the static rim on hover/focus -- a colour change and a
+        // box toggle answer two different gestures (press vs hover/focus)
+        // and do not fight each other. So every unthemed button gets both:
+        // the rim by default (Ui.Button) and the press dim here.
         //
         // The sound rides on the press animator regardless of whether the
         // button also carries a rim -- a hover-rimmed wide row (submenu row,

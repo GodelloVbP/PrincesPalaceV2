@@ -424,17 +424,12 @@ public static partial class TmpBootstrap
         mat.SetColor(ShaderUtilities.ID_OutlineColor, spec.OutlineColor);
         mat.SetFloat(ShaderUtilities.ID_OutlineWidth, spec.OutlineWidth);
 
-        // OUTLINE_ON, AND IT WAS THE MISSING HALF. Setting _OutlineWidth and
+        // OUTLINE_ON is the missing half: setting _OutlineWidth and
         // _OutlineColor does nothing on its own -- TMP's shader branches on
         // the keyword, so a width with no keyword is an authored value the
-        // renderer never reads. Every one of the six materials this method
-        // wrote before today has that shape (TacticalData: width 0.07,
-        // m_ValidKeywords holding UNDERLAY_ON alone), which is why the PC
-        // plates ended up drawing their bar captions on an opaque chip
-        // instead of outlining them -- see FightScreen's PcValueGround, now
-        // gone, and its own note saying so.
+        // renderer never reads.
         //
-        // The six already on disk are NOT rewritten by fixing this: the
+        // The six materials already on disk are not rewritten by fixing this: the
         // method returns early for a material that exists, so the change
         // reaches new presets only. That is deliberate rather than shy --
         // switching an outline on across every title, heading, button and

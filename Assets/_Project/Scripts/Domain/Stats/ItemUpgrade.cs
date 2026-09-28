@@ -24,24 +24,13 @@ namespace PrincesPalace.Domain.Stats
         // "+0 tier 10" are the two opposite corners of the same square.
         public const int MaxPlus = 10;
 
-        // 15% per plus, so a fully honed item is worth 2.5x its tier. (This
-        // line read "4% ... 1.40x" long after the constant below became 15,
-        // contradicting the very next paragraph, which explains the move.)
-        //
-        // WAS 4%, and 4% was right for the curve it was written against: tier
-        // was a straight line worth about 10% a step, so a 40% plus sat neatly
-        // underneath it as a secondary axis.
-        //
-        // That curve is gone. Tier is geometric now (GearScaling.TierGrowth,
-        // 1.25 a floor, 9.3x across the ladder), and against 9.3x a 1.4x plus
-        // is not secondary, it is invisible -- a fully honed piece would be
-        // worth less than one and a half tiers, and honing would never be the
-        // interesting choice.
-        //
-        // At 2.5x a +10 is worth about five tiers: a real prize, and still
-        // clearly beaten by descending five more floors. The old warning holds
-        // in its new form -- the two axes are 2.5x and 9.3x, and closing that
-        // gap is what would turn the rarity bands back into decoration.
+        // 15% per plus, so a fully honed item is worth 2.5x its tier. Tier is
+        // geometric (GearScaling.TierGrowth, 1.25 a floor, 9.3x across the
+        // ladder), and a plus rate has to stay secondary to that without
+        // going invisible: at 2.5x a +10 is worth about five tiers, a real
+        // prize and still clearly beaten by descending five more floors. The
+        // two axes are 2.5x and 9.3x, and closing that gap is what would turn
+        // the rarity bands back into decoration.
         //
         // Held as an INTEGER PERCENT because Apply must not go through
         // float32. 1.4f is really 1.39999997615814208984375, so a float
@@ -68,20 +57,17 @@ namespace PrincesPalace.Domain.Stats
         //
         // Entirely in integers, for the precision reason on PercentPerPlus.
         //
-        // ROUNDED AWAY FROM ZERO, in both directions. It used to floor in both
-        // directions, and flooring is what made plus a lie on most of the
-        // catalogue: a stat has to reach 7 before 15% of it is a whole point,
-        // and armour stats on this game's scale are 1 to 18. 406 of the 701
-        // generated items -- 58% -- granted *exactly the same numbers* at +1 as
-        // at +0. Reported from play as finding the +1 Etched Runeplate
-        // Gauntlets (manaRegen 1, and 1 x 1.15 floors straight back to 1) and
-        // being handed an identical item.
+        // Rounded away from zero, in both directions, not floored: flooring
+        // would make plus a lie on most of the catalogue, since a stat has
+        // to reach 7 before 15% of it is a whole point and armour stats on
+        // this game's scale are 1 to 18 -- a floored +1 Etched Runeplate
+        // Gauntlets (manaRegen 1, and 1 x 1.15 floors straight back to 1)
+        // hands the player an identical item.
         //
-        // Away-from-zero fixes the whole class rather than that one glove: for
-        // every integer >= 1, ceil(n x 1.15) > n, so a +1 is now strictly
-        // better on every stat its item grants, and the same rounding keeps a
-        // penalty growing rather than shrinking. Under the new rule none of the
-        // 701 items is flat at +1.
+        // Away-from-zero fixes the whole class: for every integer >= 1,
+        // ceil(n x 1.15) > n, so a +1 is strictly better on every stat its
+        // item grants, and the same rounding keeps a penalty growing rather
+        // than shrinking. None of the 701 authored items is flat at +1.
         //
         // It over-grants by at most one point per stat against the honest
         // multiplier, which is the price of the guarantee and cheap at these
@@ -97,8 +83,8 @@ namespace PrincesPalace.Domain.Stats
         // would round a penalty the opposite way from a bonus and make honing
         // a steel platebody quietly reduce its own speed penalty. (Note the
         // trade the other direction: AbilityDerivation's own SpeedBonus/
-        // SignatureGainBonus deliberately DO use plain truncating division as
-        // of Phase 2 -- the plan's pinned Shawn example calls for it. The
+        // SignatureGainBonus deliberately do use plain truncating division --
+        // the plan's pinned Shawn example calls for it. The
         // "guard against truncation" rule below is local to hone/gear math,
         // not a rule AbilityDerivation follows everywhere.)
         public static int Apply(int amount, int plus)

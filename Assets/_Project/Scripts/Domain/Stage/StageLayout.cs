@@ -24,26 +24,21 @@ namespace PrincesPalace.Domain.Stage
     {
         // A far actor draws at 89% of a near one.
         //
-        // WAS 100%/74%, an 26-point spread across three slots: OWNER FEEDBACK
-        // 2026-09-09 named the two symptoms of that spread directly -- "the
-        // front one is too big and the back one too small." The 1.0/0.74
-        // history above (58% -> 74%) already traded depth for legibility
-        // once; this trades a further slice of the SAME depth for the same
-        // reason; the real culprit for the overlap the same session reported
-        // was slot X-spacing, not this curve (see FightStageAnchors' Near/Far
-        // X and StageSize), but a front figure drawn at full size next to a
-        // far one at 74% was ALSO reading as two different-sized creatures
-        // rather than one creature at two distances, which is this curve's
-        // own failure mode independent of spacing.
+        // A narrower spread than a straight near/far falloff would give,
+        // because a front figure at full size next to a far one much
+        // smaller reads as two different-sized creatures rather than one
+        // creature at two distances -- the overlap this trades away is a
+        // separate problem, solved by slot X-spacing (see FightStageAnchors'
+        // Near/Far X and StageSize), not by this curve.
         //
-        // 0.94/0.82, an 12-point spread (less than half the old 26), tuned by
-        // eye against the real three-party-member capture
-        // (tools/screenshots/runtime/party_formation): enough size falloff
-        // to still read as depth, not enough that Bjorn and Odette look like
-        // two different scales of creature. The far slot's head still clears
-        // the panel ceiling AUDIT #45 documents -- UiAudit re-checks this at
-        // every canvas aspect it solves, so a future re-tune that breaks that
-        // fails the build rather than shipping unnoticed.
+        // 0.94/0.82 is tuned by eye against the real three-party-member
+        // capture (tools/screenshots/runtime/party_formation): enough size
+        // falloff to still read as depth, not enough that Bjorn and Odette
+        // look like two different scales of creature. The far slot's head
+        // still clears the panel ceiling AUDIT #45 documents -- UiAudit
+        // re-checks this at every canvas aspect it solves, so a future
+        // re-tune that breaks that fails the build rather than shipping
+        // unnoticed.
         public const float NearScale = 0.94f;
         public const float FarScale = 0.82f;
 
