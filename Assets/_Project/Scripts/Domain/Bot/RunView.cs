@@ -29,10 +29,10 @@ namespace PrincesPalace.Domain.Bot
         //
         // Filled by Core's GearEvaluator, which is the only layer that can
         // resolve an item id into what wearing it would do (the plan's F1).
-        // ChooseOffer used to rank on tier-then-plus alone, which is not what
-        // a player does: a tier-3 helm is worse than a tier-2 sword to
-        // somebody with an empty hand, and blind to the fact that the helm is
-        // already worn in a better roll.
+        // Ranking on tier-then-plus alone is not what a player does: a
+        // tier-3 helm is worse than a tier-2 sword to somebody with an
+        // empty hand, and blind to the fact that the helm is already worn
+        // in a better roll.
         public readonly IReadOnlyList<float> OfferScores;
 
         public RunView(float partyHpFraction, int step, int floor, int gold,

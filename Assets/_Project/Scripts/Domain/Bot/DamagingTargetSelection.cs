@@ -6,18 +6,13 @@ using PrincesPalace.Domain.Combat;
 namespace PrincesPalace.Domain.Bot
 {
     // Shared fix for GreedyAggressivePolicy and GreedyDefensivePolicy's
-    // "hit back" branch: both used to pick a target first (lowest HP /
-    // most threatening) and only THEN filter candidates down to that
-    // target's own Attack/Skill options -- which silently drops Attack
-    // whenever the locked target sits outside melee reach, leaving only
-    // whatever non-damaging Skill also happens to carry that target's
-    // (possibly bogus, see FightAction.LegalActions' per-target loop over
-    // a Self/AllEnemies skill) Target. A rat behind the front rank with
-    // less HP than the beetle in front of it locked GreedyAggressive onto
-    // the rat, discarded Attack for targeting the wrong enemy, and left
-    // provoke (0 estimated damage) as the only thing left standing --
-    // forever, since provoke does not change anyone's HP and the loop
-    // never re-evaluates a live outcome.
+    // "hit back" branch: picking a target first (lowest HP / most
+    // threatening) and only THEN filtering candidates down to that
+    // target's own Attack/Skill options silently drops Attack whenever the
+    // locked target sits outside melee reach, leaving only whatever
+    // non-damaging Skill also happens to carry that target's (possibly
+    // bogus, see FightAction.LegalActions' per-target loop over a
+    // Self/AllEnemies skill) Target.
     //
     // The fix: only rank targets that at least one DAMAGING candidate
     // (EstimateDamage > 0) can actually reach, THEN lock the target and

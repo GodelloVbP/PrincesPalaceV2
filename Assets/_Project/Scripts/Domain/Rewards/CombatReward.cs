@@ -20,12 +20,12 @@ namespace PrincesPalace.Domain.Rewards
 
         // Which PARTY SLOT this row is, 0-based.
         //
-        // The Reckoning used to iterate a Dictionary's Values. Insertion
-        // order happens to hold for a small never-removed-from dictionary,
-        // but it is not a contract, and nothing guaranteed that party slot 1
-        // was Reckoning row 1 — so the two screens a player reads back to
-        // back could disagree about who is who. Slot order is the contract
-        // now, and it is carried here rather than inferred from list
+        // Iterating a Dictionary's Values relies on insertion order, which
+        // happens to hold for a small never-removed-from dictionary, but it
+        // is not a contract — nothing guarantees that party slot 1 is
+        // Reckoning row 1, so the two screens a player reads back to back
+        // could disagree about who is who. Slot order is the contract, and
+        // it is carried here rather than inferred from list
         // position so a caller that filters or reorders cannot silently
         // break it.
         public readonly int SlotIndex;

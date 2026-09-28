@@ -3,15 +3,11 @@ using System.Collections.Generic;
 namespace PrincesPalace.Domain.Bot
 {
     // ONE PLACE that maps an archetype's name to a policy instance,
-    // Domain-side. Core/Bot/BotRunDriver.cs (`PolicyFor`, `Archetypes`) still
-    // owns the registry the batch runner and smoke tests actually call as of
-    // this phase -- it is out of scope here (this session touches only
-    // Domain/Bot, Tests/EditMode/Bot*Tests.cs and the tools/bot_report.py
-    // trio) and a concurrent session may be mid-edit on it. This factory
-    // exists so Core's registry CAN become a one-line call into Domain
-    // instead of a second switch that has to be kept in sync by hand every
-    // time an archetype is added -- see this phase's own report for the
-    // handoff note asking for that switch.
+    // Domain-side. Core/Bot/BotRunDriver.cs (`PolicyFor`, `Archetypes`)
+    // still owns the registry the batch runner and smoke tests actually
+    // call. This factory exists so Core's registry can become a one-line
+    // call into Domain instead of a second switch that has to be kept in
+    // sync by hand every time an archetype is added.
     public static class Archetypes
     {
         // Declaration order is also report order (BalanceBotRunner's cells,

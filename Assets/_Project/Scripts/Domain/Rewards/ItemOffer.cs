@@ -80,11 +80,11 @@ namespace PrincesPalace.Domain.Rewards
 
         // Chooses the offers.
         //
-        // Takes the TARGET TIER rather than a floor. Deciding what a depth is
-        // worth used to live here as `floor - 1`, which made this the only
-        // floor-sensitive system in the game and left no room for a boss to
-        // be worth more than the room next door. RarityTable owns that
-        // decision now — it knows what killed you and how deep you are — and
+        // Takes the TARGET TIER rather than a floor: deciding what a depth
+        // is worth as `floor - 1` here would make this the only
+        // floor-sensitive system in the game and leave no room for a boss
+        // to be worth more than the room next door. RarityTable owns that
+        // decision — it knows what killed you and how deep you are — and
         // this is back to the one job its name claims: picking which items,
         // given a target.
         //

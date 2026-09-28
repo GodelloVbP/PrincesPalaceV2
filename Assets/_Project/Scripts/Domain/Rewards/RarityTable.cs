@@ -34,14 +34,13 @@ namespace PrincesPalace.Domain.Rewards
         // How many steps of descent buy one tier.
         //
         // Sixteen — two legs, one floor pair — so the tier curve climbs at
-        // HALF the old rate (one leg). Doubled from 8 in the affix/tier
-        // rebalance pass: at 8, FloorTier(depthStep) already reached tier 2
-        // by floor 3 and tier 4 by floor 5 (RunDepth.FloorFor puts floor N at
-        // legStartStep (N-1)*8), so the ladder's own climb — which only ever
-        // adds on top, never subtracts — pushed the FLOOR of what a fight
-        // could pay past what the design calls for at that depth ("floor 3 ->
-        // tier 1-2", not "tier 2 guaranteed, usually 2-3"). Doubling the
-        // divisor keeps the ladder's shape (LootLadder.Climb, per-rung step
+        // HALF the rate one leg would give: at 8, FloorTier(depthStep) would
+        // reach tier 2 by floor 3 and tier 4 by floor 5 (RunDepth.FloorFor
+        // puts floor N at legStartStep (N-1)*8), so the ladder's own climb
+        // — which only ever adds on top, never subtracts — would push the
+        // FLOOR of what a fight could pay past what the design calls for at
+        // that depth ("floor 3 -> tier 1-2", not "tier 2 guaranteed, usually
+        // 2-3"). Doubling the divisor keeps the ladder's shape (LootLadder.Climb, per-rung step
         // chances) untouched and only slows the EXPECTATION it climbs on top
         // of. Tied to the leg length still, just two of them rather than one.
         private const int StepsPerTier = 16;

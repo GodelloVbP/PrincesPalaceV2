@@ -37,10 +37,10 @@ namespace PrincesPalace.Domain.Bot
 
     public static class ShopNodePreference
     {
-        // BLANK IS THE DEFAULT, ANYTHING ELSE MUST NAME A REAL MODE.
-        // A typo in -botShopPolicy used to fall through to WhenOffered the
-        // same as a blank did, so "-botShopPolicy Neverr" silently ran the
-        // opposite baseline from the one asked for -- matching how
+        // BLANK IS THE DEFAULT, ANYTHING ELSE MUST NAME A REAL MODE: a typo
+        // in -botShopPolicy must not fall through to WhenOffered the same
+        // as a blank does, or "-botShopPolicy Neverr" would silently run
+        // the opposite baseline from the one asked for -- matching how
         // -botArchetypes/-botProfiles already refuse an unknown name in
         // BalanceBotRunner.ReadOptions rather than substituting a default.
         public static ShopNodeMode Parse(string raw)

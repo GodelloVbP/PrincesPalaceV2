@@ -8,15 +8,9 @@ namespace PrincesPalace.Domain.Bot
 {
     // WHICH ally a thinking policy aims a SingleAlly cast at.
     //
-    // WHERE THIS CAME FROM. Until AUDIT #147 these were engine rules:
-    // FightSession.Talents.GiftRecipient picked "the ally missing the most
-    // mana who can actually take it" for Gift: Mana and "the first living
-    // ally" for Fury and Haste, and ApplyWard put the ward on the caster and
-    // the Flock's share on the first living non-caster. The owner's call was
-    // that deciding for the PLAYER is "just stupid" -- so the player now
-    // picks, and the rules did not stop being good ones, they stopped being
-    // the engine's. They live here, where the only caller left that must
-    // choose with no hand on the mouse is.
+    // These rules live here because the player picks for Gift: Mana, Fury,
+    // Haste and ApplyWard now; this is the only caller left that must
+    // choose with no hand on the mouse.
     //
     // NARROWING, NOT CHOOSING. FightAction.LegalActions emits one action per
     // eligible ally, which is what makes the bot's menu the same menu the

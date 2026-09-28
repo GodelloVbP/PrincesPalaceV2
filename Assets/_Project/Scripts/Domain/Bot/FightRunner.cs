@@ -45,16 +45,12 @@ namespace PrincesPalace.Domain.Bot
         // cannot give -- see FightInvariants.MaxPlayerCommands for the batch
         // that proved it.
         //
-        // STEP TO STEP, NOT AGAINST A WATERMARK, and the difference cost a
-        // whole batch to learn. The first version asked whether either side
-        // had reached a NEW LOW, which reads as the same question and is not:
-        // an enemy that HEALS early sets its low before the heal, and every
-        // command of a long, steadily winning grind afterwards is measured
-        // against a floor the fight can no longer touch. Seed 2, Mid/
-        // GreedyDefensive, the floor-4 boss: the Forest Warden healed 1112 ->
-        // 1853 in the opening rounds, then fell to 1557 over the next fifty
-        // commands -- progress on every reading except "a new low", which is
-        // the one that fired. 1,795 rows of it.
+        // STEP TO STEP, NOT AGAINST A WATERMARK. A watermark-based reading
+        // (has either side reached a NEW LOW) reads as the same question and
+        // is not: an enemy that HEALS early sets its low before the heal,
+        // and every command of a long, steadily winning grind afterwards
+        // would be measured against a floor the fight can no longer touch --
+        // progress on every reading except "a new low".
         //
         // The cost of the step-to-step reading is a real false NEGATIVE: a
         // fight where the enemy fully heals what the party chips off each

@@ -31,7 +31,7 @@ namespace PrincesPalace.Domain.Rewards
         }
 
         // `factorPercent` of the room shop's price, rounded half AWAY from
-        // zero (owner call: 10.5 is 11), never below 1 gold. Decimal, not
+        // zero (10.5 rounds to 11), never below 1 gold. Decimal, not
         // double, so 15 * 70 / 100 is exactly 10.5 and the midpoint rule
         // is the one that decides it.
         public static int Price(int shopPrice, int factorPercent)
