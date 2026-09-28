@@ -51,9 +51,9 @@ namespace PrincesPalace.Domain.Tests
                 resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
                 percentOfMaxHealthPerPoint: 0, percentOfCasterMaxHealth: skill.PercentOfCasterMaxHealth);
 
-        // MEASURED 2026-09-20. 18 + spell attack, the shape prism_ward already
-        // uses, so the two move together as a caster grows instead of crossing
-        // over somewhere in the middle of a run.
+        // 18 + spell attack, the shape prism_ward already uses, so the two
+        // move together as a caster grows instead of crossing over somewhere
+        // in the middle of a run.
         //
         //   caster        Gilded Aegis   prism_ward   fleece_ward
         //   spell atk 4   22 pts / 7 mp  24 / 8 mp    50 pts / 2 wool
@@ -122,7 +122,7 @@ namespace PrincesPalace.Domain.Tests
             return before - dummy.CurrentHealth;
         }
 
-        // MEASURED 2026-09-20, against an undefended target with variance off.
+        // Against an undefended target with variance off.
         //
         //   spell            packet   mana   landed   per mana
         //   Winter's Rebuke  Frost 6  8      6        0.75
@@ -174,7 +174,7 @@ namespace PrincesPalace.Domain.Tests
             return encounter.UpcomingTurns(window).Count(c => !c.IsPlayerSide);
         }
 
-        // MEASURED 2026-09-20. Hero speed 10, one enemy at speed 20, read off
+        // Hero speed 10, one enemy at speed 20, read off
         // CombatEncounter.UpcomingTurns over a 30-turn forecast window.
         //
         //   chill on the enemy   enemy turns in 30   actions denied
@@ -183,8 +183,8 @@ namespace PrincesPalace.Domain.Tests
         //   two at 25%           15                  2
         //   three at 25%         12                  5
         //
-        // THE FINDING, and it is the one worth carrying to the owner: a 25%
-        // Chilled does NOT deny 25% of an enemy's actions. It denies about 6%
+        // THE FINDING: a 25% Chilled does NOT deny 25% of an enemy's
+        // actions. It denies about 6%
         // of them. The badge says -25% Speed and that is true, but SpeedScale's
         // charge curve is deliberately sub-linear with a hard ceiling (its own
         // header records why), so a quarter off the Speed number is much less
@@ -192,9 +192,9 @@ namespace PrincesPalace.Domain.Tests
         // it starts to bite, which is an argument FOR the stacking model rather
         // than against the number.
         //
-        // Not tuned. 25% is the owner's prototype figure and the measurement
-        // says it is weak rather than wrong; whether the percent should move or
-        // the expectation should is a design call, recorded in section 5.
+        // Not tuned. 25% is the prototype figure and the measurement says it
+        // is weak rather than wrong; whether the percent should move or the
+        // expectation should is a design call, recorded in section 5.
         [Test]
         public void WintersRebukesChillDeniesFarFewerActionsThanItsPercentSuggests()
         {
@@ -261,7 +261,7 @@ namespace PrincesPalace.Domain.Tests
             return (dealt, poison?.Magnitude ?? 0, poison?.TurnsRemaining ?? 0);
         }
 
-        // MEASURED 2026-09-20, against an undefended target, variance off. Each
+        // Against an undefended target, variance off. Each
         // line starts from a fresh Bite cast (packet 3, leaves Poison 3/3) and
         // asks what the SECOND cast is worth against exactly that Poison.
         //
@@ -287,7 +287,7 @@ namespace PrincesPalace.Domain.Tests
         // one cast (three Bites deposit three independent 3/3 instances a
         // single Reckoning detonates AT ONCE for 150% of their SUM), and the
         // Vulnerable it leaves behind, neither of which this single-stack
-        // comparison exercises. Left at the prototype 150; the owner's call
+        // comparison exercises. Left at the prototype 150; the open call
         // is whether the premium should rise to make a one-stack Reckoning
         // competitive with a bigger fixed packet on its own, or whether its
         // case is deliberately the multi-stack one.
@@ -352,8 +352,8 @@ namespace PrincesPalace.Domain.Tests
             return before - dummy.CurrentHealth;
         }
 
-        // MEASURED 2026-09-20, against the two named enemies' own authored
-        // broad defense (enemies.json), variance off.
+        // Against the two named enemies' own authored broad defense
+        // (enemies.json), variance off.
         //
         //   target                     phys def   mag def   Blackglass (Void 13)   Lightning Bolt (Ltng 10)
         //   rust_knight (defended)     35         5         13                     9
@@ -364,7 +364,7 @@ namespace PrincesPalace.Domain.Tests
         // already non-physical, so ignoresDefense buys Blackglass Spear only
         // a small edge here (13 vs 9) rather than a dramatic one -- the
         // bypass matters most against a MAGICALLY armoured body, which
-        // neither of the owner's two named enemies actually is. gloom_moth's
+        // neither of the two named enemies actually is. gloom_moth's
         // bigger MagicalDefense (10 against rust_knight's 5) reads as the
         // SAME landed 9 for Lightning Bolt -- CombatMath.AfterResistance's
         // integer division floors 10x100/105 (9.52) and 10x100/110 (9.09) to
@@ -373,10 +373,10 @@ namespace PrincesPalace.Domain.Tests
         // actually changes is time-to-kill against gloom_moth's low 45 max
         // health, which this harness does not model (that is
         // `tools/bot.ps1`'s half of the pair). Reported rather than tuned:
-        // the owner's own account of "a defended enemy" may want a body with
-        // real MagicalDefense (there is none in the shipped roster above
-        // single digits except ember_hound/beetle's low tens) for this
-        // comparison to say what the brief intends.
+        // "a defended enemy" may want a body with real MagicalDefense (there
+        // is none in the shipped roster above single digits except
+        // ember_hound/beetle's low tens) for this comparison to say what it
+        // intends.
         [Test]
         public void BlackglassSpearVsLightningBolt_OnTheTwoNamedEnemies()
         {
@@ -434,8 +434,6 @@ namespace PrincesPalace.Domain.Tests
             return encounter.UpcomingTurns(window).Count(c => !c.IsPlayerSide);
         }
 
-        // MEASURED 2026-09-20.
-        //
         //   board                              no cast  1 cast  2  3
         //   hero 10 vs one enemy 20            17       17      17 16
         //   hero 10 vs two enemies at 10       12       10      -- --
@@ -454,8 +452,8 @@ namespace PrincesPalace.Domain.Tests
         // so the two-enemy row is 2 denied for one cast at 11 mana. Against
         // three it would be three.
         //
-        // Not tuned, and this is the owner's call to make: as written, the
-        // spell is a crowd tool and reads on the card like a tempo tool. The
+        // Not tuned: as written, the spell is a crowd tool and reads on the
+        // card like a tempo tool. The
         // honest one-line description of what it buys is "one action off each
         // enemy you are keeping pace with", not "each one loses a place".
         [Test]
@@ -507,8 +505,8 @@ namespace PrincesPalace.Domain.Tests
                 order.Project(window).Count(a => a == "Ally"));
         }
 
-        // MEASURED 2026-09-20. Ally's forecast position and its turn COUNT
-        // inside a 30-turn window:
+        // Ally's forecast position and its turn COUNT inside a 30-turn
+        // window:
         //
         //   treatment                 position  turns in 30
         //   nothing                   4         6
@@ -535,7 +533,7 @@ namespace PrincesPalace.Domain.Tests
         // book any caster can hold. What the 8 mana buys is ACCESS, and on a
         // board with three or more charge levels above the target it buys
         // strictly less movement than the talent does. Left at the prototype
-        // 8/2; the owner's call is whether a book that matches a talent's
+        // 8/2; the open call is whether a book that matches a talent's
         // effect at a mana price is the trade intended.
         [Test]
         public void BorrowedMomentBuysPositionsAndNeverActions()
@@ -654,8 +652,8 @@ namespace PrincesPalace.Domain.Tests
             return (acted, denied);
         }
 
-        // MEASURED 2026-09-20. Enemy turns that resolved into an action, out of
-        // six, with and without Rooted:
+        // Enemy turns that resolved into an action, out of six, with and
+        // without Rooted:
         //
         //   enemy          kit                                no root   shackled
         //   crystal_bat    plain swing only                    6 / 6     0 / 6
@@ -751,7 +749,7 @@ namespace PrincesPalace.Domain.Tests
                 appliesStatus: StatusEffectType.Burn, statusMagnitude: 4, statusDuration: 3,
                 cooldownTurns: 2, physicalMove: false);
 
-        // MEASURED 2026-09-20, against an undefended target with variance off.
+        // Against an undefended target with variance off.
         // Cooldown 2 means "turn one then turn three" (SkillCooldownTests'
         // own words), so three casts take FIVE of the caster's own turns
         // (1, 3, 5), with the caster's non-Physical Filler spending the two
@@ -878,8 +876,8 @@ namespace PrincesPalace.Domain.Tests
             return before - target.CurrentHealth;
         }
 
-        // MEASURED 2026-09-20, against an undefended target, variance off,
-        // 10 mana, one cast. `crystal_bat` (speed 15) and `golem`/`treant`
+        // Against an undefended target, variance off, 10 mana, one cast.
+        // `crystal_bat` (speed 15) and `golem`/`treant`
         // (speed 3) are section 5's own named fast/slow ends; this harness
         // varies only the axis that matters to a RETALIATION -- how often the
         // target's own physical move recurs relative to the tithe's fixed

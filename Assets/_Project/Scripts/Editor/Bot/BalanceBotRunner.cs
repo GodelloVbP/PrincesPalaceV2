@@ -22,16 +22,14 @@ namespace PrincesPalace.Editor.Bot
     // all of a batch's shards and writes the one summary.json;
     // tools/bot_report.py renders and diffs that.
     //
-    // summary.json used to be computed here, and docs/BOT_SUMMARY_SCHEMA.md
-    // had a good reason: doomedShare and swingShare are fractions of the
-    // party's MAX hp, which is not a trace field and must not become one. That
-    // reason survives intact -- it is why runs.jsonl carries partyMaxHp per
-    // fight and a pre-reduced swing count, both read live off the encounter.
-    // What did not survive is computing the BATCH's numbers here, because a
-    // batch is now N Unity processes and a median cannot be merged from N
-    // medians.
+    // summary.json is computed by tools/bot_merge.py, not here, because a
+    // batch is N Unity processes and a median cannot be merged from N
+    // medians. docs/BOT_SUMMARY_SCHEMA.md's reason for tracking doomedShare
+    // and swingShare as fractions of the party's MAX hp still holds -- it is
+    // why runs.jsonl carries partyMaxHp per fight and a pre-reduced swing
+    // count, both read live off the encounter.
     //
-    // NOTHING HERE IS A GATE. A batch reports; the author decides (plan §6).
+    // Nothing here is a gate. A batch reports; the author decides (plan §6).
     // The exit code says whether the BATCH ran, not whether the game is
     // balanced -- a run that trips an invariant is a row in bugs[], not a
     // failure.
@@ -110,8 +108,8 @@ namespace PrincesPalace.Editor.Bot
             public double ReplayShare = DefaultReplayShare;
 
             // Off makes the bot write save_slot_0.json to a throwaway
-            // directory the way it used to, which is how the equivalence of
-            // the in-memory mode is demonstrated rather than asserted.
+            // directory instead, which is how the equivalence of the
+            // in-memory mode is demonstrated rather than asserted.
             public bool InMemorySaves = true;
 
             // "2/4" -- which of how many. Provenance only: the shard's seed
@@ -712,15 +710,13 @@ namespace PrincesPalace.Editor.Bot
 
         // ---- runs.jsonl, content.json, batch.json ------------------------------------
 
-        // ONE FLAT ROW PER RUN, and no aggregate anywhere in this file.
+        // One flat row per run, and no aggregate anywhere in this file.
         //
-        // summary.json used to be computed HERE, in-process, and
-        // docs/BOT_SUMMARY_SCHEMA.md gave a good reason: doomedShare and
-        // swingShare are fractions of the party's MAX hp, which is not a trace
-        // field and must not become one. That reason still holds -- but it is
-        // a reason to compute the RUN'S OWN numbers here, not the batch's.
+        // docs/BOT_SUMMARY_SCHEMA.md's reason for treating doomedShare and
+        // swingShare as fractions of the party's MAX hp is a reason to
+        // compute the run's own numbers here, not the batch's.
         //
-        // Sharding is what forced the split. A batch now runs as N Unity
+        // Sharding is what forced the split. A batch runs as N Unity
         // processes over disjoint seed ranges, and a median, a decision-
         // pressure denominator or a coverage list cannot be merged from N
         // summaries: the median of medians is not the median, and "this relic
@@ -785,7 +781,7 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append(",\"turns\":").Append(f.Turns);
                 sb.Append(",\"damageTaken\":").Append(f.DamageTaken);
 
-                // GOLD FORGONE IS A MEDIAN OVER WON FIGHTS AT A STEP BAND
+                // Gold forgone is a median over won fights at a step band
                 // (docs/PLAN_SHOP.md 7.1 point 1), so the merger needs both:
                 // a lost fight pays zero and including it would drag every
                 // Fresh band toward 0 at exactly the depths where a shop
@@ -839,7 +835,7 @@ namespace PrincesPalace.Editor.Bot
                 }
                 sb.Append(']');
 
-                // WHAT WAS ACTUALLY WORN after this room, ids only. itemPickRate
+                // What was actually worn after this room, ids only. itemPickRate
                 // answers "how often is this taken when offered"; this answers
                 // the different and more interesting question of how often a
                 // taken item ever makes it onto a character -- an item picked

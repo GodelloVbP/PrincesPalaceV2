@@ -106,8 +106,7 @@ namespace PrincesPalace.Domain.Tests
             // TEN PARALLEL LISTS OVER ONE COLUMN, and RefreshPcPlate indexes
             // every one of them off the same loop counter -- exactly the
             // shape the Store bug had. One card language means one length to
-            // agree on, where the party plate and the roster cards used to
-            // be two families that could drift apart independently.
+            // agree on.
             AssertSameLength("pc plates", s.PcPlates, s.PcPlateArts, s.PcPlateHighlights,
                 s.PcPlateReticles, s.PcNames, s.PcSignatures, s.PcHpValues, s.PcHpFills,
                 s.PcMpValues, s.PcMpFills, s.PcMpShades);
@@ -215,18 +214,16 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1080f, root.Rect.Height, 0.01f);
         }
 
-        // ---- the PC plate column (2026-09-10) --------------------------------
+        // ---- the PC plate column ----------------------------------------------
 
         [Test]
         public void ThePcPlateStackIsFlushLeftAndBottomAtTheMeasuredAspect()
         {
-            // THE LEFT EDGE HAS NOT MOVED SINCE v1: -920. Everything else on
-            // this column has, twice, and the left edge is the one anchor
-            // the owner has kept fixed through all of it.
+            // THE LEFT EDGE stays fixed at -920 while everything else on
+            // this column moves.
             //
-            // WIDTH 452, back to the number the column carried before the
-            // 380-wide card pass -- the extra 72px is what pays for 16pt
-            // names and 14pt numbers instead of 12/10/9.
+            // WIDTH 452 pays for 16pt names and 14pt numbers instead of
+            // 12/10/9.
             //
             // HEIGHT IS NOT A LITERAL DECISION, it is 452 / PcPlateArt.Aspect
             // = 80.5546. Pinned here as a literal anyway (gotcha 5) so a
@@ -272,9 +269,7 @@ namespace PrincesPalace.Domain.Tests
         private const float PcStackTopBudget = -160.627f;
 
         // -235.7273: three 80.5546-tall plates and two 4px gaps stacked up
-        // from -485.392. It used to be -195.392 with a 154-tall card and two
-        // 66-tall roster cards; the column is 40px taller now and still 75px
-        // clear of its ceiling.
+        // from -485.392, 75px clear of the PcStackTopBudget ceiling.
         private const float PcStackTop = -235.7273f;
 
         [Test]
@@ -630,10 +625,8 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(first.Y, second.Y, 0.01f, "the first two sit side by side");
 
-            // 276, UP FROM 236 (owner, 2026-09-10, "enemy names keep
-            // truncating"): PlateW grew 220 to 260, which is what pays for a
-            // 118px name box at 14pt -- see PlateW's own comment. The 16px
-            // gutter itself did not move; the plate width inside it did.
+            // 276: PlateW (260) plus a 16px gutter pays for a 118px name
+            // box at 14pt -- see PlateW's own comment.
             Assert.AreEqual(276f, second.X - first.X, 0.01f, "plate width plus a 16px gutter");
 
             Assert.AreEqual(first.X, third.X, 0.01f, "the third starts the next row under the first");
@@ -652,23 +645,20 @@ namespace PrincesPalace.Domain.Tests
             // The plates are the stage's ceiling: the tallest actor needs 300
             // above the front slot's ground line, so its head reaches 72, and
             // the middle slot's reaches 89 while still just crossing the
-            // plates in x. Two rows of 130 (was 110, see PlateW's 2026-09-10
-            // note) still clear both, with 36 of daylight against the 12 this
-            // layout is toleranced to. 65, not 55: half of the new 130-tall
-            // plate.
+            // plates in x. Two rows of 130 still clear both, with 36 of
+            // daylight against the 12 this layout is toleranced to. 65 is
+            // half of the 130-tall plate.
             //
-            // NOT RE-VERIFIED AGAINST tools/measure_stage.py as part of
-            // either widening -- this Domain-only check uses the same
-            // hand-derived 89f+12f the old assertion did, which is a real
-            // gap this test cannot close on its own.
+            // This Domain-only check uses the same hand-derived 89f+12f
+            // tools/measure_stage.py verifies independently -- a gap this
+            // test cannot close on its own.
             Assert.Greater(third.Y - 65f, 89f + 12f,
                 "the bottom plate has dropped back onto an actor's head - see tools/measure_stage.py");
         }
 
-        // Regression for the blank 12px band Phase 3 left behind: retiring
-        // EnemyStatusLine to BRK-only (FightHudModel.EnemyStatusLine's own
-        // header) freed the middle row, and the fix folds Tags INTO the name
-        // row rather than leaving the gap where the status line used to sit.
+        // Retiring EnemyStatusLine to BRK-only (FightHudModel.EnemyStatusLine's
+        // own header) freed the middle row; the fix folds Tags into the name
+        // row rather than leaving a gap where the status line sat.
         [Test]
         public void TheEnemyPlateTopRowAndBarAreCentredWithNoBlankBand()
         {
@@ -679,40 +669,32 @@ namespace PrincesPalace.Domain.Tests
             var bar = RectOf("EnemyPlate0Bar");
 
             // Name and HP are one row; BRK rides the BAR's row, right of
-            // the bar (2026-09-10 -- folding it into the name row is what had
-            // squeezed the name to 72px at 11pt, which is the complaint that
-            // started this pass).
+            // the bar -- folding it into the name row squeezes the name to
+            // 72px at 11pt.
             Assert.AreEqual(name.Centre.Y, hp.Centre.Y, 0.01f, "name and HP share the top row");
             Assert.AreEqual(bar.Centre.Y, tags.Centre.Y, 0.01f,
                 "BRK shares the bar's row now - it is not in the name row and not a row of its own");
 
             // Symmetric margins to the plate's own top/bottom edges is what
-            // "no blank band" actually means: the old layout left an unequal
-            // gap where the status line used to sit. hp is the taller of the
-            // two top-row boxes, so its edge is the row's real top edge.
+            // "no blank band" means. hp is the taller of the two top-row
+            // boxes, so its edge is the row's real top edge.
             float topMargin = plate.Top - hp.Top;
             float bottomMargin = bar.Bottom - plate.Bottom;
             Assert.AreEqual(topMargin, bottomMargin, 0.01f,
                 "the top row and the bar should be centred as one block, not offset toward one edge");
 
-            // 39.5, DOWN FROM 40.5 (2026-09-22): the bar grew 7 -> 9px for
-            // the health-bar polish pass and topY was re-solved against it
-            // -- see the two equations in BuildEnemyPlates' own topY/barY
-            // comment. The margin gives up exactly half of what the bar
-            // gained (1 of the bar's +2), split evenly per the "equal
-            // margins" equation, same as it always has whenever either
-            // box's height moved.
+            // 39.5: the bar is 9px tall and topY is solved against it -- see
+            // the two equations in BuildEnemyPlates' own topY/barY comment.
+            // The margin gives up half of what the bar's height added,
+            // split evenly per the "equal margins" equation.
             //
             // hp is still the taller of the two top-row boxes at 34 against
             // the name's 24, so its edge is still the row's real top edge.
             Assert.AreEqual(39.5f, topMargin, 0.01f);
 
-            // A deliberate small gap between the two rows, not the old blank
-            // band (which was the full retired status line's own height).
-            // STILL 8, deliberately: the HP box grew 27 -> 34 with its font
-            // (10 -> 13pt) and barY was re-solved rather than left where it
-            // was, so the gap between the rows is the same one it has always
-            // been and the extra height came out of the outer margins.
+            // A deliberate small gap between the two rows. The HP box is 34
+            // tall with its 13pt font; barY is solved against it, so the gap
+            // stays 8 and the extra height comes out of the outer margins.
             Assert.AreEqual(8f, hp.Bottom - bar.Top, 0.01f);
 
             // The name cannot reach the HP value, and the bar cannot reach
@@ -721,8 +703,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.LessOrEqual(bar.Right, tags.Left, "the bar must not run under BRK");
         }
 
-        // QA 2026-09-26: the break meter hung below the plate's frame, in
-        // the gutter between rows, where it read as nobody's -- or as the
+        // The break meter must not hang below the plate's frame, in the
+        // gutter between rows, where it would read as nobody's -- or as the
         // next plate's. It is part of this plate, so it lives inside it.
         [Test]
         public void TheBreakMeterSitsInsideItsOwnPlate_UnderTheHpBar()
@@ -761,12 +743,11 @@ namespace PrincesPalace.Domain.Tests
         {
             // The single most important binding on this screen: the same
             // function the runtime controller calls to RE-anchor these rows is
-            // the one that placed them here. v1 had two hand-mirrored copies.
+            // the one that placed them here.
             // + (FrameCentreY - ContainerCentreY): the rows are reparented
-            // directly under the flat frame now (2026-09-23 rework), which
-            // sits VisibleBottomLine-flush rather than at the old
-            // ContainerCentreY -- see FrameCentreY's own comment. RowY itself
-            // is untouched.
+            // directly under the flat frame, which sits VisibleBottomLine-
+            // flush rather than at ContainerCentreY -- see FrameCentreY's
+            // own comment. RowY itself is untouched.
             float shift = FightSubmenuLayout.FrameCentreY - FightSubmenuLayout.ContainerCentreY;
             int count = FightSubmenuLayout.PoolSize;
             for (int i = 0; i < count; i++)
@@ -784,11 +765,9 @@ namespace PrincesPalace.Domain.Tests
             float back = RectOf("SubmenuBack").Top;
             float lastRow = RectOf($"CharacterSkill{FightSubmenuLayout.PoolSize - 1}").Bottom;
 
-            // 10, up from 8 -- this gap IS FightSubmenuLayout.RowGap (see
-            // RowsBottom), which grew from 6 to 10 when RowPitch started
-            // reading VerbPitch (62) instead of its own hand-tuned number
-            // (58f = RowHeight 52 + the old RowGap 6f). "No dead space" means
-            // one row's own gap, same as every other row-to-row gap in the
+            // This gap IS FightSubmenuLayout.RowGap (see RowsBottom):
+            // RowPitch (62) minus RowHeight (52). "No dead space" means one
+            // row's own gap, same as every other row-to-row gap in the
             // list -- not a fixed pixel budget.
             Assert.Greater(lastRow, back, "rows stack above BACK, never through it");
             Assert.Less(lastRow - back, FightSubmenuLayout.RowGap + 0.01f,
@@ -829,11 +808,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Enemy0Slot", order[order.Count - 1], "nearest last, so it paints over the others");
         }
 
-        // BOTH SIDES, since 6fedab18: each side stands where ITS OWN
-        // StageFormation says (FightStageAnchors.Enemy / .Party), so the
-        // party side is checked against the mirrored call rather than
-        // against a mirror of the enemy rects -- the two are no longer the
-        // same claim.
+        // EACH SIDE stands where ITS OWN StageFormation says
+        // (FightStageAnchors.Enemy / .Party), so the party side is checked
+        // against the mirrored call rather than against a mirror of the
+        // enemy rects -- the two are not the same claim.
         [TestCase("Enemy", false)]
         [TestCase("Party", true)]
         public void ASlotSitsWhereTheDepthCurveSaysItDoes(string side, bool mirrored)
@@ -855,16 +833,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTwoFrontRanksShareTheFloorTheyFaceEachOtherAcross()
         {
-            // "One floor, not two platforms" used to be asserted for every
-            // slot, back when both sides were one Near/Far pair mirrored in
-            // X. Since 6fedab18 the party has its own formation
-            // (StageFormation.Party): its floor has the HUD column standing
-            // on it and its back ranks rise faster to clear it, so the back
-            // ranks' ground lines legitimately differ. What still has to
-            // hold is the pair the eye compares -- the two FRONT figures,
-            // squared off across the open middle of the stage, stand on one
-            // line. Which side stands where is ASlotSitsWhereTheDepthCurve-
-            // SaysItDoes' job, per side; this only says the two fronts agree.
+            // The party has its own formation (StageFormation.Party): its
+            // floor has the HUD column standing on it and its back ranks
+            // rise faster to clear it, so the back ranks' ground lines
+            // legitimately differ. What still has to hold is the pair the
+            // eye compares -- the two FRONT figures, squared off across the
+            // open middle of the stage, stand on one line. Which side
+            // stands where is ASlotSitsWhereTheDepthCurveSaysItDoes' job,
+            // per side; this only says the two fronts agree.
             var enemy = RectOf("Enemy0Slot");
             var party = RectOf("Party0Slot");
 
@@ -1269,10 +1245,10 @@ namespace PrincesPalace.Domain.Tests
         // against) of all three surfaces that share this line: the verb
         // column, the skill panel frame, and the party plate.
         //
-        // THE PANEL'S OWN PAD IS ZERO NOW (2026-09-23 flat-fill rework) --
-        // it is a flat Solid fill plus a hairline Rim, not kit art with a
-        // transparent halo, so its rect bottom IS its last painted pixel,
-        // the same PcPlate convention this test already documents below.
+        // THE PANEL'S OWN PAD IS ZERO: it is a flat Solid fill plus a
+        // hairline Rim, not kit art with a transparent halo, so its
+        // rect bottom IS its last painted pixel, the same PcPlate
+        // convention this test already documents below.
         [Test]
         public void TheSkillPanelEndsOnTheSameLineAsTheVerbColumn()
         {
@@ -1310,7 +1286,7 @@ namespace PrincesPalace.Domain.Tests
         //
         // Same pattern as CharacterDossierScreenTests/RelicDraftScreenTests: a
         // flat Solid + Ui.Rim became Ui.Container(Violet, ThreeByFour) sized
-        // from FightSubmenuLayout.FrameWidth/FrameHeight, balance-bot 2026-09-02.
+        // from FightSubmenuLayout.FrameWidth/FrameHeight.
         // The submenu frame's container theme/ratio and content inset are
         // covered by KitContainerPlacementTests, not repeated here.
 
@@ -1328,15 +1304,14 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.Contains(names, "SubmenuBack");
         }
 
-        // ---- the container is gone (owner playtest, 2026-09-23) --------------------
+        // ---- the submenu container carries no fill or rim ---------------------
         //
-        // "The whole list sits inside a tall purple panel that extends far
-        // below the last button. Remove the container surrounding it." The
-        // frame node itself survives (it is still what ResizeSubmenuContainer
-        // moves/resizes at runtime), but it must carry no fill and no rim any
-        // more -- neither a "SubmenuContainerFill" child nor a "SubmenuContainer"
-        // -named Rim edge (Ui.Rim yields four edges sharing the frame's own
-        // base name) should exist anywhere in the tree.
+        // The frame node itself survives (it is still what
+        // ResizeSubmenuContainer moves/resizes at runtime), but it must
+        // carry no fill and no rim -- neither a "SubmenuContainerFill"
+        // child nor a "SubmenuContainer"-named Rim edge (Ui.Rim yields four
+        // edges sharing the frame's own base name) should exist anywhere in
+        // the tree.
         [Test]
         public void TheSubmenuFrameHasNoFillOrRimLeft()
         {
@@ -1359,11 +1334,8 @@ namespace PrincesPalace.Domain.Tests
                 "SubmenuContainer must be a plain group node -- give it back its fill/rim and the container is back");
         }
 
-        // ---- the rows match the command buttons beside them (owner playtest,
-        // 2026-09-23): "the skill buttons are narrower/shorter with thinner
-        // borders than the main command buttons beside them ... make the
-        // submenu buttons match the command buttons' size and border." Both
-        // now read the exact same FightSubmenuLayout.VerbRowW/VerbRowH pair,
+        // ---- the rows match the command buttons beside them --------------------
+        // Both read the exact same FightSubmenuLayout.VerbRowW/VerbRowH pair,
         // so they pick the identical themed plate at the identical size.
         [Test]
         public void ASubmenuRowIsExactlyTheSameSizeAsACommandRow()
@@ -1442,7 +1414,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(52f, rect.Height, 0.01f);
         }
 
-        // ---- the skill detail card's icon rows (2026-09-23 icon rework) -------
+        // ---- the skill detail card's icon rows ---------------------------------
 
         // WHICH ROW CARRIES WHICH FACT IS RUNTIME DATA (same reason the old
         // DetailStatKeys/Values pool was: FightHudModel.DetailPanel.Icons is
@@ -1466,13 +1438,12 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // ---- the card is a DYNAMIC box (coordinator pass 2, 2026-09-23) -------
+        // ---- the card is a DYNAMIC box -----------------------------------------
         //
-        // The owner's exact ask was "a dynamic box around it" -- a static
-        // pool-sized reservation is not that, however much smaller it is
-        // than the old body-plus-eight-rows card. DetailHFor(count) is the
-        // pure Domain function FightController.Hud.cs's RefreshDetail calls
-        // every repaint to resize the fill/Rim/column to whatever the
+        // A static pool-sized reservation would not be that.
+        // DetailHFor(count) is the pure Domain function FightController.
+        // Hud.cs's RefreshDetail calls every repaint to resize the
+        // fill/Rim/column to whatever the
         // CURRENT panel's icon count needs, the same ContainerHeightFor(count)
         // shape FightSubmenuLayout already uses for its own runtime-resized
         // frame.
@@ -1531,7 +1502,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(lastRowBottom, cardBottom, "the last row must clear the card's own bottom edge");
         }
 
-        // ---- the hero icon (owner playtest, "way out of proportion" fix) ------
+        // ---- the hero icon ------------------------------------------------------
 
         // The Element icon moves beside the title instead of taking a row of
         // its own (DetailHeroIconSize's own header) -- DetailListRowCountFor
@@ -1548,8 +1519,7 @@ namespace PrincesPalace.Domain.Tests
 
         // A card whose height still sized around `shown` (raw icon count)
         // would be one full row pitch (36px) taller than its rows actually
-        // need whenever a hero is present -- this is the regression the
-        // owner's "far larger than its content" report was pointing at.
+        // need whenever a hero is present.
         [Test]
         public void TheHeroIconDoesNotInflateTheCardsHeight()
         {
@@ -1595,12 +1565,8 @@ namespace PrincesPalace.Domain.Tests
             // 3 stage slots x 5 (4 statuses + the "+N" overflow chip),
             // flattened slot-major; 3 PC plates x 5, flattened card-major.
             //
-            // ONE COUNT WHERE THERE WERE TWO (2026-09-10). The column used to
-            // carry 10 roster badges plus 12 on the acting card -- two ranges
-            // of different widths that PaintStatusRow had to be told about
-            // separately, and an ally's statuses were readable in five slots
-            // while the acting character's were readable in twelve. Every
-            // party member gets the same five now, which is what the
+            // ONE COUNT FOR EVERY PARTY MEMBER: every ally's statuses are
+            // readable in the same five slots, which is what the
             // controller's PcStatusBadgeCount has to agree with.
             Assert.AreEqual(15, screen.EnemyStatusBadges.Count);
             Assert.AreEqual(3, screen.EnemyStatusStrips.Count);
@@ -1640,11 +1606,9 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
-            // THE BOX, not a tooltip. StatusTooltip/StatusTooltipText were
-            // removed outright (2026-09-19): they answered for ONE badge,
-            // sat beside that badge, and a pad -- which has no badge to
-            // hover -- could not open them at all. PartyBuffTooltip went the
-            // same way one pass earlier.
+            // THE BOX, not a tooltip: a tooltip answers for ONE badge, sits
+            // beside that badge, and a pad -- which has no badge to hover --
+            // cannot open it at all.
             Assert.IsNull(Find(root, "StatusTooltip"));
             Assert.IsNull(Find(root, "PartyBuffTooltip"));
 
@@ -1740,15 +1704,10 @@ namespace PrincesPalace.Domain.Tests
         // a test recomputing the production formula to build its own
         // expected value is a tautology (CLAUDE.md's gotcha 5): it can only
         // ever catch a hand-typed mistake in THIS test, never a real
-        // regression in SlotOffset itself. Values were docs/
-        // PLAN_STATUS_EFFECT_UI.md section 1's own table -- X is each slot's
-        // ground position (Near 300, mid 432.5, Far 565), Y is offset.Y - 60
-        // worked out there once (-278, -231.5, -185).
-        //
-        // X RE-PINNED 2026-09-09: Far.X widened 565 -> 660 (party overlap
-        // fix, see FightStageAnchors' own comment on Far), so mid and far
-        // move to 480 and 660. Y is untouched -- Near.Y/Far.Y did not move,
-        // only X did -- so -278/-231.5/-185 stand as they were.
+        // regression in SlotOffset itself. X is each slot's ground position
+        // (Near 300, mid 480, Far 660 -- see FightStageAnchors' own comment
+        // on Far for why Far.X is 660, not the evenly-spaced 565); Y is
+        // offset.Y - 60 (-278, -231.5, -185).
         private static readonly (float X, float Y)[] EnemyStatusRowCentres =
         {
             (300f, -278f),
@@ -1853,7 +1812,7 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // ---- the bottom-left HUD column (owner's mock-up, 2026-09-09) --------
+        // ---- the bottom-left HUD column ----------------------------------------
 
         // THE PIN THAT MATTERS MOST ON THIS COLUMN, and the only one that is
         // about something outside the column itself.

@@ -36,17 +36,14 @@ namespace PrincesPalace.Domain.Tests
         // hardcoded Self. A fixture that guesses targeting builds content
         // skills.json could never produce, and this file guessed Self for
         // every effect in it -- which meant every Ward and Gift test below
-        // was casting through a path the game stopped taking when the ally
-        // picker landed (AUDIT #147), and would have gone on passing while
-        // the real cast refused.
+        // was casting through a path the game no longer takes, and would
+        // have gone on passing while the real cast refused.
         //
-        // A WARD AUTHORS ITS OWN POOL, like every ward in skills.json does
-        // since the shield model (AUDIT #152). It used to author nothing,
-        // because WardReductionPercent WAS the ward; the talent is a
-        // multiplier over the row's number now, so a row with no number is a
-        // shield of nothing and SkillEntryResolver refuses one outright.
-        // Forty points is this file's ward: a talent of 50 makes it 60, and
-        // one of 100 makes it 80.
+        // A WARD AUTHORS ITS OWN POOL, like every ward in skills.json does.
+        // The talent is a multiplier over the row's number, so a row with
+        // no number is a shield of nothing and SkillEntryResolver refuses
+        // one outright. Forty points is this file's ward: a talent of 50
+        // makes it 60, and one of 100 makes it 80.
         private const int FixtureWardPoints = 40;
 
         private static ResolvedSkill Skill(SkillEffect effect, string name = "Skill", TransformGrant transform = null,
@@ -123,14 +120,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.LessOrEqual(afterOneTurn, 2, "at most one payout, however many blows landed");
         }
 
-        // ---- The Flock, owner's rule 2026-09-15 (AUDIT #147) ------------------
+        // ---- The Flock: no auto-pick for ward targeting -----------------------
         //
         // WARD HIMSELF AND IT SPREADS NOWHERE; WARD SOMEBODY ELSE AND THE
-        // SHARE COMES BACK TO HIM. No auto-pick survives in either direction,
-        // which is what the finding was actually about: the old rule sent the
-        // share to "the first living non-caster in party order", and since
-        // the positions pass that order IS the field formation -- so a Move
-        // silently redirected the ward and nothing on screen said so.
+        // SHARE COMES BACK TO HIM. No auto-pick survives in either direction:
+        // an auto-picked target (e.g. "the first living non-caster in party
+        // order") would silently redirect with a Move, since party order IS
+        // the field formation, and nothing on screen would say so.
 
         [Test]
         public void WardingHimselfSpreadsToNobody()
@@ -200,8 +196,8 @@ namespace PrincesPalace.Domain.Tests
         public void TheWholePartyNodeStillReachesEverybodyButThePick()
         {
             // T2/T3 of the Flock path are NOT an auto-pick -- they name
-            // everybody, so there is nothing for the owner's rule to choose
-            // between and the node keeps its promise unchanged. Pinned
+            // everybody, so there is nothing to choose between and the node
+            // keeps its promise unchanged. Pinned
             // because the self-ward case above would otherwise read as "a
             // self-ward never spreads", which is true only without this node.
             var lamb = Hero("Lamb");
@@ -334,8 +330,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- who a Gift: Mana may land on -------------------------------------
         //
-        // GiftRecipient is gone (AUDIT #147, owner 2026-09-15): the engine no
-        // longer picks a recipient at all, the player does. What survives as a
+        // GiftRecipient is gone: the engine no longer picks a recipient at
+        // all, the player does. What survives as a
         // RULE is who the cast will ACCEPT, and that is AllyTargeting --
         // exercised here through the cast itself, since that is the path a
         // click takes. The two ORDERINGS it used to encode ("the emptiest mana
@@ -356,8 +352,8 @@ namespace PrincesPalace.Domain.Tests
             var bjorn = Hero("Bjorn", speed: 8);
             bjorn.PrimaryPool = Fury();
 
-            // 60 max, 20 in the bar, and 40% of 60 is 24 -- so the old engine
-            // rule ("the emptiest bar that can take it") names Odette.
+            // 60 max, 20 in the bar, and 40% of 60 is 24 -- so an auto-pick
+            // by "the emptiest bar that can take it" would name Odette.
             var odette = new CombatantState("Odette", true, 500, 60, 40, 8);
             odette.PrimaryPool.Current = 20;
 
@@ -681,8 +677,8 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // The Black Ram's own splash fires on EVERY landed hit, so the fight
-        // this pins is not a corner: with three monsters, once the middle one
-        // died the splash used to be dead for the rest of the fight.
+        // this pins is not a corner: with three monsters, once the middle
+        // one dies the splash must not go dead for the rest of the fight.
         //
         // Literal: player basic power makes attack 100 land for 120; splash is
         // 40% of damage dealt, so the neighbour takes 48 off its 1000000.
@@ -884,21 +880,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Messages(session).Any(m => m.Contains("all 2 of them")));
         }
 
-        // WAS "BellowingAtAnEmptyRoomSaysSoHonestly", and it was green against
-        // content skills.json cannot produce: this file's Skill() fixture
-        // hardcoded SkillTargeting.Self for every effect, while the real
-        // Provoke row is SingleEnemy (SkillEntryResolver.DefaultTargetingFor
-        // falls through to it). Once the fixture started asking the resolver --
-        // 2026-09-15, with the ally picker -- the cast reached the reach gate
-        // it has always had in the game and was refused, because the only
-        // combatant it could have been aimed at is a corpse.
-        //
-        // So the refusal is what this pins now, and it is the ONLY path: the
-        // `provoked == 0` branch that used to print "bellows at nothing in
-        // particular" was deleted with AUDIT #151, because nothing the player
-        // or the bot can press reaches it. This test is what keeps that true —
-        // if the reach gate ever stops refusing, a Provoke resolving against a
-        // corpse would land back on a message that no longer exists.
+        // The Provoke reach gate refuses a cast aimed only at a corpse; this
+        // pins the refusal so a regression there does not fall back onto a
+        // message ("bellows at nothing in particular") that no longer exists,
+        // since nothing the player or the bot can press reaches that branch.
         [Test]
         public void BellowingAtACorpseIsRefusedRatherThanResolved()
         {
@@ -936,13 +921,12 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // "He gains wool from being hit" (talents.json, Black Ram row 0) is
-        // unqualified, and the grant used to sit at the enemy's plain-swing
-        // verb -- which the enemy SKILL branch returns several lines before
-        // reaching, and which no other damage path in the game touches at all.
-        // So the Bog Witch's Mud Burst, the Golem's Boulder Slam, an AOE, a
-        // poison tick, a splash and a relic's free swing all paid nothing.
-        // The primary pool's identical half was moved to the damage funnel
-        // for exactly this reason; the fleece followed it.
+        // unqualified. Placing the grant at the enemy's plain-swing verb
+        // would miss the SKILL branch entirely: the Bog Witch's Mud Burst,
+        // the Golem's Boulder Slam, an AOE, a poison tick, a splash and a
+        // relic's free swing would all pay nothing. The primary pool's
+        // identical half lives in the damage funnel for exactly this reason;
+        // the fleece follows it.
         [Test]
         public void WoolIsGainedFromAnyHitTaken()
         {
@@ -1108,8 +1092,8 @@ namespace PrincesPalace.Domain.Tests
         // PER CASTER, not per anybody-with-the-talent. Two ward-casters both
         // hold the payout talent; A is paid for the first hit, then B's turn
         // opens -- which must leave A's cap alone, because A has not had a
-        // turn since he was paid. It used to clear the whole set, so A was
-        // paid again.
+        // turn since he was paid. Clearing the whole payout set instead of
+        // just the caster's own would let A get paid again.
         //
         // The casters are MONSTERS, and that is fixture, not content: the hit
         // has to come through the real damage pipeline (the plain swing) at a
@@ -1156,8 +1140,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, a.SignaturePool.Current, "B's turn re-armed A's cap");
         }
 
-        // SHATTER COUNTS WEARERS, not ward entries (owner 2026-09-24): wards
-        // stack, but a wearer's whole ward breaks as ONE explosion, so two of
+        // SHATTER COUNTS WEARERS, not ward entries: wards stack, but a
+        // wearer's whole ward breaks as ONE explosion, so two of
         // his on one wearer read as one ward -- the same count as the blasts.
         [Test]
         public void ShatterCountsEachWearersWholeWardAsOne()

@@ -44,14 +44,11 @@ namespace PrincesPalace.Domain.Bot
         // GreedyDefensive: FightInvariants.TooManyCommands, 201 commands, the
         // last ten all fleece_ward, the enemy's HP never moving.
         //
-        // fleece_ward was a SINGLE-HIT shield when this livelock was found --
-        // StatusEffects.ConsumeWard removed the Shielded status the moment any
-        // hit landed, whatever its size. It is a POOL now (AUDIT #152), which
-        // makes the livelock rarer rather than impossible: a pool a big enemy
-        // empties in one blow is exactly the old case, and the two-turn clock
-        // is a second way for "!alreadyWarded" to come back true. Against an
-        // enemy that clears the pool every round, the
-        // ward is gone again before this policy is next asked, so
+        // fleece_ward is a pool: a shield that a big enemy empties in one
+        // blow leaves "!alreadyWarded" able to come back true, and a two-turn
+        // clock is a second way for that to happen. Against an enemy that
+        // clears the pool every round, the ward is gone again before this
+        // policy is next asked, so
         // "!alreadyWarded" is true on every single turn and the ward branch
         // -- which runs before the damage branch below -- recasts it forever
         // without Shawn ever swinging back. The fight cannot end: nothing
@@ -106,10 +103,9 @@ namespace PrincesPalace.Domain.Bot
             // ONE ALLY PER ALLY-FACING SKILL, before anything below ranks
             // anything. LegalActions offers a ward or a gift once per eligible
             // squadmate -- the player's own menu -- and this archetype has no
-            // opinion about which squadmate; AllyTargetSelection carries the
-            // rules that used to live in the engine. Narrowing here rather
-            // than teaching every score to break the tie keeps that judgement
-            // in one place.
+            // opinion about which squadmate; AllyTargetSelection carries those
+            // rules. Narrowing here rather than teaching every score to break
+            // the tie keeps that judgement in one place.
             legal = AllyTargetSelection.Narrow(session, actor, legal);
 
             int totalEnemyHp = session.Encounter.LivingEnemies.Sum(e => e.CurrentHealth);
@@ -161,15 +157,14 @@ namespace PrincesPalace.Domain.Bot
                 // swings instead -- see this field's own header.
             }
 
-            // Nothing safer to do -- hit back, aimed at whoever THREATENS
+            // Nothing safer to do -- hit back, aimed at whoever threatens
             // the party most among enemies something here can actually
-            // DAMAGE, not whoever threatens most full stop. Locking onto
-            // the most-threatening enemy before checking reach used to drop
-            // Attack outright whenever that enemy sat outside melee range,
-            // leaving nothing but a 0-damage Skill aimed at the same enemy
-            // (fleece_ward's own ward branch above already had an identical
-            // livelock, at seed 629, for the identical reason: a per-turn
-            // pick with no memory of not converting). See
+            // damage, not whoever threatens most full stop. Locking onto the
+            // most-threatening enemy before checking reach would drop Attack
+            // outright whenever that enemy sits outside melee range, leaving
+            // nothing but a 0-damage Skill aimed at the same enemy -- the
+            // same livelock shape as fleece_ward's own ward branch above: a
+            // per-turn pick with no memory of not converting. See
             // DamagingTargetSelection's own header for the full shape.
             var damaging = legal.Where(a =>
                 a.Kind == FightActionKind.Attack ||
@@ -503,8 +498,8 @@ namespace PrincesPalace.Domain.Bot
 
         // Shared with GreedyAggressivePolicy's own copy -- see that type's
         // header on why this is duplicated rather than factored out (the
-        // plan keeps each archetype file self-contained and Phase 6 was
-        // asked not to reach back into Phase 2's file to add a dependency
+        // plan keeps each archetype file self-contained, so this file does
+        // not reach into GreedyAggressivePolicy's to add a dependency
         // between two otherwise-independent archetypes).
         private static int BestIndexTiedByRng<TKey>(int count, System.Func<int, TKey> keyOf, SeededRandom rng)
             where TKey : System.IComparable<TKey>

@@ -35,13 +35,12 @@ namespace PrincesPalace.Domain.Bot
 
         public FightAction Choose(FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, SeededRandom rng)
         {
-            // ONE ALLY PER ALLY-FACING SKILL, before anything below ranks
+            // One ally per ally-facing skill, before anything below ranks
             // anything. LegalActions offers a ward or a gift once per eligible
             // squadmate -- the player's own menu -- and this archetype has no
-            // opinion about which squadmate; AllyTargetSelection carries the
-            // rules that used to live in the engine. Narrowing here rather
-            // than teaching every score to break the tie keeps that judgement
-            // in one place.
+            // opinion about which squadmate; AllyTargetSelection carries those
+            // rules. Narrowing here rather than teaching every score to break
+            // the tie keeps that judgement in one place.
             legal = AllyTargetSelection.Narrow(session, actor, legal);
 
             if (actor != null && actor.MaxHealth > 0 &&
@@ -59,14 +58,14 @@ namespace PrincesPalace.Domain.Bot
                 }
             }
 
-            // Every damaging option, locked onto the lowest-HP enemy AMONG
-            // THE ONES SOMETHING HERE CAN ACTUALLY DAMAGE -- not just the
+            // Every damaging option, locked onto the lowest-HP enemy among
+            // the ones something here can actually damage -- not just the
             // lowest-HP enemy full stop. Locking on HP alone and only then
-            // filtering by target used to drop Attack outright whenever the
-            // lowest-HP enemy sat outside melee reach (a back-rank foe with
+            // filtering by target would drop Attack outright whenever the
+            // lowest-HP enemy sits outside melee reach (a back-rank foe with
             // avoidsFrontSlot, say), leaving nothing but a 0-damage Skill
             // (Provoke) aimed at that same enemy -- which never changes
-            // anyone's HP, so the same target got picked again next turn.
+            // anyone's HP, so the same target would be picked again next turn.
             // See DamagingTargetSelection's own header for the full shape.
             var damaging = legal.Where(a =>
                 a.Kind == FightActionKind.Attack ||
@@ -167,9 +166,9 @@ namespace PrincesPalace.Domain.Bot
                     // Provoke deals no damage, and this ranks DAMAGE. It does
                     // mean GreedyAggressive never opens with a Ward or a
                     // Shatter unless nothing else is on the menu -- which is
-                    // a real limit of the archetype and is the kind of thing
-                    // Phase 6's GreedyDefensive/Lookahead2 exist to cover,
-                    // not something to paper over with a preview that throws.
+                    // a real limit of the archetype and the kind of thing
+                    // GreedyDefensive/Lookahead2 exist to cover, not something
+                    // to paper over with a preview that throws.
                     return FightAction.PreviewDamage(session, actor, option, action);
                 default:
                     return 0;
@@ -204,17 +203,16 @@ namespace PrincesPalace.Domain.Bot
             return choices[0];
         }
 
-        // SCORED WHEN THERE IS A SCORE, tier-then-plus when there is not.
+        // Scored when there is a score, tier-then-plus when there is not.
         //
-        // The fallback is what this method used to be outright, and its
-        // comment (kept, on GreedyDefensive's copy) explains why: an ItemOffer
-        // names an id, a tier and a plus, and nothing about what wearing it
-        // would DO. That is still true of the offer -- what changed is that
-        // the driver now asks Core's GearEvaluator the same question the
-        // Reckoning screen asks it for the player, and hands the answers down
-        // on the view. Ranking by tier alone made this archetype take a tier-3
-        // helm over a tier-2 sword while holding nothing in either hand, which
-        // is not "aggressive", it is "reads only the biggest number".
+        // The tier-then-plus fallback exists because an ItemOffer names an
+        // id, a tier and a plus, and nothing about what wearing it would do
+        // (see GreedyDefensive's copy of this comment). The driver asks
+        // Core's GearEvaluator the same question the Reckoning screen asks it
+        // for the player, and hands the answers down on the view; ranking by
+        // tier alone would make this archetype take a tier-3 helm over a
+        // tier-2 sword while holding nothing in either hand, which is not
+        // "aggressive", it is "reads only the biggest number".
         //
         // The fallback is not dead code: a squad with nobody who can wear any
         // of the three scores all three at zero, and RunView.OfferScores is
