@@ -2674,3 +2674,64 @@ the moment before the blow and `_tail.png` shows the blow. Unfixed.
 moves the intent badge higher on trimmed idles than it sat before. Correct
 by the new measurement, but nobody has looked at it in the running game yet.
 Pending the runtime QA capture pass (#203).
+
+### ~~63. A monster felling a party member records no kill row~~ — fixed in `f096823e`: `Ledger.WentDown(LedgerIdOf(target))` moved above the `KillCredit.Nobody` guard in `SettleDeath`, so a party member felled by a monster is recorded as downed; `_killedThisAction`/`ScoredKill`/`RelicsOnEachKill` stay below the guard, untouched
+
+Surfaced by #62 rather than caused by it: `FightSession.Enemies.cs:720` is the
+enemy swing, and it has never paired anything. Post-#62 it says so out loud
+(`KillCredit.Nobody`) instead of saying nothing, which is the only reason it is
+legible enough to file.
+
+The ledger is id-keyed and folds a fight's totals into a run's, so a monster's
+`Kills` and a party member's `TimesDowned` are both columns that exist and stay
+at zero. Whether that is wrong depends on what the end-of-fight and run screens
+are meant to say, which is a design question.
+
+**What must NOT change is the flag.** Raising `_killedThisAction` here would be
+worse than the gap: an enemy turn resolves *inside* `AdvanceAfterAction`
+(`AutoResolveEnemyTurns`), after that method has already read and reset the
+flag, so the flag would survive to the player's next action and hand them a
+Trample the monster earned. Any fix here credits the ledger only, and wants a
+test that pins the flag staying down.
+
+Left open because it is a balance and presentation decision, not a refactor's
+to make.
+
+**Fixed 2026-09-11, `f096823e`:** `Ledger.WentDown(LedgerIdOf(target))` moves
+above the `KillCredit.Nobody` guard in `SettleDeath`. Every monster swing
+reaches `SettleDeath` with `Nobody` (`FightSession.Enemies.cs`,
+`FightSession.cs`, `FightSession.Riders.cs`), so `TimesDowned` — the one event
+this column exists to report — was structurally unable to record a party
+member going down. `_killedThisAction`, `ScoredKill` and `RelicsOnEachKill`
+all stay below the guard, so the rider-flag argument this entry raised is
+untouched: `TurnRiderTests.AMonstersKillDoesNotEarnThePlayerAnExtraTurn` stays
+green. Pinned by
+`APartyMemberFelledByAMonsterIsRecordedAsHavingGoneDown`.
+
+### ~~65. A poison death records no `Ledger.WentDown`~~ — fixed in `f096823e`, same change as #63: `Ledger.WentDown` now fires for every `SettleDeath` call including `KillCredit.Nobody`, so a poison-tick death is recorded as downed while the kill-credit half stays gated
+
+Surfaced by the same `SettleDeath` (`FightSession.Ledger.cs`) that fixed #62.
+`TickStatuses` (`FightSession.Riders.cs:381`) kills via `StatusEffects.Tick`
+and calls `SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody)`
+on purpose — the poison was applied turns ago by someone who may now be dead,
+and back-crediting the kill would put points in a column the player cannot
+account for. But `SettleDeath` returns on `KillCredit.Nobody` *before*
+`Ledger.WentDown(LedgerIdOf(target))` runs, so the victim's own down-count is
+skipped along with the attacker's kill credit — a body that went down did go
+down regardless of who is credited for it.
+
+Arguably `WentDown` should fire on every `SettleDeath` call, `Nobody` included,
+and only the kill-credit half should be gated. That changes ledger numbers a
+run and an end-of-fight screen already read, so it is a decision and not a
+drive-by fix.
+
+**Fixed 2026-09-11, `f096823e`:** the same commit that closed #63 —
+`Ledger.WentDown` moved above the `Nobody` guard, so a poison-tick death is
+recorded as a down regardless of credit. The existing test
+`APoisonTickKillsWithoutCreditingAnyone` asserted `TimesDowned == 0` on the
+rationale "no kill row is written either" — the same conflation this entry
+describes, written into the test — and was corrected to assert `TimesDowned
+== 1` while its `Kills == 0` half (the actual credit question) stayed
+unchanged. Landed after `1139107d` ("The run ledger folds the party's rows
+only"), so the enemy-side `WentDown` rows this unblocks are not summed into
+the party's run-level counters.

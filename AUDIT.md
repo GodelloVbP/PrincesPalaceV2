@@ -20,6 +20,30 @@ you're chasing a v1 finding's history; #37 onward below needs no translation.
 
 ---
 
+## Index by area
+
+One line per area, listing every currently-OPEN entry number (struck entries are
+left out — find them by number in the body instead). This index must be updated
+in the same pass that adds or strikes an entry: a new open finding gets its number
+added to the fitting line (or "Recorded decisions" if it's a RECORDED: entry, not
+debt), and a struck finding gets its number removed.
+
+- Fight screen / HUD: #45, #81, #84, #89, #143, #176, #177, #184, #186, #206, #221, #222, #224, #228, #229, #230, #232, #237, #238, #239, #240, #245, #246, #247, #249, #252
+- Combat domain: #54, #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
+- Map: #226, #254
+- Shop: #122, #191, #196, #197, #212, #244
+- Events: #233
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #51, #58, #88, #104, #141, #146, #150, #178, #199, #214, #241, #243, #248
+- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #219, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
+- Save & run lifecycle: #87, #102, #112, #123, #220, #255
+- Content pipeline & data: #60, #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
+- Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
+- Tooling / tests / workflow: #47, #94, #95, #96, #98, #103, #137, #164, #263
+- Balance / economy: #37, #41, #57, #82, #83, #85
+- Recorded decisions, not debt: #200, #201, #208, #215, #216, #217, #218
+
+---
+
 ## Findings from the debug-menu / Reckoning work, 2026-08-11
 
 ### 37. The economy is built around a voluntary-retreat flow the design does not have
@@ -425,46 +449,11 @@ and deliberately did not answer.
 
 ### ~~62. A kill's two halves were typed by hand at five call sites, and one site had already lost one of them~~ -- fixed in `84eb5ed5`: `DealDamage` settles the death itself, behind a `KillCredit` argument with no default; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### 63. A monster felling a party member records no kill row
-
-Surfaced by #62 rather than caused by it: `FightSession.Enemies.cs:720` is the
-enemy swing, and it has never paired anything. Post-#62 it says so out loud
-(`KillCredit.Nobody`) instead of saying nothing, which is the only reason it is
-legible enough to file.
-
-The ledger is id-keyed and folds a fight's totals into a run's, so a monster's
-`Kills` and a party member's `TimesDowned` are both columns that exist and stay
-at zero. Whether that is wrong depends on what the end-of-fight and run screens
-are meant to say, which is a design question.
-
-**What must NOT change is the flag.** Raising `_killedThisAction` here would be
-worse than the gap: an enemy turn resolves *inside* `AdvanceAfterAction`
-(`AutoResolveEnemyTurns`), after that method has already read and reset the
-flag, so the flag would survive to the player's next action and hand them a
-Trample the monster earned. Any fix here credits the ledger only, and wants a
-test that pins the flag staying down.
-
-Left open because it is a balance and presentation decision, not a refactor's
-to make.
+### ~~63. A monster felling a party member records no kill row~~ — fixed in `f096823e`: `Ledger.WentDown(LedgerIdOf(target))` moved above the `KillCredit.Nobody` guard in `SettleDeath`, so a party member felled by a monster is recorded as downed; `_killedThisAction`/`ScoredKill`/`RelicsOnEachKill` stay below the guard, untouched; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~64. `ContentDatabase.Initialize` and `FightSession.IsOnCooldown` had no live reader~~ — fixed in `ab4a0ba5`: both deleted; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### 65. A poison death records no `Ledger.WentDown`
-
-Surfaced by the same `SettleDeath` (`FightSession.Ledger.cs`) that fixed #62.
-`TickStatuses` (`FightSession.Riders.cs:381`) kills via `StatusEffects.Tick`
-and calls `SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody)`
-on purpose — the poison was applied turns ago by someone who may now be dead,
-and back-crediting the kill would put points in a column the player cannot
-account for. But `SettleDeath` returns on `KillCredit.Nobody` *before*
-`Ledger.WentDown(LedgerIdOf(target))` runs, so the victim's own down-count is
-skipped along with the attacker's kill credit — a body that went down did go
-down regardless of who is credited for it.
-
-Arguably `WentDown` should fire on every `SettleDeath` call, `Nobody` included,
-and only the kill-credit half should be gated. That changes ledger numbers a
-run and an end-of-fight screen already read, so it is a decision and not a
-drive-by fix.
+### ~~65. A poison death records no `Ledger.WentDown`~~ — fixed in `f096823e`, same change as #63: `Ledger.WentDown` now fires for every `SettleDeath` call including `KillCredit.Nobody`, so a poison-tick death is recorded as downed while the kill-credit half stays gated; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ## Findings from the restatement sweep, 2026-09-06
 
@@ -2978,3 +2967,190 @@ Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
 assigned; easy to miss against the rest of the screen.
 
 Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+## Cleanup audit, 2026-09-28
+
+A read-only sweep for reuse/consistency debt outside the UI/UX capture pass above,
+verified file:line against this tree before filing (see this section's own note on
+#267, dropped after verification, and #268, struck on sight).
+
+### 255. A corrupt save is silently replaced by a new profile
+
+`Core/SaveSystem.cs` `Load` (73-121): parse failure (96-104), a null result
+(108-112), or a failed `Migrate` (`Data/SaveData.cs` `Migrate`, ~499-509) all
+return `SaveData.CreateNew()`; no `.bak` exists anywhere in the tree (grep for
+`\.bak` finds nothing but an unrelated comment in `tools/trim_wav.py`). `Save`
+(139-204) writes a `.tmp` then replaces, which protects the write from tearing,
+not the player from a save that was already bad before this run touched it.
+
+Fix: keep the previous good save as a `.bak` on each successful `Save`; on a
+`Load` failure try `.bak` before `CreateNew()`, and move the unreadable file
+aside (never overwrite it) so it can be inspected, and tell the player (ties to
+#220, which is about the write side of this same silence).
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed. Reference the
+installed save-systems skill.
+
+### 256. Content lookups are linear scans, and 15+ call sites re-implement them
+
+`Core/Content/ContentDatabase.cs` `Get*` (482-554, e.g. `GetCharacter`,
+`GetSkill`, `GetItem`) are `FirstOrDefault` over `List<T>`; `EnsureLoaded`
+(936-976) is where the lists are built and would be where a dictionary goes.
+Inline duplicates that re-run the same `FirstOrDefault` scan instead of
+routing through `Get*`: `Core/ShopController.cs:971`, `RewardApplier.cs:152`,
+`FightEncounterAdapter.cs:162,480,518,536,605,644`, `DefeatController.cs:182`,
+`RelicDraftController.cs:214`, `ItemOfferRoll.cs:175`,
+`ReckoningController.cs:969`, `PreviewFight.cs:218,400,432`.
+
+Fix: build id→def dictionaries in `EnsureLoaded`, route every listed site
+through `Get*`, and add a lint/test banning
+`ContentDatabase.<Catalogue>.FirstOrDefault(` outside `ContentDatabase` (same
+shape as the existing `Resources.LoadAll` lint, gotcha 4).
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 257. Four separate "are you sure?" mechanisms
+
+Shared `HoldToConfirm`+`HoldFillMath` (`ExitsController.cs:124,337`,
+`ResetProgressController.cs:84,220`); `ShopController` leave bool-arm
+(`_leaveArmed`, ~147,373-388); `ShopController` buy-by-re-select (`Select`
+243-260, `Commit`/`Buy` 315-349); `TalentController` respec modal
+(`respecButton`/`respecDialog` 84-89, `OpenRespec`/`ConfirmRespec`/`CloseRespec`
+193-195,426-503). Builds on #219/#225: once the owner picks the rule, one
+`ConfirmGate` component can serve all four.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+Blocked: owner decision #225.
+
+### 258. Numbers are formatted ad hoc
+
+Gold appears via at least seven `UiStrings` templates with no shared
+formatter: `wallet_summary` (`UiStrings.cs:35`, whose own comment records an
+earlier divergence bug), `hub.wallet` (~295), `map.gold` (311,
+`MapController.cs:323`), `reckoning.gold` (515, `ReckoningController.cs:581`),
+`defeat.gold_lost` (570, `DefeatController.cs:135`), `shop.gold` (698,
+`ShopController.cs:474`), `slot_gold` (957, `SaveSlotController.cs:101`), plus
+`debug.gold`/`debug.run_gold` (~614-616). `shop.gold`'s own sample promises
+"9,999,999 G" but nothing groups thousands. The only correct formatter in the
+codebase is `RunStatsController.Figure` (53-67, `"N0"` invariant). Signs are
+hand-rolled elsewhere too (`SheetStats.cs`, `Domain/Combat/Session/
+StatusHud.cs`).
+
+Fix: one `Domain/UiKit` `NumberFormat` (Gold, Signed, Percent, Fraction x/y)
+with `[D]` tests; route every site above through it.
+
+Route: fixer for the `Domain/UiKit` helper + tests; implementer for the call
+sites; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 259. Transient messages have four mechanisms
+
+`PartyToast` (`Core/PartyToast.cs`, hold 2.0s/fade 0.4s; wired from
+`PartyController.cs` ~1103-1138), `ShopController._refusal` (~159,304-308,
+784-786), `CharacterDossierController._alreadyKnownRefusal` (~1259,1293-1301,
+1350-1354 — the mechanism #146 is about), and `MapController.roomMessageLabel`
+(~47,340-344). Fix: one notice component (text + optional timer) that #220's
+save-failure notice can use too, instead of a fifth mechanism.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+
+### 260. `Paging.cs` exists but two pagers hand-roll it
+
+`Core/RelicDraftController.cs` `PageCount`/`StepPage` (~145-162) and
+`Core/ShopController.cs` `PackPageCount`/pack paging (~425-464,857-881)
+re-implement what `Domain/UiKit/Paging.cs` `PageCount`/`Clamp`/`Slice`
+(19-50) already provides — and provides correctly, per its own live callers
+(`ReckoningController.cs`, `DebugMenuCatalog.cs`, `GlossaryCatalog.cs`).
+
+Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 261. NavContext registration is copy-pasted per controller
+
+`RegisterNavContext`, with the same `if (_navContext != null) return;` guard,
+is typed independently in `ShopController.cs:995`, `EventController.cs:793`,
+`TalentController.cs:1233`, `HubController.cs:169`, `MapController.cs:223`,
+`MainMenuController.cs:134`, `FightController.Input.cs:1985`; comments
+cross-reference each other ("Mirrors `MapController.RegisterNavContext`").
+Fix: a shared helper; the bodies differ across controllers, so extracting one
+is a design call, not a blind copy-paste removal.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
+
+### 262. Items, weapons and item sets still bypass the generic content builder
+
+`Editor/ContentBuilder.cs` `BuildItems` (698), `BuildWeapons` (755),
+`BuildItemSets` (842) each hand-copy 15-20 fields instead of going through
+the generic `Build<TRaw, TResolved, TDef>` (260) every other content type
+uses. Extends #60 — cite it rather than repeat its reasoning.
+
+Route: senior (Escalation: cross-layer); gate: tools/run_tests_parallel.ps1
+-Changed -BuildContent.
+
+### 263. Ten production files exceed 1,500 lines
+
+`Domain/UiKit/Screens/FightScreen.cs` 3422, `Core/FightController.Hud.cs`
+3286, `Core/CharacterDossierController.cs` 2939, `Core/
+FightController.Input.cs` 2759, `Core/Bot/BotRunDriver.cs` 2069,
+`Domain/Combat/Session/FightSession.Skills.cs` 1999, `Core/
+FightBeatPlayer.cs` 1956, `Core/FightController.StageVisuals.cs` 1908,
+`Domain/Combat/Session/FightHudModel.cs` 1664, `Domain/Content/
+SkillEntryResolver.cs` 1586 — line counts current as of this pass. The cost
+lands on every task that has to touch one of these. Recorded as a split
+backlog with the obvious seams left for whoever picks a file up; no action
+taken here without a concrete task attached to it.
+
+Route: implementer, one file per task; gate per file:
+tools/run_tests_parallel.ps1 -Changed [-BuildScenes as needed].
+
+### COMBAT (all Blocked: until claude/peaceful-fermat-gfw0ig merges — it
+rewrites Domain/Combat; cite main-tree lines but note they will move)
+
+### 264. "{x} is defeated!" is hand-typed at seven sites
+
+`FightSession.cs:811`, `FightSession.Talents.cs:719,981`,
+`FightSession.RelicMechanics.cs:474,514` (not `RelicMechanics.cs` — the file
+is `FightSession.RelicMechanics.cs`), `FightSession.Rounds.cs:321`,
+`FightSession.Enemies.cs:1241` — seven sites, though `SettleDeath` already
+funnels the bookkeeping (see #62/#63/#65 above). Move the line into
+`SettleDeath` (or one `AnnounceDefeat` it calls).
+
+Route: fixer; gate: dotnet [D] domain tests. Blocked: until
+claude/peaceful-fermat-gfw0ig merges.
+
+### 265. Combat-log lines are built inline with no formatter
+
+The "X uses Y on Z for N damage!" shape recurs independently at
+`FightSession.Enemies.cs:1236` and `FightSession.Skills.cs:923`; the "X uses Y
+and recovers N" shape recurs at `FightSession.Skills.cs:526,550` and
+`FightSession.Items.cs:95-96`. Roughly 130+ `AppendMessage`/`.Append` combat-log
+call sites exist across `Domain/Combat/Session/*.cs` (133 `AppendMessage(`
+hits alone). Only `EffectivenessSuffix`/`CritSuffix` are shared today. #218
+keeps the phrasing as authored — this is about one builder producing that
+same phrasing instead of the shape being retyped at each site.
+
+Route: implementer; gate: dotnet [D] domain tests. Blocked: until
+claude/peaceful-fermat-gfw0ig merges.
+
+### 266. Three long methods, one on the file's own worst-line list
+
+`ResolveEnemyAction` (`FightSession.Enemies.cs:833`) is ~423 lines;
+`ApplyModifierOnHitRiders` (`FightSession.cs:838`) is ~180 lines; `LandPacket`
+(`FightSession.Ledger.cs:158`) is ~138 lines. (`WardOne`,
+`FightSession.Talents.cs:418`, was checked against this entry's original
+"~250 lines" claim and is actually ~36 lines — dropped from this entry; the
+longest method in that file is `CanResolveSkill` at ~191 lines, line 453, not
+cited here because it was not part of the original finding.)
+
+Route: implementer (refactoring skill: green baseline, small steps); gate:
+dotnet [D] domain tests. Blocked: until claude/peaceful-fermat-gfw0ig merges.
+
+**267 skipped:** a proposed "combat engines share no contract" finding did
+not verify. Its cited file, `FightSession.EngineSeams.cs`, and the engine
+names it named (`HealConversion`, `DelayedDamagePool`, `BloodPrice`,
+`PlantedShield`, `FuryEngine`, `EinherjarSeams`, `AgeEngineWindows`) do not
+exist anywhere in this tree — `grep -rl` for each across `Domain/Combat/`
+finds nothing but one incidental comment mention of "CrowdControl" in
+`FightSession.Skills.cs:1718`. That claim belongs to
+`claude/peaceful-fermat-gfw0ig`'s Domain/Combat rewrite, not to main; not
+filed as a numbered finding here.
+
+### ~~268. Docs/workflow drift found and fixed the same day~~ — fixed in `35915668`: CLAUDE.md's fragment sentence at :63, the commit-gate rule restated three times (WORKFLOW.md §5 now points at TESTING.md), CODE_MAP.md's `SelectHaloPainter` self-contradiction, `ItemComparisonPanel.cs`'s stale "next thing due to be rebuilt" header, and `docs/archive/README.md`'s five-doc gap
