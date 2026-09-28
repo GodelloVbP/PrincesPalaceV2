@@ -396,9 +396,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // happened".
         //
         // THE ONE HEAL FUNNEL, and since plan 4b every in-fight heal is in it:
-        // skills, potions, relics, and -- routed here 2026-09-28 -- the Regen
-        // tick (StatusEffects.TickRegenAndDurations' heal sink), lifesteal and
-        // a breaking ward's Mending Fleece heal (StatusEffects.ConsumeWard's).
+        // skills, potions, relics, and -- routed here 2026-09-28, through
+        // HealWithoutTriggers below -- the Regen tick, lifesteal and a
+        // breaking ward's Mending Fleece heal.
         // What the funnel does before any health moves, in this order:
         //
         //   1. Cursed Blood (HealConversion) converts the EFFECTIVE heal to
@@ -409,7 +409,26 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // Both are off for every combatant the Juggernaut wiring has not
         // touched, so for them this is the funnel exactly as it was.
-        private int HealAndCount(CombatantState target, int amount)
+        private int HealAndCount(CombatantState target, int amount) =>
+            HealAndCount(target, amount, HealTriggers.Run);
+
+        // WHETHER A HEAL IS HEARD BY WHAT FIRES ON A HEAL (today: World
+        // Ender's Crown's crossing check). The three paths routed into the
+        // funnel for plan 4b -- the Regen tick, lifesteal and Mending
+        // Fleece's ward-break heal -- never ran those triggers, and joining
+        // the funnel for Cursed Blood's sake was not meant to change what a
+        // relic does (owner correction, 2026-09-28). They pass Skip, and
+        // still get conversion, the pool and the ledger's Healed row (which
+        // they should always have had). A new heal-triggered effect goes
+        // behind the same switch, so it cannot leak onto them either.
+        private enum HealTriggers { Run, Skip }
+
+        // The HealSink the three rider paths hand StatusEffects and the
+        // lifesteal call site use.
+        private int HealWithoutTriggers(CombatantState target, int amount) =>
+            HealAndCount(target, amount, HealTriggers.Skip);
+
+        private int HealAndCount(CombatantState target, int amount, HealTriggers triggers)
         {
             if (target == null || amount <= 0) return 0;
 
@@ -426,7 +445,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // "already fired" flag exactly like the damage path does, or a
             // healed party would never fear the field again for the rest of
             // the fight.
-            WorldEndersCrownCheck(target);
+            if (triggers == HealTriggers.Run) WorldEndersCrownCheck(target);
 
             int landed = target.CurrentHealth - before;
             Ledger.Restored(LedgerIdOf(target), landed);

@@ -770,9 +770,9 @@ namespace PrincesPalace.Domain.Combat
         //
         // `heal` is where a breaking ward's Mending Fleece heal lands: null
         // (every pure-Domain caller) heals through CombatMath.Heal and
-        // measures it, as it always did; FightSession passes its HealAndCount
-        // funnel, so the heal is booked and Cursed Blood can convert it (plan
-        // 4b). See HealSink.
+        // measures it, as it always did; FightSession passes its heal funnel
+        // without heal triggers (HealWithoutTriggers), so the heal is booked
+        // and Cursed Blood can convert it (plan 4b). See HealSink.
         public static WardOutcome ConsumeWard(CombatantState target, int damage, HealSink heal = null)
         {
             if (target == null || damage <= 0)
@@ -836,9 +836,10 @@ namespace PrincesPalace.Domain.Combat
         // WHERE A HEAL THIS CLASS CAUSES ACTUALLY LANDS, and what it restored.
         // The heal twin of DotPacketSink: this class is pure Domain and cannot
         // reach the session's funnel, so the session hands it in.
-        // FightSession passes HealAndCount -- the one funnel every in-fight
-        // heal goes through, where Cursed Blood converts and Ignore Pain T3
-        // pays down its pool (plan 4b). Returns the health actually restored.
+        // FightSession passes HealWithoutTriggers -- the one funnel every
+        // in-fight heal goes through, where Cursed Blood converts and Ignore
+        // Pain T3 pays down its pool (plan 4b), minus the heal-triggered
+        // relics these paths never fired. Returns the health restored.
         public delegate int HealSink(CombatantState target, int amount);
 
         // The pure default: heal, clamped at max health, and measure it.
@@ -1327,9 +1328,9 @@ namespace PrincesPalace.Domain.Combat
         //
         // `heal` is where each Regen instance's heal lands: null heals through
         // CombatMath.Heal (MeasuredHeal), the pure behaviour; FightSession
-        // passes HealAndCount, so a Regen tick is a heal like any other --
-        // booked once, re-arming the crown, and converted under Cursed Blood
-        // (plan 4b; until 2026-09-28 it was the one heal outside the funnel).
+        // passes its funnel (HealWithoutTriggers), so a Regen tick is booked
+        // once and converted under Cursed Blood (plan 4b), while heal-triggered
+        // relics (World Ender's Crown) still never hear it, as before.
         public static (int regenHealed, List<StatusEffectType> expired) TickRegenAndDurations(
             CombatantState combatant, HealSink heal = null)
         {

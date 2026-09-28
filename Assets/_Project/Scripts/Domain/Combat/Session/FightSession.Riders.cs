@@ -843,9 +843,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // paid.
             if (PayDelayedDamage(actor, preTick)) preTick = null;
 
-            // REGEN, THROUGH THE HEAL FUNNEL (plan 4b). HealAndCount books the
-            // ledger row this block used to book by hand, re-arms the crown,
-            // and under Cursed Blood converts the heal to damage on the
+            // REGEN, THROUGH THE HEAL FUNNEL (plan 4b), trigger-free
+            // (HealWithoutTriggers: the crown never heard a Regen tick and
+            // still does not). The funnel books the ledger row this block used
+            // to book by hand, and under Cursed Blood converts the heal to damage on the
             // enemies -- so the beat opens BEFORE the heal lands, the damaging
             // rows' own order, and a converted tick's lines sit on it.
             //
@@ -860,7 +861,7 @@ namespace PrincesPalace.Domain.Combat.Session
             bool ownsRegenBeat = regenDue
                 && OpenStatusTickBeat(actor, preTick, StatusEffectType.Regen, isHealing: true);
 
-            var (regenHealed, expired) = StatusEffects.TickRegenAndDurations(actor, HealAndCount);
+            var (regenHealed, expired) = StatusEffects.TickRegenAndDurations(actor, HealWithoutTriggers);
 
             if (regenHealed > 0)
             {

@@ -187,9 +187,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // order; everything below is per-entry and additive.
         private int ResolveWard(CombatantState target, int damage)
         {
-            // HealAndCount as the heal sink: Mending Fleece's break heal is a
-            // heal like any other (booked, and converted under Cursed Blood).
-            var outcome = StatusEffects.ConsumeWard(target, damage, HealAndCount);
+            // The heal funnel as the sink, trigger-free: Mending Fleece's break
+            // heal is booked and converted under Cursed Blood, and fires no
+            // heal-triggered relic, as before (HealWithoutTriggers).
+            var outcome = StatusEffects.ConsumeWard(target, damage, HealWithoutTriggers);
 
             // CombatBeat.Absorbed's OTHER write site (the first is
             // FightSession.Ledger.ApplyAndCountDamage, for a signature

@@ -256,5 +256,10 @@ namespace PrincesPalace.Domain.Combat.Session
         public void PayDelayedDamageForTest(CombatantState actor) => PayDelayedDamage(actor, null);
 
         public int AttackBonusForTest(CombatantState actor) => AttackBonusFor(actor, spendingGift: false);
+
+        // The ward funnel alone (Mending Fleece's break heal rides it), without
+        // a whole hit around it -- a real hit's LandPacket runs its own crown
+        // check afterwards and would hide whether the HEAL fired it.
+        public int ResolveWardForTest(CombatantState target, int damage) => ResolveWard(target, damage);
     }
 }

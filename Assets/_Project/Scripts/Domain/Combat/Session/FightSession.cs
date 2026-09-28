@@ -969,9 +969,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     // THROUGH THE HEAL FUNNEL (plan 4b), not CombatMath.Heal:
                     // lifesteal is healing, so it is booked and Cursed Blood
-                    // converts it. The converted case says its own line.
+                    // converts it -- trigger-free (HealWithoutTriggers), so no
+                    // heal-triggered relic hears it, as before. The converted
+                    // case says its own line.
                     bool converts = actor.HealConversion.IsActive;
-                    HealAndCount(actor, healed);
+                    HealWithoutTriggers(actor, healed);
                     if (!converts) AppendMessage($"{actor.Name} drains {healed} health from the blow.");
                 }
             }
