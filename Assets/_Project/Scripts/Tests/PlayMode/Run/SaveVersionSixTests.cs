@@ -152,7 +152,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(weaponId, after.equipment.Get(EquipmentSlot.Weapon1));
         }
 
-        // WHAT THE RESET LOOKS LIKE ON THE SCREEN THAT DRAWS IT (phase 5).
+        // What the reset looks like on the screen that draws it.
         //
         // The fixture's version-5 save is a character with the whole track
         // collected: claimedTrackLevel 40 means every Identity node above 30
@@ -165,9 +165,9 @@ namespace PrincesPalace.PlayModeTests
         // character still wearing MASTER with nothing in these asserts saying
         // so.
         //
-        // AN EXTENSION, NOT A SECOND SUITE: everything above already covers
+        // An extension, not a second suite: everything above already covers
         // the load, the reset and the idempotence, and this is the one thing
-        // phase 5 added a way to observe.
+        // this test adds a way to observe.
         [Test]
         public void TheResetTakesTheIdentityStretchWithIt()
         {

@@ -23,9 +23,7 @@ namespace PrincesPalace.PlayModeTests
     // name, price and icon on it is written by ShopController.Paint at Open(),
     // so a still of the unpainted tree would be a grid of blank boxes.
     //
-    // That gap is why the screen shipped once looking nothing like its own
-    // design handoff without anyone seeing it. This is the check that would
-    // have caught it, and the one to re-run after touching ShopScreen:
+    // This is the check to re-run after touching ShopScreen:
     //
     //   tools/screenshot.ps1 -Runtime -RuntimeFilter ShopCaptureTests
     //
@@ -137,9 +135,9 @@ namespace PrincesPalace.PlayModeTests
             Debug.Log($"[ShopCapture] wrote {packPath}");
         }
 
-        // THE COMPARISON PANEL (owner ask #3, 2026-09-22): a gear card
-        // selected, so the affix names on the card (owner ask #2) and the
-        // comparison panel's stats/affix-lines/VS.-equipped delta
+        // The comparison panel: a gear card selected, so the affix names on
+        // the card and the comparison panel's stats/affix-lines/VS.-equipped
+        // delta
         // (ItemDescription.ComparisonBody, via ItemComparisonPanel) are both
         // in the same frame. One click, through the same button a player's
         // click reaches -- ShopScreenRefusalTests' own pattern -- with focus
@@ -182,12 +180,12 @@ namespace PrincesPalace.PlayModeTests
                 ?? gearCards.FirstOrDefault();
             Assert.IsNotNull(card, "the shop rolled no real gear card to select");
 
-            // SOMETHING WORN IN THAT SLOT (QA 2026-09-26). A fresh run's
-            // leader is bare (SaveData.CreateNew), so this shot used to show
-            // the offered item alone with no VS. EQUIPPED section, and a
-            // reader could not tell "never compares" from "nothing to compare
-            // against". ShopComparisonPanelTests pins the behaviour; this puts
-            // a second same-slot item on the leader so the shot shows it.
+            // Something worn in that slot: a fresh run's leader is bare
+            // (SaveData.CreateNew), and a shot with the offered item alone
+            // has no VS. EQUIPPED section, so a reader cannot tell "never
+            // compares" from "nothing to compare against".
+            // ShopComparisonPanelTests pins the behaviour; this puts a
+            // second same-slot item on the leader so the shot shows it.
             var offered = ContentDatabase.GetItem(card.contentId);
             var worn = offered == null ? null : ContentDatabase.Items
                 .Where(i => i != null && i.IsEquippable && i.equipSlot == offered.equipSlot && i.id != offered.id)
@@ -206,8 +204,8 @@ namespace PrincesPalace.PlayModeTests
             // FOCUS FIRST, THEN THE PRESS -- what a real click does
             // (Selectable.OnPointerDown selects before onClick fires) and what
             // a pad Submit implies (it presses the focused card). Invoking
-            // onClick alone left focus on the shop's entry card, and the QA
-            // pass of 2026-09-26 photographed that as "two cards selected".
+            // onClick alone leaves focus on the shop's entry card, which
+            // photographs as "two cards selected".
             EventSystem.current?.SetSelectedGameObject(button.gameObject);
             yield return null;
             button.onClick.Invoke();

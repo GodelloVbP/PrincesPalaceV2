@@ -15,18 +15,12 @@ namespace PrincesPalace.PlayModeTests
 {
     // The reward track paying out, through the screen that does the paying.
     //
-    // THROUGH THE PANEL, not by calling ClaimTrackRewards directly, and that is
-    // the whole design of this file. The claim has exactly ONE production call
-    // site -- RewardTrackController.Claim -- and a test that reached past it
-    // would pass just as happily if that site were deleted, leaving a game
-    // where stat points can no longer be collected at all and a green suite
-    // saying otherwise.
-    //
-    // That argument is inherited rather than invented: it is the one
-    // RewardApplierTests carried while the applier was the call site
-    // (AUDIT #46: a test may not do for production what production must do
-    // for itself). The site moved when collection
-    // became manual, so the coverage moved with it.
+    // Through the panel, not by calling ClaimTrackRewards directly. The
+    // claim has exactly ONE production call site -- RewardTrackController.
+    // Claim -- and a test that reached past it would pass just as happily
+    // if that site were deleted, leaving a game where stat points can no
+    // longer be collected at all and a green suite saying otherwise: a test
+    // may not do for production what production must do for itself.
     public class RewardTrackClaimTests
     {
         private string _root;
@@ -231,20 +225,11 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             // 20, NOT 30 -- the node that was pressed, which is what this
-            // test's own name says and what handoff section 4 specifies.
+            // test's own name says.
             //
-            // IT ASSERTED 30 UNTIL 2026-08-22, with a comment arguing that
-            // stopping at the pressed node "needs a second number on the save".
-            // It does not: a claim always begins at the watermark and always
-            // moves it, so stopping at 20 leaves the watermark at 20 and 21
-            // upward still owed. One number, no hole.
-            //
-            // What the test was really pinning was the implementation it was
-            // written beside -- ClaimTrackRewards took no argument, so every
-            // node on the rail was a collect-everything button wearing a
-            // different number. A test that agrees with the code rather than
-            // with the design cannot fail when the code is the thing that is
-            // wrong, which is the whole reason this one survived.
+            // A claim always begins at the watermark and always moves it,
+            // so stopping at 20 leaves the watermark at 20 and 21 upward
+            // still owed. One number, no hole.
             Assert.AreEqual(20, SquadFixture.FirstLiveMember().claimedTrackLevel,
                 "pressing a waiting node paid past the node that was pressed");
 
@@ -306,16 +291,14 @@ namespace PrincesPalace.PlayModeTests
         private static Character Roster(string definitionId) =>
             SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == definitionId);
 
-        // WOOL PER TURN, NOT WOOL CAPACITY, since progression v2 phase 4.
-        // Shawn's capacity bumps are gone from the design entirely -- §4's
-        // own note, "Wool capacity bumps are gone: income never reaches the
-        // cap" -- so the signature reward his track actually pays is the
-        // level-5 income step and the level-19 when-hurt one. Same seam,
-        // same question: does a collected signature node reach the pool the
+        // Wool per turn, not wool capacity: Shawn has no capacity bumps, so
+        // the signature reward his track actually pays is the level-5
+        // income step and the level-19 when-hurt one. Same seam, same
+        // question: does a collected signature node reach the pool the
         // fight builds.
         //
         // 1 per turn is authored on the sheep row (characters.json); the
-        // level-5 node adds 1, which is §4's "Wool per turn 1 to 2".
+        // level-5 node adds 1, for wool per turn 1 to 2.
         [Test]
         public void AWoolIncomeNodeCollectedRaisesTheFightsPoolAndAnUncollectedOneDoesNot()
         {
@@ -341,14 +324,12 @@ namespace PrincesPalace.PlayModeTests
                 "an uncollected when-hurt node was paid anyway");
         }
 
-        // LIGHTNING, and the choice of element is still the whole test --
-        // but Odette's per-element nodes are gone (progression v2 phase 4:
-        // "+5% spell damage" three times, because a per-element bump is only
-        // worth anything to a build that already casts that element). What
-        // pays Lightning now is SpellDamagePercent, EXPANDED at the read site
-        // into the same per-element rows an ElementalDamagePercent entry
-        // produces -- which is the thing worth pinning, because the reward
-        // that reaches combat is not the reward that was authored.
+        // Lightning, and the choice of element is still the whole test --
+        // but Odette has no per-element nodes. What pays Lightning is
+        // SpellDamagePercent, EXPANDED at the read site into the same
+        // per-element rows an ElementalDamagePercent entry produces -- which
+        // is the thing worth pinning, because the reward that reaches
+        // combat is not the reward that was authored.
         //
         // ElementalDamagePercent, the packet hook, NOT the on-hit rider:
         // Lightning is not her attackType.
@@ -500,10 +481,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, character.unspentStatPoints,
                 "points paid by the old table survived the track that paid them");
 
-            // THE LEVEL USED TO SURVIVE THIS STEP and no longer does, because
-            // a v4 save now passes through the 5 -> 6 step too: progression v2
-            // resets the ladder outright (SaveVersionSixTests). What is still
-            // this test's own subject is the pair above -- the 4 -> 5 step
+            // A v4 save also passes through the 5 -> 6 step, which resets
+            // the ladder outright (SaveVersionSixTests). What is still this
+            // test's own subject is the pair above -- the 4 -> 5 step
             // unwinding a watermark that would otherwise be reinterpreted.
             Assert.AreEqual(1, character.level, "the 5 -> 6 ladder reset did not run");
             Assert.AreEqual(SaveData.CurrentVersion, save.version);
@@ -515,15 +495,13 @@ namespace PrincesPalace.PlayModeTests
         // that a character with no authored track actually RESOLVES to it
         // rather than to an empty one or to somebody else's.
         //
-        // THE ID USED TO BE "bear". It stopped being a valid subject on
-        // 2026-09-11, when the owner answered AUDIT #134 with "why not?" and
-        // Bjorn got an authored track of his own -- every character on the
-        // shipped roster now has one, so the fallback can only be reached by
-        // an id no reward_tracks.json row names. That is not a reason to
-        // delete this test: RewardTracks.For's miss path is still live (it is
-        // what a save carrying a character id from a future or removed row
-        // lands on), and "turtle" is the honest subject for it, being a
-        // placeholder the roster deliberately does not author.
+        // Every character on the shipped roster has an authored track
+        // (AUDIT #134), so the fallback can only be reached by an id no
+        // reward_tracks.json row names. RewardTracks.For's miss path is
+        // still live -- it is what a save carrying a character id from a
+        // future or removed row lands on -- and "turtle" is the honest
+        // subject for it, being a placeholder the roster deliberately does
+        // not author.
         [Test]
         public void AnUnauthoredCharacterResolvesToTheGeneratedDefault()
         {

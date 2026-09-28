@@ -14,15 +14,14 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // THE SHOP'S COMPARISON PANEL COMPARES (owner ask #3, 2026-09-22).
+    // The shop's comparison panel compares.
     //
-    // QA 2026-09-26 photographed the panel showing only the offered item and
-    // no "VS. EQUIPPED" section, and could not tell whether the panel never
-    // compares or whether the picked character simply wore nothing in that
-    // slot. It was the second: SaveData.CreateNew builds bare characters, so
-    // a fresh run's leader has an empty slot, and against an empty WEAPON
-    // slot the delta is zero (gear grants no flat Attack) and DMG has no
-    // equipped number to point at.
+    // A capture showing only the offered item with no "VS. EQUIPPED"
+    // section cannot tell whether the panel never compares or whether the
+    // picked character simply wore nothing in that slot: SaveData.CreateNew
+    // builds bare characters, so a fresh run's leader has an empty slot,
+    // and against an empty WEAPON slot the delta is zero (gear grants no
+    // flat Attack) and DMG has no equipped number to point at.
     // This pins the first half of the answer -- with something worn in the
     // card's slot, the panel's text changes and carries the comparison --
     // so the next capture that shows no comparison can be read at a glance.

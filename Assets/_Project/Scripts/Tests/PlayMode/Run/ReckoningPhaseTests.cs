@@ -58,14 +58,12 @@ namespace PrincesPalace.PlayModeTests
 
         private void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
 
-        // WHY FRAMES, NOT SECONDS. All three waits below used to race a
-        // Time.realtimeSinceStartup deadline against a coroutine that only
-        // gets to advance once per Update -- and a wall-clock deadline pays
-        // for a slow frame out of the SAME budget it needs to finish in. One
-        // GC pause or JIT hiccup right after Show() can burn the whole
-        // window before the coroutine gets its second tick, which reads as
-        // the animation never having started. Seen flaky in a full
-        // multi-fixture run (never in isolation) even at a 2s ceiling.
+        // Why frames, not seconds. A wall-clock deadline races a coroutine
+        // that only gets to advance once per Update, paying for a slow
+        // frame out of the SAME budget it needs to finish in: one GC pause
+        // or JIT hiccup right after Show() can burn the whole window before
+        // the coroutine gets its second tick, which reads as the animation
+        // never having started.
         //
         // A frame count does not have this problem: a slow frame still only
         // costs ONE tick of the budget, however long it took in wall time,
@@ -248,13 +246,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0f, summary.anchoredPosition.x, 1f, "the sweep never finished");
         }
 
-        // WHICH WAY IT GOES, which nothing checked and which was backwards.
-        //
-        // The summary used to arrive from the LEFT and the choice leave to the
-        // right, which is the handedness every interface uses for going BACK.
-        // Taking a reward is going forward. Both directions land the summary at
-        // rest in the centre, so the test above passed either way and the only
-        // thing that could tell them apart was somebody watching it.
+        // Which way it goes: the summary arrives from the left and the
+        // choice leaves to the right, the handedness for going FORWARD
+        // (taking a reward), not the one every interface uses for going
+        // back. Both directions land the summary at rest in the centre, so
+        // only the direction of travel tells them apart.
         [UnityTest]
         public IEnumerator TheSweepAdvancesRatherThanRetreating()
         {
@@ -309,11 +305,11 @@ namespace PrincesPalace.PlayModeTests
             // before the sweep or FillBar have moved at all -- and FillBar
             // only overwrites it to "+0 EXP" and starts climbing once
             // StartBars() fires at the very end of SweepToSummary. Polling
-            // the gain text immediately after Click (as this used to) can
-            // catch that Paint() preview on its very first, same-frame
-            // check and return early having watched nothing animate: the
-            // real flake behind this test, independent of whether the
-            // second wait below is bounded by seconds or by frames.
+            // the gain text immediately after Click could catch that
+            // Paint() preview on its very first, same-frame check and
+            // return early having watched nothing animate, independent of
+            // whether the second wait below is bounded by seconds or by
+            // frames.
             yield return WaitForTheSweepToLand();
 
             var gain = Named("ReckoningRow0Gain").GetComponent<TMPro.TMP_Text>();
@@ -351,11 +347,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ReckoningScreen.PanelHeight, wipe.rect.height, 0.5f,
                 "the wipe is opening vertically too");
 
-            // AND THE FRAME ITSELF IS NEVER TOUCHED. This is the pair of
-            // assertions that would have caught the squash: the old animation
-            // drove frame.localScale.x, and localScale scales CHILDREN, so the
-            // border ornaments, the three cards and every label compressed with
-            // it. Checked mid-animation as well as at rest, because a scale
+            // The frame itself is never touched: localScale scales
+            // CHILDREN, so driving frame.localScale.x would compress the
+            // border ornaments, the three cards and every label with it.
+            // Checked mid-animation as well as at rest, because a scale
             // that settles back to 1 leaves no trace at the end.
             Assert.AreEqual(Vector3.one, frame.localScale,
                 "the frame is being scaled again - everything inside it squashes too");

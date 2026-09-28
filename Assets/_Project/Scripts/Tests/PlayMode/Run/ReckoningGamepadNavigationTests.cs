@@ -331,17 +331,12 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- where the stick is standing, and what the halo means now -----------
         //
-        // ADAPTED, NOT RELAXED (hardware round 1's visual pass). These were
-        // SelectingAnOffer_BrightensItsOwnHalo and
-        // MovingTheSelectionOffAnOffer_DimsItsHaloBackAndLightsTheNewOne, and
-        // they pinned AUDIT.md #160's decision to say focus with the card's
-        // existing RARITY halo, Maxed up to ThemedButtonState's Selected
-        // ratio. The cost of that is visible in the numbers the old test
-        // asserted: a focused Common card read at alpha 1.0 while an
-        // unfocused Legendary read at 0.30, so the channel that is supposed
-        // to say how good an item is said instead which card the stick was
-        // on. One meaning per channel: the halo is rarity, the arrow is
-        // focus.
+        // Focus is not said with the card's RARITY halo, maxed up to
+        // ThemedButtonState's Selected ratio: a focused Common card reading
+        // at alpha 1.0 while an unfocused Legendary read at 0.30 would mean
+        // the channel that is supposed to say how good an item is says
+        // instead which card the stick was on. One meaning per channel: the
+        // halo is rarity, the arrow is focus.
 
         [UnityTest]
         public IEnumerator SelectingAnOffer_PutsTheFocusMarkerOnIt_AndLeavesItsRarityHaloAlone()

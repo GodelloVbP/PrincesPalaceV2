@@ -8,12 +8,9 @@ namespace PrincesPalace.PlayModeTests
 {
     // Prince's Favor reaching the loot roll.
     //
-    // NONE OF THIS WAS COVERED before the reward track needed it.
-    // ItemOfferRoll.SquadFavor had exactly one caller and no test, and its one
-    // caller -- CurrentSquadFavor, which is what FightController hands to the
-    // roll -- had none either. So the max-not-sum rule, which is the whole
-    // reason Favor is a reason to field a particular character, was resting on
-    // a comment.
+    // ItemOfferRoll.SquadFavor has exactly one caller, CurrentSquadFavor,
+    // which is what FightController hands to the roll. The max-not-sum rule
+    // is the whole reason Favor is a reason to field a particular character.
     //
     // PlayMode rather than EditMode because ItemOfferRoll is Core: the EditMode
     // assembly references Domain and nothing else. Nothing here needs a scene.

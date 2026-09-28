@@ -161,12 +161,9 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EveryRoomStandsInAPaintedClearing()
         {
-            // REVERSES what this test used to assert. It previously required a
-            // short column to sit CENTRED, which was right while the backdrop
-            // was being stretched flat behind an evenly-divided track and has
-            // been wrong since it started tiling: the canopy has holes punched
-            // in it at three fixed heights, and a centred column of one would
-            // stand between two of them.
+            // A short column does not sit CENTRED: the canopy backdrop tiles
+            // with holes punched in it at three fixed heights, and a
+            // centred column of one would stand between two of them.
             yield return OpenTheMap();
 
             var descent = RunManager.Map;
@@ -229,12 +226,10 @@ namespace PrincesPalace.PlayModeTests
             var fight = RunManager.Choices().FirstOrDefault(n =>
                 n.Type == RoomType.Fight || n.Type == RoomType.EliteFight || n.Type == RoomType.Boss);
 
-            // ASSERTED, not skipped. OpenTheMap seeds the run with 4242, so the
-            // leg is the SAME every run -- the old skip therefore never fired
-            // intermittently, it either always fired or never did, and nobody
-            // could tell which from a green suite. If a generator change makes
-            // this seed's entry offer no fight, that is a fixture to re-choose
-            // deliberately, not a test to switch off silently.
+            // Asserted, not skipped. OpenTheMap seeds the run with 4242, so
+            // the leg is the SAME every run. If a generator change makes
+            // this seed's entry offer no fight, that is a fixture to
+            // re-choose deliberately, not a test to switch off silently.
             Assert.IsNotNull(fight,
                 "seed 4242's entry offers no fight room, so this test has nothing to enter - pick a seed that does");
 
@@ -242,10 +237,8 @@ namespace PrincesPalace.PlayModeTests
             int slot = column.FindIndex(n => n.Id == fight.Id);
             Named($"MapNode{MapLayout.IndexFor(fight.Depth, slot)}").GetComponent<Button>().onClick.Invoke();
 
-            // THE ROOM FIRES ON ARRIVAL, not on the click. This used to assert
-            // on the same frame the button was pressed, and that it now cannot
-            // is the point of the change rather than a wrinkle in the test: the
-            // party walks there first.
+            // The room fires on arrival, not on the click: the party walks
+            // there first.
             Assert.IsTrue(_map.IsWalking, "clicking a room starts a walk to it");
             CollectionAssert.IsEmpty(_navigated, "and nothing loads while they are still walking");
 

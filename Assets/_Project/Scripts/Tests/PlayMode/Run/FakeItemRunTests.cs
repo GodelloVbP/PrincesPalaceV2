@@ -219,11 +219,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, InventoryOps.Count(reloaded.stockpiledItems, Torso), "no refund to the bag");
         }
 
-        // ONE WRITE, CARRYING ALL OF IT. The wear used to save on its own,
-        // ahead of the cleared room, so a crash between the two left a file
-        // where the fake had worn but the fight could be fought again -- and
-        // wear again. The settlement is now one write, and that write holds
-        // the countdown and the cleared room together.
+        // One write, carrying all of it: the settlement holds the wear
+        // countdown and the cleared room together, so there is no window
+        // where a crash leaves a file with the fake worn but the fight
+        // still fightable (and wearable) again.
         [Test]
         public void SettlingAFightWithAWornFake_IsOneWrite_HoldingTheWearAndTheClearedRoom()
         {

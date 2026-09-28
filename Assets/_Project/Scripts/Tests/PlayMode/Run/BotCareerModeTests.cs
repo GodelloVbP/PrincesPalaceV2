@@ -5,9 +5,9 @@ using PrincesPalace.Domain.Bot;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // BotRunDriver.PlayCareer -- the one thing PlayRun could never do (every
-    // call wiped the save and rebuilt the profile from scratch, per
-    // docs/handoffs/progression_v2/PHASE6_BOT_REPORT.md SS1's own finding).
+    // BotRunDriver.PlayCareer -- PlayRun wipes the save and rebuilds the
+    // profile from scratch on every call (docs/handoffs/progression_v2/
+    // PHASE6_BOT_REPORT.md SS1), so it cannot play a career across runs.
     // PlayMode because a career plays through RunManager/SaveSystem/
     // RunOrchestrator, all Core, the same reason BalanceBotSmokeTests and
     // BotLevelUpCarriedHealthTests beside this file are PlayMode rather than

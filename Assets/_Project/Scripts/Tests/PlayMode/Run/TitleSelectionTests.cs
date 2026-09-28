@@ -7,11 +7,10 @@ namespace PrincesPalace.PlayModeTests
 {
     // WHICH TITLE A CHARACTER WEARS, and that the choice survives a save.
     //
-    // Progression v2 §4: "Titles share one display slot: the newest is shown,
-    // earlier ones selectable in the hub roster". Phase 5 built the roster's
-    // picker (PartyController.CycleTitle); this pins the model under it -- the
-    // default, the choice, the round-trip, and the one way the stored figure
-    // can go stale.
+    // Titles share one display slot: the newest is shown, earlier ones
+    // selectable in the hub roster's picker (PartyController.CycleTitle);
+    // this pins the model under it -- the default, the choice, the
+    // round-trip, and the one way the stored figure can go stale.
     //
     // THE TITLES ARE READ OUT OF CONTENT, never typed as literals. Which levels
     // carry a Title is reward_tracks.json's business and RewardTrackContentPin
