@@ -326,6 +326,42 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            var overlayRaw = raw.roundOverlay ?? new EventRoundOverlay();
+            string tint = (overlayRaw.tint ?? "").Trim();
+            if (tint.Length > 0 && overlayPath.Length == 0)
+            {
+                error = $"{label}: roundOverlay.tint '{tint}' is set with no roundOverlay.path, so it would never be " +
+                        "read. Set the path, or drop it.";
+                return false;
+            }
+
+            if (overlayPath.Length > 0)
+            {
+                // Outside 0-1 the point is off the image or off the frame:
+                // the flock would be pinned by a spot it does not have, or
+                // stand somewhere nobody can see. Almost always a pixel
+                // coordinate typed where a fraction belongs.
+                foreach (var (name, value) in new[]
+                         {
+                             ("pivotX", overlayRaw.pivotX), ("pivotY", overlayRaw.pivotY),
+                             ("anchorX", overlayRaw.anchorX), ("anchorY", overlayRaw.anchorY),
+                         })
+                {
+                    if (value < 0f || value > 1f || float.IsNaN(value))
+                    {
+                        error = $"{label}: roundOverlay.{name} is {value.ToString(System.Globalization.CultureInfo.InvariantCulture)}; it is a fraction, 0 to 1 " +
+                                "(pivot of the image, anchor of the frame, measured from the left and the bottom).";
+                        return false;
+                    }
+                }
+
+                if (tint.Length > 0 && !PoolEntryResolver.IsColourToken(tint))
+                {
+                    error = $"{label}: roundOverlay.tint '{tint}' is not a colour token; write '#RRGGBB' or '#RRGGBBAA'.";
+                    return false;
+                }
+            }
+
             // Results. Which ones must exist follows from what can happen.
             if (!TryResolveFightResult(raw.onDefeated, EventFightResult.Defeated, label, scope,
                     required: true, refusedWhy: null, out var onDefeated, out _, out error)
@@ -356,6 +392,11 @@ namespace PrincesPalace.Domain.Content
                 RoundOverlayKey = overlayPath,
                 RoundOverlayFromScale = fromScale,
                 RoundOverlayToScale = toScale,
+                RoundOverlayPivotX = overlayRaw.pivotX,
+                RoundOverlayPivotY = overlayRaw.pivotY,
+                RoundOverlayAnchorX = overlayRaw.anchorX,
+                RoundOverlayAnchorY = overlayRaw.anchorY,
+                RoundOverlayTint = tint,
                 OnDefeated = onDefeated,
                 OnSurvived = onSurvived ?? new ResolvedEventOutcome(),
                 OnFell = onFell ?? new ResolvedEventOutcome(),

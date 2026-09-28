@@ -578,8 +578,13 @@ MonoBehaviour:
       RoundSfxPath: Audio/Sfx/Events/bell_in_the_fog/toll
       AmbiencePath: Audio/Music/Events/bell_in_the_fog/wind
       RoundOverlayKey: Assets/_Project/Art/Events/bell_in_the_fog/flock.png
-      RoundOverlayFromScale: 0.6
-      RoundOverlayToScale: 1.3
+      RoundOverlayFromScale: 0.35
+      RoundOverlayToScale: 0.8
+      RoundOverlayPivotX: 0.5
+      RoundOverlayPivotY: 0.15
+      RoundOverlayAnchorX: 0.5
+      RoundOverlayAnchorY: 0.5
+      RoundOverlayTint: '#C8D0DAB4'
       OnDefeated:
         Requires: []
         Effects:

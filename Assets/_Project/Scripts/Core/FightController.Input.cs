@@ -1419,6 +1419,7 @@ namespace PrincesPalace
             // every fight shipped today -- no pool authors pulse yet, so the
             // list it guards is empty (see RefreshPoolPulse).
             RefreshPoolPulse();
+            KeepRoundOverlayPlaced();
 
             if (characterSheetPanel == null) return;
 

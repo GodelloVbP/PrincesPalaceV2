@@ -348,6 +348,11 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `path` | string | `""` | The overlay image, Assets-relative with its extension, baked at scene build; filed in this event's own Assets/_Project/Art/Events/<event_id>/. Empty means no overlay. |  |
 | `fromScale` | float | `1` | The overlay's scale at the first round; above 0. |  |
 | `toScale` | float | `1` | The overlay's scale at the last round of the limit; above 0. |  |
+| `pivotX` | float | `0.5` | The point of the overlay image that stays put while it scales, as a fraction of the image's width from its left edge; 0-1, default 0.5. |  |
+| `pivotY` | float | `0.5` | The same point, as a fraction of the image's height from its BOTTOM edge; 0-1, default 0.5. |  |
+| `anchorX` | float | `0.5` | Where on the fight frame that point sits, as a fraction of the frame's width from its left edge; 0-1, default 0.5. The backdrop fills the frame, so a point on the painting is a fraction of the frame. |  |
+| `anchorY` | float | `0.5` | Where on the fight frame that point sits, as a fraction of the frame's height from its BOTTOM edge; 0-1, default 0.5. |  |
+| `tint` | string | `""` | A colour token '#RRGGBB' or '#RRGGBBAA' the overlay is multiplied by; its alpha is how much of the backdrop shows through. Empty draws the image as painted. Refused without a path. |  |
 
 ### `RawDamageInstance`
 

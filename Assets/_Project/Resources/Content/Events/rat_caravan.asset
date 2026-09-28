@@ -401,6 +401,11 @@ MonoBehaviour:
       RoundOverlayKey: 
       RoundOverlayFromScale: 1
       RoundOverlayToScale: 1
+      RoundOverlayPivotX: 0.5
+      RoundOverlayPivotY: 0.5
+      RoundOverlayAnchorX: 0.5
+      RoundOverlayAnchorY: 0.5
+      RoundOverlayTint: 
       OnDefeated:
         Requires: []
         Effects:

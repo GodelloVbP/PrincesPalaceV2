@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -21,7 +22,8 @@ namespace PrincesPalace.PlayModeTests
     // bell_in_the_fog with its delivered art -- the bell page (Shawn's
     // entranced bust over stump_bell), the Bellwether fight as FightBootstrap
     // opens it (fog clearing, the Bellwether's stills, the toll counter and the
-    // flock overlay at toll 1 and toll 2), and the Endure and Break pages -- at
+    // flock overlay at tolls 1, 2, 5 and 10), the Endure and Break pages, and
+    // Bellwether's Bell in the hub glossary -- at
     // 16:9 and 4:3. Pictures, not assertions: BellInTheFogRunTests and
     // FightRoundCounterTests pin the behaviour.
     //
@@ -180,6 +182,80 @@ namespace PrincesPalace.PlayModeTests
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             yield return WaitReal(0.5f);
             yield return Shoot("c_fight_toll_2");
+
+            // Tolls 5 and 10 without playing eight more rounds: the counter,
+            // the overlay's step and the toll are FightController.PresentRound,
+            // the one seam playback steps them through, so this shows exactly
+            // what a round's beat would -- with the fighters as toll 2 left
+            // them. Playing it out is BellInTheFogRunTests' job, not a picture's.
+            var present = typeof(FightController).GetMethod("PresentRound", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(present, "FightController.PresentRound was renamed or removed");
+            foreach (int toll in new[] { 5, 10 })
+            {
+                present.Invoke(fight, new object[] { toll });
+                yield return WaitReal(0.3f);
+                yield return Shoot($"c_fight_toll_{toll}");
+            }
+        }
+
+        // ---- the relic icon -------------------------------------------------------------
+
+        // Bellwether's Bell's icon where a player meets it outside the fight
+        // result: the hub glossary's Relics list and its detail plate. The
+        // relic is not draftable, so neither the draft nor the shop offers it.
+        [UnityTest]
+        public IEnumerator CaptureTheBellRelicInTheGlossary()
+        {
+            if (!CanvasCapture.IsSupported)
+                Assert.Ignore("No graphics device. Run: tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.BellInTheFogCaptureTests");
+
+            yield return SharedScene.Ensure("Hub");
+            var hub = UnityEngine.Object.FindAnyObjectByType<HubController>();
+            Assert.IsNotNull(hub, "the Hub scene has no HubController");
+            var glossary = hub.GetComponentInChildren<GlossaryController>(includeInactive: true);
+            Assert.IsNotNull(glossary, "the glossary was never wired into the hub");
+
+            GameObject InHub(string name) =>
+                hub.GetComponentsInChildren<Transform>(includeInactive: true).FirstOrDefault(t => t.name == name)?.gameObject;
+            void Click(string name)
+            {
+                var go = InHub(name);
+                Assert.IsNotNull(go, $"no object named '{name}'");
+                go.GetComponent<Button>().onClick.Invoke();
+            }
+
+            if (glossary.gameObject.activeSelf) Click("GlossaryCloseButton");
+            Click("RelicsBuilding");
+            yield return null;
+            yield return null;
+            Click("GlossaryCategory0");
+            yield return null;
+
+            bool found = false;
+            int pages = PrincesPalace.Domain.Glossary.GlossaryCatalog.PageCount(ContentDatabase.Relics.Count);
+            for (int page = 0; page < pages && !found; page++)
+            {
+                for (int i = 0; i < PrincesPalace.Domain.Glossary.GlossaryCatalog.RowsPerPage; i++)
+                {
+                    var row = InHub($"GlossaryRow{i}");
+                    if (row == null || !row.activeSelf) continue;
+                    Click($"GlossaryRow{i}");
+                    yield return null;
+                    if (InHub("GlossaryDetailName").GetComponent<TMP_Text>().text == "Bellwether's Bell") { found = true; break; }
+                }
+
+                if (!found)
+                {
+                    Click("GlossaryNextPage");
+                    yield return null;
+                }
+            }
+
+            Assert.IsTrue(found, "Bellwether's Bell is on no page of the glossary's Relics");
+            _canvas = glossary.GetComponentInParent<Canvas>(true).rootCanvas;
+            yield return WaitReal(0.3f);
+            yield return Shoot("h_relic_glossary");
+            Click("GlossaryCloseButton");
         }
 
         // ---- driving ----------------------------------------------------------------

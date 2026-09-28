@@ -89,8 +89,9 @@ returning event and the first event fight.
   both, or nobody). It pays nothing; the fight result already did.
 - **The Bellwether** (`enemies.json`, `rollable: false`) stands on its own
   seven stills, `Resources/Enemies/bellwether/` (M9a, 2026-09-28), sliced by
-  `Art/Enemies/bellwether/recipe.json` onto one 545x484 canvas, ground line 8,
-  head box in `StanceManifest.json`. Tuned in M8a and again
+  `Art/Enemies/bellwether/recipe.json` onto one 758x593 canvas, ground line 8,
+  head box in `StanceManifest.json`. Redesigned 2026-09-28 as an upright,
+  gaunt black ram (idle 559px tall against Shawn's 350). Tuned in M8a and again
   with the round-limited attack rate (2026-09-28): HP 150, attack 33, speed
   5, defenses 20/20, rally 8% x 10. Speed 5 rather than 8 is on purpose:
   fewer, heavier swings spread the floor-1 result, where the bot's Shawn
@@ -98,7 +99,9 @@ returning event and the first event fight.
   instead of ~20. The per-floor table is in that commit's message.
 - **Art and sound** delivered (M9a, 2026-09-28): `fog_clearing.png` (event
   backdrop and fight backdrop), `stump_bell.png` (bell and ask pages),
-  `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.6 -> 1.3),
+  `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.35 -> 0.8,
+  its feet -- `pivotY` 0.15 -- on the fog line half-way up the frame, tinted
+  `#C8D0DAB4` so the fog shows through; redesigned art 2026-09-28),
   `Audio/Sfx/Events/bell_in_the_fog/toll` (round sfx),
   `Audio/Music/Events/bell_in_the_fog/wind` (ambience), and Shawn's
   `entranced` bust (`normalize_dialogue_busts.py`, recorded in
@@ -269,7 +272,8 @@ row in the event's `fights`, started by an outcome whose effects include
 
 ```
 fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
-         backdrop, roundSfx, ambience, roundOverlay { path, fromScale, toScale },
+         backdrop, roundSfx, ambience,
+         roundOverlay { path, fromScale, toScale, pivotX, pivotY, anchorX, anchorY, tint },
          onDefeated, onSurvived, onFell }
 ```
 
@@ -344,7 +348,15 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   never past the limit; `roundSfx` plays at each round start; the overlay is
   drawn full-frame behind the figures and scales from `fromScale` at round 1
   to `toScale` at the last round in equal steps; `ambience` loops from the
-  fight's start until it is left. A room fight shows none of it. A missing
+  fight's start until it is left. A room fight shows none of it. **Where the
+  overlay stands:** it scales about `pivot`, a point of its own image
+  (fractions from the image's bottom-left), held on `anchor`, a point of the
+  frame (fractions from the frame's bottom-left; the backdrop fills the frame,
+  so this is a point on the painting). Both default to 0.5, the centre-scaled
+  full frame. `tint` ('#RRGGBB' or '#RRGGBBAA', refused without a path)
+  multiplies the image; its alpha lets the backdrop show through. The build
+  refuses a pivot or anchor outside 0-1 and a tint that is not a colour
+  token (`FightRoundPresentation.PlaceOverlay` is the formula). A missing
   file hides its layer (overlay), keeps the class backdrop, or stays silent
   (sounds) -- never an error. Backdrop and overlay files are baked into the
   Fight scene, so a new file needs `-BuildScenes`. Paint the overlay as a

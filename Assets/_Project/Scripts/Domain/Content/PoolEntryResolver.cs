@@ -219,8 +219,9 @@ namespace PrincesPalace.Domain.Content
         // '#' then exactly six or eight hex digits. Written out here rather
         // than parsed with a colour type because Domain has no colour type --
         // FightHudPalette is a table of these same strings, and the kit
-        // parses them one layer up.
-        private static bool IsColourToken(string raw)
+        // parses them one layer up. Internal: an event fight's overlay tint
+        // is the same token and is checked with this same rule.
+        internal static bool IsColourToken(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return false;
 

@@ -1085,7 +1085,7 @@
           "backdrop": "Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png",
           "roundSfx": "Audio/Sfx/Events/bell_in_the_fog/toll",
           "ambience": "Audio/Music/Events/bell_in_the_fog/wind",
-          "roundOverlay": { "path": "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", "fromScale": 0.6, "toScale": 1.3 },
+          "roundOverlay": { "path": "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", "fromScale": 0.35, "toScale": 0.8, "pivotX": 0.5, "pivotY": 0.15, "anchorX": 0.5, "anchorY": 0.5, "tint": "#C8D0DAB4" },
           "onSurvived": {
             "effects": [
               { "kind": "relic", "relic": "toll_of_the_flock" },

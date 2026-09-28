@@ -103,6 +103,7 @@ namespace PrincesPalace.Domain.Tests
             fight.roundOverlay = new EventRoundOverlay
             {
                 path = "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", fromScale = 0.5f, toScale = 1.25f,
+                pivotX = 0.4f, pivotY = 0.15f, anchorX = 0.6f, anchorY = 0.55f, tint = " #C8D0DAB4 ",
             };
             fight.onDefeated = Leave(new RawEventEffect { kind = "relic", relic = "toll_of_the_flock" },
                 new RawEventEffect { kind = "exp", amount = 40, character = "sheep" }, Finish());
@@ -125,6 +126,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Assets/_Project/Art/Events/bell_in_the_fog/flock.png", resolved.RoundOverlayKey);
             Assert.AreEqual(0.5f, resolved.RoundOverlayFromScale);
             Assert.AreEqual(1.25f, resolved.RoundOverlayToScale);
+            Assert.AreEqual(0.4f, resolved.RoundOverlayPivotX);
+            Assert.AreEqual(0.15f, resolved.RoundOverlayPivotY);
+            Assert.AreEqual(0.6f, resolved.RoundOverlayAnchorX);
+            Assert.AreEqual(0.55f, resolved.RoundOverlayAnchorY);
+            Assert.AreEqual("#C8D0DAB4", resolved.RoundOverlayTint);
 
             var defeated = resolved.OutcomeFor(EventFightResult.Defeated);
             Assert.IsTrue(defeated.IsLeave);
@@ -464,6 +470,66 @@ namespace PrincesPalace.Domain.Tests
             fight.onFell = Leave(new RawEventEffect { kind = "gold", amount = 5, fight = "bellwether" });
 
             StringAssert.Contains("fight is only read by a fight effect, not by gold", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void AnOverlayWithoutPlacementResolvesToTheCentreUntinted()
+        {
+            var fight = BellFight();
+            fight.roundOverlay = new EventRoundOverlay { path = "Assets/_Project/Art/Events/bell_in_the_fog/flock.png" };
+
+            var resolved = Resolved(Event(fight)).Fights.Single();
+
+            Assert.AreEqual(0.5f, resolved.RoundOverlayPivotX);
+            Assert.AreEqual(0.5f, resolved.RoundOverlayPivotY);
+            Assert.AreEqual(0.5f, resolved.RoundOverlayAnchorX);
+            Assert.AreEqual(0.5f, resolved.RoundOverlayAnchorY);
+            Assert.AreEqual("", resolved.RoundOverlayTint);
+        }
+
+        [Test]
+        public void Refuses_ARoundOverlayScaleOfZero()
+        {
+            var fight = BellFight();
+            fight.roundOverlay = new EventRoundOverlay { path = "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", fromScale = 0f, toScale = 0.8f };
+
+            StringAssert.Contains("roundOverlay scales must be above 0", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void Refuses_ARoundOverlayPivotOffTheImage()
+        {
+            var fight = BellFight();
+            fight.roundOverlay = new EventRoundOverlay { path = "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", pivotY = 162f };
+
+            StringAssert.Contains("roundOverlay.pivotY is 162; it is a fraction, 0 to 1", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void Refuses_ARoundOverlayAnchorOffTheFrame()
+        {
+            var fight = BellFight();
+            fight.roundOverlay = new EventRoundOverlay { path = "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", anchorX = 1.5f };
+
+            StringAssert.Contains("roundOverlay.anchorX is 1.5; it is a fraction, 0 to 1", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void Refuses_ARoundOverlayTintThatIsNotAColourToken()
+        {
+            var fight = BellFight();
+            fight.roundOverlay = new EventRoundOverlay { path = "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", tint = "fog" };
+
+            StringAssert.Contains("roundOverlay.tint 'fog' is not a colour token", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void Refuses_ARoundOverlayTintWithNoPath()
+        {
+            var fight = BellFight();
+            fight.roundOverlay = new EventRoundOverlay { tint = "#C8D0DAB4" };
+
+            StringAssert.Contains("roundOverlay.tint '#C8D0DAB4' is set with no roundOverlay.path", Refusal(Event(fight)));
         }
 
         [Test]

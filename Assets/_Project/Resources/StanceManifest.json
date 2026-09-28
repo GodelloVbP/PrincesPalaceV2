@@ -186,11 +186,11 @@
       "groundLine": 8,
       "groundLineSource": "slicer",
       "head": {
-        "dx": 192.5,
-        "dy": 265,
-        "size": 140
+        "dx": 68,
+        "dy": 492,
+        "size": 150
       },
-      "_headNote": "The face and near horn, by eye, on Enemies/bellwether/idle.png: a 140px square centred at canvas pixel (465, 210) -- 545x484 canvas, groundLine 8, so dx = 465 - 545/2 = 192.5 and dy = (484 - 1 - 210) - 8 = 265 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); without it the plate crops the fleece on the ram's back."
+      "_headNote": "The face and both horns, by eye, on Enemies/bellwether/idle.png (the upright redesign, 2026-09-28): a 150px square centred at canvas pixel (447, 92) -- 758x593 canvas, groundLine 8, so dx = 447 - 758/2 = 68 and dy = (593 - 1 - 92) - 8 = 492 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); the old four-legged ram's box (192.5, 265, 140) landed on the chest of the upright figure."
     }
   ]
 }

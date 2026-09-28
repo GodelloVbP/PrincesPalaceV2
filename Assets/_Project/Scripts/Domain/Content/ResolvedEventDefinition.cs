@@ -202,6 +202,14 @@ namespace PrincesPalace.Domain.Content
         public string RoundOverlayKey = "";
         public float RoundOverlayFromScale = 1f;
         public float RoundOverlayToScale = 1f;
+        // EventRoundOverlay's pivot (image fractions) and anchor (frame
+        // fractions); 0.5 each is the centre-scaled full frame.
+        public float RoundOverlayPivotX = 0.5f;
+        public float RoundOverlayPivotY = 0.5f;
+        public float RoundOverlayAnchorX = 0.5f;
+        public float RoundOverlayAnchorY = 0.5f;
+        // A colour token, or empty for the image as painted.
+        public string RoundOverlayTint = "";
 
         public ResolvedEventOutcome OnDefeated = new ResolvedEventOutcome();
         public ResolvedEventOutcome OnSurvived = new ResolvedEventOutcome();

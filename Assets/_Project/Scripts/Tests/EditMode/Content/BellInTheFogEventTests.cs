@@ -214,8 +214,16 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(Art + "fog_clearing.png", fight.BackdropKey);
             Assert.AreEqual(Art + "flock.png", fight.RoundOverlayKey);
-            Assert.AreEqual(0.6f, fight.RoundOverlayFromScale);
-            Assert.AreEqual(1.3f, fight.RoundOverlayToScale);
+            // The flock stands in the fog behind the fighters: its feet
+            // (15% up the image) on the backdrop's fog line (half-way up the
+            // frame), growing from 0.35 to 0.8, washed toward the fog.
+            Assert.AreEqual(0.35f, fight.RoundOverlayFromScale);
+            Assert.AreEqual(0.8f, fight.RoundOverlayToScale);
+            Assert.AreEqual(0.5f, fight.RoundOverlayPivotX);
+            Assert.AreEqual(0.15f, fight.RoundOverlayPivotY);
+            Assert.AreEqual(0.5f, fight.RoundOverlayAnchorX);
+            Assert.AreEqual(0.5f, fight.RoundOverlayAnchorY);
+            Assert.AreEqual("#C8D0DAB4", fight.RoundOverlayTint);
             Assert.AreEqual("Audio/Sfx/Events/bell_in_the_fog/toll", fight.RoundSfxPath);
             Assert.AreEqual("Audio/Music/Events/bell_in_the_fog/wind", fight.AmbiencePath);
         }

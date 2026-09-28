@@ -78,6 +78,8 @@ namespace PrincesPalace
 
                 // A previous fight's last step must not carry into this one.
                 roundOverlay.rectTransform.localScale = Vector3.one;
+                roundOverlay.color = OverlayTint(overlay ? _presentation.OverlayTint : "");
+                PlaceRoundOverlay();
             }
 
             // The bed follows the presentation: a room fight's None stops a bed
@@ -134,12 +136,56 @@ namespace PrincesPalace
 
             if (roundOverlay != null && roundOverlay.gameObject.activeSelf)
             {
+                // Placed again at every step, not only at Bind: the frame's
+                // size is the canvas's, and the scaler may not have settled
+                // it yet when the first round is shown.
+                PlaceRoundOverlay();
                 float scale = _presentation.OverlayScaleFor(round);
                 roundOverlay.rectTransform.localScale = new Vector3(scale, scale, 1f);
             }
 
             SoundController.PlayClip(_presentation.RoundSfxPath);
         }
+
+        // THE OVERLAY'S STANDING POINT: the image's pivot held on the frame's
+        // anchor (FightRoundPresentation.PlaceOverlay, the formula, pinned on
+        // the fast host). The rect stays stretched over the frame with zero
+        // offsets, so moving its pivot does not move it; the anchored
+        // position then carries the pivot onto the anchor, and localScale
+        // scales about it. Defaults put the pivot at the centre and the
+        // offset at zero -- the centre-scaled full frame.
+        private void PlaceRoundOverlay()
+        {
+            if (roundOverlay == null) return;
+
+            var rect = roundOverlay.rectTransform;
+            var sprite = roundOverlay.sprite;
+            float aspect = sprite != null && sprite.rect.height > 0f ? sprite.rect.width / sprite.rect.height : 0f;
+            var size = rect.rect.size;
+            var place = _presentation.PlaceOverlay(size.x, size.y, aspect);
+            rect.pivot = new Vector2(place.PivotX, place.PivotY);
+            rect.anchoredPosition = new Vector2(place.OffsetX, place.OffsetY);
+            _overlayPlacedFor = size;
+        }
+
+        // The frame size the overlay was last placed for. The pivot fraction
+        // and the offset both depend on the frame's aspect (a 16:9 image sits
+        // letterboxed in a 4:3 frame), so a resize between tolls -- a window
+        // drag, or a capture rig switching aspect -- must re-place it, not
+        // wait for the next toll with the old aspect's numbers.
+        private Vector2 _overlayPlacedFor;
+
+        // Called every frame from Update: one size compare while an overlay shows.
+        private void KeepRoundOverlayPlaced()
+        {
+            if (roundOverlay == null || !roundOverlay.gameObject.activeInHierarchy) return;
+            if (roundOverlay.rectTransform.rect.size != _overlayPlacedFor) PlaceRoundOverlay();
+        }
+
+        // Empty or unreadable is the image as painted (the content build
+        // refuses an unreadable token, so that is a hand-built request).
+        private static Color OverlayTint(string token) =>
+            !string.IsNullOrEmpty(token) && ColorUtility.TryParseHtmlString(token, out var colour) ? colour : Color.white;
 
         // A key the bake holds replaces the class backdrop; any other key
         // (empty, or a file not there yet) leaves ApplyBackground's choice.

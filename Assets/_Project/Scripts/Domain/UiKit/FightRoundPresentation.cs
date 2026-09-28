@@ -31,11 +31,22 @@ namespace PrincesPalace.Domain.UiKit
         public string OverlayKey { get; }
         public float OverlayFromScale { get; }
         public float OverlayToScale { get; }
+        // The point of the overlay IMAGE (fractions, from its bottom-left)
+        // that is held at the ANCHOR, a point of the fight FRAME (fractions,
+        // from its bottom-left), and that the overlay scales about. 0.5 each
+        // is the centre-scaled full frame.
+        public float OverlayPivotX { get; }
+        public float OverlayPivotY { get; }
+        public float OverlayAnchorX { get; }
+        public float OverlayAnchorY { get; }
+        // A colour token the image is multiplied by; empty is as painted.
+        public string OverlayTint { get; }
         public string AmbiencePath { get; }
 
         public FightRoundPresentation(string backdropKey = "", int roundLimit = 0, string label = "",
             string roundSfxPath = "", string overlayKey = "", float overlayFromScale = 1f, float overlayToScale = 1f,
-            string ambiencePath = "")
+            string ambiencePath = "", float overlayPivotX = 0.5f, float overlayPivotY = 0.5f,
+            float overlayAnchorX = 0.5f, float overlayAnchorY = 0.5f, string overlayTint = "")
         {
             BackdropKey = backdropKey ?? "";
             RoundLimit = Math.Max(0, roundLimit);
@@ -44,6 +55,11 @@ namespace PrincesPalace.Domain.UiKit
             OverlayKey = overlayKey ?? "";
             OverlayFromScale = overlayFromScale;
             OverlayToScale = overlayToScale;
+            OverlayPivotX = overlayPivotX;
+            OverlayPivotY = overlayPivotY;
+            OverlayAnchorX = overlayAnchorX;
+            OverlayAnchorY = overlayAnchorY;
+            OverlayTint = (overlayTint ?? "").Trim();
             AmbiencePath = ambiencePath ?? "";
         }
 
@@ -80,6 +96,52 @@ namespace PrincesPalace.Domain.UiKit
             int clamped = CounterRound(round);
             float t = (clamped - 1) / (float)(RoundLimit - 1);
             return OverlayFromScale + (OverlayToScale - OverlayFromScale) * t;
+        }
+
+        // WHERE THE OVERLAY STANDS in a frame of frameWidth x frameHeight
+        // (the overlay's own stretched rect) when its image, of aspect
+        // imageAspect (width / height), is fitted inside it keeping that
+        // aspect and centred -- uGUI's PreserveAspect.
+        //
+        // Returns the rect's pivot (fractions of the FRAME, which is what
+        // RectTransform.pivot takes) at the image's own pivot point, and the
+        // offset in frame units that carries that point onto the anchor.
+        // Scaling about the rect's pivot then leaves the point on the anchor
+        // at every round. The defaults (0.5 everywhere) give pivot (0.5, 0.5)
+        // and offset (0, 0): the centre-scaled full frame, unchanged.
+        public OverlayPlacement PlaceOverlay(float frameWidth, float frameHeight, float imageAspect)
+        {
+            if (frameWidth <= 0f || frameHeight <= 0f || imageAspect <= 0f)
+            {
+                return new OverlayPlacement(0.5f, 0.5f, 0f, 0f);
+            }
+
+            float drawnWidth = Math.Min(frameWidth, frameHeight * imageAspect);
+            float drawnHeight = drawnWidth / imageAspect;
+            float pointX = (frameWidth - drawnWidth) * 0.5f + OverlayPivotX * drawnWidth;
+            float pointY = (frameHeight - drawnHeight) * 0.5f + OverlayPivotY * drawnHeight;
+
+            return new OverlayPlacement(
+                pointX / frameWidth, pointY / frameHeight,
+                OverlayAnchorX * frameWidth - pointX, OverlayAnchorY * frameHeight - pointY);
+        }
+    }
+
+    // A RectTransform pivot (frame fractions) and anchored offset (frame
+    // units), engine-free so PlaceOverlay is pinned on the fast host.
+    public readonly struct OverlayPlacement
+    {
+        public readonly float PivotX;
+        public readonly float PivotY;
+        public readonly float OffsetX;
+        public readonly float OffsetY;
+
+        public OverlayPlacement(float pivotX, float pivotY, float offsetX, float offsetY)
+        {
+            PivotX = pivotX;
+            PivotY = pivotY;
+            OffsetX = offsetX;
+            OffsetY = offsetY;
         }
     }
 }

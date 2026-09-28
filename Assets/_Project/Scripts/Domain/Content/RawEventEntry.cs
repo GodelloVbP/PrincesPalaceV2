@@ -253,6 +253,30 @@ namespace PrincesPalace.Domain.Content
         public float fromScale = 1f;
         [ContentDoc("The overlay's scale at the last round of the limit; above 0.")]
         public float toScale = 1f;
+
+        // WHERE IT STANDS. The overlay scales about one point of its own
+        // image (pivot) held at one point of the fight frame (anchor). Both
+        // default to the centre, which is the frame-filling, centre-scaled
+        // layer every overlay was before these existed. The Bell's flock
+        // pins its feet (pivot) to the backdrop's fog line (anchor), so it
+        // grows up out of the fog behind the fighters instead of out of the
+        // middle of the arena, where a centre-scaled 1920x1080 frame put
+        // eight sheep between Shawn and the Bellwether at toll 1.
+        //
+        // The anchor is in the FRAME's fractions because the backdrop fills
+        // the frame (stretched, at every aspect), so a line on the painting
+        // is a fraction of the frame. The pivot is in the IMAGE's fractions
+        // because the overlay keeps its own aspect inside the frame.
+        [ContentDoc("The point of the overlay image that stays put while it scales, as a fraction of the image's width from its left edge; 0-1, default 0.5.")]
+        public float pivotX = 0.5f;
+        [ContentDoc("The same point, as a fraction of the image's height from its BOTTOM edge; 0-1, default 0.5.")]
+        public float pivotY = 0.5f;
+        [ContentDoc("Where on the fight frame that point sits, as a fraction of the frame's width from its left edge; 0-1, default 0.5. The backdrop fills the frame, so a point on the painting is a fraction of the frame.")]
+        public float anchorX = 0.5f;
+        [ContentDoc("Where on the fight frame that point sits, as a fraction of the frame's height from its BOTTOM edge; 0-1, default 0.5.")]
+        public float anchorY = 0.5f;
+        [ContentDoc("A colour token '#RRGGBB' or '#RRGGBBAA' the overlay is multiplied by; its alpha is how much of the backdrop shows through. Empty draws the image as painted. Refused without a path.")]
+        public string tint = "";
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

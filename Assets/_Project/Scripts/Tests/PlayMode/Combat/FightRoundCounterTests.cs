@@ -268,7 +268,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Named("RoundOverlay").activeSelf, "flock.png is baked: the overlay shows");
             Assert.IsNotNull(Overlay.sprite);
             Assert.AreEqual("flock", Overlay.sprite.texture.name);
-            Assert.AreEqual(0.6f, Overlay.rectTransform.localScale.x, 1e-4f, "round 1 is the authored fromScale");
+            Assert.AreEqual(0.35f, Overlay.rectTransform.localScale.x, 1e-4f, "round 1 is the authored fromScale");
+            Assert.AreEqual(0.5f, Overlay.rectTransform.pivot.x, 1e-4f, "the flock scales about its own centre line");
+            Assert.Less(Overlay.rectTransform.pivot.y, 0.5f, "... and about its feet, low on the image, not its middle");
+            Assert.Greater(Overlay.rectTransform.anchoredPosition.y, 0f, "its feet are lifted onto the fog line");
+            Assert.AreEqual(0.7059f, Overlay.color.a, 1e-3f, "#C8D0DAB4: the backdrop's fog shows through");
 
             var shown = ((Image)backdrop.GetValue(_fight)).sprite;
             Assert.AreNotSame(classSprite, shown, "fog_clearing.png replaces the class backdrop");

@@ -116,6 +116,85 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1.0f, receding.OverlayScaleFor(10), 1e-5f);
         }
 
+        // The Bell as authored: 0.35 to 0.8 in nine equal steps of 0.05.
+        [Test]
+        public void TheBellsFlockStepsFrom035To08()
+        {
+            var bell = Bell(from: 0.35f, to: 0.8f);
+
+            Assert.AreEqual(0.35f, bell.OverlayScaleFor(1), 1e-5f);
+            Assert.AreEqual(0.55f, bell.OverlayScaleFor(5), 1e-5f);
+            Assert.AreEqual(0.80f, bell.OverlayScaleFor(10), 1e-5f);
+        }
+
+        // ---- where the overlay stands ------------------------------------------------
+
+        private static FightRoundPresentation Anchored(float pivotX, float pivotY, float anchorX, float anchorY) =>
+            new FightRoundPresentation(roundLimit: 10, overlayKey: "k", overlayFromScale: 0.35f, overlayToScale: 0.8f,
+                overlayPivotX: pivotX, overlayPivotY: pivotY, overlayAnchorX: anchorX, overlayAnchorY: anchorY);
+
+        [Test]
+        public void TheDefaultsAreTheCentreScaledFullFrame()
+        {
+            var place = new FightRoundPresentation(roundLimit: 10, overlayKey: "k").PlaceOverlay(1920f, 1080f, 16f / 9f);
+
+            Assert.AreEqual(0.5f, place.PivotX, 1e-5f);
+            Assert.AreEqual(0.5f, place.PivotY, 1e-5f);
+            Assert.AreEqual(0f, place.OffsetX, 1e-3f);
+            Assert.AreEqual(0f, place.OffsetY, 1e-3f);
+        }
+
+        // The Bell at 16:9: the flock's feet, 15% up the image (162 of 1080),
+        // lifted 378 onto the fog line half-way up the frame (540).
+        [Test]
+        public void TheBellsFlockStandsOnTheFogLine_At16x9()
+        {
+            var place = Anchored(0.5f, 0.15f, 0.5f, 0.5f).PlaceOverlay(1920f, 1080f, 16f / 9f);
+
+            Assert.AreEqual(0.5f, place.PivotX, 1e-5f);
+            Assert.AreEqual(0.15f, place.PivotY, 1e-5f);
+            Assert.AreEqual(0f, place.OffsetX, 1e-3f);
+            Assert.AreEqual(378f, place.OffsetY, 1e-3f);
+        }
+
+        // At 4:3 the frame is 1920x1440 and the 16:9 image is fitted with
+        // 180 above and below: its feet are at 180 + 162 = 342 of 1440, and
+        // the fog line (the backdrop fills the frame) is at 720.
+        [Test]
+        public void TheBellsFlockStandsOnTheFogLine_At4x3()
+        {
+            var place = Anchored(0.5f, 0.15f, 0.5f, 0.5f).PlaceOverlay(1920f, 1440f, 16f / 9f);
+
+            Assert.AreEqual(0.5f, place.PivotX, 1e-5f);
+            Assert.AreEqual(0.2375f, place.PivotY, 1e-5f);
+            Assert.AreEqual(0f, place.OffsetX, 1e-3f);
+            Assert.AreEqual(378f, place.OffsetY, 1e-3f);
+        }
+
+        // A frame wider than the image fits by height: 1080 high, 1920 wide
+        // inside a 2560 frame, 320 either side. Pivot 0.25 of the image is at
+        // 320 + 480 = 800; anchor 0.75 of 2560 is 1920.
+        [Test]
+        public void AWideFrameFitsTheImageByHeight()
+        {
+            var place = Anchored(0.25f, 0.5f, 0.75f, 0.5f).PlaceOverlay(2560f, 1080f, 16f / 9f);
+
+            Assert.AreEqual(0.3125f, place.PivotX, 1e-5f);
+            Assert.AreEqual(0.5f, place.PivotY, 1e-5f);
+            Assert.AreEqual(1120f, place.OffsetX, 1e-3f);
+            Assert.AreEqual(0f, place.OffsetY, 1e-3f);
+        }
+
+        [Test]
+        public void ADegenerateFrameFallsBackToTheCentre()
+        {
+            var place = Anchored(0.5f, 0.15f, 0.5f, 0.5f).PlaceOverlay(0f, 0f, 16f / 9f);
+
+            Assert.AreEqual(0.5f, place.PivotX, 1e-5f);
+            Assert.AreEqual(0.5f, place.PivotY, 1e-5f);
+            Assert.AreEqual(0f, place.OffsetY, 1e-3f);
+        }
+
         [Test]
         public void ALimitOfOneShowsToScale()
         {

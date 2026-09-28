@@ -1063,8 +1063,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // Full-frame, keeping the art's aspect, hidden until an event fight
         // names an overlay. The controller scales it per round
-        // (FightRoundPresentation.OverlayScaleFor) about its centre; at scale
-        // 1 it is exactly the canvas, which is what the audit measures.
+        // (FightRoundPresentation.OverlayScaleFor) about the image's authored
+        // pivot, held on the frame's authored anchor (PlaceOverlay) -- the
+        // centre by default; at scale 1 with the defaults it is exactly the
+        // canvas, which is what the audit measures.
         private UiNode BuildRoundOverlay()
         {
             var overlay = Ui.Sprite("RoundOverlay", null, Place.Stretch(), UiSize.Fill)
