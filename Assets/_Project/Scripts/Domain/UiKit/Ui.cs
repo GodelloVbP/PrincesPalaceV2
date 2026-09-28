@@ -70,15 +70,11 @@ namespace PrincesPalace.Domain.UiKit
         // stage slot whose rect is set from the real sprite on load, so a fixed
         // box authored here would be the wrong shape for every monster.
         // EVERY BUTTON GETS THE HOVER/FOCUS RIM BY DEFAULT, built right here
-        // at declaration time (AttachDefaultHoverBox below) -- owner's call,
-        // 2026-09-23 (second pass): "every hoverable/focusable element in the
-        // game shows a solid box on hover and on gamepad focus." Before this,
-        // only the ~15 screens that remembered to call .Hovers() got one, and
-        // every OTHER unthemed button's only hover/focus feedback was the
-        // press animator's now-removed scale-pop -- about 30 call sites
-        // across 15 screens went silent the moment that pop was pulled. This
-        // is the seam that fixes all of them without editing any of their
-        // files: change what Button() builds, not what 30 call sites ask for.
+        // at declaration time (AttachDefaultHoverBox below): every
+        // hoverable/focusable element shows a solid box on hover and on
+        // gamepad focus. This is the seam that reaches every call site
+        // without editing any of their files: change what Button() builds,
+        // not what every call site asks for.
         //
         // .Themed()/.ThemedPlate() strip this rim back off (ThemedButtonState
         // already drives that button's own focus visual on Glow/Plate) and
@@ -198,16 +194,15 @@ namespace PrincesPalace.Domain.UiKit
         // exactly as the caller asked, wrapping the themed frame art as ITS
         // OWN Decor Sprite child rather than being that Sprite itself.
         //
-        // The frame used to BE the returned node, marked AsDecor directly --
-        // which worked for the art but was wrong the moment ContainerContent
-        // added real content as ITS child. UiAudit.Walk's Decor exemption
-        // (A1) is inherited by an entire subtree unconditionally: `bool
-        // decorHere = isDecor || node.Source.Decor`, carried into every
-        // descendant with no way for a lower node to opt back in. So content
-        // living under a Decor frame was never checked for overlap against
-        // its own siblings -- two labels stacked on each other inside one
-        // ContainerContent audited clean, because as far as A1 was concerned
-        // everything below the frame was ambient decoration.
+        // The frame is not itself the returned node: UiAudit.Walk's Decor
+        // exemption (A1) is inherited by an entire subtree unconditionally:
+        // `bool decorHere = isDecor || node.Source.Decor`, carried into
+        // every descendant with no way for a lower node to opt back in. If
+        // the frame itself were Decor and content lived directly under it,
+        // that content would never be checked for overlap against its own
+        // siblings -- two labels stacked on each other inside one
+        // ContainerContent would audit clean, because as far as A1 is
+        // concerned everything below the frame is ambient decoration.
         //
         // Keeping the frame Decor but demoting it to a CHILD of a non-Decor
         // wrapper fixes that without touching A1's semantics at all: the
@@ -275,19 +270,12 @@ namespace PrincesPalace.Domain.UiKit
         // SystemMenuLayout's pane content half-extents so nothing inside it
         // moves.
         //
-        // WAS a themed 2:1 Container until the owner called every kit frame
-        // inside the system menu ugly and asked for the bare violet pane the
-        // design pass actually
-        // specified (2026-09-07). Exits, Options, Party, Run statistics and
-        // Reward track each built the container by hand (a Container call, a
-        // ContainerContent call, then `screen.Root = ground`) with the same
-        // six-line "this pane sat on the shared SystemMenuFill with no ground
-        // of its own" comment repeated at every site; this is the one place
-        // that construction happens now, so a caller only says what size its
-        // pane is. The content inset is the SAME 744/357.78 the container's
-        // measured border used to leave (SystemMenuLayout.PaneContentHalf
-        // Width/HalfHeight's own comment), so no label, card or button in any
-        // hosted pane moved when the frame came off. The ground node is still
+        // Exits, Options, Party, Run statistics and Reward track each host a
+        // pane; this is the one place the ground-plus-content construction
+        // happens, so a caller only says what size its pane is. The content
+        // inset is the SAME 744/357.78 SystemMenuLayout.PaneContentHalfWidth/
+        // HalfHeight declares, so no label, card or button in any hosted pane
+        // moves when a caller resizes the ground. The ground node is still
         // handed back so a caller that needs to mark it Inactive() (Reward
         // track, which opens over the dossier) or read it back into
         // `screen.Root` can do so itself.
@@ -545,14 +533,10 @@ namespace PrincesPalace.Domain.UiKit
         // A TRACK, THE FILL THAT READS IT, AND THE TWO STRIPS THAT MAKE IT A
         // METER RATHER THAN A COLOURED RECTANGLE.
         //
-        // The fight HUD wrote this by hand three times -- the party plate's HP
-        // row, its MP row, and the roster mini-plate's -- and every copy was
-        // the same two lines: a Panel tinted Track with one full-bleed Solid
-        // inside it. At 6-13px tall that reads as a red stripe, which is
-        // exactly the owner's note on the 2026-09-09 capture ("it should feel
-        // like a proper HP bar, not a red bar"). What makes it read as a meter
-        // is not height alone: it is a rim in the fill's own deep tone, a
-        // highlight along the top of the fill and a darker band under it.
+        // At 6-13px tall a plain tinted fill reads as a coloured stripe, not
+        // a meter. What makes it read as a meter is not height alone: it is
+        // a rim in the fill's own deep tone, a highlight along the top of
+        // the fill and a darker band under it.
         //
         // THE STRIPS ARE CHILDREN OF THE FILL, at FRACTIONAL anchors, and both
         // halves of that matter. FightController.SetFill drains a bar by moving
@@ -655,9 +639,8 @@ namespace PrincesPalace.Domain.UiKit
             return new MeterNodes(track, fill, shade);
         }
 
-        // OutlineButton (the hairline-rim, no-plate button) retired
-        // 2026-09-07: the shop was its only caller and every one of those
-        // sites now wears a kit plate (owner's HQ-kit instruction). The
+        // OutlineButton (the hairline-rim, no-plate button) is retired: every
+        // site that used it now wears a kit plate. The
         // `<name>Caption` convention it established outlives it -- a
         // ThemedPlate() button whose caption is more than one centred string
         // (the shop's small sell plates, Reckoning's tabs, FightScreen's verb
@@ -759,16 +742,11 @@ namespace PrincesPalace.Domain.UiKit
 
         // A dimmer plus its content, with the stacking stated once.
         //
-        // Stacking comes from SIBLING ORDER, not from a canvas. This docstring
-        // used to claim the emitter "always sets overrideSorting on the canvas
-        // it creates" -- it creates no canvas for a Modal at all, and there is
-        // no UiNodeKind.Modal case in UiEmitter. The claim was aspirational and
-        // read as a guarantee, which is worse than saying nothing.
-        //
-        // What actually retires v1's inert-BarkCanvas bug is that a modal is
+        // Stacking comes from SIBLING ORDER, not from a canvas: a modal is
         // emitted as an ordinary subtree in declaration order, so "declared
         // later draws on top" is the only rule, with no second sorting system
-        // that can silently disagree with it.
+        // that can silently disagree with it. No canvas is created for a
+        // Modal at all -- there is no UiNodeKind.Modal case in UiEmitter.
         public static UiNode Modal(string name, string dimmerHex, UiNode content)
         {
             return Node(name, UiNodeKind.Modal, Place.Stretch(), UiSize.Fill, new[]
@@ -904,8 +882,7 @@ namespace PrincesPalace.Domain.UiKit
         // ---- hover/focus rim -----------------------------------------------------
         //
         // Called by Button()'s AttachDefaultHoverBox for every fixed-size,
-        // unthemed button -- not by UiNode.Hovers(), which is a no-op since
-        // 2026-09-23 (second pass). Owner's call, 2026-09-23: no more
+        // unthemed button -- not by UiNode.Hovers(), which is a no-op: no
         // hover-scale pop anywhere in the game -- a solid rim instead, shown
         // on pointer hover OR gamepad/keyboard focus (Core/HoverBox.cs),
         // never a transform change, and on EVERY hoverable/focusable
@@ -921,10 +898,8 @@ namespace PrincesPalace.Domain.UiKit
         // right for a border that sits flush on something (Options, Run
         // statistics, Exits, the system menu, the shop's chips); a box that
         // has to read as a solid outline around a control from across the
-        // room does not. Owner's call, 2026-09-23 (second pass): the first
-        // 1px/pad-6 rim did not read as solid enough. 2px, padded 4 --
-        // closer to the control so the box reads as ABOUT the button, not a
-        // second frame floating near it.
+        // room does not. 2px, padded 4 -- closer to the control so the box
+        // reads as ABOUT the button, not a second frame floating near it.
         private const float HoverRimThickness = 2f;
         private const float HoverRimPad = 4f;
 

@@ -20,10 +20,9 @@ namespace PrincesPalace.Domain.UiKit
     // banner_flag_<theme>_<ratio>.png), and the safe interior every one of
     // them shares.
     //
-    // THIS DELIVERY IS AT TRUE NOMINAL ASPECT, which is new. Every PNG was
-    // re-measured (`PIL.Image.size`) after the 2026-09-07 regeneration, and
-    // all six themes of every group land on exactly one size, exactly on the
-    // fraction their filename claims:
+    // THIS DELIVERY IS AT TRUE NOMINAL ASPECT. Every PNG measures
+    // (`PIL.Image.size`) to all six themes of every group landing on
+    // exactly one size, exactly on the fraction their filename claims:
     //
     //   container_*_3x4:    768x1024  -> 0.75    (all six identical)
     //   container_*_9x16:   576x1024  -> 0.5625  (all six identical)
@@ -77,14 +76,10 @@ namespace PrincesPalace.Domain.UiKit
         // the six themes takes a safety margin (container ~25%, banner's
         // V-clearance ~20%) and that is what is pinned below.
         //
-        // A NOTE ON THE TOOL, because the numbers this replaces were wrong:
-        // measure_inset used to read 0 on every side of an already-cropped
-        // PNG. The transparent halo's RGB is (0,0,0), close enough to the
-        // dark panel interior that the very first pixel scanned counted as
-        // interior -- which is where the implausible L.008 T.003 raw
-        // fractions recorded against 3x2/2x1 came from. It gates on alpha
-        // now, so the figures below are the first real measurement those two
-        // groups have had.
+        // A NOTE ON THE TOOL: measure_inset gates on alpha, not RGB, so it
+        // does not mistake the transparent halo's (0,0,0) for the dark
+        // panel interior. The figures below are real measurements for every
+        // group, including 3x2/2x1.
         //
         // Raw worst-per-side, this delivery:
         //
@@ -99,15 +94,10 @@ namespace PrincesPalace.Domain.UiKit
         // 3x2 AND 2x1 KEEP THE INSETS THEY ALREADY HAD (0.035/0.04/0.045 and
         // 0.035/0.055) rather than dropping to raw*1.25: their frames are
         // hairlines and the existing pins clear them several times over.
-        // 2x1 was also what SystemMenuLayout's own pane content bound used
-        // to lay out against, back when every system-menu pane's ground was
-        // a themed 2:1 Container -- that ground is bare now (owner's call,
-        // 2026-09-07), so this ratio's remaining callers are FightScreen's
-        // PartyPlate and anything else outside the menu that still wants a
-        // 2:1 frame. Same "already comfortably safe, so leave it" call the
-        // previous delivery made; the difference is that the raw number
-        // backing it is now a real measurement rather than a scanner
-        // artifact.
+        // 2x1's remaining callers are FightScreen's PartyPlate and anything
+        // else outside the menu that still wants a 2:1 frame. Already
+        // comfortably safe, so leave it: the raw number backing it is a
+        // real measurement.
         internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).Inset;
 
         // THE VISIBLE EDGE, not the rect edge -- every one of these PNGs

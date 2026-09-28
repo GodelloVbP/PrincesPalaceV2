@@ -18,10 +18,10 @@ namespace PrincesPalace.Domain.UiKit
     // (Art/UI/Buttons/Processed/button_plate_<theme>[_3x1|_5x1].png and
     // row_plate_<theme>_6x1.png).
     //
-    // THIS DELIVERY IS AT TRUE NOMINAL ASPECT, which is new -- same as
-    // ContainerArt. Every PNG was re-measured (`PIL.Image.size`) after the
-    // 2026-09-07 regeneration and all six themes of every shape land on
-    // exactly one size, exactly on the fraction the filename claims:
+    // THIS DELIVERY IS AT TRUE NOMINAL ASPECT -- same as ContainerArt: every
+    // PNG measures (`PIL.Image.size`) to all six themes of every shape
+    // landing on exactly one size, exactly on the fraction the filename
+    // claims:
     //
     //   button_plate_<theme>.png:       1536x512  -> 3.0  (all six identical)
     //   button_plate_<theme>_3x1.png:   1536x512  -> 3.0  (all six identical)
@@ -39,12 +39,6 @@ namespace PrincesPalace.Domain.UiKit
     // resolves to Legacy. ThreeByOne is therefore unreachable from ShapeFor
     // and only reachable by an explicit .Plate(ThreeByOne) override -- which
     // costs nothing, because the two now load the same pixels.
-    //
-    // HISTORY, one line: the previous delivery was spliced off sheets and
-    // measured 2.79 / 3.10 / 4.91 / 5.92, and the FiveByOne/Row6x1 pair had
-    // already moved once (3.42 -> 4.91, 4.92 -> 5.92) on 2026-09-02. The
-    // selection literals below and the rects ButtonPlateArtTests pins against
-    // them are what those numbers used to drive.
     internal static class ButtonPlateArt
     {
         // width / height. Exact, for this delivery.
@@ -102,7 +96,7 @@ namespace PrincesPalace.Domain.UiKit
 
                 // ThreeByOne shares Legacy's literal because it shares
                 // Legacy's file: the two PNGs are byte-identical for all six
-                // themes since the 2026-09-07 regeneration.
+                // themes.
                 case ButtonPlateShape.ThreeByOne:
                 default:
                     return new ContentInsetFrac(left: 0.0034f, right: 0.0033f, top: 0.0101f, bottom: 0.0098f);

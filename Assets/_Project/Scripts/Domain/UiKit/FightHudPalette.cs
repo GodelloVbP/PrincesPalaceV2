@@ -184,10 +184,9 @@ namespace PrincesPalace.Domain.UiKit
         // these through ForDamageType, so a hit and the card describing the
         // skill that caused it cannot disagree about what colour "Fire" is.
         //
-        // Physical is the popup's own original flat red (0.93, 0.26, 0.24 in
-        // DamagePopup's old hardcoded Color), carried over as a token rather
-        // than changed -- this pass adds colour to the OTHER five types, it
-        // does not restyle the one every hit used to show.
+        // Physical is carried over as a token rather than changed (0.93,
+        // 0.26, 0.24): this file adds colour to the OTHER five types, it
+        // does not restyle Physical.
         public const string DamageTypePhysical = "#ED423DFF";
         public const string DamageTypeFire = "#FF6A2AFF";
         public const string DamageTypeIce = "#9FD8F5FF";

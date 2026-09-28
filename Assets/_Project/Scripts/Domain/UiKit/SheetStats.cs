@@ -13,10 +13,9 @@ namespace PrincesPalace.Domain.UiKit
     // EquipmentSlots.All: declaration order IS display order, and there is no
     // lookup table to drift.
     //
-    // The sheet previously showed no numbers at all. A screen for deciding what
-    // to wear that never says what wearing it does is the one screen that most
-    // needs them -- and now that equipment actually reaches combat, these are
-    // the same figures the fight uses rather than a second opinion.
+    // A screen for deciding what to wear that never says what wearing it
+    // does is the one screen that most needs numbers -- these are the same
+    // figures the fight uses rather than a second opinion.
     public enum SheetStat
     {
         // The six a player spends points on.
@@ -29,9 +28,9 @@ namespace PrincesPalace.Domain.UiKit
 
         // What those turn into, plus whatever gear and talents added.
         //
-        // Defence (the old single generic mitigation stat) is GONE, not
-        // renamed to either PhysicalDefense or MagicalDefense — see
-        // StatType's own header.
+        // Defence, the single generic mitigation stat, does not exist:
+        // neither PhysicalDefense nor MagicalDefense is a rename of it —
+        // see StatType's own header.
         MaxHealth,
         Attack,
         Speed,
@@ -123,17 +122,16 @@ namespace PrincesPalace.Domain.UiKit
         //   Dexterity    -> Speed
         //   Charisma     -> signature gain
         //
-        // PHASE 2 OF THE BALANCE REDESIGN moved Physical/Magical Defense off
-        // "fed by nothing" and onto Constitution/Wisdom respectively (see
-        // AbilityDerivation.PhysicalDefenseBonus/MagicalDefenseBonus) -- armour
-        // is no longer the only source of either, ability scores are too.
+        // Physical/Magical Defense are fed by Constitution/Wisdom
+        // respectively (see AbilityDerivation.PhysicalDefenseBonus/
+        // MagicalDefenseBonus) -- armour is no longer the only source of
+        // either, ability scores are too.
         //
         // ATTACK IS FED BY NOTHING, PERMANENTLY -- not a placeholder pending a
-        // later phase. AbilityDerivation.AttackBonus was deleted for good:
-        // Strength no longer derives a flat Attack bonus, because offense
-        // lives at weapon grades instead (D3, Phase 3, landed -- see
+        // later phase. Strength does not derive a flat Attack bonus, because
+        // offense lives at weapon grades instead (see
         // WeaponPower.DisplayDamage and FightEncounterAdapter.ToCombatant) to
-        // kill the double-dip where both a stat AND a weapon rewarded the
+        // avoid the double-dip where both a stat AND a weapon rewarded the
         // same score. Hovering Strength on the sheet lights no row, and that
         // stays true: a stat row is "what does this DERIVE", and STR derives
         // nothing -- it multiplies a weapon's own number instead, which is a

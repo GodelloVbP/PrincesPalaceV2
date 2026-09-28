@@ -16,12 +16,11 @@ namespace PrincesPalace.Domain.UiKit
     {
         // ---- paging ----------------------------------------------------------
         //
-        // The two arrow glyphs, with no screen's name on them. These used to be
-        // TalentPrev/TalentNext, and five of the seven screens that step
-        // through something reached across for them -- the glossary, the debug
-        // menu, the shop's pack and the relic draft all labelled their arrows
-        // with a talent-screen string, which is how you can tell a string was
-        // named after its first caller rather than after what it says.
+        // The two arrow glyphs, with no screen's name on them: naming a
+        // shared string after its first caller rather than after what it
+        // says is what let five screens that had nothing to do with
+        // talents -- the glossary, the debug menu, the shop's pack and the
+        // relic draft -- label their arrows with a talent-screen string.
         public static readonly UiString PagerPrev = UiString.Define("pager.prev", "<");
         public static readonly UiString PagerNext = UiString.Define("pager.next", ">");
 
@@ -120,9 +119,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("talent.price_gate", "{0} Embers spent on this path",
                 "20 Embers spent on this path");
 
-        // The kicker above the name says nothing with no star picked
-        // (owner, 2026-09-19: "CHOOSE A STAR" cut) -- the body below still
-        // does, so the panel is not silent.
+        // The kicker above the name says nothing with no star picked --
+        // the body below still does, so the panel is not silent.
         public static readonly UiString TalentPickBody =
             UiString.Define("talent.pick_body",
                 "Every star in this constellation is a change to who they are. Pick one to read it.");
@@ -133,9 +131,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("talent.unwritten_body",
                 "This path is charted but not yet lit. Its stars are waiting to be written.");
 
-        // The confirmation. One press used to clear all three constellations
-        // with nothing in between, which is why these exist -- and why the body
-        // is Runtime rather than a fixed line: it names the actual refund.
+        // The confirmation. The body is Runtime rather than a fixed line:
+        // it names the actual refund.
         public static readonly UiString TalentRespecTitle =
             UiString.Define("talent.respec_title", "Put out every ember?");
         public static readonly UiString TalentRespecCancel =
@@ -157,11 +154,10 @@ namespace PrincesPalace.Domain.UiKit
         // "LEVEL 37 -- NEXT AT 40   A STAT POINT", set as four pieces plus a
         // rule rather than as one sentence.
         //
-        // ONE STRING WAS THE FIRST BUILD, and the reason it is not one now is
-        // that a sentence can only be one size. The figure is the thing this
-        // row exists to say and it was set at the same 18px as the word LEVEL
-        // in front of it; separate pieces let it stand at 34 while the words
-        // around it stay quiet.
+        // FOUR PIECES, not one sentence, because a sentence can only be one
+        // size: the figure is the thing this row exists to say; separate
+        // pieces let it stand at 34 while the word LEVEL in front of it and
+        // the rest of the words around it stay quiet at 18.
         //
         // THE REWARD'S NAME IS BACK, having been cut once for good reason: as
         // part of a single centred sentence it ran to eighty characters and
@@ -326,15 +322,11 @@ namespace PrincesPalace.Domain.UiKit
         // What the room the party just walked into did.
         //
         // Every non-fight room says something, INCLUDING the ones with no
-        // content behind them yet. That is v1's rule and it is worth restating:
-        // a room that does nothing without explaining itself reads as a bug,
-        // and v2 had regressed to exactly that -- entering a treasure room
-        // cleared it in silence.
+        // content behind them yet: a room that does nothing without
+        // explaining itself reads as a bug.
         //
-        // "Gold", not v1's "Embers". v1's treasure text said Embers while
-        // crediting run gold; in v2 those are two different currencies (gold
-        // is spent inside a descent, embers survive it), so the old copy would
-        // now name the wrong one.
+        // "Gold", not v1's "Embers": gold and embers are two different
+        // currencies (gold is spent inside a descent, embers survive it).
         public static readonly UiString MapRoomTreasure =
             UiString.Define("map.room.treasure", "You found a stash of {0} Gold.",
                 "You found a stash of 999 Gold.");
@@ -770,10 +762,10 @@ namespace PrincesPalace.Domain.UiKit
         // shop sells none).
         public static readonly UiString ShopConsumableMeta = UiString.Define("shop.consumable_meta", "CONSUMABLE");
 
-        // VISIBLE AFFIXES (owner ask #2, 2026-09-22): {2} used to be a bare
-        // COUNT ("3 AFFIX"); it is now the affix NAMES themselves,
-        // comma-joined (ShopController.DescribeEntry), or ShopGearMetaNoAffix
-        // below when the roll carries none. Runtime-only content
+        // VISIBLE AFFIXES: {2} is the affix NAMES themselves, comma-joined
+        // (ShopController.DescribeEntry), not a bare COUNT, or
+        // ShopGearMetaNoAffix below when the roll carries none. Runtime-only
+        // content
         // (ShopController sets this label via UiString.Runtime, never this
         // UiString's own audit sample), so an unusually long affix list
         // wrapping or clipping on the card is a graceful-degradation
@@ -869,19 +861,19 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DossierSlotFilled =
             UiString.Define("dossier.slot_filled", "{0}", "LIGHTNING BOLT");
 
-        // WHAT THE PANEL SAYS WHEN A SLOT PRESS IS REFUSED AS A DUPLICATE
-        // (AUDIT #116). docs/PLAN_SHOP.md 1d: "Refuse a duplicate ... not a
+        // WHAT THE PANEL SAYS WHEN A SLOT PRESS IS REFUSED AS A DUPLICATE.
+        // docs/PLAN_SHOP.md 1d: "Refuse a duplicate ... not a
         // silent success either", and 2d says assignment time is where the
         // player finds out. The refusal existed; nothing on the screen moved.
         //
-        // Owner's wording, 2026-09-11. Sentence case and the same 14pt band as
+        // Sentence case and the same 14pt band as
         // DossierNoSpellBooks above, whose place it borrows -- one line, up
         // only while the refusal stands, rather than a fourth state on the
         // slot chips.
         public static readonly UiString DossierSpellAlreadyKnown =
             UiString.Define("dossier.spell_already_known", "You already have this spell prepared");
 
-        // --- the dossier's skills panel (owner bug report, 2026-09-19) -----------
+        // --- the dossier's skills panel -----------
         // The row already existed (OverlaySkills, above); this is the panel it
         // opens, same "SMALL CAPS TITLE" register as ShopSectionBooks/
         // OverlayPackTitle.
@@ -1018,11 +1010,10 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString WoolHeading = UiString.Define("wool_heading", "WOOL");
         public static readonly UiString HpTag = UiString.Define("hp_tag", "HP");
 
-        // MpTag ("MP") is GONE. The party card's second meter draws whichever
-        // pool its holder carries, and the tag beside it is that pool's own
-        // shortTag (pools.json) rather than authored copy -- see
-        // PoolNamedValue below for the roster card's version of the same
-        // move.
+        // The party card's second meter draws whichever pool its holder
+        // carries, and the tag beside it is that pool's own shortTag
+        // (pools.json) rather than authored copy -- see PoolNamedValue
+        // below for the roster card's version of the same move.
         //
         // TEMPLATED SO THE AUDIT CAN SEE THE WORST CASE, which is the whole
         // reason this is not just a Runtime label. PoolEntryResolver caps
@@ -1054,23 +1045,20 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString HpValueTagged =
             UiString.Define("hp_value_tagged", "HP {0}/{1}", "HP 9999/9999");
 
-        // MpValueTagged ("MP {0}/{1}") is GONE, and this replaced it rather
-        // than joining it. The reasoning above still holds for HP -- "HP" is
-        // authored UI copy and belongs here -- but the second meter's tag
-        // stopped being copy the day mana became a content row: the pool a
-        // character actually holds owns its own shortTag (pools.json), and a
-        // roster card that printed a literal "MP" would say MP over a bar
-        // full of somebody's rage. So the tag is a PARAMETER here, exactly
-        // as the signature line's resource name below already is.
+        // The reasoning above still holds for HP -- "HP" is authored UI
+        // copy and belongs here -- but the second meter's tag is not copy:
+        // the pool a character actually holds owns its own shortTag
+        // (pools.json), and a roster card that printed a literal "MP" would
+        // say MP over a bar full of somebody's rage. So the tag is a
+        // PARAMETER here, exactly as the signature line's resource name
+        // below already is.
         //
         // A CLONE OF SignatureNamedValue, not a reuse of it, because the two
         // are measured against different boxes: this one is drawn ON a
         // 174px roster bar at 9pt, that one across the card at 10pt, and one
         // shared AuditSample would silently pick whichever worst case was
         // written first. The sample is the longest tag a pool is likely to
-        // author against the widest numbers the existing MP sample already
-        // covered, so this cannot be a narrower promise than the entry it
-        // replaced.
+        // author against the widest numbers a pool tag could need.
         public static readonly UiString PoolNamedValue =
             UiString.Define("pool_named_value", "{0} {1}/{2}", "FURY 9999/9999");
 
@@ -1084,11 +1072,6 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString StandingCount =
             UiString.Define("standing_count", "{0} STANDING", "99 STANDING");
-
-        // LevelAndRole ("LV1 UTILITY") is GONE, Phase C1 -- the party plate's
-        // PartyClass row it painted was removed in B2 (FightScreen.
-        // BuildPartyPlate's own note); this was its last reader
-        // (FightController.Hud.cs's RefreshPartyPlate).
 
         // Submenu chrome. The hint is the one line that tells a player the
         // column can be closed at all.
@@ -1192,11 +1175,10 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString FightSeatMiddle = UiString.Define("fight_seat_middle", "Middle");
         public static readonly UiString FightSeatRear = UiString.Define("fight_seat_rear", "Rear");
 
-        // TransformStripTurns/TransformStripPermanent are GONE with the strip
-        // itself (2026-09-09, the HUD-column pass). A transformation IS a
-        // status on the character, so it reads out through the badge row on
-        // the party plate and the roster card like every other one, and its
-        // "X turns"/"permanent" wording now lives in StatusHud.TransformRow's
+        // A transformation IS a status on the character, so it reads out
+        // through the badge row on the party plate and the roster card
+        // like every other one, and its "X turns"/"permanent" wording
+        // lives in StatusHud.TransformRow's
         // tooltip beside the twelve status tooltips it belongs with -- a
         // hover string, not a label, so it is not a UiStrings entry at all.
         // The 36px the strip reserved is what paid for the roster cards'
@@ -1268,9 +1250,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("options.battle_speed.note", "Applies from the next action");
         public static readonly UiString OptionsRestoreDefaults =
             UiString.Define("options.restore_defaults", "RESTORE DEFAULTS");
-        // Reworded: the blanket claim stopped
-        // being true the moment one row on this screen no longer retimes
-        // whatever beat is already playing.
+        // Battle speed is carved out because it does not retime whatever
+        // beat is already playing (see the note above).
         public static readonly UiString OptionsAppliesImmediately =
             UiString.Define("options.applies",
                 "Changes apply immediately. Battle speed applies from the next action.");
@@ -1377,10 +1358,9 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the Party pane --------------------------------------------------
         //
-        // Seat labels are FRONT/MIDDLE/REAR, not the handoff's role-neutral
-        // "Position 1/2/3" -- this game's positions ARE mechanically different
-        // (the front-rank rule, landed 2026-09-07), and the handoff's own
-        // escape clause says to rename them the moment that is true.
+        // Seat labels are FRONT/MIDDLE/REAR, not role-neutral "Position
+        // 1/2/3": this game's positions ARE mechanically different (the
+        // front-rank rule).
         public static readonly UiString PartyBannerDefault =
             UiString.Define("party.banner.default", "Select a companion, then choose a position.");
         public static readonly UiString PartyBannerSelected =
