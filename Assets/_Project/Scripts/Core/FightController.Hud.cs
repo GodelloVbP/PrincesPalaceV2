@@ -202,37 +202,15 @@ namespace PrincesPalace
             int active = _menu.ActiveVerbIndex;
             for (int i = 0; i < verbButtons.Length; i++)
             {
-                // OPEN MEANS OPEN. It used to also mean "the pad's focus is
-                // here", via `active < 0 && i == _focusedVerb`, and that one
-                // clause is the whole of the owner's hardware finding:
-                // "attack is always seeming to be hovered over (not a gamepad
-                // bug) and makes it difficult to notice if you hover/select
-                // it."
+                // Open means open. Pad focus is FocusMarker's job (Core/FocusMarker.cs),
+                // not `active < 0 && i == _focusedVerb` -- _focusedVerb defaults
+                // to 0 and is never -1, so that clause made ATTACK read as
+                // hovered at rest. This stays a drawing-only change:
+                // _focusedVerb, MoveFocus and ConfirmFocus are untouched.
                 //
-                // _focusedVerb is 0 from the moment the controller wakes and
-                // is never -1 -- Fight's model keeps a focused verb at all
-                // times by design, because Submit has to have something to
-                // press. So at rest, with no branch open, `highlighted` was
-                // unconditionally true for index 0, and ATTACK wore the
-                // branch-is-open plate before the player had touched
-                // anything. The two states were never "mutually exclusive in
-                // practice" as the old comment claimed; one of them was just
-                // always on.
-                //
-                // Pad focus is the marker's job now (Core/FocusMarker.cs),
-                // and this is a DRAWING change only: _focusedVerb, MoveFocus
-                // and ConfirmFocus are untouched, and so are their direct-
-                // call tests.
-                //
-                // AND INDEX 0 NO LONGER WEARS Primary EITHER (owner, 2026-09-19:
-                // "the attack button in the fight menu is still glowing
-                // always"). AUDIT.md #171 left this open as a design call
-                // rather than a bug, because a recommended default is a real
-                // thing to signal; the owner has made it. The resting column
-                // shows no ring on any verb, and "ATTACK is the default" is
-                // carried by the hotkey number beside it -- which costs no
-                // glow, cannot be mistaken for focus or hover, and is already
-                // on screen.
+                // Index 0 carries no glow at rest either: "ATTACK is the
+                // default" is carried by the hotkey number beside it, which
+                // costs no glow and cannot be mistaken for focus or hover.
                 //
                 // THEMED VERBS drive ThemedButtonState.SetMenuState (through
                 // ApplySelection) instead of targetGraphic.color -- Open or
@@ -252,12 +230,10 @@ namespace PrincesPalace
                 }
             }
 
-            // NOTHING IS OVERWRITTEN ON A VERB LABEL ANY MORE. The fourth
-            // row used to have its banked-action count written in here every
-            // repaint, because Hold Back built a resource nothing else showed.
-            // Move builds none: what it costs (the turn) and what it can do
-            // (which directions are open) are both on its own submenu rows,
-            // so the label is exactly what the screen tree authored.
+            // Nothing overwrites a verb label here: Move's cost (the turn) and
+            // options (which directions are open) both live on its own
+            // submenu rows, so the label stays exactly what the screen tree
+            // authored.
             breadcrumb.SetContent(FightHudModel.Breadcrumb(_menu));
         }
 
@@ -276,7 +252,7 @@ namespace PrincesPalace
 
             var rows = CurrentRows();
 
-            // THE SKILL OPTION LIST, ONLY WHEN A ROW ACTUALLY NAMES A SKILL.
+            // The skill option list, only when a row actually names a skill.
             // FightHudModel.SkillRows builds `rows` 1:1 off this exact list
             // (one SubmenuRow per option, in order, nothing filtered) so row
             // index i and options[i] agree without a second lookup -- see its
@@ -286,8 +262,7 @@ namespace PrincesPalace
             // null there is what stops a mark painted at Skill depth from
             // surviving into the Element list the same rows get reused for
             // (the "one row pool serves both branches" pool BuildSubmenuColumn
-            // describes) -- fixing bug 2026-09-19, "art for spell book is not
-            // shown in the select spell screen".
+            // describes).
             var options = CurrentSubmenuKind() == SubmenuKind.Skill ? SkillOptions(ActingCharacter()) : null;
 
             // ELEMENT DEPTH TITLES ITSELF, ahead of the branch: the column is
@@ -295,13 +270,10 @@ namespace PrincesPalace
             // elements, and a header reading SKILLS over four element names is
             // the header describing the depth the player just left.
             submenuTitle.Set(SubmenuTitleFor(CurrentSubmenuKind()));
-            // The truncation is reported HERE, beside the list it truncates,
-            // rather than into the combat log. It used to AppendMessage on every
-            // refresh, so the bark spent the fight repeating "9 more entr(y/ies)
-            // than the column can show" over whatever the fight was actually
-            // saying. The warning was right and the channel was wrong: a fact
-            // about the menu does not belong in the narration of the battle, and
-            // a line re-sent every frame stops being read at all.
+            // The truncation is reported here, beside the list it truncates,
+            // rather than into the combat log: a fact about the menu does not
+            // belong in the narration of the battle, and a line re-sent every
+            // frame stops being read at all.
             int hidden = rows.Count - submenuRows.Length;
             if (hidden > 0)
             {
@@ -370,12 +342,10 @@ namespace PrincesPalace
                 // the two indices are kept apart.
                 ThemedButtonState.ApplySelection(submenuRows[i], i == _menu.RowSelection);
 
-                // The row's whole state, in one channel. It used to carry the
-                // name at full strength, the meta dimmed and the cost
-                // recoloured; there is one thing on the row now, so dimming it
-                // is the entire vocabulary a name-only list has. What the
-                // player cannot afford is still hovered, and hovering is what
-                // fills the detail column with the cost they are short of.
+                // The row's whole state, in one channel: dimming the name is
+                // the entire vocabulary a name-only list has. What the player
+                // cannot afford is still hovered, and hovering is what fills
+                // the detail column with the cost they are short of.
                 SetAlpha(submenuNames[i], row.Affordable ? 1f : DimmedAlpha);
             }
 
@@ -386,16 +356,16 @@ namespace PrincesPalace
         // Column C. Describes whatever the submenu has selected, or the
         // synthetic Strike entry when the branch is ATTACK.
         //
-        // 2026-09-23 ICON REWORK, PASS 2: paints from panel.Icons now, not
-        // panel.Stats/.Body (see FightHudModel.DetailPanel's own header for
-        // why both are still populated), AND resizes the card to fit --
-        // "a dynamic box", not a static six-row reservation drawn small.
-        // Every position/size below comes from FightScreen's own pure
-        // Domain functions (DetailHFor, DetailCentreYFor, DetailFrameTopFor/
-        // BottomFor, DetailNameYFor/KindYFor, DetailIconRowYFor) -- this
-        // method's whole job is writing their output onto the RectTransforms
-        // FightScreen built, the same "Domain computes, Core paints" split
-        // FightController.AnchorSubmenuRows already follows for the submenu.
+        // Paints from panel.Icons, not panel.Stats/.Body (see
+        // FightHudModel.DetailPanel's own header for why both are still
+        // populated), and resizes the card to fit rather than reserving a
+        // static six rows. Every position/size below comes from FightScreen's
+        // own pure Domain functions (DetailHFor, DetailCentreYFor,
+        // DetailFrameTopFor/BottomFor, DetailNameYFor/KindYFor,
+        // DetailIconRowYFor) -- this method's whole job is writing their
+        // output onto the RectTransforms FightScreen built, the same "Domain
+        // computes, Core paints" split FightController.AnchorSubmenuRows
+        // already follows for the submenu.
         private void RefreshDetail()
         {
             detailColumn.SetShown(_menu.DetailOpen);
@@ -409,13 +379,12 @@ namespace PrincesPalace
 
             int shown = panel.Icons.Count;
 
-            // THE HERO ICON (owner playtest, "the skill icon ... as the
-            // card's hero, beside the title" -- FightScreen.DetailHeroIconSize's
-            // own header): the Element row, when the current hover has one,
-            // paints beside the title instead of in the row stack. It is
-            // found by Kind, not a fixed index, because Icons is compact --
-            // which pool slot holds it depends on which earlier facts (mana,
-            // cost, cooldown) this particular skill happened to carry.
+            // The hero icon (FightScreen.DetailHeroIconSize's own header): the
+            // Element row, when the current hover has one, paints beside the
+            // title instead of in the row stack. It is found by Kind, not a
+            // fixed index, because Icons is compact -- which pool slot holds
+            // it depends on which earlier facts (mana, cost, cooldown) this
+            // particular skill happened to carry.
             int heroIndex = -1;
             for (int i = 0; i < panel.Icons.Count; i++)
             {
@@ -436,11 +405,9 @@ namespace PrincesPalace
             MoveTo(detailKind.rectTransform, nameLeft, FightScreen.DetailKindYFor(listRows));
             SetWidth(detailKind.rectTransform, nameWidth);
 
-            // `rowSlot` packs the non-hero rows tight, same as `i` used to
-            // when every active icon occupied its own row -- the hero icon
-            // (if any) is skipped here so the row beneath it does not leave
-            // a gap where the hero used to sit in the old one-slot-per-row
-            // layout.
+            // `rowSlot` packs the non-hero rows tight: the hero icon (if any)
+            // is skipped here so the row beneath it does not leave a gap
+            // where the hero would otherwise sit.
             int rowSlot = 0;
             for (int i = 0; i < detailIconImages.Length; i++)
             {
@@ -473,16 +440,14 @@ namespace PrincesPalace
                     }
                 }
 
-                // NO VALUE LABEL FOR A ROW WITH NOTHING TO SAY -- Defense/
+                // No value label for a row with nothing to say -- Defense/
                 // Reach/AreaOfEffect carry their fact through the icon alone
-                // (FillDetailIcons' own "ONE ICON, COMPACT" header) and were
-                // built with Value == "", but the label object used to stay
-                // active anyway, an empty TMP_Text taking its place in the
-                // row and reading as a bare icon adrift in blank space. The
-                // icon is not "genuinely nothing" (it carries the fact by
-                // itself) so the ROW stays; only the label that has nothing
-                // to print is hidden. The hero icon never gets a value label
-                // either -- its sprite alone identifies the skill.
+                // (FillDetailIcons' own "one icon, compact" header) and are
+                // built with Value == "". The icon is not "genuinely nothing"
+                // (it carries the fact by itself) so the row stays; only the
+                // label that has nothing to print is hidden. The hero icon
+                // never gets a value label either -- its sprite alone
+                // identifies the skill.
                 if (i < detailIconValues.Length && detailIconValues[i] != null)
                 {
                     bool hasValue = has && !isHero && !string.IsNullOrEmpty(panel.Icons[i].Value);
@@ -783,12 +748,10 @@ namespace PrincesPalace
             // question asked of the same click for every plate in the loop.
             var targetingReach = TargetingReach();
 
-            // THE ENEMY RACK IS LIVE ONLY WHILE ENEMIES ARE BEING PICKED
-            // (AUDIT #147). It used to be _menu.IsTargeting, which was the
-            // same thing while there was only one rack to point at; with an
-            // ally pick open, a live enemy plate is a button offering a cast
-            // that would be refused, which is exactly the state `blocked`
-            // exists to keep off the screen.
+            // The enemy rack is live only while enemies are being picked, not
+            // just while targeting generally: with an ally pick open, a live
+            // enemy plate is a button offering a cast that would be refused,
+            // which is exactly the state `blocked` exists to keep off screen.
             bool picking = _menu.IsPickingEnemy;
 
             // An elite room fields a squad drawn entirely from the elite pool,
@@ -811,11 +774,10 @@ namespace PrincesPalace
                 bool present = i < enemies.Count && enemies[i].IsAlive && IsOnStage(enemies[i]);
                 enemyPlates[i].SetShown(present);
 
-                // BLOCKED: reachable by the click OnEnemyPressed will actually
+                // Blocked: reachable by the click OnEnemyPressed will actually
                 // accept, but not by THIS one. Dimmed, reticle greyed, and not
                 // interactable -- the plate stops being a button rather than
-                // staying one that silently refuses, which is the visual half
-                // of the fix Phase 1 already made to the click itself.
+                // staying one that silently refuses.
                 bool blocked = present && picking && _session != null
                     && !_session.CanReachEnemy(_session.Current, targetingReach, enemies[i]);
 
@@ -826,12 +788,11 @@ namespace PrincesPalace
                 if (present)
                 {
                     // enemyPlateFrames[i], not enemyPlates[i].targetGraphic:
-                    // the button is NoChrome now (owner's HQ-kit instruction,
-                    // 2026-09-07), so its own Image is a permanently
-                    // transparent click target -- the Crimson container
-                    // frame under it is what the player actually sees, and
-                    // is what the elite/boss dress and the out-of-reach dim
-                    // have to tint instead.
+                    // the button is NoChrome, so its own Image is a
+                    // permanently transparent click target -- the Crimson
+                    // container frame under it is what the player actually
+                    // sees, and is what the elite/boss dress and the
+                    // out-of-reach dim have to tint instead.
                     if (Has(enemyPlateFrames, i))
                     {
                         var colour = dressed ? EliteBossPlateTint : Color.white;
@@ -932,45 +893,31 @@ namespace PrincesPalace
 
         // ---- the HUD column: three PC plates ---------------------------------
         //
-        // ONE LOOP, ONE PLATE AT A TIME, and the only thing that varies
+        // One loop, one plate at a time, and the only thing that varies
         // between iterations is whether this plate's occupant is the one
-        // acting. That is the whole point of the 2026-09-10 model change:
-        // there used to be RefreshPartyPlate (the acting member, on a taller
-        // card with its own node names) and RefreshRoster (everybody else, on
-        // smaller ones), which meant every fact about a party member had two
-        // implementations that had to be kept in step by hand -- and the
-        // roster half was structurally unable to show things the party half
-        // could.
+        // acting -- every fact about a party member has a single
+        // implementation, whether or not that member is acting.
         //
-        // ORDER IS THE FIELD'S ORDER, not "acting first" and not the
-        // fight-long slot's. The column paints the party as it STANDS --
-        // front, middle, rear, in the order Encounter.PlayerParty holds at
-        // the moment of this repaint -- so a Move that trades two members'
-        // places trades their cards with them. A plate does NOT belong to a
+        // Order is the field's order, not "acting first" and not a
+        // fight-long slot. The column paints the party as it stands -- front,
+        // middle, rear, in the order Encounter.PlayerParty holds at the
+        // moment of this repaint -- so a Move that trades two members'
+        // places trades their cards with them. A plate does not belong to a
         // character for the whole fight; it belongs to whoever is standing
         // at that rank now, and the whole card moves at once (art, name,
-        // theme, badges and both meters all come off `member` below).
-        //
-        // THAT IS A DECISION, not a default (AUDIT #144, owner 2026-09-11).
-        // 4c4bddc3 made this loop slot-indexed while fixing PaintVitals and
-        // named the consequence in its own message -- "the HUD column no
-        // longer reorders itself when a Move reorders the field" -- as a side
-        // effect of a correctness fix rather than something the brief asked
-        // for. The owner's call is that the column follows the field: Move
+        // theme, badges and both meters all come off `member` below). Move
         // costs a whole turn and buys nothing but position, so the column
         // that lists the party by rank has to show that the rank changed.
         //
-        // WHAT REPLACES THE SLOT IS A PAINTED-OCCUPANCY RECORD, not a
+        // What tracks the occupant is a painted-occupancy record, not a
         // re-read of the live list at paint time. _plateOccupants is written
-        // here and READ by PaintVitals, which is what keeps F7's second half
-        // fixed: a round has finished resolving before its first beat plays
-        // (AfterResolution repaints the menu chrome ONLY, deliberately), so
-        // for the length of that playback the live list is already in the
-        // new order while the cards are still in the old one. Painting a
-        // beat by live index lands the two moved members' numbers on each
-        // other's portraits, which is the bug; painting by fight-long slot
-        // avoids it by freezing the column, which is what #144 rejected.
-        // Painting by what is CURRENTLY ON THE CARD does neither.
+        // here and read by PaintVitals: a round finishes resolving before its
+        // first beat plays (AfterResolution repaints the menu chrome only,
+        // deliberately), so for the length of that playback the live list is
+        // already in the new order while the cards are still in the old one.
+        // Painting a beat by live index would land the two moved members'
+        // numbers on each other's portraits; painting by what is currently on
+        // the card avoids that without freezing the column.
         private void RefreshPcPlates()
         {
             if (pcPlates == null || _session == null) return;
@@ -1336,14 +1283,13 @@ namespace PrincesPalace
         // The member's own signature resource as one line ("Wool 3/10"), or
         // nothing at all.
         //
-        // A NUMBER RATHER THAN SIXTEEN PIPS, as of 2026-09-10. The pip row
-        // was this column's one bespoke widget, it only ever existed on the
-        // acting card, and the owner's mock-ups never had it -- so a
-        // transformed or charged ALLY could not be read at all while the
-        // acting character got a meter nobody asked for. One template on
-        // every plate says the same thing in a tenth of the width.
+        // A number rather than pips: a pip row only ever existed on the
+        // acting card, so a transformed or charged ally could not be read at
+        // all while the acting character got a meter nobody asked for. One
+        // template on every plate says the same thing in a tenth of the
+        // width.
         //
-        // HIDDEN RATHER THAN BLANKED when the member carries no signature,
+        // Hidden rather than blanked when the member carries no signature,
         // which is two thirds of the party: a label set to "" still occupies
         // its cell for UiAudit's purposes and reads as a missing value rather
         // than as a character who simply has no meter.
@@ -1361,20 +1307,18 @@ namespace PrincesPalace
 
         // ---- the second meter, painted from the pool its holder carries ------
         //
-        // WHY THIS IS A RUNTIME WRITE AT ALL. Ui.Meter bakes its four colours
-        // into the scene at build time and Ui.Label bakes its tag, which was
-        // right for as long as the second meter WAS mana. It is not any more:
-        // a combatant's PrimaryPool is built from a pools.json row
+        // Why this is a runtime write at all: Ui.Meter bakes its four colours
+        // into the scene at build time and Ui.Label bakes its tag, but a
+        // combatant's PrimaryPool is built from a pools.json row
         // (ContentDatabase.BuildPrimaryPool), and the row owns the tag and
         // the three hexes. A baked meter can only be one pool's meter, so a
-        // second pool would have meant a second meter, hidden behind the
-        // first -- which is a special case wearing a prefab.
+        // second pool would mean a second meter hidden behind the first --
+        // a special case wearing a prefab.
         //
-        // The bake is not wasted: it is MANA's palette, the pool everyone
-        // shipped today holds, so an unrefreshed scene reads true and this
-        // method writes back the identical values for them. Mana therefore
-        // renders pixel-for-pixel as it did before this change; the meter
-        // only looks different the day a row authors different numbers.
+        // The bake is not wasted: it is Mana's palette, the pool everyone
+        // ships with today, so an unrefreshed scene reads true and this
+        // method writes back the identical values for it. The meter only
+        // looks different the day a row authors different numbers.
         //
         // RIM AND SHADE ARE DERIVED, NOT AUTHORED (RawPoolEntry.deepHex says
         // so): deepHex at 0.70 and 0.44, which is exactly what
@@ -1524,18 +1468,15 @@ namespace PrincesPalace
         // the same way the HP fill reads CurrentHealth fresh, rather than
         // caching anything.
         //
-        // PLAYTEST 2026-09-23: "shield is not shown on the health bar". Root
-        // cause was this formula, not the call sites (both PC and enemy
-        // plates already called this every repaint) -- endFrac was
-        // Clamp01(hpFrac + wardFrac) while startFrac stayed hpFrac
-        // unconditionally, so at full health (hpFrac already 1) endFrac
-        // clamped to the SAME 1 and the segment's own width came out zero:
-        // a real shield, rendering nothing. startFrac now reads
-        // Clamp01(endFrac - wardFrac) -- the same hpFrac whenever endFrac
-        // wasn't clamped (case A, "starts at the fill's right edge"), but
-        // when endFrac WAS clamped to 1 it slides startFrac left by exactly
-        // the clamped amount (case B, "over the fill"), so the segment's
-        // width is always wardFrac and it is never silently zeroed.
+        // startFrac is Clamp01(endFrac - wardFrac), not hpFrac unconditionally:
+        // at full health (hpFrac already 1) endFrac clamps to that same 1, so
+        // an unconditional startFrac == hpFrac would zero the segment's width
+        // and render a real shield as nothing. Reading startFrac off endFrac
+        // instead means it equals hpFrac whenever endFrac wasn't clamped
+        // (the segment starts at the fill's right edge), and slides left by
+        // exactly the clamped amount when endFrac was clamped (the segment
+        // sits over the fill) -- so the segment's width is always wardFrac
+        // and is never silently zeroed.
         private static void SetWardFill(Image ward, int current, int max, int wardPoints)
         {
             if (ward == null) return;
@@ -1676,15 +1617,13 @@ namespace PrincesPalace
             SetFillFraction(ghost, to);
         }
 
-        // RefreshTransformStrip is GONE (2026-09-09). The strip it painted was
-        // a whole panel that said one sentence about the ACTING character and
-        // could therefore never show a transformed ally sitting in the roster
-        // at all. A transformation is a StatusRow now
-        // (FightHudModel.StatusRowsFor -> StatusHud.TransformRow), so every
-        // surface that already paints status badges -- all three PC plates
-        // and the hover tooltip that names it in full -- picks
-        // it up through PaintStatusRow with no code here at all. That is the
-        // whole point of folding it in rather than adding a fourth writer.
+        // A transformation is a StatusRow (FightHudModel.StatusRowsFor ->
+        // StatusHud.TransformRow), not a dedicated panel scoped to the acting
+        // character -- that scoping could never show a transformed ally
+        // sitting in the roster. Every surface that already paints status
+        // badges -- all three PC plates and the hover tooltip that names it
+        // in full -- picks it up through PaintStatusRow with no code here at
+        // all.
 
         // The one badge on this screen that reads FightSession rather than
         // the acting character -- a Second Life charge belongs to the whole
@@ -1726,26 +1665,24 @@ namespace PrincesPalace
         // why TextSecondary is the token used.
         private static readonly Color ChipNeutral = Hex(FightHudPalette.TextSecondary);
 
-        // ---- last-tick emphasis (PLAN_STATUS_EFFECT_UI.md section 3/9 Phase 3) --
+        // ---- last-tick emphasis --
         //
-        // STATIC, on purpose -- the plan asks for "a static emphasised counter
-        // patch at 1 remaining, no pulse". A badge whose own status is about
-        // to expire gets a brighter, bolder digit and a slightly bigger patch
-        // behind it; every other count keeps the ordinary TextPrimary digit
-        // this badge always drew, no separate "emphasised" palette needed for
-        // any other value.
+        // Static, on purpose -- a badge whose own status is about to expire
+        // gets a brighter, bolder digit and a slightly bigger patch behind
+        // it; every other count keeps the ordinary TextPrimary digit this
+        // badge always drew, no separate "emphasised" palette needed for any
+        // other value.
         private static readonly Color CounterDefault = Hex(FightHudPalette.TextPrimary);
         private static readonly Color CounterEmphasis = Hex(FightHudPalette.HpBright);
         private const float CounterPatchEmphasisScale = 1.3f;
 
-        // ---- the appearance pop (PLAN_STATUS_EFFECT_UI.md section 6, package C) --
+        // ---- the appearance pop --
         //
-        // GameSettings (checked before adding this) carries no reduced-motion
-        // switch -- display and audio only. Rather than invent a setting
-        // nobody can reach from the Options screen yet, this is the literal
-        // "gate it behind a single const bool" the plan asks for instead:
-        // flip to false to turn the pop off project-wide with no other code
-        // touched. Restrained on purpose -- 150ms, one shrink, no bounce.
+        // GameSettings carries no reduced-motion switch -- display and audio
+        // only. Rather than invent a setting nobody can reach from the
+        // Options screen yet, a single const bool gates the pop: flip to
+        // false to turn it off project-wide with no other code touched.
+        // Restrained on purpose -- 150ms, one shrink, no bounce.
         private const bool StatusBadgeAppearancePopEnabled = true;
         private const float StatusBadgePopFromScale = 1.3f;
         private const float StatusBadgePopSeconds = 0.15f;
@@ -1769,12 +1706,10 @@ namespace PrincesPalace
         private const float EnemyStatusPitch = 40f;
         private const float EnemyStatusStripPadX = 12f;
 
-        // ONE FLAT INDEX SPACE across both surfaces (the enemy stage rows
+        // One flat index space across both surfaces (the enemy stage rows
         // first, then the three PC plates) rather than a HoverIndex handler
         // per surface -- one OnHoverStatusBadge, one tooltip cache, one
-        // "who is currently hovered" field. It used to span THREE surfaces;
-        // the party plate and the roster rows became one uniform PC column
-        // on 2026-09-10, so the second and third ranges collapsed into one.
+        // "who is currently hovered" field.
         private const int EnemyStatusBase = 0;
         private const int PcStatusBase = EnemyStatusBadgeCount;
         private const int TotalStatusBadges = PcStatusBase + PcStatusBadgeCount;
@@ -1786,16 +1721,11 @@ namespace PrincesPalace
         // unused Image sitting there for the polarity frame (section 3) to
         // move into.
         //
-        // UNIFORM ACROSS ALL THREE SURFACES, as of the fix for the first
-        // capture's worst defect: PartyBuff{i} used to be a plain chromeless
-        // Ui.Button (root Image doubling as both frame and glyph, Code
-        // carrying the counter folded into its own text, "PSN·2") because
-        // package B's original pass left the party plate predating this
-        // feature untouched. That workaround is what the capture showed as
-        // six tinted smudges with text stacked on top -- FightScreen now
-        // rebuilds PartyBuff{i} through BuildStatusBadge's own three-child
-        // anatomy, so all three surfaces wire and paint the same way and
-        // this struct needs no fallback-sprite field or party-only branch.
+        // Uniform across all three surfaces: FightScreen builds PartyBuff{i}
+        // through BuildStatusBadge's own three-child anatomy, the same as
+        // the enemy and roster badges, so all three surfaces wire and paint
+        // the same way and this struct needs no fallback-sprite field or
+        // party-only branch.
         private struct StatusBadgeParts
         {
             public GameObject Root;
@@ -2156,16 +2086,14 @@ namespace PrincesPalace
             }
         }
 
-        // ONE PATH for both surfaces -- enemy rows and PC plates alike
-        // now share BuildStatusBadge's Glyph/Code/Counter anatomy (see
-        // StatusBadgeParts' own header), so there is no longer a dedicated-
-        // frame-or-not branch here. Glyph stays untinted (section 3: art is
-        // painted, not recoloured, so Chilled and Rooted's own colours are
-        // never fought by a tint on top of them); polarity paints the Frame
-        // and the Code text instead. Code is blanked on an icon hit and the
-        // Counter carries the number on its own dedicated node -- the party
-        // plate no longer folds it into "PSN·2" text, because it has a real
-        // Counter node to write to like everything else.
+        // One path for both surfaces -- enemy rows and PC plates alike share
+        // BuildStatusBadge's Glyph/Code/Counter anatomy (see StatusBadgeParts'
+        // own header), so there is no dedicated-frame-or-not branch here.
+        // Glyph stays untinted -- art is painted, not recoloured, so Chilled
+        // and Rooted's own colours are never fought by a tint on top of them;
+        // polarity paints the Frame and the Code text instead. Code is
+        // blanked on an icon hit and the Counter carries the number on its
+        // own dedicated node.
         private void PaintBadge(StatusBadgeParts parts, FightHudModel.StatusRow row, bool showCounter, int flat, bool popIn)
         {
             parts.Root.SetShown(true);
@@ -2179,13 +2107,11 @@ namespace PrincesPalace
                 parts.Frame.color = polarity;
             }
 
-            // ICON FIRST, same priority RefreshIntentIcons already uses (and
-            // the retired RefreshPartyBuffs used before this replaced it).
-            // All fourteen (twelve statuses plus both speed presentations)
-            // ship real art today under Resources/Status/ (S3's review --
-            // StatusBadgeIconTests), so the three-letter Code fallback below
-            // is now only for a future status/presentation added before its
-            // own art lands.
+            // Icon first, same priority RefreshIntentIcons already uses. All
+            // fourteen (twelve statuses plus both speed presentations) ship
+            // real art under Resources/Status/ (StatusBadgeIconTests), so the
+            // three-letter Code fallback below is only for a future
+            // status/presentation added before its own art lands.
             var art = StatusSpriteFor(row);
             if (parts.Glyph != null)
             {
@@ -2196,11 +2122,11 @@ namespace PrincesPalace
 
             bool showNumber = showCounter && row.Counter >= 0;
 
-            // LAST-TICK EMPHASIS, static -- section 2/9 Phase 3. Only the
-            // exact value 1 gets the brighter/bolder digit and the bigger
-            // patch; every other count (including "no counter drawn at all")
-            // falls through to the ordinary look, so a status ticking from 3
-            // to 2 to 1 changes on the one frame that matters and nowhere else.
+            // Last-tick emphasis, static: only the exact value 1 gets the
+            // brighter/bolder digit and the bigger patch; every other count
+            // (including "no counter drawn at all") falls through to the
+            // ordinary look, so a status ticking from 3 to 2 to 1 changes on
+            // the one frame that matters and nowhere else.
             bool emphasise = showNumber && row.Counter == 1 && row.CounterText == null;
             if (parts.Code != null)
             {
@@ -2312,25 +2238,19 @@ namespace PrincesPalace
             rect.localScale = Vector3.one;
         }
 
-        // Section 6's whole overflow feature: the chip carries no polarity of
-        // its own (it is a mixed bag by definition). What hovering it does is
-        // no longer special -- it opens the status box, which lists every
-        // entry on this actor whether the row had a slot for it or not, so
-        // the chip's old job of carrying the hidden ones in a tooltip of its
-        // own is gone with the tooltip.
+        // The overflow chip carries no polarity of its own (it is a mixed
+        // bag by definition). Hovering it opens the status box, which lists
+        // every entry on this actor whether the row had a slot for it or
+        // not, so the chip needs no tooltip of its own.
         //
-        // THE FRAME STAYS ON, tinted NEUTRAL rather than either polarity --
-        // the first capture shipped this chip with no frame at all
-        // (`Frame.enabled = false`), which is what made it read as loose
-        // text floating beside the real badges instead of a badge itself.
-        // ChipNeutral is FightHudPalette.TextSecondary: the archived
-        // battle UI spec named
-        // this exact chip "neutral violet border, no category colour", and
-        // TextSecondary (#BFB0D4) is the one token in this palette that
-        // already reads as a muted violet-grey rather than a hue with its
-        // own meaning -- the rounded (benefit) frame shape is used rather
-        // than the clipped-detriment one arbitrarily, since neither shape
-        // says "mixed bag" more than the other.
+        // The frame stays on, tinted neutral rather than either polarity --
+        // a chip with no frame at all reads as loose text floating beside
+        // the real badges instead of a badge itself. ChipNeutral is
+        // FightHudPalette.TextSecondary (#BFB0D4), the one token in this
+        // palette that already reads as a muted violet-grey rather than a
+        // hue with its own meaning -- the rounded (benefit) frame shape is
+        // used rather than the clipped-detriment one arbitrarily, since
+        // neither shape says "mixed bag" more than the other.
         private void PaintOverflowChip(StatusBadgeParts parts, IReadOnlyList<FightHudModel.StatusRow> rows,
             int chipIndex, int flat)
         {
@@ -2393,33 +2313,27 @@ namespace PrincesPalace
                 var enemy = alive && IsOnStage(enemies[slot]) ? enemies[slot] : null;
                 var rows = enemy != null ? FightHudModel.StatusRowsFor(_session, enemy) : EmptyStatusRows;
 
-                // Section 7: a row with no statuses renders nothing at all,
-                // backing strip included -- the common case on most opening
-                // turns.
+                // A row with no statuses renders nothing at all, backing
+                // strip included -- the common case on most opening turns.
                 if (Has(enemyStatusStrips, slot)) enemyStatusStrips[slot].SetShown(rows.Count > 0);
 
-                // RE-SPREAD, the same way AnchorOne re-spreads the
-                // FIGURE itself. FightScreen.BuildEnemyStatusRows baked this
-                // row's position against the FIXED FightHudSpec.
-                // StageSlotsPerSide slot geometry (it has to: it runs at
-                // build time, before any encounter exists to count), but
-                // AnchorOne "spreads however many actors are
-                // ACTUALLY on this side across the whole depth range,
-                // instead of filling the first N of three fixed slots" (its
-                // own header). With fewer than three enemies those two
-                // disagree about where slot 1 sits, and a row left at its
-                // baked position draws over whichever OTHER row the spread
-                // happens to have moved there -- found by capturing this
-                // fixture's own screenshot with two enemies and watching
-                // the second one's row land on the first one's figure.
+                // Re-spread, the same way AnchorOne re-spreads the figure
+                // itself. FightScreen.BuildEnemyStatusRows baked this row's
+                // position against the fixed FightHudSpec.StageSlotsPerSide
+                // slot geometry (it has to: it runs at build time, before any
+                // encounter exists to count), but AnchorOne spreads however
+                // many actors are actually on this side across the whole
+                // depth range, instead of filling the first N of three fixed
+                // slots (its own header). With fewer than three enemies those
+                // two disagree about where slot 1 sits, and a row left at its
+                // baked position draws over whichever other row the spread
+                // moved there.
                 //
-                // TAKEN FROM WHERE THE FIGURE ACTUALLY WENT, not recomputed
-                // from the slot index. This used to read SlotOffset(slot,
-                // onStage) and be right, because a slot's index WAS its rank;
-                // A3 separated the two, so a survivor that closed up over a
-                // faded corpse stands at a rank its slot index no longer
-                // names -- and this row would have stayed behind on the empty
-                // ground the corpse left.
+                // Taken from where the figure actually went, not recomputed
+                // from the slot index: a slot's index is not its rank once a
+                // survivor closes up over a faded corpse, so a row painted by
+                // slot index would stay behind on the empty ground the corpse
+                // left.
                 if (enemy != null && slot < _enemyMarks.Length)
                 {
                     var staticOffset = FightStageAnchors.SlotOffset(slot, FightHudSpec.StageSlotsPerSide, mirrored: false);
@@ -2437,18 +2351,16 @@ namespace PrincesPalace
             }
         }
 
-        // Section 3's fix: the build-time strip is always the full 196px
-        // (4 badges + the "+N" chip, all five physical slots) because
-        // UiAudit solves the screen once, before any encounter exists to
-        // say how many statuses a given enemy will actually carry -- see
-        // FightScreen.BuildEnemyStatusRows' own header, "the audited layout
-        // is the full 5-node row and stays as is". At RUNTIME the strip
-        // shrinks to however many badges this refresh actually shows,
-        // centred on the same slot X the full-width row was built around
-        // (read back from the strip's OWN current position, already
-        // resolved by RepositionEnemyStatusRow above), so two badges on a
-        // golem no longer leave the strip's other three slots' worth of
-        // empty backing hanging off to their right.
+        // The build-time strip is always the full 196px (4 badges + the "+N"
+        // chip, all five physical slots) because UiAudit solves the screen
+        // once, before any encounter exists to say how many statuses a given
+        // enemy will actually carry -- see FightScreen.BuildEnemyStatusRows'
+        // own header. At runtime the strip shrinks to however many badges
+        // this refresh actually shows, centred on the same slot X the
+        // full-width row was built around (read back from the strip's own
+        // current position, already resolved by RepositionEnemyStatusRow
+        // above), so two badges on a golem do not leave the strip's other
+        // three slots' worth of empty backing hanging off to their right.
         private void FitEnemyStatusRow(int slot, int rowCount)
         {
             if (!Has(enemyStatusStrips, slot)) return;

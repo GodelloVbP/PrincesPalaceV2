@@ -472,25 +472,24 @@ namespace PrincesPalace
                 case 0:
                     _menu.OpenAttack();
 
-                    // A FRESH PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY
-                    // (owner's 2026-09-19 hardware-round call) -- not left at
-                    // -1 for MoveFocus/ConfirmFocus to treat as an implicit
-                    // 0. OpenAttack always lands on the enemy rack (its own
-                    // header: "does not nest -- it jumps straight to picking
-                    // a mark"), so there is no ally branch to guard here.
+                    // A fresh pick hovers the front living enemy explicitly,
+                    // not left at -1 for MoveFocus/ConfirmFocus to treat as
+                    // an implicit 0. OpenAttack always lands on the enemy
+                    // rack (its own header: "does not nest -- it jumps
+                    // straight to picking a mark"), so there is no ally
+                    // branch to guard here.
                     _hoveredEnemyIndex = FirstLivingEnemyIndex();
                     break;
 
                 case 1:
-                    // Same reasoning as the Item branch below: BasicSpell
-                    // (docs/PLAN_SHOP.md §4 Phase E) used to guarantee every
-                    // character at least one row here regardless of what
-                    // they had learned. It's gone, and bookOnly skills with
-                    // no unlockLevel are now a live authoring shape, so an
-                    // empty list is reachable content, not just a test
-                    // fixture -- refuse rather than open nothing to back out of.
+                    // Same reasoning as the Item branch below: nothing
+                    // guarantees every character at least one row here --
+                    // bookOnly skills with no unlockLevel are a live
+                    // authoring shape, so an empty list is reachable content,
+                    // not just a test fixture -- refuse rather than open
+                    // nothing to back out of.
                     //
-                    // THROUGH HasAnySkillOption, not SkillOptionsFor(...).Count
+                    // Through HasAnySkillOption, not SkillOptionsFor(...).Count
                     // -- this fires ahead of RefreshUi, so nothing has
                     // memoized the list yet, and the emptiness check is the
                     // only place in the controller that ever wants a yes/no
@@ -632,22 +631,17 @@ namespace PrincesPalace
                 return;
             }
 
-            // Self and Party resolve the same way -- Wool Gathering (HealSelf)
-            // was routing through the enemy-target prompt regardless, so the
-            // player clicked an enemy plate for a self-heal that ignored the
-            // click and healed the caster anyway (ResolveCharacterSkillInner's
-            // HealSelf case never reads its target argument). Neither has
-            // anything to aim at: the target set is fixed the instant the
-            // skill is picked, so there is nothing a Target-depth click could
-            // change.
+            // Self and Party resolve the same way: neither has anything to
+            // aim at, since the target set is fixed the instant the skill is
+            // picked, so there is nothing a Target-depth click could change
+            // (ResolveCharacterSkillInner's HealSelf case never reads its
+            // target argument).
             //
-            // AllEnemies no longer joins them here. An earlier version of this
-            // check routed every non-SingleEnemy skill through the same
-            // instant-resolve path, which meant a group cast -- real mana
+            // AllEnemies does not join them here: it enters Target depth
+            // exactly like SingleEnemy does, so a group cast -- real mana
             // cost, real variance, the most expensive miscast in the menu --
-            // had LESS confirmation friction than a single-target one. It now
-            // enters Target depth exactly like SingleEnemy does; the click
-            // that confirms it can land on any enemy plate, because
+            // gets the same confirmation friction as a single-target one. The
+            // click that confirms it can land on any enemy plate, because
             // ResolveDamageAll already hits every living opponent and ignores
             // which one was actually clicked -- see its own header.
             if (_menu.Branch == MenuBranch.Skill)
@@ -655,17 +649,13 @@ namespace PrincesPalace
                 var options = SkillOptions(_session.Current);
                 if (index < options.Count)
                 {
-                    // WHICH ELEMENT, THEN WHICHEVER TARGETING THE SKILL
-                    // ACTUALLY HAS. This used to run AFTER the Self/Party
-                    // instant-resolve below, which meant a Self/Party skill
-                    // that also authored elements[] never reached here at
-                    // all -- it cast on the row press with whatever element
-                    // ResolvedSkill defaulted to, uncastable from the menu on
-                    // any other element even though FightAction.LegalActions
-                    // enumerates every one of them for the bot. Checking the
-                    // choice first, for any targeting shape, is what makes
-                    // the element press (above) the place that decides
-                    // Self/Party-resolves-now versus SingleEnemy-needs-a-mark.
+                    // Which element, then whichever targeting the skill
+                    // actually has. Checking the element choice first, ahead
+                    // of the Self/Party instant-resolve below, is what makes
+                    // a Self/Party skill that also authors elements[]
+                    // reachable through every element FightAction.LegalActions
+                    // enumerates for the bot, rather than only the element
+                    // ResolvedSkill defaults to.
                     if (options[index].Skill.HasElementChoice)
                     {
                         _menu.EnterElementChoice();
@@ -673,27 +663,21 @@ namespace PrincesPalace
                         return;
                     }
 
-                    // Self and Party resolve the same way -- Wool Gathering
-                    // (HealSelf) was routing through the enemy-target prompt
-                    // regardless, so the player clicked an enemy plate for a
-                    // self-heal that ignored the click and healed the caster
-                    // anyway (ResolveCharacterSkillInner's HealSelf case
-                    // never reads its target argument). Neither has anything
-                    // to aim at: the target set is fixed the instant the
-                    // skill is picked, so there is nothing a Target-depth
-                    // click could change.
+                    // Self and Party resolve the same way: neither has
+                    // anything to aim at, since the target set is fixed the
+                    // instant the skill is picked, so there is nothing a
+                    // Target-depth click could change (ResolveCharacterSkillInner's
+                    // HealSelf case never reads its target argument).
                     //
-                    // AllEnemies no longer joins them here. An earlier
-                    // version of this check routed every non-SingleEnemy
-                    // skill through the same instant-resolve path, which
-                    // meant a group cast -- real mana cost, real variance,
-                    // the most expensive miscast in the menu -- had LESS
-                    // confirmation friction than a single-target one. It now
-                    // enters Target depth exactly like SingleEnemy does; the
-                    // click that confirms it can land on any enemy plate,
-                    // because ResolveDamageAll already hits every living
-                    // opponent and ignores which one was actually clicked --
-                    // see its own header.
+                    // AllEnemies does not join them here: it enters Target
+                    // depth exactly like SingleEnemy does, so a group cast --
+                    // real mana cost, real variance, the most expensive
+                    // miscast in the menu -- gets the same confirmation
+                    // friction as a single-target one. The click that
+                    // confirms it can land on any enemy plate, because
+                    // ResolveDamageAll already hits every living opponent and
+                    // ignores which one was actually clicked -- see its own
+                    // header.
                     var targeting = options[index].Skill.Targeting;
                     if (targeting == Domain.Combat.SkillTargeting.Self
                         || targeting == Domain.Combat.SkillTargeting.Party)
@@ -702,12 +686,11 @@ namespace PrincesPalace
                         return;
                     }
 
-                    // SINGLE-ALLY ENTERS THE SAME DEPTH ON THE OTHER RACK
-                    // (AUDIT #147). A ward and the three gifts used to resolve
-                    // on this press, because the engine chose the recipient;
-                    // the player chooses now, so they stop here exactly the
-                    // way a SingleEnemy cast does -- one depth, one confirm,
-                    // one cancel, and BACK lands on the skill list either way.
+                    // Single-ally enters the same depth on the other rack: the
+                    // player chooses the recipient, so a ward or gift stops
+                    // here exactly the way a SingleEnemy cast does -- one
+                    // depth, one confirm, one cancel, and BACK lands on the
+                    // skill list either way.
                     if (targeting == Domain.Combat.SkillTargeting.SingleAlly)
                     {
                         // HOW MANY PICKS IS THE EFFECT'S ANSWER, not the
@@ -730,9 +713,9 @@ namespace PrincesPalace
                 }
             }
 
-            // A FRESH PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY (owner's
-            // 2026-09-19 hardware-round call), the same reason OpenAttack's
-            // own branch above sets it rather than leaving -1.
+            // A fresh pick hovers the front living enemy explicitly, the same
+            // reason OpenAttack's own branch above sets it rather than
+            // leaving -1.
             _hoveredEnemyIndex = FirstLivingEnemyIndex();
             _menu.EnterTargeting();
             RefreshUi();
@@ -925,13 +908,11 @@ namespace PrincesPalace
             if (!CanAct || !_menu.IsTargeting || _menu.Side != side) return;
             if (target == null || !target.IsAlive) return;
 
-            // AGAINST THE OPTION LIST, not the kit, resolved ONCE and shared
-            // by the reach check below and the cast below that -- row
-            // position and kit index used to disagree the moment the
-            // appended basic-spell row existed; now every skill-branch row
-            // has a real ResolvedSkillOption behind it (docs/PLAN_SHOP.md §4
-            // Phase E), so a row that does not resolve is simply an invalid
-            // selection rather than a second, synthesised kind of row.
+            // Against the option list, not the kit, resolved once and shared
+            // by the reach check below and the cast below that -- every
+            // skill-branch row has a real ResolvedSkillOption behind it, so a
+            // row that does not resolve is simply an invalid selection rather
+            // than a second, synthesised kind of row.
             IReadOnlyList<ResolvedSkillOption> options = null;
             int row = -1;
             bool validSkillRow = false;
@@ -1067,14 +1048,13 @@ namespace PrincesPalace
 
         private void OnBackPressed()
         {
-            // THE ROOT CASE IS NOW "NOTHING HAPPENS", and that is the whole
-            // of the owner's 2026-09-19 call. FightMenuState.Back() returns
-            // false at MenuDepth.Root and only there -- a submenu, an element
-            // list and a target pick each step back one level and return true
-            // -- so a false here is "B with nothing left to back out of",
-            // which used to open the system menu (AUDIT.md #155) and now
-            // belongs to Start instead (OpenSystemMenu above). B keeps one
-            // meaning in a fight rather than two.
+            // The root case is "nothing happens": FightMenuState.Back()
+            // returns false at MenuDepth.Root and only there -- a submenu, an
+            // element list and a target pick each step back one level and
+            // return true -- so a false here is "B with nothing left to back
+            // out of". Opening the system menu belongs to Start instead
+            // (OpenSystemMenu above), so B keeps one meaning in a fight
+            // rather than two.
             if (!_menu.Back()) return;
 
             // The stick's ally cursor belongs to one open pick and to nothing
@@ -1285,12 +1265,11 @@ namespace PrincesPalace
             // hit and the card that described the skill causing it cannot
             // disagree about what "Fire" means.
             //
-            // PAINT, NOT ASSIGN. A status tick records its own element off
+            // Paint, not assign. A status tick records its own element off
             // the status (CombatBeat.DeclareDamageType) and has no actor to
             // read one from; PaintActorDamageType is what lets this loop stay
-            // a loop without having to ask each beat which kind it is. The
-            // `?? Physical` that used to live on this line moved inside it
-            // for the same reason -- see that method's own header.
+            // a loop without having to ask each beat which kind it is -- see
+            // that method's own header for the `?? Physical` fallback.
             foreach (var beat in beats)
             {
                 if (beat == null) continue;
@@ -1314,21 +1293,18 @@ namespace PrincesPalace
             }
         }
 
-        // THE FIGHT CANNOT STAY BUSY FOR A PLAYBACK THAT IS NOT RUNNING.
+        // The fight cannot stay busy for a playback that is not running.
         //
         // _isBusy is half of CanAct and is cleared only by OnPlaybackFinished,
         // so anything that ends a playback without calling back leaves every
-        // verb disabled for the rest of the fight -- no error, no message, just
-        // a screen that stops responding. An exception inside the beat
-        // coroutine used to do exactly that, and so did Flush before it
-        // learned to report.
+        // verb disabled for the rest of the fight -- no error, no message,
+        // just a screen that stops responding.
         //
-        // IsPlaying IS TRUSTWORTHY HERE ONLY BECAUSE FightBeatPlayer MAKES IT
-        // SO: its playback clears the flag and reports from a finally, so a
+        // IsPlaying is trustworthy here only because FightBeatPlayer makes it
+        // so: its playback clears the flag and reports from a finally, so a
         // coroutine that died by exception cannot leave it stuck true (see
-        // PlayBeats). Before that, this watchdog asked the dead coroutine's
-        // own flag whether it was alive and was told yes forever. It stays as
-        // the backstop for a finish that is lost some other way.
+        // PlayBeats). This watchdog stays as the backstop for a finish that
+        // is lost some other way.
         //
         // The two are set together and synchronously -- _isBusy = true is
         // immediately followed by Play, which sets IsPlaying in the same frame
@@ -1595,16 +1571,14 @@ namespace PrincesPalace
         // nobody asked for. Confirming calls the exact same OnVerbPressed/
         // OnRowPressed/OnEnemyPressed a click already does.
         //
-        // The axis/button READ used to live here too (PollGamepadNavigation,
-        // called from this file's own Update()). It moved verbatim into
-        // NavigationInputModule's Fight branch (docs/GAMEPAD_NAVIGATION_PLAN.md
-        // section 3) -- Draft 2's gating-on-"am I top" approach could not
-        // stop two readers from each independently, correctly, seeing
-        // themselves as authorized in the same frame; one dispatch point
-        // reading the axis once is the structural fix. MoveFocus/
-        // ConfirmFocus/OnBackPressed themselves are UNCHANGED and stay
-        // internal/private-tested directly, exactly as FightGamepadNavigationTests
-        // and AllyTargetPickerTests already do.
+        // The axis/button read lives in NavigationInputModule's Fight branch
+        // (docs/GAMEPAD_NAVIGATION_PLAN.md), not here: a gating-on-"am I top"
+        // approach cannot stop two readers from each independently, correctly,
+        // seeing themselves as authorized in the same frame, so one dispatch
+        // point reading the axis once is the structural fix. MoveFocus/
+        // ConfirmFocus/OnBackPressed themselves stay internal/private-tested
+        // directly, exactly as FightGamepadNavigationTests and
+        // AllyTargetPickerTests already do.
         private int _focusedVerb;
 
         // Read-only window for GamepadNavigationTests -- the field itself
@@ -1654,30 +1628,29 @@ namespace PrincesPalace
             // behaviour on top of it (inspect, the busy guard), so it is
             // where a pad-only sign correction belongs too.
             //
-            // ProcessFight hands every call here Vertical's OWN sign (Up ->
+            // ProcessFight hands every call here Vertical's own sign (Up ->
             // -1, Down -> +1, armed that way so Root's bottom-up verb column
             // reads right -- MoveFocus' own Root case). That is backwards
-            // for a target rack: the owner's 2026-09-19 call is Up = one
-            // slot DEEPER, Down = one slot nearer, so it needs one negation
-            // to land in CycleTarget's "+1 is deeper" convention. Y is not
-            // mirrored between the two racks (FightStageAnchors.SlotOffset
-            // only negates X), so "further back is higher on screen" is true
-            // for both, and this single flip serves both racks -- unlike
-            // InspectMove's horizontal case, which needs a per-side one.
+            // for a target rack: Up is one slot deeper, Down is one slot
+            // nearer, so it needs one negation to land in CycleTarget's "+1
+            // is deeper" convention. Y is not mirrored between the two racks
+            // (FightStageAnchors.SlotOffset only negates X), so "further back
+            // is higher on screen" is true for both, and this single flip
+            // serves both racks -- unlike InspectMove's horizontal case,
+            // which needs a per-side one.
             //
-            // TARGET DEPTH GOES THROUGH CycleTargetFromPad, NOT MoveFocus,
-            // for a second, separate reason (2026-09-19, the gate's own
-            // find): FocusedElement/ConfirmFocus already treat "nothing
-            // hovered" as enemy 0 -- the marker sits there and Submit would
-            // hit it -- so a pad player's FIRST press has to read as one
-            // step FROM that implicit 0, not as WrapFromNoHover's older
-            // "first press is index 0" rule (CycleTarget's own header). That
-            // older rule is still exactly right for the direct MoveFocus(int)
-            // convention below (every FightGamepadNavigationTests/
-            // AllyTargetPickerTests direct call pins it), so it could not be
-            // changed in place -- CycleTargetFromPad is the same cycle with
-            // only the no-hover case resolved differently, kept to this one
-            // pad entry point and InspectMove's own Target branch.
+            // Target depth goes through CycleTargetFromPad, not MoveFocus,
+            // for a second, separate reason: FocusedElement/ConfirmFocus
+            // already treat "nothing hovered" as enemy 0 -- the marker sits
+            // there and Submit would hit it -- so a pad player's first press
+            // has to read as one step from that implicit 0, not as
+            // WrapFromNoHover's "first press is index 0" rule (CycleTarget's
+            // own header). That rule is still exactly right for the direct
+            // MoveFocus(int) convention below (every FightGamepadNavigationTests/
+            // AllyTargetPickerTests direct call pins it), so CycleTargetFromPad
+            // is the same cycle with only the no-hover case resolved
+            // differently, kept to this one pad entry point and InspectMove's
+            // own Target branch.
             if (_menu.Depth == MenuDepth.Target)
             {
                 if (_menu.Side == TargetSide.Enemies)
@@ -1730,11 +1703,11 @@ namespace PrincesPalace
                 return;
             }
 
-            // BEFORE _menu.Back(), and that order is the whole of it: B at
-            // Root is "nothing happens" by the owner's own 2026-09-19 call,
-            // and inspect sits on top of Root. Asking the menu first would
-            // spend the press on a no-op and leave the player stuck on the
-            // actor row with no way back to the verbs.
+            // Before _menu.Back(), and that order is the whole of it: B at
+            // Root is "nothing happens", and inspect sits on top of Root.
+            // Asking the menu first would spend the press on a no-op and
+            // leave the player stuck on the actor row with no way back to
+            // the verbs.
             if (LeaveInspect()) return;
 
             OnBackPressed();
