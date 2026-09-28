@@ -154,5 +154,10 @@ namespace PrincesPalace.Domain.Rewards
         //
         // Never null, so the tally tab needs no guard.
         public Combat.CombatLedger Ledger = new Combat.CombatLedger();
+
+        // Lines the settlement had to say that are not a payout -- a caravan
+        // fake that fell apart and the merchant's "No refunds." (see
+        // FakeWear). Empty on nearly every fight; never null.
+        public readonly List<string> Notices = new List<string>();
     }
 }

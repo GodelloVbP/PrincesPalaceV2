@@ -1059,11 +1059,13 @@ namespace PrincesPalace
             // handed an already-resolved effect. The satchel lives in RunState
             // and has no business being reachable from combat.
             var stack = _satchel[index];
-            ItemUsed?.Invoke(stack.ItemId);
+            ItemUsed?.Invoke(stack.Instance);
             AfterResolution();
         }
 
-        public System.Action<string> ItemUsed;
+        // The pressed stack's whole copy, so the handler spends that stack and
+        // knows whether it is a fake -- see SatchelStack.
+        public System.Action<ItemInstance> ItemUsed;
 
         // SELF/PARTY CASTS RESOLVE THE INSTANT THEY ARE PICKED -- neither
         // targeting has a mark left to aim at (see the two call sites' own
@@ -1309,6 +1311,21 @@ namespace PrincesPalace
             // the tree declares them as a deliberate overlap.
             foreach (var verb in verbButtons) verb.gameObject.SetShown(!over);
 
+            RefreshUi();
+        }
+
+        // Lines the settlement adds once the fight is over (FightBootstrap), for
+        // a fight that ends on Continue rather than the Reckoning. Called from
+        // inside FightEnded, before this pass's RefreshUi paints the log.
+        internal void AppendEndLog(IEnumerable<string> lines)
+        {
+            if (lines == null) return;
+            foreach (var line in lines)
+            {
+                if (!string.IsNullOrEmpty(line)) _log.Add(line);
+            }
+
+            TrimLog();
             RefreshUi();
         }
 

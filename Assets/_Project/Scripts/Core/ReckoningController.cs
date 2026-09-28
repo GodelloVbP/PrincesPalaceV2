@@ -31,6 +31,7 @@ namespace PrincesPalace
         // scaling it again.
         [SerializeField] internal RectTransform frameWipe;
         [SerializeField] internal TMP_Text goldLabel;
+        [SerializeField] internal TMP_Text noticeLabel;
         [SerializeField] internal Button continueButton;
         [SerializeField] internal GameObject lootHeading;
 
@@ -578,6 +579,17 @@ namespace PrincesPalace
         private void Paint()
         {
             goldLabel.Set(UiStrings.ReckoningGold, _reward?.GoldGained ?? 0);
+
+            // A caravan fake that fell apart in this fight, and the merchant's
+            // "No refunds." (CombatReward.Notices). Hidden on every fight that
+            // has nothing to say, which is nearly all of them.
+            if (noticeLabel != null)
+            {
+                var notices = _reward?.Notices;
+                bool any = notices != null && notices.Count > 0;
+                noticeLabel.gameObject.SetShown(any);
+                if (any) noticeLabel.SetContent(string.Join("\n", notices));
+            }
 
             var characters = _reward?.Characters ?? new List<CharacterReward>();
 

@@ -58,6 +58,11 @@ namespace PrincesPalace.Domain.Bot
         public readonly string ItemDisplayName;
         public readonly bool ItemRestoresMana;
 
+        // WHICH COPY, for an item: the satchel stack's own instance, so the
+        // session learns whether it is a fake and the run spends that exact
+        // stack. Null on every other kind.
+        public readonly ItemInstance ItemInstance;
+
         // Stands in for the real item's potency. SatchelStack (FightHudModel.cs)
         // carries an id, a display name, a count and whether the item restores
         // mana or health -- not how MUCH it restores; that number lives on the
@@ -78,8 +83,10 @@ namespace PrincesPalace.Domain.Bot
             string itemDisplayName = null,
             bool itemRestoresMana = false,
             MoveDirection moveDirection = MoveDirection.Forward,
-            DamageType? element = null)
+            DamageType? element = null,
+            ItemInstance itemInstance = null)
         {
+            ItemInstance = itemInstance;
             Element = element;
             Kind = kind;
             Target = target;
@@ -277,7 +284,7 @@ namespace PrincesPalace.Domain.Bot
                     actions.Add(new FightAction(
                         FightActionKind.Item, actor,
                         itemId: stack.ItemId, itemDisplayName: stack.DisplayName,
-                        itemRestoresMana: stack.RestoresMana));
+                        itemRestoresMana: stack.RestoresMana, itemInstance: stack.Instance));
                 }
             }
 
@@ -374,7 +381,8 @@ namespace PrincesPalace.Domain.Bot
                     session.CastSkill(action.SkillIndex, action.Target, action.Element);
                     break;
                 case FightActionKind.Item:
-                    session.UseConsumable(action.ItemDisplayName, ItemAmountProxy, action.ItemRestoresMana);
+                    session.UseConsumable(action.ItemDisplayName, ItemAmountProxy, action.ItemRestoresMana,
+                        action.ItemInstance?.IsFake == true);
                     break;
                 case FightActionKind.Move:
                     session.Move(action.MoveDirection);

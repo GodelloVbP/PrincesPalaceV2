@@ -156,6 +156,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> TallyKills = new List<NodeRef>();
 
         public NodeRef GoldLabel;
+
+        // What the settlement had to say that is not a payout -- a caravan
+        // fake falling apart, then "No refunds." (FakeWear). Beside the gold,
+        // on the line the fight's spoils are read from. Hidden when empty,
+        // which is nearly every fight.
+        public NodeRef NoticeLabel;
         public NodeRef ContinueButton;
         public NodeRef ContinueGlow;
         public NodeRef LootHeading;
@@ -565,15 +571,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // WIDE, not two columns. The offers moved to their own phase, so
             // the right half emptied out -- a party of one under an EXPERIENCE
             // heading beside a hole is worse than either half alone.
+            //
+            // The gold line is 420 wide, not the 700 it was: "+99999 GOLD" at
+            // 32 needs well under that, and the band to its right carries the
+            // settlement's notice (230..530, inside ContentHalfWidth 540).
             var children = new List<UiNode>
             {
-                Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(700f, 54f), 32,
+                Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(420f, 54f), 32,
                     "#F2DB9E", Place.At(0f, 30f)).AsDecor().Styled(TypographyRole.TacticalData),
                 Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 32f), 20,
                     "#B8A8D9", Place.At(0f, -20f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
+                Ui.Label("ReckoningNoticeLabel", UiString.Runtime, new UiVec(300f, 54f), 15,
+                    "#E8A07A", Place.At(380f, 30f)).AsDecor().Styled(TypographyRole.Body).Inactive(),
             };
 
             GoldLabel = children[0];
+            NoticeLabel = children[2];
 
             for (int i = 0; i < RowCount; i++)
             {

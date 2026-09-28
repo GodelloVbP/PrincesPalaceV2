@@ -557,6 +557,12 @@ namespace PrincesPalace
             // the next screen is about to read.
             if (settled.Reward != null) LastReward = settled.Reward;
             if (settled.RunEnded != null) LastSettlement = settled.RunEnded;
+
+            // NO REWARD, NO RECKONING: a no-pay fight ends on the plain
+            // Continue, so what the settlement has to say (a fake falling
+            // apart) goes in the end log above it. With a Reward the Reckoning
+            // shows the same lines off Reward.Notices.
+            if (settled.Reward == null && settled.Notices.Count > 0) fight.AppendEndLog(settled.Notices);
         }
 
         // What the fight just paid, per character. Held for the rewards screen
@@ -572,14 +578,17 @@ namespace PrincesPalace
         // Resolving the effect is Core's job -- the session is told what
         // happened, not what the item was, because ItemEffect is content and
         // the session is Domain.
-        private void OnItemUsed(string itemId)
+        //
+        // Handed the pressed stack's whole ItemInstance: whether it is a fake
+        // (used up for nothing) and which exact stack the spend below takes.
+        private void OnItemUsed(ItemInstance pressed)
         {
             var save = SaveSlotManager.CurrentSave;
-            var item = ContentDatabase.GetItem(itemId);
+            var item = ContentDatabase.GetItem(pressed?.ItemId);
             if (save == null || item == null) return;
 
             bool used = fight.Session?.UseConsumable(item.displayName, item.amount,
-                item.effect == ItemEffect.RestoreMana) ?? false;
+                item.effect == ItemEffect.RestoreMana, pressed.IsFake) ?? false;
 
             // NOT SPENT UNLESS IT WAS USED, and this line used to run whatever
             // the session did with the press. A mana potion pressed by a
@@ -603,7 +612,7 @@ namespace PrincesPalace
             // bought nothing here. Same bodies today, which is exactly when to
             // collapse them: the moment they differ, one of the two doors is
             // wrong and nothing says which.
-            RunOrchestrator.SpendConsumable(itemId);
+            RunOrchestrator.SpendConsumable(pressed);
             fight.RefreshSatchel(RunOrchestrator.BuildSatchel());
         }
 }

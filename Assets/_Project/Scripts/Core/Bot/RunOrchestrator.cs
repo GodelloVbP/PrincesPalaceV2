@@ -383,7 +383,7 @@ namespace PrincesPalace
                 .Where(x => x.Item != null && x.Item.kind == ItemKind.Consumable)
                 .Select(x => new SatchelStack(
                     x.Item.id, x.Item.displayName, x.Entry.count,
-                    x.Item.effect == ItemEffect.RestoreMana))
+                    x.Item.effect == ItemEffect.RestoreMana, x.Entry.Instance))
                 .ToList();
         }
 
@@ -404,12 +404,19 @@ namespace PrincesPalace
         // `amount` from content, the bot passes FightAction.ItemAmountProxy,
         // which both clamp to the same top-off), and folding the command in
         // here would force one of them to lie about which item it used.
-        public static void SpendConsumable(string itemId)
+        //
+        // SPENDS THE STACK THAT WAS PRESSED, named by its whole ItemInstance.
+        // This took an id and removed the lowest-plus copy of it, which was
+        // right while every potion of one id was interchangeable and stopped
+        // being right with caravan lots: a genuine potion and a fake one share
+        // an id, and spending by id would let either stand in for the other
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.3).
+        public static void SpendConsumable(ItemInstance used)
         {
             var save = SaveSlotManager.CurrentSave;
-            if (save == null || string.IsNullOrEmpty(itemId)) return;
+            if (save == null || used == null || string.IsNullOrEmpty(used.ItemId)) return;
 
-            InventoryOps.TryRemove(save.stockpiledItems, itemId);
+            InventoryOps.TryRemoveAt(save.stockpiledItems, used);
             SaveSlotManager.SaveCurrent();
         }
 
@@ -429,10 +436,26 @@ namespace PrincesPalace
             // the run is still going.
             public readonly RunSettlement.Result RunEnded;
 
-            public FightSettlement(CombatReward reward, RunSettlement.Result runEnded)
+            // Lines the end of this fight has to SAY that are not a payout:
+            // today, caravan fakes that fell apart ("<item> falls apart.",
+            // then "No refunds."). Never null. Also copied onto Reward.Notices
+            // when there is a Reward, so the Reckoning shows them; with no
+            // Reward the screen puts them in the end log above Continue.
+            public readonly IReadOnlyList<string> Notices;
+
+            public FightSettlement(CombatReward reward, RunSettlement.Result runEnded,
+                IReadOnlyList<string> notices = null)
             {
                 Reward = reward;
                 RunEnded = runEnded;
+                Notices = notices ?? new List<string>();
+            }
+
+            public FightSettlement WithNotices(IReadOnlyList<string> notices)
+            {
+                if (notices == null || notices.Count == 0) return this;
+                if (Reward != null) Reward.Notices.AddRange(notices);
+                return new FightSettlement(Reward, RunEnded, notices);
             }
         }
 
@@ -539,7 +562,13 @@ namespace PrincesPalace
                 return new FightSettlement(null, RunManager.EndRun());
             }
 
-            if (request.IsEventFight) return SettleEventFight(session, won, request, payout);
+            // CARAVAN FAKES WEAR HERE: past the run-loss return (a run that
+            // ended takes its gear with it, so there is nothing to count down),
+            // before either settlement branch, so a room fight and an event
+            // fight count a completed fight by the same line. See FakeWear.
+            var notices = WearFakes(session);
+
+            if (request.IsEventFight) return SettleEventFight(session, won, request, payout).WithNotices(notices);
 
             CombatReward reward = null;
             if (payout.HasValue) reward = PayOut(session, run, payout.Value, participants: null);
@@ -556,7 +585,50 @@ namespace PrincesPalace
             // nothing left to choose between.
             if (RunManager.LegIsOver()) RunManager.AdvanceLeg();
 
-            return new FightSettlement(reward, null);
+            return new FightSettlement(reward, null).WithNotices(notices);
+        }
+
+        // One completed fight on every FIELDED member's worn fakes (FakeWear).
+        // Returns the lines to show, empty when nothing broke.
+        //
+        // Fielded is FieldedIds -- who stood on the stage -- so a benched
+        // member's fake does not count, and neither does a fake in the bag,
+        // which is on nobody. A broken piece leaves the body the way an
+        // unequip does, carried health rescaled against the max it took with
+        // it (ScaleCarriedHealth), and goes nowhere: no refund to the bag.
+        //
+        // WRITES when it counted anything down, so the countdown is on disk
+        // however the rest of the settlement persists (a paying fight writes
+        // again in RewardApplier; a no-pay room fight might not write at all).
+        private static List<string> WearFakes(FightSession session)
+        {
+            var lines = new List<string>();
+            var save = SaveSlotManager.CurrentSave;
+            if (save?.roster == null || session == null) return lines;
+
+            bool wore = false;
+            foreach (var id in FieldedIds(session).Distinct())
+            {
+                var character = save.roster.FirstOrDefault(c => c != null && c.definitionId == id);
+                if (character?.equipment == null) continue;
+                if (!character.equipment.slots.Any(e => e?.provenance != null && e.provenance.fake
+                                                        && !string.IsNullOrEmpty(e.itemId))) continue;
+
+                wore = true;
+                int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+                var broken = FakeWear.WearOneFight(character.equipment);
+                if (broken.Count == 0) continue;
+
+                RunEncounter.ScaleCarriedHealth(character, maxBefore);
+                foreach (var piece in broken)
+                {
+                    lines.Add(FakeWear.BreakLine(ContentDatabase.GetItem(piece.ItemId)?.displayName ?? piece.ItemId));
+                }
+            }
+
+            if (lines.Count > 0) lines.Add(FakeWear.NoRefundsLine);
+            if (wore) SaveSlotManager.SaveCurrent();
+            return lines;
         }
 
         // WHAT A WON, PAID FIGHT GIVES: gold banked, one spell-drop roll, and

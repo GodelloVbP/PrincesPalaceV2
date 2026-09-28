@@ -61,20 +61,35 @@ namespace PrincesPalace.Domain.Combat.Session
     // One consumable stack, as the fight sees it. Core owns the inventory and
     // hands these over already resolved -- the satchel lives in RunState and has
     // no business being reachable from combat.
+    //
+    // CARRIES THE STACK'S WHOLE COPY (ItemInstance), not just its id. A bag can
+    // hold two stacks of one potion -- an ordinary one and a caravan lot, which
+    // may be fake -- and a press has to spend the stack that was pressed:
+    // spending "a potion" by id would let a genuine one stand in for a fake or
+    // the other way round (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.3). Nothing on
+    // screen reads IsFake; only the session's use of it does.
     public readonly struct SatchelStack
     {
         public readonly string ItemId;
         public readonly string DisplayName;
         public readonly int Count;
         public readonly bool RestoresMana;
+        public readonly ItemInstance Instance;
 
-        public SatchelStack(string itemId, string displayName, int count, bool restoresMana)
+        public SatchelStack(string itemId, string displayName, int count, bool restoresMana,
+            ItemInstance instance = null)
         {
             ItemId = itemId;
             DisplayName = displayName;
             Count = count;
             RestoresMana = restoresMana;
+            Instance = instance ?? new ItemInstance(itemId);
         }
+
+        public bool IsFake => Instance?.IsFake == true;
+
+        public SatchelStack WithCount(int count) =>
+            new SatchelStack(ItemId, DisplayName, count, RestoresMana, Instance);
     }
 
     // WHICH ICON A DetailIcon ROW PAINTS. Enum-keyed rather than a raw

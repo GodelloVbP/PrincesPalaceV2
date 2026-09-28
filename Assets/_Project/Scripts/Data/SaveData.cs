@@ -69,7 +69,14 @@ namespace PrincesPalace
         // it as a room fight, clearing the event's room and skipping its
         // ending. Refusing the newer save (Migrate's `version >
         // CurrentVersion`) is the safe answer, and only a bump can ask for it.
-        public const int CurrentVersion = 7;
+        // 7 -> 8: item copies carry provenance (docs/PLAN_EVENTS_BELL_AND_
+        // CARAVAN.md 3.3) -- a caravan lot, a fake flag and a fake's wear
+        // countdown, one nested `provenance` object on each bag and slot
+        // entry. Additive again, so the step is empty; the bump is for the
+        // other direction once more: a build at 7 would load a caravan fake
+        // as a genuine item that never breaks and merge lot copies into
+        // ordinary stacks.
+        public const int CurrentVersion = 8;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
         // raises this. Matches the id ContentBuilder authors it under —
@@ -555,6 +562,13 @@ namespace PrincesPalace
             {
             }
 
+            // 7 -> 8: nothing to convert either (see CurrentVersion). A save
+            // from 7 holds no lot and no fake, and the field initializer's
+            // plain provenance is exactly what it means.
+            if (version < 8)
+            {
+            }
+
             version = CurrentVersion;
             Reconcile();
 
@@ -771,6 +785,14 @@ namespace PrincesPalace
 
             stockpiledItems.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
 
+            // A WORN-OUT FAKE IS GONE (plan 3.3). The settlement removes one
+            // the moment its countdown reaches zero, so a zero on disk is a
+            // write that was interrupted -- and the answer is the same
+            // removal, with nothing handed back. Gear only: a fake consumable
+            // carries no countdown (FakeWear.IsWornOut says why).
+            stockpiledItems.RemoveAll(entry => FakeWear.IsWornOut(entry.provenance,
+                ContentDatabase.GetItem(entry.itemId)?.IsEquippable == true));
+
             // No modifierIds pruning here yet, and that is correct for now --
             // Phase A (this one) adds only the storage, and no path in the
             // game today can write a real id into modifierIds, so there is no
@@ -918,6 +940,11 @@ namespace PrincesPalace
                 // puts a real id into modifierIds, so this is inert today;
                 // it exists so the plumbing is already correct once Phase A2
                 // ships modifiers.json.
+                // The same worn-out-fake rule as the bag, on the body. Removed
+                // outright, not returned to the bag: a broken fake is gone.
+                character.equipment.slots?.RemoveAll(e => e != null && FakeWear.IsWornOut(e.provenance,
+                    ContentDatabase.GetItem(e.itemId)?.IsEquippable == true));
+
                 foreach (var orphan in character.equipment.RemoveEntriesWhere(
                              id => ContentDatabase.GetItem(id)?.IsEquippable != true))
                 {

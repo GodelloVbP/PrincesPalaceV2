@@ -77,10 +77,12 @@ namespace PrincesPalace.Domain.Bot
         // RunOrchestrator.SpendConsumable, which is the same InventoryOps call
         // FightBootstrap.OnItemUsed makes for the screen. Optional, because a
         // caller playing a one-off fight with no run behind it (a test) has
-        // nothing to spend from.
+        // nothing to spend from. Handed the stack's whole ItemInstance, so the
+        // save spends the copy the policy picked -- a fake is never spent in
+        // place of a genuine one, nor the other way round.
         public static List<InvariantHit> Play(
             FightSession session, IFightPolicy policy, IReadOnlyList<SatchelStack> satchel,
-            SeededRandom rng, FightTrace traceOut, Action<string> onItemUsed = null,
+            SeededRandom rng, FightTrace traceOut, Action<ItemInstance> onItemUsed = null,
             TransformUse transformUse = TransformUse.PolicyDecides)
         {
             var hits = new List<InvariantHit>();
@@ -99,7 +101,7 @@ namespace PrincesPalace.Domain.Bot
             // same fight sees an accurate count and cannot "use" more
             // potions than the satchel actually holds.
             var localSatchel = satchel?
-                .Select(s => new SatchelStack(s.ItemId, s.DisplayName, s.Count, s.RestoresMana))
+                .Select(s => s.WithCount(s.Count))
                 .ToList() ?? new List<SatchelStack>();
 
             int commands = 0;
@@ -132,8 +134,9 @@ namespace PrincesPalace.Domain.Bot
 
                 if (action.Kind == FightActionKind.Item)
                 {
-                    DecrementSatchel(localSatchel, action.ItemId);
-                    onItemUsed?.Invoke(action.ItemId);
+                    var used = action.ItemInstance ?? new ItemInstance(action.ItemId);
+                    DecrementSatchel(localSatchel, used);
+                    onItemUsed?.Invoke(used);
                 }
 
                 // THE TIER THIS COMMAND'S OWN CAST FIRED, if any -- drained
@@ -349,15 +352,15 @@ namespace PrincesPalace.Domain.Bot
             }
         }
 
-        private static void DecrementSatchel(List<SatchelStack> satchel, string itemId)
+        // The stack that was used, by the one merge predicate -- never merely
+        // the first stack sharing its id.
+        private static void DecrementSatchel(List<SatchelStack> satchel, ItemInstance used)
         {
             for (int i = 0; i < satchel.Count; i++)
             {
-                if (satchel[i].ItemId != itemId) continue;
+                if (!ItemInstance.SameStack(satchel[i].Instance, used)) continue;
 
-                var stack = satchel[i];
-                satchel[i] = new SatchelStack(stack.ItemId, stack.DisplayName,
-                    System.Math.Max(0, stack.Count - 1), stack.RestoresMana);
+                satchel[i] = satchel[i].WithCount(System.Math.Max(0, satchel[i].Count - 1));
                 return;
             }
         }

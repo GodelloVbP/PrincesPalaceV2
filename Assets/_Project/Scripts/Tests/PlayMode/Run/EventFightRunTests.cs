@@ -544,33 +544,23 @@ namespace PrincesPalace.PlayModeTests
             ((List<EnemyDefinition>)ContentDatabase.Enemies).Add(asset);
         }
 
-        // ---- 6. save 7 ---------------------------------------------------------------
+        // ---- 6. save 7, and the 8 above it ------------------------------------------
+        //
+        // Stage B's M4 bumped the save to 8 (item provenance). The version pin
+        // and the refusal of the next version up moved to FakeItemTests; what
+        // stays here is Stage A's own step: a v6 save with a pending event
+        // fight still arrives at the current version with the fight kept.
 
         [Test]
-        public void TheSaveIsVersionSeven()
-        {
-            Assert.AreEqual(7, SaveData.CurrentVersion);
-        }
-
-        [Test]
-        public void AVersionSixSave_MigratesToSeven_KeepingAnOpenEventsPendingFight()
+        public void AVersionSixSave_MigratesToEight_KeepingAnOpenEventsPendingFight()
         {
             OpenFightFixture();
             EventPicks.OnCurrentPage(Brawl);
             Save.version = 6;
 
             Assert.IsTrue(Save.Migrate(), "a version-6 save was refused");
-            Assert.AreEqual(7, Save.version);
+            Assert.AreEqual(8, Save.version);
             Assert.AreEqual("brawl", Run.pendingFight);
-        }
-
-        [Test]
-        public void ASaveFromVersionEight_IsRefused()
-        {
-            var save = SaveData.CreateNew();
-            save.version = 8;
-
-            Assert.IsFalse(save.Migrate());
         }
     }
 }

@@ -36,7 +36,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // says "nothing changes" -- the player chose to do that and the potion
         // genuinely could have worked. A pool that refuses mana outright is a
         // press that could never have worked.
-        public bool UseConsumable(string displayName, int amount, bool restoresMana)
+        //
+        // A FAKE (a caravan fake, `isFake`) IS USED UP AND DOES NOTHING: the
+        // same beat and stance, the turn spent, no restore and no number, and
+        // the log says why. It is refused by exactly the rule a genuine copy
+        // is, first, so a greyed row or a refusal never tells the two apart.
+        public const string FakeConsumableLine = "This is of such poor quality... it's a fake.";
+
+        public bool UseConsumable(string displayName, int amount, bool restoresMana, bool isFake = false)
         {
             var actor = Current;
             if (actor == null) return false;
@@ -45,6 +52,16 @@ namespace PrincesPalace.Domain.Combat.Session
 
             BeginBeat(actor, actor);
             SetStance(actor, Stances.Cast);
+
+            if (isFake)
+            {
+                string used = string.IsNullOrEmpty(displayName) ? "something" : displayName;
+                AppendMessage($"{actor.Name} uses {used}.");
+                AppendMessage(FakeConsumableLine);
+                CommitBeat();
+                AdvanceAfterAction();
+                return true;
+            }
 
             // Clamped by CombatMath, so a 200-point potion on a hero missing 30
             // health restores 30 and says 30 -- the number the player sees is
