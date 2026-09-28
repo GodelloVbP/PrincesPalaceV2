@@ -1,0 +1,673 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a04c8e410f566d4c95baac0a724b55d, type: 3}
+  m_Name: bell_in_the_fog
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
+  data:
+    Id: bell_in_the_fog
+    SortOrder: 2
+    Floors: 
+    Requires:
+    - Kind: 0
+      CharacterId: sheep
+      CharacterDisplayName: Shawn
+      Ability: 0
+      Min: 0
+      HasMin: 0
+      Max: 0
+      HasMax: 0
+      CounterId: 
+      RequireStanding: 1
+      AuthoredReason: 
+    Pages:
+    - Id: bell
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png
+      Title: The Bell in the Fog
+      Body: 
+      Choices:
+      - Text: Touch the bell
+        Requires:
+        - Kind: 0
+          CharacterId: sheep
+          CharacterDisplayName: Shawn
+          Ability: 0
+          Min: 0
+          HasMin: 0
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 1
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 9
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+            FightId: bellwether
+          Result: 
+          GoTo: 
+          IsLeave: 0
+      - Text: Ask the others
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires:
+          - Kind: 0
+            CharacterId: bear
+            CharacterDisplayName: Bjorn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 0
+            CharacterId: owl
+            CharacterDisplayName: Odette
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          Effects: []
+          Result: 
+          GoTo: ask_both
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: bear
+            CharacterDisplayName: Bjorn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          Effects: []
+          Result: 
+          GoTo: ask_bjorn
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: owl
+            CharacterDisplayName: Odette
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          Effects: []
+          Result: 
+          GoTo: ask_odette
+          IsLeave: 0
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: ask_none
+          IsLeave: 0
+      - Text: Walk away
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: Shawn keeps looking back until the fog closes over the clearing.
+            Nothing follows. The bell is patient.
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The fog thickens until the trees are only shapes. Then a clearing the
+          path never promised, and in it an old stump. On the stump, a bell.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Polished brass, not a fingerprint on it, hung from a new leather strap.
+          Everything else in this forest is moss and rot. The bell is clean.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: Do you hear it? It's ringing. Nobody's touching it, and it's ringing.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: It makes no sound. The mist around it does not stir. Shawn has taken
+          a step toward the stump, and does not seem to know it.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: I think I'm meant to touch it. I don't know how I know that.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Past the trees, soft as breath, something is counting. It has lost
+          its place before, and started again.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    - Id: ask_both
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png
+      Title: The Bell in the Fog
+      Body: 
+      Choices:
+      - Text: Listen again
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: bell
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      - CharacterId: bear
+        Side: 1
+      - CharacterId: owl
+        Side: 1
+      Lines:
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: You hear it. Tell me you hear it.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+      - SpeakerId: bear
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Hear what, little one? It's a bell on a stump. It isn't doing a thing.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: There is no sound at all. No birds, either. I noticed the birds first.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Shawn looks from one to the other as if they were speaking to him through
+          water.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: It's so loud.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+    - Id: ask_bjorn
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png
+      Title: The Bell in the Fog
+      Body: 
+      Choices:
+      - Text: Listen again
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: bell
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      - CharacterId: bear
+        Side: 1
+      Lines:
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: Bjorn. You hear it, don't you?
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+      - SpeakerId: bear
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: I hear wind, and you breathing hard. That's all. Say the word and we
+          walk on.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: It's so loud.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+    - Id: ask_odette
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png
+      Title: The Bell in the Fog
+      Body: 
+      Choices:
+      - Text: Listen again
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: bell
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      - CharacterId: owl
+        Side: 1
+      Lines:
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: Odette. You hear it, don't you?
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 3
+        Side: 1
+        Text: I hear nothing, Shawn. That is what worries me. Even the fog has gone
+          quiet.
+        IsEventSpeaker: 0
+        ExpressionName: nervous
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: It's so loud.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+    - Id: ask_none
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png
+      Title: The Bell in the Fog
+      Body: 
+      Choices:
+      - Text: Listen again
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: bell
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: There is no one standing to ask. The fog keeps its own counsel.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: Just me, then. Just me and the bell.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+    - Id: endure
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/endure.png
+      Title: The Flock
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires:
+          - Kind: 0
+            CharacterId: bear
+            CharacterDisplayName: Bjorn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 0
+            CharacterId: owl
+            CharacterDisplayName: Odette
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          Effects: []
+          Result: '"Gone?" Bjorn frowns. "You touched it and let go." Odette nods:
+            a second, no more. Neither of them hears the flock still walking behind
+            the trees.'
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 0
+            CharacterId: bear
+            CharacterDisplayName: Bjorn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          Effects: []
+          Result: '"Gone?" Bjorn frowns. "You touched it and let go. A second, no
+            more." He does not hear the flock still walking behind the trees.'
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 0
+            CharacterId: owl
+            CharacterDisplayName: Odette
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          Effects: []
+          Result: Odette tilts her head. "A second, Shawn. You touched it and let
+            go." She does not hear the flock still walking behind the trees.
+          GoTo: 
+          IsLeave: 1
+        - Requires: []
+          Effects: []
+          Result: No one is standing to tell him. The fog does not say. Behind the
+            trees, soft as breath, the flock is still walking.
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: On the tenth toll the Bellwether stops, and the flock stops behind
+          it. Then, all together, they turn to look at him.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Every sheep in the flock is wearing his face. Not a face like his.
+          His. Hundreds of him, patient in the fog, waiting to be counted.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 6
+        Side: 0
+        Text: ...Oh.
+        IsEventSpeaker: 0
+        ExpressionName: entranced
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The bell rings once more, very close, and Shawn opens his eyes. He
+          is standing at the stump. His hoof has only just left the brass.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 3
+        Side: 0
+        Text: How long was I gone?
+        IsEventSpeaker: 0
+        ExpressionName: nervous
+    - Id: break
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/bell_broken.png
+      Title: The Broken Bell
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The Bellwether folds into the fog without a sound, and the flock behind
+          it goes too, like breath off glass.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Shawn is standing at the stump, hoof on the brass. Under it the bell
+          cracks, one clean line from crown to lip. The tolling stops.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 3
+        Side: 0
+        Text: I didn't mean to. I only wanted it to stop.
+        IsEventSpeaker: 0
+        ExpressionName: nervous
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The strap is still new. He takes the bell anyway. It is warm, as if
+          someone had been holding it for a very long time.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Behind the trees, whatever was counting loses its place, and does not
+          start again.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+    MayReturn: 1
+    Speakers: []
+    Fights:
+    - Id: bellwether
+      EnemyIds:
+      - bellwether
+      Elite: 0
+      PartyIds:
+      - sheep
+      SurviveRounds: 10
+      RoundLabel: Toll
+      Loss: 1
+      Pays: 0
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      RoundSfxPath: Audio/Sfx/Events/bell_in_the_fog/toll
+      AmbiencePath: Audio/Music/Events/bell_in_the_fog/wind
+      RoundOverlayKey: Assets/_Project/Art/Events/bell_in_the_fog/flock.png
+      RoundOverlayFromScale: 0.6
+      RoundOverlayToScale: 1.3
+      OnDefeated:
+        Requires: []
+        Effects:
+        - Kind: 6
+          Amount: 0
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: toll_of_the_flock
+          RelicDisplayName: Toll of the Flock
+          FightId: 
+        - Kind: 6
+          Amount: 0
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: bellwethers_bell
+          RelicDisplayName: Bellwether's Bell
+          FightId: 
+        - Kind: 3
+          Amount: 80
+          Item: 
+          CounterId: 
+          CharacterId: sheep
+          CharacterDisplayName: Shawn
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+        - Kind: 10
+          Amount: 0
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+        Result: 
+        GoTo: break
+        IsLeave: 0
+      OnSurvived:
+        Requires: []
+        Effects:
+        - Kind: 6
+          Amount: 0
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: toll_of_the_flock
+          RelicDisplayName: Toll of the Flock
+          FightId: 
+        - Kind: 3
+          Amount: 80
+          Item: 
+          CounterId: 
+          CharacterId: sheep
+          CharacterDisplayName: Shawn
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+        - Kind: 10
+          Amount: 0
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+        Result: 
+        GoTo: endure
+        IsLeave: 0
+      OnFell:
+        Requires: []
+        Effects:
+        - Kind: 10
+          Amount: 0
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+        Result: Shawn wakes on the wet ground with the taste of brass in his mouth.
+          The stump is empty. No bell, no strap, no mark where either hung.
+        GoTo: 
+        IsLeave: 1
+      HasOnSurvived: 1
+      HasOnFell: 1

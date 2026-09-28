@@ -59,6 +59,54 @@ there). Things it does that a new event may want to copy:
 - Pinned by `PettingZooEventTests` (content, fast host) and `PettingZooRunTests`
   (through the run, needs built content).
 
+## The Bell in the Fog
+
+`bell_in_the_fog` (`docs/PLAN_EVENTS_BELL_AND_CARAVAN.md` 1.4) is the first
+returning event and the first event fight.
+
+> **DRAFT COPY (M7a, 2026-09-28).** Every line, result and title in the Bell
+> is a first draft written to the brief (quiet dread, never gory; the bell is
+> the only clean thing in the forest; a clue about the mind's owner, never an
+> explanation, no human names). The owner rewrites it. The tests pin page
+> ids, choice texts, speakers and effects, never the prose, so a rewrite
+> breaks nothing as long as it keeps under the caps.
+
+- **Graph.** `bell` (Touch the bell / Ask the others / Walk away) opens with
+  Shawn `entranced`. Ask routes by who is standing, first match wins:
+  `ask_both`, `ask_bjorn`, `ask_odette`, `ask_none`; each has one row, "Listen
+  again", back to `bell`. Walk away leaves with a result and no `finish`, so
+  the Bell comes back at a later Event node.
+- **Fight `bellwether`.** Shawn alone, 10 tolls, `wake`, `pays: false`.
+  `onSurvived` (Endure) -> `endure`, `onDefeated` (Break) -> `break`,
+  `onFell` (Fall) leaves on its result. All three `finish`. Endure grants
+  Toll of the Flock, Break both relics, each with **80 exp to Shawn**: a
+  literal, since event exp does not scale with depth. 80 is about a
+  floor 1-2 elite room's payout per member (two enemies of ~25 raw exp x the
+  1.56 elite multiplier); it underpays deeper. A depth-scaled `exp` is an
+  engine change, not content.
+- **Endure's Leave** has four outcomes on who is standing, so the "only a
+  second passed" line comes from whoever is actually there (Bjorn, Odette,
+  both, or nobody). It pays nothing; the fight result already did.
+- **The Bellwether** (`enemies.json`, `rollable: false`) has no `spritePath`
+  until M9a: the stage draws the no-art name plate. First-guess stats and
+  their reasoning are in M7a's commit message; M8a tunes them.
+- **Art and sound** named but not delivered yet (M9a): `fog_clearing.png`
+  (event backdrop and fight backdrop), `stump_bell.png` (bell and ask
+  pages), `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.6 ->
+  1.3), `Audio/Sfx/Events/bell_in_the_fog/toll` (round sfx),
+  `Audio/Music/Events/bell_in_the_fog/wind` (ambience),
+  `Audio/Sfx/Events/bell_in_the_fog/flock_charge` (Toll of the Flock's
+  `vfx.sfxPath`). Every one of those degrades silently while missing.
+- **Relic icons are the exception**: a relic `iconPath` naming a file that is
+  not there yet stops the scene build (the wiring sweep refuses the null
+  sprite in the relic draft and glossary tables). Both Bell relics ship with
+  an empty `iconPath` (the flat accent circle, as Kinship). M9a delivers
+  `Art/Items/Relics/Processed/bellwethers_bell.png` and
+  `toll_of_the_flock.png` and fills the two paths in.
+- Pinned by `BellInTheFogEventTests` (content, fast host) and
+  `BellInTheFogRunTests` (every page, Endure/Break/Fall through the run, the
+  bot's walk, never rolled).
+
 ## Requirements
 
 One flat row, `{ kind, character, alive, ability, min, max, counter, reason }`. A list is AND.

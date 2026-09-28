@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
+  m_Name: toll_of_the_flock
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
+  data:
+    Id: toll_of_the_flock
+    DisplayName: Toll of the Flock
+    Description: Every third turn Shawn takes, a ghost flock charges every enemy.
+      It hits harder while he is transformed.
+    Effect: 34
+    SortOrder: 40
+    IconPath: 
+    Rarity: 2
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0
+    Bearer: sheep
+    Draftable: 0
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      fit: 
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: Audio/Sfx/Events/bell_in_the_fog/flock_charge
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers: []
+      layerFormat: 0
+      hitCueSeconds: 0

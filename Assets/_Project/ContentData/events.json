@@ -823,6 +823,297 @@
       ]
     },
     {
+      "id": "bell_in_the_fog",
+      "mayReturn": true,
+      "floors": [],
+      "requires": [
+        { "kind": "inParty", "character": "sheep", "alive": true }
+      ],
+      "backdrop": "Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png",
+      "pages": [
+        {
+          "id": "bell",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png",
+          "title": "The Bell in the Fog",
+          "body": "",
+          "cast": [ { "character": "sheep", "side": "left" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "The fog thickens until the trees are only shapes. Then a clearing the path never promised, and in it an old stump. On the stump, a bell." },
+            { "speaker": "narration", "expression": "", "text": "Polished brass, not a fingerprint on it, hung from a new leather strap. Everything else in this forest is moss and rot. The bell is clean." },
+            { "speaker": "sheep", "expression": "entranced", "text": "Do you hear it? It's ringing. Nobody's touching it, and it's ringing." },
+            { "speaker": "narration", "expression": "", "text": "It makes no sound. The mist around it does not stir. Shawn has taken a step toward the stump, and does not seem to know it." },
+            { "speaker": "sheep", "expression": "entranced", "text": "I think I'm meant to touch it. I don't know how I know that." },
+            { "speaker": "narration", "expression": "", "text": "Past the trees, soft as breath, something is counting. It has lost its place before, and started again." }
+          ],
+          "choices": [
+            {
+              "text": "Touch the bell",
+              "requires": [
+                { "kind": "inParty", "character": "sheep", "alive": true }
+              ],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [ { "kind": "fight", "fight": "bellwether" } ], "result": "", "goTo": "" }
+              ]
+            },
+            {
+              "text": "Ask the others",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "bear", "alive": true },
+                    { "kind": "inParty", "character": "owl", "alive": true }
+                  ],
+                  "effects": [], "result": "", "goTo": "ask_both"
+                },
+                {
+                  "requires": [ { "kind": "inParty", "character": "bear", "alive": true } ],
+                  "effects": [], "result": "", "goTo": "ask_bjorn"
+                },
+                {
+                  "requires": [ { "kind": "inParty", "character": "owl", "alive": true } ],
+                  "effects": [], "result": "", "goTo": "ask_odette"
+                },
+                { "requires": [], "effects": [], "result": "", "goTo": "ask_none" }
+              ]
+            },
+            {
+              "text": "Walk away",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "Shawn keeps looking back until the fog closes over the clearing. Nothing follows. The bell is patient.", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ask_both",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png",
+          "title": "The Bell in the Fog",
+          "body": "",
+          "cast": [
+            { "character": "sheep", "side": "left" },
+            { "character": "bear", "side": "right" },
+            { "character": "owl", "side": "right" }
+          ],
+          "lines": [
+            { "speaker": "sheep", "expression": "entranced", "text": "You hear it. Tell me you hear it." },
+            { "speaker": "bear", "expression": "neutral", "text": "Hear what, little one? It's a bell on a stump. It isn't doing a thing." },
+            { "speaker": "owl", "expression": "neutral", "text": "There is no sound at all. No birds, either. I noticed the birds first." },
+            { "speaker": "narration", "expression": "", "text": "Shawn looks from one to the other as if they were speaking to him through water." },
+            { "speaker": "sheep", "expression": "entranced", "text": "It's so loud." }
+          ],
+          "choices": [
+            {
+              "text": "Listen again",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "bell" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ask_bjorn",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png",
+          "title": "The Bell in the Fog",
+          "body": "",
+          "cast": [
+            { "character": "sheep", "side": "left" },
+            { "character": "bear", "side": "right" }
+          ],
+          "lines": [
+            { "speaker": "sheep", "expression": "entranced", "text": "Bjorn. You hear it, don't you?" },
+            { "speaker": "bear", "expression": "neutral", "text": "I hear wind, and you breathing hard. That's all. Say the word and we walk on." },
+            { "speaker": "sheep", "expression": "entranced", "text": "It's so loud." }
+          ],
+          "choices": [
+            {
+              "text": "Listen again",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "bell" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ask_odette",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png",
+          "title": "The Bell in the Fog",
+          "body": "",
+          "cast": [
+            { "character": "sheep", "side": "left" },
+            { "character": "owl", "side": "right" }
+          ],
+          "lines": [
+            { "speaker": "sheep", "expression": "entranced", "text": "Odette. You hear it, don't you?" },
+            { "speaker": "owl", "expression": "nervous", "text": "I hear nothing, Shawn. That is what worries me. Even the fog has gone quiet." },
+            { "speaker": "sheep", "expression": "entranced", "text": "It's so loud." }
+          ],
+          "choices": [
+            {
+              "text": "Listen again",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "bell" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ask_none",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/stump_bell.png",
+          "title": "The Bell in the Fog",
+          "body": "",
+          "cast": [ { "character": "sheep", "side": "left" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "There is no one standing to ask. The fog keeps its own counsel." },
+            { "speaker": "sheep", "expression": "entranced", "text": "Just me, then. Just me and the bell." }
+          ],
+          "choices": [
+            {
+              "text": "Listen again",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "bell" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "endure",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/endure.png",
+          "title": "The Flock",
+          "body": "",
+          "cast": [ { "character": "sheep", "side": "left" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "On the tenth toll the Bellwether stops, and the flock stops behind it. Then, all together, they turn to look at him." },
+            { "speaker": "narration", "expression": "", "text": "Every sheep in the flock is wearing his face. Not a face like his. His. Hundreds of him, patient in the fog, waiting to be counted." },
+            { "speaker": "sheep", "expression": "entranced", "text": "...Oh." },
+            { "speaker": "narration", "expression": "", "text": "The bell rings once more, very close, and Shawn opens his eyes. He is standing at the stump. His hoof has only just left the brass." },
+            { "speaker": "sheep", "expression": "nervous", "text": "How long was I gone?" }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "bear", "alive": true },
+                    { "kind": "inParty", "character": "owl", "alive": true }
+                  ],
+                  "effects": [],
+                  "result": "\"Gone?\" Bjorn frowns. \"You touched it and let go.\" Odette nods: a second, no more. Neither of them hears the flock still walking behind the trees.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [ { "kind": "inParty", "character": "bear", "alive": true } ],
+                  "effects": [],
+                  "result": "\"Gone?\" Bjorn frowns. \"You touched it and let go. A second, no more.\" He does not hear the flock still walking behind the trees.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [ { "kind": "inParty", "character": "owl", "alive": true } ],
+                  "effects": [],
+                  "result": "Odette tilts her head. \"A second, Shawn. You touched it and let go.\" She does not hear the flock still walking behind the trees.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "No one is standing to tell him. The fog does not say. Behind the trees, soft as breath, the flock is still walking.",
+                  "goTo": "Leave"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "break",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/bell_broken.png",
+          "title": "The Broken Bell",
+          "body": "",
+          "cast": [ { "character": "sheep", "side": "left" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "The Bellwether folds into the fog without a sound, and the flock behind it goes too, like breath off glass." },
+            { "speaker": "narration", "expression": "", "text": "Shawn is standing at the stump, hoof on the brass. Under it the bell cracks, one clean line from crown to lip. The tolling stops." },
+            { "speaker": "sheep", "expression": "nervous", "text": "I didn't mean to. I only wanted it to stop." },
+            { "speaker": "narration", "expression": "", "text": "The strap is still new. He takes the bell anyway. It is warm, as if someone had been holding it for a very long time." },
+            { "speaker": "narration", "expression": "", "text": "Behind the trees, whatever was counting loses its place, and does not start again." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        }
+      ],
+      "fights": [
+        {
+          "id": "bellwether",
+          "enemies": [ "bellwether" ],
+          "elite": false,
+          "party": [ "sheep" ],
+          "surviveRounds": 10,
+          "roundLabel": "Toll",
+          "onLoss": "wake",
+          "pays": false,
+          "backdrop": "Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png",
+          "roundSfx": "Audio/Sfx/Events/bell_in_the_fog/toll",
+          "ambience": "Audio/Music/Events/bell_in_the_fog/wind",
+          "roundOverlay": { "path": "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", "fromScale": 0.6, "toScale": 1.3 },
+          "onSurvived": {
+            "effects": [
+              { "kind": "relic", "relic": "toll_of_the_flock" },
+              { "kind": "exp", "amount": 80, "character": "sheep" },
+              { "kind": "finish" }
+            ],
+            "result": "",
+            "goTo": "endure"
+          },
+          "onDefeated": {
+            "effects": [
+              { "kind": "relic", "relic": "toll_of_the_flock" },
+              { "kind": "relic", "relic": "bellwethers_bell" },
+              { "kind": "exp", "amount": 80, "character": "sheep" },
+              { "kind": "finish" }
+            ],
+            "result": "",
+            "goTo": "break"
+          },
+          "onFell": {
+            "effects": [ { "kind": "finish" } ],
+            "result": "Shawn wakes on the wet ground with the taste of brass in his mouth. The stump is empty. No bell, no strap, no mark where either hung.",
+            "goTo": "Leave"
+          }
+        }
+      ]
+    },
+    {
       "id": "demo_dialogue",
       "floors": [999],
       "requires": [

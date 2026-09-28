@@ -205,7 +205,14 @@ namespace PrincesPalace.PlayModeTests
             // ApplyModifierOnHitRiders). The foe's health is raised past any
             // one swing below, so that no longer depends on which enemy this
             // picks; the tankiest one is kept so its defences stay real.
+            // Among enemies a room can roll. The event-only Bellwether
+            // (rollable: false, M7a) outranked the Forest Troll on health, and
+            // at speed 8 it takes its own turn before the hero's next one: the
+            // proc landed, then the one-turn status wore off on that turn,
+            // before the assertions below read it. The Troll (speed 4) never
+            // got a turn in between.
             var toughestEnemyId = ContentDatabase.Enemies
+                .Where(e => e.Data.Rollable)
                 .OrderByDescending(e => e.Data.BaseStats.maxHealth)
                 .Select(e => e.id)
                 .FirstOrDefault();

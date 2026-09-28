@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
@@ -109,6 +110,7 @@ namespace PrincesPalace.PlayModeTests
             yield return Bind(FightRoundPresentation.None, 0);
 
             Assert.IsFalse(Named("RoundCounter").activeSelf, "a room fight shows no round counter");
+            Assert.IsFalse(Named("RoundCounterPlate").activeSelf, "a room fight shows no counter plate");
             Assert.IsFalse(Named("RoundOverlay").activeSelf, "a room fight shows no overlay");
             Assert.IsFalse(SoundController.AmbiencePlaying, "a room fight plays no bed");
         }
@@ -119,6 +121,7 @@ namespace PrincesPalace.PlayModeTests
             yield return Bind(Bell(), 10);
 
             Assert.IsTrue(Named("RoundCounter").activeSelf, "a fight with a round limit shows its counter");
+            Assert.IsTrue(Named("RoundCounterPlate").activeSelf, "the counter sits on its dark plate");
             Assert.AreEqual("Toll 1", Counter.text);
 
             yield return AttackAndPlayOut();
@@ -137,6 +140,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Bind(null, 0);
             Assert.IsFalse(Named("RoundCounter").activeSelf);
+            Assert.IsFalse(Named("RoundCounterPlate").activeSelf, "the plate went with the counter");
         }
 
         // ---- the overlay ---------------------------------------------------------------
@@ -187,6 +191,41 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(Named("RoundOverlay").activeSelf, "no baked sprite hides the layer rather than a white quad");
             Assert.AreEqual("Toll 1", Counter.text, "the counter does not depend on the overlay");
+        }
+
+        // THE REAL BELL, AS CONTENT AUTHORS IT, BEFORE ITS ART AND SOUND EXIST
+        // (M7a). Its backdrop, overlay, toll and wind name files M9a has not
+        // delivered: the class backdrop stays, the overlay stays hidden, the
+        // bed and the toll are silent, and nothing logs. Only the counter and
+        // its plate show.
+        [UnityTest]
+        public IEnumerator TheRealBell_WithNoArtOrSoundYet_ShowsOnlyTheCounter_AndLogsNothing()
+        {
+            var bell = ContentDatabase.Events.Select(e => e.Data).Single(e => e.Id == "bell_in_the_fog");
+            var fight = bell.FightById("bellwether");
+            var presentation = EncounterRequest.ForEventFight(PrincesPalace.Domain.Dungeon.RoomType.Event,
+                bell.Id, fight).Presentation;
+
+            yield return SharedScene.EnsureFight();
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+            var backdrop = typeof(FightController).GetField("backgroundImage", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(backdrop, "FightController.backgroundImage was renamed or removed");
+            var classSprite = ((Image)backdrop.GetValue(_fight)).sprite;
+
+            BindOnly(presentation, fight.SurviveRounds);
+            yield return null;
+
+            Assert.AreEqual("Toll 1", Counter.text);
+            Assert.IsTrue(Named("RoundCounterPlate").activeSelf);
+            Assert.IsFalse(Named("RoundOverlay").activeSelf, "no flock.png yet: the overlay stays hidden");
+            Assert.AreSame(classSprite, ((Image)backdrop.GetValue(_fight)).sprite,
+                "no fog_clearing.png yet: the class backdrop stands");
+            Assert.IsFalse(SoundController.AmbiencePlaying, "no wind loop yet: silence");
+
+            yield return AttackAndPlayOut();
+            Assert.AreEqual("Toll 2", Counter.text, "a missing toll sound does not stop the count");
+            LogAssert.NoUnexpectedReceived();
         }
 
         // ---- the ambience bed ----------------------------------------------------------

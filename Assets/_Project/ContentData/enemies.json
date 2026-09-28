@@ -320,6 +320,27 @@
         }
       ],
       "attackWeight": 0
+    },
+    {
+      "id": "bellwether",
+      "minFloor": 1,
+      "displayName": "The Bellwether",
+      "maxHealth": 150,
+      "speed": 8,
+      "attack": 20,
+      "physicalDefense": 20,
+      "magicalDefense": 20,
+      "attackType": "Physical",
+      "expReward": 30,
+      "currencyReward": 18,
+      "weakness": "none",
+      "resistance": "none",
+      "active": true,
+      "rollable": false,
+      "rallyPerRound": {
+        "attackPercentPerStack": 8,
+        "maxStacks": 10
+      }
     }
   ]
 }

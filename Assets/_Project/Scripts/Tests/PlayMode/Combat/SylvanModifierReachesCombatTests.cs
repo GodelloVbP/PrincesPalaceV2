@@ -198,7 +198,14 @@ namespace PrincesPalace.PlayModeTests
                 "pins the scaling formula itself at a lower tier." +
                 " This end-to-end test has stopped covering the root proc; give it a fixture item that guarantees it.");
 
+            // Among enemies a room can roll. The event-only Bellwether
+            // (rollable: false, M7a) outranked the Forest Troll on health, and
+            // at speed 8 it takes its own turn before the hero's next one: the
+            // proc landed, then the one-turn status wore off on that turn,
+            // before the assertions below read it. The Troll (speed 4) never
+            // got a turn in between.
             var toughestEnemyId = ContentDatabase.Enemies
+                .Where(e => e.Data.Rollable)
                 .OrderByDescending(e => e.Data.BaseStats.maxHealth)
                 .Select(e => e.id)
                 .FirstOrDefault();

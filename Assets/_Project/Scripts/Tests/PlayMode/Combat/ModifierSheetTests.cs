@@ -286,7 +286,12 @@ namespace PrincesPalace.PlayModeTests
             // before the second rider gets its turn to fire, which would
             // make this a test of "one rider fires" rather than "three
             // rolled modifiers compose".
+            // Among enemies a room can roll, the rule the Frosty and Sylvan
+            // fixtures needed once the event-only Bellwether (rollable: false,
+            // M7a) outranked the Forest Troll on health: an event monster's
+            // speed and kit are not what this sheet is measured against.
             var toughestEnemyId = ContentDatabase.Enemies
+                .Where(e => e.Data.Rollable)
                 .OrderByDescending(e => e.Data.BaseStats.maxHealth)
                 .Select(e => e.id)
                 .FirstOrDefault();

@@ -63,6 +63,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // limit.
         public NodeRef RoundOverlay;
         public NodeRef RoundCounter;
+        public NodeRef RoundCounterPlate;
 
         public NodeRef InitiativeTracker;
         public List<NodeRef> InitiativeIcons = new List<NodeRef>();
@@ -420,7 +421,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             hud.Add(s.BuildInitiativeTracker());
             hud.Add(s.BuildBark());
-            hud.Add(s.BuildRoundCounter());
+            hud.AddRange(s.BuildRoundCounter());
             hud.AddRange(s.BuildEnemiesHeading());
             hud.AddRange(s.BuildEnemyPlates());
             hud.AddRange(s.BuildPcPlates());
@@ -1019,18 +1020,45 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const int RoundCounterFontSize = 30;
         public const float RoundCounterGap = 16f;
 
-        private UiNode BuildRoundCounter()
+        // A SOFT DARK PLATE UNDER THE COUNTER. The dark text edge alone
+        // (OverArt, the bark's answer) was not enough: the M6 captures put
+        // "Toll 1" in gold straight over the pale canopy gap, where gold on
+        // cream reads at barely any contrast. The plate is the scrim's own
+        // shape and colour (radial_glow in the near-black violet, BuildScrim)
+        // rather than a box, so it darkens what sits behind the words and
+        // fades out before it reads as a panel. Sized to the words a real
+        // label makes ("Toll 10" is ~110px at 30pt), not to the 420px audit
+        // box, which only exists to prove the longest label fits.
+        public const float RoundCounterPlateWidth = 320f;
+        public const float RoundCounterPlateHeight = 104f;
+        private const string RoundCounterPlateColour = "#0B0718C0";
+
+        // The plate first: uGUI paints later siblings on top, so the label
+        // lands over it. Both start hidden and FightController shows and
+        // hides them together.
+        private IEnumerable<UiNode> BuildRoundCounter()
         {
+            float counterTop = -(BarkHeight + RoundCounterGap);
+            float plateTop = counterTop + (RoundCounterPlateHeight - RoundCounterHeight) * 0.5f;
+
+            var plate = Ui.Sprite("RoundCounterPlate", ScrimCentreKey,
+                    Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), new UiVec(0f, plateTop)),
+                    UiSize.Fixed(RoundCounterPlateWidth, RoundCounterPlateHeight))
+                .Coloured(RoundCounterPlateColour)
+                .AsDecor()
+                .Inactive();
+            RoundCounterPlate = plate;
+            yield return plate;
+
             var counter = Ui.Label("RoundCounter", UiStrings.FightRoundCounter,
                     new UiVec(RoundCounterWidth, RoundCounterHeight), RoundCounterFontSize, FightHudPalette.HeadingGold,
-                    Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), new UiVec(0f, -(BarkHeight + RoundCounterGap))))
+                    Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), new UiVec(0f, counterTop)))
                 .Styled(TypographyRole.FunctionalHeading)
-                // On the painting with no plate, the log's own answer to the
-                // same problem (BuildBark): the dark edge reads over fog.
+                // The dark text edge stays too, for the plate's faded rim.
                 .OverArt()
                 .Inactive();
             RoundCounter = counter;
-            return counter;
+            yield return counter;
         }
 
         // Full-frame, keeping the art's aspect, hidden until an event fight

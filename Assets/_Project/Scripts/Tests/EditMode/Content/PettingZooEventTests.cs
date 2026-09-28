@@ -29,34 +29,9 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- loading the real files ------------------------------------------------------
 
-        private static Dictionary<string, string> CharacterNames() =>
-            ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters
-                .ToDictionary(c => c.id, c => c.displayName);
+        private static List<ResolvedRelic> Relics() => RealEventCatalogue.Relics();
 
-        private static List<ResolvedRelic> Relics()
-        {
-            var achievements = ContentDataFiles.ParseFile<RawAchievementFile>(ContentDataFiles.DataPath("achievements.json"))
-                .achievements.Select(a => a.id).ToList();
-            var raw = ContentDataFiles.ParseFile<RawRelicFile>(ContentDataFiles.DataPath("relics.json")).relics;
-
-            bool ok = RelicEntryResolver.TryResolveAll(raw, achievements, CharacterNames().Keys.ToList(),
-                out var resolved, out var errors);
-            Assert.IsTrue(ok, "relics.json: " + string.Join("; ", errors ?? new List<string>()));
-            return resolved;
-        }
-
-        private static List<ResolvedEventDefinition> Events()
-        {
-            var items = ContentDataFiles.ParseFile<RawItemFile>(ContentDataFiles.DataPath("items.json")).items
-                .Select(i => i.id).ToList();
-            var relicNames = Relics().ToDictionary(r => r.Id, r => r.DisplayName);
-            var raw = ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events;
-
-            bool ok = EventEntryResolver.TryResolveAll(raw, CharacterNames(), items, relicNames,
-                out var resolved, out var errors);
-            Assert.IsTrue(ok, "events.json: " + string.Join("; ", errors ?? new List<string>()));
-            return resolved;
-        }
+        private static List<ResolvedEventDefinition> Events() => RealEventCatalogue.Events();
 
         private static ResolvedEventDefinition Zoo() => Events().Single(e => e.Id == "petting_zoo");
 
@@ -243,7 +218,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void WheneverAnyoneIsStanding_ShawnsBranchFiresOrPetterShowsAPetRow()
         {
-            var roster = CharacterNames().Keys.ToList();
+            var roster = RealEventCatalogue.CharacterNames().Keys.ToList();
             var petter = Page("petter");
             int checkedSquads = 0;
 

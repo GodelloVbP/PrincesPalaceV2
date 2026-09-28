@@ -133,13 +133,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void DemoWishingWell_StillResolvesUnchanged()
         {
-            var entries = ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events;
-            // The real file also holds petting_zoo, whose `relic` effect names
-            // kinship; without a relic catalogue the resolver refuses it.
-            var knownRelics = new Dictionary<string, string> { ["kinship"] = "Kinship" };
-            bool ok = EventEntryResolver.TryResolveAll(entries, KnownCharacters, KnownItems, knownRelics,
-                out var resolved, out var errors);
-            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            // Against the real catalogues: the file also holds events that
+            // name relics and fight enemies (petting_zoo, bell_in_the_fog).
+            var resolved = RealEventCatalogue.Events();
 
             var well = resolved.Single(e => e.Id == "demo_wishing_well");
             Assert.AreEqual("Assets/_Project/Art/Backgrounds/Dungeon.png", well.BackdropKey);

@@ -38,6 +38,10 @@ namespace PrincesPalace
         [SerializeField] internal IconEntry[] roundOverlayArt;
 
         [SerializeField] internal TMP_Text roundCounter;
+
+        // The soft dark plate under the counter (FightScreen.BuildRoundCounter);
+        // shown and hidden with it.
+        [SerializeField] internal Image roundCounterPlate;
         [SerializeField] internal Image roundOverlay;
 
         private FightRoundPresentation _presentation = FightRoundPresentation.None;
@@ -59,6 +63,7 @@ namespace PrincesPalace
 
             bool shows = _presentation.ShowsCounter;
             if (roundCounter != null) roundCounter.gameObject.SetShown(shows);
+            if (roundCounterPlate != null) roundCounterPlate.gameObject.SetShown(shows);
 
             bool overlay = false;
             if (roundOverlay != null)

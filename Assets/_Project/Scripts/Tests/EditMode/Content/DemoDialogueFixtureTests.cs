@@ -60,11 +60,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheMergedCopyInEventsJson_MatchesTheStagingCopy()
         {
-            var entries = ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events;
-            var relics = new Dictionary<string, string> { ["kinship"] = "Kinship" };
-            bool ok = EventEntryResolver.TryResolveAll(entries, RealCharacters(), new[] { "health_potion" }, relics,
-                out var resolved, out var errors);
-            Assert.IsTrue(ok, "events.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
+            var resolved = RealEventCatalogue.Events();
 
             Assert.AreEqual("demo_dialogue", resolved.Last().Id, "demo_dialogue is the last entry of events.json");
             Assert.AreEqual(Fingerprint(Resolve()), Fingerprint(resolved.Last()));

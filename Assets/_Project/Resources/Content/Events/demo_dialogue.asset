@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
   data:
     Id: demo_dialogue
-    SortOrder: 2
+    SortOrder: 3
     Floors: e7030000
     Requires:
     - Kind: 0
