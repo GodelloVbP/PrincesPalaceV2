@@ -1173,6 +1173,24 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("target_prompt_ally_of_many", "Choose ally {1} of {2} for {0}.",
                 "Choose ally 1 of 2 for Palace Passage.");
 
+        // THE SEAT-DESTINATION PROMPTS (PLAN_BELLWETHER_KIT 1.2/3.6). A cast
+        // whose last pick is a seat asks two different questions -- who goes,
+        // then where -- so "ally 2 of 2" would name the wrong half of the
+        // screen for the second press: an empty seat is not an ally.
+        public static readonly UiString TargetPromptTraveller =
+            UiString.Define("target_prompt_traveller", "Choose who moves with {0}.",
+                "Choose who moves with Palace Passage.");
+
+        public static readonly UiString TargetPromptSeat =
+            UiString.Define("target_prompt_seat", "Choose a seat for {1}.",
+                "Choose a seat for Odette.");
+
+        // The words on the empty-seat markers the seat pick lights
+        // (FightScreen.BuildPartySeatMarkers), front to rear.
+        public static readonly UiString FightSeatFront = UiString.Define("fight_seat_front", "Front");
+        public static readonly UiString FightSeatMiddle = UiString.Define("fight_seat_middle", "Middle");
+        public static readonly UiString FightSeatRear = UiString.Define("fight_seat_rear", "Rear");
+
         // TransformStripTurns/TransformStripPermanent are GONE with the strip
         // itself (2026-09-09, the HUD-column pass). A transformation IS a
         // status on the character, so it reads out through the badge row on

@@ -75,7 +75,74 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         public bool CastSkillOnPicks(ResolvedSkill skill, IReadOnlyList<CombatantState> targets,
-            DamageType? element = null)
+            DamageType? element = null) =>
+            CastCore(skill, targets, element, NoDestinationSeat);
+
+        // ---- a seat as the destination (PLAN_BELLWETHER_KIT 1.2/3.6) -----------
+        //
+        // PALACE PASSAGE'S DOOR: a traveller and a destination SEAT, occupied
+        // or empty. An occupied seat is handed on as today's two-ally pick
+        // list [traveller, occupant] -- the identical cast, refusals and
+        // messages, not a second path that merely agrees with it. Only an
+        // EMPTY seat, which has nobody to put in a list, rides as a seat
+        // number. Every refusal is still before payment (CastCore).
+        public bool CastSkillToSeat(int index, CombatantState traveller, int seat)
+        {
+            var kit = KitFor(Current);
+            if (kit == null || index < 0 || index >= kit.Skills.Count) return false;
+
+            return CastSkillToSeat(kit.Skills[index], traveller, seat);
+        }
+
+        public bool CastSkillToSeat(ResolvedSkill skill, CombatantState traveller, int seat)
+        {
+            if (skill == null) return false;
+
+            var occupant = _encounter.OccupantOf(seat);
+            return occupant != null
+                ? CastCore(skill, new[] { traveller, occupant }, null, NoDestinationSeat)
+                : CastCore(skill, new[] { traveller }, null, seat);
+        }
+
+        // WOULD CastSkillToSeat ACCEPT THIS RIGHT NOW? The same refusals, in
+        // the same order, asked without a message or a point spent -- for a
+        // bot that must never be offered a command the session refuses
+        // (FightAction's own header on the stall that cost). Pure: nothing
+        // here writes to the board or the log.
+        public bool CanCastToSeat(int index, CombatantState traveller, int seat)
+        {
+            var actor = Current;
+            var kit = KitFor(actor);
+            if (actor == null || kit == null || index < 0 || index >= kit.Skills.Count) return false;
+
+            var skill = kit.Skills[index];
+            if (skill == null || !SkillEffects.LastPickIsSeat(skill.Effect)) return false;
+            if (!EligibleAllies(actor, skill).Contains(traveller)) return false;
+
+            var occupant = _encounter.OccupantOf(seat);
+            if (occupant != null && !EligibleAllies(actor, skill).Contains(occupant)) return false;
+
+            if (!SkillResolution.CanAfford(actor, skill.ManaCost, skill.ResourceCost, skill.HealthCostPercent))
+            {
+                return false;
+            }
+
+            var picks = occupant != null
+                ? new[] { traveller, occupant }
+                : new[] { traveller };
+            if (!CanResolveSkill(actor, skill, picks, occupant != null ? NoDestinationSeat : seat, out _))
+            {
+                return false;
+            }
+
+            return !(IsFreeAction(actor, skill) && ReferenceEquals(_freeActionTakenBy, actor));
+        }
+
+        // "No seat named": the pick list carries every end of the cast.
+        private const int NoDestinationSeat = -1;
+
+        private bool CastCore(ResolvedSkill skill, IReadOnlyList<CombatantState> targets,
+            DamageType? element, int destinationSeat)
         {
             var actor = Current;
             if (actor == null) return false;
@@ -163,7 +230,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // no further choice (see its own header), so this recursion runs
             // the identical path every other skill takes -- one cast pipeline,
             // not a parallel one for typed spells.
-            if (chosen != null) return CastSkillOnPicks(chosen, targets);
+            if (chosen != null) return CastCore(chosen, targets, null, destinationSeat);
 
             // MANA, SIGNATURE AND HEALTH, VALIDATED TOGETHER (plan 1.1/1.2):
             // a cast that could pay one and not another must spend neither.
@@ -181,7 +248,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // milestone B for requiresStatus (Ashen Reckoning) -- a
             // board-state refusal about the TARGET, which the two effects
             // above never needed to ask about.
-            if (!CanResolveSkill(actor, skill, targets, out string refusal))
+            if (!CanResolveSkill(actor, skill, targets, destinationSeat, out string refusal))
             {
                 AppendMessage(refusal);
                 return false;
@@ -242,7 +309,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // never got to open.
             RefreshAttackBonus(actor, spendingGift: DealsDamage(skill));
 
-            ResolveCharacterSkill(actor, skill, targets, PointsSpent(skill, resourceSpent, primarySpent), poolTier);
+            ResolveCharacterSkill(actor, skill, targets, PointsSpent(skill, resourceSpent, primarySpent), poolTier,
+                destinationSeat);
 
             // SOURCED by the actor. The relic's shield and the Lamb's Ward are
             // the same status, and an unsourced one would be a ward whose
@@ -379,7 +447,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // the resolution rather than about the aiming.
         private void ResolveCharacterSkill(CombatantState actor, ResolvedSkill skill,
             IReadOnlyList<CombatantState> targets, int resourceSpent,
-            PoolTierResolution.Result poolTier = default)
+            PoolTierResolution.Result poolTier = default, int destinationSeat = NoDestinationSeat)
         {
             var target = PrimaryTarget(targets);
 
@@ -389,7 +457,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             try
             {
-                ResolveCharacterSkillInner(actor, skill, targets, resourceSpent, poolTier);
+                ResolveCharacterSkillInner(actor, skill, targets, resourceSpent, poolTier, destinationSeat);
             }
             finally
             {
@@ -400,7 +468,8 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         private void ResolveCharacterSkillInner(CombatantState actor, ResolvedSkill skill,
-            IReadOnlyList<CombatantState> targets, int resourceSpent, PoolTierResolution.Result poolTier)
+            IReadOnlyList<CombatantState> targets, int resourceSpent, PoolTierResolution.Result poolTier,
+            int destinationSeat = NoDestinationSeat)
         {
             var target = PrimaryTarget(targets);
 
@@ -423,7 +492,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
 
                 case SkillEffect.SwapAllies:
-                    ResolveSwapAllies(actor, skill, targets);
+                    ResolveSwapAllies(actor, skill, targets, destinationSeat);
                     break;
 
                 case SkillEffect.Afflict:
@@ -1153,16 +1222,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // THE ROOTED REFUSAL IS NOT HERE. It is a CanResolveSkill refusal, so
         // it spends nothing -- see 1.12. By the time this runs the cast is
         // committed and the swap must happen.
-        private void ResolveSwapAllies(CombatantState actor, ResolvedSkill skill, IReadOnlyList<CombatantState> targets)
+        //
+        // ANY SEAT SINCE PLAN_BELLWETHER_KIT M3: the second end is a seat.
+        // An occupied one arrives as the old pick list and trades; an empty
+        // one arrives as `destinationSeat` and the traveller steps into it
+        // (PassageDestination is the one reading of the two forms).
+        private void ResolveSwapAllies(CombatantState actor, ResolvedSkill skill, IReadOnlyList<CombatantState> targets,
+            int destinationSeat)
         {
-            if (targets == null || targets.Count < 2) return;
+            var traveller = PrimaryTarget(targets);
+            int seat = PassageDestination(targets, destinationSeat);
+            if (traveller == null || seat < 0) return;
+            if (IndexInParty(_encounter.PlayerParty, traveller) < 0) return;
 
-            var party = _encounter.PlayerParty;
-            int first = IndexInParty(party, targets[0]);
-            int second = IndexInParty(party, targets[1]);
-            if (first < 0 || second < 0 || first == second) return;
-
-            BeginBeat(actor, targets[0], isCast: true);
+            BeginBeat(actor, traveller, isCast: true);
 
             // THROUGH THE SAME DOOR EVERY OTHER RESOLVER USES. This arm used
             // to pose the caster with a bare SetStance(Idle) and never call
@@ -1175,22 +1248,36 @@ namespace PrincesPalace.Domain.Combat.Session
             // skill has authored a stance), so the manual Idle is gone too.
             RecordSpellPresentation(skill);
 
-            // THE ONE PLACEMENT RULE (CombatEncounter.PlaceAt): the first pick
-            // goes to the second's seat, trading with it -- today's swap,
-            // exactly. M3 lets the second pick be an empty seat.
-            if (_encounter.PlaceAt(targets[0], _encounter.SeatOf(targets[1]), out _) != PlaceOutcome.Placed) return;
+            // THE ONE PLACEMENT RULE (CombatEncounter.PlaceAt): the traveller
+            // goes to the destination seat, trading with its occupant -- the
+            // two-ally swap, exactly -- or stepping into it when it is empty.
+            if (_encounter.PlaceAt(traveller, seat, out var occupant) != PlaceOutcome.Placed) return;
 
-            AppendMessage($"{targets[0].Name} and {targets[1].Name} step through and trade places.");
+            AppendMessage(occupant != null
+                ? $"{traveller.Name} and {occupant.Name} step through and trade places."
+                : $"{traveller.Name} steps through to the empty {SeatWord(seat)}.");
 
-            // BOTH figures moved, and the note is fired for both with the
-            // CASTER as the acting character -- Sparring Buckler pays whoever
-            // acted for a move that changed any position, Sparring Saber pays
-            // only the one who chose to move. On a Passage the chooser is the
-            // caster, who may not be either of the two travellers, and
-            // NoteDeliberateMove's own header is what says that distinction
-            // is the point of the pair.
-            NoteDeliberateMove(targets[0], actor);
-            NoteDeliberateMove(targets[1], actor);
+            // EVERY figure that moved is noted, with the CASTER as the acting
+            // character -- Sparring Buckler pays whoever acted for a move that
+            // changed any position, Sparring Saber pays only the one who chose
+            // to move. On a Passage the chooser is the caster, who may not be
+            // either traveller, and NoteDeliberateMove's own header is what
+            // says that distinction is the point of the pair.
+            NoteDeliberateMove(traveller, actor);
+            if (occupant != null) NoteDeliberateMove(occupant, actor);
+        }
+
+        // WHERE A PASSAGE SENDS ITS TRAVELLER: the named empty seat, or --
+        // for the two-ally form -- the second ally's seat. -1 when the cast
+        // names neither, which the refusal in CanResolveSkill turns into a
+        // sentence before anything is paid.
+        private int PassageDestination(IReadOnlyList<CombatantState> targets, int destinationSeat)
+        {
+            if (destinationSeat >= 0) return destinationSeat;
+
+            return targets != null && targets.Count >= 2 && targets[1] != null
+                ? _encounter.SeatOf(targets[1])
+                : NoDestinationSeat;
         }
 
         private static int IndexInParty(IReadOnlyList<CombatantState> party, CombatantState member)

@@ -104,6 +104,47 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreSame(_caster, session.Current, "fixture: the Passage's owner has to be the one acting");
         }
 
+        // A LONE SHAWN WITH THE PASSAGE: the seat pick's own case
+        // (PLAN_BELLWETHER_KIT 1.2/3.6, M3). Two empty seats behind him and no
+        // squadmate, so every destination the picker offers is an empty seat.
+        private IEnumerator LoadSoloFightWithThePassage()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+
+            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
+            Assert.IsNotNull(module, "the Fight scene's EventSystem is not running NavigationInputModule");
+            EventSystem.current = module.GetComponent<EventSystem>();
+            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
+            module.inputOverride = _input;
+
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            _caster = new CombatantState("Shawn", true, 300, 30, 40, 30);
+            var foe = new CombatantState("Front", false, 5000, 10, 8, 1);
+            var kits = new List<PlayerKit>
+            {
+                new PlayerKit("sheep", CharacterRole.Support, new[] { Passage() }, null, DamageType.Physical),
+            };
+            var enemyKits = new List<EnemyKit>
+            {
+                new EnemyKit(new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false),
+            };
+
+            var session = new FightSession(new CombatEncounter(new[] { _caster }, new[] { foe }),
+                kits, enemyKits, new SeededRandom(9));
+            session.Begin();
+
+            _fight.Bind(session, Domain.Rewards.EncounterClass.Normal);
+            yield return null;
+
+            Assert.AreSame(_caster, session.Current, "fixture: the lone Shawn has to be the one acting");
+        }
+
         private IEnumerator DriveFrame()
         {
             yield return null;
@@ -213,6 +254,73 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(_fight.IsPickingAllyForTest,
                 "a second Cancel with nothing held has to leave the rack");
+        }
+
+        [UnityTest]
+        public IEnumerator ASoloSeatPickShowsBothEmptySeats_AndThePadWalksToTheRearAndCommits()
+        {
+            // THE PICKER SHOWS EMPTY SEATS AS DESTINATIONS, and a pad can
+            // reach every one: traveller -> empty rear -> commit, three
+            // presses and one stick step through the real dispatcher.
+            yield return LoadSoloFightWithThePassage();
+            yield return OpenThePicker();
+
+            Assert.IsFalse(_fight.IsPickingSeatForTest, "the first press is the traveller, not a seat");
+            Assert.IsFalse(_fight.SeatMarkerLiveForTest(1), "a seat marker was up before the traveller was chosen");
+
+            yield return PressSubmit();
+
+            Assert.IsTrue(_fight.IsPickingSeatForTest, "choosing the traveller did not open the seat pick");
+            Assert.IsFalse(_fight.SeatMarkerLiveForTest(0), "his own seat was offered as a destination");
+            Assert.IsTrue(_fight.SeatMarkerLiveForTest(1), "the empty middle was not offered");
+            Assert.IsTrue(_fight.SeatMarkerLiveForTest(2), "the empty rear was not offered");
+            Assert.IsTrue(_fight.FocusIsOnSeatMarkerForTest(1),
+                "with nothing hovered the focus marker has to stand on what Submit would press: the middle");
+
+            // Up is deeper on both racks: one step from the implicit first
+            // stop is the rear.
+            yield return Move(1f);
+            Assert.AreEqual(2, _fight.HoveredSeatForTest, "the stick did not reach the rear seat");
+            Assert.IsTrue(_fight.FocusIsOnSeatMarkerForTest(2), "the focus marker did not follow the stick");
+
+            yield return PressSubmit();
+            yield return null;
+
+            var session = _fight.SessionForTest;
+            Assert.AreEqual(2, session.Encounter.SeatOf(_caster), "the pad's seat pick did not send him to the rear");
+            Assert.AreSame(_caster, session.Current, "a free action spent the turn");
+            Assert.IsFalse(_fight.IsPickingAllyForTest, "the cast committed but the picker stayed open");
+            Assert.IsFalse(_fight.SeatMarkerLiveForTest(1), "a seat marker outlived the pick");
+        }
+
+        [UnityTest]
+        public IEnumerator AMouseClickOnAnEmptySeatMarkerCommitsTheStep()
+        {
+            yield return LoadSoloFightWithThePassage();
+            yield return OpenThePicker();
+            yield return PressSubmit();
+
+            Assert.IsTrue(_fight.SeatMarkerLiveForTest(1), "precondition: the middle is offered");
+            _fight.ClickSeatMarkerForTest(1);
+            yield return null;
+
+            Assert.AreEqual(1, _fight.SessionForTest.Encounter.SeatOf(_caster));
+            Assert.AreSame(_caster, _fight.SessionForTest.Current);
+        }
+
+        [UnityTest]
+        public IEnumerator CancelAtTheSeatPickStepsBackToTheTravellerPick()
+        {
+            yield return LoadSoloFightWithThePassage();
+            yield return OpenThePicker();
+            yield return PressSubmit();
+            Assert.IsTrue(_fight.IsPickingSeatForTest, "precondition: the seat pick is open");
+
+            yield return PressCancel();
+
+            Assert.IsFalse(_fight.IsPickingSeatForTest, "Cancel did not drop the traveller");
+            Assert.IsTrue(_fight.IsPickingAllyForTest, "Cancel left the rack instead of stepping back one pick");
+            Assert.AreEqual(0, _fight.SessionForTest.Encounter.SeatOf(_caster), "a cancelled pick moved him");
         }
 
         [UnityTest]

@@ -146,6 +146,11 @@ namespace PrincesPalace
             RefreshSubmenu();
             RefreshDetail();
             RefreshTargetPrompt();
+
+            // The seat markers are menu state (a seat pick open or not), so
+            // they come down with the menu on AfterResolution rather than
+            // waiting out the beat's playback for the next full repaint.
+            RefreshSeatMarkers();
         }
 
         // The one place FightSession.SkillOptionsFor is actually called from
@@ -603,7 +608,18 @@ namespace PrincesPalace
             if (!targeting) return;
 
             string name = CurrentDetail().Name;
-            if (_menu.IsPickingAlly && _menu.RequiredPicks > 1)
+
+            // A SEAT-DESTINATION CAST asks "who" then "where", and the second
+            // question is not about an ally (PLAN_BELLWETHER_KIT 1.2).
+            if (_menu.IsPickingSeat && _menu.Picks.Count > 0)
+            {
+                targetPromptLabel.Set(UiStrings.TargetPromptSeat, name, _menu.Picks[0].Name);
+            }
+            else if (_menu.IsPickingAlly && _menu.LastPickIsSeat)
+            {
+                targetPromptLabel.Set(UiStrings.TargetPromptTraveller, name);
+            }
+            else if (_menu.IsPickingAlly && _menu.RequiredPicks > 1)
             {
                 // WHICH PRESS THIS IS, because nothing else on the rack says
                 // so: the plates look the same for pick 1 and pick 2, and the
@@ -1039,6 +1055,28 @@ namespace PrincesPalace
         // reorder have played) nor _slotOf (which never reorders at all).
         // Written only by RefreshPcPlates above, read only by PaintVitals.
         private CombatantState[] _plateOccupants;
+
+        // THE EMPTY-SEAT MARKERS (PLAN_BELLWETHER_KIT 1.2/3.6): up, and taking
+        // clicks, exactly for the empty seats a seat pick will accept
+        // (PickableSeats -- the list the stick walks and Submit presses). An
+        // occupied seat is picked on its figure or plate, which the loop above
+        // already lit, so its marker stays down; every marker is down outside
+        // a seat pick.
+        private void RefreshSeatMarkers()
+        {
+            if (partySeatMarkers == null) return;
+
+            var stops = PickableSeats();
+            for (int seat = 0; seat < partySeatMarkers.Length; seat++)
+            {
+                var marker = partySeatMarkers[seat];
+                if (marker == null) continue;
+
+                bool live = stops.Contains(seat) && _session.Encounter.OccupantOf(seat) == null;
+                marker.gameObject.SetShown(live);
+                marker.interactable = live;
+            }
+        }
 
         // OVER PlayerParty RATHER THAN LivingPlayerParty, deliberately: a
         // downed ally is still worth showing here, at 0 HP, rather than

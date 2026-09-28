@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: palace_passage
     DisplayName: Palace Passage
-    Description: Swap two allies. Free action. Neither may be rooted.
+    Description: Move an ally to any seat, trading with whoever stands there. Free
+      action. Neither may be rooted.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 17

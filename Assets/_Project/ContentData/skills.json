@@ -945,7 +945,7 @@
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Palace Passage/Palace Passage - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Palace Passage",
-      "description": "Swap two allies. Free action. Neither may be rooted.",
+      "description": "Move an ally to any seat, trading with whoever stands there. Free action. Neither may be rooted.",
       "characterId": "sheep",
       "effect": "SwapAllies",
       "physicalMove": false,

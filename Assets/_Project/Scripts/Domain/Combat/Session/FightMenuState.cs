@@ -182,6 +182,41 @@ namespace PrincesPalace.Domain.Combat.Session
         // only one that exists solely because a cast is half made.
         public bool HasPicked(CombatantState candidate) => candidate != null && _picks.Contains(candidate);
 
+        // ---- a seat as the last pick (PLAN_BELLWETHER_KIT 1.2/3.6) -------------
+        //
+        // Palace Passage's second pick is a DESTINATION SEAT, occupied or
+        // empty. An occupied seat is recorded exactly as before -- the
+        // occupant goes into Picks through RecordPick, so the cast and every
+        // message are today's two-ally swap. Only an EMPTY seat, which has
+        // nobody to put in a combatant list, is held here instead.
+        //
+        // The caller's read of the skill (SkillEffects.LastPickIsSeat), for
+        // the reason RequiredPicks is: this type holds no content.
+        public bool LastPickIsSeat { get; private set; }
+
+        // The empty seat the last pick named, -1 while none is held. Set only
+        // by RecordSeatPick; a held seat always completes the cast.
+        public int DestinationSeat { get; private set; } = -1;
+
+        // THE LAST PRESS OF A SEAT-DESTINATION CAST IS BEING ASKED FOR: the
+        // rack the view offers now is the three seats (minus the traveller's
+        // own), empty ones included, not the party plates alone.
+        public bool IsPickingSeat =>
+            IsPickingAlly && LastPickIsSeat && _picks.Count == RequiredPicks - 1 && DestinationSeat < 0;
+
+        // Records an EMPTY seat as the last pick. Refused (nothing recorded)
+        // outside a seat pick or for a seat number that does not exist; an
+        // occupied seat goes through RecordPick with its occupant instead.
+        public bool RecordSeatPick(int seat, out bool complete)
+        {
+            complete = false;
+            if (!IsPickingSeat || seat < 0) return false;
+
+            DestinationSeat = seat;
+            complete = true;
+            return true;
+        }
+
         // Records one pick and says whether that was the LAST one, which is
         // the caller's signal to commit. Returns false without recording for
         // a null, for a repeat, or for a cast that is already full -- a
@@ -189,7 +224,8 @@ namespace PrincesPalace.Domain.Combat.Session
         public bool RecordPick(CombatantState target, out bool complete)
         {
             complete = false;
-            if (!IsTargeting || target == null || _picks.Contains(target) || _picks.Count >= RequiredPicks)
+            if (!IsTargeting || target == null || _picks.Contains(target) || _picks.Count >= RequiredPicks
+                || DestinationSeat >= 0)
             {
                 return false;
             }
@@ -202,9 +238,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // Undoes the most recent pick and stays where it is. Cancel's first
         // step at Target depth, and the reason Back() below never leaves the
         // depth while a pick is still held: the owner's rule is that Cancel
-        // steps back ONE level, and a recorded pick is a level.
+        // steps back ONE level, and a recorded pick is a level. A held seat is
+        // the most recent pick whenever there is one.
         public bool DropLastPick()
         {
+            if (DestinationSeat >= 0)
+            {
+                DestinationSeat = -1;
+                return true;
+            }
+
             if (_picks.Count == 0) return false;
 
             _picks.RemoveAt(_picks.Count - 1);
@@ -268,12 +311,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // (SkillEffects.PicksRequired), for the same reason the side is:
         // this type holds no content. Defaulted to 1 so every existing call
         // site keeps its meaning unchanged.
-        public void EnterTargeting(TargetSide side = TargetSide.Enemies, int requiredPicks = 1)
+        //
+        // `lastPickIsSeat` likewise (SkillEffects.LastPickIsSeat), defaulted
+        // false so every existing call site keeps its meaning.
+        public void EnterTargeting(TargetSide side = TargetSide.Enemies, int requiredPicks = 1,
+            bool lastPickIsSeat = false)
         {
             if (!IsOpen) return;
             Depth = MenuDepth.Target;
             Side = side;
             RequiredPicks = requiredPicks < 1 ? 1 : requiredPicks;
+            LastPickIsSeat = lastPickIsSeat;
+            DestinationSeat = -1;
             _picks.Clear();
         }
 
@@ -397,6 +446,8 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ForgetPicks()
         {
             RequiredPicks = 1;
+            LastPickIsSeat = false;
+            DestinationSeat = -1;
             _picks.Clear();
         }
 

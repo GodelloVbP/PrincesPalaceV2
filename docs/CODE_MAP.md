@@ -742,7 +742,7 @@ milliseconds rather than by loading a scene.
 | `FightSession.Beats.cs` | beat RECORDING, the retro-attach rule (AUDIT #13), stance and voice capture |
 | `FightSession.Riders.cs` | Brave / Trample / Bloodlust, turn-start bookkeeping, victory resolution |
 | `FightSession.Enemies.cs` | intents, the telegraph, the two skip paths, taunt redirection, the status rider |
-| `FightSession.Skills.cs` | the fourteen-effect dispatch, role riders, the queue push |
+| `FightSession.Skills.cs` | the fourteen-effect dispatch, role riders, the queue push; Palace Passage's seat door (`CastSkillToSeat`/`CanCastToSeat`: a traveller and a destination seat, occupied = the two-ally swap, empty = a step, PLAN_BELLWETHER_KIT 3.6) |
 | `FightSession.Talents.cs` | wool engines, wards, Shatter, Gifts, splash, the transform, Provoke |
 | `FightSession.Cooldowns.cs` | skill cooldowns, counted in the caster's own turns rather than rounds |
 | `FightSession.Items.cs` | using something out of the satchel |

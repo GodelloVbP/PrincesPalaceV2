@@ -53,6 +53,14 @@ namespace PrincesPalace.Domain.Bot
         // way four targets are.
         public readonly DamageType? Element;
 
+        // Valid only when Kind == Skill and the skill's last pick is a seat
+        // (SkillEffects.LastPickIsSeat -- Palace Passage): the seat, 0 = front,
+        // that Target (the traveller) goes to, occupied or empty. -1 on every
+        // other action. PLAN_BELLWETHER_KIT 3.6 -- one destination, not a
+        // second target: an occupied seat names its occupant through the
+        // board, so the action never has to.
+        public readonly int DestinationSeat;
+
         // Valid only when Kind == Item.
         public readonly string ItemId;
         public readonly string ItemDisplayName;
@@ -84,8 +92,10 @@ namespace PrincesPalace.Domain.Bot
             bool itemRestoresMana = false,
             MoveDirection moveDirection = MoveDirection.Forward,
             DamageType? element = null,
-            ItemInstance itemInstance = null)
+            ItemInstance itemInstance = null,
+            int destinationSeat = -1)
         {
+            DestinationSeat = destinationSeat < 0 ? -1 : destinationSeat;
             ItemInstance = itemInstance;
             Element = element;
             Kind = kind;
@@ -102,6 +112,8 @@ namespace PrincesPalace.Domain.Bot
             switch (Kind)
             {
                 case FightActionKind.Attack: return $"Attack({Target?.Name})";
+                case FightActionKind.Skill when DestinationSeat >= 0:
+                    return $"Skill[{SkillIndex}]({Target?.Name}->seat {DestinationSeat})";
                 case FightActionKind.Skill:
                     return Element.HasValue
                         ? $"Skill[{SkillIndex}]:{Element.Value}({Target?.Name})"
@@ -208,29 +220,19 @@ namespace PrincesPalace.Domain.Bot
                 // AllyTargetSelection states what is preferred. That split is
                 // what keeps RandomLegal genuinely uniform over the real menu
                 // rather than over a menu somebody already narrowed for it.
-                // A TWO-PICK CAST IS SKIPPED, EXPLICITLY AND WITH A REASON
-                // (plan 1.12; SkillEffects.PicksRequired is the one place
-                // that count lives). A FightAction carries ONE Target, and
-                // Palace Passage needs two ends -- so the bot cannot express
-                // this command without the action type growing a second
-                // target field that exactly one skill in the game would ever
-                // use, which is the hardcoded slot docs/CODE_STANDARDS.md
-                // section 10 exists to refuse.
+                // A SEAT-DESTINATION CAST (Palace Passage) IS NOT OFFERED HERE
+                // YET. The action can carry it since PLAN_BELLWETHER_KIT M3
+                // (DestinationSeat; SeatDestinationActions below lists every
+                // legal one through the session's own CanCastToSeat), but
+                // WHEN a policy should take a free reposition is M6's
+                // telegraph answer (3.10). Offering it to every archetype
+                // before that would change every balance number for a reason
+                // no policy was written to weigh.
                 //
-                // SKIPPED, NOT OFFERED-AND-REFUSED, and the difference is the
-                // whole point of writing it here. Milestone B shipped a skill
+                // SKIPPED, NOT OFFERED-AND-REFUSED: Milestone B shipped a skill
                 // the bot could pick and the session always refused, and
-                // BalanceBotSmokeTests found it as a 60-command STALL rather
-                // than as a wrong answer: a policy that scores an action
-                // positively and never gets to spend it will pick it again
-                // next turn, forever. An action the legal menu never contains
-                // cannot stall anything.
-                //
-                // WHAT THIS COSTS: Palace Passage is outside the balance
-                // bot's reach, so its tempo value is measured by the focused
-                // harness (plan section 5) and not by whole runs. Said out
-                // loud here because a silently unreachable skill is the half
-                // of this decision that would otherwise hide.
+                // BalanceBotSmokeTests found it as a 60-command STALL. An
+                // action the legal menu never contains cannot stall anything.
                 if (SkillEffects.PicksRequired(option.Skill.Effect) > 1) continue;
 
                 if (option.Skill.Targeting == SkillTargeting.SingleAlly)
@@ -300,6 +302,37 @@ namespace PrincesPalace.Domain.Bot
             if (session.CanMove(actor, MoveDirection.Back))
             {
                 actions.Add(new FightAction(FightActionKind.Move, moveDirection: MoveDirection.Back));
+            }
+
+            return actions;
+        }
+
+        // EVERY LEGAL SEAT-DESTINATION CAST for `actor` right now: one action
+        // per ready Palace Passage, per eligible traveller, per seat the
+        // session would accept (occupied or empty, never the traveller's own).
+        // Asked through FightSession.CanCastToSeat, the refusal list the cast
+        // itself runs, so nothing here can be refused on Apply. Not part of
+        // LegalActions until M6 (see the skip there); `actor` must be the
+        // session's Current, as for every command.
+        public static IReadOnlyList<FightAction> SeatDestinationActions(FightSession session, CombatantState actor)
+        {
+            var actions = new List<FightAction>();
+            if (session == null || actor == null || !ReferenceEquals(session.Current, actor)) return actions;
+
+            foreach (var option in session.SkillOptionsFor(actor))
+            {
+                if (!option.Ready || !SkillEffects.LastPickIsSeat(option.Skill.Effect)) continue;
+
+                foreach (var traveller in session.EligibleAllies(actor, option.Skill))
+                {
+                    for (int seat = 0; seat < CombatEncounter.SeatsPerSide; seat++)
+                    {
+                        if (!session.CanCastToSeat(option.Index, traveller, seat)) continue;
+
+                        actions.Add(new FightAction(FightActionKind.Skill, traveller, option.Index,
+                            destinationSeat: seat));
+                    }
+                }
             }
 
             return actions;
@@ -377,6 +410,9 @@ namespace PrincesPalace.Domain.Bot
             {
                 case FightActionKind.Attack:
                     session.ExecuteAttack(action.Target);
+                    break;
+                case FightActionKind.Skill when action.DestinationSeat >= 0:
+                    session.CastSkillToSeat(action.SkillIndex, action.Target, action.DestinationSeat);
                     break;
                 case FightActionKind.Skill:
                     session.CastSkill(action.SkillIndex, action.Target, action.Element);

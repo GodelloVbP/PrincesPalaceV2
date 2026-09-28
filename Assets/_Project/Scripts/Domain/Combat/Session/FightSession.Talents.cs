@@ -446,8 +446,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // has to ask that at commit as well as at pick time, since a pick and
         // a commit are different moments. Every other arm reads `target`, the
         // first of the list, exactly as it always did.
+        //
+        // `destinationSeat` is Palace Passage's empty-seat destination
+        // (PLAN_BELLWETHER_KIT 3.6), -1 for every other cast and for the
+        // two-ally form, whose second pick names the seat itself.
         private bool CanResolveSkill(CombatantState actor, ResolvedSkill skill,
-            IReadOnlyList<CombatantState> targets, out string refusal)
+            IReadOnlyList<CombatantState> targets, int destinationSeat, out string refusal)
         {
             refusal = null;
             var target = targets != null && targets.Count > 0 ? targets[0] : null;
@@ -555,33 +559,53 @@ namespace PrincesPalace.Domain.Combat.Session
 
                     return true;
 
-                // PALACE PASSAGE (plan 1.12, 2.9). Three refusals, all before
-                // payment, all about a board the player can misread.
+                // PALACE PASSAGE (plan 1.12, 2.9; any seat since
+                // PLAN_BELLWETHER_KIT M3). Every refusal before payment, all
+                // about a board the player can misread.
                 //
-                // ROOTED IS ONE RULE READ OFF BOTH SIDES, which is what
-                // CanMove/Move already do for the verb: Rooted means "cannot
-                // change field position" and a swap changes two. Checked HERE
-                // rather than only at pick time because a pick and a commit
-                // are different moments -- a partner rooted in between must
-                // still refuse the cast (1.12).
+                // THROUGH THE ONE PLACEMENT RULE (CombatEncounter.CanPlaceAt),
+                // the same one the resolution calls: Rooted is read off both
+                // ends (traveller first, then the occupant of the seat, which
+                // is the order the two-ally form always named them in), and an
+                // empty seat has nobody to be rooted. Checked HERE rather than
+                // only at pick time because a pick and a commit are different
+                // moments -- a partner rooted in between must still refuse the
+                // cast (1.12).
                 case SkillEffect.SwapAllies:
                 {
-                    if (targets == null || targets.Count < 2 || targets[0] == null || targets[1] == null
-                        || ReferenceEquals(targets[0], targets[1]))
+                    var traveller = target;
+                    if (traveller == null || (targets.Count >= 2 && ReferenceEquals(targets[0], targets[1])))
                     {
                         refusal = $"{skill.DisplayName} needs two different allies.";
                         return false;
                     }
 
-                    foreach (var pick in targets)
+                    int seat = PassageDestination(targets, destinationSeat);
+                    if (seat < 0)
                     {
-                        if (!StatusEffects.HasRooted(pick.Statuses)) continue;
-
-                        refusal = $"{pick.Name} is rooted.";
+                        refusal = $"{skill.DisplayName} needs a seat to send {traveller.Name} to.";
                         return false;
                     }
 
-                    return true;
+                    switch (_encounter.CanPlaceAt(traveller, seat, out var occupant))
+                    {
+                        case PlaceOutcome.Placed:
+                            return true;
+                        case PlaceOutcome.MemberRooted:
+                            refusal = $"{traveller.Name} is rooted.";
+                            return false;
+                        case PlaceOutcome.OccupantRooted:
+                            refusal = $"{occupant.Name} is rooted.";
+                            return false;
+                        case PlaceOutcome.NoSuchSeat:
+                            refusal = seat >= 0 && seat < CombatEncounter.SeatsPerSide
+                                ? $"{traveller.Name} already stands at the {SeatWord(seat)}."
+                                : $"{skill.DisplayName} has no such seat to go to.";
+                            return false;
+                        default:
+                            refusal = $"{skill.DisplayName} needs an ally on the field.";
+                            return false;
+                    }
                 }
 
                 // A PLAYER'S REPOSITION that could not move anyone is refused

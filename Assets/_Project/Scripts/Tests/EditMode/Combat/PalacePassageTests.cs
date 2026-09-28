@@ -248,20 +248,34 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ASoloPartyIsRefusedTheCast()
+        public void ASoloShawnPassesToAnEmptySeat_AndKeepsHisTurn()
         {
-            // 1.12's empty case: a party of one has no legal second pick.
+            // REVERSED BY THE OWNER (PLAN_BELLWETHER_KIT 1.2, M3). This was
+            // ASoloPartyIsRefusedTheCast: 1.12's empty case, "a party of one
+            // has no legal second pick". Since field seats the second pick is
+            // a SEAT, and a lone Shawn has two empty ones -- so the cast that
+            // used to be refused is now the front-to-rear step the Bell's
+            // knell asks for. The two-ally form alone is still refused, as
+            // before: a list of one names no destination.
             var lone = Member("Lone", 30);
+            var foe = new CombatantState("Foe", false, 1000, 10, 1, 1);
             var kits = new List<PlayerKit>
             {
                 new PlayerKit("sheep", CharacterRole.Support, new[] { Passage() }, null, DamageType.Physical),
             };
-            var session = new FightSession(
-                new CombatEncounter(new[] { lone }, new[] { new CombatantState("Foe", false, 1000, 10, 1, 1) }),
+            var session = new FightSession(new CombatEncounter(new[] { lone }, new[] { foe }),
                 kits, null, new SeededRandom(4));
+            int manaBefore = lone.PrimaryPool.Current;
 
-            Assert.IsFalse(session.CastSkillOnPicks(0, new[] { lone }));
-            Assert.AreSame(lone, session.Current);
+            Assert.IsFalse(session.CastSkillOnPicks(0, new[] { lone }), "a list of one names no destination");
+
+            Assert.IsTrue(session.CastSkillToSeat(0, lone, 2), "front to the empty rear was refused");
+            Assert.AreEqual(2, session.Encounter.SeatOf(lone));
+            Assert.AreEqual(0, session.Encounter.LivingRankOf(lone), "a seat is not a rank: he is still rank 0");
+            Assert.AreEqual(7, manaBefore - lone.PrimaryPool.Current);
+            Assert.AreEqual(3, session.CooldownRemaining(lone, "palace_passage"));
+            Assert.AreSame(lone, session.Current, "a free action ended the turn");
+            Assert.IsTrue(session.ExecuteAttack(foe), "he could not act after the Passage");
         }
 
         // ---- what the swap actually does ------------------------------------------

@@ -132,6 +132,18 @@ namespace PrincesPalace
                 }
             }
 
+            if (partySeatMarkers != null)
+            {
+                for (int i = 0; i < partySeatMarkers.Length; i++)
+                {
+                    if (partySeatMarkers[i] == null) continue;
+
+                    int seat = i;
+                    partySeatMarkers[i].onClick.AddListener(() => ConfirmSeat(seat));
+                    NoNavigation(partySeatMarkers[i]);
+                }
+            }
+
             submenuBackButton.onClick.AddListener(OnBackPressed);
             NoNavigation(submenuBackButton);
             if (targetCancelButton != null) targetCancelButton.onClick.AddListener(OnBackPressed);
@@ -397,7 +409,10 @@ namespace PrincesPalace
                 // spinning.
                 for (int pick = 0; pick < _menu.RequiredPicks && _menu.IsTargeting; pick++)
                 {
-                    ConfirmTarget(TargetSide.Allies, NextEligibleAlly());
+                    // A seat pick presses its first stop, which is what the
+                    // pad's Submit would press too.
+                    if (_menu.IsPickingSeat) ConfirmSeat(FocusedSeat());
+                    else ConfirmTarget(TargetSide.Allies, NextEligibleAlly());
                 }
             }
             else OnEnemyPressed(FirstLivingEnemyIndex());
@@ -704,8 +719,11 @@ namespace PrincesPalace
                         // same code path rather than a preserved special
                         // case.
                         _hoveredAllyIndex = -1;
+                        _hoveredSeat = -1;
+                        var effect = options[index].Skill.Effect;
                         _menu.EnterTargeting(TargetSide.Allies,
-                            Domain.Combat.SkillEffects.PicksRequired(options[index].Skill.Effect));
+                            Domain.Combat.SkillEffects.PicksRequired(effect),
+                            Domain.Combat.SkillEffects.LastPickIsSeat(effect));
                         RefreshUi();
                         return;
                     }
@@ -777,6 +795,129 @@ namespace PrincesPalace
             }
 
             return null;
+        }
+
+        // ---- a seat as the last pick (PLAN_BELLWETHER_KIT 1.2/3.6) -------------
+        //
+        // Palace Passage's second press names a SEAT. An occupied seat is
+        // handed to ConfirmTarget as its occupant -- the identical two-ally
+        // pick, down to the "already going" refusal -- so only an EMPTY seat
+        // takes the new path: recorded on the menu, cast through
+        // CastSkillToSeat. Reached from a marker click and from the pad's
+        // Submit; a figure or plate click on an occupant never comes here.
+        private void ConfirmSeat(int seat)
+        {
+            if (!CanAct || !_menu.IsPickingSeat) return;
+
+            var occupant = _session.Encounter.OccupantOf(seat);
+            if (occupant != null)
+            {
+                ConfirmTarget(TargetSide.Allies, occupant);
+                return;
+            }
+
+            if (_menu.Branch != MenuBranch.Skill) return;
+
+            var options = SkillOptions(_session.Current);
+            int row = _menu.Selection;
+            if (row < 0 || row >= options.Count || _menu.Picks.Count == 0) return;
+
+            if (!_menu.RecordSeatPick(seat, out bool complete) || !complete) return;
+
+            _session.CastSkillToSeat(options[row].Index, _menu.Picks[0], seat);
+            AfterResolution();
+        }
+
+        // Which seat the pad's cursor is on during a seat pick, -1 for none
+        // ("nothing hovered presses the first stop", the rule both racks
+        // follow). Its own field for the reason _hoveredAllyIndex is not
+        // _hoveredEnemyIndex: a seat is not a plate -- an empty one has no
+        // plate at all -- and one int meaning two things is how the Hasten
+        // ghost preview (which reads the plate cursor) would start reading a
+        // seat number as a plate.
+        private int _hoveredSeat = -1;
+
+        public int HoveredSeatForTest => _hoveredSeat;
+
+        public bool IsPickingSeatForTest => _menu.IsPickingSeat;
+
+        // Whether the empty-seat marker for `seat` is up and taking clicks,
+        // and the click itself -- a PlayMode test cannot reach the internal
+        // Button array (Core's InternalsVisibleTo names the Editor only).
+        public bool SeatMarkerLiveForTest(int seat)
+        {
+            var marker = NodeAt(partySeatMarkers, seat);
+            return marker != null && marker.activeInHierarchy && partySeatMarkers[seat].interactable;
+        }
+
+        public void ClickSeatMarkerForTest(int seat) => partySeatMarkers[seat].onClick.Invoke();
+
+        // Whether the pad's focus marker is standing on that seat's marker.
+        public bool FocusIsOnSeatMarkerForTest(int seat)
+        {
+            var node = NodeAt(partySeatMarkers, seat);
+            return node != null && ReferenceEquals(FocusedElement(), node);
+        }
+
+        // THE SEATS A SEAT PICK WILL ACCEPT, front to rear: every seat but
+        // the traveller's own, occupied or empty, minus an occupant the cast
+        // would refuse (EligibleAllies -- the one list the plates are lit
+        // from). One list, three readers: the stick cycles it, Submit presses
+        // its first stop, and the focus marker stands on it.
+        private List<int> PickableSeats()
+        {
+            var seats = new List<int>();
+            if (_session == null || !_menu.IsPickingSeat || _menu.Picks.Count == 0) return seats;
+
+            var encounter = _session.Encounter;
+            int own = encounter.SeatOf(_menu.Picks[0]);
+            var eligible = _session.EligibleAllies(_session.Current, SelectedSkill());
+
+            for (int seat = 0; seat < CombatEncounter.SeatsPerSide; seat++)
+            {
+                if (seat == own) continue;
+
+                var occupant = encounter.OccupantOf(seat);
+                if (occupant != null && (eligible == null || !eligible.Contains(occupant))) continue;
+
+                seats.Add(seat);
+            }
+
+            return seats;
+        }
+
+        // The seat the pad would press now: the hovered one, else the first
+        // stop. -1 when there is nowhere to go.
+        private int FocusedSeat()
+        {
+            var seats = PickableSeats();
+            if (seats.Count == 0) return -1;
+
+            return seats.Contains(_hoveredSeat) ? _hoveredSeat : seats[0];
+        }
+
+        // What the marker stands on for a seat: the occupant's figure (or
+        // plate) when somebody is there, the seat's own marker when not.
+        private GameObject SeatFocusNode(int seat)
+        {
+            if (seat < 0) return null;
+
+            var occupant = _session.Encounter.OccupantOf(seat);
+            if (occupant == null) return NodeAt(partySeatMarkers, seat);
+
+            for (int plate = 0; pcPlates != null && plate < pcPlates.Length; plate++)
+            {
+                if (ReferenceEquals(PartyMemberOnPlate(plate), occupant)) return AllyFigureOrPlate(plate);
+            }
+
+            return null;
+        }
+
+        private void OnSeatHovered(int seat)
+        {
+            if (_hoveredSeat == seat) return;
+            _hoveredSeat = seat;
+            RefreshUi();
         }
 
         private void ConfirmTarget(TargetSide side, CombatantState target)
@@ -854,6 +995,7 @@ namespace PrincesPalace
                     // which is the same reasoning OnBackPressed already gives
                     // for clearing it on the way out.
                     _hoveredAllyIndex = -1;
+                    _hoveredSeat = -1;
                     RefreshUi();
                     return;
                 }
@@ -938,8 +1080,9 @@ namespace PrincesPalace
             // The stick's ally cursor belongs to one open pick and to nothing
             // else. Left set, a later pick would open with the stick already
             // resting on whoever it last walked to -- which is a hover the
-            // player never made.
+            // player never made. The seat cursor likewise.
             _hoveredAllyIndex = -1;
+            _hoveredSeat = -1;
             RefreshUi();
         }
 
@@ -1094,6 +1237,7 @@ namespace PrincesPalace
         {
             _menu.Reset();
             _hoveredAllyIndex = -1;
+            _hoveredSeat = -1;
             _hoveredEnemyIndex = -1;
 
             // AND THE PAD IS BACK ON THE VERBS. A round resolving under a
@@ -1677,6 +1821,11 @@ namespace PrincesPalace
                         }
                     }
 
+                    // A SEAT PICK STANDS ON SEATS: the occupant's figure,
+                    // or an empty seat's own marker (FocusedSeat is what
+                    // Submit presses, so the two cannot disagree).
+                    if (_menu.IsPickingSeat) return SeatFocusNode(FocusedSeat());
+
                     if (_menu.Side == TargetSide.Allies)
                     {
                         int plate = _hoveredAllyIndex;
@@ -1741,6 +1890,10 @@ namespace PrincesPalace
             if (InspectedStop(out var inspected)) return inspected.Actor;
 
             if (_menu.Depth != MenuDepth.Target) return null;
+
+            // An empty seat has nobody to describe; an occupied one is its
+            // occupant, the same actor the marker stands on.
+            if (_menu.IsPickingSeat) return _session.Encounter.OccupantOf(FocusedSeat());
 
             if (_menu.Side == TargetSide.Allies)
             {
@@ -1982,6 +2135,20 @@ namespace PrincesPalace
             // candidates, in screen order, wrapping -- so the only thing the
             // side decides is which list is walked and which cursor
             // remembers where the stick got to.
+            // THE SEAT PICK WALKS SEATS, front to rear, empty ones included
+            // -- "+1 is deeper" is one seat further back, the same reading
+            // the plates have (plate order is seat order among the living).
+            if (_menu.IsPickingSeat)
+            {
+                var seats = PickableSeats();
+                if (seats.Count == 0) return;
+
+                int atSeat = seats.IndexOf(_hoveredSeat);
+                if (fromPad && atSeat < 0) atSeat = 0;
+                OnSeatHovered(seats[WrapFromNoHover(atSeat, delta, seats.Count)]);
+                return;
+            }
+
             if (_menu.Side == TargetSide.Allies)
             {
                 var allies = PickableAllyPlates();
@@ -2540,6 +2707,13 @@ namespace PrincesPalace
                     // SAME "the first press should work" rule on both racks:
                     // nothing hovered yet confirms the first candidate rather
                     // than doing nothing.
+                    if (_menu.IsPickingSeat)
+                    {
+                        int seat = FocusedSeat();
+                        if (seat >= 0) ConfirmSeat(seat);
+                        break;
+                    }
+
                     if (_menu.Side == TargetSide.Allies)
                     {
                         if (_hoveredAllyIndex >= 0)

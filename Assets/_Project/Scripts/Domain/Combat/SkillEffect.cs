@@ -144,8 +144,11 @@ namespace PrincesPalace.Domain.Combat
         // APPENDED, never inserted -- see this enum's own header.
         Hasten,
 
-        // TWO ALLIES TRADE FIELD PLACES, as the caster's one free action --
-        // Palace Passage (plan D10, 2.9, 1.12, milestone C).
+        // ONE ALLY GOES TO ANY SEAT, trading with whoever stands there or
+        // stepping into it when it is empty, as the caster's one free action
+        // -- Palace Passage (plan D10, 2.9, 1.12, milestone C; any seat since
+        // PLAN_BELLWETHER_KIT M3). The name predates empty seats: picking an
+        // occupied seat is still exactly the two-ally swap.
         //
         // THE ONLY EFFECT IN THE GAME THAT NEEDS TWO PICKS, and the pick
         // COUNT is read off the effect here (SkillEffects.PicksRequired)
@@ -234,6 +237,14 @@ namespace PrincesPalace.Domain.Combat
         // readers -- the shape this file's own IsDamagePipeline exists for.
         public static int PicksRequired(SkillEffect effect) =>
             effect == SkillEffect.SwapAllies ? 2 : 1;
+
+        // WHETHER THE LAST PICK NAMES A SEAT RATHER THAN A COMBATANT
+        // (PLAN_BELLWETHER_KIT 1.2/3.6). Palace Passage's second pick is a
+        // destination: an occupied seat is today's two-ally swap, an empty
+        // one is a step into it. Same readers as PicksRequired -- the menu
+        // (which rack the last press walks), the session (CastSkillToSeat)
+        // and the bot (FightAction.DestinationSeat).
+        public static bool LastPickIsSeat(SkillEffect effect) => effect == SkillEffect.SwapAllies;
     }
 
     // Who a skill is aimed at. Kept separate from the effect because the

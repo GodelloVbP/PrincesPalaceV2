@@ -168,7 +168,7 @@ namespace PrincesPalace.Domain.Tests
                 { "SubmenuRows", s.SubmenuRows }, { "SubmenuMarks", s.SubmenuMarks },
                 { "DamagePopups", s.DamagePopups },
                 { "SpellVfx", s.SpellVfx }, { "SpellVfxNext", s.SpellVfxNext },
-                { "PartyHitAreas", s.PartyHitAreas },
+                { "PartyHitAreas", s.PartyHitAreas }, { "PartySeatMarkers", s.PartySeatMarkers },
                 { "PcPlates", s.PcPlates }, { "PcPlateArts", s.PcPlateArts },
                 { "PcPlateHighlights", s.PcPlateHighlights },
                 { "PcPlateReticles", s.PcPlateReticles },
@@ -336,6 +336,38 @@ namespace PrincesPalace.Domain.Tests
                     "a live rectangle over the battlefield eats clicks meant for whatever is behind it");
                 Assert.IsTrue(area.Chromeless, "the figure is the button; this only hears the click");
             }
+        }
+
+        [Test]
+        public void AnEmptySeatMarkerStandsUnderEachPartySeat_BehindTheFigures()
+        {
+            // PLAN_BELLWETHER_KIT 1.2/3.6: a seat pick's empty destinations.
+            // One per SEAT, where a figure in that seat stands (the party
+            // formation's own offset), inactive until a seat pick lights it,
+            // and declared before the party stage so every figure paints over
+            // it.
+            var s = Screen();
+            Assert.AreEqual(3, s.PartySeatMarkers.Count);
+
+            var root = Solve();
+            for (int seat = 0; seat < s.PartySeatMarkers.Count; seat++)
+            {
+                var marker = s.PartySeatMarkers[seat].Node;
+                Assert.AreEqual($"PartySeatMarker{seat}", marker.Name);
+                Assert.AreEqual(UiNodeKind.Button, marker.Kind);
+                Assert.IsTrue(marker.StartInactive, "a seat marker is live only during a seat pick");
+
+                var expected = FightStageAnchors.SlotOffset(seat, 3, mirrored: true);
+                Assert.AreEqual(expected.X, Find(root, marker.Name).Rect.Centre.X, 0.01f, $"seat {seat} x");
+            }
+
+            var hud = s.PartyStage.Node;
+            var frame = Find(root, "PartySeatMarkerFrame");
+            Assert.IsNotNull(frame);
+            var siblings = root.Descendants().First(n => n.Children.Any(c => c.Name == "PartySeatMarkerFrame")).Children
+                .Select(c => c.Name).ToList();
+            Assert.Less(siblings.IndexOf("PartySeatMarkerFrame"), siblings.IndexOf(hud.Name),
+                "the markers must be declared before the party stage, or they paint over the figures");
         }
 
         [Test]

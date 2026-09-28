@@ -92,6 +92,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // it; the enemy side gets away with treating the two as one number
         // only because nothing on that side ever moves.
         public List<NodeRef> PartyHitAreas = new List<NodeRef>();
+
+        // One per party SEAT (0 = front), standing where a figure in that seat
+        // would stand -- the destinations of a seat pick (Palace Passage onto
+        // any seat, PLAN_BELLWETHER_KIT 1.2/3.6). INDEXED BY SEAT, not by
+        // stage slot: an empty seat has no character and so no slot. Inactive
+        // until a seat pick opens; only EMPTY seats show one (an occupied
+        // seat is picked on its figure or plate, as before). See
+        // BuildPartySeatMarkers.
+        public List<NodeRef> PartySeatMarkers = new List<NodeRef>();
         public List<NodeRef> EnemySprites = new List<NodeRef>();
         public List<NodeRef> EnemyHitFlashes = new List<NodeRef>();
         public List<NodeRef> EnemyNameplates = new List<NodeRef>();
@@ -407,6 +416,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows, s.EnemyIntentIcons, s.EnemyHitAreas);
             s.PartyStage = partyStage;
             s.EnemyStage = enemyStage;
+
+            // BEFORE the party stage, so every figure paints over a marker
+            // rather than a marker over a neighbour's feet. A frame of its
+            // own rather than children of the stage: DrawSide re-sorts the
+            // stage's children by sibling index 0..2 on every repaint, and a
+            // marker among them would be sorted into the figures' order.
+            hud.Add(s.BuildPartySeatMarkers());
             hud.Add(partyStage);
             hud.Add(enemyStage);
 
@@ -780,6 +796,74 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // OfAFigureSFeet is now that check.
                 .AllowOverlap("the party and enemy stages share one centred frame, and the HUD is drawn over both - a stage is a transparent coordinate frame, never a surface. This covers the FRAME only: figures standing in it are checked by NoAlwaysVisiblePanelStandsInFrontOfAFigureSFeet, because A1 cannot tell the two apart");
         }
+
+        // ---- empty-seat markers (PLAN_BELLWETHER_KIT 1.2/3.6, M3) ------------
+        //
+        // WHERE A FIGURE IN THAT SEAT WOULD STAND: the party formation's own
+        // seat offset and depth scale (FightStageAnchors, the one place a slot
+        // position is computed), in the stage's own centred frame -- so the
+        // ring lands on the floor exactly under where the traveller will be
+        // drawn once he steps there.
+        //
+        // A FIXED-SIZE BUTTON, NoChrome, with a floor ring and the seat's
+        // name as decor children: the ring is what says "you can go here",
+        // the word is what says which seat, and the button's default hover
+        // rim is the gamepad focus box every other stop on the rack gets.
+        private const float SeatMarkerW = 200f;
+        private const float SeatMarkerH = 110f;
+
+        // How far below the ground line the marker's bottom edge sits, so the
+        // ring (the lower half) straddles the floor the way a contact shadow
+        // does.
+        private const float SeatMarkerSink = 30f;
+
+        private UiNode BuildPartySeatMarkers()
+        {
+            int count = CombatEncounterSeats;
+            var words = new[] { UiStrings.FightSeatFront, UiStrings.FightSeatMiddle, UiStrings.FightSeatRear };
+            var children = new List<UiNode>();
+            for (int i = 0; i < count; i++) PartySeatMarkers.Add(default);
+
+            for (int seat = 0; seat < count; seat++)
+            {
+                var offset = FightStageAnchors.SlotOffset(seat, count, mirrored: true);
+                float scale = FightStageAnchors.SlotScale(seat, count);
+
+                var ring = Ui.Sprite($"PartySeat{seat}Ring", "proc:ring_outline",
+                        Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 0.5f)), UiSize.Fill)
+                    .Coloured(SeatMarkerRingHex)
+                    .AsDecor();
+
+                var word = Ui.Label($"PartySeat{seat}Word", words[seat],
+                        new UiVec(SeatMarkerW, 40f), 22, FightHudPalette.TextPrimary,
+                        Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), UiVec.Zero))
+                    .AsDecor();
+
+                var marker = Ui.Button($"PartySeatMarker{seat}", UiString.Runtime,
+                        Place.At(offset.X, offset.Y - SeatMarkerSink * scale, new UiVec(0.5f, 0f)),
+                        UiSize.Fixed(SeatMarkerW, SeatMarkerH), 1)
+                    .NoChrome()
+                    .Inactive()
+                    .WithScale(new UiVec(scale, scale))
+                    .AllowOverflow("the rear seat stands at the stage frame's edge exactly as the rear figure's slot does - the frame is a coordinate frame, not a clip region");
+                marker.Children.Add(ring);
+                marker.Children.Add(word);
+
+                PartySeatMarkers[seat] = marker;
+                children.Add(marker);
+            }
+
+            return Ui.Panel("PartySeatMarkerFrame", Place.At(0f, 0f),
+                    UiSize.Fixed(FightStageAnchors.StageSize.X, FightStageAnchors.StageSize.Y), children.ToArray())
+                .AllowOverlap("the seat markers share the stages' one centred frame, which overlaps both stages and the HUD by construction - it is a transparent coordinate frame, never a surface")
+                .AllowOverflow("a seat marker stands on the floor line and straddles it, like a figure's contact shadow");
+        }
+
+        private const int CombatEncounterSeats = PrincesPalace.Domain.Party.PartySeat.Count;
+
+        // The party's own contact-ring green, brighter and opaque: a
+        // destination has to read on the floor at a glance.
+        private const string SeatMarkerRingHex = "#7CF08AFF";
 
         // ---- status badges (enemy row, party plate, roster row) --------------
         //

@@ -97,6 +97,11 @@ namespace PrincesPalace
         // it. See FightScreen.PartyHitAreas.
         [SerializeField] internal Button[] partyHitAreas;
 
+        // One per party SEAT (0 = front), live only for an EMPTY seat while a
+        // seat pick is open (Palace Passage onto any seat, PLAN_BELLWETHER_KIT
+        // 1.2/3.6). See FightScreen.PartySeatMarkers.
+        [SerializeField] internal Button[] partySeatMarkers;
+
         // The way out of targeting. It lives on the target prompt because the
         // list BACK used to live in folds as soon as a skill is picked.
         [SerializeField] internal Button targetCancelButton;
