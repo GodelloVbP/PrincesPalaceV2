@@ -194,8 +194,9 @@ namespace PrincesPalace.PlayModeTests
         // goes through the reward track panel for the same reason this file
         // used to go through RewardApplier -- the claim has exactly one
         // production call site, and a test that reached past it would pass just
-        // as happily if that site were deleted. architecture_audit.md F17, and
-        // AUDIT #46 is what ignoring it costs.
+        // as happily if that site were deleted. A test may not do for
+        // production what production must do for itself; AUDIT #46 is what
+        // ignoring it costs.
 
         [Test]
         public void LevellingLeavesTheTrackOwingRatherThanPaying()

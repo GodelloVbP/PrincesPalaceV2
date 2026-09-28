@@ -66,7 +66,8 @@ namespace PrincesPalace.PlayModeTests
         // themselves, so every one of them would pass just as happily if
         // FightBootstrap never handed it in and the reward silently did nothing
         // in the real game. This is the only place a fight is built through the
-        // real door with a real run behind it. architecture_audit.md F17.
+        // real door with a real run behind it. A test may not do for
+        // production what production must do for itself.
         [UnityTest]
         public IEnumerator AFightBuiltForALevelNinetySquadCarriesItsSecondLife()
         {

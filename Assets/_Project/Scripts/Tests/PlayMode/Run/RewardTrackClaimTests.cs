@@ -24,7 +24,8 @@ namespace PrincesPalace.PlayModeTests
     //
     // That argument is inherited rather than invented: it is the one
     // RewardApplierTests carried while the applier was the call site
-    // (architecture_audit.md F17, AUDIT #46). The site moved when collection
+    // (AUDIT #46: a test may not do for production what production must do
+    // for itself). The site moved when collection
     // became manual, so the coverage moved with it.
     public class RewardTrackClaimTests
     {

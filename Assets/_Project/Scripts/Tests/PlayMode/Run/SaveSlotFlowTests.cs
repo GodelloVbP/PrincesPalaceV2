@@ -347,9 +347,8 @@ namespace PrincesPalace.PlayModeTests
             // DRIVEN THROUGH THE BUTTONS, not by calling what the controller
             // calls. The first version of this test ran SaveSlotManager.Forget
             // itself with a comment saying "what ConfirmDelete now does" -- so
-            // it passed whether or not ConfirmDelete did anything, which is the
-            // exact shape architecture_audit.md F17 was written about an hour
-            // before it was typed.
+            // it passed whether or not ConfirmDelete did anything: a test doing
+            // for production what production must do for itself.
             //
             // The bug: SaveSlotManager holds ONE SaveData for the current slot
             // and SaveCurrent writes it wherever CurrentSlot points. Deleting

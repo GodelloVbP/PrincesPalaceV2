@@ -693,7 +693,7 @@
 > **Item 1** (`65ad5325`, `AUDIT.md` #160 closed): the dossier's pack cells,
 > equipment slots and ability-score cells, and the Reckoning's offer cards,
 > now carry a selected-visual -- see `AUDIT.md` #160's own resolution
-> paragraph and `docs/CODE_MAP.md`'s phase 4 entry for the mechanism.
+> paragraph; the mechanism that replaced it is `Core/FocusMarker.cs`.
 > Narrower than the brief that opened this item: the pack's sort tabs and the
 > pack/spells Close buttons turned out to already answer focus for free
 > (`.ThemedPlate()`/`.Themed()` already wires a `ThemedButtonState`), found by
