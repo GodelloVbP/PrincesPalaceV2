@@ -2,39 +2,26 @@
 
 These instructions apply to every Codex session in this repository. The safety,
 generated-content, ownership, staging, testing, and verification rules in
-`CLAUDE.md` and `docs/WORKFLOW.md` also apply. Where the model names differ,
-the routing below is the Codex equivalent.
+`CLAUDE.md` and `docs/WORKFLOW.md` also apply.
 
-## Mandatory model routing
+## Roles and model choice
 
-The primary GPT-6 Astra agent is an orchestrator only. It may:
+The user-selected model may perform repository work directly or delegate it.
+Repository roles describe responsibilities; they do not select, pin, or exclude
+models. When delegation is useful, use these roles:
 
-- clarify the request and challenge unsafe or contradictory scope;
-- maintain the task record and write bounded worker briefs;
-- launch, wait for, interrupt, and message workers;
-- compare worker reports against acceptance evidence; and
-- deliver concise status and final summaries to the user.
-
-The Astra orchestrator must not read or search repository files directly, edit
-files, write code or scripts, run repository commands, run tests or builds, or
-stage/commit changes. It must obtain repository facts and all execution evidence
-through the roles below.
-
-- Use `reader` (GPT-5.6 Terra, low) for independent repository research:
+- Use `reader` for independent repository research:
   bounded searches, inventories, diff/status inspection, and fact-finding that
   does not belong to an active implementation.
-- Use `implementer` (GPT-5.6 Sol, low) for all programming, file edits,
+- Use `implementer` for programming, file edits,
   generated artifacts, focused tests, corrections, documentation changes, and
   explicit-path git staging or commits. An implementer may inspect its owned
   files, direct dependencies, and the status/diff needed to preserve other work.
-- Use `verifier` (GPT-5.6 Sol, low) for one named final gate against a fixed
+- Use `verifier` for one named final gate against a fixed
   snapshot. A verifier reports only and never fixes.
 
-Do not use Astra as an architecture implementer. If implementation exposes a
-contract or lifecycle question, the Sol owner stops and reports the decision to
-the Astra orchestrator. Astra decides scope and sends a revised bounded brief;
-Sol still performs every repository read, edit, test, and command required by
-that decision.
+If implementation exposes a contract or lifecycle question outside the brief,
+the owner stops and reports the decision needed before continuing.
 
 ## Concurrency and ownership
 
@@ -89,5 +76,5 @@ Use the launch and completion checklists in `docs/WORKFLOW.md` §2.
 - Stage only explicit paths. Never use `git add -A`, `git add .`, `git add -u`,
   or `git commit -a`. Commit only verified checkpoints, with each asset and its
   `.meta` together.
-- Do not claim completion without fresh evidence from the appropriate Sol
-  worker. Report missing or blocked evidence plainly.
+- Do not claim completion without fresh evidence. Report missing or blocked
+  evidence plainly.
