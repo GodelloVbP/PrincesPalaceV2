@@ -136,6 +136,12 @@ namespace PrincesPalace.Editor.Bot
             // across the whole career -- see BotRunDriver.PlayCareer's own
             // header for what does and does not carry between lives.
             public bool Career = false;
+
+            // THE TUNING PROBE (M8a): a forced event, a pinned event choice,
+            // transforms off, granted relics and talents. Empty is a plain
+            // batch. Refused with -botCareer: a career's lives share one save,
+            // and a granted talent or relic would compound across them.
+            public BotRunDriver.BotProbe Probe = new BotRunDriver.BotProbe();
         }
 
         private static Options ReadOptions()
@@ -154,6 +160,19 @@ namespace PrincesPalace.Editor.Bot
                 ShopNodes = ShopNodePreference.Parse(Arg(args, "-botShopPolicy", "WhenOffered")),
                 Career = ArgInt(args, "-botCareer", 0) != 0,
             };
+
+            o.Probe.ForceEventId = Arg(args, "-botForceEvent", "");
+            o.Probe.ForceEventFloor = ArgInt(args, "-botForceEventFloor", 0);
+            o.Probe.EventChoiceText = Arg(args, "-botEventChoice", "");
+            o.Probe.NoTransform = ArgInt(args, "-botNoTransform", 0) != 0;
+            o.Probe.GrantRelicIds = SplitList(Arg(args, "-botGrantRelic", ""));
+            o.Probe.GrantTalentIds = SplitList(Arg(args, "-botGrantTalent", ""));
+
+            if (o.Career && !o.Probe.IsEmpty)
+            {
+                throw new ArgumentException("-botCareer does not take the probe flags (-botForceEvent, -botEventChoice, " +
+                                            "-botNoTransform, -botGrantRelic, -botGrantTalent)");
+            }
 
             if (o.ReplayShare < 0) o.ReplayShare = 0;
             if (o.ReplayShare > 1) o.ReplayShare = 1;
@@ -335,7 +354,7 @@ namespace PrincesPalace.Editor.Bot
                                 || (o.ReplayShare > 0 && i % Math.Max(1, (int)Math.Round(1.0 / o.ReplayShare)) == 0);
 
                             var entry = PlayOnePairSafely(
-                                seed, archetype, profile, o.DepthCap, o.ShopNodes, replay);
+                                seed, archetype, profile, o.DepthCap, o.ShopNodes, replay, o.Probe);
                             played.Add(entry);
 
                             // WRITTEN AS THEY FINISH, not held and dumped at
@@ -408,14 +427,15 @@ namespace PrincesPalace.Editor.Bot
         // Wrapped so a throw that somehow escapes BotRunDriver's own run-level
         // catch still costs one run rather than the batch.
         private static Played PlayOnePairSafely(
-            ulong seed, string archetype, string profile, int depthCap, ShopNodeMode shopNodes, bool replay)
+            ulong seed, string archetype, string profile, int depthCap, ShopNodeMode shopNodes, bool replay,
+            BotRunDriver.BotProbe probe)
         {
             var entry = new Played { Seed = seed, Archetype = archetype, Profile = profile, HashMatched = true };
             LoggedThisRun.Clear();
 
             try
             {
-                entry.Result = BotRunDriver.PlayRun(seed, archetype, profile, depthCap, shopNodes);
+                entry.Result = BotRunDriver.PlayRun(seed, archetype, profile, depthCap, shopNodes, probe);
                 _runPlays++;
 
                 if (!replay) return entry;
@@ -423,7 +443,7 @@ namespace PrincesPalace.Editor.Bot
                 RunTrace again;
                 using (BotPhaseTimers.Measure(BotPhase.Replay))
                 {
-                    again = BotRunDriver.PlayRun(seed, archetype, profile, depthCap, shopNodes).Trace;
+                    again = BotRunDriver.PlayRun(seed, archetype, profile, depthCap, shopNodes, probe).Trace;
                 }
 
                 _runPlays++;
@@ -631,6 +651,8 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append("\"Won\":").Append(f.Won ? "true" : "false").Append(',');
                 sb.Append("\"PayoutGold\":").Append(f.PayoutGold).Append(',');
                 sb.Append("\"PayoutExp\":").Append(f.PayoutExp).Append(',');
+                AppendEventFightFields(sb, f, pascal: true);
+                sb.Append(',');
                 sb.Append("\"TurnTraces\":[");
                 for (int j = 0; j < f.TurnTraces.Count; j++)
                 {
@@ -668,6 +690,8 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append("\"RoomType\":").Append(Str(r.RoomType)).Append(',');
                 sb.Append("\"OfferItemIds\":").Append(StrList(r.OfferItemIds)).Append(',');
                 sb.Append("\"PickedIndex\":").Append(r.PickedIndex).Append(',');
+                sb.Append("\"EventId\":").Append(Str(r.EventId)).Append(',');
+                sb.Append("\"EventForced\":").Append(r.EventForced ? "true" : "false").Append(',');
                 sb.Append("\"Equipped\":").Append(EquipJson(r.Equipped));
                 sb.Append('}');
             }
@@ -775,6 +799,8 @@ namespace PrincesPalace.Editor.Bot
 
                 sb.Append(",\"usedItem\":")
                   .Append(f.TurnTraces.Any(x => x.Action != null && x.Action.StartsWith("Item:")) ? "true" : "false");
+                sb.Append(',');
+                AppendEventFightFields(sb, f, pascal: false);
                 sb.Append('}');
             }
             sb.Append("],");
@@ -858,6 +884,8 @@ namespace PrincesPalace.Editor.Bot
                 // recorded for every room the same reason goldOnArrival is:
                 // gate 3's own exit numbers ask about a specific step, not
                 // only the run's last one.
+                sb.Append(",\"eventId\":").Append(Str(r.EventId));
+                sb.Append(",\"eventForced\":").Append(r.EventForced ? "true" : "false");
                 sb.Append(",\"learnedSpellCountAfterRoom\":").Append(r.LearnedSpellCountAfterRoom);
                 sb.Append(",\"unassignedSpellBookCountAfterRoom\":").Append(r.UnassignedSpellBookCountAfterRoom);
                 sb.Append(",\"spellAssignments\":[");
@@ -1019,9 +1047,33 @@ namespace PrincesPalace.Editor.Bot
             sb.Append("\"replayShare\":").Append(Num(o.ReplayShare)).Append(",\n");
             sb.Append("\"shopPolicy\":").Append(Str(ShopNodePreference.Name(o.ShopNodes))).Append(",\n");
             sb.Append("\"career\":").Append(o.Career ? "true" : "false").Append(",\n");
+            sb.Append("\"forceEvent\":").Append(Str(o.Probe.ForceEventId)).Append(",\n");
+            sb.Append("\"forceEventFloor\":").Append(o.Probe.ForceEventFloor).Append(",\n");
+            sb.Append("\"eventChoice\":").Append(Str(o.Probe.EventChoiceText)).Append(",\n");
+            sb.Append("\"noTransform\":").Append(o.Probe.NoTransform ? "true" : "false").Append(",\n");
+            sb.Append("\"grantRelicIds\":").Append(StrList(o.Probe.GrantRelicIds)).Append(",\n");
+            sb.Append("\"grantTalentIds\":").Append(StrList(o.Probe.GrantTalentIds)).Append(",\n");
             sb.Append("\"elapsedSeconds\":").Append(Num(elapsed)).Append("\n");
             sb.Append("}\n");
             return sb.ToString();
+        }
+
+        // The M8a fight fields, one writer for both files: PascalCase (the C#
+        // names) into traces.jsonl, camelCase into runs.jsonl. No leading or
+        // trailing comma.
+        private static void AppendEventFightFields(StringBuilder sb, FightTrace f, bool pascal)
+        {
+            string K(string name) => "\"" + (pascal ? name : char.ToLowerInvariant(name[0]) + name.Substring(1)) + "\":";
+
+            sb.Append(K("EventId")).Append(Str(f.EventId));
+            sb.Append(',').Append(K("EndReason")).Append(Str(f.EndReason));
+            sb.Append(',').Append(K("Rounds")).Append(f.Rounds);
+            sb.Append(',').Append(K("ShawnHpPercentIn")).Append(f.ShawnHpPercentIn);
+            sb.Append(',').Append(K("ShawnHpPercentOut")).Append(f.ShawnHpPercentOut);
+            sb.Append(',').Append(K("ShawnSpeed")).Append(f.ShawnSpeed);
+            sb.Append(',').Append(K("ShawnTransformed")).Append(f.ShawnTransformed ? "true" : "false");
+            sb.Append(',').Append(K("ShawnDamageDealt")).Append(f.ShawnDamageDealt);
+            sb.Append(',').Append(K("FlockDamage")).Append(f.FlockDamage);
         }
 
         private static string Num(double v)

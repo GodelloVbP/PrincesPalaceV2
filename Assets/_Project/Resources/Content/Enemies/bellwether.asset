@@ -18,7 +18,7 @@ MonoBehaviour:
     BaseStats:
       maxHealth: 150
       speed: 8
-      attack: 20
+      attack: 28
       manaRegen: 0
       physicalDefense: 20
       magicalDefense: 20

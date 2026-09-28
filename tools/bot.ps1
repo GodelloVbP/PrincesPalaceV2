@@ -30,7 +30,29 @@ param(
     # runs.jsonl/summary.json/report.html, which read a career batch with no
     # changes at all: every life still lands its own row exactly the shape an
     # independent run's would.
-    [switch]$Career
+    [switch]$Career,
+
+    # TUNING PROBES (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M8a;
+    # BotRunDriver.BotProbe has the exact rules). All off by default, which
+    # is a plain batch. Not with -Career.
+    #   -ForceEvent <id>        every Event room opens <id> instead of its roll;
+    #   -ForceEventFloor <n>    ...or, with n > 0, once per run at the first
+    #                           non-fight non-shop room on floor n (an Event
+    #                           node preferred), the room being only the event.
+    #   -EventChoice <text>     take the open choice whose text contains <text>
+    #                           (case-insensitive) wherever one does; else the
+    #                           first available, as always.
+    #   -NoTransform            Transform skills off the menu. Without it the
+    #                           bot casts a ready Transform whenever none is worn.
+    #   -GrantRelic <ids>       comma-separated; added after the relic draft.
+    #   -GrantTalent <ids>      comma-separated; kindled free with every
+    #                           prerequisite, e.g. sheep_ram_converge = Black Ram.
+    [string]$ForceEvent = "",
+    [int]$ForceEventFloor = 0,
+    [string]$EventChoice = "",
+    [switch]$NoTransform,
+    [string]$GrantRelic = "",
+    [string]$GrantTalent = ""
 )
 
 # Runs a balance-bot batch headlessly, across one or several Unity instances.
@@ -308,6 +330,10 @@ else {
     Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$ArchetypesLabel], profiles [$Profiles],"
     Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy, across $($shardList.Count) shard(s)."
 }
+if ($ForceEvent -or $EventChoice -or $NoTransform -or $GrantRelic -or $GrantTalent) {
+    Write-Host "Probe: force event [$ForceEvent] floor $ForceEventFloor, event choice [$EventChoice], no transform $NoTransform,"
+    Write-Host "       grant relic [$GrantRelic], grant talent [$GrantTalent]."
+}
 
 # ---- launch ------------------------------------------------------------------
 
@@ -350,6 +376,14 @@ foreach ($shard in $shardList) {
     )
 
     if ($Career) { $unityArgs += @("-botCareer", "1") }
+
+    # Each only when set: an empty ArgumentList element shifts every argument
+    # after it by one (see the -botCommit guard above).
+    if ($ForceEvent) { $unityArgs += @("-botForceEvent", $ForceEvent, "-botForceEventFloor", $ForceEventFloor) }
+    if ($EventChoice) { $unityArgs += @("-botEventChoice", "`"$EventChoice`"") }
+    if ($NoTransform) { $unityArgs += @("-botNoTransform", "1") }
+    if ($GrantRelic) { $unityArgs += @("-botGrantRelic", $GrantRelic) }
+    if ($GrantTalent) { $unityArgs += @("-botGrantTalent", $GrantTalent) }
 
     Write-Host "  shard $($shard.Index): seeds $($shard.Seed)..$($shard.Seed + $shard.Runs - 1) in $($shard.Path)"
     $shard.Process = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs

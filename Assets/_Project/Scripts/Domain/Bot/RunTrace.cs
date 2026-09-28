@@ -55,6 +55,40 @@ namespace PrincesPalace.Domain.Bot
         public bool Won;
         public int PayoutGold;
         public int PayoutExp;
+
+        // ---- event fights and Shawn's own numbers (PLAN_EVENTS_BELL_AND_CARAVAN M8a) ----
+
+        // The EVENT's id when this was an event fight (EncounterRequest.EventId),
+        // "" for a room fight.
+        public string EventId = "";
+
+        // FightSession.EndReason's name: Defeated / Survived / Fell, or None
+        // for a fight the runner stopped (a stall) before it ended.
+        public string EndReason = "";
+
+        // FightSession.Round when the fight stopped. For a round-limited fight
+        // that Survived this is the limit + 1 (the round that never started).
+        public int Rounds;
+
+        // Shawn (kit "sheep"), when fielded: HP as a whole percent of his max
+        // entering and leaving the fight, -1 when he was not fielded.
+        public int ShawnHpPercentIn = -1;
+        public int ShawnHpPercentOut = -1;
+
+        // His Speed as the fight opened (the flock's speed-band split, R7).
+        public int ShawnSpeed;
+
+        // Whether he wore a Transform at any point this fight.
+        public bool ShawnTransformed;
+
+        // His row of the fight's own ledger (overkill included, the ledger's
+        // own rule), and the part of it Toll of the Flock's packets made.
+        public int ShawnDamageDealt;
+        public int FlockDamage;
+
+        // Names of every party member seen wearing a Transform after a command
+        // (FightRunner). ShawnTransformed is read off it.
+        public List<string> TransformedActors = new List<string>();
     }
 
     // One thing the bot put on, between rooms.
@@ -179,6 +213,11 @@ namespace PrincesPalace.Domain.Bot
         // What the bot actually did with each pending book this room, in
         // order -- the acquisition-loop analogue of ShopChoices above.
         public List<SpellAssignmentTrace> SpellAssignments = new List<SpellAssignmentTrace>();
+
+        // The event opened in this room ("" when none did), and whether it was
+        // the bot's -ForceEvent rather than the room's own roll.
+        public string EventId = "";
+        public bool EventForced;
     }
 
     // One ChooseSpellAssignment answer and what the orchestrator did with

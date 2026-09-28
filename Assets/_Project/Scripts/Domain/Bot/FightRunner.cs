@@ -7,6 +7,21 @@ using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.Domain.Bot
 {
+    // WHO DECIDES WHEN A TRANSFORM IS CAST (M8a of
+    // docs/PLAN_EVENTS_BELL_AND_CARAVAN.md). No archetype scores a Transform:
+    // it previews no damage, so GreedyAggressive and Lookahead2 rank it at 0
+    // and a Black Ram build would sit in wool forever. WhenReady is the plain
+    // player habit -- cast it the moment it is ready and not already worn, and
+    // until then save the resource it costs -- and Never is the bot's
+    // -NoTransform, which takes it off the menu.
+    public enum TransformUse
+    {
+        // The policy's own choice, unfiltered: what every caller got before.
+        PolicyDecides,
+        WhenReady,
+        Never,
+    }
+
     // Plays one already-built FightSession to its end with one IFightPolicy,
     // one command at a time, exactly the way a player would: Begin(), then
     // while the player still has a turn, ask the policy, issue the command
@@ -65,7 +80,8 @@ namespace PrincesPalace.Domain.Bot
         // nothing to spend from.
         public static List<InvariantHit> Play(
             FightSession session, IFightPolicy policy, IReadOnlyList<SatchelStack> satchel,
-            SeededRandom rng, FightTrace traceOut, Action<string> onItemUsed = null)
+            SeededRandom rng, FightTrace traceOut, Action<string> onItemUsed = null,
+            TransformUse transformUse = TransformUse.PolicyDecides)
         {
             var hits = new List<InvariantHit>();
             if (session == null || policy == null || rng == null) return hits;
@@ -108,7 +124,8 @@ namespace PrincesPalace.Domain.Bot
                     break;
                 }
 
-                var action = policy.Choose(session, actor, legal, rng);
+                legal = TransformsOffered(session, actor, legal, transformUse, out FightAction? transformNow);
+                var action = transformNow ?? policy.Choose(session, actor, legal, rng);
                 string label = TraceLabel(session, actor, action);
                 FightAction.Apply(session, action);
                 commands++;
@@ -159,6 +176,17 @@ namespace PrincesPalace.Domain.Bot
                         PoolTierFired = poolTierFired,
                         PrimaryPoolAfter = actor?.CurrentMana ?? 0,
                     });
+                }
+
+                if (traceOut != null)
+                {
+                    foreach (var member in session.Encounter.PlayerParty)
+                    {
+                        if (member?.Transformation != null && !traceOut.TransformedActors.Contains(member.Name))
+                        {
+                            traceOut.TransformedActors.Add(member.Name);
+                        }
+                    }
                 }
 
                 int enemyHp = session.Encounter.LivingEnemies.Sum(c => c.CurrentHealth);
@@ -223,6 +251,61 @@ namespace PrincesPalace.Domain.Bot
         // rarer than it is. FightSettlementTests calls this "a pre-existing
         // production fault these tests trip, not one they cause" and leaves it
         // alone; this is the thing that will finally count it.
+        // The legal list with TransformUse applied, and the one command to
+        // play instead of asking the policy (WhenReady with a Transform ready
+        // and none worn). Never takes every Transform out; it never empties
+        // the list, because Attack (or an already-skipped turn) carries that
+        // guarantee and a Transform is never the only command.
+        private static IReadOnlyList<FightAction> TransformsOffered(
+            FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal,
+            TransformUse use, out FightAction? transformNow)
+        {
+            transformNow = null;
+            if (use == TransformUse.PolicyDecides || actor == null) return legal;
+
+            if (use == TransformUse.Never)
+            {
+                var rest = legal.Where(a => !IsTransform(session, actor, a)).ToList();
+                return rest.Count > 0 ? rest : legal;
+            }
+
+            // WhenReady from here. Known at all, ready or not: a Transform
+            // on cooldown or short of its resource still shapes the turn.
+            if (actor.Transformation != null) return legal;
+            bool knowsATransform = session.SkillOptionsFor(actor)
+                .Any(o => o.Skill != null && o.Skill.Effect == SkillEffect.Transform);
+            if (!knowsATransform) return legal;
+
+            var ready = legal.FirstOrDefault(a => IsTransform(session, actor, a));
+            if (ready.Kind == FightActionKind.Skill && session.Encounter.LivingEnemies.Any())
+            {
+                transformNow = ready;
+                return legal;
+            }
+
+            // BANK THE RESOURCE for it: every other skill priced in the
+            // signature resource (Shawn's wool) is held back until the form is
+            // worn. Without this the greedy archetypes spend each 3 wool on
+            // Shear and a Black Ram build reaches its 7 in about one fight in
+            // ten -- a build a player would never play that way.
+            var banked = legal.Where(a => !SpendsSignatureResource(session, actor, a)).ToList();
+            return banked.Count > 0 ? banked : legal;
+        }
+
+        private static bool SpendsSignatureResource(FightSession session, CombatantState actor, FightAction action)
+        {
+            if (action.Kind != FightActionKind.Skill) return false;
+            var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+            return option.Skill != null && option.Skill.ResourceCost > 0;
+        }
+
+        private static bool IsTransform(FightSession session, CombatantState actor, FightAction action)
+        {
+            if (action.Kind != FightActionKind.Skill) return false;
+            var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+            return option.Skill != null && option.Skill.Effect == SkillEffect.Transform;
+        }
+
         private static List<InvariantHit> RescueAStalledEnemyTurn(FightSession session, int commands)
         {
             var hits = new List<InvariantHit>();

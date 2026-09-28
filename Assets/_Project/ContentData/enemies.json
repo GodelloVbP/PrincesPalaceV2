@@ -327,7 +327,7 @@
       "displayName": "The Bellwether",
       "maxHealth": 150,
       "speed": 8,
-      "attack": 20,
+      "attack": 28,
       "physicalDefense": 20,
       "magicalDefense": 20,
       "attackType": "Physical",

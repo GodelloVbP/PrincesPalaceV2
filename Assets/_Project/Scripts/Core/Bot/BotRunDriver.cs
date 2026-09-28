@@ -6,6 +6,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Bot;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
 
@@ -179,6 +180,56 @@ namespace PrincesPalace
             public double ElapsedMs;
         }
 
+        // ---- probes: forcing one event, one relic, one build (M8a) ----------------
+
+        // WHAT A TUNING BATCH PINS DOWN that a plain batch leaves to the dice
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M8a). Every field empty/off is
+        // exactly a plain run. tools/bot.ps1's -ForceEvent / -ForceEventFloor /
+        // -EventChoice / -NoTransform / -GrantRelic / -GrantTalent.
+        public sealed class BotProbe
+        {
+            // ForceEventId with ForceEventFloor 0: every Event room opens this
+            // event instead of its roll. With a floor n > 0: ONCE per run, at
+            // the first room on floor n that is not a fight or a shop -- the
+            // node choice prefers an Event node, then any other non-fight,
+            // non-shop node -- and that room is the event and nothing else
+            // (no rest heal, no stash). A run that dies before floor n, or
+            // whose floor n offers only fights and shops, never sees it.
+            public string ForceEventId = "";
+            public int ForceEventFloor;
+
+            // Case-insensitive substring of a choice's text. On any event page
+            // that has a visible, enabled choice containing it, that choice is
+            // taken; everywhere else the first available one, as always.
+            public string EventChoiceText = "";
+
+            // Transforms off the menu entirely (TransformUse.Never). Off, a
+            // ready Transform is cast whenever none is worn, and the resource
+            // it costs is saved for it until then (WhenReady).
+            public bool NoTransform;
+
+            // Added to the run's relics after the draft.
+            public List<string> GrantRelicIds = new List<string>();
+
+            // Kindled on their owner (and every prerequisite, transitively)
+            // after the profile is built, free: "-GrantTalent
+            // sheep_ram_converge" is a Black Ram build.
+            public List<string> GrantTalentIds = new List<string>();
+
+            public bool IsEmpty =>
+                string.IsNullOrEmpty(ForceEventId) && string.IsNullOrEmpty(EventChoiceText) && !NoTransform
+                && GrantRelicIds.Count == 0 && GrantTalentIds.Count == 0;
+        }
+
+        // The probe of the run in flight: set by PlayRun for its own duration
+        // and put back in a finally, so a career (which never sets one) and
+        // every later run see none.
+        private static BotProbe _probe;
+        private static bool _forcedEventDone;
+
+        // Shawn's kit id. The Bell and the flock are his (plan 1.4).
+        private const string ShawnKitId = "sheep";
+
         // ---- the run -------------------------------------------------------------
 
         // THE SAVE STAYS IN RAM, unless somebody deliberately turns that off.
@@ -219,7 +270,7 @@ namespace PrincesPalace
         // reset; the two modes are meant to be run as two batches over the
         // same seeds and compared.
         public static BotRunResult PlayRun(ulong seed, string archetype, string profile, int depthCapSteps,
-            ShopNodeMode shopNodes = ShopNodeMode.WhenOffered)
+            ShopNodeMode shopNodes = ShopNodeMode.WhenOffered, BotProbe probe = null)
         {
             var result = new BotRunResult();
             result.Trace.Seed = seed;
@@ -248,6 +299,8 @@ namespace PrincesPalace
                 // RunManager whose cached map is dropped between runs.
                 OpenHarness(root, inMemory);
 
+                _probe = probe;
+                _forcedEventDone = false;
                 PlayOneRun(seed, archetype, profile, depthCapSteps, shopNodes, result);
             }
             catch (Exception e)
@@ -261,6 +314,9 @@ namespace PrincesPalace
             }
             finally
             {
+                _probe = null;
+                _forcedEventDone = false;
+
                 // The SHARED root outlives the run by design; only a per-run
                 // one is this run's to delete -- CloseHarness itself checks
                 // inMemory before deleting.
@@ -543,6 +599,8 @@ namespace PrincesPalace
                 return;
             }
 
+            GrantTalents(save, result);
+
             RunOrchestrator.StartRun(seed);
             if (!RunManager.HasRun)
             {
@@ -567,6 +625,8 @@ namespace PrincesPalace
             {
                 Draft(seed, runPolicy, result);
             }
+
+            GrantRelics(result);
 
             // DRESS BEFORE WALKING IN. A player opens the character sheet on
             // the way out of the hub and wears the best of what they own; the
@@ -630,7 +690,9 @@ namespace PrincesPalace
                 // unchanged (ShopNodePreference).
                 var view = ViewOf(save);
                 var offered = ShopNodePreference.ChoicesFor(shopNodes, choices);
-                var node = ShopNodePreference.PreferredNode(
+                bool forceHere = ForcedEventDueOnThisFloor();
+                var node = (forceHere ? ForcedEventNode(offered) : null)
+                           ?? ShopNodePreference.PreferredNode(
                                shopNodes, offered, view, runPolicy.RestBelowPartyHpFraction)
                            ?? runPolicy.ChooseNode(offered, view, StreamFor(seed, NodeStream, RunManager.Run.step, rooms));
 
@@ -658,8 +720,30 @@ namespace PrincesPalace
                 RunOrchestrator.Arrival arrival;
                 using (BotPhaseTimers.Measure(BotPhase.RoomResolve))
                 {
-                    arrival = RunOrchestrator.ArriveAt(node);
+                    arrival = forceHere && CanHostForcedEvent(node)
+                        ? ArriveAtForcedEvent(node, roomTrace, result)
+                        : RunOrchestrator.ArriveAt(node);
                 }
+
+                // Every-Event-room mode (-ForceEventFloor 0): the roll is
+                // replaced where it stood.
+                if (arrival == RunOrchestrator.Arrival.Event && !roomTrace.EventForced
+                    && !string.IsNullOrEmpty(_probe?.ForceEventId) && _probe.ForceEventFloor <= 0)
+                {
+                    if (RunManager.Run.eventId == _probe.ForceEventId
+                        || RunOrchestrator.OpenEventForDebug(_probe.ForceEventId))
+                    {
+                        roomTrace.EventForced = true;
+                    }
+                    else
+                    {
+                        result.Hits.Add(new InvariantHit("ForcedEventMissing",
+                            $"-ForceEvent '{_probe.ForceEventId}' is not in the built content"));
+                    }
+                }
+
+                // Read before the visit: the event's Leave clears it.
+                if (arrival == RunOrchestrator.Arrival.Event) roomTrace.EventId = RunManager.Run.eventId ?? "";
 
                 if (arrival == RunOrchestrator.Arrival.Refused)
                 {
@@ -782,7 +866,7 @@ namespace PrincesPalace
                     break;
                 }
 
-                var open = view.Choices.FirstOrDefault(c => c.Visible && c.Enabled);
+                var open = PreferredChoice(view);
                 if (open == null)
                 {
                     // The build refuses a page with no unconditional choice,
@@ -819,6 +903,114 @@ namespace PrincesPalace
             }
 
             return true;
+        }
+
+        // -EventChoice's text when an open choice on this page contains it,
+        // else the first available one.
+        private static EventChoiceView PreferredChoice(EventView view)
+        {
+            string wanted = _probe?.EventChoiceText;
+            if (!string.IsNullOrEmpty(wanted))
+            {
+                var match = view.Choices.FirstOrDefault(c => c.Visible && c.Enabled && c.Text != null
+                    && c.Text.IndexOf(wanted, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (match != null) return match;
+            }
+
+            return view.Choices.FirstOrDefault(c => c.Visible && c.Enabled);
+        }
+
+        // ---- the forced event (BotProbe) ---------------------------------------------
+
+        private static bool ForcedEventDueOnThisFloor() =>
+            _probe != null && !string.IsNullOrEmpty(_probe.ForceEventId) && _probe.ForceEventFloor > 0
+            && !_forcedEventDone && RunManager.Run.floor == _probe.ForceEventFloor;
+
+        private static bool CanHostForcedEvent(DescentNode node) =>
+            node != null && !RunOrchestrator.IsFight(node.Type) && node.Type != RoomType.Shop;
+
+        // An Event node first, then any other node that can host the event;
+        // null when this column is all fights and shops (the policy chooses,
+        // and the next column is asked again).
+        private static DescentNode ForcedEventNode(IReadOnlyList<DescentNode> offered) =>
+            offered.FirstOrDefault(n => n.Type == RoomType.Event)
+            ?? offered.FirstOrDefault(CanHostForcedEvent);
+
+        // ArriveAt's event branch with the forced id in place of the roll, on
+        // any non-fight, non-shop node: the room IS the event, so a Rest or a
+        // Treasure node pays nothing of its own here.
+        private static RunOrchestrator.Arrival ArriveAtForcedEvent(DescentNode node, RoomTrace roomTrace, BotRunResult result)
+        {
+            if (!RunManager.MoveTo(node.Id)) return RunOrchestrator.Arrival.Refused;
+
+            RoomResolver.Reset();
+            _forcedEventDone = true;
+
+            if (!RunOrchestrator.OpenEventForDebug(_probe.ForceEventId))
+            {
+                result.Hits.Add(new InvariantHit("ForcedEventMissing",
+                    $"-ForceEvent '{_probe.ForceEventId}' is not in the built content"));
+                RoomResolver.Resolve(RunManager.Run, node.Type);
+                RunManager.ClearCurrentRoom();
+                return RunOrchestrator.Arrival.Resolved;
+            }
+
+            roomTrace.EventForced = true;
+            return RunOrchestrator.Arrival.Event;
+        }
+
+        private static void GrantRelics(BotRunResult result)
+        {
+            if (_probe == null || _probe.GrantRelicIds.Count == 0) return;
+
+            var run = RunManager.Run;
+            run.relicIds ??= new List<string>();
+            foreach (string id in _probe.GrantRelicIds)
+            {
+                if (ContentDatabase.GetRelic(id) == null)
+                {
+                    result.Hits.Add(new InvariantHit("GrantedRelicMissing", $"-GrantRelic '{id}' is not in the built content"));
+                    continue;
+                }
+
+                if (!run.relicIds.Contains(id)) run.relicIds.Add(id);
+            }
+
+            SaveSlotManager.SaveCurrent();
+        }
+
+        // Each talent and its prerequisites, transitively, kindled on the
+        // character it belongs to -- no embers spent, no cap asked. A shared
+        // talent (no owner) goes to every fielded character.
+        private static void GrantTalents(SaveData save, BotRunResult result)
+        {
+            if (_probe == null || _probe.GrantTalentIds.Count == 0) return;
+
+            var pending = new Stack<string>(_probe.GrantTalentIds);
+            var seen = new HashSet<string>();
+            while (pending.Count > 0)
+            {
+                string id = pending.Pop();
+                if (!seen.Add(id)) continue;
+
+                var talent = ContentDatabase.GetTalent(id);
+                if (talent == null)
+                {
+                    result.Hits.Add(new InvariantHit("GrantedTalentMissing", $"-GrantTalent '{id}' is not in the built content"));
+                    continue;
+                }
+
+                foreach (var character in save.ActiveSquad())
+                {
+                    if (character == null) continue;
+                    if (!talent.Data.IsShared && talent.Data.CharacterId != character.definitionId) continue;
+                    if (!character.unlockedTalentIds.Contains(id)) character.unlockedTalentIds.Add(id);
+                }
+
+                foreach (string before in talent.Data.Prerequisites) pending.Push(before);
+            }
+
+            SaveSlotManager.SaveCurrent();
         }
 
         // ---- the shop ------------------------------------------------------------
@@ -1286,6 +1478,17 @@ namespace PrincesPalace
 
             int partyMaxHp = session.Encounter.PlayerParty.Sum(c => c.MaxHealth);
 
+            // Shawn's own numbers (M8a): the Bell is his fight and the flock
+            // is his relic. Read before the fight so a Transform's temporary
+            // health is not in the "in" figure.
+            fightTrace.EventId = request.IsEventFight ? request.EventId ?? "" : "";
+            var shawn = session.Encounter.PlayerParty.FirstOrDefault(c => session.KitFor(c)?.Id == ShawnKitId);
+            if (shawn != null)
+            {
+                fightTrace.ShawnHpPercentIn = HpPercent(shawn);
+                fightTrace.ShawnSpeed = shawn.Speed;
+            }
+
             // What the run is worth before the fight pays it, for the plan's
             // "gold, exp or level decreasing across a won fight" check.
             int goldBefore = run.gold;
@@ -1302,8 +1505,23 @@ namespace PrincesPalace
             {
                 result.Hits.AddRange(FightRunner.Play(
                     session, fightPolicy, RunOrchestrator.BuildSatchel(), fightRng, fightTrace,
-                    RunOrchestrator.SpendConsumable));
+                    RunOrchestrator.SpendConsumable,
+                    _probe != null && _probe.NoTransform ? TransformUse.Never : TransformUse.WhenReady));
             }
+
+            fightTrace.EndReason = session.EndReason.ToString();
+            fightTrace.Rounds = session.Round;
+            if (shawn != null)
+            {
+                fightTrace.ShawnHpPercentOut = shawn.IsAlive ? HpPercent(shawn) : 0;
+                fightTrace.ShawnTransformed = fightTrace.TransformedActors.Contains(shawn.Name);
+                string shawnLedger = session.KitFor(shawn)?.Id;
+                if (!string.IsNullOrEmpty(shawnLedger) && session.Ledger.Has(shawnLedger))
+                {
+                    fightTrace.ShawnDamageDealt = session.Ledger.For(shawnLedger).TotalDealt;
+                }
+            }
+            fightTrace.FlockDamage = session.TollOfTheFlockDamageDealt;
 
             bool won = session.PlayerWon;
             fightTrace.Won = won;
@@ -1409,6 +1627,11 @@ namespace PrincesPalace
             CaptureWhatTheRunHolds(save, result);
             return true;
         }
+
+        // Whole percent of max, the Transform's temporary health excluded by
+        // the clamp (it can push CurrentHealth over MaxHealth).
+        private static int HpPercent(Domain.Combat.CombatantState c) =>
+            c == null || c.MaxHealth <= 0 ? 0 : Math.Min(100, (int)Math.Round(100.0 * c.CurrentHealth / c.MaxHealth));
 
         // ---- wearing what the run has picked up -----------------------------------
 

@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Bot;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Events;
@@ -359,6 +360,128 @@ namespace PrincesPalace.PlayModeTests
             }
 
             Assert.AreEqual(3, runs, $"only {runs} run(s) over seeds 1-200 reached an Event room within {DepthCap} steps");
+        }
+
+        // ---- the M8a tuning probe (BotRunDriver.BotProbe, tools/bot.ps1) --------------
+
+        private const int ProbeDepthCap = 8;
+
+        // Plays seeds from 1 until `wanted` runs saw the forced Bell, and
+        // returns each such run with its one forced room and its Bell fight
+        // (null when the event page led to no fight).
+        private static List<(ulong seed, BotRunDriver.BotRunResult result, Domain.Bot.RoomTrace room, Domain.Bot.FightTrace fight)>
+            ForcedBellRuns(BotRunDriver.BotProbe probe, int wanted, string archetype = "GreedyAggressive")
+        {
+            var found = new List<(ulong, BotRunDriver.BotRunResult, Domain.Bot.RoomTrace, Domain.Bot.FightTrace)>();
+            for (ulong seed = 1; seed <= 60UL && found.Count < wanted; seed++)
+            {
+                var result = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, ProbeDepthCap,
+                    ShopNodeMode.WhenOffered, probe);
+                var forced = result.Trace.Rooms.Where(r => r.EventForced).ToList();
+                if (forced.Count == 0) continue;
+
+                Assert.AreEqual(1, forced.Count, $"seed {seed}: a floor-pinned -ForceEvent fires once per run");
+                var fight = result.Trace.Fights.FirstOrDefault(f => f.EventId == Bell);
+                found.Add((seed, result, forced[0], fight));
+            }
+
+            Assert.AreEqual(wanted, found.Count, $"only {found.Count} run(s) over seeds 1-60 reached a forced Bell");
+            return found;
+        }
+
+        private static BotRunDriver.BotProbe BellOnFloorOne() =>
+            new BotRunDriver.BotProbe { ForceEventId = Bell, ForceEventFloor = 1 };
+
+        // -ForceEvent/-ForceEventFloor: the Bell opens on floor 1 in a room
+        // that is not a fight or a shop, the bot touches it (first available),
+        // and the Bell fight carries its end, rounds and Shawn's numbers.
+        [Test]
+        public void ForcedBell_OpensOnceOnItsFloor_AndTheFightTracesItsEndRoundsAndShawn()
+        {
+            foreach (var (seed, result, room, fight) in ForcedBellRuns(BellOnFloorOne(), 3))
+            {
+                Assert.AreEqual(Bell, room.EventId, $"seed {seed}");
+                Assert.AreEqual(1, room.Floor, $"seed {seed}");
+                Assert.That(room.RoomType, Is.Not.EqualTo("Fight").And.Not.EqualTo("Shop"), $"seed {seed}");
+                Assert.IsNotNull(fight, $"seed {seed}: touching the bell played no Bell fight");
+
+                CollectionAssert.Contains(new[] { "Defeated", "Survived", "Fell" }, fight.EndReason, $"seed {seed}");
+                Assert.GreaterOrEqual(fight.Rounds, 1, $"seed {seed}");
+                if (fight.EndReason == "Survived") Assert.AreEqual(11, fight.Rounds, $"seed {seed}: Survived is round 11 refused");
+                Assert.That(fight.ShawnHpPercentIn, Is.InRange(1, 100), $"seed {seed}");
+                Assert.That(fight.ShawnHpPercentOut, Is.InRange(0, 100), $"seed {seed}");
+                if (fight.EndReason == "Fell") Assert.AreEqual(0, fight.ShawnHpPercentOut, $"seed {seed}");
+                Assert.Greater(fight.ShawnSpeed, 0, $"seed {seed}");
+                Assert.AreEqual(fight.DamageDealt, fight.ShawnDamageDealt, $"seed {seed}: Shawn fights the Bell alone");
+                Assert.AreEqual(0, fight.FlockDamage, $"seed {seed}: no flock relic yet");
+            }
+        }
+
+        // -EventChoice: "Walk away" is taken over the first row, so no Bell
+        // fight is played and the room still clears.
+        [Test]
+        public void EventChoice_WalkAway_IsTakenOverTheFirstRow()
+        {
+            var probe = BellOnFloorOne();
+            probe.EventChoiceText = "walk AWAY";
+
+            foreach (var (seed, result, room, fight) in ForcedBellRuns(probe, 3))
+            {
+                Assert.IsNull(fight, $"seed {seed}: walking away played the Bell fight");
+                Assert.IsFalse(result.Hits.Any(h => h.Name == "EventRoomNotCleared"), $"seed {seed}");
+            }
+        }
+
+        // -GrantTalent sheep_ram_converge is a Black Ram build: with it the bot
+        // casts Black Ram when ready (TransformUse.WhenReady) and the Bell fight
+        // says he transformed; -NoTransform takes it off the menu.
+        [Test]
+        public void BlackRamBuild_TransformsWhenReady_AndNoTransformNeverDoes()
+        {
+            var ram = BellOnFloorOne();
+            ram.GrantTalentIds.Add("sheep_ram_converge");
+            var ramRuns = ForcedBellRuns(ram, 3);
+            Assert.IsTrue(ramRuns.Any(r => r.fight != null && r.fight.ShawnTransformed),
+                "no Bell fight of a Black Ram build transformed");
+            foreach (var r in ramRuns)
+            {
+                CollectionAssert.Contains(r.result.TalentIdsAtEnd, "sheep_ram_converge", $"seed {r.seed}");
+                CollectionAssert.Contains(r.result.TalentIdsAtEnd, "sheep_ram_horns_3", $"seed {r.seed}: prerequisites come too");
+            }
+
+            var still = BellOnFloorOne();
+            still.GrantTalentIds.Add("sheep_ram_converge");
+            still.NoTransform = true;
+            foreach (var r in ForcedBellRuns(still, 3))
+            {
+                Assert.IsFalse(r.result.Trace.Fights.Any(f => f.ShawnTransformed || f.TransformedActors.Count > 0),
+                    $"seed {r.seed}: -NoTransform still transformed");
+            }
+        }
+
+        // -GrantRelic: Toll of the Flock is held from the start, its packets
+        // land on the trace as FlockDamage, and they are part of Shawn's own
+        // ledger row, never more than it.
+        [Test]
+        public void GrantRelic_TollOfTheFlock_ChargesAndIsTracedAsPartOfShawnsDamage()
+        {
+            var probe = new BotRunDriver.BotProbe();
+            probe.GrantRelicIds.Add("toll_of_the_flock");
+
+            int charged = 0;
+            for (ulong seed = 1; seed <= 5UL; seed++)
+            {
+                var result = BotRunDriver.PlayRun(seed, "GreedyAggressive", ProfilePresets.Fresh, ProbeDepthCap,
+                    ShopNodeMode.WhenOffered, probe);
+                CollectionAssert.Contains(result.RelicIdsAtEnd, "toll_of_the_flock", $"seed {seed}");
+                foreach (var fight in result.Trace.Fights)
+                {
+                    Assert.LessOrEqual(fight.FlockDamage, fight.ShawnDamageDealt, $"seed {seed} step {fight.Step}");
+                    if (fight.FlockDamage > 0) charged++;
+                }
+            }
+
+            Assert.Greater(charged, 0, "the flock never charged in five runs of fights");
         }
     }
 }

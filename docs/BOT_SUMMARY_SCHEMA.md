@@ -76,7 +76,13 @@ gearIds           string[] -- worn across the fielded squad when the run
 levelAtDeath      int   -- fielded squad's total level when the run ended
 skillsUsed        string[] -- distinct ids behind "Skill:" turn labels
 fights[]          step, floor, roomType, enemyIds, turns, damageTaken,
-                  partyHpOut, partyMaxHp, usedItem, won, payoutGold
+                  partyHpOut, partyMaxHp, usedItem, won, payoutGold,
+                  eventId, endReason, rounds, shawnHpPercentIn,
+                  shawnHpPercentOut, shawnSpeed, shawnTransformed,
+                  shawnDamageDealt, flockDamage
+                  -- the last nine are FightTrace's own fields of the same
+                  names (camelCase), documented once in the FightTrace
+                  block under traces.jsonl.
                   -- won/payoutGold exist for one number: "gold forgone", the
                   median WON-fight payout at the step band a shop was taken
                   at, which is what taking that node cost (PLAN_SHOP.md
@@ -170,6 +176,34 @@ FightTrace
   Won           bool
   PayoutGold    int  -- 0 when Won is false
   PayoutExp     int  -- 0 when Won is false
+  EventId       string -- the event's id for an event fight
+                          (EncounterRequest.EventId, e.g. "bell_in_the_fog");
+                          "" for a room fight
+  EndReason     string -- FightSession.EndReason: "Defeated" (every enemy
+                          down), "Survived" (a round limit ran out with the
+                          party standing), "Fell", or "None" for a fight the
+                          runner stopped before it ended (a stall). Won is
+                          true for both Defeated and Survived.
+  Rounds        int  -- FightSession.Round when the fight stopped. A fight
+                        that Survived a limit of N reads N+1: the round
+                        that was refused.
+  ShawnHpPercentIn  int -- Shawn's (kit "sheep") HP as a whole percent of
+                        his max entering the fight; -1 when not fielded
+  ShawnHpPercentOut int -- the same leaving it, 0 when he fell, clamped to
+                        100 (a Transform's temporary health can push
+                        CurrentHealth past MaxHealth); -1 when not fielded
+  ShawnSpeed    int  -- his Speed as the fight opened (the flock's speed
+                        bands, plan R7); 0 when not fielded
+  ShawnTransformed bool -- he wore a Transform after at least one command
+  ShawnDamageDealt int -- his row of the fight's own ledger (TotalDealt,
+                        overkill included -- the ledger's rule)
+  FlockDamage   int  -- what Toll of the Flock's packets dealt this fight
+                        (FightSession.TollOfTheFlockDamageDealt), already
+                        inside ShawnDamageDealt. The flock's share of his
+                        damage is FlockDamage / ShawnDamageDealt.
+  TransformedActors string[] -- names of every party member seen wearing a
+                        Transform after a command (in memory only, not
+                        written to either file; ShawnTransformed is read off it)
 
 TurnTrace
   ActorId       string -- combatant id issuing this command
@@ -268,6 +302,11 @@ RoomTrace
   SpellAssignments SpellAssignmentTrace[] -- every ChooseSpellAssignment
                         answer this room, in order -- the acquisition-loop
                         analogue of RoomTrace.ShopChoices.
+  EventId       string -- the event this room opened, read on arrival
+                        (before the event's Leave clears it); "" when no
+                        event opened here
+  EventForced   bool   -- the event was -ForceEvent's rather than the room's
+                        own roll (see "Tuning probes" below)
 
 OfferEntry
   ItemId        string
@@ -316,6 +355,31 @@ EquipTrace
   Slot          string -- EquipmentSlot name, e.g. "Weapon1"
   Plus          int    -- which copy; the bag keys stacks on it
 ```
+
+### Tuning probes (M8a)
+
+`tools/bot.ps1 -ForceEvent <id> [-ForceEventFloor <n>] [-EventChoice <text>]
+[-NoTransform] [-GrantRelic <ids>] [-GrantTalent <ids>]`
+(docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M8a; the exact rules are
+`BotRunDriver.BotProbe`'s header). Each shard's `batch.json` records them as
+`forceEvent`, `forceEventFloor`, `eventChoice`, `noTransform`,
+`grantRelicIds`, `grantTalentIds`; `summary.json` does not carry them, so a
+probe batch is read from its shard files. Refused together with `-Career`.
+
+- A floor-pinned forced event fires once per run, at the first room on that
+  floor that is not a fight or a shop, and that room is only the event. A
+  run that died earlier, or whose floor offered only fights and shops, has
+  no `EventForced` room -- count the denominator from those rooms, not
+  from runs.
+- Transforms: without `-NoTransform` the bot casts a ready Transform
+  whenever none is worn (`TransformUse.WhenReady`), whatever the archetype,
+  and until then holds back every other skill priced in the signature
+  resource (Shawn's wool) so the form can be afforded; no archetype scores
+  a Transform on its own. Before M8a nothing in a bot profile
+  could reach a Transform (Black Ram is talent-gated), so this changed no
+  earlier batch.
+- `-GrantTalent` kindles the talent and every prerequisite, free, on its
+  owner: `sheep_ram_converge` is the Black Ram build.
 
 ### `RunTrace.Hash()` and this change
 

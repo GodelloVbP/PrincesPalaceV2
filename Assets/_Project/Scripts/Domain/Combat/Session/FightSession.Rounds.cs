@@ -184,6 +184,12 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public const string TollOfTheFlockLine = "The lost flock charges.";
 
+        // Everything the flock's packets dealt this fight, as booked to the
+        // bearer's ledger row (overkill included, the ledger's rule). Read by
+        // the balance bot for the flock's share of Shawn's damage (M8a); no
+        // mechanic reads it.
+        public int TollOfTheFlockDamageDealt { get; private set; }
+
         // Called as the last step of OpenTurnFor, with that turn already counted.
         // On the bearer's every TollOfTheFlockEvery-th opened turn, if they are
         // still standing: one packet to every living enemy, through the normal
@@ -233,6 +239,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 int landed = outcome.Damage;
                 DealDamage(bearer, enemy, landed, type, KillCredit.Nobody);
+                TollOfTheFlockDamageDealt += landed;
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 RecordTargetResult(enemy, landed);
 
