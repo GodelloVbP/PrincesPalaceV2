@@ -101,8 +101,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, encounter.PendingExtraTurns(hero));
         }
 
-        // AUDIT #189. EnemyTurnsIn above -- and every other "count the enemy's
-        // turns" reader in the suite -- used to ask `Actor != null`, which a
+        // EnemyTurnsIn above -- and every other "count the enemy's
+        // turns" reader in the suite -- must not ask `Actor != null`, which a
         // status tick on an enemy can satisfy: a healing tick names its holder
         // as Actor (so the view does not make them flinch). Nothing shipped
         // gives a monster Regen yet, so this is the content change that would
@@ -131,18 +131,17 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- a form running out is not an action -----------------------------
         //
-        // Owner, 2026-09-26: "a transform expiring should definitely not be an
-        // action". The expiry beat names its holder as Actor (the stage flashes
-        // over him), and it used to open through BeginBeat -- the action seam
-        // -- so it counted as a turn taken AND told a decaying pool the turn
-        // was not idle.
+        // A transform expiring must not be an action. The expiry beat names
+        // its holder as Actor (the stage flashes over him); opening it
+        // through BeginBeat -- the action seam -- would count it as a turn
+        // taken AND tell a decaying pool the turn was not idle.
         //
         // THE FIXTURE. Speed 100 against 1, so the hero takes every turn and
         // no enemy swing ever lands in the numbers. The pool decays 10 on any
-        // turn with no ACTION in it (AnyAction, the reading the expiry used to
-        // satisfy; the Damage reading never heard it). The form has one turn
-        // left, so Begin()'s opening turn start runs it out: the pool ticks
-        // first (50 -> 40, an empty window), then the form expires.
+        // turn with no ACTION in it (AnyAction; the Damage reading never
+        // hears the expiry). The form has one turn left, so Begin()'s opening
+        // turn start runs it out: the pool ticks first (50 -> 40, an empty
+        // window), then the form expires.
         private static (FightSession session, CombatantState hero) AFormThatRunsOutAtTheFirstTurnStart()
         {
             var hero = new CombatantState("Hero", true, 500, 10, 20, 100);
@@ -283,9 +282,9 @@ namespace PrincesPalace.Domain.Tests
             //
             // Two granted extra turns carry the hero through the killless
             // turn, so the second kill happens on the same actor's
-            // uninterrupted run. GrantExtraTurn is the primitive the deleted
-            // Brave rider used to reach; this test never cared about the bank,
-            // only about keeping the turn.
+            // uninterrupted run. GrantExtraTurn is the primitive that grants
+            // a bonus turn; this test never cares about the bank, only about
+            // keeping the turn.
             var hero = Hero();
             GiveTrample(hero, 1);
             var (session, _, encounter) = Fight(hero, null, Foe("Weak", 1), Foe("AlsoWeak", 1), Foe("Tank", 1000));
@@ -349,7 +348,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(MessagesIn(round).Any(m => m.Contains("Bloodlust")));
         }
 
-        // ---- Bloodlust: once per fight (owner 2026-09-24) ----------------------
+        // ---- Bloodlust: once per fight -------------------------------------------
         //
         // The relic buys ONE extra action a fight, on the holder's first kill
         // Trample did not already reward, and is then spent until a new
@@ -372,7 +371,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(MessagesIn(second).Any(m => m.Contains("Bloodlust")));
 
             // A NEW TURN, same fight: still spent. This is what separates
-            // "once per fight" from the old per-turn chain cap.
+            // "once per fight" from a per-turn chain cap.
             Assert.AreSame(hero, encounter.Current, "fixture: the turn came back to the hero");
             var third = Round(session, () => session.ExecuteAttack(encounter.Enemies[2]));
             Assert.IsFalse(encounter.Enemies[2].IsAlive);
@@ -534,18 +533,15 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TurnStartMessagesLandOnTheBeatTheyFollow()
         {
-            // AUDIT #13 again, from the other side: turn-start lines are
-            // decided after the beat committed. Written straight to the
-            // immediate list they land OLDER than the blow they follow.
+            // From the other side: turn-start lines are decided after the
+            // beat committed. Written straight to the immediate list they
+            // would land OLDER than the blow they follow.
             //
-            // "NO BEAT IS INVENTED FOR A RIDER" WAS THE OLD CONTRACT AND IS
-            // NOT THIS ONE. A poison tick now opens its own beat (owner
-            // 2026-09-19, "poison damage or DoTs are not clear") precisely so
-            // the stage can play the hurt pose, the tinted flash and the
-            // number that the log line has always described on its own. What
-            // has not changed is the half this test exists for: nothing
-            // reaches the immediate list, so no turn-start line can land
-            // older than the blow it follows.
+            // A poison tick opens its own beat, precisely so the stage can
+            // play the hurt pose, the tinted flash and the number that the
+            // log line has always described on its own. What this test
+            // exists for: nothing reaches the immediate list, so no
+            // turn-start line can land older than the blow it follows.
             var hero = Hero();
             StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 7, 3);
             var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
@@ -560,7 +556,7 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(session.DrainImmediateMessages());
         }
 
-        // ---- a tick the stage can see (owner 2026-09-19) ---------------------
+        // ---- a tick the stage can see ------------------------------------------
         //
         // A damage-over-time tick was log-only until now: it went through
         // StatusEffects.Tick and RecordUnattributedDamage without ever
@@ -651,25 +647,23 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, session.DrainBeats().Count, "the swing, and nothing invented after it");
         }
 
-        // ---- WHAT AN EXTRA TURN RE-PAYS: decided, AUDIT #113 ------------------
+        // ---- WHAT AN EXTRA TURN RE-PAYS ----------------------------------------
         //
-        // A bonus action is the SAME turn and re-pays nothing. Until
-        // 2026-09-11 the one GrantTurnStart treated "a fresh actor's turn" and
-        // "the same actor's extra turn" identically: AdvanceAfterAction calls
-        // GrantExtraTurn BEFORE AdvanceTurn, so a Trample or a Bloodlust put
-        // the same actor back on Current and the whole thirteen-step block ran
-        // for them a second time -- the poison tick, every
+        // A bonus action is the SAME turn and re-pays nothing. GrantTurnStart
+        // must not treat "a fresh actor's turn" and "the same actor's extra
+        // turn" identically: AdvanceAfterAction calls GrantExtraTurn BEFORE
+        // AdvanceTurn, so a Trample or a Bloodlust puts the same actor back
+        // on Current, and running the whole thirteen-step block for them a
+        // second time would double the poison tick, every
         // non-IsSpentByTheTurn duration countdown, the cooldown countdown, and
         // both duration clocks (TickTransform, TickPhoenixEgg).
         //
-        // The owner's line: the clearance ledger's row K8 had already cleared
-        // exactly two of those thirteen -- _locks.ResetTurn and
-        // TickPrimaryPool -- as things an ACTION pays for, and those two (plus
-        // the two recomputes that read them) are now the whole of
-        // ReopenTurnFor. Every clock stayed with OpenTurnFor.
+        // Exactly two of those thirteen -- _locks.ResetTurn and
+        // TickPrimaryPool -- are what an ACTION pays for, and those two (plus
+        // the two recomputes that read them) are the whole of ReopenTurnFor.
+        // Every clock stays with OpenTurnFor.
         //
-        // The three cases below are the reproduction, written while the
-        // decision was open and [Ignore]d until it was made. The one that was
+        // The three cases below are the reproduction. The one that was
         // never a balance question is the third: talents.json ships
         // sheep_ram_trample_3 ("A kill does not cost you the turn") as a
         // PREREQUISITE of sheep_ram_converge (Black Ram Mode, "7 wool for

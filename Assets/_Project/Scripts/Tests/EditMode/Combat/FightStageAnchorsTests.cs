@@ -11,12 +11,11 @@ namespace PrincesPalace.Domain.Tests
     // StageLayout's own lerp would happily agree with a stage that had silently
     // moved.
     //
-    // NOTHING HERE IS v1-PARITY ANY MORE, and this class has twice claimed to
-    // be. First Y went, because the inherited -300/-140 were v1's numbers from
-    // BEFORE v1 fixed them and they put every front row's feet behind the HUD.
-    // Then X, the scales and the frame size went with the formation change:
-    // depth now recedes OUTWARD rather than in, so the back rank is the one
-    // furthest from the enemy instead of the one nearest it.
+    // NOT v1-PARITY: Y is not the inherited -300/-140 (those numbers put
+    // every front row's feet behind the HUD), and X, the scales and the
+    // frame size differ from v1's formation too, since depth recedes
+    // OUTWARD rather than in -- the back rank is the one furthest from
+    // the enemy instead of the one nearest it.
     public class FightStageAnchorsTests
     {
         [Test]
@@ -24,15 +23,14 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(300f, FightStageAnchors.Near.X, 0.001f);
             Assert.AreEqual(-218f, FightStageAnchors.Near.Y, 0.001f);
-            // Far.X 565 -> 660 and StageSize.X 1260 -> 1500, 2026-09-09: the
-            // owner-reported party overlap (Odette swallowed by the middle
-            // slot) -- see FightStageAnchors' own comment on Far.
+            // Far.X is 660, not the evenly-spaced 565, widened to fix a
+            // party overlap (the middle slot swallowing a figure) -- see
+            // FightStageAnchors' own comment on Far.
             Assert.AreEqual(660f, FightStageAnchors.Far.X, 0.001f);
             Assert.AreEqual(-125f, FightStageAnchors.Far.Y, 0.001f);
             Assert.AreEqual(0.76f, FightStageAnchors.SpriteScale, 0.001f);
             Assert.AreEqual(-34f, FightStageAnchors.NameplateOffset, 0.001f);
-            // StageSize.X 1500 -> 1700, 2026-09-09: the party's far anchor
-            // moved out to 810 and this frame has to contain it -- see
+            // StageSize.X must contain the party's far anchor at 810 -- see
             // EveryStageSlotFitsInsideTheStageRect below, which is the check
             // that keeps finding this.
             Assert.AreEqual(1700f, FightStageAnchors.StageSize.X, 0.001f);
@@ -48,14 +46,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(660f, FightStageAnchors.Enemy.Far.X, 0.001f);
             Assert.AreEqual(-125f, FightStageAnchors.Enemy.Far.Y, 0.001f);
 
-            // 360/720 -> 320/810, 2026-09-09: the three party figures still
-            // read as a clump at a 180px slot pitch against 197-228px
-            // bodies. The party's X endpoints are authored outright now
-            // rather than as the enemy's plus a PartyRetreat scalar, which
-            // is gone -- see FightStageAnchors.PartyNearX's own note for the
-            // measured overlaps and for what caps 810 (Shawn's idle at the
-            // back slot reaches 126.5 stage px left of his mark, and the 4:3
-            // canvas stops at -960).
+            // The three party figures would still read as a clump at a
+            // 180px slot pitch against 197-228px bodies at the enemy's own
+            // spacing. The party's X endpoints are authored outright rather
+            // than as the enemy's plus a PartyRetreat scalar -- see
+            // FightStageAnchors.PartyNearX's own note for the measured
+            // overlaps and for what caps 810 (Shawn's idle at the back slot
+            // reaches 126.5 stage px left of his mark, and the 4:3 canvas
+            // stops at -960).
             Assert.AreEqual(320f, FightStageAnchors.Party.Near.X, 0.001f);
             Assert.AreEqual(-218f, FightStageAnchors.Party.Near.Y, 0.001f);
             Assert.AreEqual(810f, FightStageAnchors.Party.Far.X, 0.001f);
@@ -66,8 +64,8 @@ namespace PrincesPalace.Domain.Tests
         public void ThreeSlots_LandOnTheNearAnchor_TheMidpoint_AndTheFarAnchor()
         {
             // Depths 0, 0.5, 1 across three slots; x lerps 300 -> 660, OUTWARD
-            // with depth (widened from 565 2026-09-09, see Far's own
-            // comment), and y lerps -218 -> -125.
+            // with depth (see Far's own comment for why 660 rather than the
+            // evenly-spaced 565), and y lerps -218 -> -125.
             var near = FightStageAnchors.SlotOffset(0, 3, mirrored: false);
             Assert.AreEqual(300f, near.X, 0.001f);
             Assert.AreEqual(-218f, near.Y, 0.001f);
@@ -81,10 +79,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-125f, far.Y, 0.001f);
         }
 
-        // WAS MirroringFlipsXAndAddsThePartyRetreat. PartyRetreat is gone --
-        // it stopped being one scalar when the party got its own Y
-        // (6fedab18) and stopped being one on X when the party's spread had
-        // to widen further than the enemy's (+20 near, +150 far). What is
+        // PartyRetreat is gone -- it stopped being one scalar when the
+        // party got its own Y and stopped being one on X when the party's
+        // spread had to widen further than the enemy's (+20 near, +150
+        // far). What is
         // left to claim, and all that was ever load-bearing, is that
         // MIRRORING is a sign flip and nothing else: the party formation is
         // authored as magnitudes out from stage centre, exactly like the
@@ -116,11 +114,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-141f, FightStageAnchors.SlotOffset(1, 3, mirrored: true).Y, 0.001f);
             Assert.AreEqual(-64f, FightStageAnchors.SlotOffset(2, 3, mirrored: true).Y, 0.001f);
 
-            // -320 / -565 / -810, widened from -360 / -540 / -720 on
-            // 2026-09-09: at a 180px pitch three 197-228px bodies overlapped
-            // by a third each. 245 per step is what makes them touch rather
-            // than stack -- FightStageAnchors.PartyNearX carries the
-            // measurements.
+            // -320 / -565 / -810: at a 180px pitch three 197-228px bodies
+            // would overlap by a third each. 245 per step is what makes
+            // them touch rather than stack -- FightStageAnchors.PartyNearX
+            // carries the measurements.
             Assert.AreEqual(-320f, FightStageAnchors.SlotOffset(0, 3, mirrored: true).X, 0.001f);
             Assert.AreEqual(-565f, FightStageAnchors.SlotOffset(1, 3, mirrored: true).X, 0.001f);
             Assert.AreEqual(-810f, FightStageAnchors.SlotOffset(2, 3, mirrored: true).X, 0.001f);
@@ -151,14 +148,12 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(2)]
         public void NoPartySlotStandsInsideThePcPlateColumn(int slot)
         {
-            // RE-READ OFF FightScreen 2026-09-10, for the third time, and
-            // the discipline is the point: this literal has said -468, then
-            // -540, then -468 again as the column went 452 wide, 380 wide and
-            // 452 wide. Every stale value it carried was CONSERVATIVE (a
-            // wider block checks more slots, never fewer) and every one of
-            // them was still wrong to leave, because a literal that happens
-            // to over-cover is indistinguishable from one that has silently
-            // stopped describing anything.
+            // RE-READ OFF FightScreen, not carried forward: a stale literal
+            // here would be CONSERVATIVE either way (a wider block checks
+            // more slots, never fewer), but that does not make it right to
+            // leave -- a literal that happens to over-cover is
+            // indistinguishable from one that has silently stopped
+            // describing anything.
             //
             // FightScreenTests.ThePcPlateStackIsFlushLeftAndBottomAtThe-
             // MeasuredAspect pins -920..-468 from the solved screen; this is
@@ -166,21 +161,18 @@ namespace PrincesPalace.Domain.Tests
             // Domain-only.
             const float PlateLeft = -920f;
 
-            // -468, RE-READ OFF FightScreen 2026-09-10. The column went back
-            // to 452 wide (PcPlateWidth) with the three-PC-plate pass, so its
-            // right edge moved out 72px from the 380-wide cards' -540. Wider
-            // means MORE slots are checked, never fewer -- and that is still
+            // -468, RE-READ OFF FightScreen: the column is 452 wide
+            // (PcPlateWidth). Wider means MORE slots are checked, never
+            // fewer -- and that is still
             // not a reason to leave a stale number here: a literal that
             // happens to be conservative is indistinguishable from one that
             // has silently stopped describing anything, which is the argument
             // this test already made twice.
             const float PlateRight = -468f;
 
-            // -235.7273, up from -195.392: the 2026-09-10 HUD-column pass
-            // replaced one 154-tall card plus two 66-tall roster cards with
-            // three identical 80.55-tall PC plates, so the stack is 40px
-            // taller and its top edge rose by that much. Pinned rather than
-            // computed for the reason this test's own header gives -- this
+            // -235.7273: three identical 80.55-tall PC plates stacked from
+            // the column's bottom. Pinned rather than computed for the
+            // reason this test's own header gives -- this
             // assembly is Domain-only and reaching into the UiKit screen for
             // private layout constants would be the wrong dependency even if
             // it could. FightScreenTests pins the same number from the other
@@ -213,10 +205,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SlotScale_ComposesTheDepthCurveWithTheGlobalShrink()
         {
-            // ScaleForDepth lerps 0.94 -> 0.82 (was 1.0 -> 0.74, narrowed
-            // 2026-09-09 -- the owner's "front one is too big and the back
-            // one too small", see StageLayout.NearScale/FarScale), then
-            // everything is shrunk by 0.76.
+            // ScaleForDepth lerps 0.94 -> 0.82 ("the front one is too big and
+            // the back one too small", see StageLayout.NearScale/FarScale),
+            // then everything is shrunk by 0.76.
             Assert.AreEqual(0.7144f, FightStageAnchors.SlotScale(0, 3), 0.0001f);
             Assert.AreEqual(0.6688f, FightStageAnchors.SlotScale(1, 3), 0.0001f);
             Assert.AreEqual(0.6232f, FightStageAnchors.SlotScale(2, 3), 0.0001f);
@@ -241,12 +232,9 @@ namespace PrincesPalace.Domain.Tests
             // screen tree's containment audit would fail at build time, and
             // this says so a step earlier, in Domain, where it costs a second.
             //
-            // It has already earned that THREE TIMES: moving the far anchor
-            // out to 565 put the outermost slot 65px beyond the old
-            // 1000-wide frame; C4's PartyRetreat put the retreated party slot
-            // 25px beyond the 1200-wide frame that fix landed on -- which is
-            // why BOTH sides are checked here, not just the enemy one; and
-            // PartyFarX's move to 810 put it 60px beyond the 1500-wide one.
+            // BOTH sides are checked here, not just the enemy one: an anchor
+            // tweak on either side can independently push a slot outside
+            // the frame it is declared in.
             float halfW = FightStageAnchors.StageSize.X / 2f;
             float halfH = FightStageAnchors.StageSize.Y / 2f;
 
@@ -268,9 +256,10 @@ namespace PrincesPalace.Domain.Tests
         // empty. They stood 132 apart against a 675px-wide rat sheet, so the
         // back one was 78% hidden and the pair read as a single monster.
         //
-        // Literals, not a re-derivation: 300 and 660 are Near.X and Far.X (Far
-        // widened from 565 2026-09-09, see Far's own comment), and the point
-        // of the test is that a PAIR reaches both ends of that range.
+        // Literals, not a re-derivation: 300 and 660 are Near.X and Far.X
+        // (see Far's own comment for why Far is 660 rather than the
+        // evenly-spaced 565), and the point of the test is that a PAIR
+        // reaches both ends of that range.
         [Test]
         public void TwoActorsStandAtBothEndsOfTheRange_NotBunchedAtTheNearEnd()
         {
@@ -313,9 +302,7 @@ namespace PrincesPalace.Domain.Tests
             // -320/-810, not -300/-660: the party's endpoints are its own
             // (FightStageAnchors.PartyNearX/PartyFarX), wider than the
             // enemy's because three similar bipeds have to separate on a
-            // half of the floor that also carries the HUD. Was -360/-720
-            // until 2026-09-09, when the three of them still read as a
-            // clump.
+            // half of the floor that also carries the HUD.
             var front = FightStageAnchors.SlotOffset(0, 2, mirrored: true);
             var back = FightStageAnchors.SlotOffset(1, 2, mirrored: true);
 

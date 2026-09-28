@@ -12,8 +12,7 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // FIGHT'S HALF of hardware round 1's visual findings, which is two
-    // separate complaints from the owner about the same screen:
+    // Two separate complaints about the same screen:
     //
     //   "there is no proper selector. Maybe we can make a small hovering
     //    arrow for the thing you're targeting with gamepad?"
@@ -147,11 +146,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(attack, "Verb0 should be a themed button");
 
             // Open is "this verb's branch is showing", which at rest
-            // nothing's is. Before hardware round 1 the pad's own focus index
-            // painted Open here, unconditionally, forever; after it, index 0
-            // still wore Primary's gold ring, and the owner's answer to
-            // AUDIT.md #171 (2026-09-19) was that the ring reads as hover too.
-            // So the resting column is flat: no verb is lit for any reason.
+            // nothing's is. The ring (Primary's gold ring) reads as hover
+            // too, so the resting column is flat: no verb is lit for any
+            // reason.
             Assert.AreEqual(ThemedMenuState.Idle, attack.CurrentMenuState,
                 "nothing is open at rest, so no verb may wear a plate or a ring");
         }
@@ -215,10 +212,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(Node("TargetPrompt"),
                 "precondition: the Submit reached Target depth (the prompt is only shown while targeting)");
 
-            // THE FIGURE, not the plate. The owner asked for an arrow on
-            // "the thing you're targeting", and the thing being targeted is
-            // the monster on the battlefield, not its readout at the top of
-            // the screen. EnemyHitArea<n> is the rect over that figure and is
+            // THE FIGURE, not the plate: an arrow on "the thing you're
+            // targeting" points at the monster on the battlefield, not its
+            // readout at the top of the screen. EnemyHitArea<n> is the rect
+            // over that figure and is
             // shown only while a target is being picked.
             //
             // Nothing hovered yet: FocusedElement answers whatever
@@ -228,19 +225,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreSame(Node("EnemyHitArea0").transform, Marker.Target,
                 "with nothing hovered, the marker sits on the figure Submit would land on");
 
-            // STICK DOWN, not up, since 2026-09-19: the pad's vertical axis is
-            // negated at Target depth (FightController.Input's
-            // IFightNavigationTarget.MoveFocus -- the owner's "up is one slot
-            // deeper"), so the press that walks the marker off the near end of
-            // a two-enemy rack is the one that used to sit still.
+            // STICK DOWN, not up: the pad's vertical axis is negated at
+            // Target depth (FightController.Input's
+            // IFightNavigationTarget.MoveFocus -- "up is one slot deeper"),
+            // so the press that walks the marker off the near end of a
+            // two-enemy rack is Down.
             yield return Move(-1f);
 
             Assert.AreSame(Node("EnemyHitArea1").transform, Marker.Target,
                 "and a stick press walks it along the rack");
         }
 
-        // QA 2026-09-26: the ITEM list wheeled two notches down with Potion 1
-        // still focused put the arrow in empty stage space above the list --
+        // The ITEM list wheeled two notches down with Potion 1
+        // still focused puts the arrow in empty stage space above the list --
         // pointing at a row the viewport had clipped away. The marker now
         // hides while its row is scrolled out, and comes back ON THAT ROW'S
         // successor the moment the pad arrows (which scrolls it into view).
@@ -280,8 +277,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Marker.IsShown, "the arrowed-onto row is back in the window, and so is the marker");
         }
 
-        // QA 2026-09-26: the submenu stands 8px from the verb column, so the
-        // arrow drawn LEFT of a focused list row landed on the ITEM / MOVE
+        // The submenu stands 8px from the verb column, so the
+        // arrow drawn LEFT of a focused list row would land on the ITEM / MOVE
         // verb and read as selecting it. Through the real dispatcher: open
         // the ITEM list, step to a row level with a verb, and the marker must
         // cover no verb button (FocusMarkerPlacement.EdgeFor's neighbour
@@ -341,9 +338,9 @@ namespace PrincesPalace.PlayModeTests
                 "still level with the focused row it points at");
         }
 
-        // QA 2026-09-26, round 2: moved to the row's right by the rule above,
-        // the arrow stood a few pixels off the list's scrollbar (the bar is
-        // 8px off the rows). The bar is a keep-clear rect: the marker steps
+        // Moved to the row's right by the rule above, the arrow would stand
+        // a few pixels off the list's scrollbar (the bar is 8px off the
+        // rows). The bar is a keep-clear rect: the marker steps
         // past it and never comes nearer than 7 units (its 10-unit gap less
         // the 3-unit bob) at any point of the bob.
         [UnityTest]
@@ -408,9 +405,9 @@ namespace PrincesPalace.PlayModeTests
         // PointerEnter straight to OnEnemyHovered with no alive check, so the
         // pointer can still be sitting on a plate/figure whose enemy died
         // under it. FocusedElement/FocusedActor (FightController.Input.cs)
-        // used to trust _hoveredEnemyIndex unconditionally -- this pins the
-        // fix: a dead hover reads as no hover and falls back the same way
-        // ConfirmFocus's own no-hover branch does.
+        // must not trust _hoveredEnemyIndex unconditionally: a dead hover
+        // reads as no hover and falls back the same way ConfirmFocus's own
+        // no-hover branch does.
         [UnityTest]
         public IEnumerator ADeadHoverReadsAsNoHover_TheMarkerFallsBackToTheFirstLivingEnemy()
         {
@@ -434,15 +431,14 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // gap-fight-b-1: the PLATE's own hover, not the figure's hit area
-        // ADeadHoverReadsAsNoHover exercises above. AddEnemyHover used to
-        // wire the plate through a raw EventTrigger; a plate is deactivated
+        // ADeadHoverReadsAsNoHover exercises above. A plate is deactivated
         // (SetShown(false)) the instant its monster dies, and Unity delivers
-        // no PointerExit to a disabled object, so _hoveredEnemyIndex and
-        // _inspectedActor stayed on the corpse forever -- not merely until
-        // the next refresh, which is what the marker-only test above could
-        // not tell apart from this. HoverIndex.OnDisable is what actually
-        // fires the missing exit; this pins THAT wiring, not just the
-        // symptom-level fallback.
+        // no PointerExit to a disabled object, so a raw EventTrigger wiring
+        // would leave _hoveredEnemyIndex and _inspectedActor on the corpse
+        // forever -- not merely until the next refresh, which is what the
+        // marker-only test above could not tell apart from this.
+        // HoverIndex.OnDisable is what actually fires the missing exit; this
+        // pins THAT wiring, not just the symptom-level fallback.
         [UnityTest]
         public IEnumerator HoveringAPlate_ThenKillingItsEnemy_ClearsTheHoverAndTheStatusBox()
         {
