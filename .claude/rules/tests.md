@@ -40,4 +40,4 @@ Commands and gates: `docs/TESTING.md`.
 - A test without its own save root gets an emptied `TestSaveSandbox`.
 - Contracts: the headers of `Tests/PlayMode/Shared/SharedScene.cs`,
   `TestSaveSandbox.cs`, `UnityEventRegistryPrune.cs`, `NavSceneReuse.cs`.
-
+- A test never does for production what production must do for itself.

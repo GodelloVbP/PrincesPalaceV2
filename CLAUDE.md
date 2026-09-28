@@ -98,7 +98,7 @@ refuses the rest.
 |---|---|
 | Ownership, briefs, parallel sessions, commits | `docs/WORKFLOW.md` |
 | Which test command | `docs/TESTING.md` |
-| Screen/system → file (Grep it, never read whole) | `docs/CODE_MAP.md` |
+| Screen/system → file | `docs/CODE_MAP.md` |
 | System map | `docs/ARCHITECTURE.md` |
 | Code rules | `docs/CODE_STANDARDS.md`, plus `.claude/rules/` (load by path) |
 | Art pipeline | `docs/ART_PIPELINE.md` |

@@ -1509,7 +1509,7 @@ Step A declared navigation on `ScreenDef.Nav` and wrote
 `UiAudit.CheckNavigable`. Steps B and C then found that no screen could
 use it and added a second, runtime path (`RuntimeNavWiring`) with its own
 copy of the prev/next math. Two implementations of one rule is what
-`docs/CODE_STANDARDS.md` section 10 forbids, so the two were collapsed
+`docs/CODE_STANDARDS.md` "Build the model" forbids, so the two were collapsed
 into one:
 
 **The decision: runtime wiring is the only path; the build-time

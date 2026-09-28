@@ -89,7 +89,7 @@ generalised: a status applied during the bearer's own turn does not age at that
 turn's end. It has two concrete users — a ward raised on the caster's turn, and
 a caster's self-inflicted Vulnerable (Court of Whispers, Ashen Reckoning's
 wording "through their next completed turn"). That is the two-use validation
-`docs/CODE_STANDARDS.md` §10 asks for.
+`docs/CODE_STANDARDS.md` "Build the model" asks for.
 
 **Alternative rejected:** author every new spell at N+1 and leave the clock
 alone. Cost: "duration" would mean one thing on the thirteen new rows and
@@ -274,7 +274,7 @@ independent of damage element (owner's rule). A plain attack is physical in code
 and authors nothing — there is no skill row for it. A content-build lint refuses
 any `DamageSingle`/`DamageAll` row that does not state `physicalMove`
 explicitly, with a vacuity guard asserting the lint saw at least the count of
-damage rows the catalogue holds (`docs/CODE_STANDARDS.md` §8). Non-damaging
+damage rows the catalogue holds (`.claude/rules/tests.md`). Non-damaging
 rows default false and need no authoring.
 
 **Alternative rejected:** derive it from `approach` (`close`/`lunge`/`charge`).
@@ -365,7 +365,7 @@ The reason the recommendation was made, kept here because it is also the reason
 the answer is safe to build on: there is no smaller *model-consistent* option.
 "New spells only" cannot be expressed as anything but a per-row flag saying which
 meaning of "duration" this row uses, which is precisely what
-`docs/CODE_STANDARDS.md` §10 forbids and what the baseline's §9 note flags as
+`docs/CODE_STANDARDS.md` "Build the model" forbids and what the baseline's §9 note flags as
 needing a decision rather than an assumption. The scope of the global change is
 nine authored numbers, one predicate rename (`IsSpentByTheTurn` →
 `DurationClock`), and moving five status types from the turn-start tick to the
@@ -1514,7 +1514,7 @@ expiry, failure behaviour, presentation, content row. Numbers marked
 ## 3. Test matrix
 
 One row per contract clause and per named failure risk. Tests pin literals and
-none recomputes a production formula (`docs/CODE_STANDARDS.md` §8). Existing
+none recomputes a production formula (`.claude/rules/tests.md`). Existing
 classes are named where a pin already exists; new methods go into the existing
 class for their area wherever one exists, because a test's area is the folder it
 sits in and every one of these is `Tests/EditMode/Combat/`.
@@ -1870,7 +1870,7 @@ Reckoning, Blackglass Spear.
 >   body, and the single-target door is a list of one.
 > - **The bot SKIPS a two-pick cast, explicitly.** A `FightAction` carries one
 >   `Target`; giving it a second field that exactly one skill in the game
->   would ever use is the hardcoded slot `docs/CODE_STANDARDS.md` section 10
+>   would ever use is the hardcoded slot `docs/CODE_STANDARDS.md` "Build the model"
 >   refuses. `FightAction.LegalActions` therefore drops any effect whose
 >   `SkillEffects.PicksRequired` is above one, with the reason written at the
 >   line. Skipped rather than offered-and-refused, which is milestone B's
@@ -2036,7 +2036,7 @@ owner's brief requires, and land as tests in this package.
 >   probe must return the same rows in the same order, or nothing is parsed),
 >   because a literal row count in a build refusal would fail the build for
 >   deleting a skill. The literal -- 23 damage rows -- is pinned in
->   `PhysicalMoveAuditTests`, which is where `docs/CODE_STANDARDS.md` section 8
+>   `PhysicalMoveAuditTests`, which is where `.claude/rules/tests.md`
 >   puts literals: it is a test-rules section.
 > - **`SkillEffect.Afflict` APPENDS behind `SwapAllies`.** D10 lists it first
 >   of the five; `Reclaim`, `Hasten` and `SwapAllies` landed in milestones B
@@ -2741,7 +2741,7 @@ during this pass. Line numbers are from the tree at `a016e0ba`.
 | The enemy roster and its authored abilities | `ContentData/enemies.json` | 16 enemies; bosses `forest_warden` and `hollow_choir`; nine authored abilities across five enemies |
 | `preview.ps1 -Spell` refuses seven effects | `docs/TESTING.md`, decision table | `Ward`, `Shatter`, three Gifts, `Provoke`, `RestorePartyMana` |
 | AUDIT #188 names the `TickReport` problem | `AUDIT.md:2556-2572` | and proposes the element-keyed shape |
-| `docs/CODE_STANDARDS.md` §8 and §10 | `docs/CODE_STANDARDS.md:355-395`, `:426-470` | literal pins, vacuity guards, two-use validation |
+| `.claude/rules/tests.md` and `docs/CODE_STANDARDS.md` "Build the model" | same | literal pins, vacuity guards, two-use validation |
 | Globality test for a spell | `docs/SPELL_DESIGN_STANDARD.md:73-99`, `:219-226` | all thirteen pass it: none needs Wool, a body part, a companion or a form |
 
 ### Where the baseline is wrong or silent

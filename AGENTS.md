@@ -60,7 +60,7 @@ Verifier reports must pin HEAD plus the uncommitted-file list, name the single
 gate run, and report pass/fail with failing tests and log path when applicable.
 Every worker report includes its history mode.
 
-Use the launch and completion checklists in `docs/WORKFLOW.md` §2.
+Use the brief shape in `docs/WORKFLOW.md` "Briefs".
 
 ## Repository safety and completion
 

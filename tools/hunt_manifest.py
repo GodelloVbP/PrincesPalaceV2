@@ -99,6 +99,12 @@ RULE_DOCS = (
     "docs/CODE_MAP.md",
     "docs/CONTENT_SCHEMA.md",
     "docs/ART_PIPELINE.md",
+    "docs/ARCHITECTURE.md",
+    "docs/TESTING.md",
+    ".claude/rules/ui.md",
+    ".claude/rules/tests.md",
+    ".claude/rules/tools.md",
+    ".claude/rules/content.md",
 )
 SCOPE.append(("doc", lambda p: p in RULE_DOCS))
 

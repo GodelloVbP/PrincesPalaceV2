@@ -599,7 +599,7 @@ provenance the same way every other recipe's do.
    `Processed/` file.
 3. Rebuild content and/or scenes as needed:
    `run_tests_parallel.ps1 -BuildContent -BuildScenes` — this is also what
-   syncs the regenerated `.meta`s back to main (see `docs/WORKFLOW.md` §9).
+   syncs the regenerated `.meta`s back to main (see `docs/WORKFLOW.md` "Commits").
 4. Commit the `.png` **and** its `.meta` together.
 5. After a TestRunner build, double-check `Art/` actually diffed back to
    main — `LoadSprite` flips a texture's importer settings and can generate
@@ -1047,7 +1047,7 @@ restore; the slicer refuses those ids outright. `actors` names combat actors
 whose stance stills predate recipes and cannot be regenerated from a recorded
 invocation. `HandAssembledArtTests` pins both by content hash so a clobber from
 any direction fails the suite, and refuses an actor that is in neither category
-or in both. See `docs/INCIDENTS.md`.
+or in both.
 
 
 ## 5c. Melee contact effects (`Resources/Vfx/{name}/f0..fN`)

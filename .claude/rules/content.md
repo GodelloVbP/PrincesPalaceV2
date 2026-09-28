@@ -21,3 +21,5 @@ Content is generated from `ContentData/*.json` by `ContentBuilder`
   Unity skips readonly fields and it round-trips as `default`. It is a plain
   mutable struct, written once by the resolver.
 - An id written into save data is never renamed once a save exists.
+- Every file `ContentInputHash` hashes counts its comments: any edit to one,
+  comment-only included, needs `-BuildContent` in the same commit.
