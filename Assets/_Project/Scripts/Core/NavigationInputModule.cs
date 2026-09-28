@@ -32,15 +32,13 @@ namespace PrincesPalace
         // remembering a context pushed by the one it replaced.
         public static NavContextStack Contexts { get; private set; }
 
-        // ---- the one pad-focus visual (hardware round 1, the owner's visual
-        // ---- findings; Core/FocusMarker.cs has the argument) -------------------
+        // ---- the one pad-focus visual (Core/FocusMarker.cs has the argument) -----
         //
         // THE SOURCE OF TRUTH FOR "WHAT HAS FOCUS" IS THIS CLASS, because it
         // is already the one place that settles the selection every frame
         // (ReselectIfOutsideDeclaredSet) and the one place that drives Fight's
-        // own focus model (ProcessFight). Every screen used to answer this
-        // question for itself with a halo of its own, three screens did not
-        // answer it at all, and no two of the answers looked alike.
+        // own focus model (ProcessFight). A per-screen halo would let every
+        // screen answer this question differently, or not at all.
         //
         // The marker itself is a scene root fixture SceneBuilder builds
         // beside this EventSystem (Core/FocusMarker.cs's own header argues
@@ -123,31 +121,31 @@ namespace PrincesPalace
         // before the module sees it -- never accumulates a consecutive move,
         // never arms the 0.5s repeat DELAY, and therefore repeats at the bare
         // 1/inputActionsPerSecond rate, ten selections a second, off a stick
-        // nobody is touching. That is the "almost random" the owner saw, and
-        // it is also why one deliberate flick could produce two Moves: hold
-        // the stick past 0.5s and the repeat delay expires mid-flick.
+        // nobody is touching -- which is also why one deliberate flick could
+        // produce two Moves: hold the stick past 0.5s and the repeat delay
+        // expires mid-flick.
         //
         // The rule here is the one the Fight branch already shipped: the
         // press has to return below MoveThreshold before another one counts.
         // COST, STATED RATHER THAN HIDDEN: a held stick no longer auto-
         // repeats at all. That is a real loss on a long list (the reward
         // track's rail, the dossier's pack) and it is reversible -- but
-        // predictable-and-slower beat unpredictable in the owner's own
-        // report, and one rule across both branches beats two.
+        // predictable-and-slower beats unpredictable, and one rule across
+        // both branches beats two.
         private bool _moveArmed = true;
         private bool _movePassesThisFrame;
 
-        // ProjectSettings/InputManager.asset's own two new button axes
-        // (plan phase 3, item 2): TabPrev binds Q and joystick button 4,
-        // TabNext binds E and joystick button 5 -- named constants so a
+        // ProjectSettings/InputManager.asset's own two button axes: TabPrev
+        // binds Q and joystick button 4, TabNext binds E and joystick
+        // button 5 -- named constants so a
         // future rebind touches one file rather than a string repeated at
         // every call site (ScriptedBaseInput's own test double included).
         private const string TabPrevButton = "TabPrev";
         private const string TabNextButton = "TabNext";
         private const string CharacterSelectButton = "Jump";
 
-        // THE OVERARCHING MENU'S OWN BUTTON -- Start on a pad, not B (the
-        // owner's 2026-09-19 call). InputManager.asset binds escape and
+        // THE OVERARCHING MENU'S OWN BUTTON -- Start on a pad, not B.
+        // InputManager.asset binds escape and
         // joystick button 7 to it. Escape is ALSO Cancel's positiveButton,
         // which is the whole reason the dispatch below spends a frame on one
         // of the two and never on both.
@@ -210,8 +208,7 @@ namespace PrincesPalace
                 EventSystem.current.SetSelectedGameObject(null);
             }
 
-            // CAPTURED BEFORE base.Process() RUNS -- phase 4 item 4's own
-            // mixed-input pass found that this is load-bearing, not
+            // CAPTURED BEFORE base.Process() RUNS: this is load-bearing, not
             // defensive. PointerInputModule.DeselectIfSelectionChanged nulls
             // the CURRENT selection the instant a click's `currentOverGo`
             // resolves to anything without an ISelectHandler ancestor
@@ -231,10 +228,8 @@ namespace PrincesPalace
 
             base.Process();
 
-            // Empty stack (no context registered anywhere -- e.g. Main Menu
-            // in phase 1): base.Process() alone, nothing else reads this
-            // frame's input. Plan section 3, last bullet of the "top is not
-            // Fight" branch.
+            // Empty stack (no context registered anywhere -- e.g. Main Menu):
+            // base.Process() alone, nothing else reads this frame's input.
             //
             // The marker still updates before returning. A screen with no
             // NavContext is still a screen a pad can move around -- Unity's
@@ -270,22 +265,21 @@ namespace PrincesPalace
             // closing the menu around the player.
             if (!systemMenuHandled && input.GetButtonDown(cancelButton)) topAtStart.RaiseCancel();
 
-            // THE SHOULDER SHORTCUT (INavSectionStrip) -- owner's 2026-09-19
-            // hardware-round call: LB/RB page sections/characters (dossier
-            // paging, StepCharacter on the talent screen), not tabs. Offered
-            // off the same topAtStart Cancel is -- a context with no
-            // section strip (INavSectionStrip) absorbs this silently
+            // THE SHOULDER SHORTCUT (INavSectionStrip): LB/RB page
+            // sections/characters (dossier paging, StepCharacter on the
+            // talent screen), not tabs. Offered off the same topAtStart
+            // Cancel is -- a context with no section strip
+            // (INavSectionStrip) absorbs this silently
             // (NavContext.RaiseSectionStep's own no-op). Read through
             // `input`, never UnityEngine.Input directly, same seam every
-            // other value this dispatcher reads goes through (plan section
-            // 2).
+            // other value this dispatcher reads goes through.
             if (input.GetButtonDown(TabPrevButton)) topAtStart.RaiseSectionStep(-1);
             else if (input.GetButtonDown(TabNextButton)) topAtStart.RaiseSectionStep(1);
 
-            // THE TRIGGER SHORTCUT (INavTabStrip) -- owner's 2026-09-19
-            // hardware-round call: LT/RT step the tab strip (system-menu
-            // tabs, talent constellations/paths), beside the shoulders and
-            // absorbed the same way by a context that declares no tab strip.
+            // THE TRIGGER SHORTCUT (INavTabStrip): LT/RT step the tab strip
+            // (system-menu tabs, talent constellations/paths), beside the
+            // shoulders and absorbed the same way by a context that
+            // declares no tab strip.
             //
             // Both edges are READ before either is spent, unlike the
             // shoulders' plain if/else: TriggerPressed re-arms as well as
@@ -300,9 +294,9 @@ namespace PrincesPalace
             else if (rightPulled) topAtStart.RaiseTabStep(1);
 
             // RE-READ HERE, deliberately -- this is not the same "capture
-            // once" rule Cancel-dispatch above follows, and conflating the
-            // two was a real bug phase 2's own SystemMenu work found. A
-            // Cancel that just POPPED topAtStart (SystemMenu closing back to
+            // once" rule Cancel-dispatch above follows: conflating the two
+            // is a real bug. A Cancel that just POPPED topAtStart (SystemMenu
+            // closing back to
             // the hub) still has a live NavContext instance sitting in
             // memory with its own Selectables/entry -- reselecting against
             // THAT stale instance would put its last-selected control right
@@ -690,9 +684,9 @@ namespace PrincesPalace
             if (Usable(current) && top.ContainsSelectable(current)) return;
 
             // PREFER WHAT WAS SELECTED A MOMENT AGO, if the SAME top context
-            // still declares it -- item 4's own mixed-input finding (see
-            // Process()'s own comment on `selectedBeforeDispatch`). This is
-            // deliberately narrower than "never let selection go stale":
+            // still declares it (see Process()'s own comment on
+            // `selectedBeforeDispatch`). This is deliberately narrower than
+            // "never let selection go stale":
             // `top.ContainsSelectable` is false for a node that belonged to
             // a context this frame just POPPED OUT FROM UNDER (Debug menu's
             // own Cancel-closes-and-reselects-the-gate case,
