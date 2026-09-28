@@ -17,17 +17,14 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- ComputeAttackDamage / ComputeSkillDamage: RAW, no mitigation --
         //
-        // Phase 1 of the balance redesign moved every defense term out of
-        // CombatMath and into DamagePipeline's single canonical equation
-        // (see its own header) — these two functions never read the target
-        // for anything but its type signature (kept for call-site
+        // Every defense term lives in DamagePipeline's single canonical
+        // equation (see its own header) — these two functions never read the
+        // target for anything but its type signature (kept for call-site
         // stability).
         //
-        // NO LONGER SCALED (fixed 2026-08-26): D1 always said
-        // CombatMath.DamageScale's x5 was deleted from these two entry
-        // points; two prior implementation passes left it in regardless.
-        // They now return Math.Max(1, ScaledAttack(...)) -- see
-        // ComputeAttackDamage's own header for the full story.
+        // NOT SCALED: CombatMath.DamageScale's x5 does not apply to these
+        // two entry points. They return Math.Max(1, ScaledAttack(...)) --
+        // see ComputeAttackDamage's own header for the full story.
 
         [Test]
         public void ComputeAttackDamage_IsUnaffectedByTheTargetsDefense()
@@ -275,12 +272,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(48, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
-        // PROPORTIONAL MITIGATION used to be a property of ComputeAttackDamage
-        // itself, back when it applied Mitigate internally. That step moved to
-        // DamagePipeline.AfterDefences (see DamagePipelineTests for the
-        // property test that replaces this one) — ComputeAttackDamage no
-        // longer reads the target for anything, which is exactly what this
-        // now pins instead.
+        // Mitigation lives in DamagePipeline.AfterDefences (see
+        // DamagePipelineTests for that property test) — ComputeAttackDamage
+        // does not read the target for anything, which is what this pins.
         [Test]
         public void ComputeAttackDamage_IsIndependentOfTheTargetsArmour()
         {

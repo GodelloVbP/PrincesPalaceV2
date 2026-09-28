@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.Tests
     // THE OVERSHOOT A LAYER OPENS AT, and the two things it must not do:
     // outlive its own window, or move a layer that authored none.
     //
-    // Owner, 2026-09-19: Cinderfault "should feel more like a POP". Halving the
+    // Cinderfault "feels more like a POP": halving the
     // cast buys the tempo; the punch is what makes the opening frame land
     // rather than merely arrive early.
     //

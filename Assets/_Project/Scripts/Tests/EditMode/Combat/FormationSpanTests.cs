@@ -7,13 +7,13 @@ namespace PrincesPalace.Domain.Tests
     // THE LINE A SPANNING LAYER LIES ON, pinned against the stage's own
     // endpoints.
     //
-    // WHY THIS EXISTS. Cinderfault's fault was drawn as an axis-aligned box
-    // across the enemy rank's horizontal extent, sitting on the rank's MEAN
-    // ground line. The enemy rank is not level and has not been since the depth
-    // line was re-derived: it runs (300, -218) -> (660, -125), so the fault
-    // opened 46 units below the back body's feet and 46 above the front one's,
-    // and read as a crack in a floor nobody was standing on. Owner, 2026-09-19:
-    // the line "should follow the mobs, who stand in a diagonal line".
+    // WHY THIS EXISTS. Cinderfault's fault must follow the mobs, who stand
+    // in a diagonal line, not be drawn as an axis-aligned box
+    // across the enemy rank's horizontal extent sitting on the rank's MEAN
+    // ground line. The enemy rank is not level: it runs (300, -218) ->
+    // (660, -125), so an axis-aligned box would open 46 units below the
+    // back body's feet and 46 above the front one's, and read as a crack in
+    // a floor nobody is standing on.
     //
     // EVERY EXPECTED NUMBER IS A LITERAL WITH ITS ARITHMETIC SPELLED OUT, never
     // recomputed by calling the thing under test (CLAUDE.md gotcha 5). The

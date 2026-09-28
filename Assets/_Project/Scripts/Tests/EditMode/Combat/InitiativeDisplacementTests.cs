@@ -11,11 +11,9 @@ namespace PrincesPalace.Domain.Tests
 {
     // INITIATIVE DISPLACEMENT (docs/PLAN_SPELL_EXPANSION.md section 1.9).
     //
-    // WRITTEN BEFORE THE OPERATION, which the owner's brief asks for by name
-    // and which is the reason the four worked examples in 1.9 exist at all:
-    // a scheduler rule argued out on paper and then implemented is a rule
-    // with two independent statements of itself, and the test is the one
-    // that fails when the code drifts.
+    // A scheduler rule argued out on paper (the four worked examples in
+    // 1.9) and then implemented is a rule with two independent statements
+    // of itself, and this test is the one that fails when the code drifts.
     //
     // HOW A CHARGE IS SET HERE, since nothing on TurnOrder writes one
     // directly. AddCombatant seeds Charge from `initiative` ONCE THE ORDER

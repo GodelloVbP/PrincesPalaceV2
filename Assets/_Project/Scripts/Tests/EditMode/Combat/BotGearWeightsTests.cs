@@ -114,8 +114,8 @@ namespace PrincesPalace.Domain.Tests
 
         // The fallback is not dead code. RunView.OfferScores is empty whenever
         // the driver had no live save to score against, and a length mismatch
-        // would mean the two lists had drifted -- both have to land back on the
-        // tier/plus read this method used to be outright.
+        // would mean the two lists had drifted -- both have to land back on
+        // a tier/plus read.
         [Test]
         public void AnUnscoredOfferFallsBackToTierThenPlus()
         {

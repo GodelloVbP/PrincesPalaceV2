@@ -5,8 +5,8 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.Domain.Tests
 {
     // THE AIR A CALLED STRIKE AMASSES IN, AND THE TURN THAT POINTS IT AT ITS
-    // TARGET. Owner, 2026-09-23: Winter's Rebuke "should form and amass in the
-    // air around the middle, then fire itself diagonally at the mob".
+    // TARGET. Winter's Rebuke "forms and amasses in the
+    // air around the middle, then fires itself diagonally at the mob".
     //
     // Literals with their arithmetic spelled out (CLAUDE.md gotcha 5). The rat
     // body is TargetBodyTests' lone front-rank rat: left 132.8304, right

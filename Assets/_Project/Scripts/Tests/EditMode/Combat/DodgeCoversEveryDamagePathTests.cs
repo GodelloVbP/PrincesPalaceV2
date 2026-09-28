@@ -24,9 +24,9 @@ namespace PrincesPalace.Domain.Tests
     //   4. FightSession.Skills.cs ResolveDamageInstances  (a fixed-packet spell)
     //   5. FightSession.Enemies.cs ResolveEnemyAction      (an enemy's real swing)
     //
-    // ExecuteSkillInner (the free basic Skill action every character used to
-    // have regardless of what they had learned) was removed with BasicSpell
-    // (docs/PLAN_SHOP.md Gate 4) -- this file's old path 2 proof went with it.
+    // There is no free basic Skill action every character can use
+    // regardless of what they have learned (see BasicSpell,
+    // docs/PLAN_SHOP.md Gate 4), so no such path needs a proof here.
     //
     // Everything that does NOT reach AfterDefences at all -- splash/kill-
     // splash (SplashOntoNeighbours), Shatter, and a Poison DoT tick -- gets

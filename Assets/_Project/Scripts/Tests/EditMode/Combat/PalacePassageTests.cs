@@ -250,13 +250,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASoloShawnPassesToAnEmptySeat_AndKeepsHisTurn()
         {
-            // REVERSED BY THE OWNER (PLAN_BELLWETHER_KIT 1.2, M3). This was
-            // ASoloPartyIsRefusedTheCast: 1.12's empty case, "a party of one
-            // has no legal second pick". Since field seats the second pick is
-            // a SEAT, and a lone Shawn has two empty ones -- so the cast that
-            // used to be refused is now the front-to-rear step the Bell's
-            // knell asks for. The two-ally form alone is still refused, as
-            // before: a list of one names no destination.
+            // With field seats (PLAN_BELLWETHER_KIT 1.2, M3) the second pick
+            // is a SEAT, and a lone Shawn has two empty ones -- so the cast
+            // is the front-to-rear step the Bell's knell asks for. The
+            // two-ally form alone is still refused: a list of one names no
+            // destination.
             var lone = Member("Lone", 30);
             var foe = new CombatantState("Foe", false, 1000, 10, 1, 1);
             var kits = new List<PlayerKit>
@@ -310,10 +308,10 @@ namespace PrincesPalace.Domain.Tests
             // THE AUTHORED LAYERS, OR NOTHING -- palace_passage's real
             // skills.json entry has a two-layer "target-centre" VFX
             // (ritual sprite + settle emitter, both keyed to
-            // "Spells/palace_passage"/"..._particles"), but ResolveSwapAllies
-            // used to open the beat and pose the caster without ever calling
-            // RecordSpellPresentation, so that authored VFX never reached the
-            // beat and the cast played with nothing on screen. Every other
+            // "Spells/palace_passage"/"..._particles"), and ResolveSwapAllies
+            // has to call RecordSpellPresentation or that authored VFX never
+            // reaches the beat and the cast plays with nothing on screen.
+            // Every other
             // resolver (HealSingle, BuffParty, HealParty, ...) calls
             // RecordSpellPresentation right after BeginBeat; this pins the
             // swap resolver to the same contract with a literal path, the way

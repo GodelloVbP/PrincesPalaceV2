@@ -491,10 +491,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("WhenOffered", ShopNodePreference.Name(ShopNodeMode.WhenOffered));
         }
 
-        // A TYPO USED TO SILENTLY RUN THE BASELINE: any string other than
-        // blank/WhenOffered/Never used to fall through to WhenOffered, so
-        // "-botShopPolicy Neverr" ran the opposite mode from the one asked
-        // for with no error at all. It must refuse instead, the same way
+        // A TYPO MUST NOT SILENTLY RUN THE BASELINE: any string other than
+        // blank/WhenOffered/Never must not fall through to WhenOffered, or
+        // "-botShopPolicy Neverr" would run the opposite mode from the one
+        // asked for with no error at all. It must refuse instead, the same way
         // -botArchetypes/-botProfiles already refuse an unknown name.
         [Test]
         public void AnUnrecognizedNameIsRefused()
