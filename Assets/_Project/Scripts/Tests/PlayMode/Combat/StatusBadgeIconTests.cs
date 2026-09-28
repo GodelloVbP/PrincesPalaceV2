@@ -17,18 +17,8 @@ namespace PrincesPalace.PlayModeTests
     // docs/STATUS_ICON_PROMPTS.md, the frozen art contract they were
     // generated from.
     //
-    // WIDENED from two entries (Chilled, Rooted) to all fourteen in phase 2
-    // of PLAN_STATUS_EFFECT_UI.md (section 10), in the same commit that
-    // landed the art: the plan is explicit that this test sits red between
-    // the widening and the art landing, never skipped or [Ignore]d.
-    //
-    // The negative half this file used to run
-    // (EveryOtherStatusStillFallsBackToTextWithNoSpriteFound, asserting the
-    // other statuses must NOT load a sprite) is deleted outright rather than
-    // ignored: PLAN_STATUS_EFFECT_UI.md commissions exactly that art, so a
-    // test forbidding it would have to go the moment phase 2 lands it
-    // anyway, and there is no value in keeping it green for a commit or two
-    // in between.
+    // All fourteen presentations are asserted to carry real art; none is
+    // asserted to fall back to text.
     //
     // No scene load anywhere in this file: Resources.Load<Sprite> needs no
     // FightController, no session, nothing running -- unlike
@@ -126,11 +116,8 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // StatusHud.RowFor is PUBLIC -- unlike the FightHudModel.StatusBadge
-        // switch this file used to reach through reflection (deleted;
-        // PLAN_STATUS_EFFECT_UI.md section 4/11 merged StatusBadge and
-        // PillCode into the one StatusHud table), so these two read the row
-        // straight off StatusHud with no reflection at all.
+        // StatusHud.RowFor is PUBLIC, so these two read the row straight
+        // off StatusHud with no reflection at all.
         [Test]
         public void ChilledTooltip_ReadsAsAKeywordPhrase_NotASentence()
         {

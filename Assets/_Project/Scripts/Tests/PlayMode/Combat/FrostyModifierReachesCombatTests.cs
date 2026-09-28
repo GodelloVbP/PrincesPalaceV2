@@ -11,18 +11,15 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // PHASE D2, end to end: the real "frostbite" modifiers.json entry's
+    // End to end: the real "frostbite" modifiers.json entry's
     // ChilledOnHitChancePercent rider reaches a real fight and actually
     // chills a real target -- not just a number sitting unread on
     // ModifierEffectSet.
     //
-    // POST-AFFIX-SPLIT: Ice's family used to be one bundled "frosty" id
-    // (ElementalDamageOnHitPercent + TypedResistanceFlat + ChilledOnHitChancePercent,
-    // all three at once). A designer pass split it into three single-effect
-    // ids -- "frosty" (damage), "permafrost" (resistance), "frostbite" (this
-    // file's chill proc) -- so this file's own equip helper now reaches for
-    // "frostbite" specifically, the id that actually carries
-    // ChilledOnHitChancePercent today.
+    // Ice's family is three single-effect ids -- "frosty" (damage),
+    // "permafrost" (resistance), "frostbite" (this file's chill proc) --
+    // so this file's equip helper reaches for "frostbite" specifically, the
+    // id that carries ChilledOnHitChancePercent.
     //
     // Mirrors SwiftModifierReachesCombatTests/ItemModifierScalingReachesCombatTests'
     // own real-content pattern: equip a REAL item with a REAL id at a known
@@ -72,8 +69,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // All three of Ice's split affixes at once -- for the one test below
-        // that proves they can still coexist on one character, the way one
-        // bundled "frosty" roll used to grant all three at once.
+        // that proves they can still coexist on one character.
         private static Character FreshCharacterWearingWholeIceFamily(ItemDefinition item, RiftTier riftTier)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
@@ -231,11 +227,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
 
             session.DamageVarianceRange = 0f;
-            // THE FOE OUTLASTS THE SWING BY FIXTURE, not by luck of content
-            // (AUDIT #46). This used to Assert.Inconclusive whenever the
-            // picked enemy died to one hit, which switched the rider check off
-            // the moment gear or enemy numbers moved. Health is not what is
-            // under test; a live target for the on-hit rider is.
+            // The foe outlasts the swing by fixture, not by luck of
+            // content. Health is not what is under test; a live target for
+            // the on-hit rider is.
             foe.MaxHealth = DurableFoeHealth;
             foe.CurrentHealth = DurableFoeHealth;
             session.Begin();

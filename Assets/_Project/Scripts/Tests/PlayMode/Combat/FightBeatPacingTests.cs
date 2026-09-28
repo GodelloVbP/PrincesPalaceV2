@@ -19,11 +19,9 @@ namespace PrincesPalace.PlayModeTests
     // frame of the swing ran straight into the return to idle and the next
     // beat.
     //
-    // Nothing could see it. "No pause" and "a pause of zero" are the same code
-    // path, the beat ordering tests still passed because the ORDER was right,
-    // and the only symptom was that the fight felt fast and twitchy. The sheets
-    // are gone; the same subtraction still runs, and the hit-stop now takes out
-    // of it what the frames used to.
+    // "No pause" and "a pause of zero" are the same code path, so the beat
+    // ordering tests alone cannot see this: they pass because the ORDER is
+    // right. The hit-stop is what takes the subtraction out now.
     //
     // Most of these are plain [Test]s rather than [UnityTest]s: the arithmetic
     // is the thing that was wrong, and it needs no scene to state.
@@ -62,14 +60,13 @@ namespace PrincesPalace.PlayModeTests
         // fixing every frame at SampleSeconds so the number cannot depend on
         // how fast the machine produces frames.
         //
-        // It used to read Time.realtimeSinceStartup, and that failed ~1 run in
-        // 9 under a loaded sharded gate (0.170s against the 0.175s floor).
-        // Not a slow wait: WaitForSeconds counts from the Time.time of the
-        // frame it started in, which is stamped at the TOP of that frame, and
-        // the real-time start was read partway through it, after however much
-        // of the frame the machine had already spent. Under load that gap
-        // grew past the slop and the real interval came out SHORTER than the
-        // game-time wait it was measuring.
+        // Time.realtimeSinceStartup is not safe here: WaitForSeconds counts
+        // from the Time.time of the frame it started in, which is stamped
+        // at the TOP of that frame, while a real-time start is read partway
+        // through it, after however much of the frame the machine had
+        // already spent. Under load that gap can grow past the slop and
+        // make the real interval come out SHORTER than the game-time wait
+        // it is measuring.
         private const float SampleSeconds = 0.01f;
 
         // Half a sample: WaitForSeconds resolves on the first frame whose
@@ -204,7 +201,7 @@ namespace PrincesPalace.PlayModeTests
                 "the stance outran the budget");
         }
 
-        // ---- how long a struck figure reels (owner 2026-09-19) ------------------
+        // ---- how long a struck figure reels ------------------------------------
         //
         // "Reeling happens way too fast: it should happen 4x as slow." The
         // reel is three legs: StageActorAnimator's 0.055s push out, the dwell
@@ -215,10 +212,10 @@ namespace PrincesPalace.PlayModeTests
         // were, because "too fast" is a complaint about velocity and the
         // spring back is the leg the eye reads as the flinch easing off.
         //
-        // PINNED AS LITERALS, for the reason SwingSeconds above is: derived
+        // Pinned as literals, for the reason SwingSeconds above is: derived
         // from the beat budget and the slowdown factor, these would agree
-        // with whatever those became, and what the owner asked for was two
-        // lengths.
+        // with whatever those became, when what was asked for was two
+        // literal lengths.
 
         private const float ReelPushOutSeconds = 0.055f;   // StageActorAnimator.LungeSeconds
         private const float ReelDwellSeconds = 0.81f;      // was 0.2025
@@ -260,11 +257,10 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void TheWholeReelIsFourTimesTheOneTheOwnerCalledTooFast()
         {
-            // The number the owner actually asked about: the reel end to end.
-            // The push out is deliberately not part of the multiplication, so
-            // this is 4x the old 0.4175s LESS the 3x the push out did not get
-            // -- 1.505 rather than 1.67, and the 0.165s difference is the
-            // impact frame staying exactly where it was.
+            // The reel end to end. The push out is deliberately not part of
+            // the multiplication, so the 1.505 total is short of a plain
+            // 4x by the 3x the push out did not get -- the 0.165s
+            // difference is the impact frame staying exactly where it was.
             float whole = ReelPushOutSeconds + FightBeatPlayer.RecoilDwellSeconds
                           + FightBeatPlayer.RecoilReturnSeconds;
 

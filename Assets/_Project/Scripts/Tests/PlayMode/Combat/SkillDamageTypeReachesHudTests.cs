@@ -23,9 +23,8 @@ namespace PrincesPalace.PlayModeTests
             var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == "sheep");
             Assert.IsNotNull(definition, "fixture: content still authors Shawn under id \"sheep\"");
 
-            // COLLECTED, not merely reached. Progression v2 phase 4 removed
-            // the unlockLevel ladder: everything on Shawn's strip beyond
-            // Shear now arrives from his reward track, so a level-20
+            // Collected, not merely reached: everything on Shawn's strip
+            // beyond Shear arrives from his reward track, so a level-20
             // character who has collected nothing has a one-skill strip and
             // the non-damaging branch below would never be exercised.
             var character = new Character(definition.id) { level = 20, claimedTrackLevel = 20 };

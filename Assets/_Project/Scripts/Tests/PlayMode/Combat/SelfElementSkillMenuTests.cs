@@ -15,13 +15,13 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // A Self/Party SKILL THAT ALSO AUTHORS elements[] used to be uncastable
-    // from the menu: OnRowPressed's Self/Party instant-resolve ran BEFORE the
-    // HasElementChoice check, so the row press cast on the spot with whatever
-    // element ResolvedSkill happened to default to, and the element list this
-    // skill authored never appeared. FightAction.LegalActions enumerated every
-    // element for the bot regardless, so a player and the bot disagreed about
-    // what the same skill could do.
+    // A Self/Party skill that also authors elements[] must offer the
+    // element choice from the menu: OnRowPressed's HasElementChoice check
+    // runs before the Self/Party instant-resolve, so the row press opens
+    // the element list rather than casting on the spot with whatever
+    // element ResolvedSkill would default to. FightAction.LegalActions
+    // enumerates every element for the bot regardless, so a player and the
+    // bot must agree about what the same skill can do.
     //
     // No such skill exists in real content today (every element-choice skill
     // in the catalogue targets SingleEnemy), so this is a fixture -- but the

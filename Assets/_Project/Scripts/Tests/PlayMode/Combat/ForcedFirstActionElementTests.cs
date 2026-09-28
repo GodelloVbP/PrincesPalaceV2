@@ -58,11 +58,9 @@ namespace PrincesPalace.PlayModeTests
             yield return CastAndAssert(element: null, expected: null);
         }
 
-        // AND IT PRESSES THE ONE THAT WAS ASKED FOR. Reaching the plate proves
-        // the forced path got through the element depth; it says nothing about
-        // WHICH element it pressed, and "it pressed one" is exactly what was
-        // true before AUDIT #107 and exactly what made photographing Wind
-        // impossible.
+        // And it presses the one that was asked for. Reaching the plate
+        // proves the forced path got through the element depth; it says
+        // nothing about WHICH element it pressed.
         //
         // THE LAST ELEMENT IN AUTHORED ORDER, deliberately: the default rule is
         // "the first that draws", so an ask that happens to agree with the
@@ -85,10 +83,7 @@ namespace PrincesPalace.PlayModeTests
             yield return CastAndAssert(element: asked, expected: asked);
         }
 
-        // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46).
-        // Both callers used to Ignore themselves here, so renaming or
-        // de-elementing the pinned skill switched this whole class off while
-        // the run stayed green.
+        // A content precondition, stated rather than hoped for.
         private static void AssertElementSkillStillOffersAChoice(SkillDefinition skill)
         {
             Assert.IsNotNull(skill,

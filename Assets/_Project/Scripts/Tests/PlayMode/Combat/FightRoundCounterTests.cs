@@ -98,8 +98,7 @@ namespace PrincesPalace.PlayModeTests
             // plays whatever Begin() queued -- the toll's own sound/overlay
             // step included -- before input opens (Core/FightController.cs).
             // A click while that is still playing is silently swallowed
-            // (CanAct requires !IsBusy), which used to never matter here
-            // because Bind never played anything of its own.
+            // (CanAct requires !IsBusy).
             float openDeadline = Time.realtimeSinceStartup + 10f;
             while (_fight.IsBusy && Time.realtimeSinceStartup < openDeadline) yield return null;
             Assert.IsFalse(_fight.IsBusy, "fixture: Bind's own opening playback never finished, so input never opened");

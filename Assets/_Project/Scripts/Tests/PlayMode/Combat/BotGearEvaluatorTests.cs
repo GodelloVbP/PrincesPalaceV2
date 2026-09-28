@@ -150,8 +150,7 @@ namespace PrincesPalace.PlayModeTests
             var weapons = ContentDatabase.Items
                 .Where(i => i != null && i.IsEquippable && i.kind == ItemKind.Weapon)
                 .Take(6).ToList();
-            // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46):
-            // this used to Ignore itself, which reads as green in a run.
+            // A content precondition, stated rather than hoped for.
             Assert.GreaterOrEqual(weapons.Count, 2,
                 "content no longer has two equippable weapons, so there is nothing for the archetypes to " +
                 "choose between -- this test has stopped covering the evaluator; give it a fixture bag");
@@ -261,11 +260,9 @@ namespace PrincesPalace.PlayModeTests
                     $"the preset kindled '{id}', which talents.json does not have");
             }
 
-            // THE GATE, NOT THE GRANT. This assertion used to be green for the
-            // wrong reason: ProfilePresets.EmbersFor clamped what it handed
-            // over to the cap, so the spend could not exceed what nothing was
-            // checking. The clamp is gone and the refusal
-            // (TalentPage.Refusal.BudgetSpent) is what holds this line now.
+            // The gate, not the grant: the refusal
+            // (TalentPage.Refusal.BudgetSpent) is what holds this line,
+            // not a clamp on what ProfilePresets.EmbersFor hands over.
             //
             // It still cannot FAIL on today's content -- three live bosses is a
             // budget of 3 against a cap of 30, so the preset never approaches
