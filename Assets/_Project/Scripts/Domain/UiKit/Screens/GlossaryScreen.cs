@@ -14,20 +14,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // since the hub was built.
     public sealed class GlossaryScreen
     {
-        // Silver, 2:1 KIT CONTAINER (owner's HQ-kit instruction,
-        // 2026-09-07), replacing a flat #241736F5 panel authored at
-        // 1700x900. TwoByOne (aspect 2.0) is the nearest kit ratio to that
-        // working shape (1.89, a 5.5% miss -- closer than ThreeByTwo's 1.5,
-        // which misses by 26%), but even TwoByOne needs the box GROWN to
-        // pass ValidateContainerAspect at a size that still contains every
-        // child once TwoByOne's own inset (3.5% each side, 5.5% top/bottom)
-        // is carved out of it: CloseButton's 840px right edge and the
+        // Silver, 2:1 KIT CONTAINER: TwoByOne needs the box GROWN to pass
+        // ValidateContainerAspect at a size that still contains every child
+        // once TwoByOne's own inset (3.5% each side, 5.5% top/bottom) is
+        // carved out of it: CloseButton's 840px right edge and the
         // title/pager rows' ~417px top/bottom edges are the two extremes
         // that set the floor. 945 clears both with room to spare (content
         // half-width 872, half-height 420) and keeps the frame inside the
         // +-960/+-540 safe area every UiFrames.All frame guarantees at
         // minimum -- PanelWidth/PanelHeight derive from it rather than
-        // restating the two numbers this replaces.
+        // restating the two numbers.
         private static readonly UiVec FrameSize = Ui.ContainerSizeForHeight(ContainerRatio.TwoByOne, 945f);
         public static float PanelWidth => FrameSize.X;
         public static float PanelHeight => FrameSize.Y;
@@ -118,23 +114,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ---- the plate ---------------------------------------------------
             //
-            // Silver, 3:4 KIT CONTAINER (owner's HQ-kit instruction,
-            // 2026-09-07), sized exactly on ThreeByFour rather than the flat
-            // panel's old 660x780 (aspect 0.846, 12.8% off 0.75 -- more than
-            // ValidateContainerAspect allows). Width holds at 660
-            // (ContainerSizeForHeight keeps the old 780 and derives 585 --
-            // narrower, not wider, so this container's own footprint SHRINKS
-            // inside GlossaryFrame rather than pushing that frame's resize
-            // further). The kit's own content inset (6.9% each side) then
-            // leaves 504px of usable width where the flat panel had all 660,
-            // so DetailName/Meta/Body/LockedBy are re-solved to 480 (was
-            // 600) -- narrower text, same font size, comfortably inside.
+            // Silver, 3:4 KIT CONTAINER, sized exactly on ThreeByFour:
+            // width holds at 660, height at 780 (ContainerSizeForHeight
+            // derives 585 -- narrower, so this container's own footprint
+            // SHRINKS inside GlossaryFrame rather than pushing that frame's
+            // resize further). The kit's own content inset (6.9% each side)
+            // leaves 504px of usable width, so DetailName/Meta/Body/LockedBy
+            // are solved to 480 -- narrower text, same font size,
+            // comfortably inside.
             //
-            // Every child here is now inside the Container's own
+            // Every child here is inside the Container's own
             // ContainerContent, so its coordinates are LOCAL TO THE PLATE
-            // (0-centred) rather than offset by PlateX the way the flat
-            // panel's siblings used to be -- PlateX now names only where the
-            // plate itself sits in the frame.
+            // (0-centred) rather than offset by PlateX -- PlateX names only
+            // where the plate itself sits in the frame.
             var detailPlateSize = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 780f);
             const float DetailContentWidth = 480f;
 

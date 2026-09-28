@@ -14,14 +14,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // difference in what they cost: leaving the game is undone by starting it
     // again, and a descent thrown away is not.
     //
-    // BUTTONS WEAR THE KIT'S OWN PLATES now (owner's HQ-kit instruction,
-    // 2026-09-07), superseding the "chromeless over a drawn plate" call this
-    // comment used to make: the shared button sprite used to be authored for
-    // a 220px button and stretch Simple, so a 520px one would have smeared it
-    // and the menu drew its own flat plates instead. The kit's regenerated
-    // art (ButtonPlateArt) is delivered at several true nominal shapes now,
-    // so ExitTitle/ExitQuit size to whichever one fits their 720px width
-    // (ExitsLayout.ExitHeight) instead of drawing a bespoke rect.
+    // BUTTONS WEAR THE KIT'S OWN PLATES: ButtonPlateArt is delivered at
+    // several true nominal shapes, so ExitTitle/ExitQuit size to whichever
+    // one fits their 720px width (ExitsLayout.ExitHeight) instead of
+    // drawing a bespoke rect.
     public sealed class ExitsScreen
     {
         private const string Hover = FightHudPalette.HoverTint;
@@ -35,8 +31,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The wash that crosses the hold. Deliberately not the rim's colour:
         // it passes under the label for 1.2 seconds and the label has to
-        // stay readable the whole way. The track it used to run across is
-        // gone -- the Crimson kit plate reads as the track now.
+        // stay readable the whole way. The Crimson kit plate reads as the
+        // track it runs across.
         private const string HoldFill = "#E0786E4D";
 
         public UiNode Root;
@@ -101,10 +97,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             children.Add(BuildAbandon(screen));
 
-            // BARE, not a kit container (owner's call, 2026-09-07 -- every
-            // frame inside the system menu read as ugly). This pane sits on
-            // the shared SystemMenuFill with no ground of its own, same as
-            // the dossier always did.
+            // BARE, not a kit container. This pane sits on the shared
+            // SystemMenuFill with no ground of its own, same as the
+            // dossier.
             var ground = Ui.SystemMenuPane("ExitsPane", "ExitsPaneContent",
                 new UiVec(ExitsLayout.PaneWidth, ExitsLayout.PaneHeight), children.ToArray());
 
@@ -130,15 +125,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var button = Ui.Button($"Exit{key}", label, size, 17, Place.At(0f, buttonY))
                 .Themed(ButtonTheme.Silver);
 
-            // A WASH, not a scale, for the same reason it always was: scaling
-            // the button would grow its label and leave the plate behind
-            // standing still. DECLARED AFTER the button now (it used to sit
-            // under a chromeless button's own drawn plate) so it draws ON TOP
-            // of the kit plate -- Themed()'s own Glow already answers "does
-            // this button react to hover" on the plate itself, so this stays
-            // only for the same wash the design still asks for on top of it,
-            // and drawing it behind the new opaque plate would have hidden it
-            // completely.
+            // A WASH, not a scale: scaling the button would grow its label
+            // and leave the plate behind standing still. DECLARED AFTER the
+            // button so it draws ON TOP of the kit plate -- Themed()'s own
+            // Glow already answers "does this button react to hover" on the
+            // plate itself, so this stays only for the wash the design asks
+            // for on top of it; drawing it behind the opaque plate would
+            // hide it completely.
             var hover = Ui.Solid($"Exit{key}Hover", Hover, size, Place.At(0f, buttonY))
                 .Inactive()
                 .AsDecor();
@@ -188,10 +181,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var holdSize = new UiVec(ExitsLayout.HoldWidth, ExitsLayout.HoldHeight);
 
-            // CRIMSON THEMED PLATE now (owner's HQ-kit instruction,
-            // 2026-09-07), replacing the flat track Solid this used to draw
-            // under NoChrome -- the plate itself reads as the track, so only
-            // the progress fill survives as a child, clipped to the plate's
+            // CRIMSON THEMED PLATE: the plate itself reads as the track, so
+            // only the progress fill survives as a child, clipped to the plate's
             // own measured paint exactly as MainMenuScreen.
             // ResetConfirmYesButton's identical hold already does (see that
             // screen's own comment for the clip/fill mechanism this copies).
