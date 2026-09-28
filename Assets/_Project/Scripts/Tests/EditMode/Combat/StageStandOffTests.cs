@@ -9,10 +9,8 @@ namespace PrincesPalace.Domain.Tests
 {
     // WHERE AN ATTACKER STOPS, pinned with literal expected values worked out
     // by hand from the real art rather than by re-running TravelTo's own
-    // arithmetic (CLAUDE.md gotcha 5). The numbers below are the ones the
-    // owner's two complaints are actually about, so a regression that
-    // re-introduces either of them fails here rather than in a screenshot
-    // somebody has to look at.
+    // arithmetic (CLAUDE.md gotcha 5), so a stopping-distance regression
+    // fails here rather than in a screenshot somebody has to look at.
     //
     // The art, measured off the committed PNGs, about each canvas's own
     // centre, in canvas pixels. TIGHT is the outermost opaque pixel (Unity's
@@ -33,10 +31,11 @@ namespace PrincesPalace.Domain.Tests
     // Drawn mirrored (every enemy is), those last two become -339..130 /
     // -280..83 and -212..46 / -204..37.
     //
-    // THE ARITHMETIC BELOW READS THE MASS PAIR, which is the 2026-09-15
-    // change: the beetle's horn trails 58 canvas pixels past its body and
-    // Bjorn used to stop 12px short of the tip of it. StageStandOff's own
-    // header argues the rule; OpaqueSpan.MassFraction argues the threshold.
+    // THE ARITHMETIC BELOW READS THE MASS PAIR, not the tight one: the
+    // beetle's horn trails 58 canvas pixels past its body, and stopping at
+    // the tight bound would put the attacker short of the tip of it.
+    // StageStandOff's own header argues the rule; OpaqueSpan.MassFraction
+    // argues the threshold.
     //
     // The stage, at three slots (FightStageAnchors / StageLayout):
     //
@@ -45,12 +44,10 @@ namespace PrincesPalace.Domain.Tests
     //   party slot 1   x -565   scale 0.6688
     //   party slot 2   x -810   scale 0.6232
     //
-    // The three party marks widened from -360/-540/-720 on 2026-09-09 (see
-    // FightStageAnchors.PartyNearX). Only the DISTANCES below moved with
-    // them: the arrival point is derived from the target and the attacker's
-    // own reach, so it is the same three numbers it was, which is the
-    // property TheArrivalPointBarelyMovesWithTheSlotYouStartedIn exists to
-    // state and the reason this re-pin was mechanical.
+    // The arrival point is derived from the target and the attacker's own
+    // reach (see FightStageAnchors.PartyNearX), not the slot's own x, which
+    // is the property TheArrivalPointBarelyMovesWithTheSlotYouStartedIn
+    // exists to state.
     public class StageStandOffTests
     {
         private static readonly OpaqueSpan BearSlam = new OpaqueSpan(-209f, 237f, -172f, 200f);
@@ -81,7 +78,7 @@ namespace PrincesPalace.Domain.Tests
         // The beetle faces left, so its outermost pixel is the horn tip at
         // 300 - 339*0.7144 = 57.8184 and its BODY starts further right, at
         // 300 - 280*0.7144 = 99.968. The hammer tip lands past both: 56.58px
-        // past the horn it used to stop in front of, and 14.43px inside the
+        // past the horn, and 14.43px inside the
         // body -- which is 37 canvas pixels of hammer beyond the hammer's own
         // mass edge, less the 12px the two bodies keep between them.
         [Test]
@@ -158,9 +155,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-36.6720f, -810f + back.X, 0.001f);
         }
 
-        // AND IT CLIMBS. A back-rank attacker used to swing from its own row,
-        // level with the target's head; the stand-off lands on the target's
-        // ground line.
+        // AND IT CLIMBS: a back-rank attacker's stand-off lands on the
+        // target's ground line, not level with the target's head at the
+        // attacker's own row.
         [Test]
         public void AttackingOutOfTheBackRankStepsDownToTheTargetsGroundLine()
         {

@@ -41,10 +41,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASoloPartyCanStepBackButNotForwardFromTheFront()
         {
-            // Field seats (PLAN_BELLWETHER_KIT 1.1, owner 2026-09-28): the
-            // empty middle is a legal step in every fight. This case used to
-            // pin "a solo party can move neither way"; FieldSeatTests walks
-            // the whole line.
+            // Field seats (PLAN_BELLWETHER_KIT 1.1): the
+            // empty middle is a legal step in every fight. FieldSeatTests
+            // walks the whole line.
             var lone = Member("Lone", 10);
             var session = Fight(lone);
 

@@ -54,7 +54,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(15, FallingOffStacks.Magnitude(target, Key, 3, 15), "5 stacks x 3 = 15, at the cap");
         }
 
-        // THE EXAMPLE THE MECHANIC WAS SPECIFIED AGAINST: three hits three
+        // THE CANONICAL EXAMPLE: three hits three
         // turns apart give three stacks; a turn with no hit ages the oldest
         // out (2 remain); a hit landing before the next ageing step brings
         // it back to three, because the two survivors have not both reached

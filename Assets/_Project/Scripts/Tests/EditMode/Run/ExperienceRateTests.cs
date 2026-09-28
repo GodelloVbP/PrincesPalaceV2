@@ -10,8 +10,7 @@ namespace PrincesPalace.Domain.Tests
     // WHAT A FIGHT PAYS IN EXPERIENCE, at the four depths the progression v2
     // model is written against.
     //
-    // Phase 2 of docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §7: gold
-    // keeps the health curve (75 permille a step) and experience moves to its
+    // Gold keeps the health curve (75 permille a step) and experience has its
     // own, much flatter 25. The literals below are the model's own figures
     // (docs/handoffs/progression_v2/xp_model.md Part A/B, recomputed at 25
     // permille), written down rather than recomputed here -- CLAUDE.md gotcha
@@ -81,9 +80,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(DifficultyCurve.ScaleHealth(raw, step), DifficultyCurve.ScaleReward(raw, step));
         }
 
-        // THE POINT OF THE SPLIT, in one number: a step-80 fight used to pay
-        // 325x a step-0 one in experience and now pays 7.2x. The old figure
-        // is what made a hundred-level track worth under four deep runs.
+        // THE POINT OF THE SPLIT, in one number: a step-80 fight pays 7.2x a
+        // step-0 one in experience, not the 325x the shared health/reward
+        // curve would give it.
         [Test]
         public void DepthNoLongerDominatesTheExperienceTotal()
         {

@@ -16,8 +16,7 @@ namespace PrincesPalace.Domain.Tests
             return new CombatantState("Test", true, maxHealth, 10, 5, 5);
         }
 
-        // D5: TickReport carries typed rows rather than a PoisonDamage field.
-        // Every test written against the old field reads this instead.
+        // TickReport carries typed rows rather than a PoisonDamage field.
         // FirstOrDefault rather than Single: a tick with nothing left to deal
         // reports no Poison row at all, and TickRow's default ToHealth (0) is
         // the right answer for "a fourth tick landed" on an expired status,
@@ -39,10 +38,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(3, target.Statuses[0].TurnsRemaining);
         }
 
-        // THE MERGE BRANCH STILL EXISTS and these three still pin it -- they
-        // were written against Poison, which stacks as of 2026-09-20, and are
-        // re-aimed at Empowered rather than deleted. Empowered is a
-        // single-spend token (StackingPolicy.Refresh): "two of it" has no
+        // THE MERGE BRANCH STILL EXISTS and these three still pin it, aimed
+        // at Empowered. Empowered is a single-spend token
+        // (StackingPolicy.Refresh): "two of it" has no
         // meaning beyond duration, so re-casting it must never be strictly
         // better than casting it once, which is the rule these were always
         // about.
@@ -196,7 +194,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(StackingPolicy.Stack, StatusEffects.StackPolicyOf(StatusEffectType.Shielded));
         }
 
-        // ---- instance stacking, owner 2026-09-20 -------------------------------
+        // ---- instance stacking -------------------------------
 
         [Test]
         public void ASecondPoison_StandsBesideTheFirst_WithItsOwnMagnitudeAndClock()
@@ -312,12 +310,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(summary.Any);
         }
 
-        // ---- the turn-end clock, plan D1 ---------------------------------------
+        // ---- the turn-end clock ---------------------------------------
 
-        // THE BUG D1 CLOSES. Under the old turn-start countdown a two-turn
-        // Vulnerable was removed at the start of the bearer's second turn,
-        // before that turn's action ever happened, so it exposed them for one
-        // turn and not two.
+        // Ticking at turn END, not turn start: a turn-start countdown would
+        // remove a two-turn Vulnerable at the start of the bearer's second
+        // turn, before that turn's action ever happened, exposing them for
+        // one turn instead of two.
         [Test]
         public void AStandingStatusWithTwoTurns_StillApplies_OnTheSecondTurnsAction()
         {
@@ -728,12 +726,10 @@ namespace PrincesPalace.Domain.Tests
                 "The pool was emptied by the first hit");
         }
 
-        // RE-RAISING WHILE THE SHIELD STILL STANDS ADDS TO IT. This test used
-        // to assert the opposite twice over -- first because Apply merged
-        // every status, then because the shield model's first cut kept one
-        // ward per character. Wards stack now (owner, 2026-09-16), and the
-        // relic's "does not stack" promise is held by its once-per-turn lock
-        // instead, which is where a limit on how often it raises belongs.
+        // RE-RAISING WHILE THE SHIELD STILL STANDS ADDS TO IT: wards stack.
+        // The relic's "does not stack" promise is held by its once-per-turn
+        // lock instead, which is where a limit on how often it raises
+        // belongs.
         [Test]
         public void ReapplyingAWard_WhileStillUp_AddsASecondPool()
         {

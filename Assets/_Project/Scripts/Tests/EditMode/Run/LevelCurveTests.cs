@@ -12,10 +12,8 @@ namespace PrincesPalace.Domain.Tests
     // has to be right whatever the content says, exercised over a table small
     // enough to check by eye.
     //
-    // Progression v2 phase 2 replaced a geometric formula (BaseCost 100, 90
-    // permille a level, cap 200) with that table, so the old per-level
-    // literals here are gone rather than retuned: there is no longer a
-    // formula for them to be literals OF.
+    // Costs come from an authored table, not a formula, so there is no
+    // formula for the literals here to be literals OF.
     public class LevelCurveTests
     {
         // Four levels' worth: 2 costs 10, 3 costs 20, 4 costs 20, 5 costs 40.
@@ -142,12 +140,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, after.LevelsGained);
         }
 
-        // THE CAP, which is new in progression v2 phase 2. Nothing used to
-        // bound `level`: income alone could carry a character past the last
-        // authored node, and the track would answer TrackEntry.None forever
-        // after. Harmless at a cap of 100 nobody reached; at 40, which a
-        // career reaches on run 24, it would have every later run advertise
-        // levels that pay nothing.
+        // THE CAP: without it, income alone could carry a character past the
+        // last authored node, and the track would answer TrackEntry.None
+        // forever after. At a cap of 40, which a career reaches on run 24,
+        // that would have every later run advertise levels that pay nothing.
         [Test]
         public void LevellingStopsAtTheCapAndKeepsTheOverflow()
         {

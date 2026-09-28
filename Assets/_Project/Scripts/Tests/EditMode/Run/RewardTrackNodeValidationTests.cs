@@ -4,8 +4,7 @@ using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // PHASE 3's node-kind validator (docs/handoffs/progression_v2/
-    // PLAN_PROGRESSION_V2.md §7 phase 3). Most cases go through
+    // The node-kind validator. Most cases go through
     // ValidateAgainstCap rather than Validate, because a fixture that only
     // authors levels 2 to 5 would otherwise fail the "highest rewarding
     // level equals the cap" rule for a reason that has nothing to do with
@@ -23,12 +22,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the production door runs the rules, unguarded ----
         //
-        // Phase 3 shipped Validate switched off behind a
-        // MaxLevel == 100 check, and the test that stood here asserted
-        // exactly that no-op. Phase 4 removed the guard with the
-        // hundred-level content it existed for, so what has to be pinned
-        // now is the opposite: the door a real build goes through actually
-        // refuses a broken track.
+        // What has to be pinned is that the door a real build goes through
+        // actually refuses a broken track.
 
         [Test]
         public void Validate_RefusesABrokenTrack()

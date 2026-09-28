@@ -8,21 +8,14 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // SECOND LIFE, CLAUSE BY CLAUSE AGAINST THE PLAN THAT PROPOSES MOVING IT.
+    // SECOND LIFE, CLAUSE BY CLAUSE AGAINST docs/handoffs/progression_v2/
+    // PLAN_PROGRESSION_V2.md §5's description: "once per run, the first time
+    // this character would drop to 0 health they stay at 1 and gain no other
+    // effect; consumed on use, reset at run start, not shared."
     //
-    // docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §5 moves Second Life
-    // to level 25 and describes it as: "once per run, the first time this
-    // character would drop to 0 health they stay at 1 and gain no other
-    // effect; consumed on use, reset at run start, not shared. This is the
-    // existing rule as read from the code; phase 2 pins it and any difference
-    // is reported before content moves."
-    //
-    // It is NOT the existing rule. Four of the six clauses describe something
-    // else, and this file asserts what the CODE does, with the divergence
-    // named on each one. Nothing here changes behaviour -- phase 2's brief is
-    // to report, and the owner decides in phase 4 whether the content moves to
-    // a rule the code already has or the code moves to the rule the plan
-    // describes.
+    // That is NOT the existing rule. Four of the six clauses describe
+    // something else, and this file asserts what the CODE does, with the
+    // divergence named on each one. Nothing here changes behaviour.
     //
     //   1. "the first time THIS CHARACTER would drop to 0"
     //      -> the code fires only when the WHOLE PARTY would be wiped.

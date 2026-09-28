@@ -185,10 +185,9 @@ namespace PrincesPalace.Domain.Tests
         // WHICH CURRENCY A RUN CAN COST YOU is the whole distinction, so it is
         // asserted rather than left to convention.
         //
-        // This inverted when Gold and Embers swapped roles: Gold used to be the
-        // safe one and Embers the wager. Now Gold is the run's own stake --
-        // earned delving, banked on retreat, lost on a wipe -- and Embers are
-        // the boss-paid meta currency written straight to the save.
+        // Gold is the run's own stake -- earned delving, banked on retreat,
+        // lost on a wipe -- and Embers are the boss-paid meta currency
+        // written straight to the save.
         [Test]
         public void OnlyGold_IsPutAtRiskByARun()
         {

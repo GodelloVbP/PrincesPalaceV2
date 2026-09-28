@@ -74,11 +74,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheVictoryIsSaidOutLoudButThePayoutIsNot()
         {
-            // The bark used to read "20 experience, 14 gold." and the Reckoning
-            // now expands seconds later saying exactly that, larger, with a
-            // bar -- while the bark sits ABOVE the panel, where it is the first
-            // thing the eye lands on. Two readouts of one fact, smaller one
-            // first.
+            // The Reckoning panel expands seconds later saying exactly the
+            // payout, larger, with a bar -- while the bark sits ABOVE the
+            // panel, where it is the first thing the eye lands on. Two
+            // readouts of one fact, smaller one first, so the bark itself
+            // does not need to say the payout.
             //
             // What the log still owes the player is that they WON, which the
             // Reckoning never says. And the payout itself still has to be
@@ -369,11 +369,10 @@ namespace PrincesPalace.Domain.Tests
             int guard = 0;
             while (!session.IsOver && guard++ < 20)
             {
-                // A spent charge now hands the turn back rather than leaving
+                // A spent charge hands the turn back rather than leaving
                 // the session parked on the enemy that landed the killing blow
                 // (ASpentSecondLifeHandsTheTurnBackToThePlayer above), so this
-                // driver no longer needs the AutoResolveEnemyTurns branch that
-                // used to exist to unstick it. The guard stays: whether the
+                // driver needs no branch to unstick it. The guard stays: whether the
                 // monster replies on any given exchange is a turn-order detail.
                 hero.CurrentHealth = 1;
                 session.ExecuteAttack(foe);
