@@ -875,6 +875,7 @@ namespace PrincesPalace
             ReconcileShopStock(activeRun);
             ReconcileOpenEvent(activeRun);
             ReconcilePendingFight(activeRun);
+            ReconcileShelves(activeRun);
 
             eventCounters ??= new List<EventCounterEntry>();
             eventCounters.RemoveAll(e => e == null || string.IsNullOrEmpty(e.id));
@@ -1235,6 +1236,55 @@ namespace PrincesPalace
             }
         }
 
+        // AN EVENT'S SHELF STOCK (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.4) is
+        // not tied to the node the party stands on -- that is its whole point
+        // -- so unlike ReconcileShopStock nothing here drops a stock for being
+        // somewhere else. What goes is what cannot be trusted: a stock whose
+        // event or shelf content no longer has, and a stock with a null card
+        // (the room shop's reason: nothing on it says where it sat, and
+        // dropping it would renumber the rest). Its event's next shelf effect
+        // rolls it afresh. A card whose item vanished turns NO OFFER in place.
+        //
+        // The shelf in front (pendingShelf) needs its event open here and its
+        // stock present; otherwise it is dropped and the event shows its page.
+        private static void ReconcileShelves(RunSnapshot run)
+        {
+            run.shelves ??= new List<MerchantShelfStock>();
+            run.pendingShelf ??= "";
+
+            run.shelves.RemoveAll(stock =>
+            {
+                bool drop = stock == null || stock.entries == null || stock.entries.Any(e => e == null)
+                    || RunOrchestrator.FindEvent(stock.eventId)?.ShelfById(stock.shelfId) == null;
+                if (drop && stock != null)
+                {
+                    UnityEngine.Debug.LogWarning(
+                        $"[Reconcile] dropped shelf '{stock.shelfId}' of event '{stock.eventId}': content no longer " +
+                        "has it, or its stock is damaged.");
+                }
+
+                return drop;
+            });
+
+            foreach (var stock in run.shelves)
+            {
+                foreach (var entry in stock.entries)
+                {
+                    if (entry.noOffer || entry.sold || Resolves(entry)) continue;
+                    entry.noOffer = true;
+                }
+            }
+
+            if (run.pendingShelf.Length == 0) return;
+
+            bool eventOpen = !string.IsNullOrEmpty(run.eventId) && run.eventNodeId >= 0
+                && run.eventNodeId == run.currentNodeId && RunOrchestrator.FindEvent(run.eventId) != null;
+            if (!eventOpen || RunOrchestrator.FindShelfStock(run, run.eventId, run.pendingShelf) == null)
+            {
+                run.pendingShelf = "";
+            }
+        }
+
         private static void ReconcileShopStock(RunSnapshot run)
         {
             run.shopStock ??= new List<ShopStockEntry>();
@@ -1285,6 +1335,7 @@ namespace PrincesPalace
             {
                 case ShopEntryKind.Gear: return ContentDatabase.GetItem(entry.contentId) != null;
                 case ShopEntryKind.Relic: return ContentDatabase.GetRelic(entry.contentId) != null;
+                case ShopEntryKind.Consumable: return ContentDatabase.GetItem(entry.contentId) != null;
 
                 // THE SAME PREDICATE THE BOOK SHELF IS ROLLED FROM.
                 // IsBookEligible above is what stocks the section and what

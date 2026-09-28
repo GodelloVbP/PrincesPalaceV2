@@ -18,6 +18,11 @@ namespace PrincesPalace.Domain.Rewards
         Gear,
         Book,
         Relic,
+
+        // Appended, never inserted: a persisted stock stores this as an int.
+        // Only a merchant shelf (an event's, plan 3.4) stocks consumables;
+        // the room shop sells none.
+        Consumable,
     }
 
     // One card on the shop shelf, as it is persisted.
@@ -61,12 +66,41 @@ namespace PrincesPalace.Domain.Rewards
         public int section;
         public int index;
 
+        // PROVENANCE, merchant shelves only (plan 3.3/3.4). The room shop
+        // leaves both empty, and its copies stay ordinary items that stack.
+        //
+        // `lot` names this one physical copy, genuine or not, so a caravan
+        // item never merges with anything (plan section 2, item 10) and a
+        // fake is never given away as "the stack that did not merge".
+        // `fake` is decided when the stock is rolled and never shown unless
+        // the shelf is revealed; it is stored here, with the stock, so a
+        // reload, a Walk on or a later visit sees the same fakes.
+        public string lot = "";
+        public bool fake;
+
         public ShopStockEntry() { }
 
-        // THE COPY A GEAR PURCHASE STAMPS INTO THE BAG. The one place a stock
-        // card becomes an item, so a shelf that sells provenance (the caravan's
-        // lot and fake flag, plan 3.4) extends this and nothing else.
-        public ItemInstance GearInstance() => new ItemInstance(contentId, plus, modifiers, riftTier);
+        // THE COPY A GEAR PURCHASE STAMPS INTO THE BAG. The one place a gear
+        // card becomes an item: a genuine caravan copy carries its lot, a fake
+        // one its lot and the wear countdown (FakeWear), a room-shop copy
+        // nothing.
+        public ItemInstance GearInstance() =>
+            new ItemInstance(contentId, plus, modifiers, riftTier, CardProvenance(wears: true));
+
+        // The consumable half of the same rule. A fake potion has no
+        // countdown: it is spent on use, to no effect.
+        public ItemInstance ConsumableInstance() =>
+            new ItemInstance(contentId, 0, null, 0, CardProvenance(wears: false));
+
+        // Whichever of the two this card is.
+        public ItemInstance Instance() => kind == ShopEntryKind.Consumable ? ConsumableInstance() : GearInstance();
+
+        private Provenance CardProvenance(bool wears)
+        {
+            if (string.IsNullOrEmpty(lot)) return null;
+            if (!fake) return new Provenance(lot);
+            return wears ? FakeWear.NewFakeGear(lot) : new Provenance(lot, fake: true);
+        }
 
         public static ShopStockEntry Gear(int index, string itemId, int plus, IEnumerable<string> modifiers,
             int riftTier, int price)
@@ -88,6 +122,18 @@ namespace PrincesPalace.Domain.Rewards
                 riftTier = riftTier,
                 price = price,
                 section = ShopStock.GearSection,
+                index = index,
+            };
+        }
+
+        public static ShopStockEntry Consumable(int index, string itemId, int price)
+        {
+            return new ShopStockEntry
+            {
+                kind = ShopEntryKind.Consumable,
+                contentId = itemId ?? "",
+                price = price,
+                section = ShopStock.ConsumableSection,
                 index = index,
             };
         }
@@ -181,6 +227,15 @@ namespace PrincesPalace.Domain.Rewards
         public const int RelicSection = 2;
         public const int SectionCount = 3;
 
+        // A MERCHANT SHELF'S OWN SECTION (plan 3.4), outside SectionCount on
+        // purpose: SectionCount is the room shop's three shelves and the
+        // length of its reroll array, and a merchant shelf neither has a
+        // reroll nor is ever the room shop. Its cards show in the panel the
+        // room shop gives its books (ShopController), up to that panel's
+        // card count.
+        public const int ConsumableSection = 3;
+        public const int ConsumableCount = BookCount;
+
         // ---- how many decisions one visit can want ---------------------------
         //
         // DERIVED, NOT TYPED. A headless caller has to bound a shop visit --
@@ -224,6 +279,7 @@ namespace PrincesPalace.Domain.Rewards
                 case GearSection: return GearCount;
                 case BookSection: return BookCount;
                 case RelicSection: return RelicCount;
+                case ConsumableSection: return ConsumableCount;
                 default: return 0;
             }
         }
@@ -234,6 +290,7 @@ namespace PrincesPalace.Domain.Rewards
             {
                 case BookSection: return ShopEntryKind.Book;
                 case RelicSection: return ShopEntryKind.Relic;
+                case ConsumableSection: return ShopEntryKind.Consumable;
                 default: return ShopEntryKind.Gear;
             }
         }

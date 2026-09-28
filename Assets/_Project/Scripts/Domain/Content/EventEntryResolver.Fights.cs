@@ -53,6 +53,7 @@ namespace PrincesPalace.Domain.Content
             public bool MayReturn;
             public HashSet<string> PageIds = new HashSet<string>(StringComparer.Ordinal);
             public HashSet<string> FightIds = new HashSet<string>(StringComparer.Ordinal);
+            public HashSet<string> ShelfIds = new HashSet<string>(StringComparer.Ordinal);
             public Dictionary<string, ResolvedEventSpeaker> Speakers =
                 new Dictionary<string, ResolvedEventSpeaker>(StringComparer.Ordinal);
 

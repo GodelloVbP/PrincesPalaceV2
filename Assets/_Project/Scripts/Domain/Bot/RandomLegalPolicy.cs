@@ -77,6 +77,7 @@ namespace PrincesPalace.Domain.Bot
                 if (card.Kind == ShopEntryKind.Gear) legal.Add(ShopChoice.BuyGear(card.Index));
                 else if (card.Kind == ShopEntryKind.Relic) legal.Add(ShopChoice.BuyRelic(card.Index));
                 else if (card.Kind == ShopEntryKind.Book) legal.Add(ShopChoice.BuyBook(card.Index));
+                else if (card.Kind == ShopEntryKind.Consumable) legal.Add(ShopChoice.BuyConsumable(card.Index));
             }
 
             foreach (var row in shop.Bag)

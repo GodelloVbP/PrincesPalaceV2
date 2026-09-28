@@ -857,6 +857,17 @@ namespace PrincesPalace
                     continue;
                 }
 
+                // AN EVENT'S SHELF (plan 3.4): the shop's own buying loop on
+                // the stock in front, then back to the event. The shelf's
+                // page offers Walk on first, so a first-available bot leaves
+                // after one visit rather than looking again forever.
+                if (RunOrchestrator.EventShelfPending)
+                {
+                    ShopAtTheStockInFront(seed, save, runPolicy, roomTrace);
+                    RunOrchestrator.LeaveShelf();
+                    continue;
+                }
+
                 var view = RunOrchestrator.CurrentEvent();
                 if (view == null) break;
 
@@ -1056,6 +1067,26 @@ namespace PrincesPalace
             roomTrace.PurchasesBySection = new int[ShopStock.SectionCount];
             roomTrace.RerollsBySection = new int[ShopStock.SectionCount];
 
+            ShopAtTheStockInFront(seed, save, runPolicy, roomTrace);
+
+            RunOrchestrator.LeaveShop();
+
+            roomTrace.GoldOnLeave = run.gold;
+            roomTrace.GoldSpent = roomTrace.GoldOnArrival - roomTrace.GoldOnLeave;
+        }
+
+        // THE BUYING LOOP, SHARED by the room shop (VisitShop) and an event's
+        // merchant shelf (VisitEvent): it reads whatever stock is in front
+        // (RunOrchestrator.CurrentShopStock) and buys through the same
+        // orchestrator calls the screen uses. Leaving is the caller's, since
+        // the two leave differently.
+        private static void ShopAtTheStockInFront(ulong seed, SaveData save, IRunPolicy runPolicy, RoomTrace roomTrace)
+        {
+            var run = RunManager.Run;
+
+            roomTrace.PurchasesBySection ??= new int[ShopStock.SectionCount];
+            roomTrace.RerollsBySection ??= new int[ShopStock.SectionCount];
+
             int step = run.step;
 
             // ONE SCORE CACHE FOR THE WHOLE VISIT, not one ScoreOffer call per
@@ -1148,13 +1179,13 @@ namespace PrincesPalace
                     Sold = entry.sold,
                 });
 
-                if (entry.sold) roomTrace.PurchasesBySection[entry.section]++;
+                // A merchant's consumable section sits outside the room
+                // shop's three; its purchases are on ShopOffers above.
+                if (entry.sold && entry.section >= 0 && entry.section < roomTrace.PurchasesBySection.Length)
+                {
+                    roomTrace.PurchasesBySection[entry.section]++;
+                }
             }
-
-            RunOrchestrator.LeaveShop();
-
-            roomTrace.GoldOnLeave = run.gold;
-            roomTrace.GoldSpent = roomTrace.GoldOnArrival - roomTrace.GoldOnLeave;
         }
 
         // WAS THE VISIT OVER, OR ONLY CUT OFF? The difference is the whole
@@ -1286,6 +1317,7 @@ namespace PrincesPalace
             switch (choice.Kind)
             {
                 case ShopChoiceKind.BuyGear: return RunOrchestrator.BuyGear(choice.Index);
+                case ShopChoiceKind.BuyConsumable: return RunOrchestrator.BuyConsumable(choice.Index);
                 case ShopChoiceKind.BuyRelic: return RunOrchestrator.BuyRelic(choice.Index);
                 case ShopChoiceKind.BuyBook: return RunOrchestrator.BuyBook(choice.Index);
                 case ShopChoiceKind.Sell: return RunOrchestrator.Sell(choice.Index, choice.Quantity);
@@ -1331,18 +1363,24 @@ namespace PrincesPalace
                     entry.price, entry.sold, entry.noOffer, run.gold >= entry.price, score));
             }
 
+            // A MERCHANT SHELF neither rerolls nor buys from the bag (plan
+            // 3.4), and says so in the view rather than by refusing: no
+            // reroll anyone can afford, no bag rows to sell. A policy then
+            // never asks for either, and its visit ends on its own Leave.
+            bool merchant = RunOrchestrator.ShelfInFrontIsMerchant;
+
             var rerollPrices = new int[ShopStock.SectionCount];
             var rerollsUsed = new int[ShopStock.SectionCount];
             for (int section = 0; section < ShopStock.SectionCount; section++)
             {
-                rerollPrices[section] = RunOrchestrator.RerollPriceFor(section);
+                rerollPrices[section] = merchant ? int.MaxValue : RunOrchestrator.RerollPriceFor(section);
                 rerollsUsed[section] = run.shopRerollsUsed != null && section < run.shopRerollsUsed.Length
                     ? run.shopRerollsUsed[section]
                     : 0;
             }
 
-            return new ShopView(
-                cards, rerollPrices, rerollsUsed, BagRowsOf(save, weights, scoreCache), run.gold);
+            var bag = merchant ? new List<ShopBagRow>() : BagRowsOf(save, weights, scoreCache);
+            return new ShopView(cards, rerollPrices, rerollsUsed, bag, run.gold);
         }
 
         // itemId+plus is the whole of what GearEvaluator.ScoreOffer reads

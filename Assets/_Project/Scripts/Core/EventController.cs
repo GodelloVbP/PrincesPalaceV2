@@ -88,6 +88,13 @@ namespace PrincesPalace
         // Raised when the event closes. The map owns navigation.
         public System.Action Finished;
 
+        // Raised when a pick put the event's merchant shelf in front of the
+        // party (RunOrchestrator.EventShelfPending). The map opens the shop
+        // screen on it and, when the shelf is left, reopens this panel on the
+        // page the pick went to. The event is still open throughout, so this
+        // is not Finished.
+        public System.Action ShelfRequested;
+
         // What each visible row does: a choice's AUTHORED index, or LeaveRow
         // for the concluded state's own Leave. Rows are packed top-down over
         // the visible choices, so row i is not choice i.
@@ -258,6 +265,14 @@ namespace PrincesPalace
             if (RunOrchestrator.EventFightPending)
             {
                 LaunchFight();
+                return;
+            }
+
+            // A SHELF THIS EVENT OPENED, the same way: the pick that opened
+            // it, or a reload that finds it still in front.
+            if (RunOrchestrator.EventShelfPending)
+            {
+                HandToShelf();
                 return;
             }
 
@@ -717,6 +732,20 @@ namespace PrincesPalace
             }
 
             Navigation.Go(Navigation.Fight);
+        }
+
+        // Not Close() either: the event stays open, and the shelf's Leave
+        // brings this panel back through the map.
+        private void HandToShelf()
+        {
+            if (_playback != null)
+            {
+                _playback.Close();
+                SnapBusts();
+            }
+
+            gameObject.SetActive(false); // OnDisable pops the context
+            ShelfRequested?.Invoke();
         }
 
         private void Close()

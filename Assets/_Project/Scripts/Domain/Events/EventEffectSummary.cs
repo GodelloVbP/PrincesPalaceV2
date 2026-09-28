@@ -64,6 +64,14 @@ namespace PrincesPalace.Domain.Events
                     return UiStrings.EventEffectPrincesFavor.Format(effect.Amount);
                 case EventEffectKind.FillSpecialPool:
                     return UiStrings.EventEffectFillSpecialPool.Format();
+                case EventEffectKind.TakeShelf:
+                {
+                    // Only the APPLIED record reaches here (ShelfLoss); the
+                    // cards handed over are item lines of their own.
+                    if (string.IsNullOrEmpty(effect.Item)) return UiStrings.EventEffectShelfNothingLost.Format();
+                    string name = itemName?.Invoke(effect.Item);
+                    return UiStrings.EventEffectShelfLost.Format(string.IsNullOrEmpty(name) ? effect.Item : name);
+                }
                 default:
                     return "";
             }

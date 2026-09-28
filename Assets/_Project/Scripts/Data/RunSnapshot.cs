@@ -376,6 +376,27 @@ namespace PrincesPalace
         // its ending.
         public string pendingFight = "";
 
+        // ---- merchant shelves (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.4) ----
+        //
+        // AN EVENT'S STOCK OUTLIVES ITS NODE, so it cannot live in the room
+        // shop's single slot above (shopStock/shopNodeId, overwritten by the
+        // next shop and cleared by Reconcile the moment the party stands
+        // anywhere else). One entry per (event, shelf) rolled this run: its
+        // cards with their quoted prices, lots and fakes, and whether the
+        // fakes are revealed. Kept across Walk on, a room shop in between
+        // and any number of later visits; removed by the event's `finish`,
+        // and gone with the run because StartRun replaces the snapshot.
+        //
+        // Purely additive; save 8 (Stage B's bump) already stands for it.
+        public List<MerchantShelfStock> shelves = new List<MerchantShelfStock>();
+
+        // The shelf of the OPEN event the party is looking at, or "". Set by
+        // a pick whose effects carry `shelf`, cleared when the shelf is left
+        // (RunOrchestrator.LeaveShelf). Persisted like pendingFight, so a quit
+        // with the shelf open comes back to it; meaningful only while the
+        // event is open, and Reconcile drops one whose event is not.
+        public string pendingShelf = "";
+
         // Buffs events granted this run (docs/PLAN_PETTING_ZOO.md): Prince's
         // favor for the run, a full special pool for one leg. One model for
         // both scopes, see EventBuffEntry; read through EventBuffs, never by
@@ -385,6 +406,23 @@ namespace PrincesPalace
         //
         // Purely additive, so CurrentVersion does not move.
         public List<EventBuffEntry> eventBuffs = new List<EventBuffEntry>();
+    }
+
+    // One event shelf's stock on the run (RunSnapshot.shelves). The owner is
+    // (eventId, shelfId); rolledStep/rolledNodeId are the position the stock
+    // was rolled at, kept as the record its lots were built from.
+    [Serializable]
+    public class MerchantShelfStock
+    {
+        public string eventId = "";
+        public string shelfId = "";
+        public int rolledStep;
+        public int rolledNodeId = -1;
+        public bool revealed;
+        public List<ShopStockEntry> entries = new List<ShopStockEntry>();
+
+        public bool IsOwnedBy(string owningEventId, string owningShelfId) =>
+            eventId == owningEventId && shelfId == owningShelfId;
     }
 
     // One learned spell, in one of a character's three slots this run.

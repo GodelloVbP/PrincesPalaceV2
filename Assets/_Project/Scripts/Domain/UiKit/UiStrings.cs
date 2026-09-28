@@ -378,6 +378,15 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString EventEffectFillSpecialPool =
             UiString.Define("event.effect_fill_special_pool", "Special pools full each turn this leg");
 
+        // A takeShelf's line (the caravan robbed): the one card the scuffle
+        // cost, or that there was nothing left on the shelf to lose. The
+        // cards handed over each read as an ordinary item line beside it.
+        public static readonly UiString EventEffectShelfLost =
+            UiString.Define("event.effect_shelf_lost", "Lost in the scuffle: {0}",
+                "Lost in the scuffle: Ceremonial Greatsword of the Undying");
+        public static readonly UiString EventEffectShelfNothingLost =
+            UiString.Define("event.effect_shelf_nothing_lost", "Nothing left to lose in the scuffle");
+
         // --- the event panel (EventScreen / EventController) --------------------
         // Every event word is content; these templates exist so E1 measures
         // each box against its worst case rather than against nothing, the
@@ -681,6 +690,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopSectionBooks = UiString.Define("shop.section_books", "SPELL BOOKS");
         public static readonly UiString ShopSectionRelics = UiString.Define("shop.section_relics", "RELICS");
 
+        // A merchant shelf (an event's, plan 3.4) shows its consumable cards
+        // in the panel the room shop gives its books; the header says which.
+        public static readonly UiString ShopSectionConsumables =
+            UiString.Define("shop.section_consumables", "CONSUMABLES");
+
         // The two panels in the design's right-hand column. "SHOP" twice over
         // -- once as the screen's title, once as the actions panel's own
         // caption -- is the prototype's own wording, and the two are separate
@@ -713,6 +727,16 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("shop.card_need", "NEED {0}", "NEED 9999");
         public static readonly UiString ShopCardSold = UiString.Define("shop.card_sold", "SOLD");
         public static readonly UiString ShopCardNoOffer = UiString.Define("shop.card_no_offer", "NO OFFER");
+
+        // A merchant shelf's card once its fakes are revealed ("Browse with
+        // Odette", plan 1.5): the meta line leads with the mark. Runtime
+        // content like ShopGearMeta, so the sample is only the audit's.
+        public static readonly UiString ShopCardFakeMeta =
+            UiString.Define("shop.card_fake_meta", "FAKE · {0}", "FAKE · TIER 10 · +5 · Fiery, Swift");
+
+        // A consumable card's meta line (merchant shelves only; the room
+        // shop sells none).
+        public static readonly UiString ShopConsumableMeta = UiString.Define("shop.consumable_meta", "CONSUMABLE");
 
         // VISIBLE AFFIXES (owner ask #2, 2026-09-22): {2} used to be a bare
         // COUNT ("3 AFFIX"); it is now the affix NAMES themselves,

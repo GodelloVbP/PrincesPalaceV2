@@ -260,6 +260,34 @@ namespace PrincesPalace.Domain.Content
         }
     }
 
+    // One merchant shelf's recipe (RawEventShelf), validated. The stock it
+    // rolls lives on the run (RunSnapshot.shelves), never here.
+    [Serializable]
+    public sealed class ResolvedEventShelf
+    {
+        public string Id = "";
+        public int PriceFactorPercent = 100;
+        public int FakeShare;
+
+        // ShopStock section ids (only ShopStock.GearSection today), in
+        // authored order.
+        public int[] Sections = Array.Empty<int>();
+        public int ConsumableCount;
+
+        public ResolvedEventShelf()
+        {
+        }
+
+        public ResolvedEventShelf(string id, int priceFactorPercent, int fakeShare, int[] sections, int consumableCount)
+        {
+            Id = id ?? "";
+            PriceFactorPercent = priceFactorPercent;
+            FakeShare = fakeShare;
+            Sections = sections ?? Array.Empty<int>();
+            ConsumableCount = consumableCount;
+        }
+    }
+
     // One branch of a choice. EventEntryResolver refuses a list whose last
     // outcome is conditional, so EventFlow.Resolve can always find one that
     // matches.
@@ -330,6 +358,7 @@ namespace PrincesPalace.Domain.Content
         public bool MayReturn;
         public ResolvedEventSpeaker[] Speakers = Array.Empty<ResolvedEventSpeaker>();
         public ResolvedEventFight[] Fights = Array.Empty<ResolvedEventFight>();
+        public ResolvedEventShelf[] Shelves = Array.Empty<ResolvedEventShelf>();
 
         public ResolvedEventDefinition()
         {
@@ -337,7 +366,7 @@ namespace PrincesPalace.Domain.Content
 
         public ResolvedEventDefinition(string id, int sortOrder, int[] floors, EventRequirement[] requires, ResolvedEventPage[] pages,
             string backdropKey = "", bool mayReturn = false, ResolvedEventSpeaker[] speakers = null,
-            ResolvedEventFight[] fights = null)
+            ResolvedEventFight[] fights = null, ResolvedEventShelf[] shelves = null)
         {
             Id = id ?? "";
             SortOrder = sortOrder;
@@ -348,6 +377,18 @@ namespace PrincesPalace.Domain.Content
             MayReturn = mayReturn;
             Speakers = speakers ?? Array.Empty<ResolvedEventSpeaker>();
             Fights = fights ?? Array.Empty<ResolvedEventFight>();
+            Shelves = shelves ?? Array.Empty<ResolvedEventShelf>();
+        }
+
+        public ResolvedEventShelf ShelfById(string shelfId)
+        {
+            if (Shelves == null || string.IsNullOrEmpty(shelfId)) return null;
+            foreach (var shelf in Shelves)
+            {
+                if (shelf != null && shelf.Id == shelfId) return shelf;
+            }
+
+            return null;
         }
 
         public ResolvedEventFight FightById(string fightId)

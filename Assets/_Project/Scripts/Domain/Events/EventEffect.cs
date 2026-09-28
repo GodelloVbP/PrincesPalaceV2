@@ -27,6 +27,13 @@ namespace PrincesPalace.Domain.Events
         // event seen, so it never rolls again this run.
         Fight,
         Finish,
+
+        // Stage B (the caravan). Shelf opens one of the event's own merchant
+        // shelves (ShelfId), revealing its fakes when Reveal; TakeShelf hands
+        // the party that shelf's unsold cards, Amount of them lost to the
+        // scuffle first.
+        Shelf,
+        TakeShelf,
     }
 
     // One effect. [Serializable] with public fields for the same reason
@@ -66,6 +73,16 @@ namespace PrincesPalace.Domain.Events
         // Fight only: the id of one of the event's own fights
         // (ResolvedEventDefinition.FightById).
         public string FightId = "";
+
+        // Shelf and TakeShelf: the id of one of the event's own shelves
+        // (ResolvedEventDefinition.ShelfById). Reveal is Shelf's alone: this
+        // visit marks the fakes, and the mark stays with the stock.
+        //
+        // AN APPLIED TakeShelf (the effects line's record, never authored)
+        // carries the card the scuffle took in Item, empty when there was
+        // nothing left to lose.
+        public string ShelfId = "";
+        public bool Reveal;
 
         // For the serializer only -- every real instance comes from a
         // factory below.
@@ -122,6 +139,19 @@ namespace PrincesPalace.Domain.Events
             new EventEffect(EventEffectKind.Fight, 0, "", "") { FightId = fightId ?? "" };
 
         public static EventEffect Finish() => new EventEffect(EventEffectKind.Finish, 0, "", "");
+
+        public static EventEffect OpenShelf(string shelfId, bool reveal) =>
+            new EventEffect(EventEffectKind.Shelf, 0, "", "") { ShelfId = shelfId ?? "", Reveal = reveal };
+
+        // `amount`: how many unsold cards the scuffle loses before the rest
+        // are handed over.
+        public static EventEffect TakeShelf(string shelfId, int amount) =>
+            new EventEffect(EventEffectKind.TakeShelf, amount, "", "") { ShelfId = shelfId ?? "" };
+
+        // What a TakeShelf did, for the effects line: the card it lost, or
+        // "" when nothing was left to lose.
+        public static EventEffect ShelfLoss(string shelfId, string lostItemId) =>
+            new EventEffect(EventEffectKind.TakeShelf, 0, lostItemId, "") { ShelfId = shelfId ?? "" };
 
         public bool TargetsOneMember => !string.IsNullOrEmpty(CharacterId);
     }

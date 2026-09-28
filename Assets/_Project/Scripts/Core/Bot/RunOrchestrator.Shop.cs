@@ -56,8 +56,13 @@ namespace PrincesPalace
 
         // The stock in front of the party, or nothing when they are not
         // standing in a shop they have not left. Never null.
+        //
+        // IN FRONT means the room shop at this node OR the open event's
+        // merchant shelf (RunOrchestrator.Shelf.cs, plan 3.4): the two cannot
+        // both be open, since a node is one room. The screen and the bot read
+        // whichever it is through here, so neither learns shelves exist.
         public static IReadOnlyList<ShopStockEntry> CurrentShopStock =>
-            ShopIsOpen(RunManager.Run) ? RunManager.Run.shopStock : new List<ShopStockEntry>();
+            StockInFront(RunManager.Run) ?? new List<ShopStockEntry>();
 
         // "There is a shop here and it belongs to this node." shopNodeId is
         // the guard rather than an optimisation: without it a stale list from
@@ -175,14 +180,23 @@ namespace PrincesPalace
 
         // ---- the mutations ---------------------------------------------------------
 
-        public static ShopResult BuyGear(int index)
+        // Gear, from the stock in front: the room shop's, or an event
+        // shelf's (plan 3.4 -- "the buy path takes a stock list").
+        public static ShopResult BuyGear(int index) => BuyItemCard(ShopStock.GearSection, index);
+
+        // Consumables are stocked by merchant shelves alone; in a room shop
+        // this finds no card and refuses BadIndex.
+        public static ShopResult BuyConsumable(int index) => BuyItemCard(ShopStock.ConsumableSection, index);
+
+        private static ShopResult BuyItemCard(int section, int index)
         {
             // 1. VALIDATE.
             var run = RunManager.Run;
             var save = SaveSlotManager.CurrentSave;
-            if (!ShopIsOpen(run) || save == null) return ShopResult.Refused(ShopRefusal.NoShop);
+            var stock = StockInFront(run);
+            if (stock == null || save == null) return ShopResult.Refused(ShopRefusal.NoShop);
 
-            var entry = EntryAt(run, ShopStock.GearSection, index);
+            var entry = EntryIn(stock, section, index);
             if (entry == null) return ShopResult.Refused(ShopRefusal.BadIndex);
             if (entry.noOffer || entry.sold) return ShopResult.Refused(ShopRefusal.NothingToBuy);
 
@@ -202,9 +216,11 @@ namespace PrincesPalace
             // them is a second decision taken on their behalf at the moment
             // they are most likely to be mid-plan (§2c).
             //
-            // The card stamps the copy (ShopStockEntry.GearInstance), so a
-            // shelf whose cards carry provenance needs no change here.
-            InventoryOps.Add(save.stockpiledItems, entry.GearInstance(), 1);
+            // The card stamps the copy (ShopStockEntry.Instance): a room-shop
+            // card an ordinary item, a merchant's its lot and, when fake,
+            // its fake flag -- so a genuine caravan potion never merges with
+            // an ordinary one, and a fake is never told apart by that.
+            InventoryOps.Add(save.stockpiledItems, entry.Instance(), 1);
 
             // 3. PERSIST.
             return Persisted(-price);
@@ -373,11 +389,14 @@ namespace PrincesPalace
 
         // ---- the roll ------------------------------------------------------------------
 
-        private static ShopStockEntry EntryAt(RunSnapshot run, int section, int index)
-        {
-            if (index < 0 || index >= ShopStock.CountFor(section)) return null;
+        private static ShopStockEntry EntryAt(RunSnapshot run, int section, int index) =>
+            EntryIn(run.shopStock, section, index);
 
-            return run.shopStock.FirstOrDefault(e => e != null && e.section == section && e.index == index);
+        private static ShopStockEntry EntryIn(List<ShopStockEntry> stock, int section, int index)
+        {
+            if (stock == null || index < 0 || index >= ShopStock.CountFor(section)) return null;
+
+            return stock.FirstOrDefault(e => e != null && e.section == section && e.index == index);
         }
 
         private static uint StreamFor(int section)
@@ -400,19 +419,7 @@ namespace PrincesPalace
                 RerollsUsed(run, section));
             Func<int, int> next = bound => rng.NextInt(0, bound);
 
-            if (section == ShopStock.GearSection)
-            {
-                // EncounterClass.Normal: a shop is not a fight, and rolling it
-                // as Elite or Boss would make browsing better than winning
-                // (assumption 7).
-                var context = ItemOfferRoll.BuildRollContext();
-                int favor = ItemOfferRoll.CurrentSquadFavor();
-
-                return ShopStock.RollGear(
-                    ItemOfferRoll.Candidates(), run.step, ItemOfferRoll.MaxTier,
-                    offer => ItemOfferRoll.RollOne(offer, context, EncounterClass.Normal, favor, next),
-                    next);
-            }
+            if (section == ShopStock.GearSection) return RollGearWith(run, next);
 
             if (section == ShopStock.RelicSection)
             {
@@ -420,6 +427,26 @@ namespace PrincesPalace
             }
 
             return ShopStock.RollBooks(AvailableBookOptions(), next);
+        }
+
+        // THE GEAR ROLL, on whichever stream the caller opened: the room
+        // shop's (ShopGear) or a merchant shelf's (ShelfGear). One body, so
+        // "the caravan stocks the room shop's gear roll" is true by
+        // construction -- same candidates, tier band, affixes, quality and
+        // affordability floors.
+        //
+        // EncounterClass.Normal: a shop is not a fight, and rolling it as
+        // Elite or Boss would make browsing better than winning (assumption
+        // 7).
+        private static List<ShopStockEntry> RollGearWith(RunSnapshot run, Func<int, int> next)
+        {
+            var context = ItemOfferRoll.BuildRollContext();
+            int favor = ItemOfferRoll.CurrentSquadFavor();
+
+            return ShopStock.RollGear(
+                ItemOfferRoll.Candidates(), run.step, ItemOfferRoll.MaxTier,
+                offer => ItemOfferRoll.RollOne(offer, context, EncounterClass.Normal, favor, next),
+                next);
         }
 
         // THE BOOK POOL THIS SHOP CAN OFFER: every bookTier > 0 skill, minus

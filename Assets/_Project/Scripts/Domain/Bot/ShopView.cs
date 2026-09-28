@@ -19,7 +19,7 @@ namespace PrincesPalace.Domain.Bot
     // still owns, and a policy holding one across a mutation would be reading
     // a shelf that moved under it.
 
-    // What a policy decided to do next. One of five, and `Leave` is always
+    // What a policy decided to do next. One of these, and `Leave` is always
     // legal -- the driver's loop ends on it.
     public enum ShopChoiceKind
     {
@@ -29,6 +29,10 @@ namespace PrincesPalace.Domain.Bot
         BuyBook,
         Sell,
         Reroll,
+
+        // Appended: an event's merchant shelf alone stocks consumables
+        // (plan 3.4); in a room shop there is no such card to buy.
+        BuyConsumable,
     }
 
     public readonly struct ShopChoice
@@ -64,6 +68,9 @@ namespace PrincesPalace.Domain.Bot
         public static ShopChoice BuyBook(int index) =>
             new ShopChoice(ShopChoiceKind.BuyBook, index, 0, ShopStock.BookSection);
 
+        public static ShopChoice BuyConsumable(int index) =>
+            new ShopChoice(ShopChoiceKind.BuyConsumable, index, 0, ShopStock.ConsumableSection);
+
         public static ShopChoice Sell(int bagIndex, int quantity) =>
             new ShopChoice(ShopChoiceKind.Sell, bagIndex, quantity, -1);
 
@@ -77,6 +84,7 @@ namespace PrincesPalace.Domain.Bot
                 case ShopChoiceKind.BuyGear: return "BuyGear:" + Index;
                 case ShopChoiceKind.BuyRelic: return "BuyRelic:" + Index;
                 case ShopChoiceKind.BuyBook: return "BuyBook:" + Index;
+                case ShopChoiceKind.BuyConsumable: return "BuyConsumable:" + Index;
                 case ShopChoiceKind.Sell: return "Sell:" + Index + "x" + Quantity;
                 case ShopChoiceKind.Reroll: return "Reroll:" + Section;
                 default: return "Leave";

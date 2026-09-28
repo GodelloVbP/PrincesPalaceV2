@@ -217,6 +217,7 @@ namespace PrincesPalace.EditModeTests
                 RngStreams.Leg, RngStreams.Boss, RngStreams.Fight, RngStreams.Treasure,
                 RngStreams.ShopGear, RngStreams.ShopBooks, RngStreams.ShopRelics,
                 RngStreams.SpellDrop, RngStreams.Event,
+                RngStreams.ShelfGear, RngStreams.ShelfConsumables, RngStreams.ShelfFakes, RngStreams.ShelfScuffle,
             };
 
             CollectionAssert.AllItemsAreUnique(numbers);
@@ -228,6 +229,19 @@ namespace PrincesPalace.EditModeTests
         public void TheEventStreamIsNumberNine()
         {
             Assert.AreEqual(9u, RngStreams.Event);
+        }
+
+        // The merchant shelf's four, the numbers after Event
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M5). Same serialized-format
+        // reason as above: a caravan's stock, fakes and robbery are all keyed
+        // to these.
+        [Test]
+        public void TheShelfStreamsAreTenToThirteen()
+        {
+            Assert.AreEqual(10u, RngStreams.ShelfGear);
+            Assert.AreEqual(11u, RngStreams.ShelfConsumables);
+            Assert.AreEqual(12u, RngStreams.ShelfFakes);
+            Assert.AreEqual(13u, RngStreams.ShelfScuffle);
         }
     }
 }

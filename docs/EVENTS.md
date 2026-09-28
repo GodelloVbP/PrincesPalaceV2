@@ -147,7 +147,7 @@ show a caption; `reason` on an event-level or outcome row is ignored.
 
 ## Effects
 
-`{ kind, amount, item, counter, character, relic }`, applied in order.
+`{ kind, amount, item, counter, character, relic, fight, shelf, reveal }`, applied in order.
 
 | kind | amount | effects line |
 |---|---|---|
@@ -163,7 +163,9 @@ show a caption; `reason` on an event-level or outcome row is ignored.
 | `princesFavor` | > 0. Added to the squad's Prince's favor for the rest of the **run**, after the squad's best member (item offers and shop stock rolled from now on; a shelf already rolled is not rerolled) | `+10 Prince's favor` |
 | `fillSpecialPool` | exactly 1. For the rest of this **leg**, each character's special pool (signature, else primary) is full when their turn opens | `Special pools full each turn this leg` |
 | `fight` + `fight` | none (refused). Starts the event's own fight by id; see **Fights** | none |
-| `finish` | none (refused). Marks a `mayReturn` event seen; see **Returning events** | none |
+| `finish` | none (refused). Marks a `mayReturn` event seen, and ends every shelf stock it owns; see **Returning events** | none |
+| `shelf` + `shelf` (+ `reveal`) | none (refused). Opens the event's own shelf by id; see **Merchant shelves** | none |
+| `takeShelf` + `shelf` | cards lost first, 0 or more. Hands the party the shelf's unsold cards; see **Merchant shelves** | `+1 <item>` per card, then `Lost in the scuffle: <item>` or `Nothing left to lose in the scuffle` |
 
 `princesFavor` and `fillSpecialPool` are run buffs (`RunSnapshot.eventBuffs`).
 A run buff ends with the run; a leg buff also ends when the party takes the
@@ -289,6 +291,86 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   1920x1080 frame with transparency; at scales above 1 its edges leave the
   screen, so keep what matters near the centre.
 
+## Merchant shelves
+
+An event can keep a merchant's stock: the room shop's roll and buying, on a
+stock that belongs to the **event**, not the node. Each is a row in the
+event's `shelves`, opened by a `shelf` effect and robbed by `takeShelf`.
+
+```
+shelf  { id, priceFactorPercent, fakeShare, sections[], consumableCount }
+effect { "kind": "shelf", "shelf": "<id>", "reveal": false }
+effect { "kind": "takeShelf", "shelf": "<id>", "amount": 1 }
+```
+
+- **The stock** is rolled the first time a `shelf` or `takeShelf` effect of
+  the run needs it, at that (step, node), on the shelf's own streams
+  (`RngStreams.ShelfGear`/`ShelfConsumables`/`ShelfFakes`, 10-12), and kept on
+  the run (`RunSnapshot.shelves`): across a reload, Walk on, a room shop in
+  between and a return at any later node. Every visit shows the same cards
+  minus what sold. There is no reroll. It ends only on the event's `finish`
+  or with the run.
+- **`sections`**: `["gear"]` stocks the room shop's gear roll -- 4 cards, same
+  candidates, tier band, affixes and floors. Books and relics are refused:
+  they carry no item instance, so a fake could not apply. **`consumableCount`**
+  (0-3) adds that many consumables from `items.json`, drawn without repeats
+  (the room shop sells none). A shelf must stock something.
+- **`priceFactorPercent`** (1-100): each card costs that percent of the room
+  shop's price for it, rounded half away from zero, never below 1 (a 15-gold
+  potion at 70 is 11). Selling back is unchanged: 30% of the room shop's
+  price, fake or not.
+- **`fakeShare`**: `max(1, round(cards / fakeShare))` of the real cards are
+  fake, picked on their own stream -- 3 means a third (1, 1, 2, 2 of 3, 4, 5,
+  6 cards); 0 means none. A fake looks, prices and sells like the genuine
+  card. Fake gear falls apart after 3 fights worn by a fielded member ("No
+  refunds."); a fake consumable spends the turn and does nothing.
+- **Every copy from a shelf is its own lot** (`<event>:<shelf>:<step>:<node>:<card>`),
+  genuine ones included, so it never stacks with anything -- not even an
+  ordinary potion -- and a fake is never given away as the one that did not
+  stack.
+- **`shelf`** puts the shelf on screen after the pick; leaving it returns to
+  the event, on the page the pick's `goTo` named. It never clears the room:
+  the event's own Leave does. `"reveal": true` marks the fakes ("FAKE" on the
+  card's meta line) for this and every later visit and reload; a plain
+  `shelf` after it keeps the mark. The mark is the shelf's: it does not
+  follow a copy into the bag. The build refuses a `shelf` in a pick that
+  leaves the event (`goTo` Leave), starts a fight, finishes, or opens a
+  second shelf, and in a fight's result.
+- **`takeShelf`** hands over every unsold card as the copy a purchase would
+  have given (fakes stay fake), after the scuffle loses `amount` of them,
+  picked on `RngStreams.ShelfScuffle` at the robbery's (step, node); Odette's
+  marks play no part. None left: nothing is lost, and the line says so. Put
+  `finish` after it -- the build refuses a `shelf`/`takeShelf` after a
+  `finish`, which would roll a fresh stock nobody sees.
+- **The shelf screen** is the shop's: gear in the gear panel, consumables in
+  the book panel under CONSUMABLES, and no relics, rerolls or pack.
+- **At runtime** the pick saves `RunSnapshot.pendingShelf` (so a quit on the
+  shelf comes back to it); while it is set the event refuses picks
+  (`ShelfOpen`). The bot runs the shop's buying loop on it and then leaves.
+
+A worked example, the caravan's shape:
+
+```json
+"shelves": [
+  { "id": "caravan", "priceFactorPercent": 70, "fakeShare": 3,
+    "sections": ["gear"], "consumableCount": 2 }
+],
+...
+{ "text": "Browse", "outcomes": [
+  { "effects": [{ "kind": "shelf", "shelf": "caravan" }], "goTo": "after_browse" } ] },
+{ "text": "Browse with Odette", "hiddenUntilMet": true,
+  "requires": [{ "kind": "inParty", "character": "owl", "alive": true }],
+  "outcomes": [
+  { "effects": [{ "kind": "shelf", "shelf": "caravan", "reveal": true }], "goTo": "after_browse" } ] },
+...
+"fights": [
+  { "id": "rat_pack", "enemies": ["rat", "rat", "rat"], "elite": true,
+    "onDefeated": { "result": "...",
+      "effects": [{ "kind": "takeShelf", "shelf": "caravan", "amount": 1 }, { "kind": "finish" }],
+      "goTo": "Leave" } }
+]
+```
+
 ## Art
 
 - **Where:** one folder per event, named by its id:
@@ -313,9 +395,9 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
 
 At most 4 choices per page; at least one choice per page with no `requires`
 and not `hiddenUntilMet`; the last outcome of a choice has no `requires`;
-every character, item, relic, enemy, ability, page, counter, fight and speaker
-named must exist. Fights and event speakers have their own rules, in their
-sections.
+every character, item, relic, enemy, ability, page, counter, fight, shelf and
+speaker named must exist. Fights, merchant shelves and event speakers have
+their own rules, in their sections.
 
 Text length, in characters. Each cap is the length of the sample the panel's
 box is audited against at every scene build (the samples in `UiStrings` are

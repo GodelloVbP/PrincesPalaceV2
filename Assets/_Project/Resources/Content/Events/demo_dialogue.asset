@@ -114,6 +114,8 @@ MonoBehaviour:
             RelicId: 
             RelicDisplayName: 
             FightId: 
+            ShelfId: 
+            Reveal: 0
           Result: The lantern leads you down a stair of old stone. A few coins glint
             on the steps, and at the bottom someone large is already warming his
             paws at it.
@@ -130,6 +132,8 @@ MonoBehaviour:
             RelicId: 
             RelicDisplayName: 
             FightId: 
+            ShelfId: 
+            Reveal: 0
           Result: The lantern leads you down a stair of old stone. A few coins glint
             on the steps.
           GoTo: quiet
@@ -283,3 +287,4 @@ MonoBehaviour:
     MayReturn: 0
     Speakers: []
     Fights: []
+    Shelves: []

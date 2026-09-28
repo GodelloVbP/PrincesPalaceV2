@@ -78,6 +78,13 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] bookMetas;
         [SerializeField] internal TMP_Text[] bookPrices;
 
+        // A MERCHANT SHELF (an event's, plan 3.4) is shown on this same
+        // screen with what a merchant does not have stood down: the relic
+        // panel, every reroll and the pack (no selling to a merchant), and
+        // the book panel shows its consumable cards under its own header.
+        [SerializeField] internal TMP_Text bookHeader;
+        [SerializeField] internal GameObject relicPanel;
+
         [SerializeField] internal Button relicReroll;
         [SerializeField] internal TMP_Text relicRerollLabel;
         [SerializeField] internal Button[] relicCards;
@@ -164,9 +171,9 @@ namespace PrincesPalace
             if (_wired) return;
             _wired = true;
 
-            WireSection(gearCards, ShopStock.GearSection);
-            WireSection(bookCards, ShopStock.BookSection);
-            WireSection(relicCards, ShopStock.RelicSection);
+            WireSection(gearCards, () => ShopStock.GearSection);
+            WireSection(bookCards, () => MiddleSection);
+            WireSection(relicCards, () => ShopStock.RelicSection);
 
             if (gearReroll != null) gearReroll.onClick.AddListener(() => Reroll(ShopStock.GearSection));
             if (bookReroll != null) bookReroll.onClick.AddListener(() => Reroll(ShopStock.BookSection));
@@ -193,15 +200,24 @@ namespace PrincesPalace
             }
         }
 
-        private void WireSection(Button[] cards, int section)
+        // The section is asked at the press, not captured at wiring: the book
+        // panel is the books in a room shop and the consumables on a
+        // merchant shelf, and the same buttons serve both.
+        private void WireSection(Button[] cards, System.Func<int> section)
         {
             if (cards == null) return;
             for (int i = 0; i < cards.Length; i++)
             {
                 int index = i;
-                if (cards[i] != null) cards[i].onClick.AddListener(() => Select(section, index));
+                if (cards[i] != null) cards[i].onClick.AddListener(() => Select(section(), index));
             }
         }
+
+        // Whether the stock in front is an event's merchant shelf.
+        private static bool Merchant => RunOrchestrator.ShelfInFrontIsMerchant;
+
+        // Which section the book panel shows.
+        private static int MiddleSection => Merchant ? ShopStock.ConsumableSection : ShopStock.BookSection;
 
         // ---- selection and purchase -------------------------------------------
 
@@ -294,6 +310,9 @@ namespace PrincesPalace
                 case ShopStock.RelicSection:
                     result = RunOrchestrator.BuyRelic(index);
                     break;
+                case ShopStock.ConsumableSection:
+                    result = RunOrchestrator.BuyConsumable(index);
+                    break;
                 default:
                     result = RunOrchestrator.BuyBook(index);
                     break;
@@ -341,7 +360,10 @@ namespace PrincesPalace
                 return;
             }
 
-            RunOrchestrator.LeaveShop();
+            // A merchant shelf goes back to its event, which is still open;
+            // the room shop clears its room.
+            if (Merchant) RunOrchestrator.LeaveShelf();
+            else RunOrchestrator.LeaveShop();
             gameObject.SetActive(false); // triggers OnDisable's PopNavContext
             Finished?.Invoke();
         }
@@ -434,17 +456,47 @@ namespace PrincesPalace
             if (leaveButtonLabel != null)
                 leaveButtonLabel.Set(_leaveArmed ? UiStrings.ShopLeaveConfirm : UiStrings.ShopLeave);
 
+            bool merchant = Merchant;
+            PaintMerchantLayout(merchant);
+
             PaintSection(ShopStock.GearSection, gearCards, gearIcons, itemArt, gearNames, gearMetas,
                 gearPrices, gearReroll, gearRerollLabel);
-            PaintSection(ShopStock.BookSection, bookCards, bookIcons, skillArt, bookNames, bookMetas,
+            PaintSection(MiddleSection, bookCards, bookIcons, merchant ? itemArt : skillArt, bookNames, bookMetas,
                 bookPrices, bookReroll, bookRerollLabel);
-            PaintSection(ShopStock.RelicSection, relicCards, relicIcons, relicArt, relicNames, relicMetas,
-                relicPrices, relicReroll, relicRerollLabel);
+            if (!merchant)
+            {
+                PaintSection(ShopStock.RelicSection, relicCards, relicIcons, relicArt, relicNames, relicMetas,
+                    relicPrices, relicReroll, relicRerollLabel);
+            }
 
             PaintCharacterPicker();
             PaintDetail(run);
             PaintPack();
             RefreshNavigation();
+        }
+
+        // What the stock in front has panels for. Set every paint, both ways,
+        // because one controller serves the room shop and every merchant
+        // shelf and must not carry one's layout into the other.
+        private void PaintMerchantLayout(bool merchant)
+        {
+            SetShown(relicPanel, !merchant);
+            SetShown(gearReroll, !merchant);
+            SetShown(bookReroll, !merchant);
+            SetShown(relicReroll, !merchant);
+            SetShown(packButton, !merchant);
+            if (bookHeader != null)
+                bookHeader.Set(merchant ? UiStrings.ShopSectionConsumables : UiStrings.ShopSectionBooks);
+        }
+
+        private static void SetShown(Component component, bool shown)
+        {
+            if (component != null) SetShown(component.gameObject, shown);
+        }
+
+        private static void SetShown(GameObject target, bool shown)
+        {
+            if (target != null && target.activeSelf != shown) target.SetActive(shown);
         }
 
         // ---- the character picker (owner ask #3) ------------------------------
@@ -491,10 +543,17 @@ namespace PrincesPalace
             var run = RunManager.Run;
             if (run == null || cards == null) return;
 
+            bool merchant = Merchant;
             for (int i = 0; i < cards.Length; i++)
             {
                 var entry = EntryAt(section, i);
                 bool selected = _selectedSection == section && _selectedIndex == i;
+
+                // A merchant shelf stocks as many cards as its recipe says
+                // (two consumables in a three-card panel): a card with no
+                // entry behind it is not part of this shelf and is not shown.
+                // The room shop always fills every card, NO OFFER included.
+                if (cards[i] != null) SetShown(cards[i], !merchant || entry != null);
 
                 if (entry == null || entry.noOffer)
                 {
@@ -507,7 +566,7 @@ namespace PrincesPalace
 
                 if (icons != null && i < icons.Length) ItemIcons.Apply(icons[i], art, entry.contentId);
 
-                var (name, meta) = DescribeEntry(entry);
+                var (name, meta) = DescribeCard(entry);
                 if (names != null && i < names.Length) names[i].SetContent(name);
                 if (metas != null && i < metas.Length) metas[i].SetContent(meta);
 
@@ -553,10 +612,26 @@ namespace PrincesPalace
                 : modifier.Data.DisplayName;
         }
 
+        // A card as the shelf shows it: DescribeEntry, with a revealed
+        // merchant shelf's fake mark leading the meta line ("Browse with
+        // Odette", plan 1.5). The mark is the shelf's, never the item's: it
+        // does not follow the copy into the bag.
+        private (string name, string meta) DescribeCard(ShopStockEntry entry)
+        {
+            var (name, meta) = DescribeEntry(entry);
+            if (entry.fake && RunOrchestrator.ShelfInFrontIsRevealed) meta = UiStrings.ShopCardFakeMeta.Format(meta);
+            return (name, meta);
+        }
+
         private (string name, string meta) DescribeEntry(ShopStockEntry entry)
         {
             switch (entry.kind)
             {
+                case ShopEntryKind.Consumable:
+                {
+                    var item = ContentDatabase.GetItem(entry.contentId);
+                    return (item?.displayName ?? entry.contentId, UiStrings.ShopConsumableMeta.Format());
+                }
                 case ShopEntryKind.Gear:
                 {
                     var item = ContentDatabase.GetItem(entry.contentId);
@@ -643,9 +718,11 @@ namespace PrincesPalace
 
             string description = entry.kind == ShopEntryKind.Relic
                 ? ContentDatabase.GetRelic(entry.contentId)?.Data.Description ?? ""
-                : ContentDatabase.GetSkill(entry.contentId)?.Data.Description ?? "";
+                : entry.kind == ShopEntryKind.Consumable
+                    ? ContentDatabase.GetItem(entry.contentId)?.description ?? ""
+                    : ContentDatabase.GetSkill(entry.contentId)?.Data.Description ?? "";
 
-            var (name, meta) = DescribeEntry(entry);
+            var (name, meta) = DescribeCard(entry);
             detailBody.SetContent(string.IsNullOrEmpty(description)
                 ? $"{name} - {meta}"
                 : $"{name} - {meta} - {description}");
@@ -662,7 +739,7 @@ namespace PrincesPalace
 
             if (item == null || character == null)
             {
-                var (name, meta) = DescribeEntry(entry);
+                var (name, meta) = DescribeCard(entry);
                 detailBody.SetContent($"{name} - {meta}");
                 return;
             }
@@ -908,10 +985,12 @@ namespace PrincesPalace
 
         private void RefreshShelfNavigation()
         {
-            var relic = Present(relicCards);
-            var book = Present(bookCards);
-            var gear = Present(gearCards);
-            var actions = Present(new[] { buyButton, packButton, leaveButton });
+            // Shown() rather than Present(): a merchant shelf stands down the
+            // relic panel, the pack and the rerolls, and its unstocked cards.
+            var relic = Shown(relicCards);
+            var book = Shown(bookCards);
+            var gear = Shown(gearCards);
+            var actions = Shown(new[] { buyButton, packButton, leaveButton });
 
             var groups = new List<UiNavGroup<Selectable>>();
             void AddGroup(string id, UiNavGroupKind kind, List<Button> members, int gridRowLength = 1)
@@ -990,7 +1069,7 @@ namespace PrincesPalace
 
         private static void LinkRerollAbove(List<Button> cards, Button reroll, List<UiNavLink<Selectable>?> links)
         {
-            if (cards.Count == 0 || reroll == null) return;
+            if (cards.Count == 0 || reroll == null || !reroll.gameObject.activeSelf) return;
 
             links.Add(RuntimeNavWiring.Link(cards[0], UiNavDirection.Up, reroll));
             links.Add(RuntimeNavWiring.Link(reroll, UiNavDirection.Down, cards[0]));
@@ -1068,6 +1147,13 @@ namespace PrincesPalace
 
         private static List<Button> Present(IEnumerable<Button> buttons) =>
             (buttons ?? System.Array.Empty<Button>()).Where(b => b != null).ToList();
+
+        // Present, and standing: neither the button nor a panel above it
+        // stood down (PaintMerchantLayout). In a room shop that is every
+        // button, so its navigation is exactly Present's.
+        private static List<Button> Shown(IEnumerable<Button> buttons) =>
+            Present(buttons).Where(b => b.gameObject.activeSelf
+                && (b.transform.parent == null || b.transform.parent.gameObject.activeSelf)).ToList();
 
         private static Button At(Button[] array, int index) =>
             array != null && index >= 0 && index < array.Length ? array[index] : null;

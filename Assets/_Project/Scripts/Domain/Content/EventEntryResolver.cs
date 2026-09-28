@@ -206,7 +206,9 @@ namespace PrincesPalace.Domain.Content
             // Speakers and fights before pages: a line names a speaker, and
             // a fight effect names a fight, so both sets must be known first.
             // A fight's own outcomes only name pages, whose ids already are.
+            // Shelves before fights too: a fight's result may takeShelf.
             if (!TryResolveSpeakers(raw.speakers, eventLabel, scope, out var speakers, out error)
+                || !TryResolveShelves(raw.shelves, eventLabel, scope, out var shelves, out error)
                 || !TryResolveFights(raw.fights, eventLabel, scope, out var fights, out error))
             {
                 return false;
@@ -224,10 +226,11 @@ namespace PrincesPalace.Domain.Content
             }
 
             var candidate = new ResolvedEventDefinition(raw.id, sortOrder, floors, requires, resolvedPages.ToArray(), eventBackdrop,
-                raw.mayReturn, speakers, fights);
+                raw.mayReturn, speakers, fights, shelves);
 
             // Needs the whole page graph, so it runs once every page resolved.
             if (!TryCheckEveryFightStarts(candidate, eventLabel, out error)
+                || !TryCheckEveryShelfUsed(candidate, eventLabel, out error)
                 || !TryCheckSpeakersPresent(candidate, eventLabel, out error)
                 || !TryCheckStagedResults(candidate, eventLabel, out error))
             {
@@ -410,6 +413,11 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
+                if (!TryCheckShelfOpening(choiceLabel, effects, outcome, out error))
+                {
+                    return false;
+                }
+
                 resolvedOutcomes.Add(outcome);
             }
 
@@ -440,6 +448,11 @@ namespace PrincesPalace.Domain.Content
             }
 
             if (!TryResolveEffects(raw.effects, choiceLabel, scope, out var effects, out error))
+            {
+                return false;
+            }
+
+            if (isFightResult && !TryCheckNoShelfFromFightResult(choiceLabel, effects, out error))
             {
                 return false;
             }
@@ -639,7 +652,7 @@ namespace PrincesPalace.Domain.Content
                 {
                     error = $"{label}: effect kind '{row.kind}' is not a known EventEffectKind " +
                             "(gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, " +
-                            "fight, finish).";
+                            "fight, finish, shelf, takeShelf).";
                     return false;
                 }
 
@@ -657,6 +670,11 @@ namespace PrincesPalace.Domain.Content
                 if (!string.IsNullOrWhiteSpace(row.fight) && kind != EventEffectKind.Fight)
                 {
                     error = $"{label}: fight is only read by a fight effect, not by {row.kind}.";
+                    return false;
+                }
+
+                if (!TryCheckShelfFields(row, kind, label, out error))
+                {
                     return false;
                 }
 
@@ -809,6 +827,16 @@ namespace PrincesPalace.Domain.Content
                         }
 
                         list.Add(control);
+                        break;
+
+                    case EventEffectKind.Shelf:
+                    case EventEffectKind.TakeShelf:
+                        if (!TryResolveShelfEffect(row, kind, label, scope, out var shelfEffect, out error))
+                        {
+                            return false;
+                        }
+
+                        list.Add(shelfEffect);
                         break;
 
                     default:

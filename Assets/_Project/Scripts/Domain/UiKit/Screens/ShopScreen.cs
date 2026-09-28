@@ -316,6 +316,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef BookRerollLabel;
         public List<OfferCard> BookCards = new List<OfferCard>();
 
+        // The whole relic panel, so a merchant shelf (an event's, which
+        // sells no relics) can stand it down. The book panel's header is
+        // repainted instead: it shows a merchant's consumables.
+        public NodeRef RelicPanel;
         public NodeRef RelicHeader;
         public NodeRef RelicReroll;
         public NodeRef RelicRerollLabel;
@@ -345,10 +349,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.CeremonialTitle));
 
             // Row 1: RELICS, SPELL BOOKS, SHOPKEEPER.
-            children.Add(screen.BuildShelf("Relic", UiStrings.ShopSectionRelics,
+            var relicPanel = screen.BuildShelf("Relic", UiStrings.ShopSectionRelics,
                 Col1CentreX, Row1CentreY, NarrowColWidth, ShopStock.RelicCount,
                 out screen.RelicHeader, out screen.RelicReroll, out screen.RelicRerollLabel,
-                screen.RelicCards));
+                screen.RelicCards);
+            screen.RelicPanel = relicPanel;
+            children.Add(relicPanel);
 
             children.Add(screen.BuildShelf("Book", UiStrings.ShopSectionBooks,
                 Col2CentreX, Row1CentreY, NarrowColWidth, ShopStock.BookCount,

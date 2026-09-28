@@ -262,6 +262,14 @@ namespace PrincesPalace
                 return EventChoiceResult.Refused(EventRefusal.FightPending);
             }
 
+            // A shelf this event opened is still in front: its page is the
+            // one the Browse went to, and it is picked from once the shelf
+            // is left (LeaveShelf).
+            if (!string.IsNullOrEmpty(run.pendingShelf))
+            {
+                return EventChoiceResult.Refused(EventRefusal.ShelfOpen);
+            }
+
             var choice = page.Choices[index];
             var context = new RunEventContext(save, run);
             if (!EventChoiceGate.Evaluate(choice, context).Enabled)
@@ -375,6 +383,7 @@ namespace PrincesPalace
             run.eventResult = "";
             run.eventResultEffects = new List<EventEffect>();
             run.pendingFight = "";
+            run.pendingShelf = "";
         }
 
         // ---- the event fight's end ----------------------------------------------------
@@ -595,6 +604,18 @@ namespace PrincesPalace
                     {
                         run.eventsSeen.Add(run.eventId);
                     }
+
+                    // Its merchant stock ends with it (plan 1.5): the only
+                    // thing besides the run's end that does.
+                    EndShelvesOf(run, run.eventId);
+                    return;
+
+                case EventEffectKind.Shelf:
+                    ApplyOpenShelf(run, effect);
+                    return;
+
+                case EventEffectKind.TakeShelf:
+                    ApplyTakeShelf(save, run, effect, applied);
                     return;
             }
         }

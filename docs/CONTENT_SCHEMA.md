@@ -104,6 +104,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `mayReturn` | bool | `false` | When true, opening this event does not mark it seen: it stays eligible for every later Event node this run until a finish effect applies. False (every event before the Bell) marks it seen the moment it opens. A finish effect on an event without mayReturn is refused. |  |
 | `speakers` | RawEventSpeaker[] (below) | `[]` | This event's own speakers: people who belong to the event rather than the party (a merchant, say). A line or cast entry may name one by id; they are always present at their own event. |  |
 | `fights` | RawEventFight[] (below) | `[]` | Fights this event can start, each named by a fight effect in some outcome. Its result (every enemy down, the round limit reached, or the party down) picks onDefeated, onSurvived or onFell, which apply like any outcome. |  |
+| `shelves` | RawEventShelf[] (below) | `[]` | Merchant shelves this event can open (a shelf effect) or hand over (a takeShelf effect). A shelf is the room shop's own roll and buying on a stock that belongs to the event, not the node: rolled once per run, kept across Walk on and later visits, ended by finish. |  |
 
 ## items.json -- `RawItemEntry`
 
@@ -397,13 +398,15 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight or finish. | Gold, HealPercent, DamagePercent, Exp, Item, Counter, Relic, PrincesFavor, FillSpecialPool, Fight, Finish |
-| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight and finish refuse it. |  |
+| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight, finish, shelf or takeShelf. | Gold, HealPercent, DamagePercent, Exp, Item, Counter, Relic, PrincesFavor, FillSpecialPool, Fight, Finish, Shelf, TakeShelf |
+| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight, finish and shelf refuse it; takeShelf reads it as how many unsold cards are lost first (0 or more). |  |
 | `item` | string | `""` | The item id granted; required by item. |  |
 | `counter` | string | `""` | The counter id this effect changes; required by counter. |  |
 | `character` | string | `""` | Optional on healPercent and exp: that one character id instead of the whole squad. healPercent never revives (a member at 0 HP stays at 0); exp goes to that member alone rather than being split. Refused on any other kind. |  |
 | `relic` | string | `""` | The relic id (relics.json) added to the run; required by relic. Already held is a no-op. |  |
 | `fight` | string | `""` | fight only, required: the id of one of this event's own fights[] to start. Allowed only in an outcome's effects, at most one per outcome, and that outcome's goTo must be empty -- the fight's result outcome decides where the event goes next. |  |
+| `shelf` | string | `""` | shelf and takeShelf only, required: the id of one of this event's own shelves[]. shelf opens it (the stock is rolled on the first shelf or takeShelf of the run and kept until finish); takeShelf hands the party its unsold cards, amount of them lost first, fakes staying fake. |  |
+| `reveal` | bool | `false` | shelf only: when true this visit marks the shelf's fakes, and the mark stays with the stock for every later visit and reload. Refused on any other kind. |  |
 
 ### `RawEventFight`
 
@@ -467,6 +470,16 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `counter` | string | `""` | The counter id this requirement reads; required by counter. |  |
 | `reason` | string | `""` | Optional caption a locked choice shows for this row, replacing the generated one for any kind. Empty means generated (a counter's generated caption is 'Not yet' / 'No longer', never its id). On a choice row it is capped at EventEntryResolver.MaxLockReasonLength characters; event- and outcome-level rows never show it. |  |
 | `alive` | bool | `false` | inParty only: when true the character must also be standing (run health above 0); a downed member fails with the caption 'Requires <name> standing'. Refused on any other kind. |  |
+
+### `RawEventShelf`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | `""` | Stable id within this event, named by a shelf or takeShelf effect. |  |
+| `priceFactorPercent` | int | `100` | Every card's price as a percent of the room shop's price for the same card, rounded half away from zero, never below 1 gold. 1-100. |  |
+| `fakeShare` | int | `0` | How many cards are fake: max(1, round(cards / fakeShare)), so 3 is a third (1, 1, 2, 2 of 3, 4, 5, 6 cards). 0 means none. A fake looks and sells like the genuine card; fake gear falls apart after 3 fights worn, a fake consumable does nothing when used. |  |
+| `sections` | string[] | `[]` | Which room-shop shelves this stock rolls, each at most once: 'gear' (the room shop's gear roll: same candidates, tier band and affixes). Books and relics are refused -- they carry no item instance, so a fake could not apply. |  |
+| `consumableCount` | int | `0` | How many consumable cards (items.json consumables, drawn without repeats) sit beside the sections' cards; 0 up to ShopStock.ConsumableCount (3). |  |
 
 ### `RawEventSpeaker`
 

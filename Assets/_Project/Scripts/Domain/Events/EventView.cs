@@ -233,6 +233,11 @@ namespace PrincesPalace.Domain.Events
         // page is the one that launched it; nothing on it is pickable until
         // the fight settles and moves the event on.
         FightPending,
+
+        // A shelf this event opened is still in front of the party
+        // (RunSnapshot.pendingShelf). Leaving it returns to the page, which
+        // is pickable again from then on.
+        ShelfOpen,
     }
 
     public enum EventChoiceOutcome

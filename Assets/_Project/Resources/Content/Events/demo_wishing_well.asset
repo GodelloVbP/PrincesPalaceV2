@@ -58,6 +58,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         - Kind: 5
           Amount: 1
           Item: 
@@ -67,6 +69,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         Outcomes:
         - Requires:
           - Kind: 3
@@ -90,6 +94,8 @@ MonoBehaviour:
             RelicId: 
             RelicDisplayName: 
             FightId: 
+            ShelfId: 
+            Reveal: 0
           Result: On the tenth coin the well glimmers gold -- your wish is granted.
           GoTo: wish_granted
           IsLeave: 0
@@ -122,6 +128,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         Outcomes:
         - Requires: []
           Effects: []
@@ -152,6 +160,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         Outcomes:
         - Requires: []
           Effects: []
@@ -201,6 +211,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         Outcomes:
         - Requires: []
           Effects: []
@@ -214,3 +226,4 @@ MonoBehaviour:
     MayReturn: 0
     Speakers: []
     Fights: []
+    Shelves: []

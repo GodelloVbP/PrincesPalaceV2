@@ -32,9 +32,9 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventEffect
     {
-        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight or finish.")]
+        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight, finish, shelf or takeShelf.")]
         public string kind = "";
-        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight and finish refuse it.")]
+        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight, finish and shelf refuse it; takeShelf reads it as how many unsold cards are lost first (0 or more).")]
         public int amount;
         [ContentDoc("The item id granted; required by item.")]
         public string item = "";
@@ -46,6 +46,10 @@ namespace PrincesPalace.Domain.Content
         public string relic = "";
         [ContentDoc("fight only, required: the id of one of this event's own fights[] to start. Allowed only in an outcome's effects, at most one per outcome, and that outcome's goTo must be empty -- the fight's result outcome decides where the event goes next.")]
         public string fight = "";
+        [ContentDoc("shelf and takeShelf only, required: the id of one of this event's own shelves[]. shelf opens it (the stock is rolled on the first shelf or takeShelf of the run and kept until finish); takeShelf hands the party its unsold cards, amount of them lost first, fakes staying fake.")]
+        public string shelf = "";
+        [ContentDoc("shelf only: when true this visit marks the shelf's fakes, and the mark stays with the stock for every later visit and reload. Refused on any other kind.")]
+        public bool reveal;
     }
 
     // One branch of a choice, exactly as typed into a choice's `outcomes`
@@ -160,6 +164,25 @@ namespace PrincesPalace.Domain.Content
         public RawEventSpeaker[] speakers = Array.Empty<RawEventSpeaker>();
         [ContentDoc("Fights this event can start, each named by a fight effect in some outcome. Its result (every enemy down, the round limit reached, or the party down) picks onDefeated, onSurvived or onFell, which apply like any outcome.")]
         public RawEventFight[] fights = Array.Empty<RawEventFight>();
+        [ContentDoc("Merchant shelves this event can open (a shelf effect) or hand over (a takeShelf effect). A shelf is the room shop's own roll and buying on a stock that belongs to the event, not the node: rolled once per run, kept across Walk on and later visits, ended by finish.")]
+        public RawEventShelf[] shelves = Array.Empty<RawEventShelf>();
+    }
+
+    // One row of an event's `shelves` array: a merchant's stock recipe
+    // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.4, Stage B).
+    [Serializable]
+    public class RawEventShelf
+    {
+        [ContentDoc("Stable id within this event, named by a shelf or takeShelf effect.")]
+        public string id = "";
+        [ContentDoc("Every card's price as a percent of the room shop's price for the same card, rounded half away from zero, never below 1 gold. 1-100.")]
+        public int priceFactorPercent = 100;
+        [ContentDoc("How many cards are fake: max(1, round(cards / fakeShare)), so 3 is a third (1, 1, 2, 2 of 3, 4, 5, 6 cards). 0 means none. A fake looks and sells like the genuine card; fake gear falls apart after 3 fights worn, a fake consumable does nothing when used.")]
+        public int fakeShare;
+        [ContentDoc("Which room-shop shelves this stock rolls, each at most once: 'gear' (the room shop's gear roll: same candidates, tier band and affixes). Books and relics are refused -- they carry no item instance, so a fake could not apply.")]
+        public string[] sections = Array.Empty<string>();
+        [ContentDoc("How many consumable cards (items.json consumables, drawn without repeats) sit beside the sections' cards; 0 up to ShopStock.ConsumableCount (3).")]
+        public int consumableCount;
     }
 
     // One row of an event's `speakers` array: a bust on the dialogue stage

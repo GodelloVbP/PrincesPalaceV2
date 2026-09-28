@@ -57,6 +57,19 @@ namespace PrincesPalace.Domain.Rng
         // one roll predict the other.
         public const uint Event = 9;
 
+        // A MERCHANT SHELF (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.5, 3.4) is
+        // four streams, the room shop's reason for three: what the gear is,
+        // which consumables sit beside it, which cards are fake and which card
+        // a robbery loses must each be unable to move the others. The first
+        // three open at the (step, node) where the stock is first rolled; the
+        // scuffle at the (step, node) of the robbery that takes it. Never the
+        // room shop's ShopGear: a caravan and a room shop at the same position
+        // must not roll the same gear.
+        public const uint ShelfGear = 10;
+        public const uint ShelfConsumables = 11;
+        public const uint ShelfFakes = 12;
+        public const uint ShelfScuffle = 13;
+
         // SplitMix64's finalizer, the same mixing SeededRandom itself uses.
         // Applied to the packed inputs rather than to a running state, so this
         // is a pure hash: same inputs, same answer, forever, with no ordering

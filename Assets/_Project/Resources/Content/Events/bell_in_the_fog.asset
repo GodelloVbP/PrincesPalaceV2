@@ -61,6 +61,8 @@ MonoBehaviour:
             RelicId: 
             RelicDisplayName: 
             FightId: bellwether
+            ShelfId: 
+            Reveal: 0
           Result: 
           GoTo: 
           IsLeave: 0
@@ -590,6 +592,8 @@ MonoBehaviour:
           RelicId: toll_of_the_flock
           RelicDisplayName: Toll of the Flock
           FightId: 
+          ShelfId: 
+          Reveal: 0
         - Kind: 6
           Amount: 0
           Item: 
@@ -599,6 +603,8 @@ MonoBehaviour:
           RelicId: bellwethers_bell
           RelicDisplayName: Bellwether's Bell
           FightId: 
+          ShelfId: 
+          Reveal: 0
         - Kind: 3
           Amount: 80
           Item: 
@@ -608,6 +614,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         - Kind: 10
           Amount: 0
           Item: 
@@ -617,6 +625,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         Result: 
         GoTo: break
         IsLeave: 0
@@ -632,6 +642,8 @@ MonoBehaviour:
           RelicId: toll_of_the_flock
           RelicDisplayName: Toll of the Flock
           FightId: 
+          ShelfId: 
+          Reveal: 0
         - Kind: 3
           Amount: 80
           Item: 
@@ -641,6 +653,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         - Kind: 10
           Amount: 0
           Item: 
@@ -650,6 +664,8 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         Result: 
         GoTo: endure
         IsLeave: 0
@@ -665,9 +681,12 @@ MonoBehaviour:
           RelicId: 
           RelicDisplayName: 
           FightId: 
+          ShelfId: 
+          Reveal: 0
         Result: Shawn wakes on the wet ground with the taste of brass in his mouth.
           The stump is empty. No bell, no strap, no mark where either hung.
         GoTo: 
         IsLeave: 1
       HasOnSurvived: 1
       HasOnFell: 1
+    Shelves: []
