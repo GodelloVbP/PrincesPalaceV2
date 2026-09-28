@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.Combat
     // "Some hit markers when Shawn hits as the black ram, some cool OOMPH
     // behind his hits." The obvious shape for that is a branch on the Black
     // Ram somewhere in the view, and it is the shape docs/CODE_STANDARDS.md
-    // "Build the model" exists to refuse: a second form would be a second branch, and
+    // section 10 exists to refuse: a second form would be a second branch, and
     // no skill id or character id belongs in code.
     //
     // WHY IT SITS ON THE TRANSFORM RATHER THAN ON THE SKILLS. The holder's

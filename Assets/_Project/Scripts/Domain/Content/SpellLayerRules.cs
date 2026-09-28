@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.Content
     // A graceful default is right for a placement -- a misplaced effect is
     // still an effect -- and wrong for `render`, where there is no safe answer
     // to "what draws". So every rule below refuses the build, which is
-    // docs/CODE_STANDARDS.md "Functions": "degrade, but never quietly lie"
+    // docs/CODE_STANDARDS.md section 5's "degrade, but never quietly lie"
     // applied at the layer that has an author to tell.
     //
     // EVERY PROBLEM IN ONE PASS, never the first only, matching every other

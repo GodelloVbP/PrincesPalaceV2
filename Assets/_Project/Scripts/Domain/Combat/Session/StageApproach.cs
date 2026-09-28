@@ -48,7 +48,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // enemy's plain-attack approach cannot disagree about what "charge" means.
     // Both resolvers parse through here rather than each keeping their own
     // switch -- the drift a second copy invites is the exact thing
-    // docs/CODE_STANDARDS.md "Reuse" promotes a shared helper to prevent.
+    // docs/CODE_STANDARDS.md section 2 promotes a shared helper to prevent.
     public static class StageApproaches
     {
         // Unrecognised spellings return `fallback` and say nothing, the

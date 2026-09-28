@@ -174,7 +174,7 @@ namespace PrincesPalace.Domain.Content
             // name on every HUD card that stands for them, and Blue is
             // Odette's. An unauthored row would not look unthemed, it would
             // look like Odette, which is the plausible-wrong-answer this
-            // codebase refuses (docs/CODE_STANDARDS.md "Functions").
+            // codebase refuses (docs/CODE_STANDARDS.md Sec5).
             if (!TryParseEnum(raw.plateTheme, out ButtonTheme plateTheme))
             {
                 error = $"{label}: plateTheme '{raw.plateTheme}' is required and must name a ButtonTheme " +
