@@ -49,24 +49,15 @@ namespace PrincesPalace
 
         // ---- content -> Domain ------------------------------------------------
 
-        // The conversion that used to have to exist, and no longer converts
-        // anything.
-        //
-        // This WAS a hand-written copy of 34 arguments out of EnemyDefinition
-        // and back into a ResolvedEnemy -- one of the three field lists this
-        // type's facts were written on, and the same shape that dropped
-        // `transform` and then `bookOnly`/`bookTier` on the skill side. The
-        // asset now STORES the ResolvedEnemy, so there is nothing here to drop.
+        // A NO-OP: the asset now STORES the ResolvedEnemy, so there is
+        // nothing here to convert or drop.
         public static ResolvedEnemy Resolve(EnemyDefinition definition) => definition.Data;
 
-        // PHASE 5B (D6): closes AUDIT #54. An Elite pack's stats used to be
-        // the authored baseStats verbatim -- StatBlock.ScaledForElite existed,
-        // had its multipliers reasoned about in its own header, and had NO
-        // production caller anywhere in the game. Elite is HP x1.40 / ATK
-        // x1.15 / both broad Defenses x1.15, applied to the AUTHORED stats
-        // before depth scaling -- so an Elite fought at any depth is that
-        // depth's normal encounter scaled up by the same fixed ratio, not a
-        // ratio that itself drifts with depth.
+        // An Elite pack's stats are HP x1.40 / ATK x1.15 / both broad
+        // Defenses x1.15, applied to the AUTHORED stats before depth
+        // scaling -- so an Elite fought at any depth is that depth's normal
+        // encounter scaled up by the same fixed ratio, not a ratio that
+        // itself drifts with depth.
         private const float EliteHealthMultiplier = 1.40f;
         private const float EliteAttackMultiplier = 1.15f;
         private const float EliteDefenseMultiplier = 1.15f;
@@ -112,16 +103,11 @@ namespace PrincesPalace
             // health -- ScaledForElite's own main `multiplier` parameter,
             // unchanged behaviour from before this phase.)
             //
-            // MANA REGEN IS NOT IN THAT LIST, and this comment used to say it
-            // was. `stats` really has been elite-scaled two blocks up, so the
-            // claim reads plausibly -- but stats.manaRegen is never read on
-            // this path at all: the call below passes manaRegen: 0 outright,
-            // and no enemy in the game has ever regenerated a point of mana,
-            // before this phase or after it. The behaviour is fine; the
-            // sentence was the kind that sends the next reader hunting a bug
-            // that is not there, or "fixing" it and silently re-tuning every
-            // elite in the game. Passing stats.manaRegen instead would be a
-            // balance change and the owner's call, not a comment's.
+            // MANA REGEN IS NOT IN THAT LIST: stats.manaRegen is never read
+            // on this path at all, the call below passes manaRegen: 0
+            // outright, and no enemy in the game regenerates mana. Passing
+            // stats.manaRegen instead would be a balance change and the
+            // owner's call, not a comment's.
             var state = new CombatantState(definition.Data.DisplayName, false,
                 DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
                 ContentDatabase.BuildPrimaryPool(ContentDatabase.ManaPoolId,
@@ -129,11 +115,11 @@ namespace PrincesPalace
                 DifficultyCurve.ScaleEnemyAttack(stats.attack, depthStep, roundLimit),
                 stats.speed);
 
-            // PHASE 5B (D6): enemy defenses no longer depth-scale at all --
-            // used at their AUTHORED (step-0) value, only elite-scaled above
-            // when this encounter is an Elite. The R_broad/(100+R_broad)
-            // mitigation curve (DamagePipeline) is already asymptotic, so
-            // scaling a defense on top of it double-dips and was running boss
+            // ENEMY DEFENSES NO LONGER DEPTH-SCALE AT ALL -- used at their
+            // AUTHORED (step-0) value, only elite-scaled above when this
+            // encounter is an Elite. The R_broad/(100+R_broad) mitigation
+            // curve (DamagePipeline) is already asymptotic, so scaling a
+            // defense on top of it would double-dip and run boss
             // time-to-kill away past floor 4. See DifficultyCurve.ScaleAttack's
             // own note.
             state.PhysicalDefense = stats.physicalDefense;
@@ -194,12 +180,12 @@ namespace PrincesPalace
             var stats = ContentDatabase.EffectiveStats(character);
             var scores = ContentDatabase.EffectiveAbilityScores(character);
 
-            // THE WEAPON MODEL -- balance redesign Phase 3 (D3). A LIVE
-            // main-hand weapon's honed WeaponPower REPLACES base+gear+ability
-            // Attack entirely; EffectiveStats.attack no longer carries a gear
-            // contribution at all (see its own note), so `stats.attack` here
-            // is already exactly the unarmed fallback the plan calls for --
-            // the character's own authored figure, no multiplier -- and this
+            // THE WEAPON MODEL: a LIVE main-hand weapon's honed WeaponPower
+            // REPLACES base+gear+ability Attack entirely; EffectiveStats.attack
+            // no longer carries a gear contribution at all (see its own
+            // note), so `stats.attack` here is already exactly the unarmed
+            // fallback -- the character's own authored figure, no multiplier
+            // -- and this
             // is the one place the two are chosen between.
             int attack = ContentDatabase.EquippedWeaponPower(character) ?? stats.attack;
 
@@ -277,15 +263,13 @@ namespace PrincesPalace
             // ContentDatabase.ModifierEffects' own header).
             state.ModifierEffects = modifierEffects;
 
-            // RUNIC'S MANA POOL MOVED INTO THE CHAIN. FlatMaxManaBonus and
-            // FlatManaRegenBonus used to be added to the CombatantState here,
-            // after construction, with the comment that Max and Current had
-            // to be bumped by the same amount or the wearer would open the
-            // fight one modifier short of full. That pairing is now
-            // structural rather than remembered: the pool is built at its
+            // RUNIC'S MANA POOL IS BUILT INTO THE CHAIN: FlatMaxManaBonus and
+            // FlatManaRegenBonus are folded into the pool at construction
+            // rather than added to the CombatantState afterward, so Max and
+            // Current cannot come out of step -- the pool is built at its
             // final capacity and its startRule fills it (see
-            // ContentDatabase.BuildPrimaryPool), so there is no second
-            // number to keep in step.
+            // ContentDatabase.BuildPrimaryPool), with no second number to
+            // keep in step.
 
             // The elemental family's typed-resistance half -- the SAME seam
             // relic-granted typed resistance already reaches state.TypedResistance
@@ -335,7 +319,7 @@ namespace PrincesPalace
             // character actually swings with, not of a base nobody sees.
             //
             // Attack carries NO ability-score term any more (Strength derives
-            // nothing until Phase 3 wires weapon power in -- see
+            // nothing until weapon power is wired in -- see
             // AbilityDerivation's header); `stats.attack` alone is what this
             // path swings for, same as the save-backed overload's `total`
             // already reflects via DerivedStats.
@@ -659,16 +643,11 @@ namespace PrincesPalace
             // level grants. Both are looked up here rather than carried on the
             // definition, so adding a skill stays a line in skills.json.
             //
-            // THROUGH ContentDatabase.SkillsUnlockedByLevel now, not a second
-            // hand-rolled copy of it. This used to restate the predicate
-            // itself, with its own "!s.bookOnly is belt and braces" line
-            // explaining why a book-only entry's unlockLevel of int.MaxValue
-            // already excluded it without that extra clause -- true, but it
-            // was still a second copy of a rule one place should own. One
-            // hand-rolled copy of this predicate already dropped the level
-            // filter entirely once (see the Character overload below for what
-            // that cost); the shared function is what stops the next copy
-            // from being able to.
+            // THROUGH ContentDatabase.SkillsUnlockedByLevel, not a
+            // hand-rolled copy of the predicate: one hand-rolled copy of this
+            // predicate already dropped the level filter entirely once (see
+            // the Character overload below for what that cost); the shared
+            // function is what stops the next copy from being able to.
             //
             // No run and no talent list here (no Character record to read
             // them off), so this is the base predicate alone -- the
@@ -697,29 +676,17 @@ namespace PrincesPalace
         // The IN-RUN kit: the character's own strip PLUS whatever their tree
         // granted them, at their real level.
         //
-        // THROUGH ContentDatabase.AvailableSkillsFor, which is the one place
-        // that knows what "this character can press this" means -- unlocked by
-        // level, OR taught outright (unlockedSkillIds), OR granted by a talent,
-        // and player-selectable either way.
-        //
-        // It used to hand-roll the union here, and the hand-rolled version
-        // dropped the level filter entirely: every skill authored against the
-        // character id went into the kit regardless of unlockLevel. The whole
-        // convention that marks a skill "granted rather than earned" is
-        // authoring it at level 999 (see AvailableSkillsFor's own header), so
-        // dropping that filter handed a level-1 Shawn the entire talent tree's
-        // worth of abilities for free -- Ward, Shatter, Wail, all three Gifts,
-        // Provoke, Headbutt and Black Ram Mode, plus golden_fleece (unlockLevel
-        // 8 at the time; later made bookOnly, then removed 2026-09-15,
-        // AUDIT #150) seven levels early. The balance bot found it from the
-        // outside: a level-2 run with
-        // an empty talentIds list recorded fleece_ward, gift_haste and shatter
-        // in skillsUsed, and the defensive policy spent 41% of its deep-fight
-        // turns on a Ward it had never bought.
-        //
-        // AvailableSkillsFor had no production caller at all before this, which
-        // is why nothing caught the divergence: the correct answer existed and
-        // the fight asked a second, wrong copy of the question instead.
+        // THROUGH ContentDatabase.AvailableSkillsFor rather than a
+        // hand-rolled union here: a hand-rolled copy of this predicate can
+        // silently drop the level filter, handing a low-level character
+        // every talent-granted ability for free regardless of unlockLevel
+        // (the convention that marks a skill "granted rather than earned"
+        // is authoring it at level 999 -- see AvailableSkillsFor's own
+        // header). AvailableSkillsFor is the one place that knows what
+        // "this character can press this" means -- unlocked by level, OR
+        // taught outright (unlockedSkillIds), OR granted by a talent, and
+        // player-selectable either way -- so there is only one answer for
+        // a second copy to diverge from.
         private static PlayerKit KitFor(Character character, CharacterDefinition definition,
                                         IReadOnlyList<ResolvedRelic> relics)
         {
@@ -741,14 +708,12 @@ namespace PrincesPalace
                 definition.Data.PlateTheme, definition.Data.PlateArt, definition.Data.BattleSpriteFacing);
         }
 
-        // THE SPELL TIER'S OWN powerMultiplier, kept even though the tier's
-        // name/mana cost/DisplayName it used to travel with (as PlayerKit.
-        // BasicSpell) did not survive the flip. FightSession.Skills.cs'
+        // THE SPELL TIER'S OWN powerMultiplier: FightSession.Skills.cs'
         // ResolveDamageInstances/PreviewSkillPower multiply every FIXED-
         // damage skill (frost_flare, lightning_bolt) by this alongside
         // EffectiveSkillScaling's INT/WIS grade -- "the two never stood in
         // for each other" is that file's own words for why dropping this to
-        // 1 would have been a silent damage nerf, not a cleanup.
+        // 1 would be a silent damage nerf, not a cleanup.
         //
         // THROUGH ContentDatabase, not a private re-walk of SpellTiers: the
         // in-run overload above uses EffectiveSkillPowerMultiplier, which is
@@ -764,23 +729,11 @@ namespace PrincesPalace
         private static float DefinitionOnlySkillPowerMultiplier(int level) =>
             ContentDatabase.GetSpellTierForLevel(level)?.Data.PowerMultiplier ?? 1.5f;
 
-        // The other half of the content conversion, and it is no longer a
-        // conversion at all.
-        //
-        // This WAS a hand-written copy of 34 fields out of SkillDefinition and
-        // back into a ResolvedSkill, and its own comment called it "mechanical,
-        // field for field" -- which is exactly the kind of copy where a missing
-        // line is invisible. Two lines went missing. `transform` was written
-        // onto the asset by ContentBuilder and never read back here, so every
-        // skill resolved for a fight -- including the player's own -- arrived
-        // with a null grant and Black Ram Mode did nothing at all. `bookOnly`
-        // and `bookTier` were dropped the same way afterwards, defaulting to
-        // false/0 for every skill in every fight.
-        //
-        // The fix was the one SpellPresentation already made for the six VFX
-        // fields, one level up: the asset now STORES the ResolvedSkill, so
-        // there is nothing here to drop. ContentRoundTripTests still guards
-        // the journey end to end.
+        // A NO-OP, like Resolve(EnemyDefinition) above: the asset now
+        // STORES the ResolvedSkill, so there is nothing here to convert or
+        // drop -- a hand-written field-by-field copy is exactly the kind of
+        // copy where a missing line goes unnoticed. ContentRoundTripTests
+        // still guards the journey end to end.
         public static ResolvedSkill Resolve(SkillDefinition definition) => definition.Data;
     }
 }

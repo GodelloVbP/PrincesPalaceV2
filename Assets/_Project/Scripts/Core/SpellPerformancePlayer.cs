@@ -34,21 +34,20 @@ namespace PrincesPalace
     // WHO OWNS WHAT WHILE A SPELL IS DRAWING, WHEN IT STOPS, AND WHAT CLOCK
     // BOTH ANSWERS ARE MEASURED AGAINST.
     //
-    // OWNERSHIP IS THE CAST, not the stage slot. What this replaces handed out
-    // pool members by POSITION IN THE STRUCK WALK, so every cast started again
-    // at member 0 and a second cast on a live member restarted it -- there is a
-    // comment in the old renderer defending that restart, and it is the
-    // behaviour the brief asks to remove. A cast records every renderer and
-    // every particle it obtains against its own handle, and the free lists only
-    // ever hand out members nothing owns.
+    // OWNERSHIP IS THE CAST, not the stage slot: a cast records every
+    // renderer and every particle it obtains against its own handle, and
+    // the free lists only ever hand out members nothing owns. Handing out
+    // pool members by POSITION IN THE STRUCK WALK instead would have every
+    // cast start again at member 0, so a second cast on a live member would
+    // restart it.
     //
-    // ONE CLOCK, AND IT IS Time.time. The renderer used to read
-    // realtimeSinceStartup while the beat waited on WaitForSeconds, which is
-    // scaled engine time -- so opening the system menu mid-cast froze the beat
-    // and FAST-FORWARDED the spell, and a captured recording sampled the spell
-    // at wall speed while frames advanced at a fixed step. Time.time is stopped
-    // by timeScale and advanced by captureFramerate, so the beat and the spell
-    // freeze and resume on one mechanism.
+    // ONE CLOCK, AND IT IS Time.time: reading realtimeSinceStartup while the
+    // beat waits on WaitForSeconds (scaled engine time) would let the two
+    // drift apart -- opening the system menu mid-cast would freeze the beat
+    // and fast-forward the spell, and a captured recording would sample the
+    // spell at wall speed while frames advance at a fixed step. Time.time is
+    // stopped by timeScale and advanced by captureFramerate, so the beat and
+    // the spell freeze and resume on one mechanism.
     //
     // ONE CONVERSION, AND IT IS FightBeatPlayer.Scaled. A schedule holds
     // AUTHORED seconds and the clock holds engine ones; the multiplier behind
@@ -211,9 +210,8 @@ namespace PrincesPalace
         public CastHandle Begin(SpellPerformance performance)
         {
             // NOTHING TO PLAY IS NOT A CAST. Refused here rather than by each
-            // caller, which is where it used to live: two of the three callers
-            // pre-filtered an empty performance and PlayContactFx did not, and
-            // the one that did not was one presentation edit away from Paint
+            // caller: leaving it to each caller to pre-filter an empty
+            // performance is one presentation edit away from Paint
             // dereferencing the null Performance that Advance's own Release
             // leaves behind.
             if (performance?.Instances == null || performance.Instances.Count == 0) return CastHandle.None;
@@ -483,13 +481,13 @@ namespace PrincesPalace
             // lets emission stop while the particles it already threw finish.
             if (layer.Render == SpellRender.Emitter)
             {
-                // REFUSED HERE, NOT IN PaintEmitter's PER-FRAME PATH. A path
-                // that resolves to no frames used to reach
-                // `frames[drop.Frame]` unguarded once a drop went alive by
-                // age alone, throwing out of Tick's loop and starving every
-                // later slot in the same tick -- the graceful-degradation
-                // posture this project takes on missing art everywhere else
-                // (ItemIcons, CharacterPortraits, SceneBuilder.LoadSpriteByKey).
+                // REFUSED HERE, NOT IN PaintEmitter's PER-FRAME PATH: a path
+                // that resolves to no frames reaching `frames[drop.Frame]`
+                // unguarded once a drop goes alive by age alone would throw
+                // out of Tick's loop and starve every later slot in the same
+                // tick -- the graceful-degradation posture this project
+                // takes on missing art everywhere else (ItemIcons,
+                // CharacterPortraits, SceneBuilder.LoadSpriteByKey).
                 // Leaving cast.Drops[index] null makes PaintEmitter's
                 // existing `if (drops == null) return;` the only check the
                 // hot path needs -- nothing new added there.
