@@ -105,18 +105,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float Row1CentreY = GridTop - RowHeight * 0.5f;
         private const float Row2CentreY = GridBottom + RowHeight * 0.5f;
 
-        // ---- the merged keeper/detail/actions column (owner ask #3, 2026-09-22) ----
+        // ---- the merged keeper/detail/actions column -------------------------
         //
         // COL3 SPANS BOTH ROWS, the same way GEAR already spans both narrow
-        // columns horizontally (BuildGearPanel). The old shape was two
-        // panels: a "SHOPKEEPER" row with a portrait placeholder and a
-        // one-line detail label, and a "SHOP" row of actions underneath. The
-        // portrait was always a stopgap ("a portrait slot with no portrait
-        // yet") and a "roughly square, ~420x420" comparison panel needs more
-        // height than either row alone has, so this pass retires the
-        // placeholder and merges the two panels rather than shrinking
-        // Relic/Book/Gear's own tuned metrics to make room -- the model
-        // rule's other sanctioned lever (CLAUDE.md brief, "Model rules").
+        // columns horizontally (BuildGearPanel): a "roughly square,
+        // ~420x420" comparison panel needs more height than one row alone
+        // has, and merging keeper/detail/actions into one column buys that
+        // rather than shrinking Relic/Book/Gear's own tuned metrics to make
+        // room -- the model rule's other sanctioned lever (CLAUDE.md brief,
+        // "Model rules").
         private const float TallColHeight = RowHeight * 2f + RowGap;
         private const float TallColCentreY = (Row1CentreY + Row2CentreY) * 0.5f;
         private const float TallHeaderCentreY = TallColHeight * 0.5f - PanelPad - PanelHeaderHeight * 0.5f;
@@ -133,9 +130,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float PickerArrowSize = 34f;
         private const float PickerWidth = DetailPanelSize;
 
-        // The comparison panel: "roughly square and readable" per the
-        // owner's own words. ItemComparisonPanel is the reusable builder;
-        // this is just where the shop puts one.
+        // The comparison panel: roughly square and readable.
+        // ItemComparisonPanel is the reusable builder; this is just where
+        // the shop puts one.
         private const float DetailPanelSize = 420f;
         private const float DetailPanelTitleHeight = 30f;
         private const float DetailTop = PickerCentreY - PickerRowHeight * 0.5f - PickerGap;
@@ -297,22 +294,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef BuyButton;
         public NodeRef PackButton;
 
-        // The character picker (owner ask #3) -- defaults to the party
-        // leader, stepped by the arrows or by LB/RB via
-        // ShopController.StepSection.
+        // The character picker: defaults to the party leader, stepped by
+        // the arrows or by LB/RB via ShopController.StepSection.
         public NodeRef CharacterName;
         public NodeRef PrevCharacterButton;
         public NodeRef NextCharacterButton;
 
         // THE ONE BOX FOR "WHAT THE SHOP IS TELLING THE PLAYER RIGHT NOW"
-        // (docs/CODE_STANDARDS.md "Build the model" -- one authoritative place, not a
-        // second box next to the first one). The old one-line
-        // "ShopDetailLabel" retires: ShopDetailPanelBody carries the
-        // refusal/empty-selection/relic/book-description text it used to
-        // (ShopController.PaintDetail), AND the full gear comparison
-        // (ItemDescription.ComparisonBody) for a selected gear card --
-        // ShopScreenRefusalTests and the two Journey tests were updated to
-        // read the new node name.
+        // (docs/CODE_STANDARDS.md "Build the model" -- one authoritative
+        // place, not a second box next to the first one).
+        // ShopDetailPanelBody carries the refusal/empty-selection/relic/
+        // book-description text (ShopController.PaintDetail), AND the full
+        // gear comparison (ItemDescription.ComparisonBody) for a selected
+        // gear card.
         public NodeRef DetailPanelRoot;
         public NodeRef DetailTitle;
         public NodeRef DetailBody;
@@ -429,9 +423,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // THE BUST STANDS ON THE PANEL'S BOTTOM EDGE. The art is a straight
         // cut at the jacket (the dialogue stage runs it off the screen's
         // bottom), so it cannot float: centred in a box with PreserveAspect
-        // it hung mid-panel with the cut showing (capture 2026-09-28). Its
-        // bottom sits one hairline above the panel's own bottom edge, on the
-        // rim, and ShopController sizes its rect to the sprite's aspect
+        // it hangs mid-panel with the cut showing. Its bottom sits one
+        // hairline above the panel's own bottom edge, on the rim, and
+        // ShopController sizes its rect to the sprite's aspect
         // (MerchantBustSize) so nothing centres it back up.
         public const float MerchantBustBottomY = -PanelHalfHeight + 1f;
         public const float MerchantBustMaxHeight = ContentTop - MerchantBustBottomY;
@@ -554,10 +548,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float width, int count, out NodeRef headerRef, out NodeRef reroll, out NodeRef rerollLabel,
             List<OfferCard> cards)
         {
-            // Themed(Silver), owner's HQ-kit instruction (2026-09-07),
-            // replacing the hairline OutlineButton. 210x40 (5.25) is close
-            // enough to the FiveByOne plate's 5.0 that the swap costs no
-            // visible stretch.
+            // Themed(Silver). 210x40 (5.25) is close enough to the
+            // FiveByOne plate's 5.0 that the swap costs no visible stretch.
             var rerollButton = Ui.Button($"Shop{prefix}Reroll", UiStrings.ShopReroll,
                     new UiVec(RerollWidth, RerollHeight), 22,
                     Place.At(width * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY))
@@ -618,8 +610,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 UiSize.Fixed(GearWidth, RowHeight), parts);
         }
 
-        // SHOPKEEPER / DETAIL / ACTIONS, merged (owner ask #3, 2026-09-22):
-        // the character picker, the selected gear card's comparison panel
+        // SHOPKEEPER / DETAIL / ACTIONS, merged: the character picker, the
+        // selected gear card's comparison panel
         // (ItemComparisonPanel) and the shop's own BUY/PACK/LEAVE, one
         // column spanning the full grid height. See this class's own
         // "merged keeper/detail/actions column" header above for why the
@@ -662,13 +654,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ---- gold, buy/pack, leave --------------------------------------
             //
-            // TWO PER ROW rather than the old three stacked full-width rows:
-            // a 420-tall comparison panel leaves this block less headroom
-            // than three stacked FiveByOne plates need, so BUY and PACK sit
-            // side by side (Ui.PlateNominalSizeFor keeps the requested WIDTH
-            // and only adjusts height to a valid plate aspect, same as every
-            // other call site) and LEAVE stays full width below them, hard
-            // against the panel's bottom edge exactly as it always was.
+            // TWO PER ROW: a 420-tall comparison panel leaves this block
+            // less headroom than three stacked FiveByOne plates need, so
+            // BUY and PACK sit side by side (Ui.PlateNominalSizeFor keeps
+            // the requested WIDTH and only adjusts height to a valid plate
+            // aspect, same as every other call site) and LEAVE stays full
+            // width below them, hard against the panel's bottom edge.
             float goldY = ActionsTop - ActionsGoldHeight * 0.5f;
             float goldBottom = goldY - ActionsGoldHeight * 0.5f;
 
@@ -792,10 +783,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         //
         // Matches docs/handoffs/shop_v2/screenshots/pack.png: a centred dialog
         // with a title, a close control, and one hairline-outlined row per bag
-        // entry carrying name, metadata and sell price. Unchanged in shape by
-        // this pass except for the frame -- the modal used to be a bare solid
-        // with no rim at all, which was the one place it did not look like the
-        // reference.
+        // entry carrying name, metadata and sell price. The rim on the frame
+        // is what makes this match the reference; a bare solid with no rim
+        // would not.
         private UiNode BuildPackModal()
         {
             const float ModalWidth = 1100f;
@@ -909,12 +899,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             children.Add(price);
 
-            // ThemedPlate(Silver) small plates, owner's HQ-kit instruction
-            // (2026-09-07). ThemedPlate rather than Themed(): each needs its
-            // own declared `<name>Caption` child the way OutlineButton always
-            // built one (Runtime button text + a separate caption node), so
-            // swapping factories keeps that shape and only trades the
-            // hairline rim for the kit's plate art.
+            // ThemedPlate(Silver) small plates. ThemedPlate rather than
+            // Themed(): each needs its own declared `<name>Caption` child
+            // the way OutlineButton always built one (Runtime button text +
+            // a separate caption node), so swapping factories keeps that
+            // shape and only trades the hairline rim for the kit's plate
+            // art.
             var sellOneSize = new UiVec(120f, 40f);
             var sellOne = Ui.Button($"ShopPackRow{index}SellOne", UiString.Runtime, sellOneSize, 20,
                     Place.At(260f, 0f))
