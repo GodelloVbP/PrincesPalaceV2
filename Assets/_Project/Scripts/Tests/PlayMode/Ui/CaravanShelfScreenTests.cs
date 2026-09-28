@@ -123,6 +123,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(Named("ShopGearReroll").activeSelf, "a merchant shelf offered a reroll");
             Assert.IsFalse(Named("ShopBookReroll").activeSelf, "a merchant shelf offered a reroll");
             Assert.IsFalse(Named("ShopPackButton").activeSelf, "a merchant shelf offered to buy the bag");
+            Assert.AreEqual(0f, ((RectTransform)Named("ShopBuyButton").transform).anchoredPosition.x, 0.01f,
+                "BUY kept its left-of-PACK slot with PACK stood down");
+            Assert.IsTrue(Named("ShopDetailPanel").activeSelf,
+                "the comparison panel is hidden with nothing selected, so SELECT A CARD paints into nothing");
             Assert.AreEqual("CONSUMABLES", Text("ShopBookPanelHeader"));
             Assert.AreEqual("BUYING FOR", Text("ShopKeeperPanelHeader"),
                 "a merchant shelf still captioned the buyer's column SHOPKEEPER beside the keeper's own panel");

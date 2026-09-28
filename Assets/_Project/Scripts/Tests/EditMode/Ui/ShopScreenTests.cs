@@ -36,6 +36,53 @@ namespace PrincesPalace.Domain.Tests
                 string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
         }
 
+        [Test]
+        public void BuySitsLeftOfPackWhilePackShows_AndCentresAlone()
+        {
+            // Pair 300 wide with a 16 gap: BUY's centre is (300 + 16) / 2 left.
+            Assert.AreEqual(-158f, ShopScreen.BuyButtonX(packShown: true), 0.001f);
+            Assert.AreEqual(0f, ShopScreen.BuyButtonX(packShown: false), 0.001f);
+        }
+
+        [Test]
+        public void TheBuiltBuyButtonIsAtTheRoomShopsSlot()
+        {
+            var screen = ShopScreen.Build();
+            Assert.AreEqual(-158f, screen.BuyButton.Node.Place.Offset.X, 0.001f);
+        }
+
+        [Test]
+        public void TheMerchantBustStandsOnThePanelsBottomEdge()
+        {
+            // Row height (892 - 24) / 2 = 434, so the panel's bottom edge is
+            // -217 and the bust stands one hairline above it; the content top
+            // is 217 - 28 - 48 - 16 = 125, 341 above the bust's foot.
+            Assert.AreEqual(-216f, ShopScreen.MerchantBustBottomY, 0.001f);
+            Assert.AreEqual(341f, ShopScreen.MerchantBustMaxHeight, 0.001f);
+
+            var bust = ShopScreen.Build().MerchantBust.Node;
+            Assert.AreEqual(-216f, bust.Place.Offset.Y, 0.001f);
+            Assert.AreEqual(0f, bust.Place.Pivot.Y, 0.001f, "the bust is bottom-pivoted, so its cut edge is its anchor");
+        }
+
+        [Test]
+        public void TheMerchantBustIsSizedToItsArt()
+        {
+            // The rat merchant's 1408x1402: 200 wide, 200 * 1402 / 1408 tall.
+            var rat = ShopScreen.MerchantBustSize(new UiVec(1408f, 1402f));
+            Assert.AreEqual(200f, rat.X, 0.01f);
+            Assert.AreEqual(199.15f, rat.Y, 0.01f);
+
+            // A sprite taller than the room shrinks to 341 tall, width with it.
+            var tall = ShopScreen.MerchantBustSize(new UiVec(500f, 1000f));
+            Assert.AreEqual(170.5f, tall.X, 0.01f);
+            Assert.AreEqual(341f, tall.Y, 0.01f);
+
+            var none = ShopScreen.MerchantBustSize(new UiVec(0f, 0f));
+            Assert.AreEqual(200f, none.X, 0.01f);
+            Assert.AreEqual(200f, none.Y, 0.01f);
+        }
+
         // The shelf sizes are ShopStock's own constants, decided from gate
         // 1's batch (docs/handoffs/shop_v2/GAP_AUDIT.md, "Gate exit checks
         // -> Gate 1"). Pinned against the constant, never a literal, so a

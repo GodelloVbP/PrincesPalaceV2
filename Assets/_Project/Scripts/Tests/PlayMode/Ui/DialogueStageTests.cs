@@ -583,6 +583,48 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(LineLabel.maxVisibleCharacters, atOpen, "closing the menu did not resume the typewriter");
         }
 
+        // ---- the backdrop -------------------------------------------------------------
+
+        // A stage resized under an open page re-covers on the next frame. The
+        // cover used to be solved once at paint, so the capture rig's 4:3
+        // pass (and a real window resize) kept the 16:9 size and showed bare
+        // ground above and below it. Dungeon.png is 1672x941: at 1920x1440
+        // the height binds, 941 * 1440/941 = 1440 and 1672 * 1440/941 =
+        // 2558.64 (DialogueStageLayoutTests' own worked figures).
+        [UnityTest]
+        public IEnumerator AStageResizedUnderAnOpenPage_ReCoversTheBackdrop()
+        {
+            yield return OpenTheStage();
+
+            var stage = (RectTransform)Find("DialogueStage").transform;
+            var backdrop = Find("StageBackdrop").GetComponent<Image>();
+            Assert.IsTrue(backdrop.enabled && backdrop.sprite != null, "fixture: the default backdrop is baked");
+
+            var anchorMin = stage.anchorMin;
+            var anchorMax = stage.anchorMax;
+            var sizeDelta = stage.sizeDelta;
+            var position = stage.anchoredPosition;
+            try
+            {
+                stage.anchorMin = stage.anchorMax = new Vector2(0.5f, 0.5f);
+                stage.anchoredPosition = Vector2.zero;
+                stage.sizeDelta = new Vector2(1920f, 1440f);
+                yield return null;
+                yield return null;
+
+                var size = backdrop.rectTransform.sizeDelta;
+                Assert.AreEqual(2558.64f, size.x, 0.05f, "the cover did not follow the stage's new width");
+                Assert.AreEqual(1440f, size.y, 0.05f, "the cover did not follow the stage's new height");
+            }
+            finally
+            {
+                stage.anchorMin = anchorMin;
+                stage.anchorMax = anchorMax;
+                stage.sizeDelta = sizeDelta;
+                stage.anchoredPosition = position;
+            }
+        }
+
         // ---- busts ----------------------------------------------------------------------
 
         [UnityTest]

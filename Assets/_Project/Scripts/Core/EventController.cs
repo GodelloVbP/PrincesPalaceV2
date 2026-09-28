@@ -243,6 +243,8 @@ namespace PrincesPalace
         // every way it opens and closes is covered, not only Start.
         private void Update()
         {
+            KeepBackdropCovered();
+
             if (_playback == null) return;
 
             if (systemMenu != null && systemMenu.IsOpen) _playback.Suspend();
@@ -573,7 +575,11 @@ namespace PrincesPalace
         private void PaintBackdrop(string backdropKey)
         {
             if (!ItemIcons.Apply(stageBackdrop, backdropArt, backdropKey)) return;
+            CoverBackdrop();
+        }
 
+        private void CoverBackdrop()
+        {
             var sprite = stageBackdrop.sprite;
             var canvas = dialogueStage.rect.size;
             var cover = DialogueStageLayout.CoverSize(
@@ -583,6 +589,25 @@ namespace PrincesPalace
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = Vector2.zero;
             rect.sizeDelta = new Vector2(cover.X, cover.Y);
+            _backdropCoveredFor = canvas;
+        }
+
+        // THE COVER FOLLOWS THE STAGE, not just the paint. It was solved once
+        // when a page painted, so a stage resized under an open event (a
+        // window resize, a fullscreen toggle, the capture rig's aspect sweep)
+        // kept the old aspect's size: at 4:3 a 16:9 cover left 180px of bare
+        // ground above and below it and the set piece hung into that band;
+        // at 21:9 it left bars down both sides. Re-solved on the frame the
+        // stage's rect changes.
+        private Vector2 _backdropCoveredFor;
+
+        private void KeepBackdropCovered()
+        {
+            if (dialogueStage == null || stageBackdrop == null) return;
+            if (!stageBackdrop.enabled || stageBackdrop.sprite == null) return;
+            if (!dialogueStage.gameObject.activeInHierarchy) return;
+            if (dialogueStage.rect.size == _backdropCoveredFor) return;
+            CoverBackdrop();
         }
 
         // Requested expression, then neutral, then no bust (contract 11);

@@ -46,11 +46,13 @@ namespace PrincesPalace
         [SerializeField] internal Button prevCharacterButton;
         [SerializeField] internal Button nextCharacterButton;
 
-        // The comparison panel (ItemComparisonPanel). detailPanelRoot is
-        // shown only for a valid, non-refused GEAR selection; every other
+        // The comparison panel (ItemComparisonPanel). ALWAYS SHOWN: only a
+        // valid, non-refused GEAR selection fills detailTitle; every other
         // state (nothing selected, a refusal, a relic/book card) paints
-        // into detailBody alone the way the old single-line detail label
-        // always did -- see PaintDetail's own header.
+        // into detailBody alone -- see PaintDetail's own header. It used to
+        // be hidden in those states, and detailBody is the panel's child, so
+        // SELECT A CARD, a relic's line and every refusal were painted into
+        // an inactive label: the column showed a 420px hole (2026-09-28).
         [SerializeField] internal GameObject detailPanelRoot;
         [SerializeField] internal TMP_Text detailTitle;
         [SerializeField] internal TMP_Text detailBody;
@@ -502,6 +504,7 @@ namespace PrincesPalace
             SetShown(bookReroll, !merchant);
             SetShown(relicReroll, !merchant);
             SetShown(packButton, !merchant);
+            PlaceBuyButton(packShown: !merchant);
             if (bookHeader != null)
                 bookHeader.Set(merchant ? UiStrings.ShopSectionConsumables : UiStrings.ShopSectionBooks);
             if (keeperHeader != null)
@@ -511,6 +514,17 @@ namespace PrincesPalace
             SetShown(merchantPanel, front != null);
             PaintTitle(front);
             if (front != null) PaintMerchant(front);
+        }
+
+        // BUY beside PACK, or alone and centred when PACK is stood down
+        // (ShopScreen.BuyButtonX). Only x moves; the tree owns the row's y.
+        private void PlaceBuyButton(bool packShown)
+        {
+            if (buyButton == null) return;
+            var rect = (RectTransform)buyButton.transform;
+            var position = rect.anchoredPosition;
+            position.x = ShopScreen.BuyButtonX(packShown);
+            rect.anchoredPosition = position;
         }
 
         private void PaintTitle(MerchantShelfFront front)
@@ -543,6 +557,15 @@ namespace PrincesPalace
                 merchantBust.sprite = sprite;
                 merchantBust.preserveAspect = true;
                 SetShown(merchantBust, sprite != null);
+
+                // Sized to the art so its cut edge stays on the panel's
+                // bottom edge (ShopScreen.MerchantBustBottomY); a square box
+                // with PreserveAspect would centre a shorter sprite upward.
+                if (sprite != null)
+                {
+                    var size = ShopScreen.MerchantBustSize(new UiVec(sprite.rect.width, sprite.rect.height));
+                    merchantBust.rectTransform.sizeDelta = new Vector2(size.X, size.Y);
+                }
             }
 
             SetShown(merchantBustPending, sprite == null);
@@ -739,11 +762,11 @@ namespace PrincesPalace
         // order the old single-line label always used:
         //
         //   1. a refusal, or the pack/empty-selection placeholder -- plain
-        //      text in detailBody, panel hidden (nothing to compare).
+        //      text in detailBody under an empty title (nothing to compare).
         //   2. a relic or book -- the old name/meta/description line, same
         //      text, same box (a comparison needs an equip slot; neither
         //      kind has one).
-        //   3. a gear card -- detailTitle gets its name, the panel shows,
+        //   3. a gear card -- detailTitle gets its name,
         //      and detailBody carries ItemDescription.ComparisonBody: the
         //      item's stats, its affix lines (owner ask #2's full numbers)
         //      and the delta against whatever SelectedCharacter() has
@@ -751,7 +774,7 @@ namespace PrincesPalace
         private void PaintDetail(RunSnapshot run)
         {
             if (detailTitle != null) detailTitle.SetContent("");
-            SetDetailPanelActive(false);
+            SetDetailPanelActive(true);
 
             if (detailBody == null) return;
 
@@ -816,8 +839,6 @@ namespace PrincesPalace
             var riftTier = (RiftTier)entry.riftTier;
             detailBody.SetContent(ItemDescription.ComparisonBody(character, item, entry.plus,
                 riftTier, entry.modifiers));
-
-            SetDetailPanelActive(true);
         }
 
         private void SetDetailPanelActive(bool active)

@@ -131,6 +131,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float PickerGap = 16f;
         private const float PickerCentreY = TallContentTop - PickerRowHeight * 0.5f;
         private const float PickerArrowSize = 34f;
+        private const float PickerWidth = DetailPanelSize;
 
         // The comparison panel: "roughly square and readable" per the
         // owner's own words. ItemComparisonPanel is the reusable builder;
@@ -152,6 +153,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float ActionsGoldHeight = 62f;
         private const float ActionsPairWidth = 300f;
         private const float ActionsPairGap = 16f;
+
+        // BUY's x in the keeper panel: left of PACK while PACK shows, centred
+        // over LEAVE when it is stood down (a merchant shelf has no pack), so
+        // the row never shows a half-empty pair. ShopController applies it
+        // every paint; the tree is built at the room shop's shape.
+        public static float BuyButtonX(bool packShown) =>
+            packShown ? -(ActionsPairWidth + ActionsPairGap) * 0.5f : 0f;
 
         // 532 + 24 + 532 + 24 + 696 = 1808 = the full inner width. The wide
         // column is the prototype's 1.3fr rounded to a whole number that
@@ -415,8 +423,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // as a bug), the epithet and a line on the shelf's fakes on the
         // right. Built inactive; ShopController shows it instead of the relic
         // panel on a merchant shelf.
-        private const float MerchantBustWidth = 200f;
+        public const float MerchantBustWidth = 200f;
         private const float MerchantTextGap = 20f;
+
+        // THE BUST STANDS ON THE PANEL'S BOTTOM EDGE. The art is a straight
+        // cut at the jacket (the dialogue stage runs it off the screen's
+        // bottom), so it cannot float: centred in a box with PreserveAspect
+        // it hung mid-panel with the cut showing (capture 2026-09-28). Its
+        // bottom sits one hairline above the panel's own bottom edge, on the
+        // rim, and ShopController sizes its rect to the sprite's aspect
+        // (MerchantBustSize) so nothing centres it back up.
+        public const float MerchantBustBottomY = -PanelHalfHeight + 1f;
+        public const float MerchantBustMaxHeight = ContentTop - MerchantBustBottomY;
+
+        // MerchantBustWidth wide at the sprite's aspect; a sprite taller than
+        // the room to the content top is shrunk to fit it, width with it. A
+        // degenerate sprite answers the square the tree builds.
+        public static UiVec MerchantBustSize(UiVec sprite)
+        {
+            if (sprite.X <= 0f || sprite.Y <= 0f) return new UiVec(MerchantBustWidth, MerchantBustWidth);
+
+            float height = MerchantBustWidth * sprite.Y / sprite.X;
+            if (height <= MerchantBustMaxHeight) return new UiVec(MerchantBustWidth, height);
+            return new UiVec(MerchantBustMaxHeight * sprite.X / sprite.Y, MerchantBustMaxHeight);
+        }
         private const float MerchantEpithetHeight = 64f;
         private const float MerchantNoteGap = 16f;
         private const float MerchantNoteHeight = 120f;
@@ -439,8 +469,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             MerchantBustPending = pending;
             parts.Add(pending);
 
-            // Shares the PORTRAIT PENDING box's slot; only one is ever shown.
-            var bust = Ui.Sprite("ShopMerchantBust", null, Place.At(bustCentreX, contentCentreY), UiSize.Fixed(bustSize))
+            // Shares the PORTRAIT PENDING box's column; only one is ever shown.
+            // Bottom-pivoted on the panel's bottom edge (MerchantBustBottomY).
+            var bust = Ui.Sprite("ShopMerchantBust", null,
+                    Place.At(bustCentreX, MerchantBustBottomY, new UiVec(0.5f, 0f)),
+                    UiSize.Fixed(MerchantBustWidth, MerchantBustWidth))
                 .AsDecor()
                 .Inactive();
             bust.PreserveAspect = true;
@@ -600,15 +633,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float inner = WideColWidth - PanelPad * 2f;
 
             // ---- the character picker --------------------------------------
+            // As wide as the comparison panel under it, not the column: the
+            // arrows sat 640px apart at the column's edges with the name
+            // alone in the middle, which read as three stray glyphs.
             var characterName = Ui.Label("ShopCharacterName", UiString.Runtime,
-                new UiVec(inner - (PickerArrowSize + 16f) * 2f, PickerRowHeight), 20, DetailText,
+                new UiVec(PickerWidth - (PickerArrowSize + 16f) * 2f, PickerRowHeight), 20, DetailText,
                 Place.At(0f, PickerCentreY));
             CharacterName = characterName;
             parts.Add(characterName);
 
             var pager = Ui.Pager(
-                "ShopPrevCharacter", Place.At(-inner * 0.5f + PickerArrowSize * 0.5f, PickerCentreY),
-                "ShopNextCharacter", Place.At(inner * 0.5f - PickerArrowSize * 0.5f, PickerCentreY),
+                "ShopPrevCharacter", Place.At(-PickerWidth * 0.5f + PickerArrowSize * 0.5f, PickerCentreY),
+                "ShopNextCharacter", Place.At(PickerWidth * 0.5f - PickerArrowSize * 0.5f, PickerCentreY),
                 new UiVec(PickerArrowSize, PickerArrowSize), 16);
             PrevCharacterButton = pager.Prev;
             NextCharacterButton = pager.Next;
@@ -656,7 +692,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             float pairHalfGap = ActionsPairGap * 0.5f;
             var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, pairSize, 26,
-                    Place.At(-(pairSize.X * 0.5f + pairHalfGap), pairY))
+                    Place.At(BuyButtonX(packShown: true), pairY))
                 .Themed(ButtonTheme.Gold);
             BuyButton = buy;
             parts.Add(buy);
