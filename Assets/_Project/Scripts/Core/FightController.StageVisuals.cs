@@ -26,12 +26,11 @@ namespace PrincesPalace
         // not who Domain already knows is dead. FightSession resolves a whole
         // round synchronously before any beat reaches the view, so by the time
         // beat 1 starts playing, CombatantState.IsAlive already reflects
-        // whatever beat 4 or 5 does to that combatant. StanceOf used to read
-        // IsAlive directly, which put a character in the Defeated pose from the
-        // very first frame of the round if anything later in that same round
-        // killed them -- "before the turn is done, with all phases, Shawn
-        // already downs." FadeTheFallen already solved this exact class of bug
-        // for the death fade by keying off beat.Snapshot instead of live
+        // whatever beat 4 or 5 does to that combatant. Reading IsAlive
+        // directly in StanceOf would put a character in the Defeated pose
+        // from the very first frame of the round if anything later in that
+        // same round killed them. FadeTheFallen solves this exact class of
+        // bug for the death fade by keying off beat.Snapshot instead of live
         // health; this is the same fix applied to the pose.
         private readonly HashSet<CombatantState> _confirmedDefeated = new HashSet<CombatantState>();
 
@@ -39,19 +38,16 @@ namespace PrincesPalace
         // source HoldsRank reads, in place of asking a StageDeathFade's own
         // Faded flag live.
         //
-        // THE RACE THIS REPLACES (StageFormationTests.TheSurvivorClosesUp
-        // OnlyOnceTheCorpseHasFinishedFading, hunt 2026-09-22): HoldsRank
-        // used to read fade.Faded directly, and RefreshStage is reached
-        // from every ordinary beat's PaintVitals as well as from a fade's
-        // own Finished callback. Both are coroutines on different
-        // MonoBehaviours, and Unity gives no ordering guarantee between two
-        // different components' coroutines resuming on the same frame -- so
-        // an ordinary beat's repaint could, on the exact frame a fade
-        // crossed its own finish line, observe Faded already true and close
-        // ranks a frame ahead of the fade's own notification. A HitStrength
-        // pass that shortened a nearby beat's dwell made that coincidence
-        // land often enough to be caught; the coincidence was always
-        // possible.
+        // THE RACE THIS AVOIDS (StageFormationTests.TheSurvivorClosesUp
+        // OnlyOnceTheCorpseHasFinishedFading): reading fade.Faded directly
+        // would race RefreshStage, which is reached from every ordinary
+        // beat's PaintVitals as well as from a fade's own Finished callback.
+        // Both are coroutines on different MonoBehaviours, and Unity gives
+        // no ordering guarantee between two different components'
+        // coroutines resuming on the same frame -- so an ordinary beat's
+        // repaint could, on the exact frame a fade crossed its own finish
+        // line, observe Faded already true and close ranks a frame ahead of
+        // the fade's own notification.
         //
         // Written ONLY by OnCorpseFadeFinished (the fade's own explicit
         // notification) and cleared only by a revival, so no OTHER caller
@@ -184,7 +180,7 @@ namespace PrincesPalace
             if (IsStanding(combatant)) return true;
 
             // _corpseGone, not fade.Faded read live -- see its own header
-            // for the race asking the fade directly used to open.
+            // for the race reading the fade directly would open.
             return !_corpseGone.Contains(combatant);
         }
 
@@ -279,9 +275,10 @@ namespace PrincesPalace
                 // rather than re-deriving where it thinks the figure went.
                 // That row is baked at build time against the fixed
                 // three-slot geometry and has to be nudged by the difference
-                // (RefreshEnemyStatusRows); it used to compute that
-                // difference from the slot INDEX, which was the same number
-                // as the rank until this file stopped treating them as one.
+                // (RefreshEnemyStatusRows), computed from the mark rather
+                // than the slot INDEX, since slot and rank are not the same
+                // number once a figure's rank can change independently of
+                // its slot.
                 if (marks != null && slot < marks.Length) marks[slot] = mark;
 
                 AnchorOne(slots[slot],
@@ -402,11 +399,10 @@ namespace PrincesPalace
         // builder used, so the two can never disagree about what "slot 1 of 2"
         // means.
         //
-        // WAS A LOOP OVER SLOTS, and is now a call per RANK, which is the
-        // whole of A3's positional half: the caller decides which combatant
-        // holds which rank for the beat being drawn and this puts that
-        // combatant's own slot on the mark that rank implies. While rank and
-        // slot were the same number the difference did not exist.
+        // A CALL PER RANK, not a loop over slots: the caller decides which
+        // combatant holds which rank for the beat being drawn and this puts
+        // that combatant's own slot on the mark that rank implies, so rank
+        // and slot can move independently of each other.
         private static void AnchorOne(RectTransform slot, StageActorAnimator animator,
                                       Vector2 mark, Vector3 baseScale, bool[] placed, int index)
         {
@@ -448,20 +444,18 @@ namespace PrincesPalace
 
             // THE ANIMATOR HAS TO BE TOLD, and telling it is the whole of the
             // write. It holds the mark a figure returns to after a lunge and
-            // the scale its stretch multiplies onto, and it captured both in
-            // Awake -- which was correct only while a slot's position was fixed
-            // at build time. Without this every swing after a re-spread ended
-            // by snapping the figure back to where its slot used to be, at the
-            // size it used to be.
+            // the scale its stretch multiplies onto, captured once and not
+            // re-read from the RectTransform -- since a slot's position can
+            // change after a re-spread, every swing would otherwise end by
+            // snapping the figure back to a stale mark and scale.
             //
-            // ASSIGNING THE RECT HERE AS WELL USED TO BE PART OF IT, and it is
-            // not any more. That wrote the two values and then called a Rehome
-            // that read them straight back, which worked only because nothing
-            // else wrote localScale between the two lines. The idle breath
-            // writes it every frame, so that arrangement would have folded a
-            // breath into the base scale and multiplied it again on the next
-            // one. Handing the values over leaves one writer, which cannot be
-            // got out of order.
+            // NOT ASSIGNING THE RECT HERE AS WELL: writing the two values and
+            // then calling a Rehome that read them straight back would work
+            // only because nothing else writes localScale between the two
+            // lines. The idle breath writes it every frame, so that
+            // arrangement would fold a breath into the base scale and
+            // multiply it again on the next one. Handing the values over
+            // leaves one writer, which cannot be got out of order.
             if (animator == null)
             {
                 slot.anchoredPosition = mark;
@@ -743,8 +737,8 @@ namespace PrincesPalace
                 top - drop + FightStageAnchors.IntentIconOffset + FightStageAnchors.IntentIconSize * 0.5f);
         }
 
-        // THE ICON OVER A MONSTER'S HEAD IS HOW A POINTER REACHES THE MONSTER
-        // (2026-09-19). The figure's own hit area is live ONLY while a target
+        // THE ICON OVER A MONSTER'S HEAD IS HOW A POINTER REACHES THE MONSTER.
+        // The figure's own hit area is live ONLY while a target
         // is being picked -- RefreshEnemyPlates raises it for that window and
         // takes it down again, deliberately, so an idle stage takes no clicks
         // -- which left the badge row under its feet as the only always-live
@@ -893,17 +887,16 @@ namespace PrincesPalace
         // drawing's feet on it.
         //
         // Delivered art does not put the feet on the canvas bottom. Pinning the
-        // raw canvas to the ground line made a figure JUMP as it changed pose --
-        // 52px for the golem going idle->attack, which is the "golem flies
-        // upwards in its attack" playtest report.
+        // raw canvas to the ground line makes a figure JUMP as it changes pose --
+        // 52px for the golem going idle->attack.
         //
-        // READ FROM THE MANIFEST, never measured. The runtime used to scan the
-        // art's alpha and was wrong twice over: the golem's slam erupts an earth
-        // spike ~50px below its own feet and Shawn's idle plants a staff ~33px
-        // below his, so both were read as the floor and both figures were
-        // hoisted into the air. A kit states where its feet are, which is the
-        // one thing a runtime measurement can never report -- it just quietly
-        // believes whatever it finds.
+        // READ FROM THE MANIFEST, never measured. Scanning the art's alpha
+        // is wrong twice over: the golem's slam erupts an earth spike ~50px
+        // below its own feet and a staff-idle pose plants its staff ~33px
+        // below its owner's feet, so both would be read as the floor and
+        // both figures hoisted into the air. A kit states where its feet
+        // are, which is the one thing a runtime measurement can never
+        // report -- it just quietly believes whatever it finds.
         //
         // ONE value per actor rather than per stance, and that is load-bearing:
         // the bug being designed out is a figure MOVING VERTICALLY between
@@ -1255,16 +1248,15 @@ namespace PrincesPalace
             ResumeIdleBreathing();
         }
 
-        // THE HANDLE IS NOT THE COROUTINE (hunt 2026-09-11, scenario B1).
+        // THE HANDLE IS NOT THE COROUTINE.
         //
         // Unity stops every coroutine on a MonoBehaviour the moment it is
-        // disabled, and it does not resume them on the way back -- but the
-        // Coroutine object this held stayed non-null through all of it. So
-        // the guard below read "already breathing" about a coroutine that had
-        // been dead since the disable, and the stage stood perfectly still
-        // for the rest of the fight. The pair of Unity messages underneath is
-        // the other half: Bind was the only caller, so even with the handle
-        // nulled nothing would have asked for the breath back.
+        // disabled, and it does not resume them on the way back, but the
+        // Coroutine object a handle holds stays non-null through all of it --
+        // so a guard reading a stale handle as "already breathing" would
+        // hold the stage still for the rest of the fight. The pair of Unity
+        // messages underneath is the other half: Bind is the only caller, so
+        // even with the handle nulled nothing else asks for the breath back.
         //
         // Split from StartIdleBreathing rather than folded into it because
         // the two clocks must be cleared per FIGHT and not per enable -- a
@@ -1331,9 +1323,8 @@ namespace PrincesPalace
         // same reasoning, as the lunge and the recoil.
         //
         // NO REPAINT. The breath is a transform write, so nothing about the
-        // picture RefreshStage paints has changed; calling it per figure per
-        // frame is what the old sprite-swapping loop had to do and this does
-        // not.
+        // picture RefreshStage paints has changed, and calling it per figure
+        // per frame is unnecessary.
         //
         // Silent when there is no slot or no animator: a combatant that is not
         // on stage (a summon still being held back by _confirmedPresent) has
@@ -1540,12 +1531,12 @@ namespace PrincesPalace
 
                 fade.ResetToVisible();
 
-                // NOT BOUND HERE ANY MORE. Finished used to be assigned once
-                // per slot, right here, with no idea which combatant would
-                // eventually die in it -- FadeTheFallen now rebinds it at
-                // the moment a specific combatant's fade actually starts
-                // (its own comment says why), which is the only place that
-                // knows who. Left unbound, a fade that somehow ran with no
+                // NOT BOUND HERE. Assigning Finished once per slot, with no
+                // idea which combatant would eventually die in it, is wrong
+                // -- FadeTheFallen rebinds it at the moment a specific
+                // combatant's fade actually starts (its own comment says
+                // why), which is the only place that knows who. Left
+                // unbound, a fade that somehow ran with no
                 // rebind (should not happen -- PlayIfNotAlready has exactly
                 // one call site, and it always rebinds first) simply
                 // finishes in silence rather than throwing on a null
@@ -1688,11 +1679,11 @@ namespace PrincesPalace
         // How big this particular monster should be drawn, on top of whatever
         // depth its rank implies.
         //
-        // BY COMBATANT, where it used to be by slot index -- the caller walked
-        // slots and read the roster back out at the same index, which is the
-        // identity assumption A3 removed. Only enemies author one
-        // (RawEnemyEntry.stageScale); the party rack passes no presence
-        // function at all.
+        // BY COMBATANT, not by slot index: reading the roster back out at a
+        // slot's own index assumes slot and rank agree, which they do not
+        // once a figure's rank can change independently of its slot. Only
+        // enemies author one (RawEnemyEntry.stageScale); the party rack
+        // passes no presence function at all.
         private float StageScaleFor(CombatantState combatant) =>
             _session?.SourceFor(combatant)?.Source.StageScale ?? 1f;
 
@@ -1706,14 +1697,12 @@ namespace PrincesPalace
             // so a party combatant's facing comes off its PlayerKit instead
             // -- ResolvedCharacter.BattleSpriteFacing, carried through
             // FightEncounterAdapter.KitFor exactly the way PlateArt already
-            // is. This used to fall through to a hardcoded Right with a
-            // comment claiming the fallback was unreachable for a
-            // content-backed combatant; that was false for the whole party
-            // (every one of them reaches here on every repaint) and only
-            // read as correct because all three fielded characters happen to
-            // be authored Right. KitFor's own facing default (also Right)
-            // is what a kit with no content behind it -- or none at all --
-            // now falls through to.
+            // is: every party member reaches here on every repaint, so a
+            // hardcoded fallback would be reachable, not a dead branch, and
+            // would only look correct by coincidence if the fielded
+            // characters all happened to be authored Right. KitFor's own
+            // facing default (also Right) is what a kit with no content
+            // behind it -- or none at all -- falls through to.
             return _session?.KitFor(combatant)?.Facing ?? SpriteFacing.Right;
         }
 
@@ -1739,47 +1728,30 @@ namespace PrincesPalace
                 : StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
         }
 
-        // C3 ROOT CAUSE, confirmed with a throwaway diagnostic PlayMode test
-        // (Resources.Load("Characters/sheep/idle") + a raw GetPixels dump,
-        // run against the real imported asset): `sprite.textureRect` is NOT
-        // `sprite.rect`. Every stance PNG imports with Sprite Mesh Type
-        // Tight, which crops the texture DATA Unity actually stores down to
-        // the opaque bounding box -- for Shawn's idle, `rect` reports the
-        // full authored 540x370 canvas but `textureRect` is (65, 6, 280,
-        // 354), a sub-window well inside it. The measurement functions below
-        // (both the old whole-silhouette one and this file's first C3 pass)
-        // called `GetPixels(textureRect.x, textureRect.y, ...)` -- which
-        // correctly reads the trimmed pixel data -- and then divided by
-        // THAT SAME trimmed rect's own width to get a fraction, discarding
-        // its `.x`/`.y` OFFSET within the untrimmed canvas entirely. A tight
-        // crop's content fills its own crop edge-to-edge BY CONSTRUCTION, so
-        // that fraction is always close to 0 no matter how far off-centre
-        // the art actually sits on the canvas PlaceShadow positions the ring
-        // against (`slotRect.sizeDelta = sprite.rect.size`, the UNTRIMMED
-        // width) -- which is exactly the "the offset reads as barely
-        // applied" symptom the capture showed. Confirmed numerically: the
-        // old whole-silhouette scan against the trimmed rect measured
-        // Shawn's fraction at ~0 (the shipped `footShadowAnchoredPosition.x
-        // == -0.87` in tools/screenshots/runtime/party_formation/a3 and
-        // /c3_after/slots.json, both captured before this fix); converting
-        // the same scan's pixel coordinates back into canvas space before
-        // dividing gives -0.121 (whole silhouette) / -0.133 (foot band) --
-        // which is what an offline scan of the same idle.png on disk, with
-        // no Unity import involved at all, independently gives too.
+        // `sprite.textureRect` is NOT `sprite.rect`. Every stance PNG imports
+        // with Sprite Mesh Type Tight, which crops the texture DATA Unity
+        // actually stores down to the opaque bounding box, so `rect` reports
+        // the full authored canvas while `textureRect` is a sub-window well
+        // inside it.
         //
         // THE FIX, IN ONE SENTENCE: every pixel coordinate GetPixels hands
         // back is LOCAL TO THE TRIMMED CROP, and has to be translated back
         // into canvas space (+ textureRect.x / .y) before it is compared
         // against a canvas-space quantity (the ground line) or divided by
         // the canvas's own width (sprite.rect.width, not textureRect.width).
+        // Dividing by the trimmed rect's own width instead discards that
+        // offset entirely -- a tight crop's content fills its own crop
+        // edge-to-edge by construction, so the resulting fraction is always
+        // close to 0 no matter how far off-centre the art actually sits on
+        // the canvas PlaceShadow positions the ring against
+        // (`slotRect.sizeDelta = sprite.rect.size`, the untrimmed width).
         //
-        // Was the whole silhouette's centroid (every opaque pixel, top to
-        // bottom); now it is the FOOT BAND's alone -- the 24 texture rows
-        // directly above the authored ground line. Even set aside from the
-        // trimming bug, the whole-silhouette centroid was always the wrong
-        // SPAN to average: a prop or a limb that never touches the ring's
-        // own ground line (Shawn's staff, a flyer's trailing wingtip) drags
-        // the measured centre away from where the FEET actually are.
+        // The FOOT BAND alone -- the 24 texture rows directly above the
+        // authored ground line -- not the whole silhouette's centroid (every
+        // opaque pixel, top to bottom): a prop or a limb that never touches
+        // the ring's own ground line (a raised staff, a flyer's trailing
+        // wingtip) would drag a whole-silhouette centroid away from where
+        // the FEET actually are.
         private const int FootBandHeight = 24;
 
         // The alpha floor both readers below compare against, scaled once to
@@ -1886,14 +1858,13 @@ namespace PrincesPalace
         // load-bearing enough to be worth the manifest.
         //
         // CANVAS SPACE, via the one opaque-box scan the spell layer already
-        // reads (OpaqueBoxForActor, FightController.SpellVfx). This used to be
-        // its own scan that returned the first opaque row counted from the
-        // Tight crop's bottom -- crop space -- while PlaceIntentBadge
-        // subtracts the authored ground line, which is canvas space. Every
-        // trimmed idle put the badge low by exactly its crop's Y offset, the
-        // bug FootBandCentreFraction had in X (.claude/rules/ui.md "Sprites").
-        // One scan with one crop-to-canvas mapping, rather than a second
-        // copy of both.
+        // reads (OpaqueBoxForActor, FightController.SpellVfx), not a second
+        // scan returning crop-space rows: PlaceIntentBadge subtracts the
+        // authored ground line, which is canvas space, and a crop-space
+        // value there would put the badge low by exactly the crop's Y
+        // offset -- the same bug FootBandCentreFraction guards against in X
+        // (.claude/rules/ui.md "Sprites"). One scan with one crop-to-canvas
+        // mapping, rather than a second copy of both.
         private static float ContentTopForActor(string folder)
         {
             var box = OpaqueBoxForActor(folder);
