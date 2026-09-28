@@ -74,8 +74,8 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text enemiesHint;
         [SerializeField] internal Button[] enemyPlates;
 
-        // The Crimson TwoByOne container frame's own Art Image (owner's
-        // HQ-kit instruction, 2026-09-07). RefreshEnemyPlates tints THIS for
+        // The Crimson TwoByOne container frame's own Art Image.
+        // RefreshEnemyPlates tints THIS for
         // the elite/boss dress and the out-of-reach dim -- enemyPlates is
         // NoChrome now (a transparent, always-alpha-0 click target, see
         // FightScreen.BuildEnemyPlates), so its own targetGraphic is no
@@ -90,7 +90,7 @@ namespace PrincesPalace
         [SerializeField] internal Button[] enemyHitAreas;
 
         // The same over each PARTY figure, live only while an ALLY is being
-        // picked (AUDIT #147). INDEXED BY STAGE SLOT, which on this side is
+        // picked. INDEXED BY STAGE SLOT, which on this side is
         // not the party list's order -- a slot belongs to one character for
         // the whole fight and the list reorders on every Move, so the handler
         // resolves a slot to its occupant rather than indexing the party by
@@ -102,8 +102,9 @@ namespace PrincesPalace
         // 1.2/3.6). See FightScreen.PartySeatMarkers.
         [SerializeField] internal Button[] partySeatMarkers;
 
-        // The way out of targeting. It lives on the target prompt because the
-        // list BACK used to live in folds as soon as a skill is picked.
+        // The way out of targeting. It lives on the target prompt rather
+        // than the list, because the list folds away as soon as a skill is
+        // picked.
         [SerializeField] internal Button targetCancelButton;
         [SerializeField] internal TMP_Text[] enemyPlateHps;
         [SerializeField] internal Image[] enemyPlateHpFills;
@@ -113,7 +114,7 @@ namespace PrincesPalace
         [SerializeField] internal Image[] enemyPlateBreakFills;
         [SerializeField] internal GameObject secondLifeBadge;
 
-        // ---- the HUD column: three PC plates (2026-09-10) --------------------
+        // ---- the HUD column: three PC plates --------------------
         //
         // ONE ARRAY SHAPE FOR THE WHOLE COLUMN. Every one of these is
         // PcPlateCount long and indexed by PLATE, so the paint routine is one
@@ -229,11 +230,11 @@ namespace PrincesPalace
         private const int PcStatusBadgesPerPlate = 5;
         private const int EnemyStatusBadgeCount = 15; // 3 stage slots x 5
 
-        // 15, DOWN FROM 10 roster + 12 party (2026-09-10): the column is
-        // three identical plates of five now, so there is ONE flat range
-        // covering the whole party rather than two ranges with different
-        // widths that PaintStatusRow had to be told about separately. The
-        // overflow chip is still the last slot of each plate's five.
+        // The column is three identical plates of five, so there is ONE flat
+        // range covering the whole party rather than two ranges with
+        // different widths that PaintStatusRow would have to be told about
+        // separately. The overflow chip is still the last slot of each
+        // plate's five.
         private const int PcStatusBadgeCount = PcPlateCount * PcStatusBadgesPerPlate;
         private const int PcPlateCount = 3;
 
@@ -302,8 +303,8 @@ namespace PrincesPalace
 
         // The status code whose row the box draws emphasised, or null. Only
         // a badge hover sets one: the badge names a single status inside a
-        // list the box shows whole, and losing which one was pointed at is
-        // the one thing the old per-badge tooltip did better.
+        // list the box shows whole, and without this the box would lose
+        // which one was pointed at.
         private string _inspectedCode;
 
         // WHICH SURFACE OPENED THE BOX, so that only that surface can close
@@ -390,9 +391,9 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform submenuScrollThumb;
 
         // The themed art frame around the whole box -- "SubmenuContainer" in
-        // FightScreen.BuildSubmenuFrame. Only wired from 2026-09-22: nothing
-        // needed to move it at runtime before the container started growing
-        // to fit the row count (AnchorSubmenuRows' own header).
+        // FightScreen.BuildSubmenuFrame. Wired so it can be moved at runtime
+        // as the container grows to fit the row count (AnchorSubmenuRows'
+        // own header).
         [SerializeField] internal RectTransform submenuContainer;
 
         // How far down the open list the player has scrolled, in pixels, and
@@ -425,10 +426,7 @@ namespace PrincesPalace
         // 36x36 `CharacterSkill{i}Mark`) -- auto-bound off the "SubmenuMarks"
         // NodeRef list the same way submenuNames above binds "SubmenuNames"
         // (UiAutoBind keys on the field's own identifier; no wiring line
-        // needed in ScreenRegistry for this one). fe40bd36 wired the shop and
-        // dossier spell slots but left this row pool untouched, which is the
-        // "art for spell book is not shown in the select spell screen" bug
-        // (owner, 2026-09-19); RefreshSubmenu paints it.
+        // needed in ScreenRegistry for this one). RefreshSubmenu paints it.
         [SerializeField] internal Image[] submenuMarks;
 
         // Skill book/glyph art, keyed by skill id -- baked in Fight()'s Wire
@@ -443,7 +441,7 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text detailName;
         [SerializeField] internal TMP_Text detailKind;
 
-        // THE DYNAMIC BOX ITSELF (coordinator pass 2, 2026-09-23) -- the
+        // THE DYNAMIC BOX ITSELF -- the
         // fill and the four Rim edges (Top/Bottom/Left/Right, Ui.Rim's own
         // yield order) RefreshDetail resizes/repositions every repaint via
         // FightScreen.DetailHFor/DetailFrameTopFor/DetailFrameBottomFor, so
@@ -452,9 +450,7 @@ namespace PrincesPalace
         [SerializeField] internal Image detailColumnFill;
         [SerializeField] internal Image[] detailColumnRim;
 
-        // ICON ROWS, NOT TEXT (2026-09-23 icon rework) -- detailBody and the
-        // detailStatValues/detailStatKeys/detailDamageType fields this
-        // replaced are gone; see FightScreen.BuildDetailColumn's own header.
+        // ICON ROWS, NOT TEXT -- see FightScreen.BuildDetailColumn's own header.
         // detailIconImages[i] is a plain Image with no sprite assigned at
         // build time (FightScreen.BuildDetailColumn's Ui.Sprite(..., null,
         // ...)) -- RefreshDetail assigns one at runtime by IconKey, off the
@@ -593,14 +589,12 @@ namespace PrincesPalace
             // Making the order matter would be a rule nobody can see; repainting
             // here makes the two calls commutative.
             //
-            // THE WHOLE SCREEN, not only the stage. The stage was the one
-            // reader of this map when this line was written; the turn-order
-            // ribbon became a second (RefreshInitiative -> StanceSpriteFor ->
-            // SpriteFolderFor), and a stage-only repaint left every party chip
-            // on its letter fallback ("S", "O", "B") while the enemy chips
-            // beside it drew -- in a real fight, FightBootstrap binds the art
-            // after Bind, until the player's first press repainted the HUD
-            // (QA 2026-09-26). RefreshUi includes RefreshStage, so the next
+            // THE WHOLE SCREEN, not only the stage: the turn-order ribbon
+            // also reads this map (RefreshInitiative -> StanceSpriteFor ->
+            // SpriteFolderFor), so a stage-only repaint would leave every
+            // party chip on its letter fallback ("S", "O", "B") while the
+            // enemy chips beside it draw, until the player's first press
+            // repaints the HUD. RefreshUi includes RefreshStage, so the next
             // reader of party art is covered without being listed here.
             if (_session != null) RefreshUi();
             else RefreshStage();
@@ -673,19 +667,13 @@ namespace PrincesPalace
 
             // The first turn's intents are NOT committed here any more.
             //
-            // This used to read "FightSession.Begin() is where this belongs and
-            // it has NO production caller", and called PrepareEnemyIntents
-            // itself as the narrow fix -- deliberately narrow, because Begin
-            // also grants a turn start and auto-resolves enemy turns, and that
-            // was judged too large a change to make inside a UI one.
-            //
-            // The judgement was sound and the missing caller was the whole bug:
-            // with nothing resolving an enemy that won initiative, a fight that
-            // opened on a monster's turn never gave the player one. FightBootstrap
-            // calls Begin now and Begin telegraphs turn one, so committing them
-            // again here would be a second home for the same concern -- and a
-            // Bind that quietly repairs half an opening is what let the missing
-            // Begin go unnoticed for as long as it did.
+            // FightSession.Begin() is where this belongs: with nothing
+            // resolving an enemy that won initiative, a fight that opened on
+            // a monster's turn would never give the player one.
+            // FightBootstrap calls Begin, and Begin telegraphs turn one, so
+            // committing them again here would be a second home for the same
+            // concern -- and a Bind that quietly repairs half an opening
+            // would let a missing Begin call go unnoticed.
             //
             // But Begin() ALSO resolves a faster enemy's opening swing
             // (RelicsOnCombatBegin/GrantTurnStart/AutoResolveEnemyTurns, all
@@ -837,15 +825,13 @@ namespace PrincesPalace
 
         // WHICH SLOT A COMBATANT OWNS, FOR THE WHOLE FIGHT.
         //
-        // THE BUG THIS EXISTS FOR, and it is the reason A3 is a package at
-        // all. Every one of the four lookups below used to answer by scanning
-        // Encounter.PlayerParty for the combatant and returning the handle at
-        // the same INDEX -- which was correct only while the party list never
-        // moved, and Move is the command that moves it. A move traded two
-        // members' list positions and therefore traded their sprites, their
+        // Scanning Encounter.PlayerParty for the combatant and returning the
+        // handle at the same INDEX would be correct only while the party
+        // list never moves, and Move is the command that moves it: trading
+        // two members' list positions would trade their sprites, their
         // nameplates, their hit flashes, their death fades and their
-        // animators: the already-queued enemy swing then landed its flash and
-        // its number on the figure that had stepped out of the way.
+        // animators, so an already-queued enemy swing could land its flash
+        // and its number on the figure that had stepped out of the way.
         //
         // A slot belongs to the combatant that started in it and keeps it
         // until the fight ends. Position is the thing that moves -- see
@@ -913,24 +899,24 @@ namespace PrincesPalace
         private RectTransform SlotFor(CombatantState combatant) =>
             HandleFor(combatant, enemySlots, partySlots);
 
-        // SlotFor's exact twin for the animator that lives on that same slot.
-        // Playback (FightBeatPlayer.TravelFor/RecoilOne/Punch) used to walk
-        // SlotFor and then GetComponent<StageActorAnimator> on what came back;
+        // SlotFor's exact twin for the animator that lives on that same slot,
+        // so playback (FightBeatPlayer.TravelFor/RecoilOne/Punch) does not
+        // have to walk SlotFor and then GetComponent<StageActorAnimator> on
+        // what comes back;
         // this returns the component directly from the array ScreenRegistry
         // populated, so nothing downstream of the controller ever calls
         // GetComponent to find one.
         private StageActorAnimator AnimatorFor(CombatantState combatant) =>
             HandleFor(combatant, enemyActorAnimators, partyActorAnimators);
 
-        // SlotFor's twin for the hit-flash silhouette. Used by FlashOne, which
-        // used to reach it through SlotFor(target).GetComponentInChildren --
-        // the same GetComponent-at-point-of-use shape this whole change
-        // replaces.
+        // SlotFor's twin for the hit-flash silhouette, so FlashOne avoids
+        // the SlotFor(target).GetComponentInChildren shape this file avoids
+        // elsewhere too.
         private StageHitFlash HitFlashFor(CombatantState combatant) =>
             HandleFor(combatant, enemyHitFlashes, partyHitFlashes);
 
-        // SlotFor's twin for the death fade. Used by FadeTheFallen, which used
-        // to reach it through SlotFor(target).GetComponent.
+        // SlotFor's twin for the death fade, so FadeTheFallen avoids
+        // SlotFor(target).GetComponent.
         private StageDeathFade DeathFadeFor(CombatantState combatant) =>
             HandleFor(combatant, enemyDeathFades, partyDeathFades);
 
@@ -974,32 +960,28 @@ namespace PrincesPalace
                 SetFill(enemyPlateHpFills[i], recorded.Health, enemyMax);
             }
 
-            // EVERY PARTY MEMBER IN THE SNAPSHOT, not just the acting one.
-            // This used to paint only the acting character's card, because
-            // that was the only party card with meters on it -- the two
-            // roster cards beside it showed live state and so lagged a beat
-            // behind the card above them. Three identical plates means a
-            // heal landing on an ally moves that ally's own bar on the frame
-            // the blow lands, which is what a snapshot is for.
+            // EVERY PARTY MEMBER IN THE SNAPSHOT, not just the acting one:
+            // three identical plates means a heal landing on an ally moves
+            // that ally's own bar on the frame the blow lands, which is what
+            // a snapshot is for.
             //
             // A member the snapshot does not mention is left alone rather
             // than cleared: a snapshot is a record of a moment, and silence
             // in it means "unchanged", not "gone".
             //
             // ONTO THE CARD THAT IS CURRENTLY SHOWING THE MEMBER -- the
-            // painted-occupancy record, walked plate-first (hunt 2026-09-11
-            // F7, then AUDIT #144, owner 2026-09-11).
+            // painted-occupancy record, walked plate-first.
             //
             // NEITHER OF THE TWO OBVIOUS INDEXES IS THE RIGHT ONE. The live
             // party list is wrong because the round has already finished
             // resolving by the time a beat plays, so a Move in it has traded
             // two members' list positions while their cards are still where
-            // RefreshPcPlates last drew them -- that was F7's second half,
-            // the two moved members' numbers landing on each other's
-            // portraits for the rest of the playback. _slotOf is wrong
-            // because a slot never moves, so addressing by it forces the
-            // column to sit in its opening order for the whole fight, which
-            // is the behaviour #144 reversed.
+            // RefreshPcPlates last drew them -- addressing by that list would
+            // land the two moved members' numbers on each other's portraits
+            // for the rest of the playback. _slotOf is wrong because a slot
+            // never moves, so addressing by it would force the column to sit
+            // in its opening order for the whole fight, when the column is
+            // meant to follow the field.
             //
             // What is right is the third thing: whom RefreshPcPlates last
             // PUT on each card. That answer is correct during the playback
