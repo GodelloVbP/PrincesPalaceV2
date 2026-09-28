@@ -63,7 +63,7 @@ namespace PrincesPalace
         // THE CONTENT'S OWN ID, which is the entire point of this seam.
         // Everything that reads unlockedTalentIds -- the effective stats, the
         // ability scores, the combat effect set -- matches against the ids in
-        // talents.json, and this used to write one the screen had invented.
+        // talents.json.
         //
         // `unlocked`/`embers` are read off the character rather than passed in,
         // unlike TalentPage.CanInvest's own parameters: TalentPage is Domain
@@ -171,13 +171,12 @@ namespace PrincesPalace
         //
         // RunEncounter.ScaleCarriedHealth's header states the rule in the
         // widest possible terms -- "the run stores current health as an
-        // ABSOLUTE number per character, and the maximum it is a fraction of is
-        // computed from the character -- so anything that changes the maximum
-        // silently changes the fraction" -- and until this, only gear obeyed
-        // it. Kindling an orb and confirming a respec both moved the maximum
-        // and left the run holding the old absolute: kindle a +20 max health
-        // talent at 50 of 100 and the run carries 50 against 120, growing the
-        // permanently-empty tail that header describes.
+        // ABSOLUTE number per character, and the maximum it is a fraction of
+        // is computed from the character, so anything that changes the
+        // maximum silently changes the fraction" -- and kindling an orb or
+        // confirming a respec both move the maximum, so both must go
+        // through the same rescale gear does, or the run would hold an
+        // absolute against a maximum it no longer matches.
         //
         // A LAMBDA RATHER THAN THREE LINES AT EACH SITE, for the reason
         // EquipmentOps gives for existing at all: that pair "had three copies

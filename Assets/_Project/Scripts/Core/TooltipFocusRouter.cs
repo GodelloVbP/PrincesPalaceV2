@@ -72,8 +72,8 @@ namespace PrincesPalace
             select.Changed = (_, selected) => Selection(go, selected);
         }
 
-        // The pointer's half. Called from the screen's existing HoverIndex
-        // hook instead of the handler it used to call directly.
+        // The pointer's half, called from the screen's existing HoverIndex
+        // hook rather than a handler of its own.
         public void Pointer(GameObject node, bool entered) => Apply(_focus.Pointer(node, entered));
 
         private void Selection(GameObject node, bool selected) => Apply(_focus.Selection(node, selected));

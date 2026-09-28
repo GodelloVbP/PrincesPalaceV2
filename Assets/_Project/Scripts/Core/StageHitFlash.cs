@@ -27,18 +27,14 @@ namespace PrincesPalace
         public const float FadeSeconds = 0.16f;
 
         // THE AFTERGLOW, and the reason the typed flash is two pulses rather
-        // than one.
+        // than one: tinting a single full-alpha pulse over the whole
+        // silhouette is not a flash at all -- it is the monster repainted a
+        // colour for a fifth of a second, and three enemies doing it at once
+        // looks like a palette swap.
         //
-        // Owner 2026-09-19: "flash like the white but THEN for example green
-        // poison, red for fire." The first attempt read the "but" as "instead
-        // of" and tinted the single pulse, which at alpha 1 over the whole
-        // silhouette is not a flash at all -- it is the monster repainted
-        // green for a fifth of a second. Three enemies doing it at once looked
-        // like a palette swap.
-        //
-        // So the impact stays exactly what it was -- white, alpha 1, 0.05 hold
-        // and 0.16 fade, byte-for-byte -- and the element arrives AFTER it, at
-        // a little over half strength and fading twice as slowly. Softer and
+        // So the impact stays white, alpha 1, 0.05 hold and 0.16 fade, and
+        // the element arrives AFTER it, at a little over half strength and
+        // fading twice as slowly. Softer and
         // longer is what makes the eye read it as light left behind by the
         // blow rather than as the body's own colour: a hard, brief pulse is an
         // event, a soft, slow one is a residue, and stacking them in that
@@ -145,10 +141,9 @@ namespace PrincesPalace
 
         public void Flash() => Flash(WhiteOnly);
 
-        // THE FLASH, WEARING THE ELEMENT THAT CAUSED IT. Owner 2026-09-19:
-        // "flash like the white but THEN for example green poison, red for
-        // fire." The white first, the element second -- see TypedPeakAlpha's
-        // own header for why that order and those numbers.
+        // THE FLASH, WEARING THE ELEMENT THAT CAUSED IT: white first, the
+        // element second -- see TypedPeakAlpha's own header for why that
+        // order and those numbers.
         public void Flash(DamageType type) => Flash(PulsesFor(type));
 
         public void FlashHeal() => Flash(HealOnly);
