@@ -95,9 +95,9 @@ namespace PrincesPalace
 
         // ---- the palette -----------------------------------------------------
         //
-        // Every value here is the handoff's, and the one that looks arbitrary
-        // is the one that matters: the ring at 40% while a stone is merely
-        // affordable-later is what stops twenty rings pulsing at once.
+        // The one value here that looks arbitrary is the one that matters:
+        // the ring at 40% while a stone is merely affordable-later is what
+        // stops twenty rings pulsing at once.
         private static readonly Color GlowTaken = new Color(1f, 0.80f, 0.45f, 0.55f);
         private static readonly Color GlowOff = new Color(1f, 0.80f, 0.45f, 0f);
 
@@ -213,10 +213,9 @@ namespace PrincesPalace
         private int Embers => Current?.embers ?? 0;
 
         // AND WHAT THEY MAY STILL COMMIT, which is not the same number. The
-        // wallet above accumulates across runs and is uncapped; this is what is
-        // left of ContentDatabase.EmberSpendCap -- a per-character lifetime
-        // budget of 30 that used to be enforced only inside the balance bot's
-        // preset builder, so the screen would happily kindle past it.
+        // wallet above accumulates across runs and is uncapped; this is what
+        // is left of ContentDatabase.EmberSpendCap, a per-character lifetime
+        // budget.
         private int Budget => ContentDatabase.EmbersLeftFor(Current);
 
         // ---- input -----------------------------------------------------------
@@ -283,11 +282,9 @@ namespace PrincesPalace
         }
 
         // FIRST PRESS SELECTS, SECOND PRESS ON THE SAME STAR KINDLES.
-        // Owner's hardware playtest (2026-09-23) rejected the earlier
-        // contract -- "Make A on a star that is unkindled the way to
-        // kindle it" -- because a single press with no confirmation reads
-        // as an accidental spend on both mouse and pad: nothing tells the
-        // player what a star does before it is gone. Button.onClick is
+        // A single press with no confirmation would read as an accidental
+        // spend on both mouse and pad: nothing tells the player what a star
+        // does before it is gone. Button.onClick is
         // still the ONE handler a mouse click and a pad Submit on the
         // focused orb both drive (Unity's own OnPointerClick/OnSubmit each
         // call Press()), so this one place still covers both.
@@ -418,11 +415,11 @@ namespace PrincesPalace
         // Gives back everything this character has committed, so they can
         // spend it again. Level 20 of the reward track.
         //
-        // IT ASKS FIRST NOW. One press used to clear all three constellations
+        // IT ASKS FIRST: a single press clearing all three constellations
         // outright, with nothing between the pointer and twenty-one dark
-        // stones. The handoff settled both halves: the respec stays FREE --
-        // charging for it taxes experimenting with a system whose whole point
-        // is experimenting -- and it confirms.
+        // stones, is too easy to trigger by accident. The respec stays FREE
+        // -- charging for it taxes experimenting with a system whose whole
+        // point is experimenting -- but it confirms.
         private void OpenRespec()
         {
             var character = Current;
@@ -453,12 +450,11 @@ namespace PrincesPalace
         // often than a scene does, so it is pushed from OpenRespec/CloseRespec
         // rather than OnEnable/OnDisable.
         //
-        // Owner's hardware playtest (2026-09-23): the dialog "does not work
-        // with the gamepad" -- OpenRespec never declared Confirm/Cancel to
-        // any NavContext, so the dispatcher's own reselect-outside-the-
-        // declared-set rule (NavigationInputModule.ReselectIfOutsideDeclaredSet)
-        // yanked the pad straight back onto whatever the SCREEN'S context
-        // still called selected, which sat under the dialog the whole time.
+        // Without declaring Confirm/Cancel to a NavContext here, the
+        // dispatcher's own reselect-outside-the-declared-set rule
+        // (NavigationInputModule.ReselectIfOutsideDeclaredSet) would yank
+        // the pad straight back onto whatever the SCREEN'S context still
+        // called selected, which sits under the dialog.
         //
         // CANCEL IS THE CONTEXT'S CANCEL, not an INavCancelClaim: this dialog
         // has nothing under it worth asking first -- it IS the top of the
@@ -664,12 +660,12 @@ namespace PrincesPalace
                     bool costly = refusal == TalentPage.Refusal.NotEnoughEmbers;
                     bool unauthored = refusal == TalentPage.Refusal.NotAuthored;
 
-                    // AN UNAUTHORED PATH KEEPS ITS SHAPE. It used to be hidden
-                    // outright, which left the third constellation as an empty
-                    // sky; the design draws the spire in full-grey stones at
-                    // 55% and says so in the panel. The shape ships even though
-                    // the content does not -- what a player learns from it is
-                    // that there IS a third path.
+                    // AN UNAUTHORED PATH KEEPS ITS SHAPE rather than hiding
+                    // outright, which would leave the third constellation as
+                    // an empty sky; the design draws the spire in full-grey
+                    // stones at 55% and says so in the panel. The shape ships
+                    // even though the content does not -- what a player
+                    // learns from it is that there IS a third path.
                     orbs[index].SetShown(true);
 
                     var image = orbs[index].targetGraphic as Image;
@@ -835,16 +831,15 @@ namespace PrincesPalace
         // CLIMBED.
         //
         // An edge lights only when BOTH its endpoints are invested on its own
-        // path: the child, and the specific parent it is drawn from. "The
-        // parent necessarily already is [invested]" was the child-only rule
-        // this used to run on, and it is false for a merge or capstone slot,
-        // which TalentPage.MeetsPrerequisites lets in on ONE completed strand
-        // of several -- so the child lights while the other strand's own
-        // parent never got taken, and the child-only test lit that strand's
-        // edge anyway: an energy beam into a kindled star from a stone the
-        // player never touched (owner's hardware playtest, 2026-09-23).
-        // EdgeParentSlots (TalentScreen) is the per-edge parent this needed
-        // and never had.
+        // path: the child, and the specific parent it is drawn from. A
+        // child-only rule (assuming the parent is necessarily already
+        // invested) is false for a merge or capstone slot, which
+        // TalentPage.MeetsPrerequisites lets in on ONE completed strand of
+        // several -- so the child can light while the other strand's own
+        // parent was never taken, and a child-only test would light that
+        // strand's edge anyway: an energy beam into a kindled star from a
+        // stone the player never touched. EdgeParentSlots (TalentScreen) is
+        // the per-edge parent this needs.
         //
         // The edges were pure decoration before any of this: three paths'
         // worth of limbs that never changed whatever the player spent, so a
@@ -913,11 +908,10 @@ namespace PrincesPalace
             {
                 detailName.SetContent(string.Empty);
 
-                // BLANK, NOT "CHOOSE A STAR" -- the owner called the prompt
-                // out on 2026-09-19. The kicker still carries the state word
-                // once something IS selected (KickerFor below), so the node
-                // stays; this branch is the only place that stops writing
-                // to it.
+                // BLANK, NOT "CHOOSE A STAR". The kicker still carries the
+                // state word once something IS selected (KickerFor below), so
+                // the node stays; this branch is the only place that stops
+                // writing to it.
                 panelKicker.SetContent(string.Empty);
                 panelPrice.SetContent(string.Empty);
                 detailBody.SetContent(UiStrings.TalentPickBody.Template);
@@ -980,11 +974,10 @@ namespace PrincesPalace
             investLabel.Set(LabelFor(refusal));
         }
 
-        // THE FILL BAR IS GONE (owner, 2026-09-19: "the weird yellow line at
-        // the bottom"). What is left is the wallet count alone -- the
-        // committed-over-earned PROPORTION it used to draw as a length has
-        // no reader left to draw for, and the panel's own layout region is
-        // otherwise untouched (TalentScreen.BuildPanel).
+        // NO FILL BAR: the wallet count alone is what this panel shows, with
+        // no committed-over-earned proportion drawn as a length, and the
+        // panel's own layout region is otherwise untouched
+        // (TalentScreen.BuildPanel).
         private void PaintMeter(Character character)
         {
             emberCount.Set(UiStrings.TalentEmbers, Embers);
@@ -1056,7 +1049,7 @@ namespace PrincesPalace
             }
         }
 
-        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) --------
         //
         // NOT A GRID. TalentSkeleton is a tree -- a single root, three triples
         // climbing to a convergence, three more triples climbing to the
@@ -1065,12 +1058,11 @@ namespace PrincesPalace
         // row of 3. UiNavSpec has no Graph kind either (UiNavLinkBuilder's own
         // header: Map's is "entirely explicit links"), so every direction here
         // is an explicit Link, computed once per slot from two small tables
-        // below rather than a Rail GROUP -- Rail's owner-default wrap (and this
-        // method's own two earlier attempts at a "continue past the edge"
-        // fallback) is not what the owner's restated model wants.
+        // below rather than a Rail GROUP -- Rail's default wrap is not what
+        // this screen's model wants.
         //
-        // A "LEVEL" IS A ROW OF STONES AT THE SAME SCREEN HEIGHT (owner,
-        // 2026-09-23) -- TalentSkeleton's own depth tiers, already grouped by
+        // A "LEVEL" IS A ROW OF STONES AT THE SAME SCREEN HEIGHT --
+        // TalentSkeleton's own depth tiers, already grouped by
         // _skeletonTiers below. UP/DOWN stay in LANE: _skeletonUpChild/
         // _skeletonDownParent send a chain slot to the SAME dx one level up or
         // down, and fall back to a single-stone level's one stone (the root,
@@ -1089,21 +1081,18 @@ namespace PrincesPalace
         private static readonly int[] _skeletonDownParent;
         private static readonly List<int>[] _skeletonTiers;
 
-        // LEFT/RIGHT's target per slot, per direction (owner's final
-        // correction, 2026-09-23: Left/Right step ONE LANE AT A TIME within
-        // a 3-wide level -- middle to a side and back, never a jump to the
-        // far side -- only a second press past an outer lane reaches the
-        // page arrow). -1 is the ARROW sentinel: RefreshOrbNavigation reads
-        // it as "go to prevPathButton/nextPathButton" rather than an orb.
+        // LEFT/RIGHT's target per slot, per direction: Left/Right step ONE
+        // LANE AT A TIME within a 3-wide level -- middle to a side and back,
+        // never a jump to the far side -- only a second press past an outer
+        // lane reaches the page arrow. -1 is the ARROW sentinel:
+        // RefreshOrbNavigation reads it as "go to
+        // prevPathButton/nextPathButton" rather than an orb.
         //
         // A single-stone level (the root, the convergence, the capstone)
-        // is unchanged by this correction and still jumps straight to the
-        // adjacent 3-wide level's own outer lane -- "for single-stone
-        // levels (the middle position), Left/Right go to the borrowed
-        // level's left or right lane, which is already the case" (owner).
-        // Landing there is what puts the player ON that lane, so the very
-        // next press already follows the ordinary in-level rule below (one
-        // more step to the middle, or the arrow from the far side).
+        // jumps straight to the adjacent 3-wide level's own outer lane
+        // instead, landing the player ON that lane, so the very next press
+        // already follows the ordinary in-level rule below (one more step
+        // to the middle, or the arrow from the far side).
         private static readonly int[] _leftFlank;
         private static readonly int[] _rightFlank;
 
@@ -1128,9 +1117,7 @@ namespace PrincesPalace
             // parents -- only the convergence and the capstone gather more
             // than one -- it is the dx-0 one specifically, since neither
             // of those has a "lane" of its own to preserve and the centre
-            // is this method's own chosen landing (owner, 2026-09-23:
-            // "leaving a single-stone level, the stone you land on is up
-            // to you, but state it").
+            // is this method's own chosen landing.
             for (int i = 0; i < n; i++)
             {
                 var parents = TalentSkeleton.Parents[i];
@@ -1258,19 +1245,18 @@ namespace PrincesPalace
         // has one call site to update.
         private void HandleCancel() => Navigation.Go(Navigation.Hub);
 
-        // THE TRIGGER SHORTCUT (INavTabStrip, plan phase 3 item 2; owner
-        // hardware round 2, 2026-09-19: LT/RT scrolls you between
-        // different talent trees). StepTab IS StepPath, verbatim -- the
-        // same rule INavCancelClaim/INavTabStrip's own header states for
-        // every implementor: the trigger pull and the on-screen arrow
-        // both have to run through the ONE "what is the next path"
-        // computation, or they could disagree about where the clamp lands.
+        // THE TRIGGER SHORTCUT (INavTabStrip): LT/RT scrolls between talent
+        // trees. StepTab IS StepPath, verbatim -- the same rule
+        // INavCancelClaim/INavTabStrip's own header states for every
+        // implementor: the trigger pull and the on-screen arrow both have to
+        // run through the ONE "what is the next path" computation, or they
+        // could disagree about where the clamp lands.
         public void StepTab(int direction) => StepPath(direction);
 
-        // THE SHOULDER SHORTCUT (INavSectionStrip; owner hardware round 2,
-        // 2026-09-19: "To go to the next character or prior you can press
-        // LB or RB"). StepSection IS StepCharacter, verbatim, for the same
-        // "one computation, never two" reason StepTab is StepPath above it.
+        // THE SHOULDER SHORTCUT (INavSectionStrip): LB/RB moves to the next
+        // or prior character. StepSection IS StepCharacter, verbatim, for
+        // the same "one computation, never two" reason StepTab is StepPath
+        // above it.
         public void StepSection(int direction) => StepCharacter(direction);
 
         // Called from Refresh() -- every path switch, character switch,
@@ -1292,15 +1278,11 @@ namespace PrincesPalace
             var groups = new List<UiNavGroup<Selectable>>();
             var links = new List<UiNavLink<Selectable>?>();
 
-            // THE SCREEN'S OWN CHROME, WHICH WAS NOT IN THE GRAPH AT ALL
-            // (hardware play-test round 1, item 1: "I found no way to move in
-            // the talent screen"). Measured rather than guessed: on the real
-            // Hub -> Talents path the entry orb's four links read
-            // up=Orb0_2, down=null, left=null, right=null -- three of the four
-            // stick directions dead on arrival, and prevPath/nextPath/
-            // prevCharacter/nextCharacter/respec/back reachable by mouse only
-            // (TalentBackButton was still sitting on Navigation.Mode.Automatic,
-            // the scene-build default, because nothing ever declared it).
+            // THE SCREEN'S OWN CHROME BELONGS IN THE GRAPH TOO --
+            // prevPath/nextPath/prevCharacter/nextCharacter/respec/back are
+            // otherwise reachable by mouse only, left on
+            // Navigation.Mode.Automatic (the scene-build default) unless
+            // something explicitly declares them.
             //
             // AUTHORED FROM WHERE THE CONTROLS ACTUALLY ARE, the same rule the
             // Hub's own links now follow: the sky fills the left of the screen
@@ -1349,10 +1331,9 @@ namespace PrincesPalace
             links.Add(RuntimeNavWiring.Link(investButton, UiNavDirection.Left, nextPathButton));
             links.Add(RuntimeNavWiring.Link(respecButton, UiNavDirection.Left, nextPathButton));
 
-            // ONE RULE, EVERY DIRECTION, EVERY SLOT (owner's restated model,
-            // 2026-09-23, superseding both earlier passes at this method --
-            // defined entirely by ON-SCREEN POSITION, "a level" being a row
-            // of stones at the same screen height):
+            // ONE RULE, EVERY DIRECTION, EVERY SLOT, defined entirely by
+            // ON-SCREEN POSITION, "a level" being a row of stones at the
+            // same screen height:
             //
             // UP/DOWN STAY IN LANE. _skeletonUpChild/_skeletonDownParent
             // already compute exactly this and are UNCHANGED by this pass:
@@ -1364,10 +1345,9 @@ namespace PrincesPalace
             // fall back to that level's one stone regardless of the lane
             // you left it from (chosen for the dx-0 candidate among
             // several, e.g. every strand's Up into the convergence, or the
-            // convergence's own Down into the grid below it -- "leaving a
-            // single-stone level, the stone you land on is up to you": this
-            // method picks the centre one, the same convention the root's
-            // own Up onto the centre tier-1 stone already used).
+            // convergence's own Down into the grid below it -- this method
+            // picks the centre one, the same convention the root's own Up
+            // onto the centre tier-1 stone already uses).
             //
             // LEFT/RIGHT NAME A LEVEL'S TWO ENDS, ONCE. _leftFlank/
             // _rightFlank (computed once in the static constructor) give
@@ -1407,11 +1387,10 @@ namespace PrincesPalace
                 links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Right, rightTarget));
             }
 
-            // INVEST'S OTHER ROUTE. The old "Right from the root reaches an
-            // arrow, Right again reaches Invest" path is gone -- the root's
-            // Right now reaches tier 1's own right-hand stone, like every
-            // other single-stone level (owner, 2026-09-23: "give InvestButton
-            // another reachable route (Down from the root...)"). The root is
+            // INVEST'S OTHER ROUTE. The root's Right reaches tier 1's own
+            // right-hand stone, like every other single-stone level, so
+            // InvestButton needs a separate reachable route: Down from the
+            // root. The root is
             // the one slot with nothing below it in the tree (Parents.Length
             // == 0, the same test _skeletonDownParent's own construction
             // already uses), so its Down was always unclaimed; it is spent
