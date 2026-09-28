@@ -21,10 +21,9 @@ namespace PrincesPalace.Domain.Tests
     // content yet (FlatSpeedBonus, GuaranteedFirstAction) and the closed-
     // enum default (None).
     //
-    // REWRITTEN 2026-08-27 for the terse, keyword-coloured format -- every
-    // expected string here now wraps the fragment's own rolled number in
-    // ModifierEffectText.KeywordHex via the literal "<color=...>" tag rather
-    // than the old plain-prose sentence, matching Describe's own rewrite.
+    // Every expected string here wraps the fragment's own rolled number in
+    // ModifierEffectText.KeywordHex via the literal "<color=...>" tag,
+    // matching Describe's own terse, keyword-coloured format.
     public class ModifierEffectTextTests
     {
         private static string Keyword(string text) => $"<color={ModifierEffectText.KeywordHex}>{text}</color>";

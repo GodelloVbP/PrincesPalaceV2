@@ -6,13 +6,12 @@ namespace PrincesPalace.Domain.Tests
 {
     // Mechanic (f): a once-per-X gate, owned by a COMBATANT and named by a key.
     //
-    // The owner used to be spelled into the key string -- "berserkers_vest:" +
-    // the ledger id -- and ResetTurn cleared by suffix match. Two things were
-    // wrong with that and only one of them was visible. The suffix convention
-    // was fragile (an owner id that happened to end another one, or contain the
-    // separator, aliases two owners silently), and the ledger id is not an
-    // identity: it deliberately groups every combatant of one enemy type under
-    // one row, so three rats were one lock owner.
+    // The owner is tracked as its own identity, not spelled into the key
+    // string: a suffix convention on "berserkers_vest:" + the ledger id
+    // would be fragile (an owner id that happens to end another one, or
+    // contain the separator, aliases two owners silently), and the ledger
+    // id is not an identity -- it deliberately groups every combatant of
+    // one enemy type under one row, so three rats would be one lock owner.
     public class CombatLocksTests
     {
         private static CombatantState Rat(string name = "Rat") =>
@@ -79,13 +78,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(locks.OncePerTurn(hero, Vest), "the hero's own turn boundary must re-arm the hero's lock");
         }
 
-        // THE FINDING. Three rats in a room are three combatants and one ledger
-        // id -- LedgerIdOf returns enemy.Source.Id and that grouping is
-        // deliberate, because a fight's damage table wants one "Rat" row, not
-        // three. Handing that same string to a lock made them one lock owner:
-        // the first rat to claim a once-per-turn gate spent it for its
-        // littermates, and any one rat's turn boundary re-armed it for all of
-        // them.
+        // THE RISK THIS GUARDS. Three rats in a room are three combatants and
+        // one ledger id -- LedgerIdOf returns enemy.Source.Id and that
+        // grouping is deliberate, because a fight's damage table wants one
+        // "Rat" row, not three. A lock keyed on that same string would make
+        // them one lock owner: the first rat to claim a once-per-turn gate
+        // would spend it for its littermates, and any one rat's turn
+        // boundary would re-arm it for all of them.
         [Test]
         public void TwoCombatantsOfTheSameTypeDoNotShareAPerTurnLock()
         {

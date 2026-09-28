@@ -5,13 +5,12 @@ using PrincesPalace.Domain.Combat;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The Ward -- the one construct the Fragile Lamb's whole path is built on,
-    // and since 2026-09-16 (AUDIT #152, the owner's call) a SHIELD: a pool of
-    // points that damage is taken out of, not a percentage off one blow.
+    // The Ward -- the one construct the Fragile Lamb's whole path is built on
+    // -- is a SHIELD: a pool of points that damage is taken out of, not a
+    // percentage off one blow.
     //
-    // WARDS STACK, decided the same day, once the one-ward-per-character rule
-    // had been built and read back. A character carries several entries; the
-    // total is the sum; damage drains the entry that expires soonest first.
+    // WARDS STACK: a character carries several entries; the total is the
+    // sum; damage drains the entry that expires soonest first.
     //
     // Called a Ward everywhere, and implemented with
     // StatusEffectType.Shielded. "Shield" already means something else in this
@@ -201,7 +200,7 @@ namespace PrincesPalace.Domain.Tests
         //
         // A WARD IS THE ONE DURATION IN THE GAME THAT RUNS AT THE END OF THE
         // WEARER'S TURN rather than at its start, and the turn it was raised
-        // on does not count (owner's answer to AUDIT #153, 2026-09-16). That
+        // on does not count. That
         // is a turn of visibility: at turn start it would be gone before the
         // player got the turn back.
 
@@ -257,7 +256,7 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- The Golden Fleece belongs to the CASTER ------------------------
         //
-        // Three cases, owner 2026-09-16, and the middle one is the whole
+        // Three cases, and the middle one is the whole
         // reason it is read off the ward's Source rather than off whoever is
         // wearing it.
 
@@ -564,11 +563,10 @@ namespace PrincesPalace.Domain.Tests
         // Weight of Wool and Gift: Fury both arrive through the same field, so
         // this is where "does the multiplier reach damage at all" is answered.
         //
-        // It used to also answer "before defense or after". That question has
-        // stopped existing a second time over: mitigation moved entirely out
-        // of CombatMath and into DamagePipeline (Phase 1 of the balance
-        // redesign), so ComputeAttackDamage no longer reads the target AT
-        // ALL any more -- the bonus folds into the attack side, is scaled,
+        // "Before defense or after" does not apply: mitigation lives
+        // entirely in DamagePipeline, not CombatMath, so ComputeAttackDamage
+        // does not read the target AT
+        // ALL -- the bonus folds into the attack side, is scaled,
         // and that is the whole function. See CombatMathTests.
         // ComputeAttackDamage_IsIndependentOfTheTargetsArmour for the
         // property this now is.

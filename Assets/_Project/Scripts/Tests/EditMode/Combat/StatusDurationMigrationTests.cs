@@ -9,8 +9,8 @@ namespace PrincesPalace.Domain.Tests
 {
     // THE MIGRATION PIN for plan D1 (docs/PLAN_SPELL_EXPANSION.md section 0).
     //
-    // Five statuses -- Protect, Vulnerable, Chilled, Rooted, Marked -- moved
-    // from the turn-START countdown to the turn-END one on 2026-09-20, because
+    // Five statuses -- Protect, Vulnerable, Chilled, Rooted, Marked -- run
+    // off the turn-END countdown, not the turn-START one, because
     // a counter that reaches zero at the start of a turn removes the status
     // before the action of that turn ever happens. "turns: 2" therefore
     // exposed a target for ONE turn, not two, everywhere in the game.
@@ -117,9 +117,8 @@ namespace PrincesPalace.Domain.Tests
         // Chilled covered only the interval before the bearer's next turn
         // began, and ActiveStatus floors turns at 1 so there was no smaller
         // number to author. Under the turn-end clock the same 1 is one full
-        // affected turn. The owner accepted the change rather than deleting the
-        // proc; this is where that acceptance is written down in a form that
-        // fails if somebody "fixes" it back.
+        // affected turn -- a deliberate behaviour change, not a bug, pinned
+        // here so it fails if somebody "fixes" it back.
         [Test]
         public void LuckyDecksRedCard_GainsTheOneAffectedTurnItNeverHad()
         {

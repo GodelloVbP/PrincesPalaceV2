@@ -64,8 +64,7 @@ namespace PrincesPalace.Domain.Tests
         {
             // THE NO-INTENT PATH. This monster is faster than the whole
             // party, so it swings during Begin() with nothing telegraphed --
-            // the path that used to pick a party member uniformly at random
-            // and reach straight past the front rank.
+            // and still only ever reaches the front rank.
             var front = Member("Front", 10);
             var back = Member("Back", 9);
             var session = Fight(new[] { front, back }, new[] { Monster(speed: OpeningSpeed) });
@@ -242,8 +241,8 @@ namespace PrincesPalace.Domain.Tests
         public void APromiseWithNothingLeftInReachForfeitsInsteadOfLandingOnRankZero()
         {
             // THE RE-PICK THAT FINDS NOBODY. Every other re-pick test above
-            // has somewhere for the blow to go; this one does not, and that
-            // is the case where the fallback used to reach past the mask.
+            // has somewhere for the blow to go; this one does not, and the
+            // fallback must forfeit rather than reach past the mask.
             //
             // The lob is telegraphed at the back rank while both members are
             // standing. The back-ranker then dies, so by the time the monster

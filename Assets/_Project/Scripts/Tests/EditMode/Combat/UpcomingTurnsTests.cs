@@ -31,13 +31,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreSame(fast, upcoming[0]);
         }
 
-        // Replaces an OrdersBySpeedDescending test that asserted the tracker
-        // showed each combatant exactly once, fastest first. That was the
-        // rotation contract, and charge scheduling deliberately abandons it:
-        // speed now decides how OFTEN you act, not merely in what order, so
-        // the same combatant can and should appear more than once before a
-        // slower one appears at all. Asserting frequency is the only way to
-        // cover the thing the old rotation could never express.
+        // Charge scheduling means speed decides how OFTEN you act, not
+        // merely in what order, so the same combatant can and should appear
+        // more than once before a slower one appears at all. Asserting
+        // frequency is the only way to cover that.
         [Test]
         public void AFasterCombatantAppearsMoreOftenThanASlowerOne()
         {
@@ -170,9 +167,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => encounter.UpcomingTurns(-1));
         }
 
-        // AUDIT #101. FightSession hands its initiative depth to UpcomingTurns
-        // at every CommitBeat, so a zero depth used to construct fine and then
-        // throw out of the middle of the first action. Refused at the door.
+        // FightSession hands its initiative depth to UpcomingTurns
+        // at every CommitBeat, so a zero depth must be refused at
+        // construction rather than throw out of the middle of the first
+        // action.
         [Test]
         public void AFightSessionRefusesAZeroInitiativeDepthAtConstruction()
         {

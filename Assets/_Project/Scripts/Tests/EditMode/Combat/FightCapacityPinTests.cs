@@ -76,23 +76,18 @@ namespace PrincesPalace.Domain.Tests
                 $"silently: {string.Join(", ", over)}.");
         }
 
-        // WAS A RECORDING, IS NOW A BOUND, which is the outcome its own
-        // failure message asked for: "if it fits now, delete this and assert
-        // the bound properly".
+        // A character holds ONE talent root, so the worst case is
+        // level-unlocked skills plus everything a single root grants -- 5 + 6
+        // = 11 for the sheep down the Fragile Lamb path, then 12 once Mud
+        // Burst landed at level 3, which the submenu's pool must have room
+        // for or a fully-built Lamb's skills vanish with nothing anywhere
+        // saying why.
         //
-        // The finding it recorded: a character holds ONE talent root, so the
-        // worst case is level-unlocked skills plus everything a single root
-        // grants -- 5 + 6 = 11 for the sheep down the Fragile Lamb path, then
-        // 12 once Mud Burst landed at level 3. The submenu drew eight rows and
-        // had rects for no more, so four of a fully-built Lamb's skills had
-        // nowhere to go and vanished with nothing anywhere saying why.
-        //
-        // What resolved it was the scrolling container: the pool is sixteen
-        // rects and nine of them are on screen at a time, so the whole kit
-        // exists and the window moves over it. The old recording noted that
-        // raising the row count was not a free fix -- eleven rows reached y 399
-        // against a bark box beginning at 378 -- and that is still true, which
-        // is why the fix was a window rather than a taller column.
+        // The pool is a scrolling container: sixteen rects, nine on screen
+        // at a time, so the whole kit exists and the window moves over it.
+        // Raising the row count instead is not a free fix -- eleven rows
+        // would reach y 399 against a bark box beginning at 378 -- which is
+        // why the fix is a window rather than a taller column.
         //
         // The bound asserted here is against the POOL, not the window. Content
         // outgrowing the window is now ordinary; content outgrowing the pool is
@@ -140,16 +135,10 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the other two capacities ---------------------------------------------
 
-        // NoSignatureResourceHoldsMorePointsThanThereArePips is GONE
-        // (2026-09-10). It pinned that no signature resource could hold more
-        // points than the acting card's 16-pip meter could DRAW, which was a
-        // real invisible-state bug for as long as the meter was pips. The
-        // HUD column draws every party member's signature as one numeric
-        // line on their own plate now ("Wool 3/10"), which has no ceiling to
-        // overflow -- so there is nothing left for this pin to measure and it
-        // goes rather than being kept green against a widget that does not
-        // exist. FightScreenTests' own text-fit audit is what now covers the
-        // only remaining failure mode, a number too wide for its box.
+        // The HUD column draws every party member's signature as one numeric
+        // line on their own plate ("Wool 3/10"), which has no ceiling to
+        // overflow. FightScreenTests' own text-fit audit covers the
+        // remaining failure mode, a number too wide for its box.
 
         [Test]
         public void OnePlatePerStageSlot()

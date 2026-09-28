@@ -92,14 +92,11 @@ namespace PrincesPalace.Domain.Tests
                 "a hit taken is visible on the stage, not only in the log");
         }
 
-        // THE ATTACK-TYPE INTEGRATION TEST the balance-redesign plan's D1
-        // calls for: an enemy authored with a non-Physical attackType must,
-        // in a resolved fight, have its swing reduced by the target's
-        // MagicalDefense and NOT PhysicalDefense. Before Phase 1, an enemy
-        // had no way to reach MagicalDefense at all -- every monster's
-        // attack was untyped Physical regardless of what it was authored as
-        // -- which made MagicalDefense a dead stat against every enemy in
-        // the game. See ActorAttackType's own comment, FightSession.Skills.cs.
+        // THE ATTACK-TYPE INTEGRATION TEST: an enemy authored with a
+        // non-Physical attackType must, in a resolved fight, have its swing
+        // reduced by the target's MagicalDefense and NOT PhysicalDefense,
+        // or MagicalDefense is a dead stat against every enemy in the game.
+        // See ActorAttackType's own comment, FightSession.Skills.cs.
         [Test]
         public void AnEnemyWithAnAuthoredAttackType_IsMetByMagicalDefenseNotPhysical()
         {

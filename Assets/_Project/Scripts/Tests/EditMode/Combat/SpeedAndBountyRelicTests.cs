@@ -132,8 +132,8 @@ namespace PrincesPalace.Domain.Tests
         // REACHABLE, not theoretical: Fleece Ward T3 hands out a free action,
         // so a second cast can land inside the same turn as the first -- and
         // a turns: 1 buff is only revoked at the NEXT turn start, which has
-        // not happened yet. Two casts, one turn, and the old code added a
-        // second full 20% on top of the first.
+        // not happened yet. Two casts, one turn, must refresh rather than
+        // stack a second full 20% on top of the first.
         //
         // Both halves are asserted because they can fail apart: Speed is what
         // the fight actually runs on, Granted is what RevokeSpeedBuff will
@@ -386,16 +386,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(session.BountyEarned, 0, "the kill should have paid out");
         }
 
-        // THE HALF THAT WAS MISSING, and the reason the two tests above passed
-        // while the relic was worth nothing.
-        //
-        // Both of them assert on session.BountyEarned, which no production code
-        // read: the contract banked gold onto the session, printed a line in the
-        // combat log saying so, and the fight's Payout was computed from the
-        // enemies' own CurrencyReward alone. A player wearing it collected
-        // nothing. Exactly the shape CLAUDE.md's gotcha 5 warns about -- a test
-        // that measures the thing it can reach rather than the thing that
-        // matters -- and exactly the shape of AUDIT #42.
+        // THE HALF THAT MATTERS: the two tests above assert on
+        // session.BountyEarned, but production code has to actually READ it
+        // -- the fight's Payout has to include the bounty, not just bank it
+        // onto the session and print a line in the combat log, or a player
+        // wearing the relic collects nothing.
         //
         // Asserted against a bounty-less session rather than a literal, because
         // the base payout rides DifficultyCurve and a pinned number here would
