@@ -531,7 +531,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             _locks.ResetTurn(actor);
             StartEngineAction(actor);
-            TickPrimaryPool(actor);
+            TickPrimaryPool(actor, reopened: true);
             ApplyRunicWardConversion(actor);
             RefreshNecklaceSpeed(actor);
         }

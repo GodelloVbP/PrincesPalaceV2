@@ -275,6 +275,22 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void Juggernaut_PaysOncePerOwnTurn_NotAgainOnAnExtraActionsReopen()
+        {
+            var r = Fight(FuryEngineKind.Juggernaut);
+            r.Bjorn.CurrentHealth = 130;
+
+            r.Session.TickPrimaryPoolForTest(r.Bjorn);
+            Assert.AreEqual(35, Fury(r), "his turn opens at half health");
+
+            r.Session.ReopenTurnForTest(r.Bjorn); // Trample's extra action
+            Assert.AreEqual(35, Fury(r), "the same turn: nothing more");
+
+            r.Session.TickPrimaryPoolForTest(r.Bjorn);
+            Assert.AreEqual(70, Fury(r), "his next turn pays again");
+        }
+
+        [Test]
         public void Juggernaut_HasNoIdleDecay()
         {
             var r = Fight(FuryEngineKind.Juggernaut);

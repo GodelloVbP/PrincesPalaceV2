@@ -863,8 +863,10 @@ null = off).
   `15 x (1 + 3 t^2)` in integers (100% 15, 75% 20, 50% 35, <=25% 60,
   floored between; pinned). Paid in `TickPrimaryPool` after the pool's own
   tick, whose idle decay is skipped (`ResourcePool.TickTurnStart(allowDecay)`).
-  Like `gainPerTurn`, it also pays on an extra action's reopen (AUDIT K8's
-  "income per action taken"). No hit-based income.
+  Once per his OWN turn (decided 2026-09-28): an extra action that reopens
+  the turn (Trample, Bloodlust) re-runs the pool's own tick, as `gainPerTurn`
+  always has, but does not pay the Juggernaut income again
+  (`TickPrimaryPool(actor, reopened: true)`; pinned). No hit-based income.
 - Momentum (`actor.Momentum`): `Enabled` (T1), `ExtendedStackCap` (8
   instead of 5) and `CritDamagePerStackBonus` (+5% crit damage per stack)
   for T2, `IgnoresSmallHits` (T3: a hit under 10% max HP keeps the stack).
@@ -875,16 +877,17 @@ null = off).
   see it. `FillToCap()` is Headsplitter T3's hook.
 - Battle Trance (`actor.BattleTrance = new BattleTrance(20 or 30)`):
   `DoublesWhileTransformed` (T2; read off `CombatantState.Transformation`,
-  Bjorn's only form being Berserk), `ProtectWhenEmptied` (T3,
+  Bjorn's only form being Berserk), `ProtectWhenTranceBreaks` (T3,
   `ProtectPercent` 50, `ProtectTurns` 1, through `ApplyStatusTo` — no
   hashed file touched). In `LandPacket`, after Ignore Pain's deferral: at or
   above `ThresholdFury` (50; "above 50" read as the 50+ used everywhere
   else), `floor(hit x pct / 100)` is paid at 1 Fury per 1% max HP rounded
   up; if the pool cannot cover it, the soak is what the whole pool covers
-  and the pool empties. Hits only. `session.BattleTranceEmptied` fires when
-  a soak empties the pool. OPEN for the owner: with the 50 threshold, one
-  soak only empties the bar on a very large hit (at 60% in Berserk, a hit
-  of about 83% max HP from 50 Fury), so T3 will be rare as designed.
+  and the pool empties. Hits only. T3 and `session.BattleTranceBroke` fire
+  when a soak takes Fury from at-or-above the threshold to below it, the
+  moment soaking stops (decided 2026-09-28; the literal "when soaking empties
+  his Fury" would need one hit of about 83% max HP at 60% in Berserk from 50
+  Fury, so T3 would almost never fire).
 - Twin Rampage (`actor.TwinRampage = new TwinRampageRule("rampage", 1f, 1,
   5)`): a DamageAll cast of that skill id at a full-pool tier (spend 100%)
   with `Cooldown` closed runs `ResolveDamageAllWithTwin`: the Einherjar
@@ -915,7 +918,7 @@ null = off).
      `CritDamagePerStackBonus`, T3 `IgnoresSmallHits`
      (`TalentEffectType` members, set in `ArmEngineSeams`).
   5. Battle Trance rows: T1 `new BattleTrance(20)`, T2 Percent 30 +
-     `DoublesWhileTransformed`, T3 `ProtectWhenEmptied`.
+     `DoublesWhileTransformed`, T3 `ProtectWhenTranceBreaks`.
   6. Twin Rampage: the slot-20 node sets `actor.TwinRampage = new
      TwinRampageRule()`; Rampage moves to the slot-10 convergence
      (`grantsSkillId`).
@@ -1049,6 +1052,11 @@ as worthless. Separate plan.
 - Planted-shield break shards (2026-09-28): 20% of the shield's max HP (the
   placement's size), dealt to the breaking attacker; wired as the default
   `PlantedShield.BreakShardPercent`.
+- Battle Trance T3 (owner-delegated, 2026-09-28): Protect for 1 turn fires
+  when a soak takes Fury from at-or-above the threshold to below it (the
+  moment soaking stops), not when Fury reaches 0.
+- Juggernaut income (owner-delegated, 2026-09-28): once per his own turn; an
+  extra action that reopens the turn (Trample etc.) does not pay again.
 - Thornwall "melee" (2026-09-28): a physical MOVE
   (`CombatActions.IsPhysicalMove`), as 4a built it.
 

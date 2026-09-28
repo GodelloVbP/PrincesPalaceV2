@@ -90,8 +90,12 @@ namespace PrincesPalace.Domain.Combat
         // form's entry and exit.
         public bool DoublesWhileTransformed;
 
-        // T3: when a soak takes the pool to 0, the holder gains Protect.
-        public bool ProtectWhenEmptied;
+        // T3: when a soak takes the pool from at-or-above ThresholdFury to
+        // below it -- the moment the trance stops soaking -- the holder gains
+        // Protect (decided 2026-09-28; "when soaking empties his Fury" read as
+        // the trance running dry, since a single soak reaching 0 from 50 needs
+        // a hit of most of his max HP).
+        public bool ProtectWhenTranceBreaks;
         public int ProtectPercent = 50;
         public int ProtectTurns = 1;
 

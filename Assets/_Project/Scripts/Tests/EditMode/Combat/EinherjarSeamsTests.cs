@@ -223,34 +223,61 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void BattleTrance_WhenASoakEmptiesTheBar_T3GrantsProtect_AndTheHookFires()
+        public void BattleTrance_T3_ASoakThatTakesFuryBelowTheThreshold_GrantsProtect_AndTheHookFires()
         {
-            var trance = new BattleTrance(30) { DoublesWhileTransformed = true, ProtectWhenEmptied = true };
+            var r = TranceFight(55, new BattleTrance { ProtectWhenTranceBreaks = true });
+
+            CombatantState broke = null;
+            r.Session.BattleTranceBroke += holder => broke = holder;
+
+            r.Session.StrikeForTest(r.Foe, r.Bjorn, 140, DamageType.Physical);  // 100: 20 soaked for 8
+
+            Assert.AreEqual(47, r.Bjorn.PrimaryPool.Current, "55 -> 47 crosses the 50 line");
+            Assert.AreEqual(180, r.Bjorn.CurrentHealth);
+            Assert.AreSame(r.Bjorn, broke);
+
+            var protect = r.Bjorn.Statuses.Single(s => s.Type == StatusEffectType.Protect);
+            Assert.AreEqual(50, protect.Magnitude);
+            Assert.AreEqual(1, protect.TurnsRemaining);
+        }
+
+        [Test]
+        public void BattleTrance_T3_ASoakThatStaysAtTheThreshold_GrantsNothing()
+        {
+            var r = TranceFight(58, new BattleTrance { ProtectWhenTranceBreaks = true });
+
+            CombatantState broke = null;
+            r.Session.BattleTranceBroke += holder => broke = holder;
+
+            r.Session.StrikeForTest(r.Foe, r.Bjorn, 140, DamageType.Physical);
+
+            Assert.AreEqual(50, r.Bjorn.PrimaryPool.Current, "58 -> 50: still at the threshold, still soaking");
+            Assert.IsNull(broke);
+            Assert.IsFalse(r.Bjorn.Statuses.Any(s => s.Type == StatusEffectType.Protect));
+        }
+
+        [Test]
+        public void BattleTrance_AFullPoolSoak_EmptiesTheBar_AndBreaksTheTrance()
+        {
+            var trance = new BattleTrance(30) { DoublesWhileTransformed = true, ProtectWhenTranceBreaks = true };
             var r = TranceFight(50, trance);
             Transformation.Enter(r.Bjorn, "Berserk", 3, 0, 0, 0);
-
-            CombatantState emptied = null;
-            r.Session.BattleTranceEmptied += holder => emptied = holder;
 
             r.Session.StrikeForTest(r.Foe, r.Bjorn, 350, DamageType.Physical);  // 250; 60% wants 150
 
             Assert.AreEqual(0, r.Bjorn.PrimaryPool.Current, "50 Fury covers only 130 of the 150");
             Assert.AreEqual(140, r.Bjorn.CurrentHealth, "250 - 130 = 120 to health");
-            Assert.AreSame(r.Bjorn, emptied);
-
-            var protect = r.Bjorn.Statuses.Single(s => s.Type == StatusEffectType.Protect);
-            Assert.AreEqual(50, protect.Magnitude);
+            Assert.IsTrue(r.Bjorn.Statuses.Any(s => s.Type == StatusEffectType.Protect));
         }
 
         [Test]
-        public void BattleTrance_EmptyingWithoutT3_GrantsNoProtect()
+        public void BattleTrance_BreakingWithoutT3_GrantsNoProtect()
         {
-            var r = TranceFight(50, new BattleTrance(30) { DoublesWhileTransformed = true });
-            Transformation.Enter(r.Bjorn, "Berserk", 3, 0, 0, 0);
+            var r = TranceFight(55, new BattleTrance());
 
-            r.Session.StrikeForTest(r.Foe, r.Bjorn, 350, DamageType.Physical);
+            r.Session.StrikeForTest(r.Foe, r.Bjorn, 140, DamageType.Physical);
 
-            Assert.AreEqual(0, r.Bjorn.PrimaryPool.Current);
+            Assert.AreEqual(47, r.Bjorn.PrimaryPool.Current);
             Assert.IsFalse(r.Bjorn.Statuses.Any(s => s.Type == StatusEffectType.Protect));
         }
 

@@ -24,10 +24,11 @@ namespace PrincesPalace.Domain.Combat.Session
     // which is every combatant until the Unity wiring sets them.
     public sealed partial class FightSession
     {
-        // Raised when a Battle Trance soak takes its holder's pool to 0, before
-        // T3's Protect is applied. A hook for the view (a trance-break cue);
-        // nothing in the session subscribes.
-        public event Action<CombatantState> BattleTranceEmptied;
+        // Raised when a Battle Trance soak takes its holder's pool below the
+        // threshold (the trance stops soaking), before T3's Protect is
+        // applied. A hook for the view (a trance-break cue); nothing in the
+        // session subscribes.
+        public event Action<CombatantState> BattleTranceBroke;
 
         // ---- the raw incoming figure (Sentinel) -----------------------------------
 
@@ -156,10 +157,11 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // The pool's own gain and decay, with decay
         // switched off under the Juggernaut engine, then that engine's
-        // health-curved income. Runs wherever the pool's income runs --
-        // including an extra action's reopen, the rule gainPerTurn already
-        // follows ("income per action taken", AUDIT K8).
-        private void TickPrimaryPool(CombatantState actor)
+        // health-curved income -- ONCE PER HIS OWN TURN (decided 2026-09-28):
+        // an extra action that reopens the turn (Trample, Bloodlust) re-runs
+        // the pool's own tick, as gainPerTurn always has (AUDIT K8), but the
+        // Juggernaut income is not paid again (`reopened`).
+        private void TickPrimaryPool(CombatantState actor, bool reopened = false)
         {
             var pool = actor?.PrimaryPool;
             if (pool == null) return;
@@ -167,7 +169,7 @@ namespace PrincesPalace.Domain.Combat.Session
             var engine = actor.FuryEngine;
             pool.TickTurnStart(allowDecay: !engine.SuppressesIdleDecay);
 
-            if (engine.Kind == FuryEngineKind.Juggernaut && actor.IsAlive)
+            if (engine.Kind == FuryEngineKind.Juggernaut && actor.IsAlive && !reopened)
             {
                 pool.Gain(FuryEngine.JuggernautFury(actor.CurrentHealth, actor.MaxHealth));
             }
@@ -213,11 +215,13 @@ namespace PrincesPalace.Domain.Combat.Session
             pool.SpendUpTo(cost);
             AppendMessage($"{target.Name}'s battle trance takes {soak} of the blow for {cost} {pool.DisplayName}.");
 
-            if (pool.Current == 0)
+            // A soak only runs from at-or-above the threshold, so ending below
+            // it is exactly the crossing: the trance just stopped soaking.
+            if (pool.Current < trance.ThresholdFury)
             {
-                BattleTranceEmptied?.Invoke(target);
+                BattleTranceBroke?.Invoke(target);
 
-                if (trance.ProtectWhenEmptied
+                if (trance.ProtectWhenTranceBreaks
                     && ApplyStatusTo(target, StatusEffectType.Protect, trance.ProtectPercent, trance.ProtectTurns, target))
                 {
                     AppendMessage($"{target.Name}'s trance breaks - he gains Protect!");
@@ -312,6 +316,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // ---- seams for tests ---------------------------------------------------------------
 
         public void TickPrimaryPoolForTest(CombatantState actor) => TickPrimaryPool(actor);
+
+        public void ReopenTurnForTest(CombatantState actor) => ReopenTurnFor(actor);
 
         public void StartEngineActionForTest(CombatantState actor) => StartEngineAction(actor);
 
