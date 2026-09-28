@@ -268,12 +268,10 @@ public static class ScreenRegistry
                 // per slot would be six identical assets and six draw-call
                 // batches where one will do.
                 //
-                // STORED ON THE CONTROLLER, not just attached and left for a
-                // GetComponentInChildren to rediscover per beat -- the two
-                // fields these fill (enemyHitFlashes/partyHitFlashes) used to
-                // be a dead Image[] pair UiAutoBind wired to the raw overlay
-                // graphic and nothing ever read; they now carry the
-                // StageHitFlash itself, the same seam stageShakes uses.
+                // Stored on the controller, not just attached and left for a
+                // GetComponentInChildren to rediscover per beat. The two
+                // fields these fill (enemyHitFlashes/partyHitFlashes) carry
+                // the StageHitFlash itself, the same seam stageShakes uses.
                 var flashMaterial = AssetDatabase.LoadAssetAtPath<Material>(PipelineBuilder.HitFlashMaterialPath);
                 fight.enemyHitFlashes = screen.EnemyHitFlashes
                     .Select(flashRef => AttachHitFlash(result, flashMaterial, flashRef)).ToArray();
@@ -286,19 +284,14 @@ public static class ScreenRegistry
                 // someone has to remember (CLAUDE.md gotcha 3).
                 fight.enemyFallbackSprite = SceneBuilder.LoadSpriteByKey(FightScreen.FallbackPlateKey);
 
-                // NO PLATE ART IS BAKED HERE, and that is the point of the
-                // 2026-09-10 column pass. Which character's leather sits in
-                // which of the three slots is decided per encounter, so the
-                // sprites are loaded at runtime off characters.json's
+                // No plate art is baked here. Which character's leather sits
+                // in which of the three slots is decided per encounter, so
+                // the sprites are loaded at runtime off characters.json's
                 // plateArt (PcPlateSprites) rather than serialised into the
                 // scene -- a character authored after the last scene build
                 // gets their own plate with no rebuild. The tree still bakes
-                // ONE default per slot so an unrefreshed scene is not three
+                // one default per slot so an unrefreshed scene is not three
                 // white quads; see PcPlateArt.BakedDefaults.
-                //
-                // The per-ButtonTheme 2x1 container bake this replaced was
-                // already gone: it loaded one kit sprite per theme for a
-                // frame the card no longer has.
 
                 // Something has to actually START a fight, or the scene opens on
                 // an empty stage and the screen cannot be looked at. Placeholder
@@ -328,13 +321,13 @@ public static class ScreenRegistry
                 fight.enemyActorAnimators = screen.EnemySlots.Select(result.Attach<StageActorAnimator>).ToArray();
                 fight.partyActorAnimators = screen.PartySlots.Select(result.Attach<StageActorAnimator>).ToArray();
 
-                // The death fade reaches TWO sibling images -- the figure and
+                // The death fade reaches two sibling images -- the figure and
                 // its ground shadow -- because a corpse whose shadow stayed put
                 // reads as the sprite failing to draw rather than as a death.
                 // Stored on the controller for the same reason the animator
-                // above now is: FadeTheFallen used to re-derive this with
+                // above is, rather than re-derived with
                 // SlotFor(combatant).GetComponent<StageDeathFade>() every time
-                // a beat's snapshot mentioned a corpse.
+                // a beat's snapshot mentions a corpse.
                 fight.enemyDeathFades = AttachDeathFades(result, screen.EnemySlots, screen.EnemySprites,
                     screen.EnemyFootShadows, screen.EnemyFootGlows);
                 fight.partyDeathFades = AttachDeathFades(result, screen.PartySlots, screen.PartySprites,
@@ -617,10 +610,9 @@ public static class ScreenRegistry
                 map.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
                 // Held, not discarded: the map's own NavContext.systemMenu
-                // handler opens this (MapController.HandleSystemMenu). The
-                // owner's 2026-09-19 call moved it off Cancel onto Start, so
-                // the map's Cancel is a no-op now and this is the only way in
-                // (AUDIT.md #155 for why the path is shared at all).
+                // handler opens this (MapController.HandleSystemMenu). It
+                // opens on Start, not Cancel, so the map's Cancel is a no-op
+                // and this is the only way in.
                 map.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
                     inDescent: true);
 
@@ -639,12 +631,11 @@ public static class ScreenRegistry
 
                 map.debugMenuPanel = WireDebugMenu(result, screen.Debug);
 
-                // The SAME SystemMenuController instance the map just built
+                // The same SystemMenuController instance the map just built
                 // above (map.systemMenu), not a second one: one overlay per
                 // Map scene, and the shop is a nested panel inside it, not a
-                // screen of its own (AUDIT.md #173's Shop line, closed by the
-                // owner's 2026-09-19 ask -- "press Start in the shop to check
-                // on your chars").
+                // screen of its own -- press Start in the shop to check on
+                // your chars (AUDIT.md #173).
                 shopController.systemMenu = map.systemMenu;
 
                 // The event panel, nested and sharing the menu exactly as the
@@ -994,17 +985,15 @@ public static class ScreenRegistry
 
     // The overarching menu's wiring, shared by every scene that carries one.
     //
-    // `escapeConsumers` is gone (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2, step
-    // B): the menu no longer polls Escape itself at all, so there is nothing
-    // left for a per-scene consumer list to guard. Every scene that carries
-    // one now opens it through ONE path (SystemMenuController.OpenFromRoot)
-    // from its own context's `systemMenu` handler -- the hub's HandleEscape,
-    // the map's HandleSystemMenu and the fight's OpenSystemMenu -- which Start
-    // and Escape reach and Cancel does not. Cancel is a no-op at all three
-    // roots since the owner's 2026-09-19 call; AUDIT.md #155 closed in phase 2
-    // step F with the same single path hung off Cancel instead, so the button
-    // moved and the sharing did not. Each caller therefore needs the
-    // controller in hand, which is why this returns it.
+    // `escapeConsumers` is gone: the menu does not poll Escape itself at
+    // all, so there is nothing left for a per-scene consumer list to guard.
+    // Every scene that carries one opens it through one path
+    // (SystemMenuController.OpenFromRoot) from its own context's
+    // `systemMenu` handler -- the hub's HandleEscape, the map's
+    // HandleSystemMenu and the fight's OpenSystemMenu -- which Start and
+    // Escape reach and Cancel does not; Cancel is a no-op at all three
+    // roots. Each caller needs the controller in hand, which is why this
+    // returns it.
     private static SystemMenuController WireSystemMenu(
         UiEmitResult result, NodeRef host, SystemMenuScreen menu, bool lockedForFight,
         bool inDescent)
@@ -1174,9 +1163,9 @@ public static class ScreenRegistry
         controller.sliderKeys = options.SliderKeys.ToArray();
         controller.stepperKeys = options.StepperKeys.ToArray();
 
-        // OptionRow (plan section 7) attached HERE, at build time, not
-        // runtime-added the way the old HoverIndex was -- UiAutoBind has no
-        // name match for `rows` against `RowHovers` (deliberately: it binds
+        // OptionRow (plan section 7) attached here, at build time, not
+        // runtime-added -- UiAutoBind has no name match for `rows` against
+        // `RowHovers` (deliberately: it binds
         // GameObject/Tmp/Button/Image/Rect by name, never an arbitrary
         // component type), so this is explicit, the same shape every other
         // Attach<T> call in this file already is.
@@ -1245,8 +1234,8 @@ public static class ScreenRegistry
                 : SceneBuilder.LoadSpriteByKey(RewardTrackLayout.IconFor(reward)))
             .ToArray();
 
-        // NULL IS A REAL ANSWER HERE NOW, not a miss. Since phase 5 only nine
-        // reward kinds have a medallion that honestly means them; the other
+        // Null is a real answer here, not a miss. Only nine reward kinds
+        // have a medallion that honestly means them; the other
         // twelve draw a word (RewardTrackLayout.CardGlyphFor) and CardArtKeyFor
         // returns null for every one of them. UiWiringSweep still refuses a
         // half-wired array whatever the reason, so those slots carry the same
@@ -1313,12 +1302,12 @@ public static class ScreenRegistry
         // the very list it is meant to agree with, so a count check here
         // would only compare that list with itself.
 
-        // NO PORTRAIT ARRAY, and its absence is the point. Every character with
-        // a portraitPath used to be baked here as an IconEntry, which made the
-        // scene a photograph of the roster: a character authored after the last
-        // scene build had an empty plate and nothing short of -BuildScenes
-        // filled it. portraitPath is Resources-relative now and
-        // CharacterPortraits loads it by id at the moment the dossier draws.
+        // No portrait array, and its absence is the point: baking every
+        // character with a portraitPath here as an IconEntry would make the
+        // scene a photograph of the roster, so a character authored after
+        // the last scene build had an empty plate until -BuildScenes ran.
+        // portraitPath is Resources-relative and CharacterPortraits loads it
+        // by id at the moment the dossier draws.
         // Items plus book-only skills, in one table -- the same Items+Relics
         // concat-then-select shape WireGlossary already uses. A skill's
         // iconPath carries the glyph baked into the book art, so the spell
@@ -1342,11 +1331,11 @@ public static class ScreenRegistry
     // child it holds a reference to rather than to itself.
     private static ReckoningController WireReckoning(UiEmitResult result, ReckoningScreen screen)
     {
-        // The controller takes the WIPE MASK and no handle on the painted frame
-        // at all -- there is no frame field for the binder to fill, deliberately.
-        // Everything the controller used to do to the frame -- scale it, lift
-        // it -- is now done to the mask around it, and a reference it does not
-        // hold cannot be squashed by accident a second time.
+        // The controller takes the wipe mask and no handle on the painted
+        // frame at all -- there is no frame field for the binder to fill,
+        // deliberately. Scaling and lifting are done to the mask around the
+        // frame, and a reference it does not hold cannot be squashed by
+        // accident.
         var controller = result.Attach<ReckoningController>(screen.Root);
         UiAutoBind.Bind(result, controller, screen);
 

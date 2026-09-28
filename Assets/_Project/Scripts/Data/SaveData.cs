@@ -20,62 +20,49 @@ namespace PrincesPalace
         //
         // 1 -> 2: the talent tree reset. Orbs stopped costing talent points
         // and started costing Embers, so every orb on an older save was paid
-        // for in a currency that no longer exists. This is the FIRST bump this
-        // field has ever taken -- everything before it was additive and
-        // handled by clear-as-you-read folds inside Reconcile(), which is the
-        // policy the comments below still describe and which still applies to
-        // anything that is merely a new field. A change that INVALIDATES data
-        // already on disk is the case that policy cannot cover.
-        // 2 -> 3: Embers moved from the shared wallet onto the CHARACTER.
-        // A single pool meant a character you had never fielded could be
-        // kindled to the top of their tree out of embers someone else earned,
-        // which is the opposite of what per-character progression is for. The
-        // migration hands the whole old pool to the first roster member rather
-        // than splitting it, because splitting would silently reduce what any
-        // one character can afford and there is no record of who earned what.
+        // for in a currency that no longer exists. Every bump before this one
+        // was additive and handled by the clear-as-you-read folds inside
+        // Reconcile() -- that policy still applies to a merely new field. A
+        // change that invalidates data already on disk is the case that
+        // policy cannot cover.
+        // 2 -> 3: Embers moved from the shared wallet onto the character. A
+        // single pool let a character never fielded be kindled to the top of
+        // their tree out of embers someone else earned. The migration hands
+        // the whole old pool to the first roster member rather than
+        // splitting it, since splitting would silently reduce what any one
+        // character can afford with no record of who earned what.
         // 3 -> 4: a run keeps nothing. Gear and the pack are cleared when a
-        // run ends now, and a save written before that rule is carrying the
-        // spoils of runs that ended under the old one -- 41 stockpiled items
-        // and three worn pieces on the save that reported this. Cleared once,
-        // on the way up, rather than left as a permanent exception to a rule
-        // the game otherwise enforces.
+        // run ends now, and a save written before that rule carries the
+        // spoils of runs that ended under the old one. Cleared once, on the
+        // way up, rather than left as a permanent exception to a rule the
+        // game otherwise enforces.
         // 4 -> 5: the reward track became per-character content. Removed
-        // fields would need no bump -- JsonUtility drops what the shape no
-        // longer has -- but `claimedTrackLevel` SURVIVES and would be
-        // REINTERPRETED, which is worse than either: a watermark of 40 read
-        // against Shawn's new table claims two wool-capacity nodes and +12%
-        // Nature that were never applied, while unspentStatPoints still holds
-        // what the old table paid. See Migrate's own step for what it does
-        // about it.
-        // 5 -> 6: progression v2 reset the whole ladder. The level cap came
-        // down from 100 to 40, the cost of every level changed (10 was 236 and
-        // is now 500; 40 was 30,199 and is now 10,000), and the reward at each
-        // level is being reauthored in phase 4. A carried `level` therefore
-        // means something different on each side of this bump, and a carried
-        // `exp` was earned against income that paid 195,369 for a deep run
-        // where it now pays 10,153. There is no honest conversion: a
-        // level-preserving migration would have to reconcile old rewards
-        // against new nodes, which is more code than the feature. So the
-        // ladder is put back to the bottom and everything that is not the
-        // ladder is kept. The only saves in existence are developers'
-        // (PLAN_PROGRESSION_V2.md §6 says so and is the authority for this
-        // being acceptable at all); a shipped game would need the other
-        // answer.
-        // 6 -> 7: an event can start a fight (docs/PLAN_EVENTS_BELL_AND_
-        // CARAVAN.md 3.1, 3.3). No data changes -- RunSnapshot.pendingFight
-        // is additive and an older save reads it empty -- so the step is
-        // empty. The bump exists for the OTHER direction: a build at 6 that
-        // loaded a save holding a pending event fight would build and settle
-        // it as a room fight, clearing the event's room and skipping its
-        // ending. Refusing the newer save (Migrate's `version >
-        // CurrentVersion`) is the safe answer, and only a bump can ask for it.
-        // 7 -> 8: item copies carry provenance (docs/PLAN_EVENTS_BELL_AND_
-        // CARAVAN.md 3.3) -- a caravan lot, a fake flag and a fake's wear
-        // countdown, one nested `provenance` object on each bag and slot
-        // entry. Additive again, so the step is empty; the bump is for the
-        // other direction once more: a build at 7 would load a caravan fake
-        // as a genuine item that never breaks and merge lot copies into
-        // ordinary stacks.
+        // fields need no bump -- JsonUtility drops what the shape no longer
+        // has -- but `claimedTrackLevel` survives and would be reinterpreted
+        // against the new per-character table, claiming nodes that were
+        // never applied while unspentStatPoints still holds what the old
+        // table paid. See Migrate's own step for what it does about it.
+        // 5 -> 6: progression v2 reset the whole ladder -- level cap, cost
+        // per level and the reward at each level all changed. A carried
+        // `level` and `exp` would mean something different on each side of
+        // this bump, and a level-preserving migration would have to
+        // reconcile old rewards against new nodes, which is more code than
+        // the feature. The ladder is put back to the bottom; everything else
+        // is kept. Acceptable because the only saves in existence are
+        // developers' (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md
+        // §6); a shipped game would need the other answer.
+        // 6 -> 7: an event can start a fight
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.1, 3.3).
+        // RunSnapshot.pendingFight is additive, so the step is empty; the
+        // bump exists so Migrate's `version > CurrentVersion` check refuses
+        // a newer save instead of a build settling its pending event fight
+        // as an ordinary room fight.
+        // 7 -> 8: item copies carry provenance
+        // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.3) -- a caravan lot, a
+        // fake flag and a fake's wear countdown, nested on each bag and slot
+        // entry. Additive, so the step is empty; the bump exists so an
+        // older build won't treat a caravan fake as a genuine item that
+        // never breaks or merge lot copies into ordinary stacks.
         public const int CurrentVersion = 8;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
@@ -176,32 +163,29 @@ namespace PrincesPalace
         // a solo save three entries long for one member.
         public List<string> selectedCharacterIds = new List<string>();
 
-        // THE CAP THIS PROFILE HAS ALREADY SEEN, which is what separates "the
-        // squad is short because the cap grew" from "the squad is short
-        // because the player benched somebody" (AUDIT #118).
+        // The cap this profile has already seen, which is what separates
+        // "the squad is short because the cap grew" from "the squad is
+        // short because the player benched somebody". Comparing the
+        // selection's length against EffectiveMaxSquadSize() cannot tell
+        // those apart, and reads a bench as a vacancy, handing the benched
+        // member back in the rear seat on the next load; only a recorded
+        // fact can.
         //
-        // Reconcile's top-up used to read the two as one: a selection shorter
-        // than EffectiveMaxSquadSize() meant seats to fill, so benching a
-        // member from the party screen was undone by the next load, which
-        // handed them back in the REAR seat because that is where TopUpOrder
-        // lands. The count cannot answer the question; only a recorded fact
-        // can.
-        //
-        // ZERO ON EVERY SAVE WRITTEN BEFORE THIS FIELD EXISTED (JsonUtility
-        // keeps the initialiser for a missing key), which reads as "this
-        // profile has never seen a cap" and so tops up exactly once, exactly
-        // as it did before. Reconcile stamps the current cap on the way out,
-        // so the second load onwards respects a bench.
+        // A save written before this field existed reads it as zero
+        // (JsonUtility keeps the initialiser for a missing key), which reads
+        // as "this profile has never seen a cap" and tops up exactly once.
+        // Reconcile stamps the current cap on the way out, so the second
+        // load onwards respects a bench.
         public int squadSizeSeen;
 
         public List<string> purchasedUpgradeIds = new List<string>();
 
         // Every boss this profile has ever put down, across all runs.
         //
-        // THE ember source. Embers are paid per UNIQUE boss kill, so the answer
-        // to "does this kill pay" is "is it already in here" — which is why the
-        // list is lifetime and lives on the save rather than on the run. A run
-        // knows what it killed; only this knows what was new.
+        // The ember source. Embers are paid per unique boss kill, so the
+        // answer to "does this kill pay" is "is it already in here" — the
+        // list is lifetime and lives on the save rather than on the run. A
+        // run knows what it killed; only this knows what was new.
         //
         // Deliberately never cleared. Clearing it would silently re-open a
         // payout the player has already banked and spent, which is the
@@ -241,19 +225,14 @@ namespace PrincesPalace
         // compared for equality or fed into a formula the way damage is.
         public float totalPlaySeconds;
 
-        // relicLoadout WAS HERE, and it is gone (AUDIT #119, owner's call
-        // 2026-09-11). A `(characterId, relicId)` map, serialized on every
-        // save, null-guarded and pruned on every Reconcile, and NEITHER
-        // WRITTEN NOR READ by anything in the tree -- stronger than #50, #87
-        // and #112, which are at least written.
-        //
-        // What actually carries a character's relic is RunSnapshot.relicIds
-        // plus FightEncounterAdapter.ResolveRelics, which is run-scoped rather
-        // than save-scoped; per-character assignment, which is the only thing
-        // this shape was for, exists nowhere and is not on the roadmap. It was
-        // written as `{}` on every save, so JsonUtility simply DROPS the
-        // unknown key on the next load and nothing is lost -- the same
-        // no-migration deletion grantedGold got in the pass that filed #112.
+        // relicLoadout is gone: a `(characterId, relicId)` map that was
+        // written and pruned on every Reconcile but read by nothing in the
+        // tree. What actually carries a character's relic is
+        // RunSnapshot.relicIds plus FightEncounterAdapter.ResolveRelics,
+        // run-scoped rather than save-scoped; per-character assignment,
+        // which is the only thing this shape was for, exists nowhere. It
+        // was written as `{}` on every save, so JsonUtility simply drops the
+        // unknown key on the next load and nothing is lost.
         //
         // Kept as a comment rather than removed outright because the hazard
         // was never the field, it was a future reader seeing a relic loadout
@@ -510,34 +489,33 @@ namespace PrincesPalace
 
             // 1 -> 2: the talent reset.
             //
-            // Gated on the version the save CAME FROM, not on the version it is
+            // Gated on the version the save came from, not on the version it is
             // going to, and expressed as a range rather than `version == 1`.
             // Both matter. A range keeps this correct when CurrentVersion moves
             // to 3 and a v1 save has to pass through this step on its way
             // there; an equality check would silently skip it and let a v1
             // save arrive in a much later build with its old orbs intact.
             //
-            // Ordered BEFORE the stamp below for the same reason -- once
+            // Ordered before the stamp below for the same reason -- once
             // `version` is rewritten there is no longer anything to test.
             if (version < 2)
             {
                 ResetTalentProgress();
             }
 
-            // 2 -> 3 (the ember move) IS DEFERRED PAST Reconcile, alone
+            // 2 -> 3 (the ember move) is deferred past Reconcile, alone
             // among these steps, and the flag is captured here so the
-            // gate still reads the version the save CAME FROM -- the same
+            // gate still reads the version the save came from -- the same
             // reason the 1 -> 2 step above is expressed as a range rather
             // than an equality.
             //
-            // It is the only step that MOVES something rather than clearing
+            // It is the only step that moves something rather than clearing
             // it, so it is the only one that cares whether the roster it is
-            // moving onto survives. Run here, it handed the whole pooled
-            // balance to the first roster member on disk and then Reconcile
-            // deleted that member for naming content that no longer exists --
-            // which is an ordinary rename, and took the embers with it. An
-            // empty roster lost them the same way one step earlier, with the
-            // wallet cleared and nobody to have received it.
+            // moving onto survives: run before Reconcile prunes the roster,
+            // it would hand the whole pooled balance to a member Reconcile
+            // then deletes for naming content that no longer exists, taking
+            // the embers with it. An empty roster loses them the same way,
+            // with the wallet cleared and nobody to have received it.
             bool moveEmbers = version < 3;
 
             if (version < 4)
@@ -607,13 +585,14 @@ namespace PrincesPalace
         // The one-time sweep for saves written before the reward track became
         // per-character content.
         //
-        // WHAT THIS IS ACTUALLY FIXING is not the removed fields -- JsonUtility
+        // What this actually fixes is not the removed fields -- JsonUtility
         // drops `earnedFavor`, `bonusExpPermille` and `bonusMaxHealth` on load
-        // with no help from here -- but the one that SURVIVED.
-        // `claimedTrackLevel` used to mean "paid this far up ONE shared table
-        // of stat points and max health"; it now means "collected this far up
-        // THIS CHARACTER'S track", and every reward on that track is summed
-        // live against it. A watermark of 40 carried across unread would hand
+        // with no help from here -- but the one that survives.
+        // `claimedTrackLevel` meant "paid this far up one shared table
+        // of stat points and max health" under the old shape; it now means
+        // "collected this far up this character's track", and every reward
+        // on that track is summed live against it. A watermark of 40 carried
+        // across unread would hand
         // Shawn two wool-capacity nodes and +12% Nature he was never paid,
         // while his unspentStatPoints still holds what the old table gave him.
         // That is a plausible wrong answer, which is the one thing neither of
@@ -630,11 +609,11 @@ namespace PrincesPalace
         // you", and it exercises the new claim path from level 1 on first
         // open.
         //
-        // ONE CONSEQUENCE WORTH KNOWING BEFORE IT IS REPORTED AS A BUG:
+        // One consequence worth knowing before it is reported as a bug:
         // invested points are part of the equipment requirement floor
         // (ContentDatabase.ActiveLoadout), so a character whose weapon was
         // liftable only because of them opens the migrated save with that item
-        // INERT -- worn, on the paperdoll, contributing nothing -- until the
+        // inert -- worn, on the paperdoll, contributing nothing -- until the
         // points are re-spent. It is visible (the dossier paints
         // SlotBlockedCaptions) and it is one collect plus a re-spend away,
         // which is the same state Character.Respec already produces on
@@ -654,7 +633,7 @@ namespace PrincesPalace
         // The one-time sweep for saves written before progression v2 reset the
         // ladder, 5 -> 6.
         //
-        // EVERYTHING THE LADDER TOUCHES, and nothing else. Level and
+        // Everything the ladder touches, and nothing else. Level and
         // experience go back to where a new character starts; the track's
         // watermark, the points it paid and the scores those points were spent
         // on go with them, because a point that came off the old table cannot
@@ -663,7 +642,7 @@ namespace PrincesPalace
         // ever priced in experience, and a player who spent an evening on a
         // talent tree should not lose it to a curve retune.
         //
-        // OVERLAPS ResetTheRewardTrack ON PURPOSE. A version-4 save runs both,
+        // Overlaps ResetTheRewardTrack on purpose. A version-4 save runs both,
         // and the three fields they share are set to the same values by each,
         // so the order does not matter and neither does the duplication. The
         // alternative -- a shared helper called from two version gates -- would
@@ -671,7 +650,7 @@ namespace PrincesPalace
         // step must keep meaning what it meant when it was written even if
         // this one changes.
         //
-        // IDEMPOTENT BY THE VERSION STAMP rather than by the arithmetic:
+        // Idempotent by the version stamp rather than by the arithmetic:
         // Migrate returns at its first line for a save already at
         // CurrentVersion, so a version-6 save loaded twice is read, reconciled
         // and left alone. That is what makes "loading again changes nothing"
@@ -696,12 +675,12 @@ namespace PrincesPalace
             int pooled = wallet.embers;
             if (pooled <= 0) return;
 
-            // THE SOURCE IS NOT CLEARED UNTIL SOMEBODY HAS TAKEN IT. The
-            // clear used to happen either way, so a roster with nobody in it
-            // emptied the wallet into nothing. Its caller now runs this after
-            // Reconcile, which should make an empty roster impossible -- this
-            // is the guard that keeps "should" from being the only thing
-            // standing between a player and their whole ember balance.
+            // The source is not cleared until somebody has taken it, so a
+            // roster with nobody in it cannot empty the wallet into nothing.
+            // The caller runs this after Reconcile, which should make an
+            // empty roster impossible -- this is the guard that keeps
+            // "should" from being the only thing standing between a player
+            // and their whole ember balance.
             var first = roster?.FirstOrDefault(c => c != null);
             if (first == null) return;
 
@@ -746,23 +725,11 @@ namespace PrincesPalace
         // references to content that no longer exists, and tops up
         // selectedCharacterIds to EffectiveMaxSquadSize().
         //
-        // PUBLIC, AND THE REASON IS NOT THE ONE THIS COMMENT USED TO GIVE. It
-        // said the visibility existed so that buying extra_recruit_slot could
-        // reconcile immediately rather than at the next full reload (AUDIT.md
-        // P0 #3). There is no such caller and never was one under this tree:
-        // the only production `.Reconcile()` outside Migrate/Load is
-        // ProfilePresets.cs, the bot's profile builder, and
-        // purchasedUpgradeIds has no production writer at all -- upgrades.json
-        // says as much itself ("there is no Principality shop screen yet, so
-        // nothing has ever charged anybody 50 for anything"). The described
-        // purchase cannot happen, so the justification described a caller that
-        // does not exist.
-        //
-        // What is true today: it is public because the bot builds a profile
-        // in memory and has to settle it against content without a load, and
-        // because tests reach it directly. If a Principality shop is ever
-        // built, calling this after a purchase IS the right move -- the
-        // sentence above was a plan, and it is recorded here as one.
+        // Public because the bot builds a profile in memory and has to
+        // settle it against content without a load, and because tests reach
+        // it directly. purchasedUpgradeIds has no production writer yet --
+        // there is no Principality shop screen -- but calling this after a
+        // purchase would be the right move once one exists.
         public void Reconcile()
         {
             wallet ??= new Wallet();
@@ -785,7 +752,7 @@ namespace PrincesPalace
 
             stockpiledItems.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
 
-            // A WORN-OUT FAKE IS GONE (plan 3.3). The settlement removes one
+            // A worn-out fake is gone (plan 3.3). The settlement removes one
             // the moment its countdown reaches zero, so a zero on disk is a
             // write that was interrupted -- and the answer is the same
             // removal, with nothing handed back. Gear only: a fake consumable
@@ -819,7 +786,7 @@ namespace PrincesPalace
             activeRun.clearedNodeIds ??= new List<int>();
             activeRun.relicIds ??= new List<string>();
 
-            // THE TWO LISTS RunSettlement ACTUALLY READS, and the two this
+            // The two lists RunSettlement actually reads, and the two this
             // method walked past. Every other run list above is guarded here
             // and pruned somewhere; bossesKilled and ledger were neither, which
             // left the only run-scoped values a load hands straight to a payout
@@ -829,11 +796,7 @@ namespace PrincesPalace
             activeRun.inventory.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
             activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
 
-            // THE RUN'S OWN RELICS, which this method pruned everything BUT.
-            //
-            // save.relicLoadout got this treatment for as long as it existed
-            // and the run's list did not -- and the run's is the one that
-            // counts, which is most of why the other was deleted (#119).
+            // The run's own relics, which this method pruned everything but.
             // FightEncounterAdapter.ResolveRelics skips an unresolvable id
             // harmlessly, but RunOrchestrator.DraftHasAnotherRound counts
             // relicIds.Count against RelicPool.StartingRelicsPerDescent -- so
@@ -841,13 +804,13 @@ namespace PrincesPalace
             // round early, having handed over one fewer relic than it says.
             activeRun.relicIds.RemoveAll(id => ContentDatabase.GetRelic(id) == null);
 
-            // THE RUN'S EVENT BUFFS, beside its relics and for the same
+            // The run's event buffs, beside its relics and for the same
             // reason: a kind a later build dropped would otherwise ride along
             // unread, and a null row would be one every reader has to guard.
             activeRun.eventBuffs ??= new List<EventBuffEntry>();
             EventBuffs.Prune(activeRun.eventBuffs);
 
-            // THE RUN'S BOSS KILLS, which are money. RunSettlement pays an
+            // The run's boss kills, which are money. RunSettlement pays an
             // ember per boss the profile has never killed and then writes that
             // id into save.defeatedBossIds permanently, where
             // DefeatDistinctBosses counts it. A boss renamed in enemies.json
@@ -856,7 +819,7 @@ namespace PrincesPalace
             // new id pays again -- one rename, two embers, and a distinct-boss
             // count that names something the game no longer has.
             //
-            // LOUD, unlike the tolerant prunes above. Dropping a dangling item
+            // Loud, unlike the tolerant prunes above. Dropping a dangling item
             // costs the player nothing they can see; dropping a boss kill takes
             // away a payout they earned, and that should be in the log if
             // anyone ever comes looking for the missing ember.
@@ -906,7 +869,7 @@ namespace PrincesPalace
                 character.unlockedSkillIds ??= new List<string>();
                 character.unlockedSkillIds.RemoveAll(id => ContentDatabase.GetSkill(id) == null);
 
-                // Strips talents that belong to a DIFFERENT character. Before
+                // Strips talents that belong to a different character. Before
                 // talents had an owner, every node was available to everyone,
                 // so a save written then can legitimately hold one that is now
                 // somebody else's — and its bonuses would keep applying
@@ -930,17 +893,13 @@ namespace PrincesPalace
                 // BACK to the stash rather than deleted, because a slot
                 // holding a real item the player earned should not be
                 // silently emptied by an authoring change.
-                // AT THE PLUS IT LEFT WITH. This used to take the ids-only
-                // overload and re-add at the default plus 0, so a renamed
-                // content id quietly turned a +5 heirloom into a plain one --
-                // with the item count still correct, which is why nothing
-                // caught it.
-                // AT THE PLUS AND ROLL IT LEFT WITH -- orphan.modifierIds and
-                // orphan.riftTier travel back with it for the identical
-                // reason orphan.plus does above them. Nothing in Phase A ever
-                // puts a real id into modifierIds, so this is inert today;
-                // it exists so the plumbing is already correct once Phase A2
-                // ships modifiers.json.
+                // Returned at the plus, roll, modifierIds and riftTier it
+                // left with, not re-added at the default -- otherwise a
+                // renamed content id would quietly turn a +5 heirloom into a
+                // plain one while the item count stayed correct, so nothing
+                // would catch it. Nothing puts a real id into modifierIds
+                // yet, so that part is inert until modifiers.json ships, and
+                // the plumbing is already correct for when it does.
                 // The same worn-out-fake rule as the bag, on the body. Removed
                 // outright, not returned to the bag: a broken fake is gone.
                 character.equipment.slots?.RemoveAll(e => e != null && FakeWear.IsWornOut(e.provenance,
@@ -1011,27 +970,23 @@ namespace PrincesPalace
             }
             else if (effectiveMax > squadSizeSeen || droppedForMissingContent > 0)
             {
-                // ONLY WHEN THE CAP GREW, OR WHEN CONTENT TOOK SOMEBODY AWAY
-                // (AUDIT #118).
+                // Only when the cap grew, or when content took somebody away.
                 //
                 // "The squad is short" and "there is a seat to fill" are two
                 // different facts, and the count can only ever tell you the
-                // first. The player benches one of three, Persist writes two,
-                // and this loop used to read that as a vacancy and hand the
-                // benched character straight back -- in the REAR seat, because
-                // that is where TopUpOrder lands. A visible affordance undone
-                // by quitting.
+                // first: reading a bench (three selected, one benched, two
+                // written) as a vacancy would hand the benched character
+                // straight back in the rear seat, where TopUpOrder lands.
                 //
                 // squadSizeSeen is the second fact. It is stamped at the
                 // bottom of this method, so the growth is measured against the
                 // last cap this profile actually reconciled against rather
                 // than against the roster or the selection.
                 //
-                // EXISTING SAVES STILL KEEP THEIR SQUAD, which is what this
-                // loop was always for: it only ever ADDS, never reorders and
-                // never removes anything the player chose. A profile written
-                // while the squad was solo gains the two seats the squad of
-                // three opened, once.
+                // Existing saves keep their squad: this loop only ever adds,
+                // never reorders and never removes anything the player chose.
+                // A profile written while the squad was solo gains the two
+                // seats the squad of three opened, once.
                 //
                 // The top-up order follows content's starting squad first and
                 // roster order after it, so a save that is short a member
@@ -1113,37 +1068,28 @@ namespace PrincesPalace
         // stockpiledItems gets above: a content edit under a live run is not
         // worth discarding the run over.
         //
-        // CHECKED AGAINST bookTier > 0, not against bookOnly.
+        // Checked against bookTier > 0, not against bookOnly: bookTier is the
+        // right question here -- "is this a skill a book can be" -- and the
+        // two predicates currently agree by coincidence (all four
+        // bookTier > 0 skills in skills.json carry bookOnly: true today), not
+        // by rule. ContentDatabase.AvailableSkillsFor gates the kit on
+        // BookOnly, so the prune and the read would disagree the day a
+        // bookTier > 0 skill ships with bookOnly: false; nothing refuses that
+        // combination.
         //
-        // THE REASON THIS USED TO GIVE IS SPENT. It said "bookOnly stays false
-        // on every skill until Phase E's flip (docs/handoffs/shop_v2/
-        // GAP_AUDIT.md, Gate 3), so a check against it here would prune every
-        // learned spell the moment it was learned". The flip has happened: all
-        // four bookTier > 0 skills in skills.json (mud_burst, frost_flare,
-        // cinderfault, lightning_bolt -- static_fleece and golden_fleece
-        // removed 2026-09-15, AUDIT #150, they failed the universality test
-        // docs/SPELL_DESIGN_STANDARD.md states) carry bookOnly: true today,
-        // so the two predicates now agree.
-        //
-        // They agree by COINCIDENCE, which is the thing to know. bookTier is
-        // still the right question here -- "is this a skill a book can be" --
-        // but ContentDatabase.AvailableSkillsFor gates the KIT on BookOnly, so
-        // the prune and the read would disagree the day a bookTier > 0 skill
-        // ships with bookOnly: false. Nothing refuses that combination.
-        //
-        // AND A THIRD KIND OF BROKEN, added with the pool model (plan P6,
-        // gate 4): the book is fine, the character is fine, and the two can
-        // no longer go together because that character's primary pool stopped
+        // A third kind of broken, added with the pool model (plan P6, gate
+        // 4): the book is fine, the character is fine, and the two can no
+        // longer go together because that character's primary pool stopped
         // reading books between the save and the load. The entry is dropped
         // rather than left to sit inert -- an unreachable slot is exactly the
         // "purchase with no effect" AvailableSkillsFor's own header records.
         //
-        // THE BOOK GOES BACK TO THE POOL, not into the bin: nothing about the
+        // The book goes back to the pool, not into the bin: nothing about the
         // copy is wrong, only who is holding it, and a different squad member
         // can still place it. Same call ReplaceSpell makes for a displaced
         // book, and the same reasoning (§7.1 point 5).
         //
-        // LOUD, because this one is silent otherwise. The other three arms
+        // Loud, because this one is silent otherwise. The other three arms
         // drop content that no longer exists, which the player can see for
         // themselves; this one drops a spell off a character who still has
         // three empty-looking slots.
@@ -1257,7 +1203,7 @@ namespace PrincesPalace
             }
         }
 
-        // AN EVENT'S SHELF STOCK (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.4) is
+        // An event's shelf stock (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.4) is
         // not tied to the node the party stands on -- that is its whole point
         // -- so unlike ReconcileShopStock nothing here drops a stock for being
         // somewhere else. What goes is what cannot be trusted: a stock whose
@@ -1358,15 +1304,13 @@ namespace PrincesPalace
                 case ShopEntryKind.Relic: return ContentDatabase.GetRelic(entry.contentId) != null;
                 case ShopEntryKind.Consumable: return ContentDatabase.GetItem(entry.contentId) != null;
 
-                // THE SAME PREDICATE THE BOOK SHELF IS ROLLED FROM.
+                // The same predicate the book shelf is rolled from.
                 // IsBookEligible above is what stocks the section and what
                 // prunes unassignedSpellBooks; asking it here is what stops a
                 // load from disagreeing with the roll about whether a book
-                // exists. This used to fall through to `default: return false`
-                // -- correct while books were unauthored, and a bug from the
-                // moment ShopStock.RollBooks started drawing real candidates:
-                // every unsold book card on a reloaded save was stamped NO
-                // OFFER in place, permanently.
+                // exists, rather than falling through to `default: return
+                // false` and permanently stamping every unsold book card on a
+                // reloaded save as no offer in place.
                 case ShopEntryKind.Book: return IsBookEligible(entry.contentId);
 
                 default: return false;
