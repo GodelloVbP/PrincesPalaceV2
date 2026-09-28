@@ -352,13 +352,10 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void TheFirstLegEndsAtItsBoss()
         {
-            // A LEG IS NOT A RUN, and this is the correction that matters: a leg
-            // is eight steps and, since the D6/Phase 5B retune ("boss every
-            // floor"), a boss falls every eight -- so leg 0 finishes on a BOSS,
-            // with a forced elite already passed at its midpoint. Treating "no
-            // choices left" as the end of the run would have stopped every
-            // descent here. Was EliteFight (leg 0) then Boss (leg 1) before the
-            // retune, when bosses only fell every sixteen steps.
+            // A leg is not a run: a leg is eight steps and a boss falls
+            // every eight, so leg 0 finishes on a BOSS, with a forced elite
+            // already passed at its midpoint. Treating "no choices left" as
+            // the end of the run would have stopped every descent here.
             RunManager.StartRun(Seed);
 
             Assert.AreEqual(RoomType.Boss, WalkToTheEndOfTheLeg());
@@ -507,14 +504,11 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the room after the leg boundary ------------------------------------
         //
-        // PROBE for "after the leg's set piece, going into a fight it just hangs
-        // and you cant do anything anymore". FightBootstrap returns a null
-        // session when the roster is empty, which leaves an empty stage and no
-        // way to act -- a hang. This walks a run over a leg boundary and asks
-        // what the next room would field. Named for the elite it used to be
-        // (leg 0 ended on one, before the D6/Phase 5B retune made every leg end
-        // on its boss instead) -- what it actually exercises is AdvanceLeg's own
-        // seam, which does not care which room forced the boundary.
+        // FightBootstrap returns a null session when the roster is empty,
+        // which leaves an empty stage and no way to act -- a hang. This
+        // walks a run over a leg boundary and asks what the next room would
+        // field, exercising AdvanceLeg's own seam, which does not care
+        // which room forced the boundary.
         [Test]
         public void TheRoomAfterTheEliteFieldsAFight()
         {
@@ -694,12 +688,8 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // The reported case exactly: walk leg 1 to its boss, cross over, and
-        // check the party does not start leg 2 already spent. (Originally
-        // walked to leg 1's ELITE, back when bosses only fell every sixteen
-        // steps and leg 1 ended on the elite instead -- the D6/Phase 5B
-        // retune moved the boss to every leg's end, so this now exercises
-        // the same "party crosses a leg beat up" case against a boss.)
+        // Walks leg 1 to its boss, crosses over, and checks the party does
+        // not start leg 2 already spent.
         [Test]
         public void TheLegAfterTheFirstBossStartsWhole()
         {

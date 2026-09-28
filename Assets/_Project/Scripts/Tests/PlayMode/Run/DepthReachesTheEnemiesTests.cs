@@ -98,11 +98,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(definition.Data.BaseStats.magicalDefense, enemy.MagicalDefense);
         }
 
-        // PHASE 5B (D6): enemy defenses no longer depth-scale at all -- used
-        // at their authored, step-0 value regardless of how deep the fight
-        // is. The R_broad/(100+R_broad) mitigation curve is already
-        // asymptotic on its own; scaling a defense on top of it double-dips
-        // and was running boss time-to-kill away past floor 4.
+        // Enemy defenses do not depth-scale: they use their authored,
+        // step-0 value regardless of how deep the fight is. The
+        // R_broad/(100+R_broad) mitigation curve is already asymptotic on
+        // its own; scaling a defense on top of it would double-dip.
         [Test]
         public void DefensesAreNotScaledByDepth()
         {

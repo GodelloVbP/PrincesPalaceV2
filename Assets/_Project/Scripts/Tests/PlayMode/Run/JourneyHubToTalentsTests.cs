@@ -10,43 +10,25 @@ using UnityEngine.TestTools;
 namespace PrincesPalace.PlayModeTests
 {
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 2, segment 6: the Hub's
-    // own Talents building, unlike Shop a real Hub button
-    // (HubController.WireNavigation's own four staged buildings), reached
-    // between descents rather than through the Map.
+    // own Talents building, a real Hub button reached between descents
+    // rather than through the Map.
     //
-    // Hub's own grid puts the gate (StartRunGate) dead centre, equidistant
-    // from both building columns (HubController.WireNavigation's own
-    // comment) -- from the gate: Up reaches CharacterSheetBuilding
-    // (explicit), then Left reaches PrincipalityBuilding (same Grid row,
-    // column 0), then Up reaches TalentsBuilding (Grid row-stepping, same
-    // column) -- three presses, none of them guessed: every one is a link
+    // From the gate (StartRunGate, dead centre between both building
+    // columns): Up reaches CharacterSheetBuilding, Left reaches
+    // PrincipalityBuilding (same Grid row, column 0), Up reaches
+    // TalentsBuilding (Grid row-stepping, same column) -- every link
     // HubController.WireNavigation itself declares.
     //
-    // DEVIATION FROM THE BRIEF'S OWN "invest on an eligible orb... and be
-    // refused on an unauthored one": the specific slot a character's tree
-    // has NO authored talent for (TalentPage.Refusal.NotAuthored) is a fact
-    // about content, not about structure -- which slot that is, or whether
-    // one exists at all for whichever character ends up standing here, is
-    // not a stable thing for a test to pin. The refusal proven here instead
-    // is PrerequisiteMissing: a tier-1 orb pressed before its path's root is
-    // unlocked, which TalentPage.Evaluate's own ordering
-    // (TalentGamepadNavigationTests already reads it) guarantees by
-    // construction -- a real, "both eligibility shapes exist" refusal (plan
-    // section 2's own verification note) that does not depend on which
-    // character or which content happens to be authored today.
+    // The refusal proven here is PrerequisiteMissing (a tier-1 orb pressed
+    // before its path's root is unlocked), not NotAuthored: which slot has
+    // no authored talent is a fact about content, not structure, so it is
+    // not stable to pin.
     //
-    // TWO SEPARATE JOURNEYS, EACH RECONSTRUCTED, rather than one continuous
-    // session chaining both outcomes: investing the root REMOVES the very
-    // PrerequisiteMissing condition the refused case needs (a tier-1 orb's
-    // prerequisite is the root), so proving both in one uninterrupted
-    // pad session would mean refusing first and investing after -- which
-    // still leaves the cursor standing on InvestButton with no dispatcher-
-    // proven way back onto the tree (RefreshOrbNavigation's own override is
-    // stated one-directional, Down only) short of a Cancel that would leave
-    // the screen. Every existing single-screen gamepad-nav file in this
-    // project already reconstructs its own precondition per test rather
-    // than chaining unrelated outcomes through one selection walk; this
-    // segment follows the same shape twice.
+    // Two separate journeys, each reconstructed, rather than one continuous
+    // session: investing the root removes the PrerequisiteMissing condition
+    // the refused case needs, and proving both in one pad session would
+    // leave the cursor on InvestButton with no dispatcher-proven way back
+    // onto the tree short of a Cancel that leaves the screen.
     public class JourneyHubToTalentsTests : JourneyFixture
     {
         private string _root;
@@ -129,19 +111,18 @@ namespace PrincesPalace.PlayModeTests
             yield return PressSubmit(); // OnOrbPressed -> selects this orb (refused, so no auto-kindle), reveals the detail panel
 
             // Down from a tier-1 orb follows the constellation's own lane
-            // back to the root (unchanged -- Up/Down stay in lane, the
-            // owner's restated model, 2026-09-23). This is a focus move
-            // only (no click), so _selectedSlot stays on the tier-1 orb.
+            // back to the root -- Up/Down stay in lane. This is a focus
+            // move only (no click), so _selectedSlot stays on the tier-1
+            // orb.
             yield return MoveDown();
             AssertSelectedName("Orb0_0", "Down from a selected tier-1 orb should follow the tree to its root");
 
-            // INVEST'S NEW ROUTE (owner, 2026-09-23: root -> arrow -> Invest
-            // is retired now that the root's own Right reaches tier 1's
-            // right-hand stone like every other single-stone level; "give
-            // InvestButton another reachable route (Down from the root...)"
-            // is what RefreshOrbNavigation now wires, unconditionally, since
-            // the root has nothing below it in the tree to begin with).
-            // Selecting the tier-1 orb above already made InvestButton
+            // The root's own Right reaches tier 1's right-hand stone like
+            // every other single-stone level, so InvestButton's route is
+            // Down from the root, which RefreshOrbNavigation wires
+            // unconditionally since the root has nothing below it in the
+            // tree to begin with. Selecting the tier-1 orb above already
+            // made InvestButton
             // active (TalentGamepadNavigationTests.Down_FromTheRoot_
             // ReachesInvestButton_Unconditionally proves the link itself
             // does not depend on which orb was selected), so one press
@@ -186,19 +167,17 @@ namespace PrincesPalace.PlayModeTests
             yield return CancelBackToTheHub();
         }
 
-        // HARDWARE PLAY-TEST ROUND 1, ITEM 1: "I found no way to move in the
-        // talent screen." Driven on the REAL Hub -> Talents building -> Submit
-        // path. REWRITTEN 2026-09-23 for the owner's restated model: the
-        // root now behaves exactly like the convergence (Left/Right reach
-        // tier 1's own flanking stones, a second press from THAT stone
-        // reaches the arrow), and Invest is reached by the root's own Down
-        // rather than through the right-hand arrow -- TalentGamepadNavigation
-        // Tests carries the unit-level proof for each of these individually
+        // Driven on the REAL Hub -> Talents building -> Submit path. The
+        // root behaves like the convergence (Left/Right reach tier 1's
+        // flanking stones, a second press from that stone reaches the
+        // arrow), and Invest is reached by the root's Down rather than
+        // through the right-hand arrow -- TalentGamepadNavigationTests
+        // carries the unit-level proof for each of these individually
         // (Left/Right_FromTheRoot_ReachesThe*Child,
         // Right/Left_At*Stone_ReachesThe*Arrow,
-        // Down_FromTheRoot_ReachesInvestButton_Unconditionally); this test's
-        // own job is only proving the same graph holds on the REAL built
-        // scene, not re-deriving it.
+        // Down_FromTheRoot_ReachesInvestButton_Unconditionally); this
+        // test's job is only proving the same graph holds on the REAL
+        // built scene, not re-deriving it.
         //
         // Literal node names, one ring, every direction off the entry.
         [UnityTest]
@@ -206,8 +185,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return ReachTalentsFromTheHub();
 
-            // Up/Down: the tree, unchanged -- lane-preserving, the one axis
-            // the owner's restated model left untouched.
+            // Up/Down: the tree, lane-preserving.
             yield return MoveUp();
             AssertSelectedName("Orb0_2", "Up from the root should still reach the centre tier-1 stone");
             yield return MoveDown();
@@ -223,10 +201,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Node("InvestButton").activeInHierarchy,
                 "selecting the root should reveal InvestButton");
 
-            // INVEST, THE ROOT'S OWN NEW ROUTE: Down from the root reaches
-            // it directly and unconditionally now (root -> arrow -> Invest
-            // is retired), and Up from Invest returns to the root -- the
-            // same round trip the old route made, one hop shorter.
+            // Down from the root reaches InvestButton directly and
+            // unconditionally, and Up from Invest returns to the root.
             yield return MoveDown();
             AssertSelectedName("InvestButton", "Down from the root should reach InvestButton directly");
 

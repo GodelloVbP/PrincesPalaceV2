@@ -78,16 +78,14 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void ADownedCharacterGetsARowAndHalfThePay()
         {
-            // They used to vanish from the reward entirely, so a party of three
-            // came back as two rows with nothing saying why. Squad-of-three is
-            // now the live default (SaveData.SquadOfThreeReady), so this test's
-            // own "party of three" IS the fielded squad rather than a stand-in
-            // for it -- every member should get a row, not a literal one.
+            // Squad-of-three is the live default (SaveData.SquadOfThreeReady),
+            // so this test's own "party of three" IS the fielded squad
+            // rather than a stand-in for it -- every member should get a
+            // row, not a literal one.
             //
-            // AND THE ROW IS NO LONGER EMPTY. Progression v2's contract 4 pays
-            // a downed character half, rounded up, where they used to earn
-            // nothing -- 25 of this fight's 50. The arithmetic itself is pinned
-            // in FightRewardsTests.ADownedSquadMemberEarnsHalfRoundedUp; what
+            // A downed character earns half, rounded up -- 25 of this
+            // fight's 50. The arithmetic itself is pinned in
+            // FightRewardsTests.ADownedSquadMemberEarnsHalfRoundedUp; what
             // is here is that the halved figure reaches the save.
             var squad = SaveSlotManager.CurrentSave.ActiveSquad();
             var before = squad.Select(c => c.exp).ToList();
@@ -183,20 +181,13 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the reward track is NOT paid here any more --------------------------
         //
-        // It used to be, unconditionally, on every payout -- which kept the
-        // level and the watermark in lockstep and made the gap between them
-        // reachable only through a migration or the debug menu.
-        //
-        // COLLECTION IS SOMETHING THE PLAYER DOES NOW (reward track design
-        // handoff, section 3), so what these pin is the other half of that
-        // change: a fight LEVELS a character and leaves the track OWING. What
-        // happens when the debt is collected is RewardTrackClaimTests, which
-        // goes through the reward track panel for the same reason this file
-        // used to go through RewardApplier -- the claim has exactly one
-        // production call site, and a test that reached past it would pass just
-        // as happily if that site were deleted. A test may not do for
-        // production what production must do for itself; AUDIT #46 is what
-        // ignoring it costs.
+        // Collection is something the player does: a fight LEVELS a
+        // character and leaves the track OWING. What happens when the debt
+        // is collected is RewardTrackClaimTests, which goes through the
+        // reward track panel -- the claim has exactly one production call
+        // site, and a test that reached past it would pass just as happily
+        // if that site were deleted. A test may not do for production what
+        // production must do for itself.
 
         [Test]
         public void LevellingLeavesTheTrackOwingRatherThanPaying()
@@ -236,12 +227,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, SquadFixture.FirstLiveMember().claimedTrackLevel);
         }
 
-        // The migration case, from the direction it now arrives: a character
-        // who reached their level before the track existed has a zero watermark
-        // and is owed everything, and a fight does not quietly settle it. The
-        // handoff calls this the expected path rather than an edge case -- it
-        // is what the ribbon's comb of gold ticks and the collect-all button
-        // are for.
+        // A character who reached their level before the track existed has
+        // a zero watermark and is owed everything, and a fight does not
+        // quietly settle it -- this is the expected path, not an edge case:
+        // it is what the ribbon's comb of gold ticks and the collect-all
+        // button are for.
         [Test]
         public void AFightDoesNotSettleACharactersBackCatalogue()
         {

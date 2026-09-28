@@ -18,9 +18,9 @@ namespace PrincesPalace.PlayModeTests
     // PettingZooEventTests; this file pins what only the run can show -- HP
     // moving, the counter and relic landing once, and what survives a reload.
     //
-    // One choice per visit (owner, 2026-09-25): a step page's "Say goodbye"
-    // closes the event, a petter row concludes it with a result, and only
-    // "Leave the sheep be" goes back to zoo.
+    // One choice per visit: a step page's "Say goodbye" closes the event, a
+    // petter row concludes it with a result, and only "Leave the sheep be"
+    // goes back to zoo.
     //
     // NEEDS BUILT CONTENT: petting_zoo must be in Resources/Content.
     public class PettingZooRunTests

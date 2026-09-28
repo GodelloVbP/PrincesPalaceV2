@@ -8,13 +8,9 @@ namespace PrincesPalace.PlayModeTests
     // Ending a run closes its books, whichever way it ends.
     //
     // There are two ways out of a descent -- dying in it, and abandoning it
-    // from the map -- and settling used to be the CALLER'S job. Only the defeat
-    // path did it, so walking away threw away every ember the bosses in that
-    // run had earned and every room it had cleared. Nothing reported it,
-    // because a discarded snapshot looks identical whether or not anything read
-    // it first.
+    // from the map -- and both settle through it.
     //
-    // These drive RunManager.EndRun directly, which is now the single door both
+    // These drive RunManager.EndRun directly, which is the single door both
     // paths go through.
     public class RunEndingTests
     {
@@ -291,13 +287,13 @@ namespace PrincesPalace.PlayModeTests
         // ExitsController all call it flat -- and the hub between runs is
         // exactly where a player equips what they just bought.
         //
-        // Nothing inside EndRun asked whether there WAS a run. RunSettlement
+        // EndRun does not itself ask whether there was a run: RunSettlement
         // guards on `run == null`, which is never true (RunSnapshot's own
         // header explains why hasRun is an in-band flag rather than a null
-        // check), so the whole settlement ran against an empty snapshot and
-        // the two clears after it ran unconditionally: every roster
+        // check), so calling it with no run still settles an empty snapshot
+        // and runs the two clears after it unconditionally: every roster
         // character's equipment, the whole stockpile, and lifetimeRunsEnded
-        // counted one more run that never happened.
+        // count one more run that never happened.
         //
         // "Gear does not survive a run" cannot apply where there is no run to
         // not survive it.

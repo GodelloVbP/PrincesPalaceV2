@@ -15,19 +15,15 @@ namespace PrincesPalace.PlayModeTests
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 2, segment 5: a Shop
     // room reached from the Hub's own gate.
     //
-    // DEVIATION FROM THE BRIEF'S OWN "Hub -> Shop... navigate to the shop
-    // building from the hub entry", NAMED RATHER THAN FOLLOWED PAST WHAT IS
-    // REAL, and already flagged by this plan's own status header before this
-    // pass started: the Hub has no Shop building at all --
-    // HubController.WireNavigation's own four staged buildings are Talents,
-    // Relics, Principality and CharacterSheet. The in-run shop is a MAP
-    // ROOM (ShopGamepadNavigationTests' own fixture reaches it the same
-    // way). So this segment is Hub -> the descent gate -> the relic draft
-    // (spent, same as segment 1 -- a fresh run has not drafted one yet) ->
-    // the Map -> a Shop room's own entry node -> Submit, which walks there
-    // and opens the shop AS A PANEL OVER THE MAP
-    // (MapController.Walk.Arrive's own Arrival.Shop branch calls OpenShop()
-    // in place -- no scene load). Leaving therefore returns to the SAME Map,
+    // The Hub has no Shop building: HubController.WireNavigation's four
+    // staged buildings are Talents, Relics, Principality and
+    // CharacterSheet. The in-run shop is a MAP ROOM
+    // (ShopGamepadNavigationTests' fixture reaches it the same way). So
+    // this segment is Hub -> the descent gate -> the relic draft (spent,
+    // same as segment 1) -> the Map -> a Shop room's entry node -> Submit,
+    // which walks there and opens the shop as a panel over the map
+    // (MapController.Walk.Arrive's Arrival.Shop branch calls OpenShop() in
+    // place -- no scene load). Leaving therefore returns to the same Map,
     // never "the hub": there is no path from this shop straight to the hub,
     // on the pad or on the mouse.
     public class JourneyHubToShopTests : JourneyFixture

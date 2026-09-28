@@ -14,20 +14,13 @@ namespace PrincesPalace.PlayModeTests
     // own decision point where there is a REAL choice among reachable nodes,
     // driven by Move rather than accepted as the entry.
     //
-    // DEVIATION FROM THE BRIEF'S OWN "the run's second traversal", NAMED
-    // RATHER THAN LITERALLY REPLAYED: reaching an actual second fight would
-    // mean playing the first one to a real win through the pad first, which
-    // is segment 8's own scope (LevelTheSquadTo, a bounded multi-round
-    // fight) -- doing that again here to reach the SAME kind of decision a
-    // second time would duplicate that cost for no new claim. What this
-    // segment's own sizing note (this plan's status header) actually asks
-    // for is the property segment 1 deliberately sidesteps: "there is no
-    // independent way for this segment to steer Move presses toward one
-    // otherwise" -- so this is the map's FIRST decision point, seeded so the
-    // entry (depth 1, slot 0) is NOT the target: a plain Fight room sits at
-    // a LATER slot, reachable only by moving past the entry, which is
-    // exactly the "genuinely needs Move-driven aiming at a specific room
-    // type" segment 1's own shortcut cannot exercise.
+    // Reaching an actual second fight would mean playing the first one to a
+    // real win through the pad first (segment 8's scope), duplicating that
+    // cost for no new claim. So this exercises the map's FIRST decision
+    // point instead, seeded so the entry (depth 1, slot 0) is NOT the
+    // target: a plain Fight room sits at a later slot, reachable only by
+    // moving past the entry, which needs Move-driven aiming at a specific
+    // room type.
     public class JourneyMapChosenNodeTests : JourneyFixture
     {
         private string _root;

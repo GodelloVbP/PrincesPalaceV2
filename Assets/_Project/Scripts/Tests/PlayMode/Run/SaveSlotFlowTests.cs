@@ -401,7 +401,6 @@ namespace PrincesPalace.PlayModeTests
 
             HoldToDelete("ResetConfirmYesButton");
 
-            // The write that used to resurrect it.
             SaveSlotManager.SaveCurrent();
 
             Assert.IsFalse(SaveSystem.SlotExists(Slot),
@@ -498,13 +497,13 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- nothing may write a slot before the player has picked one ------
 
-        // AUDIT #117. Continue is "which slot did I play last", and SaveSystem
-        // answers it off the FILE'S OWN mtime -- so anything that writes a slot
+        // Continue is "which slot did I play last", and SaveSystem answers
+        // it off the FILE'S OWN mtime -- so anything that writes a slot
         // before the player has chosen one answers the question wrongly, and
         // slot 0 is the only slot anything at boot can reach.
         //
         // Driven by REFLECTION over RunManager's own [RuntimeInitializeOnLoad
-        // Method] members rather than by naming the method that used to do it.
+        // Method] members rather than by naming a specific method.
         // The rule is "nothing RunManager runs at boot may write a save", not
         // "SettleAnyRunAPreviousSessionLeftBehind in particular must go": a
         // second boot hook added later under any name is caught here without
