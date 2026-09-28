@@ -119,7 +119,8 @@ namespace PrincesPalace
             var stock = EnsureShelfStock(run, run.eventId, effect.ShelfId);
             if (stock == null) return;
 
-            var rng = RngStreams.Open(run.runSeed, RngStreams.ShelfScuffle, run.step, run.currentNodeId);
+            var rng = RngStreams.Open(run.runSeed, RngStreams.ShelfScuffle, run.step, run.currentNodeId,
+                ShelfKey(stock.eventId, stock.shelfId));
             var (taken, lost) = MerchantShelf.Scuffle(stock.entries, effect.Amount, bound => rng.NextInt(0, bound));
 
             save.stockpiledItems ??= new List<InventoryEntry>();
@@ -165,16 +166,17 @@ namespace PrincesPalace
 
             int step = run.step;
             int node = run.currentNodeId;
+            int shelfKey = ShelfKey(eventId, shelfId);
 
             var gear = new List<ShopStockEntry>();
             if (recipe.Sections != null && recipe.Sections.Contains(ShopStock.GearSection))
             {
-                var gearRng = RngStreams.Open(run.runSeed, RngStreams.ShelfGear, step, node);
+                var gearRng = RngStreams.Open(run.runSeed, RngStreams.ShelfGear, step, node, shelfKey);
                 gear = RollGearWith(run, bound => gearRng.NextInt(0, bound));
             }
 
-            var consumableRng = RngStreams.Open(run.runSeed, RngStreams.ShelfConsumables, step, node);
-            var fakeRng = RngStreams.Open(run.runSeed, RngStreams.ShelfFakes, step, node);
+            var consumableRng = RngStreams.Open(run.runSeed, RngStreams.ShelfConsumables, step, node, shelfKey);
+            var fakeRng = RngStreams.Open(run.runSeed, RngStreams.ShelfFakes, step, node, shelfKey);
 
             var entries = MerchantShelf.Build(
                 gear, ConsumableCandidates(), recipe.ConsumableCount,
@@ -196,6 +198,14 @@ namespace PrincesPalace
             run.shelves.Add(stock);
             return stock;
         }
+
+        // WHICH SHELF, as the streams' third coordinate. (step, node) alone
+        // is where a stock was rolled, and two shelves of one event -- or two
+        // events' -- at one node would otherwise roll identical stock and
+        // lose identical cards. Stable across launches (RngStreams.KeyOf), so
+        // a reload that re-rolls a dropped stock rolls the same one.
+        private static int ShelfKey(string eventId, string shelfId) =>
+            RngStreams.KeyOf((eventId ?? "") + "/" + (shelfId ?? ""));
 
         // Every consumable in the catalogue, in authored order, at the room
         // shop's price for it (its authored cost, BuyPriceOf's rule). The room

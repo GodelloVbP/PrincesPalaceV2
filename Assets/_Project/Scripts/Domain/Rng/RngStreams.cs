@@ -62,7 +62,9 @@ namespace PrincesPalace.Domain.Rng
         // which consumables sit beside it, which cards are fake and which card
         // a robbery loses must each be unable to move the others. The first
         // three open at the (step, node) where the stock is first rolled; the
-        // scuffle at the (step, node) of the robbery that takes it. Never the
+        // scuffle at the (step, node) of the robbery that takes it. All four
+        // take KeyOf(event/shelf) as `c`, so two shelves at one position roll
+        // apart (RunOrchestrator.Shelf's ShelfKey). Never the
         // room shop's ShopGear: a caravan and a room shop at the same position
         // must not roll the same gear.
         public const uint ShelfGear = 10;
@@ -103,6 +105,26 @@ namespace PrincesPalace.Domain.Rng
             z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
             z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
             return z ^ (z >> 31);
+        }
+
+        // A STRING ID AS A POSITION INPUT (the `c` of Derive): FNV-1a, 32 bits,
+        // over the UTF-16 code units. Never string.GetHashCode, which .NET
+        // randomises per process -- a stock keyed on it would reroll on every
+        // launch. Used where two things at one (step, node) must still roll
+        // apart: an event's merchant shelves, keyed by (event, shelf).
+        public static int KeyOf(string id)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                foreach (char ch in id ?? "")
+                {
+                    hash ^= ch;
+                    hash *= 16777619u;
+                }
+
+                return (int)hash;
+            }
         }
 
         // Convenience for the common shape: derive a seed and open a generator

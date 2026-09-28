@@ -107,6 +107,41 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual((a.MaxHealth - a.CurrentHealth) + 60, session.Ledger.For(Shawn).TotalDealt);
         }
 
+        // A relic trigger is not the bearer attacking (CombatBeat.RelicTrigger).
+        // His pool's gainOnAttack is once per turn; the charge that opens turn
+        // 3 must neither pay it nor spend the lock his own swing in turn 3
+        // earns it with.
+        [Test]
+        public void TheChargeIsNotHisAttack_ItPaysNoGainOnAttack_AndLeavesTheTurnsGainToHisSwing()
+        {
+            var row = new ResolvedPool("fixture", "Fixture", "FIX",
+                PoolCapacityRule.Fixed, 100,
+                0, 5, 0,
+                0, PoolDecayTrigger.Damage,
+                PoolStartRule.Zero, 0,
+                "#FFFFFF", "#000000", "#CCCCCC",
+                false, true, true, false,
+                0);
+            var hero = new CombatantState("Shawn", true, 100000, new ResourcePool(row, 100, 0), 400, 10)
+            {
+                PhysicalDefense = 0, MagicalDefense = 0,
+            };
+
+            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, Foe("A"));
+            session.DrainBeats();
+            Assert.AreEqual(0, hero.PrimaryPool.Current, "fixture: the pool opens empty");
+
+            Swing(session);
+            Assert.AreEqual(5, hero.PrimaryPool.Current, "fixture: his turn-1 swing earns 5");
+
+            var second = Swing(session);
+            Assert.IsTrue(second.Any(IsFlock), "fixture: the flock charged as turn 3 opened");
+            Assert.AreEqual(10, hero.PrimaryPool.Current, "turn 2's swing earned 5; the charge earned nothing");
+
+            Swing(session);
+            Assert.AreEqual(15, hero.PrimaryPool.Current, "his own turn-3 swing still earned its 5");
+        }
+
         [Test]
         public void TransformedItIsOneAndAHalfTimesOnTheSameAttack()
         {

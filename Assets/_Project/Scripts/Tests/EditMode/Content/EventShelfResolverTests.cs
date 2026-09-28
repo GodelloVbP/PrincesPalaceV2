@@ -176,6 +176,31 @@ namespace PrincesPalace.Domain.Tests
                 Refusal(Caravan(shelf)));
         }
 
+        // No title: the screen shows the keeper's name in the same 28-wide
+        // box, so a 29-character name is refused the way a 29-character
+        // title is -- and a 28-character one, or any name under a title of
+        // its own, still builds.
+        [Test]
+        public void NoTitle_AndAKeeperNameOverTheTitleCap_IsRefused()
+        {
+            var shelf = Wares();
+            shelf.keeper = "merchant";
+            var entry = Caravan(shelf);
+            entry.speakers = new[] { new RawEventSpeaker { id = "merchant", name = new string('W', 29) } };
+
+            StringAssert.Contains(
+                "shelf 'wares': has no title, so the shelf screen's title is keeper 'merchant''s name",
+                Refusal(entry));
+
+            entry.speakers[0].name = new string('W', 28);
+            Assert.AreEqual(new string('W', 28), entry.speakers[0].name, "fixture");
+            Assert.AreEqual("merchant", Resolved(entry).Shelves[0].KeeperId, "28 characters is at the cap, not over it");
+
+            entry.speakers[0].name = new string('W', 29);
+            shelf.title = "Wares";
+            Assert.AreEqual("Wares", Resolved(entry).Shelves[0].Title, "a title of its own covers any keeper name");
+        }
+
         [Test]
         public void AKeeperThatIsNotAnEventSpeaker_IsRefused()
         {

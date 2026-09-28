@@ -418,6 +418,31 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
+                // OWN EFFECTS NEVER LEAD INTO A PARTY-OVERRIDE FIGHT. A pick
+                // that would send an override party with nobody standing is
+                // refused before anything moves (RunOrchestrator's NoFighters),
+                // and that decision is taken against the outcome the pick
+                // resolves to BEFORE its own effects apply. Own effects can
+                // move which outcome wins -- a counter, gold, a level -- so an
+                // outcome that starts an override fight must be reachable only
+                // from a choice with none, where the outcome checked is the
+                // outcome applied. (A normal-party fight fields the standing
+                // squad, which own effects cannot shrink: damagePercent floors
+                // at 1 and a member heal never revives.)
+                if (effects.Length > 0)
+                {
+                    var overrideFight = outcome.Effects?.FirstOrDefault(e =>
+                        e != null && e.Kind == EventEffectKind.Fight && scope.OverrideFightIds.Contains(e.FightId ?? ""));
+                    if (overrideFight != null)
+                    {
+                        error = $"{choiceLabel}: has effects of its own and an outcome that starts fight " +
+                                $"'{overrideFight.FightId}', which fields only its own party. The fighters are checked " +
+                                "against the outcome before the choice's effects apply, and those effects can change " +
+                                "which outcome wins -- move the effects onto the outcomes, or give the fight no party.";
+                        return false;
+                    }
+                }
+
                 resolvedOutcomes.Add(outcome);
             }
 

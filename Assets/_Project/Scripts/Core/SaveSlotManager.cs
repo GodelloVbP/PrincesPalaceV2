@@ -49,10 +49,59 @@ namespace PrincesPalace
         // throwing. Nothing with no save loaded to write is a false: it is
         // not an error, but it is also not a persisted mutation, and a caller
         // asking "did this reach the disk" is asking about the disk.
+        //
+        // INSIDE A WritesDeferred SCOPE this only marks the save dirty and
+        // answers true; the one write happens when the outermost scope closes.
         public static bool SaveCurrent()
         {
             if (_cached == null) return false;
-            return SaveSystem.Save(_cached, CurrentSlot);
+            if (_deferDepth > 0)
+            {
+                _deferredDirty = true;
+                return true;
+            }
+
+            bool landed = SaveSystem.Save(_cached, CurrentSlot);
+            if (landed) WritesLanded++;
+            return landed;
+        }
+
+        // Every write SaveCurrent has landed this process. Read by tests that
+        // pin how many writes an operation makes (FightSettlement's one);
+        // public because PlayMode has no InternalsVisibleTo grant.
+        public static int WritesLanded { get; private set; }
+
+        // ONE WRITE FOR A MULTI-STEP MUTATION. Every SaveCurrent inside the
+        // scope -- RunManager's Persist, RewardApplier.Apply, ClearCurrentRoom
+        // -- collapses into a single write when the outermost scope is
+        // disposed, so a crash between two of them cannot leave a half-applied
+        // state on disk. Settling a fight is the caller (RunOrchestrator
+        // .SettleFight): its payout, cleared room, fake wear and ledger fold
+        // are one fact, and a file holding some of them replays the rest.
+        //
+        // Nothing is written if nothing inside asked to be.
+        public static System.IDisposable WritesDeferred()
+        {
+            _deferDepth++;
+            return new DeferredWrites();
+        }
+
+        private static int _deferDepth;
+        private static bool _deferredDirty;
+
+        private sealed class DeferredWrites : System.IDisposable
+        {
+            private bool _disposed;
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+
+                if (--_deferDepth > 0 || !_deferredDirty) return;
+                _deferredDirty = false;
+                SaveCurrent();
+            }
         }
 
         // For tests, which move between slots and throwaway roots freely.

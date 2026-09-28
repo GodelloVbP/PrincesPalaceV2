@@ -273,7 +273,13 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   says where the event goes next. The build refuses a `fight` effect in a
   choice's own effects, two in one outcome, or one beside a `goTo` (`Leave`
   included). A fight result cannot start another fight. A fight that no
-  outcome starts is refused.
+  outcome starts is refused. A choice with effects of its own may not have
+  an outcome that starts a fight with a `party`: whether that party has
+  anyone standing is checked before the choice's effects apply, and they can
+  change which outcome wins.
+- **Nobody to send:** a pick whose fight would field nobody is refused. A
+  request that fields nobody by the time it is built (or loaded) is dropped,
+  and the event stays on the page that launched it.
 - **Results** are ordinary outcome rows (`effects`, `result`, `goTo`). They
   take no `requires`; the build refuses them.
   - `onDefeated`: every enemy is down. Always required.
@@ -354,7 +360,8 @@ effect { "kind": "takeShelf", "shelf": "<id>", "amount": 1 }
 
 - **The stock** is rolled the first time a `shelf` or `takeShelf` effect of
   the run needs it, at that (step, node), on the shelf's own streams
-  (`RngStreams.ShelfGear`/`ShelfConsumables`/`ShelfFakes`, 10-12), and kept on
+  (`RngStreams.ShelfGear`/`ShelfConsumables`/`ShelfFakes`, 10-12, keyed by
+  the event and shelf too, so two shelves at one node roll apart), and kept on
   the run (`RunSnapshot.shelves`): across a reload, Walk on, a room shop in
   between and a return at any later node. Every visit shows the same cards
   minus what sold. There is no reroll. It ends only on the event's `finish`
@@ -394,7 +401,8 @@ effect { "kind": "takeShelf", "shelf": "<id>", "amount": 1 }
 - **The shelf screen** is the shop's: gear in the gear panel, consumables in
   the book panel under CONSUMABLES, and no relics, rerolls or pack.
   **`title`** (capped like a page title, 28) replaces SHOP; empty, the
-  keeper's name does, then SHOP. **`keeper`** names one of the event's own
+  keeper's name does (so the build refuses an untitled shelf whose keeper's
+  name is over 28), then SHOP. **`keeper`** names one of the event's own
   `speakers`: the relic panel's slot shows that speaker's bust (first
   declared face, then neutral, else PORTRAIT PENDING), name and epithet, and
   -- when `fakeShare` is above 0 -- "Some of these are fakes..." or, once

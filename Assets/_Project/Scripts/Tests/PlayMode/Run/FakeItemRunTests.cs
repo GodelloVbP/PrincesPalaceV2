@@ -219,6 +219,32 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, InventoryOps.Count(reloaded.stockpiledItems, Torso), "no refund to the bag");
         }
 
+        // ONE WRITE, CARRYING ALL OF IT. The wear used to save on its own,
+        // ahead of the cleared room, so a crash between the two left a file
+        // where the fake had worn but the fight could be fought again -- and
+        // wear again. The settlement is now one write, and that write holds
+        // the countdown and the cleared room together.
+        [Test]
+        public void SettlingAFightWithAWornFake_IsOneWrite_HoldingTheWearAndTheClearedRoom()
+        {
+            RunManager.StartRun(71UL);
+            Member("sheep").equipment.Put(EquipmentSlot.Torso, FakeTorso());
+            int node = RunManager.CurrentNode.Id;
+
+            var built = RunOrchestrator.BuildFight();
+            Assert.IsNotNull(built, "fixture: the room fight did not build");
+
+            int before = SaveSlotManager.WritesLanded;
+            RunOrchestrator.SettleFight(built.Session, won: true);
+
+            Assert.AreEqual(1, SaveSlotManager.WritesLanded - before, "the settlement is one write");
+
+            var reloaded = ReloadFromDisk();
+            Assert.AreEqual(2, reloaded.roster.First(c => c.definitionId == "sheep")
+                .equipment.GetInstance(EquipmentSlot.Torso).FightsLeft, "the wear is in that write");
+            CollectionAssert.Contains(reloaded.activeRun.clearedNodeIds, node, "and so is the cleared room");
+        }
+
         [Test]
         public void AFakeInTheBag_DoesNotWear()
         {

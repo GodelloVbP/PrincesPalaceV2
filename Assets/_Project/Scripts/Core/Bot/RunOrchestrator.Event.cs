@@ -199,7 +199,12 @@ namespace PrincesPalace
             run.eventPageId = start.Id;
             run.eventResult = "";
             run.eventResultEffects = new List<EventEffect>();
+
+            // Nothing in front from whatever was open before: the debug door
+            // replaces an event mid-page, and a fight or shelf the old one
+            // left pending would block every choice on the new one.
             run.pendingFight = "";
+            run.pendingShelf = "";
 
             // ONCE PER RUN, unless it may return (plan 1.1): a returning event
             // stays in the pool until a `finish` effect marks it seen, so
@@ -264,8 +269,10 @@ namespace PrincesPalace
 
             // A shelf this event opened is still in front: its page is the
             // one the Browse went to, and it is picked from once the shelf
-            // is left (LeaveShelf).
-            if (!string.IsNullOrEmpty(run.pendingShelf))
+            // is left (LeaveShelf). THIS event's shelf, found through its
+            // stock (OpenShelfOn), not the raw name -- a name no stock of the
+            // open event owns is not in front of anybody.
+            if (OpenShelfOn(run) != null)
             {
                 return EventChoiceResult.Refused(EventRefusal.ShelfOpen);
             }
@@ -281,6 +288,15 @@ namespace PrincesPalace
             // 5). Decided before anything moves, against the outcome the pick
             // would take now; the choice's own effects cannot start a fight
             // (the build refuses it there), so only the outcome can.
+            //
+            // "NOW" IS THE OUTCOME THE PICK APPLIES, because the build
+            // guarantees it: own effects can change which outcome wins (a
+            // counter, gold), so EventEntryResolver refuses own effects on any
+            // choice that can start a party-override fight. What is left can
+            // flip only to a normal-party fight, whose fighters are the
+            // standing squad -- and no own effect downs anyone (damagePercent
+            // floors at 1). BuildFight backs this up at the other end: a
+            // request that fields nobody is dropped, not staged.
             string fightId = FightStartedBy(EventFlow.Resolve(page, index, context));
             if (fightId.Length > 0)
             {

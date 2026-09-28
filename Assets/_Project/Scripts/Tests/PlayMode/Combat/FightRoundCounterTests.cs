@@ -65,9 +65,9 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
-        private void BindOnly(FightRoundPresentation presentation, int roundLimit)
+        private void BindOnly(FightRoundPresentation presentation, int roundLimit, int heroSpeed = 10)
         {
-            var hero = new CombatantState("Shawn", true, 5000, 30, 10, 10);
+            var hero = new CombatantState("Shawn", true, 5000, 30, 10, heroSpeed);
             var foe = new CombatantState("Bell", false, 50000, 10, 5, 10);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var enemyKit = new EnemyKit(
@@ -140,6 +140,39 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(2, _session.Round, "fixture: one exchange carries the fight into round 2");
             Assert.AreEqual("Toll 2", Counter.text, "the counter stepped when round 2's beat played");
+        }
+
+        // BEGIN CROSSED TWO ROUNDS before Shawn's first turn (speed 2 against
+        // the Bell's 10): the counter opens on round 1, not the session's 3,
+        // and the queued opening beats step it -- each toll once, in order.
+        [UnityTest]
+        public IEnumerator WhenBeginCrossesRounds_TheCounterOpensOnOne_AndTheOpeningBeatsStepItThroughEachToll()
+        {
+            yield return SharedScene.EnsureFight();
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            BindOnly(Bell(), 10, heroSpeed: 2);
+            Assert.AreEqual(3, _session.Round, "fixture: Begin carried the fight into round 3");
+            Assert.AreEqual("Toll 1", Counter.text, "the counter jumped to the session's round at Bind");
+
+            // Every toll the rest of the opening playback presents, in order.
+            var player = Object.FindAnyObjectByType<FightBeatPlayer>();
+            var field = typeof(FightBeatPlayer).GetField("PresentRound", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field, "FightBeatPlayer.PresentRound was renamed or removed");
+            var present = (System.Action<int>)field.GetValue(player);
+            var shown = new List<string> { Counter.text };
+            field.SetValue(player, (System.Action<int>)(round =>
+            {
+                present(round);
+                if (shown[shown.Count - 1] != Counter.text) shown.Add(Counter.text);
+            }));
+
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsFalse(_fight.IsBusy, "fixture: the opening playback never finished");
+
+            CollectionAssert.AreEqual(new[] { "Toll 1", "Toll 2", "Toll 3" }, shown);
         }
 
         // A second bind on the same scene -- the next fight -- puts a room

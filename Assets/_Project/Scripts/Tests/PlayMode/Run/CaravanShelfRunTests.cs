@@ -257,6 +257,109 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(before, Snapshot());
         }
 
+        // ---- a stale shelf name never blocks a page -------------------------------------
+
+        [Test]
+        public void ReopeningTheEventThroughTheDebugDoor_PutsNoShelfInFront_AndItsChoicesPick()
+        {
+            StartWithTheCaravanHere();
+            Pick(Browse);
+            Assert.IsTrue(RunOrchestrator.EventShelfPending, "fixture: the shelf is in front");
+
+            OpenTheCaravanHere();
+
+            Assert.AreEqual("", Run.pendingShelf, "the reopened event kept the old shelf in front");
+            Assert.IsFalse(RunOrchestrator.EventShelfPending);
+            Pick(WalkOnFromStart);
+        }
+
+        [Test]
+        public void APageResetByReconcile_PutsNoShelfInFront_AndItsChoicesPick()
+        {
+            StartWithTheCaravanHere();
+            Pick(Browse);
+            Assert.AreEqual(Wares, Run.pendingShelf, "fixture: the shelf is in front");
+
+            // Content lost the page the Browse went to: Reconcile sends the
+            // event back to its start page.
+            Run.eventPageId = "a_page_content_no_longer_has";
+            Save.Reconcile();
+
+            Assert.AreEqual("caravan", Run.eventPageId, "fixture: the page reset to the start");
+            Assert.AreEqual("", Run.pendingShelf, "the reset page kept the old shelf in front");
+            Pick(WalkOnFromStart);
+        }
+
+        [Test]
+        public void AShelfNameNoStockOfTheOpenEventOwns_DoesNotRefuseAPick()
+        {
+            StartWithTheCaravanHere();
+            Run.pendingShelf = "a_shelf_this_event_never_rolled";
+
+            var picked = EventPicks.OnCurrentPage(Browse);
+
+            Assert.AreEqual(EventChoiceOutcome.Ok, picked.Outcome, $"the pick was refused: {picked.Reason}");
+            Assert.AreEqual(Wares, Run.pendingShelf);
+        }
+
+        // TWO SHELVES, ONE NODE: the same recipe twice, browsed at the same
+        // (step, node). The streams carry which shelf, so the two roll apart
+        // -- compared on what the cards SELL, since the lot names its shelf
+        // anyway -- and each one still reloads as itself.
+        [Test]
+        public void TwoShelvesAtOneNode_RollApart_AndEachReloadsAsItself()
+        {
+            var entry = CaravanFixture();
+            entry.id = "m5_two_stalls";
+            var stall = new RawEventShelf
+            {
+                id = "stall", priceFactorPercent = 70, fakeShare = 3, sections = new[] { "gear" }, consumableCount = 2,
+            };
+            entry.shelves = new[] { entry.shelves[0], stall };
+            entry.pages = new[]
+            {
+                new RawEventPage
+                {
+                    id = "caravan", title = "Caravan", body = "B",
+                    choices = new[] { Choice("Browse the wares", GoTo("after_browse", Shelf())), Choice("Walk on", GoTo("Leave")) },
+                },
+                new RawEventPage
+                {
+                    id = "after_browse", title = "Caravan", body = "B",
+                    choices = new[]
+                    {
+                        Choice("Browse the stall", GoTo("after_browse", new RawEventEffect { kind = "shelf", shelf = "stall" })),
+                        Choice("Walk on", GoTo("Leave")),
+                    },
+                },
+            };
+            entry.fights = new RawEventFight[0];
+
+            FixtureEvents.Append(entry);
+            RunManager.StartRun(21UL);
+            Assert.IsTrue(RunOrchestrator.OpenEventForDebug("m5_two_stalls"), "fixture: the event did not open");
+
+            Pick(0);
+            var wares = Snapshot();
+            RunOrchestrator.LeaveShelf();
+            Pick(0);
+            var stallStock = Snapshot();
+
+            List<string> Sells(List<string> cards) =>
+                cards.Select(c => System.Text.RegularExpressions.Regex.Replace(c, " lot=\\S*", "")).ToList();
+
+            Assert.AreEqual(Sells(wares).Count, Sells(stallStock).Count, "fixture: one recipe, one card count");
+            CollectionAssert.AreNotEqual(Sells(wares), Sells(stallStock), "two shelves at one node rolled the same stock");
+
+            ReloadFromDisk();
+            CollectionAssert.AreEqual(stallStock, Snapshot(), "the stall did not reload as itself");
+            RunOrchestrator.LeaveShelf();
+            Pick(0);
+            CollectionAssert.AreEqual(stallStock, Snapshot(), "looking again rerolled the stall");
+            Assert.AreEqual(2, Run.shelves.Count, "fixture: both stocks are kept");
+            Assert.AreNotSame(Run.shelves[0], Run.shelves[1]);
+        }
+
         [Test]
         public void WalkOn_AndAReturnAtAnotherNode_ShowTheSameStock_MinusWhatSold()
         {

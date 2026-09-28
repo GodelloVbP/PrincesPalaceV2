@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -18,9 +20,11 @@ namespace PrincesPalace
     // THE ROUND ON SCREEN IS PLAYBACK'S, not the session's. The session starts
     // a round a whole round ahead of the picture, so the counter steps when
     // the beat that carries the round plays (FightBeatPlayer.PresentRound).
-    // The one exception is Bind: the round the fight opened on is shown at
-    // once, toll and all, and its beat -- still queued from Begin -- is then
-    // a no-op, because a round is presented once and never twice.
+    // The one exception is Bind: the round the fight opened on -- the first
+    // round the opening beats carry -- is shown at once, toll and all, and
+    // its beat is then a no-op, because a round is presented once and never
+    // twice. Any later round Begin crossed steps when its own beat plays
+    // (PresentOpeningRound).
     //
     // MISSING FILES ARE QUIET. An overlay key with no baked sprite hides the
     // layer, a backdrop key with none keeps the class backdrop, and a sound
@@ -79,8 +83,40 @@ namespace PrincesPalace
             // The bed follows the presentation: a room fight's None stops a bed
             // a previous fight left running, and the same path again keeps it.
             SoundController.StartAmbience(_presentation.AmbiencePath);
+        }
 
-            if (shows && _session != null) PresentRound(_session.Round);
+        // THE ROUND THE FIGHT OPENED ON, shown at Bind once the opening beats
+        // are drained -- the round the FIRST of them carries, not the
+        // session's. Begin can cross several rounds before the party's first
+        // turn (a slow party, an enemy that opens), and the session is then
+        // at the last of them; showing that would jump the counter and leave
+        // every queued toll a no-op, since presenting never goes backwards.
+        // From the first, the opening beats step it one toll at a time.
+        //
+        // No beats queued, or no player to play them: the session's round,
+        // stepped to in order so each toll still sounds once.
+        private void PresentOpeningRound(IReadOnlyList<CombatBeat> openingBeats, bool willPlay)
+        {
+            if (!_presentation.ShowsCounter || _session == null) return;
+
+            int opening = 0;
+            if (openingBeats != null)
+            {
+                foreach (var beat in openingBeats)
+                {
+                    if (beat == null || beat.RoundStarted <= 0) continue;
+                    opening = beat.RoundStarted;
+                    break;
+                }
+            }
+
+            if (opening > 0 && willPlay)
+            {
+                PresentRound(opening);
+                return;
+            }
+
+            for (int round = Mathf.Max(1, opening); round <= _session.Round; round++) PresentRound(round);
         }
 
         // THE TOLL. The counter's number, the overlay's step and the round's

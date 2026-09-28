@@ -1209,6 +1209,12 @@ namespace PrincesPalace
                 run.eventPageId = definition.StartPage?.Id ?? "";
                 run.eventResult = "";
                 run.eventResultEffects.Clear();
+
+                // Back at the start page, nothing the lost page launched is
+                // still in front of it: a fight or a shelf left pending would
+                // refuse every choice on the page the player now sees.
+                run.pendingFight = "";
+                run.pendingShelf = "";
                 if (string.IsNullOrEmpty(run.eventPageId)) RunOrchestrator.CloseEventFields(run);
             }
         }
@@ -1220,18 +1226,33 @@ namespace PrincesPalace
         // event to return to, its ending would have nowhere to land. The
         // event itself stays on the page that launched it, so the player can
         // pick again.
-        private static void ReconcilePendingFight(RunSnapshot run)
+        //
+        // AND A REQUEST THAT FIELDS NOBODY IS DROPPED TOO: BuildFight would
+        // return null for it, SettleFight would never run, and the request
+        // would survive every reload as a stage with no one on it.
+        private void ReconcilePendingFight(RunSnapshot run)
         {
             run.pendingFight ??= "";
             if (run.pendingFight.Length == 0) return;
 
             var definition = string.IsNullOrEmpty(run.eventId) ? null : RunOrchestrator.FindEvent(run.eventId);
             bool eventOpen = definition != null && run.eventNodeId >= 0 && run.eventNodeId == run.currentNodeId;
-            if (!eventOpen || definition.FightById(run.pendingFight) == null)
+            var fight = eventOpen ? definition.FightById(run.pendingFight) : null;
+            if (fight == null)
             {
                 UnityEngine.Debug.LogWarning(
                     $"[Reconcile] dropped pending event fight '{run.pendingFight}': its event " +
                     $"'{run.eventId}' is not open here or no longer has that fight.");
+                run.pendingFight = "";
+                return;
+            }
+
+            var request = EncounterRequest.ForEventFight(PrincesPalace.Domain.Dungeon.RoomType.Event, run.eventId, fight);
+            if (RunEncounter.FightersFor(this, run, request).Count == 0)
+            {
+                UnityEngine.Debug.LogWarning(
+                    $"[Reconcile] dropped pending event fight '{run.pendingFight}' of event '{run.eventId}': " +
+                    "nobody in its party is standing. The event stays on the page that launched it.");
                 run.pendingFight = "";
             }
         }

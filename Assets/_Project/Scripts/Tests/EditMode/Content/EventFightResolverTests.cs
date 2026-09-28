@@ -211,6 +211,32 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("a fight effect is in the choice's own effects", Refusal(Event(BellFight(), choice)));
         }
 
+        // The NoFighters check reads the outcome before the choice's own
+        // effects apply; own effects can change which outcome wins, so they
+        // may not sit on a choice that can start a party-override fight. A
+        // normal-party fight behind the same own effects still builds.
+        [Test]
+        public void Refuses_OwnEffectsOnAChoiceThatCanStartAPartyOverrideFight()
+        {
+            var choice = new RawEventChoice
+            {
+                text = "Touch the bell",
+                effects = new[] { new RawEventEffect { kind = "damagePercent", amount = 10 } },
+                outcomes = new[] { StartFight() },
+            };
+
+            StringAssert.Contains(
+                "has effects of its own and an outcome that starts fight 'bellwether', which fields only its own party",
+                Refusal(Event(BellFight(), choice)));
+
+            var everyone = BellFight();
+            everyone.party = new string[0];
+            everyone.onLoss = "endRun";
+            everyone.onFell = null;
+            Assert.AreEqual(0, Resolved(Event(everyone, choice)).Fights.Single().PartyIds.Length,
+                "the same own effects in front of a normal-party fight build");
+        }
+
         [Test]
         public void Refuses_TwoFightEffectsInOneOutcome()
         {

@@ -121,6 +121,23 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
+                // THE TITLE THE SCREEN WILL SHOW, not only the one authored:
+                // an empty title falls back to the keeper's name
+                // (MerchantShelfFront), and that lands in the same title box
+                // the cap above measures. A speaker's name has no cap of its
+                // own, so the fallback is checked here.
+                if (string.IsNullOrWhiteSpace(row.title) && keeper.Length > 0)
+                {
+                    string keeperName = scope.Speakers[keeper].Name ?? "";
+                    if (keeperName.Length > MaxTitleLength)
+                    {
+                        error = $"{label}: has no title, so the shelf screen's title is keeper '{keeper}''s name " +
+                                $"'{keeperName}', {keeperName.Length} characters -- over the title cap of " +
+                                $"{MaxTitleLength}. Give the shelf a title, or the keeper a shorter name.";
+                        return false;
+                    }
+                }
+
                 list.Add(new ResolvedEventShelf(id, row.priceFactorPercent, row.fakeShare, sections.ToArray(),
                     row.consumableCount, (row.title ?? "").Trim(), keeper));
             }

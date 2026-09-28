@@ -635,8 +635,9 @@ namespace PrincesPalace
             WirePlayback();
             ResetStagePresentation();
 
-            // After the class backdrop, which a request-driven one replaces,
-            // and after the session is set, whose opening round it shows.
+            // After the class backdrop, which a request-driven one replaces.
+            // The opening round is shown below, once the opening beats are
+            // drained (PresentOpeningRound).
             ApplyPresentation(presentation);
 
             // The session existing IS what "Fight is active" meant to the
@@ -685,6 +686,10 @@ namespace PrincesPalace
                 if (beat == null) continue;
                 beat.PaintActorDamageType(_session.ActorAttackType(beat.Actor));
             }
+
+            // The counter opens on the round the first of these beats
+            // carries, so the rest step it as they play.
+            PresentOpeningRound(openingBeats, willPlay: beatPlayer != null && openingBeats.Count > 0);
 
             if (beatPlayer != null && openingBeats.Count > 0)
             {

@@ -347,5 +347,19 @@ namespace PrincesPalace.Domain.Tests
                 "Special pools full each turn this leg",
                 line);
         }
+
+        // exp with a character reached that member alone, so the line names
+        // them; squad-wide exp keeps "+N XP".
+        [Test]
+        public void TheEffectsLine_NamesTheMemberAnExpGrantReached()
+        {
+            var line = EventEffectSummary.Describe(new[]
+            {
+                EventEffect.ExpTo("sheep", "Shawn", 80),
+                EventEffect.Exp(25),
+            }, _ => null);
+
+            Assert.AreEqual("Shawn +80 XP  ·  +25 XP", line);
+        }
     }
 }

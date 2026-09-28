@@ -363,6 +363,10 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("event.effect_damage", "Party hurt {0}%", "Party hurt 100%");
         public static readonly UiString EventEffectExp =
             UiString.Define("event.effect_exp", "+{0} XP", "+99999 XP");
+        // One member's exp (exp with a character), named the way a member's
+        // heal is, so the line never reads as squad-wide exp it was not.
+        public static readonly UiString EventEffectExpMember =
+            UiString.Define("event.effect_exp_member", "{0} +{1} XP", "Wandering Bog Witch +99999 XP");
         public static readonly UiString EventEffectItem =
             UiString.Define("event.effect_item", "+{0} {1}", "+99 Ceremonial Greatsword of the Undying");
         // Every item grant on an over-budget line, folded into one count

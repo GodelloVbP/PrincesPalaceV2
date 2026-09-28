@@ -53,6 +53,10 @@ namespace PrincesPalace.Domain.Content
             public bool MayReturn;
             public HashSet<string> PageIds = new HashSet<string>(StringComparer.Ordinal);
             public HashSet<string> FightIds = new HashSet<string>(StringComparer.Ordinal);
+
+            // The fights that field only their own `party` (a party override).
+            // Read by TryResolveChoice: see its own-effects rule.
+            public HashSet<string> OverrideFightIds = new HashSet<string>(StringComparer.Ordinal);
             public HashSet<string> ShelfIds = new HashSet<string>(StringComparer.Ordinal);
             public Dictionary<string, ResolvedEventSpeaker> Speakers =
                 new Dictionary<string, ResolvedEventSpeaker>(StringComparer.Ordinal);
@@ -208,6 +212,7 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
+                if (fight.PartyIds != null && fight.PartyIds.Length > 0) scope.OverrideFightIds.Add(id);
                 list.Add(fight);
             }
 

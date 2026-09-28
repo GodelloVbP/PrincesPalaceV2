@@ -199,6 +199,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // NO VARIANCE AND NO DODGE (rng null): the relic is a fixed share of the
         // bearer's attack, and a turn start is no place to draw from the run's
         // generator -- the draw would shift every roll after it in the fight.
+        //
+        // HIS DAMAGE, NOT HIS ACTION (CombatBeat.RelicTrigger). What shapes
+        // the bearer's damage against a target still shapes the packet: his
+        // attack type, and his execute talent, which AfterDefences applies to
+        // every untyped raw figure with an actor -- a flock charging a target
+        // on its way down hits it harder, as his own blows do. What answers
+        // "did he act" does not: DealRelicPacket notes no pool activity for
+        // him and pays or spends none of his once-per-turn gainOnAttack.
         private void TollOfTheFlock(CombatantState bearer)
         {
             if (bearer == null || !bearer.IsAlive) return;
@@ -238,7 +246,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     resolveWard: ResolveWard);
 
                 int landed = outcome.Damage;
-                DealDamage(bearer, enemy, landed, type, KillCredit.Nobody);
+                DealRelicPacket(bearer, enemy, landed, type);
                 TollOfTheFlockDamageDealt += landed;
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 RecordTargetResult(enemy, landed);

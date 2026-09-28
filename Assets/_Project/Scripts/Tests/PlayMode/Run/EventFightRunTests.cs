@@ -296,6 +296,47 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(RunOrchestrator.EventFightPending);
         }
 
+        // A request that fields nobody by the time it is built -- the override
+        // fell after the pick -- is dropped, not staged: an empty stage never
+        // settles, and the request would outlive every reload.
+        [Test]
+        public void ARequestWhoseOverrideFellAfterThePick_IsDroppedAtBuild_AndTheEventIsBackOnItsPage()
+        {
+            OpenFightFixture();
+            var picked = EventPicks.OnCurrentPage(Duel);
+            Assert.AreEqual(EventChoiceOutcome.Ok, picked.Outcome, "fixture");
+            Assert.AreEqual("duel", Run.pendingFight, "fixture");
+
+            Run.currentHealth.RemoveAll(e => e.characterId == "sheep");
+            Run.currentHealth.Add(new RunHealthEntry { characterId = "sheep", hp = 0 });
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("event fight 'duel' .* dropped"));
+            Assert.IsNull(RunOrchestrator.BuildFight());
+
+            Assert.AreEqual("", Run.pendingFight, "the request outlived the empty build");
+            Assert.AreEqual("gate", Run.eventPageId, "the event is back on the page that launched the fight");
+            Assert.IsTrue(RunOrchestrator.EventIsOpen);
+
+            SaveSlotManager.Forget();
+            Assert.AreEqual("", SaveSlotManager.CurrentSave.activeRun.pendingFight, "the drop is on disk");
+        }
+
+        [Test]
+        public void Reconcile_DropsAPendingFightWhoseOverrideHasNobodyStanding()
+        {
+            OpenFightFixture();
+            Assert.AreEqual(EventChoiceOutcome.Ok, EventPicks.OnCurrentPage(Duel).Outcome, "fixture");
+
+            Run.currentHealth.RemoveAll(e => e.characterId == "sheep");
+            Run.currentHealth.Add(new RunHealthEntry { characterId = "sheep", hp = 0 });
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("nobody in its party is standing"));
+            Save.Reconcile();
+
+            Assert.AreEqual("", Run.pendingFight);
+            Assert.AreEqual("gate", Run.eventPageId);
+        }
+
         // ---- 3. settling ------------------------------------------------------------
 
         [Test]

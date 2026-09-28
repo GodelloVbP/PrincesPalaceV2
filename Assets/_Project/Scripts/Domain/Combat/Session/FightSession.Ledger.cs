@@ -49,7 +49,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // `credit` has no default on purpose: a caller must say whether its
         // damage scores a kill. See KillCredit for what the two answers cost.
         private CombatMath.DamageResult DealDamage(
-            CombatantState actor, CombatantState target, int amount, DamageType type, KillCredit credit)
+            CombatantState actor, CombatantState target, int amount, DamageType type, KillCredit credit) =>
+            DealDamage(actor, target, amount, type, credit, actorActed: true);
+
+        // A RELIC'S OWN PACKET (CombatBeat's RelicTrigger: Toll of the Flock).
+        // The bearer is the source -- his attack type, his defence-piercing,
+        // his execute talent, his ledger row -- but he did not ACT: his pool
+        // notes no activity and his once-per-turn gainOnAttack is neither
+        // paid nor spent, so his own swing that turn still earns it. The
+        // target's half (damage taken, activity, hit-taken gains) is a blow
+        // like any other. Credits nobody (KillCredit.Nobody), as the relic's
+        // attribution rule says.
+        private CombatMath.DamageResult DealRelicPacket(
+            CombatantState bearer, CombatantState target, int amount, DamageType type) =>
+            DealDamage(bearer, target, amount, type, KillCredit.Nobody, actorActed: false);
+
+        private CombatMath.DamageResult DealDamage(
+            CombatantState actor, CombatantState target, int amount, DamageType type, KillCredit credit,
+            bool actorActed)
         {
             // Measured ACROSS the call rather than read after it, so one body
             // can only be settled once. ApplyFinalDamage's elemental and
@@ -58,7 +75,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // kill row for the same corpse would out-count the fight.
             bool wasAlive = target != null && target.IsAlive;
 
-            var result = ApplyAndCountDamage(actor, target, amount, type);
+            var result = ApplyAndCountDamage(actor, target, amount, type, actorActed);
 
             if (wasAlive && target != null && !target.IsAlive)
             {
@@ -75,7 +92,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // its wearer from inside this method and must settle like any other
         // death.
         private CombatMath.DamageResult ApplyAndCountDamage(
-            CombatantState actor, CombatantState target, int amount, DamageType type)
+            CombatantState actor, CombatantState target, int amount, DamageType type, bool actorActed)
         {
             // THE POOLS HEAR THE BLOW FIRST, BEFORE ANY EXIT CAN SKIP THEM.
             //
@@ -91,7 +108,11 @@ namespace PrincesPalace.Domain.Combat.Session
             // Read on the raw amount, ahead of Cursed Idol's bonus: whether
             // this was a damaging action is a fact about the blow that was
             // thrown, not about a relic that made it bigger.
-            NoteDamageForPools(actor, target, amount);
+            //
+            // A relic's own packet (DealRelicPacket) is a blow the target
+            // hears and the bearer did not throw: null is the unattributed
+            // case NoteDamageForPools already handles for a status tick.
+            NoteDamageForPools(actorActed ? actor : null, target, amount);
 
             var landed = LandPacket(actor, target, amount, type);
 

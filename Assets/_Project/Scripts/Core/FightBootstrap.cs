@@ -265,6 +265,17 @@ namespace PrincesPalace
             var asked = ConsumeDevForced();
 
             var built = BuildOpeningFight(asked);
+            if (built == null && RunManager.HasRun && RunOrchestrator.EventIsOpen && !RunOrchestrator.EventFightPending)
+            {
+                // An event fight that fielded nobody was dropped by
+                // BuildFight: the event is open on the page that launched
+                // it, and the map reopens that panel (MapController's
+                // RefreshAndShowLiveEvent). An empty stage here would be a
+                // dead end the player cannot leave.
+                Navigation.Go(Navigation.Map);
+                return;
+            }
+
             if (built == null)
             {
                 // No content, or a preview that refused: the scene still loads

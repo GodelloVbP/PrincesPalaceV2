@@ -94,7 +94,12 @@ namespace PrincesPalace.Domain.Events
                 case EventEffectKind.DamagePercent:
                     return UiStrings.EventEffectDamage.Format(effect.Amount);
                 case EventEffectKind.Exp:
-                    return UiStrings.EventEffectExp.Format(effect.Amount);
+                    // exp with a character reaches that member alone
+                    // (RunOrchestrator's Exp case), so the line names them.
+                    if (!effect.TargetsOneMember) return UiStrings.EventEffectExp.Format(effect.Amount);
+                    return UiStrings.EventEffectExpMember.Format(
+                        string.IsNullOrEmpty(effect.CharacterDisplayName) ? effect.CharacterId : effect.CharacterDisplayName,
+                        effect.Amount);
                 case EventEffectKind.Item:
                 {
                     string name = itemName?.Invoke(effect.Item);

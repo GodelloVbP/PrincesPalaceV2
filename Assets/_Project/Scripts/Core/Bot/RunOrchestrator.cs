@@ -307,9 +307,27 @@ namespace PrincesPalace
                 // An empty party here is a squad wipe that should have ended
                 // the run before the map ever offered this room. Saying so is
                 // worth more than an empty stage that looks like a render bug.
-                string what = request.IsEventFight ? $" (event fight '{request.EventFight.Id}')" : "";
+                //
+                // AN EVENT FIGHT IS DROPPED, NOT STAGED. Its request would
+                // otherwise outlive the empty stage: SettleFight never runs,
+                // pendingFight stays set, every choice is refused FightPending,
+                // and a reload brings the same nothing back. Cleared and
+                // persisted here, the event is back on the page that launched
+                // it (the fight never moved it) and FightBootstrap returns to
+                // the map, which reopens the event panel.
+                if (request.IsEventFight && run != null)
+                {
+                    Debug.LogWarning(
+                        $"[RunOrchestrator] event fight '{request.EventFight.Id}' of event '{run.eventId}' fielded " +
+                        $"{roster.PartyIds?.Count ?? 0} party and {roster.EnemyIds?.Count ?? 0} enemies; dropped, " +
+                        "and the event is back on its page.");
+                    run.pendingFight = "";
+                    SaveSlotManager.SaveCurrent();
+                    return null;
+                }
+
                 Debug.LogWarning(
-                    $"[RunOrchestrator] Room {roomType}{what} fielded {roster.PartyIds?.Count ?? 0} party " +
+                    $"[RunOrchestrator] Room {roomType} fielded {roster.PartyIds?.Count ?? 0} party " +
                     $"and {roster.EnemyIds?.Count ?? 0} enemies; the stage stays empty.");
                 return null;
             }
@@ -472,7 +490,21 @@ namespace PrincesPalace
         // advance the leg" with the event's own rules. A room fight reads the
         // request as ForRoom and runs every line it always ran, in the order
         // it always ran them.
+        //
+        // ONE WRITE. The lines below persist in several places (BankPayout,
+        // RewardApplier.Apply, ClearCurrentRoom, AdvanceLeg, EndRun, the
+        // event branch's own), and each of those writes used to land as it
+        // came: a crash after the first left a file with the gold banked or
+        // the fakes worn but the room uncleared, and the refight replayed
+        // the ledger fold, the Amassing Star bank and the wear on top of it.
+        // WritesDeferred folds them into one write at the end, so the file
+        // holds the fight before settlement or all of it.
         public static FightSettlement SettleFight(FightSession session, bool won)
+        {
+            using (SaveSlotManager.WritesDeferred()) return SettleFightInOneWrite(session, won);
+        }
+
+        private static FightSettlement SettleFightInOneWrite(FightSession session, bool won)
         {
             if (!RunManager.HasRun) return new FightSettlement(null, null);
 
@@ -597,16 +629,18 @@ namespace PrincesPalace
         // unequip does, carried health rescaled against the max it took with
         // it (ScaleCarriedHealth), and goes nowhere: no refund to the bag.
         //
-        // WRITES when it counted anything down, so the countdown is on disk
-        // however the rest of the settlement persists (a paying fight writes
-        // again in RewardApplier; a no-pay room fight might not write at all).
+        // WRITES NOTHING. Every branch after it persists -- ClearCurrentRoom
+        // on a room fight, PayOut or SettleEventFight's own write on an event
+        // fight -- and SettleFight folds those into its one write, so the
+        // wear lands on disk together with the payout and the cleared room.
+        // It used to save here, mid-settlement, which put a half-settled run
+        // on disk ahead of everything else.
         private static List<string> WearFakes(FightSession session)
         {
             var lines = new List<string>();
             var save = SaveSlotManager.CurrentSave;
             if (save?.roster == null || session == null) return lines;
 
-            bool wore = false;
             foreach (var id in FieldedIds(session).Distinct())
             {
                 var character = save.roster.FirstOrDefault(c => c != null && c.definitionId == id);
@@ -614,7 +648,6 @@ namespace PrincesPalace
                 if (!character.equipment.slots.Any(e => e?.provenance != null && e.provenance.fake
                                                         && !string.IsNullOrEmpty(e.itemId))) continue;
 
-                wore = true;
                 int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
                 var broken = FakeWear.WearOneFight(character.equipment);
                 if (broken.Count == 0) continue;
@@ -627,7 +660,6 @@ namespace PrincesPalace
             }
 
             if (lines.Count > 0) lines.Add(FakeWear.NoRefundsLine);
-            if (wore) SaveSlotManager.SaveCurrent();
             return lines;
         }
 
