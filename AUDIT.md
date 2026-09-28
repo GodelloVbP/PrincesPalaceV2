@@ -6,17 +6,15 @@ line>` appended, so the register stays a complete history of what this project h
 actually been wrong about, not just what's currently wrong. New findings (including
 open investigations that never got a firm root cause) get appended under whatever
 section fits, or under "Open investigations" near the end if none does. A struck
-finding's full write-up does not stay here: it moves, verbatim, to
-`docs/AUDIT_STRUCK_ARCHIVE.md`, and this file keeps only the one-line struck heading
-pointing at it — that is what keeps this register readable as it grows.
+finding is a one-line heading naming the fixing commit; its full write-up does not
+stay here — that is what keeps this register readable as it grows. Details for any
+struck finding live in git history (the fixing commit named in its heading).
 
 **This register begins at #37, and is native to this tree (v2).** Findings #1–36 —
 written against v1, a codebase this repository never contained — plus the three dated
-re-triage passes over them (2026-08-02, -03, -04), are archived verbatim at
-`docs/AUDIT_V1_ARCHIVE.md`. Nothing was deleted, only relocated: that section's own
-warning box already said none of it means anything without re-verifying against this
-tree first, and it had grown to roughly 40% of this file's length. See the archive if
-you're chasing a v1 finding's history; #37 onward below needs no translation.
+re-triage passes over them (2026-08-02, -03, -04), are not carried in this tree; their
+history lives in git. See git history if you're chasing a v1 finding's history; #37
+onward below needs no translation.
 
 ---
 
@@ -54,9 +52,9 @@ Fix: rewrite the comments to the shipped design and delete `BankFrom` + its test
 
 Route: fixer; gate `[D]` domain tests.
 
-### ~~39. A tree node named `<button>Label` silently collides with the caption `UiEmitter` generates~~ — fixed in `4fc572b`: renamed the colliding `…Label` nodes and added `UiAudit`'s `CheckButtonLabelCollision`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~39. A tree node named `<button>Label` silently collides with the caption `UiEmitter` generates~~ — fixed in `4fc572b`: renamed the colliding `…Label` nodes and added `UiAudit`'s `CheckButtonLabelCollision`
 
-### ~~40. Relics and Embers are two currencies with one source, and one of them does nothing~~ — fixed in `f2ddde9`: Relics stopped being a currency and became a per-run draft with an authored rarity band instead; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~40. Relics and Embers are two currencies with one source, and one of them does nothing~~ — fixed in `f2ddde9`: Relics stopped being a currency and became a per-run draft with an authored rarity band instead
 
 ### 41. `CurrencyType.Embers` and `Wallet.embers` survive with no live reader
 `Wallet.embers` / `CurrencyType.Embers` (`Wallet.cs:22-27`, `CurrencyType.cs:32`) survive only
@@ -66,15 +64,15 @@ Fix: keep until the save migration drops pre-character-embers versions, then del
 
 Route: fixer.
 
-### ~~42. No relic had ever fired in an actual fight~~ — fixed in `06f996b`: `FightEncounterAdapter.KitFor` now supplies the player's relic list, pinned by `RelicsReachCombatTests`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~42. No relic had ever fired in an actual fight~~ — fixed in `06f996b`: `FightEncounterAdapter.KitFor` now supplies the player's relic list, pinned by `RelicsReachCombatTests`
 
-### ~~38. A wipe does not actually forfeit anything yet~~ — fixed in `76a4dd1`/`2814cec`: the forfeit is enforced structurally — `RunSettlement.Settle` now runs before `EndRun` discards the snapshot; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~38. A wipe does not actually forfeit anything yet~~ — fixed in `76a4dd1`/`2814cec`: the forfeit is enforced structurally — `RunSettlement.Settle` now runs before `EndRun` discards the snapshot
 
 ---
 
 ## Findings from the Reckoning polish pass, 2026-08-12
 
-### ~~43. `screenshot.ps1` reports success for a panel it never captured~~ — fixed in `846d820`: `-Panel` is validated against `ScreenRegistry` up front and success is checked against the specific expected file rather than whatever is already on disk; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~43. `screenshot.ps1` reports success for a panel it never captured~~ — fixed in `846d820`: `-Panel` is validated against `ScreenRegistry` up front and success is checked against the specific expected file rather than whatever is already on disk
 
 ### 44. The Reckoning's gain label sits on top of the bar it annotates
 `ReckoningScreen.cs:718-720` gain label (200x22 at 370,-21) overlaps the bar at `:763` (0,-14);
@@ -100,13 +98,13 @@ The pass that established the v1/v2 split documented at the top. It struck #38 (
 struck), #29 and #19 (both obsoleted by the rebuild), and refiled the one piece of #19 that
 genuinely carries across.
 
-### ~~46. Twelve `Assert.Ignore`s skip on CONTENT shape, and three of them guard the regression #42 describes~~ — fixed in `794f2278`: the twelve named sites were already converted in `0625b823`; sixteen newer content-shape skips turned into hard failures or fixtures; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~46. Twelve `Assert.Ignore`s skip on CONTENT shape, and three of them guard the regression #42 describes~~ — fixed in `794f2278`: the twelve named sites were already converted in `0625b823`; sixteen newer content-shape skips turned into hard failures or fixtures
 
 ---
 
 ## Findings from the build-speed pass, 2026-08-19
 
-### ~~48. `EnemyIntentIconTests` asked an arbitrary font whether it could draw a glyph~~ — fixed in `c2f436a`: the test now reads the font off a live `TMP_Text` instead of an arbitrarily-ordered `Resources` lookup; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~48. `EnemyIntentIconTests` asked an arbitrary font whether it could draw a glyph~~ — fixed in `c2f436a`: the test now reads the font off a live `TMP_Text` instead of an arbitrarily-ordered `Resources` lookup
 
 ## The fight that never started, 2026-08-20
 
@@ -161,32 +159,32 @@ way, which means nothing was tuned around the absence.
 
 ## Findings from the reward-track planning pass, 2026-08-21
 
-### ~~49. `Character.cs` documented an invariant that was inverted, unimplemented, and guarded by a test that did not exist~~ — fixed in `457bce0`: both comments now say what is true and `RunManagerTests` gained the test that was claimed; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~49. `Character.cs` documented an invariant that was inverted, unimplemented, and guarded by a test that did not exist~~ — fixed in `457bce0`: both comments now say what is true and `RunManagerTests` gained the test that was claimed
 
-### ~~50. `SaveData.relicLoadout` is written by nothing and read by nothing~~ — superseded: its subject (`SaveData.relicLoadout`) was deleted in `a7ebbf28` under #119; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~50. `SaveData.relicLoadout` is written by nothing and read by nothing~~ — superseded: its subject (`SaveData.relicLoadout`) was deleted in `a7ebbf28` under #119
 
-### ~~53. Stat points cannot be spent -- `Character.Invest` has no production caller~~ — fixed in `a39a2c1`: the dossier's attribute cells gained a "+" that calls `Invest`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~53. Stat points cannot be spent -- `Character.Invest` has no production caller~~ — fixed in `a39a2c1`: the dossier's attribute cells gained a "+" that calls `Invest`
 
-### ~~55. `ContentDatabase.MinSpentMet` enforces the talent gates and nothing calls it~~ — fixed in `e1ce29f`: the gate now lives in `TalentPage.Evaluate` as `Refusal.Gated`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~55. `ContentDatabase.MinSpentMet` enforces the talent gates and nothing calls it~~ — fixed in `e1ce29f`: the gate now lives in `TalentPage.Evaluate` as `Refusal.Gated`
 
-### ~~56. Every lit talent edge drew a second stray line, and the layout audit was exempted from seeing it~~ — fixed in `e1ce29f`: the edge's core is placed at `(0, 0)` unrotated instead of inheriting its parent transform twice; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~56. Every lit talent edge drew a second stray line, and the layout audit was exempted from seeing it~~ — fixed in `e1ce29f`: the edge's core is placed at `(0, 0)` unrotated instead of inheriting its parent transform twice
 
 ## Findings from the simplification pass, 2026-09-05
 
-### ~~61. `SpellVfxTests` flakes between runs on an identical tree — cause not found~~ — fixed in `c9afc22`: a frame-duration race, NOT the pooled ground node — the whole cast is 13ms of real time at 60x and the tests counted a frame later; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~61. `SpellVfxTests` flakes between runs on an identical tree — cause not found~~ — fixed in `c9afc22`: a frame-duration race, NOT the pooled ground node — the whole cast is 13ms of real time at 60x and the tests counted a frame later
 
 ## Findings from the architecture review, 2026-09-06
 
 One finding, fixed in the same pass that found it, and one question it surfaced
 and deliberately did not answer.
 
-### ~~62. A kill's two halves were typed by hand at five call sites, and one site had already lost one of them~~ -- fixed in `84eb5ed5`: `DealDamage` settles the death itself, behind a `KillCredit` argument with no default; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~62. A kill's two halves were typed by hand at five call sites, and one site had already lost one of them~~ -- fixed in `84eb5ed5`: `DealDamage` settles the death itself, behind a `KillCredit` argument with no default
 
-### ~~63. A monster felling a party member records no kill row~~ — fixed in `f096823e`: `Ledger.WentDown(LedgerIdOf(target))` moved above the `KillCredit.Nobody` guard in `SettleDeath`, so a party member felled by a monster is recorded as downed; `_killedThisAction`/`ScoredKill`/`RelicsOnEachKill` stay below the guard, untouched; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~63. A monster felling a party member records no kill row~~ — fixed in `f096823e`: `Ledger.WentDown(LedgerIdOf(target))` moved above the `KillCredit.Nobody` guard in `SettleDeath`, so a party member felled by a monster is recorded as downed; `_killedThisAction`/`ScoredKill`/`RelicsOnEachKill` stay below the guard, untouched
 
-### ~~64. `ContentDatabase.Initialize` and `FightSession.IsOnCooldown` had no live reader~~ — fixed in `ab4a0ba5`: both deleted; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~64. `ContentDatabase.Initialize` and `FightSession.IsOnCooldown` had no live reader~~ — fixed in `ab4a0ba5`: both deleted
 
-### ~~65. A poison death records no `Ledger.WentDown`~~ — fixed in `f096823e`, same change as #63: `Ledger.WentDown` now fires for every `SettleDeath` call including `KillCredit.Nobody`, so a poison-tick death is recorded as downed while the kill-credit half stays gated; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~65. A poison death records no `Ledger.WentDown`~~ — fixed in `f096823e`, same change as #63: `Ledger.WentDown` now fires for every `SettleDeath` call including `KillCredit.Nobody`, so a poison-tick death is recorded as downed while the kill-credit half stays gated
 
 ## Findings from the restatement sweep, 2026-09-06
 
@@ -217,15 +215,15 @@ decision recorded in that file's own header (lines ~606-617) and gets no entry h
 
 ### ~~75. `CharacterVoice` keyed Shawn's lines on the literal `"sheep"` with no check against `characters.json`~~ — fixed in `8156a4ca`: a PlayMode test asserts every `CharacterVoice` key is a live id `ContentDatabase.GetCharacter` recognises; full reasoning in the commit message
 
-### ~~76. `architecture_audit.md` §7 stated two partial-class line counts as precise numbers, both stale~~ — fixed in `1656372a`: the `FightController` and `ContentDatabase` rows now read approximate, sha-stamped counts, same phrasing as the `FightSession` row fixed the same morning; full reasoning in the commit message
+### ~~76. The system map's §7 stated two partial-class line counts as precise numbers, both stale~~ — fixed in `1656372a`: the `FightController` and `ContentDatabase` rows now read approximate, sha-stamped counts, same phrasing as the `FightSession` row fixed the same morning; full reasoning in the commit message
 
-### ~~77. `ContentDatabase.ValidateContent()`'s six pre-existing whole-catalogue rules have no test~~ — fixed in `51a3dba6`: the six rules became pure predicates in `Domain/Content/CatalogueCrossChecks.cs` with one fixture test per rule; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~77. `ContentDatabase.ValidateContent()`'s six pre-existing whole-catalogue rules have no test~~ — fixed in `51a3dba6`: the six rules became pure predicates in `Domain/Content/CatalogueCrossChecks.cs` with one fixture test per rule
 
-### ~~78. `docs/BOT_SUMMARY_SCHEMA.md` lists room fields in two places~~ — fixed in `2fffa3d5`: the `runs.jsonl` `rooms[]` section points at the `RoomTrace` block; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~78. `docs/BOT_SUMMARY_SCHEMA.md` lists room fields in two places~~ — fixed in `2fffa3d5`: the `runs.jsonl` `rooms[]` section points at the `RoomTrace` block
 
 ## Findings from the positions pass, 2026-09-07
 
-### ~~79. `ContentTop` has the same crop-offset bug the ring measurement had~~ — fixed in `6e8c71d5`: `ContentTopForActor` reads `OpaqueBoxForActor`'s measured box; `FootBandCentreFraction` uses `textureRectOffset`; `IntentBadgeContentTopTests` pins the rat idle. Note: intent badges on trimmed idles now sit higher, and this has not been looked at on screen yet (see #211); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~79. `ContentTop` has the same crop-offset bug the ring measurement had~~ — fixed in `6e8c71d5`: `ContentTopForActor` reads `OpaqueBoxForActor`'s measured box; `FootBandCentreFraction` uses `textureRectOffset`; `IntentBadgeContentTopTests` pins the rat idle. Note: intent badges on trimmed idles now sit higher, and this has not been looked at on screen yet (see #211)
 
 ### 80. The six-theme container kit's LEFT pad is asymmetric on two ratios
 
@@ -317,7 +315,7 @@ Six Opus hunters (combat; run/dungeon/economy/progression; UiKit/stage/audio/par
 Core→Domain seam; tools/; a speed-buff/reach follow-up) each found a defect, fixed it, and
 also found a few things that are not bugs — a comment or a mechanism that quietly stopped
 matching intent, left exactly as found because deciding differently is the owner's call, not
-the hunter's. Full write-up: `docs/archive/BUG_HUNT_2026-09-08.md`.
+the hunter's.
 
 ### 84. `FightHudModel.MoveRow` cannot tell "no room" from "rooted", though its own header promises a reason
 
@@ -410,7 +408,7 @@ places to actually take, and only one of the three would fail to compile if miss
 is mechanical and safe, but `Domain/UiKit` and `Domain/Party` referencing `Domain/Combat` at all
 is an assembly-layering call this register does not get to make unasked.
 
-### ~~90. `FightSubmenuLayout.FrameContentCentreY`'s comment states a kit-delivery-old inset split~~ -- struck as obsolete: `FrameContentCentreY` and `FrameInset` were removed in `47358962` (2026-09-23, the flat-fill rework), full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~90. `FightSubmenuLayout.FrameContentCentreY`'s comment states a kit-delivery-old inset split~~ -- struck as obsolete: `FrameContentCentreY` and `FrameInset` were removed in `47358962` (2026-09-23, the flat-fill rework)
 
 ### 91. `SystemMenuLayout.StripFits` cannot return false while uniform mode is active
 
@@ -448,7 +446,7 @@ finding #77), which is a validation-rule addition, not a `StanceManifest` bug fi
 duplicate `spritePath` is ever legitimately authored (two stances sharing art) is a content-authoring
 question this register can't answer from the code alone.
 
-### ~~93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen~~ — fixed in `82385df6`, answered together with #118: the save carries the hole, and `PartySeatGapRoundTripTests` is un-`[Ignore]`d; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen~~ — fixed in `82385df6`, answered together with #118: the save carries the hole, and `PartySeatGapRoundTripTests` is un-`[Ignore]`d
 ### 94. `unity_lock.ps1`'s `Certain`/`Ambiguous` fields have no reader, so a guess and a real hold look identical
 
 `tools/unity_lock.ps1:78-79` computes `Certain = $held` (a Unity.exe process actually matched to
@@ -525,8 +523,8 @@ summon's authored reward. `FightOutcomeTests.ASummonedBodyDoesNotPayItsOwnReward
 
 ### 98. `tools/measure_stage.py` is not wired into the gate, which is how it rotted silently
 
-The eighth hunter (Core runtime relayout) found the tool itself dead (fixed, `cd6f6f67`; see
-`docs/archive/BUG_HUNT_2026-09-08.md`), but fixing the tool does not fix the fact that nothing runs it.
+The eighth hunter (Core runtime relayout) found the tool itself dead (fixed, `cd6f6f67`),
+but fixing the tool does not fix the fact that nothing runs it.
 It answers the one clearance question `UiAudit` structurally cannot (a stage slot's declared
 320x200 is a placeholder the runtime replaces with the real sprite canvas, so `UiAudit` measures
 a box that never appears on screen) and it failed loud, exit 1, for however long the 2x1 plate
@@ -536,7 +534,7 @@ it because no script in `run_tests_parallel.ps1` calls it.
 **Why it is the owner's:** wiring it into the gate needs Pillow available on whatever machine
 runs the gate, which is an environment decision, not a code one.
 
-### ~~99. `SystemMenuController.MeasuredLabelWidths` has no fallback for a zero-width live measurement~~ — resolved: cleared by test on 2026-09-08 per its own entry; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~99. `SystemMenuController.MeasuredLabelWidths` has no fallback for a zero-width live measurement~~ — resolved: cleared by test on 2026-09-08 per its own entry
 
 ### 100. `IdleBreathing` puts an opposing slot-0 pair in phase with each other
 
@@ -547,7 +545,7 @@ on that index -- so enemy slot 0 and party slot 0 breathe in phase with each oth
 side breathing in lockstep, not against the two sides mirroring each other. Cosmetic, and
 plausibly nobody would notice at a glance; filed rather than fixed because it may be intended.
 
-### ~~101. `CombatEncounter.UpcomingTurns` throws on a zero-length ask, and its one caller has no guard~~ — fixed in `27034b2b`: `FightSession` refuses `initiativeSlots <= 0` at construction; `RefreshInitiative` returns early on an empty icon array; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~101. `CombatEncounter.UpcomingTurns` throws on a zero-length ask, and its one caller has no guard~~ — fixed in `27034b2b`: `FightSession` refuses `initiativeSlots <= 0` at construction; `RefreshInitiative` returns early on an empty icon array
 
 ### 102. `SaveSystem.Save`'s in-memory backend stores the caller's live object, not a copy
 
@@ -580,7 +578,7 @@ refused, nothing new got staged, and the bare `git commit` a hunter then tried a
 had no `add` in the same command for the hook to refuse -- it went through and committed
 whatever was already staged in this shared working tree, which was another agent's in-flight
 docs changes. Caught before anything left the tree (`git reset --soft HEAD~1`, recommitted by
-explicit pathspec); nothing lost. See `docs/archive/BUG_HUNT_2026-09-08.md` (f) for the incident.
+explicit pathspec); nothing lost.
 
 **Why it is the owner's:** two independent design calls -- whether the hook should scan commit
 message text at all (a false positive costs a blocked commit; not scanning risks missing a
@@ -595,11 +593,11 @@ argument the hook could scan.
 
 ## Open investigations
 
-### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold
 
-### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — fixed as a symptom of #13 (pre-v2 history, no sha in this tree): a message-buffer trim discarded the Bloodlust line before the assertion read it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — fixed as a symptom of #13 (pre-v2 history, no sha in this tree): a message-buffer trim discarded the Bloodlust line before the assertion read it
 
-### ~~59. A flat-art CHARGE lands its blow before the charger has crossed, and its own travel floor is why~~ — fixed in `d0f9944`: `FightBeatPlayer.Charge` now returns the `outSeconds` `PlayBeats` waits out before firing impact, burst only (no slash arc) per `docs/ART_PIPELINE.md`'s Blunt row; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~59. A flat-art CHARGE lands its blow before the charger has crossed, and its own travel floor is why~~ — fixed in `d0f9944`: `FightBeatPlayer.Charge` now returns the `outSeconds` `PlayBeats` waits out before firing impact, burst only (no slash arc) per `docs/ART_PIPELINE.md`'s Blunt row
 
 ## Findings from the Prismatic Orb pass, 2026-09-08
 
@@ -661,10 +659,10 @@ redirect was never spent) is a design call; the comment at `:664` reads as
 
 ## Findings from the layered-spell pass, 2026-09-08
 
-### ~~106. Loading a fight scene over a live one logs an error, because a status badge pops on a panel that is already inactive~~ — fixed in `16eeb5aa`: `BeginAppearancePop` sets the badge's final scale directly instead of starting a coroutine when the screen cannot host one. The guard is NOT the one proposed below and the difference is measured: at that teardown repaint `isActiveAndEnabled` still reads **true** — nothing called `SetActive`, the whole SCENE is unloading — and the scheduler refuses anyway, so the error still fired from the same line with the proposed guard in place (stack in the runner log). `gameObject.scene.isLoaded` is the flag that has already flipped. Asserted by `FightTeardownLifecycleTests.LoadingAFightOverALiveOneWithEverythingInFlightLogsNothing`, which abandons a real round (a popup mid-rise, a death fade mid-fade, a lunge mid-tween) with no `LogAssert.ignoreFailingMessages` anywhere in it, and was seen red with this exact message. The four Fight fixtures that tolerate it across a scene swap can now drop that line; none was touched here.; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `4c45692b`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~106. Loading a fight scene over a live one logs an error, because a status badge pops on a panel that is already inactive~~ — fixed in `16eeb5aa`: `BeginAppearancePop` sets the badge's final scale directly instead of starting a coroutine when the screen cannot host one. The guard is NOT the one proposed below and the difference is measured: at that teardown repaint `isActiveAndEnabled` still reads **true** — nothing called `SetActive`, the whole SCENE is unloading — and the scheduler refuses anyway, so the error still fired from the same line with the proposed guard in place (stack in the runner log). `gameObject.scene.isLoaded` is the flag that has already flipped. Asserted by `FightTeardownLifecycleTests.LoadingAFightOverALiveOneWithEverythingInFlightLogsNothing`, which abandons a real round (a popup mid-rise, a death fade mid-fade, a lunge mid-tween) with no `LogAssert.ignoreFailingMessages` anywhere in it, and was seen red with this exact message. The four Fight fixtures that tolerate it across a scene swap can now drop that line; none was touched here.
+### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `4c45692b`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`
 
-### ~~108. `SpellEmitter` cannot weight which atlas cell a particle draws~~ — fixed in `44e05216`: an optional `float[] weights` on `SpellEmitter`, one entry per cell in the folder's own file order, landed together with an array-aware `IsAuthored`/`FieldsEqual` so a `float[]` field defaulting to null never reads as reference-unequal to itself. `SpellLayerRules` refuses a negative, non-finite or all-zero array (the numbers-only half it can check without the disk); the length-equals-frame-count half lives beside the identical `startFrame` rule in `SpellVfxRecipeDriftTests`, because Domain cannot see the folder's frame count either way. `SpellEmitterSim.At` picks by cumulative weight over the same `hash(seed, index, 6)` an unweighted emitter always used, so a shipped emitter that authors no weights plays the identical field it always did. Earth's `shed` and `spray` emitters both ship `[15, 18, 8, 12, 12, 8, 15, 2]` over the 8-cell drops folder -- small/mid chunks dominant, the two heaviest chunks held down, grit present, the dust puff at 2.2%; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~108. `SpellEmitter` cannot weight which atlas cell a particle draws~~ — fixed in `44e05216`: an optional `float[] weights` on `SpellEmitter`, one entry per cell in the folder's own file order, landed together with an array-aware `IsAuthored`/`FieldsEqual` so a `float[]` field defaulting to null never reads as reference-unequal to itself. `SpellLayerRules` refuses a negative, non-finite or all-zero array (the numbers-only half it can check without the disk); the length-equals-frame-count half lives beside the identical `startFrame` rule in `SpellVfxRecipeDriftTests`, because Domain cannot see the folder's frame count either way. `SpellEmitterSim.At` picks by cumulative weight over the same `hash(seed, index, 6)` an unweighted emitter always used, so a shipped emitter that authors no weights plays the identical field it always did. Earth's `shed` and `spray` emitters both ship `[15, 18, 8, 12, 12, 8, 15, 2]` over the 8-cell drops folder -- small/mid chunks dominant, the two heaviest chunks held down, grit present, the dust puff at 2.2%
 
 ### 109. The house contact effect is the one spell look still authored in code
 
@@ -687,7 +685,7 @@ Fix shape: author the contact effect as content, one presentation per
 because content assets are already built once. Needs a schema entry and
 `ContentBuilder` support, so it is its own pass, not a cleanup.
 
-### ~~110. `run_tests_parallel.ps1` reports "All tests passed" off a STALE results file~~ — fixed in `44473ae6`: per-run results file names, a failed delete refuses the run (helpers in `tools/unity_lock.ps1`); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~110. `run_tests_parallel.ps1` reports "All tests passed" off a STALE results file~~ — fixed in `44473ae6`: per-run results file names, a failed delete refuses the run (helpers in `tools/unity_lock.ps1`)
 
 ### 111. `absorbsDamage` is authorable on a pools.json row, resolved, copied onto the runtime pool -- and read by nothing
 
@@ -750,8 +748,7 @@ as a mismatch to repair.
 Four Opus hunters (combat and the resource-pool model; the run outside combat; the fight
 stage and its presentation; verification/content tooling plus UiKit) reported rather than
 fixed, and four fixers worked from those reports — which is what let a finding be graded as
-an owner's call before anyone spent a commit on it. Full write-up, including the deferred
-work and the untuned Fury economy: `docs/archive/BUG_HUNT_2026-09-10.md`. This hunt has TWO register
+an owner's call before anyone spent a commit on it. This hunt has TWO register
 entries and they sit under different headers: #112 below, and #111 (`absorbsDamage`), which
 was appended to the 2026-09-08 layered-spell section above rather than here. Left where it
 is — this register does not renumber or relocate — but noted, because a reader looking for
@@ -796,18 +793,16 @@ Four Opus finders read every call site of the four seams the plan named
 only the findings whose intent evidence was two agreeing sources or better.
 The twelve below are the ones a fixer could not take: each either picks a
 behaviour the evidence does not settle, or changes a number that is a balance
-decision. Full write-up, including what was fixed, what was disproven with
-counter-evidence and what is still awaiting reproduction:
-`docs/archive/BUG_HUNT_2026-09-11.md`. The manifest row for each is in
+decision. The manifest row for each is in
 `docs/hunt/MANIFEST.md`.
 
-### ~~113. What an extra turn should re-pay: today it re-pays everything, and Black Ram Mode loses two of its three turns in one round~~ -- fixed in `c477205f`: the owner took option 1 -- a bonus action is the SAME turn and re-pays nothing, so `GrantTurnStart` split into `OpenTurnFor` (unchanged) and `ReopenTurnFor` (`_locks.ResetTurn`, `TickPrimaryPool`, and the two recomputes that read them), and the three `[Ignore]`d repro tests are green with a control beside them; full reasoning in the commit message; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards~~ — fixed in `0ec7d8fc` (content) and `5fc4eb51` (code): the owner took neither filed option — the starting kit is DELETED, and `Candidates()` asks `ContentDatabase.Offerable` rather than re-typing a predicate, so there is no third universe left for the two filters to disagree about; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~115. The shop screen produces refusals it may not guess at, and displays none of them~~ — fixed in `bbe23ff6`: option 1, one `PaintRefusal(ShopResult)` into the existing `detailLabel`, and `Reroll`/`SellRow` stopped discarding their results; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~116. The dossier swallows AlreadyKnown, which the plan says is where the player finds out~~ — fixed in `ed24933b`: option 3, "You already have this spell prepared" in the spell panel's existing status line, and the green would-fill preview is suppressed for a book the character already carries; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~117. The boot settle rewrites slot 0, so Continue points at the wrong slot~~ — fixed in `b8242045`: option 3, the `[RuntimeInitializeOnLoadMethod]` boot check is gone and `SaveSlotManager.EnterSlot` -> `SettleOnOpening` is the whole of the rule's enforcement; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~118. Benching a character is undone by the next load~~ — fixed in `82385df6`, together with #93: option 1, the save records the fact — `squadSizeSeen` for the cap, a hole in `selectedCharacterIds` for the seat; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~119. `SaveData.relicLoadout` is a serialized field with no writer and no reader~~ — fixed in `a7ebbf28`: option 1, the field, its prune, the `RelicLoadout` type and its unit tests are all deleted; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~113. What an extra turn should re-pay: today it re-pays everything, and Black Ram Mode loses two of its three turns in one round~~ -- fixed in `c477205f`: the owner took option 1 -- a bonus action is the SAME turn and re-pays nothing, so `GrantTurnStart` split into `OpenTurnFor` (unchanged) and `ReopenTurnFor` (`_locks.ResetTurn`, `TickPrimaryPool`, and the two recomputes that read them), and the three `[Ignore]`d repro tests are green with a control beside them; full reasoning in the commit message
+### ~~114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards~~ — fixed in `0ec7d8fc` (content) and `5fc4eb51` (code): the owner took neither filed option — the starting kit is DELETED, and `Candidates()` asks `ContentDatabase.Offerable` rather than re-typing a predicate, so there is no third universe left for the two filters to disagree about
+### ~~115. The shop screen produces refusals it may not guess at, and displays none of them~~ — fixed in `bbe23ff6`: option 1, one `PaintRefusal(ShopResult)` into the existing `detailLabel`, and `Reroll`/`SellRow` stopped discarding their results
+### ~~116. The dossier swallows AlreadyKnown, which the plan says is where the player finds out~~ — fixed in `ed24933b`: option 3, "You already have this spell prepared" in the spell panel's existing status line, and the green would-fill preview is suppressed for a book the character already carries
+### ~~117. The boot settle rewrites slot 0, so Continue points at the wrong slot~~ — fixed in `b8242045`: option 3, the `[RuntimeInitializeOnLoadMethod]` boot check is gone and `SaveSlotManager.EnterSlot` -> `SettleOnOpening` is the whole of the rule's enforcement
+### ~~118. Benching a character is undone by the next load~~ — fixed in `82385df6`, together with #93: option 1, the save records the fact — `squadSizeSeen` for the cap, a hole in `selectedCharacterIds` for the seat
+### ~~119. `SaveData.relicLoadout` is a serialized field with no writer and no reader~~ — fixed in `a7ebbf28`: option 1, the field, its prune, the `RelicLoadout` type and its unit tests are all deleted
 ### 120. The `Effective*` family has two different null contracts, and `EffectiveStats` has a dead guard
 
 Found 2026-09-11 by the `ContentDatabase` seam finder (F11). No behaviour
@@ -1094,8 +1089,8 @@ weights to sum to ~1.0).
    per-score share of a variable pool rather than a fixed one, accepting the current spread as
    intended variety between materials.
 
-### ~~126. `enemies.json`'s golem authors `attackHoldsPosition` on a row where `attackWeight: 0` makes it unreachable~~ — fixed in `62094abf`: option 1, dropped the flag and rewrote the stale comment (no other enemy plain-attacks with a stationary pose yet, so the worked example was removed rather than relocated); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~127. `characters.json`'s `_readme` describes Wool as attack-led; the shipped row is per-turn-only~~ — fixed in `90c41655`: option 2, the prose. The owner's reasoning is that Wool is per-turn-led AT BASE and grows, through the reward track and the Black Ram talents; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~126. `enemies.json`'s golem authors `attackHoldsPosition` on a row where `attackWeight: 0` makes it unreachable~~ — fixed in `62094abf`: option 1, dropped the flag and rewrote the stale comment (no other enemy plain-attacks with a stationary pose yet, so the worked example was removed rather than relocated)
+### ~~127. `characters.json`'s `_readme` describes Wool as attack-led; the shipped row is per-turn-only~~ — fixed in `90c41655`: option 2, the prose. The owner's reasoning is that Wool is per-turn-led AT BASE and grows, through the reward track and the Black Ram talents
 ### 128. `achievements.json:three_bosses` cannot be earned by the shipped roster
 
 `{"id": "three_bosses", "condition": "DefeatDistinctBosses", "threshold": 3}`. `enemies.json`
@@ -1134,7 +1129,7 @@ a folder with a provenance that no skill plays.
 1. Delete the folder and its recipe.
 2. Keep it as the single-sheet fallback and say so in the recipe's `_notes`.
 
-### ~~130. Shawn is "he" in the Black Ram strand and "she" in the Fragile Lamb strand~~ — fixed in `44258f3e`: option 1, he. The four player-facing strings are swept; the two CODE comments are not, and that is recorded below rather than quietly left; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~130. Shawn is "he" in the Black Ram strand and "she" in the Fragile Lamb strand~~ — fixed in `44258f3e`: option 1, he. The four player-facing strings are swept; the two CODE comments are not, and that is recorded below rather than quietly left
 ### 131. `amulet_of_wisdom` is the one starting-kit item with no icon
 
 `items.json` has six `startingStock: true` rows. Five carry an `iconPath` into
@@ -1148,7 +1143,7 @@ consistent with each other and not part of this finding.
 2. Leave it on the graceful-degradation path and note in the row why (a stated placeholder,
    rather than an unnoticed gap).
 
-### ~~132. The bog witch is the only monster weak to the element it attacks with~~ — fixed in `8a4c32d6`: neither filed option. The owner re-authored the pair outright — weak to Wind and Arcane, resistant to Water and Earth; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~132. The bog witch is the only monster weak to the element it attacks with~~ — fixed in `8a4c32d6`: neither filed option. The owner re-authored the pair outright — weak to Wind and Arcane, resistant to Water and Earth
 ### 133. Four enemy stance PNGs nothing can play
 
 Driven stances are the six on `FightSession.Beats.cs:423-430` (`idle`, `attack`, `cast`, `hurt`,
@@ -1226,7 +1221,7 @@ was written, but nothing establishes what the intended top of the curve is.
 2. Confirm 9 is the intended ceiling (Skill deliberately flattens for the rest of a run) and say
    so explicitly in the `_readme`, replacing the "curve deepens with level" framing.
 
-### ~~136. `tools/run_tests.ps1` hardcodes v1 paths that no longer exist~~ — fixed in `5d46970d`: option 1, deleted as superseded by `test.ps1` and `run_tests_parallel.ps1`; `docs/CODE_MAP.md`'s entry went with it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~136. `tools/run_tests.ps1` hardcodes v1 paths that no longer exist~~ — fixed in `5d46970d`: option 1, deleted as superseded by `test.ps1` and `run_tests_parallel.ps1`; `docs/CODE_MAP.md`'s entry went with it
 ### 137. A balance-bot shard killed after `runs.jsonl` starts writing silently drops its requested-count share from the batch total
 
 A shard that crashes or is killed **after** writing at least one run to `runs.jsonl` but
@@ -1268,36 +1263,9 @@ wrong.
    `docs/BOT_SUMMARY_SCHEMA.md`'s "Partial batches" section to describe the sharded reality
    rather than the pre-sharding mechanism it currently documents.
 
-### ~~138. `Domain/Combat/CombatAction.cs` is dead code with no intent evidence either way~~ — fixed in `5d46970d`: option 1, deleted. The grep was re-run over `.cs`, `.json` and `.md` first, and the only hits outside the file itself were this register and the hunt's own notes; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~139. `Domain/UiKit/OverlayAnchors.cs` is dead code whose replacement re-permits the exact defect it was built to fix~~ — fixed in `5d46970d`: option 1, the dead file deleted — but ONLY the dead-code half of it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~140. AUDIT.md's own archival rule was not followed for thirteen struck findings~~ — fixed in `5d46970d`: option 1. #62's and #64's inline write-ups moved verbatim to `docs/AUDIT_STRUCK_ARCHIVE.md`; #66-#76 are recorded there as one block, because they never had a write-up here to move
-
-That distinction matters for whoever runs the cross-check next. #66-#76 were struck the day they were found and
-their headings say "full reasoning in the commit message", so there was nothing verbatim to relocate, and
-paraphrasing eleven commits into the archive would have created a second and worse copy of what git already holds.
-They are listed in the archive under one heading that says exactly that — which is what stops the set-comparison
-that produced this finding from reporting them as missing forever.
-
-The original finding follows.
-
-This register's own header states: "A struck finding's full write-up does not stay here: it
-moves, verbatim, to `docs/AUDIT_STRUCK_ARCHIVE.md`, and this file keeps only the one-line struck
-heading pointing at it." Cross-checked every struck (`~~N.~~`) finding number in this file
-against every struck finding number in `docs/AUDIT_STRUCK_ARCHIVE.md`: this file has struck
-findings {24, 38, 39, 40, 42, 43, 48, 49, 52, 53, 55, 56, 59, 61, 62, 64, 66, 67, 68, 69, 70, 71,
-72, 73, 74, 75, 76, 107, 108} (29 total); the archive only contains {24, 38, 39, 40, 42, 43, 48,
-49, 52, 53, 55, 56, 59, 61, 107, 108} (16 total). The 13 missing from the archive — #62, #64,
-#66-76 — were spot-checked directly in this file (e.g. #62 at line 488, #64 at 566, #66 at 610,
-#76 at 630 as of the revision this was found): several (#62) still carry a full multi-paragraph
-write-up inline here, not just a one-line heading, directly contradicting the register's own
-stated process. This is a process claim about the register itself, not a behavioural bug, and it
-costs nothing to fix either way.
-
-**Two options.**
-1. Move #62, #64, #66-76's full write-ups to `docs/AUDIT_STRUCK_ARCHIVE.md` the same way #24 etc.
-   already were, leaving one-line struck headings here.
-2. Amend the header's stated process to describe what actually happens for this later range (if
-   keeping some struck write-ups inline is now the intended behaviour).
+### ~~138. `Domain/Combat/CombatAction.cs` is dead code with no intent evidence either way~~ — fixed in `5d46970d`: option 1, deleted. The grep was re-run over `.cs`, `.json` and `.md` first, and the only hits outside the file itself were this register and the hunt's own notes
+### ~~139. `Domain/UiKit/OverlayAnchors.cs` is dead code whose replacement re-permits the exact defect it was built to fix~~ — fixed in `5d46970d`: option 1, the dead file deleted — but ONLY the dead-code half of it
+### ~~140. AUDIT.md's own archival rule was not followed for thirteen struck findings~~ — fixed in `5d46970d`: option 1, #62's and #64's inline write-ups were removed from this file down to one-line struck headings; #66-#76 never had a write-up here to remove
 
 ### 141. A kindled Talent stone's interrupted settle rests on GameObject Update order between two components, not on TalentController
 
@@ -1359,7 +1327,7 @@ of the shipped behaviour.
    it against `ACinderfaultOverALiveTailSharesNoRendererWithIt`, which currently asserts the
    opposite for a different case.
 
-### ~~144. Which order the plate column keeps: a bug fix stopped the HUD column from reordering on a Move~~ -- fixed in `6740399e`: the owner took option 2 on 2026-09-11 ("move"). `_plateOccupants` stopped being scratch for one loop and became the painted-occupancy record itself: `RefreshPcPlates` walks the party in FORMATION order and writes which member it put on each card, `PaintVitals` reads that record instead of looking any index up. During a Move's playback the record says what the screen says (the cards have not been repainted yet, because `AfterResolution` deliberately repaints the menu chrome only); at `OnPlaybackFinished` the repaint moves the cards and rewrites the record in one pass. Option 1's cost was the whole finding -- a turn spent on nothing but position, readable only as two figures sliding past each other on the stage. Option 2 turned out smaller than this entry estimated: the record has no lifecycle of its own to keep synchronized against Move, death or revive, because it is rewritten whole by the one repaint that already handles all three. Pinned by `FightHudSnapshotLifecycleTests.AMoveReordersTheColumnToFollowTheField`, seen red (`Expected: "Beta" But was: "Alpha"`); `4c4bddc3`'s two tests are unaltered and stayed green throughout; full reasoning in the commit message; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~144. Which order the plate column keeps: a bug fix stopped the HUD column from reordering on a Move~~ -- fixed in `6740399e`: the owner took option 2 on 2026-09-11 ("move"). `_plateOccupants` stopped being scratch for one loop and became the painted-occupancy record itself: `RefreshPcPlates` walks the party in FORMATION order and writes which member it put on each card, `PaintVitals` reads that record instead of looking any index up. During a Move's playback the record says what the screen says (the cards have not been repainted yet, because `AfterResolution` deliberately repaints the menu chrome only); at `OnPlaybackFinished` the repaint moves the cards and rewrites the record in one pass. Option 1's cost was the whole finding -- a turn spent on nothing but position, readable only as two figures sliding past each other on the stage. Option 2 turned out smaller than this entry estimated: the record has no lifecycle of its own to keep synchronized against Move, death or revive, because it is rewritten whole by the one repaint that already handles all three. Pinned by `FightHudSnapshotLifecycleTests.AMoveReordersTheColumnToFollowTheField`, seen red (`Expected: "Beta" But was: "Alpha"`); `4c4bddc3`'s two tests are unaltered and stayed green throughout; full reasoning in the commit message
 ### 145. Eleven content-resolver blind spots found across the shipped `.json` files (B3-B11 plus two prior)
 
 One entry for the resolver gaps the content pass found that let an authored value validate clean
@@ -1475,10 +1443,10 @@ orchestrator made, flip-able, see its commit message), F4 (`15b1560d`, Magic Mar
 -- likewise), F3 (`c0e72b3a`, the timed slow's missing refresh) and four small restores
 (`310c4f43`). The three below need the owner.
 
-### ~~147. "The Flock" wards exactly one ally, and which one is decided by the field formation~~ - fixed in `ee0d7727`: neither filed option, and not a patch on this talent. The owner's call was that the engine deciding for the player is "just stupid", so nothing auto-picks any more: `SkillTargeting.SingleAlly` enters the same Target depth `SingleEnemy` does, on the party rack, and Ward plus all three Gifts go through it. Who may be picked is `Domain/Combat/AllyTargeting`, one predicate per effect, read by the plates, by `CastSkill`'s refusal and by the bot alike; `FightSession.EligibleAllies` is the filter over it, beside `EligibleTargets`; `CanReach` split into `CanReachEnemy`, `CanReachAlly` and a side-blind core, and the ally side takes no `Reach` at all because nothing stands between a caster and his own squad. The Flock's own rule (owner, 2026-09-15) is now: warding himself spreads nowhere, warding somebody else sends the share back to him -- isolated in `FlockSpread` so it is one edit to retune. `GiftRecipient` is gone; its two orderings and the ward's "his own back first" moved to `Domain/Bot/AllyTargetSelection`, the only caller left that must choose with no hand on the mouse. Full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`. **EXTENDED 2026-09-20, spell expansion milestone C:** the picker now takes a required pick COUNT rather than always exactly one -- `MenuDepth.Target` gains `RequiredPicks` and a pick list, `Back()` drops one pick at a time before leaving the depth (the owner's "Cancel steps back a level" rule applied to a level that did not exist then), and `FightSession.CastSkillOnPicks` is the two-pick door. How many picks is a property of the EFFECT (`SkillEffects.PicksRequired`), never an authored field: one more content number would let a row ask for three picks no resolution can use. Palace Passage is the one caller at count 2; every other command in the game is count 1 and takes literally the same path.
+### ~~147. "The Flock" wards exactly one ally, and which one is decided by the field formation~~ - fixed in `ee0d7727`: neither filed option, and not a patch on this talent. The owner's call was that the engine deciding for the player is "just stupid", so nothing auto-picks any more: `SkillTargeting.SingleAlly` enters the same Target depth `SingleEnemy` does, on the party rack, and Ward plus all three Gifts go through it. Who may be picked is `Domain/Combat/AllyTargeting`, one predicate per effect, read by the plates, by `CastSkill`'s refusal and by the bot alike; `FightSession.EligibleAllies` is the filter over it, beside `EligibleTargets`; `CanReach` split into `CanReachEnemy`, `CanReachAlly` and a side-blind core, and the ally side takes no `Reach` at all because nothing stands between a caster and his own squad. The Flock's own rule (owner, 2026-09-15) is now: warding himself spreads nowhere, warding somebody else sends the share back to him -- isolated in `FlockSpread` so it is one edit to retune. `GiftRecipient` is gone; its two orderings and the ward's "his own back first" moved to `Domain/Bot/AllyTargetSelection`, the only caller left that must choose with no hand on the mouse. **EXTENDED 2026-09-20, spell expansion milestone C:** the picker now takes a required pick COUNT rather than always exactly one -- `MenuDepth.Target` gains `RequiredPicks` and a pick list, `Back()` drops one pick at a time before leaving the depth (the owner's "Cancel steps back a level" rule applied to a level that did not exist then), and `FightSession.CastSkillOnPicks` is the two-pick door. How many picks is a property of the EFFECT (`SkillEffects.PicksRequired`), never an authored field: one more content number would let a row ask for three picks no resolution can use. Palace Passage is the one caller at count 2; every other command in the game is count 1 and takes literally the same path.
 
-### ~~148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates~~ — fixed in `44d94bc0`, beyond both filed options: the owner's call was that Root cancels the swing outright rather than redrawing into anything (legal skill or not), which drops the RNG draw entirely and changes real gameplay, not just seed comparability; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~149. Lucky Deck's red card says "a moment to recover" even when nothing recovered~~ — fixed in `62094abf`: option 2, the owner's call was to drop the line rather than measure it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates~~ — fixed in `44d94bc0`, beyond both filed options: the owner's call was that Root cancels the swing outright rather than redrawing into anything (legal skill or not), which drops the RNG draw entirely and changes real gameplay, not just seed comparability
+### ~~149. Lucky Deck's red card says "a moment to recover" even when nothing recovered~~ — fixed in `62094abf`: option 2, the owner's call was to drop the line rather than measure it
 ## Findings from the fleece-spell removal, 2026-09-15
 
 ### 150. Shawn's reward-track level 30 has no replacement for static_fleece
@@ -1502,34 +1470,34 @@ sheep skill, a bigger `StatPoint`/`MaxHealth` grant matching the milestone's wei
 AtLevel1` and the existing level-45 milestone). Whatever is chosen, `RewardTrackContentPinTests`
 needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this same change).
 
-### ~~151. Provoke's "bellows at nothing in particular" line cannot be reached~~ - fixed in `399d6c1d`: the owner's call was that the line is dead copy; the `provoked == 0` branch is gone and the reach refusal is the one path; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~151. Provoke's "bellows at nothing in particular" line cannot be reached~~ - fixed in `399d6c1d`: the owner's call was that the line is dead copy; the `provoked == 0` branch is gone and the reach refusal is the one path
 
-### ~~152. Wards are a percent of the next hit with no timer; the owner may want absorb pools~~ - fixed in `339ce102`: the owner answered shields; a ward is a pool of shield points, stacking, on a one-turn clock (the stacking and the clock are the follow-up calls of the same day -- see 8f005266); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~152. Wards are a percent of the next hit with no timer; the owner may want absorb pools~~ - fixed in `339ce102`: the owner answered shields; a ward is a pool of shield points, stacking, on a one-turn clock (the stacking and the clock are the follow-up calls of the same day -- see 8f005266)
 
-### ~~153. A one-turn ward is never visible on its caster's own turn, and Shatter cannot reach one~~ - closed in `214e7ad7`: the owner's answer was to move the tick to the END of the wearer's turn, so a ward is visible on the turn it protects and Shatter can reach one cast the turn before; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~153. A one-turn ward is never visible on its caster's own turn, and Shatter cannot reach one~~ - closed in `214e7ad7`: the owner's answer was to move the tick to the END of the wearer's turn, so a ward is visible on the turn it protects and Shatter can reach one cast the turn before
 
-### ~~154. The three relic wards stack on themselves every turn, on a whole-fight duration~~ - closed in `214e7ad7`: NOT a fix -- the owner chose unbounded stacking on purpose, so `RunicWardPointsCap` is deleted and no ceiling replaces it anywhere; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~154. The three relic wards stack on themselves every turn, on a whole-fight duration~~ - closed in `214e7ad7`: NOT a fix -- the owner chose unbounded stacking on purpose, so `RunicWardPointsCap` is deleted and no ceiling replaces it anywhere
 
 ## Findings from gamepad-navigation phase 2, 2026-09-17
 
-### ~~155. Map and Fight lost "Cancel opens the system menu" via keyboard/gamepad~~ - fixed in `4eab048b`: one shared open path (`SystemMenuController.OpenOnCancel`) called from the hub's, the map's and the fight's own Cancel handlers -- Fight hangs it on `MenuDepth.Root`, the only depth where its own `Back()` consumes nothing; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~155. Map and Fight lost "Cancel opens the system menu" via keyboard/gamepad~~ - fixed in `4eab048b`: one shared open path (`SystemMenuController.OpenOnCancel`) called from the hub's, the map's and the fight's own Cancel handlers -- Fight hangs it on `MenuDepth.Root`, the only depth where its own `Back()` consumes nothing
 
-### ~~156. Party (gamepad-navigation phase 2, step D) was not attempted~~ - closed in `467770ef`: seats and roster cards are navigable Rails, Submit is the Button's own onClick (so pick-up and drop go through the same `ClickSeat`/`ClickCard` the mouse uses), and the missing per-pane Cancel seam is `INavCancelClaim` -- the active pane gets first refusal on the press, Party claims it while carrying, nothing else implements it; the visual capture found that Party has no mouse-hover treatment at all, which is an owner call recorded in the plan's status header; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~156. Party (gamepad-navigation phase 2, step D) was not attempted~~ - closed in `467770ef`: seats and roster cards are navigable Rails, Submit is the Button's own onClick (so pick-up and drop go through the same `ClickSeat`/`ClickCard` the mouse uses), and the missing per-pane Cancel seam is `INavCancelClaim` -- the active pane gets first refusal on the press, Party claims it while carrying, nothing else implements it; the visual capture found that Party has no mouse-hover treatment at all, which is an owner call recorded in the plan's status header
 
 ## Findings from gamepad-navigation phase 3a, 2026-09-17
 
-### ~~157. Two Combat/Stage tests fail on this tree, unrelated to phase 3a's own changes~~ — resolved with no change: both named tests pass on this tree (`tools/test.ps1 FightPlayableTests,StageFormationTests`: 10 passed, 1 legitimate graphics skip); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~157. Two Combat/Stage tests fail on this tree, unrelated to phase 3a's own changes~~ — resolved with no change: both named tests pass on this tree (`tools/test.ps1 FightPlayableTests,StageFormationTests`: 10 passed, 1 legitimate graphics skip)
 
-### ~~158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)~~ -- fixed in `ccb1b08d`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### 159. ~~Main Menu's Manage Saves and reset-confirm modals are mouse-only~~ -- fixed in `232f310b`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)~~ -- fixed in `ccb1b08d`
+### ~~159. Main Menu's Manage Saves and reset-confirm modals are mouse-only~~ -- fixed in `232f310b`
 ## Findings from gamepad-navigation phase 3b items 1 and 2, 2026-09-17
 
-### ~~160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing~~ -- fixed in `65ad5325`, REOPENED BY HARDWARE AND CLOSED DIFFERENTLY in `ce405df9`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it~~ -- fixed in `7ea33bca`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing~~ -- fixed in `65ad5325`, REOPENED BY HARDWARE AND CLOSED DIFFERENTLY in `ce405df9`
+### ~~161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it~~ -- fixed in `7ea33bca`
 ## Findings from gamepad-navigation phase 4, items 3 and 4, 2026-09-18
 
-### ~~162. `JourneyToFirstFightMouseTests` (and once, `JourneyHubToTalentsMouseTests`) fails in a large batch, never alone~~ -- fixed in `bd6f80af`: `JourneyFixture.MoveMouseTo` aimed the scripted pointer at the target's PIVOT rather than its rect centre, which on the Hub's gate (pivot 0.5/0, rect y:0) is the rect's own inclusive bottom edge, and the hover scale-up the pointer's own arrival starts then shifts that edge a fraction of a pixel away from the frozen pointer before the MouseDown frame arrives.; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~163. A click on a Navigation.Mode.None Selectable (a stepper button, a background click) drops the row's own selection to the context's Entry, not back to the row~~ -- fixed in this pass's own `NavigationInputModule.cs` change; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~162. `JourneyToFirstFightMouseTests` (and once, `JourneyHubToTalentsMouseTests`) fails in a large batch, never alone~~ -- fixed in `bd6f80af`: `JourneyFixture.MoveMouseTo` aimed the scripted pointer at the target's PIVOT rather than its rect centre, which on the Hub's gate (pivot 0.5/0, rect y:0) is the rect's own inclusive bottom edge, and the hover scale-up the pointer's own arrival starts then shifts that edge a fraction of a pixel away from the frozen pointer before the MouseDown frame arrives.
+### ~~163. A click on a Navigation.Mode.None Selectable (a stepper button, a background click) drops the row's own selection to the context's Entry, not back to the row~~ -- fixed in this pass's own `NavigationInputModule.cs` change
 ### 164. A scripted mouse cannot reliably reach a dot scrolled out of the reward track's own masked viewport
 
 Found writing item 3's own mouse-only regression for phase 4 item 2 segment 8 (the reward track).
@@ -1555,7 +1523,7 @@ do -- nothing production-facing is wrong here, this is a test-harness capability
 ("whether a scripted pointer resolves against this scene's ScreenSpaceCamera canvas is not this
 capture's own claim").
 
-### ~~165. `FightTeardownLifecycleTests.TwoPopsOnOneBadgeLeaveItAtItsRestScale` can exit its own wait at a value its own assertion rejects~~ — fixed in `b1adf41b`: the wait, assertion and hold check share one `AtRestScale` predicate; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~165. `FightTeardownLifecycleTests.TwoPopsOnOneBadgeLeaveItAtItsRestScale` can exit its own wait at a value its own assertion rejects~~ — fixed in `b1adf41b`: the wait, assertion and hold check share one `AtRestScale` predicate
 
 ### 166. The D-pad bindings are correct for one controller by documentation, and unverified on any
 
@@ -1653,11 +1621,11 @@ Fixed in `ce405df9` (`Core/FocusMarker.cs`, `Domain/UiKit/FocusMarkerPlacement.c
 `NavigationInputModule.ShowFocusOn`). `Core/SelectHaloPainter.cs` had no callers left and is
 deleted.
 
-### ~~169. Fight's ATTACK verb wore the branch-is-open plate at rest, forever~~ -- fixed in `0995736b`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~170. The focus marker attaches to its target's own canvas, and "root canvas, last sibling" would have been wrong~~ — recorded, not a defect: caught before ship; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~169. Fight's ATTACK verb wore the branch-is-open plate at rest, forever~~ -- fixed in `0995736b`
+### ~~170. The focus marker attaches to its target's own canvas, and "root canvas, last sibling" would have been wrong~~ — recorded, not a defect: caught before ship
 
-### ~~171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169~~ -- closed in `b12a1682`: the owner made the call ("the attack button in the fight menu is still glowing always") and the ring is gone from the verb column entirely; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### ~~172. OWNER'S CALL: the marker's edge is derived from the control's aspect, not authored per control~~ — resolved in `86abfe67` + `7a2ebe3e`: one general rule (preferred edge by shape, next clear edge if the marker would overlap another control or text; scrollbars stepped past), no per-control overrides; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169~~ -- closed in `b12a1682`: the owner made the call ("the attack button in the fight menu is still glowing always") and the ring is gone from the verb column entirely
+### ~~172. OWNER'S CALL: the marker's edge is derived from the control's aspect, not authored per control~~ — resolved in `86abfe67` + `7a2ebe3e`: one general rule (preferred edge by shape, next clear edge if the marker would overlap another control or text; scrollbars stepped past), no per-control overrides
 
 ---
 
@@ -1880,9 +1848,9 @@ the palace and any other art that is supposed to glow the same shader treatment 
 spell layers now have. That keeps "what blooms" an authored property of the thing
 rather than a threshold everything is measured against.
 
-### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `818a00eb`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch. Full write-up: `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `818a00eb`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch.
 
-### ~~183. The reel is four times slower, and the two legs that moved are the two that are motion~~ — recorded, not a defect: landed change, recorded for history; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~183. The reel is four times slower, and the two legs that moved are the two that are motion~~ — recorded, not a defect: landed change, recorded for history
 
 ### 184. OWNER'S CALL: the settle gate is narrow (this beat's two figures), and widening it costs about 4.4s a round
 
@@ -1907,7 +1875,7 @@ beat needs the mark. That would make the reel's length depend on what happens af
 it, so the same blow would read differently in a duel and in a crowd. Waiting costs
 pacing and says so; it does not cost the reel its shape.
 
-### ~~185. "Playback finished" no longer implies "the stage is at rest", and five fixtures had to learn it~~ — recorded, not a defect: fixed as fallout in the same pass; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~185. "Playback finished" no longer implies "the stage is at rest", and five fixtures had to learn it~~ — recorded, not a defect: fixed as fallout in the same pass
 
 ### 186. A typed hit is two pulses now, because one tinted pulse read as repainting the monster
 
@@ -1932,7 +1900,7 @@ leaves a luminance margin of roughly 0.45 over the fixture's background. That is
 real margin but a smaller one than the white pulse's, and it is the first thing to
 suspect if that fixture ever goes intermittent over a lighter background.
 
-### ~~187. `BeginStatusTickBeat` duplicates `BeginBeat`'s constructor to skip one line of it~~ — fixed in `efbce0fa`: one `NewBeat` constructor; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~187. `BeginStatusTickBeat` duplicates `BeginBeat`'s constructor to skip one line of it~~ — fixed in `efbce0fa`: one `NewBeat` constructor
 
 ### ~~188. `TickReport` names poison specifically, so the second damage-over-time will not fit~~ — fixed in `fbbccc44`
 
@@ -1963,7 +1931,7 @@ called once per row, not once per tick — the real second case (Burn) landed
 in the same milestone and is the one `StatusEffectsTests
 .OneTick_CarryingBurnAndPoison_ReportsBothRowsSeparately` pins.
 
-### ~~189. `b.Actor != null && !b.Actor.IsPlayerSide` stopped meaning "an enemy turn" the moment ticks became beats~~ — fixed in `559f3069`: `CombatBeat.IsAction` predicate across 13 sites; later refined by `fb0a06ab` (`BeatCause`); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~189. `b.Actor != null && !b.Actor.IsPlayerSide` stopped meaning "an enemy turn" the moment ticks became beats~~ — fixed in `559f3069`: `CombatBeat.IsAction` predicate across 13 sites; later refined by `fb0a06ab` (`BeatCause`)
 
 ### 190. OWNER'S CALL: on the ally rack, Right means "nearer", and that needs a hand on a pad to confirm
 
@@ -2101,7 +2069,7 @@ category would need a second reason to exist (`docs/CODE_STANDARDS.md` §10).
 Not tuned. `SpellExpansionBalanceTests.VelvetShacklesDeniesAWholeTurnOnlyFromAnEnemyWithNoCast`
 pins every figure above, so a decision either way moves a literal.
 
-### ~~195. Rooted gaining "no physical moves" silently retuned the Sylvan modifier~~ — recorded, not a defect: the rule change working as intended; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~195. Rooted gaining "no physical moves" silently retuned the Sylvan modifier~~ — recorded, not a defect: the rule change working as intended
 
 ## Findings from the shop pricing, spell-book, and QA-backlog pass, 2026-09-22
 
@@ -2156,15 +2124,15 @@ band of ~9-11. Same designer call as before the coefficient landed, just a
 smaller gap. Owner: retune the treant kit or the coefficient further, or widen
 the accepted band.
 
-### ~~202. OWNER'S CALL: the dossier item tooltip's reused comparison panel crosses the Legs-slot mannequin art~~ — fixed in `0660b1bf`: tooltips place around keep-out rects (mannequin, all eight slots, Carried row) and size to content; plate opaque in `f15a5620`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~202. OWNER'S CALL: the dossier item tooltip's reused comparison panel crosses the Legs-slot mannequin art~~ — fixed in `0660b1bf`: tooltips place around keep-out rects (mannequin, all eight slots, Carried row) and size to content; plate opaque in `f15a5620`
 
-### ~~203. Hands-on QA still pending for nine landed systems; no runtime captures taken~~ — QA capture pass done 2026-09-26, report at `docs/captures/qa-2026-09-26/REPORT.md`; defects it found fixed in `27e8f67f`, `8ddb135f`, `bee93472`, `8fb2dc9c`, `5b818279`, `8852f19d`, `f3918a88`, `fc5bbd72`, `7bf45849`, `e1328743`, `0660b1bf`, `86abfe67`, `6e6d63f5`, `ce1db1d2`, `d418a31f`, `f15a5620`, `7a2ebe3e`, `29ca1c97`, `f1b49295`, `36c4aca3`, `7a53c8ec`. Capture gaps that remain are #216; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~203. Hands-on QA still pending for nine landed systems; no runtime captures taken~~ — QA capture pass done 2026-09-26, report at `docs/captures/qa-2026-09-26/REPORT.md`; defects it found fixed in `27e8f67f`, `8ddb135f`, `bee93472`, `8fb2dc9c`, `5b818279`, `8852f19d`, `f3918a88`, `fc5bbd72`, `7bf45849`, `e1328743`, `0660b1bf`, `86abfe67`, `6e6d63f5`, `ce1db1d2`, `d418a31f`, `f15a5620`, `7a2ebe3e`, `29ca1c97`, `f1b49295`, `36c4aca3`, `7a53c8ec`. Capture gaps that remain are #216
 
-### ~~204. Graphics-mode tooling still steals focus; the hidden-desktop fix is an untested candidate~~ — fixed in `33171e6b`: graphics launches run on the hidden desktop PPHeadless by default (real GPU, Direct3D 12), opt-out `PP_GRAPHICS_DESKTOP=visible`; `focus_check` proof zero foreground changes. Captures now render at 1920x1080 (`d44b0695`). Runner copies claimed, never cleared blind (`46ffce90`, `bf88a7dc`); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~204. Graphics-mode tooling still steals focus; the hidden-desktop fix is an untested candidate~~ — fixed in `33171e6b`: graphics launches run on the hidden desktop PPHeadless by default (real GPU, Direct3D 12), opt-out `PP_GRAPHICS_DESKTOP=visible`; `focus_check` proof zero foreground changes. Captures now render at 1920x1080 (`d44b0695`). Runner copies claimed, never cleared blind (`46ffce90`, `bf88a7dc`)
 
 ## Findings from the spell target-bounds pass, 2026-09-23
 
-### ~~205. OWNER'S CALL: a sky strike at a tall target starts under the combat log~~ — resolved by owner rule, fixed in `fc5bbd72`: layers that would reach the log band are shortened about their anchor; the log never overlaps; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~205. OWNER'S CALL: a sky strike at a tall target starts under the combat log~~ — resolved by owner rule, fixed in `fc5bbd72`: layers that would reach the log band are shortened about their anchor; the log never overlaps
 
 ### 206. OWNER'S CALL: formation spans and every target aim moved from canvas to drawn body
 
@@ -2175,7 +2143,7 @@ not their canvases -- a lone rat's fault is ~225 canvas px shorter. Every
 now 350 (its comment's stated intent) where the old stageScale fit gave ~250.
 Owner: look at Cinderfault on one rat and on a full rank.
 
-### ~~207. RECORDED: spell previews anchor sample 0 at the press, so the file labels run early~~ — fixed in `ce1db1d2`: preview samples taken from the cast's own clock; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~207. RECORDED: spell previews anchor sample 0 at the press, so the file labels run early~~ — fixed in `ce1db1d2`: preview samples taken from the cast's own clock
 
 ### 208. RECORDED: caster-side rituals and the house melee contact do not size to anyone
 
@@ -2185,7 +2153,7 @@ sized for the caster's hand, and `PlayContactFx` sizes by stage depth only.
 None of them take `fit: target`. Owner: say if the ally-target rituals should
 move onto the ally's body.
 
-### ~~209. Clearing `VfxPaddingCache` per fight breaks a travelling-effect placement test -- cause not chased down~~ — fixed in `756abfbf`: a cold scan was a 35ms hitch that outlasted the fixture's 11ms 60x flight, so the test read a released renderer; scan is now row-wise from the bottom, cache cleared per fight and keyed by (path, first frame). Full write-up: `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~209. Clearing `VfxPaddingCache` per fight breaks a travelling-effect placement test -- cause not chased down~~ — fixed in `756abfbf`: a cold scan was a 35ms hitch that outlasted the fixture's 11ms 60x flight, so the test read a released renderer; scan is now row-wise from the bottom, cache cleared per fight and keyed by (path, first frame).
 
 ### 210. OWNER'S CALL: a forfeited turn (stunned or helplessly rooted) still counts as an action
 
@@ -2196,7 +2164,7 @@ decision "a transform expiring should definitely not be an action") a
 `Forfeit` cause is a one-line change. Options: keep as-is, or add
 `BeatCause.Forfeit`.
 
-### ~~211. OWNER'S CALL: intent badge height moved on trimmed idles (from #79) and is unreviewed on screen~~ — reviewed on screen 2026-09-26: rat and beetle badges sit ~50-60px above the body, same gap; treant ~85px (REPORT.md §3). Resolved; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~211. OWNER'S CALL: intent badge height moved on trimmed idles (from #79) and is unreviewed on screen~~ — reviewed on screen 2026-09-26: rat and beetle badges sit ~50-60px above the body, same gap; treant ~85px (REPORT.md §3). Resolved
 
 ## Findings from the QA round, 2026-09-26
 
@@ -2371,14 +2339,13 @@ any new confirm gesture) is generalized to these.
 ### 226. The map gives no information to choose a route with
 
 `Core/MapController.cs` `Caption(RoomType)` (723-737) — a node shows only its
-room-type caption and icon, no tooltip or preview of what's inside. Per
-`HANDOVER.md:38-46`, only the current leg is visible: the per-tile ground
-glow and open-room beacon pulse were both cut at hand-off ("a lot of wiring
-for polish"), hover highlighting was never ported from v1, and `BeaconPulse`
-exists in `Core/BeaconPulse.cs` unused by the map. The "you are here" marker
-is a flat 18x18 solid square (`Domain/UiKit/Screens/MapScreen.cs:516-519`),
-which `HANDOVER.md:47-48` itself calls out as looking like what it is — a
-placeholder. Pressing an unreachable node is silently ignored
+room-type caption and icon, no tooltip or preview of what's inside. Only the
+current leg is visible: the per-tile ground glow and open-room beacon pulse
+were both cut at hand-off ("a lot of wiring for polish"), hover highlighting
+was never ported from v1, and `BeaconPulse` exists in `Core/BeaconPulse.cs`
+unused by the map. The "you are here" marker is a flat 18x18 solid square
+(`Domain/UiKit/Screens/MapScreen.cs:516-519`), a known placeholder. Pressing
+an unreachable node is silently ignored
 (`MapController.cs:747` walk-guard, `752` node-lookup guard, `759` legality
 guard, no feedback on any of the three). Fix: node preview/tooltip, a hover
 cue, and a visible refusal on an illegal press.
@@ -2890,4 +2857,4 @@ finds nothing but one incidental comment mention of "CrowdControl" in
 `claude/peaceful-fermat-gfw0ig`'s Domain/Combat rewrite, not to main; not
 filed as a numbered finding here.
 
-### ~~268. Docs/workflow drift found and fixed the same day~~ — fixed in `35915668`: CLAUDE.md's fragment sentence at :63, the commit-gate rule restated three times (WORKFLOW.md §5 now points at TESTING.md), CODE_MAP.md's `SelectHaloPainter` self-contradiction, `ItemComparisonPanel.cs`'s stale "next thing due to be rebuilt" header, and `docs/archive/README.md`'s five-doc gap
+### ~~268. Docs/workflow drift found and fixed the same day~~ — fixed in `35915668`: CLAUDE.md's fragment sentence at :63, the commit-gate rule restated three times (WORKFLOW.md §5 now points at TESTING.md), CODE_MAP.md's `SelectHaloPainter` self-contradiction, `ItemComparisonPanel.cs`'s stale "next thing due to be rebuilt" header, and the archive index's five-doc gap
