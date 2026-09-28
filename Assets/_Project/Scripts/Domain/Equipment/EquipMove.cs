@@ -16,14 +16,57 @@ namespace PrincesPalace.Domain.Equipment
     // milliseconds instead of through a scene.
     public static class EquipMove
     {
-        // `plus` names WHICH COPY is being worn. It has to be passed rather than
-        // looked up: the bag can hold several stacks of one item id at different
-        // plus levels, and only the caller -- which knows which row the player
-        // clicked -- can say which one they meant. `modifierIds`/`riftTier` name
-        // the same thing for the rolled-affix axis, and travel through this
-        // method for the identical reason plus does (see EquipmentLoadout.Set's
-        // own comment) -- nothing populates them yet, but the plumbing has to
-        // exist before Phase A3 content can ride it.
+        // `instance` names WHICH COPY is being worn. It has to be passed rather
+        // than looked up: the bag can hold several stacks of one item id (other
+        // plus, other roll, other lot), and only the caller -- which knows which
+        // row the player clicked -- can say which one they meant. Taking the
+        // whole ItemInstance rather than its fields is what makes provenance
+        // travel with the move instead of being a fifth thing to remember.
+        public static bool TryEquip(
+            EquipmentLoadout loadout,
+            List<InventoryEntry> bag,
+            ItemInstance instance,
+            EquipmentSlot itemSlot,
+            bool isEquippable,
+            EquipmentSlot? preferredSlot = null)
+        {
+            if (loadout == null || bag == null || instance == null || string.IsNullOrEmpty(instance.ItemId)) return false;
+            if (!isEquippable) return false;
+
+            if (preferredSlot.HasValue && !EquipmentSlots.Accepts(preferredSlot.Value, itemSlot)) return false;
+
+            // The bag's own copy, not the caller's: a caller holding a stale or
+            // partial instance (a plain one for a lot copy, say) finds nothing
+            // here and changes nothing, and the copy that goes on the body is
+            // exactly the one that left the bag.
+            var held = InventoryOps.Find(bag, instance);
+            if (held == null) return false;
+            var worn = held.Instance;
+
+            // Checked before anything is mutated: an equip that cannot be paid
+            // for must not half-happen.
+            if (!InventoryOps.TryRemoveAt(bag, worn)) return false;
+
+            var slot = preferredSlot ?? loadout.ResolveTargetSlot(itemSlot);
+
+            // ALL of what is being displaced comes back from Put -- the whole
+            // instance, read before the slot is overwritten. Taking only the id
+            // would put a +5 sword back in the bag as a +0 one -- an
+            // item-destroying bug that no count-based assertion would ever
+            // catch, because the count is still right. The same holds for a
+            // displaced copy's roll and provenance.
+            var displaced = loadout.Put(slot, worn);
+
+            if (displaced != null)
+            {
+                InventoryOps.Add(bag, displaced, 1);
+            }
+
+            return true;
+        }
+
+        // The positional form, for callers holding an ordinary copy. Kept so
+        // the existing callers and tests read as they always did.
         public static bool TryEquip(
             EquipmentLoadout loadout,
             List<InventoryEntry> bag,
@@ -35,36 +78,9 @@ namespace PrincesPalace.Domain.Equipment
             List<string> modifierIds = null,
             int riftTier = 0)
         {
-            if (loadout == null || bag == null || string.IsNullOrEmpty(itemId)) return false;
-            if (!isEquippable) return false;
-
-            if (preferredSlot.HasValue && !EquipmentSlots.Accepts(preferredSlot.Value, itemSlot)) return false;
-
-            // Checked before anything is mutated: an equip that cannot be paid
-            // for must not half-happen.
-            if (!InventoryOps.TryRemoveAt(bag, itemId, plus, modifierIds, riftTier)) return false;
-
-            var slot = preferredSlot ?? loadout.ResolveTargetSlot(itemSlot);
-
-            // ALL of what is being displaced is read BEFORE Set overwrites the
-            // slot. Taking only the id would put a +5 sword back in the bag as a
-            // +0 one -- an item-destroying bug that no count-based assertion
-            // would ever catch, because the count is still right. The same
-            // applies to a displaced item's rolled affixes once anything rolls
-            // them.
-            string displaced = loadout.Get(slot);
-            int displacedPlus = loadout.GetPlus(slot);
-            List<string> displacedModifierIds = loadout.GetModifierIds(slot);
-            int displacedRiftTier = loadout.GetRiftTier(slot);
-
-            loadout.Set(slot, itemId, plus, modifierIds, riftTier);
-
-            if (displaced.Length > 0)
-            {
-                InventoryOps.Add(bag, displaced, 1, displacedPlus, displacedModifierIds, displacedRiftTier);
-            }
-
-            return true;
+            if (string.IsNullOrEmpty(itemId)) return false;
+            return TryEquip(loadout, bag, new ItemInstance(itemId, plus, modifierIds, riftTier),
+                itemSlot, isEquippable, preferredSlot);
         }
 
         // Empties a slot and puts what was in it back in the bag. False when the
@@ -73,15 +89,12 @@ namespace PrincesPalace.Domain.Equipment
         {
             if (loadout == null || bag == null) return false;
 
-            // Read before the clear, for the same reason the equip path reads
-            // the displaced plus (and now modifierIds/riftTier) before Set.
-            int removedPlus = loadout.GetPlus(slot);
-            List<string> removedModifierIds = loadout.GetModifierIds(slot);
-            int removedRiftTier = loadout.GetRiftTier(slot);
-            string removed = loadout.Clear(slot);
-            if (removed.Length == 0) return false;
+            // The whole copy comes back from Put, read before the clear, for
+            // the same reason the equip path reads what it displaces.
+            var removed = loadout.Put(slot, null);
+            if (removed == null) return false;
 
-            InventoryOps.Add(bag, removed, 1, removedPlus, removedModifierIds, removedRiftTier);
+            InventoryOps.Add(bag, removed, 1);
             return true;
         }
     }

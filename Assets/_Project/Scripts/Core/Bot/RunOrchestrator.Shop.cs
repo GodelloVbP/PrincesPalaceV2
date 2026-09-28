@@ -201,8 +201,10 @@ namespace PrincesPalace
             // with money, against the other cards, and placing the item for
             // them is a second decision taken on their behalf at the moment
             // they are most likely to be mid-plan (§2c).
-            InventoryOps.Add(save.stockpiledItems, entry.contentId, 1, entry.plus,
-                new List<string>(entry.modifiers ?? new List<string>()), entry.riftTier);
+            //
+            // The card stamps the copy (ShopStockEntry.GearInstance), so a
+            // shelf whose cards carry provenance needs no change here.
+            InventoryOps.Add(save.stockpiledItems, entry.GearInstance(), 1);
 
             // 3. PERSIST.
             return Persisted(-price);
@@ -293,10 +295,7 @@ namespace PrincesPalace
             // removal: TryRemoveAt drops the entry out of the list once its
             // count reaches zero, and the object would then be describing a
             // stack that is no longer there.
-            string itemId = entry.itemId;
-            int plus = entry.plus;
-            int riftTier = entry.riftTier;
-            var modifiers = new List<string>(entry.modifierIds ?? new List<string>());
+            var copy = entry.Instance;
 
             int sold = 0;
             for (int i = 0; i < quantity; i++)
@@ -306,7 +305,7 @@ namespace PrincesPalace
                 // in step 2 that can answer "no", and the direction of that
                 // answer is the difference between an accounting slip and a
                 // gold printer.
-                if (!InventoryOps.TryRemoveAt(save.stockpiledItems, itemId, plus, modifiers, riftTier)) break;
+                if (!InventoryOps.TryRemoveAt(save.stockpiledItems, copy)) break;
                 sold++;
             }
 

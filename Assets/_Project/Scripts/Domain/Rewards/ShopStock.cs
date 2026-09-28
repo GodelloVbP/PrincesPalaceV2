@@ -63,6 +63,11 @@ namespace PrincesPalace.Domain.Rewards
 
         public ShopStockEntry() { }
 
+        // THE COPY A GEAR PURCHASE STAMPS INTO THE BAG. The one place a stock
+        // card becomes an item, so a shelf that sells provenance (the caravan's
+        // lot and fake flag, plan 3.4) extends this and nothing else.
+        public ItemInstance GearInstance() => new ItemInstance(contentId, plus, modifiers, riftTier);
+
         public static ShopStockEntry Gear(int index, string itemId, int plus, IEnumerable<string> modifiers,
             int riftTier, int price)
         {

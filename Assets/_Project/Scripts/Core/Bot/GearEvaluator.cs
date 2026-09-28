@@ -227,18 +227,13 @@ namespace PrincesPalace
                     var item = ContentDatabase.GetItem(pick.itemId);
                     if (item == null) continue;
 
-                    // modifierIds/riftTier travel through the same way plus
-                    // does -- InventoryOps.TryRemoveAt inside TryEquip keys on
-                    // the full (itemId, plus, modifierIds, riftTier) stack, so
-                    // omitting them would look for the wrong stack and fail to
-                    // find the very entry that was just scored. Copied rather
-                    // than handed over, because the entry is about to be
-                    // removed from the bag underneath it.
-                    if (!EquipmentOps.Equip(save, character, pick.itemId, item.equipSlot,
-                                            item.IsEquippable, plus: pick.plus,
-                                            modifierIds: new List<string>(pick.modifierIds ?? new List<string>()),
-                                            riftTier: pick.riftTier,
-                                            preferredSlot: slot))
+                    // The entry's whole copy -- InventoryOps keys stacks on
+                    // ItemInstance.SameStack, so anything less would look for
+                    // the wrong stack and fail to find the very entry that was
+                    // just scored. An instance is a snapshot, so the entry
+                    // leaving the bag underneath it cannot change it.
+                    if (!EquipmentOps.Equip(save, character, pick.Instance, item.equipSlot,
+                                            item.IsEquippable, preferredSlot: slot))
                     {
                         continue;
                     }

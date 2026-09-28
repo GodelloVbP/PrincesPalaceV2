@@ -33,13 +33,39 @@ namespace PrincesPalace
     // before BotRunDriver.InMemorySaves existed.
     public static class EquipmentOps
     {
-        // Wears `itemId` off `save.stockpiledItems`. False when EquipMove
+        // Wears this copy off `save.stockpiledItems`. False when EquipMove
         // refused it, having changed nothing.
         //
-        // `plus`/`modifierIds`/`riftTier` name WHICH COPY -- the bag keys
-        // stacks on all four together (see InventoryOps' header), so a caller
-        // that omits them looks for the plain, unrolled stack and silently
-        // fails to find a rolled one.
+        // The whole ItemInstance names WHICH COPY -- the bag keys stacks on
+        // ItemInstance.SameStack (see InventoryOps' header), so a caller that
+        // hands over only an id looks for the plain, unrolled stack and
+        // silently fails to find a rolled one or a caravan lot.
+        public static bool Equip(
+            SaveData save,
+            Character character,
+            ItemInstance instance,
+            EquipmentSlot itemSlot,
+            bool isEquippable,
+            EquipmentSlot? preferredSlot = null)
+        {
+            if (save == null || character?.equipment == null) return false;
+
+            // MEASURED BEFORE THE SWAP, because the swap is what moves it.
+            // Gear that carries max health changes what the run's carried
+            // current health is a fraction OF -- see ScaleCarriedHealth.
+            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+
+            if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, instance, itemSlot,
+                                    isEquippable, preferredSlot))
+            {
+                return false;
+            }
+
+            RunEncounter.ScaleCarriedHealth(character, maxBefore);
+            return true;
+        }
+
+        // The positional form, for an ordinary copy.
         public static bool Equip(
             SaveData save,
             Character character,
@@ -51,21 +77,8 @@ namespace PrincesPalace
             int riftTier = 0,
             EquipmentSlot? preferredSlot = null)
         {
-            if (save == null || character?.equipment == null) return false;
-
-            // MEASURED BEFORE THE SWAP, because the swap is what moves it.
-            // Gear that carries max health changes what the run's carried
-            // current health is a fraction OF -- see ScaleCarriedHealth.
-            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
-
-            if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, itemId, itemSlot,
-                                    isEquippable, preferredSlot, plus, modifierIds, riftTier))
-            {
-                return false;
-            }
-
-            RunEncounter.ScaleCarriedHealth(character, maxBefore);
-            return true;
+            return Equip(save, character, new ItemInstance(itemId, plus, modifierIds, riftTier),
+                itemSlot, isEquippable, preferredSlot);
         }
 
         // Takes a slot off and puts what was in it back in the bag. False when

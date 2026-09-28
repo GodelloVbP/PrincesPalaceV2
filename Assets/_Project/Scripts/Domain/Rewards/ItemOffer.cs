@@ -37,6 +37,11 @@ namespace PrincesPalace.Domain.Rewards
             Modifiers = modifiers ?? new List<string>();
         }
 
+        // The copy taking this offer puts in the bag. An offer is always an
+        // ordinary copy -- no lot, no provenance -- so this is the whole
+        // conversion.
+        public ItemInstance Instance => new ItemInstance(ItemId, Plus, Modifiers, (int)RiftTier);
+
         // The same offer at a different plus. Used by the reward roll, which
         // picks WHICH item from the candidate pool and HOW HONED it is in two
         // separate steps. Preserves whatever RiftTier/Modifiers this offer

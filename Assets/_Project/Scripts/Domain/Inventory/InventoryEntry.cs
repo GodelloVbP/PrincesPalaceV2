@@ -5,8 +5,9 @@ namespace PrincesPalace
 {
     // One stack of a held item. Matches ItemDefinition.id.
     //
-    // A stack is keyed by (itemId, plus, modifierIds, riftTier), not by
-    // itemId alone: a +3 coif and a +5 coif are the same DEFINITION but not
+    // A stack is keyed by ItemInstance.SameStack -- (itemId, plus,
+    // modifierIds, riftTier) for an ordinary copy, the lot alone for a
+    // caravan copy -- not by itemId alone: a +3 coif and a +5 coif are the same DEFINITION but not
     // the same object, and stacking them would silently upgrade one of them.
     // `count` still means "how many identical ones", it is just that
     // identical now also includes which affixes rolled and how many slots
@@ -50,9 +51,29 @@ namespace PrincesPalace
         // tier. Zero on a save written before this field existed.
         public int riftTier;
 
+        // Where this copy came from -- see Provenance. The one nested object
+        // on an otherwise flat entry; a save written before it existed loads
+        // the initializer's ordinary copy.
+        public Provenance provenance = new Provenance();
+
         public InventoryEntry()
         {
         }
+
+        // An entry IS an instance plus how many of it (plan 3.3). Built from
+        // one so a move carries every axis, and read back as one so a caller
+        // hands the same copy onward without naming its fields.
+        public InventoryEntry(ItemInstance instance, int count)
+        {
+            itemId = instance?.ItemId ?? "";
+            this.count = count;
+            plus = instance?.Plus ?? 0;
+            modifierIds = instance?.ModifierList() ?? new List<string>();
+            riftTier = instance?.RiftTier ?? 0;
+            provenance = instance?.ProvenanceCopy() ?? new Provenance();
+        }
+
+        public ItemInstance Instance => new ItemInstance(itemId, plus, modifierIds, riftTier, provenance);
 
         public InventoryEntry(string itemId, int count, int plus = 0,
             List<string> modifierIds = null, int riftTier = 0)

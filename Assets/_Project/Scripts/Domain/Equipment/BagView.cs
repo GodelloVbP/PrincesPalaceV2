@@ -34,9 +34,17 @@ namespace PrincesPalace.Domain.Equipment
         public readonly IReadOnlyList<string> ModifierIds;
         public readonly RiftTier RiftTier;
 
+        // WHICH COPY this row is, whole. What an equip from the grid hands to
+        // EquipMove, so the row's provenance goes onto the body with it rather
+        // than being rebuilt from the display fields above (which cannot say
+        // which lot a row is). Built from those fields when the caller has no
+        // entry to take it from.
+        public readonly ItemInstance Instance;
+
         public BagItem(string id, string name, int kind, EquipmentSlot slot,
                        int tier, int plus, int count, string iconPath, bool isEquippable,
-                       IReadOnlyList<string> modifierIds = null, int riftTier = 0)
+                       IReadOnlyList<string> modifierIds = null, int riftTier = 0,
+                       ItemInstance instance = null)
         {
             Id = id;
             Name = name;
@@ -49,6 +57,7 @@ namespace PrincesPalace.Domain.Equipment
             IsEquippable = isEquippable;
             ModifierIds = modifierIds ?? new List<string>();
             RiftTier = (RiftTier)riftTier;
+            Instance = instance ?? new ItemInstance(id, plus, modifierIds, riftTier);
         }
     }
 

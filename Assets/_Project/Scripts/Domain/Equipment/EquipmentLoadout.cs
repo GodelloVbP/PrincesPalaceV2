@@ -44,8 +44,36 @@ namespace PrincesPalace.Domain.Equipment
         // modifierIds above.
         public int riftTier;
 
+        // Where this copy came from -- see Provenance. Travels with the item
+        // through every equip and unequip exactly as plus does, because the
+        // move reads and writes the whole ItemInstance.
+        public Provenance provenance = new Provenance();
+
         public EquipmentSlotEntry()
         {
+        }
+
+        // A slot entry IS a slot plus one instance (plan 3.3).
+        public EquipmentSlotEntry(EquipmentSlot slot, ItemInstance instance)
+        {
+            this.slot = slot;
+            Write(instance);
+        }
+
+        public ItemInstance Instance => new ItemInstance(itemId, plus, modifierIds, riftTier, provenance);
+
+        // Overwrites every identity field from `instance`, so a slot can never
+        // end up holding one copy's plus and another copy's provenance.
+        internal void Write(ItemInstance instance)
+        {
+            itemId = instance?.ItemId ?? "";
+            plus = instance?.Plus ?? 0;
+            // Copied, not assigned -- see CollectionOps.CopyOrEmpty for why a
+            // shared reference here would be the aliasing bug Clone()'s tests
+            // exist to catch.
+            modifierIds = instance?.ModifierList() ?? new List<string>();
+            riftTier = instance?.RiftTier ?? 0;
+            provenance = instance?.ProvenanceCopy() ?? new Provenance();
         }
 
         public EquipmentSlotEntry(EquipmentSlot slot, string itemId, int plus = 0,
@@ -125,6 +153,44 @@ namespace PrincesPalace.Domain.Equipment
             return entry == null || string.IsNullOrEmpty(entry.itemId) ? 0 : entry.riftTier;
         }
 
+        // The whole copy worn in `slot`, or null when it is empty. What every
+        // move reads BEFORE it displaces anything: one read that cannot
+        // forget an axis, where the four getters above each had to be called.
+        public ItemInstance GetInstance(EquipmentSlot slot)
+        {
+            var entry = Find(slot);
+            return entry == null || string.IsNullOrEmpty(entry.itemId) ? null : entry.Instance;
+        }
+
+        // Puts this copy in `slot` and returns the copy it displaced (null if
+        // the slot was free). A null or id-less instance clears the slot.
+        public ItemInstance Put(EquipmentSlot slot, ItemInstance instance)
+        {
+            var previous = GetInstance(slot);
+            var entry = Find(slot);
+
+            if (instance == null || string.IsNullOrEmpty(instance.ItemId))
+            {
+                if (entry != null)
+                {
+                    slots.Remove(entry);
+                }
+
+                return previous;
+            }
+
+            if (entry == null)
+            {
+                slots.Add(new EquipmentSlotEntry(slot, instance));
+            }
+            else
+            {
+                entry.Write(instance);
+            }
+
+            return previous;
+        }
+
         // Puts `itemId` in `slot`, replacing whatever was there, and returns
         // the id it displaced ("" if the slot was free). Callers use that
         // return value to put the old item back in the bag — which is why
@@ -138,37 +204,14 @@ namespace PrincesPalace.Domain.Equipment
         // way `plus` names which honing level is — every caller that reads
         // GetModifierIds/GetRiftTier before displacing has to pass them back
         // in here or the roll is lost the moment the item changes slots.
+        //
+        // The positional form of Put, for callers holding an ordinary copy:
+        // it writes a plain provenance.
         public string Set(EquipmentSlot slot, string itemId, int plus = 0,
             List<string> modifierIds = null, int riftTier = 0)
         {
             string previous = Get(slot);
-            var entry = Find(slot);
-
-            if (string.IsNullOrEmpty(itemId))
-            {
-                if (entry != null)
-                {
-                    slots.Remove(entry);
-                }
-
-                return previous;
-            }
-
-            if (entry == null)
-            {
-                slots.Add(new EquipmentSlotEntry(slot, itemId, plus, modifierIds, riftTier));
-            }
-            else
-            {
-                entry.itemId = itemId;
-                entry.plus = plus;
-                // Copied, not assigned — see CollectionOps.CopyOrEmpty for
-                // why a shared reference here would be the aliasing bug
-                // Clone()'s tests exist to catch.
-                entry.modifierIds = CollectionOps.CopyOrEmpty(modifierIds);
-                entry.riftTier = riftTier;
-            }
-
+            Put(slot, string.IsNullOrEmpty(itemId) ? null : new ItemInstance(itemId, plus, modifierIds, riftTier));
             return previous;
         }
 
@@ -368,8 +411,7 @@ namespace PrincesPalace.Domain.Equipment
                     // into a NEW list rather than taking the reference, so
                     // this is a real deep copy — mutating the clone's list
                     // can never reach back into `entry.modifierIds`.
-                    copy.slots.Add(new EquipmentSlotEntry(entry.slot, entry.itemId, entry.plus,
-                        entry.modifierIds, entry.riftTier));
+                    copy.slots.Add(new EquipmentSlotEntry(entry.slot, entry.Instance));
                 }
             }
 

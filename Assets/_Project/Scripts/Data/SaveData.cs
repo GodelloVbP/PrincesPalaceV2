@@ -923,8 +923,7 @@ namespace PrincesPalace
                 {
                     if (ContentDatabase.GetItem(orphan.itemId) != null)
                     {
-                        InventoryOps.Add(stockpiledItems, orphan.itemId, 1, orphan.plus,
-                            orphan.modifierIds, orphan.riftTier);
+                        InventoryOps.Add(stockpiledItems, orphan.Instance, 1);
                     }
                 }
 

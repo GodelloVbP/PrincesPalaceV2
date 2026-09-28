@@ -26,37 +26,42 @@ namespace PrincesPalace
     // merging them is correct, exactly like two +5 swords today — it is only
     // a DIFFERENT roll that must never merge. modifierIds compares as an
     // unordered SET (roll order carries no meaning), not a sequence.
+    //
+    // The key itself now lives in ONE place, ItemInstance.SameStack, and every
+    // method below that means "this copy" takes an ItemInstance. The
+    // positional overloads (itemId, plus, modifierIds, riftTier) remain for
+    // callers that only ever hold an ordinary copy; each is a one-line wrapper
+    // that builds the plain instance, so there is no second predicate to drift.
     public static class InventoryOps
     {
-        // True when two entries' rolled affixes are the same SET, ignoring
-        // order — the roll that produced ["fiery","swift"] is the same item
-        // as one that produced ["swift","fiery"]. Null and an empty list
-        // compare equal, matching the "empty and absent read the same way"
-        // convention the rest of this codebase's list fields already use.
-        private static bool ModifiersMatch(List<string> a, List<string> b)
+        // The stack this copy belongs to, or null.
+        public static InventoryEntry Find(List<InventoryEntry> inventory, ItemInstance instance)
         {
-            var setA = new HashSet<string>(a ?? new List<string>());
-            var setB = new HashSet<string>(b ?? new List<string>());
-            return setA.SetEquals(setB);
+            if (inventory == null || instance == null) return null;
+            return inventory.FirstOrDefault(e => e != null && ItemInstance.SameStack(e.Instance, instance));
+        }
+
+        public static void Add(List<InventoryEntry> inventory, ItemInstance instance, int count = 1)
+        {
+            if (inventory == null || instance == null || string.IsNullOrEmpty(instance.ItemId) || count <= 0)
+            {
+                return;
+            }
+
+            var entry = Find(inventory, instance);
+            if (entry == null)
+            {
+                inventory.Add(new InventoryEntry(instance, count));
+                return;
+            }
+
+            entry.count += count;
         }
 
         public static void Add(List<InventoryEntry> inventory, string itemId, int count = 1, int plus = 0,
             List<string> modifierIds = null, int riftTier = 0)
         {
-            if (inventory == null || string.IsNullOrEmpty(itemId) || count <= 0)
-            {
-                return;
-            }
-
-            var entry = inventory.FirstOrDefault(e => e != null && e.itemId == itemId && e.plus == plus
-                && e.riftTier == riftTier && ModifiersMatch(e.modifierIds, modifierIds));
-            if (entry == null)
-            {
-                inventory.Add(new InventoryEntry(itemId, count, plus, modifierIds, riftTier));
-                return;
-            }
-
-            entry.count += count;
+            Add(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier), count);
         }
 
         // How many of this item are held AT ANY PLUS.
@@ -76,23 +81,25 @@ namespace PrincesPalace
             return inventory.Where(e => e != null && e.itemId == itemId).Sum(e => e.count);
         }
 
-        // How many are held at exactly this plus/modifierIds/riftTier — the
-        // full stacking key. modifierIds/riftTier default to "no modifiers",
-        // so an unmodified copy is still found by its plus alone, same as
-        // before this axis existed. Once two stacks can share an (itemId,
-        // plus) but differ in what rolled, matching on plus alone would
-        // silently answer for the wrong stack.
+        // How many are held of exactly this copy — the full stacking key.
+        public static int CountAt(List<InventoryEntry> inventory, ItemInstance instance)
+        {
+            return Find(inventory, instance)?.count ?? 0;
+        }
+
+        // The positional form. modifierIds/riftTier default to "no
+        // modifiers", so an unmodified copy is still found by its plus alone,
+        // same as before this axis existed.
         public static int CountAt(List<InventoryEntry> inventory, string itemId, int plus,
             List<string> modifierIds = null, int riftTier = 0)
         {
-            return inventory?.FirstOrDefault(e => e != null && e.itemId == itemId && e.plus == plus
-                && e.riftTier == riftTier && ModifiersMatch(e.modifierIds, modifierIds))?.count ?? 0;
+            return CountAt(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier));
         }
 
         // Removes one of the item and returns whether there was one to
         // remove. Takes the LOWEST plus held, so spending a consumable or
         // handing one over never quietly consumes the best copy the player
-        // owns. Callers that mean a specific copy pass its plus.
+        // owns. Callers that mean a specific copy pass its instance.
         //
         // NOT modifier-aware: this picks the lowest plus regardless of what
         // rolled on it. Nothing in Phase A ever populates modifierIds on a
@@ -108,14 +115,16 @@ namespace PrincesPalace
             return RemoveOne(inventory, entry);
         }
 
-        // Removes one of exactly this copy — the full (itemId, plus,
-        // modifierIds, riftTier) key, same reasoning as CountAt above.
+        // Removes one of exactly this copy.
+        public static bool TryRemoveAt(List<InventoryEntry> inventory, ItemInstance instance)
+        {
+            return RemoveOne(inventory, Find(inventory, instance));
+        }
+
         public static bool TryRemoveAt(List<InventoryEntry> inventory, string itemId, int plus,
             List<string> modifierIds = null, int riftTier = 0)
         {
-            var entry = inventory?.FirstOrDefault(e => e != null && e.itemId == itemId && e.plus == plus
-                && e.riftTier == riftTier && ModifiersMatch(e.modifierIds, modifierIds));
-            return RemoveOne(inventory, entry);
+            return TryRemoveAt(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier));
         }
 
         private static bool RemoveOne(List<InventoryEntry> inventory, InventoryEntry entry)

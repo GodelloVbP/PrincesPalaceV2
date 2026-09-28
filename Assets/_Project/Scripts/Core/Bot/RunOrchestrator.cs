@@ -671,11 +671,8 @@ namespace PrincesPalace
 
             // Straight to the meta stash, which is the single live bag -- the
             // same one the character overlay and the fight satchel read. The
-            // roll's affix slots travel with it: offer.Modifiers is an
-            // IReadOnlyList, InventoryOps.Add wants a List<string> to copy
-            // from, so ToList() rather than a cast.
-            InventoryOps.Add(save.stockpiledItems, offer.ItemId, 1, offer.Plus,
-                offer.Modifiers?.ToList(), (int)offer.RiftTier);
+            // whole copy travels as one ItemInstance, roll included.
+            InventoryOps.Add(save.stockpiledItems, offer.Instance, 1);
 
             // AUTO-EQUIP INTO AN EMPTY SLOT. A reward picked for a slot nobody
             // is wearing anything in went to the bag and sat there until the
@@ -705,19 +702,16 @@ namespace PrincesPalace
                 if (character?.equipment == null) continue;
                 if (character.equipment.FirstFreeSlotFor(itemDef.equipSlot) == null) continue;
 
-                // modifierIds/riftTier travel through the same way plus does --
-                // InventoryOps.TryRemoveAt inside TryEquip keys on the full
-                // (itemId, plus, modifierIds, riftTier) stack, so omitting them
-                // here would look for the WRONG stack (the plain, unrolled one)
-                // and silently fail to find the copy Take() just added.
+                // The SAME instance TakeOffer just added -- InventoryOps keys
+                // stacks on ItemInstance.SameStack, so anything less than the
+                // whole copy would look for the WRONG stack (the plain,
+                // unrolled one) and silently fail to find it.
                 //
                 // EquipmentOps.Equip carries the "measure max health first,
                 // rescale carried health after" pair this call site used to
                 // spell out; TakeOffer still owns the SaveCurrent below it.
-                if (!EquipmentOps.Equip(save, character, offer.ItemId, itemDef.equipSlot,
-                                        itemDef.IsEquippable, plus: offer.Plus,
-                                        modifierIds: offer.Modifiers?.ToList(),
-                                        riftTier: (int)offer.RiftTier))
+                if (!EquipmentOps.Equip(save, character, offer.Instance, itemDef.equipSlot,
+                                        itemDef.IsEquippable))
                 {
                     return;
                 }

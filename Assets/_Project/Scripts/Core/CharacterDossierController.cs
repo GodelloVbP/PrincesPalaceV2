@@ -2017,12 +2017,12 @@ namespace PrincesPalace
                 // rather than dropped, so the player sees what happened instead
                 // of watching the bag quietly shrink.
                 return new BagItem(entry.itemId, entry.itemId, 0, EquipmentSlot.Weapon1,
-                    0, entry.plus, entry.count, "", false);
+                    0, entry.plus, entry.count, "", false, instance: entry.Instance);
             }
 
             return new BagItem(item.id, RarityColors.NameOf(item, entry.plus), (int)item.kind,
                 item.equipSlot, item.tier, entry.plus, entry.count, item.iconPath, item.IsEquippable,
-                entry.modifierIds, entry.riftTier);
+                entry.modifierIds, entry.riftTier, entry.Instance);
         }
 
         private static Color TierColour(int tier) => Hex(RarityBands.HexColorForTier(tier));
@@ -2559,22 +2559,18 @@ namespace PrincesPalace
 
             var item = _bag[index];
 
-            // modifierIds/riftTier travel through the same way plus does --
-            // InventoryOps.TryRemoveAt inside TryEquip keys on the full
-            // (itemId, plus, modifierIds, riftTier) stack (see
-            // RunOrchestrator.AutoEquipIntoAnEmptySlot's identical note),
-            // so omitting them here would look for the wrong stack and
-            // silently strip a rolled item's affixes the moment it is worn
-            // from the pack.
+            // The row's whole copy -- InventoryOps keys stacks on
+            // ItemInstance.SameStack (see RunOrchestrator.
+            // AutoEquipIntoAnEmptySlot's identical note), so anything less
+            // would look for the wrong stack and silently strip a rolled
+            // item's affixes, or a lot copy's provenance, the moment it is
+            // worn from the pack.
             //
             // The "measure max health before the swap, rescale carried health
             // after it" pair that used to sit around this call is inside
             // EquipmentOps.Equip now -- three screens and the bot each had
             // their own copy of it. Nothing about the move changed.
-            if (!EquipmentOps.Equip(save, character, item.Id, item.Slot, item.IsEquippable,
-                                    plus: item.Plus,
-                                    modifierIds: item.ModifierIds?.ToList(),
-                                    riftTier: (int)item.RiftTier))
+            if (!EquipmentOps.Equip(save, character, item.Instance, item.Slot, item.IsEquippable))
             {
                 return;
             }
