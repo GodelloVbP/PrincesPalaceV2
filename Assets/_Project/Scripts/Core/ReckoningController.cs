@@ -116,11 +116,9 @@ namespace PrincesPalace
         // THE PHASE CHANGE ADVANCES: the summary comes IN FROM THE RIGHT and
         // the choice leaves to the left, both travelling the same way.
         //
-        // It used to run the other way -- summary in from the left, choice out
-        // to the right -- and travelling rightward is the handedness every UI
-        // uses for going BACK. Taking a reward is going forward, so it was
-        // pushing the wrong way round: the new screen arrived the way a
-        // cancelled one does.
+        // Rightward is the handedness every UI here uses for going BACK, and
+        // taking a reward is going forward, so this direction reads as
+        // advancing rather than as a cancel.
         //
         // FAST, and that is half of the fix. At 0.3s on a smoothstep this
         // eased in AND out, so it left slowly, arrived slowly, and spent its
@@ -251,12 +249,10 @@ namespace PrincesPalace
                 hover.Index = index;
                 hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
 
-                // AUDIT.md #160's SelectIndex subscription -- which
-                // brightened the card's own rarity halo to
-                // ThemedButtonState's Selected ratio while the stick stood on
-                // it -- IS GONE (hardware round 1: one pad-focus indicator
-                // project-wide, Core/FocusMarker.cs). The halo goes back to
-                // saying exactly one thing, which is the item's rarity.
+                // No SelectIndex subscription brightens the card's own
+                // rarity halo any more (Core/FocusMarker.cs owns the one
+                // pad-focus indicator project-wide), so the halo goes back
+                // to saying exactly one thing, which is the item's rarity.
                 //
                 // The SelectIndex component itself stays: _tooltips.Register
                 // just above put it there and rides its Changed delegate for
@@ -264,7 +260,7 @@ namespace PrincesPalace
             }
         }
 
-        // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b, item 2) ------
+        // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) ------------------------
         //
         // TWO STATES, one context. The choice phase is a Rail of the cards
         // actually on screen; the summary it sweeps to is the page tabs plus
@@ -300,9 +296,7 @@ namespace PrincesPalace
                 // entry back through `as GameObject` (it holds an opaque
                 // handle, being engine-free), so a Selectable put here
                 // resolves to null and the dispatcher's own reselection rule
-                // then clears the selection every single frame -- phase 3a
-                // found this once already on Main Menu (`d39d955b`) and it
-                // cost this pass a test run to find again.
+                // then clears the selection every single frame.
                 entry = First(cards)?.gameObject;
                 Declare(selectables, cards);
             }
@@ -454,9 +448,6 @@ namespace PrincesPalace
 
         // The box follows the card it describes.
         //
-        // It used to be a fixed strip across the bottom of the panel, which
-        // meant nothing on screen connected the numbers to the thing under the
-        // cursor -- see ReckoningScreen.BuildOfferTooltip for the full story.
         // The arithmetic is TooltipPlacement's, shared with the dossier's pack,
         // so "beside, flipped if there is no room, clamped inside" is one rule
         // with one set of tests rather than two hand-written copies.
@@ -785,14 +776,12 @@ namespace PrincesPalace
                 // icon, but its core is hidden behind the item, so on its own
                 // the rarity read as a few spikes rather than as a colour.
                 //
-                // ONE MEANING, RESTORED. This used to Max the rarity alpha
-                // against ThemedButtonState.SelectedGlowAlpha and scale the
-                // halo to SelectedGlowScale while the stick stood on the card
-                // (AUDIT.md #160) -- so the same glow was saying both "this
-                // item is Legendary" and "this is the card you are on", and a
-                // focused Common read brighter than an unfocused Legendary.
-                // Focus is the arrow's job now (Core/FocusMarker.cs); rarity
-                // is this halo's, and only that.
+                // ONE MEANING: this halo says only "this item is Legendary"
+                // (or whatever rarity), never also "this is the card you are
+                // on" -- mixing both would let a focused Common read
+                // brighter than an unfocused Legendary. Focus is the arrow's
+                // job (Core/FocusMarker.cs); rarity is this halo's, and only
+                // that.
                 if (offerHalos != null && i < offerHalos.Length && offerHalos[i] != null)
                 {
                     var soft = glow;
@@ -943,8 +932,8 @@ namespace PrincesPalace
             if (relicEmptyHint != null) relicEmptyHint.SetActive(held.Count == 0);
 
             // PAGED, never truncated: the shop sells relics with no cap, and
-            // a run past one page used to lose everything after the last row
-            // without a word. Same reasoning as the unknown-id row below.
+            // truncating would silently lose everything after the last row.
+            // Same reasoning as the unknown-id row below.
             int pageSize = relicRows.Length;
             int pageCount = Paging.PageCount(held.Count, pageSize);
             _relicPage = Paging.Clamp(_relicPage, held.Count, pageSize);
@@ -1088,11 +1077,10 @@ namespace PrincesPalace
         private IEnumerator SweepToSummary()
         {
             // A phase travels exactly its OWN width, which is the clip's, not
-            // the panel's. Both phases now live inside a RectMask2D inset to
-            // the painted border, so a card is gone the moment it has moved one
-            // clip-width -- and it disappears BEHIND the border rather than
-            // sailing on over the battlefield, which is what it used to do with
-            // nothing bounding it at all.
+            // the panel's. Both phases live inside a RectMask2D inset to the
+            // painted border, so a card is gone the moment it has moved one
+            // clip-width, disappearing BEHIND the border rather than sailing
+            // on over the battlefield.
             float width = ReckoningScreen.ContentHalfWidth * 2f;
 
             var offerBlur = BlurGroup(offerPhase);

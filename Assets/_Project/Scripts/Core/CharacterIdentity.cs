@@ -21,10 +21,10 @@ namespace PrincesPalace
         }
     }
 
-    // PHASE 3's read model for a character's collected Identity nodes
-    // (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §7 phase 3
-    // package 1: "expose a small read model"). No rendering yet -- phase 5
-    // is where a dossier/roster/victory screen actually draws any of this.
+    // A read model for a character's collected Identity nodes
+    // (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §7: "expose a
+    // small read model"). No rendering yet -- that is a dossier/roster/
+    // victory screen's job to add.
     //
     // Core rather than Domain, same reason RewardTracks itself is Core: it
     // needs RewardTracks.For(character) to find the track at all
@@ -165,10 +165,8 @@ namespace PrincesPalace
                     // VICTORYPOSE CONTRIBUTES NOTHING HERE. It is still read
                     // by CollectedIdentity's own list (the track screen and
                     // roster show the node as collected) but has no plate
-                    // rendering -- it has no still to draw, and the one word
-                    // it used to add (VICTOR, on a since-deleted `Line`
-                    // field) reached no renderer. See docs/ART_PIPELINE.md
-                    // §7's victory-pose backlog entry.
+                    // rendering -- it has no still to draw. See
+                    // docs/ART_PIPELINE.md §7's victory-pose backlog entry.
                     case TrackIdentityKind.VictoryPose: break;
 
                     case TrackIdentityKind.Mastery: mastery = true; break;

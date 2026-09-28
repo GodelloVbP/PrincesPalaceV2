@@ -34,12 +34,12 @@ namespace PrincesPalace
     // DevForced* block for the session-state half.
     public static class PreviewFight
     {
-        // THE FORMATION VOCABULARY, owned here and named rather than typed.
-        // "lone" and "full" used to be typed out at every site that reads or
-        // writes FightBootstrap.DevForcedFormation (this file, FightBootstrap
-        // itself, and PreviewRequestWatcher) -- a typo at any one of them
-        // silently falls through to the lone branch, since nothing there is
-        // an enum with a default case to refuse it. tools/preview.ps1 sends
+        // THE FORMATION VOCABULARY, owned here and named rather than typed at
+        // every site that reads or writes FightBootstrap.DevForcedFormation
+        // (this file, FightBootstrap itself, and PreviewRequestWatcher) -- a
+        // typo at any one of them would silently fall through to the lone
+        // branch, since nothing there is an enum with a default case to
+        // refuse it. tools/preview.ps1 sends
         // this over SessionState as plain text (it is PowerShell; it cannot
         // reference a C# const), so the literals stay pinned at the wire in
         // DevForcedPreviewKeyTests rather than disappearing entirely.

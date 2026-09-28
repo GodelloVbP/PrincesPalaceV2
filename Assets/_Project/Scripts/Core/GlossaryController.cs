@@ -51,10 +51,9 @@ namespace PrincesPalace
         private int _selectedRow = -1;
         private bool _wired;
 
-        // Pushed at the end of every Paint() (docs/GAMEPAD_NAVIGATION_PLAN.md
-        // phase 3, AUDIT.md #158), popped on OnDisable -- the panel toggling
-        // off is the only way this screen closes, mouse or Cancel alike (see
-        // Close() below).
+        // Pushed at the end of every Paint(), popped on OnDisable -- the
+        // panel toggling off is the only way this screen closes, mouse or
+        // Cancel alike (see Close() below).
         private NavContext _navContext;
 
         // ALL SIX CATEGORIES, built once per open. Switching category is then
