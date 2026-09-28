@@ -12,8 +12,22 @@ namespace PrincesPalace.Domain.Events
     // A COUNTER IS NOT SHOWN. It is bookkeeping for a later outcome ("the
     // tenth toss"), and printing "+1 wishing_well_tosses" would put an id
     // in front of the player.
+    //
+    // THE LINE HAS A LENGTH BUDGET, MaxLength characters. On the dialogue
+    // stage it shares one box with the result text, and a line-cap result
+    // leaves room for one line of effects under it
+    // (DialogueStageTextFitTests measures a MaxLength line there). A robbed
+    // caravan hands over a whole shelf, one "+1 <name>" per card, which ran
+    // to three lines. So a line over budget folds its item grants into one
+    // count ("+5 items") where the first grant stood; every other part --
+    // gold, XP, heals, relics, the scuffle's loss -- stays word for word,
+    // because those are what the player cannot read anywhere else. A line
+    // that is over budget with no grants to fold is left as it is: nothing
+    // in it is safe to drop.
     public static class EventEffectSummary
     {
+        public const int MaxLength = 72;
+
         // `itemName` resolves an item id to its display name; Domain cannot
         // see the item catalogue, so the caller hands the lookup in.
         public static string Describe(IReadOnlyList<EventEffect> effects, Func<string, string> itemName)
@@ -21,13 +35,45 @@ namespace PrincesPalace.Domain.Events
             if (effects == null || effects.Count == 0) return "";
 
             var parts = new List<string>();
+            var isGrant = new List<bool>();
+            int grantParts = 0;
+            int grantedCount = 0;
             foreach (var effect in effects)
             {
                 string part = Describe(effect, itemName);
-                if (!string.IsNullOrEmpty(part)) parts.Add(part);
+                if (string.IsNullOrEmpty(part)) continue;
+
+                bool grant = effect.Kind == EventEffectKind.Item;
+                parts.Add(part);
+                isGrant.Add(grant);
+                if (grant)
+                {
+                    grantParts++;
+                    grantedCount += effect.Amount;
+                }
             }
 
-            return string.Join(UiStrings.EventEffectSeparator.Format(), parts);
+            string separator = UiStrings.EventEffectSeparator.Format();
+            string line = string.Join(separator, parts);
+            if (line.Length <= MaxLength || grantParts == 0) return line;
+
+            var folded = new List<string>();
+            bool countPlaced = false;
+            for (int i = 0; i < parts.Count; i++)
+            {
+                if (!isGrant[i])
+                {
+                    folded.Add(parts[i]);
+                    continue;
+                }
+                if (countPlaced) continue;
+                countPlaced = true;
+                folded.Add(grantedCount == 1
+                    ? UiStrings.EventEffectItemsOne.Format()
+                    : UiStrings.EventEffectItemsCount.Format(grantedCount));
+            }
+
+            return string.Join(separator, folded);
         }
 
         private static string Describe(EventEffect effect, Func<string, string> itemName)

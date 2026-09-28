@@ -110,6 +110,10 @@ namespace PrincesPalace.PlayModeTests
             map.OpenShop();
             yield return null;
 
+            // The room shop keeps its column caption; a merchant shelf
+            // retitles it (CaravanShelfScreenTests).
+            Assert.AreEqual("SHOPKEEPER", Named("ShopKeeperPanelHeader")?.GetComponent<TMP_Text>()?.text);
+
             int goldBefore = RunManager.Run.gold;
 
             // ONE press selects, BUY commits -- a second press on the card

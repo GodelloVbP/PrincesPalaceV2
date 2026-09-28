@@ -365,6 +365,12 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("event.effect_exp", "+{0} XP", "+99999 XP");
         public static readonly UiString EventEffectItem =
             UiString.Define("event.effect_item", "+{0} {1}", "+99 Ceremonial Greatsword of the Undying");
+        // Every item grant on an over-budget line, folded into one count
+        // (EventEffectSummary.MaxLength).
+        public static readonly UiString EventEffectItemsCount =
+            UiString.Define("event.effect_items_count", "+{0} items", "+99 items");
+        public static readonly UiString EventEffectItemsOne =
+            UiString.Define("event.effect_items_one", "+1 item");
         // One member's heal (healPercent with a character). Never a revive, so
         // it only ever appears for someone who was standing.
         public static readonly UiString EventEffectHealMember =
@@ -400,7 +406,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString EventBody =
             UiString.Define("event.body", "{0}", AtCap(EventBodyProse, Content.EventEntryResolver.MaxBodyLength));
         public static readonly UiString EventEffects =
-            UiString.Define("event.effects", "{0}", "+9999 gold  ·  Party healed 100%  ·  +99999 XP");
+            UiString.Define("event.effects", "{0}", AtCap(EventEffectsProse, Events.EventEffectSummary.MaxLength));
         public static readonly UiString EventChoice =
             UiString.Define("event.choice", "{0}",
                 AtCap("Offer the stranger the last of the party's rations ", Content.EventEntryResolver.MaxChoiceTextLength));
@@ -427,6 +433,11 @@ namespace PrincesPalace.Domain.UiKit
         private const string EventBodyProse =
             "The water is black and perfectly still, and something glints far below. " +
             "A rope hangs from the winch, frayed where hands have worried it. ";
+
+        // An effects line at its budget: parts that survive the fold word
+        // for word (EventEffectSummary), at their widest.
+        private const string EventEffectsProse =
+            "+9999 gold  ·  +99999 XP  ·  Lost in the scuffle: Ceremonial Greatsword of the Undying  ·  ";
 
         // The prose repeated or cut to exactly `cap` characters.
         private static string AtCap(string prose, int cap)
@@ -714,6 +725,9 @@ namespace PrincesPalace.Domain.UiKit
         // 56pt title.
         public static readonly UiString ShopSectionKeeper = UiString.Define("shop.section_keeper", "SHOPKEEPER");
         public static readonly UiString ShopSectionActions = UiString.Define("shop.section_actions", "SHOP");
+        // The same column on a merchant shelf, where the keeper has his own
+        // panel: it holds whom you are buying for, the purse, BUY and LEAVE.
+        public static readonly UiString ShopSectionBuyer = UiString.Define("shop.section_buyer", "BUYING FOR");
 
         // The shopkeeper's portrait slot, standing empty. Says what it is
         // rather than drawing a blank box: no shopkeeper art exists yet, and
@@ -742,9 +756,11 @@ namespace PrincesPalace.Domain.UiKit
 
         // A merchant shelf's card once its fakes are revealed ("Browse with
         // Odette", plan 1.5): the meta line leads with the mark. Runtime
-        // content like ShopGearMeta, so the sample is only the audit's.
+        // content like ShopGearMeta, so the sample is only the audit's. {0}
+        // is ShopCardFakeMark, coloured by the controller; {1} the meta.
+        public static readonly UiString ShopCardFakeMark = UiString.Define("shop.card_fake_mark", "FAKE");
         public static readonly UiString ShopCardFakeMeta =
-            UiString.Define("shop.card_fake_meta", "FAKE · {0}", "FAKE · TIER 10 · +5 · Fiery, Swift");
+            UiString.Define("shop.card_fake_meta", "{0} · {1}", "FAKE · TIER 10 · +5 · Fiery, Swift");
 
         // A consumable card's meta line (merchant shelves only; the room
         // shop sells none).

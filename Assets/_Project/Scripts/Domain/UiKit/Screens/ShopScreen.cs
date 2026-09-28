@@ -324,6 +324,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // repainted instead: it shows a merchant's consumables.
         public NodeRef RelicPanel;
 
+        // The right-hand column's caption: SHOPKEEPER in the room shop, and
+        // what the column is for on a merchant shelf, whose keeper has a
+        // panel of his own (ShopController.PaintMerchantLayout).
+        public NodeRef KeeperHeader;
+
         // The screen's title (SHOP, or a merchant shelf's own) and the
         // merchant's panel in the relic panel's slot (BuildMerchantPanel).
         public NodeRef Title;
@@ -590,7 +595,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private UiNode BuildKeeperPanel()
         {
             var parts = PanelFrame("ShopKeeperPanel", UiStrings.ShopSectionKeeper, WideColWidth,
-                out _, null, TallColHeight);
+                out KeeperHeader, null, TallColHeight);
 
             float inner = WideColWidth - PanelPad * 2f;
 

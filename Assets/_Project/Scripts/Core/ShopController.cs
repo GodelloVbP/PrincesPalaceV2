@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
@@ -84,6 +85,10 @@ namespace PrincesPalace
         // panel, every reroll and the pack (no selling to a merchant), and
         // the book panel shows its consumable cards under its own header.
         [SerializeField] internal TMP_Text bookHeader;
+        // The right-hand column's caption. SHOPKEEPER is a second name for
+        // the merchant beside his own panel, so a shelf titles the column by
+        // what it holds: the buyer's picker, the purse, BUY and LEAVE.
+        [SerializeField] internal TMP_Text keeperHeader;
         [SerializeField] internal GameObject relicPanel;
 
         // ...and the title and the relic panel's slot say who is selling: the
@@ -499,6 +504,8 @@ namespace PrincesPalace
             SetShown(packButton, !merchant);
             if (bookHeader != null)
                 bookHeader.Set(merchant ? UiStrings.ShopSectionConsumables : UiStrings.ShopSectionBooks);
+            if (keeperHeader != null)
+                keeperHeader.Set(merchant ? UiStrings.ShopSectionBuyer : UiStrings.ShopSectionKeeper);
 
             var front = merchant ? RunOrchestrator.ShelfInFront : null;
             SetShown(merchantPanel, front != null);
@@ -668,10 +675,18 @@ namespace PrincesPalace
         // merchant shelf's fake mark leading the meta line ("Browse with
         // Odette", plan 1.5). The mark is the shelf's, never the item's: it
         // does not follow the copy into the bag.
+        //
+        // The mark alone wears the item panels' loss red, so Odette's reveal
+        // reads against the violet meta text it leads; the rest of the line
+        // keeps its colour.
+        internal static string FakeMark =>
+            ItemStatLines.Coloured(ItemStatLines.LossHex, UiStrings.ShopCardFakeMark.Format());
+
         private (string name, string meta) DescribeCard(ShopStockEntry entry)
         {
             var (name, meta) = DescribeEntry(entry);
-            if (entry.fake && RunOrchestrator.ShelfInFrontIsRevealed) meta = UiStrings.ShopCardFakeMeta.Format(meta);
+            if (entry.fake && RunOrchestrator.ShelfInFrontIsRevealed)
+                meta = UiStrings.ShopCardFakeMeta.Format(FakeMark, meta);
             return (name, meta);
         }
 

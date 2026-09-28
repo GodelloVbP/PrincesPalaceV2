@@ -34,8 +34,8 @@ namespace PrincesPalace.PlayModeTests
 
         // A result beat is the result plus an effects line under it
         // (EventController.PaintBeat), so its worst case is a line-cap result
-        // AND a long effects line.
-        private const string LongEffects = "+200 gold  ·  +50 XP  ·  Party healed 25%  ·  Relic: Kinship";
+        // AND an effects line at its budget (EventEffectSummary.MaxLength).
+        private static string LongEffects => UiStrings.EventEffects.AuditSample;
 
         private EventController _panel;
 
@@ -107,6 +107,8 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadTheMap();
             Assert.AreEqual(EventEntryResolver.MaxLineLength, LongestLine.Length, "fixture: the sample is at the cap");
+            Assert.AreEqual(PrincesPalace.Domain.Events.EventEffectSummary.MaxLength, LongEffects.Length,
+                "fixture: the effects sample is at the budget");
 
             var line = Label("StageLineText");
             Assert.AreEqual(EventScreen.LineWidth, UiTextFit.Box(line).x, 0.5f);

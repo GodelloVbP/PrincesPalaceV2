@@ -124,17 +124,24 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(Named("ShopBookReroll").activeSelf, "a merchant shelf offered a reroll");
             Assert.IsFalse(Named("ShopPackButton").activeSelf, "a merchant shelf offered to buy the bag");
             Assert.AreEqual("CONSUMABLES", Text("ShopBookPanelHeader"));
+            Assert.AreEqual("BUYING FOR", Text("ShopKeeperPanelHeader"),
+                "a merchant shelf still captioned the buyer's column SHOPKEEPER beside the keeper's own panel");
             Assert.IsTrue(Named("ShopBookCard0").activeSelf);
             Assert.IsTrue(Named("ShopBookCard1").activeSelf);
             Assert.IsFalse(Named("ShopBookCard2").activeSelf, "a card the shelf does not stock is shown");
 
             // Browse with Odette: every fake card's meta line wears the mark,
-            // and no genuine one does.
+            // and no genuine one does. The mark alone is in the loss red
+            // (ItemStatLines.LossHex); the rest of the line is untouched.
+            const string mark = "<color=#E05A5A>FAKE</color> · ";
             foreach (var entry in RunOrchestrator.CurrentShopStock)
             {
                 string card = entry.section == ShopStock.GearSection ? $"ShopGearCard{entry.index}" : $"ShopBookCard{entry.index}";
-                bool marked = Text(card + "Meta").StartsWith("FAKE", StringComparison.Ordinal);
-                Assert.AreEqual(entry.fake, marked, $"{card} ({entry.contentId}, fake={entry.fake}): '{Text(card + "Meta")}'");
+                string meta = Text(card + "Meta");
+                bool marked = meta.StartsWith(mark, StringComparison.Ordinal);
+                Assert.AreEqual(entry.fake, marked, $"{card} ({entry.contentId}, fake={entry.fake}): '{meta}'");
+                if (marked) StringAssert.DoesNotContain("<color", meta.Substring(mark.Length), "only the mark is coloured");
+                Assert.IsFalse(!entry.fake && meta.Contains("FAKE"), $"{card} is genuine but reads '{meta}'");
             }
 
             // LEAVE arms, then leaves -- back to the event, room uncleared.

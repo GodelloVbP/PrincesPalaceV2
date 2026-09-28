@@ -122,14 +122,116 @@ namespace PrincesPalace.Domain.Tests
                 EventEffect.Counter("wishing_well_tosses", 1),
                 EventEffect.HealPercent(30),
                 EventEffect.Gold(-5),
-                EventEffect.DamagePercent(10),
-                EventEffect.Exp(50),
                 EventEffect.ItemGrant("health_potion", 2),
             }, id => id == "health_potion" ? "Health Potion" : null);
 
-            Assert.AreEqual(
-                "+25 gold  ·  Party healed 30%  ·  -5 gold  ·  Party hurt 10%  ·  +50 XP  ·  +2 Health Potion",
-                line);
+            Assert.AreEqual("+25 gold  ·  Party healed 30%  ·  -5 gold  ·  +2 Health Potion", line);
+            Assert.AreEqual("Party hurt 10%  ·  +50 XP",
+                EventEffectSummary.Describe(new[] { EventEffect.DamagePercent(10), EventEffect.Exp(50) }, null));
+        }
+
+        // ---- the effects line's budget (EventEffectSummary.MaxLength) -----------------
+
+        private static string CaravanName(string id)
+        {
+            switch (id)
+            {
+                case "slippers": return "Borrowed Regalia Ritual Slippers";
+                case "dagger": return "Bronze Dagger";
+                case "cap": return "Studded Brigandine Studded Cap";
+                case "legguards": return "Etched Runeplate Legguards";
+                case "mana_potion": return "Mana Potion";
+                case "health_potion": return "Health Potion";
+                default: return null;
+            }
+        }
+
+        [Test]
+        public void TheBudgetIsSeventyTwoCharacters()
+        {
+            Assert.AreEqual(72, EventEffectSummary.MaxLength);
+        }
+
+        [Test]
+        public void ALineUnderBudget_KeepsEveryItemNamed()
+        {
+            // 69 characters: under the budget, itemised as ever.
+            var line = EventEffectSummary.Describe(new[]
+            {
+                EventEffect.ItemGrant("slippers"),
+                EventEffect.ItemGrant("legguards"),
+            }, CaravanName);
+
+            Assert.AreEqual("+1 Borrowed Regalia Ritual Slippers  ·  +1 Etched Runeplate Legguards", line);
+        }
+
+        [Test]
+        public void ALineAtExactlyTheBudget_IsNotFolded()
+        {
+            // "+1 " + a 69-character name: 72 exactly.
+            var line = EventEffectSummary.Describe(new[] { EventEffect.ItemGrant("long") },
+                _ => "Ceremonial Greatsword of the Undying, Borrowed From a Sleeping Dragon");
+            Assert.AreEqual("+1 Ceremonial Greatsword of the Undying, Borrowed From a Sleeping Dragon", line);
+            Assert.AreEqual(72, line.Length);
+        }
+
+        [Test]
+        public void TheRobbedCaravan_FoldsItsGrants_AndKeepsTheScuffleWordForWord()
+        {
+            var line = EventEffectSummary.Describe(new[]
+            {
+                EventEffect.ItemGrant("slippers"),
+                EventEffect.ItemGrant("dagger"),
+                EventEffect.ItemGrant("cap"),
+                EventEffect.ItemGrant("legguards"),
+                EventEffect.ItemGrant("mana_potion"),
+                EventEffect.ShelfLoss("wares", "health_potion"),
+            }, CaravanName);
+
+            Assert.AreEqual("+5 items  ·  Lost in the scuffle: Health Potion", line);
+        }
+
+        [Test]
+        public void AFold_CountsAmounts_StandsWhereTheFirstGrantStood_AndKeepsGoldAndXp()
+        {
+            var line = EventEffectSummary.Describe(new[]
+            {
+                EventEffect.Gold(40),
+                EventEffect.ItemGrant("slippers"),
+                EventEffect.Exp(25),
+                EventEffect.ItemGrant("health_potion", 3),
+                EventEffect.ItemGrant("legguards"),
+            }, CaravanName);
+
+            Assert.AreEqual("+40 gold  ·  +5 items  ·  +25 XP", line);
+        }
+
+        [Test]
+        public void OneOverBudgetGrant_FoldsToOneItem()
+        {
+            var line = EventEffectSummary.Describe(new[]
+            {
+                EventEffect.Gold(9999),
+                EventEffect.Exp(99999),
+                EventEffect.ItemGrant("slippers"),
+                EventEffect.ShelfLoss("wares", "legguards"),
+            }, CaravanName);
+
+            Assert.AreEqual("+9999 gold  ·  +99999 XP  ·  +1 item  ·  Lost in the scuffle: Etched Runeplate Legguards", line);
+        }
+
+        [Test]
+        public void AnOverBudgetLineWithNoGrants_IsLeftWordForWord()
+        {
+            var line = EventEffectSummary.Describe(new[]
+            {
+                EventEffect.Gold(9999),
+                EventEffect.Exp(99999),
+                EventEffect.HealPercent(100),
+                EventEffect.RelicGrant("crown", "World-Ender's Crown of Ash"),
+            }, null);
+
+            Assert.AreEqual("+9999 gold  ·  +99999 XP  ·  Party healed 100%  ·  Relic: World-Ender's Crown of Ash", line);
         }
 
         [Test]
