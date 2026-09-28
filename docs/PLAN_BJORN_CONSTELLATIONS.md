@@ -55,13 +55,20 @@ the root is free. What is NOT there yet:
   stays only as the default for an engine that does not override it.
 - **Reward track** (`reward_tracks.json` bear rows): `FuryGainOnAttack`
   (levels 5, 19) contradicts "Juggernaut gets Fury from no other source" and
-  double-counts on Einherjar. Rework them into engine-neutral rewards
-  (e.g. Fury capacity, `FuryStartOfFight`). Owner to confirm.
-- **Starting kit** (deferred by owner, partially settled):
-  - Slam: in the base kit. Einherjar's bottom-left branch upgrades it.
-  - Bellow: OUT of the base kit, unlocked by Sentinel.
+  double-counts on Einherjar. Owner decision (2026-09-28, second pass): leave
+  those two rows EMPTY for now rather than rework them; a replacement reward
+  is a later decision.
+- **Roots grant a skill** (owner, 2026-09-28, second pass): the mechanism
+  already exists — a `skills.json` row gets `unlockLevel: 999`, and the root
+  talent names it via `grantsSkillId`. Sentinel's root also grants Brace
+  (existing `placeholder_brawler_ward`, today `unlockLevel 1`); Juggernaut's
+  root also grants Second Wind (existing `second_wind`); Einherjar's root
+  also grants a new skill, placeholder name **Hack** (see section 3).
+- **Starting kit**: base kit = Slam only, plus the basic attack. Brace,
+  Second Wind and Hack come from whichever root the player picks, not from
+  the base kit. Einherjar's bottom-left branch upgrades Slam.
   - Rampage: OUT of the base kit, Einherjar convergence.
-  - Brace, Bulwark, Second Wind: open, see section 7.
+  - Bulwark: still open, see section 7.
   - `placeholder_brawler_ward_root` (the one current bear talent): removed.
 
 ---
@@ -75,7 +82,8 @@ convergence, the ultimate on the top edge.
 `raw incoming damage / Bjorn max HP x 150`, clamped 3-25 per hit. RAW means
 before his defenses reduce it, so resistance investment never cuts his
 income. Damage to his planted shield or to Shieldwall counts. Decay: pool
-default.
+default. The root also grants **Brace** (existing `placeholder_brawler_ward`,
+today `unlockLevel 1`), via `grantsSkillId` at `unlockLevel: 999`.
 
 ### Bottom
 
@@ -138,8 +146,19 @@ relics are his sustain; he gets no healing tree.
 **Root — engine (slot 0).** Fury per damaging action =
 `damage dealt / Bjorn's Attack x 10`, clamped 5-30. Once per action; an
 area hit counts its single largest hit, so Rampage cannot refill itself.
-Damage after mitigation. A crit deals more, so it pays more with no extra
-rule. Decay: pool default (idle turns drain).
+Damage is the RAW, pre-mitigation amount — verified in code (2026-09-28):
+`FightSession.Ledger.cs` `ApplyAndCountDamage` pays Fury pools on the raw
+hit ("the pools hear the blow first"), not the corrected "after mitigation"
+this section previously said. Because raw damage scales with Attack in
+practice, `damage / Attack x 10` works out to "10 Fury x the hit's damage
+multiplier" (basic attack ~10, a 2x Slam ~20, crits more): enemy defense and
+Bjorn's own Attack gear do not move that multiplier, but damage bonuses that
+are not Attack (Wrath, a crit) do raise it. A crit deals more, so it pays
+more with no extra rule. Decay: pool default (idle turns drain). The root
+also grants a new skill, placeholder name **Hack**: hits one target twice,
+costs no Fury, 3-turn cooldown (owner said 2-3; starting at 3). Each of its
+two hits pays the Fury engine separately — the one exception to "once per
+action" — so Hack is the Fury builder.
 
 ### Bottom
 
@@ -201,7 +220,9 @@ largest centre toe. Owner to confirm or pick a bear head instead.
 | 25% or less | 60 |
 
 Curved, not linear: modest above half health, steep below. Idle decay is
-OFF for this engine; the per-turn income is the whole economy.
+OFF for this engine; the per-turn income is the whole economy. The root
+also grants **Second Wind** (existing `second_wind`), via `grantsSkillId` at
+`unlockLevel: 999`.
 
 ### Bottom
 
@@ -227,7 +248,7 @@ Unstoppable for 2 turns (cannot be affected by crowd control). It is the
 |---|---|---|---|
 | **Unyielding** (L: 11/14/17) — CC passive | When crowd control is attempted on him, he negates it and gains +speed and +25% damage for 2 turns. 4-turn cooldown. | Cooldown 3 turns. | The trigger also grants 20 Fury. |
 | **Ignore Pain** (C: 12/15/18) — delayed damage | 20% of every hit is not taken now but spread over the next 3 turns as damage over time. | 30%. | Healing reduces the pending delayed damage before it restores health. |
-| **Blood Price** (R: 13/16/19) — control over his own health | When short on Fury, skills can be paid with health instead: 1 Fury = 0.5% max HP. | Health-paid skills deal +15% damage. | Cheat death, once per fight: lethal damage leaves him at 1 HP and fills Fury to 100. |
+| **Blood Price** (R: 13/16/19) — control over his own health | When short on Fury, skills can be paid with health instead: 1 Fury = 0.5% max HP. | Health-paid skills deal +15% damage. | Cheat death, once per fight: lethal damage leaves him at 1 HP and fills Fury to 100. Reuses the existing `CheatDeathOncePerFight` `TalentEffect` — no new kind needed. |
 
 Unyielding vs Unstoppable (owner decision): while Unstoppable is active,
 Unstoppable blocks the crowd control and Unyielding neither fires nor
@@ -239,24 +260,29 @@ way down, and the cheat death makes Cursed Blood survivable.
 
 ### Ultimate — Cursed Blood (slot 20)
 
-Skill. For 2 turns Bjorn cannot be healed. Every heal that would land on
-him (his regen, Gorge, Unbroken, an ally's heal, his share of a party heal)
-is dealt as damage to every enemy instead.
+Skill. Cost 50 Fury, once per fight. For 2 turns Bjorn cannot be healed.
+Every heal that would land on him (his regen, Gorge, Unbroken, an ally's
+heal, his share of a party heal) is dealt as damage to every enemy instead,
+damage type **Void** (exists in `DamageType`, rarely resisted).
 
 - Converts the EFFECTIVE heal: capped by his missing health at that
   moment. Since he cannot heal during it, his missing health stays put and
   each heal converts in full. A raw-heal version would reward being at
   full health, the opposite of the tree.
-- Second Wind (if kept, section 7) becomes a nuke under this; the
-  missing-health cap bounds it.
+- Second Wind becomes a nuke under this; the missing-health cap bounds it.
 
 ---
 
 ## 5. Implementation plan
 
-Routing per `CLAUDE.md`: triage each phase at launch. Every phase below is a
-separate issue with one owner. Gates per `docs/TESTING.md`; formula tests
-pin literal values (gotcha 5).
+**Routing (owner, 2026-09-28, second pass) — supersedes `CLAUDE.md`'s
+routing table for this plan only:** the main session orchestrates on
+Opus 5.5; all reading goes to Sonnet `reader`; any implementation Sonnet can
+do goes to Sonnet `fixer`; Opus 5.5 medium (`implementer`/`senior`) is used
+only when the extra reasoning is actually needed. Triage each phase at
+launch against that bar, not against `CLAUDE.md`'s trivial/doable/deep
+table. Every phase below is a separate issue with one owner. Gates per
+`docs/TESTING.md`; formula tests pin literal values (gotcha 5).
 
 ### Phase 1 — Critical-hit system (game-wide, first; owner decision)
 
@@ -267,9 +293,13 @@ pin literal values (gotcha 5).
 - Beat/popup + combat log line for a crit.
 - Sources: gear/relic affix hooks (authoring later).
 - Revisit the "cannot be critically hit" note in `TalentEffect.cs:152`.
-- Decision needed: can enemies crit? Recommendation: no in this phase.
-- Likely `senior` with `Escalation: cross-layer` (serialized stat enum +
-  Core damage path + Editor/scene popup must land together). Gate:
+- Owner decision (2026-09-28, second pass): enemies can crit ONLY when an
+  ability is authored to crit, never from a random baseline chance. An
+  authored crit is guaranteed, not a percent roll, and `EnemyIntent` (which
+  already carries `ExpectedDamage`) shows it in the telegraph — so the
+  owner's "no random spikes" rule still holds even though enemies can crit.
+- Routing (owner, 2026-09-28, second pass, supersedes `CLAUDE.md`'s table for
+  this plan; see section 5 header): `implementer` (Opus 5.5 medium). Gate:
   `run_tests_parallel.ps1 -Changed`, plus `-BuildScenes` / `-BuildContent`
   if touched.
 
@@ -278,8 +308,8 @@ pin literal values (gotcha 5).
 - Zero the pool's flat gains; move Fury income into the three root
   `TalentEffect`s with the formulas in sections 2-4.
 - Per-engine decay (Juggernaut: off).
-- Reward-track bear rows reworked (section 1).
-- `implementer`.
+- Reward-track bear rows left empty (section 1).
+- `implementer` (Opus 5.5 medium).
 
 ### Phase 3 — Per-character constellation silhouettes
 
@@ -289,17 +319,21 @@ pin literal values (gotcha 5).
   each.
 - Screen tree in `Domain/UiKit/Screens/`, wiring in `ScreenRegistry.cs`;
   `-BuildScenes`; `UiAudit` must pass at all four aspects.
-- `implementer`.
+- Routing: `fixer` for the plots data (the `Plots` keying and the three
+  layout entries); `implementer` if the layout contract itself changes.
 
 ### Phase 4 — Combat mechanics (one issue each, in this order)
 
+Routing 4a-4h: triage at launch; default `fixer` for content-on-existing-
+effects, `implementer` for new mechanics.
+
 | # | Mechanic | Used by | Notes |
 |---|---|---|---|
-| 4a | Damage redirect to a shield entity + a shared party pool | Plant the Shield, Shield Bash, Shieldwall | New damage-routing lifecycle; likely `senior`, `Escalation: architecture`. Decide: status on Bjorn vs. a `Summon`-style field entity. |
-| 4b | One heal funnel with a conversion hook | Cursed Blood, Ignore Pain T3 | Every heal path must pass one seam or conversion leaks. |
+| 4a | Plant the Shield as a Ward + a single shared party Ward pool | Plant the Shield, Shield Bash, Shieldwall | Verified in code (2026-09-28): there is no damage-redirect hook, and `Summon` only adds combatants to the ENEMY side (`TryAddEnemy`) — a planted shield cannot be a party-seat entity. But Wards already absorb last in `DamagePipeline.AfterDefences`, and Fury pools hear damage before Wards do, so "the shield takes the hit and Bjorn still gains Fury" is already how a Ward works. Plant the Shield = a Ward with its own HP formula, a planted visual, and break effects. Shieldwall = ONE Ward pool shared by every ally, which is new work (`WardSpreadsToWholeParty` today gives each ally their own separate pool). Downgraded from "likely `senior`, architecture" to `implementer`. |
+| 4b | Route the Regen tick through the existing heal funnel, add a conversion hook | Cursed Blood, Ignore Pain T3 | Verified in code (2026-09-28): heals already share one funnel, `FightSession.HealAndCount` (`Ledger.cs:381`) — skills, potions, relics all pass through it. Unverified: whether the Regen status tick uses it. Scope is narrower than first thought: add the conversion hook in `HealAndCount`, and route the Regen tick through it if it does not already. |
 | 4c | Delayed damage pool | Ignore Pain | |
-| 4d | Health as skill cost + cheat death | Blood Price | |
-| 4e | CC immunity + CC-negate trigger | Unbroken, Unyielding | |
+| 4d | Health as skill cost + cheat death | Blood Price | Blood Price T3 reuses the existing `CheatDeathOncePerFight` `TalentEffect` — no new kind needed. |
+| 4e | Define "crowd control" as one predicate; block at status application | Unbroken, Unyielding | Verified in code (2026-09-28): crowd control has no single existing definition — Stun and Feared share one gate (`StatusEffects.HasStun`), Rooted uses another (`CombatActions.IsLegalFor`), and Chilled only slows. 4e must first define "crowd control" as one predicate (proposal: Stun, Feared, Rooted, Chilled) and block it at status APPLICATION (the `ApplyStatusTo` seam), which is also where Unyielding's "negated an attempt" trigger fires. |
 | 4f | Reflect, silence, thorns, slow, disarm | Spellbreaker, Thornwall | Silence may need a new status. |
 | 4g | Momentum stacks, Fury soak, Berserk (reuse `Transformation`), Headsplitter, Twin Rampage | Einherjar | After phase 1. |
 | 4h | Hold the Line, Bellow upgrades, Gorge, Unbroken skills | Sentinel, Juggernaut | Mostly content on existing effects. |
@@ -308,6 +342,12 @@ pin literal values (gotcha 5).
 
 `talents.json` (63 rows, slots per the tables above) and `skills.json`;
 remove the placeholder kit rows that the trees replace; `-BuildContent`.
+Routing: `fixer`.
+
+Save compatibility, verified in code (2026-09-28): removed talent ids are
+dropped silently on load (`SaveData.Reconcile`), and spent embers are
+summed from unlocked ids, so removing `placeholder_brawler_ward_root`
+effectively refunds those embers on next load — no migration step needed.
 
 ### Phase 6 — Balance
 
@@ -349,15 +389,28 @@ Ignore Pain see little use. Separate plan.
 ## 7. Open questions
 
 1. Juggernaut silhouette: paw print (proposed) or bear head?
-2. Brace: gone entirely, or base-kit for non-Sentinel builds?
-3. Bulwark (ally shield) and Second Wind (Fury to heal): keep, fold into a
-   tree (Hold the Line / Juggernaut), or drop?
-4. Does Unbroken's regen convert under Cursed Blood? (The obvious combo;
+2. Bulwark (ally shield): keep, fold into a tree (Hold the Line /
+   Juggernaut), or drop?
+3. Does Unbroken's regen convert under Cursed Blood? (The obvious combo;
    either tune Cursed Blood around it or exclude it.)
-5. Cursed Blood cost, cooldown and damage type (physical, true, or a type
-   enemies can resist).
-6. Can enemies crit (phase 1)?
-7. Reward-track `FuryGainOnAttack` rows: what replaces them?
-8. Names still placeholders: Iron Retort, Thornwall, Spellbreaker, Plant
+4. Names still placeholders: Iron Retort, Thornwall, Spellbreaker, Plant
    the Shield, Bloodfire, Battle Trance, Twin Rampage, Thick Blood, Wrath,
    Gorge, Unbroken, Unyielding.
+
+---
+
+## 8. Review findings (2026-09-28), pending owner
+
+| # | Finding | Recommendation |
+|---|---|---|
+| 1 | `TalentEffect` is a CLOSED enum (Type/Magnitude/Threshold only, ~35 kinds, each wired inline at its mechanic). The 60 non-root nodes here need roughly 40+ new kinds; the plan did not budget this. | A reuse pass before Phase 5 mapping each node to an existing kind where it fits (`CheatDeathOncePerFight`, `IgnoreDefensePercent` for Slam T3, `ExecuteDamageBonusPercent` for Headsplitter T2, `TransformExtendOnKill`, `ProvokedDamageReductionPercent`), and trim nodes that only exist to be different. |
+| 2 | The balance bot scores actions by previewed damage; non-damage skills score 0 (`SkillResolution` returns 0 for Provoke, Transform, Ward-type utility). Brace, Bellow, Hold the Line, Plant the Shield, Berserk, Unbroken, Cursed Blood would be ignored, so Phase 6 cannot evaluate Sentinel or Juggernaut. | Add bot valuations for each new utility skill in the same issue that adds the skill. |
+| 3 | Sentinel cannot act as a tank on turn 1: Fury starts at 0 and only comes from being hit, while Bellow (20), Plant the Shield (30) and Hold the Line (40) all cost Fury. | Bellow costs 0 with a 3-turn cooldown. |
+| 4 | Brace (root) and Plant the Shield (convergence) are two Ward buttons. | The convergence upgrades Brace into Plant the Shield instead of adding a second button. |
+| 5 | "Juggernaut gets Fury from no other source" conflicts with Fury-granting nodes in other trees he can still buy (Bellow T3, Hold the Line T2, Bloodfire). | Those still pay; the rule means "no hit-based income", nothing more. |
+| 6 | Blood Price health cost: no rule for paying near 0 health. | Cannot pay below 1 HP; self-payment never triggers cheat death. |
+| 7 | Ignore Pain T3 vs Cursed Blood: order undefined. | Under Cursed Blood, heals convert first and do not clear delayed damage. |
+| 8 | Phase order builds all mechanics, then all content, then balance. | Vertical slices per constellation after Phases 1-3: Einherjar first (exercises the crit system, mostly existing seams), then Juggernaut, then Sentinel (shared Ward pool is the newest mechanic). |
+| 9 | Existing saves / new players: a Bjorn with no root has no Fury and only Slam. | The Talents screen (or first hub visit) forces the engine pick; until then Bjorn is flagged in the party UI. |
+| 10 | Several branches react to enemy behaviour the roster barely has (crowd control, magic casts). | The enemy-roster track lands before Sentinel/Juggernaut balance, or the bot reads those branches as worthless. |
+| 11 | Twin Rampage second sweep: keep 1x + 1-turn stun. | Verify party-applied Stun on enemies uses `HasStun` at enemy turn (it does per the 2026-09-28 read), so no new work there. |
