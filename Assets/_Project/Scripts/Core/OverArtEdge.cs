@@ -9,10 +9,9 @@ namespace PrincesPalace
     // rewrites the same material on every play.
     //
     // Why an edge and not a colour: the fight log and the ENEMIES heading float
-    // over whatever the backdrop is at that spot (QA 2026-09-26 REPORT 1.6:
-    // white log text over the treant stage's pale canopy, and the heading
-    // vanished into it entirely), and a spell can put white, violet or black
-    // under them a moment later. No face colour separates from all of those;
+    // over whatever the backdrop is at that spot, and a spell can put white,
+    // violet or black under them a moment later. No face colour separates
+    // from all of those;
     // a near-black ring around a light face does. The fight HUD took the black
     // slab away from the log on purpose ("read as a slab dropped over the
     // battlefield"), so the edge is carried by the glyphs, not by a plate.
@@ -41,11 +40,11 @@ namespace PrincesPalace
 
         // SMALL FACES NEED MORE FACE. At 12pt a ChakraPetch stroke is barely
         // wider than the SDF's own antialiasing ramp, so with the 20pt dilate
-        // no pixel of the face ever reached its full colour: every pixel of
-        // "1 STANDING" was face blended into the dark ring, and it measured
-        // #7D728E on the capture whatever face colour the tree asked for (QA
-        // 2026-09-26 round 3). The heavier dilate thickens the stroke until
-        // its core is solid face again; the ring is unchanged.
+        // no pixel of the face ever reaches its full colour: every pixel of
+        // "1 STANDING" blends into the dark ring, measuring a muddy midtone
+        // whatever face colour the tree asked for. The heavier dilate
+        // thickens the stroke until its core is solid face again; the ring
+        // is unchanged.
         internal const float SmallFaceBelowPt = 16f;
         internal const float SmallEdgeDilate = 0.8f;
 

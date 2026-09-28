@@ -78,25 +78,14 @@ namespace PrincesPalace
         // Deliberately not a resume. Resuming is the other reading of the same
         // rule and it is not the one the author asked for.
         //
-        // THERE IS NO BOOT CHECK ANY MORE, and that is the whole of the fix
-        // for AUDIT #117 (owner's call, 2026-09-11 -- option 3 of three).
-        //
-        // A [RuntimeInitializeOnLoadMethod(BeforeSceneLoad)] used to do this,
-        // and being before any scene meant it ran with SaveSlotManager.
-        // CurrentSlot still at its default 0. Two consequences, one of them
-        // harmless and one not. It could only ever SEE slot 0, so it never
-        // covered the slots it was written for -- SettleOnOpening below is
-        // what actually enforces the rule, for every slot including 0. And it
-        // WROTE slot 0: both of EndRun's live exits Persist(), so settling
-        // somebody else's leftover run made slot 0 the newest file on disk,
-        // and SaveSystem.MostRecentSlot -- which is deliberately keyed off the
-        // file's own mtime, because CurrentSlot cannot answer "which slot did
-        // I play last time" -- then pointed the main menu's Continue at a slot
-        // the player had never chosen.
-        //
-        // Removing it is smaller than preserving the mtime around the write or
-        // adding a lastPlayedAtTicks field, and it takes a mechanism away
-        // rather than adding one. Nothing is lost: the half that worked is
+        // THERE IS NO BOOT CHECK: a [RuntimeInitializeOnLoadMethod
+        // (BeforeSceneLoad)] would run before any scene, with
+        // SaveSlotManager.CurrentSlot still at its default 0, so it could
+        // only ever see and settle slot 0 -- never whichever slot is
+        // actually being opened. SettleOnOpening below is what actually
+        // enforces the rule, for every slot including 0, from
+        // SaveSlotManager.EnterSlot. This takes a mechanism away rather
+        // than adding one; nothing is lost, since the half that worked is
         // still here.
 
         // Settles a run found in a slot the player has just opened.
@@ -202,12 +191,10 @@ namespace PrincesPalace
 
         // Ends the run AND closes its books, in that order, in one call.
         //
-        // Settling used to be the caller's job and there are two callers -- a
-        // defeat and an abandon from the map. Only the defeat did it, so
-        // walking away from a descent silently threw away every ember the
-        // bosses in it had earned and every room it had cleared. Nothing
-        // reported that, because discarding a snapshot looks exactly the same
-        // whether or not anybody read it first.
+        // Settling here rather than leaving it to each caller means every
+        // caller -- a defeat and an abandon from the map alike -- pays out
+        // every ember its bosses earned and credits every room it cleared,
+        // rather than the run being silently discarded unpaid.
         //
         // Folded in here so the ordering cannot be got wrong again: the
         // settlement is returned for whoever wants to describe it, and ignoring
@@ -289,19 +276,13 @@ namespace PrincesPalace
                 character?.equipment?.Clear();
             }
 
-            // AND THE PACK, which is the part I got wrong the first time.
-            //
-            // This used to say inventory was already handled because it lives on
-            // RunSnapshot, which the line below replaces. It does not.
-            // stockpiledItems is "the single live inventory for now" --
-            // FightBootstrap's own words -- and it is what the pack draws, what
-            // the fight satchel is built from, and what the Reckoning drops loot
-            // into. RunSnapshot.inventory is vestigial: one stats readout reads
-            // it and nothing ever puts loot there.
-            //
-            // So the run's actual haul sat on the PROFILE and survived every
-            // death and every abandon, which is what "my inventory in save slot
-            // 5 is still not cleared" was.
+            // AND THE PACK: stockpiledItems is "the single live inventory
+            // for now" -- FightBootstrap's own words -- and it is what the
+            // pack draws, what the fight satchel is built from, and what the
+            // Reckoning drops loot into. RunSnapshot.inventory is vestigial:
+            // one stats readout reads it and nothing ever puts loot there.
+            // Clearing only RunSnapshot would leave the run's actual haul
+            // sitting on the PROFILE, surviving every death and abandon.
             save.stockpiledItems?.Clear();
 
             save.activeRun = new RunSnapshot { hasRun = false };
@@ -440,16 +421,13 @@ namespace PrincesPalace
             // whatever the elite left them, against enemies at 1.95x health and
             // 1.58x attack, and it never recovered.
             //
-            // The elite itself was not the spike, which is worth saying because
-            // it is where the report points: an elite room fields two enemies
-            // where a normal room fields one or two. At the time this was
-            // written, StatBlock.ScaledForElite -- the multiplier its own
-            // comment said made elites "completely clap you" in playtesting --
-            // HAD NO CALLER (AUDIT #54); FightEncounterAdapter.ToCombatant now
-            // wires it in for elite encounters (Phase 5B), so an elite's own
-            // stats are the deliberate spike they were always meant to be, and
-            // what came after the elite was the separate, unrelated problem
-            // this heal fixes.
+            // The elite itself is not the spike this heal targets: an elite
+            // room fields two enemies where a normal room fields one or two,
+            // and FightEncounterAdapter.ToCombatant wires
+            // StatBlock.ScaledForElite in for elite encounters, so an
+            // elite's own stats are the deliberate spike they are meant to
+            // be. What comes after the elite is the separate, unrelated
+            // problem this heal fixes.
             //
             // A leg is the natural place: it now always ends on a boss (with a
             // forced elite mid-leg), so this reads as the beat after a set
@@ -486,14 +464,13 @@ namespace PrincesPalace
         // AND IT IS THE ONE PLACE A RUN EARNS GOLD, so it is the one place that
         // records having earned it.
         //
-        // `goldEarned` used to be credited in RunLedger.RecordRoom, which only
-        // a settled FIGHT reaches. Treasure rooms pay 15-30 through here
-        // (RoomResolver) and a shop sale paid straight onto run.gold, so
-        // neither counted -- and Run statistics shows held and earned side by
-        // side precisely because "held and earned are different numbers as soon
-        // as anything is spent, and a shop exists" (RunStatRows). That framing
-        // only holds while earned >= held; with treasure uncounted, a run could
-        // read 22 gold held against 0 earned.
+        // Crediting `goldEarned` only in RunLedger.RecordRoom (a settled
+        // FIGHT) would miss the other two gold sources: treasure rooms pay
+        // 15-30 through here (RoomResolver), and a shop sale pays straight
+        // onto run.gold -- and Run statistics shows held and earned side by
+        // side precisely because "held and earned are different numbers as
+        // soon as anything is spent, and a shop exists" (RunStatRows), a
+        // framing that only holds while earned >= held.
         //
         // HELD AND EARNED MOVE TOGETHER HERE and diverge only through spending,
         // which is the whole distinction: spending touches run.gold and never

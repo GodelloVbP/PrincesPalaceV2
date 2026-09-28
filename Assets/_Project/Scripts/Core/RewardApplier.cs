@@ -61,10 +61,9 @@ namespace PrincesPalace
                 if (participants != null && !participants.Contains(character.definitionId)) continue;
 
                 // FIELDED is decided by whether the fight actually had them. A
-                // squad member at 0 HP is left out of the encounter, and used to
-                // vanish from the reward entirely -- so a party of three came
-                // back as two rows with nothing saying why. They get a row now,
-                // downed, with nothing gained.
+                // squad member at 0 HP is left out of the encounter but still
+                // gets a row, downed, with nothing gained, so a party of three
+                // never comes back as two rows with nothing saying why.
                 bool isDowned = !fielded.Contains(character.definitionId);
 
                 // Read BEFORE the award: AddExperience mutates in place, and the
@@ -88,20 +87,13 @@ namespace PrincesPalace
                 int gained = VictoryRewards.ExperienceFor(payout, isDowned);
                 if (gained > 0) character.AddExperience(gained);
 
-                // AND THE TRACK IS **NOT** PAID HERE ANY MORE.
+                // AND THE TRACK IS NOT PAID HERE.
                 //
-                // This used to call character.ClaimTrackRewards() on every
-                // payout, unconditionally, which kept `level` and
-                // `claimedTrackLevel` in lockstep -- so the gap between reached
-                // and collected only ever appeared for a character levelled by
-                // a migration or a debug grant.
-                //
-                // COLLECTION IS SOMETHING THE PLAYER DOES NOW. The reward track
-                // design handoff (section 3) makes that gap the screen's whole
-                // state model: a reward is WAITING until it is claimed, the
-                // waiting nodes pulse, the ribbon combs them, and a collect
-                // button counts them. Paying automatically here would leave all
-                // of that reachable only through the debug menu.
+                // COLLECTION IS SOMETHING THE PLAYER DOES. A reward is
+                // WAITING until it is claimed, the waiting nodes pulse, the
+                // ribbon combs them, and a collect button counts them.
+                // Paying automatically here would leave all of that
+                // reachable only through the debug menu.
                 //
                 // WHAT THIS CHANGES FOR THE PLAYER, stated plainly because it
                 // is a gameplay change and not a presentation one: stat points,
@@ -109,26 +101,12 @@ namespace PrincesPalace
                 // end of a fight. They arrive when the track is opened and
                 // collected, from the system menu's Character & Inventory pane.
                 //
-                // The guarantee the old comment here defended is unchanged and
-                // is what makes this safe: the WATERMARK decides what is owed,
+                // WHAT MAKES THIS SAFE: the WATERMARK decides what is owed,
                 // not any call site, so a character who levelled before the
                 // track existed or before a reward kind was implemented is
                 // still owed it and can still collect it. Nothing expires.
                 //
-                // THIS IS DECIDED, and the revert note that used to sit here is
-                // gone rather than corrected. It said "TO REVERT: put
-                // `character.ClaimTrackRewards();` back on the line below",
-                // naming an overload that does not exist: the method is
-                // (RewardTrackDefinition track, int throughLevel) since
-                // claiming became per-node. Following it literally with
-                // ClaimTrackRewards(RewardTracks.For(character), character.level)
-                // would restore exactly the collect-everything auto-claim that
-                // Character.cs records as the reported bug ("it still auto
-                // claims" -- every node on the rail a collect-everything button
-                // wearing a different number).
-                //
                 // Manual collection is the design, not a state to be undone.
-                // See the reward-track design handoff section 3.
 
                 reward.Characters.Add(new CharacterReward(
                     character.definitionId,

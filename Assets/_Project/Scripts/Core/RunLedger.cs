@@ -63,11 +63,11 @@ namespace PrincesPalace
         // died in was not cleared, but the blows you struck in it still
         // happened.
         //
-        // NO GOLD PARAMETER, deliberately. This used to take `goldGained` and
-        // credit run.goldEarned from it, which made a settled fight the only
+        // NO GOLD PARAMETER, deliberately: taking one and crediting
+        // run.goldEarned from it here would make a settled fight the only
         // thing in the game that could earn -- a treasure room's 15-30 and a
-        // shop sale both went onto run.gold without passing here, so "Gold
-        // earned" could read below "Gold held". Earning now happens in the one
+        // shop sale both go onto run.gold without passing here, so "Gold
+        // earned" could read below "Gold held". Earning happens in the one
         // place gold is credited (RunManager.BankPayout), and taking the
         // parameter away is what stops the two from ever double-counting the
         // same coin.
