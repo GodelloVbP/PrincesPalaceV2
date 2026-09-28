@@ -34,9 +34,7 @@ namespace PrincesPalace
         // Returns true when the room resolved here, false when it hands off to
         // a screen instead.
         //
-        // THE RETURN IS ADVISORY, which this used to claim more strongly than
-        // the code supports: it said the caller "should clear it and redraw"
-        // off this bool, and the one production caller
+        // THE RETURN IS ADVISORY: the one production caller
         // (RunOrchestrator.ArriveAt) discards it and clears unconditionally.
         // That is not a bug today and the reason is worth writing down rather
         // than rediscovering: false comes back only for Fight, EliteFight,

@@ -26,7 +26,7 @@ namespace PrincesPalace
     // only BUY can refuse, and it refuses through RunOrchestrator's own
     // ShopResult rather than a client-side guess at affordability.
     //
-    // INavSectionStrip (owner ask #3, 2026-09-22): LB/RB step the character
+    // INavSectionStrip: LB/RB step the character
     // picker the same way the dossier's shoulders page its own roster --
     // StepSection is the ONE path both the shoulder buttons and the
     // on-screen arrows call, so they cannot disagree about where wrap lands.
@@ -38,7 +38,7 @@ namespace PrincesPalace
         [SerializeField] internal Button buyButton;
         [SerializeField] internal Button packButton;
 
-        // The character picker (owner ask #3): who the comparison panel
+        // The character picker: who the comparison panel
         // below is comparing a selected gear card AGAINST. Defaults to the
         // party leader (ActiveSquad()[0]) exactly the way
         // CharacterDossierController's own _index starts at 0.
@@ -49,10 +49,10 @@ namespace PrincesPalace
         // The comparison panel (ItemComparisonPanel). ALWAYS SHOWN: only a
         // valid, non-refused GEAR selection fills detailTitle; every other
         // state (nothing selected, a refusal, a relic/book card) paints
-        // into detailBody alone -- see PaintDetail's own header. It used to
-        // be hidden in those states, and detailBody is the panel's child, so
-        // SELECT A CARD, a relic's line and every refusal were painted into
-        // an inactive label: the column showed a 420px hole (2026-09-28).
+        // into detailBody alone -- see PaintDetail's own header. Hiding the
+        // panel in those states would paint SELECT A CARD, a relic's line
+        // and every refusal into detailBody, which is the panel's inactive
+        // child, showing a 420px hole instead.
         [SerializeField] internal GameObject detailPanelRoot;
         [SerializeField] internal TMP_Text detailTitle;
         [SerializeField] internal TMP_Text detailBody;
@@ -112,10 +112,9 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] relicMetas;
         [SerializeField] internal TMP_Text[] relicPrices;
 
-        // The overarching menu this screen's Start opens (owner's
-        // 2026-09-19 ask: "press Start in the shop to check on your chars'
-        // equipment / skills"), assigned by ScreenRegistry.Map's Wire lambda
-        // from the same instance it hands MapController -- one
+        // The overarching menu this screen's Start opens, assigned by
+        // ScreenRegistry.Map's Wire lambda from the same instance it hands
+        // MapController -- one
         // SystemMenuController per Map scene, not a second copy for the
         // shop to own, the same sharing MapController.systemMenu documents.
         [SerializeField] internal SystemMenuController systemMenu;
@@ -139,7 +138,7 @@ namespace PrincesPalace
         private int _selectedIndex = -1;
 
         // Which party member the comparison panel scores a selected gear
-        // card against (owner ask #3). Reset to 0 -- the party leader -- on
+        // card against. Reset to 0 -- the party leader -- on
         // every Open(), the same "start on the leader" default the dossier
         // itself resets to when nothing says otherwise.
         private int _charIndex;
@@ -259,7 +258,7 @@ namespace PrincesPalace
             Paint();
         }
 
-        // ---- the character picker (owner ask #3) ------------------------------
+        // ---- the character picker ------------------------------------------------
         //
         // Mirrors CharacterDossierController.Squad()/Step() deliberately:
         // same source (ActiveSquad, filtered of nulls), same wrap-by-modulo,
@@ -444,8 +443,8 @@ namespace PrincesPalace
 
             // KEPT for the same reason Reroll's is. A sell can refuse NotInBag
             // -- SellPriceOf answers 0 for an item the catalogue no longer has
-            // and the row stays pressable in the SELL ALL column -- and that
-            // refusal used to be thrown away here.
+            // and the row stays pressable in the SELL ALL column -- so that
+            // refusal has to reach PaintRefusal rather than being discarded.
             var result = RunOrchestrator.Sell(absolute, quantity);
             PaintRefusal(result);
 
@@ -581,7 +580,7 @@ namespace PrincesPalace
             if (target != null && target.activeSelf != shown) target.SetActive(shown);
         }
 
-        // ---- the character picker (owner ask #3) ------------------------------
+        // ---- the character picker ------------------------------------------------
         private void PaintCharacterPicker()
         {
             var squad = Squad();
@@ -726,7 +725,7 @@ namespace PrincesPalace
                 {
                     var item = ContentDatabase.GetItem(entry.contentId);
                     string name = item?.displayName ?? entry.contentId;
-                    // VISIBLE AFFIXES (owner ask #2): the card names its
+                    // VISIBLE AFFIXES: the card names its
                     // modifiers, not just how many there are. What each one
                     // DOES, in numbers, is more than this line can hold --
                     // that is ModifierAffixLines.LinePairs' text, and it
@@ -759,18 +758,18 @@ namespace PrincesPalace
 
         // THE ONE BOX FOR "WHAT THE SHOP IS TELLING THE PLAYER RIGHT NOW"
         // (ShopScreen.DetailBody's own header). Three shapes, same priority
-        // order the old single-line label always used:
+        // order:
         //
         //   1. a refusal, or the pack/empty-selection placeholder -- plain
         //      text in detailBody under an empty title (nothing to compare).
-        //   2. a relic or book -- the old name/meta/description line, same
-        //      text, same box (a comparison needs an equip slot; neither
-        //      kind has one).
+        //   2. a relic or book -- name/meta/description as plain text in the
+        //      same box (a comparison needs an equip slot; neither kind has
+        //      one).
         //   3. a gear card -- detailTitle gets its name,
         //      and detailBody carries ItemDescription.ComparisonBody: the
-        //      item's stats, its affix lines (owner ask #2's full numbers)
-        //      and the delta against whatever SelectedCharacter() has
-        //      equipped in that slot (owner ask #3).
+        //      item's stats, its affix lines with their full numbers, and
+        //      the delta against whatever SelectedCharacter() has equipped
+        //      in that slot.
         private void PaintDetail(RunSnapshot run)
         {
             if (detailTitle != null) detailTitle.SetContent("");
@@ -978,12 +977,12 @@ namespace PrincesPalace
                 .FirstOrDefault(e => e != null && e.section == section && e.index == index);
         }
 
-        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) ----------------
         //
         // A MODAL, not a whole-scene base context (Hub/Map/Talent/MainMenu's
-        // shape) -- pushed on Open(), popped on the real Leave() and, as the
-        // OnDisable/OnDestroy safety net plan section 4 calls for, on ANY
-        // deactivation this class did not initiate itself.
+        // shape) -- pushed on Open(), popped on the real Leave() and, as an
+        // OnDisable/OnDestroy safety net, on ANY deactivation this class did
+        // not initiate itself.
         //
         // ONE CONTEXT, reconfigured between the shelf and the pack modal --
         // NavContext.Reconfigure's own documented case (Map's runtime rewrite,
