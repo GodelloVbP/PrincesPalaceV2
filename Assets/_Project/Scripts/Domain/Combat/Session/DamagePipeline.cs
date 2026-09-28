@@ -97,6 +97,17 @@ namespace PrincesPalace.Domain.Combat.Session
     // THAT hit). See ModifierEffectType.DodgeRating's own comment
     // for the fuller argument for why this split is correct rather than
     // arbitrary.
+    //
+    // CRITICAL HITS (CritRules) are decided HERE too, for the dodge's reason:
+    // one funnel means no damage path can forget them. Right after the dodge
+    // (a miss spends no crit draw and cannot crit) the crit is decided -- the
+    // caller's `crit` when it hands one in (an authored enemy crit, or a
+    // multi-packet cast's single decision), otherwise one RollCrit on the same
+    // `rng` -- and the multiplier rides the OUTGOING amount, before
+    // effectiveness and defense. `rng == null` (every preview) never rolls one;
+    // an authored `crit: true` still applies there, because it is certain.
+    // Everything listed above as not routing through here (splash, Shatter,
+    // DoT ticks, relic packets with no rng) cannot crit either.
     public static class DamagePipeline
     {
         // +/-20% by default, so two swings that would otherwise deal the
@@ -131,12 +142,21 @@ namespace PrincesPalace.Domain.Combat.Session
             // as different information to the player.
             public readonly bool IsMiss;
 
-            public Outcome(int damage, float effectiveness, int poisonDetonation, bool isMiss = false)
+            // TRUE when this hit was a CRITICAL HIT -- rolled here for a party
+            // member, or authored on an enemy ability and handed in. Damage
+            // already includes the multiplier; this is reported so the view
+            // can present it (CombatBeat.Crit / BeatTargetResult.Crit). Never
+            // true on a miss.
+            public readonly bool IsCrit;
+
+            public Outcome(int damage, float effectiveness, int poisonDetonation, bool isMiss = false,
+                           bool isCrit = false)
             {
                 Damage = damage;
                 Effectiveness = effectiveness;
                 PoisonDetonation = poisonDetonation;
                 IsMiss = isMiss;
+                IsCrit = isCrit && !isMiss;
             }
         }
 
@@ -187,6 +207,33 @@ namespace PrincesPalace.Domain.Combat.Session
             return RandomOps.RollPercent(rng, dodgeChance);
         }
 
+        // THE CRIT ROLL -- see CritRules for the whole rule. Same seam and same
+        // conventions as RollDodge above: the session's own `rng` stream,
+        // through RandomOps.RollPercent, and `rng == null` (every read-only
+        // preview) never crits, so a telegraph cannot spend a draw. Enemies
+        // answer 0 from CritRules.ChanceFor and therefore never consume one
+        // either; an enemy crit is AUTHORED and handed in, never rolled.
+        public static bool RollCrit(CombatantState attacker, SeededRandom rng)
+        {
+            if (rng == null) return false;
+            return RandomOps.RollPercent(rng, CritRules.ChanceFor(attacker));
+        }
+
+        // WHETHER THIS HIT CRITS, as the funnel decides it.
+        //
+        // `crit` is the caller's call when it has one: true for an AUTHORED
+        // crit (guaranteed, no draw, applies in a preview too), false for a
+        // hit that must not crit. null means "decide here": roll it -- UNLESS
+        // the caller already resolved the swing (`dodgeAlreadyResolved`),
+        // because then it owns the crit call too, exactly as it owns the dodge
+        // (a multi-packet spell rolls once for the whole cast and hands the
+        // result to every packet; a rider on a landed blow does not crit).
+        private static bool DecideCrit(bool? crit, bool dodgeAlreadyResolved, CombatantState attacker, SeededRandom rng)
+        {
+            if (crit.HasValue) return crit.Value;
+            return !dodgeAlreadyResolved && RollCrit(attacker, rng);
+        }
+
         // The typed path: a spell or skill whose damage type is authored.
         //
         // `affinity` comes from the target's own definition and is passed in
@@ -229,11 +276,22 @@ namespace PrincesPalace.Domain.Combat.Session
             CombatantState attacker = null,
             bool ignoresDefense = false,
             bool dodgeAlreadyResolved = false,
-            Func<CombatantState, CombatantState, DamageType, int> resolveDetonation = null)
+            Func<CombatantState, CombatantState, DamageType, int> resolveDetonation = null,
+            bool? crit = null)
         {
             if (!dodgeAlreadyResolved && RollDodge(target, attacker, rng))
             {
                 return new Outcome(0, 1f, 0, isMiss: true);
+            }
+
+            // THE CRIT, right after the dodge and before everything else: a
+            // miss cannot crit (and spends no crit draw), and the multiplier
+            // rides the OUTGOING amount, before effectiveness and defense --
+            // see CritRules' header for why that side of the armour.
+            bool isCrit = DecideCrit(crit, dodgeAlreadyResolved, attacker, rng);
+            if (isCrit)
+            {
+                raw = CritRules.Apply(raw, attacker);
             }
 
             // Jo-Sun's Book of Anatomy: the attacker's own bonus against a
@@ -284,7 +342,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // is not a hit that was merely softened.
             result = resolveWard == null ? result : resolveWard(target, result);
 
-            return new Outcome(result, effectiveness, detonated);
+            return new Outcome(result, effectiveness, detonated, isCrit: isCrit);
         }
 
         // The untyped path: an attacker whose damage type comes from their own
@@ -306,7 +364,8 @@ namespace PrincesPalace.Domain.Combat.Session
             SeededRandom rng,
             Func<CombatantState, int, int> resolveWard,
             bool ignoresDefense = false,
-            Func<CombatantState, CombatantState, DamageType, int> resolveDetonation = null)
+            Func<CombatantState, CombatantState, DamageType, int> resolveDetonation = null,
+            bool? crit = null)
         {
             // The execute bonus rides HERE, in the one overload that knows both
             // sides, rather than at the call sites that would otherwise each
@@ -331,7 +390,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 return AfterDefences(raw, attackType.Value, target, affinity,
                                      varianceRange, rng, resolveWard,
                                      attacker: actor, ignoresDefense: ignoresDefense,
-                                     resolveDetonation: resolveDetonation);
+                                     resolveDetonation: resolveDetonation, crit: crit);
             }
 
             // The untyped tail never reaches the typed overload above, so it
@@ -341,6 +400,13 @@ namespace PrincesPalace.Domain.Combat.Session
             if (RollDodge(target, actor, rng))
             {
                 return new Outcome(0, 1f, 0, isMiss: true);
+            }
+
+            // The crit, in the same position the typed overload puts it.
+            bool isCrit = DecideCrit(crit, dodgeAlreadyResolved: false, actor, rng);
+            if (isCrit)
+            {
+                raw = CritRules.Apply(raw, actor);
             }
 
             // Untyped: physical armour only, no effectiveness, no poison combo.
@@ -361,7 +427,7 @@ namespace PrincesPalace.Domain.Combat.Session
             result = ApplyFlatPhysicalReduction(result, target, DamageType.Physical);
             result = resolveWard == null ? result : resolveWard(target, result);
 
-            return new Outcome(result, 1f, 0);
+            return new Outcome(result, 1f, 0, isCrit: isCrit);
         }
 
         // Stalwart's FlatPhysicalDamageReduction: a flat subtraction from

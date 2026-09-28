@@ -35,11 +35,16 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly int Amount;
         public readonly bool Missed;
 
-        public BeatTargetResult(CombatantState target, int amount, bool missed)
+        // This target's hit was a critical hit (DamagePipeline.Outcome.IsCrit)
+        // -- per target, because every target of a sweep rolls its own.
+        public readonly bool Crit;
+
+        public BeatTargetResult(CombatantState target, int amount, bool missed, bool crit = false)
         {
             Target = target;
             Amount = amount;
             Missed = missed;
+            Crit = crit && !missed;
         }
     }
 }

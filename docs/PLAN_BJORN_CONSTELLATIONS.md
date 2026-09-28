@@ -230,7 +230,9 @@ pay — the rule only rules out earning Fury from taking or dealing hits
 Curved, not linear: modest above half health, steep below. Idle decay is
 OFF for this engine; the per-turn income is the whole economy. The root
 also grants **Second Wind** (existing `second_wind`), via `grantsSkillId` at
-`unlockLevel: 999`.
+`unlockLevel: 999`. When granted by the Juggernaut root, Second Wind has a
+**4-turn cooldown** (owner-approved, self-review 2026-09-28): at 60 free Fury
+per turn at low health it would otherwise chain near-full heals every turn.
 
 ### Bottom
 
@@ -319,6 +321,129 @@ table. Every phase below is a separate issue with one owner. Gates per
   this plan; see section 5 header): `implementer` (Opus 5.5 medium). Gate:
   `run_tests_parallel.ps1 -Changed`, plus `-BuildScenes` / `-BuildContent`
   if touched.
+
+#### Phase 1 — Domain design as built (2026-09-28)
+
+- **Rule** lives in `Domain/Combat/CritRules.cs`: `BaseChancePercent = 5`,
+  `BaseDamagePercent = 150` (a crit is x1.5), `MinDamagePercent = 100`.
+  `CombatantState.CritChancePercent` / `CritDamagePercent` are the fight
+  totals; the constructor starts every player-side combatant at 5% and every
+  enemy at 0, damage at 150 for both.
+- **Where it applies:** inside `DamagePipeline.AfterDefences` (both
+  overloads), right after the dodge roll and before effectiveness, defense,
+  variance and the ward — the multiplier rides the OUTGOING amount. A miss
+  cannot crit and spends no crit draw. Heals never reach the pipeline, so
+  heals never crit. Splash, Shatter, DoT ticks and relic packets with
+  `rng: null` (Toll of the Flock) cannot crit either.
+- **The roll** is `DamagePipeline.RollCrit` -> `RandomOps.RollPercent` on
+  the fight's own `_rng`; `rng == null` (every preview) never rolls. Enemies
+  answer 0 from `CritRules.ChanceFor` and never consume a draw.
+- **Per hit, not per action:** each target of a sweep rolls its own crit;
+  a multi-packet spell rolls ONE crit for the whole cast (same shape as its
+  single dodge) via `ResolveDamageInstances`. The elemental on-hit rider
+  never crits; Ashen Reckoning's detonation (a returned snapshot) never
+  crits.
+- **Authored enemy crits:** `EnemyAbility.Crits` (plain swing, legacy
+  attack or real skill). `ResolveEnemyAction` arms
+  `FightSession._authoredCritActor` for that one action (cleared in a
+  `finally` by `AutoResolveEnemyTurns`, before retaliation); every damage
+  call site passes `crit: CritCallFor(actor)`. Guaranteed, no draw.
+  `EnemyIntent.WillCrit` is set and `ExpectedDamage` (and the per-seat
+  table) includes the multiplier. The legacy `skillName/skillPower/
+  skillChance` trio has no crit field — frozen legacy authoring.
+- **Reporting:** `DamagePipeline.Outcome.IsCrit`; `CombatBeat.Crit` for a
+  single-target blow; `BeatTargetResult.Crit` per target of a sweep. Log:
+  `FightSession.CritLine` ("A critical hit!") ahead of the damage line;
+  sweeps append " (critical)" per target in the summary line.
+- **Bot:** `FightAction.PreviewAttackDamage` and `FightAction.PreviewDamage`
+  apply `CritRules.ExpectedDamage` (damage x (1 + chance x bonus)); all three
+  policies use them. `PreviewSkillPower` itself (the HUD POWER row) stays
+  exact. Enemy authored crits reach the bot exactly through
+  `EnemyIntent.ExpectedDamage`.
+- **Part B — written but held back from the Domain commit** (the next two
+  bullets and the `TalentEffect.cs` comment). Every file it touches is in
+  `ContentInputHash`, so committing it without a content rebuild turns
+  `ContentFreshnessTests` red; it lands atomically with the first
+  `-BuildContent` (handoff item 1). Files: `Domain/Stats/StatType.cs`,
+  `Domain/Stats/StatBlock.cs`, `Domain/Combat/CritRules.cs` (the two
+  `Party*` helpers), `Domain/Combat/TalentEffect.cs` (comment only),
+  `Domain/Content/RawEnemyEntry.cs`, `Domain/Content/EnemyEntryResolver.cs`,
+  `Domain/Content/ResolvedEnemy.cs`, `Domain/Combat/Session/CombatantKit.cs`,
+  `docs/CONTENT_SCHEMA.md`, `Tests/EditMode/Content/CritAuthoringTests.cs`.
+- **Stats (part B):** `StatType.CritChance`, `StatType.CritDamage` APPENDED; the
+  `StatBlock` fields `critChance` / `critDamage` are BONUS percent points on
+  top of the baseline (0 = baseline). `CritRules.PartyChancePercent(stats)`
+  / `PartyDamagePercent(stats)` turn effective stats into the combat totals.
+  `Scaled` / `ScaledForElite` pass them through unscaled.
+- **Authoring (part B):** `RawEnemyEntry.attackCrits` (refused with `attackWeight 0`)
+  -> `ResolvedEnemy.AttackCrits`; `RawEnemyAbility.crits` ->
+  `EnemyAbilityRef.Crits`. `docs/CONTENT_SCHEMA.md` regenerated with
+  `CONTENT_SCHEMA_WRITE=1` (both rows present).
+- Existing talents unchanged; Last Stand's spike cap
+  (`DamageCapPercentBelowHealth`) still stands in for "cannot be critically
+  hit".
+
+#### Phase 1 — Unity-side handoff
+
+Domain is done; none of the following could be built or verified in the
+dotnet-only container. Every item names the file, the change and why.
+
+1. **Land part B with `-BuildContent` (blocking).** `StatBlock.cs`,
+   `TalentEffect.cs` and `Domain/Content/*.cs` are in `ContentInputHash`, so
+   with part B applied
+   `ContentFreshnessTests.TheInputsAreTheOnesTheTreeWasBuiltFrom` is red
+   until the content tree is rebuilt — commit part B and the rebuilt tree
+   together. `StatBlock` gained two serialized
+   fields and `ResolvedEnemy` / `EnemyAbilityRef` one each; the rebuild
+   writes them into every asset and the new stamp. Sync
+   `Resources/Content/` back to main (gotcha 1). No `ContentBuilder` mapping
+   code should be needed — `EnemyDefinition` stores the resolver's
+   `ResolvedEnemy` whole — but confirm a built enemy asset carries
+   `AttackCrits` / `Abilities[i].Crits`.
+2. **`Core/FightEncounterAdapter.cs`, party kit builds (~L221 and ~L348,
+   beside `ArmorPenetration`):** set
+   `state.CritChancePercent = CritRules.PartyChancePercent(stats);` and
+   `state.CritDamagePercent = CritRules.PartyDamagePercent(stats);` (part
+   B helpers). Without
+   it every party member still crits at the 5%/150% baseline (constructor
+   default) but a `critChance` / `critDamage` bonus on gear or talents is
+   ignored. Use the effective stats (`ContentDatabase.EffectiveStats` on the
+   save-backed path) so item `statBonus` crit stats count.
+3. **`Core/FightEncounterAdapter.cs` `EnemyKitFor` (L600, L614, L621):**
+   `EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f,
+   source.AttackWeight, crits: source.AttackCrits)`;
+   `EnemyAbility.Of(Resolve(skill), reference.Weight, reference.Crits)`; and
+   the empty-pool fallback at L621 with `crits: source.AttackCrits`. Without
+   this an authored enemy crit resolves to a plain hit in real fights (the
+   Domain legacy pool in `CombatantKit` reads `AttackCrits` with part B).
+4. **Crit sources (authoring later, hooks only):** gear/relic crit. Item
+   `statBonus` is a `StatBlock`, so crit stats flow once item 2 lands. A
+   relic source needs `RelicStat.CritChance` / `CritDamage` APPENDED and
+   `RelicModifiers.Apply` at the item-2 lines; a rolled affix needs
+   `ModifierEffectType` members APPENDED plus a read at the same lines.
+   Enum rule: append only.
+5. **View — popup and beat (`Core/FightBeatPlayer.cs` ~L1159-1186
+   `PopNumber` / single-amount path, `DamagePopup`):** read `CombatBeat.Crit`
+   (single target) and `BeatTargetResult.Crit` (sweeps) and play a crit
+   popup style (larger, distinct colour, e.g. "36!"); optionally a
+   shake / hit-stop floor via the existing `RecordFormHitCue` floor pattern.
+   The log line already arrives in `beat.Messages`.
+6. **View — telegraph (`Core/FightController.StageVisuals.cs` ~L571 and
+   ~L723, intent badge/tooltip):** show `EnemyIntent.WillCrit` (crit marker
+   on the badge, "Critical" in the tooltip). `ExpectedDamage` already
+   includes the multiplier.
+7. **Character sheet (optional):** a Crit / Crit Dmg row in
+   `Domain/UiKit/SheetStats.cs` / `DossierLayout` reading
+   `CritRules.PartyChancePercent(stats)`; a screen-tree change means
+   `-BuildScenes`.
+8. **[U] tests:** adapter test (party state gets 5/150 and a stat bonus
+   moves it; enemy kit carries `Crits`); PlayMode popup test for a crit
+   beat and a sweep with per-target crits; intent badge test for
+   `WillCrit`.
+9. **Balance bot:** party damage EV rises ~2.5% from the baseline; re-run
+   and re-pin any Core/Bot balance baselines.
+10. **Gate:** `run_tests_parallel.ps1 -Changed -BuildContent` (plus
+    `-BuildScenes` if item 5-7 touch a screen tree or `[SerializeField]`).
 
 ### Phase 2 — Engine-driven Fury
 
@@ -475,6 +600,10 @@ as worthless. Separate plan.
 - Twin Rampage second sweep (review finding 11): no work needed — verified
   in code that party-applied Stun on enemies already uses `HasStun` at
   enemy turn.
+- Second Wind cooldown under Juggernaut (owner-approved, self-review
+  2026-09-28): when granted by the Juggernaut root, Second Wind has a 4-turn
+  cooldown — 60 free Fury per turn at low health would otherwise chain
+  near-full heals every turn.
 
 ## 7. Open questions
 

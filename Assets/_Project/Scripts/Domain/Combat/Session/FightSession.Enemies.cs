@@ -183,7 +183,7 @@ namespace PrincesPalace.Domain.Combat.Session
                         || _encounter.Enemies.Count >= _stageSlotsPerSide)
                     {
                         effective ??= new List<EnemyAbility>(abilities);
-                        effective[i] = EnemyAbility.Of(ability.Skill, 0f);
+                        effective[i] = ability.WithWeight(0f);
                         continue;
                     }
                 }
@@ -192,18 +192,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (reach.HasValue && EligibleTargets(enemy, reach.Value).Count == 0)
                 {
                     effective ??= new List<EnemyAbility>(abilities);
-                    effective[i] = ability.HasSkill
-                        ? EnemyAbility.Of(ability.Skill, 0f)
-                        : EnemyAbility.LegacyAttack(ability.Label, ability.Power, 0f);
+                    effective[i] = ability.WithWeight(0f);
                     continue;
                 }
 
                 if (rooted && !CombatActions.IsLegalFor(enemy, ability.IsPhysicalMove, out _))
                 {
                     effective ??= new List<EnemyAbility>(abilities);
-                    effective[i] = ability.HasSkill
-                        ? EnemyAbility.Of(ability.Skill, 0f)
-                        : EnemyAbility.LegacyAttack(ability.Label, ability.Power, 0f);
+                    effective[i] = ability.WithWeight(0f);
                 }
             }
 
@@ -386,7 +382,8 @@ namespace PrincesPalace.Domain.Combat.Session
                         source?.AppliesStatus, source != null && source.HasStatus);
 
                 return new EnemyIntent(ability.Label, kind, target,
-                    PreviewDamage(enemy, target, !isPlainSwing, source, ability.Power), chosen);
+                    PreviewDamage(enemy, target, !isPlainSwing, source, ability.Power, ability.Crits), chosen,
+                    willCrit: ability.Crits);
             }
 
             // A REAL SKILL. Its own effect decides the icon, the scope and
@@ -398,11 +395,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 ability.Label,
                 EnemyIntentIcons.KindFor(skill),
                 target,
-                PreviewSkill(enemy, target, skill),
+                PreviewSkill(enemy, target, skill, seat: null, crits: ability.Crits),
                 chosen,
                 EnemyIntentIcons.ScopeFor(effect),
                 EnemyIntentIcons.HealsFor(effect),
-                then);
+                then,
+                willCrit: ability.Crits);
         }
 
         // What a monster's SKILL would land for.
@@ -418,12 +416,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // would change the fight it is previewing: variance and the ward would
         // consume a draw and spend a shield the player still holds, and both
         // are why the tooltip says "about".
-        private int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill) =>
-            PreviewSkill(enemy, target, skill, seat: null);
-
+        //
+        // `crits` is the ability's AUTHORED crit (EnemyAbility.Crits), and it is
+        // shared, not left out: a guaranteed crit is exact, draws nothing, and
+        // is precisely the spike the telegraph exists to announce. A random
+        // party-style crit can never apply here -- rng is null, and monsters
+        // have no chance anyway (CritRules).
+        //
         // `seat` asks "what if the target stood THERE" for a seat-sized hit
         // (the intent's per-seat table); null reads the seat he stands in.
-        private int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill, int? seat)
+        private int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill, int? seat,
+                                 bool crits)
         {
             if (enemy == null) return 0;
 
@@ -462,7 +465,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 attackType: castType,
                 affinity: AffinityOf(against),
                 varianceRange: 0f, rng: null, resolveWard: null,
-                ignoresDefense: skill.IgnoresDefense).Damage;
+                ignoresDefense: skill.IgnoresDefense,
+                crit: crits).Damage;
         }
 
         // What the blow would land for, with NOTHING that mutates and NOTHING
@@ -473,8 +477,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // player still has, and the third depends on a taunt that may not exist
         // yet when the icon is drawn. The number is therefore a centre, not a
         // promise, and the tooltip says "about" for that reason.
+        //
+        // An AUTHORED crit (`crits`) is the one exception to "nothing that
+        // draws": it draws nothing, it is certain, and it is the number the
+        // player most needs to see. See PreviewSkill.
         private static int PreviewDamage(CombatantState enemy, CombatantState target, bool useSkill,
-                                         ResolvedEnemy source, float power)
+                                         ResolvedEnemy source, float power, bool crits = false)
         {
             if (enemy == null || target == null) return 0;
 
@@ -490,7 +498,8 @@ namespace PrincesPalace.Domain.Combat.Session
             return DamagePipeline.AfterDefences(
                 damage, enemy, target,
                 attackType: source?.AttackType, affinity: ElementalAffinity.Neutral,
-                varianceRange: 0f, rng: null, resolveWard: null).Damage;
+                varianceRange: 0f, rng: null, resolveWard: null,
+                crit: crits).Damage;
         }
 
         public string IntentFor(CombatantState enemy) =>
@@ -526,12 +535,13 @@ namespace PrincesPalace.Domain.Combat.Session
                         && pool[intent.AbilityIndex].HasSkill
                 ? pool[intent.AbilityIndex].Skill
                 : null;
+            bool crits = intent.WillCrit;
 
             if (skill != null && skill.HasDamageBySeat && !intent.Heals
                 && intent.Label != IntentForfeit && target != null && target.IsAlive)
             {
                 bySeat = new int[CombatEncounter.SeatsPerSide];
-                for (int s = 0; s < bySeat.Length; s++) bySeat[s] = PreviewSkill(enemy, target, skill, s);
+                for (int s = 0; s < bySeat.Length; s++) bySeat[s] = PreviewSkill(enemy, target, skill, s, crits);
                 expected = seat >= 0 && seat < bySeat.Length ? bySeat[seat] : 0;
             }
 
@@ -646,7 +656,19 @@ namespace PrincesPalace.Domain.Combat.Session
                 // BEFORE the turn-end clock, so a retaliation that kills its
                 // holder settles like any other death before StepToNextTurn
                 // asks whether the fight is over.
-                bool physicalMove = ResolveEnemyAction(current);
+                // The authored crit belongs to this one action and nothing
+                // after it -- not the retaliation just below, not a reaction
+                // on the next turn. See FightSession.Crits.
+                bool physicalMove;
+                try
+                {
+                    physicalMove = ResolveEnemyAction(current);
+                }
+                finally
+                {
+                    _authoredCritActor = null;
+                }
+
                 _hardControlRecovery.Remove(current);
                 if (physicalMove) TriggerPhysicalMoveRetaliation(current);
 
@@ -1016,6 +1038,12 @@ namespace PrincesPalace.Domain.Combat.Session
 
             _intents.Remove(enemy);
 
+            // AN AUTHORED CRIT is armed for this action only -- every damage
+            // call below, legacy swing or real skill, asks CritCallFor(enemy).
+            // Cleared by the caller (AutoResolveEnemyTurns) whatever path
+            // returns. See FightSession.Crits.
+            _authoredCritActor = chosen.HasValue && chosen.Value.Crits ? enemy : null;
+
             // THE POINT OF NO RETURN: everything below resolves, so this is an
             // acting turn, and a due scheduled step is used up here.
             NoteEnemyActed(enemy, chosen.HasValue ? committedIndex : -1, target);
@@ -1111,7 +1139,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
                 resolveWard: ResolveWard,
-                resolveDetonation: ResolveDetonation);
+                resolveDetonation: ResolveDetonation,
+                crit: CritCallFor(enemy));
 
             // The enemy's own pose (and cast VFX) is recorded regardless of
             // whether the blow connects -- the monster still visibly swings
@@ -1151,6 +1180,7 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             damage = outcome.Damage;
+            if (outcome.IsCrit) NoteCrit();
 
             // Provoke T2: a goaded enemy swings wide. Applied to the PAIR rather
             // than through the target's own DamageTakenMultiplier, so it blunts

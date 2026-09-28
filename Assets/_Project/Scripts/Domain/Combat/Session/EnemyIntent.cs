@@ -127,6 +127,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // at commitment; the plate line and tooltip say "<Then> next".
         public readonly string Then;
 
+        // AN AUTHORED CRIT (EnemyAbility.Crits): the blow is a guaranteed
+        // critical hit and ExpectedDamage already includes the multiplier. The
+        // telegraph says so, which is what keeps "no random spikes" true even
+        // though monsters can crit -- the spike is announced. False for every
+        // heal and every forfeit. See CritRules.
+        public readonly bool WillCrit;
+
         // ---- read live (FightSession.IntentDetailFor), never stored --------
         //
         // A seat-sized hit's expected damage for each seat, front first, or
@@ -140,15 +147,17 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public EnemyIntent(string label, EnemyIntentKind kind, CombatantState target, int expectedDamage,
                            int abilityIndex = -1, EnemyIntentScope scope = EnemyIntentScope.One,
-                           bool heals = false, string then = null)
-            : this(label, kind, target, expectedDamage, abilityIndex, scope, heals, then, null, -1, false)
+                           bool heals = false, string then = null, bool willCrit = false)
+            : this(label, kind, target, expectedDamage, abilityIndex, scope, heals, then, null, -1, false,
+                   willCrit)
         {
         }
 
         private EnemyIntent(string label, EnemyIntentKind kind, CombatantState target, int expectedDamage,
                             int abilityIndex, EnemyIntentScope scope, bool heals, string then,
-                            int[] damageBySeat, int targetSeat, bool isLethal)
+                            int[] damageBySeat, int targetSeat, bool isLethal, bool willCrit)
         {
+            WillCrit = willCrit && !heals;
             Label = label;
             Kind = kind;
             Target = target;
@@ -165,7 +174,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // The same commitment with its live reading filled in.
         public EnemyIntent Live(int expectedDamage, int[] damageBySeat, int targetSeat, bool isLethal) =>
             new EnemyIntent(Label, Kind, Target, expectedDamage, AbilityIndex, Scope, Heals, Then,
-                damageBySeat, targetSeat, isLethal);
+                damageBySeat, targetSeat, isLethal, WillCrit);
 
         public bool IsAttack => Kind == EnemyIntentKind.Attack;
 

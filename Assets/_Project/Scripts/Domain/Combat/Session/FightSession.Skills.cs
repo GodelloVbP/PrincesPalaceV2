@@ -847,7 +847,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // A spell with authored packets deals exactly what it says, per
                 // element, and reports the split.
                 var detail = new StringBuilder();
-                damage = ResolveDamageInstances(actor, skill, target, detail, out bool dodgedInstances, packets);
+                damage = ResolveDamageInstances(actor, skill, target, detail, out bool dodgedInstances,
+                    out bool critInstances, packets);
 
                 // Swift: rolled ONCE for the whole multi-packet cast inside
                 // ResolveDamageInstances -- see that method's own header and
@@ -860,6 +861,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     return;
                 }
 
+                if (critInstances) NoteCrit();
                 AppendMessage($"{actor.Name} casts {castLabel} on {target.Name} for {damage}! -{detail}");
             }
             else
@@ -901,7 +903,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard,
                     ignoresDefense: skill.IgnoresDefense,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    crit: CritCallFor(actor));
 
                 if (outcome.IsMiss)
                 {
@@ -909,6 +912,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     AppendMessage($"{target.Name} dodges {actor.Name}'s {castLabel}!");
                     return;
                 }
+
+                if (outcome.IsCrit) NoteCrit();
 
                 damage = TotalDamage(actor, baseAmount, outcome.Damage);
                 DepleteBreakShield(target, outcome.Effectiveness);
@@ -1384,7 +1389,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (skill.HasFixedDamage)
                 {
                     var packets = new StringBuilder();
-                    int packetTotal = ResolveDamageInstances(actor, skill, enemy, packets, out bool packetsDodged);
+                    int packetTotal = ResolveDamageInstances(actor, skill, enemy, packets, out bool packetsDodged,
+                        out bool packetsCrit);
 
                     if (packetsDodged)
                     {
@@ -1394,12 +1400,12 @@ namespace PrincesPalace.Domain.Combat.Session
                     }
 
                     ApplyFinalDamage(actor, enemy, packetTotal, CombatActions.IsPhysicalMove(skill));
-                    RecordTargetResult(enemy, packetTotal);
+                    RecordTargetResult(enemy, packetTotal, crit: packetsCrit);
                     struckAndLanded.Add(enemy);
 
                     largestLanded = System.Math.Max(packetTotal, largestLanded);
                     RecordBeatAmount(largestLanded);
-                    summary.Append($" {enemy.Name} takes {packetTotal}! -{packets}");
+                    summary.Append($" {enemy.Name} takes {packetTotal}{CritSuffix(packetsCrit)}! -{packets}");
 
                     ApplyMark(actor, enemy);
                     MagicMarkerApplyMark(actor, enemy);
@@ -1437,7 +1443,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard,
                     ignoresDefense: skill.IgnoresDefense,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    // Per enemy, like the dodge: every target of a sweep rolls
+                    // its own crit (an authored crit crits them all).
+                    crit: CritCallFor(actor));
 
                 // Swift: EACH enemy in an AOE independently rolls its own
                 // dodge -- it is a genuinely separate target reacting to the
@@ -1479,12 +1488,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 // CAST's type, not the caster's swing, exactly as before.
                 ApplyFinalDamage(actor, enemy, landed, CombatActions.IsPhysicalMove(skill), castType);
 
-                RecordTargetResult(enemy, landed);
+                RecordTargetResult(enemy, landed, crit: outcome.IsCrit);
                 struckAndLanded.Add(enemy);
 
                 largestLanded = System.Math.Max(landed, largestLanded);
                 RecordBeatAmount(largestLanded);
-                summary.Append($" {enemy.Name} takes {landed}{EffectivenessSuffix(outcome.Effectiveness)}");
+                summary.Append($" {enemy.Name} takes {landed}{CritSuffix(outcome.IsCrit)}{EffectivenessSuffix(outcome.Effectiveness)}");
 
                 // The Drowned Lantern: a sweep marks everyone it actually hits.
                 ApplyMark(actor, enemy);
@@ -1569,13 +1578,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // everything else about resolving those packets (dodge once, scale
         // once, resolve each through AfterDefences) is identical either way.
         private int ResolveDamageInstances(CombatantState actor, ResolvedSkill skill, CombatantState target,
-            StringBuilder detail, out bool dodged, DamageInstance[] packets = null)
+            StringBuilder detail, out bool dodged, out bool crit, DamageInstance[] packets = null)
         {
+            crit = false;
             dodged = DamagePipeline.RollDodge(target, actor, _rng);
             if (dodged)
             {
                 return 0;
             }
+
+            // ONE CRIT FOR THE WHOLE CAST, for the dodge's own reason: a
+            // multi-element spell is one blow, so either every packet crits or
+            // none does. Rolled after the dodge (a miss spends no crit draw)
+            // and handed to each packet below.
+            crit = ResolveCrit(actor);
 
             int total = 0;
             float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
@@ -1601,7 +1617,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     // is the one call that did not.
                     ignoresDefense: skill.IgnoresDefense,
                     dodgeAlreadyResolved: true,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    crit: crit);
 
                 DepleteBreakShield(target, outcome.Effectiveness);
                 total += outcome.Damage;

@@ -374,11 +374,26 @@ namespace PrincesPalace.Domain.Bot
         // of which hand-rolled option.Skill.Effect == DamageSingle ||
         // == DamageAll before asking PreviewSkillPower. ResolvedSkill.IsDamaging
         // is that same test, named once.
+        //
+        // CRITS AS EXPECTED VALUE (CritRules.ExpectedDamage): a party member's
+        // chance x bonus rides on top of the session's preview, which itself
+        // stays exact (it is also the HUD's POWER row, a promise about one
+        // cast rather than an average). Pure arithmetic, no draw, so the bot
+        // stays deterministic. An enemy's authored crit is exact and reaches a
+        // policy through EnemyIntent.ExpectedDamage instead.
         public static int PreviewDamage(
             FightSession session, CombatantState actor, ResolvedSkillOption option, FightAction action) =>
             option.Skill.IsDamaging
-                ? session.PreviewSkillPower(actor, CastAs(option.Skill, action))
+                ? CritRules.ExpectedDamage(session.PreviewSkillPower(actor, CastAs(option.Skill, action)), actor)
                 : 0;
+
+        // THE ONE PLACE A POLICY ASKS "what would this Attack action deal" --
+        // the raw swing (CombatMath.ComputeAttackDamage) with crits counted as
+        // expected value, the same treatment PreviewDamage gives a cast. The
+        // three policies used to each call ComputeAttackDamage directly; one
+        // seam means none of them can forget the crit.
+        public static int PreviewAttackDamage(CombatantState actor, CombatantState target) =>
+            CritRules.ExpectedDamage(CombatMath.ComputeAttackDamage(actor, target), actor);
 
         // THE LAST THING LEFT ON THE MENU, for a policy whose own scoring has
         // run out of opinions.

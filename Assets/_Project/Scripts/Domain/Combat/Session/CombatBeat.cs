@@ -200,6 +200,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // per-enemy damage number already does: in the log line, not here.
         public bool Missed;
 
+        // The single-target blow this beat represents was a CRITICAL HIT
+        // (DamagePipeline.Outcome.IsCrit): Amount already includes the
+        // multiplier, this only tells the view to present it as one. Like
+        // Missed, left false on a multi-target beat -- a sweep reports each
+        // target's crit on its own BeatTargetResult.Crit instead.
+        public bool Crit;
+
         // The turn queue as it stood when this beat resolved. Same reasoning as
         // the vitals snapshot: live state has already run the entire chain by
         // the time any beat is played, so reading it during playback shows the

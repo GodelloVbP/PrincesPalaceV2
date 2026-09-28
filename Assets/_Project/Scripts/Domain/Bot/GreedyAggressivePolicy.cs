@@ -145,7 +145,7 @@ namespace PrincesPalace.Domain.Bot
             switch (action.Kind)
             {
                 case FightActionKind.Attack:
-                    return CombatMath.ComputeAttackDamage(actor, action.Target);
+                    return FightAction.PreviewAttackDamage(actor, action.Target);
                 case FightActionKind.Skill:
                     var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
 

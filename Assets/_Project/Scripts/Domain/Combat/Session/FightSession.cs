@@ -712,7 +712,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
                 resolveWard: ResolveWard,
-                resolveDetonation: ResolveDetonation);
+                resolveDetonation: ResolveDetonation,
+                crit: CritCallFor(actor));
 
             // Swift: the swing missed outright. Everything below this line
             // is a rider on a LANDED hit -- BreakShield depletion, the mark
@@ -732,6 +733,8 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             DepleteBreakShield(target, outcome.Effectiveness);
+
+            if (outcome.IsCrit) NoteCrit();
 
             if (outcome.PoisonDetonation > 0)
             {
@@ -937,7 +940,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     resolveWard: ResolveWard,
                     attacker: actor,
                     dodgeAlreadyResolved: true,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    // Bonus damage riding a landed blow, never a crit of its
+                    // own -- the blow it rides already had its crit call.
+                    crit: false);
 
                 int elementalDamage = elementalOutcome.Damage;
                 if (elementalDamage <= 0) continue;

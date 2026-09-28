@@ -73,6 +73,19 @@ namespace PrincesPalace.Domain.Combat
         // retuned nothing. See ResistanceByType.
         public ResistanceByType TypedResistance;
 
+        // CRITICAL HITS -- see CritRules for the whole rule. Totals, not
+        // bonuses: a party member's kit build may write the totals its
+        // effective stats give here. Set after construction for the same
+        // reason ArmorPenetration is.
+        //
+        // The constructor starts a PLAYER-SIDE combatant at the baseline 5%
+        // (CritRules.BaseChancePercent) and an enemy at 0; only party members
+        // ever roll it (CritRules.ChanceFor). The damage defaults to the
+        // baseline 150%, so an enemy's AUTHORED crit lands at the rule's own
+        // figure.
+        public int CritChancePercent;
+        public int CritDamagePercent = CritRules.BaseDamagePercent;
+
         // THE SECOND, PRIVATE POOL: null for everyone who has no signature
         // resource, which today is everyone except Shawn. A nullable
         // reference rather than a zero-capacity instance so "has one" is a
@@ -254,6 +267,13 @@ namespace PrincesPalace.Domain.Combat
             Name = name;
             IsPlayerSide = isPlayerSide;
             MaxHealth = maxHealth;
+
+            // THE PARTY BASELINE, here rather than at kit build, so every
+            // player-side combatant crits at the rule's own 5% however it was
+            // built. A kit build that knows the character's stats may overwrite
+            // it with their stat-driven total (see CritRules). Enemies stay at 0 (and
+            // are ignored by CritRules.ChanceFor regardless).
+            CritChancePercent = isPlayerSide ? CritRules.BaseChancePercent : 0;
             CurrentHealth = maxHealth;
             PrimaryPool = primaryPool ?? DefaultManaPool(0);
             Attack = attack;
