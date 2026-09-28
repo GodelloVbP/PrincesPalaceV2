@@ -343,9 +343,9 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapRoomShop =
             UiString.Define("map.room.shop", "A trader waits here. (In-run shops are not built yet.)");
         public static readonly UiString MapRoomEvent =
-            UiString.Define("map.room.event", "Something stirs here. (Events are not built yet.)");
+            UiString.Define("map.room.event", "Something stirs here, but nothing comes of it.");
         public static readonly UiString MapRoomItem =
-            UiString.Define("map.room.item", "Something glints here. (Item rooms are not built yet.)");
+            UiString.Define("map.room.item", "Something glints here, but there is nothing to find.");
         public static readonly UiString MapRoomEmpty =
             UiString.Define("map.room.empty", "The room is empty.");
 
@@ -819,7 +819,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopRefusedNotEnoughGold =
             UiString.Define("shop.refused_not_enough_gold", "Not enough gold");
         public static readonly UiString ShopRefusedGeneric =
-            UiString.Define("shop.refused_generic", "Can't do that");
+            UiString.Define("shop.refused_generic", "Can't do that -- reselect and try again");
 
         // NOT A REFUSAL AT ALL, which is why it is not one of the two above:
         // the purchase HAPPENED and the disk write did not (SaveSystem.Save
@@ -827,7 +827,8 @@ namespace PrincesPalace.Domain.UiKit
         // this" and "this will not survive being closed" are opposite pieces
         // of news and a player who confuses them loses the run.
         public static readonly UiString ShopAppliedNotPersisted =
-            UiString.Define("shop.applied_not_persisted", "Bought, but the save did not write");
+            UiString.Define("shop.applied_not_persisted",
+                "Bought -- but saving failed. Your progress may be lost if you quit now.");
 
         // "THE PACK" on the modal's own title, "PACK" on the button that
         // opens it -- the prototype's wording for each, and the reason they
