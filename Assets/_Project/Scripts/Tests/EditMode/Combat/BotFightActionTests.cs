@@ -50,9 +50,9 @@ namespace PrincesPalace.Domain.Tests
         public void LegalActions_SoloPartyOneOnOne_OffersAttackAndMoveBackOnly()
         {
             // THE NEVER-EMPTY GUARANTEE, at its narrowest: Attack on the front
-            // enemy is always legal. A one-member party used to have no Move
-            // at all; with field seats (PLAN_BELLWETHER_KIT 1.1) it can step
-            // back into the empty middle, and still not forward off the front.
+            // enemy is always legal. With field seats (PLAN_BELLWETHER_KIT
+            // 1.1), a one-member party can step back into the empty middle,
+            // and still not forward off the front.
             var (session, hero, foe) = OneOnOne();
 
             var legal = FightAction.LegalActions(session, session.Current, System.Array.Empty<SatchelStack>());
@@ -125,10 +125,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void LastResort_PrefersAttackAndNeverThrows()
         {
-            // The two greedy policies both end on this. Hold Back used to be
-            // unconditionally legal and they used to end on
-            // First(a => a.Kind == HoldBack), which throws the day that stops
-            // being true. It has stopped being true.
+            // The two greedy policies both end on this. Hold Back is not
+            // unconditionally legal, so a fallback that does
+            // First(a => a.Kind == HoldBack) throws; LastResort must not.
             var (session, hero, foe) = OneOnOne();
             var legal = FightAction.LegalActions(session, session.Current, System.Array.Empty<SatchelStack>());
 

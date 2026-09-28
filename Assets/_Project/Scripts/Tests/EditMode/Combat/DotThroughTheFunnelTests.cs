@@ -122,7 +122,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, hero.CurrentHealth, "the shell took it, not the wearer");
         }
 
-        // ---- World Ender's Crown (owner 2026-09-25: a tick crossing counts) -------
+        // ---- World Ender's Crown (a tick crossing counts) -------
 
         [Test]
         public void ADotTickCrossingThirtyPercentFiresTheCrown()

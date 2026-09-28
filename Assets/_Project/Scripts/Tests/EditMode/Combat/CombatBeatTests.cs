@@ -99,10 +99,9 @@ namespace PrincesPalace.Domain.Tests
             var beat = new CombatBeat();
             Assert.IsFalse(beat.HasSpellAnimation, "an empty presentation has no path to play");
 
-            // THE SENTINEL IS GONE. seconds used to arrive as -1 meaning "not
-            // authored" and was resolved to 0.6 by whichever resolver saw it
-            // first; a presentation now carries the real default from the
-            // moment it exists, so "no duration" has to be said outright.
+            // NO SENTINEL: a presentation carries the real default from the
+            // moment it exists, so "no duration" has to be said outright
+            // (seconds == 0), not signalled with a magic value like -1.
             beat.Vfx.path = "Spells/frost_flare";
             beat.Vfx.seconds = 0f;
             Assert.IsFalse(beat.HasSpellAnimation, "a path with no duration is not an animation");

@@ -249,14 +249,14 @@ namespace PrincesPalace.Domain.Tests
                 "the badge must not read as an ordinary threat when nothing is coming");
         }
 
-        // ---- PHASE D3 FIX: BuildIntent's -1 fallback ---------------------------
+        // ---- BuildIntent's -1 fallback ---------------------------
         //
         // EnemyAbilityDraw.Pick returns -1 for two DIFFERENT reasons: a genuinely
         // mis-authored pool (every weight zeroed by content mistake), and a
-        // Rooted enemy whose only entry EffectivePoolFor itself zeroed. BuildIntent
-        // used to treat both the same way -- swing anyway -- which telegraphed a
-        // full-power Attack for a turn Rooted was always going to forfeit at
-        // resolution. See FightSession.Enemies.cs's own comment on the fix.
+        // Rooted enemy whose only entry EffectivePoolFor itself zeroed.
+        // Swinging anyway for both would telegraph a
+        // full-power Attack for a turn Rooted is always going to forfeit at
+        // resolution. See FightSession.Enemies.cs's own comment.
 
         [Test]
         public void ARootedEnemyWithNoLegalSkill_TelegraphsAForfeit_NotAFakeAttack()

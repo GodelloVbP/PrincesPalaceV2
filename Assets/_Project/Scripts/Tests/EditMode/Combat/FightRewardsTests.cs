@@ -107,8 +107,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ExperienceDoesNotRideTheThreatCurve()
         {
-            // Progression v2 phase 2 gave experience its own, much flatter
-            // rate -- the whole reason the two are separate methods now. The
+            // Experience has its own, much flatter
+            // rate -- the whole reason the two are separate methods. The
             // literal pins live in ExperienceRateTests; this one only has to
             // catch the two being wired back together.
             var payout = VictoryRewards.For(new[] { Kit(100, 100) }, isElite: false, depthStep: 25);
@@ -128,15 +128,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(60, VictoryRewards.ExperienceFor(payout, isDowned: false));
         }
 
-        // HALF, ROUNDED UP, and never zero -- progression v2's contract 4. It
-        // used to be nothing at all, which compounded a bad run into a bad
-        // career: the player losing fights is the one who most needs the
-        // levels that would let them stop losing.
+        // HALF, ROUNDED UP, and never zero -- progression v2's contract 4:
+        // a downed player still needs the levels that would let them stop
+        // losing, so a downed party member's experience is never nothing.
         //
         // The three literals are the plan's own worked cases plus the two
         // edges. 29 is an average room-0 normal fight and 100 the boss;
-        // rounding UP is what keeps a 1-experience payout from paying nothing
-        // and quietly restoring the old rule.
+        // rounding UP is what keeps a 1-experience payout from paying
+        // nothing.
         [TestCase(0, 0)]
         [TestCase(1, 1)]
         [TestCase(15, 8)]

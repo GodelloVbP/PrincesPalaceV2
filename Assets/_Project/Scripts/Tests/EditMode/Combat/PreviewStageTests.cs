@@ -16,8 +16,8 @@ namespace PrincesPalace.Domain.Tests
     // the party size and who fills it -- which moved to Domain as PreviewStage
     // exactly so these literals could be checked without a Unity boot.
     //
-    // Afflict and SwapAllies are the two effects added 2026-09-25 so
-    // thorn_tithe and palace_passage can be previewed and captured.
+    // Afflict and SwapAllies are the two effects that let
+    // thorn_tithe and palace_passage be previewed and captured.
     public class PreviewStageTests
     {
         private static ResolvedSkill Skill(string id, SkillEffect effect, SkillTargeting targeting) =>

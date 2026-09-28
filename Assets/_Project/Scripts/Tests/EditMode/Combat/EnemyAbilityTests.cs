@@ -531,36 +531,26 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the golem's slam, pinned -------------------------------------------
         //
-        // Boulder Slam was a 1.8x multiplier on the golem's basic attack and is
-        // a real skill now. The two forms do not produce the same curve and
-        // cannot: the multiplier scaled a figure the target's armour had
-        // ALREADY been subtracted from, so armour counted twice against it,
-        // while a skill's flatAmount is added BEFORE defence.
-        //
-        // flatAmount 2 lands it within about a tenth of the old number across
-        // the defence band Shawn actually occupies (4 base, plus gear). What
-        // changes is the tail: heavily armoured, the old slam collapsed toward
-        // the floor of 1 and the new one does not.
+        // Boulder Slam is a real skill, not a multiplier on the golem's
+        // basic attack: its flatAmount is added BEFORE defence, unlike a
+        // multiplier, which would scale a figure the target's armour had
+        // ALREADY been subtracted from and so count armour twice.
         //
         // LITERAL EXPECTED VALUES, not a recomputation of the formula -- see
         // CLAUDE.md. These are what the numbers ARE, so a retune has to come
         // here and say so.
         //
-        // REWRITTEN for Phase 1 of the balance redesign: SkillResolution.
-        // Damage no longer mitigates at all (it always returns
-        // Math.Max(1, raw)); DamagePipeline.AfterDefences is now the
+        // SkillResolution.Damage does not mitigate at all (it always returns
+        // Math.Max(1, raw)); DamagePipeline.AfterDefences is the
         // single place a defense term is ever subtracted, reading the
         // target's PhysicalDefense (this is the untyped/attackType:null
-        // path, which reads physical armour) on the new R/(R+100) curve
-        // rather than the old, now-deleted 12/(12+R) one. The two literals
-        // below are therefore new numbers, not a port of the old ones.
+        // path, which reads physical armour) on the R/(R+100) curve.
         //
-        // NO LONGER SCALED (fixed 2026-08-26): SkillResolution.Damage
-        // stopped multiplying by CombatMath.DamageScale for the same reason
-        // ComputeAttackDamage/ComputeSkillDamage did -- see its own header.
-        // Raw dropped from 40 to 8, which is small enough now that both
-        // defence values below floor-divide to the same landed figure --
-        // that is a real property of the new numbers, not a copy-paste.
+        // SkillResolution.Damage does not multiply by CombatMath.DamageScale,
+        // for the same reason ComputeAttackDamage/ComputeSkillDamage do not
+        // -- see its own header. Raw is 8, small enough that both defence
+        // values below floor-divide to the same landed figure -- that is a
+        // real property of the numbers, not a copy-paste.
         [Test]
         public void TheGolemsSlamLandsWhereItUsedTo()
         {

@@ -10,11 +10,7 @@ namespace PrincesPalace.Domain.Tests
     // How a rolled modifier's effects read, and how a candidate's affixes
     // diff against whatever is currently equipped.
     //
-    // NONE OF THIS WAS TESTABLE FROM EDITMODE before this moved out of
-    // Core.ItemDescription -- it reached ContentDatabase.ModifierEffectsForItem
-    // / GetModifier (ScriptableObject accessors), so only the PlayMode/
-    // content-pipeline suite could exercise the gain/loss/neutral
-    // classification. This suite feeds ModifierAffixLines plain, already-
+    // This suite feeds ModifierAffixLines plain, already-
     // resolved data -- exactly what Core.ItemDescription resolves off
     // ContentDatabase before calling in -- and pins the exact formatted
     // output (CLAUDE.md gotcha 5: literal expected strings, never the

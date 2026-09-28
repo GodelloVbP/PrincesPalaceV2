@@ -7,9 +7,9 @@ namespace PrincesPalace.Domain.Tests
     // THE TARGET-BOUNDS CONTRACT: where a struck body is on stage and what
     // `fit: target` sizes a layer by.
     //
-    // WHY THIS EXISTS. Every per-target spell layer aimed at the slot and
-    // sized off it, and a slot is the sprite's CANVAS -- padding for the
-    // tallest pose included. Owner, 2026-09-23: Court of Whispers "does not
+    // WHY THIS EXISTS. Every per-target spell layer aims at the slot and
+    // sizes off it, and a slot is the sprite's CANVAS -- padding for the
+    // tallest pose included. Court of Whispers "does not
     // scale with the mob's height/width".
     //
     // EVERY EXPECTED NUMBER IS A LITERAL with its arithmetic in the comment,
@@ -95,8 +95,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(456.82308f, treant.Extent, Tolerance);
 
             // 456.82308 / 280 = 1.631511 -- the ritual that reads as a patch on
-            // a rat-sized box is 1.63x on the treant, where the old stageScale
-            // multiplier gave 1.45 and a canvas measure gave neither.
+            // a rat-sized box is 1.63x on the treant.
             Assert.AreEqual(1.631511f, TargetBody.FitFactor(treant), 1e-5f);
         }
 

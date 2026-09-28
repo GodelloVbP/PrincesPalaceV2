@@ -4,14 +4,15 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // SpendPoisonIfMatched COMPUTES AND SPENDS, AND DEALS NOTHING. It used to
-    // deal the bonus itself, from inside DamagePipeline.AfterDefences -- which
-    // is also what every telegraph preview runs through, so a preview spent the
-    // status and took the health for it. The damage half now belongs to
-    // FightSession.ResolveDetonation, which routes it through DealDamage; the
-    // assertions here are about the RULE (which hits match, what the remaining
-    // ticks are worth, that a spent poison cannot be spent twice), and the
-    // health assertions moved to KillCreditTests where the funnel is.
+    // SpendPoisonIfMatched COMPUTES AND SPENDS, AND DEALS NOTHING: dealing
+    // damage from inside DamagePipeline.AfterDefences would also run through
+    // every telegraph preview, since a preview runs the same pipeline, so a
+    // preview would spend the status and take the health for it. The damage
+    // half belongs to FightSession.ResolveDetonation, which routes it
+    // through DealDamage; the assertions here are about the RULE (which hits
+    // match, what the remaining ticks are worth, that a spent poison cannot
+    // be spent twice). The health assertions live in KillCreditTests, where
+    // the funnel is.
     public class StatusCombosTests
     {
         private static CombatantState MakeCombatant(int maxHealth = 1000)
@@ -98,7 +99,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, StatusCombos.SpendPoisonIfMatched(null, DamageType.Nature));
         }
 
-        // ---- stacking, owner 2026-09-20 ---------------------------------------
+        // ---- stacking ---------------------------------------
 
         // EVERY INSTANCE, NOT THE FIRST. A detonation that ate one of three
         // would read to a player as a detonation that did nothing much, and

@@ -5,7 +5,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // Pins HitStrength.Classify's table against literals -- CLAUDE.md gotcha
     // 5 -- and the boundary behaviour ("distinguish impact strength"'s three
-    // owner rules): a miss never slides, a fully-absorbed hit never slides,
+    // rules): a miss never slides, a fully-absorbed hit never slides,
     // and a kill is always Heavy regardless of the fraction that produced it.
     public class HitStrengthTests
     {
@@ -113,8 +113,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.35f, HitStrength.DwellFractionFor(HitStrength.Tier.Light));
             Assert.AreEqual(0.65f, HitStrength.DwellFractionFor(HitStrength.Tier.Medium));
 
-            // Heavy stays at 1x the existing dwell -- the reeling behaviour
-            // that already shipped (owner, 2026-09-19) is untouched.
+            // Heavy stays at 1x the existing dwell -- the shipped reeling
+            // behaviour is untouched.
             Assert.AreEqual(1f, HitStrength.DwellFractionFor(HitStrength.Tier.Heavy));
         }
     }
