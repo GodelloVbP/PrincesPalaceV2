@@ -36,7 +36,8 @@ namespace PrincesPalace.Domain.Tests
             int raw, DamageType type, CombatantState target,
             ElementalAffinity affinity = default,
             System.Func<CombatantState, int, int> ward = null) =>
-            DamagePipeline.AfterDefences(raw, type, target, affinity, NoVariance, null, ward,
+            DamagePipeline.AfterDefences(raw, type, target, affinity, NoVariance, null,
+                ward == null ? null : (t, dmg, _, _) => ward(t, dmg),
                 resolveDetonation: Detonate);
 
         [Test]
@@ -112,7 +113,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 DamagePipeline.AfterDefences(100, DamageType.Fire, target, ElementalAffinity.Neutral,
                     varianceRange: 0.2f, rng: rng,
-                    resolveWard: (t, dmg) => { seen.Add(dmg); return dmg; });
+                    resolveWard: (t, dmg, _, _) => { seen.Add(dmg); return dmg; });
             }
 
             CollectionAssert.IsNotEmpty(seen);
@@ -490,7 +491,7 @@ namespace PrincesPalace.Domain.Tests
             var outcome = DamagePipeline.AfterDefences(
                 100, DamageType.Nature, target, ElementalAffinity.Neutral,
                 varianceRange: 0.2f, rng: new PrincesPalace.Domain.Rng.SeededRandom(1),
-                resolveWard: (t, dmg) => { wardWasAsked = true; return dmg; },
+                resolveWard: (t, dmg, _, _) => { wardWasAsked = true; return dmg; },
                 resolveDetonation: Detonate);
 
             Assert.IsTrue(outcome.IsMiss);

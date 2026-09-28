@@ -14,6 +14,8 @@ namespace PrincesPalace.Domain.Combat.Session
     //                        turn-start tick and HealAndCount
     //   4d Blood Price   -- BloodPrice,         read in CanAfford / CastCore
     //   4e Unstoppable / Unyielding -- CrowdControlGuard, read in RecordStatus
+    //   4a Planted shield / Shieldwall -- PlantedShield, read in ResolveWard;
+    //                        its session half is FightSession.PlantedShield.cs
     //
     // Every one is OFF for every combatant until something sets it, so the
     // fight is unchanged for anyone the Juggernaut content never touches.
@@ -249,6 +251,10 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             guard.UnyieldingCooldown.AgeAtHoldersTurnEnd();
+
+            // 4a: the planted shield's lifetime, its re-place wait and
+            // Shieldwall's per-turn Fury cap (FightSession.PlantedShield).
+            AgePlantedShield(actor);
         }
 
         // ---- seams for tests ---------------------------------------------------
@@ -260,6 +266,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // The ward funnel alone (Mending Fleece's break heal rides it), without
         // a whole hit around it -- a real hit's LandPacket runs its own crown
         // check afterwards and would hide whether the HEAL fired it.
-        public int ResolveWardForTest(CombatantState target, int damage) => ResolveWard(target, damage);
+        public int ResolveWardForTest(CombatantState target, int damage) =>
+            ResolveWard(target, damage, attacker: null, DamageType.Physical);
     }
 }

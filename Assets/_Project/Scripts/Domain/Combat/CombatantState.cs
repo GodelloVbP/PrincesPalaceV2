@@ -200,6 +200,11 @@ namespace PrincesPalace.Domain.Combat
         // the application seam every status reaches. See CrowdControlGuard.
         public readonly CrowdControlGuard CrowdControl = new CrowdControlGuard();
 
+        // The Sentinel's planted shield and Shieldwall (4a). Nothing placed
+        // and every reactive hook off until the Sentinel wiring touches it.
+        // Read at FightSession.ResolveWard. See PlantedShield.
+        public readonly PlantedShield PlantedShield = new PlantedShield();
+
         // Always a real (possibly empty) list rather than nullable — unlike
         // Signature/BreakShield, which are each ONE mechanic a combatant
         // either has or does not, a combatant can pick up any number of

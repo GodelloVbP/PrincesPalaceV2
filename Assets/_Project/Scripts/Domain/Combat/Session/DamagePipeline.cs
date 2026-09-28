@@ -110,6 +110,18 @@ namespace PrincesPalace.Domain.Combat.Session
     // DoT ticks, relic packets with no rng) cannot crit either.
     public static class DamagePipeline
     {
+        // THE WARD HOOK'S SHAPE. It hears WHO struck and WITH WHAT as well as
+        // whom and how hard: the Sentinel's planted shield (plan 4a,
+        // FightSession.PlantedShield) answers the blow that broke it or
+        // struck it -- break shards at the attacker, Thornwall's return on a
+        // physical hit, Spellbreaker's reflect on a magic one -- and the ward
+        // pool is the one step of this funnel that knows how much of the hit
+        // the shield ate. Every other ward ignores the last two arguments.
+        // `attacker` is null exactly when AfterDefences was given none; the
+        // untyped overload passes DamageType.Physical, the type its own
+        // header says untyped damage is.
+        public delegate int WardResolver(CombatantState target, int damage, CombatantState attacker, DamageType type);
+
         // +/-20% by default, so two swings that would otherwise deal the
         // identical number read as a roll rather than a rote calculation.
         // 0 disables the roll entirely, which is what the fight tests do so a
@@ -272,7 +284,7 @@ namespace PrincesPalace.Domain.Combat.Session
             ElementalAffinity affinity,
             float varianceRange,
             SeededRandom rng,
-            Func<CombatantState, int, int> resolveWard,
+            WardResolver resolveWard,
             CombatantState attacker = null,
             bool ignoresDefense = false,
             bool dodgeAlreadyResolved = false,
@@ -340,7 +352,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Protect/Vulnerable and resistance handling above, and what it
             // returns can legitimately be ZERO: a pool that ate the whole hit
             // is not a hit that was merely softened.
-            result = resolveWard == null ? result : resolveWard(target, result);
+            result = resolveWard == null ? result : resolveWard(target, result, attacker, type);
 
             return new Outcome(result, effectiveness, detonated, isCrit: isCrit);
         }
@@ -362,7 +374,7 @@ namespace PrincesPalace.Domain.Combat.Session
             ElementalAffinity affinity,
             float varianceRange,
             SeededRandom rng,
-            Func<CombatantState, int, int> resolveWard,
+            WardResolver resolveWard,
             bool ignoresDefense = false,
             Func<CombatantState, CombatantState, DamageType, int> resolveDetonation = null,
             bool? crit = null)
@@ -425,7 +437,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // in the same place the typed overload puts it, just ahead of the
             // ward.
             result = ApplyFlatPhysicalReduction(result, target, DamageType.Physical);
-            result = resolveWard == null ? result : resolveWard(target, result);
+            result = resolveWard == null ? result : resolveWard(target, result, actor, DamageType.Physical);
 
             return new Outcome(result, 1f, 0, isCrit: isCrit);
         }

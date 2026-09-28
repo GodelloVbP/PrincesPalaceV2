@@ -577,7 +577,7 @@ below, not top-to-bottom through this table.
 
 #### Phase 4 engine seams — built in cloud, wiring handoff (2026-09-28)
 
-Rows 4b, 4c, 4d and 4e are built as Domain seams, commit `601be17`. Each one
+Rows 4b, 4c, 4d and 4e are built as Domain seams, commit `601be17`. Row 4a followed the same way; it is described at the end of this subsection. Each one
 is switched per combatant by state on `CombatantState`, and each is off for
 everyone until something sets it. Nothing sets any of them yet. The
 `TalentEffectType`/`SkillEffect` members that will set them are
@@ -707,6 +707,108 @@ null = off).
   4. Add a bot valuation for Unbroken.
 - Enemy-roster track reminder (review finding 10): CC-applying enemies are
   what make 4e testable in a real fight.
+
+**4a Plant the Shield / Shieldwall — `CombatantState.PlantedShield`**
+(`PlantedShield.cs`; session half `FightSession.PlantedShield.cs`; tests
+`PlantedShieldTests`, `[D]`).
+
+- The model: the planted shield IS a ward. `PlantShield` raises one
+  `Shielded` entry through `RaiseWard` (sourced to the holder, turns =
+  `LifetimeTurns`) and `PlantedShield.Ward` keeps a handle on that entry.
+  The badge, drain order, Shatter and HUD see an ordinary ward. No parallel
+  shield type.
+- Shield HP = `2 x (PhysicalDefense + MagicalDefense) + floor(MaxHealth / 10)`,
+  read live at placement. A negative defence sum reads as 0 and the minimum
+  is 1. Today's Bjorn (40 / 12 / 260) gets 130.
+- Lifetime: `Lifetime` (a `TurnWindow`), 3 of the holder's turns, the same
+  clock as every window. The ward entry expires on the same turn end, and
+  `AgePlantedShield` lifts it first. Re-place wait: `ReplaceWait` opens when
+  the placement ends (broken, expired, bashed or removed by something
+  else) for `ReplaceWaitTurns` (3), or for `BashWaitTurns` (1) after a Bash
+  when `ShortWaitAfterBash` is set. `CanPlace` is the menu's question;
+  `PlantShield` refuses when it is false.
+- `AbsorbedThisPlacement`: everything this placement soaked, for the holder
+  and for every ally the wall covered. Reset at each placement.
+  `BashPlantedShield(holder)` consumes the shield and returns it. Shield Bash
+  deals `base + PlantedShield.BashBonus(absorbed, 30)` (floored).
+- Break: `BreakShardDamage` (0 = off) is dealt as Physical to the attacker
+  whose hit emptied the shield. Only a break by a hit counts. An entry that
+  something else removed ends quietly.
+- The ward step learns who struck and with what.
+  `DamagePipeline.resolveWard` is now a `WardResolver(target, damage,
+  attacker, type)`. `FightSession.ResolveWard` runs the status wards
+  (`ResolveStatusWards`, the old body), then the planted-shield bookkeeping,
+  then Shieldwall.
+- Fury, corrected finding: the pools do NOT hear a hit before the wards.
+  They hear what `DealDamage` is handed, which is the post-ward remainder,
+  so a hit a ward eats whole has always paid the victim's pool nothing
+  (`NoteDamageForPools` returns on 0). The planted shield fixes this for
+  itself only: when it absorbed and nothing was left, the holder's pools
+  hear the blow once. Ordinary wards are unchanged, which is pinned by
+  `AnOrdinaryWard_ThatEatsTheWholeHit_StillPaysNoFury`.
+- Shieldwall: set `CoversParty` before placing. `PlantShield` then raises
+  ONE entry of `2 x` the planted HP on the holder. Any other living ally's
+  hit drains it after that ally's own wards (soonest-to-lapse first, the
+  rule every ward follows) and before their health. An area attack reaches
+  it once per ally hit, each in full. The holder's own hits drain it as his
+  own ward.
+  - Coverage is decided per hit from the side's living members. An ally who
+    joins or is revived mid-fight is covered from their first hit, and a
+    fallen ally is simply never asked about.
+  - If the holder is dead, the wall ends the next time anyone asks for it.
+- Shieldwall Fury: per ally hit the wall absorbs,
+  `clamp(floor(absorbed x 150 / holder MaxHealth), 3, 25)` (the root
+  engine's formula, `FuryForAbsorbedHit`), then capped at
+  `PartyFuryCapPerTurn` (40). The cap resets at the holder's turn end. This
+  is the only place the root's per-hit clamp exists until Phase 2 builds it
+  for his own hits; Phase 2 should call the same helper.
+- Reactive hooks (all off): `ThornsPercent` (Thornwall), `ReflectMagicPercent`
+  (Spellbreaker; "magic" means any type other than Physical, reflected as
+  that type), and `SilenceCasterOnSpellHit`, which raises
+  `FightSession.SpellHitShieldHolder(holder, caster)` once per caster per
+  action.
+  - "Him or the shield": each hook applies to the whole post-defence hit on
+    the holder, whether or not a shield is down, and to the share of an
+    ally's hit that his wall ate.
+  - Answers are queued during the swing and paid by `SettleShieldReactions`
+    at the two post-action seams, beside the Thorned retaliation. They are
+    never dealt mid-swing, so an AOE never keeps swinging with a dead
+    attacker.
+  - Thorns answer only when the action was a physical MOVE
+    (`CombatActions.IsPhysicalMove`, the nearest thing to "melee" here). A
+    physical-typed arrow or spell is not returned. This reading is open to
+    the owner.
+  - Each answer is a hit through `DamagePipeline` (no dodge, crit or
+    variance) and then `DealDamage`, with the holder as the source and
+    `actorActed: false`. Kill credit counts only on the holder's own turn.
+    An answer is never itself answered.
+- Wiring (Unity session, `-BuildContent`):
+  1. Append `SkillEffect.PlantShield` (the cast calls
+     `session.PlantShield(actor)`; Brace's button is upgraded by the
+     convergence node) and `SkillEffect.ShieldBash` (calls
+     `BashPlantedShield`, deals `base + BashBonus(absorbed, 30)`, stuns 1;
+     T3 also hits the adjacent enemies). Add both to
+     `FightSession.Skills` resolution and gate the menu on `CanPlace` or
+     `IsPlaced`.
+  2. Append `TalentEffectType` members: `PlantedShieldBreakShards`
+     (magnitude = damage; the value is not set in the plan yet),
+     `ShieldBashShortWait`, `ShieldwallCoversParty`, `ThornsPercent`
+     (15), `ReflectMagicPercent` (15) and `SilenceCasterOnSpellHit`. Set
+     them on `actor.PlantedShield` in the `ArmEngineSeams` pass.
+  3. Append `StatusEffectType.Silence` to `StatusEffect.cs` (its
+     DurationClock, HUD slug and glossary entry, and the block on casting).
+     Subscribe to `SpellHitShieldHolder` to apply it for 1 turn, with the
+     3-turn per-enemy cooldown.
+  4. Content rows: the Plant the Shield skill (30 Fury,
+     `placeholder_brawler_ward` upgraded by the slot-10 node), Shield Bash
+     (slot 12), the Spellbreaker, Thornwall and Shieldwall nodes, and bot
+     valuations for Plant the Shield and Shield Bash.
+  5. Art: a planted-shield sprite with cracked and broken states (read
+     `IsPlaced` and `Ward.Magnitude` against the placed size), and the
+     Shieldwall visual (one wall across the party, read `IsShieldwall`).
+- Not built: Spellbreaker T3 (reflected damage grants half as Fury),
+  Thornwall T2/T3 (slow; disarm on a physical break), and the root's own
+  per-hit Fury engine (Phase 2).
 
 ### Build order — vertical slices per constellation (owner-delegated, 2026-09-28)
 

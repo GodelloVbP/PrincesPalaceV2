@@ -670,6 +670,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 }
 
                 _hardControlRecovery.Remove(current);
+                SettleShieldReactions(physicalMove);
                 if (physicalMove) TriggerPhysicalMoveRetaliation(current);
 
                 if (!StepToNextTurn()) break;

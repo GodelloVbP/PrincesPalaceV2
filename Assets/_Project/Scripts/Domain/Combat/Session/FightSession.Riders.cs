@@ -142,6 +142,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // one-action recovery before any early fight-over return.
             _hardControlRecovery.Remove(_encounter.Current);
 
+            // The planted shield's answers (plan 4a) first: they were owed
+            // by blows inside the action that just ended, and they land
+            // before the fight-over check for the retaliation's reason.
+            SettleShieldReactions(physicalMove);
             if (physicalMove) TriggerPhysicalMoveRetaliation(_encounter.Current);
 
             // Read-then-reset up front, unconditionally, so a flag can never
