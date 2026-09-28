@@ -26,7 +26,7 @@ namespace PrincesPalace.Domain.Events
         }
     }
 
-    // THE OPEN EVENT, read-only, for the panel (phase 3) and the bot.
+    // The open event, read-only, for the panel and the bot.
     //
     // Two shapes:
     //   * On a page: Title/Body/ArtKey are the page's, Choices are its

@@ -129,21 +129,20 @@ namespace PrincesPalace.Domain.Bot
         // CanMove for where the actor can step, and the satchel handed in for
         // what can be drunk.
         //
-        // WHAT GUARANTEES THIS LIST IS NEVER EMPTY IS NOW ATTACK, not the
-        // pass action. Hold Back used to be unconditionally legal and carried
-        // the guarantee on its own; Move does not, because a rooted character
-        // cannot step at all (a solo one can step into an empty seat since
-        // field seats, PLAN_BELLWETHER_KIT 1.1, but not while rooted). The
-        // guarantee moved to Attack: on a live player turn the opposing rank
-        // 0 always exists and is always melee-reachable (Provoke aside, and
-        // Provoke is player-side -- a provoked ENEMY is still reachable, it
-        // is only the enemy's own choice of target that a taunt narrows).
-        // MILESTONE D PUT ONE CONDITION ON IT, and paid for it elsewhere. A
-        // rooted actor may not swing at all (plan 1.10), so Attack is no
-        // longer unconditional either -- but a rooted actor with nothing left
-        // never reaches a policy: FightSession.ResolveSkippedTurn forfeits its
+        // What guarantees this list is never empty is Attack, not the pass
+        // action. Move does not, because a rooted character cannot step at
+        // all (a solo one can step into an empty seat since field seats,
+        // PLAN_BELLWETHER_KIT 1.1, but not while rooted). On a live player
+        // turn the opposing rank 0 always exists and is always
+        // melee-reachable (Provoke aside, and Provoke is player-side -- a
+        // provoked enemy is still reachable, it is only the enemy's own
+        // choice of target that a taunt narrows).
+        //
+        // A rooted actor may not swing at all (plan 1.10), so Attack is not
+        // unconditional either -- but a rooted actor with nothing left never
+        // reaches a policy: FightSession.ResolveSkippedTurn forfeits its
         // turn inside AutoResolveEnemyTurns, before control is handed back, so
-        // this list is still never asked for one. The guarantee is now
+        // this list is still never asked for one. The guarantee is
         // "Attack, or the turn was already skipped".
         //
         // See FightInvariants' "no legal action" check, which is what would
@@ -188,8 +187,8 @@ namespace PrincesPalace.Domain.Bot
                 // RestorePartyMana) all resolve off the actor and
                 // ignore the target parameter outright (ResolveCharacterSkillInner
                 // passes `actor` to BeginBeat/SkillResolution.Amount for every
-                // one of them) -- looping this over every enemy used to hand
-                // a bot policy N identical copies of the same cast that
+                // one of them) -- looping this over every enemy would hand a
+                // bot policy N identical copies of the same cast that
                 // differ only in a Target field nothing downstream reads,
                 // which is not "more options", it is the same option wearing
                 // a different enemy's name. A Skill Choose() has to filter
@@ -380,15 +379,15 @@ namespace PrincesPalace.Domain.Bot
                 ? session.PreviewSkillPower(actor, CastAs(option.Skill, action))
                 : 0;
 
-        // THE LAST THING LEFT ON THE MENU, for a policy whose own scoring has
+        // The last thing left on the menu, for a policy whose own scoring has
         // run out of opinions.
         //
         // Attack first, because that is what carries the never-empty
         // guarantee (see LegalActions above) -- and `legal[0]` rather than a
         // First(...) that throws if the guarantee ever changes shape again.
-        // The two greedy policies both used to end on
-        // `legal.First(a => a.Kind == HoldBack)`, which was an exception
-        // waiting for the day Hold Back stopped being unconditional. It has.
+        // `legal.First(a => a.Kind == HoldBack)` would be an exception
+        // waiting for the day Hold Back stops being unconditional -- and it
+        // is not unconditional, so this uses Attack and `legal[0]` instead.
         public static FightAction LastResort(IReadOnlyList<FightAction> legal)
         {
             foreach (var action in legal)

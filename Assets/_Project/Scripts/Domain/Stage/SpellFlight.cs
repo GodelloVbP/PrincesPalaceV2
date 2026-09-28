@@ -3,17 +3,15 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Stage
 {
-    // WHERE A CALLED STRIKE AMASSES, AND HOW A PROJECTILE LIES ON ITS FLIGHT.
+    // Where a called strike amasses, and how a projectile lies on its flight.
     //
-    // Two halves of one owner report (2026-09-23): Winter's Rebuke "spawns
-    // somewhere under the mob" and should "form and amass in the air around
-    // the middle, then fire itself diagonally at the mob". The vocabulary had
-    // no point that was not ON a body, and no way to turn a painted spear onto
-    // the line it flies along -- it was held at the feet as a still, rotated
-    // along the RANK (align: span), which is the floor's diagonal, not the
-    // strike's.
+    // Two halves of one problem: a strike like Winter's Rebuke needs to form
+    // and amass in the air around the target rather than spawning under it,
+    // and fire itself diagonally at the mob rather than sitting at the feet
+    // rotated along the rank (align: span), which is the floor's diagonal,
+    // not the strike's.
     //
-    // ENGINE-FREE for the reason FormationSpan and CastPointPlacement are:
+    // Engine-free for the reason FormationSpan and CastPointPlacement are:
     // Core measures the points (slot transforms, sprite alpha) and this is the
     // arithmetic over them, pinned with literals by SpellFlightTests.
     public static class SpellFlight
@@ -37,10 +35,10 @@ namespace PrincesPalace.Domain.Stage
         // visible body, lifted SkyLift above whichever of the two stands
         // taller, never above SkyCeiling.
         //
-        // HALFWAY and not "over the target", because a strike called down
+        // Halfway and not "over the target", because a strike called down
         // vertically onto the target reads as a lightning bolt; from halfway
-        // up and over, the line to the target is the diagonal the owner asked
-        // for, and its angle falls out of the stage rather than being authored.
+        // up and over, the line to the target is the intended diagonal, and
+        // its angle falls out of the stage rather than being authored.
         public static UiVec SkyPoint(UiVec casterPoint, float casterTop, StageBody target)
         {
             var aim = target.Centre;
@@ -51,18 +49,16 @@ namespace PrincesPalace.Domain.Stage
 
         // ---- nothing a spell draws may cross the combat log ----------------
         //
-        // QA 2026-09-26 (AUDIT #205, now ruled): against an Elder Treant the
-        // air point meets SkyCeiling and the sheets drawn around it are sized
-        // to the treant's body (fit: target, x1.63), so Winter's Rebuke's
-        // spear reached y~85 on screen across log lines 2-4, Blackglass
-        // Spear's ran off the top edge, and Crownfall's crown sat over line 2.
-        // Owner: "If it doesn't show it's a bug." Lowering the ceiling alone
-        // cannot fix it -- the treant's head is at 240, so an air point any
-        // lower is beside the head rather than above it, and a 490-unit spear
-        // launched from it still reaches past the top of the screen. What has
-        // to give is the SIZE of the drawing near the ceiling.
+        // Against a tall target (an Elder Treant, say) the air point meets
+        // SkyCeiling and a large drawing sized to the target's body can
+        // reach past the log or off the top of the screen. Lowering the
+        // ceiling alone cannot fix it -- the treant's head is at 240, so an
+        // air point any lower is beside the head rather than above it, and a
+        // 490-unit spear launched from it still reaches past the top of the
+        // screen. What has to give is the size of the drawing near the
+        // ceiling.
         //
-        // SHRUNK ABOUT ITS ANCHOR, not moved. Every placed layer has a point
+        // Shrunk about its anchor, not moved. Every placed layer has a point
         // that must not move -- the air point a spear leaves from, the body an
         // impact lands on -- and its box sits at a fixed offset from that point
         // that scales with the box (the impact-point correction is a fraction

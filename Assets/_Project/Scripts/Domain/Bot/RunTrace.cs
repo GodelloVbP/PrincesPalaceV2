@@ -5,7 +5,7 @@ namespace PrincesPalace.Domain.Bot
 {
     // What one player command did, inside one fight. Fields, not
     // properties, and everything a plain type (string/int/bool) -- this is
-    // written straight to JSON by the batch runner (Phase 3), and a getter
+    // written straight to JSON by the batch runner, and a getter
     // with logic in it is a trap for a serializer that just walks fields.
     public sealed class TurnTrace
     {
@@ -15,18 +15,15 @@ namespace PrincesPalace.Domain.Bot
         public int PartyHpAfter;
         public int EnemyHpAfter;
 
-        // THE POOL TIER THIS COMMAND'S OWN CAST FIRED -- 0 for every command
+        // The pool tier this command's own cast fired -- 0 for every command
         // that is not a poolTiers skill's cast (an attack, an item, a move,
         // an untiered skill, and a tiered skill that fired no tier at all),
         // else the fired tier's damage multiplier (2 for Bjorn's Slam x2, 4
         // for x4 -- CombatBeat.PoolTierDamageMultiplier's own values). Read
-        // by FightRunner off the beat it drains for THIS command whose Actor
-        // is this command's own actor -- see FightRunner.Play. Phase 1 of
-        // the fury-tier plan built and reverted this same field
-        // (PHASE1_BOT_REPORT.md's own note); this time it stays, so a batch
-        // can finally answer the plan's x2/x4 share trip-wire instead of the
-        // contaminated damage-magnitude proxy PHASE6_BOT_REPORT.md §3 had to
-        // fall back to.
+        // by FightRunner off the beat it drains for this command whose Actor
+        // is this command's own actor -- see FightRunner.Play. This lets a
+        // batch answer an x2/x4 share question directly, rather than through
+        // a contaminated damage-magnitude proxy.
         public float PoolTierFired;
 
         // THE ACTOR'S OWN PRIMARY POOL (mana, fury, whatever pools.json names
@@ -180,9 +177,9 @@ namespace PrincesPalace.Domain.Bot
 
         // The squad's Prince's Favor at the moment this room's offer was
         // rolled (ItemOfferRoll.CurrentSquadFavor()), and the encounter class
-        // RunOrchestrator.RollOffers actually used to roll it -- "Normal" or
-        // "Elite" exactly as that method computes them, not a class this room
-        // arguably deserves. Empty string for a room that made no offer.
+        // RunOrchestrator.RollOffers actually rolled it against -- "Normal"
+        // or "Elite" exactly as that method computes them, not a class this
+        // room arguably deserves. Empty string for a room that made no offer.
         public int Favor;
         public string EncounterClass = "";
 
