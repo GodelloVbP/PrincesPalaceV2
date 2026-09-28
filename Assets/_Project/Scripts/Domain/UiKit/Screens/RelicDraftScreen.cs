@@ -24,13 +24,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // comment), so changing width is the change that does not reopen that
         // budget.
         //
-        // 345 NOW, WAS 270. Against the spliced delivery's measured 0.588 a
-        // 460-tall card was 270 wide; the 2026-09-07 repin puts the art at a
-        // true 0.75, so the same card is 345 (345/460 = 0.75 exactly). Three
-        // of them at a CardGap pitch reach +-557.5, still well inside the
-        // frame's own +-697.5 content bound, and every child inside the card
-        // (the 230-wide body being the widest) gains room rather than losing
-        // it.
+        // 345: at the art's true 0.75 aspect, a 460-tall card is 345 wide
+        // (345/460 = 0.75 exactly). Three of them at a CardGap pitch reach
+        // +-557.5, still well inside the frame's own +-697.5 content bound,
+        // and every child inside the card (the 230-wide body being the
+        // widest) has room to spare.
         public const float CardWidth = 345f; // was 270, was 380
         public const float CardHeight = 460f;
         private const float CardGap = 40f;
@@ -141,18 +139,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.DescendButton = descend;
             inside.Add(descend);
 
-            // THE SYSTEM MENU'S OWN FRAME IDIOM, not a kit Container.
-            //
-            // WAS a Violet 3:2 Container (ContainerArt's baked leather plate,
-            // stretched besides: 1500x1000 measured 0.7% off the regenerated
-            // kit's 1.49, inside Ui.Container's 5% band, but the owner's
-            // actual complaint was the ART, not the fit -- "it's stretched
-            // and looks bad and the inside is not black, it's more leathery"
-            // (2026-09-23). SystemMenuScreen and ShopScreen dropped this
-            // exact art for this exact reason on 2026-09-07 (see Ui.
-            // SystemMenuPane's own header): a flat near-black Solid ground
-            // plus a hairline Rim reads as the kit's UI chrome, where the
-            // leather plate reads as a game OBJECT sitting behind the menu.
+            // THE SYSTEM MENU'S OWN FRAME IDIOM, not a kit Container: a flat
+            // near-black Solid ground plus a hairline Rim reads as the
+            // kit's UI chrome, where a leather Container plate reads as a
+            // game OBJECT sitting behind the menu. SystemMenuScreen and
+            // ShopScreen use the same idiom for the same reason (see Ui.
+            // SystemMenuPane's own header).
             //
             // PanelFill/PanelRim are SystemMenuScreen's own two constants
             // (its PanelFill/PanelRim fields) copied rather than shared,
@@ -162,11 +154,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // BorderQuiet pair instead, which is the same "the shell doesn't
             // export its colours" precedent already in the kit.
             //
-            // FrameSize UNCHANGED at 1500x1000: this is not a Container any
-            // more, so the aspect that used to matter (matching the kit's
-            // measured 3:2) is no longer a fact about this frame at all --
-            // every child's placement (card row, pager, Descend) was already
-            // measured against this exact size and did not have to move.
+            // FrameSize AT 1500x1000: not a Container, so no aspect has to
+            // match the kit's measured 3:2 -- every child's placement (card
+            // row, pager, Descend) is measured against this exact size.
             const string PanelFill = "#1A1024F5"; // SystemMenuScreen.PanelFill (PanelViolet at 96%)
             const string PanelRim = FightHudPalette.BorderGold; // SystemMenuScreen.PanelRim
             var frameSize = new UiVec(1500f, 1000f);
@@ -255,16 +245,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // doesn't have: rarity's box bottoms out at RarityY - 15, so this
             // starts 8px under that.
             //
-            // 290x58, WAS 230x76 AND PULLED 10px UP INTO THE RARITY LINE. The
-            // 2026-09-07 repin took the container's bottom inset from 0.04 to
-            // 0.055 (a 204.7px content bound on a 460-tall card, down from
-            // 211.6), which the 76-tall box could no longer clear even with
-            // the pull-up -- it hung 2.6px past. The card is also 345 wide now
-            // instead of 270, so the trade is straightforward: give the line
-            // 60px more width and take 18px of height back, which fits more
-            // characters per line than the height paid for. At 58 tall it
-            // sits exactly 8px under the rarity line with no pull-up at all
-            // and clears the content bound by 4.7px.
+            // 290x58: the container's bottom inset gives a 204.7px content
+            // bound on a 460-tall card, and a wider, shorter box clears it
+            // -- 290 wide (the card is 345 wide) fits more characters per
+            // line than a taller box would, and at 58 tall it sits exactly
+            // 8px under the rarity line with no pull-up needed, clearing
+            // the content bound by 4.7px.
             var body = Ui.Label($"DraftCard{index}Body", UiString.Runtime, new UiVec(290f, 58f), 14,
                     "#9C8FC4", Place.At(0f, RarityY - 15f - 8f - 29f))
                 .AsDecor();

@@ -172,9 +172,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // order is declaration order in this DSL, and a wash added after
             // its own row's text would cover it.
             //
-            // includeWash is false for the choose-list Slot{i}Button now
-            // (balance-bot, 2026-09-02): that button wears a Gold ThemedPlate
-            // instead of NoChrome, so the plate itself IS the background and
+            // includeWash is false for the choose-list Slot{i}Button: that
+            // button wears a Gold ThemedPlate instead of NoChrome, so the
+            // plate itself IS the background and
             // a wash under it would either hide behind an opaque plate or
             // show through a translucent one for no reason. Manage Saves'
             // rows stay Panels, not Buttons, and keep the wash exactly as
@@ -276,24 +276,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // centring under it.
             const float LeftEdgeX = -810f;
 
-            // No .Tracked() here any more -- CeremonialTitle's own spec
-            // (2f, not the 5f this used to hardcode) is what ApplyTypography
-            // actually applies once Role is set; a node.Tracking value would
-            // be silently ignored, so stating one here would lie.
+            // No .Tracked() here -- CeremonialTitle's own spec is what
+            // ApplyTypography actually applies once Role is set; a
+            // node.Tracking value would be silently ignored, so stating one
+            // here would lie.
             var title = Ui.Label("TitleLabel", UiStrings.GameTitle, new UiVec(760f, 100f), 64,
                     "#E3C166", Place.At(LeftEdgeX + 380f, 260f))
                 .TextAligned(UiTextAlign.Left)
                 .Styled(TypographyRole.CeremonialTitle);
             screen.TitleLabel = title;
 
-            // GOLD, 3:2 KIT CONTAINER, not a flat scrim any more -- this is the
+            // GOLD, 3:2 KIT CONTAINER, not a flat scrim -- this is the
             // save-selection surface's own colour, matching the plaques the
-            // wordmark sits above. 900x560 (aspect 1.607) was 7.9% off the
-            // kit's 3:2 aspect -- past the 5% band Ui.Container refuses --
-            // and was nudged to 834x560 to hit the spliced delivery's
-            // measured 1.49. The 2026-09-07 repin puts the art at a true 1.5,
-            // so the width is asked of the kit instead of authored -- 840x560,
-            // exactly 1.5, rather than being left 0.7% off. Height is the
+            // wordmark sits above. 840x560, exactly the kit's 3:2 aspect:
+            // the width is asked of the kit instead of authored, so it can
+            // never drift off that aspect. Height is the
             // fixed side and width follows it: nothing
             // is declared INSIDE this rect (the title/menu column are
             // separate siblings positioned independently, not children of
@@ -338,11 +335,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             for (int i = 0; i < slotCount; i++)
             {
-                // GOLD THEMED PLATE now (balance-bot, 2026-09-02), not
-                // Chromeless -- the plate replaces the old FilledWash/
-                // EmptyWash Solids as the card's own background, and
-                // SaveSlotController drives filled/empty through
-                // SetMenuState(Primary/Idle) instead of toggling two washes.
+                // GOLD THEMED PLATE, not Chromeless -- the plate is the
+                // card's own background, and SaveSlotController drives
+                // filled/empty through SetMenuState(Primary/Idle) instead of
+                // toggling two washes.
                 // 700x92 (aspect 7.6) stretches the 6.0 row plate non-
                 // uniformly by about 28% rather than being narrowed to fit
                 // it exactly: AddCardContent's column geometry (the number
@@ -352,7 +348,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // either desync the two lists' column alignment or force a
                 // second copy of that geometry -- the same "accept the
                 // stretch" tradeoff RespecButton already established
-                // (ButtonPlateArt's own header, 2ff2e50).
+                // (ButtonPlateArt's own header).
                 var button = Ui.Button($"Slot{i}Button", UiString.Runtime,
                         new UiVec(CardWidth, ChooseCardHeight), 20)
                     .ThemedPlate(ButtonTheme.Gold);
@@ -378,13 +374,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             slotChildren.Add(Ui.Row("SaveSlotFooter", Place.Flow, spacing: 24f, UiAlign.Centre,
                 manageSaves, cancel));
 
-            // 10, down from 16: Slot{i}Button grew from 92 to 112 tall (see
-            // its own comment -- 700x92 was 72% off the Row6x1 plate's true
-            // 6:1, ThemedButtonAspectLintTests), and at the roster size
+            // 10: at Slot{i}Button's 112-tall size, and at the roster size
             // TheMenuAuditsCleanAtOtherSlotCounts(8) checks (a roster the
             // game does not currently field, but the screen's own arithmetic
-            // has to hold for), the column no longer fit the 1080-tall
-            // screen at the old spacing.
+            // has to hold for), the column needs this tight a spacing to
+            // fit the 1080-tall screen.
             var saveSlotModal = Ui.Modal("SaveSlotPanel", "#000000D9",
                 Ui.Column("SaveSlotColumn", Place.At(0f, 0f), spacing: 10f, UiAlign.Centre, slotChildren))
                 .Inactive();
@@ -446,9 +440,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // this exact label invisible, because CreateText defaulted to black
             // and the panel behind it is near-black (AUDIT P0 #4). Ui.Label
             // defaults to white, so the bug has no way to recur.
-            // THE HOLD, now wearing the Crimson HQ plate (owner's kit
-            // instruction, 2026-09-07) instead of a flat track rect -- the
-            // plate itself reads as the track, so only the progress fill
+            // THE HOLD wears the Crimson HQ plate instead of a flat track
+            // rect -- the plate itself reads as the track, so only the
+            // progress fill
             // survives as a child. Fill stays authored at holdSize, FULL
             // WIDTH and pivoted to its own left edge, unchanged from the flat
             // version: UiAudit refuses a zero-sized graphic, and growing
