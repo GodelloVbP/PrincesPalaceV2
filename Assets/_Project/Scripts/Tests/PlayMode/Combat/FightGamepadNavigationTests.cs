@@ -99,8 +99,7 @@ namespace PrincesPalace.PlayModeTests
                 "Y/Triangle should enter the existing party portrait/figure controls, not the enemy ring");
         }
 
-        // ---- character-select walks the formation spatially (owner playtest,
-        // 2026-09-23) -----------------------------------------------------------
+        // ---- character-select walks the formation spatially --------------------
         //
         // "Pressing Y puts the cursor on Bjorn (good). From there LEFT goes
         // back to the Attack command button -- it should go to party
@@ -322,17 +321,17 @@ namespace PrincesPalace.PlayModeTests
                 "a first \"previous\" press from no hover lands on the last living enemy, index 1 of 2");
         }
 
-        // THE GATE'S OWN BUG (2026-09-19 follow-up): the two tests above
+        // THE GATE'S OWN BUG: the two tests above
         // drive MoveFocus/CycleTarget DIRECTLY, bypassing
         // IFightNavigationTarget.MoveFocus -- the wrapper that flips the
-        // pad's vertical sign at Target depth so "up is one slot deeper" (the
-        // owner's call). That flip exposed a second, separate bug:
+        // pad's vertical sign at Target depth so "up is one slot deeper".
+        // That flip exposes a second, separate bug:
         // FocusedElement/ConfirmFocus already treat no hover as enemy 0 (the
         // marker sits there before any press, and Submit would hit it), so a
         // FIRST pad press has to read as one step FROM that implicit 0 --
         // not as WrapFromNoHover's older "first press lands ON index 0" rule,
         // which is what the two direct-call tests above still correctly pin.
-        // Before today's fix, the first Up press landed back on 0 (no
+        // Without this fix, the first Up press lands back on 0 (no
         // visible change) instead of on 1.
         [UnityTest]
         public IEnumerator FirstPressOnAFreshTargetPickTreatsEnemyZeroAsHovered()
@@ -383,10 +382,10 @@ namespace PrincesPalace.PlayModeTests
         // fix in HorizontalAtTargetDepthCyclesTargets does NOT: the MIRRORED
         // ally rack, where Right means "nearer" rather than "deeper"
         // (InspectMove's own header). A fresh Right on the ally rack already
-        // read correctly before today (HorizontalAtTargetDepthCyclesAllyTargets
-        // pins it, unaffected by this fix, same reason Down above is
-        // unaffected) -- Left is the ally rack's "deeper" direction, and
-        // "deeper" is exactly the case that was broken.
+        // reads correctly (HorizontalAtTargetDepthCyclesAllyTargets pins it,
+        // unaffected by this fix, same reason Down above is unaffected) --
+        // Left is the ally rack's "deeper" direction, and "deeper" is
+        // exactly the case this fix covers.
         [UnityTest]
         public IEnumerator FirstPressOnAFreshTargetPickTreatsPlateZeroAsHoveredOnTheMirroredAllyRack()
         {
@@ -444,9 +443,9 @@ namespace PrincesPalace.PlayModeTests
                 "Left from a fresh ally pick steps one slot deeper than the implicit plate 0, landing on Bjorn");
         }
 
-        // ---- the status box follows the pad (2026-09-19) -------------------------
+        // ---- the status box follows the pad -------------------------------------
         //
-        // The owner's question, in their words: "in a fight, how does a player
+        // The question this answers: "in a fight, how does a player
         // hover over a mob or a PC to check (de)buffs? (gamepad)". The answer
         // this pins is that the box follows the FOCUS: whenever the pad is on
         // an actor, that actor's statuses are on screen, and when it is on
@@ -523,9 +522,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(StatusBoxIsShown(), "leaving the rack for the verb column closes the box");
         }
 
-        // ---- inspecting without committing to a verb (2026-09-19) ---------------
+        // ---- inspecting without committing to a verb ----------------------------
         //
-        // The other half of the owner's question, and the half the block above
+        // The other half of that question, and the half the block above
         // recorded as impossible: a pad could reach an actor only through a
         // verb. The horizontal axis is the answer
         // (NavigationInputModule.ProcessFight -> IFightNavigationTarget.
@@ -604,7 +603,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(StatusBoxIsShown(), "an actor with no statuses shows no box");
 
             // RIGHT again: off the end of the monsters and onto the party,
-            // which is the half of the owner's question about PCs.
+            // the other half of that question about PCs.
             //
             // BY NAME PREFIX, not by a literal slot: the party's hit areas are
             // indexed by STAGE SLOT and the ring walks PLATES (FightScreen.
@@ -691,13 +690,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(StatusBoxIsShown(), "and the box closes");
         }
 
-        // TARGET-PICK SEMANTICS CHANGED, DELIBERATELY, AT ONE DEPTH ONLY
-        // (the owner's 2026-09-19 follow-up: "selecting different mobs with
-        // gamepad goes with up down, but it should work with left right").
-        // Left/Right at Target depth now CYCLES the rack, the same rack
-        // Up/Down already walk -- see HorizontalAtTargetDepthCyclesTargets
-        // and its ally twin below. What survives from the old claim is
-        // narrower than it was: a submenu LIST (a skill or item row) still
+        // TARGET-PICK SEMANTICS CHANGED, DELIBERATELY, AT ONE DEPTH ONLY:
+        // "selecting different mobs with gamepad goes with up down, but it
+        // should work with left right". Left/Right at Target depth CYCLES
+        // the rack, the same rack Up/Down already walk -- see
+        // HorizontalAtTargetDepthCyclesTargets and its ally twin below. What
+        // survives is narrower than before this change: a submenu LIST (a
+        // skill or item row) still
         // answers to Up/Down alone, and cycling a target -- on either axis
         // -- still only ever HOVERS one; a player aiming a spell still
         // cannot have a press quietly CONFIRM the pick out from under them.
@@ -714,7 +713,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(IsShown("TargetPrompt"), "precondition: a target pick is open");
 
             // RIGHT from no hover treats enemy 0 as ALREADY hovered (the gate's
-            // own 2026-09-19 fix, CycleTargetFromPad) and steps one slot
+            // own fix, CycleTargetFromPad) and steps one slot
             // DEEPER from it -- enemy 1, not enemy 0. A bare "first press
             // lands on 0" would be no visible change at all, since the marker
             // already sat on EnemyHitArea0 before this press (FocusedElement's

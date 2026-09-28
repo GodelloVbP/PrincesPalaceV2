@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Tests
         {
             // 1 and 999 are the only two values left (see
             // OnlyTheStartingKitAndTheGrantedSentinelAreLegalUnlockLevels
-            // below); this used to say 2 and 4.
+            // below).
             var aoe = Minimal("aoe");
             aoe.effect = "DamageAll";
             aoe.unlockLevel = 1;
@@ -338,9 +338,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(unlockLevel, resolved[0].UnlockLevel);
         }
 
-        // 0 and below were refused before this rule existed, and still are --
-        // by the same check now, which is worth pinning so the old refusal
-        // is not assumed to have survived on its own.
+        // 0 and below are refused by the SAME check that refuses ladder
+        // rungs, which is worth pinning so the refusal is not assumed to
+        // have survived on a separate rule.
         [TestCase(0)]
         public void AnUnlockLevelBelowOne_IsStillRejected(int unlockLevel)
         {
@@ -850,18 +850,17 @@ namespace PrincesPalace.Domain.Tests
 
         // PINNED literals throughout — nothing here recomputes the formula.
         //
-        // REWRITTEN for Phase 1 of the balance redesign: SkillResolution.
-        // Damage no longer mitigates at all — it always returns
-        // Math.Max(1, raw) — so neither the target's defense nor
-        // `ignoresDefense` has any effect on this return value any more.
+        // SkillResolution.Damage does not mitigate at all — it always
+        // returns Math.Max(1, raw) — so neither the target's defense nor
+        // `ignoresDefense` has any effect on this return value.
         // DamagePipeline.AfterDefences is the single place a defense term is
-        // ever subtracted now; see DamagePipelineTests for that half.
+        // ever subtracted; see DamagePipelineTests for that half.
         //
-        // NO LONGER SCALED (fixed 2026-08-26): this raw figure feeds the same
-        // mitigated-combat path ComputeAttackDamage/ComputeSkillDamage do
-        // (FightSession.Skills.cs's real DamageSingle/DamageAll casts), so it
-        // stopped multiplying by CombatMath.DamageScale in the same fix --
-        // see SkillResolution.Damage's own header.
+        // NOT SCALED EITHER: this raw figure feeds the same mitigated-combat
+        // path ComputeAttackDamage/ComputeSkillDamage do (FightSession.
+        // Skills.cs's real DamageSingle/DamageAll casts), and does not
+        // multiply by CombatMath.DamageScale -- see SkillResolution.Damage's
+        // own header.
         [Test]
         public void Damage_IsAttackPlusScaling_RawAndUnaffectedByTheTargetOrTheFlag()
         {
@@ -872,12 +871,12 @@ namespace PrincesPalace.Domain.Tests
                 SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true));
         }
 
-        // WHAT A WALL COSTS is now nothing at all, at THIS layer — see the
+        // WHAT A WALL COSTS is nothing at all, at THIS layer — see the
         // header above. A heavily defended target and an undefended one
-        // produce the identical raw figure; only Attack moves it. The
-        // property this used to pin (a wall blunting a swing proportionally
-        // rather than flattening it) still holds, just one layer further
-        // down — see DamagePipelineTests and CombatMathTests.AfterResistance*.
+        // produce the identical raw figure; only Attack moves it. A wall
+        // blunting a swing proportionally rather than flattening it still
+        // holds, just one layer further down — see DamagePipelineTests and
+        // CombatMathTests.AfterResistance*.
         [Test]
         public void ADefendedTarget_NoLongerChangesTheRawFigureAtAll()
         {

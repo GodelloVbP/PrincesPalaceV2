@@ -36,15 +36,13 @@ namespace PrincesPalace.Domain.Tests
         // The property that still matters is that nothing is UNREACHABLE, and
         // these three are it: the window is on screen, the top of the list can
         // be scrolled to, and so can the bottom.
-        // WINDOW-PER-COUNT now (2026-09-22), not the static ViewportCentreY/
+        // WINDOW-PER-COUNT, not the static ViewportCentreY/
         // ViewportHeight -- the container GROWS TO FIT up to RowsInView rows
         // (FightController.AnchorSubmenuRows' own header), so the window a
         // row actually has to land inside is ViewportCentreYFor(shown), not
         // the STATIC tree's own oversized BuildReservationRows placeholder.
-        // The two agreed by construction before this rework (ContentY had
-        // only one ViewportCentreY to read); they no longer do, so mixing
-        // them here would pin a window this test never actually sees a row
-        // drawn against.
+        // The two do not agree in general, so mixing them here would pin a
+        // window this test never actually sees a row drawn against.
         [TestCase(0)]
         [TestCase(1)]
         [TestCase(5)]
@@ -104,24 +102,19 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // The shipped bug's shape, kept as literals so this fails loudly if
-        // the clamp is ever removed. The NUMBERS have moved four times now --
-        // the pitch changed, BACK moved inside the frame, the panel dropped to
-        // sit flush with the verb column, and the pool grew to 24 -- but the
-        // property is unchanged: unclamped placement runs away, clamped
+        // the clamp is ever removed. The property matters regardless of what
+        // the exact numbers are: unclamped placement runs away, clamped
         // placement does not.
         //
-        // ASKED FOR FORTY, not seventeen. Seventeen was above the old pool and
-        // is inside the new one, so the test's two halves had become the same
-        // call and it proved nothing while still passing.
+        // ASKED FOR FORTY, not seventeen: a count that sits only barely
+        // above the current pool size would make the clamped and unclamped
+        // halves the same value, proving nothing while still passing.
         [Test]
         public void TheShippedBug_AnUnclampedCountRunningAwayUpTheScreen_CannotRecur()
         {
-            // 2030/1038, UP FROM 1870/942 -- RowPitch 58->62 (owner playtest,
-            // 2026-09-23, "submenu rows drift upward against the command
-            // rows"): RowPitch now reads VerbPitch directly instead of a
-            // separately hand-tuned RowGap, so this test's own literals move
-            // with it again; see FightSubmenuLayout.RowPitch's own comment
-            // for why 62.
+            // RowPitch reads VerbPitch (62) directly instead of a separately
+            // hand-tuned RowGap, so this test's own literals move with it;
+            // see FightSubmenuLayout.RowPitch's own comment for why 62.
             Assert.AreEqual(2030f, FightSubmenuLayout.RowY(40, 0), 0.01f,
                 "unclamped, RowY still produces the runaway position - this documents the input, not the behaviour");
 
@@ -144,13 +137,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(5, 0f), 0.01f);
         }
 
-        // Twelve rows against a FIVE-row window (RowsInView, down from eight,
-        // 2026-09-22): seven rows' worth of travel. 434, UP FROM 406
-        // (RowPitch 58->62, owner playtest 2026-09-23, submenu row spacing
-        // now reads VerbPitch directly), not the 434... er, not a round
-        // number, for the same reason as before: travel is measured in
-        // PIXELS and twelve rows carry eleven gaps against the window's four,
-        // each of those gaps now 4px wider (RowGap 6->10).
+        // Twelve rows against a FIVE-row window (RowsInView): seven rows'
+        // worth of travel. 434 is not a round number for the same reason as
+        // always: travel is measured in PIXELS, and twelve rows carry eleven
+        // gaps against the window's four.
         [Test]
         public void AListLongerThanTheWindowScrollsByTheDifference()
         {
@@ -173,10 +163,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheThumbShowsHowMuchOfTheListIsOnScreen()
         {
-            // 122.62, UP FROM 116.89 (RowPitch 58->62, owner playtest
-            // 2026-09-23) -- the thumb is the visible fraction of the content
-            // BY HEIGHT (300 of 734 now), and twelve rows carry eleven gaps
-            // against the window's four. Pinned at the real number, because
+            // The thumb is the visible fraction of the content BY HEIGHT
+            // (300 of 734), and twelve rows carry eleven gaps against the
+            // window's four. Pinned at the real number, because
             // the tidy one would mean the thumb was measuring rows rather
             // than pixels and would drift the moment the gap changed.
             Assert.AreEqual(122.62f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
@@ -207,19 +196,19 @@ namespace PrincesPalace.Domain.Tests
                 FightSubmenuLayout.ThumbMinHeight);
         }
 
-        // THE HEADER NO LONGER MOVES AT ALL, which is a deliberate reversal.
-        // It used to ride the top row so a short list kept its label attached
-        // to it; with a container that is wrong twice -- the label would sit
-        // inside the frame for a short list, and it would slide every time the
-        // count changed while the box around it did not.
+        // THE HEADER DOES NOT MOVE AT ALL. Riding the top row so a short
+        // list keeps its label attached is wrong twice with a container: the
+        // label would sit inside the frame for a short list, and it would
+        // slide every time the count changed while the box around it did
+        // not.
         [Test]
         public void TheHeaderSitsOnTheContainerRatherThanOnTheList()
         {
             Assert.AreEqual(FightSubmenuLayout.HeaderY(2), FightSubmenuLayout.HeaderY(17), 0.01f,
                 "the header moved with the count instead of staying on its frame");
 
-            // FrameTop, not the old ContainerCentreY + ContainerHeight * 0.5f --
-            // the frame is VisibleBottomLine-flush now (FrameCentreY's own
+            // FrameTop, not ContainerCentreY + ContainerHeight * 0.5f --
+            // the frame is VisibleBottomLine-flush (FrameCentreY's own
             // header), a few pixels off ContainerCentreY's own convention,
             // so the frame the header actually has to clear is the one built
             // from that flush edge, not the inner box's own raw rect.
@@ -229,30 +218,18 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the frame must never render narrower than its own rows --------------
         //
-        // THE 98a4e062 BUG: FrameHeight dropped to BuildReservationRows(8)'s
-        // figure at build time and ResizeSubmenuContainer shrinks only the
-        // RECT's height per count afterward -- but Ui.Container's frame art
-        // carried PreserveAspect, which does not stretch a mismatched rect,
-        // it LETTERBOXES the art down to whichever axis is over-constrained.
-        // A short list's rect was far off the art's 3:4, so the rendered art
-        // came out narrower than the 240-wide rows sitting on it.
-        //
-        // FIXED TWICE NOW. PreserveAspect off (Type.Simple non-uniform
-        // stretch) was tried first and fixed the overflow, but distorted the
-        // painted border hard at 1-3 rows -- the same "stretched container
-        // art looks bad" defect the owner rejected on the relic draft screen
-        // the same day. The 2026-09-23 rework replaces the Violet 3:4
-        // Ui.Container outright with RelicDraftScreen's own flat Solid-fill-
-        // plus-Rim idiom (that file's own DraftFrameFill/DraftFrame header):
-        // FrameWidth IS ContainerWidth now, at every height, because a flat
-        // fill has no aspect to keep in the first place.
+        // A flat Solid-fill-plus-Rim frame (RelicDraftScreen's own
+        // DraftFrameFill/DraftFrame idiom) has no aspect to preserve, so
+        // FrameWidth IS ContainerWidth at every height -- unlike a
+        // PreserveAspect container, which would LETTERBOX a short list's
+        // rect down to whichever axis is over-constrained, rendering
+        // narrower than the rows sitting on it.
         //
         // 334 is hand-computed from the current constants, not read back
         // through the property it checks (CLAUDE.md's fifth gotcha):
         // ContainerWidth = RowWidth(300) + ContainerPad*2(20) +
-        // ScrollbarGap(8) + ScrollbarWidth(6) = 334. RowWidth is 300 now,
-        // UP FROM 240 (owner playtest 2026-09-23: submenu rows read
-        // VerbRowW directly -- FightSubmenuLayout.RowWidth's own header).
+        // ScrollbarGap(8) + ScrollbarWidth(6) = 334. RowWidth reads
+        // VerbRowW directly -- FightSubmenuLayout.RowWidth's own header.
         [TestCase(1)]
         [TestCase(3)]
         [TestCase(5)]
