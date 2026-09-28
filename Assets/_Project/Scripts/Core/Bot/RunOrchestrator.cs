@@ -14,25 +14,18 @@ namespace PrincesPalace
 {
     // THE RULES OF A RUN, IN ONE PLACE, WITH TWO CALLERS.
     //
-    // Everything here used to live inside a MonoBehaviour: what a room does on
-    // arrival was in MapController.Walk, what a fight is built from and what
-    // its end does to the run were in FightBootstrap, the loot roll was in
-    // FightController.Input, taking an offer was in ReckoningController, and
-    // the relic draft's own roll was in RelicDraftController. That was fine
-    // while a screen was the only thing that could play the game.
+    // docs/PLAN_BALANCE_BOT.md F2 is why: a headless bot that plays
+    // thousands of runs to report on balance has to obey the same rules a
+    // screen does, and the alternative to this class is a second copy of
+    // them inside the bot -- a copy that measures itself rather than the
+    // game the moment either side moves. What a room does on arrival, what
+    // a fight is built from and what its end does to the run, the loot
+    // roll, taking an offer, and the relic draft's own roll all live here,
+    // where both callers reach the same code; the bot is the second caller.
     //
-    // docs/PLAN_BALANCE_BOT.md F2 is why it is not fine any more: a headless
-    // bot that plays thousands of runs to report on balance has to obey the
-    // same rules, and the alternative to this class is a second copy of them
-    // inside the bot -- a copy that measures itself rather than the game the
-    // moment either side moves. So the bodies moved DOWN here and the screens
-    // became callers; the bot is the second caller.
-    //
-    // NOTHING WAS REWRITTEN ON THE WAY. The comments that came with these
-    // bodies came with them, because most of them record an ordering that once
-    // went wrong -- HP written back before the win check, second lives folded
-    // on both outcomes, the run persisted on arrival BEFORE the room resolves.
-    // They are the reason this extraction is safe to read.
+    // Every ordering rule here is load-bearing rather than incidental -- HP
+    // written back before the win check, second lives folded on both
+    // outcomes, the run persisted on arrival BEFORE the room resolves.
     //
     // Static and stateless, exactly like RunManager and RunLedger, and for the
     // same reason: the SAVE is the state, and a second copy held here would be
@@ -250,18 +243,18 @@ namespace PrincesPalace
             // and persisted again by EnsureEvent before this returns. When
             // the floor's pool is empty (every event seen, or none authored
             // for this floor) there is nothing to show, and the node falls
-            // through to RoomResolver.Resolve below -- the old "nothing built
-            // here" line and a cleared room, never a throw (contract 3).
+            // through to RoomResolver.Resolve below -- "nothing built
+            // here" and a cleared room, never a throw.
             if (target.Type == RoomType.Event)
             {
                 RoomResolver.Reset();
                 if (EnsureEvent()) return Arrival.Event;
             }
 
-            // Everything else resolves HERE and the map redraws, which is where
-            // the next choice lives anyway. This used to be a bare
-            // ClearCurrentRoom: treasure paid nothing, rest healed nobody, and
-            // the room cleared without saying anything had happened.
+            // Everything else resolves HERE and the map redraws, which is
+            // where the next choice lives anyway: RoomResolver.Resolve pays
+            // out treasure, heals a rest, and reports what happened, rather
+            // than a bare ClearCurrentRoom that would clear the room silently.
             RoomResolver.Resolve(RunManager.Run, target.Type);
 
             RunManager.ClearCurrentRoom();
@@ -423,11 +416,9 @@ namespace PrincesPalace
         // which both clamp to the same top-off), and folding the command in
         // here would force one of them to lie about which item it used.
         //
-        // SPENDS THE STACK THAT WAS PRESSED, named by its whole ItemInstance.
-        // This took an id and removed the lowest-plus copy of it, which was
-        // right while every potion of one id was interchangeable and stopped
-        // being right with caravan lots: a genuine potion and a fake one share
-        // an id, and spending by id would let either stand in for the other
+        // SPENDS THE STACK THAT WAS PRESSED, named by its whole ItemInstance,
+        // not by id: a genuine potion and a fake one share an id, and
+        // spending by id would let either stand in for the other
         // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.3).
         public static void SpendConsumable(ItemInstance used)
         {
@@ -493,9 +484,9 @@ namespace PrincesPalace
         //
         // ONE WRITE. The lines below persist in several places (BankPayout,
         // RewardApplier.Apply, ClearCurrentRoom, AdvanceLeg, EndRun, the
-        // event branch's own), and each of those writes used to land as it
-        // came: a crash after the first left a file with the gold banked or
-        // the fakes worn but the room uncleared, and the refight replayed
+        // event branch's own), and letting each land as it comes would risk
+        // a crash after the first leaving a file with the gold banked or
+        // the fakes worn but the room uncleared, so a refight would replay
         // the ledger fold, the Amassing Star bank and the wear on top of it.
         // WritesDeferred folds them into one write at the end, so the file
         // holds the fight before settlement or all of it.
@@ -629,12 +620,12 @@ namespace PrincesPalace
         // unequip does, carried health rescaled against the max it took with
         // it (ScaleCarriedHealth), and goes nowhere: no refund to the bag.
         //
-        // WRITES NOTHING. Every branch after it persists -- ClearCurrentRoom
-        // on a room fight, PayOut or SettleEventFight's own write on an event
-        // fight -- and SettleFight folds those into its one write, so the
-        // wear lands on disk together with the payout and the cleared room.
-        // It used to save here, mid-settlement, which put a half-settled run
-        // on disk ahead of everything else.
+        // WRITES NOTHING: saving here, mid-settlement, would put a
+        // half-settled run on disk ahead of everything else. Every branch
+        // after it persists -- ClearCurrentRoom on a room fight, PayOut or
+        // SettleEventFight's own write on an event fight -- and SettleFight
+        // folds those into its one write, so the wear lands on disk
+        // together with the payout and the cleared room.
         private static List<string> WearFakes(FightSession session)
         {
             var lines = new List<string>();
@@ -753,14 +744,12 @@ namespace PrincesPalace
         public static List<ItemOffer> RollOffers(FightSession session, Func<int, int> nextIndex)
         {
             // BOSS CHECKED FIRST -- via FightSession.EncounterClass, the one
-            // ranking every caller now shares. This used to read IsEliteFight
-            // only, inline, so a boss kill -- which sets IsBossFight, not
-            // IsEliteFight -- fell through to EncounterClass.Normal every
-            // time: RarityTable's TierFloorFor(Boss)=3 guarantee, and
-            // LootLadder's wider Boss step chance, never fired for the one
-            // fight class they exist for. Found from a floor-3 boss paying
-            // out a tier-1/+1 item, which the Normal band produces routinely
-            // and the Boss floor forbids outright.
+            // ranking every caller shares: reading IsEliteFight alone would
+            // let a boss kill (which sets IsBossFight, not IsEliteFight)
+            // fall through to EncounterClass.Normal, so RarityTable's
+            // TierFloorFor(Boss)=3 guarantee and LootLadder's wider Boss
+            // step chance would never fire for the one fight class they
+            // exist for.
             var encounter = session?.EncounterClass ?? EncounterClass.Normal;
 
             int depth = session?.DepthStep ?? 0;
@@ -812,8 +801,8 @@ namespace PrincesPalace
                 // unrolled one) and silently fail to find it.
                 //
                 // EquipmentOps.Equip carries the "measure max health first,
-                // rescale carried health after" pair this call site used to
-                // spell out; TakeOffer still owns the SaveCurrent below it.
+                // rescale carried health after" pair; TakeOffer still owns
+                // the SaveCurrent below it.
                 if (!EquipmentOps.Equip(save, character, offer.Instance, itemDef.equipSlot,
                                         itemDef.IsEquippable))
                 {

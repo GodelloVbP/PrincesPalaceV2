@@ -25,16 +25,15 @@ namespace PrincesPalace
     // missing-file path, then Character.ClaimTrackRewards, Character.Invest and
     // TalentOps.Kindle.
     //
-    // BUILT BY AN ARCHETYPE, not by a house rule. Points and talents used to be
-    // spent by a fixed round-robin, on the argument that any other rule is a
-    // BUILD and a build is a strategy the batch would be measuring instead of
-    // the game. That argument does not survive contact with the thing the batch
-    // is FOR: the archetype gap. A GreedyDefensive that fights defensively and
-    // then spends its levels the same way GreedyAggressive does is not a
-    // defensive player, and the gap between them is measured with half the
-    // difference sanded off. The archetype is the variable; it now varies here
-    // too, and the neutral spread is available as a fifth policy if a future
-    // phase wants that comparison.
+    // BUILT BY AN ARCHETYPE, not by a house rule: a fixed round-robin spend
+    // would be a BUILD, and a build is a strategy the batch would be
+    // measuring instead of the game. But that argument misses the thing the
+    // batch is FOR: the archetype gap. A GreedyDefensive that fights
+    // defensively and then spends its levels the same way GreedyAggressive
+    // does is not a defensive player, and the gap between them is measured
+    // with half the difference sanded off. The archetype is the variable; it
+    // varies here too, and the neutral spread is available as a fifth
+    // policy if a future comparison wants it.
     public static class ProfilePresets
     {
         public const string Fresh = "Fresh";
