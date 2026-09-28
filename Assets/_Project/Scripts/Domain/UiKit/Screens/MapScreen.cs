@@ -152,13 +152,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The in-run shop, entered from a Shop room (F10, docs/PLAN_SHOP.md).
         // Nested here the same way the draft nests in the hub -- entered from
         // this screen, no scene of its own. Declared BEFORE the system menu
-        // among Root's children (below), the reverse of an earlier build:
-        // docs/PLAN_SHOP.md §2c's "no dossier access from inside the shop in
-        // v1" stood only as long as Start had nowhere to open from the shop
-        // at all, and the owner's 2026-09-19 ask ("press Start in the shop to
-        // check on your chars' equipment / skills") reverses it -- so the
-        // menu now has to draw ON TOP of the shop it can be opened over,
-        // exactly the ordering AUDIT.md #173's Shop line calls out as the gap.
+        // among Root's children (below), so the menu can be opened from
+        // inside the shop (a player checking equipment/skills mid-shop) and
+        // draws ON TOP of it -- the ordering AUDIT.md #173's Shop line calls
+        // out as the gap.
         public ShopScreen Shop;
 
         // An event room's panel, nested exactly as the shop is and for the
@@ -454,9 +451,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string TrailCoreAheadHex = "#6E5537A0";
         public const string TrailCoreClosedHex = "#3F332552";
 
-        // Wider than the lines they replace. A road has to be thick enough for
-        // the verge to read AS a verge -- at the old 7px an "ahead" trail would
-        // have had two pixels of edge and two of core.
+        // A road has to be thick enough for the verge to read AS a verge --
+        // at 7px an "ahead" trail has only two pixels of edge and two of
+        // core, so the other states are wider.
         public const float TrailWidthTaken = 24f;
         public const float TrailWidthOpen = 20f;
         public const float TrailWidthAhead = 12f;
@@ -489,8 +486,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // caption as "<button>Label", so "MapNode3Label" produced two
             // GameObjects with that name under one parent -- the wiring bound
             // this one and painted it, while every lookup by name silently took
-            // the emitter's empty one. Shipped undetected until UiAudit learned
-            // to check for it (A4b, 2026-08-11).
+            // the emitter's empty one. UiAudit's A4b is what catches it now.
             var label = Ui.Label($"MapNode{index}Name", UiString.Runtime, new UiVec(MapLayout.MaxTileWidth, 28f), 13,
                     "#EDE6FF", Place.At(0f, -size.Y * 0.5f - 16f))
                 .AllowOverflow("the caption sits BELOW its node deliberately - inside, it would cover the room icon it names");

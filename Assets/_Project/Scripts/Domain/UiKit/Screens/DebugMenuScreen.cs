@@ -13,21 +13,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // staged in depth -- and every number needed one home two files could
     // read. This is a title, a category rail, a sub-filter
     // row, a two-column list and a grant bar. Splitting it would be
-    // ceremony. (The second example used to be OverlayAnchors, deleted
-    // 2026-09-11 as dead code per AUDIT #139; DossierLayout is the class
-    // that actually holds the dossier's slot geometry today.)
+    // ceremony.
     //
     // It is deliberately plain. A debug tool that takes design effort is a
     // debug tool that stops getting extended.
     //
-    // REBUILT 2026-09-23 (debug menu overhaul) around DebugMenuCatalog's
-    // category/sub-filter model: what was a currency row over one flat kind
-    // filter and 12 rows is now a category rail (left) over a 2x12 list,
-    // with a grant bar underneath holding the plus/quantity modifiers the
-    // item picker never had. The three currency buttons are GONE -- gold,
-    // embers and levels are rows on the Resources tab now, beside the Tools
-    // tab's verbs, because a fixed button row could not hold one row per
-    // character without the tree knowing the roster.
+    // BUILT AROUND DebugMenuCatalog's category/sub-filter model: a category
+    // rail (left) over a 2x12 list, with a grant bar underneath holding the
+    // plus/quantity modifiers. Gold, embers and levels are rows on the
+    // Resources tab, beside the Tools tab's verbs, because a fixed button
+    // row cannot hold one row per character without the tree knowing the
+    // roster.
     public sealed class DebugMenuScreen
     {
         public UiNode Root;

@@ -95,23 +95,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // APPLIES IMMEDIATELY, and the pane says so rather than leaving the
             // player hunting for a confirm button that is not there.
             //
-            // ContentBottom + 12f, not ContentBottom - 14f: this used to sit in
-            // the 64px of PadBottom slack below ContentBottom, which the Silver
-            // 2:1 container's own inset replaced with a 4px margin (balance-bot,
-            // 2026-09-02) -- 14px below ContentBottom now escapes the
-            // container's own content inset instead of landing in dead space
-            // beneath it. Nothing else occupies this strip, so moving the note
-            // to just inside the floor costs nothing.
+            // ContentBottom + 12f, not ContentBottom - 14f: the Silver 2:1
+            // container's own inset leaves only a 4px margin below
+            // ContentBottom, so 14px below it would escape the container's
+            // own content inset. Nothing else occupies this strip, so
+            // sitting just inside the floor costs nothing.
             children.Add(Ui.Label("OptionsAppliesNote", UiStrings.OptionsAppliesImmediately,
                     new UiVec(520f, 18f), 13, Body,
                     Place.At(OptionsLayout.ColumnCentreX(0), OptionsLayout.ContentBottom + 12f))
                 .AsDecor()
                 .Styled(TypographyRole.Body));
 
-            // BARE, not a kit container (owner's call, 2026-09-07 -- every
-            // frame inside the system menu read as ugly). This pane sits on
-            // the shared SystemMenuFill with no ground of its own, same as
-            // the dossier always did.
+            // BARE, not a kit container. This pane sits on the shared
+            // SystemMenuFill with no ground of its own, same as the
+            // dossier.
             var ground = Ui.SystemMenuPane("OptionsPane", "OptionsPaneContent",
                 new UiVec(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight), children.ToArray());
 
