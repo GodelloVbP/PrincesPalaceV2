@@ -160,7 +160,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TwoBleedsStackAsTwoInstancesAndTickTogether()
         {
-            // The DoT rule (StackPolicyOf: Stack, owner 2026-09-20), which
+            // The DoT rule (StackPolicyOf: Stack), which
             // the plan names for Bleed (1.3: "stacks like the other DoTs").
             var holder = Member("Shawn");
             holder.PhysicalDefense = 0;

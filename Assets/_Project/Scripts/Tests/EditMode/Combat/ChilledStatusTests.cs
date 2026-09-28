@@ -173,13 +173,11 @@ namespace PrincesPalace.Domain.Tests
                 "a content-authored Chilled has to actually slow its target, not just draw a pill");
         }
 
-        // ---- stack, not refresh (owner, 2026-09-20) ---------------------------
+        // ---- stack, not refresh ---------------------------
         //
-        // These two were the refresh pins. Chilled stacks now, so what they
-        // guard has changed from "a recast cannot compound" to "a recast
+        // Chilled stacks: a recast
         // compounds ADDITIVELY and the malus is still computed once, off the
-        // true base" -- which is the property that made the old refresh
-        // arithmetic reversible and is the one worth keeping.
+        // true base.
 
         [Test]
         public void Chilled_ASecondApplication_StacksAndTheMalusIsTheSum()

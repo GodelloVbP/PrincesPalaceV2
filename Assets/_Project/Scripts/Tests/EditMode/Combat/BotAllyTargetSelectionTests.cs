@@ -10,13 +10,11 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // THE THREE RULES THAT MOVED OUT OF THE ENGINE (AUDIT #147, owner
-    // 2026-09-15).
+    // THE THREE RULES THAT LIVE OUTSIDE THE ENGINE.
     //
-    // FightSession.Talents.GiftRecipient used to answer "who does this gift
-    // land on" and ApplyWard used to answer "who does this ward land on".
-    // Both were auto-picks, which is what the owner rejected: the player picks
-    // now. The rules themselves were not wrong, they were in the wrong layer,
+    // The player picks who a gift or a ward lands on; there is no auto-pick
+    // in FightSession.Talents.GiftRecipient or ApplyWard. These rules are
+    // not wrong to have, they are in the wrong layer if they live there,
     // so they live in Domain/Bot/AllyTargetSelection -- the only caller left
     // that has to choose with no hand on the mouse.
     //

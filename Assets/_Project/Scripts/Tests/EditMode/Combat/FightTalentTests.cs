@@ -330,12 +330,12 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- who a Gift: Mana may land on -------------------------------------
         //
-        // GiftRecipient is gone: the engine no longer picks a recipient at
-        // all, the player does. What survives as a
+        // The engine does not pick a recipient; the player does. What
+        // survives as a
         // RULE is who the cast will ACCEPT, and that is AllyTargeting --
         // exercised here through the cast itself, since that is the path a
-        // click takes. The two ORDERINGS it used to encode ("the emptiest mana
-        // bar", "the first living ally") moved to the bot, where something
+        // click takes. The two ORDERINGS ("the emptiest mana
+        // bar", "the first living ally") live in the bot, where something
         // still has to choose with no hand on the mouse; they are pinned in
         // BotAllyTargetSelectionTests.
         private static ResourcePool Fury() =>

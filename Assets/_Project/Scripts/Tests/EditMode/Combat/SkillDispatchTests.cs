@@ -80,8 +80,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASkillWhoseRequirementsAreUnmet_IsNotOffered()
         {
-            // It used to be listed with a LOCKED prefix and greyed out, so every
-            // turn the player read past rows they could not pick.
+            // Not listed with a LOCKED prefix and greyed out: an unmet
+            // requirement is left off the menu entirely, so the player never
+            // reads past rows they cannot pick.
             var reachable = Skill(SkillEffect.DamageSingle, displayName: "Reachable");
             var (session, hero, _) = Fight(Kit(skills: new[] { OutOfReachSkill("Out Of Reach"), reachable }));
 
@@ -195,10 +196,10 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- ignoresDefense on the FIXED-PACKET path, milestone B (plan 1.3) -
 
-        // ResolveDamageInstances used to omit ignoresDefense entirely, so a
-        // fixed-packet spell's flag was inert -- true on the row, false at
+        // ResolveDamageInstances must read ignoresDefense, or a
+        // fixed-packet spell's flag is inert -- true on the row, false at
         // every resolution. Blackglass Spear is the first live content that
-        // would have hit this silently.
+        // would hit this silently.
         private static ResolvedSkill FixedPacketSkill(DamageType type, int amount, bool ignoresDefense) =>
             new ResolvedSkill("test", "Fixed Packet", "", "hero", 1, SkillEffect.DamageSingle,
                 SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, ignoresDefense,

@@ -127,10 +127,10 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE TURN IT WENT UP ON DOES NOT COUNT, for a ward raised inside the
-        // turn-open itself. It used to: the exemption was a set that
-        // OpenTurnFor emptied a few lines AFTER this conversion had put its
-        // ward in it, so the Runic ward aged at the end of the very turn it
-        // went up on. 99 is FightTuning.MagicalShieldDurationTurns.
+        // turn-open itself: OpenTurnFor's exemption set must be emptied
+        // BEFORE this conversion puts its ward in it, or the Runic ward
+        // ages at the end of the very turn it went up on. 99 is
+        // FightTuning.MagicalShieldDurationTurns.
         [Test]
         public void TheConvertedWard_DoesNotAgeAtTheEndOfTheTurnItWentUpOn()
         {
@@ -168,14 +168,11 @@ namespace PrincesPalace.Domain.Tests
                 "no Runic modifier, no ward -- unspent mana just sits there, same as it always has");
         }
 
-        // NO CEILING, and the owner meant it (AUDIT #154). This test used to
-        // assert the opposite -- that a deep pool was capped at 20 points --
-        // and the cap held while a new ward REPLACED the standing one. Wards
-        // stack now, so a cap would have been the only special case in a model
-        // that deliberately has none, and the owner's answer was to delete it.
+        // NO CEILING: wards stack, so a cap would be the only special case
+        // in a model that deliberately has none.
         //
-        // 0.25 x 1000 unspent mana = 250, a literal rather than a reference to
-        // a constant that no longer exists.
+        // 0.25 x 1000 unspent mana = 250, a literal rather than a reference
+        // to a constant, since none exists.
         [Test]
         public void TheWardConversion_ScalesWithTheWholePool_WithNoCeiling()
         {

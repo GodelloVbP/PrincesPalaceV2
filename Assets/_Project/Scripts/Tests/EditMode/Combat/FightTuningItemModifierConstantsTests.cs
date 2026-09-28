@@ -3,7 +3,7 @@ using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // PHASE F, the item-modifier plan: pins the four Rift-affix tuning
+    // Pins the four Rift-affix tuning
     // constants in FightTuning that every OTHER test in the suite only ever
     // reads back through the FightTuning.X symbol itself (Assert.AreEqual(
     // FightTuning.X, actual) is a real regression guard against the WIRING
@@ -16,7 +16,7 @@ namespace PrincesPalace.Domain.Tests
     // a test recompute a production value; a raw literal is not a
     // recomputation, it is the one number the test is FOR). If a designer
     // retunes one of these, this is the file that turns red and says which
-    // number moved and what it used to be.
+    // number moved.
     //
     // The OTHER Rift constants (ModifierMagnitude's TierMultiplier/
     // RiftMultiplier curve, RunicWardConversionRate, ChilledOnHitSpeedPercent)
@@ -34,9 +34,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, FightTuning.ModifierPushBackSlots);
         }
 
-        // RunicWardPointsCap_Pin IS GONE, and so is the cap. The owner's
-        // answer to AUDIT #154 was that unlimited stacking is the design,
-        // relic wards included, so there is no ceiling left to pin. The
+        // RunicWardPointsCap_Pin IS GONE, and so is the cap: unlimited
+        // stacking is the design, relic wards included, so there is no
+        // ceiling left to pin. The
         // conversion RATE is still a constant and is still pinned above;
         // ItemModifierRunicHookTests now asserts the absence, which is the
         // half a deleted constant cannot cover on its own.

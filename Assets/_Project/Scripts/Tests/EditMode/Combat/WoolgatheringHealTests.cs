@@ -4,15 +4,9 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // THE TWO ANCHORS Woolgathering was retuned against, pinned literally.
+    // Woolgathering's two anchors, pinned literally.
     //
-    // What it used to be: flatAmount 40 + power 30 per wool spent, four wool,
-    // no mana, no cooldown -- a flat 160 every single turn, forever, for a
-    // resource that refills at one a turn on its own. The balance bot spent
-    // 22% of a deep fight's turns on it and healed roughly three full health
-    // bars per fight with it.
-    //
-    // What it is now: 40 flat, 2 a wool (so 8 at its four-wool cost), plus
+    // 40 flat, 2 a wool (so 8 at its four-wool cost), plus
     // half a percent of the caster's own max health per point of Wisdom above
     // neutral, on a one-turn cooldown. That last term is the whole point --
     // the heal is worth having on a Wisdom build and unremarkable on one that
