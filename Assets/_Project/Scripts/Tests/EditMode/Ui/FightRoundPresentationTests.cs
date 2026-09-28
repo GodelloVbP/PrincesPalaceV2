@@ -116,15 +116,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1.0f, receding.OverlayScaleFor(10), 1e-5f);
         }
 
-        // The Bell as authored: 0.35 to 0.8 in nine equal steps of 0.05.
+        // The Bell as authored: 0.35 to 0.6 in nine equal steps of 0.0277778.
         [Test]
-        public void TheBellsFlockStepsFrom035To08()
+        public void TheBellsFlockStepsFrom035To06()
         {
-            var bell = Bell(from: 0.35f, to: 0.8f);
+            var bell = Bell(from: 0.35f, to: 0.6f);
 
             Assert.AreEqual(0.35f, bell.OverlayScaleFor(1), 1e-5f);
-            Assert.AreEqual(0.55f, bell.OverlayScaleFor(5), 1e-5f);
-            Assert.AreEqual(0.80f, bell.OverlayScaleFor(10), 1e-5f);
+            Assert.AreEqual(0.4611111f, bell.OverlayScaleFor(5), 1e-5f);
+            Assert.AreEqual(0.6f, bell.OverlayScaleFor(10), 1e-5f);
         }
 
         // ---- where the overlay stands ------------------------------------------------

@@ -99,7 +99,7 @@ returning event and the first event fight.
   instead of ~20. The per-floor table is in that commit's message.
 - **Art and sound** delivered (M9a, 2026-09-28): `fog_clearing.png` (event
   backdrop and fight backdrop), `stump_bell.png` (bell and ask pages),
-  `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.35 -> 0.8,
+  `endure.png`, `bell_broken.png`, `flock.png` (round overlay, 0.35 -> 0.6,
   its feet -- `pivotY` 0.15 -- on the fog line half-way up the frame, tinted
   `#C8D0DAB4` so the fog shows through; redesigned art 2026-09-28),
   `Audio/Sfx/Events/bell_in_the_fog/toll` (round sfx),

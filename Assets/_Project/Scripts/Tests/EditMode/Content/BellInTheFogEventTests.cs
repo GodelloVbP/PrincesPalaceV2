@@ -216,9 +216,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(Art + "flock.png", fight.RoundOverlayKey);
             // The flock stands in the fog behind the fighters: its feet
             // (15% up the image) on the backdrop's fog line (half-way up the
-            // frame), growing from 0.35 to 0.8, washed toward the fog.
+            // frame), growing from 0.35 to 0.6, washed toward the fog.
             Assert.AreEqual(0.35f, fight.RoundOverlayFromScale);
-            Assert.AreEqual(0.8f, fight.RoundOverlayToScale);
+            Assert.AreEqual(0.6f, fight.RoundOverlayToScale);
             Assert.AreEqual(0.5f, fight.RoundOverlayPivotX);
             Assert.AreEqual(0.15f, fight.RoundOverlayPivotY);
             Assert.AreEqual(0.5f, fight.RoundOverlayAnchorX);
