@@ -81,15 +81,39 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(ConstellationLayout.PanelBodyHeight, 240f);
         }
 
+        // EVERY AUTHORED FIGURE, for every character that has one, plus the
+        // spire an unplotted path falls back to. The invariants below walk
+        // this rather than a path index, so a character's plots are held to
+        // the same floors the moment they are registered -- no per-character
+        // copy of any check.
+        private static System.Collections.Generic.IEnumerable<(string character, int path)> EveryPlot()
+        {
+            foreach (var character in ConstellationLayout.PlottedCharacters)
+            {
+                for (int path = 0; path < ConstellationLayout.PlotCountFor(character); path++)
+                {
+                    yield return (character, path);
+                }
+            }
+
+            yield return ("no_such_character", 0);
+        }
+
+        private static float X((string character, int path) plot, int slot) =>
+            ConstellationLayout.StarX(plot.character, plot.path, slot);
+
+        private static float Y((string character, int path) plot, int slot) =>
+            ConstellationLayout.StarY(plot.character, plot.path, slot);
+
         [Test]
         public void EveryPathPlotsEverySlot()
         {
-            for (int path = 0; path < ConstellationLayout.PlotCount; path++)
+            foreach (var plot in EveryPlot())
             {
                 // Slot 20 is the capstone; asking for it must not fall back to
                 // the origin, which is what an out-of-range read would do.
-                Assert.AreNotEqual(0f, ConstellationLayout.StarY(path, Talents.TalentSkeleton.SlotCount - 1),
-                    $"path {path} has no coordinate for its capstone");
+                Assert.AreNotEqual(0f, Y(plot, Talents.TalentSkeleton.SlotCount - 1),
+                    $"{plot} has no coordinate for its capstone");
             }
         }
 
@@ -98,11 +122,10 @@ namespace PrincesPalace.Domain.Tests
         {
             // A capstone is the thing at the top of a climb. A constellation
             // that grew downward would read as falling.
-            for (int path = 0; path < ConstellationLayout.PlotCount; path++)
+            foreach (var plot in EveryPlot())
             {
-                Assert.Greater(ConstellationLayout.StarY(path, Talents.TalentSkeleton.SlotCount - 1),
-                    ConstellationLayout.StarY(path, 0),
-                    $"path {path}'s capstone is not above its root");
+                Assert.Greater(Y(plot, Talents.TalentSkeleton.SlotCount - 1), Y(plot, 0),
+                    $"{plot}'s capstone is not above its root");
             }
         }
 
@@ -111,7 +134,7 @@ namespace PrincesPalace.Domain.Tests
         // plot drifted off the ladder the clearances below would stop meaning
         // anything even while they still passed.
         [Test]
-        public void AllThreePlotsShareOneSpineLadder()
+        public void EveryPlotSharesOneSpineLadder()
         {
             for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
             {
@@ -119,12 +142,12 @@ namespace PrincesPalace.Domain.Tests
 
                 float y = ConstellationLayout.StarY(0, slot);
 
-                for (int path = 1; path < ConstellationLayout.PlotCount; path++)
+                foreach (var plot in EveryPlot())
                 {
-                    Assert.AreEqual(0f, ConstellationLayout.StarX(path, slot), 0.01f,
-                        $"path {path}'s slot {slot} is a spine node but is not on the spine");
-                    Assert.AreEqual(y, ConstellationLayout.StarY(path, slot), 0.01f,
-                        $"path {path}'s slot {slot} has come off the shared ladder");
+                    Assert.AreEqual(0f, X(plot, slot), 0.01f,
+                        $"{plot}'s slot {slot} is a spine node but is not on the spine");
+                    Assert.AreEqual(y, Y(plot, slot), 0.01f,
+                        $"{plot}'s slot {slot} has come off the shared ladder");
                 }
             }
         }
@@ -132,17 +155,17 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SideNodesSitOnTheSideTheirSlotSaysTheyDo()
         {
-            for (int path = 0; path < ConstellationLayout.PlotCount; path++)
+            foreach (var plot in EveryPlot())
             {
                 for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
                 {
-                    float x = ConstellationLayout.StarX(path, slot);
+                    float x = X(plot, slot);
 
                     switch (Talents.TalentSkeleton.DxSlot[slot])
                     {
-                        case -1: Assert.Less(x, 0f, $"path {path} slot {slot} is a left node on the right"); break;
-                        case 1: Assert.Greater(x, 0f, $"path {path} slot {slot} is a right node on the left"); break;
-                        default: Assert.AreEqual(0f, x, 0.01f, $"path {path} slot {slot} is a spine node off-centre"); break;
+                        case -1: Assert.Less(x, 0f, $"{plot} slot {slot} is a left node on the right"); break;
+                        case 1: Assert.Greater(x, 0f, $"{plot} slot {slot} is a right node on the left"); break;
+                        default: Assert.AreEqual(0f, x, 0.01f, $"{plot} slot {slot} is a spine node off-centre"); break;
                     }
                 }
             }
@@ -155,18 +178,18 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NoTwoStonesSitCloserThanTheSeparationFloor()
         {
-            for (int path = 0; path < ConstellationLayout.PlotCount; path++)
+            foreach (var plot in EveryPlot())
             {
                 for (int a = 0; a < Talents.TalentSkeleton.SlotCount; a++)
                 {
                     for (int b = a + 1; b < Talents.TalentSkeleton.SlotCount; b++)
                     {
-                        float dx = ConstellationLayout.StarX(path, a) - ConstellationLayout.StarX(path, b);
-                        float dy = ConstellationLayout.StarY(path, a) - ConstellationLayout.StarY(path, b);
+                        float dx = X(plot, a) - X(plot, b);
+                        float dy = Y(plot, a) - Y(plot, b);
                         float distance = UnityEngine.Mathf.Sqrt(dx * dx + dy * dy);
 
                         Assert.GreaterOrEqual(distance, ConstellationLayout.SeparationFloor,
-                            $"path {path}: slots {a} and {b} are {distance:F0}px apart, inside the floor");
+                            $"{plot}: slots {a} and {b} are {distance:F0}px apart, inside the floor");
                     }
                 }
             }
@@ -175,18 +198,60 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASideNodeKeepsItsDistanceFromItsOwnTiersSpine()
         {
-            for (int path = 0; path < ConstellationLayout.PlotCount; path++)
+            foreach (var plot in EveryPlot())
             {
                 for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
                 {
                     if (Talents.TalentSkeleton.DxSlot[slot] == 0) continue;
 
-                    Assert.GreaterOrEqual(
-                        UnityEngine.Mathf.Abs(ConstellationLayout.StarX(path, slot)),
+                    Assert.GreaterOrEqual(UnityEngine.Mathf.Abs(X(plot, slot)),
                         ConstellationLayout.SideClearance,
-                        $"path {path} slot {slot} crowds its own tier's spine");
+                        $"{plot} slot {slot} crowds its own tier's spine");
                 }
             }
+        }
+
+        // THE EDGES HAVE TO READ AS CONNECTIONS. A hand-plotted figure can run
+        // a limb straight through a stone it does not join, and then the lit
+        // line looks like it feeds that stone -- the one lie a talent tree
+        // cannot tell. Every edge keeps the lit glow's half-width clear of
+        // every stone that is not one of its own two ends.
+        [Test]
+        public void NoEdgeRunsThroughAStoneItDoesNotJoin()
+        {
+            foreach (var plot in EveryPlot())
+            {
+                for (int child = 0; child < Talents.TalentSkeleton.SlotCount; child++)
+                {
+                    foreach (int parent in Talents.TalentSkeleton.Parents[child])
+                    {
+                        float ax = X(plot, parent), ay = Y(plot, parent);
+                        float bx = X(plot, child), by = Y(plot, child);
+
+                        for (int other = 0; other < Talents.TalentSkeleton.SlotCount; other++)
+                        {
+                            if (other == child || other == parent) continue;
+
+                            float clear = ConstellationLayout.OrbSize(Talents.TalentSkeleton.Kind[other]) * 0.5f
+                                + ConstellationLayout.EdgeGlowWidth * 0.5f;
+
+                            float gap = DistanceToSegment(X(plot, other), Y(plot, other), ax, ay, bx, by);
+
+                            Assert.GreaterOrEqual(gap, clear,
+                                $"{plot}: edge {parent}-{child} passes {gap:F0}px from slot {other}");
+                        }
+                    }
+                }
+            }
+        }
+
+        private static float DistanceToSegment(float px, float py, float ax, float ay, float bx, float by)
+        {
+            float dx = bx - ax, dy = by - ay;
+            float t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+            t = System.Math.Max(0f, System.Math.Min(1f, t));
+            float cx = ax + dx * t - px, cy = ay + dy * t - py;
+            return UnityEngine.Mathf.Sqrt(cx * cx + cy * cy);
         }
 
         // The figure has to fit the stage it is drawn on, orbs included. The
@@ -197,25 +262,108 @@ namespace PrincesPalace.Domain.Tests
         {
             float halfHeight = UiFrames.Reference.Y * 0.5f;
 
-            for (int path = 0; path < ConstellationLayout.PlotCount; path++)
+            foreach (var plot in EveryPlot())
             {
                 for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
                 {
                     float half = ConstellationLayout.OrbSize(Talents.TalentSkeleton.Kind[slot]) * 0.5f;
-                    float y = ConstellationLayout.TreeOriginY + ConstellationLayout.StarY(path, slot);
-                    float x = ConstellationLayout.TreeOriginX + ConstellationLayout.StarX(path, slot);
+                    float y = ConstellationLayout.TreeOriginY + Y(plot, slot);
+                    float x = ConstellationLayout.TreeOriginX + X(plot, slot);
 
                     Assert.LessOrEqual(y + half, halfHeight,
-                        $"path {path} slot {slot} runs off the top of the canvas");
+                        $"{plot} slot {slot} runs off the top of the canvas");
                     Assert.GreaterOrEqual(y - half, -halfHeight,
-                        $"path {path} slot {slot} runs off the bottom of the canvas");
+                        $"{plot} slot {slot} runs off the bottom of the canvas");
 
                     // Horizontally the bound is the SKY, not the canvas: the
                     // panel takes the right-hand column and a stone under it
                     // would be hidden rather than merely tight.
                     Assert.LessOrEqual(x + half, ConstellationLayout.SkyWidth * 0.5f,
-                        $"path {path} slot {slot} runs under the detail panel");
+                        $"{plot} slot {slot} runs under the detail panel");
                 }
+            }
+        }
+
+        // TreeWidth claims to be the widest figure. A plot wider than it would
+        // make every consumer of that number wrong without failing anything.
+        [Test]
+        public void TreeWidthReallyIsTheWidestFigure()
+        {
+            foreach (var plot in EveryPlot())
+            {
+                for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
+                {
+                    Assert.LessOrEqual(UnityEngine.Mathf.Abs(X(plot, slot)) * 2f + ConstellationLayout.OrbCap,
+                        ConstellationLayout.TreeWidth + 0.01f,
+                        $"{plot} slot {slot} is wider than TreeWidth says any figure is");
+                }
+            }
+        }
+
+        // ---- which figure each character draws -----------------------------------
+        //
+        // Pinned by NAME, so the test says what the owner decided (Bjorn's
+        // path order is Sentinel, Einherjar, Juggernaut) rather than repeating
+        // sixty-three coordinates.
+        [TestCase(0, "shield")]
+        [TestCase(1, "axe")]
+        [TestCase(2, "paw")]
+        public void BjornDrawsShieldAxeAndPaw(int path, string figure)
+        {
+            Assert.AreEqual(figure, ConstellationLayout.PlotId("bear", path));
+        }
+
+        [TestCase(0, "ram")]
+        [TestCase(1, "lamb")]
+        [TestCase(2, "spire")]
+        public void ShawnStillDrawsHisOwnFigures(int path, string figure)
+        {
+            Assert.AreEqual(figure, ConstellationLayout.PlotId("sheep", path));
+        }
+
+        [TestCase("owl", 0)]
+        [TestCase("no_such_character", 1)]
+        [TestCase(null, 0)]
+        [TestCase("bear", 3)]
+        [TestCase("bear", -1)]
+        public void AnythingUnplottedFallsBackToTheSpire(string character, int path)
+        {
+            Assert.AreEqual("spire", ConstellationLayout.PlotId(character, path));
+        }
+
+        // The path-only API predates the character key and meant Shawn's all
+        // along -- the screen tree and controller still call it, and nothing
+        // they draw may move until they are switched over.
+        [Test]
+        public void ThePathOnlyApiIsShawns()
+        {
+            Assert.AreEqual(ConstellationLayout.PlotCountFor("sheep"), ConstellationLayout.PlotCount);
+
+            for (int path = -1; path <= ConstellationLayout.PlotCount; path++)
+            {
+                for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
+                {
+                    Assert.AreEqual(ConstellationLayout.StarX("sheep", path, slot), ConstellationLayout.StarX(path, slot));
+                    Assert.AreEqual(ConstellationLayout.StarY("sheep", path, slot), ConstellationLayout.StarY(path, slot));
+                }
+            }
+        }
+
+        // Different characters draw different figures -- the whole point of
+        // the key. Guards against a registry that maps every id to one table.
+        [Test]
+        public void BjornsFiguresAreNotShawns()
+        {
+            for (int path = 0; path < 3; path++)
+            {
+                bool differs = false;
+                for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
+                {
+                    differs |= ConstellationLayout.StarX("bear", path, slot) != ConstellationLayout.StarX("sheep", path, slot)
+                        || ConstellationLayout.StarY("bear", path, slot) != ConstellationLayout.StarY("sheep", path, slot);
+                }
+
+                Assert.IsTrue(differs, $"bear path {path} draws Shawn's figure");
             }
         }
 

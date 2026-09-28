@@ -464,6 +464,95 @@ dotnet-only container. Every item names the file, the change and why.
 - Routing: `fixer` for the plots data (the `Plots` keying and the three
   layout entries); `implementer` if the layout contract itself changes.
 
+#### Phase 3 — Domain part as built (2026-09-28)
+
+- **Path order for Bjorn (`bear`): path 0 Sentinel, 1 Einherjar,
+  2 Juggernaut.** Phase 5 content must author Bjorn's `talents.json`
+  columns in this order, or the Sentinel talents draw on the axe.
+- `ConstellationLayout` now selects a figure by (character id, path):
+  `StarX/StarY(string characterId, int path, int slot)`,
+  `PlotId(characterId, path)` (`ram`/`lamb`/`spire` for `sheep`,
+  `shield`/`axe`/`paw` for `bear`), `PlotCountFor(characterId)`,
+  `PlottedCharacters`. The key is `Character.definitionId`. Anything
+  unplotted (unknown id, null, `owl`, out-of-range path) draws the spire.
+- The path-only `StarX/StarY(path, slot)` and `PlotCount` are kept and
+  delegate to Shawn (`sheep`), so every current caller draws exactly what it
+  drew before. Nothing on screen changes until the call sites below move.
+- The three plots keep every existing invariant (shared spine ladder, 112px
+  separation floor, 130px side clearance, sky bounds, `TreeWidth` still the
+  widest figure) and a new one: no edge's lit glow runs through a stone it
+  does not join. Tests walk every registered (character, path), so a future
+  character's plots are held to them on registration.
+- **One deviation from section 3:** the axe's capstone is not "on the blade
+  edge". The capstone is a spine slot, and the spine ladder pins it to
+  (0, -924). It sits on the head's top edge where both blades' upper edges
+  meet; the cutting edges are the strokes 14-17 and 16-19. Putting the
+  capstone on a blade would be a layout-contract change (spine off x = 0),
+  not a plot.
+
+#### Phase 3 — Unity-side handoff
+
+**The screen bakes star positions for one fixed character.** Verified:
+`TalentScreen.Build()` (`Domain/UiKit/Screens/TalentScreen.cs:168`) takes
+no character; `BuildPage(path)` (`:548`) and `PositionOf(path, slot)`
+(`:578-580`, path-only `StarX/StarY`) place every orb with `Place.At` at
+scene-build time, and `BuildEdge` (`:728-816`) bakes each edge's midpoint,
+length and rotation from the same positions, plus the spark's start at
+`-length/2` (`:802`) and `EdgeLengths` (`:816`). `ScreenRegistry.cs:958-961`
+(Editor) bakes those lengths into `TalentEdgeSpark.SetLength` as a
+`[SerializeField]`. The character pager switches characters at RUNTIME
+(`Core/TalentController.cs:242`, `StepCharacter`), inside one scene. So a
+per-character figure cannot be baked: it needs a **runtime reposition** on
+every character switch (and on first paint):
+
+1. `Core/TalentController.cs` — add a `Relayout()` called from `Start` and
+   from `StepCharacter` (`:242`, next to the `_selectedSlot = -1` reset),
+   keyed by `Current?.definitionId`. For each path and slot, set the orb
+   rect's `anchoredPosition` to `TreeOriginX + StarX(id, path, slot)`,
+   `TreeOriginY + StarY(id, path, slot)`. Orb children (aura, glow, core,
+   ring, collar, label, price) are children and follow.
+2. Same method, per edge (`edgeParentSlots`/`edgeChildSlots` already map
+   each edge): recompute midpoint, length and angle exactly as
+   `TalentScreen.BuildEdge` does, and apply to the dim edge rect (position,
+   `sizeDelta.x`, `localEulerAngles.z`) and the glow sibling (same), then the
+   core's width and `TalentEdgeSpark.SetLength(length)`. Extract the
+   midpoint/length/angle arithmetic into `ConstellationLayout` (Domain) and
+   have both `BuildEdge` and `Relayout` call it, so build and runtime cannot
+   drift — the reason `ConstellationLayout` exists.
+3. `Core/TalentController.Motion.cs:61` (`AimPushIn`) — switch
+   `StarX(_path, _selectedSlot)` to `StarX(Current?.definitionId, _path,
+   _selectedSlot)`.
+4. `TalentScreen.cs:579-580` may stay on the path-only API (it is the
+   pre-relayout build-time placement, and Shawn's is a fine default for a
+   scene opened with nothing loaded) — or take `ShawnId` explicitly. Either
+   way the runtime `Relayout` is the source of truth.
+5. PlayMode test: switch character sheep -> bear and assert orb 0/10/20
+   positions match `StarX/StarY("bear", ...)`, and one edge's length and
+   angle match its endpoints; switch back and assert Shawn's.
+
+Gamepad navigation is slot-topology based (`TalentController.cs:~1090`,
+DxSlot/Parents), not positional, so it needs no change.
+
+**Gate:** `tools/run_tests_parallel.ps1 -Changed -BuildScenes` (a
+`[SerializeField]` and the screen's build output move), and `UiAudit` must
+pass at all four canvas aspects. The page panels already carry
+`AllowOverlap`/`AllowOverflow` with reasons; the audit sees only the
+build-time (Shawn) positions, so the runtime figures' fit is what the [D]
+invariant tests above guarantee.
+
+**Background art per silhouette** (today one nebula for all,
+`TalentScreen.BackgroundKey`, `:52`, built at `:232`): a per-(character,
+path) backdrop keyed on `ConstellationLayout.PlotId`, swapped at runtime in
+the same `Relayout`/page change. Briefs for Phase 7:
+- `shield` — a cold iron-blue nebula with a faint heater-shield glow
+  behind the boss; stone-wall dust at the bottom.
+- `axe` — a red-gold storm sky, a faint double-bit axe head in the clouds
+  above the convergence; embers rising along the haft.
+- `paw` — a deep forest-green/brown night sky, a faint paw-print
+  impression in the clouds, blood-red mist at the edges.
+Each is a sprite under `Art/Backgrounds/` with the same `BackgroundTint`
+multiply, so the stones stay the brightest thing on screen.
+
 ### Phase 4 — Combat mechanics (mechanics reference, 4a-4h)
 
 Every issue that adds a utility skill also adds its bot valuation for it
