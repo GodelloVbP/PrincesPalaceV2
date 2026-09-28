@@ -92,6 +92,15 @@ namespace PrincesPalace.PlayModeTests
         private CombatantState _hero;
         private CombatantState _witch;
 
+        // RESOLVED FROM CONTENT, NOT READ OFF THE STAGE. The stage can no
+        // longer be trusted to still be idle by the time anything asks it:
+        // Bind starts the witch's swing itself now (the fix this fixture
+        // exists to exercise), synchronously, so a live read taken after
+        // Bind returns can already be mid-pose-change. The library's own
+        // resolution is the ground truth CombatBeat itself falls back to
+        // when a beat has no drawing to open on.
+        private string _enemyIdleSprite;
+
         // NORMAL SPEED IS THE WHOLE POINT, so this fixture states it rather
         // than inheriting whatever the previous class left behind: every other
         // fight test in this suite sets a multiplier in its own [SetUp], and a
@@ -154,8 +163,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_player, "the Fight scene has no FightBeatPlayer");
 
             // The scene's own FightBootstrap has already started a fight and is
-            // playing its opening beats. Left running, its playback holds
-            // FightController busy and the potion click below is swallowed.
+            // playing its opening beats. Left running, its playback leaves
+            // stray popups mid-flight, which the impact-frame baseline below
+            // would read as this fixture's own witch swinging.
             _player.Flush();
             yield return null;
             yield return null;
@@ -163,16 +173,21 @@ namespace PrincesPalace.PlayModeTests
             var enemy = ContentDatabase.Enemies.FirstOrDefault(e => e.id == EnemyId);
             Assert.IsNotNull(enemy, $"'{EnemyId}' is not in the content database");
 
+            var idleSprite = StanceAnimationLibrary.Resolve(enemy.Data.SpritePath, "idle");
+            Assert.IsNotNull(idleSprite, $"{EnemyId} has no 'idle' art to compare the swing against");
+            _enemyIdleSprite = idleSprite.name;
+
             var shawn = ContentDatabase.Characters
                 .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.Data.BattleSpritePath));
             Assert.IsNotNull(shawn, "no character has battle art, so the target would be a grey plate");
 
             // Speed 1 against the witch's authored 8, so the monster wins
             // initiative and FightSession.Begin resolves its swing into the beat
-            // queue before the player ever gets a turn. That queued beat is then
-            // the FIRST thing drained when the player acts, which is what lets
-            // the capture start on the witch's own beat rather than a third of a
-            // second into someone else's.
+            // queue before the player ever gets a turn. FightController.Bind
+            // (Core/FightController.cs) now drains and plays that queued beat
+            // itself, before input opens -- so the capture starts on the
+            // witch's own beat as soon as Bind runs, with no player action
+            // needed to shake it loose.
             //
             // 500 health so it survives the blow: a kill would route the target
             // to its defeated pose and this is a capture of a hit, not a death.
@@ -202,15 +217,25 @@ namespace PrincesPalace.PlayModeTests
             Assert.Less(_hero.CurrentHealth, _hero.MaxHealth,
                 "the witch did not win initiative, so its swing is not queued and there is no beat to capture");
 
-            // ONE MANA ELIXIR, and the hero is already at full mana -- see the
-            // click in TheBeat for why this stands in for the Hold Back that
-            // used to open the window.
-            _fight.Bind(session, EncounterClass.Normal, new List<SatchelStack>
-            {
-                new SatchelStack("elixir", "Elixir", 1, true),
-            });
+            // PINNED BEFORE BIND, not inside TheBeat any more. Bind is what
+            // starts the witch's swing now (the fix this fixture exists to
+            // exercise), synchronously, before this method returns -- pinning
+            // the capture clock any later would let the opening frames of that
+            // swing run on real, unpinned frame time and make this recording
+            // incomparable with the next one.
+            Time.captureDeltaTime = SampleSeconds;
+
+            _fight.Bind(session, EncounterClass.Normal);
             _fight.BindPartyArt(new[] { _hero }, new[] { shawn.Data.BattleSpritePath });
 
+            // TWO FRAMES OF THE SAME PINNED CLOCK, not a real-time gap: this
+            // is the same buffer the fixture always gave the stage before
+            // capturing, now spent on the opening ticks of the swing itself
+            // rather than on an idle stage. At 1/30s a frame that is 1/15s of
+            // a 1.4s swing -- close enough to negligible that the capture
+            // still opens on the witch's own beat, and it keeps the two
+            // stage reads (formation settling, party art landing) that used
+            // to happen here before anything could go wrong.
             yield return null;
             yield return null;
         }
@@ -309,36 +334,26 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(rec.EnemyAnimator, "the enemy slot has no StageActorAnimator, so nothing can lunge");
             Assert.IsNotNull(rec.PartyAnimator, "the party slot has no StageActorAnimator, so nothing can recoil");
 
-            rec.IdleSprite = Read(rec).EnemyStanceSprite;
+            // RESOLVED FROM CONTENT (StandTheFixtureUp), not read live. The
+            // witch's swing starts as part of Bind itself now, so by the
+            // time this method gets to read the stage at all, her pose may
+            // already have left idle -- a live read here would sometimes
+            // capture the baseline mid-swing and then find nothing but that
+            // same pose for the rest of the window.
+            rec.IdleSprite = _enemyIdleSprite;
 
-            Time.captureDeltaTime = SampleSeconds;
-
-            // A MANA ELIXIR ON A HERO WHO IS ALREADY AT FULL MANA, and the
-            // choice is load-bearing in exactly the way HOLD BACK's used to
-            // be: it reaches AfterResolution, which drains the queued beats,
-            // so the witch's swing plays first -- and the player's own beat
-            // that follows it restores nothing, so FightBeatPlayer.ShowAmount
-            // returns before popping a number (`!Missed && Amount <= 0`).
-            // That makes the rest of the capture window provably free of a
-            // second blow, which is what lets the impact assertion below be an
-            // exact count rather than a guess.
+            // NOTHING IS CLICKED HERE ANY MORE. The witch's swing is already
+            // playing by the time this method runs -- Bind started it
+            // (StandTheFixtureUp, under the pinned capture clock) and held
+            // input closed behind it -- so there is no player action left to
+            // fold away and nothing this test needs to trigger. The player
+            // never acts in this fixture at all, which is also what keeps the
+            // window free of a second blow: nothing here ends a turn, so
+            // nothing here starts the witch's next one.
             //
-            // WHY NOT MOVE, the verb that replaced HOLD BACK on row 3: this
-            // party is one character, so there is nobody to trade places with
-            // and Move is refused without spending a turn at all. Fielding a
-            // second party member to make it legal would put a second figure
-            // in the strip and change what the pilot is a picture of.
-            var item = Named("Verb2");
-            Assert.IsNotNull(item, "the fight scene has no Verb2 (ITEM)");
-            item.GetComponent<Button>().onClick.Invoke();
-
-            var row = Named("CharacterSkill0");
-            Assert.IsNotNull(row, "the item submenu did not open its first row");
-            row.GetComponent<Button>().onClick.Invoke();
-
-            // The baseline the first frame is compared against, taken BEFORE the
-            // click. Without it a popup still in flight from the scene's own
-            // bootstrap fight reads as an impact on frame 0.
+            // The baseline the first frame is compared against, taken before
+            // sampling starts. Without it a popup still in flight from the
+            // scene's own bootstrap fight reads as an impact on frame 0.
             var previous = Read(rec);
 
             for (int i = 0; i < FrameCount; i++)
@@ -357,11 +372,10 @@ namespace PrincesPalace.PlayModeTests
 
                 // ONE BEAT, and this is what holds the window to one.
                 //
-                // The fight does not pause between turns to be photographed:
-                // the player's Hold Back is folded away (a beat with no target
-                // and no amount records nothing to play) and the witch's NEXT
-                // swing opens 0.8s after this one, well inside a window long
-                // enough to show the settle. Stopping playback the moment both
+                // The player never acts in this fixture, so nothing ends the
+                // turn the witch's opening swing handed back and nothing opens
+                // her next one -- the fight simply sits on the player's turn
+                // for the rest of the window. Stopping playback the moment both
                 // figures are home leaves the rest of the capture a still stage
                 // -- which is the correct picture of "she returned to her mark
                 // and stayed there", and keeps the impact count below an exact

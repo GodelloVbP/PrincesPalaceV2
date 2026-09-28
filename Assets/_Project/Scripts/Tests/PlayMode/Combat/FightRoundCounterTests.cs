@@ -92,6 +92,18 @@ namespace PrincesPalace.PlayModeTests
 
         private IEnumerator AttackAndPlayOut()
         {
+            // WAIT FOR INPUT TO OPEN FIRST. A round-limited fight always
+            // queues a RoundStart beat for round 1 (FightSession.Rounds.cs,
+            // RecordRoundStart), and FightController.Bind now drains and
+            // plays whatever Begin() queued -- the toll's own sound/overlay
+            // step included -- before input opens (Core/FightController.cs).
+            // A click while that is still playing is silently swallowed
+            // (CanAct requires !IsBusy), which used to never matter here
+            // because Bind never played anything of its own.
+            float openDeadline = Time.realtimeSinceStartup + 10f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < openDeadline) yield return null;
+            Assert.IsFalse(_fight.IsBusy, "fixture: Bind's own opening playback never finished, so input never opened");
+
             Named("Verb0").GetComponent<Button>().onClick.Invoke();
             Named("EnemyPlate0").GetComponent<Button>().onClick.Invoke();
 

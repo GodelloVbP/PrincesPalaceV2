@@ -615,6 +615,16 @@ namespace PrincesPalace
             _menu.Reset();
             _log.Clear();
 
+            // RESET, NOT TRUSTED. A Bind that finds this already true would
+            // hold the new fight's own input closed for no reason it caused --
+            // stale only if some earlier playback on this same controller was
+            // superseded rather than finished (Play's Supersede stops the
+            // coroutine without ever calling its onFinished, which is the one
+            // place this flag normally clears). Every real fight binds a fresh
+            // FightController and never hits this; a test that binds a second
+            // session onto one already-bootstrapped controller can.
+            _isBusy = false;
+
             // Clearing the log leaves the BANNER, so hide it too -- otherwise
             // every fight opens with an empty painted strip across the top of
             // the screen and only fills it once somebody speaks.
@@ -656,9 +666,56 @@ namespace PrincesPalace
             // again here would be a second home for the same concern -- and a
             // Bind that quietly repairs half an opening is what let the missing
             // Begin go unnoticed for as long as it did.
+            //
+            // But Begin() ALSO resolves a faster enemy's opening swing
+            // (RelicsOnCombatBegin/GrantTurnStart/AutoResolveEnemyTurns, all
+            // ahead of the player's own first turn), and that swing recorded a
+            // beat into the session the same way any other action does. Nothing
+            // upstream of here ever drained it, so it sat queued until the
+            // player's own first click, then played bundled underneath the
+            // player's own action -- a monster's opening hit that was invisible
+            // until the player had already moved. Draining it HERE, before the
+            // static/dynamic repaint below opens the screen to input, is what
+            // makes it visible on its own, in order, before the player acts.
             RefreshCommandColumn();
-            RefreshUi();
-            AnnounceBossIfAny();
+
+            var openingBeats = _session.DrainBeats();
+            foreach (var beat in openingBeats)
+            {
+                if (beat == null) continue;
+                beat.PaintActorDamageType(_session.ActorAttackType(beat.Actor));
+            }
+
+            if (beatPlayer != null && openingBeats.Count > 0)
+            {
+                // HELD CLOSED, the same way AfterResolution holds it closed for
+                // a player's own action: _isBusy blocks CanAct, so nothing can
+                // act on the enemy's swing while it is still animating.
+                // OnPlaybackFinished is the one place that flag is cleared and
+                // is exactly what a player's own beat sequence completes
+                // through -- reusing it here means the opening swing is
+                // finished, watchdog-safe, exactly the way every other beat
+                // sequence is.
+                _isBusy = true;
+                beatPlayer.Play(openingBeats, () =>
+                {
+                    OnPlaybackFinished();
+                    AnnounceBossIfAny();
+                });
+            }
+            else
+            {
+                // No beats to play (the player won initiative, or no player
+                // attached -- a headless test, a preview): behave exactly as
+                // before.
+                foreach (var beat in openingBeats)
+                {
+                    foreach (var line in beat.Messages) PushLogLine(line);
+                }
+
+                RefreshUi();
+                AnnounceBossIfAny();
+            }
         }
 
         private void Start()
