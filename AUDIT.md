@@ -2034,7 +2034,7 @@ DEVIATION because it is a real behavioural limit that the Fight branch does not 
 ordinary branch by accident but by a rule written out twice, and because the next person to wonder
 why a diagonal "only did one thing" should find the answer here rather than in a stick's dead zone.
 
-### 178. OWNER'S CALL: nothing on the Talents screen names the open character or which constellation is open
+### 178. Nothing on the Talents screen names the open character or which constellation is open
 
 The owner's 2026-09-19 removal list took `TalentCharacterName` and `TalentPathName`
 ("CONSTELLATION x OF x - x KINDLED") off the panel, along with the fill bar, the "CHOOSE A STAR"
@@ -2052,6 +2052,18 @@ Not re-added, because every one of those nodes was named in the owner's own cut 
 back a smaller version of a thing that was just removed is the worst of both. Recorded so that
 "there is no way to tell which constellation you are in" is a known consequence of a decision
 rather than a bug someone finds later.
+
+Owner reversed 2026-09-28: the names come back. Scope: ONE quiet line naming the character and the
+constellation (e.g. "SHAWN · CONSTELLATION 2 OF 3", or the constellation's own name if it has one),
+built in `TalentScreen.BuildPanel` with runtime text set by `TalentController` alongside the pager
+state at `TalentController.cs:593-610`. Re-add a `UiStrings` entry for it (the old
+`UiStrings.TalentPath` was deleted). Explicitly NOT coming back: the fill bar, the "CHOOSE A STAR"
+prompt (`UiStrings.TalentPickPrompt`), the violet container, the "x KINDLED" count -- the
+2026-09-19 cut still stands for those.
+
+Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+Blocked: until claude/peaceful-fermat-gfw0ig merges (it reworks `ConstellationLayout.cs` and its
+tests for Bjorn's constellations).
 
 ### 179. Four nav-link asymmetries the round-2 audit found and did not fix
 
