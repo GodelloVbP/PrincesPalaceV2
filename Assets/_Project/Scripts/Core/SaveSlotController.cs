@@ -22,9 +22,8 @@ namespace PrincesPalace
         [SerializeField] internal Button[] slotButtons;
 
         // One card's content, per slot -- see MainMenuScreen.AddCardContent
-        // for what each of these is and where it sits. No FilledWash/
-        // EmptyWash any more (balance-bot, 2026-09-02): Slot{i}Button wears a
-        // Gold ThemedPlate now, and Refresh drives its filled/empty state
+        // for what each of these is and where it sits. Slot{i}Button wears a
+        // Gold ThemedPlate, and Refresh drives its filled/empty state
         // through ThemedButtonState.SetMenuState instead of toggling two
         // background Solids.
         [SerializeField] internal TMP_Text[] slotNumbers;

@@ -141,19 +141,16 @@ namespace PrincesPalace
         }
 
         // THE ONE PATH TO THE OVERARCHING MENU FROM A ROOT CONTEXT, from
-        // the hub, the map and the fight alike (AUDIT.md #155). Each root
-        // hangs it on its context's `systemMenu` handler, so Start and Escape
-        // reach it and Cancel does not -- the owner's 2026-09-19 call. It was
-        // named OpenOnCancel while Cancel was the button.
+        // the hub, the map and the fight alike. Each root hangs it on its
+        // context's `systemMenu` handler, so Start and Escape reach it and
+        // Cancel does not.
         //
         // Static and null-tolerant on purpose. Its three callers each hold
         // this controller as a [SerializeField] a fixture scene may never
         // wire, and each would otherwise write its own null check and its
-        // own already-open guard -- three copies of one rule, which is the
-        // exact shape the deleted Escape poll had and the reason #155
-        // happened when that poll went away and only the hub got a
-        // replacement. Returns whether it opened, for a caller that has
-        // something else to do when it did not.
+        // own already-open guard -- three copies of one rule. Returns
+        // whether it opened, for a caller that has something else to do
+        // when it did not.
         public static bool OpenFromRoot(SystemMenuController menu)
         {
             if (menu == null || menu.IsOpen) return false;
@@ -233,8 +230,7 @@ namespace PrincesPalace
                 // active right now" (NavContext's own header on why the
                 // shape still stays a function).
                 // systemMenu: the same press that opened this menu closes it
-                // again (the owner's 2026-09-19 call moved that press from B
-                // to Start). It goes through the claimant check too, and not
+                // again. It goes through the claimant check too, and not
                 // as a nicety: Start over a Party carry has to put the
                 // character back rather than shut the menu on an open
                 // transaction, which is the identical hazard INavCancelClaim
@@ -295,8 +291,8 @@ namespace PrincesPalace
         // whatever is CURRENTLY active -- the tab bar plus every Selectable
         // under the currently-shown pane, walked generically rather than
         // enumerated per pane. A pane this phase has not given its own
-        // navigation groups (Dossier, Run statistics, Main menu -- phase 3's
-        // rollout) still needs its buttons counted here, or the dispatcher's
+        // navigation groups (Dossier, Run statistics, Main menu) still
+        // needs its buttons counted here, or the dispatcher's
         // own reselection rule (NavigationInputModule.
         // ReselectIfOutsideDeclaredSet) would force a mouse click on one of
         // them straight back to the tab bar every single frame -- an
@@ -329,8 +325,8 @@ namespace PrincesPalace
         }
 
         // THE WHOLE TAB SURFACE, in one authoritative pass: the visible
-        // tabs as a Rail group (plan section 5/7, wrap by the owner's
-        // default) plus the selected tab's Down link into its pane's own
+        // tabs as a Rail group, wrap by default, plus the selected tab's
+        // Down link into its pane's own
         // first Selectable ("each tab pane's entry as the Down link from the
         // tab"), found generically in hierarchy order rather than reached
         // for by name, so Options' rows today and whatever a not-yet-migrated
@@ -599,10 +595,9 @@ namespace PrincesPalace
             if (embersValue != null) embersValue.SetContent($"EMBERS  {save?.EmberTotal() ?? 0}");
         }
 
-        // THE TRIGGER SHORTCUT (INavTabStrip) -- owner's 2026-09-19
-        // hardware-round call moved tab-stepping from the shoulders to
-        // LT/RT, freeing LB/RB for section/character paging (see
-        // ActivePaneSectionStrip below). Wraps through the SAME _visible
+        // THE TRIGGER SHORTCUT (INavTabStrip): LT/RT step tabs, freeing
+        // LB/RB for section/character paging (see ActivePaneSectionStrip
+        // below). Wraps through the SAME _visible
         // list RefreshNavLinks' own Rail
         // wires and the SAME Select(index) each tab Button's onClick calls,
         // never a second "what is the next tab" computation (this

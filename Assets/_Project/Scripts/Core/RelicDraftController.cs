@@ -73,8 +73,7 @@ namespace PrincesPalace
         private int _selected = -1;
         private bool _wired;
 
-        // Pushed the first time Paint() runs after Open() (docs/
-        // GAMEPAD_NAVIGATION_PLAN.md phase 3, AUDIT.md #158), reconfigured
+        // Pushed the first time Paint() runs after Open(), reconfigured
         // on every later Paint() so paging/a new round always matches what
         // is actually on screen, and popped on OnDisable -- the draft's own
         // Close() is what deactivates this GameObject, whichever of
@@ -256,10 +255,8 @@ namespace PrincesPalace
         //
         // Cancel is a DELIBERATE NO-OP, not wired to Close() -- this file's
         // own header says why ("a draft you can navigate around is not a
-        // draft") and HubController.HandleEscape used to enforce the same
-        // rule by refusing to hand Escape to the system menu at all while a
-        // draft was up. There is no close affordance on the mouse path
-        // either, only Descend, so a Cancel press here is simply spent.
+        // draft"). There is no close affordance on the mouse path either,
+        // only Descend, so a Cancel press here is simply spent.
         private void RefreshNavigation()
         {
             var active = cards?.Where(c => c != null && c.gameObject.activeSelf).ToList()

@@ -29,7 +29,7 @@ namespace PrincesPalace
             ContentDatabase.Items.Count == 0 ? 0 : ContentDatabase.Items.Max(i => i.tier);
 
         // WHAT THE GAME OFFERS AS A REWARD, and that is not the same set as
-        // "everything wearable" (AUDIT #114, owner's call 2026-09-11).
+        // "everything wearable".
         //
         // A "choose one of three" that can offer a health potion is not a
         // choice, it is a tax on the one player who reads carefully. Potions
@@ -133,12 +133,10 @@ namespace PrincesPalace
         // would become "bring more bodies" -- which is not a decision about
         // Favor at all.
         //
-        // Takes the per-member totals rather than the definitions it used to,
-        // so that this rule and FavorOf's rule above are two separate facts in
-        // two separate functions. It previously read
-        // princesFavor off the definition itself, which meant "where does a
-        // member's Favor come from" and "how does a squad combine it" were the
-        // same four lines and could not be changed independently.
+        // Takes the per-member totals, so that this rule and FavorOf's rule
+        // above are two separate facts in two separate functions: "where
+        // does a member's Favor come from" and "how does a squad combine
+        // it" can change independently.
         public static int SquadFavor(IEnumerable<int> memberFavors)
         {
             if (memberFavors == null) return 0;
