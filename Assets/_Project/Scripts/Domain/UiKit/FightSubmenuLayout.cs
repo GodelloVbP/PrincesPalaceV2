@@ -14,34 +14,18 @@ namespace PrincesPalace.Domain.UiKit
     // pixel-identically.
     public static class FightSubmenuLayout
     {
-        // 48 and 6, down from 66 and 8.
-        //
-        // NOW EQUAL TO VerbRowH (owner playtest, 2026-09-23): "the skill
-        // buttons are narrower/shorter with thinner borders than the main
-        // command buttons beside them -- make the submenu buttons match the
-        // command buttons' size and border." A submenu row used to be sized
-        // off its own text content (40, then 48, then 66) and picked the
-        // same Row6x1 plate as the verb row by aspect-nearest coincidence,
-        // not by construction -- close enough that nobody noticed the two
-        // rows were never actually the same size until they were compared
-        // side by side. Reading VerbRowH directly (rather than restating 52
-        // and hoping it stays in sync) is what makes "the same size" a fact
-        // the compiler can check instead of a resemblance two authors have
-        // to maintain by hand.
+        // NOW EQUAL TO VerbRowH: the skill buttons match the main command
+        // buttons' size and border. Reading VerbRowH directly (rather than
+        // restating the number and hoping it stays in sync) is what makes
+        // "the same size" a fact the compiler can check instead of a
+        // resemblance two authors have to maintain by hand.
         public const float RowHeight = VerbRowH;
 
-        // ONE SOURCE FOR THE PITCH, not a second hand-tuned gap. This used to
-        // be a bare `6f` here while the verb column carried its own separate
-        // `VerbPitch = 62f` in FightScreen -- RowHeight already read VerbRowH
-        // so the two columns' ROW HEIGHTS matched, but nothing made their ROW
-        // SPACING match, and 52+6=58 drifted a steady 4px/row short of the
-        // verb column's 62. That is the whole shape of the playtest bug this
-        // closes ("submenu rows drift upward against the command rows"): row
-        // 0 lined up, row 3 (BACK) was 12px off, and it read as the panel
-        // sitting too high rather than as an arithmetic mismatch. RowPitch
-        // now reads VerbPitch directly -- the same fix RowHeight already
-        // applied to VerbRowH, for the same reason -- and RowGap is DERIVED
-        // from it rather than being the independent number that drifted.
+        // ONE SOURCE FOR THE PITCH, not a second hand-tuned gap: RowPitch
+        // reads VerbPitch directly, the same fix RowHeight already applies
+        // to VerbRowH, so the two columns' row heights and row spacing both
+        // stay in sync by construction. RowGap is DERIVED from RowPitch
+        // rather than being an independent number that can drift.
         public const float VerbPitch = 62f;
         public const float RowPitch = VerbPitch;
         public const float RowGap = RowPitch - RowHeight;
@@ -78,14 +62,6 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- BACK IS A ROW NOW, AND IT IS INSIDE THE FRAME -----------------------
         //
-        // It used to be a 404-wide button floating BELOW the container, in the
-        // style the screen used before the list got a frame around it. Two
-        // things were wrong with that and only one of them was visible: it did
-        // not line up with the panel above it (the panel is 438 wide and grew
-        // to the right to find room for the scrollbar, so the button was inset
-        // 10px on the left and 34 on the right), and it was the last thing on
-        // the screen still drawn in the old idiom.
-        //
         // As a row inside the container it inherits the rows' width and x for
         // free, which is the alignment fix -- there is no second number left to
         // disagree. It reads as the last entry in the list, which is what it is.
@@ -101,9 +77,7 @@ namespace PrincesPalace.Domain.UiKit
         // In the container's bottom padding, so the frame closes tight under it.
         public static float BackRowY => ContainerBottom + ContainerPad + BackRowHeight * 0.5f;
 
-        // The list ends one gap above the back row. This was CommandBottom + 46
-        // -- the old external button's top -- and every row in the pool moves up
-        // with it, which is the whole visible cost of folding BACK inside.
+        // The list ends one gap above the back row.
         public static float RowsBottom => BackRowY + BackRowHeight * 0.5f + RowGap;
 
         // ---- the container and its scroll ---------------------------------------
@@ -125,8 +99,8 @@ namespace PrincesPalace.Domain.UiKit
         // to before it scrolls, not a fixed reservation every list pays for
         // whether it needs it or not.
         //
-        // FIVE, down from eight (owner's ask, 2026-09-22): the container's
-        // own visible height now follows the actual row count up to this
+        // FIVE: the container's
+        // own visible height follows the actual row count up to this
         // many rows (see VisibleRows/ViewportHeightFor and
         // FightController.AnchorSubmenuRows' own header for how), so a
         // three-skill character's box is three rows tall rather than
@@ -149,15 +123,9 @@ namespace PrincesPalace.Domain.UiKit
             return count > RowsInView ? RowsInView : count;
         }
 
-        // WHAT THE STATIC TREE IS ACTUALLY BUILT AT, and it is NOT RowsInView
-        // -- kept apart on purpose (2026-09-22). Originally this had to stay
-        // eight because FrameWidth was DERIVED from this height through the
-        // kit's fixed 3:4 container art, and a 5-row-tall frame's 3:4-matched
-        // width came out narrower than the fixed-width rows inside it
-        // (TheFightScreenAuditsCleanAtEveryFrame). THAT REASON IS GONE since
-        // the 2026-09-23 flat-fill rework (FrameWidth's own header): width is
-        // simply ContainerWidth now, at any height. Eight stays anyway,
-        // rather than collapsing this into RowsInView, because nothing
+        // WHAT THE STATIC TREE IS ACTUALLY BUILT AT, and it is NOT RowsInView.
+        // Eight stays anyway, rather than collapsing this into RowsInView,
+        // because nothing
         // forces it back down and a static tree one row taller than the
         // common case is free width-wise headroom for whatever the pool
         // grows to next, not a cost worth spending a change on today. The
@@ -170,12 +138,6 @@ namespace PrincesPalace.Domain.UiKit
         // How many row rects the tree emits. The list SCROLLS now, so this is
         // no longer "as many as fit" -- it is as many as a character can ever
         // offer, and every one of them has to exist to be scrolled to.
-        //
-        // 24, up from 16, and the sixteen was caught in a screenshot rather
-        // than by the pin that exists to catch it. Adding Frost Flare and
-        // Lightning Bolt to Shawn's ladder took a real save to EIGHTEEN skills;
-        // the list said "SHOWING 16 OF 18" and two of them had no rect to
-        // scroll to.
         //
         // FightCapacityPinTests did not fail, and its model is why: it computes
         // the worst case as levelled skills plus the grants of a SINGLE talent
@@ -250,26 +212,16 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the frame around the box above (flat fill, not kit art) ------------
         //
-        // WAS a Violet 3:4 Ui.Container. Turning PreserveAspect off (tried
-        // first, 2026-09-23) kept the rect the right size but not the ART:
-        // Type.Simple's non-uniform stretch squashed the painted border hard
-        // at 1-3 rows -- the "stretched container art looks bad" defect the
-        // owner rejected on the relic draft screen the same day, and the kit
-        // already lints against elsewhere. RelicDraftScreen's own fix for
-        // that screen (a flat Solid fill plus a hairline Rim, replacing a
-        // Violet 3:2 Container for the identical reason -- see that file's
-        // own header on DraftFrameFill) is the fix here too: a flat fill has
-        // no aspect to keep, so it resizes to any height with zero
-        // distortion and FightController.ResizeSubmenuContainer's
+        // A flat fill has no aspect to keep, so it resizes to any height with
+        // zero distortion and FightController.ResizeSubmenuContainer's
         // height-only runtime move stays exactly as simple as it already was.
+        // RelicDraftScreen's DraftFrameFill uses the same flat-fill-plus-Rim
+        // shape for the identical reason -- see that file's own header.
         //
-        // EXACTLY THE CONTENT BOX NOW, not bigger. The 3:4 art's own content
-        // inset used to force the frame wider/taller than ContainerWidth/
-        // ContainerHeight and recentre the inner box inside that slack (see
-        // this section's own history in git blame if that math is ever
-        // needed again); a flat fill has no border art to leave room for, so
-        // FrameWidth/FrameHeight ARE ContainerWidth/ContainerHeight(For) --
-        // no FrameInset, no separate FrameContentCentreY layer.
+        // EXACTLY THE CONTENT BOX NOW, not bigger: a flat fill has no border
+        // art to leave room for, so FrameWidth/FrameHeight ARE
+        // ContainerWidth/ContainerHeight(For) -- no FrameInset, no separate
+        // FrameContentCentreY layer.
         public static float FrameWidth => ContainerWidth;
 
         public static float FrameHeight => ContainerHeight;
@@ -284,17 +236,14 @@ namespace PrincesPalace.Domain.UiKit
         // bottom IS the last painted pixel" convention that test's own
         // comment already documents for the PC plate's cropped art, so the
         // frame's rect can sit flush at VisibleBottomLine directly with no
-        // pad correction, where the old art needed one.
+        // pad correction.
         //
         // ViewportOffsetInContainer(For)/BackRowY-ContainerCentreY(For) below
         // are UNCHANGED by this -- they are still authored as an offset from
         // ContainerCentreY(For), and BuildSubmenuFrame/ResizeSubmenuContainer
         // still parent viewport/track/thumb/BACK directly under this frame
         // using those same offsets, so the whole row block shifts by
-        // (FrameCentreY(For) - ContainerCentreY(For)) when reparented --
-        // exactly the mechanism the old FrameContentCentreY used, just
-        // simpler now that there is no second, art-inset-driven correction
-        // to add on top of it.
+        // (FrameCentreY(For) - ContainerCentreY(For)) when reparented.
         public static float FrameCentreY => VisibleBottomLine + FrameHeight * 0.5f;
 
         public static float FrameCentreYFor(int count) =>
@@ -330,11 +279,8 @@ namespace PrincesPalace.Domain.UiKit
         // ---- the scrolled content ------------------------------------------------
         //
         // The content rect holds the whole pool at fixed positions and MOVES AS
-        // ONE. That is the shape of the rework: the old code re-anchored every
-        // row individually on every open, through RowY, because the list's
-        // bottom had to stay put as the count changed. One rect carrying
-        // sixteen fixed children does the same job with one write, and it is
-        // the only construction that can also scroll.
+        // ONE: sixteen fixed children move with one write, and it is the
+        // only construction that can also scroll.
 
         public static float ContentHeight => ColumnHeight(PoolSize);
 
@@ -477,17 +423,12 @@ namespace PrincesPalace.Domain.UiKit
         // How many rows can be DRAWN AT ALL, whatever the caller asks for.
         //
         // Clamped here rather than at either call site because the builder and
-        // the controller have to agree about it, which is the entire reason
-        // this type exists -- v1 kept two hand-mirrored copies of these numbers
-        // and they drifted. A count above the pool is not an error worth
-        // throwing over: it is ordinary content growth, and the screen's job is
-        // to stay legible.
+        // the controller have to agree about it. A count above the pool is
+        // not an error worth throwing over: it is ordinary content growth,
+        // and the screen's job is to stay legible.
         //
-        // IT CLAMPS TO THE POOL, NOT TO THE VIEWPORT, and that is the whole
-        // change. It used to be both, because they were the same eight; a
-        // request for twelve came back as eight and four skills ceased to
-        // exist. Twelve now comes back as twelve, nine of them on screen and
-        // three a scroll away.
+        // IT CLAMPS TO THE POOL, NOT TO THE VIEWPORT: twelve requested comes
+        // back as twelve, nine of them on screen and three a scroll away.
         public static int VisibleCount(int requested)
         {
             if (requested < 0) return 0;
@@ -513,17 +454,10 @@ namespace PrincesPalace.Domain.UiKit
         // Where the title and the "esc to go back" hint sit: just above the
         // CONTAINER, rather than just above the top row.
         //
-        // It used to ride the top row so a short list kept its label attached
-        // to it. With a container that is wrong twice over: the header would
-        // sit inside the frame for a short list and the frame's own top edge
-        // would cut it, and it would move every time the count changed while
-        // the box around it did not.
-        // MEASURED AGAINST THE FRAME'S OWN TOP EDGE now, not the inner box's --
+        // MEASURED AGAINST THE FRAME'S OWN TOP EDGE, not the inner box's --
         // the frame sits a few pixels above the inner box's own ContainerCentreY
         // (FrameCentreY is VisibleBottomLine-flush, not ContainerBottom-flush --
-        // see FrameCentreY's own comment), so the old ContainerCentreY +
-        // ContainerHeight * 0.5f would land the header inside the frame instead of
-        // above it.
+        // see FrameCentreY's own comment).
         // STILL IGNORES `count` -- the parameter is kept only because
         // BuildSubmenuColumn's one build-time call already passes one
         // (PoolSize), and this answers the STATIC tree's own header

@@ -44,9 +44,7 @@ namespace PrincesPalace.Domain.UiKit
 
     // FIRST -- and only -- OFFER OF A TAB-STEP PRESS: the trigger (LT/RT)
     // shortcut docs/GAMEPAD_NAVIGATION_PLAN.md section 7's "Tabs" contract
-    // asks for (plan phase 3, item 2; reassigned from the shoulders to the
-    // triggers by the owner's 2026-09-19 hardware-round call). Same shape
-    // as INavCancelClaim right above it and for the identical reason: a
+    // asks for. Same shape as INavCancelClaim right above it and for the identical reason: a
     // context declares this by implementing it, and a context that does not
     // (every one but SystemMenu's) simply never sees the press --
     // NavContext.RaiseTabStep no-ops when its own tab-strip provider is
@@ -64,8 +62,7 @@ namespace PrincesPalace.Domain.UiKit
     }
 
     // FIRST -- and only -- OFFER OF A SECTION-STEP PRESS: the shoulder
-    // shortcut (LB/RB, reassigned from the triggers by the owner's
-    // 2026-09-19 hardware-round call), the same shape as INavTabStrip right
+    // shortcut (LB/RB), the same shape as INavTabStrip right
     // above it and declared the same way, by a context that has a second
     // axis of navigation ABOVE its tabs. A screen that does not implement it never
     // sees the press, because NavContext.RaiseSectionStep no-ops when its

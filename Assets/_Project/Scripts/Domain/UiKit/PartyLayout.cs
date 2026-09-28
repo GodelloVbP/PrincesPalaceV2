@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.UiKit
     // N being the only thing here that can outgrow its row). The toast is not
     // a fifth section -- it is pinned into the ROSTER heading row, right-
     // aligned against the empty space beside "ROSTER" itself, rather than
-    // floating over the card row it used to hide. See the toast section below
+    // floating over the card row. See the toast section below
     // and PartyScreen's own BuildToast comment.
     public static class PartyLayout
     {
@@ -215,7 +215,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float CardGap = 14f;
 
         // A TITLE ROW UNDER THE NAME, and the card is exactly as tall as it was
-        // before it (progression v2 phase 5). The 16px it needs come out of the
+        // before it. The 16px it needs come out of the
         // two pads (4 each) and the art slot (8) rather than out of the card's
         // height, and that is not tidiness -- the roster row has 5.56px of
         // clearance over the pane's own floor, so growing the card by anything
@@ -304,9 +304,6 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the toast: pinned into the ROSTER heading row, not a floating overlay --
         //
-        // It used to float over the bottom of the card row (anchored to the
-        // pane's own floor), and that hid exactly the two lines a swap just
-        // changed -- a card's role and its "In party (dot) ..."/"Benched" tag.
         // "ROSTER" is left-aligned and short; the rest of that row is empty in
         // every state (RosterHeadingWidth's own comment), so the toast claims
         // it right-aligned instead of adding a fifth section or covering the

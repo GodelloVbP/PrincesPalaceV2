@@ -23,9 +23,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float PaneWidth = SystemMenuLayout.PanelWidth;                               // 1600
         public const float PaneHeight = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight;  // 804
 
-        // THE PANE'S OWN GROUND IS BARE (owner's call, 2026-09-07 -- every
-        // kit frame inside the system menu read as ugly; it was a Silver 2:1
-        // Container before that) -- HalfHeight reads SystemMenuLayout.
+        // THE PANE'S OWN GROUND IS BARE -- HalfHeight reads SystemMenuLayout.
         // PaneContentHalfWidth/HalfHeight, the pane's own declared content
         // half-extents, instead of PaneHeight * 0.5f. PaneWidth/PaneHeight
         // above stay exactly what they were: they are still the FRAME's
@@ -51,18 +49,14 @@ namespace PrincesPalace.Domain.UiKit
         // themselves.
         public const float ExitWidth = 720f;
 
-        // 720x96 was 7.5:1 -- past every button-plate shape's own tolerance
-        // (ThemedButtonAspectLintTests) -- from when ExitTitle/ExitQuit drew
-        // a flat Solid+Rim under NoChrome. They wear a Silver kit plate now
-        // (owner's HQ-kit instruction, 2026-09-07), so the height comes from
+        // They wear a Silver kit plate, so the height comes from
         // Ui.PlateNominalSizeFor rather than being authored: static
         // readonly, not const, for the same reason MainMenuScreen.
         // ResetHoldHeight is -- PlateNominalSizeFor is not a compile-time
         // constant. It resolves to Row6x1 (nominal 6:1, height 120), which
-        // StackFits below confirms clears the pane's vertical rhythm with
-        // about 40px to spare at both ends of the stack, same as the old 96
-        // did -- the note underneath each button (NoteGap/NoteHeight,
-        // unchanged) still sits clear of it by construction of
+        // StackFits below confirms clears the pane's vertical rhythm -- the
+        // note underneath each button (NoteGap/NoteHeight, unchanged) still
+        // sits clear of it by construction of
         // ExitNoteCentreY/ExitButtonCentreY below.
         public static readonly float ExitHeight = Ui.PlateNominalSizeFor(ExitWidth, 96f).Y;
 
@@ -73,9 +67,9 @@ namespace PrincesPalace.Domain.UiKit
         public const float NoteGap = 10f;
         public const float NoteHeight = 20f;
 
-        // A PROPERTY, not a const, now that ExitHeight is a resized static
-        // readonly field rather than a compile-time literal -- the const
-        // expression this used to be cannot reference one.
+        // A PROPERTY, not a const: ExitHeight is a static readonly field,
+        // not a compile-time literal, and a const expression cannot
+        // reference one.
         public static float ExitBlockHeight => ExitHeight + NoteGap + NoteHeight;
         public const float ExitGap = 40f;
 
@@ -137,10 +131,7 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float HoldWidth = 620f;
 
-        // 620x80 was 7.75:1 -- past every plate shape's own tolerance
-        // (ThemedButtonAspectLintTests) -- from when the hold drew a flat
-        // track Solid under NoChrome. It wears the Crimson kit plate now
-        // (owner's HQ-kit instruction, 2026-09-07), with the progress fill
+        // It wears the Crimson kit plate, with the progress fill
         // clipped inside it exactly as MainMenuScreen.ResetConfirmYesButton's
         // own hold does -- see that screen's comment for the clip mechanism.
         // static readonly for the same reason ExitHeight above is: it

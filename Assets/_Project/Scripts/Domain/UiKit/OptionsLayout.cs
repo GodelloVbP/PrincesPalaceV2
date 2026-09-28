@@ -19,18 +19,13 @@ namespace PrincesPalace.Domain.UiKit
 
         // THE PANE'S OWN DECLARED CONTENT HALF-EXTENTS, not PaneWidth/
         // PaneHeight * 0.5f -- see SystemMenuLayout.PaneContentHalfWidth/
-        // HalfHeight's own comment. 744/357.78 against the old 800/402; the
-        // ground that boundary used to be a Silver 2:1 Container's painted
-        // border is bare now (owner's call, 2026-09-07), but the numbers are
-        // unchanged so nothing in this pane moved.
+        // HalfHeight's own comment.
         public static float HalfWidth => SystemMenuLayout.PaneContentHalfWidth;
         public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
 
         // A SMALL SLACK MARGIN over the pane's own content inset, not a
         // second authored pad. Same pattern as ExitsLayout.ContentMargin.
-        // ColumnWidth comes out at 1480 either way -- 4px here costs less
-        // than the old 60px PadX did, and the content inset already took
-        // more than the difference.
+        // ColumnWidth comes out at 1480 either way.
         public const float PadX = 4f;
         public const float PadTop = 4f;
         public const float PadBottom = 4f;
@@ -44,8 +39,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // HalfWidth * 2f, not PaneWidth -- the content region is the pane's
         // own declared inset, narrower than the declared frame. Comes out at
-        // 1480 either way: 744 * 2 - 8 (4px margin a side) equals 1600 - 120
-        // (the old 60px PadX a side) exactly.
+        // 1480 either way.
         public static float ColumnWidth =>
             (HalfWidth * 2f - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;   // 1480
 

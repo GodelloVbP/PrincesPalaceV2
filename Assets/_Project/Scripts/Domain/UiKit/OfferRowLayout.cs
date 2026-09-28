@@ -66,8 +66,7 @@ namespace PrincesPalace.Domain.UiKit
         //
         // WIDTH IS THE CONSTRAINT, not height, and that is the whole reason
         // this exists. ItemIcons.Apply preserves aspect, so an icon box taller
-        // than it is wide simply letterboxes: the old 200x250 box drew a
-        // 260x384 sheet at 169x250 and the extra height was doing nothing. Tie
+        // than it is wide simply letterboxes, wasting the extra height. Tie
         // the box to the card instead and a three-card row gets art half again
         // as large, while a thinner one -- fewer offers than the pool could
         // fill -- still fits inside the same budget.

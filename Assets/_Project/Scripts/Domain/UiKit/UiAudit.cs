@@ -148,12 +148,6 @@ namespace PrincesPalace.Domain.UiKit
         // parent -- and this audit, which only ever sees the tree, is blind to
         // it by construction.
         //
-        // Found the hard way (2026-08-11): the debug menu declared a
-        // "DebugRow0Label" under a button named "DebugRow0". The wiring bound
-        // the tree's node and painted it correctly; every by-name lookup --
-        // tests, the screenshot tool -- resolved to the emitter's empty one
-        // instead. The audit passed at all four frames throughout.
-        //
         // Checked here rather than in the emitter because a build failure that
         // names the offending node costs one EditMode second, and the emitter
         // discovering it costs a full scene build.
@@ -346,8 +340,7 @@ namespace PrincesPalace.Domain.UiKit
                     if (a.Source?.AllowOverlapReason != null || b.Source?.AllowOverlapReason != null) continue;
 
                     // Alternatives. Exempt from EACH OTHER and from nothing
-                    // else, which is the whole difference between this and the
-                    // AllowOverlap these pages used to carry.
+                    // else.
                     if (a.Source?.ExclusiveGroup != null
                         && ReferenceEquals(a.Source.ExclusiveGroup, b.Source?.ExclusiveGroup)) continue;
 

@@ -61,12 +61,12 @@ namespace PrincesPalace.Domain.UiKit
         // up, which means the two halves of the emit result disagree with
         // each other and nothing here can say what the field should have held.
         //
-        // Reported rather than passed over. The auditor used to return
-        // quietly at exactly this point, so a screen in this state was
-        // audited to zero problems and read as checked; whatever produced the
-        // mismatch (a node dropped from the tree after a Wire line was
-        // recorded against it, an accessor handing back a provenance for a
-        // node it never emitted) went on being invisible.
+        // Reported rather than passed over: returning quietly here would let
+        // a screen in this state be audited to zero problems and read as
+        // checked, while whatever produced the mismatch (a node dropped from
+        // the tree after a Wire line was recorded against it, an accessor
+        // handing back a provenance for a node it never emitted) stayed
+        // invisible.
         public static string ProvenanceNodeNotEmitted(
             string controllerType, string fieldName, string expectedNode)
         {

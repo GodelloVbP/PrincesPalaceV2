@@ -70,8 +70,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // Pinned to a corner or edge of the parent, so it keeps its relationship
         // to that edge when the canvas aspect changes. The initiative tracker
-        // and any HUD corner element want this, and none of them could be
-        // expressed through the old helper.
+        // and any HUD corner element want this.
         public static Place Pin(UiVec anchor, UiVec pivot, UiVec offset) =>
             new Place(PlaceKind.Pin, anchor, anchor, pivot, offset, 0f, 0f, 0f, 0f);
 

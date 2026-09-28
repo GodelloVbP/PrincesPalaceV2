@@ -66,15 +66,10 @@ namespace PrincesPalace.Domain.UiKit
         public static float ColumnX(int depth) => ClearingColumnX[0] + depth * ColumnGap;
 
         // Rows SNAP to a painted clearing by slot index -- they are not spread
-        // evenly, and a short column is not centred.
-        //
-        // This reverses what this file did before, and the reason is the art:
-        // MaxColumnWidth is exactly 3 and there are exactly 3 clearing rows, so
-        // slot 0/1/2 IS the clearing to stand in. A centred two-room column
-        // would sit at two positions the canopy has no holes at -- which is the
-        // failure the old comment here ("centring is what makes a fork read as
-        // a fork") could not see, because it was written against a backdrop
-        // that was being stretched flat and had no clearings to miss.
+        // evenly, and a short column is not centred. MaxColumnWidth is
+        // exactly 3 and there are exactly 3 clearing rows, so slot 0/1/2 IS
+        // the clearing to stand in. A centred two-room column would sit at
+        // two positions the canopy has no holes at.
         //
         // A column of two therefore leaves its unused clearing empty, including
         // the middle one, with no special case for it.
