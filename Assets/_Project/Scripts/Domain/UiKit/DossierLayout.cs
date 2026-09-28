@@ -35,20 +35,16 @@ namespace PrincesPalace.Domain.UiKit
         public const float Width = SystemMenuLayout.PanelWidth;                              // 1600
         public const float Height = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight; // 804
 
-        // BACK TO NO OUTER FRAME (balance-bot item 2, 2026-09-03). The Blue
-        // 2:1 container added 2f3ccd0 read as "the big blue container" -- a
-        // second frame wrapping column A's own Blue 3:4 card, competing with
-        // it rather than housing it. Column A keeps its card; the pane around
-        // it goes back to no frame at all (the flat #120a18 Ground/DossierVeil
-        // wash this container itself replaced is not reinstated either -- the
-        // system menu's own pane background already grounds it, same as it
-        // did before either treatment existed). HalfWidth/HalfHeight go back
-        // to a plain half of the declared frame.
+        // NO OUTER FRAME: a frame wrapping column A's own Blue 3:4 card
+        // would compete with it rather than house it. Column A keeps its
+        // card; the pane around it has no frame at all, and no flat ground
+        // wash either -- the system menu's own pane background already
+        // grounds it. HalfWidth/HalfHeight are a plain half of the declared
+        // frame.
         //
-        // COLUMN A'S OWN CARD IS GRAPHIC-LESS TOO, since 2026-09-07 (owner's
-        // call: every kit frame inside the system menu read as ugly) --
-        // BuildColumnAFrame draws no Container any more, only a plain Panel
-        // at this same rect, so this screen currently draws none at all.
+        // COLUMN A'S OWN CARD IS GRAPHIC-LESS TOO: BuildColumnAFrame draws
+        // no Container, only a plain Panel at this same rect, so this
+        // screen draws no kit frame at all.
         public static float HalfWidth => Width * 0.5f;
         public static float HalfHeight => Height * 0.5f;
 
@@ -56,47 +52,37 @@ namespace PrincesPalace.Domain.UiKit
 
         // Three columns, no gap; the dividers are borders.
         //
-        // COLUMN A'S WIDTH GOES BACK UP now that it only has to clear ITS
-        // OWN card's content height, not a second outer container's -- 449
-        // (374 base, plus 75 the loadout column gave up, "a tenth of its
-        // width", see the git log for that reasoning), same as before
-        // 2f3ccd0.
+        // COLUMN A ONLY HAS TO CLEAR ITS OWN card's content height, not a
+        // second outer container's -- 449 (374 base, plus 75 the loadout
+        // column gives up, a tenth of its width).
         public const float ColumnBGivesUp = 75f;
         public const float ColumnAWidth = 374f + ColumnBGivesUp;  // 449
 
-        // WIDTH-BOUND, and that is the choice the 2026-09-07 kit repin forced.
-        // Still measured off the 3:4 KIT'S aspect (Ui.ContainerSizeForWidth
-        // below) even though no container art renders here any more (see the
-        // comment above) -- 0.75 is still the shape this card was authored
-        // to, only the painted border is gone. A true 0.75 (it measured 0.588
-        // before the repin), so a 449-wide card is 598.67 tall where it used
-        // to be 763.61. Column A's
-        // width is set by the three-column split above and cannot grow without
-        // taking 124px off the loadout stage, so the height is what moves --
-        // the card sits centred in the 804-tall pane with ~103px of empty
-        // column above and below it, and everything measured from
+        // WIDTH-BOUND. Still measured off the 3:4 KIT'S aspect
+        // (Ui.ContainerSizeForWidth below) even though no container art
+        // renders here (see the comment above) -- 0.75 is still the shape
+        // this card is authored to, only the painted border is gone. Column
+        // A's width is set by the three-column split above and cannot grow
+        // without taking 124px off the loadout stage, so the height is what
+        // moves -- the card sits centred in the 804-tall pane with ~103px
+        // of empty column above and below it, and everything measured from
         // ColumnATop/ColumnABottom moves in with it. What actually absorbs
-        // the 165px is the portrait, per PortraitHeight's own note.
+        // the difference is the portrait, per PortraitHeight's own note.
         public static float ColumnAFrameHeight =>
             Ui.ContainerSizeForWidth(ContainerRatio.ThreeByFour, ColumnAWidth).Y;   // 598.67, was 763.61
         public const float ColumnCWidth = 480f;
 
         public static float ColumnBWidth => ContentWidth - ColumnAWidth - ColumnCWidth;   // 671
 
-        // 32f again -- the outer container's own border no longer eats a
-        // second margin on top of this one; see the comment above.
+        // 32f -- there is no outer container border to eat a second margin
+        // on top of this one; see the comment above.
         public const float PadY = 32f;
-        // 34, UP FROM 30. The 3:4 kit's own left/right inset went from 0.065
-        // to 0.069 at the 2026-09-07 repin, which capped column A's content
-        // at 449 * (1 - 0.138) = 387.0 -- and ContentAWidth was 389, so every
+        // 34: the 3:4 kit's own left/right inset caps column A's content at
+        // 449 * (1 - 0.138) = 387.0, so a wider pad here would hang every
         // full-width row in the column (portrait, sub-line, XP labels, all
-        // four nav rows) hung 1px past the container's painted border on
-        // both sides. 34 put ContentAWidth at 381 with 3px of margin a side,
-        // matching ColumnAContentMargin's own slack on the vertical. The
-        // border that margin was measured against stopped rendering later
-        // that same day (owner's call, no kit frames in the system menu);
-        // the pad stays at 34 anyway rather than being widened to use the
-        // freed space, so this content does not move either.
+        // four nav rows) past that content bound. 34 puts ContentAWidth at
+        // 381 with 3px of margin a side, matching ColumnAContentMargin's
+        // own slack on the vertical.
         public const float ColumnAPadX = 34f;
         public const float ColumnBPadLeft = 40f;
         public const float ColumnCPadX = 40f;
@@ -121,14 +107,13 @@ namespace PrincesPalace.Domain.UiKit
         //
         // MEASURED AGAINST THE FRAME PANEL'S OWN HEIGHT, not the shared panel
         // HalfHeight/PadY -- ColumnAFrameHeight is shorter than the full 804
-        // pane, and content stacking to the old ColumnATop/Bottom would sit
-        // past its edge. 0.052/0.055 were the kit's measured Container/3:4
-        // top/bottom insets (ContainerArt.Inset, repinned 2026-09-07 -- they
-        // were 0.045/0.04 against the previous delivery's thinner-looking
-        // border) from when this frame still painted one; the numbers stay
-        // now that it does not, since changing them would move the identity
-        // content this pass was told not to touch. The extra 3px is slack
-        // over the audit's own 0.01 containment tolerance, not a second inset.
+        // pane, so content stacking against the pane's own edges would sit
+        // past this frame's edge. 0.052/0.055 are the kit's measured
+        // Container/3:4 top/bottom insets (ContainerArt.Inset) from when
+        // this frame still painted one; the numbers stay now that it does
+        // not, since changing them would move the identity content this
+        // pass is not meant to touch. The extra 3px is slack over the
+        // audit's own 0.01 containment tolerance, not a second inset.
         private const float ColumnAFrameInsetTop = 0.052f;
         private const float ColumnAFrameInsetBottom = 0.055f;
         private const float ColumnAContentMargin = 3f;
@@ -143,22 +128,20 @@ namespace PrincesPalace.Domain.UiKit
         // past about the content width buys empty bars and nothing else. This
         // is why column A cannot simply be filled by growing the portrait.
         //
-        // DERIVED, NOT AUTHORED, same as before -- and the total it derives
-        // from shrank hard at the 2026-09-07 kit repin: ColumnATop/Bottom now
-        // run 265.2 to -263.4 (was 318.9 to -322.5), because the 3:4 card is
-        // 598.67 tall at a true 0.75 aspect instead of 763.61 at the old
-        // measured 0.588. Everything BELOW the portrait -- name, sub-line, XP
-        // row, the track readout, four nav rows -- is still the same fixed
-        // 422px of gaps and boxes, so the portrait absorbs all 165px of it.
+        // DERIVED, NOT AUTHORED: ColumnATop/Bottom run 265.2 to -263.4,
+        // because the 3:4 card is 598.67 tall at a true 0.75 aspect.
+        // Everything BELOW the portrait -- name, sub-line, XP row, the
+        // track readout, four nav rows -- is a fixed 422px of gaps and
+        // boxes, so the portrait absorbs whatever height is left over.
         //
-        // THAT LEAVES THE PORTRAIT AT ~107px, down from 219. It is a
-        // preserveAspect sprite, so it letterboxes to roughly 80x107 in a
-        // 356-wide column: legible, audited clean, and noticeably small. The
-        // alternative is to stop being width-bound and give column A 573px
-        // (which restores a 763-tall card and the old portrait) by taking
-        // 124px off the loadout stage beside it -- a proportion change to the
-        // screen, not a repin, so it is left as the owner's call rather than
-        // folded into an art-repin commit.
+        // THAT LEAVES THE PORTRAIT AT ~107px. It is a preserveAspect
+        // sprite, so it letterboxes to roughly 80x107 in a 356-wide column:
+        // legible, audited clean, and noticeably small. The alternative is
+        // to stop being width-bound and give column A 573px (which would
+        // restore a taller card and portrait) by taking 124px off the
+        // loadout stage beside it -- a proportion change to the screen, so
+        // it is left as a call for whoever owns that tradeoff rather than
+        // folded in here.
         public static float PortraitHeight => ColumnATop - ColumnABottom - 422f; // ~106.6, was 219.4
 
         public static float PortraitCentreY => ColumnATop - PortraitHeight * 0.5f;
@@ -229,8 +212,8 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the pack, over column A --------------------------------------------
         //
-        // TWO ABREAST AND SCROLLING, where it used to be a four-across grid of
-        // 24 icons with no way to reach a 25th.
+        // TWO ABREAST AND SCROLLING, not a four-across grid with no way to
+        // reach a 25th item.
         //
         // Two columns rather than four is what buys each entry enough width to
         // carry its NAME beside its icon. A four-across grid of bare icons in a
@@ -241,10 +224,9 @@ namespace PrincesPalace.Domain.UiKit
         // The list SCROLLS rather than paging. Paging was recorded as the real
         // fix for "24 of 27" and never built; scrolling is the same fix without
         // asking the player to remember which page a thing was on.
-        // 30 and 32, up from 26 each, because the type inside them grew.
-        // "The close and sort buttons on the pack are very small and not
-        // legible" -- they were 10 and 11px against the 15px the cells beside
-        // them now use, which is what made them read as decoration.
+        // 30 and 32: the close and sort buttons' captions read at 15px, the
+        // same as the cells beside them, so the row has to be tall enough
+        // to hold that without reading as decoration.
         public const float PackHeaderHeight = 30f;
 
         public const float PackSortRowHeight = 32f;
@@ -277,13 +259,11 @@ namespace PrincesPalace.Domain.UiKit
         public const float PackCellPadY = 6f;
         public const float PackIconGap = 4f;
 
-        // HOW MANY CELLS ARE VISIBLE IS THE AUTHORED NUMBER NOW, and the cell
-        // size follows from it. It used to run the other way -- a fixed 104px
-        // cell, with the row count falling out of whatever height was left --
-        // which meant "how much of the pack can I see at once" was a
-        // consequence nobody chose. It came out at five rows of ten cells, and
-        // the icons were 64px in a 143px cell: too small to tell a coif from a
-        // gauntlet without reading the name under it.
+        // HOW MANY CELLS ARE VISIBLE IS THE AUTHORED NUMBER, and the cell
+        // size follows from it, not the other way round: a fixed cell size
+        // with the row count falling out of whatever height is left makes
+        // "how much of the pack can I see at once" a consequence nobody
+        // chose, rather than a deliberate one.
         //
         // Three rows, six cells. The pack is RUN-SCOPED -- inventory lives on
         // RunSnapshot, not on the save, so it starts empty every descent and a
@@ -295,17 +275,11 @@ namespace PrincesPalace.Domain.UiKit
         public static float PackCellHeight =>
             (PackListHeight - PackRowGap * (PackVisibleRows - 1)) / PackVisibleRows;
 
-        // BOUND ON BOTH AXES NOW, and the height bound is the one that was
-        // missing. The comment this replaces said the icon is width-bound
-        // ("at two columns in a 314px content strip a cell is 143 wide"), and
-        // that stopped being true when column A widened to 449: ContentAWidth
-        // went to 389, the cell to 180 wide, and a 172px icon in a 193px cell
-        // left PackNameHeight -- a pure residual -- at 4.3px. The name had
-        // been squeezed to a hairline and nothing failed, because a 4px box
-        // is not a zero-size one. The 2026-09-07 kit repin shortened the card
-        // (see ColumnAFrameHeight) and pushed that residual NEGATIVE, which
-        // is how it finally surfaced: a zero-size name and an icon hanging
-        // out of its own cell, at every canvas aspect.
+        // BOUND ON BOTH AXES: PackNameHeight is a pure residual (cell height
+        // minus the icon, the gap and padding), so if the icon or cell size
+        // ever changes without re-checking this, the residual can go to
+        // zero or negative -- a name squeezed to nothing, or an icon
+        // hanging out of its own cell, and neither fails loudly on its own.
         //
         // So the name gets a floor and the icon takes what is left, rather
         // than the other way round. 44px is three lines at 14 or two at 18 --
@@ -408,12 +382,10 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float StageFitWidth => ColumnBWidth - StagePadX * 2f;
 
-        // HalfHeight * 2f, NOT Height -- pre-dates 2026-09-03's "back to no
-        // outer frame" and is stale: HalfHeight is a plain Height * 0.5f now
-        // (see the comment on it above), so this reduces to Height - PadY * 2f
-        // exactly as the plain form would. Left as HalfHeight * 2f anyway so
-        // this keeps reading from the one HalfHeight everything else in the
-        // column does, rather than restating Height as a second name for it.
+        // HalfHeight * 2f, NOT Height: this reduces to the same value either
+        // way, but stays HalfHeight * 2f so it keeps reading from the one
+        // HalfHeight everything else in the column does, rather than
+        // restating Height as a second name for it.
         public static float StageFitHeight => HalfHeight * 2f - PadY * 2f;
 
         public static float StageScale
@@ -431,10 +403,10 @@ namespace PrincesPalace.Domain.UiKit
 
         // PERFECTLY CENTRED IN ITS OWN COLUMN, both ways.
         //
-        // The stage used to hang from a top inset, which left it sitting high
-        // in a column whose height it no longer matched. Centred, the figure
-        // is in the middle of the space that belongs to it -- which is the
-        // only arrangement that does not need a number tuned by eye.
+        // A top inset would sit the stage high in a column whose height it
+        // does not match. Centred, the figure is in the middle of the
+        // space that belongs to it -- the only arrangement that does not
+        // need a number tuned by eye.
         public static float StageCentreY => 0f;
 
         public static float StageTop => StageCentreY + StageHeight * 0.5f;
@@ -542,12 +514,12 @@ namespace PrincesPalace.Domain.UiKit
         // Where each slot sits, straight from the handover's table.
         // TWO ALIGNED FILES. The x is the file's, the y is the body's.
         //
-        // Every slot used to author both, and the x's drifted (120, 132, 140,
-        // 152, 243) because they were chosen to hug a 74-wide box against the
-        // figure's outline. At 96 that put the boxes ON the arms. The vertical
-        // positions are still anatomy -- a slot has to sit level with the part
-        // it names, which is what the leader points at -- but the horizontal
-        // never was, and pinning each file to one x is what lets the box grow.
+        // Authoring an x per slot, hugging the box to the figure's outline,
+        // would drift out of step the moment the box's width changes -- a
+        // wider box would sit ON the arms. The vertical positions are still
+        // anatomy -- a slot has to sit level with the part it names, which
+        // is what the leader points at -- but the horizontal never was, and
+        // pinning each file to one x is what lets the box grow.
         // Close enough to the figure that the leader reads as a tie rather
         // than as a long walk, and far enough that a 86-wide box clears the
         // silhouette's arms.
@@ -557,20 +529,19 @@ namespace PrincesPalace.Domain.UiKit
         public const float FileLeftX = 56f;
         public const float FileRightX = 424f;
 
-        // A LEADER'S TOP IS ITS SLOT'S TOP PLUS THIS, always -- it used to be
-        // an independent literal in LeaderAt's own switch (187, 285, 387,
-        // 489...) that happened to equal SlotAt's top + 37 for every slot,
-        // which meant moving a slot in SlotAt without touching LeaderAt left
-        // a leader pointing at the old position. SlotGeometry below is now
-        // the one table both methods read a slot's top and file from, so
-        // there is nothing left to drift out of step.
+        // A LEADER'S TOP IS ITS SLOT'S TOP PLUS THIS, always. An independent
+        // literal in LeaderAt's own switch would let a slot move in SlotAt
+        // without LeaderAt following, leaving a leader pointing at the
+        // wrong position. SlotGeometry below is the one table both methods
+        // read a slot's top and file from, so there is nothing to drift out
+        // of step.
         private const float LeaderVerticalOffset = 37f;
 
         // top + file for every slot except Head, which both SlotAt and
         // LeaderAt special-case on their own (see each method's own comment
         // on why Head has no leader and needs no file). One switch, read by
         // both methods, so a slot cannot be moved by editing one copy of its
-        // top and leaving the other at the old value.
+        // top and leaving the other stale.
         private static void SlotGeometry(EquipmentSlot slot, out float top, out bool left)
         {
             left = true;
@@ -706,10 +677,8 @@ namespace PrincesPalace.Domain.UiKit
         public const float AttributeColumns = 3f;
         public const float AttributeCellWidth = ContentCWidth / AttributeColumns;
 
-        // Properties, not consts -- HalfHeight is a plain Height * 0.5f now
-        // (see its own comment; this predates 2026-09-03's "back to no outer
-        // frame" and is stale about why), kept as a property because PadY is
-        // still a design choice rather than a literal worth inlining here.
+        // Properties, not consts: kept that way because PadY is still a
+        // design choice rather than a literal worth inlining here.
         public static float ColumnCTop => HalfHeight - PadY;
         public const float SectionLabelHeight = 24f;
         public static float AttributeBlockTop => ColumnCTop - SectionLabelHeight - 12f;
@@ -725,16 +694,12 @@ namespace PrincesPalace.Domain.UiKit
         public static float StatListTop =>
             AttributeBlockTop - AttributeCellHeight * AttributeRows - 22f;
 
-        // Taller, because the list is what closes column C. At 34 the nine
-        // derived stats ended 184px above the floor and the column read as
-        // half-drawn; at 48 they reached within 78px of it. The balance
-        // redesign's Phase 1 dropped the Defence row (the old single generic
-        // `defense` stat, removed rather than folded into either broad
-        // Defense -- see StatType's own header), leaving eight rows instead
-        // of nine; 48 at eight rows regressed to 126px above the floor
-        // (SystemMenuPaneTests.EveryPaneUsesMostOfItsHeight). Raised to 56 so
-        // eight rows still close the column, with MaxStatRows still leaving
-        // one row of headroom to grow into.
+        // Taller, because the list is what closes column C: at a shorter
+        // row height, eight derived stats would end well above the floor
+        // and the column would read as half-drawn
+        // (SystemMenuPaneTests.EveryPaneUsesMostOfItsHeight). 56 closes the
+        // column at eight rows, with MaxStatRows still leaving one row of
+        // headroom to grow into.
         public const float StatRowHeight = 56f;
 
         public static float StatRowCentreY(int index) =>
@@ -819,9 +784,8 @@ namespace PrincesPalace.Domain.UiKit
         // Clear air between the tooltip and the dossier's own frame.
         public const float TooltipMargin = 8f;
 
-        // WHAT A TOOLTIP MAY NEVER COVER, in the dossier's own space (owner,
-        // 2026-09-26: "if something blocks the head and upper slots we have
-        // to change that, that is no question"). The mannequin, every
+        // WHAT A TOOLTIP MAY NEVER COVER, in the dossier's own space. The
+        // mannequin, every
         // equipment slot, and the pack's Carried row: the loadout is what a
         // hovered item is being weighed against, so a box over it hides the
         // evidence it was opened to answer. Handed to TooltipPlacement.Beside
