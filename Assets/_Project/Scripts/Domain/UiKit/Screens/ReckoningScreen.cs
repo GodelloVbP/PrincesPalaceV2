@@ -51,13 +51,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // sweep is clipped to IS the box content is asserted to stay inside.
         public const float BorderInsetX = PanelWidth * 0.5f - ContentHalfWidth;
 
-        // reckoning_frame.png's own bespoke key retired 2026-09-02 when the
-        // frame moved to the Gold 3:2 kit container (see the frame's own
-        // build-site comment) -- no caller reads it any more. TabKey and
-        // ContinueKey retired the same way 2026-09-07: the tabs wear
-        // ThemedPlate(Silver) and Continue wears Themed(Gold) now (owner's
-        // HQ-kit instruction), so tab_plate.png and continue_arrow.png have
-        // no reader left in this file either.
         // BAKED, not painted. The painted attempt came back as a stubby star:
         // short rays, a hard silhouette, and it read as a spiky blob rather
         // than as light. The generated one holds all three things the brief
@@ -190,9 +183,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferNames = new List<NodeRef>();
         public List<NodeRef> OfferMetas = new List<NodeRef>();
 
-        // Pulled in from 336 so a 520-wide column clears the painted border:
-        // 280 +/- 260 lands at 540, inside ContentHalfWidth. At the old width
-        // the rows ran to 636 and would have sat on the frame's gold edge.
+        // Pulled in to 280 so a 520-wide column clears the painted border:
+        // 280 +/- 260 lands at 540, inside ContentHalfWidth.
         private const float ColumnX = 280f;
         private const float ColumnWidth = 520f;
 
@@ -215,7 +207,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // starting at 4. One more pixel and they touch.
         private const float BarHeight = 32f;
 
-        // What this fight paid. A saturated amber rather than the old #FFE9A8
+        // What this fight paid. A saturated amber rather than a desaturated
         // cream: against a violet panel a desaturated yellow has nothing to
         // push against and reads as beige, and this is the one element on the
         // screen that is meant to look like a reward.
@@ -361,27 +353,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ONLY on the summary phase. Phase one has no way out but the
             // choice itself -- you always take something.
-            // MIGRATED TO THE HQ KIT (owner's instruction, 2026-09-07):
-            // Gold, same size/font as FightScreen's own ContinueButton
+            // GOLD, same size/font as FightScreen's own ContinueButton
             // (FightScreen.cs ~1715) so the two "the recommended next
-            // action" buttons in the game read as the same control. This
-            // retires continue_arrow.png as this button's face -- ContinueKey
-            // is unread below and deleted with TabKey at the bottom of this
-            // file. ReckoningContinueGlow (above) is left in place: it is
-            // still a real node PlayMode pins (ReckoningPhaseTests) and
-            // EmberFlare still animates it, but it was tuned to an arrow's
-            // taper point and now sits behind a rectangular plate that
-            // brings its own built-in glow -- worth a follow-up look, not
-            // resolved here.
-            // 300x80 was 3.75:1 against the Legacy plate's true 3:1 --
-            // ThemedButtonAspectLintTests. Height up to nominal (matching
-            // FightScreen.BuildContinueButton's own resize, so the two
-            // "recommended next action" buttons stay the same control).
-            // The old Y (-272) put the new bottom edge past ContentBottom
-            // (-317.184), so the button moves up just enough to clear it
-            // again -- from -312 (old bottom) to -317.184 exactly, a 5.2px
-            // shift the glow behind it (tuned to +-a few px of slop already)
-            // does not need to follow.
+            // action" buttons in the game read as the same control.
+            // ReckoningContinueGlow (above) is left in place: it is still a
+            // real node PlayMode pins (ReckoningPhaseTests) and EmberFlare
+            // still animates it, but it was tuned to an arrow's taper point
+            // and now sits behind a rectangular plate that brings its own
+            // built-in glow -- worth a follow-up look, not resolved here.
+            //
+            // 300x80: nominal aspect for the Legacy plate's true 3:1
+            // (ThemedButtonAspectLintTests). The button sits high enough to
+            // clear ContentBottom (-317.184) by 1px; the glow behind it
+            // (tuned to +-a few px of slop already) does not need to track
+            // that exactly.
             var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
             var continueY = ContentBottom + continueSize.Y * 0.5f + 1f;
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
@@ -391,14 +376,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // THE EXEMPTION SITS HERE NOW, on one button, rather than on the
             // three full-size pages it crosses.
             //
-            // The pages used to carry it, and carrying it there was a blanket:
-            // A1 skips a pair when EITHER side has a reason, so each page
-            // stopped being checked against the tab bar, the footer and
-            // anything else on the phase as well. Declaring them alternatives
-            // (Ui.Exclusive) narrowed that to the pairs it should be, and this
-            // is what fell out -- a real overlap the blanket had been hiding:
-            // Continue is a drawn button, declared after the pages, so it is on
-            // top of whatever they hold at the bottom of the phase.
+            // Carrying it on the pages would be a blanket: A1 skips a pair
+            // when EITHER side has a reason, so a page-level exemption stops
+            // that page being checked against the tab bar, the footer and
+            // anything else on the phase too. Declaring the pages
+            // alternatives (Ui.Exclusive) narrows that to the pairs it
+            // should be, and this button is the real overlap that narrowing
+            // exposes: Continue is a drawn button, declared after the
+            // pages, so it is on top of whatever they hold at the bottom of
+            // the phase.
             //
             // Which is intended. It is the way out of the summary and it has to
             // be reachable from every tab, so it belongs to the phase rather
@@ -422,27 +408,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ---- the container -----------------------------------------
             //
-            // GOLD, 3:2 KIT CONTAINER -- not the bespoke reckoning_frame.png
-            // painting this replaces. The reward container per the plan: this
-            // is the screen paying out. 1344x896 is aspect 1.5, which is the
-            // kit's 3:2 aspect EXACTLY since the 2026-09-07 repin (it was
-            // 0.7% off the spliced delivery's 1.49). The panel's own numbers
-            // were already chosen to match the OLD frame's 1536x1024 art --
-            // the same 3:2 the regenerated kit is now cut at -- so they have
-            // needed no change through either delivery.
+            // GOLD, 3:2 KIT CONTAINER: the reward container -- this is the
+            // screen paying out. 1344x896 is aspect 1.5, exactly the kit's
+            // 3:2 aspect.
             //
             // ContentHalfWidth/ContentTop/ContentBottom below still gate
             // NothingSitsOnThePaintedBorder -- they stay put deliberately,
-            // not recomputed from the kit's own (looser) measured inset: they
-            // are tighter than the kit's border in every direction, so
-            // content already proven to clear them clears the new art's
-            // border too, and nothing had to move.
+            // not recomputed from the kit's own (looser) measured inset:
+            // they are tighter than the kit's border in every direction, so
+            // content already proven to clear them clears the art's border
+            // too.
             //
             // Ui.Container returns a wrapper Panel with the art as a Decor
-            // CHILD ("ReckoningFrameArt"), not the sprite itself -- unlike
-            // the old direct Ui.Sprite, so frame.SpriteKey is now null and
-            // the art lives one level down. Un-Decor wrapper, same as every
-            // other Container call site (see Ui.BuildFrameHolder).
+            // CHILD ("ReckoningFrameArt"), not the sprite itself, so
+            // frame.SpriteKey is null and the art lives one level down.
+            // Un-Decor wrapper, same as every other Container call site (see
+            // Ui.BuildFrameHolder).
             var frame = Ui.Container("ReckoningFrame", ButtonTheme.Gold, ContainerRatio.ThreeByTwo,
                 Place.At(0f, 0f), new UiVec(PanelWidth, PanelHeight));
 
@@ -472,12 +453,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The WIPE, and the reason it exists as a node at all.
             //
-            // The open used to animate frame.localScale.x from 0. localScale
-            // scales CHILDREN, so the border's corner ornaments, the three
-            // cards and every label compressed horizontally and sprang out to
-            // full width. That rubbery stretch was the single biggest reason
-            // the screen read cheap, and no amount of easing fixes it -- a
-            // squash is not a wipe.
+            // Animating frame.localScale.x from 0 would scale CHILDREN too,
+            // so the border's corner ornaments, the three cards and every
+            // label would compress horizontally and spring out to full
+            // width -- a rubbery stretch, and no amount of easing fixes it:
+            // a squash is not a wipe.
             //
             // A mask whose WIDTH opens reveals a frame that never deforms.
             // Centred, and grown symmetrically about that centre, so the fixed
@@ -537,9 +517,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 0f), top: -4f), UiSize.Fill)
                 .AsDecor();
 
-            // ThemedPlate(Silver), owner's HQ-kit instruction (2026-09-07),
-            // replacing bespoke tab_plate.png. Caption-preserving mode
-            // because the marker strip is already a declared child sitting
+            // ThemedPlate(Silver). Caption-preserving mode because the
+            // marker strip is already a declared child sitting
             // UNDER the label -- Themed()'s label-generating mode has no
             // hook for a second layered child, and ThemedPlate's whole
             // reason to exist is a button whose caption isn't just one
@@ -732,10 +711,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
                 .Coloured(BarBeforeTint)
                 .AsDecor();
-            // WAS #FFE9A8, a pale cream that read as washed-out rather than as
-            // earned. On a violet panel a desaturated yellow has nothing to
-            // push against; this is the same hue family with the saturation put
-            // back, so it reads as light rather than as beige.
+            // See BarFillTint's own comment for why this is saturated amber
+            // rather than a desaturated cream.
             var fill = Ui.Sprite($"ReckoningRow{index}BarFill", BarFillKey,
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
                 .Coloured(BarFillTint)
@@ -793,27 +770,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // dropped on the card next door rather than as a label belonging to
         // the one being hovered.
         //
-        // ITEM-MODIFIER PLAN PHASE E: 300 -> 400. SquadComparisonBody now
-        // prepends an AFFIXES heading and up to three modifier lines ahead of
-        // the per-member deltas (ItemStatLines.SquadBody) -- a full squad
-        // with a fully-rolled offer could already brush the old ceiling on
-        // deltas alone, and the modifier section adds height no earlier
-        // build of this screen had to plan for. ContentTop/ContentBottom
-        // leave about 615px of vertical interior (see their own consts), so
-        // 400 has plenty of room to still fit beside a card.
-        //
-        // ITEM-MODIFIER PLAN PHASE F: 400 -> 590. The AFFIXES section moved
-        // from ONE shared block above every member to its OWN block inside
-        // EACH member's (ItemStatLines.SquadBody, ModifierComparisonLines) --
-        // the max squad is now three (SaveData.EffectiveMaxSquadSize, which
-        // caps at FightHudSpec.StageSlotsPerSide = 3 even with the one
-        // purchasable extra slot bought), and a fully different
-        // three-slot Convergent item on both sides can now print a heading,
-        // up to three gain lines, AND up to three "Losing: <name>" lines PER
-        // MEMBER, where before the whole squad shared one heading and three
-        // lines total. FitTooltipToBody (below) is what keeps a body bigger
-        // than this authored ceiling from breaking the box rather than a
-        // wider constant here.
+        // 590 covers a full three-member squad (SaveData.
+        // EffectiveMaxSquadSize, capped at FightHudSpec.StageSlotsPerSide =
+        // 3 even with the one purchasable extra slot bought) where a fully
+        // different three-slot Convergent item on both sides prints a
+        // heading, up to three gain lines, AND up to three "Losing: <name>"
+        // lines PER MEMBER (ItemStatLines.SquadBody, ModifierComparisonLines).
+        // FitTooltipToBody (below) is what keeps a body bigger than this
+        // authored ceiling from breaking the box rather than a wider
+        // constant here.
         //
         // 590, not the ~598 the ~615px interior would allow: the panel is
         // AUTHORED at Place.At(0,0) -- the panel's centre -- specifically so
@@ -839,21 +804,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // What a hovered offer would actually DO, per squad member.
         //
-        // BESIDE THE CARD, not under the row. This was a 920x136 strip pinned
-        // across the bottom of the panel, and the comment defending that spot
-        // argued the comparison is about the whole squad and so belongs where
-        // the eye can hold every card and the numbers at once. In the running
-        // game it did not read that way: a wide bar detached from any of the
-        // three cards looks like a status line the screen always has, so
-        // nothing connects the numbers to the thing under the cursor. The
-        // second argument -- that a per-card popup has to dodge the panel edge
-        // on the outer two, "a lot of arithmetic for no gain" -- was true and
-        // is no longer, because the dossier's pack has since written that
-        // arithmetic and it is now TooltipPlacement, shared by both.
-        //
-        // The strip also cost the cards 136px of the panel's height for a box
-        // that is empty until something is hovered. That space is the icons'
-        // now; see BuildOffer.
+        // BESIDE THE CARD, not under the row: a strip pinned across the
+        // bottom of the panel reads as a status line the screen always has,
+        // detached from any of the three cards, so nothing connects the
+        // numbers to the thing under the cursor. TooltipPlacement (shared
+        // with the dossier's pack) handles dodging the panel edge on the
+        // outer two cards.
         //
         // SQUARE, like the pack's, because the content is the same shape: a
         // per-character stack of short delta lines, which runs deep rather than
@@ -871,10 +827,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .TextAligned(UiTextAlign.TopLeft);
             OfferTooltipText = label;
 
-            // A FLAT GROUND rather than the tab plate this used to wear. That
-            // sprite is a wide 9-slice and a 300x300 crop of it reads as a
-            // button someone forgot to label; the pack's tooltip already
-            // established a plain dark sheet as the house tooltip surface.
+            // A FLAT GROUND, not a tab plate: that sprite is a wide 9-slice
+            // and a 300x300 crop of it reads as a button someone forgot to
+            // label; the pack's tooltip already established a plain dark
+            // sheet as the house tooltip surface.
             //
             // FULLY OPAQUE, where the pack's tooltip gets away with 95%: that
             // one opens over the dossier's flat ground, this one over a
@@ -899,12 +855,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // where the name sits, where the meta sits, how tall the card is and
         // where its centre lands -- falls out.
         //
-        // That is not tidiness. The card used to be a fixed 400 tall centred on
-        // the phase axis with its children placed by eye inside it, and the
-        // first attempt at growing the art moved the labels without moving the
-        // frame: the containment audit refused the build with name and meta
-        // hanging 67 and 97px below their own card. Deriving the frame from its
-        // contents means the next retune of the band cannot make that mistake.
+        // That is not tidiness: a fixed-height card with children placed by
+        // eye inside it lets a later retune grow the art without moving the
+        // frame, and the containment audit then refuses the build with name
+        // and meta hanging below their own card. Deriving the frame from its
+        // contents means a retune of the band cannot make that mistake.
         //
         // IconBottom is -195 and not lower because the painted interior stops
         // at ContentBottom (-317.2) and these two lines plus their gaps come to
@@ -933,11 +888,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float CardCentreY = (IconTop + CardBottom) * 0.5f;
 
 
-        // One of the items on offer. A button, because picking one is the only
-        // decision this screen asks the player to make, and a CARD across the
-        // width rather than a row in a list -- the offers used to share the
-        // panel with the experience bar and had to be small; alone on their own
-        // phase they can be the thing the screen is about.
+        // One of the items on offer. A button, because picking one is the
+        // only decision this screen asks the player to make, and a CARD
+        // across the width rather than a row in a list: alone on their own
+        // phase, with no experience bar to share the panel with, the offers
+        // can be the thing the screen is about.
         //
         // Positioned for a FULL-WIDTH row. A narrower one is re-centred at
         // runtime by ReckoningController, from the same OfferRowLayout.CardX
@@ -952,16 +907,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float labelWidth = OfferRowLayout.LabelWidth(ItemOfferTable.OfferCount);
             float x = OfferRowLayout.CardX(index, ItemOfferTable.OfferCount);
 
-            // THE ITEM IS THE CARD, so it gets the room -- and it gets the
-            // room the hover strip used to hold.
+            // THE ITEM IS THE CARD, so it gets the room.
             //
-            // 200x250 was the shape the art is, which was right as far as it
-            // went, but the box was WIDTH-limited: a 260x384 sheet in a 200-wide
-            // box draws 169x250 and the last 80px of height went to letterbox.
-            // So the icon grew in the only direction that pays -- the box is
-            // now as wide as its card allows (OfferRowLayout.IconWidth) and
-            // deep enough that width stays the binding constraint at three
-            // cards. A three-card row draws its art about 60% larger.
+            // A fixed 200x250 box is WIDTH-limited: a 260x384 sheet in a
+            // 200-wide box draws 169x250 and the last 80px of height goes to
+            // letterbox. The icon grows in the only direction that pays --
+            // the box is as wide as its card allows (OfferRowLayout.
+            // IconWidth) and deep enough that width stays the binding
+            // constraint at three cards. A three-card row draws its art
+            // about 60% larger than the fixed box would.
             //
             // -195, not lower: name and meta still hang below it, and the
             // painted interior stops at -317 (ContentBottom, which the
@@ -1025,10 +979,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Coloured("#FFFFFF00")
                 .AsDecor();
 
-            // THE NAME BELONGS TO THE ITEM, so it sits directly under it. It
-            // used to float 57px below the icon with nothing in the gap, which
-            // reads as two unrelated things rather than as a labelled object.
-            // 6px is enough to separate them and little enough to bind them.
+            // THE NAME BELONGS TO THE ITEM, so it sits directly under it --
+            // floating with nothing in the gap reads as two unrelated
+            // things rather than as a labelled object. 6px is enough to
+            // separate them and little enough to bind them.
             var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, NameHeight), 21,
                     "#EDE6FF", Place.At(0f, NameCentreY - CardCentreY))
                 .AsDecor();
@@ -1050,9 +1004,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // deliberate -- the offers are sized to use the full interior --
             // but it means widening a card by even a pixel fails A2 rather than
             // quietly touching the paint. That constraint is why level 50's
-            // wider offer divides the same budget into four narrower cards
-            // instead of adding a fourth at the old width, which would have
-            // needed 1450px of a 1080px interior.
+            // wider offer divides the same budget into four narrower cards:
+            // a fourth card at this width would need 1450px of a 1080px
+            // interior.
             // NOT migrated to the semantic kit, even though picking one of
             // these is this screen's "Accept" (Green, per the migration
             // brief). NoChrome() a few lines below is deliberate design, not
