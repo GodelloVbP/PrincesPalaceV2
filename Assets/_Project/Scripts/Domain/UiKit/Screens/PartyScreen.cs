@@ -33,7 +33,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // and a controller can only show or hide a node that already exists in it.
     //
     // SEATS ARE INDEXED FRONT-FIRST (0 = front, matching the front-rank rule
-    // landed 2026-09-07 -- squad index 0 is what takes the enemies' blows) but
+    // -- squad index 0 is what takes the enemies' blows) but
     // DRAWN REAR, MIDDLE, FRONT left to right, so the front seat sits nearest
     // the "facing the enemy" ribbon on the right -- matching the fight stage's
     // own party-left/enemy-right orientation. PartyLayout.VisualColumnForSeat
@@ -83,9 +83,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private const string DimWash = "#0A0614B0";
 
-        // The drag ghost's art tint (P4): ~0.8 alpha over whatever sprite
-        // loads at runtime, per the handoff's own "the dragged card, ~0.8
-        // alpha, following the pointer" copy.
+        // The drag ghost's art tint: ~0.8 alpha over whatever sprite loads
+        // at runtime, following the pointer.
         private const string GhostArtTint = "#FFFFFFCC";
 
         public UiNode Root;
@@ -122,14 +121,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SeatGlows = new List<NodeRef>();
 
         // THE GAMEPAD-SELECTION HALO, one per seat and (below) one per card.
-        // THE FOURTH CHANNEL IS NO LONGER DRAWN HERE. A gold radial glow at
-        // ThemedButtonState's Selected ratio used to sit behind every seat
-        // and every card, shown when the stick stood on it -- plan section
-        // 8's own "candidate treatment, not a verified solution; the owner
-        // reviews the picture". The owner reviewed it on hardware and the
-        // verdict was "the gold halo (e.g. in party screen) is way too
-        // strong". It is replaced, not tuned: Core/FocusMarker.cs draws one
-        // arrow beside the focused slot, on this screen and every other.
+        // NOT a gold radial glow behind every seat and card at ThemedButtonState's
+        // Selected ratio: on hardware that reads as way too strong.
+        // Core/FocusMarker.cs draws one arrow beside the focused slot
+        // instead, on this screen and every other.
         //
         // The three channels this screen actually owns are untouched -- the
         // occupied glow, the gold selection/destination ring, and the
@@ -200,10 +195,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // toast included -- "top-most" per the P4 brief.
             children.Add(BuildDragGhost(screen));
 
-            // BARE, not a kit container (owner's call, 2026-09-07 -- every
-            // frame inside the system menu read as ugly). This pane sits on
-            // the shared SystemMenuFill with no ground of its own, same as
-            // the dossier always did.
+            // BARE, not a kit container. This pane sits on the shared
+            // SystemMenuFill with no ground of its own, same as the
+            // dossier.
             var ground = Ui.SystemMenuPane("PartyPane", "PartyPaneContent",
                 new UiVec(PartyLayout.PaneWidth, PartyLayout.PaneHeight), children.ToArray());
 
@@ -632,13 +626,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new[] { text });
 
             // A TOAST IS A FLOATING OVERLAY, hidden by default and shown only
-            // for its ~2.4s -- but it used to float over the bottom of the
-            // card row, hiding exactly the role/tag lines a swap just changed.
-            // It now shares the ROSTER heading row instead, right-aligned into
-            // that row's own empty space, so it never sits over a card. AsDecor
-            // still does the only job it needs to here: non-interactive and
-            // hidden by default. It no longer needs to waive a sibling-overlap
-            // check (A1) -- this position has nothing left to overlap.
+            // for its ~2.4s. It shares the ROSTER heading row, right-aligned
+            // into that row's own empty space, so it never sits over a card
+            // -- never hiding the role/tag lines a swap just changed. AsDecor
+            // does the only job it needs to here: non-interactive and
+            // hidden by default, with no sibling-overlap check (A1) to
+            // waive, since this position has nothing left to overlap.
             toast.AsDecor().Inactive();
             screen.Toast = toast;
             screen.ToastText = text;
