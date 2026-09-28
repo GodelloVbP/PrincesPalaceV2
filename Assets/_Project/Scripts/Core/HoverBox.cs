@@ -3,26 +3,19 @@ using UnityEngine.EventSystems;
 
 namespace PrincesPalace
 {
-    // What every unthemed button gets now, replacing SubtleHoverScale at the
-    // one seam every Ui.Button() call already goes through (Ui.ApplyHoverBox
-    // builds the HoverRim child by default -- see that method's own header;
-    // UiEmitter.WireHoverBox wires this component to it). Owner's call,
-    // 2026-09-23: "hovering makes things pop out a bit and get bigger. That
-    // is fun for a website but not a game. Make a solid box surrounding it
-    // and remove this pop-out thing" -- first for the ~15 screens that
-    // called .Hovers() explicitly, then (second pass, same date, "every
-    // hoverable/focusable element in the game shows a solid box") for every
-    // OTHER unthemed button too, because changing what this ONE seam builds
-    // changes what every one of them shows without editing any of their
-    // files.
+    // What every unthemed button gets, at the one seam every Ui.Button() call
+    // already goes through (Ui.ApplyHoverBox builds the HoverRim child by
+    // default -- see that method's own header; UiEmitter.WireHoverBox wires
+    // this component to it): a solid box around the control on hover/focus,
+    // so changing what this one seam builds changes every button's hover
+    // without editing any of their files.
     //
     // NO SCALING, NO FADE. The rim is built once at its final size
     // (Ui.ApplyHoverBox picks the pad/thickness) and this component only
-    // flips its GameObject active -- SubtleHoverScale's whole Update() loop
-    // is gone with it. ThemedButtonState fades its Glow because a themed
-    // button's focus ring is meant to breathe; a 2px hairline rim fading in
-    // over a couple of frames reads as flicker at that thickness, not as a
-    // transition, so this snaps.
+    // flips its GameObject active. ThemedButtonState fades its Glow because a
+    // themed button's focus ring is meant to breathe; a 2px hairline rim
+    // fading in over a couple of frames reads as flicker at that thickness,
+    // not as a transition, so this snaps.
     //
     // Shown on EITHER a real pointer hover OR gamepad/keyboard SELECTION
     // (ISelectHandler) -- SubtleHoverScale never answered to gamepad focus at

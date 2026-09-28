@@ -30,11 +30,10 @@ namespace PrincesPalace
     // where a category, a sub-filter and a pager are cheap, and the bag only
     // ever holds what was deliberately asked for.
     //
-    // REBUILT 2026-09-23: a category rail over a two-column list, a grant bar
-    // with sticky plus/quantity, spell books and relics, and the Resources/
-    // Tools tabs that replaced the three currency buttons. Mounted in the hub
-    // AND on the map, because books, relics and every Tools row live on the
-    // descent and the hub has none.
+    // A category rail over a two-column list, a grant bar with sticky
+    // plus/quantity, spell books, relics, and Resources/Tools tabs. Mounted
+    // in the hub AND on the map, because books, relics and every Tools row
+    // live on the descent and the hub has none.
     public class DebugMenuController : MonoBehaviour
     {
         [SerializeField] internal Button closeButton;
@@ -120,9 +119,9 @@ namespace PrincesPalace
         // character who is not on the roster any more must not survive.
         private readonly Dictionary<string, DebugAction> _actions = new Dictionary<string, DebugAction>();
 
-        // Pushed at the end of every Refresh() (docs/GAMEPAD_NAVIGATION_PLAN.md
-        // phase 3, AUDIT.md #158), popped on OnDisable -- Close() below is
-        // the only way this screen shuts, mouse or Cancel alike.
+        // Pushed at the end of every Refresh(), popped on OnDisable --
+        // Close() below is the only way this screen shuts, mouse or Cancel
+        // alike.
         private NavContext _navContext;
 
         private DebugCategory CurrentCategory => Categories[_categoryIndex];
@@ -723,9 +722,8 @@ namespace PrincesPalace
             var lastGrant = grantBar.Length > 0 ? grantBar[grantBar.Length - 1] : null;
 
             // EVERY TAB steps Right into the content, and Left out of it lands
-            // on the tab being shown. Only the first tab used to carry the
-            // Right link, so from any other tab a pad had to climb back to
-            // WEAPONS before it could reach a single row.
+            // on the tab being shown, so a pad can reach a row from whichever
+            // tab it is on instead of climbing back to the first one.
             var currentCategory = categoryButtons != null && _categoryIndex < categoryButtons.Length
                 ? categoryButtons[_categoryIndex]
                 : firstCategory;

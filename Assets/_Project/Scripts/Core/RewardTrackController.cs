@@ -20,10 +20,8 @@ namespace PrincesPalace
     //
     // FOUR STATES OUT OF TWO INTEGERS. `level` is what has been EARNED and
     // `claimedTrackLevel` is what has been PAID, and the whole screen is
-    // RewardTrack.StateOf over that pair. They used to be kept in lockstep by
-    // RewardApplier claiming after every fight; collection is a thing the
-    // player does now, so the gap between them is visible, countable and
-    // clickable rather than a 14px tick in a corner.
+    // RewardTrack.StateOf over that pair, so the gap between them is
+    // visible, countable and clickable rather than a single flat state.
     public partial class RewardTrackController : MonoBehaviour
     {
         [SerializeField] internal RectTransform viewport;
@@ -211,10 +209,7 @@ namespace PrincesPalace
             // THE CURRENT LEVEL'S DOT, not dots[0]. dots[0] is level
             // FirstLevel -- the far LEFT of the rail -- while BeginFlyIn just
             // above scrolled the ribbon to _level, which can be dozens of
-            // nodes further right on anything but a brand new character. The
-            // marker followed the selection here correctly; the selection
-            // itself was simply wrong (owner's hardware playtest,
-            // 2026-09-23: "the gamepad focus marker stays off-screen left").
+            // nodes further right on anything but a brand new character.
             //
             // dots[i] is level FirstLevel + i (WireNodes' own indexing), so
             // this is that inverted and clamped into range -- the same dot
@@ -331,15 +326,11 @@ namespace PrincesPalace
         // rather than a blank screen -- graceful degradation, and the reason
         // SystemMenuCaptureTests needs no fixture change (plan §8).
         // WHAT DEPTH TO PRICE THE ESTIMATE AT -- not what depth the next real
-        // fight literally opens at. Those used to be the same question and
-        // this returned 0 in the hub to match FightBootstrap's own room-0
-        // start; the two are no longer the same question. A level-15
-        // character sitting in the hub between descents does not fight their
-        // next level at room 0 -- they fight it wherever their run gets to,
-        // and pricing the card at room 0 overstated the fight count by
-        // whatever multiple that depth's pay has climbed (phase 5 review:
-        // "121 fights" quoted at a level a returning player pays off in a
-        // fraction of that). IN A RUN, the run's own step, unchanged --
+        // fight literally opens at. A level-15 character sitting in the hub
+        // between descents does not fight their next level at room 0 -- they
+        // fight it wherever their run gets to, and pricing the card at room 0
+        // would overstate the fight count by whatever multiple that depth's
+        // pay has climbed. IN A RUN, the run's own step, unchanged --
         // that IS the pay the next victory carries. IN THE HUB, the
         // character's OWN last run's deepest step
         // (Character.lastRunDeepestStep, written by RunSettlement.Settle
@@ -560,9 +551,8 @@ namespace PrincesPalace
         // COLLECT-ALL, shown only when there is something to collect.
         //
         // A button that is always there and usually does nothing teaches the
-        // player it never does anything; this one appearing IS the notification
-        // that the track owes them, which is the job the old tick was failing
-        // at from a corner of a 26px disc.
+        // player it never does anything; this one appearing IS the
+        // notification that the track owes them.
         private void PaintCollectButton()
         {
             int owed = RewardTrack.UnclaimedCount(_level, _claimed);
@@ -625,18 +615,15 @@ namespace PrincesPalace
 
             if (cardArt != null && !wordOnly)
             {
-                // THE CARD TAKES THE NODE'S OWN SPRITE, which is handoff section
-                // 8's "reuses the milestone or filler art at the larger size"
-                // read literally: the same Sprite object, not a second lookup
-                // that could resolve to something else.
+                // THE CARD TAKES THE NODE'S OWN SPRITE: the same Sprite
+                // object, not a second lookup that could resolve to
+                // something else.
                 //
                 // SUBSCRIPTED BY KIND, not by level -- cardArtByReward is
-                // ScreenRegistry's per-TrackReward array (docs/PLAN_REWARD_
-                // TRACKS.md §1), because which reward this level holds is a
-                // per-character question the tree cannot bake by level any
-                // more. The rail's own marks are already loaded and already
-                // bound; this is the seam that was missing rather than a
-                // lookup that was wrong.
+                // ScreenRegistry's per-TrackReward array, because which
+                // reward this level holds is a per-character question the
+                // tree cannot bake by level. The rail's own marks are
+                // already loaded and already bound.
                 int i = level - RewardTrackLayout.FirstLevel;
                 var painted = CardArtFor(entry.Reward);
 
@@ -662,8 +649,7 @@ namespace PrincesPalace
                     // mark on the rail is tinted against its disc -- ink on a
                     // lit node, gold on a dark one -- because the disc under it
                     // changes; this one always sits on the same near-black
-                    // plate, and the ink it used to switch to on a reached
-                    // reward simply vanished there.
+                    // plate, where ink would be invisible.
                     if (Has(icons, i)) cardArt.sprite = icons[i].sprite;
                     cardArt.color = CardMark;
                     cardArt.rectTransform.sizeDelta =
@@ -783,8 +769,7 @@ namespace PrincesPalace
         // progression_v2/PLAN_PROGRESSION_V2.md §2 measures a deep run at
         // about 53 fights, and every level from 31 up costs a full 10,000 --
         // the plan's own cap (contract 2) -- so the raw fight count there
-        // regularly reads in the hundreds. The owner has not decided to hide
-        // the line at that stretch (phase 5 review), only to say it in the
+        // regularly reads in the hundreds, and the run count says it in the
         // unit a prestige rung is actually paid in.
         private const int FightsPerDeepRun = 53;
 

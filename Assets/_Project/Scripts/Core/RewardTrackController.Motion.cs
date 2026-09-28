@@ -15,7 +15,7 @@ namespace PrincesPalace
     // glide, ignite, burst -- have a start, a duration and a done, which is
     // exactly what a coroutine is for.
     //
-    // Durations are the handoff's, authored rather than tuned against a frame
+    // Durations are authored by feel rather than tuned against a frame
     // budget. Unscaled time throughout: this panel opens over a menu, and a
     // menu that pauses the game would otherwise freeze its own animation.
     //
@@ -34,9 +34,9 @@ namespace PrincesPalace
         private const float GlideSeconds = 0.46f;
         private const float FollowSeconds = 0.7f;
         private const float AdvanceSeconds = 0.6f;
-        // 0.7 rather than 0.9. The burst is four parts now and the last of them
-        // is gone by 70% of the old duration; the remaining 200ms were a fully
-        // transparent node still being written to every frame.
+        // 0.7: the burst's last part finishes by 70% of this duration, so a
+        // longer value would just be a fully transparent node still being
+        // written to every frame.
         private const float BurstSeconds = 0.7f;
         private const float BurstStagger = 0.13f;
 
@@ -46,10 +46,9 @@ namespace PrincesPalace
         private const float CardSwapSeconds = 0.28f;
         private const float CardRisePixels = 7f;
 
-        // 18, up from 9. Twice as long over a twelfth of the distance, so the
-        // light drifts across the visible rail rather than crossing it: about
-        // 90 pixels a second against the 2,100 it used to travel at. A cue that
-        // is always present has to be slow enough to stop being an event.
+        // 18: long enough that the light drifts across the visible rail
+        // rather than crossing it, about 90 pixels a second. A cue that is
+        // always present has to be slow enough to stop being an event.
         private const float ShimmerLoop = 18f;
 
         // How far the shimmer travels, centred on the player's node. One
@@ -211,18 +210,11 @@ namespace PrincesPalace
         // visible seam where it restarts, which is exactly what a shimmer must
         // not do.
         //
-        // IT USED TO WALK THE FULL 19,000 AND WAS THEREFORE ALMOST NEVER ON
-        // SCREEN. The window shows 1,600 of the rail, so a light travelling the
-        // whole content was inside it for about one second in every twelve --
-        // and it crossed at 2,100px a second when it did. The rail spent eleven
-        // seconds out of twelve looking like a printed rule, which is the one
-        // thing this cue exists to prevent, and the twelfth second looked like
-        // something being flicked past.
-        //
-        // So the sweep is bound to the player's node instead of to the content:
-        // a window's width of travel, centred on where they actually are. The
-        // panel opens centred there, so the light is on screen from the first
-        // frame and stays on it.
+        // The sweep is bound to the player's node instead of to the content:
+        // a window's width of travel, centred on where they actually are, so
+        // it stays visible rather than crossing a rail mostly out of frame.
+        // The panel opens centred there, so the light is on screen from the
+        // first frame and stays on it.
         private void AnimateShimmer(float t)
         {
             if (shimmerRect == null || shimmer == null) return;
@@ -443,15 +435,9 @@ namespace PrincesPalace
             _bursts = Animate(ClaimBursts(fromLevel, throughLevel));
         }
 
-        // ONE COROUTINE PER LEVEL, on its own rig, which is the opposite of
-        // what this did.
-        //
-        // It used to drive a single shared node from one loop, so the burst for
-        // level 14 was cut off at its 130th millisecond by level 15's -- five
-        // sixths of every burst in a chain was never drawn, and what the player
-        // saw was one smear travelling up the rail. Collecting thirty-five
-        // levels is the biggest thing this screen ever does and it looked like
-        // a loading bar.
+        // ONE COROUTINE PER LEVEL, on its own rig -- a shared node would cut a
+        // burst off mid-flight when the next level's starts, smearing a
+        // multi-level collect into one streak instead of separate bursts.
         //
         // Rigs are taken round-robin, so a burst gets four stagger periods --
         // 520ms of its 700 -- before its rig is needed again. The overlap that
@@ -482,9 +468,8 @@ namespace PrincesPalace
         }
 
         // ONE ROUND-ROBIN RIG PICK, shared by ClaimBursts (a multi-level claim)
-        // and OnLevelGained (a level arriving while the panel is open). Both
-        // used to hand-roll this same pair; a rig picked one way for a claim
-        // and another way for an arrival would desync which rig is "next".
+        // and OnLevelGained (a level arriving while the panel is open): picking
+        // it two different ways would desync which rig is "next".
         private void FireBurst(int level)
         {
             if (burstRoots == null || burstRoots.Length == 0) return;
@@ -812,8 +797,7 @@ namespace PrincesPalace
             return 1f + C3 * inverse * inverse * inverse + C1 * inverse * inverse;
         }
 
-        // 0 -> 1 -> 0 over one period, for the loops the handoff describes as
-        // "alternate".
+        // 0 -> 1 -> 0 over one period, for loops that alternate rather than repeat.
         private static float PingPong(float t) => 1f - Mathf.Abs(Mathf.Repeat(t, 2f) - 1f);
 
         private static Color WithAlpha(Color colour, float alpha)

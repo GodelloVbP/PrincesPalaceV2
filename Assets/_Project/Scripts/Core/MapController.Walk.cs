@@ -10,15 +10,11 @@ namespace PrincesPalace
 {
     // The party's figure, and the walk between rooms.
     //
-    // Picking a room used to resolve it on the same frame as the click, which
-    // meant the map's whole job -- deciding where to go -- happened with no
-    // sense of GOING anywhere. Now the click starts a walk along the trail that
-    // was already drawn between the two rooms, and the room's content fires on
-    // ARRIVAL.
+    // The click starts a walk along the trail already drawn between the two
+    // rooms, and the room's content fires on ARRIVAL, not on the click.
     //
-    // The room resolution itself is untouched and deliberately still lives in
-    // one place: Arrive() is exactly what OnNodePressed used to do, so Event,
-    // Shop and ItemSpawn will wire into it when they have screens without the
+    // The room resolution itself lives in one place, Arrive(), so Event,
+    // Shop and ItemSpawn can wire into it when they have screens, without the
     // movement code learning anything about them.
     public partial class MapController
     {
@@ -158,8 +154,7 @@ namespace PrincesPalace
             content.anchoredPosition = new Vector2(to, content.anchoredPosition.y);
         }
 
-        // What the room does. Byte for byte what the click used to do the
-        // instant it was pressed -- the only change is WHEN.
+        // What the room does.
         //
         // The room's own rules (move, reset the message, resolve, clear) moved
         // to RunOrchestrator.ArriveAt so the balance bot walks into rooms
@@ -199,12 +194,10 @@ namespace PrincesPalace
                     return;
 
                 default:
-                    // EXPLICIT, and the default arm is now the one that
-                    // SHOUTS rather than the one that swallows. It used to
-                    // be the catch-all every non-fight arrival fell through,
-                    // which meant a new Arrival value would silently
-                    // clear-and-redraw -- the wrong failure, and an invisible
-                    // one (docs/PLAN_SHOP.md F3).
+                    // EXPLICIT: an unhandled Arrival value logs a warning and
+                    // redraws rather than silently clearing-and-redrawing, so
+                    // a new Arrival case is caught rather than swallowed
+                    // (docs/PLAN_SHOP.md F3).
                     Debug.LogWarning(
                         "[MapController] Arrival value not handled; the map redrew and the room may not have " +
                         "been resolved. A new Arrival case needs an arm here.");
@@ -216,10 +209,8 @@ namespace PrincesPalace
         // The jitter seed for every link, built once and shared.
         //
         // The trail and the walk MUST agree on this or the figure crosses open
-        // canopy beside the path it is supposed to be on. They used to agree by
-        // both counting links in the same order, which is a coincidence waiting
-        // to be broken by anything that reorders a loop; now there is one count
-        // and two readers.
+        // canopy beside the path it is supposed to be on: one count feeds both
+        // readers rather than each counting links independently.
         private static Dictionary<long, int> LinkSeeds(DescentMap map)
         {
             var seeds = new Dictionary<long, int>();
