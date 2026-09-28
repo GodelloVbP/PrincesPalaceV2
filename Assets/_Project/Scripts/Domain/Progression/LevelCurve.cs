@@ -5,7 +5,7 @@ namespace PrincesPalace.Domain.Progression
     // What a character level costs, and what a gain of experience does to a
     // level/exp pair.
     //
-    // IN DOMAIN, NOT ON Character, for the reason TalentSkeleton's header
+    // In Domain, not on Character, for the reason TalentSkeleton's header
     // gives for the same move: the EditMode assembly references Domain and
     // nothing else, so arithmetic that lives in Core can only be pinned from
     // PlayMode or duplicated into the test. `Character.ExpToNextLevel` and
@@ -13,22 +13,17 @@ namespace PrincesPalace.Domain.Progression
     // asks -- they delegate here, so the seam callers depend on has not
     // moved.
     //
-    // AN AUTHORED TABLE, NOT A FORMULA, since progression v2 phase 2. The
-    // geometric curve that used to live here (BaseCost 100, 90 permille a
-    // level, cap 200) was fitted against an income that compounded at the
-    // health rate, and the whole point of that fit was to outrun it. Two
-    // things then changed at once: experience got its own, much flatter rate
-    // (DifficultyCurve.ScaleExperience, 25 permille) and the cap came down
-    // from 100 to 40. The model refitted the formula three ways against the
-    // new income and every fit priced level 40 at four to five deep runs
-    // while clearing a third of the track inside the first three short runs
-    // -- because one exponent cannot describe a ladder whose early rungs are
-    // meant to be minutes apart and whose late ones are meant to be runs
-    // apart. See docs/handoffs/progression_v2/xp_model.md Part C for the
+    // An authored table, not a formula: one exponent cannot describe a
+    // ladder whose early rungs are meant to be minutes apart and whose late
+    // ones are meant to be runs apart. Against DifficultyCurve.ScaleExperience
+    // (25 permille) and a level cap of 40, the model fit a single geometric
+    // curve three ways and every fit priced level 40 at four to five deep
+    // runs while clearing a third of the track inside the first three short
+    // runs. See docs/handoffs/progression_v2/xp_model.md Part C for the
     // three fits and PLAN_PROGRESSION_V2.md §3 for the table that replaced
     // them.
     //
-    // THE TABLE IS PASSED IN, NOT HELD. Domain cannot reach ContentDatabase,
+    // The table is passed in, not held. Domain cannot reach ContentDatabase,
     // and a static table installed once at load would be exactly the global
     // mutable state GlobalStateLintTests exists to keep out. Every method
     // here takes `costs`, the flat list the content resolver produces, and
@@ -106,18 +101,18 @@ namespace PrincesPalace.Domain.Progression
 
         // What `amount` more experience does to a level/exp pair.
         //
-        // THE WHOLE LEVEL-UP LOOP, moved down from Character so it can be
+        // The whole level-up loop, moved down from Character so it can be
         // pinned without a save, a scene or Unity -- docs/CODE_STANDARDS.md "Layering",
         // "arithmetic to Domain, wrapper stays". Character.AddExperience is
         // now that wrapper and does nothing else.
         //
-        // STOPS AT THE CAP, which is new. Nothing used to bound `level` at
-        // all: a character could level past RewardTrack.MaxLevel purely
-        // through income, and the track simply returned TrackEntry.None
-        // forever after (RewardTrackDefinition.At). That was graceful with a
-        // cap of 100 nobody reached; with a cap of 40 that a career reaches
-        // on run 24 it would have every later run advertise levels that pay
-        // nothing. Excess experience is KEPT rather than discarded -- it
+        // Stops at the cap: without a bound, a character could level past
+        // RewardTrack.MaxLevel purely through income, and the track simply
+        // returns TrackEntry.None forever after (RewardTrackDefinition.At).
+        // That is graceful with a cap of 100 nobody reaches; with a cap of 40
+        // that a career reaches on run 24 it would have every later run
+        // advertise levels that pay nothing. Excess experience is kept rather
+        // than discarded -- it
         // costs nothing to carry, and throwing away a player's last fight
         // because they happened to be at the cap is a worse answer than a
         // number that stops mattering.

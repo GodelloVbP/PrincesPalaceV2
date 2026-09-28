@@ -25,17 +25,14 @@ namespace PrincesPalace.Domain.Rewards
         // measured run income (docs/PLAN_SHOP.md F6). Left alone rather than
         // rewritten across 646 assets.
         //
-        // BUMPED 2026-09-22 (owner ask, "better-quality, more expensive
-        // stock"): 20/4 -> 21/5. ShopStock.RollGear now targets one tier
-        // ABOVE the map's floor tier and refuses to hand back a bare common
-        // (ShopStock.ApplyQualityFloor), so the cheapest gear a floor-1 shop
-        // can ever show is already a tier-1, +1 piece rather than a tier-0,
-        // +0 one -- these two constants moving on top of that is what pushes
-        // a floor-1 shelf's floor from 20 to 28 (see GearPrice(0, 1, 0)
-        // below and NormalFightPayoutAnchor's own updated comment), a
-        // roughly 1.4x jump on the constants alone and ~1.75x once the tier
-        // bump and the quality floor are folded in. Pinned as literals in
-        // ShopPricingTests; see that file for the full before/after table.
+        // ShopStock.RollGear targets one tier above the map's floor tier and
+        // refuses to hand back a bare common (ShopStock.ApplyQualityFloor),
+        // so the cheapest gear a floor-1 shop can ever show is already a
+        // tier-1, +1 piece rather than a tier-0, +0 one -- these two
+        // constants combine with that to push a floor-1 shelf's floor to 28
+        // (see GearPrice(0, 1, 0) below and NormalFightPayoutAnchor's own
+        // comment). Pinned as literals in ShopPricingTests; see that file for
+        // the full before/after table.
         public const int GearBase = 21;
         public const int GearPerTier = 5;
 
@@ -180,17 +177,16 @@ namespace PrincesPalace.Domain.Rewards
         // by discounting, so the price stays a pure function of tier/plus/
         // rift.
         //
-        // RAISED 24 -> 28, 2026-09-22, as a forced consequence of the same
-        // pass's "no bare commons" rule (ShopStock.ApplyQualityFloor): a
-        // tier-0/+0/no-affix piece is no longer a legal roll, so
-        // GearPrice(0, 0, 0) is no longer the cheapest gear that can exist --
-        // GearPrice(0, 1, 0) = 28 is, and an anchor left at 24 would be a
-        // guarantee (TheAffordabilityAnchorIsAboveTheCheapestGearThatCanExist)
-        // that could never fire. Left at the new floor exactly rather than
-        // padded above it, so a normal fight's own measured payout (16-24,
-        // see the header above) still buys nothing outright at floor 1 --
-        // that is the owner's price-increase ask working as intended, not a
-        // bug to paper over.
+        // 28, not lower, as a consequence of the "no bare commons" rule
+        // (ShopStock.ApplyQualityFloor): a tier-0/+0/no-affix piece is not a
+        // legal roll, so GearPrice(0, 0, 0) is not the cheapest gear that can
+        // exist -- GearPrice(0, 1, 0) = 28 is, and an anchor below that would
+        // be a guarantee
+        // (TheAffordabilityAnchorIsAboveTheCheapestGearThatCanExist) that
+        // could never fire. Left at the floor exactly rather than padded
+        // above it, so a normal fight's own measured payout (16-24, see the
+        // header above) still buys nothing outright at floor 1 -- that is
+        // the price increase working as intended, not a bug to paper over.
         public const int NormalFightPayoutAnchor = 28;
     }
 }

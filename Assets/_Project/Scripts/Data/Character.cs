@@ -56,23 +56,12 @@ namespace PrincesPalace
         // item.
         public EquipmentLoadout equipment = new EquipmentLoadout();
 
-        // META progression: earned from combat and KEPT ACROSS RUNS.
-        //
-        // This comment used to say the opposite -- "PER-RUN progression,
-        // earned from combat and reset by StartRun", closing on "one rule that
-        // has to hold: StartRun resets all four. There is a test whose whole
-        // job is to fail if it ever stops." None of that was true.
+        // Meta progression: earned from combat and kept across runs.
         // RunManager.StartRun replaces activeRun and never touches
         // save.roster; nothing anywhere assigns level = 1 or exp = 0 outside
-        // this field initialiser; and there was no such test. RewardApplier's
-        // own header states the real rule and always has -- "GOLD belongs to
-        // the run and is lost with it, EXPERIENCE belongs to the characters
-        // and survives".
-        //
-        // Worth knowing WHY the wrong version was dangerous rather than merely
-        // wrong: it read as a load-bearing invariant with a named guard, so
-        // anyone planning against it would price levels as a within-run curve
-        // and design rewards that cannot exist. See AUDIT.md #49.
+        // this field initialiser. RewardApplier's own header states the rule:
+        // "GOLD belongs to the run and is lost with it, EXPERIENCE belongs to
+        // the characters and survives".
         //
         // The consequence, stated plainly because it is a balance fact and not
         // an implementation detail: level gates spell tiers
@@ -238,10 +227,9 @@ namespace PrincesPalace
 
         // What the next level costs. The arithmetic is
         // Domain.Progression.LevelCurve; this stays as the name every caller
-        // already asks, which is what the old comment here promised --
-        // "tunable later without touching callers, since they only ever ask
-        // how much to next". Tuned twice now (a formula retune, then a whole
-        // authored table), and no caller has moved either time.
+        // asks, so it is tunable without touching callers -- tuned twice now
+        // (a formula retune, then a whole authored table), and no caller has
+        // moved either time.
         //
         // THIS IS THE ONE PLACE THE TABLE IS FETCHED. LevelCurve is engine-
         // free and cannot reach ContentDatabase, so somebody in Core has to
@@ -273,15 +261,15 @@ namespace PrincesPalace
         // can cross more than one threshold at once). Returns how many
         // levels were gained, purely so callers can show a "Level Up!".
         //
-        // THIS NO LONGER GRANTS ANYTHING. It used to hand out one stat point
-        // per level right here; the reward track owns every grant now, and
-        // ClaimTrackRewards below is what pays them. Levelling and being paid
-        // for levelling are two steps on purpose -- a level can be reached in
-        // more than one way (a debug grant, a migration), and a grant that
-        // rode inside the increment would fire for all of them or none.
+        // This grants nothing: the reward track owns every stat-point grant,
+        // and ClaimTrackRewards below is what pays them. Levelling and being
+        // paid for levelling are two steps on purpose -- a level can be
+        // reached in more than one way (a debug grant, a migration), and a
+        // grant that rode inside the increment would fire for all of them or
+        // none.
         //
-        // AND THE LOOP ITSELF IS NOW LevelCurve.AddExperience, in Domain.
-        // What is left here is the save-side wrapper: fetch the table, apply,
+        // The loop itself is LevelCurve.AddExperience, in Domain. What is
+        // left here is the save-side wrapper: fetch the table, apply,
         // copy the three fields back. The loop moved so a career's worth of
         // level-ups can be pinned under `dotnet test` without a save, a scene
         // or Unity -- docs/CODE_STANDARDS.md "Layering"'s "arithmetic to Domain, wrapper
@@ -382,24 +370,17 @@ namespace PrincesPalace
         // that reported false there would leave the screen unrefreshed and the
         // save unwritten with the watermark already moved.
         //
-        // THROUGH A LEVEL, not simply up to the character's own.
+        // Through a level, not simply up to the character's own: pressing
+        // node 13 with a watermark at 12 must collect only up to 13, not
+        // settle the entire gap up to the character's own level. Stopping
+        // short needs no second number on the save -- a claim always begins
+        // at the watermark and always moves it, so stopping at 13 leaves the
+        // watermark at 13 and 14 upward still owed. One number, no hole. The
+        // design says the same thing in section 4 -- "claims everything from
+        // claimedTrackLevel + 1 up to and including it" -- and `it` is the
+        // node, not the character.
         //
-        // It used to take no argument and always settle the entire gap, and
-        // the reward track's node press called it -- so pressing level 13 with
-        // a watermark at 12 and a character at 47 collected all thirty-five
-        // levels. Every node on the rail was a collect-everything button
-        // wearing a different number, which is what "it still auto claims"
-        // describes from the outside: rewards arriving that nobody asked for.
-        //
-        // The comment that defended it argued that stopping short would need
-        // "a second number on the save -- paid to here, but the player only
-        // asked for that far". That is not so, and it is worth saying why: a
-        // claim always begins at the watermark and always moves it, so
-        // stopping at 13 leaves the watermark at 13 and 14 upward still owed.
-        // One number, no hole, exactly as before. The design says the same
-        // thing in section 4 -- "claims everything from claimedTrackLevel + 1
-        // up to and including it" -- and `it` is the node, not the character.
-        // TAKES THE TRACK RATHER THAN FINDING IT. The definition is content
+        // Takes the track rather than finding it. The definition is content
         // (Core.RewardTracks reads it off ContentDatabase) and this type is
         // save state; a convenience overload that resolved its own track
         // would make this the one method on Character reaching into a content
