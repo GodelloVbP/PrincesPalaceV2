@@ -26,11 +26,9 @@ namespace PrincesPalace
     {
         // ---- the archetype registry ---------------------------------------------
 
-        // FORWARDED, not restated. Domain.Bot.Archetypes is the one registry;
-        // this used to be a second switch beside it, and a second switch is a
-        // second thing that can disagree -- it already had, the moment Phase 6
-        // added GreedyDefensive and Lookahead2 to Domain and left the batch
-        // runner and the smoke test unable to name them.
+        // FORWARDED, not restated: Domain.Bot.Archetypes is the one registry,
+        // and a second switch beside it would be a second thing that can
+        // disagree about which archetypes exist.
         //
         // Kept as a forward rather than deleted because three callers reach the
         // registry through Core (the batch runner's -botArchetypes, the smoke
@@ -163,8 +161,8 @@ namespace PrincesPalace
             // squad only, matching RunTrace.LevelAtDeath's own scope, but per
             // character here because a career's whole point is showing HOW
             // level/exp move run over run, and a squad-wide sum degrading three
-            // characters into one number is exactly the loss PLAN_BALANCE_BOT.md
-            // F5's own per-character correction (2026-09-11) was about.
+            // characters into one number is exactly the loss
+            // PLAN_BALANCE_BOT.md's per-character correction avoids.
             public Dictionary<string, int> LevelByCharacter = new Dictionary<string, int>();
             public Dictionary<string, int> ExpByCharacter = new Dictionary<string, int>();
 
@@ -623,12 +621,11 @@ namespace PrincesPalace
             PlayDescent(seed, save, fightPolicy, runPolicy, depthCapSteps, shopNodes, result);
         }
 
-        // ONE DESCENT, on a save and a run StartRun has already opened -- the
-        // draft, the equip pass, and the room-by-room loop that used to be
-        // PlayOneRun's own tail, unchanged. Split out so PlayCareer (below)
-        // can call this once per life against the SAME save across many
-        // calls instead of duplicating the loop or forcing a fresh profile
-        // build every time PlayOneRun's shape used to require.
+        // ONE DESCENT, on a save and a run StartRun has already opened: the
+        // draft, the equip pass, and the room-by-room loop. Split out so
+        // PlayCareer (below) can call this once per life against the SAME
+        // save across many calls instead of duplicating the loop or forcing
+        // a fresh profile build every time.
         private static void PlayDescent(
             ulong seed, SaveData save, IFightPolicy fightPolicy, IRunPolicy runPolicy,
             int depthCapSteps, ShopNodeMode shopNodes, BotRunResult result)
@@ -1089,14 +1086,10 @@ namespace PrincesPalace
         // ShopStock.MaxChoicesPerVisit, which is where the arithmetic and the
         // one judgement in it (sell headroom) are written down.
         //
-        // It used to be a hand-typed 12, justified against a six-card shelf:
-        // "six cards plus three rerolls is nine, so hitting it is a finding
-        // rather than a truncation". The shelf became ten cards on 2026-09-03
-        // and the justification did not follow it, so ten buys plus three
-        // rerolls plus the Leave -- fourteen, nothing unusual about it -- was
-        // being truncated and the truncation recorded as a finding. Measured
-        // over a 200-run batch that was 20.4% of GreedyDefensive's visits and
-        // 31.4% of Lookahead2's.
+        // A hand-typed constant justified against one shelf size goes stale
+        // the moment the shelf changes, silently turning an ordinary visit
+        // into a truncated one and its truncation into a false finding --
+        // deriving the bound is what keeps it tracking the shelf.
         private const int MaxShopChoices = ShopStock.MaxChoicesPerVisit;
 
         // WHAT THE BOT DOES IN A SHOP: ASK THE POLICY UNTIL IT LEAVES.
@@ -1200,12 +1193,12 @@ namespace PrincesPalace
                 // not tell that from a policy choosing to leave would count
                 // the cut-off visit as a completed one.
                 //
-                // ASKED, NOT ASSUMED. This used to fire on the last allowed
-                // choice, which marks Capped whenever the budget ran out --
-                // including the case where the policy was about to say Leave
-                // anyway and the visit was over. That made the rate an upper
-                // bound with no way to read the true one off the trace. One
-                // extra ChooseShop settles it: the answer is thrown away, the
+                // ASKED, NOT ASSUMED: marking Capped whenever the budget ran
+                // out, without asking, would count a visit where the policy
+                // was about to say Leave anyway as a truncation too, making
+                // the rate an upper bound with no way to read the true one
+                // off the trace. One extra ChooseShop settles it: the answer
+                // is thrown away, the
                 // stream it draws from is keyed by (seed, step, choiceIndex)
                 // like every other, and it only happens on a visit that
                 // reached the ceiling -- which, with the ceiling now derived
@@ -1824,12 +1817,11 @@ namespace PrincesPalace
         // maxBefore is a photograph taken BEFORE the claim moves the watermark:
         // EffectiveStats sums the track's MaxHealth entries at levels <=
         // claimedTrackLevel, so reading it any later makes the scale a no-op.
-        // Claim's own header says this at length; what it could not say is that
-        // the bot is the second door onto the same claim and went through it
-        // without the photograph. Every max-health node the bot collected left
-        // the run holding the old absolute -- a permanently empty tail on the
-        // bar, one per node, compounding across a descent, and the batch
-        // reported the resulting weakness as the game being hard.
+        // Claim's own header says this at length; the bot is a second door
+        // onto the same claim, so skipping the photograph here would leave
+        // the run holding the old absolute on every max-health node the bot
+        // collects -- a permanently empty tail on the bar, compounding
+        // across a descent.
         //
         // A PRIVATE HELPER, NOT A SHARED ONE. "Move a maximum, keep the
         // fraction" has four callers now (EquipmentOps, TalentOps, the reward
@@ -1901,10 +1893,9 @@ namespace PrincesPalace
             // that fed them. session.EncounterClass is the SAME ranking
             // RunOrchestrator.RollOffers reads its own `encounter` from
             // (Boss > Elite > Normal, FightSession.EncounterClass) -- one
-            // property now, not two copies of the same ternary that can
-            // drift apart the way this one already had (it used to check
-            // IsEliteFight only, so a boss room's trace read Normal/Elite
-            // even after RollOffers itself was fixed to check Boss first).
+            // property, not two copies of the same ternary that could drift
+            // apart -- two copies checking the ranking differently would let
+            // a boss room's trace disagree with what RollOffers itself uses.
             roomTrace.Favor = ItemOfferRoll.CurrentSquadFavor();
             roomTrace.EncounterClass = session.EncounterClass.ToString();
             roomTrace.Offers.AddRange(offers.Select(o => new OfferEntry
