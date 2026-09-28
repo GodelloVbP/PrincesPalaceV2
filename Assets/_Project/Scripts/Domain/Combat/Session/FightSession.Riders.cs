@@ -655,20 +655,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // modifier and skill goes through here; StatusEffects.ApplyWard stays
         // the separate entry point for shields, for the reason its own header
         // gives.
-        private void ApplyStatusTo(CombatantState recipient, StatusEffectType type,
+        //
+        // RETURNS WHETHER THE STATUS WENT ON (plan 4e), so a caller that says
+        // "X is rooted!" can stay quiet for an attempt that was refused -- by
+        // hard-control recovery, or by the CC guard in RecordStatus.
+        private bool ApplyStatusTo(CombatantState recipient, StatusEffectType type,
             int magnitude, int turns, CombatantState source = null)
         {
-            if (recipient == null) return;
+            if (recipient == null) return false;
 
             // Keep repeat-control recovery at the shared status seam so an
             // older relic, talent or modifier cannot bypass the spell-level
             // guard by applying Rooted or Feared directly.
-            if (HardControlRecoveryBlocks(recipient, type)) return;
+            if (HardControlRecoveryBlocks(recipient, type)) return false;
 
             if (type == StatusEffectType.Chilled)
             {
-                ApplyChilled(recipient, magnitude, turns, source);
-                return;
+                ApplyChilled(recipient, magnitude, turns, source, out bool chilled);
+                return chilled;
             }
 
             // THE NEW-DOT SNAPSHOT (plan 1.5), taken HERE rather than at
@@ -691,7 +695,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 magnitude = SnapshotDotMagnitude(magnitude, source);
             }
 
-            RecordStatus(recipient, type, magnitude, turns, source);
+            return RecordStatus(recipient, type, magnitude, turns, source) != null;
         }
 
         private bool HardControlRecoveryBlocks(CombatantState recipient, StatusEffectType type) =>
@@ -717,9 +721,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // status-specific bookkeeping. Separate from ApplyStatusTo so a
         // dispatch arm that DOES have bookkeeping (ApplyChilled) can reach the
         // application without recursing back through the dispatch.
+        //
+        // NULL WHEN THE CC GUARD REFUSED IT (plan 4e): the one
+        // application-time block for crowd control lives here, beneath
+        // ApplyStatusTo, because this is the seam every status reaches --
+        // ApplyChilled's direct callers and Court of Whispers' fear included.
+        // See FightSession.EngineSeams.CrowdControlAdmits.
         private ActiveStatus RecordStatus(CombatantState recipient, StatusEffectType type,
             int magnitude, int turns, CombatantState source)
         {
+            if (!CrowdControlAdmits(recipient, type)) return null;
+
             var applied = StatusEffects.Apply(recipient.Statuses, type, magnitude, turns, source);
             SpareIfAppliedOnWearersTurn(recipient, applied);
             return applied;
@@ -825,26 +837,38 @@ namespace PrincesPalace.Domain.Combat.Session
                 preTick = null;
             }
 
-            var (regenHealed, expired) = StatusEffects.TickRegenAndDurations(actor);
+            // IGNORE PAIN'S INSTALLMENT (plan 4c), after the damaging rows and
+            // before Regen: delayed damage is damage over time, and a T3 regen
+            // then pays down what is still pending rather than what was just
+            // paid.
+            if (PayDelayedDamage(actor, preTick)) preTick = null;
+
+            // REGEN, THROUGH THE HEAL FUNNEL (plan 4b). HealAndCount books the
+            // ledger row this block used to book by hand, re-arms the crown,
+            // and under Cursed Blood converts the heal to damage on the
+            // enemies -- so the beat opens BEFORE the heal lands, the damaging
+            // rows' own order, and a converted tick's lines sit on it.
+            //
+            // THE SAME MECHANISM, WITH THE HEAL FLASH FALLING OUT OF IT --
+            // FlashOne already branches on IsHealing, so a regen tick gets the
+            // green flash and the green number for the cost of the boolean.
+            // Its ACTOR is the holder rather than nobody, which is what keeps
+            // the recoil and the squash off it (FightBeatPlayer.RecoilOne/Punch
+            // both skip a target that is its own actor): a body does not
+            // flinch away from its own mending.
+            bool regenDue = actor.Statuses.Any(s => s.Type == StatusEffectType.Regen && s.Magnitude > 0);
+            bool ownsRegenBeat = regenDue
+                && OpenStatusTickBeat(actor, preTick, StatusEffectType.Regen, isHealing: true);
+
+            var (regenHealed, expired) = StatusEffects.TickRegenAndDurations(actor, HealAndCount);
 
             if (regenHealed > 0)
             {
-                // THE SAME MECHANISM, WITH THE HEAL FLASH FALLING OUT OF IT
-                // -- FlashOne already branches on IsHealing, so a regen tick
-                // gets the green flash and the green number for the cost of
-                // the boolean. Its ACTOR is the holder rather than nobody,
-                // which is what keeps the recoil and the squash off it
-                // (FightBeatPlayer.RecoilOne/Punch both skip a target that is
-                // its own actor): a body does not flinch away from its own
-                // mending.
-                bool ownsBeat = BeginStatusTickBeat(
-                    actor, preTick, StatusEffectType.Regen, regenHealed, isHealing: true);
-
+                if (ownsRegenBeat) RecordBeatAmount(regenHealed, isHealing: true);
                 AppendMessage($"{actor.Name} regenerates {regenHealed} health.");
-                Ledger.Restored(LedgerIdOf(actor), regenHealed);
-
-                if (ownsBeat) CommitBeat();
             }
+
+            if (ownsRegenBeat) CommitOrDropStatusTickBeat();
 
             // DISTINCT, because statuses stack. Three poisons running out on
             // the same tick are three removals and one thing a player needs

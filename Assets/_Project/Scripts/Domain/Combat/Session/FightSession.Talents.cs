@@ -129,6 +129,9 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null) return;
 
+            // The Phase 4 engine windows run on this same clock (TurnWindow).
+            AgeEngineWindows(actor);
+
             var expired = StatusEffects.TickAtTurnEnd(actor, _sparedAtWearersTurnEnd);
             if (expired.Count == 0) return;
 
@@ -184,7 +187,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // order; everything below is per-entry and additive.
         private int ResolveWard(CombatantState target, int damage)
         {
-            var outcome = StatusEffects.ConsumeWard(target, damage);
+            // HealAndCount as the heal sink: Mending Fleece's break heal is a
+            // heal like any other (booked, and converted under Cursed Blood).
+            var outcome = StatusEffects.ConsumeWard(target, damage, HealAndCount);
 
             // CombatBeat.Absorbed's OTHER write site (the first is
             // FightSession.Ledger.ApplyAndCountDamage, for a signature
@@ -319,6 +324,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // authored rally (FightSession.Rounds). Uncapped here -- the cap is
             // on the stack count, applied as each stack is added.
             bonus += RallyAttackPercent(actor);
+
+            // Unyielding's surge (plan 4e): +damage while its window is open.
+            bonus += actor.CrowdControl.SurgeDamagePercent;
 
             return bonus;
         }

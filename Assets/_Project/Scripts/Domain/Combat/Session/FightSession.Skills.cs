@@ -272,11 +272,27 @@ namespace PrincesPalace.Domain.Combat.Session
             // it holds, with ManaCost as the minimum CanAfford already
             // checked. Read BEFORE the charge, because afterwards there is
             // nothing left to read.
+            //
+            // BLOOD PRICE (plan 4d): what the pool cannot cover is read here,
+            // before the charge, and the pool pays only what it has. 0 for
+            // every caster without ShortfallHealthPermille, so for them this
+            // is the authored cost exactly as before.
+            int shortfall = BloodPrice.ShortfallOf(actor, skill.ManaCost);
             int primarySpent = skill.SpendsAllPrimary
                 ? (actor.PrimaryPool?.Current ?? 0)
-                : skill.ManaCost;
+                : skill.ManaCost - shortfall;
 
             ChargeSkillMana(actor, primarySpent);
+
+            // A PAYMENT, like the health cost below and for the same reasons
+            // (BloodPrice's header): a direct write that no ward, deferral or
+            // cheat death ever sees, and CanAfford already refused a cast that
+            // would leave less than 1 HP counting both together.
+            int bloodPaid = BloodPrice.Pay(actor, shortfall);
+            if (bloodPaid > 0)
+            {
+                AppendMessage($"{actor.Name} pays {bloodPaid} health for what the {actor.PrimaryPool?.DisplayName ?? "pool"} lacks.");
+            }
 
             // PAID DIRECTLY, NOT THROUGH DealDamage (plan 1.2) -- a health
             // cost is a payment, not incoming damage: no ward, no
@@ -1830,9 +1846,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     AppendMessage($"{enemy.Name} steels itself against another hard control.");
                 }
-                else
+                // THROUGH RecordStatus rather than Fear.Apply (plan 4e), so the
+                // CC guard sees this fear like every other; for a guardless
+                // enemy it is the identical StatusEffects.Apply call Fear.Apply
+                // makes, with the same magnitude and duration.
+                else if (RecordStatus(enemy, StatusEffectType.Feared, Fear.VulnerablePercent,
+                             Fear.DefaultTurns, actor) != null)
                 {
-                    Fear.Apply(enemy, Fear.DefaultTurns, actor);
                     AppendMessage($"{enemy.Name} recoils from the whispering court.");
                 }
             }
@@ -1874,7 +1894,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // would have put the badge up and slowed nobody, because
             // ApplyChilled is the only path that registers the speed malus.
             // Winter's Rebuke is the first row that authors one.
-            ApplyStatusTo(recipient, type, skill.StatusMagnitude, skill.StatusDuration, caster);
+            if (!ApplyStatusTo(recipient, type, skill.StatusMagnitude, skill.StatusDuration, caster)) return;
 
             bool isBeneficial = type == StatusEffectType.Regen || type == StatusEffectType.Protect;
             AppendMessage(isBeneficial

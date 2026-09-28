@@ -1251,8 +1251,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // plain attack or skill either one.
             if (hasSource && source.HasStatus && target.IsAlive)
             {
-                ApplyStatusTo(target, source.AppliesStatus.Value, source.StatusMagnitude, source.StatusDuration);
-                AppendMessage($"{target.Name} is afflicted with {source.AppliesStatus.Value}!");
+                if (ApplyStatusTo(target, source.AppliesStatus.Value, source.StatusMagnitude, source.StatusDuration))
+                {
+                    AppendMessage($"{target.Name} is afflicted with {source.AppliesStatus.Value}!");
+                }
             }
 
             RecordBeatAmount(damage);

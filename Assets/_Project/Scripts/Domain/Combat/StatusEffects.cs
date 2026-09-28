@@ -767,7 +767,13 @@ namespace PrincesPalace.Domain.Combat
         //
         // Non-positive damage does not touch anything -- nothing hit the
         // shield, so there is nothing to spend on it.
-        public static WardOutcome ConsumeWard(CombatantState target, int damage)
+        //
+        // `heal` is where a breaking ward's Mending Fleece heal lands: null
+        // (every pure-Domain caller) heals through CombatMath.Heal and
+        // measures it, as it always did; FightSession passes its HealAndCount
+        // funnel, so the heal is booked and Cursed Blood can convert it (plan
+        // 4b). See HealSink.
+        public static WardOutcome ConsumeWard(CombatantState target, int damage, HealSink heal = null)
         {
             if (target == null || damage <= 0)
             {
@@ -806,7 +812,7 @@ namespace PrincesPalace.Domain.Combat
                 target.Statuses.Remove(ward);
                 anyBroke = true;
 
-                int healed = HealForBrokenWard(target, ward.Source);
+                int healed = HealForBrokenWard(target, ward.Source, heal);
                 totalHealed += healed;
                 hits.Add(new WardHit(ward.Source, absorbed, broke: true, healed));
             }
@@ -817,16 +823,30 @@ namespace PrincesPalace.Domain.Combat
         // Mending Fleece T3, by the CASTER's talent and not the wearer's. A
         // ward Shawn put on the turtle heals by Shawn's node, and the turtle
         // has no say in it. Null source (the relic wards) reads as absent.
-        private static int HealForBrokenWard(CombatantState wearer, CombatantState caster)
+        private static int HealForBrokenWard(CombatantState wearer, CombatantState caster, HealSink heal)
         {
             var talents = caster?.Talents ?? TalentEffectSet.Empty;
 
             int healPercent = talents.Best(TalentEffectType.WardHealsWhenSpent);
             if (healPercent <= 0 || wearer.MaxHealth <= 0) return 0;
 
-            int before = wearer.CurrentHealth;
-            CombatMath.Heal(wearer, wearer.MaxHealth * healPercent / 100);
-            return wearer.CurrentHealth - before;
+            return (heal ?? MeasuredHeal)(wearer, wearer.MaxHealth * healPercent / 100);
+        }
+
+        // WHERE A HEAL THIS CLASS CAUSES ACTUALLY LANDS, and what it restored.
+        // The heal twin of DotPacketSink: this class is pure Domain and cannot
+        // reach the session's funnel, so the session hands it in.
+        // FightSession passes HealAndCount -- the one funnel every in-fight
+        // heal goes through, where Cursed Blood converts and Ignore Pain T3
+        // pays down its pool (plan 4b). Returns the health actually restored.
+        public delegate int HealSink(CombatantState target, int amount);
+
+        // The pure default: heal, clamped at max health, and measure it.
+        private static int MeasuredHeal(CombatantState target, int amount)
+        {
+            int before = target.CurrentHealth;
+            CombatMath.Heal(target, amount);
+            return target.CurrentHealth - before;
         }
 
         // THE END-OF-TURN CLOCK: counts down every AtTurnEnd status the actor
@@ -1243,7 +1263,7 @@ namespace PrincesPalace.Domain.Combat
         // The start-of-turn tick: every AtTick damaging status deals its
         // Magnitude through the shared ApplyDotDamage half (Poison and the
         // new DoTs alike -- a status is not a special case the pipeline has
-        // to know about twice), Regen heals through CombatMath.Heal, and the
+        // to know about twice), Regen heals through the HealSink, and the
         // AtTick family's duration counts down by one of the HOLDER's own
         // turns, anything reaching zero being removed in the same pass.
         //
@@ -1304,8 +1324,14 @@ namespace PrincesPalace.Domain.Combat
 
         // The rest of the turn-start tick, AFTER every damaging row: Regen
         // heals, and the AtTick family counts down and expires.
+        //
+        // `heal` is where each Regen instance's heal lands: null heals through
+        // CombatMath.Heal (MeasuredHeal), the pure behaviour; FightSession
+        // passes HealAndCount, so a Regen tick is a heal like any other --
+        // booked once, re-arming the crown, and converted under Cursed Blood
+        // (plan 4b; until 2026-09-28 it was the one heal outside the funnel).
         public static (int regenHealed, List<StatusEffectType> expired) TickRegenAndDurations(
-            CombatantState combatant)
+            CombatantState combatant, HealSink heal = null)
         {
             int regenHealed = 0;
 
@@ -1315,9 +1341,7 @@ namespace PrincesPalace.Domain.Combat
 
                 if (status.Type == StatusEffectType.Regen && status.Magnitude > 0)
                 {
-                    int before = combatant.CurrentHealth;
-                    CombatMath.Heal(combatant, status.Magnitude);
-                    regenHealed += combatant.CurrentHealth - before;
+                    regenHealed += (heal ?? MeasuredHeal)(combatant, status.Magnitude);
                 }
 
                 status.TurnsRemaining--;

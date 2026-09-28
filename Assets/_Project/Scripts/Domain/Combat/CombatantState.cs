@@ -178,6 +178,28 @@ namespace PrincesPalace.Domain.Combat
         // times in one fight while this must not reset with it.
         public bool CheatDeathSpent;
 
+        // THE PHASE 4 ENGINE SEAMS (docs/PLAN_BJORN_CONSTELLATIONS.md, "Phase
+        // 4 engine seams"). Each is off for everyone until the Juggernaut
+        // wiring sets it, and each is read at exactly one seam in the session.
+        //
+        // Cursed Blood (4b): open the window and every heal converts. Read by
+        // FightSession.HealAndCount. See HealConversion.
+        public readonly HealConversion HealConversion = new HealConversion();
+
+        // Ignore Pain (4c): null = no delayed damage. Read by
+        // FightSession.LandPacket (defer), TickStatuses (pay) and HealAndCount
+        // (T3's heal-reduces-pool). See DelayedDamagePool.
+        public DelayedDamagePool DelayedDamage;
+
+        // Blood Price (4d): thousandths of max health paid per point of
+        // primary-pool shortfall; 0 = off, 5 = Blood Price T1. Read by
+        // SkillResolution.CanAfford and FightSession.CastCore. See BloodPrice.
+        public int ShortfallHealthPermille;
+
+        // Unstoppable and Unyielding (4e). Read at FightSession.RecordStatus,
+        // the application seam every status reaches. See CrowdControlGuard.
+        public readonly CrowdControlGuard CrowdControl = new CrowdControlGuard();
+
         // Always a real (possibly empty) list rather than nullable — unlike
         // Signature/BreakShield, which are each ONE mechanic a combatant
         // either has or does not, a combatant can pick up any number of

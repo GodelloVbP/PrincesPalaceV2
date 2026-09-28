@@ -397,12 +397,28 @@ namespace PrincesPalace.Domain.Combat
                 return false;
             }
 
-            if (actor.PrimaryPool == null || !actor.PrimaryPool.CanSpend(manaCost))
+            if (actor.PrimaryPool == null)
             {
                 return false;
             }
 
-            if (!HealthCost.CanPay(actor, healthCostPercent))
+            // BLOOD PRICE (plan 4d): a caster with ShortfallHealthPermille may
+            // cover what the pool lacks in health. The shortfall is 0 for
+            // everyone else, so for them this is exactly the old CanSpend
+            // refusal.
+            int shortfall = BloodPrice.ShortfallOf(actor, manaCost);
+            if (shortfall <= 0 && !actor.PrimaryPool.CanSpend(manaCost))
+            {
+                return false;
+            }
+
+            // EVERY HEALTH PAYMENT TOGETHER, against the one floor: the
+            // authored health cost and Blood Price's shortfall must leave at
+            // least 1 HP between them, or neither is paid. With no shortfall
+            // this is HealthCost.CanPay's own rule, unchanged.
+            int health = HealthCost.AmountFor(actor.MaxHealth, healthCostPercent)
+                         + BloodPrice.HealthFor(actor, shortfall);
+            if (health > 0 && actor.CurrentHealth - health < 1)
             {
                 return false;
             }

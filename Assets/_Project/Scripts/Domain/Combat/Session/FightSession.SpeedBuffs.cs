@@ -381,11 +381,21 @@ namespace PrincesPalace.Domain.Combat.Session
         // convention GrantSpeedMalusPercent itself returns, so a caller can
         // gate a message on "did this actually do anything" the same way
         // LuckyDeckSlow always could.
-        private int ApplyChilled(CombatantState target, int magnitude, int turns, CombatantState source)
+        private int ApplyChilled(CombatantState target, int magnitude, int turns, CombatantState source) =>
+            ApplyChilled(target, magnitude, turns, source, out _);
+
+        // `applied` is false when nothing went on -- no target, no magnitude,
+        // or the CC guard in RecordStatus refused it (plan 4e), in which case
+        // nothing changed and there is no speed to recompute.
+        private int ApplyChilled(CombatantState target, int magnitude, int turns, CombatantState source,
+            out bool applied)
         {
+            applied = false;
             if (target == null || magnitude <= 0) return 0;
 
-            RecordStatus(target, StatusEffectType.Chilled, magnitude, turns, source);
+            applied = RecordStatus(target, StatusEffectType.Chilled, magnitude, turns, source) != null;
+            if (!applied) return 0;
+
             return RefreshChilledSpeed(target);
         }
 
