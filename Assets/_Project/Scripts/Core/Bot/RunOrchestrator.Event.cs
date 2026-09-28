@@ -9,11 +9,11 @@ using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace
 {
-    // THE EVENT ROOM'S HALF OF THE RUN'S RULES (plan: event rooms, phase 2).
+    // THE EVENT ROOM'S HALF OF THE RUN'S RULES.
     //
     // Here and not in a controller for the shop's reason: the bot is the
     // second caller, and a second copy of "what picking a choice does" would
-    // be a second rulebook. The panel (phase 3) paints CurrentEvent() and
+    // be a second rulebook. The panel paints CurrentEvent() and
     // calls ChooseEventOption / LeaveEvent; the bot does the same.
     //
     // THE LIFECYCLE, and it is the shop's:
@@ -42,8 +42,8 @@ namespace PrincesPalace
     // opens; a `finish` effect marks it, wherever it applies.
     //
     // An empty pool is not an event: EnsureEvent answers false and ArriveAt
-    // falls through to RoomResolver.Resolve, which says the old "nothing
-    // built here" line and clears the room (contract 3).
+    // falls through to RoomResolver.Resolve, which says "nothing built
+    // here" and clears the room.
     //
     // CHOOSING HAS THE SHOP'S THREE-PART SHAPE (RunOrchestrator.Shop.cs):
     // every refusal is decided before anything moves, then the effects apply

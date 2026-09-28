@@ -493,12 +493,12 @@ namespace PrincesPalace
             // characters is still offered), and the shop card's own fact line
             // is what tells the player who it is for.
             //
-            // "KNOWS IT" NOW INCLUDES THE TRACK (progression v2 phase 4).
-            // Three book spells are handed over by a reward-track UnlockSkill
-            // node -- Cinderfault to Shawn at 20, Frost Flare and Lightning
-            // Bolt to Odette at 3 and 10 -- and before this the shelf only
-            // asked run.learnedSpells, so a squad who had collected all three
-            // could still be sold copies of them. That is the same dead card
+            // "KNOWS IT" INCLUDES THE TRACK. Three book spells are handed
+            // over by a reward-track UnlockSkill node -- Cinderfault to
+            // Shawn at 20, Frost Flare and Lightning Bolt to Odette at 3 and
+            // 10 -- so asking only run.learnedSpells would let a squad that
+            // collected all three still be sold copies of them. That is the
+            // same dead card
             // §2d already refuses for a book somebody bought: nothing on it
             // can be acted on. The two routes are asked together rather than
             // the track route being bolted on afterwards, because the

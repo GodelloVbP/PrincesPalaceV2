@@ -11,11 +11,10 @@ namespace PrincesPalace
 {
     // WHAT THE CHARACTER SHEET WOULD SAY, ASKED BY A BOT INSTEAD OF A PLAYER.
     //
-    // The bot used to descend in whatever it started in. Every batch before
-    // this one measured a character in starting gear -- so "how deep does
-    // GreedyAggressive get on Late" was answering a question about a level-60
-    // character wearing a level-1 loadout, which is not a configuration the
-    // game can produce and not a number worth reading.
+    // Measuring a bot in starting gear it never re-equips would answer "how
+    // deep does GreedyAggressive get on Late" with a question about a
+    // level-60 character wearing a level-1 loadout, which is not a
+    // configuration the game can produce and not a number worth reading.
     //
     // NO FORMULA IS REIMPLEMENTED HERE, which is the whole discipline of this
     // file. Every number below comes back from the same readers
