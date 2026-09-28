@@ -13,7 +13,7 @@ namespace PrincesPalace.Domain.Progression
     // "A STAT POINT" put the number in different places, so a caller building
     // the string would have to know which reward it was holding.
     //
-    // docs/archive/PLAN_REWARD_TRACKS.md §5's twelve captions. Two of them need a
+    // Twelve captions. Two of them need a
     // lookup this class cannot do itself -- a skill's display name and a
     // signature resource's -- so the content resolver bakes both onto the
     // entry (TrackEntry.SkillDisplayName / ResourceDisplayName) before this

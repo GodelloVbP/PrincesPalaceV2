@@ -78,8 +78,8 @@ namespace PrincesPalace.PlayModeTests
                 // and a fresh character's watermark is 0, which is below the
                 // first level any track pays. An implementer who reads the
                 // track off `level` instead of the watermark breaks this test
-                // and nothing else -- which is precisely why
-                // docs/archive/PLAN_REWARD_TRACKS.md §3k made it a stated invariant of
+                // and nothing else -- which is precisely why progression v2
+                // made it a stated invariant of
                 // P4 rather than an accident that happened to hold.
                 var fresh = new Character(definition.id);
 

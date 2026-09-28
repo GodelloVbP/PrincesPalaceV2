@@ -251,8 +251,8 @@ namespace PrincesPalace
         // 4K silently drops the player to 1280x720, which on a stepper they are
         // holding down is a nasty surprise; the ends of these lists are ends.
         //
-        // Public, like Refresh and RestoreDefaults beside it: T3 and T6
-        // (docs/archive/PLAN_BATTLE_SPEED.md) both step a row directly rather than
+        // Public, like Refresh and RestoreDefaults beside it: two battle-speed
+        // tests both step a row directly rather than
         // finding and clicking its Button, and PlayMode has no
         // InternalsVisibleTo grant to reach this at `internal`.
         public void Step(string key, int delta)

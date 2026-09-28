@@ -292,7 +292,7 @@ namespace PrincesPalace.Domain.Combat
         // Target depth, same plate click, same cancel. What does NOT carry
         // across is reach -- rank masks and the front-rank rule are about
         // fighting past a bodyguard, and nothing stands between a caster and
-        // his own squad (docs/handoffs/archive/battle_ui/README.md:230). See
+        // his own squad. See
         // FightSession.CanReachAlly.
         SingleAlly,
     }

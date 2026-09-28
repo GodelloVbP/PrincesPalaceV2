@@ -262,7 +262,7 @@ namespace PrincesPalace.PlayModeTests
             TolerateTheStalledTurnWatchdog();
 
             // THREE, one per squad member: the source of a second life is
-            // per-character (docs/archive/PLAN_REWARD_TRACKS.md §6) and LevelTheSquadTo
+            // per-character and LevelTheSquadTo
             // collects level 90 on every one of them. The spend stays
             // squad-wide, which is what the assertion below is about.
             Assert.AreEqual(SaveSlotManager.CurrentSave.ActiveSquad().Count, fight.Session.SecondLifeCharges,
@@ -367,7 +367,7 @@ namespace PrincesPalace.PlayModeTests
         // whatever N is, which is why level 200 and level 90 used to be
         // indistinguishable here.
         //
-        // THE CLAIM IS THE WHOLE OF IT since docs/archive/PLAN_REWARD_TRACKS.md P4:
+        // THE CLAIM IS THE WHOLE OF IT:
         // it hands over the stat points and moves claimedTrackLevel, and every
         // other term (max health, the second life, wool, elemental damage) is
         // summed live against that watermark at its own read site. So this

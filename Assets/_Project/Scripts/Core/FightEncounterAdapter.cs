@@ -725,7 +725,7 @@ namespace PrincesPalace
         {
             // PHASE 3: SpellCostDelta/SkillCostDelta/SkillFlatDelta applied
             // ONCE HERE, at kit-build time -- the same "the kit is built once
-            // per fight" seam docs/archive/PLAN_REWARD_TRACKS.md §3j already
+            // per fight" seam already
             // establishes for AvailableSkillsFor itself. Every later reader
             // of a kit skill (affordability, the charge, the HUD's cost
             // label) sees the same already-discounted ResolvedSkill, so

@@ -5,7 +5,7 @@ using PrincesPalace;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // T8, docs/archive/PLAN_BATTLE_SPEED.md, revision 3 point 1 demoted to exactly
+    // T8, revision 3 point 1 demoted to exactly
     // this: the shared PlayMode fight-loading helper and TestGlobals.ResetAll
     // both leave FightBeatPlayer.PlayerSpeedSource and .PlayerSpeedMultiplier
     // at the shipped default, independent of whatever a PREVIOUS fixture in

@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.Tests
     // THE "BEFORE" OF THE LAYERED-SPELL REWRITE, as numbers rather than as
     // pictures.
     //
-    // docs/archive/PLAN_SPELL_LAYERS.md M0 asks for a baseline capture of five spells
+    // The spell-layers plan asks for a baseline capture of five spells
     // so M3 can prove that routing every legacy block through the new
     // orchestration path changed nothing. Its pictures cannot be the pin:
     // tools/screenshots/ is gitignored, so a capture set is evidence a human

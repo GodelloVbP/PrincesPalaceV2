@@ -82,7 +82,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("Borderless Windowed", GameSettings.WindowModeLabels[GameSettings.WindowModeIndex]);
         }
 
-        // ---- BattleSpeed (T2, docs/archive/PLAN_BATTLE_SPEED.md) --------------------
+        // ---- BattleSpeed (T2) --------------------
 
         // The same PlayerPrefs key GameSettings.cs declares privately -- there
         // is no public accessor for it, and this is the one place outside

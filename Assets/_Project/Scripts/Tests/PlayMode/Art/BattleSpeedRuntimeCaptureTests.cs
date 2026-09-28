@@ -16,7 +16,7 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // G5, docs/archive/PLAN_BATTLE_SPEED.md (mandatory): playable evidence that "1x"
+    // G5 (mandatory): playable evidence that "1x"
     // answers "fights read as too fast" -- a plain melee beat and a real
     // Water (prismatic_orb) cast at the three most legible rows on the table
     // (0.5x, 1x, 2x -- skipping 1.5x, today's relabelled pace, since the

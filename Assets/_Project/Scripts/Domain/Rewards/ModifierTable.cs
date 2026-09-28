@@ -191,7 +191,7 @@ namespace PrincesPalace.Domain.Rewards
         {
             ModifierEffectType.ElementalDamageOnHitPercent,
             // Never actually authored via modifiers.json -- only the reward
-            // track appends it (see docs/archive/PLAN_REWARD_TRACKS.md P4), so
+            // track appends it, so
             // IsOffensiveModifier is never called on it in production today.
             // Classified anyway so the vocabulary stays honest if a future
             // modifier ever wants the same combat hook, and because

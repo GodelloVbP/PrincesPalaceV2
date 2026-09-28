@@ -297,7 +297,7 @@ namespace PrincesPalace.PlayModeTests
         // the exact failure AUDIT #53 records: a reward that is granted,
         // stored and read by nothing.
         //
-        // EVERY LITERAL HERE IS READ OFF docs/archive/PLAN_REWARD_TRACKS.md section 5's
+        // EVERY LITERAL HERE IS READ OFF the reward-track design's
         // tables, never recomputed from the definition under test (CLAUDE.md's
         // fifth gotcha). A retune in reward_tracks.json moves these numbers
         // and these tests together, which is the honest trade for pinning

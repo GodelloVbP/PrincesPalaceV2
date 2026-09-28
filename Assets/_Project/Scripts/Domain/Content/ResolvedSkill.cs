@@ -602,7 +602,7 @@ namespace PrincesPalace.Domain.Content
         // Empty for every element that has not been drawn yet. When it carries
         // a path, ResolvedSkill.AsElement puts it in place of the skill's own
         // -- which is what makes four sheets a content edit rather than a
-        // chain change (docs/archive/PLAN_PRISMATIC_ORB.md, draw policy).
+        // chain change (draw policy).
         public SpellPresentation Vfx = new SpellPresentation();
 
         // For the serialiser only.

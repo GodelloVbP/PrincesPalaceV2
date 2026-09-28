@@ -786,8 +786,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // only on an unreached node, because a tint over gold is tarnish.
             //
             // UNTINTED at build time. Which reward kind (and so which hue) a
-            // level holds is per-character now (docs/archive/PLAN_REWARD_TRACKS.md
-            // §1, §8) -- this tree is shared by every save and every selected
+            // level holds is per-character now -- this tree is shared by every save and every selected
             // character, so there is no kind to tint against yet. The
             // controller writes the real tint every Refresh
             // (RewardTrackController.PaintNode); what is baked here is only

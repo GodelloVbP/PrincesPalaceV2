@@ -113,8 +113,8 @@ namespace PrincesPalace
 
         // WHICH CHARACTER this panel is showing. Set by ShowFor, called by
         // CharacterDossierController.ShowTrack() before this panel's own
-        // SetActive(true) -- so OnEnable's first Refresh already has it
-        // (docs/archive/PLAN_REWARD_TRACKS.md §8). Never resolved to a Character and
+        // SetActive(true) -- so OnEnable's first Refresh already has it.
+        // Never resolved to a Character and
         // held: the save can be replaced by a slot load while this panel is
         // open, so every Refresh re-resolves the id fresh rather than trusting
         // a reference that might now point at nothing.
@@ -176,7 +176,7 @@ namespace PrincesPalace
         // Which character this panel shows, next time it opens. Stores only
         // the id -- CharacterDossierController.ShowTrack() calls this BEFORE
         // SetActive(true), so OnEnable's first Refresh already has it
-        // (docs/archive/PLAN_REWARD_TRACKS.md §8) -- and Refresh is what resolves it
+        // -- and Refresh is what resolves it
         // against the save, every time, rather than this holding a Character
         // reference that a slot load could leave pointing at nothing.
         public void ShowFor(string characterId) => _characterId = characterId;
@@ -287,8 +287,8 @@ namespace PrincesPalace
             _painted = true;
 
             // ONE CHARACTER, resolved once and read for everything below --
-            // the level, the watermark, and which reward sits at which level
-            // (docs/archive/PLAN_REWARD_TRACKS.md §8). ResolveCharacter and Claim()'s
+            // the level, the watermark, and which reward sits at which level.
+            // ResolveCharacter and Claim()'s
             // own resolve (RewardTrackController.Input.cs) have to agree on
             // who that is, or a claim could pay one character while this
             // screen goes on showing another's watermark as unpaid.
@@ -410,7 +410,7 @@ namespace PrincesPalace
             //
             // THE SPRITE ITSELF is written here too, from the SELECTED
             // CHARACTER's own resolved entry -- markByReward, subscripted by
-            // kind rather than by level (docs/archive/PLAN_REWARD_TRACKS.md §1). The
+            // kind rather than by level. The
             // tree bakes a neutral ring in every one of these slots because
             // which kind belongs here was not known at build time; a miss
             // (an unmapped kind, or a still-loading array) leaves that ring

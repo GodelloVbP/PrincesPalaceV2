@@ -22,8 +22,8 @@ namespace PrincesPalace.PlayModeTests
         private float _savedBattleSpeed;
 
         // BattleSpeed is the one GameSettings value on this pane with a
-        // production-timing consequence once FightBootstrap.Start reads it
-        // (docs/archive/PLAN_BATTLE_SPEED.md) -- every OTHER row this file pokes
+        // production-timing consequence once FightBootstrap.Start reads it --
+        // every OTHER row this file pokes
         // (sound, fps, window, resolution) is inert outside a real device, so
         // this is the first setting here that actually needs the capture/
         // restore pattern GameSettingsTests already established, rather than
@@ -98,7 +98,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, GameSettings.ResolutionIndex,
                 "stepping below the smallest resolution wrapped to the largest");
 
-            // T3, docs/archive/PLAN_BATTLE_SPEED.md: the battle-speed row is a
+            // T3: the battle-speed row is a
             // stepper too, so it must clamp at both ends the same way.
             GameSettings.SetBattleSpeed(BattleSpeed.Rows[BattleSpeed.Rows.Count - 1].Display);
             _options.Step("battlespeed", +1);

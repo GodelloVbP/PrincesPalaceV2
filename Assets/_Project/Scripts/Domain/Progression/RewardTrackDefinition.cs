@@ -10,8 +10,7 @@ namespace PrincesPalace.Domain.Progression
     //
     // RewardTrack.cs keeps only the parts of a track that do NOT vary by
     // character -- the shared cadence, the state arithmetic; this class
-    // holds the part that does, which reward sits at which level. See
-    // docs/archive/PLAN_REWARD_TRACKS.md §3 for the fuller rationale for the split.
+    // holds the part that does, which reward sits at which level.
     //
     // AUTHORED, NOT DERIVED, since progression v2 phase 4. A track used to
     // be DESCRIBED -- ten milestones plus a "filler mix" of (reward,
@@ -194,7 +193,7 @@ namespace PrincesPalace.Domain.Progression
         // watermark semantics the static table used. THE ONE GRANT IS
         // StatPoint (RewardTrack.IsGrant), so this is 0 for every other kind;
         // everything else is read through CollectedTotal instead, at its own
-        // site, per docs/archive/PLAN_REWARD_TRACKS.md §2.
+        // site.
         public int GrantedBetween(TrackReward reward, int afterLevel, int throughLevel)
         {
             if (!RewardTrack.IsGrant(reward)) return 0;

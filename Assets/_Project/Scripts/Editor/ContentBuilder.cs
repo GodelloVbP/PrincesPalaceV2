@@ -162,8 +162,7 @@ public static class ContentBuilder
 
             // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
             // track's rules 4/5 and its UnlockSkill/signature captions are
-            // validated against what those two already resolved -- see
-            // docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point table. Pools too,
+            // validated against what those two already resolved. Pools too,
             // now: rule 6 (FuryStartOfFight) needs the owner's primary pool
             // StartRule, the same fact PoolOwnership.ZeroStartOwners above
             // already reads off `pools`.

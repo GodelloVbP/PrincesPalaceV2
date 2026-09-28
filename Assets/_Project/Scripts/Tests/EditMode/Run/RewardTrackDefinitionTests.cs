@@ -6,7 +6,6 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.Domain.Tests
 {
     // RewardTrackDefinition: a reward track materialised for one character.
-    // docs/archive/PLAN_REWARD_TRACKS.md P3.
     public class RewardTrackDefinitionTests
     {
         // THE DEFAULT TABLE'S TWO TOTALS: 13 Choice nodes at 4 stat points
@@ -65,7 +64,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // A landmark the screen draws large with nothing on it is the failure
-        // this stops -- docs/archive/PLAN_REWARD_TRACKS.md §4's first validation rule,
+        // this stops -- the first validation rule,
         // checked here against the generated default rather than left only to
         // the content resolver's authored-track validation (P2).
         [Test]
@@ -105,7 +104,7 @@ namespace PrincesPalace.Domain.Tests
         // What has not been reached yet is not collected. SecondLife is the
         // one kind on the default track that can only ever appear at its
         // single milestone (level 25 since progression v2 phase 2 repointed
-        // the cadence; it was 90) -- rule 3 in docs/archive/PLAN_REWARD_TRACKS.md §4
+        // the cadence; it was 90) -- rule 3
         // refuses a one-shot capability as filler, so unlike MaxHealth (which
         // also lands as filler well before level 10) there is no earlier
         // entry that could make this pass by accident.

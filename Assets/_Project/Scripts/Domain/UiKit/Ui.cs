@@ -277,7 +277,7 @@ namespace PrincesPalace.Domain.UiKit
         //
         // WAS a themed 2:1 Container until the owner called every kit frame
         // inside the system menu ugly and asked for the bare violet pane the
-        // design pass (docs/handoffs/archive/system_menu/README.md) actually
+        // design pass actually
         // specified (2026-09-07). Exits, Options, Party, Run statistics and
         // Reward track each built the container by hand (a Container call, a
         // ContainerContent call, then `screen.Root = ground`) with the same

@@ -402,7 +402,7 @@ namespace PrincesPalace
         // three copies of a rule is how one of them gets left behind.
         //
         // THEIR OWN TRACK, AND THE WATERMARK, not the shared table and not
-        // `level`. Both halves changed with docs/archive/PLAN_REWARD_TRACKS.md: the
+        // `level`. Both halves changed with progression v2: the
         // track is per-character now, and every reward on it is COLLECTED
         // rather than merely reached -- so a character at level 40 who has
         // never opened the reward screen has not got a respec yet, and the

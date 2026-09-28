@@ -16,7 +16,7 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // T4 and T5, docs/archive/PLAN_BATTLE_SPEED.md: a live cast's cue fires exactly
+    // T4 and T5: a live cast's cue fires exactly
     // once at every pace on the table, and an OLDER cast keeps ageing on the
     // pace it was born at when a later cast begins at a different one.
     //

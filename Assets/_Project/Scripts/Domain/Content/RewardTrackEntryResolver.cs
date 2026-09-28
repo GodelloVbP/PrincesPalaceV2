@@ -11,9 +11,8 @@ namespace PrincesPalace.Domain.Content
     // ContentBuilder.BuildRewardTracks from the characters and skills it has
     // already resolved earlier in the same build (BuildCharacters runs
     // before BuildSkills, both before BuildRewardTracks), so this resolver
-    // never reads characters.json or skills.json itself. See
-    // docs/archive/PLAN_REWARD_TRACKS.md §4, "the two display names the captions
-    // need" and validation rules 4-5.
+    // never reads characters.json or skills.json itself -- the two display
+    // names the captions need, and validation rules 4-5.
     //
     // A character absent from this map (an unknown characterId, or a test
     // that passes none at all) resolves against a blank context -- no
@@ -70,7 +69,7 @@ namespace PrincesPalace.Domain.Content
         // with "LEARN {S}".
         //
         // THE WHOLE CATALOGUE, NOT THIS CHARACTER'S OWN KIT, and that is the
-        // rule rather than a convenience (docs/archive/PLAN_REWARD_TRACKS.md §3f/§3h).
+        // rule rather than a convenience.
         // Every book-only spell in the game is authored characterId "sheep"
         // because Shawn is who they were drafted for, so an ownership test
         // here would refuse Odette's own level-10 Frost Flare. The check this
@@ -169,7 +168,7 @@ namespace PrincesPalace.Domain.Content
     // shape RelicEntryResolver uses for a second, cross-catalogue argument
     // -- here a per-character lookup rather than a flat id set, because the
     // signature-resource rule depends on which character the track belongs
-    // to. See docs/archive/PLAN_REWARD_TRACKS.md §4, "the validation rules".
+    // to. See the validation rules below.
     //
     // FIVE RULES: four (down from five at Phase 4, then up one for the P3
     // fury addendum), plus rule 7 from AUDIT #145 B9 -- MaxMana/ManaRegen

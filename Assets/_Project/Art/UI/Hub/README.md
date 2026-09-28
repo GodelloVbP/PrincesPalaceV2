@@ -53,6 +53,6 @@ the framing is what keeps the buildings' apparent sizes consistent with each
 other.
 
 Current delivery sizes (2× the on-screen size, so they stay sharp at 4K) live
-in `DELIVERY_SIZE` at the top of the keyer. See `docs/archive/2026-08-01_HUB_DESIGN_BRIEF.md` at the
-repo root for the composition, the exact positions, and the rules any building
-added later has to follow.
+in `DELIVERY_SIZE` at the top of the keyer. The composition, the exact
+positions, and the rules any building added later has to follow were
+established at the original design brief.

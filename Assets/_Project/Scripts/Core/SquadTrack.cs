@@ -8,8 +8,8 @@ namespace PrincesPalace
     // A run-scoped question asked of a per-character track has to resolve to
     // ONE number somehow, and this is THE SUM OVER THE FIELDED SQUAD, for a
     // reward that is each character's own and merely spent out of a shared
-    // pot -- SecondLivesLeft's own comment argues it, and
-    // docs/archive/PLAN_REWARD_TRACKS.md §6 is where it was settled.
+    // pot -- SecondLivesLeft's own comment argues it, and that is where it
+    // was settled.
     //
     // NOT "highest in the squad" -- that rule belongs beside a run-scoped
     // reward the whole squad shares equally regardless of who earned it
@@ -21,8 +21,7 @@ namespace PrincesPalace
     {
         // How many second lives this descent has left.
         //
-        // THE SOURCE IS PER-CHARACTER AND THE SPEND IS SQUAD-WIDE, and
-        // docs/archive/PLAN_REWARD_TRACKS.md §6 is where that split was argued. A
+        // THE SOURCE IS PER-CHARACTER AND THE SPEND IS SQUAD-WIDE. A
         // squad of three who have each collected level 90 brings three
         // charges; a member who has collected none contributes none. Summing
         // is right here, unlike a run-scoped reward the whole squad shares

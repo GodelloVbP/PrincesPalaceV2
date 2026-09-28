@@ -194,9 +194,9 @@ Build detail, formulas and the engine-side plan: `docs/PLAN_SHOP.md`.
 - `docs/handoffs/shop/reference_screenshot.png` — the v1 hub store. Use it for
   the *plate* language (gold-rimmed rows, cost right-aligned) and for nothing
   else; its layout and its currency model are both wrong for this screen.
-- `docs/handoffs/archive/relic_screen/reference_screenshot.png` — the relic screen.
-  This is the closer anchor: card row, state-driven accent colour, the
-  gold-rim-on-dark treatment, and the paging behaviour the relic section needs.
+- The relic screen is the closer anchor: card row, state-driven accent colour,
+  the gold-rim-on-dark treatment, and the paging behaviour the relic section
+  needs.
 
 **Live v2 renders were not produced, deliberately.** `tools/screenshot.ps1`
 can only target panels registered in `ScreenRegistry.All`, which is five —

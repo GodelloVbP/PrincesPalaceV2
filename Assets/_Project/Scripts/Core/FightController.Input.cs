@@ -946,7 +946,7 @@ namespace PrincesPalace
             //
             // Rank masks and the front-rank rule are about fighting PAST
             // somebody and nothing stands between a caster and his own squad
-            // (docs/handoffs/archive/battle_ui/README.md:230). What DOES gate
+            // him. What DOES gate
             // the click is whether this effect accepts this squadmate, and
             // that is EligibleAllies -- the same list the plates were lit
             // from, asked again here for the same reason the enemy branch
@@ -1520,7 +1520,7 @@ namespace PrincesPalace
             }
         }
 
-        // docs/archive/PLAN_BATTLE_SPEED.md G5: the one door onto the visible bark
+        // The one door onto the visible bark
         // feed a PlayMode test can reach -- PlayMode has no InternalsVisibleTo
         // grant, same reason every other *ForTest method on this controller
         // exists. Used to burn the preset's name into the runtime capture's

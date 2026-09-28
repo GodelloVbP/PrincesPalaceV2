@@ -78,8 +78,7 @@ namespace PrincesPalace.Domain.Tests
 
         // The design stated the ORIGINAL three/five-tab numbers outright, so
         // those were pinned as literals rather than recomputed. Party has no
-        // such design table (docs/handoffs/archive/party_screen has none for the bar
-        // itself) -- adding a fourth out-of-run tab is what pushed this row
+        // such design table for the bar itself -- adding a fourth out-of-run tab is what pushed this row
         // out of Mode A (three tabs or fewer) into Mode B, a real behaviour
         // change the arithmetic is built to absorb, not a bug. These literals
         // are hand-derived from SystemMenuLayout's own published formula

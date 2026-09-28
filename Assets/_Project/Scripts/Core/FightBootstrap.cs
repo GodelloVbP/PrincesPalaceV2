@@ -323,7 +323,7 @@ namespace PrincesPalace
             built.Session.Begin();
 
             // THE ONE PRODUCTION WRITER of FightBeatPlayer.PlayerSpeedSource
-            // (docs/archive/PLAN_BATTLE_SPEED.md contract 10) -- before Bind, so the
+            // -- before Bind, so the
             // opening glide and the first beat both read the player's chosen
             // preset rather than the static default. Read lazily inside the
             // closure, not captured as a value here: GameSettings.BattleSpeed

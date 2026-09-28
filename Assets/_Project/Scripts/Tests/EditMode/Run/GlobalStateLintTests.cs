@@ -58,7 +58,7 @@ namespace PrincesPalace.Domain.Tests
                 @"PlayerSpeedSource\s*=\s*\(\s*\)\s*=>\s*1f"),
 
             // The adopted factor has no direct assignment a test could write
-            // (docs/archive/PLAN_BATTLE_SPEED.md contract 10 -- AdoptPlayerSpeed is
+            // (AdoptPlayerSpeed is
             // the only writer), so the WRITE this watches is the call that
             // pushes a just-changed source into it. The restore it demands
             // is the sanctioned one: TestGlobals.ResetAll, which re-pins the

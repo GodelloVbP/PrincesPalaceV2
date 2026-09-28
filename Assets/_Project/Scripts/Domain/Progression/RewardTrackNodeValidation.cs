@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.Progression
     // RewardTrackDefinition -- no ContentDatabase, no character catalogue --
     // so it needs no per-track selector like RewardTrackEntryResolver's
     // rules 4/5 and is safe to call from BOTH the resolver (content-build
-    // time, docs/archive/PLAN_REWARD_TRACKS.md's established "mirrored" pattern) and
+    // time, the established "mirrored" pattern) and
     // ContentDatabase.Validation (load time, for a hand-authored asset that
     // never passed through the resolver) as the SAME function rather than a
     // restated copy -- one implementation, two call sites, per CODE_STANDARDS

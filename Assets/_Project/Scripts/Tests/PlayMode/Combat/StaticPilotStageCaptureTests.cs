@@ -22,7 +22,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // ONE BEAT OF ONE MONSTER'S PLAIN SWING, PHOTOGRAPHED AT NORMAL SPEED.
     //
-    // The static-combat pilot (docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md, "Recommended
+    // The static-combat pilot ("Recommended
     // pilot") asks a question no existing fixture answers: does an ordinary
     // melee blow by a still-art creature READ as a blow at the speed a player
     // actually sees it? Every other capture in this suite is a single still
@@ -106,7 +106,7 @@ namespace PrincesPalace.PlayModeTests
         // fight test in this suite sets a multiplier in its own [SetUp], and a
         // leaked 60x would silently turn this capture into four frames.
         //
-        // docs/archive/PLAN_BATTLE_SPEED.md G3: BeatSpeedMultiplier == 1 no longer
+        // BeatSpeedMultiplier == 1 no longer
         // guarantees Pace == 1 by itself -- FightBootstrap can install a
         // settings-backed PlayerSpeedMultiplier on top of it -- so both are
         // pinned now.

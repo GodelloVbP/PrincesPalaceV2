@@ -175,8 +175,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // NO REACH ARGUMENT, and that is the rule rather than an omission:
         // a rank mask and the front-rank rule are both about fighting PAST
         // somebody, and nothing on the caster's own side is in the way of
-        // his own squad (docs/handoffs/archive/battle_ui/README.md:230 --
-        // "no unreachable state exists for allies"). A skill that authored
+        // his own squad --
+        // "no unreachable state exists for allies". A skill that authored
         // reachSlots or meleeReach is refused at content-build time for any
         // targeting but SingleEnemy, so there is no authored mask here for
         // this to be quietly ignoring.

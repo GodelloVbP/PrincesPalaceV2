@@ -1,7 +1,7 @@
 """Cut a green screen off generated art and emit game-ready sprites.
 
 The Hub buildings (and now the Relic icons and Talent Tree kit) are generated
-on flat green (see docs/archive/2026-08-01_HUB_ART_PROMPTS.md) rather than on transparency, because
+on flat green rather than on transparency, because
 image generators are unreliable at real alpha and the obvious alternative --
 keying alpha from BRIGHTNESS, which is how the spell frames are cut -- is
 actively wrong for painted objects with dark shadow or a deliberately dark
@@ -174,8 +174,7 @@ KITS = [
         "default_delivery_size": None,
     },
     {
-        # Status-effect badge glyphs (docs/archive/PLAN_STATUS_EFFECT_UI.md, package
-        # D). Painted objects on flat green like every other kit here, keyed
+        # Status-effect badge glyphs. Painted objects on flat green like every other kit here, keyed
         # on hue-dominance -- these are small icons with genuine dark detail
         # (outlines, shadowed folds) that brightness-keying would eat.
         # Unlike the other direct-mode kits, this one DOES resize: the output

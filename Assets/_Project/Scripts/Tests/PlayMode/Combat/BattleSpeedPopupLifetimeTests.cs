@@ -14,7 +14,7 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // T7, docs/archive/PLAN_BATTLE_SPEED.md: a popup's whole life is
+    // T7: a popup's whole life is
     // FightBeatPlayer.Scaled(0.85s) of GAME time from its own activation,
     // for a hit and for a miss, at player 1/3 and 4/3 -- plus a pause inside
     // that window not counting against it, and Flush reclaiming one early.

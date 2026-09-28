@@ -85,7 +85,7 @@ namespace PrincesPalace.PlayModeTests
         {
             FightBeatPlayer.BeatSpeedMultiplier = 8f;
 
-            // docs/archive/PLAN_BATTLE_SPEED.md G3: this fixture waits a FIXED
+            // This fixture waits a FIXED
             // WaitForSecondsRealtime(1.2f) for the stage to settle at 8x --
             // margin calibrated against Pace == 8 exactly. Left unpinned,
             // FightBootstrap would install the settings-backed source and

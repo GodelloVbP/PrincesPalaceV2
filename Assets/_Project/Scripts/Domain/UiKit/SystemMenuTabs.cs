@@ -26,8 +26,7 @@ namespace PrincesPalace.Domain.UiKit
         CharacterInventory,
 
         // NOT RunOnly, unlike FloorMap/RunStats -- Party is meaningful in all
-        // three of its own modes (Camp/Run/ViewOnly, see
-        // docs/handoffs/archive/party_screen/DECISIONS.md), and Camp IS the
+        // three of its own modes (Camp/Run/ViewOnly), and Camp IS the
         // out-of-run context. Placed here, right after CharacterInventory and
         // before the run-only pair, so its relative order survives the
         // Visible(inRun) filter unchanged in both sets.

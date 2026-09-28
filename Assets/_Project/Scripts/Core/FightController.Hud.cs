@@ -2324,7 +2324,7 @@ namespace PrincesPalace
         // (`Frame.enabled = false`), which is what made it read as loose
         // text floating beside the real badges instead of a badge itself.
         // ChipNeutral is FightHudPalette.TextSecondary: the archived
-        // battle_ui spec (docs/handoffs/archive/battle_ui/README.md) named
+        // battle UI spec named
         // this exact chip "neutral violet border, no category colour", and
         // TextSecondary (#BFB0D4) is the one token in this palette that
         // already reads as a muted violet-grey rather than a hue with its

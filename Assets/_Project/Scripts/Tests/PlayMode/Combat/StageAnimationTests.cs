@@ -40,7 +40,7 @@ namespace PrincesPalace.PlayModeTests
             // out.
             FightController.BreathSpeedMultiplier = 60f;
 
-            // docs/archive/PLAN_BATTLE_SPEED.md G3: AFastMoveLeavesAnAfterimageAnd
+            // AFastMoveLeavesAnAfterimageAnd
             // ASlowOneDoesNot below runs at the REAL BeatSpeedMultiplier (1)
             // on purpose and waits a fixed WaitForSeconds(0.3f) for the
             // trail to settle -- pinned here, once, since nothing un-pins it

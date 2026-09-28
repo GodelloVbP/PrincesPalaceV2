@@ -9,7 +9,7 @@ using PrincesPalace.Domain.UiKit.Screens;
 namespace PrincesPalace.Domain.Tests
 {
     // P5's own art check, over the two per-TrackReward lookups ScreenRegistry
-    // sizes and binds (docs/archive/PLAN_REWARD_TRACKS.md P5): markByReward (the
+    // sizes and binds: markByReward (the
     // rail's mark, RewardTrackLayout.IconFor) and cardArtByReward (the focus
     // card's medallion, RewardTrackLayout.CardArtKeyFor).
     //

@@ -123,8 +123,7 @@ namespace PrincesPalace
         // rule about ordering.
         public static float BeatSpeedMultiplier = 1f;
 
-        // THE PLAYER-FACING HALF OF THE PRODUCT (docs/archive/PLAN_BATTLE_SPEED.md
-        // contract 10). Never written directly -- AdoptPlayerSpeed, below,
+        // THE PLAYER-FACING HALF OF THE PRODUCT. Never written directly -- AdoptPlayerSpeed, below,
         // is the only writer, so nothing outside it can leave this
         // disagreeing with what PlayerSpeedSource would currently say.
         public static float PlayerSpeedMultiplier { get; private set; } = 1f;

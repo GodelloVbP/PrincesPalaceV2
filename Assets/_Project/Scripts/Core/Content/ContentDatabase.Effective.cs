@@ -284,8 +284,7 @@ namespace PrincesPalace.Content
             }
 
             // The reward track's three signature terms, beside the talent ones
-            // and summed the same way -- docs/archive/PLAN_REWARD_TRACKS.md §2's
-            // read-site table. Every kind ACCUMULATES: an authored capacity
+            // and summed the same way. Every kind ACCUMULATES: an authored capacity
             // step is written "+5", never "15", so there is one summation rule
             // and no pair of kinds where getting it the wrong way round is
             // silent.
