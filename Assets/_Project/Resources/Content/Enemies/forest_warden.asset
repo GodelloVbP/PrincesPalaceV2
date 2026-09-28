@@ -42,6 +42,7 @@ MonoBehaviour:
       Weight: 2
     - SkillId: grapple
       Weight: 2
+    Schedule: []
     AttackWeight: 0
     SkillName: 
     SkillPower: 1.5

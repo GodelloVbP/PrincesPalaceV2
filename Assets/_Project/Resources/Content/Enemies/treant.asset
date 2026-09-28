@@ -40,6 +40,7 @@ MonoBehaviour:
       Weight: 3
     - SkillId: spore_cloud
       Weight: 2
+    Schedule: []
     AttackWeight: 2
     SkillName: 
     SkillPower: 1.5

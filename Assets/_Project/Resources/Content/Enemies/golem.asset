@@ -38,6 +38,7 @@ MonoBehaviour:
     Abilities:
     - SkillId: boulder_slam
       Weight: 1
+    Schedule: []
     AttackWeight: 0
     SkillName: 
     SkillPower: 1.5

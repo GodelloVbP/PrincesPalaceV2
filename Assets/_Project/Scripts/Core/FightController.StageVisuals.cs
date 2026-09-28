@@ -530,7 +530,11 @@ namespace PrincesPalace
                 var icon = enemyIntentIcons[i];
                 if (icon == null) continue;
 
-                _intentGlyphs[i] = icon.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true);
+                // BY NAME: the badge now also holds its number and callout
+                // (enemyIntentValues/Callouts), so "the first TMP under it" is
+                // no longer the caption. The emitter names that "<name>Label".
+                _intentGlyphs[i] = icon.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true)
+                    .FirstOrDefault(t => t.name == icon.name + "Label");
                 _intentImages[i] = icon.GetComponent<Image>();
 
                 var hover = icon.GetComponent<HoverIndex>();
@@ -592,6 +596,46 @@ namespace PrincesPalace
                     _intentGlyphs[i].SetContent(art == null
                         ? Domain.Combat.Session.EnemyIntentIcons.For(kind)
                         : "");
+                }
+
+                PaintIntentReading(i, enemy, intent.Value);
+            }
+        }
+
+        // THE NUMBER, THE LETHAL STYLE AND THE CALLOUT (PLAN_BELLWETHER_KIT
+        // 3.8), all read off the LIVE intent, so a Move or a free Palace
+        // Passage re-reads them on the next refresh without the monster
+        // choosing again. Lethal tints the icon and its number alike.
+        private void PaintIntentReading(int i, CombatantState enemy, EnemyIntent intent)
+        {
+            bool lethal = intent.IsLethal;
+            if (lethal && _intentImages != null && _intentImages[i] != null)
+            {
+                _intentImages[i].color = Hex(Domain.UiKit.FightHudPalette.IntentLethal);
+            }
+
+            var value = enemyIntentValues != null && i < enemyIntentValues.Length ? enemyIntentValues[i] : null;
+            if (value != null)
+            {
+                bool shows = !intent.Heals && intent.ExpectedDamage > 0;
+                value.gameObject.SetActive(shows);
+                if (shows)
+                {
+                    value.SetContent(intent.ExpectedDamage.ToString());
+                    value.color = Hex(lethal ? Domain.UiKit.FightHudPalette.IntentLethal : Domain.UiKit.FightHudPalette.IntentNumber);
+                }
+            }
+
+            var callout = enemyIntentCallouts != null && i < enemyIntentCallouts.Length ? enemyIntentCallouts[i] : null;
+            if (callout != null)
+            {
+                bool telegraphs = intent.Then != null || intent.DamageBySeat != null;
+                string line = telegraphs ? _session.TelegraphLine(enemy) : "";
+                callout.gameObject.SetActive(line.Length > 0);
+                if (line.Length > 0)
+                {
+                    callout.SetContent(line);
+                    callout.color = Hex(lethal ? Domain.UiKit.FightHudPalette.IntentLethal : Domain.UiKit.FightHudPalette.IntentNumber);
                 }
             }
         }

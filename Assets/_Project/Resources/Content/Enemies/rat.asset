@@ -36,6 +36,7 @@ MonoBehaviour:
     RallyMaxStacks: 0
     SpritePath: Enemies/rat
     Abilities: []
+    Schedule: []
     AttackWeight: 1
     SkillName: 
     SkillPower: 1.5

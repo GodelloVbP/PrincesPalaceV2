@@ -314,6 +314,8 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!TryResolveSchedule(raw, label, abilities, out var schedule, out error)) return false;
+
             var baseStats = new StatBlock(raw.maxHealth, speed, attack,
                 physicalDefense: physicalDefense, magicalDefense: magicalDefense);
             resolvedEnemy = new ResolvedEnemy(raw.id, raw.displayName, baseStats, expReward, currencyReward, raw.isBoss,
@@ -333,7 +335,104 @@ namespace PrincesPalace.Domain.Content
                 Rollable = raw.rollable,
                 RallyAttackPercentPerStack = rally.attackPercentPerStack,
                 RallyMaxStacks = rally.maxStacks,
+                Schedule = schedule,
             };
+            error = null;
+            return true;
+        }
+
+        // THE SCHEDULE (PLAN_BELLWETHER_KIT 3.7), refused wherever it would be
+        // read by nothing or read two ways. A skill id must also be in
+        // `abilities`: that is where the session finds the skill (the kit's
+        // pool), and CatalogueCrossChecks already refuses an ability id no
+        // skill matches, so an unknown id is caught by one of the two.
+        // Overlap is checked in acting-turn space, where it is exact: a
+        // sequence starting on turn t holds turns t .. t+length-1, because a
+        // turn that does not resolve is not counted.
+        private static bool TryResolveSchedule(RawEnemyEntry raw, string label,
+            IReadOnlyList<EnemyAbilityRef> abilities, out EnemyScheduleEntry[] schedule, out string error)
+        {
+            schedule = Array.Empty<EnemyScheduleEntry>();
+            var entries = raw.schedule ?? Array.Empty<RawEnemyScheduleEntry>();
+            if (entries.Length == 0)
+            {
+                error = null;
+                return true;
+            }
+
+            var known = new HashSet<string>(abilities.Select(a => a.SkillId));
+            var held = new List<(int From, int To, int Entry)>();
+            var resolved = new EnemyScheduleEntry[entries.Length];
+
+            for (int i = 0; i < entries.Length; i++)
+            {
+                var entry = entries[i];
+                var turns = entry?.onTurns ?? Array.Empty<int>();
+                var skills = entry?.skills ?? Array.Empty<string>();
+
+                if (turns.Length == 0)
+                {
+                    error = $"{label}: schedule[{i}] has no onTurns, so it never starts.";
+                    return false;
+                }
+
+                if (skills.Length == 0)
+                {
+                    error = $"{label}: schedule[{i}] has no skills, so it plays nothing.";
+                    return false;
+                }
+
+                for (int s = 0; s < skills.Length; s++)
+                {
+                    string id = (skills[s] ?? "").Trim();
+                    if (id.Length == 0)
+                    {
+                        error = $"{label}: schedule[{i}].skills[{s}] is blank.";
+                        return false;
+                    }
+
+                    if (!known.Contains(id))
+                    {
+                        error = $"{label}: schedule[{i}] plays '{id}', which is not in this monster's abilities -- " +
+                                "list it there (weight 0 keeps it out of the draw).";
+                        return false;
+                    }
+                }
+
+                var seen = new HashSet<int>();
+                foreach (int turn in turns)
+                {
+                    if (turn < 1)
+                    {
+                        error = $"{label}: schedule[{i}] starts on acting turn {turn}; the first acting turn is 1.";
+                        return false;
+                    }
+
+                    if (!seen.Add(turn))
+                    {
+                        error = $"{label}: schedule[{i}] lists acting turn {turn} twice.";
+                        return false;
+                    }
+
+                    int to = turn + skills.Length - 1;
+                    foreach (var other in held)
+                    {
+                        if (turn <= other.To && other.From <= to)
+                        {
+                            error = $"{label}: schedule[{i}] starting on acting turn {turn} holds turns {turn}-{to}, " +
+                                    $"which overlaps schedule[{other.Entry}]'s turns {other.From}-{other.To}; " +
+                                    "a sequence is never split, so two cannot share a turn.";
+                            return false;
+                        }
+                    }
+
+                    held.Add((turn, to, i));
+                }
+
+                resolved[i] = new EnemyScheduleEntry(turns, skills);
+            }
+
+            schedule = resolved;
             error = null;
             return true;
         }

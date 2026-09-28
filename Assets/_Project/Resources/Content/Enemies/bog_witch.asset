@@ -38,6 +38,7 @@ MonoBehaviour:
     Abilities:
     - SkillId: bog_mud_burst
       Weight: 2
+    Schedule: []
     AttackWeight: 3
     SkillName: 
     SkillPower: 1.5

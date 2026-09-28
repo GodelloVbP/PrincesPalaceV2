@@ -25,6 +25,29 @@ namespace PrincesPalace.Domain.Content
         }
     }
 
+    // One scheduled sequence (RawEnemyScheduleEntry), validated: starts on
+    // OnTurns (this monster's own acting turns, 1-based) and plays Skills in
+    // order, one per acting turn. Ids, looked up by FightSession against the
+    // kit's pool for the reason Abilities keeps ids.
+    [Serializable]
+    public sealed class EnemyScheduleEntry
+    {
+        public int[] OnTurns = Array.Empty<int>();
+        public string[] Skills = Array.Empty<string>();
+
+        public EnemyScheduleEntry()
+        {
+        }
+
+        public EnemyScheduleEntry(IReadOnlyList<int> onTurns, IReadOnlyList<string> skills)
+        {
+            OnTurns = new int[onTurns?.Count ?? 0];
+            for (int i = 0; i < OnTurns.Length; i++) OnTurns[i] = onTurns[i];
+            Skills = new string[skills?.Count ?? 0];
+            for (int i = 0; i < Skills.Length; i++) Skills[i] = (skills[i] ?? "").Trim();
+        }
+    }
+
     // A monster after every omitted field in its RawEnemyEntry has been
     // filled in and every provided field has been validated -- and the shape
     // EnemyDefinition now STORES rather than restates.
@@ -98,6 +121,9 @@ namespace PrincesPalace.Domain.Content
         // every consumer reads it as the interface, which an array satisfies.
         // Empty means this monster uses the legacy SkillName trio below.
         public EnemyAbilityRef[] Abilities = Array.Empty<EnemyAbilityRef>();
+
+        // See RawEnemyEntry.schedule. Empty means every turn is the draw.
+        public EnemyScheduleEntry[] Schedule = Array.Empty<EnemyScheduleEntry>();
 
         // The basic attack's own weight in that pool. See RawEnemyEntry.
         public float AttackWeight = 1f;

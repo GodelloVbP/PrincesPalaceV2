@@ -91,6 +91,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `slotSpan` | int | `0` | How many of the stage's positions this monster occupies; 0 means unset and reads as 1. |  |
 | `rollable` | bool | `true` | Whether room fights may roll this monster; false keeps it out of the room pool while an event fight can still name it. Distinct from active, which builds no asset at all. |  |
 | `rallyPerRound` | RawEnemyRally (below) | (zero -- see RawEnemyRally) | An attack stack this monster gains as each round starts, for the rest of the fight; see RawEnemyRally. Omitted or all zero means none. |  |
+| `schedule` | RawEnemyScheduleEntry[] (below) | `[]` | Fixed skill sequences on this monster's own acting turns (a stunned or skipped turn does not count); every other turn is the weighted draw. See RawEnemyScheduleEntry. Omitted or empty means none. |  |
 
 ## events.json -- `RawEventEntry`
 
@@ -384,6 +385,13 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `attackPercentPerStack` | int | `0` | Attack percent each stack adds (8 = +8%); above 0 when maxStacks is set. |  |
 | `maxStacks` | int | `0` | The most stacks the rally reaches; at least 1 when attackPercentPerStack is set. |  |
+
+### `RawEnemyScheduleEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `onTurns` | int[] | `[]` | The acting turns (1 = this monster's first) on which the sequence starts; each at least 1, no repeats, and no two sequences may overlap. |  |
+| `skills` | string[] | `[]` | The skill ids played in order, one per acting turn, never split; each must also be in abilities (weight 0 keeps it out of the draw). |  |
 
 ### `RawEventCastMember`
 

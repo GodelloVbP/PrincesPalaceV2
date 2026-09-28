@@ -152,6 +152,21 @@ namespace PrincesPalace.Domain.UiKit
         // only has to say "related, but not that".
         public const string IntentSummon = "#E58ACB";
 
+        // The Bellwether's kinds (PLAN_BELLWETHER_KIT 3.8). Bleed is the blood
+        // red of its own art, darker than Weaken's HP red; Pull and Knell sit
+        // in the void violet/lilac the kit is painted in, the Knell lighter so
+        // it reads over the dark fog.
+        public const string IntentBleed = "#D2404E";
+        public const string IntentPull = "#A88BD8";
+        public const string IntentKnell = "#D9C8F2";
+
+        // THE LETHAL STYLE, a state of any damage badge (not a kind): the
+        // shown number is at or above the target's current health. The icon
+        // and its number both take it, so "this kills you" does not depend on
+        // reading the digits.
+        public const string IntentLethal = "#FF3B3B";
+        public const string IntentNumber = "#FFF3E0";
+
         // --- the fight's own panel art ----------------------------------------
         public const string TargetPromptFill = "#26160AE6";   // 0.90
         public const string TargetPromptBorder = "#FFC45A8C"; // 0.55

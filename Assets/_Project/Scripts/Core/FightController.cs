@@ -359,6 +359,11 @@ namespace PrincesPalace
         // child it has no NodeRef for, and inventing one here would be a second
         // way to name the same object (AUDIT.md #39's exact shape).
         [SerializeField] internal GameObject[] enemyIntentIcons;
+
+        // Same slot index: the badge's expected damage and its telegraph
+        // callout (FightScreen.EnemyIntentValues/Callouts).
+        [SerializeField] internal TMP_Text[] enemyIntentValues;
+        [SerializeField] internal TMP_Text[] enemyIntentCallouts;
         [SerializeField] internal GameObject intentTooltip;
         [SerializeField] internal TMP_Text intentTooltipText;
 

@@ -36,6 +36,7 @@ MonoBehaviour:
     RallyMaxStacks: 10
     SpritePath: Enemies/bellwether
     Abilities: []
+    Schedule: []
     AttackWeight: 1
     SkillName: 
     SkillPower: 1.5

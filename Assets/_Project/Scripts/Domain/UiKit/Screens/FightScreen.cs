@@ -109,6 +109,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // monster has committed to doing next, and the hover target for the
         // detail behind it.
         public List<NodeRef> EnemyIntentIcons = new List<NodeRef>();
+
+        // Per badge, same slot index: the expected damage beside it and the
+        // telegraph callout above it (see BuildStage).
+        public List<NodeRef> EnemyIntentValues = new List<NodeRef>();
+        public List<NodeRef> EnemyIntentCallouts = new List<NodeRef>();
         public List<NodeRef> EnemyFootShadows = new List<NodeRef>();
 
         // The soft bloom UNDER the contact ring (a child of the shadow --
@@ -743,6 +748,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     // of seven, which is why they load from Resources rather
                     // than being baked one per kind.
                     intent.SpriteKey = IntentDefaultIcon;
+
+                    // THE NUMBER AND THE CALLOUT (PLAN_BELLWETHER_KIT 3.8).
+                    // Children of the badge, so they ride PlaceIntentBadge's
+                    // head-height placement and the slot's depth scale with
+                    // it. The number sits beside the icon, never on it (the
+                    // silhouette is the kind); the callout sits above and
+                    // carries only what a sequence or a seat-sized hit owes
+                    // the player ("Dark Chains! Death Knell next", "Death
+                    // Knell! Step back") -- every other badge leaves it blank.
+                    var value = Ui.Label($"EnemyIntentValue{slot}", UiString.Runtime,
+                            new UiVec(96f, 40f), 28, FightHudPalette.IntentNumber,
+                            Place.Pin(new UiVec(1f, 0.5f), new UiVec(0f, 0.5f), new UiVec(2f, 0f)))
+                        .OverArt()
+                        .AllowOverflow("the expected damage stands BESIDE the badge, not on its silhouette")
+                        .AllowOverlap("a child of the badge; the badge's own hover rim is the only thing it can touch");
+                    var callout = Ui.Label($"EnemyIntentCallout{slot}", UiString.Runtime,
+                            new UiVec(420f, 36f), 24, FightHudPalette.IntentNumber,
+                            Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 0f), new UiVec(0f, 4f)))
+                        .OverArt()
+                        .AllowOverflow("the telegraph callout floats ABOVE the badge, like the badge floats above the monster")
+                        .AllowOverlap("a child of the badge; the badge's own hover rim is the only thing it can touch");
+                    intent.Children.Add(value);
+                    intent.Children.Add(callout);
+
+                    while (EnemyIntentValues.Count <= slot) EnemyIntentValues.Add(default);
+                    while (EnemyIntentCallouts.Count <= slot) EnemyIntentCallouts.Add(default);
+                    EnemyIntentValues[slot] = value;
+                    EnemyIntentCallouts[slot] = callout;
 
                     // BY SLOT, never Add(). This loop walks FAR TO NEAR for the
                     // painter's order, so appending builds the list backwards --

@@ -1024,8 +1024,14 @@ namespace PrincesPalace.Domain.Combat.Session
         public int SeatSizedDamageBase(ResolvedSkill skill, CombatantState target)
         {
             if (skill == null || !skill.HasDamageBySeat || target == null) return 0;
+            return SeatSizedDamageBase(skill, target, _encounter.SeatOf(target));
+        }
 
-            int seat = _encounter.SeatOf(target);
+        // The same figure for `seat` rather than the one the target stands in:
+        // the intent's per-seat table ("610 at the front, 180 in the middle").
+        public int SeatSizedDamageBase(ResolvedSkill skill, CombatantState target, int seat)
+        {
+            if (skill == null || !skill.HasDamageBySeat || target == null || !target.IsAlive) return 0;
             if (seat < 0) return 0;
 
             var table = skill.DamageBySeatMaxHpPercent;

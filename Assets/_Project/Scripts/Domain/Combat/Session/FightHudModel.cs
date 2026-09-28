@@ -1530,8 +1530,18 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
             }
 
+            // A SEAT-SIZED HIT is said seat by seat, because where the target
+            // stands is the whole decision (PLAN_BELLWETHER_KIT 1.5): "Death
+            // Knell on Shawn: about 610 at the front (lethal), 180 in the
+            // middle, none at the rear. Step back." Derived from the intent's
+            // live table, never authored.
+            if (intent.DamageBySeat != null)
+            {
+                return KnellSentence(intent) + ThenLine(intent);
+            }
+
             string line = $"{enemyName} will {verb} {who}";
-            if (intent.ExpectedDamage <= 0) return line;
+            if (intent.ExpectedDamage <= 0) return line + ThenLine(intent);
 
             // THE SIGN, SAID IN WORDS. ExpectedDamage is a magnitude, and a
             // magnitude with no sign reads as a threat -- "for about 40" under a
@@ -1545,7 +1555,42 @@ namespace PrincesPalace.Domain.Combat.Session
                 ? " each"
                 : "";
 
-            return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}";
+            string lethal = intent.IsLethal ? " (lethal)" : "";
+            return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}{lethal}" + ThenLine(intent);
+        }
+
+        // "\nDeath Knell next" for a scheduled step with one to come.
+        private static string ThenLine(EnemyIntent intent) =>
+            string.IsNullOrEmpty(intent.Then) ? "" : $"\n{intent.Then} next";
+
+        private static string KnellSentence(EnemyIntent intent)
+        {
+            var parts = new List<string>();
+            int health = intent.Target != null ? intent.Target.CurrentHealth : 0;
+            bool said = false;
+
+            for (int seat = 0; seat < intent.DamageBySeat.Length; seat++)
+            {
+                int amount = intent.DamageBySeat[seat];
+                string at = seat == PrincesPalace.Domain.Party.PartySeat.Front ? "at the front"
+                    : seat == PrincesPalace.Domain.Party.PartySeat.Middle ? "in the middle"
+                    : "at the rear";
+
+                if (amount <= 0)
+                {
+                    parts.Add($"none {at}");
+                    continue;
+                }
+
+                // "about" once, on the first figure: the whole row is a centre.
+                string about = said ? "" : "about ";
+                said = true;
+                parts.Add($"{about}{amount} {at}{(amount >= health ? " (lethal)" : "")}");
+            }
+
+            string who = string.IsNullOrEmpty(intent.TargetName) ? "someone" : intent.TargetName;
+            string sentence = $"{intent.Label} on {who}: {string.Join(", ", parts)}.";
+            return intent.StepBackIsSafer ? sentence + " Step back." : sentence;
         }
     }
 }

@@ -279,6 +279,23 @@ namespace PrincesPalace.Domain.Content
         // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.2). Both zero means none.
         [ContentDoc("An attack stack this monster gains as each round starts, for the rest of the fight; see RawEnemyRally. Omitted or all zero means none.")]
         public RawEnemyRally rallyPerRound = new RawEnemyRally();
+
+        // A fixed sequence on this monster's own acting turns
+        // (docs/PLAN_BELLWETHER_KIT.md 1.6 / 3.7): each entry starts on the
+        // listed acting turns and then takes the following acting turns, one
+        // skill each, until done. Every other turn is the weighted draw.
+        [ContentDoc("Fixed skill sequences on this monster's own acting turns (a stunned or skipped turn does not count); every other turn is the weighted draw. See RawEnemyScheduleEntry. Omitted or empty means none.")]
+        public RawEnemyScheduleEntry[] schedule = Array.Empty<RawEnemyScheduleEntry>();
+    }
+
+    // One scheduled sequence: where it starts and what it plays.
+    [Serializable]
+    public class RawEnemyScheduleEntry
+    {
+        [ContentDoc("The acting turns (1 = this monster's first) on which the sequence starts; each at least 1, no repeats, and no two sequences may overlap.")]
+        public int[] onTurns = Array.Empty<int>();
+        [ContentDoc("The skill ids played in order, one per acting turn, never split; each must also be in abilities (weight 0 keeps it out of the draw).")]
+        public string[] skills = Array.Empty<string>();
     }
 
     // An enemy's per-round rally. Both fields or neither.

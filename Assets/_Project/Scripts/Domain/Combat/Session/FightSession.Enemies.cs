@@ -76,17 +76,35 @@ namespace PrincesPalace.Domain.Combat.Session
                 // the fight a different shape from the one being previewed --
                 // different targets, different variance, a different fight.
                 // Only which entry is taken changes.
+                //
+                // PRECEDENCE (PLAN_BELLWETHER_KIT 2.2): Showcase > a scheduled
+                // step > the weighted draw. A stunned enemy still forfeits
+                // (BuildIntent), and its step waits: steps are used up only
+                // when they resolve (NoteEnemyActed).
                 float roll = _rng?.NextFloat() ?? 0f;
+                var step = Showcase == null ? ScheduledStepFor(enemy) : null;
                 int chosen = Showcase != null
                     ? Showcase.Next(enemy, pool)
-                    : EnemyAbilityDraw.Pick(pool, roll);
+                    : step.HasValue
+                        ? step.Value.PoolIndex
+                        : EnemyAbilityDraw.Pick(pool, roll);
 
                 var ability = pool != null && chosen >= 0 && chosen < pool.Count
                     ? pool[chosen]
                     : (EnemyAbility?)null;
 
+                // The ordinary pick always runs, so its draw is always spent;
+                // a continuing step then keeps the sequence's own target.
                 var target = PickIntentTarget(enemy, ability);
-                _intents[enemy] = BuildIntent(enemy, target, pool, chosen);
+                if (ForcedTargetFor(enemy) == null)
+                {
+                    target = SequenceTargetFor(enemy, step, ability) ?? target;
+                }
+
+                string then = step.HasValue && step.Value.NextPoolIndex >= 0 && pool != null
+                    ? pool[step.Value.NextPoolIndex].Label
+                    : null;
+                _intents[enemy] = BuildIntent(enemy, target, pool, chosen, then);
             }
         }
 
@@ -298,7 +316,7 @@ namespace PrincesPalace.Domain.Combat.Session
             actor.IsPlayerSide ? RootedPlayerHasNoLegalAction(actor) : RootedEnemyHasNoLegalAction(actor);
 
         private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target,
-                                        IReadOnlyList<EnemyAbility> pool, int chosen)
+                                        IReadOnlyList<EnemyAbility> pool, int chosen, string then = null)
         {
             var source = SourceFor(enemy)?.Source;
 
@@ -378,12 +396,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
             return new EnemyIntent(
                 ability.Label,
-                EnemyIntentIcons.KindFor(effect, skill.AppliesStatus, skill.AppliesStatus.HasValue),
+                EnemyIntentIcons.KindFor(skill),
                 target,
                 PreviewSkill(enemy, target, skill),
                 chosen,
                 EnemyIntentIcons.ScopeFor(effect),
-                EnemyIntentIcons.HealsFor(effect));
+                EnemyIntentIcons.HealsFor(effect),
+                then);
         }
 
         // What a monster's SKILL would land for.
@@ -399,7 +418,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // would change the fight it is previewing: variance and the ward would
         // consume a draw and spend a shield the player still holds, and both
         // are why the tooltip says "about".
-        private int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill)
+        private int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill) =>
+            PreviewSkill(enemy, target, skill, seat: null);
+
+        // `seat` asks "what if the target stood THERE" for a seat-sized hit
+        // (the intent's per-seat table); null reads the seat he stands in.
+        private int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill, int? seat)
         {
             if (enemy == null) return 0;
 
@@ -415,7 +439,9 @@ namespace PrincesPalace.Domain.Combat.Session
             int raw;
             if (skill.HasDamageBySeat)
             {
-                raw = SeatSizedDamageBase(skill, against);
+                raw = seat.HasValue
+                    ? SeatSizedDamageBase(skill, against, seat.Value)
+                    : SeatSizedDamageBase(skill, against);
                 if (raw <= 0) return 0;
             }
             else
@@ -425,6 +451,11 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             if (heals) return raw;
+
+            // NOTHING RAW IS NOTHING LANDED. A pull, a provoke, a summon
+            // compute 0 here and deal nothing when they resolve; the pipeline's
+            // floor of 1 would put a "1" on a badge that hurts nobody.
+            if (raw <= 0) return 0;
 
             return DamagePipeline.AfterDefences(
                 raw, enemy, against,
@@ -465,9 +496,50 @@ namespace PrincesPalace.Domain.Combat.Session
         public string IntentFor(CombatantState enemy) =>
             enemy != null && _intents.TryGetValue(enemy, out var intent) ? intent.Label : null;
 
-        // The whole commitment, for the icon above the monster's head.
-        public EnemyIntent? IntentDetailFor(CombatantState enemy) =>
-            enemy != null && _intents.TryGetValue(enemy, out var intent) ? intent : (EnemyIntent?)null;
+        // The whole commitment, for the icon above the monster's head, the
+        // tooltip and the bot -- READ LIVE (PLAN_BELLWETHER_KIT 3.8).
+        //
+        // What was committed (the ability, its target) never changes here;
+        // what it would do is re-read against the field as it stands now. A
+        // seat-sized hit gets its per-seat table and the number for the seat
+        // the target stands in, so a Move or a free Palace Passage shows at
+        // once without the enemy re-choosing; and every damage intent is
+        // marked lethal against the target's CURRENT health.
+        public EnemyIntent? IntentDetailFor(CombatantState enemy)
+        {
+            if (enemy == null || !_intents.TryGetValue(enemy, out var intent)) return null;
+            return Live(enemy, intent);
+        }
+
+        // The number the badge shows: the live expected damage (0 when none).
+        public int IntentDamageFor(CombatantState enemy) => IntentDetailFor(enemy)?.ExpectedDamage ?? 0;
+
+        private EnemyIntent Live(CombatantState enemy, EnemyIntent intent)
+        {
+            var target = intent.Target;
+            int expected = intent.ExpectedDamage;
+            int[] bySeat = null;
+            int seat = target != null ? _encounter.SeatOf(target) : -1;
+
+            var pool = SourceFor(enemy)?.Abilities;
+            var skill = pool != null && intent.AbilityIndex >= 0 && intent.AbilityIndex < pool.Count
+                        && pool[intent.AbilityIndex].HasSkill
+                ? pool[intent.AbilityIndex].Skill
+                : null;
+
+            if (skill != null && skill.HasDamageBySeat && !intent.Heals
+                && intent.Label != IntentForfeit && target != null && target.IsAlive)
+            {
+                bySeat = new int[CombatEncounter.SeatsPerSide];
+                for (int s = 0; s < bySeat.Length; s++) bySeat[s] = PreviewSkill(enemy, target, skill, s);
+                expected = seat >= 0 && seat < bySeat.Length ? bySeat[seat] : 0;
+            }
+
+            bool lethal = !intent.Heals && expected > 0 && target != null && target.IsAlive
+                          && expected >= target.CurrentHealth;
+
+            return intent.Live(expected, bySeat, seat, lethal);
+        }
 
         // The nameplate's third line, or "" for the overwhelming majority of
         // turns. Two deliberate restrictions, both ported intact:
@@ -500,10 +572,27 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (!isPlayerTurn) return "";
 
-            string intent = IntentFor(enemy);
-            if (string.IsNullOrEmpty(intent) || intent == IntentAttack || intent == IntentForfeit) return "";
+            string line = TelegraphLine(enemy);
+            return line.Length == 0 ? "" : "\n" + line;
+        }
 
-            return "\n" + intent + "!";
+        // The plate line itself, without the break: "" for no threat, else
+        // "Roar!", with what the telegraph owes the player after it --
+        // "Dark Chains! Death Knell next" for a sequence with a step to come,
+        // "Death Knell! Step back" when a seat further back takes less.
+        public string TelegraphLine(CombatantState enemy)
+        {
+            var detail = IntentDetailFor(enemy);
+            if (!detail.HasValue) return "";
+
+            var intent = detail.Value;
+            string label = intent.Label;
+            if (string.IsNullOrEmpty(label) || label == IntentAttack || label == IntentForfeit) return "";
+
+            string line = label + "!";
+            if (!string.IsNullOrEmpty(intent.Then)) line += " " + intent.Then + " next";
+            if (intent.StepBackIsSafer) line += " Step back";
+            return line;
         }
 
         // Resolves every enemy turn between now and the player's next REAL one,
@@ -776,12 +865,20 @@ namespace PrincesPalace.Domain.Combat.Session
             // resolve the wrong one while the telegraph looked correct -- the
             // precise failure a telegraph exists to prevent.
             var enemyKit = SourceFor(enemy);
-            var committed = IntentDetailFor(enemy);
+            var committed = _intents.TryGetValue(enemy, out var held) ? held : (EnemyIntent?)null;
             var committedPool = enemyKit?.Abilities;
-            var committedAbility = committed.HasValue && committedPool != null
-                                   && committed.Value.AbilityIndex >= 0
-                                   && committed.Value.AbilityIndex < committedPool.Count
-                ? committedPool[committed.Value.AbilityIndex]
+
+            // NO COMMITMENT (a turn inside Begin, a monster that joined
+            // mid-round) still honours a due scheduled step: the schedule is
+            // counted on acting turns, and an uncommitted first turn is one.
+            // A lookup, not a draw -- the target pick below draws as before.
+            int committedIndex = committed.HasValue
+                ? committed.Value.AbilityIndex
+                : ScheduledStepFor(enemy)?.PoolIndex ?? -1;
+            var committedAbility = committedPool != null
+                                   && committedIndex >= 0
+                                   && committedIndex < committedPool.Count
+                ? committedPool[committedIndex]
                 : (EnemyAbility?)null;
 
             var forced = ForcedTargetFor(enemy);
@@ -918,6 +1015,10 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             _intents.Remove(enemy);
+
+            // THE POINT OF NO RETURN: everything below resolves, so this is an
+            // acting turn, and a due scheduled step is used up here.
+            NoteEnemyActed(enemy, chosen.HasValue ? committedIndex : -1, target);
 
             // A REAL SKILL RUNS THE SKILL PATH -- the same one a player's cast
             // goes through, which is what makes the whole SkillEffect

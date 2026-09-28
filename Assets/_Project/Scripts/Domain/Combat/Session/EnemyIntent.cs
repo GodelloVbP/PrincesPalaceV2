@@ -40,6 +40,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // knowing what is coming would change whether the player spends their
         // burst now or saves it for the two enemies about to exist.
         Summon,
+
+        // THE BELLWETHER'S VOCABULARY (PLAN_BELLWETHER_KIT 3.8), each derived
+        // from the skill like the rest: Bleed, a skill that applies Bleed;
+        // Pull, a Reposition ("you are about to be moved"); Knell, a
+        // seat-sized hit ("where you stand decides how much").
+        Bleed,
+        Pull,
+        Knell,
     }
 
     // WHO IT LANDS ON, which is the half of a telegraph that changes the
@@ -115,9 +123,31 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly EnemyIntentScope Scope;
         public readonly bool Heals;
 
+        // THE NEXT STEP OF A SCHEDULED SEQUENCE ("Death Knell"), or null. Set
+        // at commitment; the plate line and tooltip say "<Then> next".
+        public readonly string Then;
+
+        // ---- read live (FightSession.IntentDetailFor), never stored --------
+        //
+        // A seat-sized hit's expected damage for each seat, front first, or
+        // null for any other intent; ExpectedDamage is then the entry for
+        // TargetSeat, the seat the target stands in NOW.
+        public readonly int[] DamageBySeat;
+        public readonly int TargetSeat;
+
+        // The shown number is at or above the target's current health.
+        public readonly bool IsLethal;
+
         public EnemyIntent(string label, EnemyIntentKind kind, CombatantState target, int expectedDamage,
                            int abilityIndex = -1, EnemyIntentScope scope = EnemyIntentScope.One,
-                           bool heals = false)
+                           bool heals = false, string then = null)
+            : this(label, kind, target, expectedDamage, abilityIndex, scope, heals, then, null, -1, false)
+        {
+        }
+
+        private EnemyIntent(string label, EnemyIntentKind kind, CombatantState target, int expectedDamage,
+                            int abilityIndex, EnemyIntentScope scope, bool heals, string then,
+                            int[] damageBySeat, int targetSeat, bool isLethal)
         {
             Label = label;
             Kind = kind;
@@ -126,9 +156,33 @@ namespace PrincesPalace.Domain.Combat.Session
             AbilityIndex = abilityIndex;
             Scope = scope;
             Heals = heals;
+            Then = string.IsNullOrEmpty(then) ? null : then;
+            DamageBySeat = damageBySeat;
+            TargetSeat = targetSeat;
+            IsLethal = isLethal;
         }
 
+        // The same commitment with its live reading filled in.
+        public EnemyIntent Live(int expectedDamage, int[] damageBySeat, int targetSeat, bool isLethal) =>
+            new EnemyIntent(Label, Kind, Target, expectedDamage, AbilityIndex, Scope, Heals, Then,
+                damageBySeat, targetSeat, isLethal);
+
         public bool IsAttack => Kind == EnemyIntentKind.Attack;
+
+        // "Step back": a seat behind the one the target stands in takes less.
+        public bool StepBackIsSafer
+        {
+            get
+            {
+                if (DamageBySeat == null || TargetSeat < 0 || TargetSeat >= DamageBySeat.Length) return false;
+                for (int s = TargetSeat + 1; s < DamageBySeat.Length; s++)
+                {
+                    if (DamageBySeat[s] < DamageBySeat[TargetSeat]) return true;
+                }
+
+                return false;
+            }
+        }
     }
 
     public static class EnemyIntentIcons
@@ -197,6 +251,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 case EnemyIntentKind.Heal: return "heal";
                 case EnemyIntentKind.Shield: return "shield";
                 case EnemyIntentKind.Summon: return "summon";
+                case EnemyIntentKind.Bleed: return "bleed";
+                case EnemyIntentKind.Pull: return "pull";
+                case EnemyIntentKind.Knell: return "knell";
                 default: return "skill";
             }
         }
@@ -213,6 +270,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 case EnemyIntentKind.Heal: return UiKit.FightHudPalette.IntentHeal;
                 case EnemyIntentKind.Shield: return UiKit.FightHudPalette.IntentShield;
                 case EnemyIntentKind.Summon: return UiKit.FightHudPalette.IntentSummon;
+                case EnemyIntentKind.Bleed: return UiKit.FightHudPalette.IntentBleed;
+                case EnemyIntentKind.Pull: return UiKit.FightHudPalette.IntentPull;
+                case EnemyIntentKind.Knell: return UiKit.FightHudPalette.IntentKnell;
                 default: return UiKit.FightHudPalette.IntentSkill;
             }
         }
@@ -235,6 +295,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 // "CALL", not "SUM" — three letters that read as arithmetic on
                 // a badge full of other three-letter abbreviations.
                 case EnemyIntentKind.Summon: return "CALL";
+                case EnemyIntentKind.Bleed: return "BLD";
+                case EnemyIntentKind.Pull: return "PULL";
+                case EnemyIntentKind.Knell: return "KNL";
                 default: return "SKL";
             }
         }
@@ -250,6 +313,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // heal with no Regen attached would otherwise telegraph as a generic
         // "skill" -- the icon that means "something is coming" on the one turn
         // the player most needs to know it is not coming for them.
+        // A real skill's kind, from the skill itself. The seat-sized hit wins
+        // over its effect and status: "where you stand decides" is the one
+        // fact the player must act on, whatever else rides the hit.
+        public static EnemyIntentKind KindFor(Content.ResolvedSkill skill)
+        {
+            if (skill == null) return EnemyIntentKind.Skill;
+            if (skill.HasDamageBySeat && !HealsFor(skill.Effect)) return EnemyIntentKind.Knell;
+            return KindFor(skill.Effect, skill.AppliesStatus, skill.AppliesStatus.HasValue);
+        }
+
         public static EnemyIntentKind KindFor(SkillEffect effect, StatusEffectType? appliesStatus, bool hasStatus)
         {
             switch (effect)
@@ -264,6 +337,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 // the larger of the two facts by a distance.
                 case SkillEffect.Summon:
                     return EnemyIntentKind.Summon;
+
+                // Being moved is the larger fact than any rider on the move.
+                case SkillEffect.Reposition:
+                    return EnemyIntentKind.Pull;
             }
 
             return KindFor(true, appliesStatus, hasStatus);
@@ -286,6 +363,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Vulnerable: return EnemyIntentKind.Weaken;
                 case StatusEffectType.Regen: return EnemyIntentKind.Heal;
                 case StatusEffectType.Protect: return EnemyIntentKind.Shield;
+                case StatusEffectType.Bleed: return EnemyIntentKind.Bleed;
                 default: return EnemyIntentKind.Skill;
             }
         }
