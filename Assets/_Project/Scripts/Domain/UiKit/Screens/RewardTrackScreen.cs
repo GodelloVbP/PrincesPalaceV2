@@ -28,7 +28,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // screenshot later.
     public sealed class RewardTrackScreen
     {
-        // ---- the measured palette, handoff section 5 ------------------------
+        // ---- the measured palette --------------------------------------------
         //
         // Gold is applied as stroke, glow and small marks. The only broad fills
         // on this screen are the panel ground and the discs.
@@ -48,13 +48,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The rail band's soft wash, and the hairlines that bound it. The band
         // is what stops the rail floating in the middle of an empty panel.
         //
-        // 2E, NOT 99. This was a flat 60% violet rect and the design's is an
-        // 18% wash that fades to nothing at both edges -- three times too
-        // strong and with a hard line at each end, which turned "the rail runs
-        // through something" into a grey stripe laid across the panel. The
-        // stripe is also what made the empty strip below it read as a hole:
-        // give the middle third a solid block of its own and everything that is
-        // not that block becomes a gap.
+        // 2E, NOT 99: an 18% wash that fades to nothing at both edges, rather
+        // than a flat, hard-edged rect -- a hard-edged rect turns "the rail
+        // runs through something" into a grey stripe laid across the panel,
+        // and makes the empty strip below it read as a hole. Give the middle
+        // third a solid block of its own and everything that is not that
+        // block becomes a gap.
         //
         // The shape lives in the band_fade sprite; this is only how dark it
         // gets at its darkest.
@@ -71,12 +70,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // half over it, and the bloom under that.
         //
         // RAILDONE IS FULL GOLD BECAUSE THE SPRITE CARRIES THE ALPHA. The lit
-        // rail is a ramp now -- 32% at the start of the run and 100% at the
-        // player's own node -- so a flat tint here would flatten the one thing
-        // the ramp exists to say, which is which END of the lit half is now.
-        // It was measured at 6B, then raised to BF when the band wash lifted
-        // the ground behind it; both of those were the same tint applied
-        // evenly, and neither could brighten toward anything.
+        // rail is a ramp -- 32% at the start of the run and 100% at the
+        // player's own node -- so a flat tint here would flatten the one
+        // thing the ramp exists to say, which is which END of the lit half
+        // is now.
         // THE PRESTIGE STRETCH'S OWN GROUND, and the divider that opens it.
         //
         // A wash rather than a dimmer rail: the ten identity levels are not
@@ -104,8 +101,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string DiscToCome = "#3B2C56";
         public const string DiscLit = "#F2DB9E";
 
-        // #F2ECFF rather than the handoff's #FFFFFF, so the shaded rim lands
-        // near its #CFC2E8 instead of at a neutral grey.
+        // #F2ECFF rather than plain white, so the shaded rim lands near its
+        // #CFC2E8 instead of at a neutral grey.
         public const string DiscHere = "#F2ECFF";
 
         // The 1px rim on an unreached filler disc. A milestone gets the gold
@@ -122,9 +119,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string TextQuiet = "#D6C8E88C";
 
         // The seal pip, in two parts: a near-black disc and the gold ring and
-        // check drawn ON it. It used to be one node with the check knocked out,
-        // showing the gold disc underneath -- see the seal_mark bake for why
-        // that stopped being the better trick at nine pixels across.
+        // check drawn ON it -- see the seal_mark bake for why a knocked-out
+        // check does not read at nine pixels across.
         public const string SealInk = "#1A1024";
         public const string SealMark = "#F2DB9E";
 
@@ -193,15 +189,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the player stands, and a painted medallion tinted violet reads as a
         // painting behind glass rather than as an unreached reward.
         //
-        // NINE KEYS, DOWN FROM TWENTY-ONE (phase 5). Every constant below now
-        // names a medallion that actually MEANS the reward it is on -- see
-        // RewardTrackLayout.CardArtKeyFor for the nine, one line each on why.
-        // The twelve kinds with no honest picture draw a short word instead
-        // (CardGlyphFor), which is what retired the "placement, not a decision"
-        // note this block used to carry and the seven borrowed status icons
-        // phase 4 added under it. THE FIVE UNUSED MEDALLIONS -- cross, eye,
-        // precision, skull, speed -- are deliberately not listed here: a
-        // constant naming a file nothing draws is an invitation to assign it.
+        // NINE KEYS. Every constant below names a medallion that actually
+        // MEANS the reward it is on -- see RewardTrackLayout.CardArtKeyFor
+        // for the nine, one line each on why. The twelve kinds with no
+        // honest picture draw a short word instead (CardGlyphFor). THE FIVE
+        // UNUSED MEDALLIONS -- cross, eye, precision, skull, speed -- are
+        // deliberately not listed here: a constant naming a file nothing
+        // draws is an invitation to assign it.
         public const string IconRoot = "UI/TalentTree/Icons/Processed";
 
         public const string StatArtKey = IconRoot + "/ability_score.png";
@@ -312,24 +306,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.AddRange(BuildRibbon(screen));
             children.AddRange(BuildSummaryRow(screen));
 
-            // BARE, not a kit container (owner's call, 2026-09-07 -- every
-            // frame inside the system menu read as ugly), UNLIKE THE OTHER
-            // FOUR HOSTED PANES this still needs an opaque ground of its own:
-            // it opens OVER the dossier's own content within the same parent
-            // pane rather than sitting only on the shared, translucent
-            // SystemMenuFill (#1A1024F5, 96%) every other pane relies on --
-            // three columns of numbers must not read through a hundred
-            // captions underneath. The Gold container's own painted art used
-            // to carry that opacity; the flat #120A18FA Solid ground is what
-            // did the same job before the container existed (git history),
-            // so it comes back below as this pane's own first child.
+            // BARE, not a kit container, UNLIKE THE OTHER FOUR HOSTED PANES
+            // this still needs an opaque ground of its own: it opens OVER
+            // the dossier's own content within the same parent pane rather
+            // than sitting only on the shared, translucent SystemMenuFill
+            // (#1A1024F5, 96%) every other pane relies on -- three columns
+            // of numbers must not read through a hundred captions underneath.
+            // The flat #120A18FA Solid ground carries that opacity itself.
             //
             // AND IT TAKES THE POINTER, which is why it is not AsDecor. A
             // ground that hides the dossier from the eye but not from the
-            // raycaster let every hover and click on an empty stretch of
+            // raycaster lets every hover and click on an empty stretch of
             // this panel land on the dossier row drawn underneath -- a
-            // highlight and a button nobody could see (owner's report,
-            // 2026-09-24: "fake hovers and fake buttons").
+            // highlight and a button nobody could see.
             var ground = Ui.SystemMenuPane("RewardTrackPanel", "RewardTrackPanelContent",
                 new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), children.ToArray());
             ground.Children.Insert(0, Ui.Solid("RewardTrackPanelFill", Ground + "FA",
@@ -403,10 +392,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // and bottom thirds empty. Two of those thirds now have bands of
             // their own, and this gives the middle one an edge so the rail
             // reads as running THROUGH something rather than across a void.
-            // PaneContentWidth, NOT PanelWidth (balance-bot, 2026-09-02) --
-            // see RewardTrackLayout.BandEdgeWidth's own comment: this is a
-            // child of the container's content panel now, 1488 wide rather
-            // than the declared 1600 frame.
+            // PaneContentWidth, NOT PanelWidth -- see RewardTrackLayout.
+            // BandEdgeWidth's own comment: this is a child of the
+            // container's content panel, 1488 wide rather than the declared
+            // 1600 frame.
             yield return Ui.Sprite("TrackBandWash", "proc:band_fade",
                     new UiVec(RewardTrackLayout.PaneContentWidth, RewardTrackLayout.BandHeight),
                     Place.At(0f, RewardTrackLayout.BandCentreY))
@@ -594,9 +583,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The window. A coordinate frame and a mask, never a surface.
             //
-            // PaneContentWidth, NOT PanelWidth (balance-bot, 2026-09-02) --
-            // this is a child of the container's content panel now, 1488
-            // wide rather than the declared 1600 frame; the controller
+            // PaneContentWidth, NOT PanelWidth -- this is a child of the
+            // container's content panel, 1488 wide rather than the declared
+            // 1600 frame; the controller
             // reads viewport.rect.width at runtime for every scroll/ribbon
             // computation (RewardTrackController.Input.cs, .cs), so the
             // narrower rect also carries through to those correctly rather
@@ -750,10 +739,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // no-op -- a hundred dots that do nothing when pressed teach the
             // player that none of them do.
             //
-            // Hovers(1.16) rather than the default press animation, which is
-            // handoff section 7's disc-hover exactly. It also means these click
-            // silently; the controller plays the claim's own sound, which is
-            // the one that carries meaning.
+            // Hovers(1.16) rather than the default press animation, so these
+            // click silently; the controller plays the claim's own sound,
+            // which is the one that carries meaning.
             //
             // proc:disc_metal, not proc:solid_circle: see that bake's header
             // for why a flat gold coin reads as tarnish.
@@ -1178,19 +1166,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // EIGHTY-SEVEN TICKS, ALL OF THEM ALWAYS ON.
             //
-            // A tick used to stand only where a level was reached and
-            // uncollected, which meant a player who collects as they go saw a
-            // bare line with twelve dots on it: ninety-nine levels drawn as
-            // twelve marks, saying nothing about how far apart they are or how
-            // many there are between two of them.
+            // A tick only where a level is reached and uncollected would mean
+            // a player who collects as they go sees a bare line with a
+            // handful of dots on it: ninety-nine levels drawn as a dozen
+            // marks, saying nothing about how far apart they are or how many
+            // there are between two of them.
             //
             // Every level standing as a hairline is what makes this a measure
             // of the ascent rather than a list of its landmarks -- and the
             // waiting weight, twice as wide and twice as tall in gold, then
             // reads AGAINST that comb rather than being the only thing on it.
-            // The migrated character arriving with dozens of levels owed still
-            // sees exactly how much and where, which is what the first build
-            // was for.
+            // A character arriving with dozens of levels owed still sees
+            // exactly how much and where.
             //
             // Milestones do not get one; their dot IS the mark at that level,
             // and a tick under it would be a second smaller landmark in the
@@ -1268,9 +1255,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // of ninety-nine works out at 121px of the ribbon's 1440, which is
             // the clearest statement this screen makes about how much of the
             // track the rail can actually show.
-            // RewardTrackLayout.PaneContentWidth, NOT PanelWidth (balance-
-            // bot, 2026-09-02) -- this build-time box is the tree's own
-            // guess at what viewport.rect.width will be; the controller
+            // RewardTrackLayout.PaneContentWidth, NOT PanelWidth -- this
+            // build-time box is the tree's own guess at what
+            // viewport.rect.width will be; the controller
             // recomputes it from the real rect at runtime, but the two
             // should agree at build time rather than start 112px apart.
             var window = Ui.Panel("TrackRibbonWindow",
@@ -1318,18 +1305,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // hole below an uncollected level and claimedTrackLevel stays a
             // single integer.
             //
-            // GOLD THEMED PLATE now (owner's HQ-kit instruction, 2026-09-07),
-            // superseding the "would fight the design" call this comment used
-            // to make: the hairline-and-wash treatment was a deliberate
-            // departure from the game's standard filled button so this row
-            // would not sit as the brightest thing on a screen whose palette
-            // otherwise uses gold only as stroke and glow. The owner's later
-            // instruction is "all buttons are replaced with HQ ones" without
-            // that exception, so it wins -- ThemedPlate rather than Themed()
-            // because this button already declares its own caption/pip
-            // children (see LayerCaptionWithVisuals below) the same way
-            // FightScreen's verb rows and ResetConfirmYesButton do.
-            // TrackCloseButton below is the same case.
+            // GOLD THEMED PLATE, consistent with every other button in the
+            // kit -- ThemedPlate rather than Themed() because this button
+            // already declares its own caption/pip children (see
+            // LayerCaptionWithVisuals below) the same way FightScreen's verb
+            // rows and ResetConfirmYesButton do. TrackCloseButton below is
+            // the same case.
             var collectSize = new UiVec(RewardTrackLayout.CollectWidth, RewardTrackLayout.CollectHeight);
             var collect = Ui.Button("TrackCollectButton", UiString.Runtime,
                     collectSize, 15, Place.At(RewardTrackLayout.CollectCentreX,
@@ -1436,9 +1417,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.SummaryReward = reward;
             yield return reward;
 
-            // SILVER THEMED PLATE now (owner's HQ-kit instruction,
-            // 2026-09-07), the same supersession TrackCollectButton's own
-            // comment records.
+            // SILVER THEMED PLATE, the same reasoning as TrackCollectButton
+            // above.
             var closeSize = new UiVec(RewardTrackLayout.CloseWidth, RewardTrackLayout.CloseHeight);
             var close = Ui.Button("TrackCloseButton", UiString.Runtime,
                     closeSize, 15, Place.At(RewardTrackLayout.CloseCentreX,
