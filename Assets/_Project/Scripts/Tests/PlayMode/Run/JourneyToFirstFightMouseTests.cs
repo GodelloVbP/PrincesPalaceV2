@@ -88,6 +88,7 @@ namespace PrincesPalace.PlayModeTests
             yield return WaitForScene("Hub", 5f, "clicking an empty slot should enter it and load the Hub");
             yield return null;
             yield return null;
+            EngineRoots.GrantToSquad();
             TakeOverInput();
             // A fresh scene's own layout can still be mid-settle the frame it
             // activates -- this suite found that gap under the full parallel

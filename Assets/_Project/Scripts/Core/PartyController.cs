@@ -941,7 +941,12 @@ namespace PrincesPalace
             var tag = At(cardTags, index);
             if (tag != null)
             {
-                if (state.IsActive)
+                if (state.IsActive && PartyReadiness.IsMissingEngineRoot(CharacterFor(id)))
+                {
+                    tag.Set(UiStrings.PartyCardTagChoosePath);
+                    tag.gameObject.SetShown(true);
+                }
+                else if (state.IsActive)
                 {
                     tag.Set(UiStrings.PartyCardTagInParty, SeatLabelFor(state.Seat));
                     tag.gameObject.SetShown(true);

@@ -78,6 +78,7 @@ namespace PrincesPalace.PlayModeTests
             yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
             yield return null;
             yield return null;
+            EngineRoots.GrantToSquad();
             TakeOverInput();
 
             AssertSelectedName("StartRunGate", "the gate is the hub's own stated primary action and entry");

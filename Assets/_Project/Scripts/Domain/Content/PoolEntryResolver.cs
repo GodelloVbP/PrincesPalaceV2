@@ -212,7 +212,8 @@ namespace PrincesPalace.Domain.Content
                 raw.allowsSpellBooks,
                 raw.restoredByManaEffects,
                 raw.absorbsDamage,
-                sortOrder);
+                sortOrder,
+                raw.engineFed);
             error = null;
             return true;
         }

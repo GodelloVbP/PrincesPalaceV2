@@ -159,9 +159,15 @@ namespace PrincesPalace
         private int _slideFrom;
         private bool _sliding;
 
+        // Set by whoever sends the player here to make a choice (the hub
+        // gate) so the screen opens on that character; consumed on arrival so
+        // a later ordinary visit opens on the first character as before.
+        public static string RequestedCharacterId;
+
         private void Start()
         {
             Wire();
+            OpenOnRequestedCharacter();
 
             // Closed on arrival. The screen builds it Inactive, but a scene
             // re-entered mid-session arrives with whatever the last frame left,
@@ -174,6 +180,16 @@ namespace PrincesPalace
             RegisterNavContext();
             Relayout();
             Refresh();
+        }
+
+        private void OpenOnRequestedCharacter()
+        {
+            string wanted = RequestedCharacterId;
+            RequestedCharacterId = null;
+            if (string.IsNullOrEmpty(wanted)) return;
+
+            int index = Roster.FindIndex(c => c != null && c.definitionId == wanted);
+            if (index >= 0) _character = index;
         }
 
         // ---- the figures -------------------------------------------------------

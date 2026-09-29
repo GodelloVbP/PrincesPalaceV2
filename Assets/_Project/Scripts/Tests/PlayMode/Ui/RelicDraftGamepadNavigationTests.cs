@@ -76,6 +76,7 @@ namespace PrincesPalace.PlayModeTests
         private IEnumerator OpenTheDraft()
         {
             yield return SharedScene.Ensure("Hub");
+            EngineRoots.GrantToSquad();
 
             _hub = NavSceneReuse.CloseHubModals();
 

@@ -210,6 +210,7 @@ namespace PrincesPalace.PlayModeTests
             yield return SceneManager.LoadSceneAsync(Navigation.Hub, LoadSceneMode.Single);
             yield return null;
             yield return null;
+            EngineRoots.GrantToSquad();
         }
 
         private static GameObject Named(HubController hub, string name) =>

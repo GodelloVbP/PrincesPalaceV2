@@ -53,6 +53,10 @@ namespace PrincesPalace.Domain.Content
 
         public int SortOrder;
 
+        // A talent's Fury engine fills this pool, so the pool is dead until a
+        // character has taken an engine root (Party.RequiredChoices).
+        public bool EngineFed;
+
         // For the serializer only.
         public ResolvedPool()
         {
@@ -66,7 +70,7 @@ namespace PrincesPalace.Domain.Content
             PoolStartRule startRule, int startValue,
             string brightHex, string deepHex, string textHex,
             bool pulse, bool allowsSpellBooks, bool restoredByManaEffects, bool absorbsDamage,
-            int sortOrder)
+            int sortOrder, bool engineFed = false)
         {
             Id = id ?? "";
             DisplayName = displayName ?? "";
@@ -88,6 +92,7 @@ namespace PrincesPalace.Domain.Content
             RestoredByManaEffects = restoredByManaEffects;
             AbsorbsDamage = absorbsDamage;
             SortOrder = sortOrder;
+            EngineFed = engineFed;
         }
     }
 }

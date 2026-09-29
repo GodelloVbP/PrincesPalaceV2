@@ -1266,6 +1266,11 @@ as worthless. Separate plan.
 - Engine pick is mandatory (owner, 2026-09-28, third pass): Bjorn cannot
   enter a fight without a chosen root; the Talents screen (or first hub
   visit) forces the choice.
+  BUILT: `Domain/Party/RequiredChoices` (an engine-fed primary pool with no
+  FuryEngine* root taken); the hub gate routes a blocked squad to that
+  character's Talents page and its caption reads CHOOSE <NAME>'S PATH; the
+  Party card tag reads "Choose a path". Roots cost 0 embers, so the pick is
+  always affordable.
 - `TalentEffect` reuse (owner-delegated, 2026-09-28, review finding 1): a
   reuse pass runs before content authoring for each slice, mapping each
   node to an existing kind where it fits and trimming nodes that only

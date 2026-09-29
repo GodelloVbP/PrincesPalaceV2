@@ -93,6 +93,7 @@ namespace PrincesPalace.PlayModeTests
         private IEnumerator OpenTheHub()
         {
             yield return SharedScene.Ensure("Hub");
+            EngineRoots.GrantToSquad();
 
             _hub = Object.FindAnyObjectByType<HubController>();
             Assert.IsNotNull(_hub, "the Hub scene has no HubController");

@@ -5,6 +5,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -94,7 +95,9 @@ namespace PrincesPalace
         {
             if (startRunCaption == null) return;
 
-            if (RunManager.HasRun) startRunCaption.Set(UiStrings.HubResumeFloor, RunManager.Run.floor);
+            var blocked = PartyReadiness.FirstBlocked(SaveSlotManager.CurrentSave);
+            if (blocked != null) startRunCaption.Set(UiStrings.HubChoosePath, NameOf(blocked).ToUpperInvariant());
+            else if (RunManager.HasRun) startRunCaption.Set(UiStrings.HubResumeFloor, RunManager.Run.floor);
             else startRunCaption.Set(UiStrings.HubBeginDescent);
         }
 
@@ -123,6 +126,14 @@ namespace PrincesPalace
         }
 
 
+
+        private static string NameOf(Character character)
+        {
+            var definition = ContentDatabase.GetCharacter(character.definitionId);
+            return definition == null || string.IsNullOrWhiteSpace(definition.Data.DisplayName)
+                ? character.definitionId
+                : definition.Data.DisplayName;
+        }
 
         private static readonly Color UnbuiltTint = new Color(0.55f, 0.55f, 0.62f, 1f);
 
@@ -472,6 +483,19 @@ namespace PrincesPalace
         private void StartOrResumeRun()
         {
             if (_descending) return; // one gate press, not a queue of them
+
+            // A squad member whose kit needs a choice (Bjorn's Fury engine
+            // root) cannot descend until it is made. The press takes the
+            // player to that character's Talents page instead of refusing
+            // silently, and the gate stays live so a gamepad can press it.
+            var blocked = PartyReadiness.FirstBlocked(SaveSlotManager.CurrentSave);
+            if (blocked != null)
+            {
+                TalentController.RequestedCharacterId = blocked.definitionId;
+                Navigation.Go(Navigation.Talents);
+                return;
+            }
+
             StartCoroutine(BeginDescentTransition());
         }
 

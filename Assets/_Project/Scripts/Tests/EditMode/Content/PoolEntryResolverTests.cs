@@ -338,6 +338,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Resolve(raw, out var pool, out string error), error);
             Assert.AreEqual(PoolStartRule.Zero, pool.StartRule);
             Assert.AreEqual(0, pool.GainOnAttack);
+            Assert.IsTrue(pool.EngineFed);
         }
 
         [Test]

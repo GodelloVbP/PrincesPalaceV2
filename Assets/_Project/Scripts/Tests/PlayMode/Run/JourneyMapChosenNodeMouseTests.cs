@@ -70,6 +70,7 @@ namespace PrincesPalace.PlayModeTests
             yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
             yield return null;
             yield return null;
+            EngineRoots.GrantToSquad();
             TakeOverInput();
             // A fresh scene's own layout can still be mid-settle the frame it
             // activates -- this suite found that gap under the full parallel

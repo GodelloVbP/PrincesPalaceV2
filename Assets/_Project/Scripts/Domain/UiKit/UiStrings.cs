@@ -293,6 +293,8 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString HubBeginDescent =
             UiString.Define("hub.begin_descent", "BEGIN DESCENT");
+        public static readonly UiString HubChoosePath =
+            UiString.Define("hub.choose_path", "CHOOSE {0}'S PATH", "CHOOSE BJORN'S PATH");
         public static readonly UiString HubResumeFloor =
             UiString.Define("hub.resume_floor", "RESUME - FLOOR {0}", "RESUME - FLOOR 99");
 
@@ -1406,6 +1408,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("party.card.tag_in_party", "In party · {0}", "In party · Bjorn");
         public static readonly UiString PartyCardTagArtPending =
             UiString.Define("party.card.tag_art_pending", "Art pending");
+        public static readonly UiString PartyCardTagChoosePath =
+            UiString.Define("party.card.tag_choose_path", "Choose a path");
         public static readonly UiString PartyCardTagBenched = UiString.Define("party.card.tag_benched", "Benched");
         public static readonly UiString PartySelectedTag = UiString.Define("party.card.selected_tag", "SELECTED");
 

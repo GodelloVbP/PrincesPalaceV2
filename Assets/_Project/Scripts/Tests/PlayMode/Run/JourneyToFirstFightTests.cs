@@ -122,6 +122,7 @@ namespace PrincesPalace.PlayModeTests
             yield return WaitForScene("Hub", 5f, "Submit on an empty slot should enter it and load the Hub");
             yield return null;
             yield return null; // Start() runs one frame after activation
+            EngineRoots.GrantToSquad();
             TakeOverInput();
 
             AssertSelectedName("StartRunGate",

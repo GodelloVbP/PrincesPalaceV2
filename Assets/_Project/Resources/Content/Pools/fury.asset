@@ -33,3 +33,4 @@ MonoBehaviour:
     RestoredByManaEffects: 0
     AbsorbsDamage: 0
     SortOrder: 1
+    EngineFed: 1
