@@ -151,7 +151,7 @@ namespace PrincesPalace.Domain.Bot
             {
                 case FightActionKind.Attack:
                 {
-                    int dmg = CombatMath.ComputeAttackDamage(actor, action.Target);
+                    int dmg = FightAction.PreviewAttackDamage(actor, action.Target);
                     ownEffect = dmg;
                     killsTarget = action.Target != null && dmg >= action.Target.CurrentHealth;
                     break;

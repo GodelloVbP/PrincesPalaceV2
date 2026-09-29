@@ -712,7 +712,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
                 resolveWard: ResolveWard,
-                resolveDetonation: ResolveDetonation);
+                resolveDetonation: ResolveDetonation,
+                crit: CritCallFor(actor));
 
             // Swift: the swing missed outright. Everything below this line
             // is a rider on a LANDED hit -- BreakShield depletion, the mark
@@ -732,6 +733,8 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             DepleteBreakShield(target, outcome.Effectiveness);
+
+            if (outcome.IsCrit) NoteCrit();
 
             if (outcome.PoisonDetonation > 0)
             {
@@ -937,7 +940,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     resolveWard: ResolveWard,
                     attacker: actor,
                     dodgeAlreadyResolved: true,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    // Bonus damage riding a landed blow, never a crit of its
+                    // own -- the blow it rides already had its crit call.
+                    crit: false);
 
                 int elementalDamage = elementalOutcome.Damage;
                 if (elementalDamage <= 0) continue;
@@ -961,8 +967,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 int healed = Rounding.AwayFromZero(damage * lifestealPercent / 100f);
                 if (healed > 0)
                 {
-                    CombatMath.Heal(actor, healed);
-                    AppendMessage($"{actor.Name} drains {healed} health from the blow.");
+                    // THROUGH THE HEAL FUNNEL (plan 4b), not CombatMath.Heal:
+                    // lifesteal is healing, so it is booked and Cursed Blood
+                    // converts it -- trigger-free (HealWithoutTriggers), so no
+                    // heal-triggered relic hears it, as before. The converted
+                    // case says its own line.
+                    bool converts = actor.HealConversion.IsActive;
+                    HealWithoutTriggers(actor, healed);
+                    if (!converts) AppendMessage($"{actor.Name} drains {healed} health from the blow.");
                 }
             }
 
@@ -1005,9 +1017,11 @@ namespace PrincesPalace.Domain.Combat.Session
             int rootChance = effects.Best(ModifierEffectType.RootChancePercent);
             if (rootChance > 0 && target.IsAlive && RollPercent(rootChance))
             {
-                ApplyStatusTo(target, StatusEffectType.Rooted,
-                    magnitude: 0, turns: FightTuning.RootOnHitTurns, source: actor);
-                AppendMessage($"{target.Name} is rooted in place!");
+                if (ApplyStatusTo(target, StatusEffectType.Rooted,
+                        magnitude: 0, turns: FightTuning.RootOnHitTurns, source: actor))
+                {
+                    AppendMessage($"{target.Name} is rooted in place!");
+                }
             }
         }
 

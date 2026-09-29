@@ -1,0 +1,482 @@
+diff --git a/Assets/_Project/Scripts/Domain/Combat/CritRules.cs b/Assets/_Project/Scripts/Domain/Combat/CritRules.cs
+index e923834..6815ae9 100644
+--- a/Assets/_Project/Scripts/Domain/Combat/CritRules.cs
++++ b/Assets/_Project/Scripts/Domain/Combat/CritRules.cs
+@@ -23,6 +23,12 @@ namespace PrincesPalace.Domain.Combat
+     //
+     // HEALS NEVER CRIT. They never reach DamagePipeline, which is the only
+     // place a crit is applied.
++    //
++    // The two party stats (StatBlock.critChance / critDamage) are BONUSES on
++    // top of the baselines below, so zero means "the baseline" and every
++    // existing StatBlock keeps its meaning. PartyChancePercent /
++    // PartyDamagePercent turn a party member's effective stats into the two
++    // CombatantState fields at kit-build time.
+     public static class CritRules
+     {
+         // First values, owner-set (2026-09-28). Tune here, nowhere else.
+@@ -33,6 +39,12 @@ namespace PrincesPalace.Domain.Combat
+         // negative bonus says.
+         public const int MinDamagePercent = 100;
+ 
++        public static int PartyChancePercent(StatBlock stats) =>
++            ClampChance(BaseChancePercent + stats.critChance);
++
++        public static int PartyDamagePercent(StatBlock stats) =>
++            Math.Max(MinDamagePercent, BaseDamagePercent + stats.critDamage);
++
+         // The chance this attacker actually rolls at. 0 for enemies, always --
+         // see this class' header.
+         public static int ChanceFor(CombatantState attacker) =>
+diff --git a/Assets/_Project/Scripts/Domain/Combat/Session/CombatantKit.cs b/Assets/_Project/Scripts/Domain/Combat/Session/CombatantKit.cs
+index e8ed6df..8f5194d 100644
+--- a/Assets/_Project/Scripts/Domain/Combat/Session/CombatantKit.cs
++++ b/Assets/_Project/Scripts/Domain/Combat/Session/CombatantKit.cs
+@@ -193,7 +193,8 @@ namespace PrincesPalace.Domain.Combat.Session
+ 
+             var pool = new List<EnemyAbility>
+             {
+-                EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f - chance),
++                EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f - chance,
++                    crits: source != null && source.AttackCrits),
+             };
+ 
+             if (chance > 0f)
+diff --git a/Assets/_Project/Scripts/Domain/Combat/TalentEffect.cs b/Assets/_Project/Scripts/Domain/Combat/TalentEffect.cs
+index 349cea9..8a1af0a 100644
+--- a/Assets/_Project/Scripts/Domain/Combat/TalentEffect.cs
++++ b/Assets/_Project/Scripts/Domain/Combat/TalentEffect.cs
+@@ -149,12 +149,16 @@ namespace PrincesPalace.Domain.Combat
+         //
+         // This is a SUBSTITUTION, recorded here rather than only in a commit
+         // message because content authors read this file. The handoff (§6.3)
+-        // specifies "cannot be critically hit below 25% max HP" — and this
+-        // game has no critical hits, in any file, so that node would have
+-        // been inert content the resolver could not tell from a typo. A spike
+-        // cap keeps the intent exactly ("the burst that kills you cannot
+-        // happen") on a hook that exists today. If crits land later this is
+-        // the node to revisit.
++        // specifies "cannot be critically hit below 25% max HP". When this was
++        // written the game had no critical hits, so that node would have been
++        // inert content. Crits EXIST now (CritRules, 2026-09-28) -- party
++        // members roll them, and a monster crits only when an ability is
++        // authored to -- but this node is deliberately UNCHANGED: the spike
++        // cap still stands in for "cannot be critically hit", and it still
++        // keeps the intent ("the burst that kills you cannot happen") while
++        // also covering a telegraphed authored crit. Swapping it for a real
++        // crit immunity is a balance decision, not a follow-on of the crit
++        // system, and has not been taken.
+         DamageCapPercentBelowHealth,
+ 
+         // Once per fight, a hit that would reduce you to 0 leaves you at 1.
+diff --git a/Assets/_Project/Scripts/Domain/Content/EnemyEntryResolver.cs b/Assets/_Project/Scripts/Domain/Content/EnemyEntryResolver.cs
+index d6995ae..436418f 100644
+--- a/Assets/_Project/Scripts/Domain/Content/EnemyEntryResolver.cs
++++ b/Assets/_Project/Scripts/Domain/Content/EnemyEntryResolver.cs
+@@ -260,7 +260,7 @@ namespace PrincesPalace.Domain.Content
+                     return false;
+                 }
+ 
+-                abilities.Add(new EnemyAbilityRef(id, entry.weight));
++                abilities.Add(new EnemyAbilityRef(id, entry.weight, entry.crits));
+             }
+ 
+             // Every weight at zero is a monster authored as able to do nothing
+@@ -279,9 +279,10 @@ namespace PrincesPalace.Domain.Content
+             // authored and never read. The same "no meaning on this row"
+             // refusal SkillEntryResolver makes for fields its effect ignores.
+             if (raw.attackWeight == 0f
+-                && (raw.attackHoldsPosition || !string.IsNullOrWhiteSpace(raw.attackApproach)))
++                && (raw.attackHoldsPosition || !string.IsNullOrWhiteSpace(raw.attackApproach) || raw.attackCrits))
+             {
+-                string field = raw.attackHoldsPosition ? "attackHoldsPosition" : "attackApproach";
++                string field = raw.attackHoldsPosition ? "attackHoldsPosition"
++                    : raw.attackCrits ? "attackCrits" : "attackApproach";
+                 error = $"{label}: {field} is authored on a row with attackWeight 0, which never makes a plain " +
+                         "attack -- it would never be read. Drop the field, or give the plain attack a weight.";
+                 return false;
+@@ -336,6 +337,7 @@ namespace PrincesPalace.Domain.Content
+                 RallyAttackPercentPerStack = rally.attackPercentPerStack,
+                 RallyMaxStacks = rally.maxStacks,
+                 Schedule = schedule,
++                AttackCrits = raw.attackCrits,
+             };
+             error = null;
+             return true;
+diff --git a/Assets/_Project/Scripts/Domain/Content/RawEnemyEntry.cs b/Assets/_Project/Scripts/Domain/Content/RawEnemyEntry.cs
+index 20f3fa4..2d9a910 100644
+--- a/Assets/_Project/Scripts/Domain/Content/RawEnemyEntry.cs
++++ b/Assets/_Project/Scripts/Domain/Content/RawEnemyEntry.cs
+@@ -164,6 +164,14 @@ namespace PrincesPalace.Domain.Content
+         [ContentDoc("The relative weight of the monster's plain attack against its ability weights; 0 removes plain attacks entirely.")]
+         public float attackWeight = 1f;
+ 
++        // THE PLAIN ATTACK IS AUTHORED TO CRIT: every plain swing this monster
++        // lands is a guaranteed critical hit (CritRules' damage multiplier),
++        // and the telegraph shows it. Monsters have no random crit chance, so
++        // this and RawEnemyAbility.crits are the only ways one ever crits.
++        // Refused with attackWeight 0, which never swings.
++        [ContentDoc("Every plain attack this monster lands is a guaranteed critical hit, shown in its telegraph (monsters never crit at random); refused with attackWeight 0.")]
++        public bool attackCrits;
++
+         // Benched, not deleted. An inactive monster keeps its full entry
+         // here — stats, weakness, rewards, the lot — but no asset is built
+         // for it, so it cannot spawn. Used to narrow the pool to the
+@@ -328,6 +336,13 @@ namespace PrincesPalace.Domain.Content
+         // only if EVERY entry is zero.
+         [ContentDoc("The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0.")]
+         public float weight = 1f;
++
++        // AUTHORED TO CRIT, for THIS monster's use of the skill only -- a
++        // guaranteed critical hit on every damaging hit it lands, shown in the
++        // telegraph. Per ability line rather than on the skill row, so one
++        // monster's Overhead Slam can crit without every caster of it doing so.
++        [ContentDoc("Every damaging hit of this ability, as this monster uses it, is a guaranteed critical hit shown in its telegraph (monsters never crit at random).")]
++        public bool crits;
+     }
+ 
+     // JsonUtility can't deserialize a bare top-level JSON array, so
+diff --git a/Assets/_Project/Scripts/Domain/Content/ResolvedEnemy.cs b/Assets/_Project/Scripts/Domain/Content/ResolvedEnemy.cs
+index 1a551a1..71a71a1 100644
+--- a/Assets/_Project/Scripts/Domain/Content/ResolvedEnemy.cs
++++ b/Assets/_Project/Scripts/Domain/Content/ResolvedEnemy.cs
+@@ -18,10 +18,14 @@ namespace PrincesPalace.Domain.Content
+         public string SkillId;
+         public float Weight;
+ 
+-        public EnemyAbilityRef(string skillId, float weight)
++        // Authored to crit -- see RawEnemyAbility.crits and EnemyAbility.Crits.
++        public bool Crits;
++
++        public EnemyAbilityRef(string skillId, float weight, bool crits = false)
+         {
+             SkillId = (skillId ?? "").Trim();
+             Weight = weight;
++            Crits = crits;
+         }
+     }
+ 
+@@ -128,6 +132,9 @@ namespace PrincesPalace.Domain.Content
+         // The basic attack's own weight in that pool. See RawEnemyEntry.
+         public float AttackWeight = 1f;
+ 
++        // The plain attack is authored to crit. See RawEnemyEntry.attackCrits.
++        public bool AttackCrits;
++
+         // Empty SkillName means this monster has no second action at all.
+         public string SkillName = "";
+         public float SkillPower = 1.5f;
+diff --git a/Assets/_Project/Scripts/Domain/Stats/StatBlock.cs b/Assets/_Project/Scripts/Domain/Stats/StatBlock.cs
+index 4cf99a0..a780c1c 100644
+--- a/Assets/_Project/Scripts/Domain/Stats/StatBlock.cs
++++ b/Assets/_Project/Scripts/Domain/Stats/StatBlock.cs
+@@ -37,9 +37,19 @@ namespace PrincesPalace.Domain.Stats
+         public int physicalDefense;
+         public int magicalDefense;
+ 
++        // Critical-hit BONUSES in percent points, on top of CritRules' party
++        // baseline -- see StatType.CritChance. Appended last and optional on
++        // the constructor for the same compatibility reason as the three
++        // set stats above: zero means "the baseline", not "never crits".
++        public int critChance;
++        public int critDamage;
++
+         public StatBlock(int maxHealth, int speed, int attack,
+-            int manaRegen = 0, int physicalDefense = 0, int magicalDefense = 0)
++            int manaRegen = 0, int physicalDefense = 0, int magicalDefense = 0,
++            int critChance = 0, int critDamage = 0)
+         {
++            this.critChance = critChance;
++            this.critDamage = critDamage;
+             this.maxHealth = maxHealth;
+             this.speed = speed;
+             this.attack = attack;
+@@ -62,6 +72,8 @@ namespace PrincesPalace.Domain.Stats
+                     case StatType.ManaRegen: return manaRegen;
+                     case StatType.PhysicalDefense: return physicalDefense;
+                     case StatType.MagicalDefense: return magicalDefense;
++                    case StatType.CritChance: return critChance;
++                    case StatType.CritDamage: return critDamage;
+                     default:
+                         throw new ArgumentOutOfRangeException(nameof(stat), stat, "StatBlock has no field wired up for this StatType.");
+                 }
+@@ -81,6 +93,8 @@ namespace PrincesPalace.Domain.Stats
+                 case StatType.ManaRegen: return new StatBlock(0, 0, 0, manaRegen: value);
+                 case StatType.PhysicalDefense: return new StatBlock(0, 0, 0, physicalDefense: value);
+                 case StatType.MagicalDefense: return new StatBlock(0, 0, 0, magicalDefense: value);
++                case StatType.CritChance: return new StatBlock(0, 0, 0, critChance: value);
++                case StatType.CritDamage: return new StatBlock(0, 0, 0, critDamage: value);
+                 default:
+                     throw new ArgumentOutOfRangeException(nameof(stat), stat, "StatBlock cannot build a block for this StatType.");
+             }
+@@ -94,7 +108,9 @@ namespace PrincesPalace.Domain.Stats
+                 a.attack + b.attack,
+                 a.manaRegen + b.manaRegen,
+                 a.physicalDefense + b.physicalDefense,
+-                a.magicalDefense + b.magicalDefense);
++                a.magicalDefense + b.magicalDefense,
++                a.critChance + b.critChance,
++                a.critDamage + b.critDamage);
+         }
+ 
+         // The comparison a hover panel diffs two loadouts with — negative
+@@ -108,7 +124,9 @@ namespace PrincesPalace.Domain.Stats
+                 a.attack - b.attack,
+                 a.manaRegen - b.manaRegen,
+                 a.physicalDefense - b.physicalDefense,
+-                a.magicalDefense - b.magicalDefense);
++                a.magicalDefense - b.magicalDefense,
++                a.critChance - b.critChance,
++                a.critDamage - b.critDamage);
+         }
+ 
+         // Clamps every stat to at least `floor`. Useful once talents or
+@@ -122,7 +140,9 @@ namespace PrincesPalace.Domain.Stats
+                 Math.Max(floor, attack),
+                 Math.Max(floor, manaRegen),
+                 Math.Max(floor, physicalDefense),
+-                Math.Max(floor, magicalDefense));
++                Math.Max(floor, magicalDefense),
++                Math.Max(floor, critChance),
++                Math.Max(floor, critDamage));
+         }
+ 
+         // Multiplies every stat by the same factor and rounds to the nearest
+@@ -141,7 +161,12 @@ namespace PrincesPalace.Domain.Stats
+                 Rounding.AwayFromZero(attack * multiplier),
+                 Rounding.AwayFromZero(manaRegen * multiplier),
+                 Rounding.AwayFromZero(physicalDefense * multiplier),
+-                Rounding.AwayFromZero(magicalDefense * multiplier));
++                Rounding.AwayFromZero(magicalDefense * multiplier),
++                // The crit pair is NOT scaled: they are percent points, and a
++                // tier multiplier is about a body's size, not its luck. Only
++                // party members roll crits anyway (see CritRules).
++                critChance,
++                critDamage);
+         }
+ 
+         // Like Scaled, but attack and the two broad defenses each ride their
+@@ -163,7 +188,9 @@ namespace PrincesPalace.Domain.Stats
+                 Rounding.AwayFromZero(attack * attackMultiplier),
+                 Rounding.AwayFromZero(manaRegen * multiplier),
+                 Rounding.AwayFromZero(physicalDefense * defenseMultiplier),
+-                Rounding.AwayFromZero(magicalDefense * defenseMultiplier));
++                Rounding.AwayFromZero(magicalDefense * defenseMultiplier),
++                critChance,
++                critDamage);
+         }
+ 
+         public bool Equals(StatBlock other)
+@@ -173,7 +200,9 @@ namespace PrincesPalace.Domain.Stats
+                 && attack == other.attack
+                 && manaRegen == other.manaRegen
+                 && physicalDefense == other.physicalDefense
+-                && magicalDefense == other.magicalDefense;
++                && magicalDefense == other.magicalDefense
++                && critChance == other.critChance
++                && critDamage == other.critDamage;
+         }
+ 
+         public override bool Equals(object obj)
+@@ -191,13 +220,15 @@ namespace PrincesPalace.Domain.Stats
+                 hash = (hash * 397) ^ manaRegen;
+                 hash = (hash * 397) ^ physicalDefense;
+                 hash = (hash * 397) ^ magicalDefense;
++                hash = (hash * 397) ^ critChance;
++                hash = (hash * 397) ^ critDamage;
+                 return hash;
+             }
+         }
+ 
+         public override string ToString()
+         {
+-            return $"HP {maxHealth}, SPD {speed}, ATK {attack}, MPR {manaRegen}, PDEF {physicalDefense}, MDEF {magicalDefense}";
++            return $"HP {maxHealth}, SPD {speed}, ATK {attack}, MPR {manaRegen}, PDEF {physicalDefense}, MDEF {magicalDefense}, CRIT +{critChance}%, CDMG +{critDamage}%";
+         }
+     }
+ }
+diff --git a/Assets/_Project/Scripts/Domain/Stats/StatType.cs b/Assets/_Project/Scripts/Domain/Stats/StatType.cs
+index bcbcf3d..1d30621 100644
+--- a/Assets/_Project/Scripts/Domain/Stats/StatType.cs
++++ b/Assets/_Project/Scripts/Domain/Stats/StatType.cs
+@@ -30,6 +30,16 @@ namespace PrincesPalace.Domain.Stats
+         // them into a reduction on a curve that cannot reach immunity. See
+         // DamagePipeline's canonical mitigation equation.
+         PhysicalDefense,
+-        MagicalDefense
++        MagicalDefense,
++
++        // CRITICAL HITS (PLAN_BJORN_CONSTELLATIONS Phase 1). APPENDED, never
++        // inserted: content stores these as ordinals. Both are BONUSES on top
++        // of the party baseline in CritRules (5% chance, 150% damage), so a
++        // block nobody authored still means "the baseline" and every existing
++        // StatBlock keeps its meaning. Percent points, not ratings: +3 chance
++        // is 8% total, +25 damage is a 175% crit. See CritRules for the whole
++        // rule and DamagePipeline.AfterDefences for where it lands.
++        CritChance,
++        CritDamage
+     }
+ }
+diff --git a/Assets/_Project/Scripts/Tests/EditMode/Content/CritAuthoringTests.cs b/Assets/_Project/Scripts/Tests/EditMode/Content/CritAuthoringTests.cs
+new file mode 100644
+index 0000000..92bf436
+--- /dev/null
++++ b/Assets/_Project/Scripts/Tests/EditMode/Content/CritAuthoringTests.cs
+@@ -0,0 +1,128 @@
++using System.Collections.Generic;
++using NUnit.Framework;
++using PrincesPalace.Domain.Combat;
++using PrincesPalace.Domain.Combat.Session;
++using PrincesPalace.Domain.Content;
++using PrincesPalace.Domain.Stats;
++
++namespace PrincesPalace.Domain.Tests
++{
++    // CRITICAL HITS, the authored half (PLAN_BJORN_CONSTELLATIONS Phase 1):
++    // the two party stats on StatBlock, and the two enemy authoring fields
++    // (RawEnemyEntry.attackCrits, RawEnemyAbility.crits) reaching the resolved
++    // record and the kit. The combat rule itself is CritTests'.
++    public class CritAuthoringTests
++    {
++        // ---- the party stats ---------------------------------------------------
++
++        [Test]
++        public void TheCritStatsAreAppendedAfterMagicalDefense()
++        {
++            // Content stores StatType as an ordinal: appended, never inserted.
++            Assert.AreEqual(5, (int)StatType.MagicalDefense);
++            Assert.AreEqual(6, (int)StatType.CritChance);
++            Assert.AreEqual(7, (int)StatType.CritDamage);
++        }
++
++        [Test]
++        public void TheCritStatsRideTheIndexerAndSum()
++        {
++            var a = new StatBlock(0, 0, 0, critChance: 3, critDamage: 25);
++            var b = StatBlock.ForStat(StatType.CritChance, 2) + StatBlock.ForStat(StatType.CritDamage, 10);
++
++            var sum = a + b;
++
++            Assert.AreEqual(5, sum[StatType.CritChance]);
++            Assert.AreEqual(35, sum[StatType.CritDamage]);
++        }
++
++        [Test]
++        public void ScalingABodyLeavesItsCritStatsAlone()
++        {
++            var block = new StatBlock(100, 10, 10, critChance: 4, critDamage: 20);
++
++            var elite = block.ScaledForElite(1.4f, 1.15f, 1.15f);
++            var scaled = block.Scaled(2f);
++
++            Assert.AreEqual(4, elite.critChance);
++            Assert.AreEqual(20, elite.critDamage);
++            Assert.AreEqual(4, scaled.critChance);
++            Assert.AreEqual(20, scaled.critDamage);
++        }
++
++        [Test]
++        public void ThePartyTotalsAreTheBaselinePlusTheBonus()
++        {
++            Assert.AreEqual(5, CritRules.PartyChancePercent(StatBlock.Zero));
++            Assert.AreEqual(150, CritRules.PartyDamagePercent(StatBlock.Zero));
++
++            var keen = new StatBlock(0, 0, 0, critChance: 10, critDamage: 25);
++            Assert.AreEqual(15, CritRules.PartyChancePercent(keen));
++            Assert.AreEqual(175, CritRules.PartyDamagePercent(keen));
++        }
++
++        [Test]
++        public void ThePartyTotalsAreClamped()
++        {
++            Assert.AreEqual(100, CritRules.PartyChancePercent(new StatBlock(0, 0, 0, critChance: 400)));
++            Assert.AreEqual(0, CritRules.PartyChancePercent(new StatBlock(0, 0, 0, critChance: -40)));
++            Assert.AreEqual(100, CritRules.PartyDamagePercent(new StatBlock(0, 0, 0, critDamage: -90)));
++        }
++
++        // ---- the enemy authoring fields ------------------------------------------
++
++        private static RawEnemyEntry Brute(bool attackCrits = false, float attackWeight = 1f, bool abilityCrits = false) =>
++            new RawEnemyEntry
++            {
++                id = "brute", displayName = "Brute", maxHealth = 150,
++                attackWeight = attackWeight,
++                attackCrits = attackCrits,
++                abilities = new[] { new RawEnemyAbility { skillId = "slam", weight = 1f, crits = abilityCrits } },
++            };
++
++        private static bool TryResolve(RawEnemyEntry entry, out ResolvedEnemy enemy, out List<string> errors)
++        {
++            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out errors);
++            enemy = ok ? resolved[0] : null;
++            return ok;
++        }
++
++        [Test]
++        public void NothingAuthoredMeansNoCrit()
++        {
++            Assert.IsTrue(TryResolve(Brute(), out var enemy, out var errors), string.Join("; ", errors));
++
++            Assert.IsFalse(enemy.AttackCrits);
++            Assert.IsFalse(enemy.Abilities[0].Crits);
++        }
++
++        [Test]
++        public void BothAuthoringFieldsReachTheResolvedRecord()
++        {
++            Assert.IsTrue(TryResolve(Brute(attackCrits: true, abilityCrits: true), out var enemy, out var errors),
++                string.Join("; ", errors));
++
++            Assert.IsTrue(enemy.AttackCrits);
++            Assert.IsTrue(enemy.Abilities[0].Crits);
++        }
++
++        [Test]
++        public void ACritOnAPlainAttackThatNeverSwingsIsRefused()
++        {
++            Assert.IsFalse(TryResolve(Brute(attackCrits: true, attackWeight: 0f), out _, out var errors));
++            StringAssert.Contains("attackCrits", errors[0]);
++        }
++
++        [Test]
++        public void TheLegacyPoolsPlainSwingCarriesTheAuthoredCrit()
++        {
++            var source = new ResolvedEnemy("brute", "Brute", new StatBlock(), 0, 0, false,
++                DamageType.Physical, DamageType.Physical, 0) { AttackCrits = true };
++
++            var kit = new EnemyKit(source, false);
++
++            Assert.IsTrue(kit.Abilities[0].IsPlainSwing);
++            Assert.IsTrue(kit.Abilities[0].Crits);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Tests/EditMode/Content/CritAuthoringTests.cs.meta b/Assets/_Project/Scripts/Tests/EditMode/Content/CritAuthoringTests.cs.meta
+new file mode 100644
+index 0000000..eac9318
+--- /dev/null
++++ b/Assets/_Project/Scripts/Tests/EditMode/Content/CritAuthoringTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: a2746b41f25346de9dd72e6c491acd6e
+\ No newline at end of file
+diff --git a/docs/CONTENT_SCHEMA.md b/docs/CONTENT_SCHEMA.md
+index cde8fee..3b3c9fe 100644
+--- a/docs/CONTENT_SCHEMA.md
++++ b/docs/CONTENT_SCHEMA.md
+@@ -78,6 +78,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
+ | `skillChance` | float | `-1` | The legacy second action's odds of being picked on any given turn. |  |
+ | `abilities` | RawEnemyAbility[] (below) | `[]` | This monster's real skills (skills.json ids) with relative selection weights; replaces skillName/skillPower/skillChance when non-empty. |  |
+ | `attackWeight` | float | `1` | The relative weight of the monster's plain attack against its ability weights; 0 removes plain attacks entirely. |  |
++| `attackCrits` | bool | `false` | Every plain attack this monster lands is a guaranteed critical hit, shown in its telegraph (monsters never crit at random); refused with attackWeight 0. |  |
+ | `active` | bool | `true` | Whether this monster can actually spawn; false benches the entry without deleting it. |  |
+ | `facing` | string | `"right"` | Which way this monster's art is drawn in its source file, so the stage knows whether to mirror it. | Left, Right |
+ | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | VFX played over the target when this monster's skill lands; see SpellPresentation. |  |
+@@ -378,6 +379,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
+ |---|---|---|---|---|
+ | `skillId` | string | `""` | A skill id from skills.json this monster may draw. |  |
+ | `weight` | float | `1` | The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0. |  |
++| `crits` | bool | `false` | Every damaging hit of this ability, as this monster uses it, is a guaranteed critical hit shown in its telegraph (monsters never crit at random). |  |
+ 
+ ### `RawEnemyRally`
+ 

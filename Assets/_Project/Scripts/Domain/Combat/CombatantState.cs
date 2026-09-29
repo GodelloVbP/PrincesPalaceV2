@@ -73,6 +73,19 @@ namespace PrincesPalace.Domain.Combat
         // retuned nothing. See ResistanceByType.
         public ResistanceByType TypedResistance;
 
+        // CRITICAL HITS -- see CritRules for the whole rule. Totals, not
+        // bonuses: a party member's kit build may write the totals its
+        // effective stats give here. Set after construction for the same
+        // reason ArmorPenetration is.
+        //
+        // The constructor starts a PLAYER-SIDE combatant at the baseline 5%
+        // (CritRules.BaseChancePercent) and an enemy at 0; only party members
+        // ever roll it (CritRules.ChanceFor). The damage defaults to the
+        // baseline 150%, so an enemy's AUTHORED crit lands at the rule's own
+        // figure.
+        public int CritChancePercent;
+        public int CritDamagePercent = CritRules.BaseDamagePercent;
+
         // THE SECOND, PRIVATE POOL: null for everyone who has no signature
         // resource, which today is everyone except Shawn. A nullable
         // reference rather than a zero-capacity instance so "has one" is a
@@ -165,6 +178,51 @@ namespace PrincesPalace.Domain.Combat
         // times in one fight while this must not reset with it.
         public bool CheatDeathSpent;
 
+        // THE PHASE 4 ENGINE SEAMS (docs/PLAN_BJORN_CONSTELLATIONS.md, "Phase
+        // 4 engine seams"). Each is off for everyone until the Juggernaut
+        // wiring sets it, and each is read at exactly one seam in the session.
+        //
+        // Cursed Blood (4b): open the window and every heal converts. Read by
+        // FightSession.HealAndCount. See HealConversion.
+        public readonly HealConversion HealConversion = new HealConversion();
+
+        // Ignore Pain (4c): null = no delayed damage. Read by
+        // FightSession.LandPacket (defer), TickStatuses (pay) and HealAndCount
+        // (T3's heal-reduces-pool). See DelayedDamagePool.
+        public DelayedDamagePool DelayedDamage;
+
+        // Blood Price (4d): thousandths of max health paid per point of
+        // primary-pool shortfall; 0 = off, 5 = Blood Price T1. Read by
+        // SkillResolution.CanAfford and FightSession.CastCore. See BloodPrice.
+        public int ShortfallHealthPermille;
+
+        // Unstoppable and Unyielding (4e). Read at FightSession.RecordStatus,
+        // the application seam every status reaches. See CrowdControlGuard.
+        public readonly CrowdControlGuard CrowdControl = new CrowdControlGuard();
+
+        // The Sentinel's planted shield and Shieldwall (4a). Nothing placed
+        // and every reactive hook off until the Sentinel wiring touches it.
+        // Read at FightSession.ResolveWard. See PlantedShield.
+        public readonly PlantedShield PlantedShield = new PlantedShield();
+
+        // PHASE 2, THE ROOT FURY ENGINES. None = the primary pool's authored
+        // flat gains pay, exactly as before; any other kind replaces them for
+        // this combatant. Read at FightSession.NoteDamageForPools and
+        // TickPrimaryPool. See FuryEngine.
+        public readonly FuryEngine FuryEngine = new FuryEngine();
+
+        // The Einherjar tree's seams (EinherjarSeams.cs). Momentum is off
+        // until Enabled; the other two are null = off.
+        public readonly Momentum Momentum = new Momentum();
+        public BattleTrance BattleTrance;
+        public TwinRampageRule TwinRampage;
+
+        // PER-HOLDER SKILL COOLDOWNS, by skill id: when present (> 0) it
+        // replaces the skill's authored cooldownTurns for this combatant only
+        // -- Second Wind granted by the Juggernaut root carries 4 where the
+        // row itself has none. Read by SkillCooldowns.TurnsFor.
+        public readonly Dictionary<string, int> CooldownOverrides = new Dictionary<string, int>();
+
         // Always a real (possibly empty) list rather than nullable — unlike
         // Signature/BreakShield, which are each ONE mechanic a combatant
         // either has or does not, a combatant can pick up any number of
@@ -254,6 +312,13 @@ namespace PrincesPalace.Domain.Combat
             Name = name;
             IsPlayerSide = isPlayerSide;
             MaxHealth = maxHealth;
+
+            // THE PARTY BASELINE, here rather than at kit build, so every
+            // player-side combatant crits at the rule's own 5% however it was
+            // built. A kit build that knows the character's stats may overwrite
+            // it with their stat-driven total (see CritRules). Enemies stay at 0 (and
+            // are ignored by CritRules.ChanceFor regardless).
+            CritChancePercent = isPlayerSide ? CritRules.BaseChancePercent : 0;
             CurrentHealth = maxHealth;
             PrimaryPool = primaryPool ?? DefaultManaPool(0);
             Attack = attack;

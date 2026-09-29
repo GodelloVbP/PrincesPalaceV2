@@ -306,12 +306,17 @@ namespace PrincesPalace.Domain.Combat
         // gain: DecayPerIdleTurn is 0 on the shipped row, so the whole decay
         // half is authored-in-waiting. That is deliberate, not dead code --
         // see ContentData/pools.json's own note.
-        public void TickTurnStart()
+        public void TickTurnStart() => TickTurnStart(allowDecay: true);
+
+        // `allowDecay: false` is an engine that switches idle decay off for
+        // its holder (the Juggernaut's, FuryEngine.SuppressesIdleDecay): the
+        // gain and the forgetting still happen, only the drain is skipped.
+        public void TickTurnStart(bool allowDecay)
         {
             Gain(GainPerTurn);
 
             bool kept = DecayUnless == PoolDecayTrigger.AnyAction ? _acted : _dealtOrTookDamage;
-            if (!kept)
+            if (!kept && allowDecay)
             {
                 SpendUpTo(DecayPerIdleTurn);
             }

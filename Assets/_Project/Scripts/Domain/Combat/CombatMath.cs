@@ -224,11 +224,11 @@ namespace PrincesPalace.Domain.Combat
         // Last Stand T2: while badly wounded, no single hit may take more
         // than a stated slice of the target's maximum health.
         //
-        // Stands in for the handoff's "cannot be critically hit", which has
-        // nothing to hook onto in a game with no critical hits — see
-        // TalentEffectType.DamageCapPercentBelowHealth' own comment for the
-        // full reasoning. The intent survives intact: the spike that ends the
-        // run is the thing removed.
+        // Stands in for the handoff's "cannot be critically hit". Crits exist
+        // now (CritRules), but this node still uses its spike cap rather than
+        // a crit immunity -- see TalentEffectType.DamageCapPercentBelowHealth'
+        // own comment for the full reasoning. The intent survives intact: the
+        // spike that ends the run is the thing removed, crit or not.
         public static int CapSpikeDamage(int damage, CombatantState target)
         {
             if (damage <= 0 || target == null || target.MaxHealth <= 0)

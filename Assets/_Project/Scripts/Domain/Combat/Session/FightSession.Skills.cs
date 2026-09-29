@@ -272,11 +272,27 @@ namespace PrincesPalace.Domain.Combat.Session
             // it holds, with ManaCost as the minimum CanAfford already
             // checked. Read BEFORE the charge, because afterwards there is
             // nothing left to read.
+            //
+            // BLOOD PRICE (plan 4d): what the pool cannot cover is read here,
+            // before the charge, and the pool pays only what it has. 0 for
+            // every caster without ShortfallHealthPermille, so for them this
+            // is the authored cost exactly as before.
+            int shortfall = BloodPrice.ShortfallOf(actor, skill.ManaCost);
             int primarySpent = skill.SpendsAllPrimary
                 ? (actor.PrimaryPool?.Current ?? 0)
-                : skill.ManaCost;
+                : skill.ManaCost - shortfall;
 
             ChargeSkillMana(actor, primarySpent);
+
+            // A PAYMENT, like the health cost below and for the same reasons
+            // (BloodPrice's header): a direct write that no ward, deferral or
+            // cheat death ever sees, and CanAfford already refused a cast that
+            // would leave less than 1 HP counting both together.
+            int bloodPaid = BloodPrice.Pay(actor, shortfall);
+            if (bloodPaid > 0)
+            {
+                AppendMessage($"{actor.Name} pays {bloodPaid} health for what the {actor.PrimaryPool?.DisplayName ?? "pool"} lacks.");
+            }
 
             // PAID DIRECTLY, NOT THROUGH DealDamage (plan 1.2) -- a health
             // cost is a payment, not incoming damage: no ward, no
@@ -480,7 +496,9 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
 
                 case SkillEffect.DamageAll:
-                    ResolveDamageAll(actor, skill, resourceSpent, poolTier);
+                    // Twin Rampage wraps the sweep when its rule fires; any
+                    // other DamageAll is exactly ResolveDamageAll.
+                    ResolveDamageAllWithTwin(actor, skill, resourceSpent, poolTier);
                     break;
 
                 case SkillEffect.Reclaim:
@@ -847,7 +865,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // A spell with authored packets deals exactly what it says, per
                 // element, and reports the split.
                 var detail = new StringBuilder();
-                damage = ResolveDamageInstances(actor, skill, target, detail, out bool dodgedInstances, packets);
+                damage = ResolveDamageInstances(actor, skill, target, detail, out bool dodgedInstances,
+                    out bool critInstances, packets);
 
                 // Swift: rolled ONCE for the whole multi-packet cast inside
                 // ResolveDamageInstances -- see that method's own header and
@@ -860,6 +879,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     return;
                 }
 
+                if (critInstances) NoteCrit();
                 AppendMessage($"{actor.Name} casts {castLabel} on {target.Name} for {damage}! -{detail}");
             }
             else
@@ -909,7 +929,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard,
                     ignoresDefense: skill.IgnoresDefense,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    crit: CritCallFor(actor));
 
                 if (outcome.IsMiss)
                 {
@@ -917,6 +938,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     AppendMessage($"{target.Name} dodges {actor.Name}'s {castLabel}!");
                     return;
                 }
+
+                if (outcome.IsCrit) NoteCrit();
 
                 damage = TotalDamage(actor, baseAmount, outcome.Damage);
                 DepleteBreakShield(target, outcome.Effectiveness);
@@ -1314,7 +1337,9 @@ namespace PrincesPalace.Domain.Combat.Session
             return -1;
         }
 
-        private void ResolveDamageAll(CombatantState actor, ResolvedSkill skill, int resourceSpent,
+        // Returns every enemy the sweep landed on (dodgers excluded, the
+        // felled included) -- Twin Rampage's second sweep stuns exactly those.
+        private List<CombatantState> ResolveDamageAll(CombatantState actor, ResolvedSkill skill, int resourceSpent,
             PoolTierResolution.Result poolTier = default)
         {
             // THE SAME LABEL THE SINGLE-TARGET PATH USES -- "Rampage",
@@ -1400,7 +1425,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (skill.HasFixedDamage)
                 {
                     var packets = new StringBuilder();
-                    int packetTotal = ResolveDamageInstances(actor, skill, enemy, packets, out bool packetsDodged);
+                    int packetTotal = ResolveDamageInstances(actor, skill, enemy, packets, out bool packetsDodged,
+                        out bool packetsCrit);
 
                     if (packetsDodged)
                     {
@@ -1410,12 +1436,12 @@ namespace PrincesPalace.Domain.Combat.Session
                     }
 
                     ApplyFinalDamage(actor, enemy, packetTotal, CombatActions.IsPhysicalMove(skill));
-                    RecordTargetResult(enemy, packetTotal);
+                    RecordTargetResult(enemy, packetTotal, crit: packetsCrit);
                     struckAndLanded.Add(enemy);
 
                     largestLanded = System.Math.Max(packetTotal, largestLanded);
                     RecordBeatAmount(largestLanded);
-                    summary.Append($" {enemy.Name} takes {packetTotal}! -{packets}");
+                    summary.Append($" {enemy.Name} takes {packetTotal}{CritSuffix(packetsCrit)}! -{packets}");
 
                     ApplyMark(actor, enemy);
                     MagicMarkerApplyMark(actor, enemy);
@@ -1453,7 +1479,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard,
                     ignoresDefense: skill.IgnoresDefense,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    // Per enemy, like the dodge: every target of a sweep rolls
+                    // its own crit (an authored crit crits them all).
+                    crit: CritCallFor(actor));
 
                 // Swift: EACH enemy in an AOE independently rolls its own
                 // dodge -- it is a genuinely separate target reacting to the
@@ -1495,12 +1524,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 // CAST's type, not the caster's swing, exactly as before.
                 ApplyFinalDamage(actor, enemy, landed, CombatActions.IsPhysicalMove(skill), castType);
 
-                RecordTargetResult(enemy, landed);
+                RecordTargetResult(enemy, landed, crit: outcome.IsCrit);
                 struckAndLanded.Add(enemy);
 
                 largestLanded = System.Math.Max(landed, largestLanded);
                 RecordBeatAmount(largestLanded);
-                summary.Append($" {enemy.Name} takes {landed}{EffectivenessSuffix(outcome.Effectiveness)}");
+                summary.Append($" {enemy.Name} takes {landed}{CritSuffix(outcome.IsCrit)}{EffectivenessSuffix(outcome.Effectiveness)}");
 
                 // The Drowned Lantern: a sweep marks everyone it actually hits.
                 ApplyMark(actor, enemy);
@@ -1525,6 +1554,7 @@ namespace PrincesPalace.Domain.Combat.Session
             ApplyQueuePushAll(actor, skill, struckAndLanded);
 
             AppendMessage(summary.ToString());
+            return struckAndLanded;
         }
 
         // Balance redesign Phase 3 (D3): the caster's own SkillScaling
@@ -1585,13 +1615,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // everything else about resolving those packets (dodge once, scale
         // once, resolve each through AfterDefences) is identical either way.
         private int ResolveDamageInstances(CombatantState actor, ResolvedSkill skill, CombatantState target,
-            StringBuilder detail, out bool dodged, DamageInstance[] packets = null)
+            StringBuilder detail, out bool dodged, out bool crit, DamageInstance[] packets = null)
         {
+            crit = false;
             dodged = DamagePipeline.RollDodge(target, actor, _rng);
             if (dodged)
             {
                 return 0;
             }
+
+            // ONE CRIT FOR THE WHOLE CAST, for the dodge's own reason: a
+            // multi-element spell is one blow, so either every packet crits or
+            // none does. Rolled after the dodge (a miss spends no crit draw)
+            // and handed to each packet below.
+            crit = ResolveCrit(actor);
 
             int total = 0;
             float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
@@ -1617,7 +1654,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     // is the one call that did not.
                     ignoresDefense: skill.IgnoresDefense,
                     dodgeAlreadyResolved: true,
-                    resolveDetonation: ResolveDetonation);
+                    resolveDetonation: ResolveDetonation,
+                    crit: crit);
 
                 DepleteBreakShield(target, outcome.Effectiveness);
                 total += outcome.Damage;
@@ -1829,9 +1867,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     AppendMessage($"{enemy.Name} steels itself against another hard control.");
                 }
-                else
+                // THROUGH RecordStatus rather than Fear.Apply (plan 4e), so the
+                // CC guard sees this fear like every other; for a guardless
+                // enemy it is the identical StatusEffects.Apply call Fear.Apply
+                // makes, with the same magnitude and duration.
+                else if (RecordStatus(enemy, StatusEffectType.Feared, Fear.VulnerablePercent,
+                             Fear.DefaultTurns, actor) != null)
                 {
-                    Fear.Apply(enemy, Fear.DefaultTurns, actor);
                     AppendMessage($"{enemy.Name} recoils from the whispering court.");
                 }
             }
@@ -1873,7 +1915,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // would have put the badge up and slowed nobody, because
             // ApplyChilled is the only path that registers the speed malus.
             // Winter's Rebuke is the first row that authors one.
-            ApplyStatusTo(recipient, type, skill.StatusMagnitude, skill.StatusDuration, caster);
+            if (!ApplyStatusTo(recipient, type, skill.StatusMagnitude, skill.StatusDuration, caster)) return;
 
             bool isBeneficial = type == StatusEffectType.Regen || type == StatusEffectType.Protect;
             AppendMessage(isBeneficial

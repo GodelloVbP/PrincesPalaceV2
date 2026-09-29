@@ -49,22 +49,41 @@ namespace PrincesPalace.Domain.Combat.Session
         // What the telegraph calls it.
         public readonly string Label;
 
-        private EnemyAbility(ResolvedSkill skill, bool hasSkill, float weight, string label, float power)
+        // AUTHORED TO CRIT (PLAN_BJORN_CONSTELLATIONS Phase 1): every damaging
+        // hit this ability lands is a guaranteed critical hit, and its
+        // telegraph says so (EnemyIntent.WillCrit, ExpectedDamage includes
+        // it). The ONLY way a monster ever crits -- enemies have no random
+        // chance, see CritRules. Authored per enemy -- on the enemy's own
+        // ability line or plain attack, not on the skill row -- so one
+        // monster's Overhead Slam can crit without every caster of that skill
+        // critting.
+        public readonly bool Crits;
+
+        private EnemyAbility(ResolvedSkill skill, bool hasSkill, float weight, string label, float power,
+                             bool crits)
         {
             Skill = skill;
             HasSkill = hasSkill;
             Weight = weight <= 0f ? 0f : weight;
             Power = power;
             Label = label ?? "";
+            Crits = crits;
         }
 
-        public static EnemyAbility Of(ResolvedSkill skill, float weight) =>
-            new EnemyAbility(skill, true, weight, skill.DisplayName, 1f);
+        public static EnemyAbility Of(ResolvedSkill skill, float weight, bool crits = false) =>
+            new EnemyAbility(skill, true, weight, skill.DisplayName, 1f, crits);
 
         // The old trio, expressed as an ability so there is ONE list and one
         // draw rather than a branch for monsters authored before this existed.
-        public static EnemyAbility LegacyAttack(string label, float power, float weight) =>
-            new EnemyAbility(default, false, weight, label, power);
+        public static EnemyAbility LegacyAttack(string label, float power, float weight, bool crits = false) =>
+            new EnemyAbility(default, false, weight, label, power, crits);
+
+        // THE SAME ABILITY AT ANOTHER WEIGHT -- what the draw-time gates
+        // (FightSession.EffectivePoolFor) use to zero an entry out. One copy
+        // of every other field, so a gated entry can never quietly lose one
+        // (its crit, say) by being rebuilt field by field.
+        public EnemyAbility WithWeight(float weight) =>
+            new EnemyAbility(Skill, HasSkill, weight, Label, Power, Crits);
 
         public bool IsLegacyAttack => !HasSkill;
 

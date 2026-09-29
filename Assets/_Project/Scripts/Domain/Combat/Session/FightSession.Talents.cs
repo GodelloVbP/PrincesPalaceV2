@@ -112,10 +112,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // skills through WardOne, and the three relic wards -- comes through
         // here, so the "does not count the turn it was raised on" rule has one
         // home rather than four call sites that each have to remember it.
-        private void RaiseWard(CombatantState wearer, int points, int turns, CombatantState source)
+        //
+        // Returns the entry it put up (null for a non-positive pool): the
+        // planted shield (plan 4a) holds on to its own entry.
+        private ActiveStatus RaiseWard(CombatantState wearer, int points, int turns, CombatantState source)
         {
             var ward = StatusEffects.ApplyWard(wearer.Statuses, points, turns, source);
             SpareIfAppliedOnWearersTurn(wearer, ward);
+            return ward;
         }
 
         // Counts the ending actor's turn-end statuses down and says what
@@ -128,6 +132,9 @@ namespace PrincesPalace.Domain.Combat.Session
         private void TickStatusesAtTurnEnd(CombatantState actor)
         {
             if (actor == null) return;
+
+            // The Phase 4 engine windows run on this same clock (TurnWindow).
+            AgeEngineWindows(actor);
 
             var expired = StatusEffects.TickAtTurnEnd(actor, _sparedAtWearersTurnEnd);
             if (expired.Count == 0) return;
@@ -182,9 +189,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // through two pools is two casters' work and the engine owes both of
         // them. StatusEffects.ConsumeWard hands the entries back in drain
         // order; everything below is per-entry and additive.
-        private int ResolveWard(CombatantState target, int damage)
+        //
+        // The status half of the ward step. DamagePipeline reaches it through
+        // ResolveWard (FightSession.PlantedShield), which wraps it with the
+        // planted shield's bookkeeping and Shieldwall's shared pool.
+        private int ResolveStatusWards(CombatantState target, int damage)
         {
-            var outcome = StatusEffects.ConsumeWard(target, damage);
+            // The heal funnel as the sink, trigger-free: Mending Fleece's break
+            // heal is booked and converted under Cursed Blood, and fires no
+            // heal-triggered relic, as before (HealWithoutTriggers).
+            var outcome = StatusEffects.ConsumeWard(target, damage, HealWithoutTriggers);
 
             // CombatBeat.Absorbed's OTHER write site (the first is
             // FightSession.Ledger.ApplyAndCountDamage, for a signature
@@ -319,6 +333,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // authored rally (FightSession.Rounds). Uncapped here -- the cap is
             // on the stack count, applied as each stack is added.
             bonus += RallyAttackPercent(actor);
+
+            // Unyielding's surge (plan 4e): +damage while its window is open.
+            bonus += actor.CrowdControl.SurgeDamagePercent;
 
             return bonus;
         }

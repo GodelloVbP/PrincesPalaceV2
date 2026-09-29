@@ -142,7 +142,12 @@ namespace PrincesPalace.Domain.Combat.Session
             // one-action recovery before any early fight-over return.
             _hardControlRecovery.Remove(_encounter.Current);
 
+            // The planted shield's answers (plan 4a) first: they were owed
+            // by blows inside the action that just ended, and they land
+            // before the fight-over check for the retaliation's reason.
+            SettleShieldReactions(physicalMove);
             if (physicalMove) TriggerPhysicalMoveRetaliation(_encounter.Current);
+            SettleEngineAction(_encounter.Current);
 
             // Read-then-reset up front, unconditionally, so a flag can never
             // leak into a fight that is ending right here or a turn that has
@@ -387,6 +392,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // own header. Scoped to this actor only: another combatant's
             // once-per-turn locks must survive until THEIR turn starts.
             _locks.ResetTurn(actor);
+            StartEngineAction(actor);
 
             TickPrimaryPool(actor);
             ApplyRunicWardConversion(actor);
@@ -524,30 +530,15 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null) return;
 
             _locks.ResetTurn(actor);
-            TickPrimaryPool(actor);
+            StartEngineAction(actor);
+            TickPrimaryPool(actor, reopened: true);
             ApplyRunicWardConversion(actor);
             RefreshNecklaceSpeed(actor);
         }
 
-        // THE ONE TURN-START TICK FOR THE PRIMARY POOL, and the whole of the
-        // gain/decay rule for it. Was RegenerateMana, which only ever added
-        // ManaRegen; the pool now owns both halves, so widening this to a
-        // resource that decays on an idle turn is authored rather than coded
-        // (ResourcePool.TickTurnStart).
-        //
-        // NOT through CombatMath.RestoreMana, and the difference matters: a
-        // per-turn gain is the pool's own income, not a mana effect, so a
-        // pool that refuses potions still regenerates whatever it authored.
-        //
-        // The per-turn gain for the SIGNATURE pool is deliberately still at
-        // the bottom of GrantTurnStart rather than folded in here: it is
-        // Charisma-scaled and talent-fed (SignaturePerTurnFor), it says
-        // something when it overflows, and moving it would change the order
-        // two pools fill in for no gain.
-        private void TickPrimaryPool(CombatantState actor)
-        {
-            actor?.PrimaryPool?.TickTurnStart();
-        }
+        // TickPrimaryPool, the primary pool's one turn-start tick, lives in
+        // FightSession.FuryEngines since Phase 2 (the Juggernaut engine's
+        // income and its decay switch sit in it).
 
         // Runic's mana->Ward conversion: at the start of the wearer's own
         // turn, whatever mana is sitting UNSPENT (including the regen this
@@ -655,20 +646,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // modifier and skill goes through here; StatusEffects.ApplyWard stays
         // the separate entry point for shields, for the reason its own header
         // gives.
-        private void ApplyStatusTo(CombatantState recipient, StatusEffectType type,
+        //
+        // RETURNS WHETHER THE STATUS WENT ON (plan 4e), so a caller that says
+        // "X is rooted!" can stay quiet for an attempt that was refused -- by
+        // hard-control recovery, or by the CC guard in RecordStatus.
+        private bool ApplyStatusTo(CombatantState recipient, StatusEffectType type,
             int magnitude, int turns, CombatantState source = null)
         {
-            if (recipient == null) return;
+            if (recipient == null) return false;
 
             // Keep repeat-control recovery at the shared status seam so an
             // older relic, talent or modifier cannot bypass the spell-level
             // guard by applying Rooted or Feared directly.
-            if (HardControlRecoveryBlocks(recipient, type)) return;
+            if (HardControlRecoveryBlocks(recipient, type)) return false;
 
             if (type == StatusEffectType.Chilled)
             {
-                ApplyChilled(recipient, magnitude, turns, source);
-                return;
+                ApplyChilled(recipient, magnitude, turns, source, out bool chilled);
+                return chilled;
             }
 
             // THE NEW-DOT SNAPSHOT (plan 1.5), taken HERE rather than at
@@ -691,7 +686,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 magnitude = SnapshotDotMagnitude(magnitude, source);
             }
 
-            RecordStatus(recipient, type, magnitude, turns, source);
+            return RecordStatus(recipient, type, magnitude, turns, source) != null;
         }
 
         private bool HardControlRecoveryBlocks(CombatantState recipient, StatusEffectType type) =>
@@ -717,9 +712,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // status-specific bookkeeping. Separate from ApplyStatusTo so a
         // dispatch arm that DOES have bookkeeping (ApplyChilled) can reach the
         // application without recursing back through the dispatch.
+        //
+        // NULL WHEN THE CC GUARD REFUSED IT (plan 4e): the one
+        // application-time block for crowd control lives here, beneath
+        // ApplyStatusTo, because this is the seam every status reaches --
+        // ApplyChilled's direct callers and Court of Whispers' fear included.
+        // See FightSession.EngineSeams.CrowdControlAdmits.
         private ActiveStatus RecordStatus(CombatantState recipient, StatusEffectType type,
             int magnitude, int turns, CombatantState source)
         {
+            if (!CrowdControlAdmits(recipient, type)) return null;
+
             var applied = StatusEffects.Apply(recipient.Statuses, type, magnitude, turns, source);
             SpareIfAppliedOnWearersTurn(recipient, applied);
             return applied;
@@ -825,26 +828,39 @@ namespace PrincesPalace.Domain.Combat.Session
                 preTick = null;
             }
 
-            var (regenHealed, expired) = StatusEffects.TickRegenAndDurations(actor);
+            // IGNORE PAIN'S INSTALLMENT (plan 4c), after the damaging rows and
+            // before Regen: delayed damage is damage over time, and a T3 regen
+            // then pays down what is still pending rather than what was just
+            // paid.
+            if (PayDelayedDamage(actor, preTick)) preTick = null;
+
+            // REGEN, THROUGH THE HEAL FUNNEL (plan 4b), trigger-free
+            // (HealWithoutTriggers: the crown never heard a Regen tick and
+            // still does not). The funnel books the ledger row this block used
+            // to book by hand, and under Cursed Blood converts the heal to damage on the
+            // enemies -- so the beat opens BEFORE the heal lands, the damaging
+            // rows' own order, and a converted tick's lines sit on it.
+            //
+            // THE SAME MECHANISM, WITH THE HEAL FLASH FALLING OUT OF IT --
+            // FlashOne already branches on IsHealing, so a regen tick gets the
+            // green flash and the green number for the cost of the boolean.
+            // Its ACTOR is the holder rather than nobody, which is what keeps
+            // the recoil and the squash off it (FightBeatPlayer.RecoilOne/Punch
+            // both skip a target that is its own actor): a body does not
+            // flinch away from its own mending.
+            bool regenDue = actor.Statuses.Any(s => s.Type == StatusEffectType.Regen && s.Magnitude > 0);
+            bool ownsRegenBeat = regenDue
+                && OpenStatusTickBeat(actor, preTick, StatusEffectType.Regen, isHealing: true);
+
+            var (regenHealed, expired) = StatusEffects.TickRegenAndDurations(actor, HealWithoutTriggers);
 
             if (regenHealed > 0)
             {
-                // THE SAME MECHANISM, WITH THE HEAL FLASH FALLING OUT OF IT
-                // -- FlashOne already branches on IsHealing, so a regen tick
-                // gets the green flash and the green number for the cost of
-                // the boolean. Its ACTOR is the holder rather than nobody,
-                // which is what keeps the recoil and the squash off it
-                // (FightBeatPlayer.RecoilOne/Punch both skip a target that is
-                // its own actor): a body does not flinch away from its own
-                // mending.
-                bool ownsBeat = BeginStatusTickBeat(
-                    actor, preTick, StatusEffectType.Regen, regenHealed, isHealing: true);
-
+                if (ownsRegenBeat) RecordBeatAmount(regenHealed, isHealing: true);
                 AppendMessage($"{actor.Name} regenerates {regenHealed} health.");
-                Ledger.Restored(LedgerIdOf(actor), regenHealed);
-
-                if (ownsBeat) CommitBeat();
             }
+
+            if (ownsRegenBeat) CommitOrDropStatusTickBeat();
 
             // DISTINCT, because statuses stack. Three poisons running out on
             // the same tick are three removals and one thing a player needs
@@ -933,7 +949,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ReportDamageTick(CombatantState actor, StatusEffects.TickRow row, bool ownsBeat,
             Func<int, string> line = null)
         {
-            NoteDamageForPools(null, actor, row.Thrown);
+            NoteDamageForPools(null, actor, row.Thrown, isHit: false);
 
             // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
             // already uses ("attacks X for N damage!" followed by "X's Wool

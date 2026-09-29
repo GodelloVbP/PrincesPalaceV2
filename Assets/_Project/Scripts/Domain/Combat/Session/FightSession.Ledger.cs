@@ -114,7 +114,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // case NoteDamageForPools already handles for a status tick.
             NoteDamageForPools(actorActed ? actor : null, target, amount);
 
-            var landed = LandPacket(actor, target, amount, type);
+            var landed = LandPacket(actor, target, amount, type, isHit: true);
 
             // What a HIT books as taken: the figure sent minus what a pool
             // absorbed, clamped to the health there was (AUDIT #124a). This is
@@ -155,7 +155,12 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        private LandedPacket LandPacket(CombatantState actor, CombatantState target, int amount, DamageType type)
+        //
+        // `isHit` is true for a blow (DealDamage, DealRelicPacket) and false
+        // for a status tick and a delayed-damage payment
+        // (DealStatusTickPacket). Only a hit can be deferred by Ignore Pain.
+        private LandedPacket LandPacket(CombatantState actor, CombatantState target, int amount, DamageType type,
+            bool isHit)
         {
             // Kinship: the bearer's first positive packet of the fight is
             // turned aside whole -- see FightSession.Kinship. BELOW the pools
@@ -179,6 +184,26 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 return new LandedPacket(PhoenixEggAbsorb(actor, target, amount, type));
             }
+
+            // IGNORE PAIN (plan 4c): part of a HIT goes into the holder's
+            // delayed-damage pool instead of landing now. Here, after Kinship
+            // and a hatched shell (a cancelled blow defers nothing) and after
+            // DamagePipeline already ran every defence and the ward on the way
+            // in (DelayedDamagePool's header), and BEFORE the egg's lethal
+            // check below -- which therefore asks whether the part that lands
+            // NOW is lethal, the only part that is. The attacker's Dealt row
+            // still books the whole blow (`deferred` added back at the end).
+            int deferred = isHit ? DeferIntoDelayedDamage(target, amount, type) : 0;
+            amount -= deferred;
+
+            // BATTLE TRANCE (Einherjar): a share of what would land NOW is
+            // paid with Fury instead -- after the deferral, so the two never
+            // take the same point, and before the egg's lethal check, which
+            // then asks about what is left. Hits only, like the deferral. The
+            // attacker's Dealt row still books the whole blow.
+            int tranced = isHit ? SoakWithBattleTrance(target, amount) : 0;
+            amount -= tranced;
+            deferred += tranced;
 
             // Phoenix Egg, about to hatch: this hit would otherwise be
             // fatal. Intercepted BEFORE Cursed Idol's bonus/CombatMath ever
@@ -269,7 +294,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int booked = target != null && toHealth > healthBefore ? healthBefore : toHealth;
             int healthLost = target == null ? 0 : healthBefore - target.CurrentHealth;
 
-            Ledger.Dealt(LedgerIdOf(actor), type, amount);
+            Ledger.Dealt(LedgerIdOf(actor), type, amount + deferred);
 
             return new LandedPacket(result, ordinary: true, bookedAsSent: booked, healthLost: healthLost);
         }
@@ -297,7 +322,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             bool wasAlive = holder != null && holder.IsAlive;
 
-            var landed = LandPacket(null, holder, amount, element);
+            var landed = LandPacket(null, holder, amount, element, isHit: false);
             if (landed.Ordinary) Ledger.Took(LedgerIdOf(holder), landed.HealthLost, landed.Result.Absorbed);
 
             if (wasAlive && holder != null && !holder.IsAlive)
@@ -329,7 +354,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // `actor` may be null and that is the unattributed case, not an error:
         // NotePoolActivity and GrantPrimaryOnDamagingAction are both no-ops on
         // one.
-        private void NoteDamageForPools(CombatantState actor, CombatantState target, int amount)
+        //
+        // `isHit` is false for a status tick's row and a delayed-damage
+        // installment: they are damage the pools hear, not HITS, which is the
+        // distinction the Sentinel engine and Momentum's stack loss read.
+        //
+        // THE PHASE 2 ENGINES (FightSession.FuryEngines): a combatant with a
+        // FuryEngine set is paid by it INSTEAD of the flat gainOnAttack /
+        // gainOnDamageTaken below. Engine None is exactly the old behaviour.
+        private void NoteDamageForPools(CombatantState actor, CombatantState target, int amount, bool isHit = true)
         {
             if (amount <= 0) return;
 
@@ -347,7 +380,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Fired BEFORE CommitBeat, so the Vitals snapshot the HUD replays
             // is the one taken after the gain: the meter moves on the beat
             // that shows the hit, not on the next one.
-            GrantPrimaryOnDamagingAction(actor);
+            if (FlatGainsPay(actor)) GrantPrimaryOnDamagingAction(actor);
 
             // AND gainOnDamageTaken, at the same seam and for the same reason.
             // It used to sit at the enemy's plain-swing verb beside Wool's,
@@ -355,7 +388,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // player-side blow paid the victim nothing. See
             // GrantPrimaryOnDamageTaken for why this one carries no per-turn
             // lock where its gainOnAttack twin does.
-            GrantPrimaryOnDamageTaken(target);
+            if (FlatGainsPay(target)) GrantPrimaryOnDamageTaken(target);
+
+            PayEnginesForDamage(actor, target, amount, isHit);
 
             // AND THE SIGNATURE POOL'S, which was left behind at that same verb
             // when the primary pool's half moved here. It had the identical
@@ -378,9 +413,48 @@ namespace PrincesPalace.Domain.Combat.Session
         // potion path (FightSession.Items.cs) states the rule the callers now
         // all follow: "the number the player sees is the number that
         // happened".
-        private int HealAndCount(CombatantState target, int amount)
+        //
+        // THE ONE HEAL FUNNEL, and since plan 4b every in-fight heal is in it:
+        // skills, potions, relics, and -- routed here through
+        // HealWithoutTriggers below -- the Regen tick, lifesteal and a
+        // breaking ward's Mending Fleece heal.
+        // What the funnel does before any health moves, in this order:
+        //
+        //   1. Cursed Blood (HealConversion) converts the EFFECTIVE heal to
+        //      damage on every living enemy and restores nothing -- first, so
+        //      nothing below can consume a converted heal.
+        //   2. Ignore Pain T3 (DelayedDamagePool.ReduceByHeal) pays down
+        //      pending delayed damage; only the rest restores health.
+        //
+        // Both are off for every combatant the Juggernaut wiring has not
+        // touched, so for them this is the funnel exactly as it was.
+        private int HealAndCount(CombatantState target, int amount) =>
+            HealAndCount(target, amount, HealTriggers.Run);
+
+        // WHETHER A HEAL IS HEARD BY WHAT FIRES ON A HEAL (today: World
+        // Ender's Crown's crossing check). The three paths routed into the
+        // funnel for plan 4b -- the Regen tick, lifesteal and Mending
+        // Fleece's ward-break heal -- never ran those triggers, and joining
+        // the funnel for Cursed Blood's sake is not meant to change what a
+        // relic does. They pass Skip, and still get conversion, the pool and
+        // the ledger's Healed row (which they should always have had). A new
+        // heal-triggered effect goes behind the same switch, so it cannot
+        // leak onto them either.
+        private enum HealTriggers { Run, Skip }
+
+        // The HealSink the three rider paths hand StatusEffects and the
+        // lifesteal call site use.
+        private int HealWithoutTriggers(CombatantState target, int amount) =>
+            HealAndCount(target, amount, HealTriggers.Skip);
+
+        private int HealAndCount(CombatantState target, int amount, HealTriggers triggers)
         {
             if (target == null || amount <= 0) return 0;
+
+            if (TryConvertHeal(target, amount)) return 0;
+
+            amount -= ReduceDelayedDamageByHeal(target, amount);
+            if (amount <= 0) return 0;
 
             int before = target.CurrentHealth;
             CombatMath.Heal(target, amount);
@@ -390,7 +464,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // "already fired" flag exactly like the damage path does, or a
             // healed party would never fear the field again for the rest of
             // the fight.
-            WorldEndersCrownCheck(target);
+            if (triggers == HealTriggers.Run) WorldEndersCrownCheck(target);
 
             int landed = target.CurrentHealth - before;
             Ledger.Restored(LedgerIdOf(target), landed);

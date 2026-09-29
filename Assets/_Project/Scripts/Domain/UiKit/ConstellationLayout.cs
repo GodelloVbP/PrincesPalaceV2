@@ -291,7 +291,7 @@ namespace PrincesPalace.Domain.UiKit
         // Authored numbers x1.2, rounded once. Two properties survive the
         // scaling and are what the tests check rather than the individual pairs:
         //
-        //   THE SPINE LADDER IS SHARED. All three tables put their centre column
+        //   THE SPINE LADDER IS SHARED. Every table puts its centre column
         //   on 0, -130, -242, -355, -468, -582, -696, -810, -924. That is what
         //   guarantees the separation floor -- the figures differ only in how
         //   far their side nodes swing out, so a new plot only has to respect
@@ -377,35 +377,204 @@ namespace PrincesPalace.Domain.UiKit
             { 0f, -924f },         // the capstone
         };
 
+        // ---- Bjorn's three: a shield, an axe, a paw -------------------------------
+        //
+        // Same ladder, same floors, same x1.2 units, same handoff sign (negative
+        // climbing). The spine is fixed by the invariant above, so each figure
+        // is drawn entirely by how its side strands swing -- and the spine is
+        // made to MEAN something in each: the shield's centreline, the axe's
+        // haft running on up into its top spike, the paw's long centre toe.
+        //
+        // THE AXE'S CAPSTONE IS ON THE HEAD'S TOP EDGE, not out on a blade.
+        // The plan puts the ultimate "on the blade edge", but the capstone is
+        // a spine slot and the ladder pins it to (0, -924). So the blades'
+        // cutting edges are the two vertical strokes 14-17 and 16-19, and the
+        // capstone is where both blades' upper edges meet over the haft. A
+        // capstone off the spine would be a layout-contract change, not a plot.
+
+        // Heater shield. Point at the root, sides flaring to the shoulders
+        // across the bottom grid, near-vertical above the boss, top corners
+        // level with the capstone so 17-20-19 reads as the flat top edge. The
+        // 7-10 and 9-10 limbs cross at the boss and read as its straps.
+        private static readonly float[,] HeaterShield =
+        {
+            { 0f, 0f },            // root -- the point
+            { -165f, -100f },      // tier 1 -- the sides leave the point
+            { 0f, -130f },
+            { 165f, -100f },
+            { -290f, -225f },      // tier 2
+            { 0f, -242f },
+            { 290f, -225f },
+            { -370f, -395f },      // tier 3 -- nearly at full width
+            { 0f, -355f },
+            { 370f, -395f },
+            { 0f, -468f },         // the convergence -- the boss
+            { -395f, -520f },      // tier 4 -- straight sides
+            { 0f, -582f },
+            { 395f, -520f },
+            { -400f, -700f },      // tier 5 -- widest, +/-400
+            { 0f, -696f },
+            { 400f, -700f },
+            { -390f, -900f },      // tier 6 -- the top corners
+            { 0f, -810f },
+            { 390f, -900f },
+            { 0f, -924f },         // the capstone, on the top edge
+        };
+
+        // Double-bitted axe. The bottom grid is the haft: three rails at the
+        // side-clearance minimum, climbing side by side. Above the socket each
+        // side strand is a blade -- 11 the beard under the haft, 14 the lower
+        // horn, 17 the upper horn, so 14-17 is the cutting edge -- and the
+        // spine carries on up through the head as the top spike.
+        private static readonly float[,] DoubleBitAxe =
+        {
+            { 0f, 0f },            // root -- the foot of the haft
+            { -130f, -125f },      // tier 1 -- the haft, three rails
+            { 0f, -130f },
+            { 130f, -125f },
+            { -130f, -242f },      // tier 2
+            { 0f, -242f },
+            { 130f, -242f },
+            { -130f, -355f },      // tier 3
+            { 0f, -355f },
+            { 130f, -355f },
+            { 0f, -468f },         // the convergence -- where haft meets head
+            { -200f, -590f },      // tier 4 -- the blade leaves the socket
+            { 0f, -582f },
+            { 200f, -590f },
+            { -410f, -535f },      // tier 5 -- lower horn, flared down
+            { 0f, -696f },
+            { 410f, -535f },
+            { -410f, -830f },      // tier 6 -- upper horn; 14-17 is the edge
+            { 0f, -810f },
+            { 410f, -830f },
+            { 0f, -924f },         // the capstone, crowning the head
+        };
+
+        // Paw print. The bottom grid is the main pad -- heel at the root,
+        // broadest at tier 2, drawing back in at tier 3 so 7-10-9 closes it
+        // round rather than square. Above the pad's top the side strands run
+        // up and out into the two outer toes; the spine is the centre toe and
+        // the capstone, the largest stone, is its tip.
+        private static readonly float[,] PawPrint =
+        {
+            { 0f, 0f },            // root -- the heel of the pad
+            { -180f, -80f },       // tier 1
+            { 0f, -130f },
+            { 180f, -80f },
+            { -300f, -205f },      // tier 2 -- the pad at its broadest
+            { 0f, -242f },
+            { 300f, -205f },
+            { -270f, -365f },      // tier 3 -- drawing back in
+            { 0f, -355f },
+            { 270f, -365f },
+            { 0f, -468f },         // the convergence -- the top of the pad
+            { -190f, -580f },      // tier 4 -- the toes part
+            { 0f, -582f },
+            { 190f, -580f },
+            { -310f, -680f },      // tier 5
+            { 0f, -696f },
+            { 310f, -680f },
+            { -390f, -800f },      // tier 6 -- the outer toes
+            { 0f, -810f },
+            { 390f, -800f },
+            { 0f, -924f },         // the capstone -- the big centre toe
+        };
+
+        // ---- which figure a (character, path) draws -------------------------------
+        //
+        // KEYED BY CHARACTER, because a path index alone is not a figure: it
+        // was, while Shawn was the only constellation author, and every other
+        // character drew his ram and his lamb. The key is the content id
+        // (Character.definitionId), the same string talents.json rows carry.
+        //
+        // A figure has a NAME as well as coordinates, so a test can say "bear
+        // path 1 is the axe" rather than comparing sixty-three numbers, and so
+        // the background art for a figure has something stable to key on.
+        private sealed class Plot
+        {
+            public readonly string Id;
+            public readonly float[,] Stars;
+
+            public Plot(string id, float[,] stars)
+            {
+                Id = id;
+                Stars = stars;
+            }
+        }
+
         // A spire rather than a third animal, and that is the design saying
         // something with a shape: an unauthored path should read as a thin
         // unfinished thing, not as a beast nobody has written yet.
-        private static readonly float[][,] Plots = { BlackRam, FragileLamb, Unwritten };
+        private static readonly Plot Spire = new Plot("spire", Unwritten);
 
-        public static int PlotCount => Plots.Length;
+        public const string ShawnId = "sheep";
+        public const string BjornId = "bear";
 
-        // A path with no plot of its own falls back to the spire rather than
-        // throwing or stacking every stone on the origin. Graceful degradation
-        // is the house style, and an unplotted path is exactly the case the
-        // spire was drawn for.
-        private static float[,] PlotFor(int path) =>
-            path >= 0 && path < Plots.Length ? Plots[path] : Unwritten;
+        // Path order is the talents.json column order for that character:
+        // Bjorn's is Sentinel, Einherjar, Juggernaut (PLAN_BJORN_CONSTELLATIONS
+        // Phase 3), and his content must author its columns to match.
+        private static readonly System.Collections.Generic.Dictionary<string, Plot[]> PlotsByCharacter =
+            new System.Collections.Generic.Dictionary<string, Plot[]>
+            {
+                [ShawnId] = new[] { new Plot("ram", BlackRam), new Plot("lamb", FragileLamb), Spire },
+                [BjornId] = new[]
+                {
+                    new Plot("shield", HeaterShield),
+                    new Plot("axe", DoubleBitAxe),
+                    new Plot("paw", PawPrint),
+                },
+            };
 
-        public static float StarX(int path, int slot)
+        // Every character with at least one authored figure, in a fixed
+        // order -- what the invariant tests walk, so a new character's plots
+        // are held to the floors the moment they are added here.
+        public static System.Collections.Generic.IReadOnlyList<string> PlottedCharacters { get; } =
+            new[] { ShawnId, BjornId };
+
+        public static int PlotCountFor(string characterId) =>
+            characterId != null && PlotsByCharacter.TryGetValue(characterId, out var plots) ? plots.Length : 0;
+
+        // A (character, path) with no plot of its own falls back to the spire
+        // rather than throwing or stacking every stone on the origin. Graceful
+        // degradation is the house style, and an unplotted path -- or an
+        // unplotted character -- is exactly the case the spire was drawn for.
+        private static Plot PlotFor(string characterId, int path) =>
+            characterId != null
+            && PlotsByCharacter.TryGetValue(characterId, out var plots)
+            && path >= 0 && path < plots.Length
+                ? plots[path]
+                : Spire;
+
+        public static string PlotId(string characterId, int path) => PlotFor(characterId, path).Id;
+
+        public static float StarX(string characterId, int path, int slot)
         {
-            var plot = PlotFor(path);
-            return slot >= 0 && slot < plot.GetLength(0) ? plot[slot, 0] : 0f;
+            var stars = PlotFor(characterId, path).Stars;
+            return slot >= 0 && slot < stars.GetLength(0) ? stars[slot, 0] : 0f;
         }
 
         // THE ONE PLACE THE HANDOFF'S y IS FLIPPED. Its numbers climb negative
         // because the design measures down from the canvas top; depth runs UP
         // the screen here, because a constellation that grew downward would read
         // as falling.
-        public static float StarY(int path, int slot)
+        public static float StarY(string characterId, int path, int slot)
         {
-            var plot = PlotFor(path);
-            return slot >= 0 && slot < plot.GetLength(0) ? -plot[slot, 1] : 0f;
+            var stars = PlotFor(characterId, path).Stars;
+            return slot >= 0 && slot < stars.GetLength(0) ? -stars[slot, 1] : 0f;
         }
+
+        // ---- the path-only API: Shawn's figures ----------------------------------
+        //
+        // What the screen tree and the controller call today. It predates the
+        // character key and meant "Shawn's" all along, so it says so and
+        // delegates rather than keeping a second lookup. Callers that know the
+        // character move to the overloads above (Phase 3 Unity-side handoff).
+        public static int PlotCount => PlotCountFor(ShawnId);
+
+        public static float StarX(int path, int slot) => StarX(ShawnId, path, slot);
+
+        public static float StarY(int path, int slot) => StarY(ShawnId, path, slot);
 
         // ---- what the plots guarantee -------------------------------------------
         //

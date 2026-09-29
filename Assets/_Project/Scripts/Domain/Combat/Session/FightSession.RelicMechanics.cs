@@ -337,8 +337,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     seen++;
                 }
 
-                ApplyStatusTo(target, StatusEffectType.Stun, 0, 1, actor);
-                AppendMessage($"{actor.Name} palms the loaded dice - {target.Name} stumbles, stunned!");
+                if (ApplyStatusTo(target, StatusEffectType.Stun, 0, 1, actor))
+                {
+                    AppendMessage($"{actor.Name} palms the loaded dice - {target.Name} stumbles, stunned!");
+                }
                 return;
             }
         }
