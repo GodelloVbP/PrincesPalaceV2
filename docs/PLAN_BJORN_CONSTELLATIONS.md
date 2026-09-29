@@ -457,6 +457,13 @@ item is marked in place (DONE / NOT DONE).
 - Reward-track bear rows left empty (section 1).
 - `implementer` (Opus 5.5 medium).
 
+**Slice A decision: the pool's flat gains stay until the last engine lands.**
+An engine replaces the flat `gainOnAttack`/`gainOnDamageTaken` only for a
+combatant that has one, so under the Einherjar root they are inert, and for a
+Bjorn on the other two paths (still placeholders) they are his only Fury.
+Zeroing `pools.json` `fury` and emptying the reward track's `FuryGainOnAttack`
+rows belongs to the slice that lands the third engine.
+
 **Status (2026-09-28): the engine code is built** as a Domain seam
 (`CombatantState.FuryEngine`, session half `FightSession.FuryEngines.cs`,
 tests `FuryEngineTests` `[D]`); see "Phase 2 engines and the Einherjar seams"
@@ -958,6 +965,40 @@ mechanics start.
 - **Slice A — Einherjar**: mechanics 4g, plus the Einherjar-relevant parts
   of 4h. Content: Einherjar's 21 `talents.json` rows plus Hack. Bot pass:
   Einherjar vs the reworked reward track.
+  **Slice A status (built; commits d50680e6 mechanics, 3c0b71d1 content).**
+  - DONE: root sets the Einherjar engine (`TalentEffectType.FuryEngineEinherjar`,
+    armed by `FightSession.ArmEngineSeams` in `Begin`); Momentum and Battle
+    Trance (one tiered member each, `MomentumTier` / `BattleTranceTier`);
+    Twin Rampage (capstone flag); Hack (`hitCount` 2, each blow pays the
+    engine); Headsplitter (`spendsAllPrimary` + `power` + the generic
+    `damagePerMissingHealthPercent` / `refundsSpentOnKillPercent`); Berserk
+    (`Transformation` with `defenseToAttackPercent`, `primaryDrainPerTurn`,
+    `forbidsEffects`); the Slam nodes (keyed on "the DamageSingle skill with
+    poolTiers", no skill id in code), Bloodfire, kill Fury, wounded-target and
+    transformed crit chance; all 21 rows plus Hack, Headsplitter, Berserk;
+    Rampage moved off the reward track into the convergence (level 10 is now
+    +5% Physical, an owner call for a real replacement); bot valuations for
+    Hack (two blows in the preview), Headsplitter (valued only where it kills)
+    and Berserk (entered only with three turns of drain left); the Fury tier a
+    cast would fire is now in the bot's damage figure.
+  - The reuse pass trimmed no node: 14 new `TalentEffectType` members, and the
+    plan's `ExecuteDamageBonusPercent` for Headsplitter T2 was not taken
+    because T2 is a crit-chance node.
+  - NOT DONE: the Fury pool's flat gains stay (see "Decisions" below); the
+    transformed Berserk battle sprite (`spritePath` empty, art); a HUD read of
+    Momentum stacks and the Berserk drain (the status badge names the Fury
+    upkeep, nothing shows stacks); Blood Price T2, Bellow/Hold the Line
+    upgrades (other slices).
+  - Bot pass (100 runs per archetype, 5 archetypes, `-GrantTalent`): no
+    talents 24.0 / 24.4 mean depth for GreedyAggressive / ProtectTheFront and
+    33.9 for Lookahead2 (60% capped at 40); root only is within noise of that;
+    the whole path is 27.4 / 27.6 / 37.8 (85% capped), GreedyDefensive
+    unchanged at 20.4. Hack, Headsplitter, Berserk, Rampage and Slam are all cast; the bot traces skills, not individual nodes, so a passive node's share is not measured.
+    UNMEASURED: Slam T3 and Twin Rampage need 100 Fury and the bot's
+    archetypes spend at every tier (Fury of 100 or more after a turn: 3% at
+    most); `EinherjarKitTests` pins that a banking player (Hack when ready,
+    plain attacks otherwise) reaches 100 on his sixth turn.
+
 - **Slice B — Juggernaut**: mechanics 4b, 4c, 4d, 4e, plus the
   Juggernaut-relevant parts of 4h (Gorge, Unbroken skills). Content:
   Juggernaut's 21 `talents.json` rows plus Second Wind's `grantsSkillId`

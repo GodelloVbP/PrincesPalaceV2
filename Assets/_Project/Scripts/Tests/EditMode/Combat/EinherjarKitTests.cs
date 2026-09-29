@@ -564,5 +564,56 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(BotWoreBerserk(80), "80 - 50 = 30 = three turns of 10");
             Assert.IsFalse(BotWoreBerserk(79), "29 left is not three turns");
         }
+
+        // ---- reachability of the 100-Fury nodes --------------------------------------------------------
+
+        // The balance bot's archetypes spend at every tier and so never bank
+        // to 100 (Fury of 100 or more after a turn: 3% at most). This is the
+        // measurement it cannot make: a player who only builds -- Hack when
+        // it is ready, a plain attack otherwise -- and how many of his own
+        // turns that takes, at Bjorn's real Attack of 10 and the real Hack.
+        [Test]
+        public void BankingHackAndPlainAttacks_ReachesFullFury_OnTheSixthTurn()
+        {
+            var bjorn = Bjorn(Talents(Engine));
+            bjorn.Attack = 10;
+            var foe = Foe();
+            foe.CurrentHealth = 100000;
+            var hack = new ResolvedSkill("hack", "Hack", "test fixture", "bjorn", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 5, false, null, SpellPresentation.None, 0,
+                cooldownTurns: 3, physicalMove: true, hitCount: 2);
+            var session = Fight(bjorn, new[] { hack }, foe);
+
+            int turns = 0;
+            while (bjorn.PrimaryPool.Current < 100 && turns < 20)
+            {
+                turns++;
+                Assert.AreSame(bjorn, session.Encounter.Current);
+                bool cast = session.CastSkill(0, foe);
+                if (!cast) Assert.IsTrue(session.ExecuteAttack(foe));
+            }
+
+            Assert.AreEqual(6, turns);
+        }
+
+        // ---- the bot's valuation of a finisher ------------------------------------------------------------
+
+        private static int BotValueOfHeadsplitter(int foeHealth)
+        {
+            var bjorn = Bjorn(Talents(Engine), fury: 60);
+            var foe = Foe(health: foeHealth);
+            var session = Fight(bjorn, new[] { Headsplitter() }, foe, Foe());
+            var option = session.SkillOptionsFor(bjorn).Single();
+
+            return FightAction.PreviewDamage(session, bjorn, option, new FightAction(FightActionKind.Skill, foe, option.Index));
+        }
+
+        [Test]
+        public void TheBot_ValuesHeadsplitterOnlyWhereItKills()
+        {
+            // 20 Attack + 60 Fury = 80 raw, +90% for a target at 10% health.
+            Assert.AreEqual(0, BotValueOfHeadsplitter(500), "a healthy target: not worth the whole bar");
+            Assert.Greater(BotValueOfHeadsplitter(100), 0, "a target it finishes");
+        }
     }
 }

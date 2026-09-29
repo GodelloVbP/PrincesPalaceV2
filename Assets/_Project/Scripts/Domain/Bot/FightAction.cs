@@ -393,6 +393,18 @@ namespace PrincesPalace.Domain.Bot
             var cast = CastAs(option.Skill, action);
             int power = session.PreviewSkillPower(actor, cast, action.Target);
             power = PoolTierResolution.ApplyDamageMultiplier(power, PoolTierResolution.Pick(actor.PrimaryPool, cast.PoolTiers));
+
+            // A FINISHER IS VALUED FOR THE KILL. Headsplitter spends every
+            // point of Fury and pays half back only on a kill, so a policy that
+            // ranked it by damage alone threw its whole bar at healthy targets
+            // at 30 Fury, where it already out-hit Slam's tier-free base, and
+            // never banked toward the 50- and 100-Fury tiers or the capstone.
+            // Worth nothing unless the previewed blow finishes the target.
+            if (cast.RefundsSpentOnKillPercent > 0 && action.Target != null && power < action.Target.CurrentHealth)
+            {
+                return 0;
+            }
+
             return CritRules.ExpectedDamage(power, actor, action.Target);
         }
 
