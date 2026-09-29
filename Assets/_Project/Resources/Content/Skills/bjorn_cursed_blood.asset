@@ -10,31 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: second_wind
+  m_Name: bjorn_cursed_blood
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
   data:
-    Id: second_wind
-    DisplayName: Second Wind
-    Description: He lets the whole rage go at once and breathes. Needs at least 25
-      Fury, spends every point of it, and heals 1% of his maximum health for each
-      one -- a full bar is a full heal.
+    Id: bjorn_cursed_blood
+    DisplayName: Cursed Blood
+    Description: For two turns his blood will not mend him. Every heal that would
+      land on him is thrown at every enemy as Void damage instead, as much as he
+      was missing. Once a fight. Costs 50 Fury.
     CharacterId: bear
     UnlockLevel: 999
-    Effect: 2
+    Effect: 22
     Targeting: 2
-    ManaCost: 25
+    ManaCost: 50
     ResourceCost: 0
     SpendsAllResource: 0
     ResourceSpendCap: 0
-    SpendsAllPrimary: 1
-    PercentOfMaxHealthPerPoint: 1
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
     HitCount: 1
     DamagePerMissingHealthPercent: 0
     RefundsSpentOnKillPercent: 0
     FreeAction: 0
     LifestealPercent: 0
-    OncePerFight: 0
-    WindowTurns: 0
+    OncePerFight: 1
+    WindowTurns: 2
     RegenPercentOfMaxHealth: 0
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
@@ -62,7 +62,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 54
+    SortOrder: 52
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -112,11 +112,11 @@ MonoBehaviour:
       forbidsEffects: []
     CooldownTurns: 0
     PlayerSelectable: 1
-    Shake: 0
+    Shake: 0.6
     Approach: 0
-    Stance: 
+    Stance: victory
     ApproachStance: 
-    WindupStance: 
+    WindupStance: victory
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 

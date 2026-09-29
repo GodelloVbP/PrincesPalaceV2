@@ -1103,6 +1103,368 @@
           "type": "TwinRampage"
         }
       ]
+    },
+    {
+      "id": "bear_jug_root",
+      "characterId": "bear",
+      "appliesToSkillId": "second_wind",
+      "displayName": "The Juggernaut",
+      "column": 2,
+      "row": 0,
+      "description": "Fury comes with the turn and comes faster the nearer he is to death: 15 at full health, 20 at three quarters, 35 at half, 60 at a quarter or less. None for swinging, none for being hit, and it never drains when idle. Unlocks Second Wind, on a 4-turn cooldown. Free, but only one path's root talent can be active at a time; respec to change it.",
+      "effects": [
+        {
+          "type": "FuryEngineJuggernaut"
+        },
+        {
+          "type": "SkillCooldownTurns",
+          "magnitude": 4
+        }
+      ],
+      "grantsSkillId": "second_wind"
+    },
+    {
+      "id": "bear_jug_blood_1",
+      "characterId": "bear",
+      "displayName": "Thick Blood",
+      "column": 2,
+      "row": 1,
+      "description": "+10% maximum health.",
+      "prerequisites": [
+        "bear_jug_root"
+      ],
+      "effects": [
+        {
+          "type": "MaxHealthPercent",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_blood_2",
+      "characterId": "bear",
+      "displayName": "Thick Blood: Pulse",
+      "column": 2,
+      "row": 4,
+      "description": "Regenerates 2% of his maximum health at the start of each of his turns, rising to 6% at a quarter health or less, on the same curve as his Fury.",
+      "prerequisites": [
+        "bear_jug_blood_1"
+      ],
+      "effects": [
+        {
+          "type": "HealthCurveRegen",
+          "magnitude": 6,
+          "threshold": 2
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_blood_3",
+      "characterId": "bear",
+      "displayName": "Thick Blood: Deep Veins",
+      "column": 2,
+      "row": 7,
+      "description": "Another +10% maximum health (20% in all), and the regen ceiling rises to 8%.",
+      "prerequisites": [
+        "bear_jug_blood_2"
+      ],
+      "effects": [
+        {
+          "type": "MaxHealthPercent",
+          "magnitude": 20
+        },
+        {
+          "type": "HealthCurveRegen",
+          "magnitude": 8,
+          "threshold": 2
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_wrath_1",
+      "characterId": "bear",
+      "displayName": "Wrath",
+      "column": 2,
+      "row": 2,
+      "description": "+0.5% damage for every 1% of his health missing: +37% at a quarter health.",
+      "prerequisites": [
+        "bear_jug_root"
+      ],
+      "effects": [
+        {
+          "type": "DamagePerMissingHealth",
+          "magnitude": 50
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_wrath_2",
+      "characterId": "bear",
+      "displayName": "Wrath: Red Mist",
+      "column": 2,
+      "row": 5,
+      "description": "+0.75% damage for every 1% of his health missing: +56% at a quarter health.",
+      "prerequisites": [
+        "bear_jug_wrath_1"
+      ],
+      "effects": [
+        {
+          "type": "DamagePerMissingHealth",
+          "magnitude": 75
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_wrath_3",
+      "characterId": "bear",
+      "displayName": "Wrath: Nothing Left to Lose",
+      "column": 2,
+      "row": 8,
+      "description": "+1% damage for every 1% of his health missing: +75% at a quarter health.",
+      "prerequisites": [
+        "bear_jug_wrath_2"
+      ],
+      "effects": [
+        {
+          "type": "DamagePerMissingHealth",
+          "magnitude": 100
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_gorge_1",
+      "characterId": "bear",
+      "displayName": "Gorge",
+      "column": 2,
+      "row": 3,
+      "description": "Unlocks Gorge: 30 Fury for a heavy physical blow at one target that heals him for 30% of the damage it deals.",
+      "prerequisites": [
+        "bear_jug_root"
+      ],
+      "grantsSkillId": "gorge"
+    },
+    {
+      "id": "bear_jug_gorge_2",
+      "characterId": "bear",
+      "appliesToSkillId": "gorge",
+      "displayName": "Gorge: Deeper Drink",
+      "column": 2,
+      "row": 6,
+      "description": "Gorge heals 40% of the damage it deals.",
+      "prerequisites": [
+        "bear_jug_gorge_1"
+      ],
+      "effects": [
+        {
+          "type": "SkillLifestealPercent",
+          "magnitude": 40
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_gorge_3",
+      "characterId": "bear",
+      "appliesToSkillId": "gorge",
+      "displayName": "Gorge: Bloodlust",
+      "column": 2,
+      "row": 9,
+      "description": "Gorge deals +25% damage while he is at or below half health.",
+      "prerequisites": [
+        "bear_jug_gorge_2"
+      ],
+      "effects": [
+        {
+          "type": "SkillDamageBonusBelowOwnHealth",
+          "magnitude": 25,
+          "threshold": 50
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_converge",
+      "characterId": "bear",
+      "displayName": "Unbroken",
+      "column": 2,
+      "row": 10,
+      "description": "Unlocks Unbroken: 50 Fury. For 2 turns he regenerates 15% of his maximum health each turn and no crowd control can touch him. Free, gated at 9 embers spent in this path.",
+      "prerequisites": [
+        "bear_jug_blood_3",
+        "bear_jug_wrath_3",
+        "bear_jug_gorge_3"
+      ],
+      "minSpent": 9,
+      "grantsSkillId": "unbroken"
+    },
+    {
+      "id": "bear_jug_unyield_1",
+      "characterId": "bear",
+      "displayName": "Unyielding",
+      "column": 2,
+      "row": 11,
+      "description": "When crowd control lands on him he shrugs it off and gains speed and +25% damage for 2 turns. 4-turn cooldown. It does not fire while Unbroken protects him.",
+      "prerequisites": [
+        "bear_jug_converge"
+      ],
+      "effects": [
+        {
+          "type": "UnyieldingTier",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_unyield_2",
+      "characterId": "bear",
+      "displayName": "Unyielding: Again",
+      "column": 2,
+      "row": 14,
+      "description": "The cooldown drops to 3 turns.",
+      "prerequisites": [
+        "bear_jug_unyield_1"
+      ],
+      "effects": [
+        {
+          "type": "UnyieldingTier",
+          "magnitude": 2
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_unyield_3",
+      "characterId": "bear",
+      "displayName": "Unyielding: Fed by Force",
+      "column": 2,
+      "row": 17,
+      "description": "Shrugging off crowd control also grants 20 Fury.",
+      "prerequisites": [
+        "bear_jug_unyield_2"
+      ],
+      "effects": [
+        {
+          "type": "UnyieldingTier",
+          "magnitude": 3
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_pain_1",
+      "characterId": "bear",
+      "displayName": "Ignore Pain",
+      "column": 2,
+      "row": 12,
+      "description": "20% of every hit is not taken now but spread over the next 3 turns as damage.",
+      "prerequisites": [
+        "bear_jug_converge"
+      ],
+      "effects": [
+        {
+          "type": "DelayedDamagePercent",
+          "magnitude": 20,
+          "threshold": 3
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_pain_2",
+      "characterId": "bear",
+      "displayName": "Ignore Pain: Owed",
+      "column": 2,
+      "row": 15,
+      "description": "30% of every hit is spread over the next 3 turns.",
+      "prerequisites": [
+        "bear_jug_pain_1"
+      ],
+      "effects": [
+        {
+          "type": "DelayedDamagePercent",
+          "magnitude": 30,
+          "threshold": 3
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_pain_3",
+      "characterId": "bear",
+      "displayName": "Ignore Pain: Salved",
+      "column": 2,
+      "row": 18,
+      "description": "Healing pays down the pending damage first, and only what is left restores health.",
+      "prerequisites": [
+        "bear_jug_pain_2"
+      ],
+      "effects": [
+        {
+          "type": "HealReducesDelayedDamage"
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_price_1",
+      "characterId": "bear",
+      "displayName": "Blood Price",
+      "column": 2,
+      "row": 13,
+      "description": "When he cannot pay a skill's Fury cost, he pays the rest in health: 1 Fury is 0.5% of his maximum health. It cannot take him below 1 health and never triggers a death save.",
+      "prerequisites": [
+        "bear_jug_converge"
+      ],
+      "effects": [
+        {
+          "type": "ShortfallPaidInHealthPermille",
+          "magnitude": 5
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_price_2",
+      "characterId": "bear",
+      "displayName": "Blood Price: Overdraft",
+      "column": 2,
+      "row": 16,
+      "description": "Skills paid partly in health deal +15% damage.",
+      "prerequisites": [
+        "bear_jug_price_1"
+      ],
+      "effects": [
+        {
+          "type": "BloodPaidDamagePercent",
+          "magnitude": 15
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_price_3",
+      "characterId": "bear",
+      "displayName": "Blood Price: Not Yet",
+      "column": 2,
+      "row": 19,
+      "description": "Once per fight, a lethal blow leaves him at 1 health and fills his Fury to 100.",
+      "prerequisites": [
+        "bear_jug_price_2"
+      ],
+      "effects": [
+        {
+          "type": "CheatDeathOncePerFight"
+        },
+        {
+          "type": "CheatDeathFillsPrimary"
+        }
+      ]
+    },
+    {
+      "id": "bear_jug_cap",
+      "characterId": "bear",
+      "displayName": "Cursed Blood",
+      "column": 2,
+      "row": 20,
+      "description": "Unlocks Cursed Blood: 50 Fury, once per fight. For 2 turns nothing heals him; every heal that would land, his regen and Unbroken's included, is thrown at every enemy as Void damage instead, as much as he was missing. Free, gated at 20 embers spent in this path.",
+      "prerequisites": [
+        "bear_jug_unyield_3",
+        "bear_jug_pain_3",
+        "bear_jug_price_3"
+      ],
+      "minSpent": 20,
+      "grantsSkillId": "bjorn_cursed_blood"
     }
   ]
 }

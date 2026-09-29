@@ -212,7 +212,7 @@ namespace PrincesPalace.Domain.Tests
             AssertEntry(t, 27, TrackReward.StatPoint, 4);
             AssertEntry(t, 28, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
             AssertEntry(t, 29, TrackReward.StatPoint, 4);
-            AssertEntry(t, 30, TrackReward.UnlockSkill, 0, skillId: "second_wind");
+            AssertEntry(t, 30, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
         }
 
         // THE FURY NODES ARE SET, NOT SUMMED, and this is the only place the
@@ -408,7 +408,7 @@ namespace PrincesPalace.Domain.Tests
             var track = Bear();
 
             Assert.AreEqual(150, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health, 50 at 2/14/22");
-            Assert.AreEqual(20, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Physical, RewardTrack.MaxLevel), "Physical damage, 5 at 7/10/17/28");
+            Assert.AreEqual(25, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Physical, RewardTrack.MaxLevel), "Physical damage, 5 at 7/10/17/28/30");
             Assert.AreEqual(10, track.CollectedSkillFlatDelta("placeholder_brawler_slam", RewardTrack.MaxLevel), "Slam base 27 to 37");
         }
 
@@ -426,7 +426,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- what each track teaches, and when -----------------------------
 
         [TestCase("sheep", new[] { "woolgathering", "battering_ram", "tuck_in", "cinderfault", "placeholder_shawn_capstone" })]
-        [TestCase("bear", new[] { "placeholder_brawler_provoke", "bear_bulwark", "second_wind" })]
+        [TestCase("bear", new[] { "placeholder_brawler_provoke", "bear_bulwark" })]
         [TestCase("owl", new[] { "frost_flare", "lightning_bolt", "mend", "prism_ward" })]
         public void ATrackTeachesExactlyTheseSkillsInThisOrder(string characterId, string[] expected)
         {

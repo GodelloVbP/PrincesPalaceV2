@@ -10,36 +10,35 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: second_wind
+  m_Name: gorge
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
   data:
-    Id: second_wind
-    DisplayName: Second Wind
-    Description: He lets the whole rage go at once and breathes. Needs at least 25
-      Fury, spends every point of it, and heals 1% of his maximum health for each
-      one -- a full bar is a full heal.
+    Id: gorge
+    DisplayName: Gorge
+    Description: He bites into the fight and drinks. A heavy blow at one target that
+      heals him for a share of the damage it deals. Costs 30 Fury.
     CharacterId: bear
     UnlockLevel: 999
-    Effect: 2
-    Targeting: 2
-    ManaCost: 25
+    Effect: 0
+    Targeting: 0
+    ManaCost: 30
     ResourceCost: 0
     SpendsAllResource: 0
     ResourceSpendCap: 0
-    SpendsAllPrimary: 1
-    PercentOfMaxHealthPerPoint: 1
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
     HitCount: 1
     DamagePerMissingHealthPercent: 0
     RefundsSpentOnKillPercent: 0
     FreeAction: 0
-    LifestealPercent: 0
+    LifestealPercent: 30
     OncePerFight: 0
     WindowTurns: 0
     RegenPercentOfMaxHealth: 0
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
     Power: 0
-    FlatAmount: 0
+    FlatAmount: 30
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:
@@ -62,7 +61,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 54
+    SortOrder: 50
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -113,10 +112,10 @@ MonoBehaviour:
     CooldownTurns: 0
     PlayerSelectable: 1
     Shake: 0
-    Approach: 0
-    Stance: 
-    ApproachStance: 
-    WindupStance: 
+    Approach: 2
+    Stance: attack
+    ApproachStance: rush
+    WindupStance: overhead
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 
@@ -134,9 +133,9 @@ MonoBehaviour:
     DetonationPercent: 0
     DetonationSplit: 
     Reach:
-      Kind: 0
-      RankMask: 0
-    PhysicalMove: 0
+      Kind: 1
+      RankMask: 1
+    PhysicalMove: 1
     BookOnly: 0
     BookTier: 0
     Elements: []

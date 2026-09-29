@@ -380,12 +380,12 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 30
-      Reward: 11
-      Amount: 0
+      Reward: 8
+      Amount: 5
       AgainstType: 0
-      HasAgainst: 0
-      SkillId: second_wind
-      SkillDisplayName: Second Wind
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
       ResourceType: 0
       HasResource: 0

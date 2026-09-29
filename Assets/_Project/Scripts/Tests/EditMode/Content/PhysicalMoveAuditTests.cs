@@ -82,6 +82,9 @@ namespace PrincesPalace.Domain.Tests
             { "placeholder_brawler_ward", false },
             { "bear_bulwark", false },
             { "second_wind", false },
+            { "gorge", true },
+            { "unbroken", false },
+            { "bjorn_cursed_blood", false },
 
             // The nine authored enemy abilities. boulder_slam is the
             // judgement call on the true side -- a thrown boulder is the golem
