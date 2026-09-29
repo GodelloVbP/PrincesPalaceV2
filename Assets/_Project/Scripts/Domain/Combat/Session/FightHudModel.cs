@@ -487,6 +487,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 // put in a seat. Not "MOVE" or "SWAP" for the reason Hasten's
                 // own line gives.
                 case SkillEffect.Reposition: return "PULL";
+                // Unbroken and Cursed Blood each open a window on the caster.
+                // Named for what the player gets, not for the seam under it.
+                case SkillEffect.Unbroken: return "ENDURE";
+                case SkillEffect.CursedBlood: return "CURSE";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
                         "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +
@@ -506,7 +510,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // case would read as a different KIND of row rather than the same row
         // waiting.
         private static string CooldownLabel(int turns) =>
-            turns == 1 ? "1 TURN" : $"{turns} TURNS";
+            turns == FightSession.SpentForFight ? "USED"
+            : turns == 1 ? "1 TURN" : $"{turns} TURNS";
 
         // BOTH TAGS COME FROM THE CASTER, not from this file. "MP" used to be
         // a literal here, which was true only for as long as every caster
@@ -596,6 +601,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // replaces used to mean: the wait and the mana cost fought over the
         // same one line. They have their own rows now, so neither has to
         // give way to the other.
+        // A once-per-fight skill has no turns to count: it says so, and says
+        // "used" once it has been cast.
+        private static string CooldownRowFor(CombatantState actor, ResolvedSkill skill, int remaining)
+        {
+            if (!skill.OncePerFight) return CooldownRowLabel(FightSession.CooldownTurnsFor(actor, skill), remaining);
+
+            return remaining == FightSession.SpentForFight ? "USED" : "ONCE PER FIGHT";
+        }
+
         public static string CooldownRowLabel(int cooldownTurns, int remaining)
         {
             if (cooldownTurns <= 0) return "";
@@ -678,7 +692,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             AddIfApplicable(panel.Stats, "MANA", ManaCostLabel(skill, primaryTag));
             AddIfApplicable(panel.Stats, "COST", ResourceOrHealthCostLabel(skill, actor, resourceName));
-            AddIfApplicable(panel.Stats, "COOLDOWN", CooldownRowLabel(FightSession.CooldownTurnsFor(actor, skill), cooldownRemaining));
+            AddIfApplicable(panel.Stats, "COOLDOWN", CooldownRowFor(actor, skill, cooldownRemaining));
             AddIfApplicable(panel.Stats, "POWER", PowerLabel(session, actor, skill));
             AddIfApplicable(panel.Stats, "DEFENSE", DefenseLabel(session, actor, skill));
 
@@ -746,7 +760,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 panel.Icons.Add(new DetailIcon(DetailIconKind.Cost, "cost", cost));
             }
 
-            string cooldown = CooldownIconValue(FightSession.CooldownTurnsFor(actor, skill), cooldownRemaining);
+            string cooldown = skill.OncePerFight
+                ? (cooldownRemaining == FightSession.SpentForFight ? "USED" : "1x")
+                : CooldownIconValue(FightSession.CooldownTurnsFor(actor, skill), cooldownRemaining);
             if (!string.IsNullOrEmpty(cooldown))
             {
                 panel.Icons.Add(new DetailIcon(DetailIconKind.Cooldown, "cooldown", cooldown));

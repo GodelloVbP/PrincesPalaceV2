@@ -211,6 +211,23 @@ namespace PrincesPalace.Domain.Combat
         //
         // APPENDED, never inserted -- generated assets store this ordinal.
         Reposition,
+
+        // BJORN'S UNBROKEN (Juggernaut convergence): a Regen of
+        // regenPercentOfMaxHealth of his max health each turn and
+        // Unstoppable (no crowd control lands), both for windowTurns of his
+        // own turns. Resolved by FightSession.ResolveUnbroken through the
+        // Phase 4e seam (OpenUnstoppable). Touches only the caster.
+        //
+        // APPENDED, never inserted -- generated assets store this ordinal.
+        Unbroken,
+
+        // BJORN'S CURSED BLOOD (Juggernaut ultimate): for windowTurns of his
+        // own turns no heal lands on him and each one is dealt as Void damage
+        // to every enemy (FightSession.OpenCursedBlood, Phase 4b). Authored
+        // oncePerFight. Touches only the caster.
+        //
+        // APPENDED, never inserted -- generated assets store this ordinal.
+        CursedBlood,
     }
 
     // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier

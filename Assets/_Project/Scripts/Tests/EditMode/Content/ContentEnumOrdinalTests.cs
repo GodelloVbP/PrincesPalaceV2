@@ -57,6 +57,8 @@ namespace PrincesPalace.Domain.Tests
             { "Enthrall", 19 },
             // Bellwether kit M2.
             { "Reposition", 20 },
+            { "Unbroken", 21 },
+            { "CursedBlood", 22 },
         };
 
         private static readonly Dictionary<string, int> SkillTargetingOrdinals = new Dictionary<string, int>

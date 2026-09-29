@@ -424,6 +424,84 @@ namespace PrincesPalace.Domain.Combat
         // The capstone: a full-Fury Rampage triggers a second sweep on top
         // (CombatantState.TwinRampage). Magnitude is ignored.
         TwinRampage,
+
+        // ═══ The Juggernaut (Bjorn's low-health bruiser constellation) ═══
+        //
+        // docs/PLAN_BJORN_CONSTELLATIONS.md section 4. APPENDED, like the
+        // Einherjar block above, and armed by FightSession.ArmEngineSeams
+        // wherever a rule is a switch on a Domain seam rather than a number
+        // one place reads.
+
+        // The root. Sets CombatantState.FuryEngine to Juggernaut: per-turn
+        // Fury on the health curve, no income from hits, no idle decay.
+        // Magnitude is ignored.
+        FuryEngineJuggernaut,
+
+        // SKILL-SCOPED (IsSkillScoped): the holder pays Magnitude turns of
+        // cooldown for the named skill instead of the row's own. The
+        // Juggernaut root names Second Wind here. Set into
+        // CombatantState.CooldownOverrides at fight start.
+        SkillCooldownTurns,
+
+        // +Magnitude percent of max health, on the finished figure (base,
+        // gear, ability scores and reward track together). Read by
+        // ContentDatabase.EffectiveStats, so the hub, the run and the fight
+        // agree on one number. Thick Blood T1 is 10 and T3 is 20 (the two
+        // nodes together, not 10 more): the strongest owned wins, as for
+        // every repeated type.
+        MaxHealthPercent,
+
+        // Regen at the start of the holder's turn that follows the same
+        // curve as the Juggernaut's Fury: Threshold percent of max health at
+        // full health, rising to Magnitude percent at 25% health or less
+        // (HealthCurveRegen). Thick Blood T2 is 6 over 2, T3 is 8 over 2.
+        // Threshold is the floor here, not a health gate.
+        HealthCurveRegen,
+
+        // Wrath: +Magnitude hundredths of a percent to the holder's damage for
+        // each 1% of his own max health that is missing (50 = half a percent
+        // per point, so +37 at 25% health). Read by AttackBonusFor beside
+        // every other attack bonus, so a swing, a cast and the preview agree.
+        DamagePerMissingHealth,
+
+        // SKILL-SCOPED: the named skill heals its caster for Magnitude percent
+        // of the damage it deals, when that beats the skill's own authored
+        // lifestealPercent. Gorge T2 (40 over the row's 30).
+        SkillLifestealPercent,
+
+        // SKILL-SCOPED: the named skill deals Magnitude percent more damage
+        // while its caster is at or below Threshold percent of his OWN max
+        // health. Gorge T3 (25 under 50).
+        SkillDamageBonusBelowOwnHealth,
+
+        // UNYIELDING, one member for its three nodes because they nest: T1 =
+        // the passive with a 4-turn cooldown, T2 = cooldown 3, T3 = the trigger
+        // also grants 20 Fury. The highest tier owned wins.
+        UnyieldingTier,
+
+        // IGNORE PAIN: Magnitude percent of every hit is paid over the next
+        // Threshold turns instead of now (CombatantState.DelayedDamage).
+        // Threshold is a count of turns here, not a health gate.
+        DelayedDamagePercent,
+
+        // Ignore Pain T3: a heal pays down pending delayed damage before it
+        // restores health. Magnitude is ignored.
+        HealReducesDelayedDamage,
+
+        // BLOOD PRICE T1: skills the primary pool cannot cover are paid with
+        // Magnitude thousandths of max health per point of shortfall
+        // (CombatantState.ShortfallHealthPermille). 5 = 0.5%.
+        ShortfallPaidInHealthPermille,
+
+        // BLOOD PRICE T2: a cast paid partly in health deals Magnitude percent
+        // more damage. Read by AttackBonusFor with the cast's own blood-paid
+        // fact.
+        BloodPaidDamagePercent,
+
+        // BLOOD PRICE T3's second half, beside CheatDeathOncePerFight: when
+        // the death save fires, the primary pool fills to its cap. Magnitude
+        // is ignored.
+        CheatDeathFillsPrimary,
     }
 
     // One rule a talent grants. Engine-free; the combat pipeline reads these
@@ -481,6 +559,9 @@ namespace PrincesPalace.Domain.Combat
         public static bool IsSkillScoped(TalentEffectType type) =>
             type == TalentEffectType.SlamCritRestoresFury
             || type == TalentEffectType.SlamCritChanceAtFury
-            || type == TalentEffectType.SlamIgnoresDefenseAtFullFury;
+            || type == TalentEffectType.SlamIgnoresDefenseAtFullFury
+            || type == TalentEffectType.SkillCooldownTurns
+            || type == TalentEffectType.SkillLifestealPercent
+            || type == TalentEffectType.SkillDamageBonusBelowOwnHealth;
     }
 }

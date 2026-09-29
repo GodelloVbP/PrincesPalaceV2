@@ -610,6 +610,16 @@ namespace PrincesPalace.Domain.Combat
                 target.CheatDeathSpent = true;
                 cheatedDeath = true;
                 target.CurrentHealth = 1;
+
+                // BLOOD PRICE T3's second half: the save also fills the primary
+                // pool. Here, in the one branch that decides the save, so a
+                // future path into this funnel cannot fire the save and skip
+                // the Fury.
+                if (target.PrimaryPool != null && target.Talents.Has(TalentEffectType.CheatDeathFillsPrimary))
+                {
+                    target.PrimaryPool.Gain(target.PrimaryPool.Max - target.PrimaryPool.Current);
+                }
+
                 return new DamageResult(absorbed, true);
             }
 

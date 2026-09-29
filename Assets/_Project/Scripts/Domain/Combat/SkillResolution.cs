@@ -217,6 +217,13 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.Reposition:
                     return 0;
 
+                // A window opened on the caster (Unbroken's regen and
+                // Unstoppable, Cursed Blood's healing ban): what it delivers
+                // is measured in turns of a rule, not in points this returns.
+                case SkillEffect.Unbroken:
+                case SkillEffect.CursedBlood:
+                    return 0;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }

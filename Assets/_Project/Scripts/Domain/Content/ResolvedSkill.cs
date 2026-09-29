@@ -62,6 +62,13 @@ namespace PrincesPalace.Domain.Content
         public int RefundsSpentOnKillPercent;
         public bool FreeAction;
 
+        // See RawSkillEntry.lifestealPercent / oncePerFight / windowTurns /
+        // regenPercentOfMaxHealth.
+        public int LifestealPercent;
+        public bool OncePerFight;
+        public int WindowTurns;
+        public int RegenPercentOfMaxHealth;
+
         // The two a Ward alone reads -- see RawSkillEntry's own headers.
         // WardTurns is already resolved here: 0 on the raw row becomes
         // FightTuning.DefaultWardTurns (one turn), so nothing downstream has
@@ -525,8 +532,16 @@ namespace PrincesPalace.Domain.Content
             DamageType? damageType = null, int[] damageBySeatMaxHpPercent = null, int toSeat = 0,
             // APPENDED LAST OF ALL AGAIN (Einherjar), same positional-argument
             // reason every block above gives.
-            int hitCount = 1, int damagePerMissingHealthPercent = 0, int refundsSpentOnKillPercent = 0)
+            int hitCount = 1, int damagePerMissingHealthPercent = 0, int refundsSpentOnKillPercent = 0,
+            // APPENDED LAST OF ALL AGAIN (Juggernaut), same positional-argument
+            // reason every block above gives.
+            int lifestealPercent = 0, bool oncePerFight = false, int windowTurns = 0,
+            int regenPercentOfMaxHealth = 0)
         {
+            LifestealPercent = lifestealPercent;
+            OncePerFight = oncePerFight;
+            WindowTurns = windowTurns;
+            RegenPercentOfMaxHealth = regenPercentOfMaxHealth;
             HitCount = hitCount < 1 ? 1 : hitCount;
             DamagePerMissingHealthPercent = damagePerMissingHealthPercent;
             RefundsSpentOnKillPercent = refundsSpentOnKillPercent;

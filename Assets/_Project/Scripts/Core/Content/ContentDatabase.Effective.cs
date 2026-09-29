@@ -222,6 +222,13 @@ namespace PrincesPalace.Content
                 var track = RewardTracks.For(character);
                 total.maxHealth += track.CollectedTotal(TrackReward.MaxHealth, character.claimedTrackLevel);
                 total.manaRegen += track.CollectedTotal(TrackReward.ManaRegen, character.claimedTrackLevel);
+
+                // A PERCENT OF MAX HEALTH (Thick Blood) is a percent of the
+                // finished figure, so it is read after every flat term above
+                // has landed and floored once. Here rather than at the combat
+                // seam so the hub, the run and the fight all show one bar.
+                int healthPercent = TalentEffects(character).Best(TalentEffectType.MaxHealthPercent);
+                if (healthPercent > 0) total.maxHealth += total.maxHealth * healthPercent / 100;
             }
 
             // THE single clamp point (see AbilityDerivation's own header --

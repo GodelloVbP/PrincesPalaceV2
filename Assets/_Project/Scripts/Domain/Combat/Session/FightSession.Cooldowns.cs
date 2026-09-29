@@ -35,12 +35,26 @@ namespace PrincesPalace.Domain.Combat.Session
         private readonly Dictionary<CombatantState, Dictionary<string, int>> _cooldowns =
             new Dictionary<CombatantState, Dictionary<string, int>>();
 
+        // WHAT CooldownRemaining ANSWERS for a once-per-fight skill that has been
+        // cast: no number of turns, so every reader that asks "is it cooling"
+        // (the menu, the refusal, the bot) says yes, and the labels say "used"
+        // by comparing against this rather than printing it.
+        public const int SpentForFight = int.MaxValue;
+
+        // Once-per-fight casts, by caster and skill id. Never ticked and never
+        // shortened by ReduceCooldowns: it is a fact about the fight, not a
+        // count of turns.
+        private readonly HashSet<(CombatantState, string)> _usedOncePerFight =
+            new HashSet<(CombatantState, string)>();
+
         // ZERO MEANS READY, and no entry means ready too. Both spellings exist
         // because the tally is only written for skills that have actually been
         // cast, and asking about one that has not should not create a row.
         public int CooldownRemaining(CombatantState actor, string skillId)
         {
             if (actor == null || string.IsNullOrEmpty(skillId)) return 0;
+
+            if (_usedOncePerFight.Contains((actor, skillId))) return SpentForFight;
 
             return _cooldowns.TryGetValue(actor, out var forActor)
                    && forActor.TryGetValue(skillId, out int turns)
@@ -72,6 +86,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // the cooldown.
         private void BeginCooldown(CombatantState actor, ResolvedSkill skill)
         {
+            if (actor != null && skill != null && skill.OncePerFight)
+            {
+                _usedOncePerFight.Add((actor, skill.Id));
+            }
+
             int turns = CooldownTurnsFor(actor, skill);
             if (actor == null || turns <= 0) return;
 
@@ -83,6 +102,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             forActor[skill.Id] = turns;
         }
+
+        public void TickCooldownsForTest(CombatantState actor) => TickCooldowns(actor);
 
         // ONE TURN OFF EVERYTHING THIS ACTOR IS WAITING ON, at the start of
         // their turn.

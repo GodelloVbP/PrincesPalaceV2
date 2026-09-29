@@ -474,6 +474,36 @@ namespace PrincesPalace.Domain.Tests
                 Assert.AreEqual(0, encounter.SeatOf(ally), "the ally was not put in the front seat");
                 Assert.AreEqual(1, encounter.SeatOf(caster), "and the occupant took the ally's seat");
             }),
+
+            new Row(SkillEffect.Unbroken, "the caster regenerates and no crowd control can land", () =>
+            {
+                var caster = Hero("Caster", speed: 30);
+                var encounter = new CombatEncounter(new[] { caster }, new[] { Foe() });
+                var skill = new ResolvedSkill("coverage", "Unbroken", "", "hero", 1,
+                    SkillEffect.Unbroken, SkillTargeting.Self, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0, windowTurns: 2, regenPercentOfMaxHealth: 15);
+                var session = Session(encounter, Kit(skill));
+
+                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+
+                Assert.IsTrue(caster.Statuses.Any(s => s.Type == StatusEffectType.Regen),
+                    "the regen did not open");
+                Assert.IsTrue(caster.CrowdControl.Unstoppable.IsOpen, "Unstoppable did not open");
+            }),
+
+            new Row(SkillEffect.CursedBlood, "the caster's heals are converted for the window", () =>
+            {
+                var caster = Hero("Caster", speed: 30);
+                var encounter = new CombatEncounter(new[] { caster }, new[] { Foe() });
+                var skill = new ResolvedSkill("coverage", "Cursed Blood", "", "hero", 1,
+                    SkillEffect.CursedBlood, SkillTargeting.Self, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0, windowTurns: 2, oncePerFight: true);
+                var session = Session(encounter, Kit(skill));
+
+                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+
+                Assert.IsTrue(caster.HealConversion.IsActive, "the conversion window did not open");
+            }),
         };
 
         // ---- the four consumers, one case per member -----------------------
@@ -586,6 +616,12 @@ namespace PrincesPalace.Domain.Tests
                 || effect == SkillEffect.Ward)
             {
                 raw.flatAmount = 10;
+            }
+
+            if (effect == SkillEffect.Unbroken || effect == SkillEffect.CursedBlood)
+            {
+                raw.windowTurns = 2;
+                if (effect == SkillEffect.Unbroken) raw.regenPercentOfMaxHealth = 15;
             }
 
             if (effect == SkillEffect.BuffParty)

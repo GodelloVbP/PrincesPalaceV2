@@ -258,7 +258,10 @@ namespace PrincesPalace.Domain.Bot
             }
 
             legal = TransformsOffered(session, actor, legal, transformUse, out FightAction? transformNow);
-            return transformNow ?? policy.Choose(session, actor, legal, rng);
+
+            // The skills that deal no damage of their own are valued here, for
+            // every archetype alike (UtilitySkills' header).
+            return transformNow ?? UtilitySkills.Choose(session, actor, legal) ?? policy.Choose(session, actor, legal, rng);
         }
 
         // ---- the knell trace ----------------------------------------------------

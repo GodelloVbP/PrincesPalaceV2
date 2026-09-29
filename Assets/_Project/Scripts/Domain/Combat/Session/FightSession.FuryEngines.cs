@@ -130,7 +130,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // ever turns things ON: a test or a caller that set a seam by hand
         // keeps it.
         //
-        // Sentinel and Juggernaut arms land with their constellations.
+        // The Sentinel's arm lands with its constellation.
         private static void ArmEngineSeams(CombatantState actor)
         {
             var talents = actor?.Talents;
@@ -140,6 +140,8 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 actor.FuryEngine.Kind = FuryEngineKind.Einherjar;
             }
+
+            ArmJuggernautSeams(actor, talents);
 
             int momentum = talents.Best(TalentEffectType.MomentumTier);
             if (momentum >= 1) actor.Momentum.Enabled = true;

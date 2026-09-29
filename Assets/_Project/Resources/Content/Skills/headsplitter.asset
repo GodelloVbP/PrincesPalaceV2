@@ -32,6 +32,10 @@ MonoBehaviour:
     DamagePerMissingHealthPercent: 100
     RefundsSpentOnKillPercent: 50
     FreeAction: 0
+    LifestealPercent: 0
+    OncePerFight: 0
+    WindowTurns: 0
+    RegenPercentOfMaxHealth: 0
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
     Power: 1

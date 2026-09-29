@@ -280,11 +280,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // snapshot of the PREVIOUS action's board: the card missed a ward bonus
         // the very next cast applied, and went on quoting a Gift: Fury that
         // cast had already burned.
-        private void RefreshAttackBonus(CombatantState actor, bool spendingGift)
+        private void RefreshAttackBonus(CombatantState actor, bool spendingGift, bool bloodPaid = false)
         {
             if (actor == null) return;
 
-            actor.BonusAttackPercent = AttackBonusFor(actor, spendingGift);
+            actor.BonusAttackPercent = AttackBonusFor(actor, spendingGift, bloodPaid);
 
             // The return is deliberately dropped: AttackBonusFor already
             // counted the gift's magnitude. This call is the SPENDING of it,
@@ -299,11 +299,21 @@ namespace PrincesPalace.Domain.Combat.Session
         // Pure: writes no field, spends no gift, so the skill-detail card can
         // ask it about the cast the player is looking at (FightSession.Skills's
         // PreviewSkillPower) without the hover changing the fight.
-        private int AttackBonusFor(CombatantState actor, bool spendingGift)
+        //
+        // `bloodPaid` is a fact about the CAST this bonus is for: it was paid
+        // partly in health (Blood Price), which is what Blood Price T2 rewards.
+        private int AttackBonusFor(CombatantState actor, bool spendingGift, bool bloodPaid = false)
         {
             if (actor == null) return 0;
 
             int bonus = 0;
+
+            // Wrath (Juggernaut): damage for every point of his own missing
+            // health, read live so the swing and the card agree.
+            bonus += WrathBonusPercent(actor);
+
+            // Blood Price T2: a health-paid cast hits harder.
+            if (bloodPaid) bonus += actor.Talents.Best(TalentEffectType.BloodPaidDamagePercent);
 
             int perAlly = actor.Talents.Best(TalentEffectType.WardDamageBonusPerAlly);
             if (perAlly > 0)
@@ -481,6 +491,12 @@ namespace PrincesPalace.Domain.Combat.Session
             // player told "no wards to shatter" about a skill they could not
             // have cast anyway has been told the wrong thing.
             int cooling = CooldownRemaining(actor, skill.Id);
+            if (cooling == SpentForFight)
+            {
+                refusal = $"{skill.DisplayName} has been used this fight.";
+                return false;
+            }
+
             if (cooling > 0)
             {
                 refusal = cooling == 1

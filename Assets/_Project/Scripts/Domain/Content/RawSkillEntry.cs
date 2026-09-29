@@ -110,6 +110,29 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Percent of the primary pool a killing cast spent that is returned to the caster; 0 means none.")]
         public int refundsSpentOnKillPercent;
 
+        // A DAMAGE SKILL THAT HEALS ITS CASTER for a share of what it deals
+        // (Bjorn's Gorge: 30). Paid through the heal funnel, so Cursed Blood
+        // converts it like any other heal. A talent may raise it for its own
+        // skill (TalentEffectType.SkillLifestealPercent). 0 is none.
+        [ContentDoc("Percent of the damage this skill deals that is healed back to its caster; 0 means none. Only a DamageSingle skill reads it.")]
+        public int lifestealPercent;
+
+        // A SKILL THAT CAN BE CAST ONCE PER FIGHT, whatever the caster's
+        // cooldowns do (Bjorn's Cursed Blood). A cooldown counts turns and a
+        // relic can shorten it; this cannot come back.
+        [ContentDoc("The skill can be cast once per fight; the menu then shows it as used.")]
+        public bool oncePerFight;
+
+        // THE TWO NUMBERS OF A SELF WINDOW SKILL (Unbroken's regen and
+        // Unstoppable, Cursed Blood's healing ban). windowTurns is a count of
+        // the caster's own turns and is required by both effects;
+        // regenPercentOfMaxHealth is Unbroken's regen per turn.
+        [ContentDoc("How many of the caster's own turns the window this skill opens lasts. Required by an Unbroken or CursedBlood skill, refused on any other.")]
+        public int windowTurns;
+
+        [ContentDoc("Percent of the caster's max health the Regen an Unbroken skill opens heals each turn. Required by an Unbroken skill, refused on any other.")]
+        public int regenPercentOfMaxHealth;
+
         // A FLAT percent of the CASTER'S own max health, in shield points,
         // added to a Ward. Bjorn's Bulwark is 30: a shield worth roughly
         // three enemy hits at the start of a run, and still worth three of

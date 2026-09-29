@@ -790,6 +790,41 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // THE JUGGERNAUT'S FOUR, each read by one resolution and refused
+            // anywhere else, the house rule for a field with no meaning on an
+            // effect.
+            if (raw.lifestealPercent != 0
+                && (raw.lifestealPercent < 0 || raw.lifestealPercent > 100 || effect != SkillEffect.DamageSingle))
+            {
+                error = $"{label}: lifestealPercent must be 1-100 and only means anything on a DamageSingle skill, not {effect}.";
+                return false;
+            }
+
+            bool opensAWindow = effect == SkillEffect.Unbroken || effect == SkillEffect.CursedBlood;
+            if (opensAWindow && (raw.windowTurns < 1 || raw.windowTurns > MaxWindowTurns))
+            {
+                error = $"{label}: a {effect} skill needs windowTurns 1-{MaxWindowTurns} -- the turns its window stays open.";
+                return false;
+            }
+
+            if (!opensAWindow && raw.windowTurns != 0)
+            {
+                error = $"{label}: windowTurns is read only by an Unbroken or CursedBlood skill, not {effect}.";
+                return false;
+            }
+
+            if (effect == SkillEffect.Unbroken && (raw.regenPercentOfMaxHealth < 1 || raw.regenPercentOfMaxHealth > 100))
+            {
+                error = $"{label}: an Unbroken skill needs regenPercentOfMaxHealth 1-100 -- without it the Regen it opens heals nothing.";
+                return false;
+            }
+
+            if (effect != SkillEffect.Unbroken && raw.regenPercentOfMaxHealth != 0)
+            {
+                error = $"{label}: regenPercentOfMaxHealth is read only by an Unbroken skill, not {effect}.";
+                return false;
+            }
+
             if (!TryResolveBellwetherFields(raw, label, effect, targeting, instances,
                     out var ownDamageType, out var damageBySeat, out error))
             {
@@ -926,7 +961,8 @@ namespace PrincesPalace.Domain.Content
                 raw.detonationPercent, detonationSplit,
                 raw.advanceSlots, raw.physicalMove,
                 ownDamageType, damageBySeat, raw.toSeat,
-                raw.hitCount, raw.damagePerMissingHealthPercent, raw.refundsSpentOnKillPercent);
+                raw.hitCount, raw.damagePerMissingHealthPercent, raw.refundsSpentOnKillPercent,
+                raw.lifestealPercent, raw.oncePerFight, raw.windowTurns, raw.regenPercentOfMaxHealth);
             error = null;
             return true;
         }
@@ -937,6 +973,10 @@ namespace PrincesPalace.Domain.Content
 
         // A cast that strikes ten times is a typo; two is the design.
         public const int MaxHitCount = 5;
+
+        // A window a skill holds open for longer than this is a typo, not a
+        // design (Unbroken and Cursed Blood are both 2).
+        public const int MaxWindowTurns = 10;
 
         // THE BELLWETHER KIT'S THREE FIELDS (docs/PLAN_BELLWETHER_KIT.md M2):
         // damageType, damageBySeatMaxHpPercent, toSeat. Every refusal is the
@@ -1584,7 +1624,10 @@ namespace PrincesPalace.Domain.Content
             {
                 case SkillEffect.DamageAll:
                 case SkillEffect.Enthrall: return SkillTargeting.AllEnemies;
-                case SkillEffect.HealSelf: return SkillTargeting.Self;
+                case SkillEffect.HealSelf:
+                // Both open a window on the caster and touch nobody else.
+                case SkillEffect.Unbroken:
+                case SkillEffect.CursedBlood: return SkillTargeting.Self;
                 case SkillEffect.HealParty:
                 case SkillEffect.RestorePartyMana:
                 case SkillEffect.BuffParty: return SkillTargeting.Party;

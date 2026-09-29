@@ -862,6 +862,12 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (ownsRegenBeat) CommitOrDropStatusTickBeat();
 
+            // THICK BLOOD'S CURVE REGEN, after the Regen status: a beat of its
+            // own (see TickHealthCurveRegen). The status' beat, when it opened
+            // one, took the pre-tick snapshot.
+            if (ownsRegenBeat) preTick = null;
+            TickHealthCurveRegen(actor, preTick);
+
             // DISTINCT, because statuses stack. Three poisons running out on
             // the same tick are three removals and one thing a player needs
             // told; saying it three times reads as a bug in the log rather

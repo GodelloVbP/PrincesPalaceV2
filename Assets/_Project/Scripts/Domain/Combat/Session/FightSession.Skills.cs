@@ -323,7 +323,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Only a cast that can actually deal damage spends Gift: Fury. A
             // ward burning somebody else's gift would be a present the player
             // never got to open.
-            RefreshAttackBonus(actor, spendingGift: DealsDamage(skill));
+            RefreshAttackBonus(actor, spendingGift: DealsDamage(skill), bloodPaid: bloodPaid > 0);
 
             ResolveCharacterSkill(actor, skill, targets, PointsSpent(skill, resourceSpent, primarySpent), poolTier,
                 destinationSeat);
@@ -523,6 +523,14 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.Reposition:
                     ResolveReposition(actor, skill, target);
+                    break;
+
+                case SkillEffect.Unbroken:
+                    ResolveUnbroken(actor, skill);
+                    break;
+
+                case SkillEffect.CursedBlood:
+                    ResolveCursedBlood(actor, skill);
                     break;
 
                 case SkillEffect.HealSelf:
@@ -977,6 +985,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     // above (a bonus on the finished number would be worth
                     // less against exactly the armour it must beat).
                     baseAmount = ApplyMissingHealthBonus(baseAmount, skill, target);
+
+                    // GORGE T3: the named skill's own-health bonus, on the raw
+                    // figure like the wound bonus above.
+                    baseAmount = ApplySkillHealthBonus(baseAmount, skill, actor);
                 }
 
                 // NO VARIANCE ON A SEAT-SIZED HIT. Its base is a fixed share
@@ -1022,6 +1034,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // does. A swing is a swing.
             ApplyFinalDamage(actor, target, damage, CombatActions.IsPhysicalMove(skill),
                 skill.HasFixedDamage ? (DamageType?)null : CastTypeOf(actor, skill));
+
+            ApplySkillLifesteal(actor, skill, damage);
 
             RefundOnKill(actor, skill, target, resourceSpent);
 
@@ -1774,7 +1788,8 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null) return 0;
 
             int stashed = actor.BonusAttackPercent;
-            actor.BonusAttackPercent = AttackBonusFor(actor, spendingGift: DealsDamage(skill));
+            actor.BonusAttackPercent = AttackBonusFor(actor, spendingGift: DealsDamage(skill),
+                bloodPaid: BloodPrice.ShortfallOf(actor, skill.ManaCost) > 0);
             try
             {
                 if (skill.HasFixedDamage)
@@ -1823,7 +1838,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // every blow (each is a full swing of this figure).
                 if (skill.Effect == SkillEffect.DamageSingle)
                 {
-                    amount = ApplyMissingHealthBonus(amount, skill, target) * (skill.HitCount < 1 ? 1 : skill.HitCount);
+                    amount = ApplySkillHealthBonus(ApplyMissingHealthBonus(amount, skill, target), skill, actor)
+                             * (skill.HitCount < 1 ? 1 : skill.HitCount);
                 }
 
                 return amount;

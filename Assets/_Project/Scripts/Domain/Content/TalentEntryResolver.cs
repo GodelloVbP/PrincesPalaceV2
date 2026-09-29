@@ -238,6 +238,12 @@ namespace PrincesPalace.Domain.Content
             TalentEffectType.TransformPermanentBelowHealth,
             TalentEffectType.WardAlsoAppliesRegen,
             TalentEffectType.CritChanceBelowTargetHealth,
+            // HealthCurveRegen reads it as the regen's floor percent and
+            // DelayedDamagePercent as a count of turns; SkillDamageBonusBelow
+            // OwnHealth is the ordinary percent-of-max-health gate.
+            TalentEffectType.HealthCurveRegen,
+            TalentEffectType.DelayedDamagePercent,
+            TalentEffectType.SkillDamageBonusBelowOwnHealth,
         };
 
         // The four rules that are a FLAG: present or absent, with no number
@@ -260,6 +266,9 @@ namespace PrincesPalace.Domain.Content
             TalentEffectType.FirstIdleTurnFree,
             TalentEffectType.KillFillsMomentum,
             TalentEffectType.TwinRampage,
+            TalentEffectType.FuryEngineJuggernaut,
+            TalentEffectType.HealReducesDelayedDamage,
+            TalentEffectType.CheatDeathFillsPrimary,
         };
 
         private static bool TryResolveEffects(RawTalentEntry raw, string label,

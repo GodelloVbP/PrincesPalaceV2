@@ -95,6 +95,28 @@ namespace PrincesPalace.Domain.Combat
             return best;
         }
 
+        // BestFor, restricted to the rules whose health threshold the HOLDER
+        // currently satisfies (at or below Threshold percent of his own max
+        // health). The shape of a skill-scoped, health-gated bonus: Gorge's
+        // extra damage while he is under half health.
+        public int BestForBelowHealth(TalentEffectType type, string skillId, CombatantState holder)
+        {
+            if (string.IsNullOrEmpty(skillId)) return 0;
+
+            int best = 0;
+            foreach (var effect in _effects)
+            {
+                if (effect.Type != type || effect.SkillId != skillId || !AtOrBelow(holder, effect.Threshold))
+                {
+                    continue;
+                }
+
+                if (effect.Magnitude > best) best = effect.Magnitude;
+            }
+
+            return best;
+        }
+
         // The strongest magnitude among the entries of this type whose health
         // threshold is currently SATISFIED — the "replace, not stack" rule
         // for tiered health gates (TalentEffectType.WoolPerTurnBelowHealth's
