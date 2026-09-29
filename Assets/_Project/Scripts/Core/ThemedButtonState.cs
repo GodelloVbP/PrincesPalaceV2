@@ -243,7 +243,12 @@ namespace PrincesPalace
         // was pressed, matching ButtonPressAnimator's own reasoning.
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (!Interactable) return;
+            if (!Interactable)
+            {
+                if (clickSound != Sound.None) SoundController.Play(Sound.ClickFail);
+                return;
+            }
+
             SoundController.Play(clickSound);
         }
 

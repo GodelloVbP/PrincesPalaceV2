@@ -122,6 +122,7 @@ namespace PrincesPalace
         {
             gameObject.SetActive(true);
             Wire();
+            SoundController.Play(Sound.OpenPack);
 
             _seed = seed;
             _selected = -1;

@@ -24,6 +24,38 @@ namespace PrincesPalace
 
         // Over the "Palazzo Games" splash, once per launch.
         StartupIntro,
+
+        // Back, Cancel and Close buttons (UiNode.Closes), instead of the
+        // generic click.
+        MenuClose,
+
+        // A press on a control that is switched off (locked, unaffordable,
+        // not yet available). Played by the same two press handlers that play
+        // ButtonClick, so it needs no per-screen wiring.
+        ClickFail,
+
+        // Something opening that was earned: a reward-track claim, a relic
+        // draft appearing.
+        OpenPack,
+
+        // The two takes of a tab or screen switch. Never asked for by name --
+        // TabSwipe.Next alternates them so two switches in a row differ.
+        Swipe1,
+        Swipe2,
+
+        // The fight-won sting, layered with the character's own victory line.
+        VictorySting,
+    }
+
+    public static class TabSwipe
+    {
+        private static bool _second;
+
+        public static Sound Next()
+        {
+            _second = !_second;
+            return _second ? Sound.Swipe2 : Sound.Swipe1;
+        }
     }
 
     public static class SoundLibrary
@@ -38,6 +70,12 @@ namespace PrincesPalace
                 case Sound.ButtonClick: return "Audio/Sfx/button click";
                 case Sound.PressPlay: return "Audio/Sfx/press play";
                 case Sound.StartupIntro: return "Audio/Sfx/start-up intro";
+                case Sound.MenuClose: return "Audio/Sfx/menu_close";
+                case Sound.ClickFail: return "Audio/Sfx/click_fail";
+                case Sound.OpenPack: return "Audio/Sfx/open_the_pack";
+                case Sound.Swipe1: return "Audio/Sfx/swipe_1";
+                case Sound.Swipe2: return "Audio/Sfx/swipe_2";
+                case Sound.VictorySting: return "Audio/Sfx/victory_sting";
                 default: return null;
             }
         }

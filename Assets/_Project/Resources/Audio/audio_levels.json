@@ -29,6 +29,14 @@
       "peakDb": -0.6
     },
     {
+      "path": "Music/Events/bell_in_the_fog/wind",
+      "gainDb": 1.2,
+      "gain": 1.1482,
+      "metric": "lufs",
+      "measuredDb": -19.2,
+      "peakDb": -2.8
+    },
+    {
       "path": "Music/boss_music_loop",
       "gainDb": -2.17,
       "gain": 0.7789,
@@ -37,12 +45,36 @@
       "peakDb": 0.0
     },
     {
+      "path": "Sfx/Events/bell_in_the_fog/flock_charge",
+      "gainDb": -3.0,
+      "gain": 0.7079,
+      "metric": "rms",
+      "measuredDb": -15.0,
+      "peakDb": -0.9
+    },
+    {
+      "path": "Sfx/Events/bell_in_the_fog/toll",
+      "gainDb": -2.5,
+      "gain": 0.7499,
+      "metric": "rms",
+      "measuredDb": -15.5,
+      "peakDb": -1.1
+    },
+    {
       "path": "Sfx/Long synthy sine very magical",
       "gainDb": 1.9,
       "gain": 1.2445,
       "metric": "rms",
       "measuredDb": -21.9,
       "peakDb": -2.9
+    },
+    {
+      "path": "Sfx/Odette/odette_attack_impact",
+      "gainDb": 0.76,
+      "gain": 1.0914,
+      "metric": "rms",
+      "measuredDb": -28.7,
+      "peakDb": -1.8
     },
     {
       "path": "Sfx/Shawn/damage_10_shawn",
@@ -133,6 +165,22 @@
       "peakDb": 0.0
     },
     {
+      "path": "Sfx/Shawn/shawn_attack_impact",
+      "gainDb": -1.74,
+      "gain": 0.8185,
+      "metric": "rms",
+      "measuredDb": -20.9,
+      "peakDb": 0.7
+    },
+    {
+      "path": "Sfx/Shawn/shawn_attack_swipe",
+      "gainDb": -1.4,
+      "gain": 0.8511,
+      "metric": "rms",
+      "measuredDb": -16.6,
+      "peakDb": -1.5
+    },
+    {
       "path": "Sfx/Shawn/shawn_hit_attack",
       "gainDb": -2.89,
       "gain": 0.717,
@@ -197,6 +245,22 @@
       "peakDb": -2.9
     },
     {
+      "path": "Sfx/cinderfault_startup",
+      "gainDb": 12.0,
+      "gain": 3.9811,
+      "metric": "rms",
+      "measuredDb": -37.1,
+      "peakDb": -21.5
+    },
+    {
+      "path": "Sfx/click_fail",
+      "gainDb": -0.7,
+      "gain": 0.9226,
+      "metric": "rms",
+      "measuredDb": -17.3,
+      "peakDb": -1.5
+    },
+    {
       "path": "Sfx/frost_flare",
       "gainDb": -1.1,
       "gain": 0.881,
@@ -229,12 +293,52 @@
       "peakDb": -5.3
     },
     {
+      "path": "Sfx/menu_close",
+      "gainDb": 3.61,
+      "gain": 1.5153,
+      "metric": "rms",
+      "measuredDb": -29.6,
+      "peakDb": -4.6
+    },
+    {
+      "path": "Sfx/mud_burst_impact",
+      "gainDb": 1.04,
+      "gain": 1.1272,
+      "metric": "rms",
+      "measuredDb": -23.5,
+      "peakDb": -2.0
+    },
+    {
+      "path": "Sfx/mud_burst_startup",
+      "gainDb": 12.0,
+      "gain": 3.9811,
+      "metric": "rms",
+      "measuredDb": -32.8,
+      "peakDb": -13.6
+    },
+    {
+      "path": "Sfx/open_the_pack",
+      "gainDb": 3.98,
+      "gain": 1.5812,
+      "metric": "rms",
+      "measuredDb": -39.2,
+      "peakDb": -5.0
+    },
+    {
       "path": "Sfx/press play",
       "gainDb": 4.73,
       "gain": 1.7239,
       "metric": "rms",
       "measuredDb": -24.4,
       "peakDb": -5.7
+    },
+    {
+      "path": "Sfx/prismatic_orb_water_startup",
+      "gainDb": 9.68,
+      "gain": 3.0479,
+      "metric": "rms",
+      "measuredDb": -35.4,
+      "peakDb": -10.7
     },
     {
       "path": "Sfx/shawn_hit_1",
@@ -277,11 +381,27 @@
       "peakDb": -6.1
     },
     {
-      "path": "Sfx/very high dopamine sound needs cutoff at one and half sec",
-      "gainDb": 2.37,
-      "gain": 1.3137,
+      "path": "Sfx/swipe_1",
+      "gainDb": 0.3,
+      "gain": 1.0351,
       "metric": "rms",
-      "measuredDb": -24.0,
+      "measuredDb": -18.3,
+      "peakDb": -1.4
+    },
+    {
+      "path": "Sfx/swipe_2",
+      "gainDb": -1.4,
+      "gain": 0.8511,
+      "metric": "rms",
+      "measuredDb": -16.6,
+      "peakDb": -1.5
+    },
+    {
+      "path": "Sfx/victory_sting",
+      "gainDb": 1.6,
+      "gain": 1.2023,
+      "metric": "rms",
+      "measuredDb": -19.6,
       "peakDb": -3.4
     }
   ]

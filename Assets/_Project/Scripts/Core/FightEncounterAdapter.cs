@@ -666,7 +666,8 @@ namespace PrincesPalace
             }
 
             return new PlayerKit(kit.Id, kit.Role, skills, kit.Relics, kit.AttackType,
-                kit.Level, kit.SkillPowerMultiplier, kit.PlateTheme, kit.PlateArt, kit.Facing);
+                kit.Level, kit.SkillPowerMultiplier, kit.PlateTheme, kit.PlateArt, kit.Facing,
+                kit.SwingSfxPath, kit.ImpactSfxPath);
         }
 
         private static PlayerKit KitFor(CharacterDefinition definition,
@@ -693,7 +694,8 @@ namespace PrincesPalace
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
                 definition.Data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level),
-                definition.Data.PlateTheme, definition.Data.PlateArt, definition.Data.BattleSpriteFacing);
+                definition.Data.PlateTheme, definition.Data.PlateArt, definition.Data.BattleSpriteFacing,
+                definition.Data.SwingSfxPath, definition.Data.ImpactSfxPath);
         }
 
         // Test-only door to the overload above, named ...ForTest per house
@@ -739,7 +741,8 @@ namespace PrincesPalace
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
                 definition.Data.AttackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character),
-                definition.Data.PlateTheme, definition.Data.PlateArt, definition.Data.BattleSpriteFacing);
+                definition.Data.PlateTheme, definition.Data.PlateArt, definition.Data.BattleSpriteFacing,
+                definition.Data.SwingSfxPath, definition.Data.ImpactSfxPath);
         }
 
         // THE SPELL TIER'S OWN powerMultiplier: FightSession.Skills.cs'

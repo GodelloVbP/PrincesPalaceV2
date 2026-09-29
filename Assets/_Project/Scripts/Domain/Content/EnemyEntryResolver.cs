@@ -233,6 +233,8 @@ namespace PrincesPalace.Domain.Content
             // so the enemy just fights as a blank plate with no VFX and nothing
             // anywhere says why.
             if (!ArtPathConvention.Check(label, "spritePath", raw.spritePath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "swingSfxPath", raw.swingSfxPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "impactSfxPath", raw.impactSfxPath, out error)) return false;
             // THE ABILITY LIST, validated here and looked up later.
             //
             // This resolver cannot check that a skill id EXISTS -- skills are a
@@ -355,6 +357,8 @@ namespace PrincesPalace.Domain.Content
                 RallyStance = rallyStance,
                 RallyVfx = rallyVfx.Copy(),
                 Schedule = schedule,
+                SwingSfxPath = (raw.swingSfxPath ?? string.Empty).Trim(),
+                ImpactSfxPath = (raw.impactSfxPath ?? string.Empty).Trim(),
             };
             error = null;
             return true;

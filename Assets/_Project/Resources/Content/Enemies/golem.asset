@@ -58,6 +58,8 @@ MonoBehaviour:
       layerFormat: 0
       hitCueSeconds: 0
     SpritePath: Enemies/golem
+    SwingSfxPath: 
+    ImpactSfxPath: 
     Abilities:
     - SkillId: boulder_slam
       Weight: 1

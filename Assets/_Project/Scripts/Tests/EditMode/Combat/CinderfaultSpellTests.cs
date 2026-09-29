@@ -103,7 +103,7 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"layerFormat\": 1", entry);
             StringAssert.Contains("\"path\": \"Spells/cinderfault_ground\"", entry);
             StringAssert.Contains("\"path\": \"Spells/cinderfault_eruption\"", entry);
-            StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/cinderfault_pressure\"", entry);
+            StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/cinderfault_startup\"", entry);
             StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/cinderfault_impact\"", entry);
 
             // ONE CUE, AUTHORED, and it is HALF the instant the pre-layer

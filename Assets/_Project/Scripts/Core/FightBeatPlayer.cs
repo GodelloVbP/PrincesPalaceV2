@@ -998,8 +998,8 @@ namespace PrincesPalace
             // blow would connect either way. A spell instead waits out its
             // VFX's impact fraction below; only one of these three is ever
             // non-zero for a given beat, so they add rather than compete.
-            if (staticSwing) yield return StaticSwing.Windup();
-            else if (staticCharge) yield return StaticSwing.Windup(chargeOutSeconds);
+            if (staticSwing) yield return StaticSwing.Windup(ContactCues.SwingClipFor(beat));
+            else if (staticCharge) yield return StaticSwing.Windup(ContactCues.SwingClipFor(beat), chargeOutSeconds);
 
             // A WIND-UP THE BEAT DID NOT ALREADY HAVE, and the only thing
             // in this file that authoring a pose can BUY.

@@ -53,13 +53,13 @@ MonoBehaviour:
       departFrame: 9
       impactX: 0.69
       impactY: 0.52
-      sfxPath: 
+      sfxPath: Audio/Sfx/mud_burst_impact
       groundPath: 
       groundSeconds: 0
       groundImpactFrame: 0
       groundAspect: 0
       groundImpactY: -1
-      castSfxPath: 
+      castSfxPath: Audio/Sfx/mud_burst_startup
       layers: []
       layerFormat: 0
       hitCueSeconds: 0

@@ -38,11 +38,13 @@ namespace PrincesPalace
         public static float WindupSeconds =>
             StageActorAnimator.AnticipationSeconds + StageActorAnimator.LungeSeconds;
 
-        public static IEnumerator Windup()
+        // `swingClip` is ContactCues.SwingClipFor the beat: the actor's own
+        // swing, or the shared whoosh.
+        public static IEnumerator Windup(string swingClip)
         {
             // AT THE TOP OF THE CROUCH, not at contact. The swell has to be
             // audible before the blow or it reads as a second impact sound.
-            SoundController.PlayClip(ContactCues.WhooshClipPath);
+            SoundController.PlayClip(swingClip);
 
             yield return new WaitForSeconds(FightBeatPlayer.Scaled(WindupSeconds));
         }
@@ -55,9 +57,9 @@ namespace PrincesPalace
         // WindupSeconds-shaped property, because a Charge's figure is not
         // making the crouch-and-cross this class is named for; it is
         // borrowing the wait-then-flash shape and nothing else.
-        public static IEnumerator Windup(float seconds)
+        public static IEnumerator Windup(string swingClip, float seconds)
         {
-            SoundController.PlayClip(ContactCues.WhooshClipPath);
+            SoundController.PlayClip(swingClip);
 
             yield return new WaitForSeconds(FightBeatPlayer.Scaled(seconds));
         }

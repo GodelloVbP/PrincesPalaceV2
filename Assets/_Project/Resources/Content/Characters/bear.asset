@@ -52,3 +52,5 @@ MonoBehaviour:
     PlateArt: Plates/pc_bear
     Epithet: 
     DialogueBustPath: Portraits/Dialogue/bear
+    SwingSfxPath: 
+    ImpactSfxPath: 

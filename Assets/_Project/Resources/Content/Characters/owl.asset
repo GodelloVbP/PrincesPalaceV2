@@ -52,3 +52,5 @@ MonoBehaviour:
     PlateArt: Plates/pc_owl
     Epithet: 
     DialogueBustPath: Portraits/Dialogue/owl
+    SwingSfxPath: 
+    ImpactSfxPath: Audio/Sfx/Odette/odette_attack_impact

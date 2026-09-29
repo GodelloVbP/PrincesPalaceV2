@@ -63,7 +63,7 @@ MonoBehaviour:
       groundImpactFrame: 0
       groundAspect: 0
       groundImpactY: -1
-      castSfxPath: Audio/Sfx/cinderfault_pressure
+      castSfxPath: Audio/Sfx/cinderfault_startup
       layers:
       - id: fault
         render: sprite

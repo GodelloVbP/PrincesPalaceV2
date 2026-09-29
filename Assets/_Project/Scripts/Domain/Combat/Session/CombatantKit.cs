@@ -98,6 +98,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // facing renders exactly as it always has.
         public readonly SpriteFacing Facing;
 
+        // THIS CHARACTER'S OWN MELEE CLIPS (ResolvedCharacter.SwingSfxPath /
+        // ImpactSfxPath); empty means the shared default. Carried on the kit
+        // beside Facing for the same reason: FightSession.NewBeat reads them
+        // off the actor's kit rather than the view re-reading content.
+        public readonly string SwingSfxPath;
+        public readonly string ImpactSfxPath;
+
         public PlayerKit(string id, CharacterRole role,
                          IReadOnlyList<ResolvedSkill> skills,
                          IReadOnlyList<ResolvedRelic> relics,
@@ -121,8 +128,12 @@ namespace PrincesPalace.Domain.Combat.Session
                          // is the stage's own pre-existing hardcoded fallback
                          // -- a fixture that does not pass this keeps today's
                          // behaviour rather than silently flipping.
-                         SpriteFacing facing = SpriteFacing.Right)
+                         SpriteFacing facing = SpriteFacing.Right,
+                         string swingSfxPath = "",
+                         string impactSfxPath = "")
         {
+            SwingSfxPath = swingSfxPath ?? "";
+            ImpactSfxPath = impactSfxPath ?? "";
             Level = level;
             Id = id;
             Role = role;

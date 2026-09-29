@@ -638,8 +638,14 @@ namespace PrincesPalace
         {
             if (panes == null || panes.Length == 0) return;
 
+            int previous = _selected;
+            bool wasChosen = _chosen;
             _chosen = true;
             _selected = index < 0 ? 0 : index >= SystemMenuTabs.Count ? SystemMenuTabs.Count - 1 : index;
+
+            // Silent for the default tab picked when the menu opens: only a
+            // switch the player made is a swipe.
+            if (wasChosen && _selected != previous) SoundController.Play(TabSwipe.Next());
 
             int pane = SystemMenuTabs.PaneIndexFor(_selected);
 

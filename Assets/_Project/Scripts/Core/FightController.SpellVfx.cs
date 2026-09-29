@@ -1006,7 +1006,7 @@ namespace PrincesPalace
 
             performancePlayer.Begin(performance);
 
-            SoundController.PlayClip(ContactCues.ThudClipPath);
+            SoundController.PlayClip(ContactCues.ImpactClipFor(beat));
         }
 
         // WHAT THE FORM THE ACTOR IS WEARING ADDS TO THE BLOW, on every body

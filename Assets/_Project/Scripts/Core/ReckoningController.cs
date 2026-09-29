@@ -899,6 +899,7 @@ namespace PrincesPalace
         {
             if (pages == null || index < 0 || index >= pages.Length) return;
 
+            if (index != _tab) SoundController.Play(TabSwipe.Next());
             _tab = index;
             PaintTabs();
 

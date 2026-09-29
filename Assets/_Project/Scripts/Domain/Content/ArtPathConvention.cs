@@ -79,6 +79,11 @@ namespace PrincesPalace.Domain.Content
                 // plate.
                 { "plateArt", ArtPathKind.RuntimeLoaded },
 
+                // AN ACTOR'S OWN MELEE CLIPS (characters.json and enemies.json),
+                // loaded at runtime by path like a spell's sfxPath.
+                { "swingSfxPath", ArtPathKind.RuntimeLoaded },
+                { "impactSfxPath", ArtPathKind.RuntimeLoaded },
+
                 // RUNTIME SINCE 2026-09-06, and it was EditorBaked before.
                 // Baked meant the Character pane's scene held the sprite, so a
                 // character authored after the last scene build had a correct

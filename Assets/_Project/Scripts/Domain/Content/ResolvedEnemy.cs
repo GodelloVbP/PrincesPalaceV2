@@ -121,6 +121,11 @@ namespace PrincesPalace.Domain.Content
         // ResolvedCharacter.PortraitPath.
         public string SpritePath = "";
 
+        // THIS ACTOR'S OWN MELEE CLIPS (swingSfxPath / impactSfxPath on the
+        // raw row). Empty means the shared ContactCues default.
+        public string SwingSfxPath = "";
+        public string ImpactSfxPath = "";
+
         // WHAT THIS MONSTER CAN DO, as skill ids and relative weights.
         //
         // IDS RATHER THAN RESOLVED SKILLS, deliberately. Enemies and skills are

@@ -819,6 +819,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var closeSize = Ui.PlateNominalSizeFor(160f, 48f);
             var close = Ui.Button("ShopPackClose", UiStrings.Close, closeSize, 26,
                     Place.At(460f, 380f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             PackCloseButton = close;
             content.Add(close);

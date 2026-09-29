@@ -281,6 +281,8 @@ namespace PrincesPalace.Domain.Content
             if (!ArtPathConvention.Check(label, "battleSpritePath", raw.battleSpritePath, out error)) return false;
             if (!ArtPathConvention.Check(label, "plateArt", raw.plateArt, out error)) return false;
             if (!ArtPathConvention.Check(label, "dialogueBustPath", raw.dialogueBustPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "swingSfxPath", raw.swingSfxPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "impactSfxPath", raw.impactSfxPath, out error)) return false;
 
             // REQUIRED, and checked AFTER the convention so a row that
             // authored the path the wrong way round hears which mistake it
@@ -386,7 +388,11 @@ namespace PrincesPalace.Domain.Content
                 primaryPoolId,
                 raw.plateArt.Trim(),
                 epithet,
-                (raw.dialogueBustPath ?? string.Empty).Trim());
+                (raw.dialogueBustPath ?? string.Empty).Trim())
+            {
+                SwingSfxPath = (raw.swingSfxPath ?? string.Empty).Trim(),
+                ImpactSfxPath = (raw.impactSfxPath ?? string.Empty).Trim(),
+            };
             error = null;
             return true;
         }

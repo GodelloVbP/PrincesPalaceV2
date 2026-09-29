@@ -52,3 +52,5 @@ MonoBehaviour:
     PlateArt: Plates/pc_sheep
     Epithet: 
     DialogueBustPath: Portraits/Dialogue/sheep
+    SwingSfxPath: Audio/Sfx/Shawn/shawn_attack_swipe
+    ImpactSfxPath: Audio/Sfx/Shawn/shawn_attack_impact

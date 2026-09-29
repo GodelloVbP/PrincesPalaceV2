@@ -61,6 +61,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 PreSnapshot = preSnapshot ?? SnapshotVitals(),
                 Approach = approach,
             };
+
+            var kit = KitFor(actor);
+            var source = SourceFor(actor)?.Source;
+            _recordingBeat.ActorSwingSfx = kit?.SwingSfxPath ?? source?.SwingSfxPath ?? "";
+            _recordingBeat.ActorImpactSfx = kit?.ImpactSfxPath ?? source?.ImpactSfxPath ?? "";
         }
 
         // BOTH POOLS HEAR IT. Which of them cares is the pool's own authored

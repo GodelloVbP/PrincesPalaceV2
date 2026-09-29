@@ -264,6 +264,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var closeSize = Ui.PlateNominalSizeFor(220f, 56f);
             var close = Ui.Button("DebugCloseButton", UiStrings.Close, closeSize, 18,
                     Place.At(0f, -470f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             screen.CloseButton = close;
             chrome.Add(close);

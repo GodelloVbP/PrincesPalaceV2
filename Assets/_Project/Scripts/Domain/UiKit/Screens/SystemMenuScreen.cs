@@ -147,6 +147,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(w, SystemMenuLayout.TabHeight), 18,
                         Place.At(x, 0f))
                     .NoChrome()
+                    // The tab swipe (SystemMenuController.Select) is this
+                    // click's sound; the generic one would double it.
+                    .Quiet()
                     .Tracked(SystemMenuLayout.TabLabelTracking);
 
                 // WIDTH IS THE LABEL'S, not the box's. A rule as wide as a
@@ -373,6 +376,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var close = Ui.Button("SystemLintelClose", UiStrings.SystemClose,
                     new UiVec(SystemMenuLayout.CloseButtonSize, SystemMenuLayout.CloseButtonSize), 16,
                     Place.At(759f, 0f))
+                .Closes()
                 .NoChrome();
 
             screen.RunTitle = title;

@@ -58,6 +58,8 @@ MonoBehaviour:
       layerFormat: 0
       hitCueSeconds: 0
     SpritePath: Enemies/rat
+    SwingSfxPath: 
+    ImpactSfxPath: 
     Abilities: []
     Schedule: []
     AttackWeight: 1

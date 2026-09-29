@@ -1400,6 +1400,9 @@ namespace PrincesPalace
             if (_session != null && !_spokeVictory && _session.PlayerWon)
             {
                 _spokeVictory = true;
+
+                // The sting plays once for the fight, not once per survivor.
+                SoundController.Play(Sound.VictorySting);
                 foreach (var id in _session.VictoryVoiceIds)
                 {
                     CharacterVoice.Play(id, Domain.Combat.Session.VoiceLine.Victory, oncePerFight: true);

@@ -58,6 +58,8 @@ MonoBehaviour:
       layerFormat: 0
       hitCueSeconds: 0
     SpritePath: Enemies/treant
+    SwingSfxPath: 
+    ImpactSfxPath: 
     Abilities:
     - SkillId: trunk_slam
       Weight: 3

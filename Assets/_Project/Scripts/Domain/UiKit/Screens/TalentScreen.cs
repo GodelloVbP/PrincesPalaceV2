@@ -210,6 +210,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var backSize = Ui.PlateNominalSizeFor(190f, 52f);
             var back = Ui.Button("TalentBackButton", UiStrings.TalentBack, backSize, 15,
                     Place.At(-UiFrames.Reference.X * 0.5f + 119f, UiFrames.Reference.Y * 0.5f - 50f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             screen.BackButton = back;
 
@@ -509,6 +510,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var respecButtonSize = Ui.PlateNominalSizeFor(260f, 64f);
             var cancel = Ui.Button("RespecCancelButton", UiStrings.TalentRespecCancel,
                     respecButtonSize, 18, Place.At(-150f, -104f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             var confirm = Ui.Button("RespecConfirmButton", UiStrings.TalentRespecConfirm,
                     respecButtonSize, 18, Place.At(150f, -104f))

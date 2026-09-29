@@ -62,6 +62,8 @@
       "statusDuration": 1,
       "vfx": {
         "path": "Spells/mud_burst",
+        "castSfxPath": "Audio/Sfx/mud_burst_startup",
+        "sfxPath": "Audio/Sfx/mud_burst_impact",
         "seconds": 0.65,
         "impactFrame": 13,
         "departFrame": 9,
@@ -128,7 +130,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/cinderfault_impact",
-        "castSfxPath": "Audio/Sfx/cinderfault_pressure",
+        "castSfxPath": "Audio/Sfx/cinderfault_startup",
         "hitCueSeconds": 0.21666667,
         "layers": [
           {
@@ -1659,6 +1661,8 @@
       "stance": "cast",
       "vfx": {
         "path": "Spells/mud_burst",
+        "castSfxPath": "Audio/Sfx/mud_burst_startup",
+        "sfxPath": "Audio/Sfx/mud_burst_impact",
         "seconds": 0.65,
         "impactFrame": 13,
         "departFrame": 9,
@@ -2311,6 +2315,7 @@
           "type": "Water",
           "vfx": {
             "layerFormat": 1,
+            "castSfxPath": "Audio/Sfx/prismatic_orb_water_startup",
             "hitCueSeconds": 0.4167,
             "layers": [
               {

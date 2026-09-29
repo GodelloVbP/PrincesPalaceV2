@@ -58,6 +58,8 @@ MonoBehaviour:
       layerFormat: 0
       hitCueSeconds: 0
     SpritePath: Enemies/bog_witch
+    SwingSfxPath: 
+    ImpactSfxPath: 
     Abilities:
     - SkillId: bog_mud_burst
       Weight: 2

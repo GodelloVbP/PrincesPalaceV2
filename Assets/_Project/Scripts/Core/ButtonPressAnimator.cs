@@ -56,6 +56,9 @@ namespace PrincesPalace
             // button would otherwise click audibly while doing nothing.
             if (_button != null && !_button.interactable)
             {
+                // A quiet button stays quiet when refused too: its own
+                // controller owns the feedback.
+                if (clickSound != Sound.None) SoundController.Play(Sound.ClickFail);
                 return;
             }
 

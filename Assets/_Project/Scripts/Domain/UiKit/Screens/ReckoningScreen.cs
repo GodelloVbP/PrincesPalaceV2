@@ -533,7 +533,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.ButtonLabel);
 
             var tab = Ui.Button("ReckoningTab" + index, UiString.Runtime, tabSize, 19, Place.At(x, TabY))
-                .ThemedPlate(ButtonTheme.Silver);
+                .ThemedPlate(ButtonTheme.Silver)
+                .Quiet();
             tab.Children.Add(caption);
             tab.Children.Add(marker);
             tab.LayerCaptionWithVisuals(caption, marker);

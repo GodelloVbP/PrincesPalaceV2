@@ -23,6 +23,8 @@
       "portraitPath": "Portraits/sheep",
       "battleSpritePath": "Characters/sheep",
       "battleSpriteFacing": "Right",
+      "swingSfxPath": "Audio/Sfx/Shawn/shawn_attack_swipe",
+      "impactSfxPath": "Audio/Sfx/Shawn/shawn_attack_impact",
       "plateTheme": "Silver",
       "plateArt": "Plates/pc_sheep",
       "dialogueBustPath": "Portraits/Dialogue/sheep",
@@ -81,6 +83,7 @@
       "portraitPath": "Portraits/owl",
       "battleSpritePath": "Characters/owl",
       "battleSpriteFacing": "Right",
+      "impactSfxPath": "Audio/Sfx/Odette/odette_attack_impact",
       "plateTheme": "Blue",
       "plateArt": "Plates/pc_owl",
       "dialogueBustPath": "Portraits/Dialogue/owl"

@@ -3102,6 +3102,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // that a plain button's .Hovers() call would otherwise wire.
             var cancel = Ui.Button("TargetCancelButton", UiStrings.TargetCancel,
                     new UiVec(88f, 30f), 12, Place.At(190f, 0f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             TargetCancelButton = cancel;
             prompt.Children.Add(cancel);

@@ -112,6 +112,16 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Which way the battle art is drawn in its source file: 'Right' or 'Left'.")]
         public string battleSpriteFacing = "";
 
+        // THIS ACTOR'S OWN MELEE SOUNDS. Empty falls back to the shared
+        // ContactCues default, so a character or monster with no recording
+        // swings and lands like everyone else. Two fields rather than one
+        // pair-valued field because an actor may have only one of them
+        // (Odette has an impact and no swing).
+        [ContentDoc("Resources-relative path (no extension) to the clip played at the top of this character's melee wind-up; empty plays the shared default swing.")]
+        public string swingSfxPath = "";
+        [ContentDoc("Resources-relative path (no extension) to the clip played when this character's melee blow lands, layered under any hit voice line; empty plays the shared default impact.")]
+        public string impactSfxPath = "";
+
         // THIS CHARACTER'S IDENTITY COLOUR, worn by the rim and the name of
         // every fight-HUD card that stands for them (Domain.UiKit.PcTheme
         // turns the theme into the two hexes). Matched case-insensitively

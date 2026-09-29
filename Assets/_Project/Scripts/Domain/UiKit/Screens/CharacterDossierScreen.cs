@@ -487,6 +487,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var close = Ui.Button("DossierPackClose", UiStrings.OverlayPackClose, closeSize, 15,
                     Place.At(cx + DossierLayout.ContentAWidth * 0.5f - closeSize.X * 0.5f,
                              DossierLayout.ColumnATop - 12f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             PackCloseButton = close;
             children.Add(close);
@@ -712,6 +713,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var close = Ui.Button("DossierSpellsClose", UiStrings.OverlayPackClose, spellsCloseSize, 15,
                     Place.At(cx + DossierLayout.ContentAWidth * 0.5f - spellsCloseSize.X * 0.5f,
                              DossierLayout.ColumnATop - 12f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             SpellsCloseButton = close;
             children.Add(close);
@@ -927,6 +929,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var close = Ui.Button("DossierSkillsClose", UiStrings.OverlayPackClose, closeSize, 15,
                     Place.At(cx + DossierLayout.ContentAWidth * 0.5f - closeSize.X * 0.5f,
                              DossierLayout.ColumnATop - 12f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             SkillsCloseButton = close;
             children.Add(close);
@@ -1321,6 +1324,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var close = Ui.Button("DossierAttributesClose", UiStrings.OverlayPackClose, closeSize, 15,
                     Place.At(cx + DossierLayout.AttributesContentWidth * 0.5f - closeSize.X * 0.5f,
                              DossierLayout.AttributesTop - 2f))
+                .Closes()
                 .Themed(ButtonTheme.Silver);
             AttributesCloseButton = close;
             children.Add(close);

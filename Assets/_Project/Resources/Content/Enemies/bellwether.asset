@@ -112,6 +112,8 @@ MonoBehaviour:
       layerFormat: 1
       hitCueSeconds: 0.2
     SpritePath: Enemies/bellwether
+    SwingSfxPath: 
+    ImpactSfxPath: 
     Abilities:
     - SkillId: bellwether_scratch
       Weight: 1

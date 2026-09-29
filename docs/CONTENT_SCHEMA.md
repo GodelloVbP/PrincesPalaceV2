@@ -40,6 +40,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `epithet` | string | `""` | Optional short line shown under this character's name on the dialogue name plate, e.g. 'Prince the cat'. Max 32 characters; empty means the plate shows no epithet. |  |
 | `dialogueBustPath` | string | `""` | Resources-relative FOLDER (no extension) of this character's dialogue busts, one PNG per expression named by Domain.Content.DialogueBust, e.g. 'Portraits/Dialogue/sheep'; empty means no bust art yet and the dialogue stage shows none. |  |
 | `battleSpriteFacing` | string | `""` | Which way the battle art is drawn in its source file: 'Right' or 'Left'. | Left, Right |
+| `swingSfxPath` | string | `""` | Resources-relative path (no extension) to the clip played at the top of this character's melee wind-up; empty plays the shared default swing. |  |
+| `impactSfxPath` | string | `""` | Resources-relative path (no extension) to the clip played when this character's melee blow lands, layered under any hit voice line; empty plays the shared default impact. |  |
 | `plateTheme` | string | `""` | Which UiKit.ButtonTheme this character's fight-HUD cards are coloured with (rim and name), matched case-insensitively. Required: an empty or unknown value refuses the build. | Gold, Crimson, Violet, Blue, Green, Silver |
 | `plateArt` | string | `""` | Resources-relative path (no extension) to this character's fight-HUD plate, e.g. 'Plates/pc_sheep'. Required: an empty path, or one that loads nothing, refuses the build. |  |
 | `primaryPoolId` | string | `"mana"` | The pools.json id of the resource this character's skills spend; refused unless pools.json defines it, and blank means 'mana'. |  |
@@ -82,6 +84,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `active` | bool | `true` | Whether this monster can actually spawn; false benches the entry without deleting it. |  |
 | `facing` | string | `"right"` | Which way this monster's art is drawn in its source file, so the stage knows whether to mirror it. | Left, Right |
 | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | VFX played over the target when this monster's skill lands; see SpellPresentation. |  |
+| `swingSfxPath` | string | `""` | Resources-relative path (no extension) to the clip played at the top of this monster's melee wind-up; empty plays the shared default swing. |  |
+| `impactSfxPath` | string | `""` | Resources-relative path (no extension) to the clip played when this monster's melee blow lands, layered under any hit voice line; empty plays the shared default impact. |  |
 | `appliesStatus` | string | `""` | Which StatusEffectType this monster's basic attack or skill applies to whoever it hits, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared, Burn, Thorned, Bleed, Fortified |
 | `statusMagnitude` | int | `-1` | The magnitude of the applied status; required together with appliesStatus. |  |
 | `statusDuration` | int | `-1` | How many of the afflicted combatant's own turns the applied status lasts; required together with appliesStatus. |  |

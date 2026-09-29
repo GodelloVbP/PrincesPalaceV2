@@ -119,6 +119,11 @@ namespace PrincesPalace.Domain.Content
         // character.
         public string DialogueBustPath = "";
 
+        // THIS ACTOR'S OWN MELEE CLIPS (swingSfxPath / impactSfxPath on the
+        // raw row). Empty means the shared ContactCues default.
+        public string SwingSfxPath = "";
+        public string ImpactSfxPath = "";
+
         // Empty id means no resource at all, rather than a zero-capacity one
         // -- see CombatantState.SignaturePool for why that distinction is kept
         // sharp.

@@ -329,6 +329,16 @@ public static class UiEmitter
         }
     }
 
+    private static Sound ClickSoundFor(UiClickCue cue)
+    {
+        switch (cue)
+        {
+            case UiClickCue.Silent: return Sound.None;
+            case UiClickCue.Close: return Sound.MenuClose;
+            default: return Sound.ButtonClick;
+        }
+    }
+
     private static void EmitButton(GameObject go, UiNode node, SolvedNode solved)
     {
         // THEMED BUTTONS TAKE A COMPLETELY SEPARATE PATH.
@@ -403,7 +413,7 @@ public static class UiEmitter
         // button also carries a rim -- a hover-rimmed wide row (submenu row,
         // enemy plate) clicks exactly like everything else.
         var press = go.AddComponent<ButtonPressAnimator>();
-        if (node.SilentClick) press.clickSound = Sound.None;
+        press.clickSound = ClickSoundFor(node.Click);
 
         var labelGo = new GameObject(node.Name + "Label", typeof(RectTransform));
         labelGo.transform.SetParent(go.transform, worldPositionStays: false);
@@ -512,7 +522,7 @@ public static class UiEmitter
         state.Glow = glowImage;
         state.GlowRect = glowImage.rectTransform;
         state.Plate = plateImage;
-        if (node.SilentClick) state.clickSound = Sound.None;
+        state.clickSound = ClickSoundFor(node.Click);
 
         state.OpenPlateTint = ThemedOpenPlateTint;
         state.OpenGlowAlpha = ThemedOpenGlowAlpha;

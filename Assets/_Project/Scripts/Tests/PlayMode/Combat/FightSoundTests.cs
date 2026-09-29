@@ -51,6 +51,52 @@ namespace PrincesPalace.PlayModeTests
                 "Shawn has no take for: " + string.Join(", ", missing));
         }
 
+        [Test]
+        public void EveryGameSoundResolvesToARealClip()
+        {
+            var missing = new List<string>();
+            foreach (Sound sound in Enum.GetValues(typeof(Sound)))
+            {
+                if (sound == Sound.None) continue;
+                string path = SoundLibrary.PathOf(sound);
+                if (path == null || Resources.Load<AudioClip>(path) == null) missing.Add(sound + " -> " + path);
+            }
+
+            CollectionAssert.IsEmpty(missing);
+        }
+
+        [Test]
+        public void TabSwipesAlternateBetweenTheTwoTakes()
+        {
+            var first = TabSwipe.Next();
+            var second = TabSwipe.Next();
+            var third = TabSwipe.Next();
+
+            Assert.AreNotEqual(first, second);
+            Assert.AreEqual(first, third);
+            CollectionAssert.AreEquivalent(new[] { Sound.Swipe1, Sound.Swipe2 }, new[] { first, second });
+        }
+
+        [Test]
+        public void MeleeCuesFallBackToTheSharedClipsWhenTheActorNamesNone()
+        {
+            var plain = new CombatBeat();
+            var shawn = new CombatBeat
+            {
+                ActorSwingSfx = "Audio/Sfx/Shawn/shawn_attack_swipe",
+                ActorImpactSfx = "Audio/Sfx/Shawn/shawn_attack_impact",
+            };
+            var odette = new CombatBeat { ActorImpactSfx = "Audio/Sfx/Odette/odette_attack_impact" };
+
+            Assert.AreEqual("Audio/Sfx/melee_whoosh_placeholder", ContactCues.SwingClipFor(plain));
+            Assert.AreEqual("Audio/Sfx/melee_thud_placeholder", ContactCues.ImpactClipFor(plain));
+            Assert.AreEqual("Audio/Sfx/Shawn/shawn_attack_swipe", ContactCues.SwingClipFor(shawn));
+            Assert.AreEqual("Audio/Sfx/Shawn/shawn_attack_impact", ContactCues.ImpactClipFor(shawn));
+            Assert.AreEqual("Audio/Sfx/melee_whoosh_placeholder", ContactCues.SwingClipFor(odette));
+            Assert.AreEqual("Audio/Sfx/Odette/odette_attack_impact", ContactCues.ImpactClipFor(odette));
+            Assert.AreEqual("Audio/Sfx/melee_whoosh_placeholder", ContactCues.SwingClipFor(null));
+        }
+
         // Mirrors CharacterVoice.Map. Duplicated deliberately: if the mapping
         // changes on one side only, this test fails, which is the entire point
         // of writing it out rather than calling the private one.

@@ -58,6 +58,8 @@ MonoBehaviour:
       layerFormat: 0
       hitCueSeconds: 0
     SpritePath: Enemies/forest_warden
+    SwingSfxPath: 
+    ImpactSfxPath: 
     Abilities:
     - SkillId: overhead_slam
       Weight: 3

@@ -171,6 +171,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var closeY = CloseOldTopEdge - closeSize.Y * 0.5f;
             var close = Ui.Button("GlossaryCloseButton", UiStrings.Close, closeSize, 16,
                     Place.At(740f, closeY))
+                .Closes()
                 .Themed(ButtonTheme.Silver)
                 // Floats over the detail plate's top-right corner by design
                 // (declared after it, so it draws on top) -- the flat

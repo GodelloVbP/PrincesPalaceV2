@@ -470,6 +470,12 @@ namespace PrincesPalace.Domain.Combat.Session
         public VoiceLine ActorVoiceLine;
         public bool HasActorVoice;
 
+        // THE ACTOR'S OWN MELEE CLIPS, copied off its kit or monster row when
+        // the beat opens (FightSession.NewBeat). Empty means the shared
+        // ContactCues default; the view never asks content itself.
+        public string ActorSwingSfx = "";
+        public string ActorImpactSfx = "";
+
         public CombatantState Actor;
         public CombatantState Target;
 

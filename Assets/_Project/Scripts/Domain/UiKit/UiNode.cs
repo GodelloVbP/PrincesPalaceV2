@@ -20,6 +20,14 @@ namespace PrincesPalace.Domain.UiKit
         Pool,
     }
 
+    // How a button sounds when clicked; see UiNode.Click.
+    public enum UiClickCue
+    {
+        Default,
+        Silent,
+        Close,
+    }
+
     // The plate art a button wears. One PNG per theme
     // (Art/UI/Buttons/Processed/button_plate_<theme>.png), each already
     // carrying its own surface, texture and coloured border baked in -- there
@@ -158,12 +166,12 @@ namespace PrincesPalace.Domain.UiKit
         // opened". Adds a CanvasGroup, which the animator requires.
         public bool OpensOnShow;
 
-        // Suppresses the shared click sound on a button whose own controller
-        // plays a flourish on the same click. Without it the two sound at once.
-        // Nothing in v2 needs this yet -- v1 needed it for the save slots --
-        // but the flag is what makes the "every button has a click sound" test
-        // able to state an exception rather than be weakened.
-        public bool SilentClick;
+        // Which click sound this button makes. Silent suppresses it for a
+        // button whose own controller plays a flourish on the same click;
+        // without it the two sound at once. Close swaps the shared click for
+        // the menu-close cue. UiEmitter maps this onto Core's Sound enum,
+        // which Domain cannot name.
+        public UiClickCue Click;
 
         // Which plate this button wears. Null means the unthemed path: the
         // shared button_cropped frame or a bespoke SpriteKey, whichever
@@ -326,7 +334,8 @@ namespace PrincesPalace.Domain.UiKit
             return this;
         }
         public UiNode Opening() { OpensOnShow = true; return this; }
-        public UiNode Quiet() { SilentClick = true; return this; }
+        public UiNode Quiet() { Click = UiClickCue.Silent; return this; }
+        public UiNode Closes() { Click = UiClickCue.Close; return this; }
 
         // Wears a theme's plate instead of the shared button frame.
         //

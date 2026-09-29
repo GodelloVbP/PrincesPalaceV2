@@ -58,6 +58,8 @@ MonoBehaviour:
       layerFormat: 0
       hitCueSeconds: 0
     SpritePath: Enemies/beetle
+    SwingSfxPath: 
+    ImpactSfxPath: 
     Abilities:
     - SkillId: shell_up
       Weight: 1

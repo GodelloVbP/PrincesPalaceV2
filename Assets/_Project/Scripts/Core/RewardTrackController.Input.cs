@@ -314,11 +314,7 @@ namespace PrincesPalace
             // the save, because the save has already moved.
             BeginClaimBursts(claimedBefore + 1, _claimed);
 
-            // NO SOUND, and the omission is deliberate rather than pending.
-            // Sound is an enum of meanings whose every value is asserted to
-            // resolve to a file that exists, so "collect" would be a new value,
-            // a new case in SoundLibrary.PathOf and a clip nobody has recorded
-            // -- and the suite would go red until it was.
+            SoundController.Play(Sound.OpenPack);
         }
 
         // ---- hovering ---------------------------------------------------------

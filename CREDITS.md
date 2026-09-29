@@ -72,3 +72,23 @@ game must therefore surface the credit above somewhere a player can reach it —
 a credits screen, an about panel, or a bundled text file. **That surface does not
 exist yet**, so shipping a build today would not satisfy the licence. Recorded
 here rather than left to be discovered at release.
+
+---
+
+## UI sound effects — JDSherbert
+
+`Assets/_Project/Resources/Audio/Sfx/`
+
+| File | Source clip |
+|---|---|
+| `menu_close.wav` | `Menu_close.wav` |
+| `click_fail.wav` | `Click fail.mp3`, trimmed to 0.35s |
+| `open_the_pack.wav` | `Open_the_pack.wav` |
+| `swipe_1.wav` | `Swipe 1.mp3` |
+| `swipe_2.wav` | `Swipe 2.mp3` |
+
+Audio by **JDSherbert**. Licensed for commercial use with credit required; the
+licence text is `LICENSE.pdf` in the source pack, kept outside the repo. The
+files are converted to 44.1 kHz 16-bit wav, with the one trim noted above. Like
+the icons above, this credit has no in-game surface yet: there is no credits
+screen, so this file is where it currently lives.
