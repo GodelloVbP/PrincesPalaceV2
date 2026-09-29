@@ -77,6 +77,16 @@ namespace PrincesPalace.Domain.Combat
                 return false;
             }
 
+            // SILENCED MEANS "CANNOT CAST", the mirror of Rooted above: a
+            // move is not a spell, so a silenced actor may still strike. Any
+            // action that is not a physical move is a cast here, which is the
+            // same line the Spellbreaker's reflect draws ("magic").
+            if (!physicalMove && actor.Suppression.IsSilenced)
+            {
+                refusal = $"{actor.Name} is silenced and cannot cast - only strike.";
+                return false;
+            }
+
             return true;
         }
 

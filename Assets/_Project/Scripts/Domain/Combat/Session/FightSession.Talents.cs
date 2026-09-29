@@ -337,6 +337,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // Unyielding's surge (plan 4e): +damage while its window is open.
             bonus += actor.CrowdControl.SurgeDamagePercent;
 
+            // Thornwall T3's disarm (plan 4f): -attack while its window is open.
+            bonus += actor.Suppression.AttackPercentDelta;
+
             return bonus;
         }
 

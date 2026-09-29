@@ -827,10 +827,8 @@ null = off).
      `ShieldBashShortWait`, `ShieldwallCoversParty`, `ThornsPercent`
      (15), `ReflectMagicPercent` (15) and `SilenceCasterOnSpellHit`. Set
      them on `actor.PlantedShield` in the `ArmEngineSeams` pass.
-  3. Append `StatusEffectType.Silence` to `StatusEffect.cs` (its
-     DurationClock, HUD slug and glossary entry, and the block on casting).
-     Subscribe to `SpellHitShieldHolder` to apply it for 1 turn, with the
-     3-turn per-enemy cooldown.
+  3. Silence, slow, disarm and reflect Fury are built (4f, below); no status
+     member is appended.
   4. Content rows: the Plant the Shield skill (30 Fury,
      `placeholder_brawler_ward` upgraded by the slot-10 node), Shield Bash
      (slot 12), the Spellbreaker, Thornwall and Shieldwall nodes, and bot
@@ -838,9 +836,81 @@ null = off).
   5. Art: a planted-shield sprite with cracked and broken states (read
      `IsPlaced` and `Ward.Magnitude` against the placed size), and the
      Shieldwall visual (one wall across the party, read `IsShieldwall`).
-- Not built: Spellbreaker T3 (reflected damage grants half as Fury) and
-  Thornwall T2/T3 (slow; disarm on a physical break). The root's own per-hit
-  Fury engine is built now (Phase 2, below).
+- Spellbreaker T2/T3 and Thornwall T2/T3 are built in 4f, below. The root's
+  own per-hit Fury engine is built now (Phase 2, below).
+
+**4f Silence, slow, disarm, reflect Fury — `CombatantState.Suppression` and
+four more `PlantedShield` switches** (`Suppression.cs`, `PlantedShield.cs`;
+session half in `FightSession.PlantedShield.cs`; tests
+`SentinelReprisalsTests`, `[D]`). All off by default; nothing sets them yet.
+
+- Reuse first:
+  - Slow IS `Chilled`, applied through `ApplyStatusTo`, so hard-control
+    recovery and the 4e crowd-control guard (Unstoppable, Unyielding) apply
+    with no new code. The speed percent defaults to the on-hit chill's 20
+    (`FightTuning.ChilledOnHitSpeedPercent`, pinned equal by a test).
+  - No attack-down status exists, so disarm and silence are new; see next.
+- Silence and disarm are NOT `StatusEffectType` members. That file is in
+  `ContentInputHash`, so a new member would turn `ContentFreshnessTests` red
+  until Unity rebuilds content. They follow the `CrowdControlGuard`
+  precedent: `Suppression` on the combatant holds a `TurnWindow` each.
+  `IsSilenced` / `IsDisarmed` are what a badge reads. Neither is crowd
+  control (`CrowdControl.IsCrowdControl` stays Stun, Feared, Rooted,
+  Chilled), so Unstoppable does not stop them.
+- Where each fires:
+  - Silence is read by `CombatActions.IsLegalFor`, the one predicate the
+    menu, the enemy draw (`EffectivePoolFor`), the committed-intent recheck
+    and execution all ask. It is the mirror of Rooted: a silenced actor may
+    only strike, meaning any action that is not a physical move is a cast.
+    A silenced enemy whose kit is all spells falls back to its plain swing
+    (the draw's existing "nothing legal" path); a spell it had already
+    telegraphed is voided at resolution with the refusal line.
+  - Disarm is read by `AttackBonusFor`, beside every other attack bonus:
+    `-DisarmPercent` while the window is open, for players and enemies
+    alike.
+  - Both windows age in `AgeEngineWindows` (`AgeSuppression`), on the
+    holder's own turn end, so "1 turn" and "2 turns" mean the silenced or
+    disarmed enemy's own turns.
+- The four switches on `actor.PlantedShield` (all queue at
+  `QueueShieldAnswers` / `ResolveWard` and are paid at
+  `SettleShieldReactions`, the 4a post-action seam):
+  - `SilenceCasterOnSpellHit` (4a) now also silences:
+    `SilenceTurns` 1, per-enemy `SilenceCooldownTurns` 3 held on the enemy's
+    `Suppression`, counted from the moment it landed. `SpellHitShieldHolder`
+    still fires, now only as a notification.
+  - `ReflectGrantsFury` (T3): `ReflectFuryPercent` 50 of the reflection's
+    dealt damage, through `PlantedShield.ClampFuryPerHit` (3-25, 0 stays 0),
+    paid into the primary pool.
+  - `SlowsAttacker` (Thornwall T2): a physical hit on the holder or his wall
+    from a physical move applies `Chilled` (`SlowPercent` 20, `SlowTurns`
+    1). It does not need `ThornsPercent`.
+  - `DisarmsOnBreak` (Thornwall T3): a PHYSICAL hit that empties the shield
+    (`ShieldBroke`, tracked for the current ward step) disarms its attacker,
+    `DisarmPercent` 30 for `DisarmTurns` 2. A magic break does not.
+- One-liners, set at fight start:
+  `actor.PlantedShield.SlowsAttacker = true;`,
+  `actor.PlantedShield.DisarmsOnBreak = true;`,
+  `actor.PlantedShield.ReflectGrantsFury = true;`.
+- Bot valuation: no skill is added, so no valuation row is owed. The bot
+  already sees the effects through the seams it reads: a silenced enemy's
+  casts leave its legal menu, and a disarmed enemy's damage previews read
+  `AttackBonusFor`.
+- Wiring (Unity session, `-BuildContent`):
+  1. Append `TalentEffectType.ReflectGrantsFury`, `SlowsAttacker` and
+     `DisarmsOnBreak` (flags), beside the 4a members, and set them on
+     `actor.PlantedShield` in the `ArmEngineSeams` pass. Thornwall rows: T1
+     `ThornsPercent` 15, T2 `SlowsAttacker`, T3 `DisarmsOnBreak`.
+     Spellbreaker rows: T1 `ReflectMagicPercent` 15, T2
+     `SilenceCasterOnSpellHit`, T3 `ReflectGrantsFury`.
+  2. No `StatusEffectType.Silence`. Add HUD badges that read
+     `actor.Suppression.IsSilenced` / `IsDisarmed` (and `TurnsRemaining` on
+     the windows), plus glossary entries for Silence and Disarm.
+  3. Intent presentation: a silenced enemy's voided spell reads through the
+     existing refusal line; the view session decides whether it wants a
+     distinct beat.
+  4. Content rows for the six nodes above; the Sentinel `-BuildContent`
+     pass owns them.
+- Not built: nothing in Thornwall or Spellbreaker remains for the Domain.
 
 **Phase 2 engines and the Einherjar seams — `CombatantState.FuryEngine`,
 `Momentum`, `BattleTrance`, `TwinRampage`, `CooldownOverrides`**

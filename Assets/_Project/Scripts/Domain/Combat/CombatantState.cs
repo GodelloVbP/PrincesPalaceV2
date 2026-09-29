@@ -205,6 +205,11 @@ namespace PrincesPalace.Domain.Combat
         // Read at FightSession.ResolveWard. See PlantedShield.
         public readonly PlantedShield PlantedShield = new PlantedShield();
 
+        // Silence and disarm (4f), dealt to attackers by the Sentinel's
+        // reactive hooks. Empty for everyone until one lands. Read by
+        // CombatActions.IsLegalFor and FightSession.AttackBonusFor.
+        public readonly Suppression Suppression = new Suppression();
+
         // PHASE 2, THE ROOT FURY ENGINES. None = the primary pool's authored
         // flat gains pay, exactly as before; any other kind replaces them for
         // this combatant. Read at FightSession.NoteDamageForPools and

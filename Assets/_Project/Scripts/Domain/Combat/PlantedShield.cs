@@ -73,10 +73,35 @@ namespace PrincesPalace.Domain.Combat
         // Physical) reflected to its caster, as that hit's own type. 0 = off.
         public int ReflectMagicPercent;
 
-        // Spellbreaker T2: a magic hit raises FightSession.SpellHitShieldHolder
-        // naming the caster. The Silence status itself is content-hashed
-        // (StatusEffect.cs) and lands with the Unity session.
+        // Spellbreaker T2: a magic hit silences its caster for SilenceTurns
+        // (Suppression.Silence, read by CombatActions.IsLegalFor), at most
+        // once per SilenceCooldownTurns per enemy, and raises
+        // FightSession.SpellHitShieldHolder naming the caster.
         public bool SilenceCasterOnSpellHit;
+        public int SilenceTurns = 1;
+        public int SilenceCooldownTurns = 3;
+
+        // Spellbreaker T3: a reflection that dealt damage gives the holder
+        // Fury equal to ReflectFuryPercent of what it dealt, through the
+        // root's per-hit clamp (FuryPerHitMin..FuryPerHitMax). Off = false.
+        public bool ReflectGrantsFury;
+        public int ReflectFuryPercent = 50;
+
+        // Thornwall T2: a physical hit from a physical move on the holder (or
+        // on his wall) slows its attacker with Chilled for SlowTurns, through
+        // ApplyStatusTo, so the crowd-control guard applies. The speed
+        // percent is the on-hit chill's figure (FightTuning
+        // .ChilledOnHitSpeedPercent, pinned equal by a test). Off = false.
+        public bool SlowsAttacker;
+        public int SlowPercent = 20;
+        public int SlowTurns = 1;
+
+        // Thornwall T3: a PHYSICAL hit that breaks the shield disarms its
+        // attacker, -DisarmPercent attack for DisarmTurns
+        // (Suppression.Disarm, read by AttackBonusFor). Off = false.
+        public bool DisarmsOnBreak;
+        public int DisarmPercent = 30;
+        public int DisarmTurns = 2;
 
         // ---- the placement, owned by FightSession ------------------------------
 
@@ -145,6 +170,11 @@ namespace PrincesPalace.Domain.Combat
             long scaled = (long)absorbed * FuryScale / holderMaxHealth;
             return (int)Math.Max(FuryPerHitMin, Math.Min(FuryPerHitMax, scaled));
         }
+
+        // The per-hit clamp on its own, for a Fury figure already worked out
+        // (Spellbreaker T3's half of a reflection). 0 stays 0.
+        public static int ClampFuryPerHit(int fury) =>
+            fury <= 0 ? 0 : Math.Max(FuryPerHitMin, Math.Min(FuryPerHitMax, fury));
 
         // What the cap still allows this turn out of `perHit`.
         public int PartyFuryAllowance(int perHit) =>
