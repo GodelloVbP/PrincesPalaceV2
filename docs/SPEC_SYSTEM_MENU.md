@@ -54,8 +54,10 @@ height. Lintel + panel + footer = 1004 of 1080. In the pane sections below,
 free for pane-level headers and pagers.
 
 - **Lintel:** title (FunctionalHeading 24, tracked), context line (Body
-  20), gold, embers (TacticalData 22), mode pill (Body 20 in a 1px-rimmed
-  plate, 36 tall), ESC glyph plus close.
+  20), gold, embers (TacticalData 22), mode pill (FunctionalHeading 24 in a
+  1px-rimmed plate, 36 tall, fitted to its words), ESC glyph plus close. The
+  pill's words are all caps, so it takes the caps floor of 24 (section 1)
+  rather than Body 20.
 - **Tab bar:** labels FunctionalHeading 24 caps, tracked 0.14em. Game
   group from the left inset (40), system group flush right. Group gap =
   the leftover width, minimum 96; the gap between tabs inside a group is
@@ -67,9 +69,11 @@ free for pane-level headers and pagers.
   exist for the C1 overflow policy.
 - **Footer:** the notice sits left (Body 20, fades after 3 s unless it is
   a persistent state line). Prompts sit right, as a row of
-  `[glyph] Label` pairs, glyph plates 32×32 with a 20-pt letter or key
-  name, 24 apart. The prompt set is computed from the focused control and
-  the pending state (§8).
+  `[glyph] Label` pairs, glyph plates 32 tall (32 wide, wider for a key
+  name) with the letters in TacticalData 24, 24 apart. The letters take 24
+  because "LB" and "RT" are caps (section 1). The prompt set is computed
+  from the focused control and the pending state (§8), and the row holds at
+  most five pairs, dropping from the tail.
 
 ## 3. CHARACTER (C15)
 
@@ -243,7 +247,8 @@ Prompt sets by state (pad glyph / keyboard key):
 | `BookPicked` | A Replace this book · B Back |
 | PARTY `Carry` | A Place · B Put back |
 | Any refused control (C3) | the prompt stays; pressing shows the notice |
-| Fight context | the mode pill reads "IN A FIGHT — VIEW ONLY" and every mutating prompt label gets a lock suffix, e.g. "A Equip (locked)" |
+| Fight context | the mode pill reads "IN A FIGHT — VIEW ONLY" and every mutating prompt label gets a lock suffix, e.g. "A Equip (locked)". The suffix is computed from `MenuPermissions`, so it follows the table in every context: a book at camp or a refund in a descent is "(locked)" too |
+| LOADOUT, empty slot (today's dossier) | no A prompt: choosing from the pack for a slot arrives with `SlotArmed` (Phase 5b) |
 
 Keyboard names: Enter (A), Esc (B and close), Q/E (LB/RB), mouse click
 for tabs, and the C/I/P/R/G hotkeys shown as a hint in each tab's tooltip.

@@ -174,7 +174,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(screen.CancelLink.Node.StartInactive, "Cancel starts shown with nothing selected");
             Assert.IsTrue(screen.BenchLink.Node.StartInactive,
                 "Send to bench starts shown with nothing selected");
-            Assert.IsTrue(screen.Toast.Node.StartInactive, "the toast starts shown with nothing to say");
         }
 
         [Test]

@@ -485,7 +485,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             // THIS TEST COMMITS TWO REAL FORMATION CHANGES (below) to produce
-            // the swap and toast pictures, and PartyController.Persist()
+            // the swap and notice pictures, and PartyController.Persist()
             // writes every commit straight through SaveSlotManager.SaveCurrent()
             // to the REAL save on disk -- there is no test-only slot here. Left
             // unrestored, every -Runtime run of this file silently reordered
@@ -544,9 +544,9 @@ namespace PrincesPalace.PlayModeTests
                 party.Cancel();
                 yield return null;
 
-                // STATE 4 (P4): right after a committed swap -- the toast, at
-                // full alpha before its fade begins (PartyToast.Show holds full
-                // alpha for its first HoldSeconds).
+                // STATE 4 (P4): right after a committed swap -- the notice, at
+                // full alpha before its fade begins (MenuNotice holds full
+                // alpha for its first DefaultSeconds).
                 party.ClickSeat(PartySeat.Front);
                 party.ClickSeat(PartySeat.Middle);
                 yield return null;

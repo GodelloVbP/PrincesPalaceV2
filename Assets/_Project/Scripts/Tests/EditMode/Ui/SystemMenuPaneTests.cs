@@ -117,9 +117,8 @@ namespace PrincesPalace.Domain.Tests
 
                 case "party":
                     // The roster row is the last structural content down the
-                    // pane (the toast is a transient overlay, not part of the
-                    // stack -- see PartyScreen.BuildToast's own comment), so
-                    // its own bottom edge is what "used" measures against.
+                    // pane, so its own bottom edge is what "used" measures
+                    // against.
                     usable = PartyLayout.UsableHeight;
                     used = PartyLayout.ContentTop
                            - (PartyLayout.RosterRowCentreY - PartyLayout.CardHeight * 0.5f);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -352,6 +353,168 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(before, Photo(), "an operation changed state in a fight");
             CollectionAssert.AreEqual(bytesBefore, SaveBytes(), "an operation wrote the save in a fight");
             Assert.AreEqual(partyBefore, Party(fight), "the fight's party actors changed");
+        }
+
+        // ---- and every refusal says why (C11) ------------------------------------------
+        //
+        // A refused press that changes nothing and says nothing reads as a dead
+        // control. Each one below is pressed through its control, and the
+        // menu's one notice must then read exactly what MenuPermissions gives
+        // for that action -- the words come from the table, so the notice, the
+        // footer's locked prompt and the refusal cannot drift apart.
+
+        private static TMP_Text NoticeLine(SystemMenuController menu) =>
+            menu.GetComponentsInChildren<TMP_Text>(includeInactive: true).First(t => t.name == "SystemFooterNotice");
+
+        // Blanks the notice between presses: closing its object drops what it
+        // was saying (MenuNotice.OnDisable), so each press starts from silence.
+        private static void ClearNotice(SystemMenuController menu)
+        {
+            var go = NoticeLine(menu).gameObject;
+            go.SetActive(false);
+            go.SetActive(true);
+        }
+
+        private static void AssertRefusalIsSaid(
+            SystemMenuController menu, MenuAction action, MenuContext context, string what, System.Action press)
+        {
+            ClearNotice(menu);
+            Assert.AreEqual("", NoticeLine(menu).text, $"fixture: the notice was not clear before {what}");
+
+            press();
+
+            string reason = MenuPermissions.Reason(action, context).Format();
+            Assert.IsNotEmpty(reason, $"fixture: the table gives no reason for {action} in {context}");
+            Assert.AreEqual(reason, NoticeLine(menu).text, $"{what} was refused with no reason, or the wrong one");
+        }
+
+        [UnityTest]
+        public IEnumerator EveryRefusedPressInAFightSaysWhyOnTheNotice()
+        {
+            ArrangeARun();
+            yield return EnterTheFight();
+
+            var menu = Menu();
+            menu.Open();
+            menu.Select(SystemMenuTab.Character);
+            yield return null;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            dossier.Refresh();
+            yield return null;
+
+            const MenuContext fight = MenuContext.Fight;
+
+            dossier.ShowPack(true);
+            yield return null;
+            AssertRefusalIsSaid(menu, MenuAction.EquipGear, fight, "equipping from the pack",
+                () => Press(menu, "DossierPackCell0"));
+            AssertRefusalIsSaid(menu, MenuAction.UnequipGear, fight, "taking a worn item off",
+                () => Press(menu, SlotName(_worn.equipSlot)));
+
+            AssertRefusalIsSaid(menu, MenuAction.SpendAttribute, fight, "spending a point",
+                () => Press(menu, "DossierAttrPlus0"));
+            AssertRefusalIsSaid(menu, MenuAction.SpendAttribute, fight, "spending a point on the attributes panel",
+                () => Press(menu, "DossierAttrRowPlus0"));
+            AssertRefusalIsSaid(menu, MenuAction.RefundAttribute, fight, "refunding a point",
+                () => Press(menu, "DossierAttrMinus0"));
+
+            dossier.ShowSpells(true);
+            yield return null;
+            Press(menu, "DossierUnassigned0");
+            AssertRefusalIsSaid(menu, MenuAction.PlaceBook, fight, "placing a book in an empty slot",
+                () => Press(menu, "DossierSpellSlot1"));
+            AssertRefusalIsSaid(menu, MenuAction.ReplaceBook, fight, "replacing a placed book",
+                () => Press(menu, "DossierSpellSlot0"));
+
+            Press(menu, "DossierTrackRow");
+            yield return null;
+            AssertRefusalIsSaid(menu, MenuAction.CollectReward, fight, "collecting on a node",
+                () => Press(menu, $"TrackDot{Level}"));
+            AssertRefusalIsSaid(menu, MenuAction.CollectReward, fight, "collecting all",
+                () => Press(menu, "TrackCollectButton"));
+
+            menu.Select(SystemMenuTab.Party);
+            yield return null;
+            AssertRefusalIsSaid(menu, MenuAction.RepositionParty, fight, "picking up a seat",
+                () => Press(menu, "PartySeat0Button"));
+            AssertRefusalIsSaid(menu, MenuAction.SwapParty, fight, "benching",
+                () => Object.FindAnyObjectByType<PartyController>(FindObjectsInactive.Include).SendToBench());
+            AssertRefusalIsSaid(menu, MenuAction.CycleTitle, fight, "cycling a title",
+                () => Press(menu, "PartyCard0Title"));
+        }
+
+        // Options and exits are not refused, so they say nothing.
+        [UnityTest]
+        public IEnumerator AnAllowedChangeInAFightSaysNothingOnTheNotice()
+        {
+            ArrangeARun();
+            yield return EnterTheFight();
+
+            var menu = Menu();
+            menu.Open();
+            menu.Select(SystemMenuTab.Options);
+            yield return null;
+
+            ClearNotice(menu);
+            var options = Object.FindAnyObjectByType<OptionsController>(FindObjectsInactive.Include);
+            options.Step("battlespeed", GameSettings.BattleSpeed < 2f ? +1 : -1);
+
+            Assert.AreEqual("", NoticeLine(menu).text, "an allowed option change was announced as a refusal");
+        }
+
+        // The other contexts have their own reasons, from the same table: a
+        // refund is a camp privilege, and party changes and books are not.
+        [UnityTest]
+        public IEnumerator ADescentRefusesARefundAndABenchWithTheirOwnWords()
+        {
+            ArrangeARun();
+            yield return EnterTheMap();
+
+            var menu = Menu();
+            menu.Open();
+            menu.Select(SystemMenuTab.Character);
+            yield return null;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            dossier.Refresh();
+            yield return null;
+
+            AssertRefusalIsSaid(menu, MenuAction.RefundAttribute, MenuContext.Descent, "refunding in a descent",
+                () => Press(menu, "DossierAttrMinus0"));
+            Assert.AreEqual("Refunds at camp", NoticeLine(menu).text);
+
+            menu.Select(SystemMenuTab.Party);
+            yield return null;
+            var party = Object.FindAnyObjectByType<PartyController>(FindObjectsInactive.Include);
+            party.ClickSeat(PartySeat.Front);
+            AssertRefusalIsSaid(menu, MenuAction.SwapParty, MenuContext.Descent, "benching in a descent",
+                () => party.SendToBench());
+            Assert.AreEqual("Party changes happen at camp", NoticeLine(menu).text);
+        }
+
+        [UnityTest]
+        public IEnumerator CampRefusesABookWithItsOwnWords()
+        {
+            ArrangeARun();
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Menu();
+            menu.Open();
+            menu.Select(SystemMenuTab.Character);
+            yield return null;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            dossier.Refresh();
+            dossier.ShowSpells(true);
+            yield return null;
+
+            Press(menu, "DossierUnassigned0");
+            AssertRefusalIsSaid(menu, MenuAction.PlaceBook, MenuContext.Camp, "placing a book at camp",
+                () => Press(menu, "DossierSpellSlot1"));
+            Assert.AreEqual("Spell books are placed during a descent", NoticeLine(menu).text);
         }
 
         // ---- the same presses where they are allowed ---------------------------------

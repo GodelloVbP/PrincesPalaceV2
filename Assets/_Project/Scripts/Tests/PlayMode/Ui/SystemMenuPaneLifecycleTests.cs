@@ -207,14 +207,14 @@ namespace PrincesPalace.PlayModeTests
                 "is as old as the last time it was opened");
         }
 
-        // ---- A8: a second toast over a live one --------------------------------------
+        // ---- A8: a second notice over a live one -------------------------------------
 
-        // A NEW Show() RESTARTS THE TIMER rather than stacking, and PartyToast's
+        // A NEW Show() RESTARTS THE TIMER rather than stacking, and MenuNotice's
         // own header argues for it: two swaps in quick succession must snap back
         // to full alpha carrying the NEW text, instead of finishing a fade whose
         // message no longer matches what just happened.
         [UnityTest]
-        public IEnumerator ASecondToastRestartsTheTimerAndCarriesTheNewMessage()
+        public IEnumerator ASecondNoticeRestartsTheTimerAndCarriesTheNewMessage()
         {
             yield return OpenTheMenu("Hub");
 
@@ -229,39 +229,39 @@ namespace PrincesPalace.PlayModeTests
             party.ClickSeat(PartySeat.Rear);
             yield return null;
 
-            var toast = Named("PartyToast");
-            var group = toast.GetComponent<CanvasGroup>();
-            string firstMessage = Named("PartyToastText").GetComponent<TMP_Text>().text;
-            Assert.AreEqual(1f, group.alpha, 0.01f, "fixture: the first toast never showed");
+            var notice = Named("SystemFooterNotice").GetComponent<TMP_Text>();
+            string firstMessage = notice.text;
+            Assert.AreEqual(1f, notice.alpha, 0.01f, "fixture: the first notice never showed");
+            Assert.IsNotEmpty(firstMessage, "fixture: the first notice said nothing");
 
-            // Into the hold, far enough that a toast which merely CONTINUED
-            // would be visibly on its way down by the end of this test.
-            yield return Settle(PartyToast.HoldSeconds * 0.9f);
-            Assert.IsTrue(toast.activeSelf, "fixture: the first toast is already gone");
+            // Into the hold, far enough that a notice which merely CONTINUED
+            // would be gone by the end of this test.
+            yield return Settle(MenuNotice.DefaultSeconds * 0.9f);
+            Assert.IsNotEmpty(notice.text, "fixture: the first notice is already gone");
 
             party.ClickSeat(PartySeat.Middle);
             party.ClickSeat(PartySeat.Rear);
             yield return null;
 
-            string secondMessage = Named("PartyToastText").GetComponent<TMP_Text>().text;
+            string secondMessage = notice.text;
             Assert.AreNotEqual(firstMessage, secondMessage,
                 "the second commit did not change the message, so this test cannot tell the two apart");
-            Assert.AreEqual(1f, group.alpha, 0.01f,
-                "the second toast arrived part-way through the first one's fade rather than snapping " +
+            Assert.AreEqual(1f, notice.alpha, 0.01f,
+                "the second notice arrived part-way through the first one's fade rather than snapping " +
                 "back to full");
 
             // The restart is what the timer does, not just the alpha: a
-            // continued toast would be gone by now.
-            yield return Settle(PartyToast.HoldSeconds * 0.5f);
-            Assert.IsTrue(toast.activeSelf,
-                "the second toast expired on the FIRST one's clock, so a message that just arrived " +
+            // continued notice would be gone by now.
+            yield return Settle(MenuNotice.DefaultSeconds * 0.5f);
+            Assert.IsNotEmpty(notice.text,
+                "the second notice expired on the FIRST one's clock, so a message that just arrived " +
                 "vanished early");
         }
 
-        // ---- C4: a scene arriving over a live toast -----------------------------------
+        // ---- C4: a scene arriving over a live notice ----------------------------------
 
         [UnityTest]
-        public IEnumerator ASceneArrivingOverALiveToastLeavesNoToastOnTheNextScreen()
+        public IEnumerator ASceneArrivingOverALiveNoticeLeavesNoNoticeOnTheNextScreen()
         {
             yield return OpenTheMenu("Hub");
 
@@ -276,18 +276,19 @@ namespace PrincesPalace.PlayModeTests
             party.ClickSeat(PartySeat.Rear);
             yield return null;
 
-            Assert.IsTrue(Named("PartyToast").activeSelf, "fixture: no toast was up when the scene changed");
+            Assert.IsNotEmpty(Named("SystemFooterNotice").GetComponent<TMP_Text>().text,
+                "fixture: no notice was up when the scene changed");
 
             yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
             yield return null;
             yield return null;
 
-            var carried = Object.FindObjectsByType<PartyToast>(FindObjectsInactive.Include)
-                .FirstOrDefault(t => t.gameObject.activeInHierarchy);
+            var carried = Object.FindObjectsByType<MenuNotice>(FindObjectsInactive.Include)
+                .FirstOrDefault(n => n.Text.Length > 0);
 
             Assert.IsNull(carried,
-                "the next screen came up with a toast already showing, so a fade that outlived its " +
-                "scene left a message about a swap that happened somewhere else");
+                "the next screen came up with a notice already showing, so a message outlived its " +
+                "scene and speaks about a swap that happened somewhere else");
 
             LogAssert.NoUnexpectedReceived();
         }
@@ -325,8 +326,8 @@ namespace PrincesPalace.PlayModeTests
         // scene (SharedScene). A reused scene has put its panes through MORE
         // openings than a fresh one, which is the direction these tests are
         // about, so reuse costs them nothing. Put back per test: the menu
-        // closed (Close resumes the clock Open paused), the party toast down
-        // and blank (Close strands it mid-hold, still showing), and the tab
+        // closed (Close resumes the clock Open paused, and the notice drops
+        // what it was saying), and the tab
         // the menu opens on -- a fresh menu lands on its default in Start(),
         // which a reused one ran long ago, and the dossier test cycles a pane
         // that only enables under that default tab.
@@ -338,10 +339,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_menu, $"{scene} has no SystemMenuController");
 
             if (_menu.IsOpen) _menu.Close();
-            var toast = _menu.GetComponentsInChildren<PartyToast>(includeInactive: true).FirstOrDefault();
-            if (toast != null) toast.gameObject.SetActive(false);
-            var toastText = Named("PartyToastText")?.GetComponent<TMP_Text>();
-            if (toastText != null) toastText.text = "";
 
             _menu.Open();
             _menu.Select(SystemMenuTabs.DefaultFor(_menu.Context));

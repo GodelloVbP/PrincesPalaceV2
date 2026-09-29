@@ -28,8 +28,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
     //
     // NO CONTROLLER, NO DOMAIN MODEL, NO SCREENREGISTRY WIRING HERE. Every
     // state this pane can ever be in -- a badge preview, a selection ring, a
-    // locked or closed scrim, a monogram standing in for missing art, the
-    // toast -- is declared now, inactive, because the scene is generated once
+    // locked or closed scrim, a monogram standing in for missing art -- is
+    // declared now, inactive, because the scene is generated once
     // and a controller can only show or hide a node that already exists in it.
     //
     // SEATS ARE INDEXED FRONT-FIRST (0 = front, matching the front-rank rule
@@ -96,8 +96,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef StatusPill;
         public NodeRef StatusText;
         public NodeRef FilledCount;
-        public NodeRef Toast;
-        public NodeRef ToastText;
 
         // ---- P4: drag-and-drop ------------------------------------------------------
 
@@ -189,10 +187,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, PartyLayout.HairlineCentreY))
                 .AsDecor());
             children.AddRange(BuildRoster(screen, rosterCount));
-            children.Add(BuildToast(screen));
 
-            // APPENDED LAST, so it draws over every other node on the pane,
-            // toast included -- "top-most" per the P4 brief.
+            // APPENDED LAST, so it draws over every other node on the pane --
+            // "top-most" per the P4 brief.
             children.Add(BuildDragGhost(screen));
 
             // BARE, not a kit container. This pane sits on the shared
@@ -610,43 +607,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
-        // ---- the toast: pinned into the ROSTER heading row's own empty space -------
-
-        private static UiNode BuildToast(PartyScreen screen)
-        {
-            var text = Ui.Label("PartyToastText", UiString.Runtime,
-                    new UiVec(PartyLayout.ToastWidth - 32f, PartyLayout.ToastHeight), 14, TextPrimary,
-                    Place.At(0f, 0f))
-                .AsDecor()
-                .Styled(TypographyRole.Body);
-
-            var toast = Ui.OutlineBox("PartyToast",
-                Place.At(PartyLayout.ToastCentreX, PartyLayout.ToastCentreY),
-                new UiVec(PartyLayout.ToastWidth, PartyLayout.ToastHeight), "#12091CF2", BadgeRim,
-                new[] { text });
-
-            // A TOAST IS A FLOATING OVERLAY, hidden by default and shown only
-            // for its ~2.4s. It shares the ROSTER heading row, right-aligned
-            // into that row's own empty space, so it never sits over a card
-            // -- never hiding the role/tag lines a swap just changed. AsDecor
-            // does the only job it needs to here: non-interactive and
-            // hidden by default, with no sibling-overlap check (A1) to
-            // waive, since this position has nothing left to overlap.
-            toast.AsDecor().Inactive();
-            screen.Toast = toast;
-            screen.ToastText = text;
-            return toast;
-        }
-
         // ---- the drag ghost (P4): one reusable floating overlay --------------------
 
         // ONE node, re-skinned per drag rather than one ghost per seat/card --
         // the controller shows the dragged actor's own sprite (or its
         // monogram, the same either/or every art slot already carries) at
         // ~0.8 alpha and repositions this single node to the pointer in
-        // OnDrag. Hidden and non-raycastable by default (AsDecor -- see
-        // BuildToast's own comment on why that also waives the sibling-
-        // overlap check A1 would otherwise want for a floating overlay).
+        // OnDrag. Hidden and non-raycastable by default (AsDecor, which also
+        // waives the sibling-overlap check A1 would otherwise want for a
+        // floating overlay).
         private static UiNode BuildDragGhost(PartyScreen screen)
         {
             float w = PartyLayout.GhostArtWidth;

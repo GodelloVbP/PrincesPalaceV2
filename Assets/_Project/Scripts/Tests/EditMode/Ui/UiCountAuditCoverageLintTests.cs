@@ -242,7 +242,10 @@ namespace PrincesPalace.Domain.Tests
         // UiWiringSweep's Members() uses GetEndProperty for -- here the fence
         // is INDENTATION: a nested lambda body sits deeper than the statement
         // that opens it, so the nearest earlier line at or below this line's
-        // own indentation, that looks like an assignment, is the start.
+        // own indentation, that looks like an assignment, is the start. A line
+        // at that indentation that ends a statement or a block is the PREVIOUS
+        // statement, so the scan stops there: crossing it read an unrelated
+        // `.Select(...)` further up as this chain's own.
         private static string BackwardFindAssignmentStart(string[] lines, int tailIndex, out bool sawSelect)
         {
             sawSelect = lines[tailIndex].Contains(".Select(");
@@ -256,10 +259,14 @@ namespace PrincesPalace.Domain.Tests
                 string trimmed = line.Trim();
                 if (trimmed.Length == 0) continue;
 
+                if (trimmed.StartsWith("//")) continue;
+
                 if (IndentOf(line) <= tailIndent)
                 {
                     Match m = AssignmentStart.Match(trimmed);
                     if (m.Success) return m.Groups["lhs"].Value;
+
+                    if (trimmed.EndsWith(";") || trimmed.EndsWith("{") || trimmed.EndsWith("}")) return null;
                 }
             }
 

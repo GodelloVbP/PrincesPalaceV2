@@ -6,11 +6,8 @@ namespace PrincesPalace.Domain.UiKit
     //
     // FOUR SECTIONS TOP TO BOTTOM: a header row (banner + status), Formation
     // (the hero -- 3 FIXED seats, never more), a hairline, and Roster (N cards,
-    // N being the only thing here that can outgrow its row). The toast is not
-    // a fifth section -- it is pinned into the ROSTER heading row, right-
-    // aligned against the empty space beside "ROSTER" itself, rather than
-    // floating over the card row. See the toast section below
-    // and PartyScreen's own BuildToast comment.
+    // N being the only thing here that can outgrow its row). Messages are the
+    // menu's footer notice, not a part of this pane.
     public static class PartyLayout
     {
         // Still the FRAME's declared size (SystemMenuPaneTests.EveryHostedPane
@@ -200,9 +197,7 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float RosterHeadingHeight = 24f;
         // Sized to "ROSTER" itself, left-aligned at ContentLeft -- the rest of
-        // this row, out to ContentRight, is empty in every state. The toast
-        // (below) claims that space right-aligned rather than adding a fifth
-        // section to the pane.
+        // this row, out to ContentRight, is empty in every state.
         public const float RosterHeadingWidth = 300f;
         public const float RosterHeadingToRowGap = 12f;
 
@@ -301,24 +296,6 @@ namespace PrincesPalace.Domain.UiKit
             while (RosterFits(n + 1)) n++;
             return n;
         }
-
-        // ---- the toast: pinned into the ROSTER heading row, not a floating overlay --
-        //
-        // "ROSTER" is left-aligned and short; the rest of that row is empty in
-        // every state (RosterHeadingWidth's own comment), so the toast claims
-        // it right-aligned instead of adding a fifth section or covering the
-        // cards.
-        //
-        // SAME HEIGHT as the heading row it shares -- one line only, so the
-        // width has to be wide enough to hold the longest authored toast
-        // string (UiStrings' own PartyToast* entries) without wrapping;
-        // UiTextFitAudit is what actually proves that at build time, this is
-        // just generous enough to clear it with real margin to spare.
-        public const float ToastHeight = RosterHeadingHeight;
-        public const float ToastWidth = 640f;
-
-        public static float ToastCentreX => ContentRight - ToastWidth * 0.5f;
-        public static float ToastCentreY => RosterHeadingCentreY;
 
         // ---- the drag ghost (P4): one reusable floating preview, not a fifth section
 

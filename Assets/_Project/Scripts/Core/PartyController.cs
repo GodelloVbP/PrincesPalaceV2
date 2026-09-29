@@ -21,10 +21,9 @@ namespace PrincesPalace
     //
     // NAMES MIRROR PartyScreen's OWN FIELD NAMES so UiAutoBind can bind them
     // (see ScreenRegistry.WireParty for the residual it cannot see: the menu
-    // reference, the lock flag, each seat badge's own text label, the drag
-    // sources and the toast's own fader, none of which UiAutoBind's five
-    // typed lookups can reach).
-    public class PartyController : MonoBehaviour, INavCancelClaim
+    // reference, the lock flag, each seat badge's own text label and the drag
+    // sources, none of which UiAutoBind's five typed lookups can reach).
+    public class PartyController : MonoBehaviour, INavCancelClaim, IMenuPromptSource
     {
         // ---- header -----------------------------------------------------------
         [SerializeField] internal TMP_Text banner;
@@ -32,15 +31,6 @@ namespace PrincesPalace
         [SerializeField] internal Button benchLink;
         [SerializeField] internal TMP_Text statusText;
         [SerializeField] internal TMP_Text filledCount;
-        [SerializeField] internal GameObject toast;
-        [SerializeField] internal TMP_Text toastText;
-
-        // The toast's own fader (P4) -- a CanvasGroup lives on the same node
-        // ([RequireComponent] on PartyToast adds it, so nothing else here
-        // has to). Replaces P3's hard show/hide; see PartyToast's own header
-        // for why it is a small local component rather than an existing
-        // reuse-first primitive.
-        [SerializeField] internal PartyToast toastFader;
 
         // ---- seats, front-first (index 0 = front), length PartySeat.Count -----
         [SerializeField] internal Button[] seatButtons;
@@ -605,12 +595,12 @@ namespace PrincesPalace
         // through ClickSeat/ClickCard/Cancel/SendToBench above; a drag
         // reaches it through EndDrag below, which computes the very same
         // PartyOutcome (Drop/DropOnRoster/Cancel) and hands it here rather
-        // than duplicating the persist-then-paint-then-toast sequence.
+        // than duplicating the persist-then-paint-then-announce sequence.
         private void Apply(PartyOutcome outcome)
         {
             if (outcome.Changed) Persist();
             Paint();
-            ShowToast(outcome);
+            Announce(outcome);
         }
 
         // Writes the seats back IN SEAT ORDER, HOLES AND ALL. WRITTEN ON EVERY
@@ -658,7 +648,7 @@ namespace PrincesPalace
         // BEGIN calls straight through ClickSeat/ClickCard -- "the controller,
         // which asks the model" -- rather than re-deriving selectability by
         // hand: a locked/closed seat or a ViewOnly/benched-in-Run card is
-        // refused (and toasted) exactly as a click would refuse it, and
+        // refused (and announced) exactly as a click would refuse it, and
         // Cancel() first means the model holds no stale selection to leak
         // into a refused drag. The ghost only appears once the resulting
         // selection actually matches the id being dragged -- a refusal
@@ -701,7 +691,7 @@ namespace PrincesPalace
         // END hit-tests the pointer and turns what it lands on into the same
         // three outcomes the model already knows (Drop onto a seat,
         // DropOnRoster, or Cancel), then applies through the shared Apply
-        // step above -- a drag never talks to Persist/Paint/ShowToast
+        // step above -- a drag never talks to Persist/Paint/Announce
         // directly.
         private void EndDrag(PointerEventData eventData)
         {
@@ -970,7 +960,7 @@ namespace PrincesPalace
 
             // DIMMED, NEVER DISABLED. A benched card in a Run, or a locked
             // seat's card, must still be clickable -- ClickCard is what
-            // decides the refusal toast (BenchedDuringRun, SeatLocked), and a
+            // decides the refusal notice (BenchedDuringRun, SeatLocked), and a
             // Button whose interactable is false would eat the click before
             // the model ever got to explain why nothing happened.
             SetShown(cardWashes, index, !state.IsSelectable);
@@ -1086,54 +1076,112 @@ namespace PrincesPalace
         private static float FloorYAt(float[] array, int index) =>
             array != null && index >= 0 && index < array.Length ? array[index] : 0f;
 
-        // ---- toast ------------------------------------------------------------------
-
-        private void ShowToast(PartyOutcome outcome)
+        // ---- the notice ---------------------------------------------------------------
+        //
+        // Every outcome that has something to say goes to the menu's one notice
+        // line (SystemMenuController.ShowNotice). A refusal that C3 also names
+        // takes its words from MenuPermissions, so the pane and the footer's
+        // locked prompts can never disagree about why: the fight's fixed
+        // formation, and a swap outside camp.
+        private void Announce(PartyOutcome outcome)
         {
-            if (toastText == null) return;
-            if (outcome.Toast == PartyToastKind.None) return;
+            if (menu == null || outcome.Toast == PartyToastKind.None) return;
 
             switch (outcome.Toast)
             {
                 case PartyToastKind.Placed:
-                    toastText.Set(UiStrings.PartyToastPlaced, outcome.Actor, SeatWord(outcome.Seat));
+                    menu.ShowNotice(UiStrings.PartyToastPlaced, new object[] { outcome.Actor, SeatWord(outcome.Seat) });
                     break;
                 case PartyToastKind.Moved:
-                    toastText.Set(UiStrings.PartyToastMoved, outcome.Actor, SeatWord(outcome.Seat));
+                    menu.ShowNotice(UiStrings.PartyToastMoved, new object[] { outcome.Actor, SeatWord(outcome.Seat) });
                     break;
                 case PartyToastKind.Swapped:
-                    toastText.Set(UiStrings.PartyToastSwapped, outcome.Actor, outcome.Other);
+                    menu.ShowNotice(UiStrings.PartyToastSwapped, new object[] { outcome.Actor, outcome.Other });
                     break;
                 case PartyToastKind.Replaced:
-                    toastText.Set(UiStrings.PartyToastReplaced, outcome.Actor, outcome.Other);
+                    menu.ShowNotice(UiStrings.PartyToastReplaced, new object[] { outcome.Actor, outcome.Other });
                     break;
                 case PartyToastKind.Benched:
-                    toastText.Set(UiStrings.PartyToastBenched, outcome.Actor);
+                    menu.ShowNotice(UiStrings.PartyToastBenched, new object[] { outcome.Actor });
                     break;
                 case PartyToastKind.FormationFixedInFight:
-                    toastText.Set(UiStrings.PartyToastFormationFixedInFight);
-                    break;
-                case PartyToastKind.SeatNotOpen:
-                    toastText.Set(UiStrings.PartyToastSeatNotOpen);
-                    break;
-                case PartyToastKind.SeatLocked:
-                    toastText.Set(UiStrings.PartyToastSeatLocked, outcome.Actor);
+                    menu.ShowNotice(MenuPermissions.Reason(MenuAction.RepositionParty, MenuContext.Fight));
                     break;
                 case PartyToastKind.BenchedDuringRun:
-                    toastText.Set(UiStrings.PartyToastBenchedDuringRun);
-                    break;
                 case PartyToastKind.RepositionOnlyDuringRun:
-                    toastText.Set(UiStrings.PartyToastRepositionOnlyDuringRun);
+                    menu.ShowNotice(MenuPermissions.Reason(MenuAction.SwapParty, Context));
+                    break;
+                case PartyToastKind.SeatNotOpen:
+                    menu.ShowNotice(UiStrings.PartyToastSeatNotOpen);
+                    break;
+                case PartyToastKind.SeatLocked:
+                    menu.ShowNotice(UiStrings.PartyToastSeatLocked, new object[] { outcome.Actor });
                     break;
                 case PartyToastKind.PartyNeverEmpty:
-                    toastText.Set(UiStrings.PartyToastPartyNeverEmpty);
+                    menu.ShowNotice(UiStrings.PartyToastPartyNeverEmpty);
                     break;
-                default:
-                    return;
+            }
+        }
+
+        // ---- the footer's prompts (IMenuPromptSource) ----------------------------------
+        //
+        // A carry is the pane's one pending state, and it answers at the moment
+        // of asking: Place / Put back while carrying, Pick up otherwise. The
+        // action a press would take (a seat-to-seat move, or a swap with the
+        // roster) rides on the prompt, so the footer locks it exactly where
+        // MenuPermissions refuses it -- in a fight, every one.
+        IReadOnlyList<MenuPrompt> IMenuPromptSource.PromptsFor(Selectable focused)
+        {
+            if (focused == null || Formation == null) return null;
+
+            bool inPane = focused.transform.IsChildOf(transform);
+
+            if (Formation.SelectedId != null)
+            {
+                var putBack = new MenuPrompt(PromptButton.Cancel, UiStrings.PromptPutBack);
+                if (!inPane) return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptSelect), putBack };
+
+                var placing = Formation.SelectedFrom.IsSeat ? MenuAction.RepositionParty : MenuAction.SwapParty;
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptPlace, placing), putBack };
             }
 
-            if (toastFader != null) toastFader.Show();
-            else toast?.SetShown(true);
+            if (!inPane) return null;
+
+            var close = new MenuPrompt(PromptButton.Cancel, UiStrings.PromptClose);
+
+            if (Has(seatButtons, focused))
+            {
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptPickUp, MenuAction.RepositionParty), close };
+            }
+
+            if (Has(cardButtons, focused))
+            {
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptPickUp, MenuAction.SwapParty), close };
+            }
+
+            if (Has(cardTitles, focused))
+            {
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptChangeTitle, MenuAction.CycleTitle), close };
+            }
+
+            if (benchLink != null && focused == benchLink)
+            {
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptSendToBench, MenuAction.SwapParty), close };
+            }
+
+            return null;
+        }
+
+        private static bool Has(Button[] controls, Selectable focused)
+        {
+            if (controls == null) return false;
+
+            foreach (var control in controls)
+            {
+                if (control != null && control == focused) return true;
+            }
+
+            return false;
         }
 
         // ---- the title, and the picker that chooses it ------------------------------
@@ -1184,8 +1232,8 @@ namespace PrincesPalace
         // of which runs a save-on-exit hook (see Persist's own header).
         private void CycleTitle(int index)
         {
-            if (!MenuPermissions.Allows(MenuAction.CycleTitle, Context)) return;
             if (_rosterIds == null || index < 0 || index >= _rosterIds.Count) return;
+            if (SystemMenuController.Refuses(menu, MenuAction.CycleTitle)) return;
 
             var character = CharacterFor(_rosterIds[index]);
             if (character == null) return;
@@ -1293,11 +1341,11 @@ namespace PrincesPalace
             }
         }
 
-        // The toast's own copy uses the lower-case word ("takes the front
+        // The notice's own copy uses the lower-case word ("takes the front
         // position"), where the seat COLUMN's label is upper-case tactical
         // data (UiStrings.PartySeatFront et al, baked at build time) -- two
         // different registers for the same fact, so this stays local to the
-        // toast rather than becoming a fourth casing of PartySeatFront.
+        // notice rather than becoming a fourth casing of PartySeatFront.
         private static string SeatWord(int seat) =>
             seat >= 0 && seat < SeatWords.Length ? SeatWords[seat] : "";
 

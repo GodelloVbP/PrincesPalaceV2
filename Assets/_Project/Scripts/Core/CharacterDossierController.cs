@@ -21,7 +21,7 @@ namespace PrincesPalace
     // uses, never from a second computation -- a sheet that recomputed its own
     // figures would eventually disagree with the battle, and the player would be
     // right either way.
-    public class CharacterDossierController : MonoBehaviour, INavPaneEntry, INavCancelClaim, INavSectionStrip
+    public class CharacterDossierController : MonoBehaviour, INavPaneEntry, INavCancelClaim, INavSectionStrip, IMenuPromptSource
     {
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text subLine;
@@ -1179,6 +1179,107 @@ namespace PrincesPalace
         // "already showing what was asked for" from "showing the other state".
         public bool IsPackShown => packPanel != null && packPanel.activeSelf;
 
+        // ---- the footer's prompts (IMenuPromptSource) --------------------------------
+        //
+        // What A does on the control the pad stands on, and what B will do. The
+        // wording is this pane's; whether the press may change anything is not:
+        // each prompt that changes state names its MenuAction, and the footer
+        // marks it locked wherever MenuPermissions refuses it, so this cannot
+        // promise what the control's own handler then refuses.
+        //
+        // Only controls this pane owns answer; the reward track and every other
+        // pane's controls get null, and so the frame's defaults.
+        IReadOnlyList<MenuPrompt> IMenuPromptSource.PromptsFor(Selectable focused)
+        {
+            if (focused == null) return null;
+
+            var cancel = new MenuPrompt(PromptButton.Cancel,
+                IsAnyPanelOpen ? UiStrings.PromptBack : UiStrings.PromptClose);
+
+            if (Owns(slotCells, focused))
+            {
+                // A slot with nothing worn has no A: choosing from the pack for
+                // it arrives with the loadout rebuild (plan Phase 5b).
+                return WornAt(System.Array.IndexOf((System.Array)slotCells, focused))
+                    ? new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptUnequip, MenuAction.UnequipGear), cancel }
+                    : new[] { cancel };
+            }
+
+            if (Owns(packCells, focused))
+            {
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptEquip, MenuAction.EquipGear), cancel };
+            }
+
+            if (Owns(attributePluses, focused) || Owns(attributeRowSteps, focused) || Owns(attributeRowPluses, focused))
+            {
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptSpendPoint, MenuAction.SpendAttribute), cancel };
+            }
+
+            if (Owns(unassignedRows, focused))
+            {
+                return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptPickBook), cancel };
+            }
+
+            if (Owns(spellSlots, focused))
+            {
+                if (_selectedUnassignedRow < 0) return new[] { cancel };
+
+                bool occupied = BookAt(System.Array.IndexOf((System.Array)spellSlots, focused));
+                return new[]
+                {
+                    new MenuPrompt(PromptButton.Confirm,
+                        occupied ? UiStrings.PromptReplaceBook : UiStrings.PromptPlaceBook,
+                        occupied ? MenuAction.ReplaceBook : MenuAction.PlaceBook),
+                    cancel,
+                };
+            }
+
+            if (IsRowDoor(focused)) return new[] { new MenuPrompt(PromptButton.Confirm, UiStrings.PromptOpen), cancel };
+
+            return null;
+        }
+
+        // The rows that open a panel over this pane.
+        private bool IsRowDoor(Selectable focused) =>
+            focused == packRow || focused == trackRow || focused == spellsRow
+            || focused == skillsRow || focused == attributesRow;
+
+        // Whether Cancel has a panel to close first (INavCancelClaim), so the
+        // footer says Back rather than Close.
+        private bool IsAnyPanelOpen =>
+            IsAttributesShown || IsPackShown || IsSpellsShown || IsSkillsShown
+            || (trackPanel != null && trackPanel.activeSelf);
+
+        private static bool Owns<T>(T[] controls, Selectable focused) where T : Selectable
+        {
+            if (controls == null) return false;
+
+            foreach (var control in controls)
+            {
+                if (control != null && control == focused) return true;
+            }
+
+            return false;
+        }
+
+        private bool WornAt(int slotIndex)
+        {
+            var squad = Squad();
+            if (slotIndex < 0 || slotIndex >= EquipmentSlots.All.Length || _index < 0 || _index >= squad.Count) return false;
+
+            var equipment = squad[_index].equipment;
+            return equipment != null && !string.IsNullOrEmpty(equipment.Get(EquipmentSlots.All[slotIndex]));
+        }
+
+        private bool BookAt(int slot)
+        {
+            var squad = Squad();
+            var learned = RunManager.Run?.learnedSpells;
+            if (learned == null || _index < 0 || _index >= squad.Count) return false;
+
+            return learned.Exists(e => e != null && e.characterId == squad[_index].definitionId && e.slot == slot);
+        }
+
         private void TogglePack() => ShowPack(packPanel != null && !packPanel.activeSelf);
 
         // ---- spell books (docs/PLAN_SHOP.md §1g, gate 3) -------------------------
@@ -1208,11 +1309,7 @@ namespace PrincesPalace
         {
             spellsPanel.SetShown(open);
             if (spellsChevron != null) spellsChevron.SetContent(open ? "<" : ">");
-            if (!open)
-            {
-                _selectedUnassignedRow = -1;
-                _alreadyKnownRefusal = false;
-            }
+            if (!open) _selectedUnassignedRow = -1;
 
             RefreshSpells();
 
@@ -1245,15 +1342,8 @@ namespace PrincesPalace
             // draft's own card press follows -- a screen whose whole job is
             // comparing things should let a choice be reconsidered.
             _selectedUnassignedRow = _selectedUnassignedRow == row ? -1 : row;
-            _alreadyKnownRefusal = false;
             RefreshSpells();
         }
-
-        // WHY THE LAST SLOT PRESS DID NOTHING (AUDIT #116), for exactly as
-        // long as the player is still looking at the press that caused it: a
-        // different row, a different character, or a successful placement all
-        // clear it.
-        private bool _alreadyKnownRefusal;
 
         // Does the selected unassigned book already sit in one of THIS
         // character's slots? Asked once per refresh rather than per slot --
@@ -1292,8 +1382,8 @@ namespace PrincesPalace
                 && run.learnedSpells.Exists(e => e != null && e.characterId == character.definitionId && e.slot == slot);
 
             // Refused here as well as inside the operations, so a refused
-            // press changes nothing and repaints nothing.
-            if (!Allows(slotOccupied ? MenuAction.ReplaceBook : MenuAction.PlaceBook)) return;
+            // press changes nothing and repaints nothing -- and says why.
+            if (SystemMenuController.Refuses(menu, slotOccupied ? MenuAction.ReplaceBook : MenuAction.PlaceBook)) return;
 
             var result = slotOccupied
                 ? RunOrchestrator.ReplaceSpell(Context, character.definitionId, skillId, slot)
@@ -1301,16 +1391,11 @@ namespace PrincesPalace
 
             // The full result is read, not just `.Applied`, so AlreadyKnown
             // -- the moment the player finds out they picked a duplicate --
-            // is surfaced rather than silently swallowed.
-            if (result.Applied)
-            {
-                _selectedUnassignedRow = -1;
-                _alreadyKnownRefusal = false;
-            }
-            else
-            {
-                _alreadyKnownRefusal = result.Reason == ShopRefusal.AlreadyKnown;
-            }
+            // is said on the menu's notice line rather than swallowed. It is
+            // the footer's, not a label of this panel's: the slots stay
+            // readable under it (AUDIT #146).
+            if (result.Applied) _selectedUnassignedRow = -1;
+            else if (result.Reason == ShopRefusal.AlreadyKnown) menu?.ShowNotice(UiStrings.DossierSpellAlreadyKnown);
 
             Refresh();
         }
@@ -1353,26 +1438,11 @@ namespace PrincesPalace
             // (_canHoldSpellBooks) rather than per slot -- this method is also
             // reached from a row press, which is why it is a field and not a
             // local.
-            //
-            // IT CARRIES THE DUPLICATE REFUSAL TOO (AUDIT #116). The two can
-            // never be up at once -- a character who cannot hold a book cannot
-            // have one already -- so this is one line with two things to say
-            // rather than a second node and a second scene rebuild. The
-            // refusal is transient; the pool sentence is permanent for that
-            // character, which is why it wins the branch.
-            bool alreadyKnown = _alreadyKnownRefusal && _canHoldSpellBooks && character != null;
             if (spellsNoBooksLine != null)
             {
                 bool noBooks = !_canHoldSpellBooks && character != null;
-                spellsNoBooksLine.gameObject.SetActive(noBooks || alreadyKnown);
-                if (noBooks)
-                {
-                    spellsNoBooksLine.Set(UiStrings.DossierNoSpellBooks, DisplayNameOf(character));
-                }
-                else if (alreadyKnown)
-                {
-                    spellsNoBooksLine.Set(UiStrings.DossierSpellAlreadyKnown);
-                }
+                spellsNoBooksLine.gameObject.SetActive(noBooks);
+                if (noBooks) spellsNoBooksLine.Set(UiStrings.DossierNoSpellBooks, DisplayNameOf(character));
             }
 
             // THE GREEN PREVIEW IS A PROMISE. It lit for ANY empty slot while
@@ -1667,9 +1737,6 @@ namespace PrincesPalace
         private void MoveTo(int index)
         {
             _index = index;
-
-            // The refusal named a character. Paging is leaving them.
-            _alreadyKnownRefusal = false;
 
             // The selected row named a book on the shelf the OLD character was
             // looking at. Paging swaps the shelf out from under it, and a
@@ -2141,7 +2208,7 @@ namespace PrincesPalace
         // measure/rescale pair, the same one Kindle and Respec ride.
         private void Spend(int index)
         {
-            if (!Allows(MenuAction.SpendAttribute)) return;
+            if (SystemMenuController.Refuses(menu, MenuAction.SpendAttribute)) return;
             if (!TryResolveCell(index, out var character, out var score)) return;
 
             if (!TalentOps.Invest(Context, character, score)) return;
@@ -2160,7 +2227,7 @@ namespace PrincesPalace
         // clicked -- Spend guards inside the method for the same reason.
         private void Refund(int index)
         {
-            if (!Allows(MenuAction.RefundAttribute)) return;
+            if (SystemMenuController.Refuses(menu, MenuAction.RefundAttribute)) return;
             if (!TryResolveCell(index, out var character, out var score)) return;
 
             if (!TalentOps.Refund(Context, character, score)) return;
@@ -2522,10 +2589,10 @@ namespace PrincesPalace
 
         private void EquipFromPack(int index)
         {
-            if (!Allows(MenuAction.EquipGear)) return;
-
             var squad = Squad();
             if (squad.Count == 0 || index >= _bag.Count) return;
+
+            if (SystemMenuController.Refuses(menu, MenuAction.EquipGear)) return;
 
             var character = squad[_index];
             var save = SaveSlotManager.CurrentSave;
@@ -2565,14 +2632,18 @@ namespace PrincesPalace
 
         private void UnequipSlot(int index)
         {
-            if (!Allows(MenuAction.UnequipGear)) return;
-
             var squad = Squad();
             if (squad.Count == 0 || index >= EquipmentSlots.All.Length) return;
 
             var character = squad[_index];
             var save = SaveSlotManager.CurrentSave;
             if (character?.equipment == null || save == null) return;
+
+            // An empty slot has nothing to take off, in any context: pressing it
+            // is not an attempt to change gear, so it is not refused.
+            if (string.IsNullOrEmpty(character.equipment.Get(EquipmentSlots.All[index]))) return;
+
+            if (SystemMenuController.Refuses(menu, MenuAction.UnequipGear)) return;
 
             // Scales carried health both ways -- see EquipmentOps.Unequip's
             // own symmetry note.

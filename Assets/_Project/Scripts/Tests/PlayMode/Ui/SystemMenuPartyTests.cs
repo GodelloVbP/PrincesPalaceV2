@@ -141,7 +141,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front]);
             Assert.AreEqual("bear", party.Formation.SeatIds[PartySeat.Middle]);
             Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Rear]);
-            Assert.AreEqual("Swapped Shawn and Odette.", TextOf("PartyToastText"));
+            Assert.AreEqual("Swapped Shawn and Odette.", NoticeText());
         }
 
         // ---- run mode: reposition only, benching refused -------------------------
@@ -167,8 +167,9 @@ namespace PrincesPalace.PlayModeTests
             party.SendToBench();
             yield return null;
 
-            Assert.AreEqual("Mid-run you can only reposition.", TextOf("PartyToastText"),
-                "the refusal toast did not reach the pane");
+            Assert.AreEqual(MenuPermissions.Reason(MenuAction.SwapParty, MenuContext.Descent).Format(), NoticeText(),
+                "the refusal did not reach the menu's notice");
+            Assert.AreEqual("Party changes happen at camp", NoticeText());
             CollectionAssert.AreEqual(before, SaveSlotManager.CurrentSave.selectedCharacterIds,
                 "a refused bench still changed the seating");
         }
@@ -196,7 +197,9 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.AreEqual(before, SaveSlotManager.CurrentSave.selectedCharacterIds,
                 "a click in a fight changed the party");
-            Assert.AreEqual("The formation is fixed during a fight.", TextOf("PartyToastText"));
+            Assert.AreEqual(MenuPermissions.Reason(MenuAction.RepositionParty, MenuContext.Fight).Format(), NoticeText(),
+                "the fight's refusal is not the permission table's own words");
+            Assert.AreEqual("Locked during a fight", NoticeText());
         }
 
         // ---- every art slot shows exactly one of a sprite or a monogram --------
@@ -338,7 +341,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator DraggingASeatOntoTheRosterZoneInARunIsRefusedWithTheToast()
+        public IEnumerator DraggingASeatOntoTheRosterZoneInARunIsRefusedWithTheNotice()
         {
             yield return LoadScene("Map");
 
@@ -359,8 +362,8 @@ namespace PrincesPalace.PlayModeTests
             drag.OnEndDrag(FakePointer(zoneGo));
             yield return null;
 
-            Assert.AreEqual("Mid-run you can only reposition.", TextOf("PartyToastText"),
-                "the refusal toast did not reach the pane");
+            Assert.AreEqual("Party changes happen at camp", NoticeText(),
+                "the refusal did not reach the menu's notice");
             CollectionAssert.AreEqual(before, SaveSlotManager.CurrentSave.selectedCharacterIds,
                 "a refused roster drop still changed the seating");
         }
@@ -454,10 +457,10 @@ namespace PrincesPalace.PlayModeTests
                 "pane is still eating clicks");
         }
 
-        // ---- P4: the toast fades rather than hard-cutting ------------------------
+        // ---- the notice holds, then fades rather than hard-cutting ----------------
 
         [UnityTest]
-        public IEnumerator TheToastFadesOutOverTime()
+        public IEnumerator TheNoticeShowsAfterACommitAndIsGoneAfterItsHold()
         {
             yield return LoadScene("Hub");
 
@@ -472,15 +475,15 @@ namespace PrincesPalace.PlayModeTests
             party.ClickSeat(PartySeat.Rear);
             yield return null;
 
-            var toastGo = NodeOf("PartyToast");
-            var group = toastGo.GetComponent<CanvasGroup>();
-            Assert.IsNotNull(group, "the toast carries no CanvasGroup");
-            Assert.AreEqual(1f, group.alpha, 0.01f, "the toast should show at full alpha right after a commit");
+            var label = NodeOf("SystemFooterNotice").GetComponent<TMP_Text>();
+            Assert.AreEqual("Swapped Shawn and Odette.", label.text, "nothing was said after a commit");
+            Assert.AreEqual(1f, label.alpha, 0.01f, "the notice should show at full alpha right after a commit");
 
-            yield return new WaitForSecondsRealtime(2.5f);
+            // Hold 3.0s, then the 0.4s fade; the menu has the game paused, so
+            // this is the unscaled clock the notice runs on.
+            yield return new WaitForSecondsRealtime(MenuNotice.DefaultSeconds + MenuNotice.FadeSeconds + 0.3f);
 
-            Assert.IsTrue(group.alpha <= 0.01f || !toastGo.activeSelf,
-                "the toast should have faded out (or deactivated) after 2.5s");
+            Assert.AreEqual("", label.text, "the notice was still up after its hold and fade");
         }
 
         // ---- P4: the ground line, pinned against Shawn's own manifest entry -----
@@ -647,23 +650,18 @@ namespace PrincesPalace.PlayModeTests
         // half-made selection, and OpenParty's reopen runs its OnEnable ->
         // Refresh against the save [SetUp] just pointed at a fresh root.
         //
-        // What does need it is the toast. Close stops its fade coroutine with
-        // the toast still showing, so without this a refusal test would read
-        // the previous test's refusal off it.
+        // The notice needs none either: it drops whatever it was saying when
+        // the menu closes (MenuNotice.OnDisable).
         private IEnumerator LoadScene(string name)
         {
             yield return SharedScene.Ensure(name);
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            if (menu == null) yield break;
-            if (menu.IsOpen) menu.Close();
-
-            var toast = menu.GetComponentsInChildren<PartyToast>(includeInactive: true).FirstOrDefault();
-            if (toast != null) toast.gameObject.SetActive(false);
-            var toastText = menu.GetComponentsInChildren<Transform>(includeInactive: true)
-                .FirstOrDefault(t => t.name == "PartyToastText")?.GetComponent<TMP_Text>();
-            if (toastText != null) toastText.text = "";
+            if (menu != null && menu.IsOpen) menu.Close();
         }
+
+        // What the menu's one notice line says right now.
+        private string NoticeText() => TextOf("SystemFooterNotice");
 
         private void OpenParty()
         {

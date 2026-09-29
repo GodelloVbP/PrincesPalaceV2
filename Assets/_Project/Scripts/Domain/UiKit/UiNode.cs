@@ -244,6 +244,11 @@ namespace PrincesPalace.Domain.UiKit
         public string AllowOverlapReason;
         public string AllowOverflowReason;
 
+        // The menu type lint's only exemption (MenuTypeFloor): text that carries
+        // no information -- an ornament numeral, a watermark. REQUIRES a reason,
+        // and the node earns its own test that the text really is non-essential.
+        public string AllowSmallTextReason;
+
         // A fourth escape hatch, hover-rim-shaped: opts an unthemed Button out
         // of the default hover/focus rim Ui.Button now builds for it (see
         // Ui.Button's own header). REQUIRES a reason, same pattern as the
@@ -448,6 +453,12 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode AllowOverflow(string reason)
         {
             AllowOverflowReason = Require(reason, nameof(AllowOverflow));
+            return this;
+        }
+
+        public UiNode AllowSmallText(string reason)
+        {
+            AllowSmallTextReason = Require(reason, nameof(AllowSmallText));
             return this;
         }
 

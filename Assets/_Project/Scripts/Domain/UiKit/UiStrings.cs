@@ -1210,9 +1210,23 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString SystemMenuTitle =
             UiString.Define("system.title", "DIVINE PRINCIPALITY");
         public static readonly UiString SystemBetweenDescents =
-            UiString.Define("system.between_descents", "BETWEEN DESCENTS");
+            UiString.Define("system.between_descents", "Between descents");
+        public static readonly UiString SystemFloorRoom =
+            UiString.Define("system.floor_room", "Floor {0}  ·  Room {1}", "Floor 12  ·  Room 34");
+        public static readonly UiString SystemGold =
+            UiString.Define("system.gold", "Gold {0}", "Gold 99999");
+        public static readonly UiString SystemEmbers =
+            UiString.Define("system.embers", "Embers {0}", "Embers 9999");
         public static readonly UiString SystemEscHint =
-            UiString.Define("system.esc_hint", "ESC");
+            UiString.Define("system.esc_hint", "Esc");
+
+        // The lintel's mode pill (plan C10): what the whole menu may change.
+        public static readonly UiString SystemModeCamp =
+            UiString.Define("system.mode.camp", "AT CAMP");
+        public static readonly UiString SystemModeDescent =
+            UiString.Define("system.mode.descent", "IN A DESCENT");
+        public static readonly UiString SystemModeFight =
+            UiString.Define("system.mode.fight", "IN A FIGHT — VIEW ONLY");
         public static readonly UiString SystemClose =
             UiString.Define("system.close", "X");
 
@@ -1426,17 +1440,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PartyToastBenched =
             UiString.Define("party.toast.benched", "{0} returns to the bench.",
                 "Bjorn returns to the bench.");
-        public static readonly UiString PartyToastFormationFixedInFight =
-            UiString.Define("party.toast.formation_fixed_in_fight", "The formation is fixed during a fight.");
         public static readonly UiString PartyToastSeatNotOpen =
             UiString.Define("party.toast.seat_not_open", "That seat is not open yet.");
         public static readonly UiString PartyToastSeatLocked =
             UiString.Define("party.toast.seat_locked", "{0} is locked in this run.",
                 "Bjorn is locked in this run.");
-        public static readonly UiString PartyToastBenchedDuringRun =
-            UiString.Define("party.toast.benched_during_run", "New companions join between runs.");
-        public static readonly UiString PartyToastRepositionOnlyDuringRun =
-            UiString.Define("party.toast.reposition_only_during_run", "Mid-run you can only reposition.");
         public static readonly UiString PartyToastPartyNeverEmpty =
             UiString.Define("party.toast.party_never_empty", "The party can never be empty.");
 
@@ -1449,6 +1457,34 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("menu.refused.party", "Party changes happen at camp");
         public static readonly UiString MenuBooksInDescent =
             UiString.Define("menu.refused.books", "Spell books are placed during a descent");
+
+        // ---- the footer's prompt labels (plan C12) ---------------------------------
+        //
+        // What a button does, in a word or two beside its glyph. Labels only:
+        // the glyph text is a button name, kept in PromptGlyphs.
+        public static readonly UiString PromptSelect = UiString.Define("menu.prompt.select", "Select");
+        public static readonly UiString PromptClose = UiString.Define("menu.prompt.close", "Close");
+        public static readonly UiString PromptBack = UiString.Define("menu.prompt.back", "Back");
+        public static readonly UiString PromptTab = UiString.Define("menu.prompt.tab", "Tab");
+        public static readonly UiString PromptPagesCharacter =
+            UiString.Define("menu.prompt.pages.character", "Character");
+        public static readonly UiString PromptOpen = UiString.Define("menu.prompt.open", "Open");
+        public static readonly UiString PromptEquip = UiString.Define("menu.prompt.equip", "Equip");
+        public static readonly UiString PromptUnequip = UiString.Define("menu.prompt.unequip", "Unequip");
+        public static readonly UiString PromptSpendPoint = UiString.Define("menu.prompt.spend_point", "Spend point");
+        public static readonly UiString PromptPickBook = UiString.Define("menu.prompt.pick_book", "Pick book");
+        public static readonly UiString PromptPlaceBook = UiString.Define("menu.prompt.place_book", "Place book");
+        public static readonly UiString PromptReplaceBook = UiString.Define("menu.prompt.replace_book", "Replace book");
+        public static readonly UiString PromptCollect = UiString.Define("menu.prompt.collect", "Collect");
+        public static readonly UiString PromptPickUp = UiString.Define("menu.prompt.pick_up", "Pick up");
+        public static readonly UiString PromptPlace = UiString.Define("menu.prompt.place", "Place");
+        public static readonly UiString PromptPutBack = UiString.Define("menu.prompt.put_back", "Put back");
+        public static readonly UiString PromptSendToBench = UiString.Define("menu.prompt.send_to_bench", "Send to bench");
+        public static readonly UiString PromptChangeTitle = UiString.Define("menu.prompt.change_title", "Change title");
+
+        // A prompt whose action the context refuses (MenuPermissions).
+        public static readonly UiString PromptLocked =
+            UiString.Define("menu.prompt.locked", "{0} (locked)", "Replace book (locked)");
 
         // Every entry declared above, derived rather than restated.
         //

@@ -67,8 +67,14 @@ namespace PrincesPalace.Domain.UiKit
         // Only shown while a run is in progress.
         public readonly bool RunOnly;
 
+        // What LB/RB page within this tab (plan C8), as the footer's prompt
+        // label. Default (invalid) for a tab that pages nothing, and then no
+        // pager prompt is shown.
+        public readonly UiString Pages;
+
         public SystemMenuTabDef(SystemMenuTab tab, string key, UiString label, UiString shortLabel,
-                                SystemMenuTabGroup group, char hotkey = NoHotkey, bool runOnly = false)
+                                SystemMenuTabGroup group, char hotkey = NoHotkey, bool runOnly = false,
+                                UiString pages = default)
         {
             Tab = tab;
             Key = key;
@@ -77,6 +83,7 @@ namespace PrincesPalace.Domain.UiKit
             Group = group;
             Hotkey = hotkey;
             RunOnly = runOnly;
+            Pages = pages;
         }
 
         public bool HasHotkey => Hotkey != NoHotkey;
@@ -91,7 +98,7 @@ namespace PrincesPalace.Domain.UiKit
         {
             new SystemMenuTabDef(SystemMenuTab.Character, "Character",
                 UiStrings.SystemTabCharacter, UiStrings.SystemTabCharacterShort,
-                SystemMenuTabGroup.Game, hotkey: 'C'),
+                SystemMenuTabGroup.Game, hotkey: 'C', pages: UiStrings.PromptPagesCharacter),
             new SystemMenuTabDef(SystemMenuTab.Party, "Party",
                 UiStrings.SystemTabParty, UiStrings.SystemTabPartyShort,
                 SystemMenuTabGroup.Game, hotkey: 'P'),

@@ -1065,6 +1065,15 @@ public static class ScreenRegistry
 
         controller.panel = result.Go(menu.Root);
 
+        // THE FOOTER: the one notice line on the label it draws in, and the
+        // prompt row, whose slots UiAutoBind fills off the screen's own lists.
+        // The footer asks the controller what to say, so it carries the
+        // controller back rather than a copy of anything.
+        controller.notice = result.Attach<MenuNotice>(menu.FooterNotice);
+        controller.footer = result.Attach<MenuPromptFooter>(menu.Footer);
+        UiAutoBind.Bind(result, controller.footer, menu);
+        controller.footer.menu = controller;
+
         // Decided here rather than sniffed at runtime: the hub is not a
         // descent, and no state can make it one. Every pane reads it back
         // through the controller (menu.Context).
@@ -1157,11 +1166,6 @@ public static class ScreenRegistry
         // own header for why that split, not UiAutoBind, owns the delegates.
         controller.seatDragSources = party.SeatButtons.Select(result.Attach<PartyDragSource>).ToArray();
         controller.cardDragSources = party.CardButtons.Select(result.Attach<PartyDragSource>).ToArray();
-
-        // The toast's own fader (P4). [RequireComponent(CanvasGroup)] on
-        // PartyToast adds the CanvasGroup as a side effect of this one
-        // Attach -- see PartyToast's own header.
-        controller.toastFader = result.Attach<PartyToast>(party.Toast);
 
         return controller;
     }

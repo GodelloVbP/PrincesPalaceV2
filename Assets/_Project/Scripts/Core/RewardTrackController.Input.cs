@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.UiKit;
@@ -19,7 +20,7 @@ namespace PrincesPalace
     // NEVER A NO-OP, and that is the rule the whole file is built around. A
     // hundred dots that do nothing when pressed teach the player that none of
     // them do, and the ones that DO matter are then invisible.
-    public partial class RewardTrackController
+    public partial class RewardTrackController : IMenuPromptSource
     {
         private RailScroll _railScroll;
         private BarSlider _ribbonSeek;
@@ -269,6 +270,29 @@ namespace PrincesPalace
             GlideTo(level);
         }
 
+        // The footer's prompts (IMenuPromptSource): a waiting node and the
+        // collect button collect, any other node shows its card, and B always
+        // steps back to the dossier the track opened over.
+        public IReadOnlyList<MenuPrompt> PromptsFor(Selectable focused)
+        {
+            if (focused == null) return null;
+
+            var back = new MenuPrompt(PromptButton.Cancel, UiStrings.PromptBack);
+            var collect = new MenuPrompt(PromptButton.Confirm, UiStrings.PromptCollect, MenuAction.CollectReward);
+
+            if (collectButton != null && focused == collectButton) return new[] { collect, back };
+
+            var select = new MenuPrompt(PromptButton.Confirm, UiStrings.PromptSelect);
+
+            int node = dots == null ? -1 : System.Array.IndexOf((System.Array)dots, focused);
+            if (node < 0) return focused.transform.IsChildOf(transform) ? new[] { select, back } : null;
+
+            int level = RewardTrackLayout.FirstLevel + node;
+            return RewardTrack.IsWaiting(level, _level, _claimed)
+                ? new[] { collect, back }
+                : new[] { select, back };
+        }
+
         // COLLECT EVERYTHING is exactly pressing the player's own node, not a
         // second path to the same place. Two mechanisms for one action is how
         // they drift.
@@ -281,6 +305,10 @@ namespace PrincesPalace
 
             int from = character.claimedTrackLevel;
             if (throughLevel <= from) return;
+
+            // Only a press that would collect can be refused: a node with
+            // nothing waiting is viewing, and viewing is allowed everywhere.
+            if (SystemMenuController.Refuses(menu, MenuAction.CollectReward)) return;
 
             // TO THE NODE THAT WAS PRESSED, and no further -- `throughLevel`
             // bounds the claim rather than settling the entire gap. The

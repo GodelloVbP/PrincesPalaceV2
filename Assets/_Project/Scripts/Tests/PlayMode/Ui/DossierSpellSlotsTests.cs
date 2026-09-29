@@ -287,18 +287,24 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, RunManager.Run.learnedSpells.Count,
                 "the duplicate was learned into a second slot");
 
+            // Said on the menu's one notice line (AUDIT #146, #259), not on a
+            // label of the panel: the slots stay readable while it is up.
+            var notice = menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .FirstOrDefault(t => t.name == "SystemFooterNotice")?.GetComponent<TMPro.TMP_Text>();
+            Assert.IsNotNull(notice, "the menu has no notice line");
+            Assert.AreEqual("You already have this spell prepared", notice.text,
+                "the press was refused and nothing said so, which reads as a dead slot");
+
             var line = Named(dossier, "DossierSpellsNoBooksLine");
             Assert.IsNotNull(line, "DossierSpellsNoBooksLine is not in the built scene");
-            Assert.IsTrue(line.activeInHierarchy,
-                "the press was refused and the panel said nothing, which reads as a dead slot");
-            Assert.AreEqual("You already have this spell prepared",
-                line.GetComponent<TMPro.TMP_Text>()?.text);
+            Assert.IsFalse(line.activeInHierarchy,
+                "the refusal is drawn on the slot band again, over the slot it refuses");
         }
 
         // ---- paging drops the stale selection (this bug class) --------------
         //
-        // CharacterDossierController.Step reset _alreadyKnownRefusal on a page
-        // but left _selectedUnassignedRow standing, so a book selected on
+        // CharacterDossierController.Step left _selectedUnassignedRow standing
+        // on a page, so a book selected on
         // character A stayed "selected" once the pane showed character B --
         // and pressing an empty slot on B taught THEM A's book. Fixed by
         // clearing the row in Step, mirroring the refusal clear next to it.

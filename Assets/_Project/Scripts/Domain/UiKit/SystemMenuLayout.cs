@@ -240,7 +240,26 @@ namespace PrincesPalace.Domain.UiKit
         public static float GoldRuleCentreY => StageHalfHeight - GoldRuleScreenY;
 
         public const float LintelPadX = 24f;
-        public const float CloseButtonSize = 34f;
+        public const float CloseButtonSize = 38f;
+
+        // ---- the mode pill (plan C10) -----------------------------------------------
+        //
+        // A rimmed plate on the lintel, sized to its words. It is authored at
+        // PillMaxWidth so UiAudit sees the widest it can be, and the controller
+        // fits it to the measured text on every open (PillWidth). Its left edge
+        // is fixed; the lintel's gold and embers start after PillMaxWidth's end.
+        public const float PillHeight = 36f;
+        public const float PillPadX = 16f;
+        public const float PillMaxWidth = 392f;
+
+        // Lintel space, measured from the lintel's own centre.
+        public const float PillLeftEdgeX = -100f;
+
+        public static float PillWidth(float textWidth) =>
+            System.Math.Min(PillMaxWidth,
+                (float)System.Math.Ceiling((textWidth + PillPadX * 2f) / 2f) * 2f);
+
+        public static float PillCentreX(float width) => PillLeftEdgeX + width * 0.5f;
     }
 
     // One arrangement of the bar: which label set it uses and where every box

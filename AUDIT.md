@@ -31,7 +31,7 @@ debt), and a struck finding gets its number removed.
 - Map: #226, #254
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
-- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #146, #150, #178, #199, #214, #241, #243, #248
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214, #241, #243, #248
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #219, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #112, #123, #220, #255
 - Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
@@ -1390,49 +1390,7 @@ say if it should be.
 
 ## Findings from the integration pass, 2026-09-11
 
-### 146. The dossier's AlreadyKnown refusal draws on top of the slot it is refusing
-
-Found 2026-09-11 by the #116 fixer and confirmed by the integrator against the screen tree.
-
-#116's fix (`ed24933b`) puts "You already have this spell prepared" into
-`DossierSpellsNoBooksLine`, the label the panel already owns. That node was placed for a
-different reading: `CharacterDossierScreen.cs:723-727` centres it in the three-slot band
-(`Place.At(cx, slotTop - slotBandHeight * 0.5f)`), which is exactly slot 1's row, because in
-its original case -- a character whose primary pool refuses books -- the three slot buttons are
-not drawn at all and the line stands alone in the space they would occupy. Its own comment says
-so: *"WHAT REPLACES THE THREE SLOTS"*.
-
-The AlreadyKnown reading is the opposite situation. The slots are up, the player is looking at
-them, and the refusal is about one of them -- so the line lands across `DossierSpellSlot1`'s
-name for as long as it shows.
-
-**Nothing catches this.** The node is `.AsDecor()` and `UiAudit`'s `CheckSiblingOverlap` skips
-any pair with a decor side, which is deliberate and correct for the case the node was built for
-(it overlaps all three slot buttons by construction there, with nothing drawn underneath). The
-exemption was earned by one reading and is now doing duty for two.
-
-Not redesigned here. #116's placement was the owner's call and this is a consequence of it, not
-a defect in it: option 3 was chosen precisely because it needed no screen-tree change, and every
-fix below reverses that.
-
-**Two options** (both named by the #116 fixer).
-1. **The slot chip's own label.** The refusal is written into the slot the press would hit,
-   which is where the player is already looking and which cannot collide with itself. Closest
-   to filed option 1 of #116, and it leaves `NoFreeSlot` -- the other reason the line covers --
-   without a home.
-2. **A dedicated line of its own**, under the slot band rather than inside it, so the two
-   readings stop sharing a node. Needs a screen-tree change and therefore `-BuildScenes`, and
-   it re-opens the layout question the shared node sidestepped: the panel's geometry below the
-   divider has to absorb the extra row, or the line has to be `Inactive()` decor in space the
-   divider already owns.
-
-Repro: `learnedSpells=[{shawn, mud_burst, 0}]`, `unassignedSpellBooks=["mud_burst"]`, select the
-row, press slot 1. `DossierSpellSlotsTests` already builds this state -- but it writes no
-picture of it, so the overlap was measured across the two captures that fixture DOES write:
-in `spell_slots_present.png` the three slot names sit at y = 397, 461 and 525, centred at
-x = 385 in a 1920x1080 capture, and in `spell_slots_refused.png` the borrowed line draws at
-y = 461, x = 385. Same node, middle slot's row, to the pixel. A fixture that photographs the
-AlreadyKnown state is the other thing missing here.
+### ~~146. The dossier's AlreadyKnown refusal draws on top of the slot it is refusing~~ — fixed in the system menu 2b commit: the refusal is a notice on the menu's footer (`MenuNotice`), and the slot band's line carries only the no-books sentence again
 
 ## Findings from the total bug hunt, 2026-09-11 (stage 3, the combat seam)
 
@@ -2755,6 +2713,12 @@ sites; gate: tools/run_tests_parallel.ps1 -Changed.
 1350-1354 — the mechanism #146 is about), and `MapController.roomMessageLabel`
 (~47,340-344). Fix: one notice component (text + optional timer) that #220's
 save-failure notice can use too, instead of a fifth mechanism.
+
+**Progress (system menu 2b):** `Core/MenuNotice.cs`, reached through
+`SystemMenuController.ShowNotice`, is the one component. `PartyToast` and
+`_alreadyKnownRefusal` are gone (#146 struck) and every C3 refusal in the menu
+routes to it. Still on their own mechanism: `ShopController._refusal`,
+`MapController.roomMessageLabel`, and #220's save-failure notice.
 
 Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
 

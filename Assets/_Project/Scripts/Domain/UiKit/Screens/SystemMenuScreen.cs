@@ -30,12 +30,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string PanelFill = "#1A1024F5";        // PanelViolet at 96%
         private const string PanelRim = FightHudPalette.BorderGold;         // BorderGold
         private const string BarPlate = "#12091C";           // opaque, the bar's own ground
+        private const string PillFill = "#241634";           // a shade up from the plate, so the pill reads as raised
         private const string Hairline = FightHudPalette.Hairline;
         private const string GoldLight = FightHudPalette.GoldLight;
         private const string GoldRule = "#E7B25C8C";
         private const string TextPrimary = FightHudPalette.TextPrimary;
         private const string TextMuted = FightHudPalette.TextMuted;
-        private const string QuietHotkey = FightHudPalette.QuietHotkey;
         private const string TabHover = FightHudPalette.HoverTint;
 
         public CharacterDossierScreen Dossier;
@@ -55,6 +55,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef GoldValue;
         public NodeRef EmbersValue;
         public NodeRef CloseButton;
+
+        // The mode pill (plan C10): the plate, and the words in it.
+        public NodeRef ModePill;
+        public NodeRef ModePillLabel;
+
+        // The footer, below the panel (plan C12): the notice on its left and
+        // a fixed number of prompt slots on its right. The slots are authored
+        // once and re-laid at runtime by MenuPromptFooter, because how many
+        // prompts show and how wide they are depend on the focus.
+        public NodeRef Footer;
+        public NodeRef FooterNotice;
+        public List<NodeRef> PromptPlates = new List<NodeRef>();
+        public List<NodeRef> PromptGlyphTexts = new List<NodeRef>();
+        public List<NodeRef> PromptLabels = new List<NodeRef>();
 
         // Indexed by tab, in SystemMenuTabs.All order. The count audit is
         // declared against these in ScreenRegistry, so a tab that gained a
@@ -290,7 +304,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // parent, and that parent has no business being 1920 wide on a
             // canvas that is allowed to be narrower.
             var stage = Ui.Panel("SystemMenuStage", Place.At(0f, 0f), UiSize.Fill,
-                BuildLintel(screen), frame);
+                BuildLintel(screen), frame, BuildFooter(screen));
 
             // A modal, so it dims whatever it is standing over -- this menu can
             // open on the fight, and a transparent overlay there would be
@@ -321,50 +335,109 @@ namespace PrincesPalace.Domain.UiKit.Screens
             TabButton(def, shortLabel, new UiVec(SystemMenuLayout.RowWidth, SystemMenuLayout.TabHeight),
                 Place.At(0f, 0f));
 
-        // Four 1px edges rather than a painted frame. The design asks for a
-        // hairline rim in a token colour, and a sprite would put that colour
-        // in a PNG where nobody can grep it.
-                        // ---- the title lintel ---------------------------------------------------
+        // A rimmed plate: a 1px ring of `rimHex` around a fill, as two stretched
+        // solids rather than four edges, so the box may be resized at runtime
+        // (the mode pill fits its words, a glyph plate fits its letters) with
+        // nothing to re-place. Decor throughout; it is drawn, never pressed.
+        private static UiNode Plate(string name, string rimHex, string fillHex, UiVec size, Place place,
+                                    params UiNode[] over)
+        {
+            var parts = new List<UiNode>
+            {
+                Ui.Solid(name + "Rim", rimHex, Place.Stretch(), UiSize.Fill).AsDecor(),
+                Ui.Solid(name + "Fill", fillHex, Place.Stretch(1f, 1f, 1f, 1f), UiSize.Fill).AsDecor(),
+            };
+
+            parts.AddRange(over);
+            return Ui.Panel(name, place, UiSize.Fixed(size), parts);
+        }
+
+        // THE ONE GLYPH PLATE, for the lintel's Esc and every prompt in the
+        // footer: a rimmed 32-tall plate with the button's letters on it. The
+        // letters are TacticalData at 24, which is both readable and over the
+        // all-caps floor for "LB" and "RT". Its width is the caller's; the
+        // footer refits it to the measured letters.
+        private static UiNode GlyphPlate(string name, UiString text, float width, Place place, out UiNode letters)
+        {
+            letters = Ui.Label(name + "Text", text, new UiVec(width, MenuFooterLayout.GlyphHeight),
+                    GlyphLetterSize, PromptGlyphs.Plain, Place.Stretch())
+                .Styled(TypographyRole.TacticalData)
+                .AsDecor();
+
+            return Plate(name, GoldRule, BarPlate, new UiVec(width, MenuFooterLayout.GlyphHeight), place, letters);
+        }
+
+        private const int GlyphLetterSize = 24;
+
+        // ---- the title lintel ---------------------------------------------------
         //
         // ABOVE the panel, in the 90px of screen the panel does not use, and
         // deliberately not panel chrome: it carries the run's identity and the
         // player's currency, which belong to the run rather than to whichever
         // tab is open. Inside the panel it would have cost the content pane
         // 52px for something that never changes with the tab.
+        //
+        // Left to right: title, context, the mode pill, then gold, embers, the
+        // Esc glyph and close, flush to the right pad. Every label takes a role
+        // and sits at or over the type floor (MenuTypeFloor); the numbers below
+        // are the room that costs, and UiTextFitAudit holds the authored ones
+        // (title, Esc) to their boxes at build.
         private static UiNode BuildLintel(SystemMenuScreen screen)
         {
-            var title = Ui.Label("SystemLintelTitle", UiString.Runtime, new UiVec(400f, 24f), 19, GoldLight,
-                    Place.At(-560f, 0f))
-                .Tracked(SystemMenuLayout.LintelTitleTracking)
+            var title = Ui.Label("SystemLintelTitle", UiStrings.SystemMenuTitle, new UiVec(390f, 32f), 24, GoldLight,
+                    Place.At(-581f, 0f))
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(SystemMenuLayout.LintelTitleTracking)
                 .AsDecor();
 
-            var context = Ui.Label("SystemLintelContext", UiString.Runtime, new UiVec(420f, 20f), 14, TextMuted,
-                Place.At(-120f, 0f)).AsDecor();
+            var context = Ui.Label("SystemLintelContext", UiString.Runtime, new UiVec(230f, 28f), 20, TextMuted,
+                    Place.At(-231f, 0f))
+                .Styled(TypographyRole.Body)
+                .AsDecor();
 
-            var gold = Ui.Label("SystemLintelGold", UiString.Runtime, new UiVec(170f, 20f), 14, TextPrimary,
-                Place.At(380f, 0f)).AsDecor();
+            // THE MODE PILL (plan C10): what the whole menu may change, said
+            // once here so no pane needs a status of its own. Authored at its
+            // widest; the controller fits it to the words for the context.
+            var pillLabel = Ui.Label("SystemModePillLabel", UiString.Runtime,
+                    new UiVec(SystemMenuLayout.PillMaxWidth, SystemMenuLayout.PillHeight), 24, GoldLight,
+                    Place.Stretch())
+                .Styled(TypographyRole.FunctionalHeading)
+                .AsDecor();
 
-            var embers = Ui.Label("SystemLintelEmbers", UiString.Runtime, new UiVec(170f, 20f), 14, TextPrimary,
-                Place.At(570f, 0f)).AsDecor();
+            var pill = Plate("SystemModePill", GoldRule, PillFill,
+                new UiVec(SystemMenuLayout.PillMaxWidth, SystemMenuLayout.PillHeight),
+                Place.At(SystemMenuLayout.PillCentreX(SystemMenuLayout.PillMaxWidth), 0f), pillLabel);
 
-            // The ONLY thing QuietHotkey is allowed on. It measures 3.17:1
-            // against the panel, which is under the floor for anything a player
-            // has to read -- a glyph they only have to recognise is the one
-            // exception the design pass carves out for it.
-            var esc = Ui.Label("SystemLintelEscHint", UiStrings.SystemEscHint, new UiVec(42f, 18f), 12,
-                QuietHotkey, Place.At(711f, 0f)).AsDecor();
+            var gold = Ui.Label("SystemLintelGold", UiString.Runtime, new UiVec(150f, 30f), 22, TextPrimary,
+                    Place.At(379f, 0f))
+                .Styled(TypographyRole.TacticalData)
+                .AsDecor();
+
+            var embers = Ui.Label("SystemLintelEmbers", UiString.Runtime, new UiVec(170f, 30f), 22, TextPrimary,
+                    Place.At(551f, 0f))
+                .Styled(TypographyRole.TacticalData)
+                .AsDecor();
+
+            // The lintel's Esc is a glyph like the footer's, from the same
+            // plate. It names the keyboard's key whatever device is in hand: it
+            // is where the eye finds "how do I leave", and the pad's own close
+            // is in the footer.
+            var esc = GlyphPlate("SystemLintelEsc", UiStrings.SystemEscHint, 64f, Place.At(700f, 0f), out _);
 
             var close = Ui.Button("SystemLintelClose", UiStrings.SystemClose,
-                    new UiVec(SystemMenuLayout.CloseButtonSize, SystemMenuLayout.CloseButtonSize), 16,
-                    Place.At(759f, 0f))
+                    new UiVec(SystemMenuLayout.CloseButtonSize, SystemMenuLayout.CloseButtonSize), 24,
+                    Place.At(758f, 0f))
                 .Closes()
-                .NoChrome();
+                .NoChrome()
+                .Styled(TypographyRole.FunctionalHeading);
 
             screen.RunTitle = title;
             screen.ContextLine = context;
             screen.GoldValue = gold;
             screen.EmbersValue = embers;
             screen.CloseButton = close;
+            screen.ModePill = pill;
+            screen.ModePillLabel = pillLabel;
 
             var children = new List<UiNode>
             {
@@ -385,11 +458,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.At(0f, 0f))
                     .AsDecor(),
                 title,
-                Ui.Solid("SystemLintelRuleA", Hairline, new UiVec(1f, 24f), Place.At(-344f, 0f)).AsDecor(),
+                Ui.Solid("SystemLintelRuleA", Hairline, new UiVec(1f, 24f), Place.At(-366f, 0f)).AsDecor(),
                 context,
+                pill,
                 gold,
                 embers,
-                Ui.Solid("SystemLintelRuleB", Hairline, new UiVec(1f, 24f), Place.At(664f, 0f)).AsDecor(),
+                Ui.Solid("SystemLintelRuleB", Hairline, new UiVec(1f, 24f), Place.At(652f, 0f)).AsDecor(),
                 esc,
                 close,
 
@@ -407,6 +481,85 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(0f, SystemMenuLayout.LintelCentreY),
                 UiSize.Fixed(SystemMenuLayout.LintelWidth, SystemMenuLayout.LintelHeight),
                 children);
+        }
+
+        // ---- the footer (plan C12) --------------------------------------------------
+        //
+        // BELOW the panel, mirroring the lintel above it, so no pane loses
+        // height to it. The notice sits on the left. The prompts sit on the
+        // right: MenuFooterLayout.PromptSlots plates and labels, authored at
+        // the positions the row takes at typical widths and moved at runtime
+        // by MenuPromptFooter to wherever the focus's prompts measure out.
+        private static UiNode BuildFooter(SystemMenuScreen screen)
+        {
+            var notice = Ui.Label("SystemFooterNotice", UiString.Runtime,
+                    new UiVec(MenuFooterLayout.NoticeWidth, MenuFooterLayout.NoticeHeight), 20, TextPrimary,
+                    Place.At(MenuFooterLayout.NoticeCentreX, 0f))
+                .Styled(TypographyRole.Body)
+                .TextAligned(UiTextAlign.Left)
+                .Truncated()
+                .AsDecor();
+
+            screen.FooterNotice = notice;
+
+            var children = new List<UiNode>
+            {
+                Ui.Solid("SystemFooterPlate", BarPlate,
+                        new UiVec(MenuFooterLayout.Width, MenuFooterLayout.Height), Place.At(0f, 0f))
+                    .AsDecor(),
+
+                // The rule on top, against the panel's bottom edge: the
+                // lintel's own gold rule, upside down.
+                Ui.Solid("SystemFooterGoldRule", GoldRule, new UiVec(MenuFooterLayout.Width, 1f),
+                        Place.At(0f, MenuFooterLayout.Height * 0.5f - 0.5f))
+                    .AsDecor(),
+                notice,
+            };
+
+            // Where the slots sit before anyone has focus: a typical glyph and
+            // label width, through the same arithmetic the runtime uses.
+            var typical = new float[MenuFooterLayout.PromptSlots];
+            var typicalLabel = new float[MenuFooterLayout.PromptSlots];
+            for (int i = 0; i < typical.Length; i++)
+            {
+                typical[i] = 24f;
+                typicalLabel[i] = 90f;
+            }
+
+            var placed = MenuFooterLayout.Arrange(typical, typicalLabel);
+            if (placed.Count != MenuFooterLayout.PromptSlots)
+            {
+                throw new System.InvalidOperationException(
+                    $"The footer has room for {placed.Count} typical prompts but authors {MenuFooterLayout.PromptSlots} " +
+                    "slots; lower PromptSlots or widen the prompt area.");
+            }
+
+            for (int i = 0; i < placed.Count; i++)
+            {
+                var plate = GlyphPlate($"SystemPrompt{i}Glyph", UiString.Runtime, placed[i].PlateWidth,
+                    Place.At(placed[i].PlateCentreX, 0f), out var letters);
+
+                var label = Ui.Label($"SystemPrompt{i}Label", UiString.Runtime,
+                        new UiVec(placed[i].LabelWidth, 28f), 20, TextPrimary,
+                        Place.At(placed[i].LabelCentreX, 0f))
+                    .Styled(TypographyRole.Body)
+                    .TextAligned(UiTextAlign.Left)
+                    .AsDecor();
+
+                screen.PromptPlates.Add(plate);
+                screen.PromptGlyphTexts.Add(letters);
+                screen.PromptLabels.Add(label);
+                children.Add(plate);
+                children.Add(label);
+            }
+
+            var footer = Ui.Panel("SystemMenuFooter",
+                Place.At(0f, MenuFooterLayout.CentreY),
+                UiSize.Fixed(MenuFooterLayout.Width, MenuFooterLayout.Height),
+                children);
+
+            screen.Footer = footer;
+            return footer;
         }
     }
 }

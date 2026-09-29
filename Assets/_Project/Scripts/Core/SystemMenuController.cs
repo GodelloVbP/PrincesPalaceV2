@@ -33,6 +33,17 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text embersValue;
         [SerializeField] internal Button closeButton;
 
+        // The mode pill (plan C10): the plate, moved and sized to its words,
+        // and the label inside it.
+        [SerializeField] internal RectTransform modePill;
+        [SerializeField] internal TMP_Text modePillLabel;
+
+        // The footer below the panel: the one notice line (plan C11) and the
+        // prompt row (plan C12). Both are reached through this controller, so
+        // no pane holds a reference to either.
+        [SerializeField] internal MenuNotice notice;
+        [SerializeField] internal MenuPromptFooter footer;
+
         // Which part of the game this scene is (MenuContext). Set at build time
         // by ScreenRegistry.WireSystemMenu, and every pane reads it here rather
         // than keeping a flag of its own; MenuPermissions turns it into what a
@@ -683,13 +694,85 @@ namespace PrincesPalace
             if (contextLine != null)
             {
                 var run = RunManager.Run;
-                contextLine.SetContent(inRun && run != null
-                    ? $"FLOOR {run.floor}  ·  ROOM {run.step}"
-                    : UiStrings.SystemBetweenDescents.Format());
+                if (inRun && run != null) contextLine.Set(UiStrings.SystemFloorRoom, run.floor, run.step);
+                else contextLine.Set(UiStrings.SystemBetweenDescents);
             }
 
-            if (goldValue != null) goldValue.SetContent($"GOLD  {save?.Gold ?? 0}");
-            if (embersValue != null) embersValue.SetContent($"EMBERS  {save?.EmberTotal() ?? 0}");
+            if (goldValue != null) goldValue.Set(UiStrings.SystemGold, save?.Gold ?? 0);
+            if (embersValue != null) embersValue.Set(UiStrings.SystemEmbers, save?.EmberTotal() ?? 0);
+
+            RefreshModePill();
+        }
+
+        // THE PILL FITS ITS WORDS. Its left edge is fixed and its width follows
+        // the measured text for this context, so "AT CAMP" is not a plate built
+        // for "IN A FIGHT — VIEW ONLY". The rim and fill stretch with it.
+        private void RefreshModePill()
+        {
+            if (modePillLabel == null) return;
+
+            var text = MenuModePill.For(context).Format();
+            modePillLabel.SetContent(text);
+
+            if (modePill == null) return;
+
+            float width = SystemMenuLayout.PillWidth(modePillLabel.GetPreferredValues(text).x);
+            modePill.sizeDelta = new Vector2(width, SystemMenuLayout.PillHeight);
+            modePill.anchoredPosition = new Vector2(SystemMenuLayout.PillCentreX(width), modePill.anchoredPosition.y);
+        }
+
+        // ---- the notice and the prompts ------------------------------------------------
+        //
+        // Every message the menu's panes have for the player goes through here
+        // (plan C11), so it always lands in the same place on the same clock.
+        // Null-tolerant: a fixture scene may carry no footer.
+        public void ShowNotice(UiString text, float seconds = MenuNotice.DefaultSeconds) =>
+            notice?.Show(text, seconds);
+
+        public void ShowNotice(UiString text, object[] args, float seconds = MenuNotice.DefaultSeconds) =>
+            notice?.Show(text, args, seconds);
+
+        // A line that stays until cleared, under whatever notice is up.
+        public void SetStateLine(UiString text) => notice?.SetState(text);
+
+        public void ClearStateLine() => notice?.ClearState();
+
+        // THE REFUSAL EVERY PANE SHARES: true when MenuPermissions refuses the
+        // action in this menu's context, after telling the player why. A handler
+        // reads `if (SystemMenuController.Refuses(menu, action)) return;`, so a
+        // refused press is never silent and the words come from the one table
+        // that decided it. Static and null-tolerant for the panes' sake: a
+        // fixture pane with no menu reads as camp and has nowhere to say it.
+        public static bool Refuses(SystemMenuController menu, MenuAction action)
+        {
+            var where = menu != null ? menu.Context : MenuContext.Camp;
+            if (MenuPermissions.Allows(action, where)) return false;
+
+            menu?.ShowNotice(MenuPermissions.Reason(action, where));
+            return true;
+        }
+
+        // What the footer says for the focused control: the first active pane
+        // source with an answer, else the frame's own row. Asked at the moment
+        // of drawing, never cached, for the reason INavCancelClaim is: which
+        // pane is active changes under this one component.
+        public IReadOnlyList<MenuPrompt> CurrentPrompts()
+        {
+            Selectable focused = null;
+            var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            if (selected != null) focused = selected.GetComponent<Selectable>();
+
+            var activePane = ActivePane();
+            if (activePane != null)
+            {
+                foreach (var source in activePane.GetComponentsInChildren<IMenuPromptSource>(includeInactive: false))
+                {
+                    var answer = source.PromptsFor(focused);
+                    if (answer != null) return answer;
+                }
+            }
+
+            return MenuPrompts.Defaults(SystemMenuTabs.All[_selected]);
         }
 
         // THE TRIGGER SHORTCUT (INavTabStrip): LT/RT step tabs, freeing
