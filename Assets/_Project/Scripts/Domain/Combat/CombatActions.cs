@@ -80,8 +80,21 @@ namespace PrincesPalace.Domain.Combat
             return true;
         }
 
-        public static bool IsLegalFor(CombatantState actor, ResolvedSkill skill, out string refusal) =>
-            IsLegalFor(actor, IsPhysicalMove(skill), out refusal);
+        public static bool IsLegalFor(CombatantState actor, ResolvedSkill skill, out string refusal)
+        {
+            // A FORM CAN FORBID WHOLE KINDS OF CAST (Berserk: no shouts, no
+            // shields). Stated on the form, asked here, so the menu, the
+            // detail card, the bot's menu and the cast refusal all read one
+            // answer.
+            var form = actor?.Transformation;
+            if (skill != null && form != null && form.Forbids(skill.Effect))
+            {
+                refusal = $"{actor.Name} cannot use {skill.DisplayName} while {form.DisplayName}.";
+                return false;
+            }
+
+            return IsLegalFor(actor, IsPhysicalMove(skill), out refusal);
+        }
 
         // The plain attack's own arm, so no caller has to remember which
         // constant the swing takes.

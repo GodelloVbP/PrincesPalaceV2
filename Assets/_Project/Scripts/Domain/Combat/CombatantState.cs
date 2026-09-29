@@ -217,6 +217,20 @@ namespace PrincesPalace.Domain.Combat
         public BattleTrance BattleTrance;
         public TwinRampageRule TwinRampage;
 
+        // WHAT ONE SWING CARRIES, set by the session around a cast that has a
+        // context the funnel cannot see (a Fury tier that fired) and put back
+        // to 0 when the cast resolves. Read where the crit chance and the
+        // armour are worked out (CritRules.ChanceFor, CombatMath.TotalDefense),
+        // so the roll, the preview and the defence step all agree.
+        public int CastCritChanceBonus;
+        public int CastIgnoreDefensePercent;
+
+        // Whether the last blow this combatant's swing decided was a crit.
+        // Written by DamagePipeline where the crit is decided (only when the
+        // roll is real, never on a preview), read by the Fury engine when the
+        // pools hear that same blow.
+        public bool LastHitWasCrit;
+
         // PER-HOLDER SKILL COOLDOWNS, by skill id: when present (> 0) it
         // replaces the skill's authored cooldownTurns for this combatant only
         // -- Second Wind granted by the Juggernaut root carries 4 where the

@@ -122,7 +122,25 @@ namespace PrincesPalace.Domain.Combat
         // IsAuthored rather than needing a guard at every read.
         public TransformHitCue hit = new TransformHitCue();
 
-        public bool IsAuthored => turns > 0;
+        // BERSERK'S THREE MEANINGS, each a plain property of a form rather than
+        // a rule keyed to one form (docs/CODE_STANDARDS.md section 10).
+        //
+        // Percent of BOTH broad defenses that moves into Attack on entry: the
+        // defenses drop by that share and the Attack rises by the same points,
+        // and Exit gives every point back.
+        public int defenseToAttackPercent;
+
+        // Fury (the holder's primary pool) drained at the start of each of the
+        // holder's turns while the form runs. A form that drains has no turn
+        // timer: it ends when the pool cannot pay, and while it runs the
+        // pool's idle decay is off (the drain is the whole upkeep).
+        public int primaryDrainPerTurn;
+
+        // SkillEffect names the holder cannot cast while the form runs
+        // ("Provoke", "Ward" for Berserk: no Bellow, no shields).
+        public string[] forbidsEffects = Array.Empty<string>();
+
+        public bool IsAuthored => turns > 0 || primaryDrainPerTurn > 0;
     }
 
     // A timed transform a combatant is currently under — Shawn's Black Ram
@@ -184,6 +202,19 @@ namespace PrincesPalace.Domain.Combat
         // meaningless outside a running transform and has to reset with it.
         public int ExtensionsGranted;
 
+        // The defense points this form moved into Attack (already inside
+        // AttackBonus), kept per stat so Exit restores exactly what it took.
+        public readonly int PhysicalDefenseConverted;
+        public readonly int MagicalDefenseConverted;
+
+        // Fury drained per holder turn; > 0 means the form is upkept by Fury
+        // instead of a turn count. See TransformGrant.primaryDrainPerTurn.
+        public readonly int PrimaryDrainPerTurn;
+
+        private readonly SkillEffect[] _forbidden;
+
+        public bool Forbids(SkillEffect effect) => Array.IndexOf(_forbidden, effect) >= 0;
+
         // Set once the capstone's health gate has been met during THIS
         // transform. A permanent transform stops ticking down at all rather
         // than being handed a huge duration — a number the UI would then have
@@ -193,9 +224,14 @@ namespace PrincesPalace.Domain.Combat
 
         public Transformation(string displayName, int turns, int attackBonus, int speedBonus,
             int temporaryHealth, int splashPercent = 0, string spritePath = "",
-            TransformHitCue hit = null)
+            TransformHitCue hit = null, int physicalDefenseConverted = 0, int magicalDefenseConverted = 0,
+            int primaryDrainPerTurn = 0, SkillEffect[] forbidden = null)
         {
             Hit = hit ?? new TransformHitCue();
+            PhysicalDefenseConverted = Math.Max(0, physicalDefenseConverted);
+            MagicalDefenseConverted = Math.Max(0, magicalDefenseConverted);
+            PrimaryDrainPerTurn = Math.Max(0, primaryDrainPerTurn);
+            _forbidden = forbidden ?? Array.Empty<SkillEffect>();
             DisplayName = string.IsNullOrEmpty(displayName) ? "Transformed" : displayName;
             TurnsRemaining = Math.Max(1, turns);
             AttackBonus = Math.Max(0, attackBonus);
@@ -215,15 +251,24 @@ namespace PrincesPalace.Domain.Combat
         // a proportionally bigger ram.
         public static Transformation Enter(CombatantState combatant, string displayName, int turns,
             int attackPercent, int speedPercent, int temporaryHealthPercentOfMax, int splashPercent = 0,
-            string spritePath = "", TransformHitCue hit = null)
+            string spritePath = "", TransformHitCue hit = null, int defenseToAttackPercent = 0,
+            int primaryDrainPerTurn = 0, SkillEffect[] forbidden = null)
         {
-            int attackBonus = combatant.Attack * Math.Max(0, attackPercent) / 100;
+            // Both taken from the CURRENT values, like the percentages above.
+            // The converted points are added to the Attack bonus, so the one
+            // exact-reversal field covers them and Exit needs no second rule.
+            int physicalConverted = combatant.PhysicalDefense * Math.Max(0, defenseToAttackPercent) / 100;
+            int magicalConverted = combatant.MagicalDefense * Math.Max(0, defenseToAttackPercent) / 100;
+
+            int attackBonus = combatant.Attack * Math.Max(0, attackPercent) / 100 + physicalConverted + magicalConverted;
             int speedBonus = combatant.Speed * Math.Max(0, speedPercent) / 100;
             int temporary = combatant.MaxHealth * Math.Max(0, temporaryHealthPercentOfMax) / 100;
 
             var transformation = new Transformation(displayName, turns, attackBonus, speedBonus, temporary,
-                splashPercent, spritePath, hit);
+                splashPercent, spritePath, hit, physicalConverted, magicalConverted, primaryDrainPerTurn, forbidden);
 
+            combatant.PhysicalDefense -= transformation.PhysicalDefenseConverted;
+            combatant.MagicalDefense -= transformation.MagicalDefenseConverted;
             combatant.Attack += transformation.AttackBonus;
             combatant.Speed += transformation.SpeedBonus;
             combatant.MaxHealth += transformation.TemporaryHealth;
@@ -247,6 +292,8 @@ namespace PrincesPalace.Domain.Combat
                 return;
             }
 
+            combatant.PhysicalDefense += transformation.PhysicalDefenseConverted;
+            combatant.MagicalDefense += transformation.MagicalDefenseConverted;
             combatant.Attack = Math.Max(0, combatant.Attack - transformation.AttackBonus);
             combatant.Speed = Math.Max(0, combatant.Speed - transformation.SpeedBonus);
             combatant.MaxHealth = Math.Max(1, combatant.MaxHealth - transformation.TemporaryHealth);

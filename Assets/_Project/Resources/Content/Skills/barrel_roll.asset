@@ -26,6 +26,9 @@ MonoBehaviour:
     ResourceSpendCap: 0
     SpendsAllPrimary: 0
     PercentOfMaxHealthPerPoint: 0
+    HitCount: 1
+    DamagePerMissingHealthPercent: 0
+    RefundsSpentOnKillPercent: 0
     FreeAction: 0
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
@@ -98,6 +101,9 @@ MonoBehaviour:
           hitCueSeconds: 0
         shake: 0
         hitStopSeconds: 0
+      defenseToAttackPercent: 0
+      primaryDrainPerTurn: 0
+      forbidsEffects: []
     CooldownTurns: 0
     PlayerSelectable: 0
     Shake: 0

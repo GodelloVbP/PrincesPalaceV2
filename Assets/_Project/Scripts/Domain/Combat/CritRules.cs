@@ -50,10 +50,37 @@ namespace PrincesPalace.Domain.Combat
         // see this class' header. Momentum's live stacks (EinherjarSeams) ride
         // on top of the total here, the one place a chance is read, so the
         // roll, the preview and the bot's expected value all see them.
-        public static int ChanceFor(CombatantState attacker) =>
+        //
+        // `target` is optional: the rules that read who is being hit (a crit
+        // chance against a wounded target) apply only when it is known, so a
+        // preview with no target simply forfeits them.
+        public static int ChanceFor(CombatantState attacker, CombatantState target = null) =>
             attacker == null || !attacker.IsPlayerSide
                 ? 0
-                : ClampChance(attacker.CritChancePercent + attacker.Momentum.CritChanceBonus);
+                : ClampChance(attacker.CritChancePercent + attacker.Momentum.CritChanceBonus
+                              + SituationalChance(attacker, target));
+
+        // The talent-granted chance that depends on the moment rather than on
+        // the build: the cast's own bonus (a Slam that fired a Fury tier),
+        // a target already wounded, and a form being worn. MAX-not-SUM applies
+        // within each rule, and the three are different rules, so they add.
+        private static int SituationalChance(CombatantState attacker, CombatantState target)
+        {
+            var talents = attacker.Talents;
+            int bonus = attacker.CastCritChanceBonus;
+
+            if (target != null)
+            {
+                bonus += talents.BestBelowHealth(TalentEffectType.CritChanceBelowTargetHealth, target);
+            }
+
+            if (attacker.Transformation != null)
+            {
+                bonus += talents.Best(TalentEffectType.CritChanceWhileTransformed);
+            }
+
+            return bonus;
+        }
 
         // Momentum T2's +5% crit damage per stack rides here likewise.
         public static int DamagePercentFor(CombatantState attacker) =>
@@ -76,9 +103,9 @@ namespace PrincesPalace.Domain.Combat
         // back unchanged; an enemy's AUTHORED crit is exact, not expected, and
         // is applied by the caller that knows about it (FightSession's intent
         // previews), not here.
-        public static int ExpectedDamage(int damage, CombatantState attacker)
+        public static int ExpectedDamage(int damage, CombatantState attacker, CombatantState target = null)
         {
-            int chance = ChanceFor(attacker);
+            int chance = ChanceFor(attacker, target);
             if (damage <= 0 || chance <= 0) return damage;
 
             int bonus = DamagePercentFor(attacker) - 100;

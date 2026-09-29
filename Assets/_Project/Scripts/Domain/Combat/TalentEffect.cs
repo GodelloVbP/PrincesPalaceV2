@@ -349,6 +349,81 @@ namespace PrincesPalace.Domain.Combat
         // ward when hit, not for the ward being spent (see
         // WoolWhenWardedAllyHit's once-per-turn cap).
         WardsNeverExpire,
+
+        // ═══ The Einherjar (Bjorn's crit-based damage constellation) ═════
+        //
+        // docs/PLAN_BJORN_CONSTELLATIONS.md section 3. APPENDED, never
+        // inserted: the generated content assets store this enum as an ordinal.
+        // Every rule is read at one named seam and switched on at fight start
+        // by FightSession.ArmEngineSeams, which is why none of them has to
+        // know about the others.
+
+        // The root. Sets CombatantState.FuryEngine to Einherjar: Fury per
+        // damaging action from the damage dealt over his Attack, and no flat
+        // gain for swinging or being hit. Magnitude is ignored.
+        FuryEngineEinherjar,
+
+        // "Slam" below is the caster's single-target pool-tier strike (a
+        // DamageSingle skill with poolTiers) -- Bjorn's base Slam. The
+        // vocabulary has no skill-id parameter on purpose (docs/
+        // CODE_STANDARDS.md section 10: no skill id in code), and that shape
+        // is what a Fury-tier blow is, so a second such skill would be
+        // upgraded by the same nodes.
+
+        // A Slam that crits restores Magnitude Fury.
+        SlamCritRestoresFury,
+
+        // A Slam that fires a Fury tier (50+ Fury) gets +Magnitude percent
+        // crit chance.
+        SlamCritChanceAtFury,
+
+        // A Slam that fires the full-pool tier (100 Fury) ignores Magnitude
+        // percent of the target's defense. Rides the same funnel as
+        // IgnoreDefensePercent, for that one cast.
+        SlamIgnoresDefenseAtFullFury,
+
+        // A kill refunds Magnitude Fury.
+        FuryOnKill,
+
+        // The first idle turn of each fight does not drain Fury. Magnitude is
+        // ignored.
+        FirstIdleTurnFree,
+
+        // A crit pays Magnitude percent more engine Fury than the hit alone
+        // would (Magnitude 50 = one and a half times).
+        CritFuryBonusPercent,
+
+        // MOMENTUM, one member for its three nodes because they nest: T1 =
+        // Momentum runs (stacks of crit chance), T2 = cap 8 and +5% crit
+        // damage per stack, T3 = small hits no longer cost a stack. The
+        // highest tier owned wins (TalentEffectSet.Best), which is exactly
+        // "owning T3 means owning T1 and T2".
+        MomentumTier,
+
+        // +Magnitude percent crit chance against a target at or below
+        // Threshold percent of ITS max health (Headsplitter T2).
+        CritChanceBelowTargetHealth,
+
+        // A kill made by a finisher (a skill authored with
+        // refundsSpentOnKillPercent) fills Momentum to its cap. Magnitude is
+        // ignored.
+        KillFillsMomentum,
+
+        // +Magnitude percent crit chance while wearing a transformation
+        // (Berserk T2).
+        CritChanceWhileTransformed,
+
+        // A kill made while transformed adds Magnitude Fury (Berserk T3).
+        FuryOnKillWhileTransformed,
+
+        // BATTLE TRANCE, tiered like Momentum: T1 = 20% of each hit is paid
+        // in Fury above 50, T2 = 30% and doubled while transformed, T3 = a
+        // broken trance grants Protect.
+        BattleTranceTier,
+
+        // The capstone: a full-Fury Rampage triggers a second sweep on top
+        // (CombatantState.TwinRampage). Magnitude is ignored.
+        TwinRampage,
     }
 
     // One rule a talent grants. Engine-free; the combat pipeline reads these

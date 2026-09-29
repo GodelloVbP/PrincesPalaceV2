@@ -463,6 +463,8 @@ namespace PrincesPalace.Domain.Combat.Session
             if (_begun) return;
             _begun = true;
 
+            foreach (var member in _encounter.PlayerParty) ArmEngineSeams(member);
+
             RelicsOnCombatBegin();
             GrantTurnStart();
             AutoResolveEnemyTurns();

@@ -70,6 +70,11 @@ namespace PrincesPalace.Domain.Combat
             return (int)Math.Max(EinherjarMin, Math.Min(EinherjarMax, scaled));
         }
 
+        // Bloodfire T2: the one idle turn of a fight that does not drain has
+        // been spent. Set by TickPrimaryPool, never reset -- one engine, one
+        // fight.
+        internal bool FirstIdleTurnSpent;
+
         // HACK'S EXCEPTION: while set, every hit this combatant deals pays
         // the engine separately instead of the action paying once for its
         // largest hit. Set by the Hack cast for its own action

@@ -213,6 +213,7 @@ namespace PrincesPalace.Domain.Content
             TalentEffectType.DamageCapPercentBelowHealth,
             TalentEffectType.TransformPermanentBelowHealth,
             TalentEffectType.WardAlsoAppliesRegen,
+            TalentEffectType.CritChanceBelowTargetHealth,
         };
 
         // The four rules that are a FLAG: present or absent, with no number
@@ -231,6 +232,10 @@ namespace PrincesPalace.Domain.Content
             TalentEffectType.GiftAppliesImmediateTurn,
             TalentEffectType.ShatterAppliesVulnerable,
             TalentEffectType.WardsNeverExpire,
+            TalentEffectType.FuryEngineEinherjar,
+            TalentEffectType.FirstIdleTurnFree,
+            TalentEffectType.KillFillsMomentum,
+            TalentEffectType.TwinRampage,
         };
 
         private static bool TryResolveEffects(RawTalentEntry raw, string label,

@@ -760,6 +760,36 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // THE THREE EINHERJAR FIELDS, each read by one resolution and
+            // refused anywhere else, the house rule for a field with no
+            // meaning on an effect.
+            if (raw.hitCount < 0 || raw.hitCount > MaxHitCount)
+            {
+                error = $"{label}: hitCount {raw.hitCount} is outside 0-{MaxHitCount}.";
+                return false;
+            }
+
+            if (raw.hitCount > 1 && effect != SkillEffect.DamageSingle)
+            {
+                error = $"{label}: hitCount only means anything on a DamageSingle skill, not {effect}.";
+                return false;
+            }
+
+            if (raw.damagePerMissingHealthPercent != 0
+                && (raw.damagePerMissingHealthPercent < 0 || effect != SkillEffect.DamageSingle))
+            {
+                error = $"{label}: damagePerMissingHealthPercent must be positive and only means anything on a DamageSingle skill.";
+                return false;
+            }
+
+            if (raw.refundsSpentOnKillPercent != 0
+                && (raw.refundsSpentOnKillPercent < 0 || raw.refundsSpentOnKillPercent > 100
+                    || effect != SkillEffect.DamageSingle || !raw.spendsAllPrimary))
+            {
+                error = $"{label}: refundsSpentOnKillPercent must be 1-100 and only means anything on a DamageSingle skill that spendsAllPrimary.";
+                return false;
+            }
+
             if (!TryResolveBellwetherFields(raw, label, effect, targeting, instances,
                     out var ownDamageType, out var damageBySeat, out error))
             {
@@ -895,7 +925,8 @@ namespace PrincesPalace.Domain.Content
                 raw.healthCostPercent, requiresStatus, consumesStatus, instancesIfConsumed,
                 raw.detonationPercent, detonationSplit,
                 raw.advanceSlots, raw.physicalMove,
-                ownDamageType, damageBySeat, raw.toSeat);
+                ownDamageType, damageBySeat, raw.toSeat,
+                raw.hitCount, raw.damagePerMissingHealthPercent, raw.refundsSpentOnKillPercent);
             error = null;
             return true;
         }
@@ -903,6 +934,9 @@ namespace PrincesPalace.Domain.Content
         // The ceiling on one damageBySeatMaxHpPercent entry: ten times the
         // target's bar is already a typo, not a design.
         public const int MaxSeatPercent = 1000;
+
+        // A cast that strikes ten times is a typo; two is the design.
+        public const int MaxHitCount = 5;
 
         // THE BELLWETHER KIT'S THREE FIELDS (docs/PLAN_BELLWETHER_KIT.md M2):
         // damageType, damageBySeatMaxHpPercent, toSeat. Every refusal is the
@@ -1337,13 +1371,13 @@ namespace PrincesPalace.Domain.Content
 
             if (!authored)
             {
-                error = $"{label}: a Transform skill needs a transform block with a positive `turns` — " +
+                error = $"{label}: a Transform skill needs a transform block with a positive `turns` or `primaryDrainPerTurn` — " +
                         "without one it would cost its resource and change nothing.";
                 return false;
             }
 
             if (raw.transform.attackPercent == 0 && raw.transform.speedPercent == 0
-                && raw.transform.temporaryHealthPercent == 0)
+                && raw.transform.temporaryHealthPercent == 0 && raw.transform.defenseToAttackPercent == 0)
             {
                 error = $"{label}: this transform grants no attack, no speed and no temporary health — " +
                         "it would run its duration out and do nothing.";
@@ -1361,6 +1395,22 @@ namespace PrincesPalace.Domain.Content
             {
                 if (!SpellPresentationPaths.Check($"{label} transform.hit", hit.vfx, out error)) return false;
                 if (!SpellLayerRules.TryCheck($"{label} transform.hit", hit.vfx, out error)) return false;
+            }
+
+            if (raw.transform.defenseToAttackPercent < 0 || raw.transform.defenseToAttackPercent > 100
+                || raw.transform.primaryDrainPerTurn < 0)
+            {
+                error = $"{label}: transform defenseToAttackPercent must be 0-100 and primaryDrainPerTurn cannot be negative.";
+                return false;
+            }
+
+            foreach (var name in raw.transform.forbidsEffects ?? System.Array.Empty<string>())
+            {
+                if (!System.Enum.TryParse(name?.Trim(), ignoreCase: true, out SkillEffect _))
+                {
+                    error = $"{label}: transform forbidsEffects names '{name}', which is not a SkillEffect.";
+                    return false;
+                }
             }
 
             transform = raw.transform;

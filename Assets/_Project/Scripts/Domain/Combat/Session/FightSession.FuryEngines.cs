@@ -107,7 +107,130 @@ namespace PrincesPalace.Domain.Combat.Session
             var engine = actor.FuryEngine;
             if (engine.Kind != FuryEngineKind.Einherjar) return;
 
-            GrantPrimary(actor, engine.OweForHit(hit, actor.Attack));
+            int owed = engine.OweForHit(hit, actor.Attack);
+
+            // BLOODFIRE T3: a crit pays its share of the engine again by the
+            // node's percent. The flag is consumed here so a later blow of the
+            // same action that never went through the crit roll (a splash)
+            // cannot inherit it.
+            if (actor.LastHitWasCrit && owed > 0)
+            {
+                owed += owed * actor.Talents.Best(TalentEffectType.CritFuryBonusPercent) / 100;
+            }
+
+            actor.LastHitWasCrit = false;
+            GrantPrimary(actor, owed);
+        }
+
+        // ---- the fight-start pass ---------------------------------------------------------
+
+        // SWITCHES ON every engine seam the combatant's talents grant, once,
+        // when the fight begins. A talent set cannot change mid-fight, so this
+        // is the one place the tree's state reaches the Domain objects. It only
+        // ever turns things ON: a test or a caller that set a seam by hand
+        // keeps it.
+        //
+        // Sentinel and Juggernaut arms land with their constellations.
+        private static void ArmEngineSeams(CombatantState actor)
+        {
+            var talents = actor?.Talents;
+            if (talents == null || talents.IsEmpty) return;
+
+            if (talents.Has(TalentEffectType.FuryEngineEinherjar))
+            {
+                actor.FuryEngine.Kind = FuryEngineKind.Einherjar;
+            }
+
+            int momentum = talents.Best(TalentEffectType.MomentumTier);
+            if (momentum >= 1) actor.Momentum.Enabled = true;
+            if (momentum >= 2)
+            {
+                actor.Momentum.ExtendedStackCap = true;
+                actor.Momentum.CritDamagePerStackBonus = true;
+            }
+
+            if (momentum >= 3) actor.Momentum.IgnoresSmallHits = true;
+
+            int trance = talents.Best(TalentEffectType.BattleTranceTier);
+            if (trance >= 1)
+            {
+                actor.BattleTrance = new BattleTrance(trance >= 2 ? 30 : 20)
+                {
+                    DoublesWhileTransformed = trance >= 2,
+                    ProtectWhenTranceBreaks = trance >= 3,
+                };
+            }
+
+            if (talents.Has(TalentEffectType.TwinRampage) && actor.TwinRampage == null)
+            {
+                actor.TwinRampage = new TwinRampageRule();
+            }
+        }
+
+        // ---- the finisher and the Slam's rider ----------------------------------------
+
+        // A finisher's wound bonus (Headsplitter): each 1% of the target's max
+        // health already gone adds `damagePerMissingHealthPercent` percent to
+        // the raw figure. Integer arithmetic: floor(base x (10000 + rate x
+        // missing%) / 10000) with missing% in whole percent, so a target at
+        // 20% health and a rate of 100 reads +80%.
+        private static int ApplyMissingHealthBonus(int amount, ResolvedSkill skill, CombatantState target)
+        {
+            int rate = skill.DamagePerMissingHealthPercent;
+            if (rate <= 0 || target == null || target.MaxHealth <= 0 || amount <= 0) return amount;
+
+            long missing = target.MaxHealth - System.Math.Max(0, System.Math.Min(target.MaxHealth, target.CurrentHealth));
+            long missingPercent = missing * 100 / target.MaxHealth;
+            return (int)(amount * (10000L + rate * missingPercent) / 10000L);
+        }
+
+        // SLAM T1: a crit on the Fury-tier strike restores Fury.
+        private void PaySlamCritFury(CombatantState actor, ResolvedSkill skill)
+        {
+            if (!IsFuryTierStrike(skill)) return;
+
+            int gain = actor.Talents.Best(TalentEffectType.SlamCritRestoresFury);
+            if (gain <= 0) return;
+
+            GrantPrimary(actor, gain);
+        }
+
+        // A killing finisher hands back part of what it spent, and (Headsplitter
+        // T3) fills Momentum. Only a cast authored with a refund reads this.
+        private void RefundOnKill(CombatantState actor, ResolvedSkill skill, CombatantState target, int spent)
+        {
+            if (skill.RefundsSpentOnKillPercent <= 0 || target == null || target.IsAlive) return;
+
+            int refund = spent * skill.RefundsSpentOnKillPercent / 100;
+            if (refund > 0)
+            {
+                GrantPrimary(actor, refund);
+                AppendMessage($"{actor.Name} takes back {refund} {actor.PrimaryPool?.DisplayName}.");
+            }
+
+            if (actor.Talents.Has(TalentEffectType.KillFillsMomentum) && actor.Momentum.Enabled)
+            {
+                actor.Momentum.FillToCap();
+                AppendMessage($"{actor.Name}'s momentum is full ({actor.Momentum.Stacks}).");
+            }
+        }
+
+        // ---- Fury paid for a kill ---------------------------------------------------------
+
+        // Bloodfire T1 and Berserk T3, at the one place a body is settled:
+        // a kill the actor gets credit for refunds Fury, and a kill made while
+        // wearing a form refunds the form's own amount on top.
+        private void PayKillFury(CombatantState actor, CombatantState target)
+        {
+            if (actor == null || !actor.IsPlayerSide || actor.PrimaryPool == null) return;
+
+            var talents = actor.Talents;
+            int gain = talents.Best(TalentEffectType.FuryOnKill);
+            if (actor.Transformation != null) gain += talents.Best(TalentEffectType.FuryOnKillWhileTransformed);
+            if (gain <= 0) return;
+
+            GrantPrimary(actor, gain);
+            AppendMessage($"{actor.Name} drinks in the kill (+{gain} {actor.PrimaryPool.DisplayName}).");
         }
 
         // Whether the pool's flat gainOnAttack / gainOnDamageTaken still pay
@@ -167,7 +290,19 @@ namespace PrincesPalace.Domain.Combat.Session
             if (pool == null) return;
 
             var engine = actor.FuryEngine;
-            pool.TickTurnStart(allowDecay: !engine.SuppressesIdleDecay);
+
+            // No idle drain while a form upkept by this pool runs (its own
+            // per-turn drain is the whole upkeep), and BLOODFIRE T2 forgives
+            // the first idle drain of the fight.
+            bool allowDecay = !engine.SuppressesIdleDecay && !(actor.Transformation?.PrimaryDrainPerTurn > 0);
+            if (allowDecay && !engine.FirstIdleTurnSpent && actor.Talents.Has(TalentEffectType.FirstIdleTurnFree)
+                && pool.WouldDecayThisTurn)
+            {
+                engine.FirstIdleTurnSpent = true;
+                allowDecay = false;
+            }
+
+            pool.TickTurnStart(allowDecay);
 
             if (engine.Kind == FuryEngineKind.Juggernaut && actor.IsAlive && !reopened)
             {
@@ -314,6 +449,8 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // ---- seams for tests ---------------------------------------------------------------
+
+        public void ArmEngineSeamsForTest(CombatantState actor) => ArmEngineSeams(actor);
 
         public void TickPrimaryPoolForTest(CombatantState actor) => TickPrimaryPool(actor);
 

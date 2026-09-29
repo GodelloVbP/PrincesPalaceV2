@@ -380,11 +380,21 @@ namespace PrincesPalace.Domain.Bot
         // cast rather than an average). Pure arithmetic, no draw, so the bot
         // stays deterministic. An enemy's authored crit is exact and reaches a
         // policy through EnemyIntent.ExpectedDamage instead.
+        //
+        // THE FURY TIER THE CAST WOULD FIRE IS IN THE FIGURE. PreviewSkillPower
+        // is the HUD's POWER row and quotes the base, tier-free number, so a
+        // policy ranking Slam at x4 against Headsplitter's all-in against
+        // Hack's two blows was comparing a x4 hit's base to the others' whole.
         public static int PreviewDamage(
-            FightSession session, CombatantState actor, ResolvedSkillOption option, FightAction action) =>
-            option.Skill.IsDamaging
-                ? CritRules.ExpectedDamage(session.PreviewSkillPower(actor, CastAs(option.Skill, action)), actor)
-                : 0;
+            FightSession session, CombatantState actor, ResolvedSkillOption option, FightAction action)
+        {
+            if (!option.Skill.IsDamaging) return 0;
+
+            var cast = CastAs(option.Skill, action);
+            int power = session.PreviewSkillPower(actor, cast, action.Target);
+            power = PoolTierResolution.ApplyDamageMultiplier(power, PoolTierResolution.Pick(actor.PrimaryPool, cast.PoolTiers));
+            return CritRules.ExpectedDamage(power, actor, action.Target);
+        }
 
         // The one place a policy asks "what would this Attack action deal" --
         // the raw swing (CombatMath.ComputeAttackDamage) with crits counted as
@@ -392,7 +402,7 @@ namespace PrincesPalace.Domain.Bot
         // three policies used to each call ComputeAttackDamage directly; one
         // seam means none of them can forget the crit.
         public static int PreviewAttackDamage(CombatantState actor, CombatantState target) =>
-            CritRules.ExpectedDamage(CombatMath.ComputeAttackDamage(actor, target), actor);
+            CritRules.ExpectedDamage(CombatMath.ComputeAttackDamage(actor, target), actor, target);
 
         // The last thing left on the menu, for a policy whose own scoring has
         // run out of opinions.

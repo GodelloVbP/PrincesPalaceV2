@@ -163,7 +163,11 @@ namespace PrincesPalace.Domain.Combat
             // Sharp Horns' armour penetration, against whatever is left.
             if (attacker != null && broad > 0)
             {
-                int ignorePercent = attacker.Talents.Best(TalentEffectType.IgnoreDefensePercent);
+                // The cast's own share (a Slam at full Fury) rides the same
+                // percent, so the two cannot disagree about what "ignores"
+                // means; capped so both together never read past all of it.
+                int ignorePercent = Math.Min(100,
+                    attacker.Talents.Best(TalentEffectType.IgnoreDefensePercent) + attacker.CastIgnoreDefensePercent);
                 if (ignorePercent > 0)
                 {
                     broad -= broad * ignorePercent / 100;

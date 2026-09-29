@@ -814,11 +814,78 @@ namespace PrincesPalace.Domain.Combat.Session
             DisgruntledLackeyOnEnemySummon(actor);
         }
 
+        // A SINGLE-TARGET CAST: one blow, or `hitCount` blows at the same
+        // target (Hack), each its own beat and its own swing, the second only
+        // if the first left something standing. The cast is paid once, before
+        // this runs. Hack's Fury exception -- every blow pays the engine
+        // separately -- is stated once here, before the first blow.
         private void ResolveDamageSingle(CombatantState actor, ResolvedSkill skill, CombatantState target,
             int resourceSpent, PoolTierResolution.Result poolTier = default)
         {
             target = target ?? _encounter.OpponentsOf(actor).FirstOrDefault();
             if (target == null) return;
+
+            int blows = skill.HitCount < 1 ? 1 : skill.HitCount;
+            if (blows > 1) BeginPerHitEngineAction(actor);
+
+            for (int blow = 0; blow < blows; blow++)
+            {
+                if (blow > 0)
+                {
+                    if (!target.IsAlive) break;
+
+                    CommitBeat();
+                }
+
+                ResolveOneStrike(actor, skill, target, resourceSpent, poolTier);
+            }
+        }
+
+        // What a Fury-tier strike (the Slam) carries into its own swing, set
+        // before the blow and put back after it: the crit-chance and armour
+        // bonuses the tier earns, read by CritRules.ChanceFor and
+        // CombatMath.TotalDefense so the roll and the defence step agree.
+        private static void SetStrikeContext(CombatantState actor, ResolvedSkill skill,
+            PoolTierResolution.Result poolTier)
+        {
+            if (!IsFuryTierStrike(skill) || !poolTier.Fired) return;
+
+            var talents = actor.Talents;
+            actor.CastCritChanceBonus = talents.Best(TalentEffectType.SlamCritChanceAtFury);
+            if (poolTier.Tier.Spend >= 1f)
+            {
+                actor.CastIgnoreDefensePercent = talents.Best(TalentEffectType.SlamIgnoresDefenseAtFullFury);
+            }
+        }
+
+        private static void ClearStrikeContext(CombatantState actor)
+        {
+            actor.CastCritChanceBonus = 0;
+            actor.CastIgnoreDefensePercent = 0;
+        }
+
+        // "Slam": the single-target strike that spends Fury tiers. See the
+        // note above TalentEffectType.SlamCritRestoresFury.
+        private static bool IsFuryTierStrike(ResolvedSkill skill) =>
+            skill.Effect == SkillEffect.DamageSingle && skill.PoolTiers != null && skill.PoolTiers.Length > 0;
+
+        private void ResolveOneStrike(CombatantState actor, ResolvedSkill skill, CombatantState target,
+            int resourceSpent, PoolTierResolution.Result poolTier)
+        {
+            SetStrikeContext(actor, skill, poolTier);
+            try
+            {
+                ResolveOneStrikeCore(actor, skill, target, resourceSpent, poolTier);
+            }
+            finally
+            {
+                ClearStrikeContext(actor);
+            }
+        }
+
+        private void ResolveOneStrikeCore(CombatantState actor, ResolvedSkill skill, CombatantState target,
+            int resourceSpent, PoolTierResolution.Result poolTier)
+        {
 
             BeginBeat(actor, target, isCast: true);
             RecordSpellPresentation(skill);
@@ -910,6 +977,11 @@ namespace PrincesPalace.Domain.Combat.Session
                     // already took its cut. See
                     // PoolTierResolution.ApplyDamageMultiplier.
                     baseAmount = PoolTierResolution.ApplyDamageMultiplier(baseAmount, poolTier);
+
+                    // A FINISHER'S WOUND BONUS, on the raw figure like the tier
+                    // above (a bonus on the finished number would be worth
+                    // less against exactly the armour it must beat).
+                    baseAmount = ApplyMissingHealthBonus(baseAmount, skill, target);
                 }
 
                 // NO VARIANCE ON A SEAT-SIZED HIT. Its base is a fixed share
@@ -939,7 +1011,11 @@ namespace PrincesPalace.Domain.Combat.Session
                     return;
                 }
 
-                if (outcome.IsCrit) NoteCrit();
+                if (outcome.IsCrit)
+                {
+                    NoteCrit();
+                    PaySlamCritFury(actor, skill);
+                }
 
                 damage = TotalDamage(actor, baseAmount, outcome.Damage);
                 DepleteBreakShield(target, outcome.Effectiveness);
@@ -951,6 +1027,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // does. A swing is a swing.
             ApplyFinalDamage(actor, target, damage, CombatActions.IsPhysicalMove(skill),
                 skill.HasFixedDamage ? (DamageType?)null : CastTypeOf(actor, skill));
+
+            RefundOnKill(actor, skill, target, resourceSpent);
 
             // STEP 6 OF 2.4: the consume, on a LANDED hit only -- both dodge
             // arms above already returned before this line, and a lethal hit
@@ -1696,7 +1774,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // here without inventing a second rounding of the same rule. The field
         // is restored in a finally, so the board a preview leaves behind is
         // byte-for-byte the one it found.
-        public int PreviewSkillPower(CombatantState actor, ResolvedSkill skill)
+        public int PreviewSkillPower(CombatantState actor, ResolvedSkill skill, CombatantState target = null)
         {
             if (actor == null) return 0;
 
@@ -1741,9 +1819,19 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 var castType = CastTypeOf(actor, skill);
 
-                return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
+                int amount = SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
                     skill.FlatAmount, pointsSpent, skill.IgnoresDefense, castType, skill.ScalingAxis,
                     skill.PercentOfMaxHealthPerPoint, skill.PercentOfCasterMaxHealth);
+
+                // The cast's whole worth: a finisher reads its target's wounds
+                // when there is a target to read, and a multi-blow cast is
+                // every blow (each is a full swing of this figure).
+                if (skill.Effect == SkillEffect.DamageSingle)
+                {
+                    amount = ApplyMissingHealthBonus(amount, skill, target) * (skill.HitCount < 1 ? 1 : skill.HitCount);
+                }
+
+                return amount;
             }
             finally
             {

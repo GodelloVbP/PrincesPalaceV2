@@ -1207,7 +1207,8 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor.Transformation != null)
             {
                 rows.Add(StatusHud.TransformRow(actor.Transformation.DisplayName,
-                    actor.Transformation.TurnsRemaining, actor.Transformation.IsPermanent));
+                    actor.Transformation.TurnsRemaining, actor.Transformation.IsPermanent,
+                    actor.Transformation.PrimaryDrainPerTurn > 0 ? actor.PrimaryPool?.DisplayName : null));
             }
 
             // THE RALLY (PLAN_BELLWETHER_KIT 1.7 / 3.9): a fight-long stack

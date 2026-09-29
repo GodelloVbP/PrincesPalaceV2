@@ -308,6 +308,14 @@ namespace PrincesPalace.Domain.Combat
         // see ContentData/pools.json's own note.
         public void TickTurnStart() => TickTurnStart(allowDecay: true);
 
+        // Whether the turn now starting would drain this pool: nothing the
+        // holder has done since the last turn start met DecayUnless, and the
+        // pool has something to lose. Read by an engine that forgives a drain
+        // (Bloodfire's first idle turn) before the tick spends it.
+        public bool WouldDecayThisTurn =>
+            DecayPerIdleTurn > 0 && Current > 0
+            && !(DecayUnless == PoolDecayTrigger.AnyAction ? _acted : _dealtOrTookDamage);
+
         // `allowDecay: false` is an engine that switches idle decay off for
         // its holder (the Juggernaut's, FuryEngine.SuppressesIdleDecay): the
         // gain and the forgetting still happen, only the drain is skipped.

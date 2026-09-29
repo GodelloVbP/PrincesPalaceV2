@@ -89,6 +89,27 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Percent of the caster's own max health added to a heal per point of the pool actually spent; 0 means none.")]
         public int percentOfMaxHealthPerPoint;
 
+        // A DAMAGE SKILL THAT STRIKES MORE THAN ONCE (Bjorn's Hack: one target,
+        // two blows). Every blow is a full swing of its own -- its own dodge
+        // and crit roll, its own pools hearing it, its own beat -- and the cast
+        // is paid for once. 0 and 1 both mean a single blow, the default of
+        // every skill authored before this existed.
+        [ContentDoc("How many separate blows a DamageSingle cast strikes at its target (the cast is paid once); 0 or 1 means one.")]
+        public int hitCount;
+
+        // A FINISHER'S SCALING with the target's WOUNDS: each 1% of the
+        // target's max health already missing adds this many percent to the
+        // damage, before defences. Bjorn's Headsplitter is 100 (a target at
+        // 20% health takes +80%). Read only by damage effects; 0 is none.
+        [ContentDoc("Percent added to a damage skill's raw damage for each 1% of the target's max health already missing; 0 means none.")]
+        public int damagePerMissingHealthPercent;
+
+        // AND ITS PAYBACK: when the cast kills, this percent of the primary
+        // pool it spent is returned. Read only by a spendsAllPrimary damage
+        // skill; 0 is none.
+        [ContentDoc("Percent of the primary pool a killing cast spent that is returned to the caster; 0 means none.")]
+        public int refundsSpentOnKillPercent;
+
         // A FLAT percent of the CASTER'S own max health, in shield points,
         // added to a Ward. Bjorn's Bulwark is 30: a shield worth roughly
         // three enemy hits at the start of a run, and still worth three of

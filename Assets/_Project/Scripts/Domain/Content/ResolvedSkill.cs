@@ -54,6 +54,12 @@ namespace PrincesPalace.Domain.Content
         public int ResourceSpendCap;
         public bool SpendsAllPrimary;
         public int PercentOfMaxHealthPerPoint;
+
+        // See RawSkillEntry.hitCount / damagePerMissingHealthPercent /
+        // refundsSpentOnKillPercent. HitCount is never below 1.
+        public int HitCount = 1;
+        public int DamagePerMissingHealthPercent;
+        public int RefundsSpentOnKillPercent;
         public bool FreeAction;
 
         // The two a Ward alone reads -- see RawSkillEntry's own headers.
@@ -516,8 +522,14 @@ namespace PrincesPalace.Domain.Content
             bool physicalMove = false,
             // APPENDED LAST OF ALL AGAIN (Bellwether kit M2), same
             // positional-argument reason every block above gives.
-            DamageType? damageType = null, int[] damageBySeatMaxHpPercent = null, int toSeat = 0)
+            DamageType? damageType = null, int[] damageBySeatMaxHpPercent = null, int toSeat = 0,
+            // APPENDED LAST OF ALL AGAIN (Einherjar), same positional-argument
+            // reason every block above gives.
+            int hitCount = 1, int damagePerMissingHealthPercent = 0, int refundsSpentOnKillPercent = 0)
         {
+            HitCount = hitCount < 1 ? 1 : hitCount;
+            DamagePerMissingHealthPercent = damagePerMissingHealthPercent;
+            RefundsSpentOnKillPercent = refundsSpentOnKillPercent;
             HasDamageType = damageType.HasValue;
             DamageTypeOverride = damageType ?? default;
             DamageBySeatMaxHpPercent = damageBySeatMaxHpPercent ?? Array.Empty<int>();

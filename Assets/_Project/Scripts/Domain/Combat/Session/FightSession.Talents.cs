@@ -1026,7 +1026,8 @@ namespace PrincesPalace.Domain.Combat.Session
                         + (HasRelic(actor, RelicEffect.BellwethersBell) ? FightTuning.BellwethersBellTransformTurns : 0);
             var transformation = Transformation.Enter(actor, grant.displayName, turns,
                 grant.attackPercent, grant.speedPercent, grant.temporaryHealthPercent, grant.splashPercent,
-                grant.spritePath, grant.hit);
+                grant.spritePath, grant.hit, grant.defenseToAttackPercent, grant.primaryDrainPerTurn,
+                ForbiddenEffects(grant));
 
             // AND THE VIEW IS TOLD ON THE BEAT, not left to read live state.
             // The whole round has already resolved by the time this beat is
@@ -1041,7 +1042,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // than its numbers.
             _encounter.RefreshSpeed(actor);
 
-            AppendMessage($"{actor.Name} becomes {transformation.DisplayName} for {transformation.TurnsRemaining} turns!");
+            AppendMessage(transformation.PrimaryDrainPerTurn > 0
+                ? $"{actor.Name} becomes {transformation.DisplayName}!"
+                : $"{actor.Name} becomes {transformation.DisplayName} for {transformation.TurnsRemaining} turns!");
 
             // Charge T3. Fires on ENTERING, which is why the rule is worded
             // "entering" rather than "casting".
@@ -1056,12 +1059,57 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
+        // The SkillEffect members a grant's forbidsEffects names. Names were
+        // checked when the row resolved, so a name that does not parse here is
+        // simply not forbidden.
+        private static SkillEffect[] ForbiddenEffects(TransformGrant grant)
+        {
+            var names = grant.forbidsEffects;
+            if (names == null || names.Length == 0) return System.Array.Empty<SkillEffect>();
+
+            var effects = new List<SkillEffect>();
+            foreach (var name in names)
+            {
+                if (System.Enum.TryParse(name, ignoreCase: true, out SkillEffect effect)) effects.Add(effect);
+            }
+
+            return effects.ToArray();
+        }
+
+        // A form upkept by Fury (Berserk): the drain comes out of the pool at
+        // the holder's turn start, and a pool that cannot pay ends the form.
+        // Returns true when the form ended, so the caller stops.
+        private bool TickPrimaryUpkeep(CombatantState actor, Transformation transformation)
+        {
+            var pool = actor.PrimaryPool;
+            if (pool == null)
+            {
+                ExpireTransform(actor, transformation);
+                return true;
+            }
+
+            pool.SpendUpTo(transformation.PrimaryDrainPerTurn);
+            if (pool.Current > 0) return false;
+
+            ExpireTransform(actor, transformation);
+            return true;
+        }
+
         // The transform's own turn-start tick: expire it, hold it, or make it
         // permanent.
         private void TickTransform(CombatantState actor)
         {
             var transformation = actor?.Transformation;
             if (transformation == null) return;
+
+            // Berserk has no timer: Fury upkeeps it. Any other rule about a
+            // form's duration (Wrath, the capstone) is about turns and does not
+            // apply to a form that has none.
+            if (transformation.PrimaryDrainPerTurn > 0)
+            {
+                TickPrimaryUpkeep(actor, transformation);
+                return;
+            }
 
             // The capstone. Checked BEFORE the timer, so reaching the health gate
             // on the very turn the transform would have run out keeps it rather

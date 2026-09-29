@@ -522,6 +522,7 @@ namespace PrincesPalace.Domain.Combat.Session
             _killedThisAction = true;
             Ledger.ScoredKill(LedgerIdOf(actor));
             RelicsOnEachKill(actor, target);
+            PayKillFury(actor, target);
         }
 
         // The damage type a combatant's ordinary swing carries. Player kits

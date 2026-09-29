@@ -235,10 +235,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // preview) never crits, so a telegraph cannot spend a draw. Enemies
         // answer 0 from CritRules.ChanceFor and therefore never consume one
         // either; an enemy crit is AUTHORED and handed in, never rolled.
-        public static bool RollCrit(CombatantState attacker, SeededRandom rng)
+        //
+        // `target` lets the chance read who is being hit (a wounded target);
+        // the result is also left on the attacker (LastHitWasCrit) so the Fury
+        // engine can pay a crit's bonus when the pools hear this same blow.
+        public static bool RollCrit(CombatantState attacker, SeededRandom rng, CombatantState target = null)
         {
             if (rng == null) return false;
-            return RandomOps.RollPercent(rng, CritRules.ChanceFor(attacker));
+
+            bool crit = RandomOps.RollPercent(rng, CritRules.ChanceFor(attacker, target));
+            if (attacker != null) attacker.LastHitWasCrit = crit;
+            return crit;
         }
 
         // WHETHER THIS HIT CRITS, as the funnel decides it.
@@ -250,10 +257,19 @@ namespace PrincesPalace.Domain.Combat.Session
         // because then it owns the crit call too, exactly as it owns the dodge
         // (a multi-packet spell rolls once for the whole cast and hands the
         // result to every packet; a rider on a landed blow does not crit).
-        private static bool DecideCrit(bool? crit, bool dodgeAlreadyResolved, CombatantState attacker, SeededRandom rng)
+        private static bool DecideCrit(bool? crit, bool dodgeAlreadyResolved, CombatantState attacker,
+            SeededRandom rng, CombatantState target)
         {
-            if (crit.HasValue) return crit.Value;
-            return !dodgeAlreadyResolved && RollCrit(attacker, rng);
+            if (crit.HasValue)
+            {
+                // A decided call (authored, or a rider that must not crit) is
+                // still a fact about this blow: leaving the last roll's answer
+                // behind would let a splash inherit it.
+                if (rng != null && attacker != null) attacker.LastHitWasCrit = crit.Value;
+                return crit.Value;
+            }
+
+            return !dodgeAlreadyResolved && RollCrit(attacker, rng, target);
         }
 
         // The typed path: a spell or skill whose damage type is authored.
@@ -310,7 +326,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // miss cannot crit (and spends no crit draw), and the multiplier
             // rides the OUTGOING amount, before effectiveness and defense --
             // see CritRules' header for why that side of the armour.
-            bool isCrit = DecideCrit(crit, dodgeAlreadyResolved, attacker, rng);
+            bool isCrit = DecideCrit(crit, dodgeAlreadyResolved, attacker, rng, target);
             if (isCrit)
             {
                 raw = CritRules.Apply(raw, attacker);
@@ -425,7 +441,7 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             // The crit, in the same position the typed overload puts it.
-            bool isCrit = DecideCrit(crit, dodgeAlreadyResolved: false, actor, rng);
+            bool isCrit = DecideCrit(crit, dodgeAlreadyResolved: false, actor, rng, target);
             if (isCrit)
             {
                 raw = CritRules.Apply(raw, actor);

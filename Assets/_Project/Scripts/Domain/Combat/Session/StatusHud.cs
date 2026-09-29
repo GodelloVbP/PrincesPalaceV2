@@ -439,10 +439,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // already understands) rather than a count that has stopped moving:
         // see Transformation.IsPermanent's own comment for why "47 turns left"
         // reads as a bug rather than as "this is who he is now".
-        public static FightHudModel.StatusRow TransformRow(string displayName, int turnsRemaining, bool permanent)
+        //
+        // `upkeepPoolName` is set for a form a pool keeps alive (Berserk: the
+        // Fury): it has no turn count to show, so the badge names what ends it.
+        public static FightHudModel.StatusRow TransformRow(string displayName, int turnsRemaining, bool permanent,
+            string upkeepPoolName = null)
         {
             string name = string.IsNullOrEmpty(displayName) ? "Transformed" : displayName;
-            string duration = permanent ? "for the rest of the run" : Plural(turnsRemaining, "turn");
+            bool upkept = !string.IsNullOrEmpty(upkeepPoolName);
+            string duration = upkept
+                ? $"while the {upkeepPoolName} lasts"
+                : permanent ? "for the rest of the run" : Plural(turnsRemaining, "turn");
+            permanent = permanent || upkept;
 
             return new FightHudModel.StatusRow(
                 TransformCode,

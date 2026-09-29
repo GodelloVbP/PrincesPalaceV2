@@ -430,7 +430,7 @@ namespace PrincesPalace.Domain.Bot
                 .Any(o => o.Skill != null && o.Skill.Effect == SkillEffect.Transform);
             if (!knowsATransform) return legal;
 
-            var ready = legal.FirstOrDefault(a => IsTransform(session, actor, a));
+            var ready = legal.FirstOrDefault(a => IsTransform(session, actor, a) && IsWorthCasting(session, actor, a));
             if (ready.Kind == FightActionKind.Skill && session.Encounter.LivingEnemies.Any())
             {
                 transformNow = ready;
@@ -451,6 +451,24 @@ namespace PrincesPalace.Domain.Bot
             if (action.Kind != FightActionKind.Skill) return false;
             var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
             return option.Skill != null && option.Skill.ResourceCost > 0;
+        }
+
+        // A FORM KEPT UP BY A POOL IS ONLY WORTH ENTERING WITH ENOUGH LEFT TO
+        // LIVE IN. Berserk costs 50 and drains 10 a turn, so a bar of 50 enters
+        // and ends on the next turn start having done nothing. The bot's
+        // valuation is the plain habit: cast it when what remains after paying
+        // covers MinUpkeepTurns of drain. A form with a turn timer has no such
+        // question and is always worth it.
+        public const int MinUpkeepTurns = 3;
+
+        private static bool IsWorthCasting(FightSession session, CombatantState actor, FightAction action)
+        {
+            var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+            int drain = option.Skill?.Transform?.primaryDrainPerTurn ?? 0;
+            if (drain <= 0) return true;
+
+            int left = (actor.PrimaryPool?.Current ?? 0) - option.Skill.ManaCost;
+            return left >= MinUpkeepTurns * drain;
         }
 
         private static bool IsTransform(FightSession session, CombatantState actor, FightAction action)
