@@ -461,6 +461,35 @@ namespace PrincesPalace.Domain.Tests
                     forbidsEffects = new[] { "Provoke", "Ward" },
                 });
 
+        // The form's art is swapped in on the entry beat and taken off on the
+        // exit beat, both recorded on the beats themselves so playback flashes
+        // over each change rather than reading live state.
+        [Test]
+        public void Berserk_WearsItsFormArtOnEntryAndRestoresTheBaseOnExit()
+        {
+            const string Folder = "Characters/bear_berserk";
+            var wearing = new ResolvedSkill("berserk", "Berserk", "test fixture", "bjorn", 1, SkillEffect.Transform,
+                SkillTargeting.Self, 50, 0, false, 0, 0, false, null, SpellPresentation.None, 0,
+                transform: new TransformGrant
+                {
+                    displayName = "Berserk",
+                    defenseToAttackPercent = 50,
+                    primaryDrainPerTurn = 10,
+                    spritePath = Folder,
+                });
+            var bjorn = Bjorn(Talents(Engine), fury: 50);
+            var session = Fight(bjorn, new[] { wearing }, Foe());
+
+            session.CastSkill(0, null);
+            var beats = session.DrainBeats();
+
+            var entry = beats.First(b => b.Forms != null && b.Forms.TryGetValue(bjorn, out var f) && f == Folder);
+            var exit = beats.Last(b => b.Forms != null && b.Forms.TryGetValue(bjorn, out var f) && f == "");
+            Assert.Less(beats.ToList().IndexOf(entry), beats.ToList().IndexOf(exit),
+                "the base art comes back after the form art went on, not before");
+            Assert.IsNull(bjorn.Transformation, "50 Fury pays the entry and leaves nothing for the first drain");
+        }
+
         private static ResolvedSkill Bellow() =>
             new ResolvedSkill("bellow", "Bellow", "test fixture", "bjorn", 1, SkillEffect.Provoke,
                 SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false, null, SpellPresentation.None, 0);

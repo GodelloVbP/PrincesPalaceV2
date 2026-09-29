@@ -179,6 +179,23 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEquivalent(new[] { "Provoke", "Ward" }, berserk.Transform.forbidsEffects);
         }
 
+        // The form is a whole delivered actor: every stance the fight can ask
+        // of Bjorn has to load from its folder, or a pose silently falls back
+        // to the base art mid-form and the figure pops between two drawings.
+        [Test]
+        public void BerserkNamesADeliveredFormWithEveryStanceBjornUses()
+        {
+            var berserk = ContentDatabase.GetSkill("berserk").Data;
+
+            Assert.AreEqual("Characters/bear_berserk", berserk.Transform.spritePath);
+
+            foreach (var stance in new[] { "idle", "attack", "cast", "hurt", "defeated", "victory", "rush", "overhead", "slam" })
+            {
+                Assert.IsNotNull(StanceAnimationLibrary.Resolve(berserk.Transform.spritePath, stance),
+                    berserk.Transform.spritePath + "/" + stance + " is not on disk");
+            }
+        }
+
         [Test]
         public void HeadsplitterSpendsEverythingAboveItsThirtyMinimum()
         {

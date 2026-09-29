@@ -196,6 +196,13 @@
         "size": 150
       },
       "_headNote": "The face and both horns, by eye, on Enemies/bellwether/idle.png (the upright redesign, 2026-09-28): a 150px square centred at canvas pixel (447, 92) -- 758x593 canvas, groundLine 8, so dx = 447 - 758/2 = 68 and dy = (593 - 1 - 92) - 8 = 492 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); the old four-legged ram's box (192.5, 265, 140) landed on the chest of the upright figure."
+    },
+    {
+      "spritePath": "Characters/bear_berserk",
+      "groundLine": 8,
+      "groundLineSource": "slicer",
+      "breath": 1.0,
+      "_breathNote": "Copied, not tuned: the same 1.0 Characters/bear writes out, so the form breathes as he does. See Art/Characters/bear_berserk/README.md."
     }
   ]
 }

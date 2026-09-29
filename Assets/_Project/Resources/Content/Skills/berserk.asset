@@ -85,7 +85,7 @@ MonoBehaviour:
       speedPercent: 0
       temporaryHealthPercent: 0
       splashPercent: 0
-      spritePath: 
+      spritePath: Characters/bear_berserk
       hit:
         vfx:
           path: 

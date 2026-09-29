@@ -2014,7 +2014,7 @@
       "stance": "slam"
     },
     {
-      "_comment": "Berserk (talents.json bear_ein_bers_1). A form kept up by Fury, not by turns: no `turns`, primaryDrainPerTurn 10 at each of his turn starts, and it ends when the pool is empty. Half of both defenses becomes Attack. Entering costs 50 Fury (manaCost), so a bar of exactly 50 enters and ends on his next turn: it wants 60 or more. forbidsEffects: Bellow (Provoke) and shields (Ward). spritePath is empty until the transformed battle sprite is drawn; the form wears his own art meanwhile.",
+      "_comment": "Berserk (talents.json bear_ein_bers_1). A form kept up by Fury, not by turns: no `turns`, primaryDrainPerTurn 10 at each of his turn starts, and it ends when the pool is empty. Half of both defenses becomes Attack. Entering costs 50 Fury (manaCost), so a bar of exactly 50 enters and ends on his next turn: it wants 60 or more. forbidsEffects: Bellow (Provoke) and shields (Ward). spritePath is the delivered Berserk actor (Art/Characters/bear_berserk), worn from the transform beat's impact and taken off when the Fury runs out.",
       "id": "berserk",
       "displayName": "Berserk",
       "description": "He stops guarding anything. Costs 50 Fury. Half his defense turns into attack, and the Fury drains by ten each turn; when it is gone, so is the rage. No Bellow, no shields while it lasts.",
@@ -2027,7 +2027,8 @@
         "displayName": "Berserk",
         "defenseToAttackPercent": 50,
         "primaryDrainPerTurn": 10,
-        "forbidsEffects": [ "Provoke", "Ward" ]
+        "forbidsEffects": [ "Provoke", "Ward" ],
+        "spritePath": "Characters/bear_berserk"
       },
       "windupStance": "victory",
       "stance": "victory",

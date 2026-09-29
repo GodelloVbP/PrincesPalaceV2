@@ -1,0 +1,64 @@
+{
+  "_readme": "How this actor's stance stills were produced. Replay with `python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Characters/bear_berserk/recipe.json`; a replay that does not reproduce the committed PNGs byte for byte means the tool, its libraries or the source sheet moved under it. The recipe describes how the frames are MADE -- how they are used is content, in ContentData/.",
+  "tool": "tools/slice_actor_sheet.py",
+  "toolSha256": "603b1b9f06edc2fbc8e948c20a7aee9df22b95382228c879167883db51d15bd8",
+  "sheets": [
+    {
+      "sheet": "Assets/_Project/Art/Characters/bear_berserk/sheet_poses.png",
+      "grid": "3x2",
+      "stances": "idle,attack,cast,hurt,defeated,victory",
+      "key": "white_flood",
+      "pocket_max_area": 4000,
+      "delivery_scale": 1.013157894736842
+    },
+    {
+      "sheet": "Assets/_Project/Art/Characters/bear_berserk/sheet_combat.png",
+      "grid": "2x2",
+      "stances": "rush,-,overhead,slam",
+      "key": "white_flood",
+      "pocket_max_area": 4000,
+      "delivery_scale": 0.84
+    }
+  ],
+  "argv": [
+    "--sheet",
+    "Assets/_Project/Art/Characters/bear_berserk/sheet_poses.png",
+    "--grid",
+    "3x2",
+    "--stances",
+    "idle,attack,cast,hurt,defeated,victory",
+    "--key",
+    "white_flood",
+    "--pocket-max-area",
+    "4000",
+    "--delivery-scale",
+    "1.013157894736842",
+    "--sheet",
+    "Assets/_Project/Art/Characters/bear_berserk/sheet_combat.png",
+    "--grid",
+    "2x2",
+    "--stances",
+    "rush,-,overhead,slam",
+    "--key",
+    "white_flood",
+    "--pocket-max-area",
+    "4000",
+    "--delivery-scale",
+    "0.84",
+    "--actor",
+    "Characters/bear_berserk",
+    "--anchor",
+    "ground_band",
+    "--max-ground-spread",
+    "6",
+    "--prune"
+  ],
+  "outputFolder": "Assets/_Project/Resources/Characters/bear_berserk",
+  "groundLine": 8,
+  "versions": {
+    "python": "3.14.5",
+    "pillow": "12.3.0",
+    "numpy": "2.5.1"
+  },
+  "generatedAt": "2026-09-29T14:37:51+02:00"
+}
