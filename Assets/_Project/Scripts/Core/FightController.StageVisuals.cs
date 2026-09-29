@@ -217,6 +217,10 @@ namespace PrincesPalace
             DrawSide(OrderOf(playerSide: true), partySlots, partySprites, partyActorAnimators,
                      partyHitFlashes, partyNameplates, _partySlotPlaced, StageSide.Left,
                      mirrored: true, null, field: PartyFieldToShow());
+
+            // Idle only, for the reason the enemy status row is: no beat
+            // carries a shield snapshot, so a live read mid-round runs ahead.
+            if (!_isBusy) RefreshShieldProps();
         }
 
         // ONE SIDE: where each figure stands, and what it is wearing.
@@ -1452,6 +1456,7 @@ namespace PrincesPalace
             ContentCentreCache.Clear();
             ClearOpaqueBoxCache();
             ClearVfxPaddingCache();
+            ResetShieldProps();
 
             _confirmedDefeated.Clear();
 

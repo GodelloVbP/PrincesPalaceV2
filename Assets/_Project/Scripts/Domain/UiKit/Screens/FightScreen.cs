@@ -150,6 +150,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public List<NodeRef> PartySlots = new List<NodeRef>();
         public List<NodeRef> PartySprites = new List<NodeRef>();
+
+        // The planted shield / Shieldwall prop, one per party slot, a child of the
+        // slot so it takes the seat's depth scale.
+        public List<NodeRef> PartyShieldProps = new List<NodeRef>();
         public List<NodeRef> PartyHitFlashes = new List<NodeRef>();
         public List<NodeRef> PartyNameplates = new List<NodeRef>();
         public List<NodeRef> PartyFootShadows = new List<NodeRef>();
@@ -420,7 +424,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var partyStage = s.BuildStage("Party", mirrored: true,
                 FightStageAnchors.AllyShadowColor, s.PartySlots, s.PartySprites, s.PartyHitFlashes,
                 s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows,
-                intentIcons: null, hitAreas: s.PartyHitAreas);
+                intentIcons: null, hitAreas: s.PartyHitAreas, shieldProps: s.PartyShieldProps);
             var enemyStage = s.BuildStage("Enemy", mirrored: false,
                 FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows, s.EnemyIntentIcons, s.EnemyHitAreas);
@@ -593,7 +597,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                                   List<NodeRef> slots, List<NodeRef> sprites, List<NodeRef> flashes,
                                   List<NodeRef> nameplates, List<NodeRef> shadows, List<NodeRef> glows,
                                   List<NodeRef> intentIcons = null,
-                                  List<NodeRef> hitAreas = null)
+                                  List<NodeRef> hitAreas = null,
+                                  List<NodeRef> shieldProps = null)
         {
             int count = FightHudSpec.StageSlotsPerSide;
             for (int i = 0; i < count; i++)
@@ -606,6 +611,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 glows.Add(default);
                 intentIcons?.Add(default);
                 hitAreas?.Add(default);
+                shieldProps?.Add(default);
             }
 
             var children = new List<UiNode>();
@@ -809,6 +815,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 }
 
                 var kids = new List<UiNode> { shadow, sprite, flash, nameplate };
+
+                // A PROP STANDING AT THE SLOT'S GROUND LINE, in front of the
+                // figure. Anchored to the slot's bottom-left with a bottom-centre
+                // pivot so the runtime can place its tip by canvas pixels; the
+                // size is a placeholder resized to the art's own proportions.
+                // Decor, like the sprite: a prop is painted, never pressed.
+                if (shieldProps != null)
+                {
+                    var prop = Ui.Sprite($"{prefix}{slot}ShieldProp", null, new UiVec(160f, 180f),
+                            Place.Pin(UiVec.Zero, new UiVec(0.5f, 0f), UiVec.Zero))
+                        .Inactive()
+                        .AsDecor()
+                        .AllowOverflow("a planted shield stands at the figure's leading edge and is resized to the art at runtime, so it may reach past the placeholder slot");
+                    kids.Add(prop);
+                    shieldProps[slot] = prop;
+                }
                 if (hitArea != null) kids.Add(hitArea);
                 if (intent != null) kids.Add(intent);
 

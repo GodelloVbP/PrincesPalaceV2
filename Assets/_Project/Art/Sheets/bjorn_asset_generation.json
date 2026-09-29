@@ -1,0 +1,96 @@
+{
+  "generator": "built-in image_gen",
+  "generatedOn": "2026-09-29",
+  "exactPromptSource": "output/bjorn-art-2026-09-29/source-prompt.txt",
+  "promptNote": "The scratch prompt source is an unchanged copy of the user's full generation brief and contains the exact prompts for every asset in this delivery, plus the deferred Berserk stance sheets.",
+  "assets": [
+    {
+      "role": "approved-design candidate: normal and Berserk Bjorn concept",
+      "source": "exec-b78b6089-1682-4d3a-adaa-3560b40aab86.png",
+      "sourceSha256": "fc942655b20b38a74242c0786e0e56da971d2cbbaa413979312bbce537b8deb",
+      "output": "Assets/_Project/Art/Sheets/bjorn_berserk_concept.png",
+      "outputSha256": "cea1d2891c9e1b41492e7d797ecebfd306441f782fa2dce064a7ac7882669634",
+      "transform": "RGB copy; source already 1536x1024"
+    },
+    {
+      "role": "three-state planted shield source sheet",
+      "source": "exec-4045cbf0-8132-4db6-b194-8a45b8243204.png",
+      "sourceSha256": "995b1004ca82f3ad8b2b91ae91b228b0a2f50f61ec39001e8001896a17c33f2c",
+      "output": "Assets/_Project/Art/Sheets/bjorn_planted_shield.png",
+      "outputSha256": "c6636f7d3c826b8f84c098c1156e9607e49453a91895d1c050a77997a7c2619f",
+      "transform": "uniform Lanczos resize 2172x724 to 1536x512; no stretch"
+    },
+    {
+      "role": "four-shield wall source sheet",
+      "source": "exec-79df31d9-d63c-4a65-b904-6096ebb30acf.png",
+      "sourceSha256": "e1ba4be8a278c154fbcca84c20f2f03b10b817b14ca16feb574013066be51a4f",
+      "output": "Assets/_Project/Art/Sheets/bjorn_shield_wall.png",
+      "outputSha256": "f1b7609057be031bef7343ab6a2e34d54fbf92aa2792777f41e6aa0b022dbcc6",
+      "transform": "uniform Lanczos resize 2043x770 to 1359x512, centred on a 2048x512 RGB white canvas; no stretch"
+    },
+    {
+      "role": "Fortified status icon",
+      "source": "exec-7aef5636-13ea-4935-afa5-99d30c866e28.png",
+      "sourceSha256": "3cbd7cec596e9c0b9d6388ed0c1b4fd4a13c2a85f9195f8ab3480f0901be0700",
+      "rawOutput": "Assets/_Project/Art/UI/Status/Raw/fortified.png",
+      "rawOutputSha256": "f6909dcd914b27e6c2dee955b4adaac3687b5a49e5e0aa02fc175f2333e317b2",
+      "keyedOutput": "Assets/_Project/Resources/Status/fortified.png",
+      "keyedOutputSha256": "6951dc8f54cbf6d8ddca51eee01e0ed73e55cee1e1f5c655f700e4e83da7fef6",
+      "transform": "uniform 1024-square master; hue-keyed subject normalized to 778x434 maximum safe-box extent, centred on #00FF00; status keyer to 256x256"
+    },
+    {
+      "role": "Silenced status icon",
+      "source": "exec-fcd86cf8-595d-4ef6-8592-7831b9d012dd.png",
+      "sourceSha256": "33b29dcf1a3f52be36f49610194fd8846a6aea96b9eb34b2d17aa460ffb5ce43",
+      "rawOutput": "Assets/_Project/Art/UI/Status/Raw/silenced.png",
+      "rawOutputSha256": "a12553fdc848530969a6a04cd8be5c3378a584d6ca3ce9aef98f34b6e461f60d",
+      "keyedOutput": "Assets/_Project/Resources/Status/silenced.png",
+      "keyedOutputSha256": "b3a8f3c655ff596a9bd72cdd28c8193b3aaf921cd2342d4bb4492a9d35fb136d",
+      "transform": "uniform 1024-square master; hue-keyed subject normalized to 749x778 maximum safe-box extent, centred on #00FF00; status keyer to 256x256"
+    },
+    {
+      "role": "Disarmed status icon",
+      "source": "exec-43845a0f-1c89-4b93-9768-084cbf8c9b1b.png",
+      "sourceSha256": "d40be50a39cf62545e6c1e73cb562a6b823411de9fe0bf97e2251abcf5b15ff0",
+      "rawOutput": "Assets/_Project/Art/UI/Status/Raw/disarmed.png",
+      "rawOutputSha256": "ea8d9de35a290c4461e85329ad7c7d4884078c32f9b6689efd8d85b70b96223d",
+      "keyedOutput": "Assets/_Project/Resources/Status/disarmed.png",
+      "keyedOutputSha256": "d348219e9d764061fdaae30b7350febe57c271d5bac66e5bbaba77ba80348a46",
+      "transform": "uniform 1024-square master; hue-keyed subject normalized to 658x778 maximum safe-box extent, centred on #00FF00; status keyer to 256x256"
+    },
+    {
+      "role": "Sentinel talent sky",
+      "source": "exec-dc1fd73e-9a09-401c-90b7-5bb19583af27.png",
+      "sourceSha256": "50ea7df4f52e2c0836eec8e0357b6eba4cecb3ece61fce6c599576cc813b55eb",
+      "output": "Assets/_Project/Art/Backgrounds/Sentinel.png",
+      "outputSha256": "b9b96670178a79301fd38fec3937a17267de327fb0d356e34aae0c96e4ec5b5e",
+      "finalPromptAugmentation": "Very dark muted cloud shapes so constellation stars remain brightest.",
+      "transform": "uniform Lanczos resize 1672x941 to 1920x1081, then crop one bottom row to opaque RGB 1920x1080; no stretch"
+    },
+    {
+      "role": "Einherjar talent sky",
+      "source": "exec-ecd736a9-5da1-4f33-bfab-8ffe939582ca.png",
+      "sourceSha256": "73c3f258be142579e8c88132907cf27bc6bcb896d4edd25900ed6ae23c26578b",
+      "output": "Assets/_Project/Art/Backgrounds/Einherjar.png",
+      "outputSha256": "33434eb4e6a8280cd4e9237238f52c8d362d18784b933cc59b917811a7b2fdad",
+      "finalPromptAugmentation": "Very dark muted cloud shapes; broad horizontal double-bit axe cloud silhouette with concave upper and lower notches and two crescent blades; no shield or rampart.",
+      "transform": "uniform Lanczos resize 1672x941 to 1920x1081, then crop one bottom row to opaque RGB 1920x1080; no stretch"
+    },
+    {
+      "role": "Juggernaut talent sky",
+      "source": "exec-a160ab1c-ae75-4966-a1a6-c6c25ad43a54.png",
+      "sourceSha256": "02d1cc73db053fb949c0eb04e212a3f924b25f43ee637bb8178b8d352f5d02a7",
+      "output": "Assets/_Project/Art/Backgrounds/Juggernaut.png",
+      "outputSha256": "4237ced18e01f7155947845dfcd9d0e8dec997daa271b195b2aef843a19679b7",
+      "finalPromptAugmentation": "Very dark muted cloud shapes; recognizable four cloud toe lobes above a broad cloud pad, faint moss-brown rims, upper-centre at about 35% width, with a dark lower centre.",
+      "transform": "uniform Lanczos resize 1672x941 to 1920x1081, then crop one bottom row to opaque RGB 1920x1080; no stretch"
+    }
+  ],
+  "qa": {
+    "originalContactSheet": "output/bjorn-art-2026-09-29/delivery-contact-sheet.png",
+    "backgroundContactSheet": "output/bjorn-art-2026-09-29/backgrounds-original-contact-sheet.png",
+    "tintAndGlyphContactSheet": "output/bjorn-art-2026-09-29/final-qa-background-tint-and-24px-glyphs.png",
+    "skyMultiplyTint": "#3E3A58",
+    "glyphPreview": "24px glyph inside 36px badge"
+  }
+}

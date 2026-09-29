@@ -56,6 +56,10 @@ namespace PrincesPalace
         // jolting while the other holds still reads as a bug in the layout.
         [SerializeField] internal StageShake[] stageShakes;
         [SerializeField] internal Image[] partySprites;
+
+        // The planted shield / Shieldwall prop, one per party slot, a child of the
+        // slot (FightController.ShieldProps.cs).
+        [SerializeField] internal Image[] partyShieldProps;
         [SerializeField] internal StageHitFlash[] partyHitFlashes;
         [SerializeField] internal TMP_Text[] partyNameplates;
         [SerializeField] internal StageActorAnimator[] partyActorAnimators;

@@ -43,6 +43,10 @@ public class StanceSpriteImporter : AssetPostprocessor
     // the swing simply plays no effect, with nothing anywhere reporting it.
     private const string ContactVfxRoot = "/Resources/Vfx/";
 
+    // Stage props (the planted shield and Shieldwall). Loaded with
+    // Resources.Load<Sprite> by the fight view, so the same silent-null trap.
+    private const string PropRoot = "/Resources/Props/";
+
     private void OnPreprocessTexture()
     {
         if (!IsStanceSprite(assetPath))
@@ -75,7 +79,8 @@ public class StanceSpriteImporter : AssetPostprocessor
         return path.Contains(EnemyStanceRoot)
             || path.Contains(CharacterStanceRoot)
             || path.Contains(SpellVfxRoot)
-            || path.Contains(ContactVfxRoot);
+            || path.Contains(ContactVfxRoot)
+            || path.Contains(PropRoot);
     }
 
     // OnPreprocessTexture only fires on an actual (re)import — editing this

@@ -1229,6 +1229,22 @@ Cursed Blood VFX, three constellation backgrounds. Pipeline:
 separate final phase; placeholders are acceptable meanwhile (graceful
 degradation, per `CLAUDE.md` conventions).
 
+Status of each item:
+
+- Status icons (Fortified, Silenced, Disarmed): DONE. `Resources/Status/{fortified,silenced,disarmed}.png`.
+  Fortified loads through the slug table. Silenced and Disarmed are `Suppression`
+  windows, so `FightHudModel.StatusRowsFor` reads them off the combatant beside the
+  transformation and `StatusHud.SilenceRow`/`DisarmRow` word them.
+- Three constellation backgrounds: DONE. `TalentBackdrops` maps plot id
+  (shield/axe/paw) to sprite and its own tint; `TalentController.ApplyBackdrop` swaps
+  on path and character step, and a plot with no row keeps the nebula.
+- Planted shield (intact, cracked, broken) and Shieldwall: DONE as a stage prop
+  (`FightController.ShieldProps.cs`, `Resources/Props/planted_shield/`). It paints when
+  the view is idle, so a break reads at the end of the round, not on the blow.
+- Berserk battle sprite: NOT DONE. Only the concept exists (`Art/Sheets/bjorn_berserk_concept.png`);
+  the stance sheets are not generated and no form is wired.
+- Cursed Blood VFX: NOT DONE.
+
 ### Parallel track — enemy roster
 
 Owner confirmed the roster will grow to support these trees. Today:
