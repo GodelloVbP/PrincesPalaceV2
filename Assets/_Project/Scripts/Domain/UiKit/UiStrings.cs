@@ -979,7 +979,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString HubPrincipality = UiString.Define("hub_principality", "PRINCIPALITY");
         public static readonly UiString HubCharacterSheet = UiString.Define("hub_character_sheet", "CHARACTER\nSHEET");
         public static readonly UiString HubRelics = UiString.Define("hub_relics", "RELICS");
-        public static readonly UiString HubMainMenu = UiString.Define("hub_main_menu", "Main Menu");
+        public static readonly UiString HubExit = UiString.Define("hub_exit", "Exit");
 
         // --- the fight screen -------------------------------------------------
         //
@@ -1193,6 +1193,20 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("system.tab.options", "OPTIONS");
         public static readonly UiString SystemTabExit =
             UiString.Define("system.tab.exit", "EXIT");
+
+        // What each tab reads as when the full labels do not fit the bar
+        // (SystemMenuLayout.Arrange). Every tab has one, so the fallback
+        // never leaves a mix of long and short.
+        public static readonly UiString SystemTabCharacterShort =
+            UiString.Define("system.tab.character.short", "CHAR");
+        public static readonly UiString SystemTabPartyShort =
+            UiString.Define("system.tab.party.short", "PARTY");
+        public static readonly UiString SystemTabRunStatsShort =
+            UiString.Define("system.tab.run_stats.short", "STATS");
+        public static readonly UiString SystemTabOptionsShort =
+            UiString.Define("system.tab.options.short", "OPTS");
+        public static readonly UiString SystemTabExitShort =
+            UiString.Define("system.tab.exit.short", "EXIT");
         public static readonly UiString SystemMenuTitle =
             UiString.Define("system.title", "DIVINE PRINCIPALITY");
         public static readonly UiString SystemBetweenDescents =

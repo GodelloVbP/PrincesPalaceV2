@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -38,6 +39,13 @@ namespace PrincesPalace.PlayModeTests
         // 2026-09-19 call. A one-frame edge like the two above.
         public bool SystemMenuDown;
 
+        // Every other button by its Input Manager name -- the menu hotkeys
+        // (SystemMenuTabs.AxisFor) and View. One-frame edges, like the fields
+        // above; add a name with Press and it is spent by ClearOneFrameFlags.
+        public readonly HashSet<string> ButtonsDown = new HashSet<string>();
+
+        public void Press(string buttonName) => ButtonsDown.Add(buttonName);
+
         // The triggers, which are LEVELS and not edges -- InputManager.asset
         // binds them as Joystick Axis entries, so the dispatcher owns their
         // press edge itself (NavigationInputModule.TriggerPressed) and a test
@@ -70,7 +78,7 @@ namespace PrincesPalace.PlayModeTests
             if (buttonName == "TabNext") return TabNextDown;
             if (buttonName == "SystemMenu") return SystemMenuDown;
             if (buttonName == "Jump") return CharacterSelectDown;
-            return false;
+            return ButtonsDown.Contains(buttonName);
         }
 
         public void ClearOneFrameFlags()
@@ -83,6 +91,7 @@ namespace PrincesPalace.PlayModeTests
             TabNextDown = false;
             SystemMenuDown = false;
             CharacterSelectDown = false;
+            ButtonsDown.Clear();
         }
     }
 }

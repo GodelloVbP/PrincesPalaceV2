@@ -211,6 +211,12 @@ namespace PrincesPalace.Domain.UiKit
         // for a themed button's own <name>Label.
         public TypographyRole? Role;
 
+        // Tracking, in hundredths of an em, that a Role node draws with instead
+        // of its role's own spacing (Typography.Specs). Null keeps the role's.
+        // Separate from Tracking above, which a role node has always ignored:
+        // honouring it there would re-space every label that sets both.
+        public float? RoleTracking;
+
         // A label that must never wrap or spill outside its own box, whatever
         // content lands in it at runtime -- set through Truncated() below.
         // False (the untouched path) leaves TMP's own defaults, word-wrap on
@@ -428,6 +434,10 @@ namespace PrincesPalace.Domain.UiKit
 
         // In hundredths of an em, matching CSS: Tracked(14) is .14em.
         public UiNode Tracked(float emHundredths) { Tracking = emHundredths; return this; }
+
+        // Tracked for a label that also has a Role, whose spacing the role
+        // would otherwise decide.
+        public UiNode TrackedOverRole(float emHundredths) { RoleTracking = emHundredths; return this; }
 
         public UiNode AllowOverlap(string reason)
         {

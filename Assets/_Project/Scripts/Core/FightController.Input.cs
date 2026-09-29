@@ -1528,41 +1528,21 @@ namespace PrincesPalace
             if (panel != null) panel.gameObject.SetShown(visible);
         }
 
-        // ---- the character sheet, mid-fight -----------------------------------
+        // ---- per-frame upkeep ---------------------------------------------------
 
-        // Same two keys as the hub, so "what am I wearing" is one gesture
-        // wherever the player is standing. The sheet is wired read-only in
-        // this scene, so opening it cannot change the fight it is describing.
+        // The menu's hotkeys are not read here: NavigationInputModule reads them
+        // once and hands them to Fight's NavContext (RegisterNavContext).
         private void Update()
         {
             RescueAStrandedTurn();
             RescueAStalledEnemyTurn();
             TryForcedFirstAction();
 
-            // ABOVE the characterSheetPanel guard below, and that placement
-            // is the point: the sheet being unwired is a reason not to read
-            // its two hotkeys, not a reason for a card on the HUD behind it
-            // to stop breathing. Costs one int compare on every frame of
-            // every fight shipped today -- no pool authors pulse yet, so the
-            // list it guards is empty (see RefreshPoolPulse).
+            // One int compare on every frame of every fight shipped today --
+            // no pool authors pulse yet, so the list it guards is empty (see
+            // RefreshPoolPulse).
             RefreshPoolPulse();
             KeepRoundOverlayPlaced();
-
-            if (characterSheetPanel == null) return;
-
-            // GATED ON TOP OF STACK (plan section 4/11), same shape as
-            // Hub's and Map's: a modal that has pushed its own context over
-            // Fight's must not also see C/I land underneath it. Fight's own
-            // _navContext is registered by RegisterNavContext the moment a
-            // session becomes active, so this is meaningful from the first
-            // frame of a real fight.
-            if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
-            {
-                return;
-            }
-
-            if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
-            else if (Input.GetKeyDown(KeyCode.I)) ToggleCharacterSheet(inventory: true);
 
             // Cancel/Escape is not read here at all -- it belongs to the ONE
             // dispatch point now (NavigationInputModule's Fight branch,
@@ -1982,7 +1962,8 @@ namespace PrincesPalace
             // systemMenu, not Cancel: Start reaches the overarching menu
             // from inside a fight, and B is left meaning one thing only --
             // step back a level.
-            _navContext = NavContext.ForFight(this, systemMenu: OpenSystemMenu);
+            _navContext = NavContext.ForFight(this, systemMenu: OpenSystemMenu,
+                menuHotkey: hotkey => MenuHotkeys.Press(systemMenu, hotkey));
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
@@ -2725,9 +2706,8 @@ namespace PrincesPalace
             }
         }
 
-        // Separated from the key for the same reason HubController separates
-        // its own: legacy Input cannot be simulated headlessly, so a test that
-        // had to press C could not exist. Tests drive these directly.
+        // C and I without the key, through the same seam as the hub's
+        // (SheetPanel). Tests and the hotkey dispatcher share one path.
         public bool CharacterSheetIsOpen => SheetPanel.IsOpen(characterSheetPanel);
 
         public void ToggleCharacterSheet(bool inventory = false) =>

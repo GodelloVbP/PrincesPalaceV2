@@ -8,7 +8,7 @@ namespace PrincesPalace.Domain.UiKit
     // Adding a section is meant to be one entry here and nothing else: the bar
     // computes every position from this table (SystemMenuLayout), the screen
     // builds a tab and a pane per entry, the controller switches on index, and
-    // a build-time check refuses a strip that no longer fits.
+    // the build refuses a strip that no longer fits.
     //
     // The set is context-driven, not fixed. A tab that cannot be used is
     // absent, never greyed: a greyed tab asks the player to work out why, and
@@ -30,8 +30,21 @@ namespace PrincesPalace.Domain.UiKit
         Exit,
     }
 
+    // Which end of the bar a tab sits at. The game group is what the player
+    // is playing with and packs from the left; the system group is the way out
+    // and packs flush right, in a quieter colour (SystemMenuLayout).
+    public enum SystemMenuTabGroup
+    {
+        Game,
+        System,
+    }
+
     public readonly struct SystemMenuTabDef
     {
+        // Domain is engine-free, so a hotkey is the character on the key and
+        // this is what "none" looks like.
+        public const char NoHotkey = (char)0;
+
         public readonly SystemMenuTab Tab;
 
         // The node-name stem. Every node this tab owns is named from it, so a
@@ -41,49 +54,103 @@ namespace PrincesPalace.Domain.UiKit
 
         public readonly UiString Label;
 
+        // What the bar draws when the full labels do not fit
+        // (SystemMenuLayout.Arrange). Every tab has one.
+        public readonly UiString ShortLabel;
+
+        public readonly SystemMenuTabGroup Group;
+
+        // The plain key that opens or toggles this tab. The keys that go to a
+        // target (I, for the pack) live in SystemMenuTabs.Hotkeys.
+        public readonly char Hotkey;
+
         // Only shown while a run is in progress.
         public readonly bool RunOnly;
 
-        // The rendered width of Label, in pixels, at 18px Chakra Petch 500 with
-        // .14em letter-spacing.
-        //
-        // The build-time approximation the scene is emitted from, before any
-        // text exists to measure; the controller re-lays the bar from the
-        // drawn labels on every open. Author the width TMP draws, rounded to a
-        // whole pixel: SystemMenuLabelWidthTests holds each figure to the drawn
-        // label within a pixel, and these figures are what UiAudit and the
-        // capacity guard see.
-        public readonly float LabelWidth;
-
-        public SystemMenuTabDef(SystemMenuTab tab, string key, UiString label,
-                                float labelWidth, bool runOnly = false)
+        public SystemMenuTabDef(SystemMenuTab tab, string key, UiString label, UiString shortLabel,
+                                SystemMenuTabGroup group, char hotkey = NoHotkey, bool runOnly = false)
         {
             Tab = tab;
             Key = key;
             Label = label;
-            LabelWidth = labelWidth;
+            ShortLabel = shortLabel;
+            Group = group;
+            Hotkey = hotkey;
             RunOnly = runOnly;
         }
+
+        public bool HasHotkey => Hotkey != NoHotkey;
     }
 
     public static class SystemMenuTabs
     {
-        // In the order the bar draws them. The camp set is this list with the
-        // run-only entries removed, so the two sets cannot disagree about
-        // relative order: Options and Exit stay last in both.
+        // In the order the bar draws them: the game group, then the system
+        // group. The camp set is this list with the run-only entries removed,
+        // so the two sets cannot disagree about relative order.
         public static readonly IReadOnlyList<SystemMenuTabDef> All = new[]
         {
             new SystemMenuTabDef(SystemMenuTab.Character, "Character",
-                UiStrings.SystemTabCharacter, labelWidth: 121f),
+                UiStrings.SystemTabCharacter, UiStrings.SystemTabCharacterShort,
+                SystemMenuTabGroup.Game, hotkey: 'C'),
             new SystemMenuTabDef(SystemMenuTab.Party, "Party",
-                UiStrings.SystemTabParty, labelWidth: 63f),
+                UiStrings.SystemTabParty, UiStrings.SystemTabPartyShort,
+                SystemMenuTabGroup.Game, hotkey: 'P'),
             new SystemMenuTabDef(SystemMenuTab.RunStats, "RunStats",
-                UiStrings.SystemTabRunStats, labelWidth: 164f, runOnly: true),
+                UiStrings.SystemTabRunStats, UiStrings.SystemTabRunStatsShort,
+                SystemMenuTabGroup.Game, runOnly: true),
             new SystemMenuTabDef(SystemMenuTab.Options, "Options",
-                UiStrings.SystemTabOptions, labelWidth: 88f),
+                UiStrings.SystemTabOptions, UiStrings.SystemTabOptionsShort,
+                SystemMenuTabGroup.System),
             new SystemMenuTabDef(SystemMenuTab.Exit, "Exit",
-                UiStrings.SystemTabExit, labelWidth: 43f),
+                UiStrings.SystemTabExit, UiStrings.SystemTabExitShort,
+                SystemMenuTabGroup.System),
         };
+
+        // ---- hotkeys ------------------------------------------------------------
+        //
+        // Every key and button that opens the menu somewhere, read by the one
+        // dispatcher (NavigationInputModule) and answered by MenuHotkeys. The
+        // plain tab keys come from the table above, so a tab's key is one
+        // field; the two entries after them are the ones the table cannot say.
+        // Declared after All: static initialisers run in textual order.
+        public const string ViewAxis = "View";
+
+        // I: the Character tab, with the pack up.
+        public const char PackKey = 'I';
+
+        // The Input Manager button a plain key is bound to.
+        public static string AxisFor(char key) => "Hotkey" + char.ToUpperInvariant(key);
+
+        public static readonly IReadOnlyList<MenuHotkeyDef> Hotkeys = BuildHotkeys();
+
+        private static IReadOnlyList<MenuHotkeyDef> BuildHotkeys()
+        {
+            var list = new List<MenuHotkeyDef>();
+            foreach (var def in All)
+            {
+                if (def.HasHotkey) list.Add(new MenuHotkeyDef(AxisFor(def.Hotkey), def.Tab));
+            }
+
+            list.Add(new MenuHotkeyDef(AxisFor(PackKey), SystemMenuTab.Character, MenuTarget.Pack));
+            list.Add(new MenuHotkeyDef(ViewAxis, tab: null));
+            return list;
+        }
+
+        public static MenuHotkeyDef HotkeyFor(char key)
+        {
+            string axis = AxisFor(key);
+            foreach (var hotkey in Hotkeys)
+            {
+                if (hotkey.Axis == axis) return hotkey;
+            }
+
+            throw new System.ArgumentOutOfRangeException(nameof(key), key, "no such menu hotkey");
+        }
+
+        // The pad's View button: the run at a glance where there is a run, the
+        // squad at camp.
+        public static SystemMenuTab ViewTabFor(MenuContext context) =>
+            context == MenuContext.Camp ? SystemMenuTab.Character : SystemMenuTab.RunStats;
 
         public static int Count => All.Count;
 
@@ -116,6 +183,8 @@ namespace PrincesPalace.Domain.UiKit
                 nameof(tab), tab, "no such tab in SystemMenuTabs.All");
         }
 
+        public static SystemMenuTabDef Def(SystemMenuTab tab) => All[IndexOf(tab)];
+
         // The tabs shown in this context, as indices into All.
         //
         // Indices rather than defs, because the screen built its buttons
@@ -134,10 +203,9 @@ namespace PrincesPalace.Domain.UiKit
         public static IReadOnlyList<SystemMenuTabDef> Visible(bool inRun) =>
             VisibleIndices(inRun).Select(i => All[i]).ToList();
 
-        // Where the menu opens when the caller did not say: Character in every
-        // context, so `inRun` is unused. It is the one seam callers go through
-        // for "the tab to open on", which is why the parameter stays. A tab the
-        // caller names still wins over this.
-        public static SystemMenuTab DefaultFor(bool inRun) => SystemMenuTab.Character;
+        // Where the menu opens when nothing is remembered: Character in every
+        // context. Callers go through MenuMemory.TabFor, the one seam for "the
+        // tab to open on"; a tab the caller names wins over both.
+        public static SystemMenuTab DefaultFor(MenuContext context) => SystemMenuTab.Character;
     }
 }

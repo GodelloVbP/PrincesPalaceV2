@@ -98,7 +98,7 @@ namespace PrincesPalace
         private void Start()
         {
             Wire();
-            if (!_chosen) Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(InDescent)));
+            if (!_chosen) SelectCore(SystemMenuTabs.IndexOf(MenuMemory.TabFor(context)), audible: false);
         }
 
         private void Wire()
@@ -146,7 +146,7 @@ namespace PrincesPalace
         // wire, and each would otherwise write its own null check and its
         // own already-open guard -- three copies of one rule. Returns
         // whether it opened, for a caller that has something else to do
-        // when it did not.
+        // when it did not. Opens on the remembered tab (MenuMemory).
         public static bool OpenFromRoot(SystemMenuController menu)
         {
             if (menu == null || menu.IsOpen) return false;
@@ -155,10 +155,40 @@ namespace PrincesPalace
             return true;
         }
 
-        public void Open()
+        // On the tab the player last used here, else the context's default.
+        public void Open() => Open(MenuMemory.TabFor(context));
+
+        // THE ONE WAY IN. Every caller -- the roots' Start, the hotkeys, the
+        // pad's View button, the hub's buildings and corner button, the sheet
+        // seam -- ends up here, so what opening means (pause, nav context,
+        // memory) is written once.
+        //
+        // Already open is a switch, not a second open: the pending state of
+        // the tab being left is cancelled first (plan C6) and the pause and
+        // the nav context, both idempotent, are left alone. A tab this
+        // context does not have falls back to the reopen rule rather than
+        // showing a pane no tab button leads to.
+        public void Open(SystemMenuTab tab, MenuTarget target = default)
         {
             Wire();
+
+            bool wasOpen = IsOpen;
+            if (wasOpen) CancelPending();
+
             ApplyContext();
+
+            int index = SystemMenuTabs.IndexOf(tab);
+            if (!_visible.Contains(index))
+            {
+                index = SystemMenuTabs.IndexOf(MenuMemory.TabFor(context));
+                if (!_visible.Contains(index)) index = _visible[0];
+            }
+
+            // Silent when it is the open itself that lands on a tab: only a
+            // switch the player made is a swipe.
+            SelectCore(index, audible: wasOpen);
+            MenuMemory.Remember(context, SystemMenuTabs.All[index].Tab);
+
             panel.SetShown(true);
 
             // AGAIN, NOW THE PANEL IS ACTUALLY ACTIVE. ApplyContext's own
@@ -177,6 +207,8 @@ namespace PrincesPalace
 
             Pause();
             PushNavContext();
+
+            ApplyTarget(SystemMenuTabs.All[index].Tab, target);
         }
 
         public void Close()
@@ -189,6 +221,62 @@ namespace PrincesPalace
         public void Toggle()
         {
             if (IsOpen) Close(); else Open();
+        }
+
+        // The tab showing, as a value rather than an index into the table.
+        public SystemMenuTab SelectedTab => SystemMenuTabs.All[_selected].Tab;
+
+        // DROPS EVERY PENDING STATE THE ACTIVE PANE HOLDS, with no change to
+        // game state (plan C5, C6). A hotkey does it before it switches or
+        // closes; a plain Close() does not, so a pane the player left with
+        // its pack up still has it up when they come back (C7). The seam is the one Cancel already uses,
+        // INavCancelClaim, asked until the pane has nothing left to spend a
+        // press on: a Party carry is put back, the dossier's overlays close.
+        // Bounded, because a claim that answers true forever would otherwise
+        // hang the frame; the deepest pane has five levels.
+        public void CancelPending()
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                var claimant = ActivePaneCancelClaim();
+                if (claimant == null || !claimant.ClaimCancel()) return;
+            }
+        }
+
+        // Whether the thing a target names is already on screen, so a hotkey
+        // can tell "go there" from "already there" (MenuHotkeyRule).
+        public bool TargetIsShowing(MenuTarget target)
+        {
+            if (!IsOpen || SelectedTab != SystemMenuTab.Character) return false;
+            if (!target.Is(MenuTargetKind.Section, MenuSections.Pack)) return false;
+
+            var dossier = Dossier();
+            return dossier != null && dossier.IsPackShown;
+        }
+
+        // Points the tab at its target. A kind the tab has no place for yet is
+        // ignored, so a target can name something a later phase builds.
+        private void ApplyTarget(SystemMenuTab tab, MenuTarget target)
+        {
+            if (tab != SystemMenuTab.Character || target.IsNone) return;
+
+            var dossier = Dossier();
+            if (dossier == null) return;
+
+            // The character first: choosing one repaints the pane, and the pack
+            // that follows should open over the character asked for.
+            if (target.Kind == MenuTargetKind.CharacterId) dossier.SelectCharacter(target.Id);
+            if (target.Is(MenuTargetKind.Section, MenuSections.Pack)) dossier.ShowPack(true);
+        }
+
+        // Found rather than wired: the menu only knows its panes, and the
+        // dossier is the Character pane's controller.
+        private CharacterDossierController Dossier()
+        {
+            int pane = SystemMenuTabs.PaneIndexFor(SystemMenuTabs.IndexOf(SystemMenuTab.Character));
+            return panes != null && pane < panes.Length && panes[pane] != null
+                ? panes[pane].GetComponentInChildren<CharacterDossierController>(includeInactive: true)
+                : null;
         }
 
         // Restores the clock even if the object is torn down while open -- a
@@ -235,7 +323,10 @@ namespace PrincesPalace
                 _navContext = new NavContext(entry: null, selectables: null, cancel: Close,
                     claimant: ActivePaneCancelClaim, tabStrip: () => this,
                     systemMenu: CloseUnlessTheActivePaneClaimsIt,
-                    sectionStrip: ActivePaneSectionStrip);
+                    sectionStrip: ActivePaneSectionStrip,
+                    // The menu answers its own hotkeys, so C, I, P and View
+                    // switch tabs or close it from inside (plan C6).
+                    menuHotkey: hotkey => MenuHotkeys.Press(this, hotkey));
             }
 
             // PushIfAbsent, not Push: this context outlives its time on the
@@ -469,22 +560,17 @@ namespace PrincesPalace
 
             var defs = SystemMenuTabs.Visible(inRun);
 
-            // MEASURED, not read off the table.
+            // MEASURED, not read off a table.
             //
-            // The bar is arithmetic over label widths, and the authored ones
-            // are a hand-measured approximation the build needs before any text
-            // exists. They were wrong for months -- taken from a design
-            // prototype at .14em while the emitter drew at zero tracking -- and
-            // the only reason that was ever found was measuring the running
-            // scene on purpose.
-            //
-            // Asking the labels themselves removes the whole class: change a
-            // tab's wording, or its font, or its tracking, and the bar re-lays
-            // around it with nothing to keep in step by hand.
-            var labelWidths = MeasuredLabelWidths(_visible, defs);
-
-            var centres = SystemMenuLayout.TabCentresX(labelWidths);
-            var widths = SystemMenuLayout.TabWidths(labelWidths);
+            // The bar is arithmetic over label widths. They were once authored
+            // by hand and were wrong for months -- taken from a design
+            // prototype at .14em while the emitter drew at zero tracking --
+            // and the only reason that was ever found was measuring the
+            // running scene on purpose. Asking the labels themselves removes
+            // the whole class: change a tab's wording, font or tracking and
+            // the bar re-lays around it with nothing to keep in step by hand.
+            MeasureLabels(defs, out var fullWidths, out var shortWidths);
+            var bar = SystemMenuLayout.Arrange(defs, fullWidths, shortWidths);
 
             for (int i = 0; i < SystemMenuTabs.Count; i++)
             {
@@ -499,22 +585,25 @@ namespace PrincesPalace
                     continue;
                 }
 
-                Move(TabRect(i), centres[slot], widths[slot], SystemMenuLayout.TabHeight);
-                Move(Rect(Element(tabHovers, i)), centres[slot], widths[slot], SystemMenuLayout.TabHeight);
+                // Every visible label is the full or the short form together,
+                // as the arrangement decided.
+                var def = SystemMenuTabs.All[i];
+                LabelOf(i)?.Set(bar.ShortLabels ? def.ShortLabel : def.Label);
+
+                Move(TabRect(i), bar.CentreX(slot), bar.Widths[slot], SystemMenuLayout.TabHeight);
+                Move(Rect(Element(tabHovers, i)), bar.CentreX(slot), bar.Widths[slot], SystemMenuLayout.TabHeight);
 
                 // RESIZED AS WELL AS MOVED. The underline is the label's width
-                // plus a little, not the box's -- so once the label is measured
-                // rather than assumed, the rule under it has to follow. It kept
-                // its authored width before, which is why a mis-measured label
-                // showed up as a rule overhanging its own word.
+                // plus a little, not the box's, so a re-measured or shortened
+                // label needs the rule under it to follow.
                 var underline = Rect(Element(tabUnderlines, i));
                 if (underline != null)
                 {
                     underline.anchoredPosition =
-                        new Vector2(centres[slot], SystemMenuLayout.UnderlineOffsetY);
+                        new Vector2(bar.CentreX(slot), SystemMenuLayout.UnderlineOffsetY);
 
                     underline.sizeDelta = new Vector2(
-                        SystemMenuLayout.UnderlineWidth(labelWidths[slot]),
+                        SystemMenuLayout.UnderlineWidth(bar.LabelWidths[slot]),
                         SystemMenuLayout.UnderlineHeight);
                 }
             }
@@ -531,45 +620,53 @@ namespace PrincesPalace
                     var rect = Rect(tabDividers[i]);
                     if (rect != null)
                     {
-                        rect.anchoredPosition =
-                            new Vector2(SystemMenuLayout.DividerCentreX(labelWidths, i), 0f);
+                        rect.anchoredPosition = new Vector2(bar.DividerCentreX(i), 0f);
                     }
                 }
             }
 
-            // A tab that just vanished cannot stay selected. Falls back to this
-            // context's default rather than to index 0, so reordering the
-            // table cannot change where the menu lands.
+            // A tab that just vanished cannot stay selected. Falls back to the
+            // reopen rule rather than to index 0, so reordering the table
+            // cannot change where the menu lands.
             if (!_visible.Contains(_selected))
             {
-                Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inRun)));
+                SelectCore(SystemMenuTabs.IndexOf(MenuMemory.TabFor(context)), audible: false);
             }
 
+            PaintTabLabels();
             RefreshNavLinks();
             RefreshLintel(inRun);
         }
 
-        // What each visible tab's label ACTUALLY draws at, in order.
+        // What each visible tab's label ACTUALLY draws at, in both forms, in
+        // slot order. The label's own font, size and tracking measure both, so
+        // the short form is measured before it is ever shown.
         //
-        // Falls back to the authored figure per tab rather than in bulk: a
+        // Falls back to the Domain estimate per tab rather than in bulk: a
         // headless fixture with no label still lays out, and a real bar with
-        // one missing label still measures the other four.
-        private IReadOnlyList<float> MeasuredLabelWidths(
-            IReadOnlyList<int> visible, IReadOnlyList<SystemMenuTabDef> defs)
+        // one missing label still measures the others.
+        private void MeasureLabels(
+            IReadOnlyList<SystemMenuTabDef> defs, out float[] full, out float[] brief)
         {
-            var widths = new float[visible.Count];
+            full = new float[defs.Count];
+            brief = new float[defs.Count];
+            var estimated = SystemMenuLabelWidths.Estimated();
 
-            for (int slot = 0; slot < visible.Count; slot++)
+            for (int slot = 0; slot < defs.Count; slot++)
             {
-                var label = LabelOf(visible[slot]);
+                var label = LabelOf(_visible[slot]);
 
-                widths[slot] = label == null || string.IsNullOrEmpty(label.text)
-                    ? defs[slot].LabelWidth
-                    : label.GetPreferredValues(label.text, Mathf.Infinity, Mathf.Infinity).x;
+                full[slot] = label == null
+                    ? estimated.Full[_visible[slot]]
+                    : PreferredWidth(label, defs[slot].Label);
+                brief[slot] = label == null
+                    ? estimated.Short[_visible[slot]]
+                    : PreferredWidth(label, defs[slot].ShortLabel);
             }
-
-            return widths;
         }
+
+        private static float PreferredWidth(TMP_Text label, UiString text) =>
+            label.GetPreferredValues(text.Format().ToUpperInvariant(), Mathf.Infinity, Mathf.Infinity).x;
 
         private TMP_Text LabelOf(int index)
         {
@@ -633,8 +730,19 @@ namespace PrincesPalace
 
         public void Select(SystemMenuTab tab) => Select(SystemMenuTabs.IndexOf(tab));
 
-        // Exactly one pane and one underline live at a time.
+        // A tab the player chose, by click, trigger or caller: it is a swipe,
+        // and while the menu is up it is the tab to come back to (MenuMemory
+        // ignores the system group).
         public void Select(int index)
+        {
+            SelectCore(index, audible: true);
+            if (IsOpen) MenuMemory.Remember(context, SystemMenuTabs.All[_selected].Tab);
+        }
+
+        // Exactly one pane and one underline live at a time. `audible` is off
+        // for the tab picked by opening the menu or by a fallback: only a
+        // switch the player made is a swipe.
+        private void SelectCore(int index, bool audible)
         {
             if (panes == null || panes.Length == 0) return;
 
@@ -643,9 +751,7 @@ namespace PrincesPalace
             _chosen = true;
             _selected = index < 0 ? 0 : index >= SystemMenuTabs.Count ? SystemMenuTabs.Count - 1 : index;
 
-            // Silent for the default tab picked when the menu opens: only a
-            // switch the player made is a swipe.
-            if (wasChosen && _selected != previous) SoundController.Play(TabSwipe.Next());
+            if (audible && wasChosen && _selected != previous) SoundController.Play(TabSwipe.Next());
 
             int pane = SystemMenuTabs.PaneIndexFor(_selected);
 
@@ -669,9 +775,31 @@ namespace PrincesPalace
                 tabHovers[_selected].SetShown(false);
             }
 
+            PaintTabLabels();
             RefreshNavLinks();
             RefreshSelectables();
         }
+
+        // The system group's labels are quiet until selected; the game group
+        // keeps the emitter's own colour.
+        private void PaintTabLabels()
+        {
+            for (int i = 0; i < SystemMenuTabs.Count; i++)
+            {
+                if (SystemMenuTabs.All[i].Group != SystemMenuTabGroup.System) continue;
+
+                var label = LabelOf(i);
+                if (label == null) continue;
+
+                label.color = i == _selected ? SystemGroupSelected : SystemGroupQuiet;
+            }
+        }
+
+        private static readonly Color SystemGroupQuiet = Hex(FightHudPalette.TextMuted);
+        private static readonly Color SystemGroupSelected = Hex(FightHudPalette.GoldLight);
+
+        private static Color Hex(string hex) =>
+            ColorUtility.TryParseHtmlString(hex, out var color) ? color : Color.white;
 
         // ---- small helpers ------------------------------------------------------
 

@@ -1,5 +1,6 @@
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -94,6 +95,7 @@ namespace PrincesPalace.PlayModeTests
             // process a frozen game. Nothing throws; the scaled coroutines
             // simply never finish, and it surfaces as an unrelated timeout.
             ResetEngineClock();
+            ResetMenuMemory();
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
 
             // BOTH HALVES of the player-facing product (docs/
@@ -113,6 +115,13 @@ namespace PrincesPalace.PlayModeTests
             RequirementCurve.Percent = RequirementCurve.DefaultPercent;
             RequirementCurve.GearRequirementsEnabled = false;
         }
+
+        // WHERE THE SYSTEM MENU REOPENS, which production writes on every open
+        // (MenuMemory) and no test file writes, so the lint has nothing to
+        // scan. Also called before every test from PlayModeTestProfiler: a
+        // test that opened the menu on Party would otherwise hand the next one
+        // a menu that reopens there.
+        public static void ResetMenuMemory() => MenuMemory.Clear();
 
         // EVERY ENGINE TIME GLOBAL, back to what the project boots with.
         // Called from ResetAll AND, before every test, from

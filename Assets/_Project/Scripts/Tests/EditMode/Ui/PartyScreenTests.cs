@@ -236,10 +236,17 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTabStripStillFitsWithPartyPresentInBothSets()
         {
-            Assert.IsTrue(SystemMenuLayout.StripFits(SystemMenuTabs.Visible(inRun: false)),
-                "the out-of-run bar no longer fits now Party is in it");
-            Assert.IsTrue(SystemMenuLayout.StripFits(SystemMenuTabs.Visible(inRun: true)),
-                "the in-run bar no longer fits now Party is in it");
+            var estimated = SystemMenuLabelWidths.Estimated();
+            foreach (bool inRun in new[] { false, true })
+            {
+                var visible = SystemMenuTabs.VisibleIndices(inRun);
+                var bar = SystemMenuLayout.Arrange(SystemMenuTabs.Visible(inRun),
+                    visible.Select(i => estimated.Full[i]).ToList(),
+                    visible.Select(i => estimated.Short[i]).ToList());
+
+                Assert.IsFalse(bar.ShortLabels,
+                    $"the {(inRun ? "in-run" : "out-of-run")} bar needs its short labels now Party is in it");
+            }
         }
 
         // ---- helpers -------------------------------------------------------------

@@ -344,7 +344,7 @@ namespace PrincesPalace.PlayModeTests
             if (toastText != null) toastText.text = "";
 
             _menu.Open();
-            _menu.Select(SystemMenuTabs.DefaultFor(_menu.InDescent));
+            _menu.Select(SystemMenuTabs.DefaultFor(_menu.Context));
             yield return null;
             yield return null;
         }

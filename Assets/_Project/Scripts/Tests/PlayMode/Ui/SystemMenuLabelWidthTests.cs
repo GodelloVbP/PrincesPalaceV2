@@ -11,34 +11,22 @@ namespace PrincesPalace.PlayModeTests
 {
     // Does the tab bar fit the labels the game actually draws?
     //
-    // THE ONE THING NOTHING CHECKED, and it was wrong for months.
-    // SystemMenuTabDef.LabelWidth was measured at .14em letter-spacing in a
-    // browser prototype while the emitter had no way to express letter-spacing
-    // at all, so every label drew about a quarter narrower than the box built
-    // for it and the selected tab's underline overhung its own word by roughly
-    // 40px a side.
+    // THE ONE THING NOTHING ELSE CHECKS. Domain has no font metrics by design,
+    // the EditMode suite is Domain-only, and UiTextFitAudit only asks whether
+    // text OVERFLOWS its box -- a label far narrower than its box passes that
+    // happily. So the question "is the bar built around what TMP draws" has to
+    // be a PlayMode test in a real scene.
     //
-    // THE RUNTIME NO LONGER DEPENDS ON THOSE NUMBERS. The controller measures
-    // the real labels and re-lays the bar from them, so a tab can be reworded
-    // freely. What the authored figures still do is give the BUILD something to
-    // emit from -- the scene exists before any text does -- which is why the
-    // first test below keeps them honest: UiAudit and the capacity guard both
-    // run against the authored bar, and a figure that drifts far enough would
-    // audit a bar the player never sees.
-    //
-    // Nothing could see it. Domain has no font metrics by design, the EditMode
-    // suite is Domain-only, and UiTextFitAudit only asks whether text OVERFLOWS
-    // its box -- a label far narrower than its box passes that happily.
-    //
-    // So this is the check that closes it, and it has to be a PlayMode test in
-    // a real scene: the question is what TMP draws with the font the game is
-    // wearing, and that is not answerable anywhere else.
+    // The build measures each label with the emitter's own label path
+    // (UiEmitter.MeasureLabelWidth) and lays the bar out from those widths; the
+    // controller measures again on every open. The first test holds the two to
+    // each other: the underline the scene was built with is the measured width
+    // plus its overhang, so it must equal what the label draws now.
     public class SystemMenuLabelWidthTests
     {
-        // The authored figures are the widths TMP draws, rounded to whole
-        // pixels, so half a pixel of rounding plus a little font-metric noise
-        // is all the slack there is. Dropping the tracking moves a label by 19
-        // to 57px, and renaming a tab without re-measuring moves it further.
+        // The build measures on a throwaway label and the runtime measures on the
+        // real one, so half a pixel of font-metric noise is all the slack there
+        // is. Dropping the tracking moves a label by 19 to 57px.
         private const float Tolerance = 1f;
 
         [TearDown]
@@ -70,26 +58,34 @@ namespace PrincesPalace.PlayModeTests
             {
                 var label = LabelFor(menu, def.Key);
 
-                // THE PREMISE, PINNED FIRST. Without the tracking the widths
-                // below are wrong by a quarter, and the assertion after it is
-                // the only thing in the build that would notice.
+                // THE PREMISE, PINNED FIRST. A label drawn at another spacing
+                // or size than the one the build measured makes every box, gap
+                // and underline on this bar a lie about the word on it.
                 Assert.AreEqual(SystemMenuLayout.TabLabelTracking, label.characterSpacing, 0.01f,
-                    $"the {def.Key} tab is not tracked at the spacing its authored width was " +
-                    "measured at, so every box, gap and underline on this bar is laid out around " +
-                    "a number nothing draws");
+                    $"the {def.Key} tab is not tracked at the spacing the bar was measured at");
+                Assert.AreEqual(SystemMenuLayout.TabLabelSize, label.fontSize, 0.01f,
+                    $"the {def.Key} tab is not drawn at the size the bar was measured at");
+                Assert.AreEqual(Typography.Specs[TypographyRole.FunctionalHeading].FontAssetName,
+                    label.font.name, $"the {def.Key} tab is not in the FunctionalHeading font");
 
                 float drawn = label.GetPreferredValues(label.text, Mathf.Infinity, Mathf.Infinity).x;
 
-                if (Mathf.Abs(def.LabelWidth - drawn) > Tolerance)
+                // The built underline is the measured width plus its overhang.
+                var underline = menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                    .FirstOrDefault(t => t.name == $"SystemTab{def.Key}Underline") as RectTransform;
+                Assert.IsNotNull(underline, $"the {def.Key} tab has no underline");
+
+                float built = underline.rect.width - SystemMenuLayout.UnderlineOverhang;
+                if (Mathf.Abs(built - drawn) > Tolerance)
                 {
-                    wrong.Add($"{def.Key} claims {def.LabelWidth:F0}px, TMP draws {drawn:F1}px");
+                    wrong.Add($"{def.Key} was built around {built:F1}px, TMP draws {drawn:F1}px");
                 }
             }
 
             Assert.IsEmpty(wrong,
-                "The bar's boxes, gaps, dividers and underline are arithmetic over each tab's claimed " +
-                "label width, so re-measure a wrong claim rather than nudging the layout: " +
-                string.Join("; ", wrong));
+                "The bar's boxes, gaps, dividers and underline are arithmetic over each tab's measured " +
+                "label width, so a label the build measured differently from how it draws is a bar built " +
+                "around a number nothing draws: " + string.Join("; ", wrong));
         }
 
         // The lintel's title carries the design's other tracking value, and it
@@ -133,14 +129,10 @@ namespace PrincesPalace.PlayModeTests
                 "tracking has leaked into labels that never asked for it");
         }
 
-        // THE BAR LAYS OUT AROUND WHAT IS DRAWN, which is the property that
-        // replaces "the authored number happens to be right".
-        //
-        // The authored widths are still there -- the scene has to be emitted
-        // before any text exists to measure -- but they are now a build-time
-        // approximation the controller corrects on first open. So this asserts
-        // the thing that actually matters: each tab's BOX is its own label plus
-        // the declared padding, whatever the label turns out to be.
+        // THE BAR LAYS OUT AROUND WHAT IS DRAWN. The controller re-measures the
+        // real labels on every open, so this asserts the thing that actually
+        // matters: each tab's BOX is its own label plus the declared padding,
+        // whatever the label turns out to be.
         [UnityTest]
         public IEnumerator EachTabsBoxIsBuiltRoundItsOwnDrawnLabel()
         {
@@ -162,9 +154,8 @@ namespace PrincesPalace.PlayModeTests
 
                 float drawn = label.GetPreferredValues(label.text, Mathf.Infinity, Mathf.Infinity).x;
 
-                // Mode A shares the row out evenly and does not size a box to
-                // its label at all, so the check that means something in both
-                // modes is that the label FITS with its padding intact.
+                // Boxes are rounded to 4, so the check is that the label FITS
+                // with its padding intact.
                 Assert.GreaterOrEqual(box.rect.width, drawn + SystemMenuLayout.MeasuredPadX,
                     $"the {def.Key} tab's box is {box.rect.width:F0}px around a label that draws " +
                     $"{drawn:F1}px - the bar is laid out for a label other than the one on it");

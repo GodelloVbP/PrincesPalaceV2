@@ -290,7 +290,7 @@ namespace PrincesPalace.PlayModeTests
             _menu.Open();
             yield return null;
 
-            // Fixture check: DefaultFor(inRun: false) is Character, out of the
+            // Fixture check: the Camp default is Character, out of the
             // hub's own four visible tabs (Character, Party, Options, Exit --
             // RunStats is RunOnly).
             Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Character), _menu.SelectedIndex,

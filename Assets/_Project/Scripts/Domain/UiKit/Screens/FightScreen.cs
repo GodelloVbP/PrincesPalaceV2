@@ -382,10 +382,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---------------------------------------------------------------------
 
-        // partyRosterCardCount threads straight through to SystemMenuScreen.
+        // partyRosterCardCount and systemMenuLabelWidths thread straight through to
+        // SystemMenuScreen.
         // Build -- see HubScreen.Build's identical parameter for why it
         // defaults to 3 and who is meant to override it.
-        public static FightScreen Build(int partyRosterCardCount = 3)
+        public static FightScreen Build(
+            int partyRosterCardCount = 3, SystemMenuLabelWidths systemMenuLabelWidths = null)
         {
             var s = new FightScreen();
             var children = new List<UiNode>();
@@ -477,7 +479,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // an end-of-fight modal still draws over it.
             // The overarching menu, LAST in this scene's children so it draws
             // over everything it can be opened on top of.
-            var systemMenu = SystemMenuScreen.Build(partyRosterCardCount);
+            var systemMenu = SystemMenuScreen.Build(partyRosterCardCount, systemMenuLabelWidths);
             s.SystemMenu = systemMenu;
 
             // The old paperdoll is gone; the system menu's Character pane is

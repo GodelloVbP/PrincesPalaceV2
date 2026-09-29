@@ -67,6 +67,11 @@ namespace PrincesPalace.Domain.UiKit
         // one menu to open and know it when they build their context.
         private readonly Action _systemMenu;
 
+        // WHAT A MENU HOTKEY DOES HERE, or nothing: the same shape and the same
+        // silence as `_systemMenu`. The three roots and the menu answer (so a
+        // hotkey fires wherever Start does), and every modal absorbs it.
+        private readonly Action<MenuHotkeyDef> _menuHotkey;
+
         // This context's optional first refusal on Submit (INavSubmitClaim).
         // A function for the claimant's reason: whether the claim is live
         // changes while the context stays pushed.
@@ -82,8 +87,10 @@ namespace PrincesPalace.Domain.UiKit
         public NavContext(object entry, IReadOnlyDictionary<string, object> selectables, Action cancel,
             Func<INavCancelClaim> claimant = null, Func<INavTabStrip> tabStrip = null,
             Action systemMenu = null, Func<INavSectionStrip> sectionStrip = null,
-            Func<INavSubmitClaim> submitClaim = null, Func<bool> cancelLive = null)
+            Func<INavSubmitClaim> submitClaim = null, Func<bool> cancelLive = null,
+            Action<MenuHotkeyDef> menuHotkey = null)
         {
+            _menuHotkey = menuHotkey;
             _submitClaim = submitClaim;
             _cancelLive = cancelLive;
             Entry = entry;
@@ -95,8 +102,9 @@ namespace PrincesPalace.Domain.UiKit
             _sectionStrip = sectionStrip;
         }
 
-        private NavContext(IFightNavigationTarget fightTarget, Action systemMenu)
+        private NavContext(IFightNavigationTarget fightTarget, Action systemMenu, Action<MenuHotkeyDef> menuHotkey)
         {
+            _menuHotkey = menuHotkey;
             FightTarget = fightTarget;
             IsNonSelecting = true;
             Selectables = EmptySelectables;
@@ -109,8 +117,9 @@ namespace PrincesPalace.Domain.UiKit
         // the overarching menu means the same thing on the map, the hub and
         // the fight, and the dispatcher calls it off the context in all
         // three so there is one read of the button, not two.
-        public static NavContext ForFight(IFightNavigationTarget target, Action systemMenu = null) =>
-            new NavContext(target, systemMenu);
+        public static NavContext ForFight(IFightNavigationTarget target, Action systemMenu = null,
+            Action<MenuHotkeyDef> menuHotkey = null) =>
+            new NavContext(target, systemMenu, menuHotkey);
 
         public void Remember(string stableId) => RememberedId = stableId;
 
@@ -182,6 +191,16 @@ namespace PrincesPalace.Domain.UiKit
             if (_systemMenu == null) return false;
 
             _systemMenu.Invoke();
+            return true;
+        }
+
+        // A MENU HOTKEY'S ONLY EFFECT, absorbed by a context with no handler
+        // for the reason Start is. Returns whether this context answered.
+        public bool RaiseMenuHotkey(MenuHotkeyDef hotkey)
+        {
+            if (_menuHotkey == null) return false;
+
+            _menuHotkey.Invoke(hotkey);
             return true;
         }
 

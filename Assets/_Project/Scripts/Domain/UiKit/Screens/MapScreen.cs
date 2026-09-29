@@ -176,10 +176,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private static Place OnContent(float x, float y) =>
             Place.Pin(ContentEdge, UiVec.Centre, new UiVec(x, y));
 
-        // partyRosterCardCount threads straight through to SystemMenuScreen.
+        // partyRosterCardCount and systemMenuLabelWidths thread straight through to
+        // SystemMenuScreen.
         // Build -- see HubScreen.Build's identical parameter for why it
         // defaults to 3 and who is meant to override it.
-        public static MapScreen Build(int partyRosterCardCount = 3)
+        public static MapScreen Build(
+            int partyRosterCardCount = 3, SystemMenuLabelWidths systemMenuLabelWidths = null)
         {
             var screen = new MapScreen();
 
@@ -290,7 +292,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // can be opened on top of, the shop included (see Shop's own
             // field comment above for why that is now true and was not
             // before).
-            var systemMenu = SystemMenuScreen.Build(partyRosterCardCount);
+            var systemMenu = SystemMenuScreen.Build(partyRosterCardCount, systemMenuLabelWidths);
             screen.SystemMenu = systemMenu;
 
             var shop = ShopScreen.Build();

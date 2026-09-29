@@ -8,14 +8,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // ScreenRegistry maps one screen to one scene and this has to be reachable
     // from all of them.
     //
-    // THE BAR IS BUILT IN MEASURED MODE and re-laid at runtime.
+    // THE BAR IS BUILT FROM MEASURED WIDTHS and re-laid at runtime.
     //
     // That needs saying because it looks like a violation of this project's
     // first rule. The tab SET is context-driven -- four tabs at camp, five in
     // a descent -- and a scene is generated once. So the build authors every
     // tab at its five-tab position and SystemMenuController re-applies
     // SystemMenuLayout for whichever set is showing. The arithmetic still
-    // lives in exactly one place; only the moment it runs moved.
+    // lives in exactly one place; only the moment it runs moved. The widths
+    // come from the Editor, which measures the very labels it is about to
+    // emit; Domain has no font.
     //
     // UiAudit therefore only sees the five-tab layout, since that is what is
     // on disk. SystemMenuScreenTests pins the four-tab one against the numbers
@@ -72,25 +74,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // count (ContentDatabase.LoadOrdered<CharacterDefinition>().Count) is
         // that later package's job, the same way MainMenuScreen.Build reads
         // SaveSystem.SlotCount from ScreenRegistry rather than Domain.
-        public static SystemMenuScreen Build(int partyRosterCardCount = 3)
+        //
+        // labelWidths are the tab labels as measured by the caller. Null takes
+        // SystemMenuLabelWidths.Estimated, which is right for a look at the
+        // tree and wrong for a scene: ScreenRegistry always measures.
+        public static SystemMenuScreen Build(
+            int partyRosterCardCount = 3, SystemMenuLabelWidths labelWidths = null)
         {
             var screen = new SystemMenuScreen();
             var tabs = SystemMenuTabs.All;
+            labelWidths = labelWidths ?? SystemMenuLabelWidths.Estimated();
 
-            // THE GUARD, at build time, and it is arithmetic now rather than a
-            // count. A count-based limit was honest while every box was the
-            // same width; once a box is sized to its own label, "how many fit"
-            // is a question about the words, and a localisation that doubles a
-            // label overflows a bar that still has the same number of tabs.
-            var authored = SystemMenuLayout.AuthoredWidths(tabs);
-            if (!SystemMenuLayout.StripFits(authored))
-            {
-                throw new System.InvalidOperationException(
-                    $"The system menu's {tabs.Count} tabs need " +
-                    $"{SystemMenuLayout.StripWidth(authored):F0}px at minimum padding but the bar row is " +
-                    $"{SystemMenuLayout.RowWidth:F0}px. Shorten a label, widen the panel, or the bar needs " +
-                    "to wrap or scroll - it cannot simply be given another entry.");
-            }
+            // THE GUARD, at build time: Arrange throws if even the short labels
+            // do not fit the row. It is arithmetic over the words rather than a
+            // count of tabs -- a localisation that doubles a label overflows a
+            // bar that still has the same number of tabs.
+            var bar = SystemMenuLayout.Arrange(tabs, labelWidths.Full, labelWidths.Short);
 
             var barChildren = new List<UiNode>();
 
@@ -110,14 +109,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, -SystemMenuLayout.BarHeight * 0.5f + 0.5f))
                 .AsDecor());
 
-            var centres = SystemMenuLayout.TabCentresX(authored);
-            var widths = SystemMenuLayout.TabWidths(authored);
-
             for (int i = 0; i < tabs.Count; i++)
             {
                 var def = tabs[i];
-                float x = centres[i];
-                float w = widths[i];
+                float x = bar.CentreX(i);
+                float w = bar.Widths[i];
 
                 // The hover plate, under the label and the size of the whole
                 // box. The skeleton popped the tab to 1.03 instead, and the
@@ -129,29 +125,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AsDecor();
 
-                // TRACKED, and this is not decoration.
-                //
-                // SystemMenuTabDef.LabelWidth is the label's width at 18px
-                // Chakra Petch with .14em letter-spacing, and the whole bar --
-                // box widths, gaps, dividers, underline -- is arithmetic over
-                // those numbers. Drawn at the font's own spacing a label is
-                // about a quarter narrower, so every box would carry air the
-                // layout never put there and the underline would overhang its
-                // own word.
-                var button = Ui.Button($"SystemTab{def.Key}", def.Label,
-                        new UiVec(w, SystemMenuLayout.TabHeight), 18,
-                        Place.At(x, 0f))
-                    .NoChrome()
-                    // The tab swipe (SystemMenuController.Select) is this
-                    // click's sound; the generic one would double it.
-                    .Quiet()
-                    .Tracked(SystemMenuLayout.TabLabelTracking);
+                var button = TabButton(def, bar.ShortLabels, new UiVec(w, SystemMenuLayout.TabHeight),
+                    Place.At(x, 0f));
 
                 // WIDTH IS THE LABEL'S, not the box's. A rule as wide as the
                 // box reads as a second divider rather than as a marker for
                 // the word above it.
                 var underline = Ui.Solid($"SystemTab{def.Key}Underline", GoldLight,
-                        new UiVec(SystemMenuLayout.UnderlineWidth(def.LabelWidth),
+                        new UiVec(SystemMenuLayout.UnderlineWidth(bar.LabelWidths[i]),
                                   SystemMenuLayout.UnderlineHeight),
                         Place.At(x, SystemMenuLayout.UnderlineOffsetY))
                     .Inactive()
@@ -172,18 +153,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 var divider = Ui.Solid($"SystemTabDivider{i}", Hairline,
                         new UiVec(SystemMenuLayout.DividerWidth, SystemMenuLayout.DividerHeight),
-                        Place.At(SystemMenuLayout.DividerCentreX(authored, i), 0f))
+                        Place.At(bar.DividerCentreX(i), 0f))
                     .AsDecor();
 
                 screen.TabDividers.Add(divider);
                 barChildren.Add(divider);
             }
 
-            var bar = Ui.Panel("SystemMenuBar",
+            var barPanel = Ui.Panel("SystemMenuBar",
                 Place.At(0f, SystemMenuLayout.BarCentreY),
                 UiSize.Fixed(SystemMenuLayout.PanelWidth, SystemMenuLayout.BarHeight),
                 barChildren);
-            screen.Bar = bar;
+            screen.Bar = barPanel;
 
             // ---- the panes -------------------------------------------------------
             //
@@ -285,7 +266,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.At(0f, 0f))
                     .AsDecor(),
             };
-            frameChildren.Add(bar);
+            frameChildren.Add(barPanel);
             frameChildren.Add(content);
 
             // THE RIM GOES ON LAST, and that is the whole fix for the sides
@@ -317,6 +298,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Root = Ui.Modal("SystemMenuPanel", Scrim, stage).Inactive();
             return screen;
         }
+
+        // A tab's label, in the FunctionalHeading role at the bar's own size
+        // and tracking, all caps. THE ONE PLACE this is spelled: the build
+        // emits it, and the Editor measures it (TabLabelProbe) with the same
+        // node, so the width a box is built around is the width that draws.
+        //
+        // Tracked over the role's own spacing, because the role's is 2 and the
+        // bar's is .14em (SystemMenuLayout.TabLabelTracking).
+        private static UiNode TabButton(SystemMenuTabDef def, bool shortLabel, UiVec size, Place place) =>
+            Ui.Button($"SystemTab{def.Key}", shortLabel ? def.ShortLabel : def.Label, size,
+                    SystemMenuLayout.TabLabelSize, place)
+                .NoChrome()
+                // The tab swipe (SystemMenuController.Select) is this
+                // click's sound; the generic one would double it.
+                .Quiet()
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(SystemMenuLayout.TabLabelTracking);
+
+        // The node the Editor measures for a tab's label width.
+        public static UiNode TabLabelProbe(SystemMenuTabDef def, bool shortLabel) =>
+            TabButton(def, shortLabel, new UiVec(SystemMenuLayout.RowWidth, SystemMenuLayout.TabHeight),
+                Place.At(0f, 0f));
 
         // Four 1px edges rather than a painted frame. The design asks for a
         // hairline rim in a token colour, and a sprite would put that colour

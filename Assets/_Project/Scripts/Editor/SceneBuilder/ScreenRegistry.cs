@@ -99,7 +99,7 @@ public static class ScreenRegistry
                 // compatibility default HubScreen/MapScreen/FightScreen.Build
                 // fall back to when called with no argument -- see
                 // SystemMenuScreen.Build's own partyRosterCardCount comment.
-                screen = FightScreen.Build(ContentDatabase.Characters.Count);
+                screen = FightScreen.Build(ContentDatabase.Characters.Count, MeasureSystemMenuTabs());
                 return screen.Root;
             },
             Wire = result =>
@@ -400,7 +400,7 @@ public static class ScreenRegistry
             ScenePath = HubScene,
             BuildTree = () =>
             {
-                screen = HubScreen.Build(ContentDatabase.Characters.Count);
+                screen = HubScreen.Build(ContentDatabase.Characters.Count, MeasureSystemMenuTabs());
                 return screen.Root;
             },
             Wire = result =>
@@ -626,7 +626,7 @@ public static class ScreenRegistry
             ScenePath = MapScene,
             BuildTree = () =>
             {
-                screen = MapScreen.Build(ContentDatabase.Characters.Count);
+                screen = MapScreen.Build(ContentDatabase.Characters.Count, MeasureSystemMenuTabs());
                 return screen.Root;
             },
             Wire = result =>
@@ -1040,6 +1040,23 @@ public static class ScreenRegistry
     // Escape reach and Cancel does not; Cancel is a no-op at all three
     // roots. Each caller needs the controller in hand, which is why this
     // returns it.
+    // What every tab label draws at, full and short, for the bar the three
+    // scenes are built around. Measured off the emitter's own label path, so
+    // a change of font, size or tracking moves the boxes with it.
+    private static SystemMenuLabelWidths MeasureSystemMenuTabs()
+    {
+        var tabs = SystemMenuTabs.All;
+        var full = new float[tabs.Count];
+        var brief = new float[tabs.Count];
+        for (int i = 0; i < tabs.Count; i++)
+        {
+            full[i] = UiEmitter.MeasureLabelWidth(SystemMenuScreen.TabLabelProbe(tabs[i], shortLabel: false));
+            brief[i] = UiEmitter.MeasureLabelWidth(SystemMenuScreen.TabLabelProbe(tabs[i], shortLabel: true));
+        }
+
+        return new SystemMenuLabelWidths(full, brief);
+    }
+
     private static SystemMenuController WireSystemMenu(
         UiEmitResult result, NodeRef host, SystemMenuScreen menu, MenuContext context)
     {

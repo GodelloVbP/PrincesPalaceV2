@@ -67,6 +67,7 @@ screenshots all read it.
 | Content pipeline | `Assets/_Project/ContentData/*.json` → `Domain/Content/*EntryResolver.cs` → `Editor/ContentBuilder.cs` → `Core/Content/ContentDatabase.cs` | Field reference: `docs/CONTENT_SCHEMA.md` (`tools/content_schema.ps1`). |
 | Save | `Core/SaveSystem.cs`, `Data/SaveData.cs`, `Core/SaveSlotManager.cs` | Versioned `Migrate()` + additive `Reconcile()`. |
 | Scene switching | `Core/Navigation.cs` | Scene names in one place; `LoadOverride` test seam. |
+| Menu entry, hotkeys and reopen rule | `Core/SystemMenuController.cs` (`Open(tab, target)`), `Core/MenuHotkeys.cs`, `Core/SheetPanel.cs`, `Domain/UiKit/MenuTarget.cs`, `MenuHotkey.cs`, `MenuMemory.cs`, `SystemMenuTabs.cs` | One entry, one hotkey owner (`NavigationInputModule.DispatchMenuHotkeys`, read off Input Manager buttons `HotkeyC/I/P` and `View`), one reopen memory (`docs/PLAN_SYSTEM_MENU.md` C6, C7, C9). |
 | Gamepad navigation | `Core/NavigationInputModule.cs`, `Core/RuntimeNavWiring.cs`, `Domain/UiKit/UiNavLinkBuilder.cs`, `NavContext.cs`, `NavContextStack.cs` | Wired at runtime by each controller's `RefreshNavigation`/`WireNavigation`, never at build. |
 | Focus marker | `Core/FocusMarker.cs`, `Domain/UiKit/FocusMarkerPlacement.cs` | One arrow for every screen; Fight answers via `IFightNavigationTarget`. |
 | Tooltips | `Domain/UiKit/TooltipFocus.cs`, `TooltipPlacement.cs`, `Core/TooltipFocusRouter.cs`, `Core/TooltipFit.cs` | Focus outranks hover; one show/hide per screen. |

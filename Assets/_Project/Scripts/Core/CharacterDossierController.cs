@@ -1175,9 +1175,8 @@ namespace PrincesPalace
             return false;
         }
 
-        // Read by SheetPanel so I/C can tell "already showing what was asked
-        // for" from "showing the other state" -- the distinction that makes
-        // the second press of the OTHER key switch instead of closing.
+        // Read by SystemMenuController.TargetIsShowing so the I key can tell
+        // "already showing what was asked for" from "showing the other state".
         public bool IsPackShown => packPanel != null && packPanel.activeSelf;
 
         private void TogglePack() => ShowPack(packPanel != null && !packPanel.activeSelf);
@@ -1649,7 +1648,25 @@ namespace PrincesPalace
             var squad = Squad();
             if (squad.Count == 0) return;
 
-            _index = (_index + by + squad.Count) % squad.Count;
+            MoveTo((_index + by + squad.Count) % squad.Count);
+        }
+
+        // Selects a character by definition id, for a deep link
+        // (SystemMenuController.Open with a MenuTarget). False, and nothing
+        // moved, when nobody in the active squad has that id.
+        public bool SelectCharacter(string definitionId)
+        {
+            var squad = Squad();
+            int index = squad.FindIndex(c => c.definitionId == definitionId);
+            if (index < 0) return false;
+
+            MoveTo(index);
+            return true;
+        }
+
+        private void MoveTo(int index)
+        {
+            _index = index;
 
             // The refusal named a character. Paging is leaving them.
             _alreadyKnownRefusal = false;

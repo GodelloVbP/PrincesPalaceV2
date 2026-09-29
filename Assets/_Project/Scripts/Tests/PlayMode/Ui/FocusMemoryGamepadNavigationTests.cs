@@ -7,6 +7,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -205,18 +206,21 @@ namespace PrincesPalace.PlayModeTests
             yield return PressSystemMenu();
             Assert.IsTrue(menu.IsOpen, "fixture: Start should open the system menu from the hub");
 
-            // Two trigger pulls, each of which lands INSIDE the new pane
-            // rather than on its tab (SystemMenuController.StepTab's own
-            // contract), so this reaches the THIRD visible tab's pane -- read
-            // off VisibleTabs rather than hardcoded, since which tabs are
-            // visible depends on whether a descent is under way.
+            // One trigger pull, which lands INSIDE the new pane rather than on
+            // its tab (SystemMenuController.StepTab's own contract), so this
+            // reaches the SECOND visible tab's pane -- read off VisibleTabs
+            // rather than hardcoded, since which tabs are visible depends on
+            // whether a descent is under way. A game tab on purpose: the menu
+            // reopens on the last game tab and never on a system one (plan C7),
+            // so the tab the memory can be claimed for has to be a game tab.
             var visible = menu.VisibleTabs.ToList();
-            Assert.GreaterOrEqual(visible.Count, 3, "fixture: this claim needs at least three visible tabs");
-            yield return PressTriggerRight();
+            Assert.GreaterOrEqual(visible.Count, 2, "fixture: this claim needs at least two visible tabs");
+            Assert.AreEqual(SystemMenuTabGroup.Game, SystemMenuTabs.All[visible[1]].Group,
+                "fixture: the second tab must be one the menu reopens on");
             yield return PressTriggerRight();
 
-            Assert.AreEqual(visible[2], menu.SelectedIndex,
-                "fixture: two TriggerRight pulls off the first visible tab should select the third");
+            Assert.AreEqual(visible[1], menu.SelectedIndex,
+                "fixture: one TriggerRight pull off the first visible tab should select the second");
 
             var insideThePane = EventSystem.current.currentSelectedGameObject;
             Assert.IsNotNull(insideThePane, "fixture: a shoulder press should leave something selected");

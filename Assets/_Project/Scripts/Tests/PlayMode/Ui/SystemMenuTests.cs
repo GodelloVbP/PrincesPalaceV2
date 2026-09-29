@@ -150,7 +150,8 @@ namespace PrincesPalace.PlayModeTests
         {
             foreach (bool inRun in new[] { false, true })
             {
-                int index = SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inRun));
+                int index = SystemMenuTabs.IndexOf(
+                    SystemMenuTabs.DefaultFor(inRun ? MenuContext.Descent : MenuContext.Camp));
 
                 CollectionAssert.Contains(SystemMenuTabs.VisibleIndices(inRun).ToList(), index,
                     $"the default tab for inRun={inRun} is not among the tabs that context shows");

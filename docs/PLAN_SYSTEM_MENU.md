@@ -134,7 +134,7 @@ game state and focus returns to where it was created.
 | B / Esc-as-Cancel | nothing pending | close menu |
 | Start / Esc-as-SystemMenu | a pending exists | cancel pending (menu stays open) |
 | Start / Esc-as-SystemMenu | nothing pending | close menu |
-| Hotkey or deep link with a **target** (I → LOADOUT pack; hub building; glossary entry) | anywhere | cancel pending, then open or switch to the tab and go to the target. Never closes. |
+| Hotkey or deep link with a **target** (I → LOADOUT pack; hub building; glossary entry) | anywhere | cancel pending, then open or switch to the tab and go to the target. Never closes, except a hotkey whose target is already showing (I with the pack up): the keyboard needs a key that closes after I. |
 | Plain tab hotkey (C, P, R, G) | menu closed | open on that tab (C7 section rule) |
 | Plain tab hotkey | menu open, another tab showing | cancel pending, switch tab |
 | Plain tab hotkey | menu open, that tab showing | cancel pending, close menu |

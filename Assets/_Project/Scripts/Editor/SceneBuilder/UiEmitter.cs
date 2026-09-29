@@ -206,6 +206,28 @@ public static class UiEmitter
     private static string BakedText(UiString text) =>
         text.IsTemplated ? text.AuditSample : text.Format();
 
+    // HOW WIDE A LABEL DRAWS, measured on the component the emitter would
+    // make for it. The tab bar is arithmetic over these widths and Domain has
+    // no font, so the build asks here: same font, material, size, case and
+    // tracking as the real label, because it is the real label's own path
+    // (ApplyTypography), on a throwaway object that never reaches a scene.
+    public static float MeasureLabelWidth(UiNode node)
+    {
+        var go = new GameObject("LabelProbe", typeof(RectTransform));
+        try
+        {
+            var text = go.AddComponent<TextMeshProUGUI>();
+            text.text = BakedText(node.Text);
+            ApplyTypography(text, node);
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            return text.GetPreferredValues(text.text, Mathf.Infinity, Mathf.Infinity).x;
+        }
+        finally
+        {
+            Object.DestroyImmediate(go);
+        }
+    }
+
     private static void EmitLabel(GameObject go, UiNode node)
     {
         var text = go.AddComponent<TextMeshProUGUI>();
@@ -289,8 +311,9 @@ public static class UiEmitter
         // ButtonLabel's Tracking is null (dynamic, fit-dependent) by design
         // -- see Typography.cs -- so it falls through to the same
         // Ui.ButtonTracking rule d05294c gave button captions, rather than a
-        // fixed authored value every other role carries.
-        text.characterSpacing = spec.Tracking ?? Ui.ButtonTracking(node.Text);
+        // fixed authored value every other role carries. A node that asked
+        // for its own (TrackedOverRole) gets that instead.
+        text.characterSpacing = node.RoleTracking ?? spec.Tracking ?? Ui.ButtonTracking(node.Text);
         text.lineSpacing = spec.LineSpacing;
 
         // node.FontSize > 0 is this project's existing "was this actually

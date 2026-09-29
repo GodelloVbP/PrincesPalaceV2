@@ -5,8 +5,9 @@ namespace PrincesPalace.Domain.UiKit
     // Where the overarching menu's parts sit, as pure arithmetic.
     //
     // The whole point of this type is that the TAB BAR IS RELATIVE: every
-    // position is computed from the tab table, so changing that table moves the
-    // rest along on its own. Nothing here is a hand-placed x.
+    // position is computed from the tab table and the measured label widths,
+    // so changing that table moves the rest along on its own. Nothing here is
+    // a hand-placed x.
     //
     // It lives in Domain, beside FightSubmenuLayout and for the same reason:
     // the builder places the tabs and the controller has to know where they
@@ -30,14 +31,18 @@ namespace PrincesPalace.Domain.UiKit
         // LETTER-SPACING, in hundredths of an em, and it is part of the layout
         // rather than of the styling.
         //
-        // Every SystemMenuTabDef.LabelWidth is the width of its label at 18px
-        // Chakra Petch with .14em tracking, and the entire bar is arithmetic
-        // over those numbers. Drawn at the font's own spacing a label comes out
-        // about a quarter narrower than the box built for it, so the two belong
-        // together: change this and the widths are lies.
+        // Every tab's box is arithmetic over its label's measured width, and a
+        // width measured at one spacing is a lie at another. The build
+        // measures with this value and the emitter draws with it (Tracked
+        // over the role's own), so the two cannot part.
         //
-        // SystemMenuLabelWidthTests holds them to each other.
+        // SystemMenuLabelWidthTests holds the drawn label to the built box.
         public const float TabLabelTracking = 14f;
+
+        // The tab labels' size, in the FunctionalHeading role and all caps
+        // (spec section 2). Literal rather than the role's own band: the
+        // role's minimum is 34, which no bar of six tabs could carry.
+        public const int TabLabelSize = 24;
 
         // The design's .22em for the run title on the lintel.
         public const float LintelTitleTracking = 22f;
@@ -81,32 +86,27 @@ namespace PrincesPalace.Domain.UiKit
         // The row the tabs live in, inside the insets.
         public const float RowWidth = PanelWidth - BarInsetLeft - BarInsetRight;   // 1520
 
-        // ---- the two modes ------------------------------------------------------
+        // ---- the bar: two groups, one row -----------------------------------------
         //
-        // ONE COMPONENT, TWO RULES. A small set gets even, generous boxes, and
-        // a large set sizes each box to its own label and shares out what is
-        // left, because no uniform width fits labels as different in length as
-        // EXIT and RUN STATISTICS. Both real sets (four and five tabs) use
-        // the measured rule.
+        // The game group packs from the left inset with TabGap between boxes;
+        // the system group packs flush against the right inset the same way.
+        // What is left between the groups is the group gap, and it may not
+        // shrink below MinimumGroupGap or the two read as one run of tabs.
         //
-        // The threshold is a count, not a measurement, because the design
-        // states it as one: three or fewer is Mode A.
-        public const int UniformModeMaxTabs = 3;
-
-        // Mode A: the gap is fixed and the width is what remains.
-        public const float UniformGap = 130f;
-
-        // Mode B: each box is its label plus this much padding on each side,
-        // rounded so the row does not land on half pixels.
+        // A box is its label plus this much padding on each side, rounded so
+        // the row does not land on half pixels.
         public const float MeasuredPadX = 24f;
         public const float MeasuredRounding = 4f;
 
-        // The smallest gap Mode B will accept before the bar is overfull.
-        public const float MinimumGap = 24f;
+        // Between two boxes of one group.
+        public const float TabGap = 48f;
+
+        // Between the groups, at the least. The real gap is the leftover.
+        public const float MinimumGroupGap = 96f;
 
         // The underline is the label plus a little, NOT the box: a rule as wide
-        // as a generous Mode A box reads as a second divider rather than as a
-        // marker for the word above it.
+        // as the box reads as a second divider rather than as a marker for
+        // the word above it.
         public const float UnderlineOverhang = 24f;
         public const float UnderlineHeight = 3f;
 
@@ -114,148 +114,104 @@ namespace PrincesPalace.Domain.UiKit
         // design's panel-space y 81 against a bar spanning panel y 0..96.
         public const float UnderlineOffsetY = -33f;
 
-        public static bool IsUniformMode(int count) => count <= UniformModeMaxTabs;
-
-        // ---- everything below is arithmetic over LABEL WIDTHS ------------------
+        // Arithmetic over LABEL WIDTHS, not tab definitions: that is the seam
+        // that lets the bar lay itself out around what is actually drawn. The
+        // build measures every label once and the controller measures again
+        // on each open; both hand the widths to Arrange.
         //
-        // Widths, not tab definitions, and that is the seam that lets the bar
-        // lay itself out around what is ACTUALLY DRAWN.
-        //
-        // SystemMenuTabDef.LabelWidth is a hand-measured number and was wrong
-        // for months: it came off a design prototype at .14em while the emitter
-        // drew at zero tracking, so every box carried 50px of air and the
-        // underline overhung its own word. The authored figure is now the
-        // BUILD-TIME approximation only -- the scene has to be emitted from
-        // something before any text exists to measure -- and the controller
-        // re-lays the bar from the real TMP metrics the moment it opens.
-        //
-        // So changing a tab's wording is now just changing the wording.
-        public static float[] TabWidths(IReadOnlyList<float> labelWidths)
+        // Full labels first. If they do not fit at the minimum gaps the whole
+        // bar switches to short labels (never a mix, which reads as an
+        // accident), and if those do not fit either the build throws: that is
+        // an authoring error for this language, and the runtime cannot fix it.
+        public static SystemMenuBar Arrange(
+            IReadOnlyList<SystemMenuTabDef> tabs,
+            IReadOnlyList<float> fullWidths,
+            IReadOnlyList<float> shortWidths)
         {
-            var widths = new float[labelWidths.Count];
-            if (labelWidths.Count == 0) return widths;
-
-            if (IsUniformMode(labelWidths.Count))
+            if (fullWidths.Count != tabs.Count || shortWidths.Count != tabs.Count)
             {
-                float uniform = (RowWidth - UniformGap * (labelWidths.Count - 1)) / labelWidths.Count;
-                for (int i = 0; i < labelWidths.Count; i++) widths[i] = uniform;
-                return widths;
+                throw new System.ArgumentException(
+                    $"{tabs.Count} tabs but {fullWidths.Count} full and {shortWidths.Count} short label widths.");
             }
 
-            for (int i = 0; i < labelWidths.Count; i++)
+            var full = Place(tabs, fullWidths, shortLabels: false);
+            if (full.Fits) return full;
+
+            var brief = Place(tabs, shortWidths, shortLabels: true);
+            if (brief.Fits) return brief;
+
+            throw new System.InvalidOperationException(
+                $"The system menu's {tabs.Count} tabs need {brief.Needed:F0}px even with short labels " +
+                $"but the bar row is {RowWidth:F0}px. Shorten a short label, widen the panel, or the bar " +
+                "needs to wrap or scroll - it cannot simply be given another entry.");
+        }
+
+        private static SystemMenuBar Place(
+            IReadOnlyList<SystemMenuTabDef> tabs, IReadOnlyList<float> labelWidths, bool shortLabels)
+        {
+            int count = tabs.Count;
+            var boxes = new float[count];
+            var lefts = new float[count];
+
+            // The table lists the game group before the system group, and the
+            // packing below relies on it: a game tab behind a system tab would
+            // be placed at the wrong end.
+            int firstSystem = count;
+            for (int i = 0; i < count; i++)
             {
-                float wanted = labelWidths[i] + MeasuredPadX * 2f;
+                if (tabs[i].Group == SystemMenuTabGroup.System)
+                {
+                    if (firstSystem == count) firstSystem = i;
+                }
+                else if (firstSystem != count)
+                {
+                    throw new System.InvalidOperationException(
+                        $"The system menu's tab {tabs[i].Key} is a game tab listed after a system tab.");
+                }
+
                 // System.Math, not Mathf: this assembly deliberately does not
                 // reference UnityEngine, which is what keeps the layout
                 // arithmetic testable without a player loop. AwayFromZero
                 // because "nearest" is what the design says, and Math.Round's
                 // default is banker's rounding.
-                widths[i] = (float)System.Math.Round(
-                    wanted / MeasuredRounding, System.MidpointRounding.AwayFromZero) * MeasuredRounding;
+                boxes[i] = (float)System.Math.Round(
+                    (labelWidths[i] + MeasuredPadX * 2f) / MeasuredRounding,
+                    System.MidpointRounding.AwayFromZero) * MeasuredRounding;
             }
-
-            return widths;
-        }
-
-        // The gap between boxes. Uniform mode fixes it; measured mode shares
-        // out whatever the boxes did not use, so the row always ends flush
-        // against the right inset.
-        public static float GapFor(IReadOnlyList<float> labelWidths)
-        {
-            if (labelWidths.Count <= 1) return 0f;
-            if (IsUniformMode(labelWidths.Count)) return UniformGap;
-
-            float used = 0f;
-            foreach (float w in TabWidths(labelWidths)) used += w;
-            return (RowWidth - used) / (labelWidths.Count - 1);
-        }
-
-        // Left edge of each box, in panel space (0 at the panel's left edge).
-        public static float[] TabLefts(IReadOnlyList<float> labelWidths)
-        {
-            var widths = TabWidths(labelWidths);
-            float gap = GapFor(labelWidths);
-            var lefts = new float[labelWidths.Count];
 
             float x = BarInsetLeft;
-            for (int i = 0; i < labelWidths.Count; i++)
+            for (int i = 0; i < firstSystem; i++)
             {
                 lefts[i] = x;
-                x += widths[i] + gap;
+                x += boxes[i] + TabGap;
             }
 
-            return lefts;
-        }
+            float gameWidth = firstSystem == 0 ? 0f : x - TabGap - BarInsetLeft;
 
-        // Centre x of each box, measured from the PANEL CENTRE, which is the
-        // space every node in this project is placed in.
-        public static float[] TabCentresX(IReadOnlyList<float> labelWidths)
-        {
-            var widths = TabWidths(labelWidths);
-            var lefts = TabLefts(labelWidths);
-            var centres = new float[labelWidths.Count];
-
-            for (int i = 0; i < labelWidths.Count; i++)
+            float systemWidth = 0f;
+            for (int i = firstSystem; i < count; i++)
             {
-                centres[i] = -HalfWidth + lefts[i] + widths[i] * 0.5f;
+                systemWidth += boxes[i] + (i > firstSystem ? TabGap : 0f);
             }
 
-            return centres;
-        }
+            float systemLeft = BarInsetLeft + RowWidth - systemWidth;
+            x = systemLeft;
+            for (int i = firstSystem; i < count; i++)
+            {
+                lefts[i] = x;
+                x += boxes[i] + TabGap;
+            }
 
-        // The divider that follows tab `index`, centred in the gap after it.
-        public static float DividerCentreX(IReadOnlyList<float> labelWidths, int index)
-        {
-            var widths = TabWidths(labelWidths);
-            var lefts = TabLefts(labelWidths);
+            bool bothGroups = firstSystem > 0 && firstSystem < count;
+            float groupGap = bothGroups ? systemLeft - (BarInsetLeft + gameWidth) : 0f;
+            float needed = gameWidth + systemWidth + (bothGroups ? MinimumGroupGap : 0f);
 
-            float rightOfThis = lefts[index] + widths[index];
-            float leftOfNext = lefts[index + 1];
-            return -HalfWidth + (rightOfThis + leftOfNext) * 0.5f;
+            return new SystemMenuBar(shortLabels, labelWidths, boxes, lefts, groupGap, needed,
+                fits: needed <= RowWidth);
         }
 
         public static float UnderlineWidth(float labelWidth) =>
             labelWidth + UnderlineOverhang;
-
-        // ---- the authored figures, for the build ------------------------------
-        //
-        // The scene has to be emitted before any text exists to measure, so the
-        // builder lays the bar out from SystemMenuTabDef.LabelWidth and the
-        // controller corrects it on first open. These overloads are that path,
-        // and the only place the authored numbers are read.
-        public static IReadOnlyList<float> AuthoredWidths(IReadOnlyList<SystemMenuTabDef> tabs)
-        {
-            var widths = new float[tabs.Count];
-            for (int i = 0; i < tabs.Count; i++) widths[i] = tabs[i].LabelWidth;
-            return widths;
-        }
-
-        // Thin delegating overloads, so a caller that has definitions does not
-        // have to say AuthoredWidths at every site. ONE implementation either
-        // way -- these exist for readability, not as a second code path.
-        public static float[] TabWidths(IReadOnlyList<SystemMenuTabDef> tabs) =>
-            TabWidths(AuthoredWidths(tabs));
-
-        public static float GapFor(IReadOnlyList<SystemMenuTabDef> tabs) =>
-            GapFor(AuthoredWidths(tabs));
-
-        public static float[] TabLefts(IReadOnlyList<SystemMenuTabDef> tabs) =>
-            TabLefts(AuthoredWidths(tabs));
-
-        public static float[] TabCentresX(IReadOnlyList<SystemMenuTabDef> tabs) =>
-            TabCentresX(AuthoredWidths(tabs));
-
-        public static float DividerCentreX(IReadOnlyList<SystemMenuTabDef> tabs, int index) =>
-            DividerCentreX(AuthoredWidths(tabs), index);
-
-        public static float StripWidth(IReadOnlyList<SystemMenuTabDef> tabs) =>
-            StripWidth(AuthoredWidths(tabs));
-
-        public static bool StripFits(IReadOnlyList<SystemMenuTabDef> tabs) =>
-            StripFits(AuthoredWidths(tabs));
-
-        public static float UnderlineWidth(SystemMenuTabDef tab) =>
-            UnderlineWidth(tab.LabelWidth);
 
         // ---- the title lintel ---------------------------------------------------
         //
@@ -285,24 +241,92 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float LintelPadX = 24f;
         public const float CloseButtonSize = 34f;
+    }
 
-        // ---- capacity -----------------------------------------------------------
-        //
-        // ARITHMETIC, not a fixed count, and that is the design's explicit ask.
-        // A count-based guard was honest while every box was 210px wide; once
-        // boxes are sized to their own labels, "how many fit" is a question
-        // about the words, and a localisation that doubles a label's length
-        // overflows a bar that still has the same number of tabs.
-        public static float StripWidth(IReadOnlyList<float> labelWidths)
+    // One arrangement of the bar: which label set it uses and where every box
+    // sits. Immutable; the build and the controller each make one from
+    // measured widths.
+    public sealed class SystemMenuBar
+    {
+        // Whether every label is its short form.
+        public readonly bool ShortLabels;
+
+        // The label widths this arrangement was made from, full or short. The
+        // underline is drawn from these.
+        public readonly IReadOnlyList<float> LabelWidths;
+
+        // Box widths, left edges in panel space (0 at the panel's left edge),
+        // and the leftover between the groups.
+        public readonly IReadOnlyList<float> Widths;
+        public readonly IReadOnlyList<float> Lefts;
+        public readonly float GroupGap;
+
+        // The row the boxes need at the minimum gaps, and whether it fits.
+        public readonly float Needed;
+        public readonly bool Fits;
+
+        internal SystemMenuBar(bool shortLabels, IReadOnlyList<float> labelWidths, IReadOnlyList<float> widths,
+                               IReadOnlyList<float> lefts, float groupGap, float needed, bool fits)
         {
-            if (labelWidths.Count == 0) return 0f;
-
-            float used = 0f;
-            foreach (float w in TabWidths(labelWidths)) used += w;
-            return used + MinimumGap * (labelWidths.Count - 1);
+            ShortLabels = shortLabels;
+            LabelWidths = labelWidths;
+            Widths = widths;
+            Lefts = lefts;
+            GroupGap = groupGap;
+            Needed = needed;
+            Fits = fits;
         }
 
-        public static bool StripFits(IReadOnlyList<float> labelWidths) =>
-            labelWidths.Count <= 1 || StripWidth(labelWidths) <= RowWidth;
+        public int Count => Widths.Count;
+
+        // Centre x of a box, measured from the PANEL CENTRE, which is the space
+        // every node in this project is placed in.
+        public float CentreX(int index) =>
+            -SystemMenuLayout.HalfWidth + Lefts[index] + Widths[index] * 0.5f;
+
+        // The divider that follows tab `index`, centred in the gap after it
+        // (the group gap after the last game tab).
+        public float DividerCentreX(int index)
+        {
+            float rightOfThis = Lefts[index] + Widths[index];
+            float leftOfNext = Lefts[index + 1];
+            return -SystemMenuLayout.HalfWidth + (rightOfThis + leftOfNext) * 0.5f;
+        }
+    }
+
+    // What every tab's label measures, in both forms, in SystemMenuTabs.All
+    // order. Domain has no font metrics, so the Editor measures with the text
+    // the emitter will draw and passes the numbers in.
+    public sealed class SystemMenuLabelWidths
+    {
+        public readonly IReadOnlyList<float> Full;
+        public readonly IReadOnlyList<float> Short;
+
+        public SystemMenuLabelWidths(IReadOnlyList<float> full, IReadOnlyList<float> brief)
+        {
+            Full = full;
+            Short = brief;
+        }
+
+        // A stand-in for a caller with no font to measure with, an EditMode
+        // test or a screen built to look at its layout: 18.3px a character, the
+        // spec's own estimate for the tab labels at 24 caps.
+        public static SystemMenuLabelWidths Estimated()
+        {
+            var tabs = SystemMenuTabs.All;
+            var full = new float[tabs.Count];
+            var brief = new float[tabs.Count];
+            for (int i = 0; i < tabs.Count; i++)
+            {
+                full[i] = Estimate(tabs[i].Label);
+                brief[i] = Estimate(tabs[i].ShortLabel);
+            }
+
+            return new SystemMenuLabelWidths(full, brief);
+        }
+
+        private static float Estimate(UiString label) =>
+            (float)System.Math.Round(
+                (label.IsTemplated ? label.AuditSample : label.Template).Length * 18.3);
     }
 }

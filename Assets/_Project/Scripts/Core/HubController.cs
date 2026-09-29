@@ -51,8 +51,9 @@ namespace PrincesPalace
         // hub is not a modal that opens and closes, it is the scene's own
         // base context. Registered here (not a selectable set of its own)
         // so its Cancel handler runs through the ONE dispatch point instead
-        // of a raw Update() poll, and so C/I/F1 below can ask "am I still
-        // top" instead of firing under a modal that has since covered them.
+        // of a raw Update() poll, and so F1 below can ask "am I still top"
+        // instead of firing under a modal that has since covered it. The
+        // menu's own hotkeys reach it through this context too (menuHotkey).
         private NavContext _navContext;
 
         // OnEnable, not Start: the hub is returned to repeatedly -- from a
@@ -178,7 +179,8 @@ namespace PrincesPalace
             // to -- so its Cancel is deliberately nothing at all rather
             // than a second way to reach the menu.
             _navContext = new NavContext(entry: StartRunButtonGameObject, selectables: Selectables(),
-                cancel: null, systemMenu: HandleEscape);
+                cancel: null, systemMenu: HandleEscape,
+                menuHotkey: hotkey => MenuHotkeys.Press(systemMenu, hotkey));
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
@@ -328,29 +330,19 @@ namespace PrincesPalace
 
         // ---- keyboard ------------------------------------------------------------
 
-        // C and I open the character overlay; Escape closes it.
+        // F1 only. C, I, P and View are the menu's hotkeys and are read once by
+        // NavigationInputModule; this hub's context hands them to the menu.
         //
-        // Both keys land on the SAME overlay. v1 had two separate screens and a
-        // key each -- an inventory and a paperdoll that could only agree because
-        // both called the same service. v2 merged them, so honouring both keys
-        // costs nothing and spares anyone their muscle memory.
-        //
-        // This lives on the hub rather than on CharacterOverlayController
-        // because that component sits on the modal node, which is INACTIVE
-        // while the overlay is closed. An Update() on a disabled object cannot
-        // be the thing that opens it.
+        // This lives on the hub rather than on a modal's controller because
+        // that component sits on a node that is INACTIVE while its modal is
+        // closed, and an Update() on a disabled object cannot open it.
         private void Update()
         {
-            // GATED ON TOP OF STACK: a modal covering the
-            // hub -- the system menu, the glossary, the relic draft, the
-            // debug menu itself -- must not also see C/I/F1 land underneath
-            // it. None of these three push their own context yet, so
-            // "top" here means "nothing else pushed
-            // on top of the hub's own base context" -- which the debug menu,
-            // glossary and relic draft all currently achieve by covering the
-            // hub WITHOUT pushing a context of their own, so this guard is
-            // silent about them today and only actually bites once the
-            // system menu (or a future modal) registers its own.
+            // GATED ON TOP OF STACK: a modal covering the hub -- the system
+            // menu, the glossary, the relic draft, the debug menu itself --
+            // must not also see F1 land underneath it. (The menu's own keys,
+            // C, I, P and View, are not read here: NavigationInputModule
+            // reads them once and hands them to the top context.)
             if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
             {
                 return;
@@ -367,19 +359,6 @@ namespace PrincesPalace
             {
                 ToggleDebugMenu();
                 return;
-            }
-
-            if (characterOverlayPanel == null) return;
-
-            // C is the sheet and I is the bag: two panes, two keys, rather
-            // than one key that reopens whichever pane was last up.
-            if (Input.GetKeyDown(KeyCode.C))
-            {
-                ToggleCharacterOverlay(inventory: false);
-            }
-            else if (Input.GetKeyDown(KeyCode.I))
-            {
-                ToggleCharacterOverlay(inventory: true);
             }
 
             // Escape/Cancel no longer read here at all -- it belongs to the
@@ -411,20 +390,16 @@ namespace PrincesPalace
             SystemMenuController.OpenFromRoot(systemMenu);
         }
 
-        // The corner Main Menu button's action. Select follows Open in the same
-        // breath, which the controller supports: its first-frame default only
-        // applies while nothing has chosen a tab.
+        // The corner Exit button's action: the menu on its Exit tab.
         internal void OpenExitTab()
         {
-            if (!SystemMenuController.OpenFromRoot(systemMenu)) return;
-            systemMenu.Select(SystemMenuTab.Exit);
+            if (systemMenu == null || systemMenu.IsOpen) return;
+            systemMenu.Open(SystemMenuTab.Exit);
         }
 
-        // The key read above is deliberately separated from the action here:
-        // legacy Input cannot be simulated headlessly, so a test that had to
-        // press C could not exist. Tests drive these two directly -- and so
-        // does the Character Sheet building, which means the button and the
-        // key can never drift apart.
+        // C and I without the key: the same Press the dispatcher calls
+        // (SheetPanel), so the Character Sheet building, the tests and the
+        // keys share one path.
         // Read-only, so callers outside Core can ask without being able to
         // reach past the two methods that are allowed to answer. Null-tolerant
         // for the same reason those are: a scene may mount this controller
@@ -432,10 +407,8 @@ namespace PrincesPalace
         public bool CharacterOverlayIsOpen =>
             characterOverlayPanel != null && characterOverlayPanel.activeSelf;
 
-        // Toggling to a named pane: pressing C while the bag is up switches to
-        // the sheet rather than closing the overlay, which is what a reader
-        // reaching for the other half actually means. Pressing the key for the
-        // pane already showing closes it.
+        // What C (or I, with `inventory`) does: open, switch to the Character
+        // tab, or close (MenuHotkeyRule).
         public void ToggleCharacterOverlay(bool inventory = false) =>
             SheetPanel.Toggle(characterOverlayPanel, inventory);
 

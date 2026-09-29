@@ -293,6 +293,10 @@ namespace PrincesPalace
             if (leftPulled) topAtStart.RaiseTabStep(-1);
             else if (rightPulled) topAtStart.RaiseTabStep(1);
 
+            // THE MENU'S HOTKEYS, after every dispatch above so none of that
+            // order moves.
+            DispatchMenuHotkeys(topAtStart);
+
             // RE-READ HERE, deliberately -- this is not the same "capture
             // once" rule Cancel-dispatch above follows: conflating the two
             // is a real bug. A Cancel that just POPPED topAtStart (SystemMenu
@@ -338,6 +342,27 @@ namespace PrincesPalace
             ShowFocusOn(EventSystem.current.currentSelectedGameObject);
         }
 
+        // THE ONE READ OF EVERY MENU HOTKEY (C, I, P and the pad's View),
+        // offered to whichever context is top. Only a scene root and the menu
+        // itself declare a handler, which is the rule Start follows: a modal
+        // above them absorbs the press instead of letting the screen beneath
+        // it open a menu on top. At most one per frame -- two keys down
+        // together would otherwise open a tab and switch away in one call.
+        //
+        // The keyboard hotkeys are Input Manager buttons like every other
+        // press here, so ScriptedBaseInput can script them and a rebind
+        // touches ProjectSettings and nothing else.
+        private void DispatchMenuHotkeys(NavContext top)
+        {
+            foreach (var hotkey in SystemMenuTabs.Hotkeys)
+            {
+                if (!input.GetButtonDown(hotkey.Axis)) continue;
+
+                top.RaiseMenuHotkey(hotkey);
+                return;
+            }
+        }
+
         // WHICH DEVICE IS DRIVING, read once a frame off the same `input`
         // seam every other value in this class goes through (plan section 2),
         // so ScriptedBaseInput can prove it.
@@ -376,7 +401,7 @@ namespace PrincesPalace
 
             if (input.GetButtonDown(submitButton) || input.GetButtonDown(cancelButton)
                 || input.GetButtonDown(TabPrevButton) || input.GetButtonDown(TabNextButton)
-                || input.GetButtonDown(SystemMenuButton))
+                || input.GetButtonDown(SystemMenuButton) || input.GetButtonDown(SystemMenuTabs.ViewAxis))
             {
                 LastInputWasPad = true;
             }
@@ -642,6 +667,8 @@ namespace PrincesPalace
             if (input.GetButtonDown(CharacterSelectButton)) target.EnterCharacterSelect();
             if (input.GetButtonDown(submitButton)) target.ConfirmFocus();
             if (!systemMenuHandled && input.GetButtonDown(cancelButton)) target.OnBackPressed();
+
+            DispatchMenuHotkeys(top);
 
             // AFTER the three, so the marker lands on wherever this frame's
             // press left the focus rather than a frame behind it -- a Submit

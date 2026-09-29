@@ -177,15 +177,12 @@ namespace PrincesPalace
 
         // ---- the character sheet, between rooms --------------------------------
 
-        // The same two keys as the hub and the fight, so "what am I wearing" is
-        // one gesture wherever the player is standing.
         // The map's own base context, mirroring HubController's -- pushed
         // once, never popped while this scene is loaded. No Selectables yet
         // (node-button navigation is the Graph group RefreshNavLinks below
-        // gives Map), but its Cancel is live: with nothing else up, Cancel
-        // opens the system menu, exactly as it does on the hub. It also
-        // lets C/I below ask "am I still top" instead of firing underneath
-        // a modal that covers the map.
+        // gives Map). Start and the menu hotkeys reach the system menu through
+        // it; its Cancel does nothing, and a modal that pushes its own context
+        // over it absorbs all of them.
         private NavContext _navContext;
 
         // The overarching menu this screen's Cancel opens, assigned by
@@ -208,11 +205,6 @@ namespace PrincesPalace
                 return;
             }
 
-            if (characterSheetPanel == null) return;
-
-            if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
-            else if (Input.GetKeyDown(KeyCode.I)) ToggleCharacterSheet(inventory: true);
-
             // Cancel/Escape is not read here at all any more -- see the
             // context comment above.
         }
@@ -223,7 +215,8 @@ namespace PrincesPalace
 
             // systemMenu, NOT cancel -- see HandleSystemMenu below.
             _navContext = new NavContext(entry: null, selectables: null,
-                cancel: null, systemMenu: HandleSystemMenu);
+                cancel: null, systemMenu: HandleSystemMenu,
+                menuHotkey: hotkey => MenuHotkeys.Press(systemMenu, hotkey));
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 

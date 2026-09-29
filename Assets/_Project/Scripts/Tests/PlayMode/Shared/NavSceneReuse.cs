@@ -114,7 +114,7 @@ namespace PrincesPalace.PlayModeTests
             // selects the default one, so this does too.
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             if (menu != null && menu.IsOpen) menu.Close();
-            if (menu != null) menu.Select(SystemMenuTabs.DefaultFor(menu.InDescent));
+            if (menu != null) menu.Select(SystemMenuTabs.DefaultFor(menu.Context));
             if (hub.CharacterOverlayIsOpen) hub.SetCharacterOverlay(false);
             if (hub.GlossaryIsOpen) hub.SetGlossary(false);
             if (hub.DebugMenuIsOpen) hub.SetDebugMenu(false);

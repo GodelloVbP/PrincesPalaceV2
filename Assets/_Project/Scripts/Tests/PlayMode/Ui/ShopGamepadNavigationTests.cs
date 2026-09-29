@@ -92,7 +92,7 @@ namespace PrincesPalace.PlayModeTests
             {
                 var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
                 if (menu != null && menu.IsOpen) menu.Close();
-                if (menu != null) menu.Select(PrincesPalace.Domain.UiKit.SystemMenuTabs.DefaultFor(menu.InDescent));
+                if (menu != null) menu.Select(PrincesPalace.Domain.UiKit.SystemMenuTabs.DefaultFor(menu.Context));
                 var shop = Object.FindAnyObjectByType<ShopController>(FindObjectsInactive.Include);
                 if (shop != null && shop.gameObject.activeSelf) shop.gameObject.SetActive(false);
                 map.Refresh();
