@@ -52,34 +52,15 @@ namespace PrincesPalace.PlayModeTests
         // TWO STONES IN QUICK SUCCESSION is not an exotic input: a player with
         // embers banked walks up a path, and the beat is 1.12 seconds long.
         //
-        // THE STONE DOES SETTLE, AND NOT FOR THE REASON THE CODE SAYS. This
-        // was written expecting red. DriveKindling writes orbs[index].
-        // localScale every frame from CatchScale, and the only place it is
-        // written back to 1 is the branch that fires when the beat REACHES its
-        // end -- for whichever stone the controller owns at that moment. Nothing
-        // in TalentController settles the stone a second kindle abandons:
-        // DriveRestingLoops drives alpha only, and PaintOrbs never touches the
-        // orb's own rect.
+        // DriveKindling writes the owned stone's localScale every frame from
+        // CatchScale and writes it back to 1 only when the beat reaches its
+        // end. A second kindle re-points the beat, so BeginKindling settles
+        // the stone it stops owning. Nothing else writes an orb's scale
+        // (ButtonPressAnimator only tints the plate), so without that the
+        // abandoned stone keeps its last mid-catch size; how far off it is
+        // depends on the frame rate, which is why this failed only under load.
         //
-        // What puts it back is the orb's ButtonPressAnimator. Every orb IS a
-        // Ui.Button (TalentScreen: "THE ORB IS THE BUTTON"), UiEmitter.
-        // EmitButton attaches a press animator to every non-hover button, and
-        // that animator lerps localScale toward its base every frame forever.
-        // So a THIRD writer on this one property is what makes the abandoned
-        // stone correct -- while EmitButton's own comment beside that line
-        // rules out attaching two animators at once precisely "because both
-        // drive localScale, and a node carrying both would have them fight
-        // every frame".
-        //
-        // Which leaves the outcome right and the arrangement load-bearing on
-        // Update order between two components on the same GameObject -- the
-        // thing EscapeKey.cs's header calls "not a thing to build behaviour
-        // on". Recorded as an owner decision rather than fixed here: settling
-        // the outgoing stone in BeginKindling would be a one-line restore, but
-        // the test is green, and a fix with no red output is not a fix.
-        //
-        // This test therefore pins the OUTCOME, which is what a player sees,
-        // and stays honest about why it holds.
+        // The assertions pin the outcome a player sees.
         [UnityTest]
         public IEnumerator ASecondStoneKindledMidBeatStillSettlesTheFirst()
         {
@@ -126,6 +107,12 @@ namespace PrincesPalace.PlayModeTests
                 "fixture: the second kindle was refused, so nothing interrupted the first beat and " +
                 "this test proves nothing");
 
+            // Settled the instant the beat moves on, not eventually: the first
+            // stone is mid-catch here, and a frame-rate-dependent residue is
+            // what the end-of-test tolerance would otherwise hide.
+            Assert.AreEqual(1f, first.localScale.x, 0.0001f,
+                "the stone the second kindle took the beat from kept its mid-catch size");
+
             // Both beats run out.
             yield return Watch(ConstellationLayout.KindleSeconds * 2f + 0.4f);
 
@@ -133,8 +120,7 @@ namespace PrincesPalace.PlayModeTests
                 "the stone that was kindled second never settled");
             Assert.AreEqual(1f, first.localScale.x, 0.01f,
                 "the stone whose beat was interrupted by the second kindle was left at the size the " +
-                "beat had it at, and nothing ever puts it back - DriveKindling only settles the stone " +
-                "it still owns when the beat ends");
+                "beat had it at, and BeginKindling did not settle the stone it stopped owning");
         }
 
         // ---- B27: the screen re-entered after a kindle ------------------------------------

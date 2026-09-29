@@ -43,8 +43,24 @@ namespace PrincesPalace
         private float _pushFrom;
         private float _pushTo;
 
+        // A second kindle re-points the beat, so the stone it stops owning
+        // would keep whatever scale its last frame wrote (up to 1.18 mid-catch)
+        // and nothing else ever writes that rect. Settled here, before the
+        // beat moves on.
         private void BeginKindling(int path, int slot)
         {
+            if (_kindlingSlot >= 0)
+            {
+                int outgoing = TalentScreen.OrbIndex(_kindlingPath, _kindlingSlot);
+                if (outgoing >= 0 && outgoing < orbs.Length && orbs[outgoing] != null)
+                {
+                    var rect = orbs[outgoing].transform as RectTransform;
+                    if (rect != null) rect.localScale = Vector3.one;
+                }
+
+                if (Has(orbGlows, outgoing)) orbGlows[outgoing].rectTransform.localScale = Vector3.one;
+            }
+
             _kindlingPath = path;
             _kindlingSlot = slot;
             _kindlingElapsed = 0f;
