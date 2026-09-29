@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_jug_pain_1
     DisplayName: Ignore Pain
-    Description: 20% of every hit is not taken now but spread over the next 3 turns
-      as damage.
+    Description: 20% of each hit taken is delayed and dealt as damage over the next
+      3 turns.
     CharacterId: bear
     Column: 2
     Row: 12

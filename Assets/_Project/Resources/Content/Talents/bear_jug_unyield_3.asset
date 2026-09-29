@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_unyield_3
     DisplayName: 'Unyielding: Fed by Force'
-    Description: Shrugging off crowd control also grants 20 Fury.
+    Description: Ignoring crowd control with Unyielding also gives 20 Fury.
     CharacterId: bear
     Column: 2
     Row: 17

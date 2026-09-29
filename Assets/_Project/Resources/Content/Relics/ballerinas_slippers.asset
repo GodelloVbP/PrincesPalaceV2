@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: ballerinas_slippers
     DisplayName: Ballerina's Slippers
-    Description: Each attack you land permanently speeds you up by 10% for the rest
-      of the fight, up to +40% total.
+    Description: Each attack you land gives +10% speed for the rest of the fight.
+      Maximum +40%.
     Effect: 5
     SortOrder: 7
     IconPath: Assets/_Project/Art/Items/Relics/Processed/ballerinas_slippers.png

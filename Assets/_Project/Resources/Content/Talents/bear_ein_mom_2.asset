@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_mom_2
     DisplayName: 'Momentum: Building'
-    Description: Stacks also add +5% crit damage each, and the cap rises to 8.
+    Description: Each stack also gives +5% crit damage. Maximum stacks rise to 8.
     CharacterId: bear
     Column: 1
     Row: 6

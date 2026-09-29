@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: tuck_in
     DisplayName: Tuck In
-    Description: He folds the fleece over himself and waits. Spends up to 4 banked
-      Wool for a 5-point shield a Wool -- 20 at a full four, standing for one turn.
-      Costs no mana and does not end his turn -- once a turn.
+    Description: Spend up to 4 wool for a 5-point shield per wool, lasting 1 turn.
+      Free action, once per turn.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 7

@@ -101,7 +101,7 @@ namespace PrincesPalace.Domain.Tests
             var kinship = Relics().Single(r => r.Id == "kinship");
 
             Assert.AreEqual("Kinship", kinship.DisplayName);
-            Assert.AreEqual("The first blow Shawn takes each fight is turned aside.", kinship.Description);
+            Assert.AreEqual("The first hit Shawn takes each fight is negated.", kinship.Description);
             Assert.AreEqual(RelicEffect.Kinship, kinship.Effect);
             Assert.AreEqual("sheep", kinship.Bearer);
             Assert.IsFalse(kinship.Draftable);

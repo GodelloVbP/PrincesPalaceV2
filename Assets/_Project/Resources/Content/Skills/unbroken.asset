@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: unbroken
     DisplayName: Unbroken
-    Description: He refuses to fall. For two turns he regenerates 15% of his maximum
-      health a turn and no crowd control can touch him. Costs 50 Fury.
+    Description: For 2 turns, regenerate 15% of your max HP each turn and become
+      immune to crowd control. Costs 50 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 21

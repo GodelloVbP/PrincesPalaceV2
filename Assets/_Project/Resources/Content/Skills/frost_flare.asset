@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: frost_flare
     DisplayName: Frost Flare
-    Description: Burns and freezes in the same breath. Something out there hates
-      one half of it.
+    Description: Deal 4 Fire and 4 Frost damage. Costs 7 mana.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

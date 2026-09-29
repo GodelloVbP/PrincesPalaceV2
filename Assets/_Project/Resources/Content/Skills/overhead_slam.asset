@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: overhead_slam
     DisplayName: Overhead Slam
-    Description: A killing blow that does not care what you are wearing.
+    Description: Deal damage plus 4 to one target, ignoring defense.
     CharacterId: forest_warden
     UnlockLevel: 1
     Effect: 0

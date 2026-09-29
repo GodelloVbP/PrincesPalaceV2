@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: shear
     DisplayName: Shear
-    Description: Cut the fleece loose and let it fly. Costs no mana at all, only
-      wool.
+    Description: Deal Nature damage plus 6. Costs 3 wool.
     CharacterId: sheep
     UnlockLevel: 1
     Effect: 0

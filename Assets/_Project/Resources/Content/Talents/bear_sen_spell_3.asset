@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_sen_spell_3
     DisplayName: 'Spellbreaker: Feeding on Magic'
-    Description: A reflected hit also grants Fury equal to half the damage it dealt,
-      within the per-hit limits of his engine.
+    Description: A reflected hit also gives Fury equal to 50% of the damage it dealt,
+      within the per-hit Fury limits.
     CharacterId: bear
     Column: 0
     Row: 17

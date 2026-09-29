@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: headsplitter
     DisplayName: Headsplitter
-    Description: Everything he has left, brought down on one skull. Needs 30 Fury
-      and spends all of it; the more Fury and the more hurt the target, the harder
-      it lands. A kill gives half the Fury back.
+    Description: Spend all your Fury to deal damage plus 1 per Fury spent, and +1%
+      damage for each 1% of the target's HP already lost. A kill refunds half the
+      Fury spent. Needs 30 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 0

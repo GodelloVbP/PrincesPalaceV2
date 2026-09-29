@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: barrel_roll
     DisplayName: Barrel Roll
-    Description: Legs in, and the whole armoured weight of it comes through you.
+    Description: Deal damage plus 2 to one target.
     CharacterId: beetle
     UnlockLevel: 1
     Effect: 0

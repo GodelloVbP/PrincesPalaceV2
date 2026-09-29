@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: jo_suns_book_of_anatomy
     DisplayName: Jo-Sun's Book of Anatomy
-    Description: Super-effective damage is multiplied by an extra 20%.
+    Description: Super-effective hits deal an extra 20% damage.
     Effect: 0
     SortOrder: 28
     IconPath: Assets/_Project/Art/Items/Relics/Processed/jo_suns_book_of_anatomy.png

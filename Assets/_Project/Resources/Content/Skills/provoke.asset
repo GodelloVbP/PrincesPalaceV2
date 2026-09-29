@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: provoke
     DisplayName: Provoke
-    Description: Head down, eyes up. Whatever it was going to do, it is going to
-      do it to you.
+    Description: The target's next attack must hit you.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 5

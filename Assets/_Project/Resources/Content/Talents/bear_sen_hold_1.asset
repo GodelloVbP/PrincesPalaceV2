@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_sen_hold_1
     DisplayName: Hold the Line
-    Description: 'Unlocks Hold the Line: 40 Fury. Every ally gains 15 Defense and
-      15 Magical Defense for 2 turns.'
+    Description: Unlocks Hold the Line. Costs 40 Fury. All allies gain 15 Defense
+      and 15 Magical Defense for 2 turns.
     CharacterId: bear
     Column: 0
     Row: 2

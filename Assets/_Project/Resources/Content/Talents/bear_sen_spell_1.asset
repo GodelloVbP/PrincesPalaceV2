@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_sen_spell_1
     DisplayName: Spellbreaker
-    Description: Reflects 15% of magic damage that hits him or his shield back at
-      its caster.
+    Description: Reflect 15% of magic damage that hits you or your shield back at
+      the caster.
     CharacterId: bear
     Column: 0
     Row: 11

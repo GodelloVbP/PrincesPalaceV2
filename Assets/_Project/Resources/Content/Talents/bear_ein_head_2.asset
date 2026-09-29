@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_head_2
     DisplayName: 'Headsplitter: Nose for Weakness'
-    Description: +25% crit chance against targets at or below 30% health.
+    Description: +25% crit chance against targets at or below 30% HP.
     CharacterId: bear
     Column: 1
     Row: 14

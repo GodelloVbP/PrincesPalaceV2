@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: dark_chains
     DisplayName: Dark Chains
-    Description: Chains out of nothing drag you to the front of the line.
+    Description: Pull the target to the front of the line.
     CharacterId: bellwether
     UnlockLevel: 1
     Effect: 20

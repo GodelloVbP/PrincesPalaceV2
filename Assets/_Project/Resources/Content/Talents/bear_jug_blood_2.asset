@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_jug_blood_2
     DisplayName: 'Thick Blood: Pulse'
-    Description: Regenerates 2% of his maximum health at the start of each of his
-      turns, rising to 6% at a quarter health or less, on the same curve as his Fury.
+    Description: At turn start, heal 2% of maximum HP, rising to 6% at 25% HP or
+      below.
     CharacterId: bear
     Column: 2
     Row: 4

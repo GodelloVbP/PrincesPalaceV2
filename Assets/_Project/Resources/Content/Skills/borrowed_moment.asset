@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: borrowed_moment
     DisplayName: Borrowed Moment
-    Description: Moves an ally up to two places earlier in the order. Never buys
-      them an extra turn.
+    Description: Move an ally up to 2 places earlier in the turn order. Costs 8 mana.
+      Cooldown 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 16

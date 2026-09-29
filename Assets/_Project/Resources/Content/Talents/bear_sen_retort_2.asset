@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_retort_2
     DisplayName: 'Iron Retort: Hammered'
-    Description: The share rises to 20%.
+    Description: Iron Retort's bonus rises to 20%.
     CharacterId: bear
     Column: 0
     Row: 4

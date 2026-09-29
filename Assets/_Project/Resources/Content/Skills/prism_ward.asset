@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: prism_ward
     DisplayName: Prism Ward
-    Description: Light bent into a shell around somebody else. A 20-point shield
-      plus her spell attack, and one turn to spend it.
+    Description: Give one ally a ward of 20 points plus your spell attack. Costs
+      8 mana.
     CharacterId: owl
     UnlockLevel: 999
     Effect: 7

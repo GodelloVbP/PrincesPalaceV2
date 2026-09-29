@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: disgruntled_lackey
     DisplayName: Disgruntled Lackey
-    Description: Whenever an enemy summons a unit, deal 100% of your max health as
-      damage to the summoner.
+    Description: Whenever an enemy summons a unit, the summoner takes damage equal
+      to your max HP.
     Effect: 27
     SortOrder: 32
     IconPath: Assets/_Project/Art/Items/Relics/Processed/disgruntled_lackey.png

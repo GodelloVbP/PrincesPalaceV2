@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bellwethers_bell
     DisplayName: Bellwether's Bell
-    Description: Every transformation Shawn enters lasts one turn longer.
+    Description: Each transformation Shawn enters lasts 1 turn longer.
     Effect: 33
     SortOrder: 39
     IconPath: Assets/_Project/Art/Items/Relics/Processed/bellwethers_bell.png

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_horns_3
     DisplayName: Splintering Charge
-    Description: Each hit you land permanently reduces the target's defense by 2,
-      for the rest of the fight. Stacks with repeated hits.
+    Description: Each hit you land gives the target -2 defense for the rest of the
+      fight. Stacks.
     CharacterId: sheep
     Column: 0
     Row: 7

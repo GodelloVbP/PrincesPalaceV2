@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_gift_2
     DisplayName: Gift of Fury
-    Description: 'Unlocks Gift: Fury (3 wool): an ally''s next attack deals 50% more
-      damage.'
+    Description: 'Unlocks Gift: Fury. An ally''s next attack deals 50% more damage.
+      Costs 3 wool.'
     CharacterId: sheep
     Column: 1
     Row: 15

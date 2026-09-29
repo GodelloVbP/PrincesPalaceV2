@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: hack
     DisplayName: Hack
-    Description: Two quick cuts at one target. Costs no Fury, and each cut pays it
-      separately.
+    Description: Hit one target twice, each hit dealing damage plus 5. Cooldown 3.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 0

@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_gorge_3
     DisplayName: 'Gorge: Bloodlust'
-    Description: Gorge deals +25% damage while he is at or below half health.
+    Description: Gorge deals +25% damage at 50% HP or below.
     CharacterId: bear
     Column: 2
     Row: 9

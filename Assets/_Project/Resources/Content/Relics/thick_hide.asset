@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: thick_hide
     DisplayName: Thick Hide
-    Description: Forty more health, carried slowly.
+    Description: +40 max HP, -5% speed.
     Effect: 0
     SortOrder: 12
     IconPath: Assets/_Project/Art/Items/Relics/Processed/thick_hide.png

@@ -15,11 +15,9 @@ MonoBehaviour:
   data:
     Id: bear_jug_root
     DisplayName: The Juggernaut
-    Description: 'Fury comes with the turn and comes faster the nearer he is to death:
-      15 at full health, 20 at three quarters, 35 at half, 60 at a quarter or less.
-      None for swinging, none for being hit, and it never drains when idle. Unlocks
-      Second Wind, on a 4-turn cooldown. Free, but only one path''s root talent can
-      be active at a time; respec to change it.'
+    Description: 'Gain Fury at turn start: 15 at full HP, 20 at 75% HP, 35 at 50%
+      HP, 60 at 25% HP or below. Attacking and being hit give none. Fury does not
+      drain while idle. Unlocks Second Wind (cooldown 4).'
     CharacterId: bear
     Column: 2
     Row: 0

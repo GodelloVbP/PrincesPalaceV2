@@ -15,12 +15,9 @@ MonoBehaviour:
   data:
     Id: bear_sen_root
     DisplayName: The Sentinel
-    Description: 'Fury comes from being hit: 150 times the blow''s size against his
-      maximum health, at least 3 and at most 25 a hit, measured before his defences
-      so armour never cuts his income. A blow his planted shield or Shieldwall soaks
-      counts. None for swinging. Unlocks Brace, a ward worth a fifth of his health.
-      Free, but only one path''s root talent can be active at a time; respec to change
-      it.'
+    Description: 'Gain Fury when hit: 150 times the blow''s size against max HP,
+      minimum 3, maximum 25 per hit, counted before defense. Damage soaked by your
+      shield counts. Unlocks Brace, a ward worth 20% of max HP.'
     CharacterId: bear
     Column: 0
     Row: 0

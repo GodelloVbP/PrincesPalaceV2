@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: gift_mana
     DisplayName: 'Gift: Mana'
-    Description: He has more wool than he has turns. Somebody else can have the difference.
+    Description: Give an ally mana. Costs 2 wool.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 10

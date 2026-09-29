@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_wrath_3
     DisplayName: 'Wrath: Nothing Left to Lose'
-    Description: '+1% damage for every 1% of his health missing: +75% at a quarter
-      health.'
+    Description: +1% damage for every 1% of HP missing (+75% at 25% HP).
     CharacterId: bear
     Column: 2
     Row: 8

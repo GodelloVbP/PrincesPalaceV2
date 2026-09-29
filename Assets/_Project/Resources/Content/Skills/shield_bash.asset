@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: shield_bash
     DisplayName: Shield Bash
-    Description: 'He drives the planted shield into an enemy: a heavy blow that also
-      carries 30% of everything the shield soaked, and stuns it for a turn. The shield
-      is spent, and cannot be planted again for 3 turns.'
+    Description: Spend the planted shield to deal damage plus 20, plus 30% of the
+      damage it absorbed, and Stun the target for 1 turn.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 0

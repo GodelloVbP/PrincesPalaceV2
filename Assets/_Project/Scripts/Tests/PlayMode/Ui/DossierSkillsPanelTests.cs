@@ -138,11 +138,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(_dossier.IsSkillsShown, "clicking the row should have opened the skills panel");
 
             Assert.AreEqual("Provoke", TextOf(Named(_dossier, "DossierSkill0Name")));
-            Assert.AreEqual("Head down, eyes up. Whatever it was going to do, it is going to do it to you.",
+            Assert.AreEqual("The target's next attack must hit you.",
                 TextOf(Named(_dossier, "DossierSkill0Description")));
 
             Assert.AreEqual("Headbutt", TextOf(Named(_dossier, "DossierSkill1Name")));
-            Assert.AreEqual("Not elegant. Knocks the target a place down the order.",
+            Assert.AreEqual("Deal Nature damage plus 4 and push the target back 1 place in the turn order. Costs 2 wool.",
                 TextOf(Named(_dossier, "DossierSkill1Description")));
 
             // Every row past the granted two is hidden, not blank -- a blank

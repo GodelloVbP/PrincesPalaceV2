@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: dancers_anklet
     DisplayName: Dancer's Anklet
-    Description: After you attack, cast a spell or use an ability, you slip one position
+    Description: After you attack, cast a spell or use an ability, move one position
       forward in the turn order.
     Effect: 29
     SortOrder: 34

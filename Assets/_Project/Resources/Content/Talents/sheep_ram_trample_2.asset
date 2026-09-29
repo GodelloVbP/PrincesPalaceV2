@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_trample_2
     DisplayName: Wreckage
-    Description: Killing an enemy deals 50% of your Attack as damage to the enemies
-      adjacent to it.
+    Description: When you kill an enemy, deal 50% of your Attack to the enemies next
+      to it.
     CharacterId: sheep
     Column: 0
     Row: 6

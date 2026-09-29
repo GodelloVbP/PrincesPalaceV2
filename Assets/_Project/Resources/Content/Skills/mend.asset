@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: mend
     DisplayName: Mend
-    Description: A quiet word and a hand on the shoulder. Heals the chosen ally for
-      20 plus her spell attack.
+    Description: Heal one ally for 20 plus your spell attack. Costs 6 mana.
     CharacterId: owl
     UnlockLevel: 999
     Effect: 14

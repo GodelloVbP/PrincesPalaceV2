@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_retort_3
     DisplayName: 'Iron Retort: Anvil'
-    Description: The share rises to 30%.
+    Description: Iron Retort's bonus rises to 30%.
     CharacterId: bear
     Column: 0
     Row: 7

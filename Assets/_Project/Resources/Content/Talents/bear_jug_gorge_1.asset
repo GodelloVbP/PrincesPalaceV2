@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_jug_gorge_1
     DisplayName: Gorge
-    Description: 'Unlocks Gorge: 30 Fury for a heavy physical blow at one target
-      that heals him for 30% of the damage it deals.'
+    Description: 'Unlocks Gorge (30 Fury): hit one target for damage plus 30 and
+      heal 30% of the damage dealt.'
     CharacterId: bear
     Column: 2
     Row: 3

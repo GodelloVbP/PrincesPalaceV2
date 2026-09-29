@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: second_wind
     DisplayName: Second Wind
-    Description: He lets the whole rage go at once and breathes. Needs at least 25
-      Fury, spends every point of it, and heals 1% of his maximum health for each
-      one -- a full bar is a full heal.
+    Description: Spend all your Fury to heal 1% of your max HP per Fury spent. Needs
+      25 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 2

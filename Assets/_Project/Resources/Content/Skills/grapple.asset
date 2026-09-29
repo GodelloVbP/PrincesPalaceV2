@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: grapple
     DisplayName: Grapple
-    Description: Caught, and held long enough to forget what you were about to do.
+    Description: Deal damage to one target and Stun it for 1 turn.
     CharacterId: forest_warden
     UnlockLevel: 1
     Effect: 0

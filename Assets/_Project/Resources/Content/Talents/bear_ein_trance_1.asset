@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_ein_trance_1
     DisplayName: Battle Trance
-    Description: 'At 50 Fury or more, 20% of each hit he takes is paid with Fury
-      instead of health: 1 Fury per 1% of his max health.'
+    Description: At 50 Fury or more, 20% of each hit you take is paid with Fury instead
+      of HP, at 1 Fury per 1% of your max HP.
     CharacterId: bear
     Column: 1
     Row: 13

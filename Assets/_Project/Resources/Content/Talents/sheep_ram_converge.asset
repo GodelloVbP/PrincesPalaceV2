@@ -15,11 +15,9 @@ MonoBehaviour:
   data:
     Id: sheep_ram_converge
     DisplayName: Black Ram Mode
-    Description: 'Unlocks Black Ram Mode (7 wool): transform for 3 turns, gaining
-      +50% attack, +30% speed, and temporary health equal to 25% of your max health
-      (lost when the transform ends). While transformed, every landed hit also splashes
-      50% of its damage onto the adjacent enemies. 5-turn cooldown. Free, gated at
-      9 embers spent in this path.'
+    Description: 'Unlocks Black Ram Mode: for 3 turns, +50% attack, +30% speed and
+      temporary HP equal to 25% of max HP. Hits splash 50% of their damage onto adjacent
+      enemies. Costs 7 wool. Cooldown 5.'
     CharacterId: sheep
     Column: 0
     Row: 10

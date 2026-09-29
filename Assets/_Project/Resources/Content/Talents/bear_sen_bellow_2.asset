@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_bellow_2
     DisplayName: 'Bellow: Presence'
-    Description: 'Enemies choosing whom to hit favour Bjorn even without a Bellow:
-      he counts three times in their draw.'
+    Description: Enemies choosing a target are three times as likely to pick you.
     CharacterId: bear
     Column: 0
     Row: 6

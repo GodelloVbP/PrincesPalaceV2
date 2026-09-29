@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: rampaging_bulls_horn
     DisplayName: Rampaging Bull's Horn
-    Description: After casting a convergence ability, gain 50% damage reduction for
-      2 turns. Only offered to a party with a convergence ability.
+    Description: After you cast a convergence ability, take 50% less damage for 1
+      turn.
     Effect: 20
     SortOrder: 24
     IconPath: Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_jug_price_3
     DisplayName: 'Blood Price: Not Yet'
-    Description: Once per fight, a lethal blow leaves him at 1 health and fills his
-      Fury to 100.
+    Description: Once per fight, a lethal hit leaves you at 1 HP and fills Fury to
+      100.
     CharacterId: bear
     Column: 2
     Row: 19

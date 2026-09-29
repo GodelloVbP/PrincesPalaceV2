@@ -15,10 +15,8 @@ MonoBehaviour:
   data:
     Id: rampage
     DisplayName: Rampage
-    Description: He stops picking targets. Seventy percent of a Slam, thrown at everything
-      standing. Below 50 Fury it lands as a normal sweep; at 50 or more it spends
-      half his Fury for double damage; at 100 it spends it all for quadruple. He
-      always throws the hardest sweep he can afford.
+    Description: Deal damage plus 9 to all enemies. At 50 Fury or more, spend half
+      your Fury for double damage. At 100 Fury, spend it all for quadruple damage.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 1

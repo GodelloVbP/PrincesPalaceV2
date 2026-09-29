@@ -29,7 +29,7 @@ namespace PrincesPalace.Domain.Tests
         // The content row, as skills.json authors it: one Poison packet of 3,
         // then Poison 3 for 3 ticks on a survivor.
         private static ResolvedSkill Bite() =>
-            new ResolvedSkill("vipers_bite", "Viper's Bite", "Detonates existing Poison, then poisons again.",
+            new ResolvedSkill("vipers_bite", "Viper's Bite", "Deal 3 Poison damage and set off all Poison already on the target, then apply 3 Poison for 3 turns. Costs 7 mana. Cooldown 2.",
                 "hero", 1, SkillEffect.DamageSingle, SkillTargeting.SingleEnemy,
                 7, 0, false, 0, 0, false,
                 new[] { new DamageInstance(DamageType.Poison, 3) }, SpellPresentation.None, 0,
@@ -167,7 +167,7 @@ namespace PrincesPalace.Domain.Tests
         // fixture's own string against itself would pass whatever the game
         // actually ships.
         [Test]
-        public void TheTooltipInContentSaysExactlyWhatTheOwnerAskedFor()
+        public void TheShippedTooltipStatesDamagePoisonAndCost()
         {
             string body = System.IO.File.ReadAllText(ContentDataFiles.DataPath("skills.json"));
             var blocks = JsonBlocks.ObjectsInArray(body, "skills");
@@ -176,7 +176,7 @@ namespace PrincesPalace.Domain.Tests
             string bite = blocks.FirstOrDefault(b => JsonBlocks.String(b, "id") == "vipers_bite");
             Assert.IsNotNull(bite, "skills.json no longer has a row called 'vipers_bite'");
 
-            Assert.AreEqual("Detonates existing Poison, then poisons again.",
+            Assert.AreEqual("Deal 3 Poison damage and set off all Poison already on the target, then apply 3 Poison for 3 turns. Costs 7 mana. Cooldown 2.",
                 JsonBlocks.String(bite, "description"));
         }
 

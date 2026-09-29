@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_provoke
     DisplayName: Bellow
-    Description: 'He roars and one enemy can see nothing else: its next attack must
-      be aimed at him. Costs no Fury. Ready again after 3 turns.'
+    Description: 'Provoke one enemy: its next attack must target him. Cooldown 3.'
     CharacterId: bear
     UnlockLevel: 999
     Effect: 5

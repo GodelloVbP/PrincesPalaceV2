@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_thorn_2
     DisplayName: 'Thornwall: Barbs'
-    Description: The attacker is also slowed for 1 turn.
+    Description: Thornwall also makes the attacker Chilled (-20% speed) for 1 turn.
     CharacterId: bear
     Column: 0
     Row: 16

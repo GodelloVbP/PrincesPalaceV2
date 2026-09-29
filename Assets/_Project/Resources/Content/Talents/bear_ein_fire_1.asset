@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_fire_1
     DisplayName: 'Bloodfire: Blood Taken'
-    Description: A kill refunds 15 Fury.
+    Description: Each kill restores 15 Fury.
     CharacterId: bear
     Column: 1
     Row: 2

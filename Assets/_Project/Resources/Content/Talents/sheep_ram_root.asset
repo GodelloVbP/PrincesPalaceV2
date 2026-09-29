@@ -15,10 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_root
     DisplayName: The Black Ram
-    Description: 'Gain 1 wool whenever you take a hit. Also gain wool at the start
-      of your turn based on your health: 2 at 67% health or below, 3 at 33% or below
-      (only the stronger tier applies, not both). Free, but only one path''s root
-      talent can be active at a time; respec to change it.'
+    Description: +1 wool each time you're hit. At turn start, gain 2 wool at or below
+      67% HP, or 3 wool at or below 33% HP.
     CharacterId: sheep
     Column: 0
     Row: 0

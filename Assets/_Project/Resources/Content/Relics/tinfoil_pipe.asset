@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: tinfoil_pipe
     DisplayName: Tin-Foil Pipe of Magic
-    Description: Casting a spell grants +20% speed for your next turn.
+    Description: Casting a spell gives +20% speed for your next turn.
     Effect: 6
     SortOrder: 6
     IconPath: Assets/_Project/Art/Items/Relics/Processed/tinfoil_pipe.png

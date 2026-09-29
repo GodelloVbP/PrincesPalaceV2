@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: shell_up
     DisplayName: Shell Up
-    Description: The plates fold shut and the beetle becomes a stone with legs.
+    Description: Heal 2 HP and gain Protect for 1 turn (-50% damage taken).
     CharacterId: beetle
     UnlockLevel: 1
     Effect: 2

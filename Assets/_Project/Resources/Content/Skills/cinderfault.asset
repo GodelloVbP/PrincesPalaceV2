@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: cinderfault
     DisplayName: Cinderfault
-    Description: One crack runs the length of the floor, and everything standing
-      on it finds out what is underneath.
+    Description: Deal 5 Fire and 5 Nature damage to all enemies. Costs 15 mana. Cooldown
+      3.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 1

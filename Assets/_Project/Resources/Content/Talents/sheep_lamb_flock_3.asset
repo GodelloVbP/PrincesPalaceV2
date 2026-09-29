@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_flock_3
     DisplayName: Nobody Left Out
-    Description: The spread to the rest of the party is now full size instead of
-      half.
+    Description: A Ward you cast also lands on the whole party at full size.
     CharacterId: sheep
     Column: 1
     Row: 17

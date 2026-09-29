@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: roar
     DisplayName: Roar
-    Description: A call that carries back through the trees. Something answers.
+    Description: Summon a Rat. No more than 2 Rats at once.
     CharacterId: forest_warden
     UnlockLevel: 1
     Effect: 13

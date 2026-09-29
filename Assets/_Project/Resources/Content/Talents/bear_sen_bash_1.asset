@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_sen_bash_1
     DisplayName: Shield Bash
-    Description: 'Unlocks Shield Bash: a blow with the planted shield for its base
-      damage plus 30% of what the shield soaked this placement, and a 1-turn stun.
-      It spends the shield.'
+    Description: Unlocks Shield Bash. Spends the planted shield to deal damage plus
+      20, plus 30% of the damage it soaked, and Stun for 1 turn.
     CharacterId: bear
     Column: 0
     Row: 12

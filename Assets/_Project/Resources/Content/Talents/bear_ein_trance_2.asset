@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_trance_2
     DisplayName: 'Battle Trance: Deeper'
-    Description: The share rises to 30%, and doubles while in Berserk.
+    Description: The share paid with Fury rises to 30%, and doubles while in Berserk.
     CharacterId: bear
     Column: 1
     Row: 16

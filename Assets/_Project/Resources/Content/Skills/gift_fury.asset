@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: gift_fury
     DisplayName: 'Gift: Fury'
-    Description: Wound up like a spring, and pointed at something.
+    Description: An ally's next attack deals more damage. Costs 3 wool.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 11

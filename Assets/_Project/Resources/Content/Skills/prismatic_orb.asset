@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: prismatic_orb
     DisplayName: Prismatic Orb
-    Description: A held light Odette tunes to whichever element the moment wants,
-      then throws. It never hits hard; it hits where it hurts.
+    Description: 'Deal 8 damage of an element you choose: Earth, Water, Fire or Wind.
+      Costs 8 mana.'
     CharacterId: owl
     UnlockLevel: 1
     Effect: 0

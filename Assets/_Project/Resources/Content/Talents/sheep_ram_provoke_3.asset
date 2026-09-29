@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_provoke_3
     DisplayName: All of You, Then
-    Description: Provoke now affects every enemy instead of one. Gain 1 wool at the
-      start of your turn for each enemy you currently have provoked.
+    Description: Provoke hits every enemy. At turn start, gain 1 wool per provoked
+      enemy.
     CharacterId: sheep
     Column: 0
     Row: 8

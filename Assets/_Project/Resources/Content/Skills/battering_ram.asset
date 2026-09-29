@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: battering_ram
     DisplayName: Battering Ram
-    Description: Head down. Armour is a suggestion.
+    Description: Deal Nature damage plus 12, ignoring defense. Costs 6 wool.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 0

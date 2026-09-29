@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: essence_siphon
     DisplayName: Essence Siphon
-    Description: After an enemy dies (summons excluded), heal 3% of your max health.
+    Description: When an enemy dies (summons excluded), heal 3% of your max HP.
     Effect: 26
     SortOrder: 31
     IconPath: Assets/_Project/Art/Items/Relics/Processed/essence_siphon.png

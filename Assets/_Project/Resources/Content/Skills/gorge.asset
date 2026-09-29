@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: gorge
     DisplayName: Gorge
-    Description: He bites into the fight and drinks. A heavy blow at one target that
-      heals him for a share of the damage it deals. Costs 30 Fury.
+    Description: Deal damage plus 30 to one target and heal for 30% of the damage
+      dealt. Costs 30 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 0

@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: berserkers_vest
     DisplayName: Berserker's Vest
-    Description: Getting hit lowers all of your active cooldowns by 1 turn, once
-      per turn.
+    Description: Getting hit reduces all your cooldowns by 1, once per turn.
     Effect: 30
     SortOrder: 35
     IconPath: Assets/_Project/Art/Items/Relics/Processed/berserkers_vest.png

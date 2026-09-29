@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: vampire_dentures
     DisplayName: Vampire Dentures
-    Description: 10% vampirism - heal for a tenth of the damage your attacks deal.
+    Description: Heal for 10% of the damage your attacks deal.
     Effect: 0
     SortOrder: 36
     IconPath: Assets/_Project/Art/Items/Relics/Processed/vampire_dentures.png

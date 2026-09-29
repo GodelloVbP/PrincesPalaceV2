@@ -16,8 +16,6 @@ MonoBehaviour:
     Id: sheep_lamb_root
     DisplayName: The Fragile Lamb
     Description: Gain 2 wool when a Ward you cast is hit, once per wearer per turn.
-      Free, but only one path's root talent can be active at a time; respec to change
-      it.
     CharacterId: sheep
     Column: 1
     Row: 0

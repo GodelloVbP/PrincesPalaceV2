@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: seven_teeth
     DisplayName: Bounty Hunter Contract
-    Description: Killing an enemy pays gold equal to about 30% of its own experience
-      reward (minimum 1 gold).
+    Description: Each kill pays gold equal to 30% of its XP (minimum 1).
     Effect: 8
     SortOrder: 3
     IconPath: Assets/_Project/Art/Items/Relics/Processed/seven_teeth.png

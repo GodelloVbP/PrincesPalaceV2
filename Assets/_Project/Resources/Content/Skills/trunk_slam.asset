@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: trunk_slam
     DisplayName: Trunk Slam
-    Description: It brings its whole upper half down like a felled tree.
+    Description: Deal damage plus 3 to one target.
     CharacterId: treant
     UnlockLevel: 1
     Effect: 0

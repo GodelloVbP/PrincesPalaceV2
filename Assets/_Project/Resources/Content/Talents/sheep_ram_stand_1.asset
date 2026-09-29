@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_stand_1
     DisplayName: Last Stand
-    Description: +25% Defense while at or below 50% health.
+    Description: +25% defense at or below 50% HP.
     CharacterId: sheep
     Column: 0
     Row: 12

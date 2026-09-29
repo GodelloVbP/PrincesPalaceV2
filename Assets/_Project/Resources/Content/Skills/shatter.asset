@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: shatter
     DisplayName: Shatter
-    Description: Every ward he has out, broken at once, and every splinter goes somewhere.
+    Description: Break every ward you have out. Each one explodes on a random enemy.
+      Costs 3 wool. Cooldown 3.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 8

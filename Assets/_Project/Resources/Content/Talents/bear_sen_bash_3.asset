@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_bash_3
     DisplayName: 'Shield Bash: Sweep'
-    Description: Shield Bash also hits the enemies next to its target for the same
-      damage.
+    Description: Shield Bash also hits enemies next to the target for the same damage.
     CharacterId: bear
     Column: 0
     Row: 18

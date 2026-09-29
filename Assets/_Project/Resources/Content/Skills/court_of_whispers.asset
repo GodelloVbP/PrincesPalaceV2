@@ -15,8 +15,9 @@ MonoBehaviour:
   data:
     Id: court_of_whispers
     DisplayName: Court of Whispers
-    Description: Terrifies ordinary enemies for a turn. Bosses are only delayed.
-      You are left open.
+    Description: Every non-boss enemy is Feared for 1 turn. Bosses lose 2 places
+      in the turn order instead. You become Vulnerable (+20% damage taken) for 1
+      turn. Costs 14 mana. Cooldown 4.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 19

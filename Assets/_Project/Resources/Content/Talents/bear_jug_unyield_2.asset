@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_unyield_2
     DisplayName: 'Unyielding: Again'
-    Description: The cooldown drops to 3 turns.
+    Description: Unyielding cooldown drops to 3.
     CharacterId: bear
     Column: 2
     Row: 14

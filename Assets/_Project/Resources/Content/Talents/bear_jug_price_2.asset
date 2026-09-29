@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_price_2
     DisplayName: 'Blood Price: Overdraft'
-    Description: Skills paid partly in health deal +15% damage.
+    Description: Skills paid partly in HP deal +15% damage.
     CharacterId: bear
     Column: 2
     Row: 16

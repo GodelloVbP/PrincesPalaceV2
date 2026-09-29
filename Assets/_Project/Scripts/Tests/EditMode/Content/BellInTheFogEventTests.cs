@@ -337,7 +337,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(RelicEffect.BellwethersBell, bell.Effect);
             Assert.AreEqual("sheep", bell.Bearer);
             Assert.IsFalse(bell.Draftable);
-            Assert.AreEqual("Every transformation Shawn enters lasts one turn longer.", bell.Description);
+            Assert.AreEqual("Each transformation Shawn enters lasts 1 turn longer.", bell.Description);
             // M9a delivered both icons. A named file that is not there is a
             // null sprite, which the scene build's wiring sweep refuses, so the
             // build itself is what proves these resolve.
@@ -348,7 +348,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("sheep", toll.Bearer);
             Assert.IsFalse(toll.Draftable);
             Assert.AreEqual(
-                "Every third turn Shawn takes, a ghost flock charges every enemy. It hits harder while he is transformed.",
+                "Every third turn Shawn takes, every enemy takes damage equal to 15% of his attack, x1.5 while he is transformed.",
                 toll.Description);
             Assert.AreEqual("Assets/_Project/Art/Items/Relics/Processed/toll_of_the_flock.png", toll.IconPath);
             Assert.AreEqual("Audio/Sfx/Events/bell_in_the_fog/flock_charge", toll.Vfx.sfxPath);

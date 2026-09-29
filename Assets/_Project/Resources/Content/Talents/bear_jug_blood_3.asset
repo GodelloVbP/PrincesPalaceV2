@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_jug_blood_3
     DisplayName: 'Thick Blood: Deep Veins'
-    Description: Another +10% maximum health (20% in all), and the regen ceiling
-      rises to 8%.
+    Description: +20% maximum HP in total. The turn-start heal rises to 8% at 25%
+      HP or below.
     CharacterId: bear
     Column: 2
     Row: 7

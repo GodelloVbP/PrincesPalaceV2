@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_gorge_2
     DisplayName: 'Gorge: Deeper Drink'
-    Description: Gorge heals 40% of the damage it deals.
+    Description: Gorge heals 40% of the damage dealt.
     CharacterId: bear
     Column: 2
     Row: 6

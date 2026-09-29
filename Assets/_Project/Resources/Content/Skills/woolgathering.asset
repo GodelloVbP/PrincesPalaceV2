@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: woolgathering
     DisplayName: Woolgathering
-    Description: Chew, breathe, and let the fleece knit the day back together.
+    Description: Heal 48 HP plus a Wisdom bonus. Costs 4 wool. Cooldown 2.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 2

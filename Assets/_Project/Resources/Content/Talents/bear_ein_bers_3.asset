@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_bers_3
     DisplayName: 'Berserk: Feeding Frenzy'
-    Description: Each kill while in Berserk adds 20 Fury.
+    Description: Each kill while in Berserk gains 20 Fury.
     CharacterId: bear
     Column: 1
     Row: 18

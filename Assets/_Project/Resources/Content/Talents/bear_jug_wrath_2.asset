@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_wrath_2
     DisplayName: 'Wrath: Red Mist'
-    Description: '+0.75% damage for every 1% of his health missing: +56% at a quarter
-      health.'
+    Description: +0.75% damage for every 1% of HP missing (+56% at 25% HP).
     CharacterId: bear
     Column: 2
     Row: 5

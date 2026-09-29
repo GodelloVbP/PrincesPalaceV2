@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: ice_fingernail
     DisplayName: Ice Fingernail
-    Description: Attacks apply a 10% slow, stacking up to 40%.
+    Description: Each attack slows the target by 10%. Stacks up to 40%. Each stack
+      lasts 5 turns.
     Effect: 21
     SortOrder: 25
     IconPath: Assets/_Project/Art/Items/Relics/Processed/ice_fingernail.png

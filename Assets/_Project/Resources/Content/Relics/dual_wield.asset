@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: dual_wield
     DisplayName: Dual Wield
-    Description: Whenever this character attacks, they strike the same target a second
-      time.
+    Description: Each attack you make strikes the same target a second time.
     Effect: 1
     SortOrder: 0
     IconPath: Assets/_Project/Art/Items/Relics/Processed/dual_wield.png

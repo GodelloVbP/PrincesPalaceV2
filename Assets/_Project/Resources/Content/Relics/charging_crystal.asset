@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: charging_crystal
     DisplayName: Charging Crystal
-    Description: Every fourth spell you cast this fight deals 50% bonus damage.
+    Description: Every fourth spell you cast each fight deals 50% more damage.
     Effect: 4
     SortOrder: 13
     IconPath: Assets/_Project/Art/Items/Relics/Processed/charging_crystal.png

@@ -15,12 +15,11 @@ MonoBehaviour:
   data:
     Id: bear_sen_converge
     DisplayName: Plant the Shield
-    Description: 'Unlocks Plant the Shield, which takes over Brace''s button: 30
-      Fury. He sets his shield down in front of himself, worth 2 x (Defense + Magical
-      Defense) + 10% of his maximum health. It takes the blows aimed at him before
-      his health, until it breaks or 3 turns pass; a shield that breaks throws shards
-      back at whoever broke it. 3 turns before it can be planted again. Free, gated
-      at 9 embers spent in this path.'
+    Description: Unlocks Plant the Shield, replacing Brace. Costs 30 Fury. A shield
+      worth 2 x (Defense + Magical Defense) + 10% of max HP takes hits meant for
+      you for 3 turns or until it breaks. A broken shield throws shards back for
+      20% of its size. Can be planted again 3 turns later. Needs 9 embers spent in
+      this path.
     CharacterId: bear
     Column: 0
     Row: 10

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_mend_3
     DisplayName: Parting Gift
-    Description: When a Ward you cast is fully spent, its wearer heals for 10% of
-      their max health.
+    Description: When a Ward you cast is fully spent, its wearer heals 10% of max
+      HP.
     CharacterId: sheep
     Column: 1
     Row: 8

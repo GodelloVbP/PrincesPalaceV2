@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: wail
     DisplayName: Wail
-    Description: A sound nothing in the room wants to swing through.
+    Description: All allies take 50% less damage for 1 turn. Costs 10 wool. Cooldown
+      3.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 9

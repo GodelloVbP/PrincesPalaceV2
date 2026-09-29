@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: whetstone_heart
     DisplayName: Whetstone Heart
-    Description: Strikes 20% harder, and bruises just as easily.
+    Description: +20% attack, -10% defense.
     Effect: 0
     SortOrder: 11
     IconPath: Assets/_Project/Art/Items/Relics/Processed/whetstone_heart.png

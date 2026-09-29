@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_weight_3
     DisplayName: Afterweight
-    Description: +200% attack damage while warded yourself (the per-ally bonus stays
-      at +50%). This self bonus now persists for 1 turn after your own Ward is spent.
+    Description: +200% attack damage while you are warded yourself, and for 1 turn
+      after your Ward is spent. The +50% per ally stays.
     CharacterId: sheep
     Column: 1
     Row: 9

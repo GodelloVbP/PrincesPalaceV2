@@ -15,11 +15,9 @@ MonoBehaviour:
   data:
     Id: bear_ein_cap
     DisplayName: Twin Rampage
-    Description: 'Rampage at 100 Fury, when it is off cooldown, sweeps twice: the
-      first is the normal 100-Fury sweep, the second lands at 1x and stuns every
-      enemy it hits for 1 turn. The first sweep''s Fury does not refill the bar before
-      the second. 5-turn cooldown on the empowered version. Free, gated at 20 embers
-      spent in this path.'
+    Description: 'At 100 Fury, Rampage hits twice: the normal 100-Fury sweep, then
+      a second sweep at 1x damage that stuns every enemy hit for 1 turn. Cooldown
+      5.'
     CharacterId: bear
     Column: 1
     Row: 20

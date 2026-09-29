@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: monkey_kings_scepter
     DisplayName: Monkey King's Scepter
-    Description: Your melee attacks can reach any enemy, regardless of position.
+    Description: Your melee attacks can reach any enemy, whatever its position.
     Effect: 23
     SortOrder: 27
     IconPath: Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png

@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_jug_price_1
     DisplayName: Blood Price
-    Description: 'When he cannot pay a skill''s Fury cost, he pays the rest in health:
-      1 Fury is 0.5% of his maximum health. It cannot take him below 1 health and
-      never triggers a death save.'
+    Description: 'If you lack the Fury for a skill, pay the shortfall in HP: 1 Fury
+      costs 0.5% of maximum HP. This cannot bring you below 1 HP.'
     CharacterId: bear
     Column: 2
     Row: 13

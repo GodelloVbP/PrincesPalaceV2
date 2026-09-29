@@ -15,7 +15,9 @@ MonoBehaviour:
   data:
     Id: black_ram_mode
     DisplayName: Black Ram Mode
-    Description: Three turns of something the fleece was hiding.
+    Description: 'For 3 turns: +50% attack, +30% speed, temporary HP equal to 25%
+      of max HP, and hits also deal 50% damage to the enemies either side. Costs
+      7 wool. Cooldown 5.'
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 6

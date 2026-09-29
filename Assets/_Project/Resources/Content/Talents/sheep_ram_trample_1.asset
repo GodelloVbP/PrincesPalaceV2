@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_trample_1
     DisplayName: Trample
-    Description: Deal 25% more damage to a target at or below 30% of its max health.
+    Description: Deal 25% more damage to targets at or below 30% HP.
     CharacterId: sheep
     Column: 0
     Row: 3

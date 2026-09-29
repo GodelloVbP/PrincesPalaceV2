@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: bjorn_cursed_blood
     DisplayName: Cursed Blood
-    Description: For two turns his blood will not mend him. Every heal that would
-      land on him is thrown at every enemy as Void damage instead, as much as he
-      was missing. Once a fight. Costs 50 Fury.
+    Description: For 2 turns, healing you would receive is dealt as Void damage to
+      all enemies instead, up to the HP you are missing. Once per fight. Costs 50
+      Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 22

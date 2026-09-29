@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: boulder_slam
     DisplayName: Boulder Slam
-    Description: The golem heaves a slab of the floor overhead and brings it down.
+    Description: Deal damage plus 2 to one target.
     CharacterId: golem
     UnlockLevel: 1
     Effect: 0

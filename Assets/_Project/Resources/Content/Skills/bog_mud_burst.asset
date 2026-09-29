@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bog_mud_burst
     DisplayName: Mud Burst
-    Description: The bog answers. It arrives wearing whatever it picked up on the
-      way.
+    Description: Deal damage plus 5 to one target in the middle or rear and make
+      it Vulnerable (+25% damage taken) for 1 turn. Cooldown 2.
     CharacterId: bog_witch
     UnlockLevel: 1
     Effect: 0

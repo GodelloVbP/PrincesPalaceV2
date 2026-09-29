@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_jug_converge
     DisplayName: Unbroken
-    Description: 'Unlocks Unbroken: 50 Fury. For 2 turns he regenerates 15% of his
-      maximum health each turn and no crowd control can touch him. Free, gated at
-      9 embers spent in this path.'
+    Description: 'Unlocks Unbroken (50 Fury): for 2 turns, heal 15% of maximum HP
+      each turn and ignore all crowd control.'
     CharacterId: bear
     Column: 2
     Row: 10

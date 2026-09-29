@@ -15,10 +15,9 @@ MonoBehaviour:
   data:
     Id: bear_ein_bers_1
     DisplayName: Berserk
-    Description: 'Unlocks Berserk: 50 Fury to enter. Half of his defense and magical
-      defense becomes attack. Fury no longer decays when idle but drains 10 each
-      turn, and the form ends at 0 Fury. No Bellow, Hold the Line or shields while
-      it lasts.'
+    Description: 'Unlocks Berserk: costs 50 Fury. Half your defense and magical defense
+      becomes attack. Fury drains by 10 each turn and Berserk ends at 0 Fury. Bellow
+      and shields are disabled.'
     CharacterId: bear
     Column: 1
     Row: 12

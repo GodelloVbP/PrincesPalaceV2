@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: kinship
     DisplayName: Kinship
-    Description: The first blow Shawn takes each fight is turned aside.
+    Description: The first hit Shawn takes each fight is negated.
     Effect: 32
     SortOrder: 38
     IconPath: 

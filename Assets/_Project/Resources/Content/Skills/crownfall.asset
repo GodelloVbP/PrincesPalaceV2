@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: crownfall
     DisplayName: Crownfall
-    Description: Arcane damage. Far heavier against a marked enemy, and spends the
-      mark.
+    Description: Deal 7 Arcane damage, or 12 if the target is Marked (this removes
+      the Mark). Costs 6 mana.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

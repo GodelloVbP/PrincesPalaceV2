@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_cap
     DisplayName: What He Is Now
-    Description: While at or below 25% health, Black Ram Mode no longer ends and
-      costs nothing to enter. Free, gated at 20 embers spent in this path.
+    Description: At or below 25% HP, Black Ram Mode never ends and costs nothing
+      to enter.
     CharacterId: sheep
     Column: 0
     Row: 20

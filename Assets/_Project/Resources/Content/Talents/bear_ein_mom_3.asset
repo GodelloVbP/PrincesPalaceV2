@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_mom_3
     DisplayName: 'Momentum: Unbroken Line'
-    Description: Hits under 10% of his max health no longer remove a stack.
+    Description: Hits for under 10% of your max HP no longer remove a stack.
     CharacterId: bear
     Column: 1
     Row: 9

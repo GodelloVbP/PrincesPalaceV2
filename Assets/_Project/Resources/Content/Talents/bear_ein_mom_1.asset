@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: bear_ein_mom_1
     DisplayName: 'Momentum: Rolling'
-    Description: 'Each consecutive turn he deals damage adds a stack: +5% crit chance
-      per stack, up to 5. A turn without dealing damage resets it; a hit taken removes
-      one stack.'
+    Description: 'Each consecutive turn you deal damage adds a stack: +5% crit chance
+      per stack, up to 5. A turn without damage resets it. Being hit removes one
+      stack.'
     CharacterId: bear
     Column: 1
     Row: 3

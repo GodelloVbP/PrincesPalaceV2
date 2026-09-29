@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: blackglass_spear
     DisplayName: Blackglass Spear
-    Description: Costs blood. Ignores magical defence.
+    Description: Deal 13 Void damage, ignoring defense. Costs 12 mana and 5% of your
+      max HP. Cooldown 3.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

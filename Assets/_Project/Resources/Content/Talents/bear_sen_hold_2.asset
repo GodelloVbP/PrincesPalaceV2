@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_sen_hold_2
     DisplayName: 'Hold the Line: Rally'
-    Description: Hold the Line lasts 3 turns, and Bjorn gains 5 Fury each time an
-      ally is hit while it stands.
+    Description: Hold the Line lasts 3 turns. Gain 5 Fury each time a buffed ally
+      is hit.
     CharacterId: bear
     Column: 0
     Row: 5

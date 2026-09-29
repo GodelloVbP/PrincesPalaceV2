@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: gale_scythe
     DisplayName: Gale Scythe
-    Description: Wind damage to every enemy, and each one it hits loses a place in
-      the order.
+    Description: Deal 5 Wind damage to all enemies. Each enemy hit loses 1 place
+      in the turn order. Costs 11 mana. Cooldown 3.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 1

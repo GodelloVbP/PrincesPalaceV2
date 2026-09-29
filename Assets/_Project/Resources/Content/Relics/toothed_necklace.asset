@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: toothed_necklace
     DisplayName: Toothed Necklace
-    Description: The lower your health, the harder and faster you fight - up to +30%
-      damage and +20% speed at 25% health or below, scaling smoothly in between.
+    Description: Gain up to +30% damage and +20% speed. Maximum bonus reached at
+      25% HP or below.
     Effect: 7
     SortOrder: 5
     IconPath: Assets/_Project/Art/Items/Relics/Processed/toothed_necklace.png

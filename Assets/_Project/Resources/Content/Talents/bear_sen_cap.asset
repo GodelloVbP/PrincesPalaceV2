@@ -15,10 +15,10 @@ MonoBehaviour:
   data:
     Id: bear_sen_cap
     DisplayName: Shieldwall
-    Description: 'Plant the Shield covers the whole party instead of only Bjorn:
-      one pool twice the size that soaks every ally''s damage before their health.
-      An area attack drains it once per ally it hits. Bjorn gains Fury from the damage
-      it absorbs, at most 40 a turn. Free, gated at 20 embers spent in this path.'
+    Description: Plant the Shield covers the whole party with one pool twice the
+      size, soaking every ally's damage. An area attack drains it once per ally hit.
+      Gain Fury from damage it absorbs, up to 40 a turn. Needs 20 embers spent in
+      this path.
     CharacterId: bear
     Column: 0
     Row: 20

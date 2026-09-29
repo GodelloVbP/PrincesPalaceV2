@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: lightning_bolt
     DisplayName: Lightning Bolt
-    Description: A single white line from the ceiling to whatever is standing under
-      it.
+    Description: Deal 10 Lightning damage. Costs 11 mana.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

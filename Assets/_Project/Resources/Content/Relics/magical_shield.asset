@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: magical_shield
     DisplayName: Magical Shield
-    Description: After casting, the next hit this character takes is reduced by half.
+    Description: After you cast a spell, gain a 20-point ward that lasts the rest
+      of the fight.
     Effect: 2
     SortOrder: 1
     IconPath: Assets/_Project/Art/Items/Relics/Processed/magical_shield.png

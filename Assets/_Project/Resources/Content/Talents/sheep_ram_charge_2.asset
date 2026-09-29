@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_charge_2
     DisplayName: Concussive
-    Description: Headbutt also cancels the target's queued action outright.
+    Description: Headbutt also cancels the target's queued action.
     CharacterId: sheep
     Column: 0
     Row: 16

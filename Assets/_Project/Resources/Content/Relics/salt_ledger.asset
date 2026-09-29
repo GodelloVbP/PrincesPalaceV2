@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: salt_ledger
     DisplayName: The Salt Ledger
-    Description: Every attack you land reduces all of your active cooldowns by 1
-      turn.
+    Description: Each attack you land reduces all your cooldowns by 1.
     Effect: 13
     SortOrder: 4
     IconPath: Assets/_Project/Art/Items/Relics/Processed/salt_ledger.png

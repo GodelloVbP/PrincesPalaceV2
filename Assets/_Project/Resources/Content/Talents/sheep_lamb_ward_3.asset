@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_ward_3
     DisplayName: Second Nature
-    Description: Casting Ward no longer costs your action; you can ward and act again
-      on the same turn.
+    Description: Casting Ward no longer uses up your action.
     CharacterId: sheep
     Column: 1
     Row: 7

@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_hold_3
     DisplayName: 'Hold the Line: Steadying Hand'
-    Description: Casting Hold the Line also cleanses one debuff from each ally.
+    Description: Hold the Line also removes one debuff from each ally.
     CharacterId: bear
     Column: 0
     Row: 8

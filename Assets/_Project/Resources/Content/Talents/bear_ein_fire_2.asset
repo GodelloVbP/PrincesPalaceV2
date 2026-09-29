@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_fire_2
     DisplayName: 'Bloodfire: Banked Heat'
-    Description: His first idle turn of each fight does not drain Fury.
+    Description: Your first idle turn of each fight does not drain Fury.
     CharacterId: bear
     Column: 1
     Row: 5

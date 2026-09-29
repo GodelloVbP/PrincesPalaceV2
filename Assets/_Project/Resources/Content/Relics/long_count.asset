@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: long_count
     DisplayName: The Long Count
-    Description: Every third attack you land this fight deals 40% bonus damage.
+    Description: Every third attack you land each fight deals 40% more damage.
     Effect: 14
     SortOrder: 8
     IconPath: Assets/_Project/Art/Items/Relics/Processed/long_count.png

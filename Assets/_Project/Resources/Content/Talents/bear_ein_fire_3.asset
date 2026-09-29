@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_fire_3
     DisplayName: 'Bloodfire: Red Crest'
-    Description: Crits pay 50% more Fury on top of the engine.
+    Description: Crits gain 50% more Fury.
     CharacterId: bear
     Column: 1
     Row: 8

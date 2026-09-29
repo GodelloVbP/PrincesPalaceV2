@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: palace_passage
     DisplayName: Palace Passage
-    Description: Move an ally to any seat, trading with whoever stands there. Free
-      action. Neither may be rooted.
+    Description: Move an ally to any seat, swapping with whoever is there. Neither
+      may be Rooted. Free action. Costs 7 mana. Cooldown 3.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 17

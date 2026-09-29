@@ -7,7 +7,7 @@
       "displayName": "The Black Ram",
       "column": 0,
       "row": 0,
-      "description": "Gain 1 wool whenever you take a hit. Also gain wool at the start of your turn based on your health: 2 at 67% health or below, 3 at 33% or below (only the stronger tier applies, not both). Free, but only one path's root talent can be active at a time; respec to change it.",
+      "description": "+1 wool each time you're hit. At turn start, gain 2 wool at or below 67% HP, or 3 wool at or below 33% HP.",
       "effects": [
         {
           "type": "WoolOnHitTaken",
@@ -65,7 +65,7 @@
       "displayName": "Splintering Charge",
       "column": 0,
       "row": 7,
-      "description": "Each hit you land permanently reduces the target's defense by 2, for the rest of the fight. Stacks with repeated hits.",
+      "description": "Each hit you land gives the target -2 defense for the rest of the fight. Stacks.",
       "prerequisites": [
         "sheep_ram_horns_2"
       ],
@@ -82,7 +82,7 @@
       "displayName": "Provoke",
       "column": 0,
       "row": 2,
-      "description": "Unlocks Provoke: forces one enemy to target you on its next turn.",
+      "description": "Unlocks Provoke, which forces one enemy to target you on its next turn.",
       "prerequisites": [
         "sheep_ram_root"
       ],
@@ -94,7 +94,7 @@
       "displayName": "Draw the Blow",
       "column": 0,
       "row": 5,
-      "description": "A provoked enemy deals 20% less damage to you.",
+      "description": "Provoked enemies deal 20% less damage to you.",
       "prerequisites": [
         "sheep_ram_provoke_1"
       ],
@@ -111,7 +111,7 @@
       "displayName": "All of You, Then",
       "column": 0,
       "row": 8,
-      "description": "Provoke now affects every enemy instead of one. Gain 1 wool at the start of your turn for each enemy you currently have provoked.",
+      "description": "Provoke hits every enemy. At turn start, gain 1 wool per provoked enemy.",
       "prerequisites": [
         "sheep_ram_provoke_2"
       ],
@@ -131,7 +131,7 @@
       "displayName": "Trample",
       "column": 0,
       "row": 3,
-      "description": "Deal 25% more damage to a target at or below 30% of its max health.",
+      "description": "Deal 25% more damage to targets at or below 30% HP.",
       "prerequisites": [
         "sheep_ram_root"
       ],
@@ -149,7 +149,7 @@
       "displayName": "Wreckage",
       "column": 0,
       "row": 6,
-      "description": "Killing an enemy deals 50% of your Attack as damage to the enemies adjacent to it.",
+      "description": "When you kill an enemy, deal 50% of your Attack to the enemies next to it.",
       "prerequisites": [
         "sheep_ram_trample_1"
       ],
@@ -166,7 +166,7 @@
       "displayName": "Momentum",
       "column": 0,
       "row": 9,
-      "description": "Killing an enemy grants an extra action instead of ending your turn, up to once per turn.",
+      "description": "Killing an enemy gives you an extra action, once per turn.",
       "prerequisites": [
         "sheep_ram_trample_2"
       ],
@@ -183,7 +183,7 @@
       "displayName": "Black Ram Mode",
       "column": 0,
       "row": 10,
-      "description": "Unlocks Black Ram Mode (7 wool): transform for 3 turns, gaining +50% attack, +30% speed, and temporary health equal to 25% of your max health (lost when the transform ends). While transformed, every landed hit also splashes 50% of its damage onto the adjacent enemies. 5-turn cooldown. Free, gated at 9 embers spent in this path.",
+      "description": "Unlocks Black Ram Mode: for 3 turns, +50% attack, +30% speed and temporary HP equal to 25% of max HP. Hits splash 50% of their damage onto adjacent enemies. Costs 7 wool. Cooldown 5.",
       "prerequisites": [
         "sheep_ram_horns_3",
         "sheep_ram_provoke_3",
@@ -198,7 +198,7 @@
       "displayName": "Wrath",
       "column": 0,
       "row": 11,
-      "description": "Black Ram Mode lasts 1 turn longer: 4 turns instead of 3.",
+      "description": "Black Ram Mode lasts 4 turns instead of 3.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -215,7 +215,7 @@
       "displayName": "Fed on Blood",
       "column": 0,
       "row": 14,
-      "description": "A kill during Black Ram Mode extends it by 1 turn, up to 3 extra turns total.",
+      "description": "Each kill during Black Ram Mode adds 1 turn, up to 3 extra turns.",
       "prerequisites": [
         "sheep_ram_wrath_1"
       ],
@@ -233,7 +233,7 @@
       "displayName": "No Way Back",
       "column": 0,
       "row": 17,
-      "description": "While at or below 33% health, Black Ram Mode's duration stops counting down.",
+      "description": "At or below 33% HP, Black Ram Mode's remaining turns stop counting down.",
       "prerequisites": [
         "sheep_ram_wrath_2"
       ],
@@ -250,7 +250,7 @@
       "displayName": "Last Stand",
       "column": 0,
       "row": 12,
-      "description": "+25% Defense while at or below 50% health.",
+      "description": "+25% defense at or below 50% HP.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -268,7 +268,7 @@
       "displayName": "Unflinching",
       "column": 0,
       "row": 15,
-      "description": "While at or below 25% health, no single hit can deal more than 25% of your max health.",
+      "description": "At or below 25% HP, no single hit deals more than 25% of your max HP.",
       "prerequisites": [
         "sheep_ram_stand_1"
       ],
@@ -286,7 +286,7 @@
       "displayName": "Not Yet",
       "column": 0,
       "row": 18,
-      "description": "Once per fight, a hit that would reduce you to 0 health leaves you at 1 instead.",
+      "description": "Once per fight, a hit that would kill you leaves you at 1 HP instead.",
       "prerequisites": [
         "sheep_ram_stand_2"
       ],
@@ -302,7 +302,7 @@
       "displayName": "Charge",
       "column": 0,
       "row": 13,
-      "description": "Unlocks Headbutt (2 wool): a weapon attack that also pushes the target back one place in the turn order.",
+      "description": "Unlocks Headbutt: a weapon attack that pushes the target back 1 place in the turn order. Costs 2 wool.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -314,7 +314,7 @@
       "displayName": "Concussive",
       "column": 0,
       "row": 16,
-      "description": "Headbutt also cancels the target's queued action outright.",
+      "description": "Headbutt also cancels the target's queued action.",
       "prerequisites": [
         "sheep_ram_charge_1"
       ],
@@ -330,7 +330,7 @@
       "displayName": "Stampede",
       "column": 0,
       "row": 19,
-      "description": "Entering Black Ram Mode pushes every enemy back one place in the turn order.",
+      "description": "Entering Black Ram Mode pushes every enemy back 1 place in the turn order.",
       "prerequisites": [
         "sheep_ram_charge_2"
       ],
@@ -346,7 +346,7 @@
       "displayName": "What He Is Now",
       "column": 0,
       "row": 20,
-      "description": "While at or below 25% health, Black Ram Mode no longer ends and costs nothing to enter. Free, gated at 20 embers spent in this path.",
+      "description": "At or below 25% HP, Black Ram Mode never ends and costs nothing to enter.",
       "prerequisites": [
         "sheep_ram_wrath_3",
         "sheep_ram_stand_3",
@@ -366,7 +366,7 @@
       "displayName": "The Fragile Lamb",
       "column": 1,
       "row": 0,
-      "description": "Gain 2 wool when a Ward you cast is hit, once per wearer per turn. Free, but only one path's root talent can be active at a time; respec to change it.",
+      "description": "Gain 2 wool when a Ward you cast is hit, once per wearer per turn.",
       "effects": [
         {
           "type": "WoolWhenWardedAllyHit",
@@ -380,7 +380,7 @@
       "displayName": "Fleece Ward",
       "column": 1,
       "row": 1,
-      "description": "Unlocks Ward (2 wool): a shield you can put on anybody, and 40% more of it. Seventy points, spent a hit at a time, standing for one turn. Shields stack, so a second one adds to the first.",
+      "description": "Unlocks Ward: a 70-point shield you can put on any ally. Wards stack. Costs 2 wool. Cooldown 2.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -398,7 +398,7 @@
       "displayName": "Thicker Fleece",
       "column": 1,
       "row": 4,
-      "description": "Sixty percent more shield, now -- eighty points of Ward.",
+      "description": "Ward shields are 80 points.",
       "prerequisites": [
         "sheep_lamb_ward_1"
       ],
@@ -415,7 +415,7 @@
       "displayName": "Second Nature",
       "column": 1,
       "row": 7,
-      "description": "Casting Ward no longer costs your action; you can ward and act again on the same turn.",
+      "description": "Casting Ward no longer uses up your action.",
       "prerequisites": [
         "sheep_lamb_ward_2"
       ],
@@ -431,7 +431,7 @@
       "displayName": "Mending Fleece",
       "column": 1,
       "row": 2,
-      "description": "Casting a Ward also heals its wearer: 3% of their max health at the start of each of the next 2 turns.",
+      "description": "A Ward you cast also gives its wearer Regen: heals 3% of max HP at turn start for 2 turns.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -449,7 +449,7 @@
       "displayName": "Deep Mending",
       "column": 1,
       "row": 5,
-      "description": "The heal from Ward increases to 6% of max health per turn, for 3 turns.",
+      "description": "Ward's Regen heals 6% of max HP per turn for 3 turns.",
       "prerequisites": [
         "sheep_lamb_mend_1"
       ],
@@ -467,7 +467,7 @@
       "displayName": "Parting Gift",
       "column": 1,
       "row": 8,
-      "description": "When a Ward you cast is fully spent, its wearer heals for 10% of their max health.",
+      "description": "When a Ward you cast is fully spent, its wearer heals 10% of max HP.",
       "prerequisites": [
         "sheep_lamb_mend_2"
       ],
@@ -484,7 +484,7 @@
       "displayName": "Weight of Wool",
       "column": 1,
       "row": 3,
-      "description": "+25% attack damage for each other party member you have warded; +100% attack damage while you are warded yourself.",
+      "description": "+25% attack damage for each other ally you have warded. +100% while you are warded yourself.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -505,7 +505,7 @@
       "displayName": "Heavier Still",
       "column": 1,
       "row": 6,
-      "description": "+50% attack damage for each other warded ally; +150% while you are warded yourself.",
+      "description": "+50% attack damage for each other ally you have warded. +150% while you are warded yourself.",
       "prerequisites": [
         "sheep_lamb_weight_1"
       ],
@@ -526,7 +526,7 @@
       "displayName": "Afterweight",
       "column": 1,
       "row": 9,
-      "description": "+200% attack damage while warded yourself (the per-ally bonus stays at +50%). This self bonus now persists for 1 turn after your own Ward is spent.",
+      "description": "+200% attack damage while you are warded yourself, and for 1 turn after your Ward is spent. The +50% per ally stays.",
       "prerequisites": [
         "sheep_lamb_weight_2"
       ],
@@ -566,7 +566,7 @@
       "displayName": "The Flock",
       "column": 1,
       "row": 11,
-      "description": "A Ward you cast also lands on one other ally, at 50% of its size.",
+      "description": "A Ward you cast also lands on one other ally at 50% size.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -583,7 +583,7 @@
       "displayName": "The Whole Flock",
       "column": 1,
       "row": 14,
-      "description": "The spread now reaches the entire party instead of one ally, still at 50% size.",
+      "description": "A Ward you cast also lands on the whole party at 50% size.",
       "prerequisites": [
         "sheep_lamb_flock_1"
       ],
@@ -603,7 +603,7 @@
       "displayName": "Nobody Left Out",
       "column": 1,
       "row": 17,
-      "description": "The spread to the rest of the party is now full size instead of half.",
+      "description": "A Ward you cast also lands on the whole party at full size.",
       "prerequisites": [
         "sheep_lamb_flock_2"
       ],
@@ -623,7 +623,7 @@
       "displayName": "Wool Gift",
       "column": 1,
       "row": 12,
-      "description": "Unlocks Gift: Mana (2 wool): restores 25% of an ally's maximum mana.",
+      "description": "Unlocks Gift: Mana. Restores 25% of an ally's max mana. Costs 2 wool.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -641,7 +641,7 @@
       "displayName": "Gift of Fury",
       "column": 1,
       "row": 15,
-      "description": "Unlocks Gift: Fury (3 wool): an ally's next attack deals 50% more damage.",
+      "description": "Unlocks Gift: Fury. An ally's next attack deals 50% more damage. Costs 3 wool.",
       "prerequisites": [
         "sheep_lamb_gift_1"
       ],
@@ -659,7 +659,7 @@
       "displayName": "Gift of Haste",
       "column": 1,
       "row": 18,
-      "description": "Unlocks Gift: Haste (5 wool): pulls an ally to the front of the turn queue.",
+      "description": "Unlocks Gift: Haste. An ally moves to the front of the turn order. Costs 5 wool.",
       "prerequisites": [
         "sheep_lamb_gift_2"
       ],
@@ -676,7 +676,7 @@
       "displayName": "Shatter",
       "column": 1,
       "row": 13,
-      "description": "Unlocks Shatter (3 wool): detonates every Ward you have cast; each one deals damage to a random enemy equal to 100% of your Attack.",
+      "description": "Unlocks Shatter. Every Ward you have out explodes, hitting a random enemy for 100% of your Attack. Costs 3 wool. Cooldown 3.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -694,7 +694,7 @@
       "displayName": "Splintering",
       "column": 1,
       "row": 16,
-      "description": "Each detonated Ward now deals 175% of your Attack instead of 100%.",
+      "description": "Shatter deals 175% of your Attack per Ward instead of 100%.",
       "prerequisites": [
         "sheep_lamb_shatter_1"
       ],
@@ -731,7 +731,7 @@
       "displayName": "The Golden Fleece",
       "column": 1,
       "row": 20,
-      "description": "Wards you cast no longer expire from time; they last until spent, including wherever The Flock has spread them. A Ward someone else placed on you keeps its own duration. Free, gated at 20 embers spent in this path.",
+      "description": "Wards you cast last until spent, including copies spread by The Flock. Wards placed on you by others keep their own duration.",
       "prerequisites": [
         "sheep_lamb_flock_3",
         "sheep_lamb_gift_3",
@@ -750,7 +750,7 @@
       "displayName": "The Sentinel",
       "column": 0,
       "row": 0,
-      "description": "Fury comes from being hit: 150 times the blow's size against his maximum health, at least 3 and at most 25 a hit, measured before his defences so armour never cuts his income. A blow his planted shield or Shieldwall soaks counts. None for swinging. Unlocks Brace, a ward worth a fifth of his health. Free, but only one path's root talent can be active at a time; respec to change it.",
+      "description": "Gain Fury when hit: 150 times the blow's size against max HP, minimum 3, maximum 25 per hit, counted before defense. Damage soaked by your shield counts. Unlocks Brace, a ward worth 20% of max HP.",
       "effects": [
         {
           "type": "FuryEngineSentinel"
@@ -764,7 +764,7 @@
       "displayName": "Iron Retort",
       "column": 0,
       "row": 1,
-      "description": "His Physical hits gain flat damage equal to 10% of the Defense and Magical Defense he has above his base stats. Elemental resistances do not count, and a fresh Bjorn has none above base.",
+      "description": "Your Physical hits deal extra damage equal to 10% of the Defense and Magical Defense you have above base.",
       "prerequisites": [
         "bear_sen_root"
       ],
@@ -781,7 +781,7 @@
       "displayName": "Iron Retort: Hammered",
       "column": 0,
       "row": 4,
-      "description": "The share rises to 20%.",
+      "description": "Iron Retort's bonus rises to 20%.",
       "prerequisites": [
         "bear_sen_retort_1"
       ],
@@ -798,7 +798,7 @@
       "displayName": "Iron Retort: Anvil",
       "column": 0,
       "row": 7,
-      "description": "The share rises to 30%.",
+      "description": "Iron Retort's bonus rises to 30%.",
       "prerequisites": [
         "bear_sen_retort_2"
       ],
@@ -815,7 +815,7 @@
       "displayName": "Hold the Line",
       "column": 0,
       "row": 2,
-      "description": "Unlocks Hold the Line: 40 Fury. Every ally gains 15 Defense and 15 Magical Defense for 2 turns.",
+      "description": "Unlocks Hold the Line. Costs 40 Fury. All allies gain 15 Defense and 15 Magical Defense for 2 turns.",
       "prerequisites": [
         "bear_sen_root"
       ],
@@ -828,7 +828,7 @@
       "displayName": "Hold the Line: Rally",
       "column": 0,
       "row": 5,
-      "description": "Hold the Line lasts 3 turns, and Bjorn gains 5 Fury each time an ally is hit while it stands.",
+      "description": "Hold the Line lasts 3 turns. Gain 5 Fury each time a buffed ally is hit.",
       "prerequisites": [
         "bear_sen_hold_1"
       ],
@@ -850,7 +850,7 @@
       "displayName": "Hold the Line: Steadying Hand",
       "column": 0,
       "row": 8,
-      "description": "Casting Hold the Line also cleanses one debuff from each ally.",
+      "description": "Hold the Line also removes one debuff from each ally.",
       "prerequisites": [
         "bear_sen_hold_2"
       ],
@@ -867,7 +867,7 @@
       "displayName": "Bellow",
       "column": 0,
       "row": 3,
-      "description": "Unlocks Bellow: no Fury, a 3-turn cooldown. One enemy can see nothing else and must aim its next attack at him.",
+      "description": "Unlocks Bellow. Costs no Fury. Cooldown 3. One enemy must aim its next attack at you.",
       "prerequisites": [
         "bear_sen_root"
       ],
@@ -879,7 +879,7 @@
       "displayName": "Bellow: Presence",
       "column": 0,
       "row": 6,
-      "description": "Enemies choosing whom to hit favour Bjorn even without a Bellow: he counts three times in their draw.",
+      "description": "Enemies choosing a target are three times as likely to pick you.",
       "prerequisites": [
         "bear_sen_bellow_1"
       ],
@@ -896,7 +896,7 @@
       "displayName": "Bellow: Fed by Fear",
       "column": 0,
       "row": 9,
-      "description": "Bellow grants 10 Fury for each enemy it provokes.",
+      "description": "Bellow gives 10 Fury for each enemy it provokes.",
       "prerequisites": [
         "bear_sen_bellow_2"
       ],
@@ -913,7 +913,7 @@
       "displayName": "Plant the Shield",
       "column": 0,
       "row": 10,
-      "description": "Unlocks Plant the Shield, which takes over Brace's button: 30 Fury. He sets his shield down in front of himself, worth 2 x (Defense + Magical Defense) + 10% of his maximum health. It takes the blows aimed at him before his health, until it breaks or 3 turns pass; a shield that breaks throws shards back at whoever broke it. 3 turns before it can be planted again. Free, gated at 9 embers spent in this path.",
+      "description": "Unlocks Plant the Shield, replacing Brace. Costs 30 Fury. A shield worth 2 x (Defense + Magical Defense) + 10% of max HP takes hits meant for you for 3 turns or until it breaks. A broken shield throws shards back for 20% of its size. Can be planted again 3 turns later. Needs 9 embers spent in this path.",
       "prerequisites": [
         "bear_sen_retort_3",
         "bear_sen_hold_3",
@@ -933,7 +933,7 @@
       "displayName": "Spellbreaker",
       "column": 0,
       "row": 11,
-      "description": "Reflects 15% of magic damage that hits him or his shield back at its caster.",
+      "description": "Reflect 15% of magic damage that hits you or your shield back at the caster.",
       "prerequisites": [
         "bear_sen_converge"
       ],
@@ -950,7 +950,7 @@
       "displayName": "Spellbreaker: Gag",
       "column": 0,
       "row": 14,
-      "description": "A spell that hits him or his shield silences its caster for 1 turn. 3-turn cooldown for each enemy.",
+      "description": "A spell that hits you or your shield silences its caster for 1 turn. Cooldown 3 per enemy.",
       "prerequisites": [
         "bear_sen_spell_1"
       ],
@@ -966,7 +966,7 @@
       "displayName": "Spellbreaker: Feeding on Magic",
       "column": 0,
       "row": 17,
-      "description": "A reflected hit also grants Fury equal to half the damage it dealt, within the per-hit limits of his engine.",
+      "description": "A reflected hit also gives Fury equal to 50% of the damage it dealt, within the per-hit Fury limits.",
       "prerequisites": [
         "bear_sen_spell_2"
       ],
@@ -982,7 +982,7 @@
       "displayName": "Shield Bash",
       "column": 0,
       "row": 12,
-      "description": "Unlocks Shield Bash: a blow with the planted shield for its base damage plus 30% of what the shield soaked this placement, and a 1-turn stun. It spends the shield.",
+      "description": "Unlocks Shield Bash. Spends the planted shield to deal damage plus 20, plus 30% of the damage it soaked, and Stun for 1 turn.",
       "prerequisites": [
         "bear_sen_converge"
       ],
@@ -994,7 +994,7 @@
       "displayName": "Shield Bash: Quick Hands",
       "column": 0,
       "row": 15,
-      "description": "After a Shield Bash the shield can be planted again in 1 turn instead of 3.",
+      "description": "After a Shield Bash, the shield can be planted again after 1 turn instead of 3.",
       "prerequisites": [
         "bear_sen_bash_1"
       ],
@@ -1011,7 +1011,7 @@
       "displayName": "Shield Bash: Sweep",
       "column": 0,
       "row": 18,
-      "description": "Shield Bash also hits the enemies next to its target for the same damage.",
+      "description": "Shield Bash also hits enemies next to the target for the same damage.",
       "prerequisites": [
         "bear_sen_bash_2"
       ],
@@ -1028,7 +1028,7 @@
       "displayName": "Thornwall",
       "column": 0,
       "row": 13,
-      "description": "Melee physical hits on him or his shield return 15% of their damage to the attacker.",
+      "description": "Melee Physical hits on you or your shield return 15% of their damage to the attacker.",
       "prerequisites": [
         "bear_sen_converge"
       ],
@@ -1045,7 +1045,7 @@
       "displayName": "Thornwall: Barbs",
       "column": 0,
       "row": 16,
-      "description": "The attacker is also slowed for 1 turn.",
+      "description": "Thornwall also makes the attacker Chilled (-20% speed) for 1 turn.",
       "prerequisites": [
         "bear_sen_thorn_1"
       ],
@@ -1061,7 +1061,7 @@
       "displayName": "Thornwall: Splinters",
       "column": 0,
       "row": 19,
-      "description": "A physical hit that breaks the shield disarms its attacker: -30% attack for 2 turns.",
+      "description": "A Physical hit that breaks your shield gives its attacker -30% attack for 2 turns.",
       "prerequisites": [
         "bear_sen_thorn_2"
       ],
@@ -1077,7 +1077,7 @@
       "displayName": "Shieldwall",
       "column": 0,
       "row": 20,
-      "description": "Plant the Shield covers the whole party instead of only Bjorn: one pool twice the size that soaks every ally's damage before their health. An area attack drains it once per ally it hits. Bjorn gains Fury from the damage it absorbs, at most 40 a turn. Free, gated at 20 embers spent in this path.",
+      "description": "Plant the Shield covers the whole party with one pool twice the size, soaking every ally's damage. An area attack drains it once per ally hit. Gain Fury from damage it absorbs, up to 40 a turn. Needs 20 embers spent in this path.",
       "prerequisites": [
         "bear_sen_spell_3",
         "bear_sen_bash_3",
@@ -1096,7 +1096,7 @@
       "displayName": "The Einherjar",
       "column": 1,
       "row": 0,
-      "description": "Each damaging action pays Fury by how hard it hit against his Attack: 10 for a plain blow, more for a bigger one, at least 5 and at most 30, once per action (a sweep pays for its largest hit). No Fury for swinging otherwise, none for being hit. Unlocks Hack: two cuts at one target, no Fury cost, 3-turn cooldown, and each cut pays separately. Free, but only one path's root talent can be active at a time; respec to change it.",
+      "description": "Each damaging action gains Fury: 10 for a plain blow, more for a bigger one (minimum 5, maximum 30). Unlocks Hack.",
       "effects": [
         {
           "type": "FuryEngineEinherjar"
@@ -1129,7 +1129,7 @@
       "displayName": "Slam: Fury's Edge",
       "column": 1,
       "row": 4,
-      "description": "A Slam that fires a Fury tier (50 Fury or more) gets +15% crit chance.",
+      "description": "A Slam that triggers a Fury tier (50 Fury or more) gets +15% crit chance.",
       "prerequisites": [
         "bear_ein_slam_1"
       ],
@@ -1164,7 +1164,7 @@
       "displayName": "Bloodfire: Blood Taken",
       "column": 1,
       "row": 2,
-      "description": "A kill refunds 15 Fury.",
+      "description": "Each kill restores 15 Fury.",
       "prerequisites": [
         "bear_ein_root"
       ],
@@ -1181,7 +1181,7 @@
       "displayName": "Bloodfire: Banked Heat",
       "column": 1,
       "row": 5,
-      "description": "His first idle turn of each fight does not drain Fury.",
+      "description": "Your first idle turn of each fight does not drain Fury.",
       "prerequisites": [
         "bear_ein_fire_1"
       ],
@@ -1197,7 +1197,7 @@
       "displayName": "Bloodfire: Red Crest",
       "column": 1,
       "row": 8,
-      "description": "Crits pay 50% more Fury on top of the engine.",
+      "description": "Crits gain 50% more Fury.",
       "prerequisites": [
         "bear_ein_fire_2"
       ],
@@ -1214,7 +1214,7 @@
       "displayName": "Momentum: Rolling",
       "column": 1,
       "row": 3,
-      "description": "Each consecutive turn he deals damage adds a stack: +5% crit chance per stack, up to 5. A turn without dealing damage resets it; a hit taken removes one stack.",
+      "description": "Each consecutive turn you deal damage adds a stack: +5% crit chance per stack, up to 5. A turn without damage resets it. Being hit removes one stack.",
       "prerequisites": [
         "bear_ein_root"
       ],
@@ -1231,7 +1231,7 @@
       "displayName": "Momentum: Building",
       "column": 1,
       "row": 6,
-      "description": "Stacks also add +5% crit damage each, and the cap rises to 8.",
+      "description": "Each stack also gives +5% crit damage. Maximum stacks rise to 8.",
       "prerequisites": [
         "bear_ein_mom_1"
       ],
@@ -1248,7 +1248,7 @@
       "displayName": "Momentum: Unbroken Line",
       "column": 1,
       "row": 9,
-      "description": "Hits under 10% of his max health no longer remove a stack.",
+      "description": "Hits for under 10% of your max HP no longer remove a stack.",
       "prerequisites": [
         "bear_ein_mom_2"
       ],
@@ -1280,7 +1280,7 @@
       "displayName": "Headsplitter",
       "column": 1,
       "row": 11,
-      "description": "Unlocks Headsplitter: needs 30 Fury and spends all of it. Damage grows with the Fury spent and with how hurt the target is. A kill returns half the Fury spent.",
+      "description": "Unlocks Headsplitter: spends all your Fury (minimum 30) for one hit that hits harder the more Fury spent and the more HP the target has lost. A kill returns half the Fury spent.",
       "prerequisites": [
         "bear_ein_converge"
       ],
@@ -1292,7 +1292,7 @@
       "displayName": "Headsplitter: Nose for Weakness",
       "column": 1,
       "row": 14,
-      "description": "+25% crit chance against targets at or below 30% health.",
+      "description": "+25% crit chance against targets at or below 30% HP.",
       "prerequisites": [
         "bear_ein_head_1"
       ],
@@ -1326,7 +1326,7 @@
       "displayName": "Berserk",
       "column": 1,
       "row": 12,
-      "description": "Unlocks Berserk: 50 Fury to enter. Half of his defense and magical defense becomes attack. Fury no longer decays when idle but drains 10 each turn, and the form ends at 0 Fury. No Bellow, Hold the Line or shields while it lasts.",
+      "description": "Unlocks Berserk: costs 50 Fury. Half your defense and magical defense becomes attack. Fury drains by 10 each turn and Berserk ends at 0 Fury. Bellow and shields are disabled.",
       "prerequisites": [
         "bear_ein_converge"
       ],
@@ -1355,7 +1355,7 @@
       "displayName": "Berserk: Feeding Frenzy",
       "column": 1,
       "row": 18,
-      "description": "Each kill while in Berserk adds 20 Fury.",
+      "description": "Each kill while in Berserk gains 20 Fury.",
       "prerequisites": [
         "bear_ein_bers_2"
       ],
@@ -1372,7 +1372,7 @@
       "displayName": "Battle Trance",
       "column": 1,
       "row": 13,
-      "description": "At 50 Fury or more, 20% of each hit he takes is paid with Fury instead of health: 1 Fury per 1% of his max health.",
+      "description": "At 50 Fury or more, 20% of each hit you take is paid with Fury instead of HP, at 1 Fury per 1% of your max HP.",
       "prerequisites": [
         "bear_ein_converge"
       ],
@@ -1389,7 +1389,7 @@
       "displayName": "Battle Trance: Deeper",
       "column": 1,
       "row": 16,
-      "description": "The share rises to 30%, and doubles while in Berserk.",
+      "description": "The share paid with Fury rises to 30%, and doubles while in Berserk.",
       "prerequisites": [
         "bear_ein_trance_1"
       ],
@@ -1406,7 +1406,7 @@
       "displayName": "Battle Trance: Second Skin",
       "column": 1,
       "row": 19,
-      "description": "When soaking drops his Fury below 50, he gains Protect for 1 turn.",
+      "description": "When paying with Fury drops you below 50 Fury, gain Protect for 1 turn.",
       "prerequisites": [
         "bear_ein_trance_2"
       ],
@@ -1423,7 +1423,7 @@
       "displayName": "Twin Rampage",
       "column": 1,
       "row": 20,
-      "description": "Rampage at 100 Fury, when it is off cooldown, sweeps twice: the first is the normal 100-Fury sweep, the second lands at 1x and stuns every enemy it hits for 1 turn. The first sweep's Fury does not refill the bar before the second. 5-turn cooldown on the empowered version. Free, gated at 20 embers spent in this path.",
+      "description": "At 100 Fury, Rampage hits twice: the normal 100-Fury sweep, then a second sweep at 1x damage that stuns every enemy hit for 1 turn. Cooldown 5.",
       "prerequisites": [
         "bear_ein_head_3",
         "bear_ein_bers_3",
@@ -1443,7 +1443,7 @@
       "displayName": "The Juggernaut",
       "column": 2,
       "row": 0,
-      "description": "Fury comes with the turn and comes faster the nearer he is to death: 15 at full health, 20 at three quarters, 35 at half, 60 at a quarter or less. None for swinging, none for being hit, and it never drains when idle. Unlocks Second Wind, on a 4-turn cooldown. Free, but only one path's root talent can be active at a time; respec to change it.",
+      "description": "Gain Fury at turn start: 15 at full HP, 20 at 75% HP, 35 at 50% HP, 60 at 25% HP or below. Attacking and being hit give none. Fury does not drain while idle. Unlocks Second Wind (cooldown 4).",
       "effects": [
         {
           "type": "FuryEngineJuggernaut"
@@ -1461,7 +1461,7 @@
       "displayName": "Thick Blood",
       "column": 2,
       "row": 1,
-      "description": "+10% maximum health.",
+      "description": "+10% maximum HP.",
       "prerequisites": [
         "bear_jug_root"
       ],
@@ -1478,7 +1478,7 @@
       "displayName": "Thick Blood: Pulse",
       "column": 2,
       "row": 4,
-      "description": "Regenerates 2% of his maximum health at the start of each of his turns, rising to 6% at a quarter health or less, on the same curve as his Fury.",
+      "description": "At turn start, heal 2% of maximum HP, rising to 6% at 25% HP or below.",
       "prerequisites": [
         "bear_jug_blood_1"
       ],
@@ -1496,7 +1496,7 @@
       "displayName": "Thick Blood: Deep Veins",
       "column": 2,
       "row": 7,
-      "description": "Another +10% maximum health (20% in all), and the regen ceiling rises to 8%.",
+      "description": "+20% maximum HP in total. The turn-start heal rises to 8% at 25% HP or below.",
       "prerequisites": [
         "bear_jug_blood_2"
       ],
@@ -1518,7 +1518,7 @@
       "displayName": "Wrath",
       "column": 2,
       "row": 2,
-      "description": "+0.5% damage for every 1% of his health missing: +37% at a quarter health.",
+      "description": "+0.5% damage for every 1% of HP missing (+37% at 25% HP).",
       "prerequisites": [
         "bear_jug_root"
       ],
@@ -1535,7 +1535,7 @@
       "displayName": "Wrath: Red Mist",
       "column": 2,
       "row": 5,
-      "description": "+0.75% damage for every 1% of his health missing: +56% at a quarter health.",
+      "description": "+0.75% damage for every 1% of HP missing (+56% at 25% HP).",
       "prerequisites": [
         "bear_jug_wrath_1"
       ],
@@ -1552,7 +1552,7 @@
       "displayName": "Wrath: Nothing Left to Lose",
       "column": 2,
       "row": 8,
-      "description": "+1% damage for every 1% of his health missing: +75% at a quarter health.",
+      "description": "+1% damage for every 1% of HP missing (+75% at 25% HP).",
       "prerequisites": [
         "bear_jug_wrath_2"
       ],
@@ -1569,7 +1569,7 @@
       "displayName": "Gorge",
       "column": 2,
       "row": 3,
-      "description": "Unlocks Gorge: 30 Fury for a heavy physical blow at one target that heals him for 30% of the damage it deals.",
+      "description": "Unlocks Gorge (30 Fury): hit one target for damage plus 30 and heal 30% of the damage dealt.",
       "prerequisites": [
         "bear_jug_root"
       ],
@@ -1582,7 +1582,7 @@
       "displayName": "Gorge: Deeper Drink",
       "column": 2,
       "row": 6,
-      "description": "Gorge heals 40% of the damage it deals.",
+      "description": "Gorge heals 40% of the damage dealt.",
       "prerequisites": [
         "bear_jug_gorge_1"
       ],
@@ -1600,7 +1600,7 @@
       "displayName": "Gorge: Bloodlust",
       "column": 2,
       "row": 9,
-      "description": "Gorge deals +25% damage while he is at or below half health.",
+      "description": "Gorge deals +25% damage at 50% HP or below.",
       "prerequisites": [
         "bear_jug_gorge_2"
       ],
@@ -1618,7 +1618,7 @@
       "displayName": "Unbroken",
       "column": 2,
       "row": 10,
-      "description": "Unlocks Unbroken: 50 Fury. For 2 turns he regenerates 15% of his maximum health each turn and no crowd control can touch him. Free, gated at 9 embers spent in this path.",
+      "description": "Unlocks Unbroken (50 Fury): for 2 turns, heal 15% of maximum HP each turn and ignore all crowd control.",
       "prerequisites": [
         "bear_jug_blood_3",
         "bear_jug_wrath_3",
@@ -1633,7 +1633,7 @@
       "displayName": "Unyielding",
       "column": 2,
       "row": 11,
-      "description": "When crowd control lands on him he shrugs it off and gains speed and +25% damage for 2 turns. 4-turn cooldown. It does not fire while Unbroken protects him.",
+      "description": "When crowd control lands on you, ignore it and gain +20% speed and +25% damage for 2 turns. Cooldown 4.",
       "prerequisites": [
         "bear_jug_converge"
       ],
@@ -1650,7 +1650,7 @@
       "displayName": "Unyielding: Again",
       "column": 2,
       "row": 14,
-      "description": "The cooldown drops to 3 turns.",
+      "description": "Unyielding cooldown drops to 3.",
       "prerequisites": [
         "bear_jug_unyield_1"
       ],
@@ -1667,7 +1667,7 @@
       "displayName": "Unyielding: Fed by Force",
       "column": 2,
       "row": 17,
-      "description": "Shrugging off crowd control also grants 20 Fury.",
+      "description": "Ignoring crowd control with Unyielding also gives 20 Fury.",
       "prerequisites": [
         "bear_jug_unyield_2"
       ],
@@ -1684,7 +1684,7 @@
       "displayName": "Ignore Pain",
       "column": 2,
       "row": 12,
-      "description": "20% of every hit is not taken now but spread over the next 3 turns as damage.",
+      "description": "20% of each hit taken is delayed and dealt as damage over the next 3 turns.",
       "prerequisites": [
         "bear_jug_converge"
       ],
@@ -1702,7 +1702,7 @@
       "displayName": "Ignore Pain: Owed",
       "column": 2,
       "row": 15,
-      "description": "30% of every hit is spread over the next 3 turns.",
+      "description": "30% of each hit taken is delayed and dealt as damage over the next 3 turns.",
       "prerequisites": [
         "bear_jug_pain_1"
       ],
@@ -1720,7 +1720,7 @@
       "displayName": "Ignore Pain: Salved",
       "column": 2,
       "row": 18,
-      "description": "Healing pays down the pending damage first, and only what is left restores health.",
+      "description": "Healing first pays off delayed damage. Only the remainder restores HP.",
       "prerequisites": [
         "bear_jug_pain_2"
       ],
@@ -1736,7 +1736,7 @@
       "displayName": "Blood Price",
       "column": 2,
       "row": 13,
-      "description": "When he cannot pay a skill's Fury cost, he pays the rest in health: 1 Fury is 0.5% of his maximum health. It cannot take him below 1 health and never triggers a death save.",
+      "description": "If you lack the Fury for a skill, pay the shortfall in HP: 1 Fury costs 0.5% of maximum HP. This cannot bring you below 1 HP.",
       "prerequisites": [
         "bear_jug_converge"
       ],
@@ -1753,7 +1753,7 @@
       "displayName": "Blood Price: Overdraft",
       "column": 2,
       "row": 16,
-      "description": "Skills paid partly in health deal +15% damage.",
+      "description": "Skills paid partly in HP deal +15% damage.",
       "prerequisites": [
         "bear_jug_price_1"
       ],
@@ -1770,7 +1770,7 @@
       "displayName": "Blood Price: Not Yet",
       "column": 2,
       "row": 19,
-      "description": "Once per fight, a lethal blow leaves him at 1 health and fills his Fury to 100.",
+      "description": "Once per fight, a lethal hit leaves you at 1 HP and fills Fury to 100.",
       "prerequisites": [
         "bear_jug_price_2"
       ],
@@ -1789,7 +1789,7 @@
       "displayName": "Cursed Blood",
       "column": 2,
       "row": 20,
-      "description": "Unlocks Cursed Blood: 50 Fury, once per fight. For 2 turns nothing heals him; every heal that would land, his regen and Unbroken's included, is thrown at every enemy as Void damage instead, as much as he was missing. Free, gated at 20 embers spent in this path.",
+      "description": "Unlocks Cursed Blood (50 Fury, once per fight): for 2 turns you cannot be healed. Each heal instead hits every enemy for Void damage equal to the HP it would have restored.",
       "prerequisites": [
         "bear_jug_unyield_3",
         "bear_jug_pain_3",

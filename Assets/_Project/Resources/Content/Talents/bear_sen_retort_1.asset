@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_sen_retort_1
     DisplayName: Iron Retort
-    Description: His Physical hits gain flat damage equal to 10% of the Defense and
-      Magical Defense he has above his base stats. Elemental resistances do not count,
-      and a fresh Bjorn has none above base.
+    Description: Your Physical hits deal extra damage equal to 10% of the Defense
+      and Magical Defense you have above base.
     CharacterId: bear
     Column: 0
     Row: 1

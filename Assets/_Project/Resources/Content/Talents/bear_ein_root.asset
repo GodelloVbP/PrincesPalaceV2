@@ -15,12 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_ein_root
     DisplayName: The Einherjar
-    Description: 'Each damaging action pays Fury by how hard it hit against his Attack:
-      10 for a plain blow, more for a bigger one, at least 5 and at most 30, once
-      per action (a sweep pays for its largest hit). No Fury for swinging otherwise,
-      none for being hit. Unlocks Hack: two cuts at one target, no Fury cost, 3-turn
-      cooldown, and each cut pays separately. Free, but only one path''s root talent
-      can be active at a time; respec to change it.'
+    Description: 'Each damaging action gains Fury: 10 for a plain blow, more for
+      a bigger one (minimum 5, maximum 30). Unlocks Hack.'
     CharacterId: bear
     Column: 1
     Row: 0

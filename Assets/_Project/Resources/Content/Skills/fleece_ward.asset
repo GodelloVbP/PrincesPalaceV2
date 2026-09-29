@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: fleece_ward
     DisplayName: Ward
-    Description: A turn of the fleece, wrapped tight. A 50-point shield, and one
-      turn to spend it.
+    Description: Put a 50-point shield on you or an ally for 1 turn. Costs 2 wool.
+      Cooldown 2.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 7
