@@ -385,10 +385,10 @@ table. Every phase below is a separate issue with one owner. Gates per
 
 #### Phase 1 — Unity-side handoff
 
-Domain is done; none of the following could be built or verified in the
-dotnet-only container. Every item names the file, the change and why.
+Domain is done. Every item names the file, the change and why. Status per
+item is marked in place (DONE / NOT DONE).
 
-1. **Land part B with `-BuildContent` (blocking).** `StatBlock.cs`,
+1. **DONE. Land part B with `-BuildContent` (blocking).** `StatBlock.cs`,
    `TalentEffect.cs` and `Domain/Content/*.cs` are in `ContentInputHash`, so
    with part B applied
    `ContentFreshnessTests.TheInputsAreTheOnesTheTreeWasBuiltFrom` is red
@@ -400,7 +400,7 @@ dotnet-only container. Every item names the file, the change and why.
    code should be needed — `EnemyDefinition` stores the resolver's
    `ResolvedEnemy` whole — but confirm a built enemy asset carries
    `AttackCrits` / `Abilities[i].Crits`.
-2. **`Core/FightEncounterAdapter.cs`, party kit builds (~L221 and ~L348,
+2. **DONE. `Core/FightEncounterAdapter.cs`, party kit builds (~L221 and ~L348,
    beside `ArmorPenetration`):** set
    `state.CritChancePercent = CritRules.PartyChancePercent(stats);` and
    `state.CritDamagePercent = CritRules.PartyDamagePercent(stats);` (part
@@ -409,40 +409,44 @@ dotnet-only container. Every item names the file, the change and why.
    default) but a `critChance` / `critDamage` bonus on gear or talents is
    ignored. Use the effective stats (`ContentDatabase.EffectiveStats` on the
    save-backed path) so item `statBonus` crit stats count.
-3. **`Core/FightEncounterAdapter.cs` `EnemyKitFor` (L600, L614, L621):**
+3. **DONE. `Core/FightEncounterAdapter.cs` `EnemyKitFor` (L600, L614, L621):**
    `EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f,
    source.AttackWeight, crits: source.AttackCrits)`;
    `EnemyAbility.Of(Resolve(skill), reference.Weight, reference.Crits)`; and
    the empty-pool fallback at L621 with `crits: source.AttackCrits`. Without
    this an authored enemy crit resolves to a plain hit in real fights (the
    Domain legacy pool in `CombatantKit` reads `AttackCrits` with part B).
-4. **Crit sources (authoring later, hooks only):** gear/relic crit. Item
+4. **PARTLY DONE. Crit sources (authoring later, hooks only):** gear/relic crit.
+   Gear crit flows through item 2; relic crit is hooked (`RelicStat.CritChance`
+   / `CritDamage` and `RelicModifierType.CritChanceFlat` / `CritDamageFlat`,
+   appended, read at the item-2 lines). NOT DONE: the rolled-affix
+   `ModifierEffectType` members and their read. Item
    `statBonus` is a `StatBlock`, so crit stats flow once item 2 lands. A
    relic source needs `RelicStat.CritChance` / `CritDamage` APPENDED and
    `RelicModifiers.Apply` at the item-2 lines; a rolled affix needs
    `ModifierEffectType` members APPENDED plus a read at the same lines.
    Enum rule: append only.
-5. **View — popup and beat (`Core/FightBeatPlayer.cs` ~L1159-1186
+5. **DONE (popup); hit-stop/shake NOT DONE. View — popup and beat (`Core/FightBeatPlayer.cs` ~L1159-1186
    `PopNumber` / single-amount path, `DamagePopup`):** read `CombatBeat.Crit`
    (single target) and `BeatTargetResult.Crit` (sweeps) and play a crit
    popup style (larger, distinct colour, e.g. "36!"); optionally a
    shake / hit-stop floor via the existing `RecordFormHitCue` floor pattern.
    The log line already arrives in `beat.Messages`.
-6. **View — telegraph (`Core/FightController.StageVisuals.cs` ~L571 and
+6. **DONE. View — telegraph (`Core/FightController.StageVisuals.cs` ~L571 and
    ~L723, intent badge/tooltip):** show `EnemyIntent.WillCrit` (crit marker
    on the badge, "Critical" in the tooltip). `ExpectedDamage` already
    includes the multiplier.
-7. **Character sheet (optional):** a Crit / Crit Dmg row in
+7. **NOT DONE (optional). Character sheet:** a Crit / Crit Dmg row in
    `Domain/UiKit/SheetStats.cs` / `DossierLayout` reading
    `CritRules.PartyChancePercent(stats)`; a screen-tree change means
    `-BuildScenes`.
-8. **[U] tests:** adapter test (party state gets 5/150 and a stat bonus
+8. **DONE. [U] tests:** adapter test (party state gets 5/150 and a stat bonus
    moves it; enemy kit carries `Crits`); PlayMode popup test for a crit
    beat and a sweep with per-target crits; intent badge test for
    `WillCrit`.
-9. **Balance bot:** party damage EV rises ~2.5% from the baseline; re-run
+9. **DONE (nothing to re-pin). Balance bot:** party damage EV rises ~2.5% from the baseline; re-run
    and re-pin any Core/Bot balance baselines.
-10. **Gate:** `run_tests_parallel.ps1 -Changed -BuildContent` (plus
+10. **DONE. Gate:** `run_tests_parallel.ps1 -Changed -BuildContent` (plus
     `-BuildScenes` if item 5-7 touch a screen tree or `[SerializeField]`).
 
 ### Phase 2 — Engine-driven Fury

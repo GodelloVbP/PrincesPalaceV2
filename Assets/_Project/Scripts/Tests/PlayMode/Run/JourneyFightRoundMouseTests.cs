@@ -98,12 +98,11 @@ namespace PrincesPalace.PlayModeTests
 
             // LITERAL, pinned the same as the pad file: the input mode does
             // not change what SeededRandom(3) rolls against this exact
-            // hero/enemy pair. MOVED FROM 6 TO 8 alongside it --
-            // CombatMath.BasicAttackPowerMultiplier (1.2x on a player's
-            // plain swing) landed concurrently with this nav change and is
-            // unrelated to it. MOVED FROM 8 TO 9 with the pad file: the 5%
-            // party crit baseline (CritRules.BaseChancePercent) lands on
-            // SeededRandom(3)'s draw; at a 0% baseline this reads 8.
+            // hero/enemy pair. Why 9: the plain swing is 8
+            // (CombatMath.BasicAttackPowerMultiplier is already in it), and
+            // the 5% party crit baseline (CritRules.BaseChancePercent) lands
+            // on this seed's one crit draw, applied before armour; at a 0%
+            // baseline the same seed reads 8.
             Assert.AreEqual(9, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
                 "the exact damage this seeded attack deals, mouse-only same as on the pad");
         }

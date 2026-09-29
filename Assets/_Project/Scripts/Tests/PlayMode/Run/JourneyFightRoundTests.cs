@@ -129,17 +129,12 @@ namespace PrincesPalace.PlayModeTests
             // LITERAL, pinned rather than recomputed from the damage formula
             // under test (CLAUDE.md gotcha 5's formula-pinning
             // rule) -- SeededRandom(3) against this exact hero/enemy pair.
-            // MOVED FROM 6 TO 8: CombatMath.BasicAttackPowerMultiplier
-            // (1.2x on a player's plain swing, landed concurrently with this
-            // nav change) raises the raw swing before it ever reaches this
-            // formula -- unrelated to the nav-mapping fix this test file is
-            // actually about.
-            // MOVED FROM 8 TO 9: the 5% party crit baseline
-            // (CritRules.BaseChancePercent, PLAN_BJORN_CONSTELLATIONS Phase 1)
-            // is live on every player-side combatant, and SeededRandom(3)'s
-            // one crit draw lands under it here, so this swing is the 8 it
-            // was, crit at 150%, defenses applied = 9. Verified: with the
-            // baseline set to 0 this reads 8 again.
+            // Why 9: the plain swing is 8 (CombatMath.BasicAttackPowerMultiplier
+            // already raises the raw figure 1.2x). The 5% party crit baseline
+            // (CritRules.BaseChancePercent) is on every player-side combatant
+            // and this seed's one crit draw lands under it, so the swing crits
+            // at 150% before armour, and defenses then leave 9. At a 0%
+            // baseline the same seed reads 8.
             Assert.AreEqual(9, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
                 "the exact damage this seeded attack deals");
         }
