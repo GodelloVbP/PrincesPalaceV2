@@ -153,7 +153,9 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (abilities == null) return null;
 
-            bool rooted = StatusEffects.HasRooted(enemy.Statuses);
+            // Rooted and Silenced both restrict what may be done; the shared
+            // predicate below says which abilities each one refuses.
+            bool rooted = StatusEffects.HasRooted(enemy.Statuses) || enemy.Suppression.IsSilenced;
             List<EnemyAbility> effective = null;
 
             for (int i = 0; i < abilities.Count; i++)

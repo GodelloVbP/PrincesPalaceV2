@@ -27,10 +27,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // SPELLBREAKER T2'S CALLBACK POINT: a magic hit on a holder with
         // SilenceCasterOnSpellHit (on him or on the shield covering an ally)
         // raises this with (holder, caster) when the action that dealt it
-        // settles. The Silence status is content-hashed (StatusEffect.cs) and
-        // does not exist yet; the Unity wiring appends it and subscribes here
-        // (ApplyStatusTo(caster, Silence, 1, 1) plus its 3-turn per-enemy
-        // cooldown). Raised once per caster per action.
+        // settles, once per caster per action. The session itself then
+        // silences the caster (SilenceShieldAttacker, Suppression.Silence, the
+        // per-enemy cooldown included); the event is a notification for the
+        // view, not the place the silence is applied.
         public event Action<CombatantState, CombatantState> SpellHitShieldHolder;
 
         // What a hit on a holder (or on his wall) owes its attacker. Queued by
@@ -45,6 +45,8 @@ namespace PrincesPalace.Domain.Combat.Session
             Thorns,
             Reflect,
             Silence,
+            Slow,
+            Disarm,
         }
 
         private readonly struct QueuedShieldAnswer
@@ -72,6 +74,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // is never itself answered (no ping-pong between two holders, and no
         // reflect of a reflect), whatever the target carries.
         private bool _settlingShieldAnswers;
+
+        // The holder whose shield the CURRENT ward step emptied, so the step's
+        // reactive-hook block (which knows the hit's damage type) can queue
+        // Thornwall T3's disarm. Set by ShieldBroke, consumed and cleared at
+        // the end of ResolveWard.
+        private CombatantState _shieldBrokenThisHit;
 
         // ---- the wiring's one-liners ------------------------------------------
 
@@ -189,7 +197,18 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     QueueShieldAnswers(wallHolder, attacker, wallAbsorbed, type);
                 }
+
+                // Thornwall T3: a PHYSICAL hit that broke a shield disarms
+                // whoever struck it.
+                var broken = _shieldBrokenThisHit;
+                if (broken != null && type == DamageType.Physical && broken.PlantedShield.DisarmsOnBreak
+                    && attacker.IsPlayerSide != broken.IsPlayerSide)
+                {
+                    _shieldAnswers.Add(new QueuedShieldAnswer(broken, attacker, ShieldAnswer.Disarm, 0, type));
+                }
             }
+
+            _shieldBrokenThisHit = null;
 
             // A hit the wards ate whole is not heard by the pools (the planted
             // shield's own hearing above has already consumed the figure), so
@@ -274,6 +293,8 @@ namespace PrincesPalace.Domain.Combat.Session
             shield.End(shield.ReplaceWaitTurns, IsHoldersTurn(holder));
             AppendMessage(wall ? $"{holder.Name}'s shieldwall breaks!" : $"{holder.Name}'s planted shield breaks!");
 
+            if (!_settlingShieldAnswers && attacker != null) _shieldBrokenThisHit = holder;
+
             if (!_settlingShieldAnswers && attacker != null && shield.BreakShardDamage > 0)
             {
                 _shieldAnswers.Add(new QueuedShieldAnswer(holder, attacker, ShieldAnswer.Shards,
@@ -292,6 +313,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (thorns > 0)
                 {
                     _shieldAnswers.Add(new QueuedShieldAnswer(holder, attacker, ShieldAnswer.Thorns, thorns, type));
+                }
+
+                if (shield.SlowsAttacker)
+                {
+                    _shieldAnswers.Add(new QueuedShieldAnswer(holder, attacker, ShieldAnswer.Slow, 0, type));
                 }
 
                 return;
@@ -349,7 +375,16 @@ namespace PrincesPalace.Domain.Combat.Session
                             if (silenced.Add((answer.Holder, attacker)))
                             {
                                 SpellHitShieldHolder?.Invoke(answer.Holder, attacker);
+                                SilenceShieldAttacker(answer.Holder, attacker);
                             }
+                            break;
+
+                        case ShieldAnswer.Slow:
+                            if (physicalMove) SlowShieldAttacker(answer.Holder, attacker);
+                            break;
+
+                        case ShieldAnswer.Disarm:
+                            DisarmShieldAttacker(answer.Holder, attacker);
                             break;
 
                         case ShieldAnswer.Thorns:
@@ -357,7 +392,7 @@ namespace PrincesPalace.Domain.Combat.Session
                             break;
 
                         case ShieldAnswer.Reflect:
-                            DealShieldAnswer(answer, "reflection");
+                            GrantReflectFury(answer.Holder, DealShieldAnswer(answer, "reflection"));
                             break;
 
                         case ShieldAnswer.Shards:
@@ -372,7 +407,8 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        private void DealShieldAnswer(QueuedShieldAnswer answer, string what)
+        // Returns the damage the answer dealt (0 when nothing got through).
+        private int DealShieldAnswer(QueuedShieldAnswer answer, string what)
         {
             var holder = answer.Holder;
             var attacker = answer.Attacker;
@@ -406,6 +442,67 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             if (ownsBeat) CommitOrDropStatusTickBeat();
+            return outcome.Damage;
+        }
+
+        // ---- 4f: what a shield does to whoever struck it -------------------------
+
+        // Spellbreaker T2. The per-enemy cooldown lives on the enemy
+        // (Suppression), so two Sentinels in one party share it, and the
+        // silence spends nothing when the cooldown refuses.
+        private void SilenceShieldAttacker(CombatantState holder, CombatantState attacker)
+        {
+            var shield = holder.PlantedShield;
+            if (!attacker.Suppression.TrySilence(shield.SilenceTurns, shield.SilenceCooldownTurns,
+                    IsHoldersTurn(attacker)))
+            {
+                return;
+            }
+
+            AppendMessage($"{attacker.Name} is silenced by {holder.Name}'s shield!");
+        }
+
+        // Thornwall T2: Chilled through the one status seam, so hard-control
+        // recovery and the crowd-control guard both get their say.
+        private void SlowShieldAttacker(CombatantState holder, CombatantState attacker)
+        {
+            var shield = holder.PlantedShield;
+            if (ApplyStatusTo(attacker, StatusEffectType.Chilled, shield.SlowPercent, shield.SlowTurns, holder))
+            {
+                AppendMessage($"{attacker.Name} is slowed by {holder.Name}'s shield!");
+            }
+        }
+
+        // Thornwall T3.
+        private void DisarmShieldAttacker(CombatantState holder, CombatantState attacker)
+        {
+            var shield = holder.PlantedShield;
+            attacker.Suppression.ApplyDisarm(shield.DisarmPercent, shield.DisarmTurns, IsHoldersTurn(attacker));
+            AppendMessage($"{attacker.Name} is disarmed by {holder.Name}'s shield!");
+        }
+
+        // Spellbreaker T3: half of what a reflection dealt, through the root's
+        // per-hit clamp, straight into the primary pool like every other
+        // talent rider (Bellow T3, Unyielding T3).
+        private void GrantReflectFury(CombatantState holder, int dealt)
+        {
+            var shield = holder.PlantedShield;
+            if (!shield.ReflectGrantsFury || dealt <= 0 || !holder.IsAlive) return;
+
+            int fury = PlantedShield.ClampFuryPerHit(PlantedShield.PercentOf(dealt, shield.ReflectFuryPercent));
+            int gained = holder.PrimaryPool?.Gain(fury) ?? 0;
+            if (gained > 0)
+            {
+                AppendMessage($"{holder.Name} drinks the reflection: +{gained} {holder.PrimaryPool.DisplayName}.");
+            }
+        }
+
+        // The silenced or disarmed enemy's turn ended (AgeEngineWindows).
+        private void AgeSuppression(CombatantState actor)
+        {
+            var (silenceEnded, disarmEnded) = actor.Suppression.AgeAtHoldersTurnEnd();
+            if (silenceEnded) AppendMessage($"{actor.Name} can cast again.");
+            if (disarmEnded) AppendMessage($"{actor.Name} takes up arms again.");
         }
 
         // ---- the clock ------------------------------------------------------------

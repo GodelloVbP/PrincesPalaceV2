@@ -261,6 +261,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // Momentum and Twin Rampage's cooldown (FightSession.FuryEngines).
             AgeFuryEngines(actor);
+
+            // 4f: silence, its per-enemy cooldown, and disarm.
+            AgeSuppression(actor);
         }
 
         // ---- seams for tests ---------------------------------------------------
