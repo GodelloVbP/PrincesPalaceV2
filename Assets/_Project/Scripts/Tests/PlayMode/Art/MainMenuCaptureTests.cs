@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -47,7 +48,7 @@ namespace PrincesPalace.PlayModeTests
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime", "main_menu"));
 
-        private static IEnumerator Capture(string fileName)
+        private static IEnumerator Capture(string fileName, System.Action afterLoad = null, System.Action afterStart = null)
         {
             if (!CanvasCapture.IsSupported)
             {
@@ -59,6 +60,22 @@ namespace PrincesPalace.PlayModeTests
 
             Time.captureFramerate = CaptureFps;
             for (float elapsed = 0f; elapsed < SettleSeconds; elapsed += 1f / CaptureFps) yield return null;
+
+            if (afterLoad != null)
+            {
+                afterLoad();
+                for (float elapsed = 0f; elapsed < SettleSeconds; elapsed += 1f / CaptureFps) yield return null;
+            }
+
+            if (afterStart != null)
+            {
+                // A modal's controller Start runs a frame after SetActive, so
+                // its listeners exist only from the next frame on.
+                yield return null;
+                yield return null;
+                afterStart();
+                for (float elapsed = 0f; elapsed < SettleSeconds; elapsed += 1f / CaptureFps) yield return null;
+            }
 
             var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
                 .First(c => c.isRootCanvas);
@@ -85,6 +102,34 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.Forget();
 
             yield return Capture("main_menu_with_save.png");
+        }
+
+        private static void SaveSlots(params int[] slots)
+        {
+            foreach (int slot in slots)
+            {
+                SaveSlotManager.EnterSlot(slot);
+                SaveSlotManager.Forget();
+            }
+        }
+
+        private static Button Named(string name) =>
+            Resources.FindObjectsOfTypeAll<Button>().First(b => b.name == name && b.gameObject.scene.IsValid());
+
+        [UnityTest]
+        public IEnumerator LoadList_WithTwoOfFiveSlotsFilled()
+        {
+            SaveSlots(0, 2);
+            yield return Capture("load_list_two_saves.png", () => Named("LoadButton").onClick.Invoke());
+        }
+
+        [UnityTest]
+        public IEnumerator DeleteConfirm_OverTheLoadList()
+        {
+            SaveSlots(0, 2);
+            yield return Capture("delete_confirm.png",
+                () => Named("LoadButton").onClick.Invoke(),
+                () => Named("Slot2DeleteButton").onClick.Invoke());
         }
     }
 }
