@@ -468,7 +468,11 @@ function Get-ScopeKey {
     $seg = $Rel -split '/'
     # Assets/_Project/Scripts/<Layer>[/<Area>/...]
     $n = if ($seg.Count -gt 5 -and $seg[3] -eq 'Domain') { 5 } else { [Math]::Min(4, $seg.Count - 1) }
-    return ($seg[0..($n - 1)] -join '/')
+    $key = ($seg[0..($n - 1)] -join '/')
+    # Stats (StatBlock, StatType) feeds the damage path, so it shares the
+    # combat engine's scope: over-select rather than miss the Journey fixtures.
+    if ($key -like '*/Domain/Stats') { return ($key -replace 'Stats$', 'Combat') }
+    return $key
 }
 
 function Get-FacadeSeeds {

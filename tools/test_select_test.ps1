@@ -39,12 +39,14 @@ function Get-SelectedClasses {
 Write-Host "scope keys"
 Assert-That "a file in Domain/Combat and one in Domain/Combat/Session share a scope" `
     ((Get-ScopeKey -Rel "$scripts/Domain/Combat/CritRules.cs") -eq (Get-ScopeKey -Rel "$scripts/Domain/Combat/Session/DamagePipeline.cs"))
-Assert-That "Domain/Combat and Domain/Stats are different scopes" `
-    ((Get-ScopeKey -Rel "$scripts/Domain/Combat/CritRules.cs") -ne (Get-ScopeKey -Rel "$scripts/Domain/Stats/StatBlock.cs"))
+Assert-That "Domain/Stats shares the Domain/Combat engine scope" `
+    ((Get-ScopeKey -Rel "$scripts/Domain/Combat/CritRules.cs") -eq (Get-ScopeKey -Rel "$scripts/Domain/Stats/StatBlock.cs"))
+Assert-That "Domain/Dungeon is still its own scope" `
+    ((Get-ScopeKey -Rel "$scripts/Domain/Combat/CritRules.cs") -ne (Get-ScopeKey -Rel "$scripts/Domain/Dungeon/DifficultyCurve.cs"))
 
 Write-Host "damage path reaches the fixtures that pin seeded fight numbers"
 $journey = @("JourneyFightRoundTests", "JourneyFightRoundMouseTests")
-foreach ($p in @("Domain/Combat/Session/DamagePipeline.cs", "Domain/Combat/CritRules.cs")) {
+foreach ($p in @("Domain/Combat/Session/DamagePipeline.cs", "Domain/Combat/CritRules.cs", "Domain/Stats/StatBlock.cs")) {
     $sel = Get-SelectedClasses -Path "$scripts/$p"
     foreach ($c in $journey) { Assert-That "$p selects $c" ($sel -contains $c) }
 }
