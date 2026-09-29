@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: shear
     DisplayName: Shear
-    Description: Deal Nature damage plus 6. Costs 3 wool.
+    Description: Deal {nature} damage plus 6. Costs 3 wool.
     CharacterId: sheep
     UnlockLevel: 1
     Effect: 0

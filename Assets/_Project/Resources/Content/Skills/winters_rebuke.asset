@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: winters_rebuke
     DisplayName: Winter's Rebuke
-    Description: Deal 6 Frost damage and Chill the target (-25% speed) for 2 turns.
-      Costs 8 mana. Cooldown 2.
+    Description: Deal 6 {ice} damage and **Chill** the target (-25% speed) for 2
+      turns. Costs 8 {mana}. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

@@ -468,7 +468,7 @@ namespace PrincesPalace.PlayModeTests
 
                     Assert.IsTrue(tooltip.activeSelf, $"hovering '{id}' showed no tooltip (focus on '{EventSystem.current.currentSelectedGameObject?.name}')");
                     Assert.AreEqual(chunk[i].Data.DisplayName, title.text);
-                    StringAssert.Contains(chunk[i].Data.Description, body.text,
+                    StringAssert.Contains(DescriptionRenderer.Render(chunk[i].Data.Description), body.text,
                         $"the tooltip for '{id}' does not say what the book does");
 
                     hover.OnPointerExit(null);
@@ -509,7 +509,7 @@ namespace PrincesPalace.PlayModeTests
                     yield return null;
                     Assert.IsTrue(tooltip.activeSelf, $"focusing slot 0 holding '{book.id}' showed no tooltip");
                     Assert.AreEqual(book.Data.DisplayName, title.text);
-                    StringAssert.Contains(book.Data.Description, body.text);
+                    StringAssert.Contains(DescriptionRenderer.Render(book.Data.Description), body.text);
                 }
             }
 

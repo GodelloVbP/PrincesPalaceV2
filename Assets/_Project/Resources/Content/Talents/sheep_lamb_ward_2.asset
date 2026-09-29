@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_ward_2
     DisplayName: Thicker Fleece
-    Description: Ward shields are 80 points.
+    Description: '**Ward** shields are 80 points.'
     CharacterId: sheep
     Column: 1
     Row: 4

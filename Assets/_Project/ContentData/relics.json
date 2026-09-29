@@ -13,7 +13,7 @@
     {
       "id": "magical_shield",
       "displayName": "Magical Shield",
-      "description": "After you cast a spell, gain a 20-point ward that lasts the rest of the fight.",
+      "description": "After you cast a spell, gain a 20-point **ward** that lasts the rest of the fight.",
       "effect": "MagicalShield",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magical_shield.png"
@@ -77,7 +77,7 @@
     {
       "id": "drowned_lantern",
       "displayName": "Drowned Lantern",
-      "description": "A spell that lands Marks its target. Your next attack on a Marked target deals 50% more damage.",
+      "description": "A spell that lands **Marks** its target. Your next attack on a Marked target deals 50% more damage.",
       "rarity": "ultrarare",
       "effect": "DrownedLantern",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/drowned_lantern.png"
@@ -178,7 +178,7 @@
     {
       "id": "magic_marker",
       "displayName": "Magic Marker",
-      "description": "Your spells Mark the enemy they hit. Attacking a Marked enemy consumes the Mark and restores 20% of your missing mana (or signature resource).",
+      "description": "Your spells **Mark** the enemy they hit. Attacking a Marked enemy consumes the Mark and restores 20% of your missing mana (or signature resource).",
       "effect": "MagicMarker",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magic_marker.png"
@@ -186,7 +186,7 @@
     {
       "id": "jar_of_bear_urine",
       "displayName": "Jar of Bear Urine",
-      "description": "Marks every enemy when combat begins.",
+      "description": "**Marks** every enemy when combat begins.",
       "effect": "JarOfBearUrine",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jar_of_bear_urine.png"
@@ -194,7 +194,7 @@
     {
       "id": "world_enders_crown",
       "displayName": "World Ender's Crown",
-      "description": "When you drop below 30% HP, every enemy is Feared for 1 turn. Re-arms when you climb back above 30%.",
+      "description": "When you drop below 30% HP, every enemy is **Feared** for 1 turn. Re-arms when you climb back above 30%.",
       "effect": "WorldEndersCrown",
       "rarity": "mythic",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/world_enders_crown.png"
@@ -218,7 +218,7 @@
     {
       "id": "pointy_nail_on_the_end_of_a_stick",
       "displayName": "Pointy Nail on the End of a Stick",
-      "description": "Physical damage gains 35 flat armor penetration.",
+      "description": "{physical} damage gains 35 flat armor penetration.",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png",
       "modifiers": [
@@ -248,7 +248,7 @@
     {
       "id": "loaded_dice",
       "displayName": "Loaded Dice",
-      "description": "At the start of the fight, stun one random enemy for 1 turn.",
+      "description": "At the start of the fight, **stun** one random enemy for 1 turn.",
       "effect": "LoadedDice",
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
@@ -285,7 +285,7 @@
     {
       "id": "sparring_buckler",
       "displayName": "Sparring Buckler",
-      "description": "Any action of yours that changes a position on the field gives a 10-point ward, once per turn.",
+      "description": "Any action of yours that changes a position on the field gives a 10-point **ward**, once per turn.",
       "effect": "SparringBuckler",
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png"

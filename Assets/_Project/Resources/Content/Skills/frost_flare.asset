@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: frost_flare
     DisplayName: Frost Flare
-    Description: Deal 4 Fire and 4 Frost damage. Costs 7 mana.
+    Description: Deal 4 {fire} and 4 {ice} damage. Costs 7 {mana}.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

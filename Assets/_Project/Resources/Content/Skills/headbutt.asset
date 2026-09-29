@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: headbutt
     DisplayName: Headbutt
-    Description: Deal Nature damage plus 4 and push the target back 1 place in the
-      turn order. Costs 2 wool.
+    Description: Deal {nature} damage plus 4 and push the target back 1 place in
+      the turn order. Costs 2 wool.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 0

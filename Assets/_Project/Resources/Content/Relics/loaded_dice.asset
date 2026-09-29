@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: loaded_dice
     DisplayName: Loaded Dice
-    Description: At the start of the fight, stun one random enemy for 1 turn.
+    Description: At the start of the fight, **stun** one random enemy for 1 turn.
     Effect: 22
     SortOrder: 26
     IconPath: Assets/_Project/Art/Generated/disc_metal.png

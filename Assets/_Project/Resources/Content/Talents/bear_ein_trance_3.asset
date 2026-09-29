@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_ein_trance_3
     DisplayName: 'Battle Trance: Second Skin'
-    Description: When paying with Fury drops you below 50 Fury, gain Protect for
-      1 turn.
+    Description: When paying with Fury drops you below 50 Fury, gain **Protect**
+      for 1 turn.
     CharacterId: bear
     Column: 1
     Row: 19

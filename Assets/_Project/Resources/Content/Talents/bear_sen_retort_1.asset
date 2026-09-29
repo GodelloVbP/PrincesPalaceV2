@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_retort_1
     DisplayName: Iron Retort
-    Description: Your Physical hits deal extra damage equal to 10% of the Defense
+    Description: Your {physical} hits deal extra damage equal to 10% of the Defense
       and Magical Defense you have above base.
     CharacterId: bear
     Column: 0

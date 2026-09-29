@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: magic_marker
     DisplayName: Magic Marker
-    Description: Your spells Mark the enemy they hit. Attacking a Marked enemy consumes
-      the Mark and restores 20% of your missing mana (or signature resource).
+    Description: Your spells **Mark** the enemy they hit. Attacking a Marked enemy
+      consumes the Mark and restores 20% of your missing mana (or signature resource).
     Effect: 15
     SortOrder: 18
     IconPath: Assets/_Project/Art/Items/Relics/Processed/magic_marker.png

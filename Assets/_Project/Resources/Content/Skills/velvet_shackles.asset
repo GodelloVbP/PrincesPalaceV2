@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: velvet_shackles
     DisplayName: Velvet Shackles
-    Description: Root one enemy for 2 turns. It cannot make physical attacks or move.
-      Costs 9 mana. Cooldown 3.
+    Description: '**Root** one enemy for 2 turns. It cannot make physical attacks
+      or move. Costs 9 {mana}. {cooldown} 3.'
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 18

@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_gift_1
     DisplayName: Wool Gift
-    Description: 'Unlocks Gift: Mana. Restores 25% of an ally''s max mana. Costs
+    Description: 'Unlocks **Gift: Mana**. Restores 25% of an ally''s max mana. Costs
       2 wool.'
     CharacterId: sheep
     Column: 1

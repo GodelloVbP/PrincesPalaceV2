@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: jar_of_bear_urine
     DisplayName: Jar of Bear Urine
-    Description: Marks every enemy when combat begins.
+    Description: '**Marks** every enemy when combat begins.'
     Effect: 16
     SortOrder: 19
     IconPath: Assets/_Project/Art/Items/Relics/Processed/jar_of_bear_urine.png

@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_ward
     DisplayName: Brace
-    Description: Gain a ward worth 20% of your max HP. Cooldown 2.
+    Description: Gain a **ward** worth 20% of your max HP. {cooldown} 2.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 7

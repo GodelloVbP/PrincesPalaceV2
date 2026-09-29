@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: censer_of_embers
     DisplayName: Censer of Embers
-    Description: Apply Burn (4 damage per turn) to one enemy for 3 turns. Costs 8
-      mana. Cooldown 2.
+    Description: Apply **Burn** (4 damage per turn) to one enemy for 3 turns. Costs
+      8 {mana}. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 18

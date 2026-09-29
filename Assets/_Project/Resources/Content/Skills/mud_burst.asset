@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: mud_burst
     DisplayName: Mud Burst
-    Description: Deal 6 Earth damage and make the target Vulnerable (+25% damage
-      taken) for 1 turn. Costs 8 mana. Cooldown 2.
+    Description: Deal 6 {earth} damage and make the target **Vulnerable** (+25% damage
+      taken) for 1 turn. Costs 8 {mana}. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

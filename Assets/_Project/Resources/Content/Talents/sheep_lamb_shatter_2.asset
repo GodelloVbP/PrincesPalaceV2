@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_shatter_2
     DisplayName: Splintering
-    Description: Shatter deals 175% of your Attack per Ward instead of 100%.
+    Description: '**Shatter** deals 175% of your Attack per Ward instead of 100%.'
     CharacterId: sheep
     Column: 1
     Row: 16

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: death_knell
     DisplayName: Death Knell
-    Description: 'Deal Void damage, ignoring defense: 130% of the target''s max HP
-      at the front, 20% in the middle, none at the rear.'
+    Description: 'Deal {void} damage, ignoring defense: 130% of the target''s max
+      HP at the front, 20% in the middle, none at the rear.'
     CharacterId: bellwether
     UnlockLevel: 1
     Effect: 0

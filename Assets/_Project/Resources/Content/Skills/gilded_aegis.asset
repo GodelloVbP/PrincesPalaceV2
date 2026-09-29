@@ -16,7 +16,7 @@ MonoBehaviour:
     Id: gilded_aegis
     DisplayName: Gilded Aegis
     Description: Give one ally a shield of 18 points plus your spell attack for 2
-      turns. Costs 7 mana. Cooldown 2.
+      turns. Costs 7 {mana}. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 7

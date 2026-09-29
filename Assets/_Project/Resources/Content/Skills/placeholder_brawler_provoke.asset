@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_provoke
     DisplayName: Bellow
-    Description: 'Provoke one enemy: its next attack must target him. Cooldown 3.'
+    Description: '**Provoke** one enemy: its next attack must target him. {cooldown}
+      3.'
     CharacterId: bear
     UnlockLevel: 999
     Effect: 5

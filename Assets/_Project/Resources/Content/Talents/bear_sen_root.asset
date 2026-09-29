@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: bear_sen_root
     DisplayName: The Sentinel
-    Description: 'Gain Fury when hit: 150 times the blow''s size against max HP,
-      minimum 3, maximum 25 per hit, counted before defense. Damage soaked by your
-      shield counts. Unlocks Brace, a ward worth 20% of max HP.'
+    Description: 'Gain **Fury** when hit: 150 times the blow''s size against max
+      HP, minimum 3, maximum 25 per hit, counted before defense. Damage soaked by
+      your shield counts. Unlocks Brace, a **ward** worth 20% of max HP.'
     CharacterId: bear
     Column: 0
     Row: 0

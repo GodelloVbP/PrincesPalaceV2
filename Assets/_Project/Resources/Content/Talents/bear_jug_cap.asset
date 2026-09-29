@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: bear_jug_cap
     DisplayName: Cursed Blood
-    Description: 'Unlocks Cursed Blood (50 Fury, once per fight): for 2 turns you
-      cannot be healed. Each heal instead hits every enemy for Void damage equal
-      to the HP it would have restored.'
+    Description: 'Unlocks **Cursed Blood** (50 Fury, once per fight): for 2 turns
+      you cannot be healed. Each heal instead hits every enemy for {void} damage
+      equal to the HP it would have restored.'
     CharacterId: bear
     Column: 2
     Row: 20

@@ -16,7 +16,7 @@ MonoBehaviour:
     Id: sparring_buckler
     DisplayName: Sparring Buckler
     Description: Any action of yours that changes a position on the field gives a
-      10-point ward, once per turn.
+      10-point **ward**, once per turn.
     Effect: 25
     SortOrder: 30
     IconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png

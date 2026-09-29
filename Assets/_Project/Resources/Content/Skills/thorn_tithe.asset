@@ -15,8 +15,9 @@ MonoBehaviour:
   data:
     Id: thorn_tithe
     DisplayName: Thorn Tithe
-    Description: 'Apply Thorned to one enemy for 3 turns: 5 Nature damage at the
-      start of its turn and after each physical move. Costs 10 mana. Cooldown 3.'
+    Description: 'Apply **Thorned** to one enemy for 3 turns: 5 {nature} damage at
+      the start of its turn and after each physical move. Costs 10 {mana}. {cooldown}
+      3.'
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 18

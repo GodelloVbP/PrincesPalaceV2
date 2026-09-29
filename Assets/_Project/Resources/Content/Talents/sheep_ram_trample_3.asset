@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_trample_3
     DisplayName: Momentum
-    Description: Killing an enemy gives you an extra action, once per turn.
+    Description: Killing an enemy gives you an **extra action**, once per turn.
     CharacterId: sheep
     Column: 0
     Row: 9

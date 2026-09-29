@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: world_enders_crown
     DisplayName: World Ender's Crown
-    Description: When you drop below 30% HP, every enemy is Feared for 1 turn. Re-arms
-      when you climb back above 30%.
+    Description: When you drop below 30% HP, every enemy is **Feared** for 1 turn.
+      Re-arms when you climb back above 30%.
     Effect: 17
     SortOrder: 20
     IconPath: Assets/_Project/Art/Items/Relics/Processed/world_enders_crown.png

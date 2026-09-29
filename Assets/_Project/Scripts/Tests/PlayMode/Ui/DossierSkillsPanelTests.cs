@@ -142,7 +142,8 @@ namespace PrincesPalace.PlayModeTests
                 TextOf(Named(_dossier, "DossierSkill0Description")));
 
             Assert.AreEqual("Headbutt", TextOf(Named(_dossier, "DossierSkill1Name")));
-            Assert.AreEqual("Deal Nature damage plus 4 and push the target back 1 place in the turn order. Costs 2 wool.",
+            // The panel shows the expanded render of the authored tokens, not the raw text.
+            Assert.AreEqual(DescriptionRenderer.Render("Deal {nature} damage plus 4 and push the target back 1 place in the turn order. Costs 2 wool."),
                 TextOf(Named(_dossier, "DossierSkill1Description")));
 
             // Every row past the granted two is hidden, not blank -- a blank

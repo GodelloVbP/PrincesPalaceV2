@@ -16,7 +16,7 @@ MonoBehaviour:
     Id: bear_jug_unyield_1
     DisplayName: Unyielding
     Description: When crowd control lands on you, ignore it and gain +20% speed and
-      +25% damage for 2 turns. Cooldown 4.
+      +25% damage for 2 turns. {cooldown} 4.
     CharacterId: bear
     Column: 2
     Row: 11

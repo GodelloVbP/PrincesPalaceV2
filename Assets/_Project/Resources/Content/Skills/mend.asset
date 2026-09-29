@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: mend
     DisplayName: Mend
-    Description: Heal one ally for 20 plus your spell attack. Costs 6 mana.
+    Description: Heal one ally for 20 plus your spell attack. Costs 6 {mana}.
     CharacterId: owl
     UnlockLevel: 999
     Effect: 14

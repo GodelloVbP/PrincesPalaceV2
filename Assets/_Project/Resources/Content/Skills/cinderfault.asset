@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: cinderfault
     DisplayName: Cinderfault
-    Description: Deal 5 Fire and 5 Nature damage to all enemies. Costs 15 mana. Cooldown
-      3.
+    Description: Deal 5 {fire} and 5 {nature} damage to all enemies. Costs 15 {mana}.
+      {cooldown} 3.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 1

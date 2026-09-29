@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_root
     DisplayName: The Fragile Lamb
-    Description: Gain 2 wool when a Ward you cast is hit, once per wearer per turn.
+    Description: Gain 2 wool when a **Ward** you cast is hit, once per wearer per
+      turn.
     CharacterId: sheep
     Column: 1
     Row: 0

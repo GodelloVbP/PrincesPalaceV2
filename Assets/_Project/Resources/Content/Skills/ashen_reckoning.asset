@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: ashen_reckoning
     DisplayName: Ashen Reckoning
-    Description: Needs a Poisoned target. Remove its Poison and deal 150% of the
-      damage it had left as Poison and Fire damage, then make it Vulnerable (+20%
-      damage taken) for 1 turn. Costs 10 mana. Cooldown 2.
+    Description: Needs a **Poisoned** target. Remove its Poison and deal 150% of
+      the damage it had left as {poison} and {fire} damage, then make it **Vulnerable**
+      (+20% damage taken) for 1 turn. Costs 10 {mana}. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 15

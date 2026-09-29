@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: prism_ward
     DisplayName: Prism Ward
-    Description: Give one ally a ward of 20 points plus your spell attack. Costs
-      8 mana.
+    Description: Give one ally a **ward** of 20 points plus your spell attack. Costs
+      8 {mana}.
     CharacterId: owl
     UnlockLevel: 999
     Effect: 7

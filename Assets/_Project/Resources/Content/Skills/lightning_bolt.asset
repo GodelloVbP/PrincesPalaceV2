@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: lightning_bolt
     DisplayName: Lightning Bolt
-    Description: Deal 10 Lightning damage. Costs 11 mana.
+    Description: Deal 10 {lightning} damage. Costs 11 {mana}.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

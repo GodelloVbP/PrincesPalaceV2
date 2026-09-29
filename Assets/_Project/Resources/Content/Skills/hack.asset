@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: hack
     DisplayName: Hack
-    Description: Hit one target twice, each hit dealing damage plus 5. Cooldown 3.
+    Description: Hit one target twice, each hit dealing damage plus 5. {cooldown}
+      3.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 0

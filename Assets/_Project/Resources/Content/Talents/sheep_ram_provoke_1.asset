@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_provoke_1
     DisplayName: Provoke
-    Description: Unlocks Provoke, which forces one enemy to target you on its next
-      turn.
+    Description: Unlocks **Provoke**, which forces one enemy to target you on its
+      next turn.
     CharacterId: sheep
     Column: 0
     Row: 2

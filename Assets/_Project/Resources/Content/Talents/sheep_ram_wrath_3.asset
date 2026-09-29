@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_wrath_3
     DisplayName: No Way Back
-    Description: At or below 33% HP, Black Ram Mode's remaining turns stop counting
+    Description: At or below 33% HP, **Black Ram Mode**'s remaining turns stop counting
       down.
     CharacterId: sheep
     Column: 0

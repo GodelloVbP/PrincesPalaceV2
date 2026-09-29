@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: vipers_bite
     DisplayName: Viper's Bite
-    Description: Deal 3 Poison damage and set off all Poison already on the target,
-      then apply 3 Poison for 3 turns. Costs 7 mana. Cooldown 2.
+    Description: Deal 3 {poison} damage and set off all **Poison** already on the
+      target, then apply 3 Poison for 3 turns. Costs 7 {mana}. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0

@@ -82,7 +82,7 @@
       "displayName": "Provoke",
       "column": 0,
       "row": 2,
-      "description": "Unlocks Provoke, which forces one enemy to target you on its next turn.",
+      "description": "Unlocks **Provoke**, which forces one enemy to target you on its next turn.",
       "prerequisites": [
         "sheep_ram_root"
       ],
@@ -94,7 +94,7 @@
       "displayName": "Draw the Blow",
       "column": 0,
       "row": 5,
-      "description": "Provoked enemies deal 20% less damage to you.",
+      "description": "**Provoked** enemies deal 20% less damage to you.",
       "prerequisites": [
         "sheep_ram_provoke_1"
       ],
@@ -111,7 +111,7 @@
       "displayName": "All of You, Then",
       "column": 0,
       "row": 8,
-      "description": "Provoke hits every enemy. At turn start, gain 1 wool per provoked enemy.",
+      "description": "**Provoke** hits every enemy. At turn start, gain 1 wool per provoked enemy.",
       "prerequisites": [
         "sheep_ram_provoke_2"
       ],
@@ -166,7 +166,7 @@
       "displayName": "Momentum",
       "column": 0,
       "row": 9,
-      "description": "Killing an enemy gives you an extra action, once per turn.",
+      "description": "Killing an enemy gives you an **extra action**, once per turn.",
       "prerequisites": [
         "sheep_ram_trample_2"
       ],
@@ -183,7 +183,7 @@
       "displayName": "Black Ram Mode",
       "column": 0,
       "row": 10,
-      "description": "Unlocks Black Ram Mode: for 3 turns, +50% attack, +30% speed and temporary HP equal to 25% of max HP. Hits splash 50% of their damage onto adjacent enemies. Costs 7 wool. Cooldown 5.",
+      "description": "Unlocks **Black Ram Mode**: for 3 turns, +50% attack, +30% speed and temporary HP equal to 25% of max HP. Hits splash 50% of their damage onto adjacent enemies. Costs 7 wool. {cooldown} 5.",
       "prerequisites": [
         "sheep_ram_horns_3",
         "sheep_ram_provoke_3",
@@ -198,7 +198,7 @@
       "displayName": "Wrath",
       "column": 0,
       "row": 11,
-      "description": "Black Ram Mode lasts 4 turns instead of 3.",
+      "description": "**Black Ram Mode** lasts 4 turns instead of 3.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -215,7 +215,7 @@
       "displayName": "Fed on Blood",
       "column": 0,
       "row": 14,
-      "description": "Each kill during Black Ram Mode adds 1 turn, up to 3 extra turns.",
+      "description": "Each kill during **Black Ram Mode** adds 1 turn, up to 3 extra turns.",
       "prerequisites": [
         "sheep_ram_wrath_1"
       ],
@@ -233,7 +233,7 @@
       "displayName": "No Way Back",
       "column": 0,
       "row": 17,
-      "description": "At or below 33% HP, Black Ram Mode's remaining turns stop counting down.",
+      "description": "At or below 33% HP, **Black Ram Mode**'s remaining turns stop counting down.",
       "prerequisites": [
         "sheep_ram_wrath_2"
       ],
@@ -302,7 +302,7 @@
       "displayName": "Charge",
       "column": 0,
       "row": 13,
-      "description": "Unlocks Headbutt: a weapon attack that pushes the target back 1 place in the turn order. Costs 2 wool.",
+      "description": "Unlocks **Headbutt**: a weapon attack that pushes the target back 1 place in the turn order. Costs 2 wool.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -314,7 +314,7 @@
       "displayName": "Concussive",
       "column": 0,
       "row": 16,
-      "description": "Headbutt also cancels the target's queued action.",
+      "description": "**Headbutt** also cancels the target's queued action.",
       "prerequisites": [
         "sheep_ram_charge_1"
       ],
@@ -330,7 +330,7 @@
       "displayName": "Stampede",
       "column": 0,
       "row": 19,
-      "description": "Entering Black Ram Mode pushes every enemy back 1 place in the turn order.",
+      "description": "Entering **Black Ram Mode** pushes every enemy back 1 place in the turn order.",
       "prerequisites": [
         "sheep_ram_charge_2"
       ],
@@ -346,7 +346,7 @@
       "displayName": "What He Is Now",
       "column": 0,
       "row": 20,
-      "description": "At or below 25% HP, Black Ram Mode never ends and costs nothing to enter.",
+      "description": "At or below 25% HP, **Black Ram Mode** never ends and costs nothing to enter.",
       "prerequisites": [
         "sheep_ram_wrath_3",
         "sheep_ram_stand_3",
@@ -366,7 +366,7 @@
       "displayName": "The Fragile Lamb",
       "column": 1,
       "row": 0,
-      "description": "Gain 2 wool when a Ward you cast is hit, once per wearer per turn.",
+      "description": "Gain 2 wool when a **Ward** you cast is hit, once per wearer per turn.",
       "effects": [
         {
           "type": "WoolWhenWardedAllyHit",
@@ -380,7 +380,7 @@
       "displayName": "Fleece Ward",
       "column": 1,
       "row": 1,
-      "description": "Unlocks Ward: a 70-point shield you can put on any ally. Wards stack. Costs 2 wool. Cooldown 2.",
+      "description": "Unlocks **Ward**: a 70-point shield you can put on any ally. Wards stack. Costs 2 wool. {cooldown} 2.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -398,7 +398,7 @@
       "displayName": "Thicker Fleece",
       "column": 1,
       "row": 4,
-      "description": "Ward shields are 80 points.",
+      "description": "**Ward** shields are 80 points.",
       "prerequisites": [
         "sheep_lamb_ward_1"
       ],
@@ -415,7 +415,7 @@
       "displayName": "Second Nature",
       "column": 1,
       "row": 7,
-      "description": "Casting Ward no longer uses up your action.",
+      "description": "Casting **Ward** no longer uses up your action.",
       "prerequisites": [
         "sheep_lamb_ward_2"
       ],
@@ -431,7 +431,7 @@
       "displayName": "Mending Fleece",
       "column": 1,
       "row": 2,
-      "description": "A Ward you cast also gives its wearer Regen: heals 3% of max HP at turn start for 2 turns.",
+      "description": "A **Ward** you cast also gives its wearer **Regen**: heals 3% of max HP at turn start for 2 turns.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -449,7 +449,7 @@
       "displayName": "Deep Mending",
       "column": 1,
       "row": 5,
-      "description": "Ward's Regen heals 6% of max HP per turn for 3 turns.",
+      "description": "**Ward**'s **Regen** heals 6% of max HP per turn for 3 turns.",
       "prerequisites": [
         "sheep_lamb_mend_1"
       ],
@@ -467,7 +467,7 @@
       "displayName": "Parting Gift",
       "column": 1,
       "row": 8,
-      "description": "When a Ward you cast is fully spent, its wearer heals 10% of max HP.",
+      "description": "When a **Ward** you cast is fully spent, its wearer heals 10% of max HP.",
       "prerequisites": [
         "sheep_lamb_mend_2"
       ],
@@ -566,7 +566,7 @@
       "displayName": "The Flock",
       "column": 1,
       "row": 11,
-      "description": "A Ward you cast also lands on one other ally at 50% size.",
+      "description": "A **Ward** you cast also lands on one other ally at 50% size.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -583,7 +583,7 @@
       "displayName": "The Whole Flock",
       "column": 1,
       "row": 14,
-      "description": "A Ward you cast also lands on the whole party at 50% size.",
+      "description": "A **Ward** you cast also lands on the whole party at 50% size.",
       "prerequisites": [
         "sheep_lamb_flock_1"
       ],
@@ -603,7 +603,7 @@
       "displayName": "Nobody Left Out",
       "column": 1,
       "row": 17,
-      "description": "A Ward you cast also lands on the whole party at full size.",
+      "description": "A **Ward** you cast also lands on the whole party at full size.",
       "prerequisites": [
         "sheep_lamb_flock_2"
       ],
@@ -623,7 +623,7 @@
       "displayName": "Wool Gift",
       "column": 1,
       "row": 12,
-      "description": "Unlocks Gift: Mana. Restores 25% of an ally's max mana. Costs 2 wool.",
+      "description": "Unlocks **Gift: Mana**. Restores 25% of an ally's max mana. Costs 2 wool.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -641,7 +641,7 @@
       "displayName": "Gift of Fury",
       "column": 1,
       "row": 15,
-      "description": "Unlocks Gift: Fury. An ally's next attack deals 50% more damage. Costs 3 wool.",
+      "description": "Unlocks **Gift: Fury**. An ally's next attack deals 50% more damage. Costs 3 wool.",
       "prerequisites": [
         "sheep_lamb_gift_1"
       ],
@@ -659,7 +659,7 @@
       "displayName": "Gift of Haste",
       "column": 1,
       "row": 18,
-      "description": "Unlocks Gift: Haste. An ally moves to the front of the turn order. Costs 5 wool.",
+      "description": "Unlocks **Gift: Haste**. An ally moves to the front of the turn order. Costs 5 wool.",
       "prerequisites": [
         "sheep_lamb_gift_2"
       ],
@@ -676,7 +676,7 @@
       "displayName": "Shatter",
       "column": 1,
       "row": 13,
-      "description": "Unlocks Shatter. Every Ward you have out explodes, hitting a random enemy for 100% of your Attack. Costs 3 wool. Cooldown 3.",
+      "description": "Unlocks **Shatter**. Every Ward you have out explodes, hitting a random enemy for 100% of your Attack. Costs 3 wool. {cooldown} 3.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -694,7 +694,7 @@
       "displayName": "Splintering",
       "column": 1,
       "row": 16,
-      "description": "Shatter deals 175% of your Attack per Ward instead of 100%.",
+      "description": "**Shatter** deals 175% of your Attack per Ward instead of 100%.",
       "prerequisites": [
         "sheep_lamb_shatter_1"
       ],
@@ -731,7 +731,7 @@
       "displayName": "The Golden Fleece",
       "column": 1,
       "row": 20,
-      "description": "Wards you cast last until spent, including copies spread by The Flock. Wards placed on you by others keep their own duration.",
+      "description": "**Wards** you cast last until spent, including copies spread by The Flock. Wards placed on you by others keep their own duration.",
       "prerequisites": [
         "sheep_lamb_flock_3",
         "sheep_lamb_gift_3",
@@ -750,7 +750,7 @@
       "displayName": "The Sentinel",
       "column": 0,
       "row": 0,
-      "description": "Gain Fury when hit: 150 times the blow's size against max HP, minimum 3, maximum 25 per hit, counted before defense. Damage soaked by your shield counts. Unlocks Brace, a ward worth 20% of max HP.",
+      "description": "Gain **Fury** when hit: 150 times the blow's size against max HP, minimum 3, maximum 25 per hit, counted before defense. Damage soaked by your shield counts. Unlocks Brace, a **ward** worth 20% of max HP.",
       "effects": [
         {
           "type": "FuryEngineSentinel"
@@ -764,7 +764,7 @@
       "displayName": "Iron Retort",
       "column": 0,
       "row": 1,
-      "description": "Your Physical hits deal extra damage equal to 10% of the Defense and Magical Defense you have above base.",
+      "description": "Your {physical} hits deal extra damage equal to 10% of the Defense and Magical Defense you have above base.",
       "prerequisites": [
         "bear_sen_root"
       ],
@@ -815,7 +815,7 @@
       "displayName": "Hold the Line",
       "column": 0,
       "row": 2,
-      "description": "Unlocks Hold the Line. Costs 40 Fury. All allies gain 15 Defense and 15 Magical Defense for 2 turns.",
+      "description": "Unlocks **Hold the Line**. Costs 40 Fury. All allies gain 15 Defense and 15 Magical Defense for 2 turns.",
       "prerequisites": [
         "bear_sen_root"
       ],
@@ -867,7 +867,7 @@
       "displayName": "Bellow",
       "column": 0,
       "row": 3,
-      "description": "Unlocks Bellow. Costs no Fury. Cooldown 3. One enemy must aim its next attack at you.",
+      "description": "Unlocks **Bellow**. Costs no Fury. {cooldown} 3. One enemy must aim its next attack at you.",
       "prerequisites": [
         "bear_sen_root"
       ],
@@ -896,7 +896,7 @@
       "displayName": "Bellow: Fed by Fear",
       "column": 0,
       "row": 9,
-      "description": "Bellow gives 10 Fury for each enemy it provokes.",
+      "description": "Bellow gives 10 **Fury** for each enemy it provokes.",
       "prerequisites": [
         "bear_sen_bellow_2"
       ],
@@ -950,7 +950,7 @@
       "displayName": "Spellbreaker: Gag",
       "column": 0,
       "row": 14,
-      "description": "A spell that hits you or your shield silences its caster for 1 turn. Cooldown 3 per enemy.",
+      "description": "A spell that hits you or your shield silences its caster for 1 turn. {cooldown} 3 per enemy.",
       "prerequisites": [
         "bear_sen_spell_1"
       ],
@@ -982,7 +982,7 @@
       "displayName": "Shield Bash",
       "column": 0,
       "row": 12,
-      "description": "Unlocks Shield Bash. Spends the planted shield to deal damage plus 20, plus 30% of the damage it soaked, and Stun for 1 turn.",
+      "description": "Unlocks **Shield Bash**. Spends the planted shield to deal damage plus 20, plus 30% of the damage it soaked, and **Stun** for 1 turn.",
       "prerequisites": [
         "bear_sen_converge"
       ],
@@ -1028,7 +1028,7 @@
       "displayName": "Thornwall",
       "column": 0,
       "row": 13,
-      "description": "Melee Physical hits on you or your shield return 15% of their damage to the attacker.",
+      "description": "Melee {physical} hits on you or your shield return 15% of their damage to the attacker.",
       "prerequisites": [
         "bear_sen_converge"
       ],
@@ -1045,7 +1045,7 @@
       "displayName": "Thornwall: Barbs",
       "column": 0,
       "row": 16,
-      "description": "Thornwall also makes the attacker Chilled (-20% speed) for 1 turn.",
+      "description": "Thornwall also makes the attacker **Chilled** (-20% speed) for 1 turn.",
       "prerequisites": [
         "bear_sen_thorn_1"
       ],
@@ -1061,7 +1061,7 @@
       "displayName": "Thornwall: Splinters",
       "column": 0,
       "row": 19,
-      "description": "A Physical hit that breaks your shield gives its attacker -30% attack for 2 turns.",
+      "description": "A {physical} hit that breaks your shield gives its attacker -30% attack for 2 turns.",
       "prerequisites": [
         "bear_sen_thorn_2"
       ],
@@ -1096,7 +1096,7 @@
       "displayName": "The Einherjar",
       "column": 1,
       "row": 0,
-      "description": "Each damaging action gains Fury: 10 for a plain blow, more for a bigger one (minimum 5, maximum 30). Unlocks Hack.",
+      "description": "Each damaging action gains **Fury**: 10 for a plain blow, more for a bigger one (minimum 5, maximum 30). Unlocks **Hack**.",
       "effects": [
         {
           "type": "FuryEngineEinherjar"
@@ -1111,7 +1111,7 @@
       "displayName": "Slam: Bloodied Edge",
       "column": 1,
       "row": 1,
-      "description": "A Slam that crits restores 10 Fury.",
+      "description": "A Slam that crits restores 10 **Fury**.",
       "prerequisites": [
         "bear_ein_root"
       ],
@@ -1164,7 +1164,7 @@
       "displayName": "Bloodfire: Blood Taken",
       "column": 1,
       "row": 2,
-      "description": "Each kill restores 15 Fury.",
+      "description": "Each kill restores 15 **Fury**.",
       "prerequisites": [
         "bear_ein_root"
       ],
@@ -1280,7 +1280,7 @@
       "displayName": "Headsplitter",
       "column": 1,
       "row": 11,
-      "description": "Unlocks Headsplitter: spends all your Fury (minimum 30) for one hit that hits harder the more Fury spent and the more HP the target has lost. A kill returns half the Fury spent.",
+      "description": "Unlocks **Headsplitter**: spends all your **Fury** (minimum 30) for one hit that hits harder the more Fury spent and the more HP the target has lost. A kill returns half the Fury spent.",
       "prerequisites": [
         "bear_ein_converge"
       ],
@@ -1326,7 +1326,7 @@
       "displayName": "Berserk",
       "column": 1,
       "row": 12,
-      "description": "Unlocks Berserk: costs 50 Fury. Half your defense and magical defense becomes attack. Fury drains by 10 each turn and Berserk ends at 0 Fury. Bellow and shields are disabled.",
+      "description": "Unlocks **Berserk**: costs 50 Fury. Half your defense and magical defense becomes attack. Fury drains by 10 each turn and Berserk ends at 0 Fury. Bellow and shields are disabled.",
       "prerequisites": [
         "bear_ein_converge"
       ],
@@ -1406,7 +1406,7 @@
       "displayName": "Battle Trance: Second Skin",
       "column": 1,
       "row": 19,
-      "description": "When paying with Fury drops you below 50 Fury, gain Protect for 1 turn.",
+      "description": "When paying with Fury drops you below 50 Fury, gain **Protect** for 1 turn.",
       "prerequisites": [
         "bear_ein_trance_2"
       ],
@@ -1423,7 +1423,7 @@
       "displayName": "Twin Rampage",
       "column": 1,
       "row": 20,
-      "description": "At 100 Fury, Rampage hits twice: the normal 100-Fury sweep, then a second sweep at 1x damage that stuns every enemy hit for 1 turn. Cooldown 5.",
+      "description": "At 100 Fury, **Rampage** hits twice: the normal 100-Fury sweep, then a second sweep at 1x damage that stuns every enemy hit for 1 turn. {cooldown} 5.",
       "prerequisites": [
         "bear_ein_head_3",
         "bear_ein_bers_3",
@@ -1443,7 +1443,7 @@
       "displayName": "The Juggernaut",
       "column": 2,
       "row": 0,
-      "description": "Gain Fury at turn start: 15 at full HP, 20 at 75% HP, 35 at 50% HP, 60 at 25% HP or below. Attacking and being hit give none. Fury does not drain while idle. Unlocks Second Wind (cooldown 4).",
+      "description": "Gain **Fury** at turn start: 15 at full HP, 20 at 75% HP, 35 at 50% HP, 60 at 25% HP or below. Attacking and being hit give none. Fury does not drain while idle. Unlocks **Second Wind** (cooldown 4).",
       "effects": [
         {
           "type": "FuryEngineJuggernaut"
@@ -1569,7 +1569,7 @@
       "displayName": "Gorge",
       "column": 2,
       "row": 3,
-      "description": "Unlocks Gorge (30 Fury): hit one target for damage plus 30 and heal 30% of the damage dealt.",
+      "description": "Unlocks **Gorge** (30 Fury): hit one target for damage plus 30 and heal 30% of the damage dealt.",
       "prerequisites": [
         "bear_jug_root"
       ],
@@ -1618,7 +1618,7 @@
       "displayName": "Unbroken",
       "column": 2,
       "row": 10,
-      "description": "Unlocks Unbroken (50 Fury): for 2 turns, heal 15% of maximum HP each turn and ignore all crowd control.",
+      "description": "Unlocks **Unbroken** (50 Fury): for 2 turns, heal 15% of maximum HP each turn and ignore all crowd control.",
       "prerequisites": [
         "bear_jug_blood_3",
         "bear_jug_wrath_3",
@@ -1633,7 +1633,7 @@
       "displayName": "Unyielding",
       "column": 2,
       "row": 11,
-      "description": "When crowd control lands on you, ignore it and gain +20% speed and +25% damage for 2 turns. Cooldown 4.",
+      "description": "When crowd control lands on you, ignore it and gain +20% speed and +25% damage for 2 turns. {cooldown} 4.",
       "prerequisites": [
         "bear_jug_converge"
       ],
@@ -1789,7 +1789,7 @@
       "displayName": "Cursed Blood",
       "column": 2,
       "row": 20,
-      "description": "Unlocks Cursed Blood (50 Fury, once per fight): for 2 turns you cannot be healed. Each heal instead hits every enemy for Void damage equal to the HP it would have restored.",
+      "description": "Unlocks **Cursed Blood** (50 Fury, once per fight): for 2 turns you cannot be healed. Each heal instead hits every enemy for {void} damage equal to the HP it would have restored.",
       "prerequisites": [
         "bear_jug_unyield_3",
         "bear_jug_pain_3",

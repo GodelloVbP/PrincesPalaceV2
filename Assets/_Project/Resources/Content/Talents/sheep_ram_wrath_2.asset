@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_wrath_2
     DisplayName: Fed on Blood
-    Description: Each kill during Black Ram Mode adds 1 turn, up to 3 extra turns.
+    Description: Each kill during **Black Ram Mode** adds 1 turn, up to 3 extra turns.
     CharacterId: sheep
     Column: 0
     Row: 14
