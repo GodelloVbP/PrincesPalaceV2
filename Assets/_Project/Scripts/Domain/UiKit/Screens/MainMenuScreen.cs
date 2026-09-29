@@ -15,10 +15,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
     {
         public readonly int SlotCount;
 
-        public MainMenuInputs(int slotCount)
+        // Defaults to the shipped style so ScreenRegistry needs no say; a
+        // test passes the other one to keep it building.
+        public readonly MainMenuItemStyle ItemStyle;
+
+        public MainMenuInputs(int slotCount, MainMenuItemStyle itemStyle = MainMenuScreen.ItemStyle)
         {
             SlotCount = slotCount;
+            ItemStyle = itemStyle;
         }
+    }
+
+    // How the column's items are drawn. Both are built and audited (the
+    // screen tests run each), so neither rots while the other ships.
+    public enum MainMenuItemStyle
+    {
+        // A themed plate per item.
+        Plated,
+        // The word alone over the painting; it lights gold on hover or focus.
+        Text,
     }
 
     // The main menu, declared. Engine-free, so an EditMode test builds and
@@ -28,6 +43,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
     public sealed class MainMenuScreen
     {
         public const string BackgroundKey = "Backgrounds/Main_menu.png";
+
+        // THE ONE REVERT POINT. The owner is trialling plain text over the
+        // painting (Hades / Hollow Knight); set this to Plated to get the
+        // plate column back. MainMenuInputs takes it as its default.
+        public const MainMenuItemStyle ItemStyle = MainMenuItemStyle.Text;
+
+        // Text style. These are TINTS over the role's material face
+        // (FunctionalHeading: parchment #DDD5C4), so white is the material's
+        // own parchment and the lit tint is the wordmark's gold over it.
+        // CeremonialTitle (Cinzel) cannot serve here: its material face is
+        // already bronze, so no tint reads as parchment and idle would match
+        // lit. Quit rests dimmer than its neighbours so the way out is not
+        // the loudest word.
+        public const string TextIdleHex = "#FFFFFF";
+        public const string TextQuitIdleHex = "#B8B4AC";
+        public const string TextLitHex = "#E3C166";
+        private const string TextSublineHex = "#B9AD92";
+        private const int TextFontSize = 36;
+        private const float TextRowWidth = 460f;
+        // 36pt Cinzel measures 48.5 tall (UiTextFitAudit).
+        private const float TextCaptionHeight = 50f;
+        private const float TextRowHeight = 56f;
+        private const float TextContinueHeight = 88f;
 
         // The hold's own footprint, authored here rather than only inline in
         // Build -- SaveSlotController (Core) needs the same width to
@@ -66,6 +104,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef ContinueButton;
         public NodeRef ContinueCaption;
         public NodeRef ContinueSubline;
+
+        // Text style only: the buttons whose caption swaps from IdleHex to
+        // LitHex on hover, focus and press. ScreenRegistry wires the tint
+        // (a Selectable colour block on the caption), so the mouse and the pad
+        // light a word through the one state machine. Empty in Plated.
+        public readonly struct LitItem
+        {
+            public readonly NodeRef Button;
+            public readonly NodeRef Caption;
+            public readonly string IdleHex;
+            public readonly string LitHex;
+
+            public LitItem(NodeRef button, NodeRef caption, string idleHex, string litHex)
+            {
+                Button = button;
+                Caption = caption;
+                IdleHex = idleHex;
+                LitHex = litHex;
+            }
+        }
+
+        public readonly List<LitItem> LitItems = new List<LitItem>();
 
         public NodeRef NewRunButton;
         public NodeRef LoadButton;
@@ -186,6 +246,120 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return new SlotCardRefs(number, top, detail, gold);
         }
 
+        // The plate column: one themed plate per item.
+        private static UiNode BuildPlatedColumn(MainMenuScreen screen, float leftEdgeX)
+        {
+            // Continue is the column's first item and carries a second line
+            // under its caption. ThemedPlate, so the caption is a declared
+            // child (see ExitsScreen's hold button) sitting above the centre
+            // with the subline below it.
+            const float MenuWidth = 400f;
+            var continueSize = Ui.PlateNominalSizeFor(MenuWidth, 80f);
+            var continueButton = Ui.Button("ContinueButton", UiString.Runtime, continueSize, 24)
+                .ThemedPlate(ButtonTheme.Gold);
+            var continueCaption = Ui.Label("ContinueButtonCaption", UiStrings.ContinueSlot,
+                    new UiVec(continueSize.X - 40f, 36f), 24, place: Place.At(0f, 14f))
+                .Styled(TypographyRole.ButtonLabel);
+            var continueSubline = Ui.Label("ContinueSubline", UiStrings.ContinueSubline,
+                    new UiVec(continueSize.X - 40f, 22f), 15, "#F2DB9E", Place.At(0f, -18f))
+                .AsDecor();
+            continueButton.Children.Add(continueCaption);
+            continueButton.Children.Add(continueSubline);
+            continueButton.LayerCaptionWithVisuals(continueCaption, continueSubline);
+            screen.ContinueButton = continueButton;
+            screen.ContinueCaption = continueCaption;
+            screen.ContinueSubline = continueSubline;
+
+            // 260x60 was 4.333:1 against the FiveByOne plate's true 5:1 --
+            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            var itemSize = Ui.PlateNominalSizeFor(260f, 60f);
+            var newRun = Ui.Button("NewRunButton", UiStrings.NewRun, itemSize, 24)
+                .Themed(ButtonTheme.Gold);
+            var load = Ui.Button("LoadButton", UiStrings.Load, itemSize, 24)
+                .Themed(ButtonTheme.Gold);
+            var settings = Ui.Button("SettingsButton", UiStrings.Settings, itemSize, 24)
+                .Themed(ButtonTheme.Gold);
+            var quit = Ui.Button("ExitButton", UiStrings.Quit, itemSize, 24)
+                .Themed(ButtonTheme.Silver);
+            screen.NewRunButton = newRun;
+            screen.LoadButton = load;
+            screen.SettingsButton = settings;
+            screen.ExitButton = quit;
+
+            // Top-aligned under the title, left edge shared with it. The
+            // column's centre y is authored so its top sits at y = 190.
+            const float MenuSpacing = 20f;
+            const float MenuTop = 190f;
+            float menuHeight = continueSize.Y + itemSize.Y * 4f + MenuSpacing * 4f;
+            var menuColumn = Ui.Column("MenuButtons",
+                Place.At(leftEdgeX + MenuWidth * 0.5f, MenuTop - menuHeight * 0.5f), MenuSpacing,
+                UiAlign.Start, continueButton, newRun, load, settings, quit);
+            return menuColumn;
+        }
+
+        // The text column: no plate, no rim, no glow. Each item is a
+        // transparent full-width button (the hit area) holding a left-aligned
+        // caption; LightsLabel lights the caption on hover, focus and press.
+        // Caption typography is FunctionalHeading, whose 34-42pt band is the
+        // size wanted here and whose parchment face gives an idle colour.
+        private static UiNode BuildTextColumn(MainMenuScreen screen, float leftEdgeX)
+        {
+            const string NoRimReason =
+                "the caption itself lights gold on hover and focus (LightsLabel); a rim box around a bare word would be a second signal";
+
+            UiNode Item(string name, string captionName, UiString text, string idleHex, float height)
+            {
+                var caption = Ui.Label(captionName, text, new UiVec(TextRowWidth, TextCaptionHeight), TextFontSize, idleHex,
+                        Place.At(0f, 0f))
+                    .Styled(TypographyRole.FunctionalHeading)
+                    .TextAligned(UiTextAlign.Left)
+                    .AsDecor();
+                var button = Ui.Button(name, UiString.Runtime, new UiVec(TextRowWidth, height), 1)
+                    .NoChrome()
+                    .NoHoverBox(NoRimReason);
+                button.Children.Add(caption);
+                screen.LitItems.Add(new LitItem(button, caption, idleHex, TextLitHex));
+                return button;
+            }
+
+            var continueButton = Ui.Button("ContinueButton", UiString.Runtime,
+                    new UiVec(TextRowWidth, TextContinueHeight), 1)
+                .NoChrome()
+                .NoHoverBox(NoRimReason);
+            var continueCaption = Ui.Label("ContinueButtonCaption", UiStrings.ContinueSlot,
+                    new UiVec(TextRowWidth, TextCaptionHeight), TextFontSize, TextIdleHex, Place.At(0f, 16f))
+                .Styled(TypographyRole.FunctionalHeading)
+                .TextAligned(UiTextAlign.Left)
+                .AsDecor();
+            var continueSubline = Ui.Label("ContinueSubline", UiStrings.ContinueSubline,
+                    new UiVec(TextRowWidth, 24f), 17, TextSublineHex, Place.At(0f, -28f))
+                .TextAligned(UiTextAlign.Left)
+                .AsDecor();
+            continueButton.Children.Add(continueCaption);
+            continueButton.Children.Add(continueSubline);
+            screen.LitItems.Add(new LitItem(continueButton, continueCaption, TextIdleHex, TextLitHex));
+            screen.ContinueButton = continueButton;
+            screen.ContinueCaption = continueCaption;
+            screen.ContinueSubline = continueSubline;
+
+            var newRun = Item("NewRunButton", "NewRunButtonCaption", UiStrings.NewRun, TextIdleHex, TextRowHeight);
+            var load = Item("LoadButton", "LoadButtonCaption", UiStrings.Load, TextIdleHex, TextRowHeight);
+            var settings = Item("SettingsButton", "SettingsButtonCaption", UiStrings.Settings, TextIdleHex, TextRowHeight);
+            var quit = Item("ExitButton", "ExitButtonCaption", UiStrings.Quit, TextQuitIdleHex, TextRowHeight);
+            screen.NewRunButton = newRun;
+            screen.LoadButton = load;
+            screen.SettingsButton = settings;
+            screen.ExitButton = quit;
+
+            // Same top edge as the plated column (y = 190).
+            const float MenuSpacing = 18f;
+            const float MenuTop = 190f;
+            float menuHeight = TextContinueHeight + TextRowHeight * 4f + MenuSpacing * 4f;
+            return Ui.Column("MenuButtons",
+                Place.At(leftEdgeX + TextRowWidth * 0.5f, MenuTop - menuHeight * 0.5f), MenuSpacing,
+                UiAlign.Start, continueButton, newRun, load, settings, quit);
+        }
+
         public static MainMenuScreen Build(MainMenuInputs inputs)
         {
             var screen = new MainMenuScreen();
@@ -247,53 +421,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.TitleLabel = title;
 
             // --- the menu itself ---------------------------------------------
-            //
-            // Continue is the column's first item and carries a second line
-            // under its caption. ThemedPlate, so the caption is a declared
-            // child (see ExitsScreen's hold button) sitting above the centre
-            // with the subline below it.
-            const float MenuWidth = 400f;
-            var continueSize = Ui.PlateNominalSizeFor(MenuWidth, 80f);
-            var continueButton = Ui.Button("ContinueButton", UiString.Runtime, continueSize, 24)
-                .ThemedPlate(ButtonTheme.Gold);
-            var continueCaption = Ui.Label("ContinueButtonCaption", UiStrings.ContinueSlot,
-                    new UiVec(continueSize.X - 40f, 36f), 24, place: Place.At(0f, 14f))
-                .Styled(TypographyRole.ButtonLabel);
-            var continueSubline = Ui.Label("ContinueSubline", UiStrings.ContinueSubline,
-                    new UiVec(continueSize.X - 40f, 22f), 15, "#F2DB9E", Place.At(0f, -18f))
-                .AsDecor();
-            continueButton.Children.Add(continueCaption);
-            continueButton.Children.Add(continueSubline);
-            continueButton.LayerCaptionWithVisuals(continueCaption, continueSubline);
-            screen.ContinueButton = continueButton;
-            screen.ContinueCaption = continueCaption;
-            screen.ContinueSubline = continueSubline;
-
-            // 260x60 was 4.333:1 against the FiveByOne plate's true 5:1 --
-            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
-            var itemSize = Ui.PlateNominalSizeFor(260f, 60f);
-            var newRun = Ui.Button("NewRunButton", UiStrings.NewRun, itemSize, 24)
-                .Themed(ButtonTheme.Gold);
-            var load = Ui.Button("LoadButton", UiStrings.Load, itemSize, 24)
-                .Themed(ButtonTheme.Gold);
-            var settings = Ui.Button("SettingsButton", UiStrings.Settings, itemSize, 24)
-                .Themed(ButtonTheme.Gold);
-            var quit = Ui.Button("ExitButton", UiStrings.Quit, itemSize, 24)
-                .Themed(ButtonTheme.Silver);
-            screen.NewRunButton = newRun;
-            screen.LoadButton = load;
-            screen.SettingsButton = settings;
-            screen.ExitButton = quit;
-
-            // Top-aligned under the title, left edge shared with it. The
-            // column's centre y is authored so its top sits at y = 190.
-            const float MenuSpacing = 20f;
-            const float MenuTop = 190f;
-            float menuHeight = continueSize.Y + itemSize.Y * 4f + MenuSpacing * 4f;
-            var menuColumn = Ui.Column("MenuButtons",
-                Place.At(LeftEdgeX + MenuWidth * 0.5f, MenuTop - menuHeight * 0.5f), MenuSpacing,
-                UiAlign.Start, continueButton, newRun, load, settings, quit);
-            screen.MenuColumn = menuColumn;
+            screen.MenuColumn = inputs.ItemStyle == MainMenuItemStyle.Text
+                ? BuildTextColumn(screen, LeftEdgeX)
+                : BuildPlatedColumn(screen, LeftEdgeX);
 
             // --- save slots ---------------------------------------------------
             var slotChildren = new List<UiNode>
@@ -465,7 +595,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.ResetConfirmPanel = confirmModal;
 
             screen.Root = Ui.Panel("MainMenuPanel", UiSize.Fill,
-                sceneLayer, leftScrim, title, menuColumn,
+                sceneLayer, leftScrim, title, screen.MenuColumn.Node,
                 saveSlotModal, settingsModal, confirmModal);
 
             return screen;

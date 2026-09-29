@@ -480,6 +480,7 @@ public static class ScreenRegistry
                 // MainMenuController.RefreshContinue with GetComponentInParent
                 // at runtime rather than a delegate wired here.
                 DressAmbience(result, screen);
+                LightTextItems(result, screen);
             },
 
             // NO CountBindings. Both that stood here -- slotButtons and
@@ -489,6 +490,44 @@ public static class ScreenRegistry
             // matter and are still written by hand above; nothing indexes
             // them against a separate number.
         };
+    }
+
+    // Text-style items (MainMenuItemStyle.Text): the button's own colour
+    // transition tints the caption, so hover, pad selection and press come
+    // from one state machine and cannot disagree. The caption's own colour
+    // goes to white and the block carries idle/lit, because the tint
+    // multiplies the graphic's colour and a multiply cannot turn parchment
+    // into gold. Nothing to do in the Plated style (LitItems is empty).
+    private static void LightTextItems(UiEmitResult result, MainMenuScreen screen)
+    {
+        foreach (var item in screen.LitItems)
+        {
+            var caption = result.Tmp(item.Caption);
+            var idle = SceneBuilder.ParseHex(item.IdleHex, Color.white);
+            var lit = SceneBuilder.ParseHex(item.LitHex, Color.white);
+
+            caption.color = Color.white;
+
+            // The role's caps are baked into the text at build time, so
+            // Continue's runtime string would come back mixed-case beside
+            // its capitalised neighbours. The style renders caps whatever
+            // string is assigned and leaves .text as authored.
+            caption.fontStyle |= FontStyles.UpperCase;
+
+            var button = result.Button(item.Button);
+            button.targetGraphic = caption;
+            button.transition = Selectable.Transition.ColorTint;
+            button.colors = new ColorBlock
+            {
+                normalColor = idle,
+                highlightedColor = lit,
+                selectedColor = lit,
+                pressedColor = Color.Lerp(lit, Color.black, 0.25f),
+                disabledColor = Color.Lerp(idle, Color.black, 0.5f),
+                colorMultiplier = 1f,
+                fadeDuration = 0.1f,
+            };
+        }
     }
 
     // Engine dressing: the animator components whose types Domain cannot name.

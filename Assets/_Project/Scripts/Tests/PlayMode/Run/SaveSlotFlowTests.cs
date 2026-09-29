@@ -404,7 +404,7 @@ namespace PrincesPalace.PlayModeTests
 
             var continueGo = Named("ContinueButton");
             Assert.IsTrue(continueGo.activeSelf);
-            Assert.AreEqual("Continue - Slot 3", continueGo.GetComponentInChildren<TMP_Text>(true).text);
+            Assert.AreEqual("Continue - Slot 3", Named("ContinueButtonCaption").GetComponent<TMP_Text>().text);
         }
 
         [UnityTest]

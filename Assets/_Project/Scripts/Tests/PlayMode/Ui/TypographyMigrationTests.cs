@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -30,6 +31,16 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return SharedScene.Ensure("MainMenu");
         }
+
+        // The column item this fixture inspects, whichever style ships
+        // (MainMenuScreen.ItemStyle). Plated: a themed button's generated
+        // label in ButtonLabel at 24. Text: the declared caption in
+        // FunctionalHeading at 36, inside that role's 34-42 band.
+        private static bool TextItems => MainMenuScreen.ItemStyle == MainMenuItemStyle.Text;
+        private static string ItemLabelName => TextItems ? "NewRunButtonCaption" : "NewRunButtonLabel";
+        private static TypographyRole ItemRole => TextItems ? TypographyRole.FunctionalHeading : TypographyRole.ButtonLabel;
+        private static float ItemFontSize => TextItems ? 36f : 24f;
+        private static float ItemFontSizeMin => TextItems ? 34f : 24f;
 
         private static TMP_Text FindText(string name) =>
             Resources.FindObjectsOfTypeAll<TMP_Text>()
@@ -68,10 +79,10 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadMainMenu();
 
-            var spec = Typography.Specs[TypographyRole.ButtonLabel];
-            var play = FindText("NewRunButtonLabel");
+            var spec = Typography.Specs[ItemRole];
+            var play = FindText(ItemLabelName);
 
-            Assert.IsNotNull(play, "NewRunButton is Themed(), so it should carry a NewRunButtonLabel child");
+            Assert.IsNotNull(play, "NewRunButton should carry its " + ItemLabelName + " child");
             Assert.AreEqual(spec.FontAssetName, play.font.name);
             Assert.AreEqual(spec.MaterialName, play.fontSharedMaterial.name);
             Assert.AreEqual(UiStrings.NewRun.Format().ToUpperInvariant(), play.text);
@@ -88,12 +99,12 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadMainMenu();
 
-            var play = FindText("NewRunButtonLabel");
+            var play = FindText(ItemLabelName);
 
-            Assert.IsNotNull(play, "NewRunButton is Themed(), so it should carry a NewRunButtonLabel child");
-            Assert.AreEqual(24f, play.fontSizeMax,
-                "NewRunButton was authored with FontSize 24 - the explicit literal wins over ButtonLabel's own max");
-            Assert.AreEqual(24f, play.fontSizeMin,
+            Assert.IsNotNull(play, "NewRunButton should carry its " + ItemLabelName + " child");
+            Assert.AreEqual(ItemFontSize, play.fontSizeMax,
+                "NewRunButton's item literal wins over the role's own max");
+            Assert.AreEqual(ItemFontSizeMin, play.fontSizeMin,
                 "an explicit literal below the role's band pins fontSizeMin to it too, so fontSizeMin never " +
                 "exceeds fontSizeMax; auto-sizing can still shrink further if the text does not fit");
         }

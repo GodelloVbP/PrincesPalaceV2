@@ -24,13 +24,17 @@ namespace PrincesPalace.Domain.Tests
         private static UiNode Tree(int slotCount = RealSlotCount) =>
             MainMenuScreen.Build(new MainMenuInputs(slotCount)).Root;
 
-        [Test]
-        public void TheMenuAuditsCleanAtEveryFrame()
+        // Both item styles, so the one not shipping cannot rot
+        // (MainMenuScreen.ItemStyle is the switch between them).
+        [TestCase(MainMenuItemStyle.Plated)]
+        [TestCase(MainMenuItemStyle.Text)]
+        public void TheMenuAuditsCleanAtEveryFrame(MainMenuItemStyle style)
         {
-            var errors = UiAudit.RunAllFrames(Tree());
+            var errors = UiAudit.RunAllFrames(
+                MainMenuScreen.Build(new MainMenuInputs(RealSlotCount, style)).Root);
 
             Assert.IsEmpty(errors,
-                "first 5 of " + errors.Count + ": " +
+                $"{style}, first 5 of " + errors.Count + ": " +
                 string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
         }
 
@@ -49,6 +53,41 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsEmpty(errors,
                 $"at {slotCount} slots, first 5 of {errors.Count}: " +
                 string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
+        }
+
+        // Text style: an item lights from parchment to the title gold on
+        // hover, focus and press alike. Literals, not the constants under test.
+        [Test]
+        public void ATextItemLightsFromIdleToTheTitleGold()
+        {
+            var screen = MainMenuScreen.Build(new MainMenuInputs(RealSlotCount, MainMenuItemStyle.Text));
+
+            CollectionAssert.AreEquivalent(
+                new[] { "ContinueButton", "NewRunButton", "LoadButton", "SettingsButton", "ExitButton" },
+                screen.LitItems.Select(i => i.Button.Node.Name).ToArray());
+
+            foreach (var item in screen.LitItems)
+            {
+                string name = item.Button.Node.Name;
+                Assert.AreEqual("#E3C166", item.LitHex, name);
+                Assert.AreNotEqual(item.LitHex, item.IdleHex, name + " idle must differ from lit");
+                Assert.AreEqual(item.IdleHex, item.Caption.Node.ColorHex, name + " caption is authored in its idle colour");
+                Assert.IsTrue(item.Button.Node.Chromeless, name + " wears no plate");
+                Assert.IsNull(Find(item.Button.Node, "HoverRim"), name + " draws no rim box");
+                Assert.AreEqual(460f, item.Button.Node.Size.X, 0.01f, name + " hit area is the whole row");
+            }
+
+            Assert.AreEqual("#FFFFFF", screen.LitItems.First(i => i.Button.Node.Name == "NewRunButton").IdleHex);
+            Assert.AreEqual("#B8B4AC", screen.LitItems.First(i => i.Button.Node.Name == "ExitButton").IdleHex,
+                "Quit rests dimmer");
+        }
+
+        [Test]
+        public void PlatedStyleLightsNothing()
+        {
+            var screen = MainMenuScreen.Build(new MainMenuInputs(RealSlotCount, MainMenuItemStyle.Plated));
+
+            Assert.IsEmpty(screen.LitItems);
         }
 
         [Test]

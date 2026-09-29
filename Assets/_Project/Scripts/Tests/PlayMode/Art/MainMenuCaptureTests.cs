@@ -104,6 +104,19 @@ namespace PrincesPalace.PlayModeTests
             yield return Capture("main_menu_with_save.png");
         }
 
+        // A non-first item lit, to see the lit colour against an idle column.
+        [UnityTest]
+        public IEnumerator MainMenu_WithASave_LoadSelected()
+        {
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            SaveSlotManager.SaveCurrent();
+            SaveSlotManager.Forget();
+
+            yield return Capture("main_menu_load_selected.png", afterLoad: () =>
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(Named("LoadButton").gameObject));
+        }
+
         private static void SaveSlots(params int[] slots)
         {
             foreach (int slot in slots)
