@@ -75,6 +75,9 @@ namespace PrincesPalace.Domain.Tests
             // Bjorn. A brawler's damage is all body.
             { "placeholder_brawler_slam", true },
             { "rampage", true },
+            { "hack", true },
+            { "headsplitter", true },
+            { "berserk", false },
             { "placeholder_brawler_provoke", false },
             { "placeholder_brawler_ward", false },
             { "bear_bulwark", false },

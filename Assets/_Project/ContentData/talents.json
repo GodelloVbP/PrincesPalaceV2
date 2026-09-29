@@ -757,6 +757,349 @@
           "magnitude": 40
         }
       ]
+    },
+    {
+      "id": "bear_ein_root",
+      "characterId": "bear",
+      "displayName": "The Einherjar",
+      "column": 1,
+      "row": 0,
+      "description": "Each damaging action pays Fury by how hard it hit against his Attack: 10 for a plain blow, more for a bigger one, at least 5 and at most 30, once per action (a sweep pays for its largest hit). No Fury for swinging otherwise, none for being hit. Unlocks Hack: two cuts at one target, no Fury cost, 3-turn cooldown, and each cut pays separately. Free, but only one path's root talent can be active at a time; respec to change it.",
+      "effects": [
+        {
+          "type": "FuryEngineEinherjar"
+        }
+      ],
+      "grantsSkillId": "hack"
+    },
+    {
+      "id": "bear_ein_slam_1",
+      "characterId": "bear",
+      "displayName": "Slam: Bloodied Edge",
+      "column": 1,
+      "row": 1,
+      "description": "A Slam that crits restores 10 Fury.",
+      "prerequisites": [
+        "bear_ein_root"
+      ],
+      "effects": [
+        {
+          "type": "SlamCritRestoresFury",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_slam_2",
+      "characterId": "bear",
+      "displayName": "Slam: Fury's Edge",
+      "column": 1,
+      "row": 4,
+      "description": "A Slam that fires a Fury tier (50 Fury or more) gets +15% crit chance.",
+      "prerequisites": [
+        "bear_ein_slam_1"
+      ],
+      "effects": [
+        {
+          "type": "SlamCritChanceAtFury",
+          "magnitude": 15
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_slam_3",
+      "characterId": "bear",
+      "displayName": "Slam: Through the Plate",
+      "column": 1,
+      "row": 7,
+      "description": "A Slam at 100 Fury ignores 30% of the target's defense.",
+      "prerequisites": [
+        "bear_ein_slam_2"
+      ],
+      "effects": [
+        {
+          "type": "SlamIgnoresDefenseAtFullFury",
+          "magnitude": 30
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_fire_1",
+      "characterId": "bear",
+      "displayName": "Bloodfire: Blood Taken",
+      "column": 1,
+      "row": 2,
+      "description": "A kill refunds 15 Fury.",
+      "prerequisites": [
+        "bear_ein_root"
+      ],
+      "effects": [
+        {
+          "type": "FuryOnKill",
+          "magnitude": 15
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_fire_2",
+      "characterId": "bear",
+      "displayName": "Bloodfire: Banked Heat",
+      "column": 1,
+      "row": 5,
+      "description": "His first idle turn of each fight does not drain Fury.",
+      "prerequisites": [
+        "bear_ein_fire_1"
+      ],
+      "effects": [
+        {
+          "type": "FirstIdleTurnFree"
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_fire_3",
+      "characterId": "bear",
+      "displayName": "Bloodfire: Red Crest",
+      "column": 1,
+      "row": 8,
+      "description": "Crits pay 50% more Fury on top of the engine.",
+      "prerequisites": [
+        "bear_ein_fire_2"
+      ],
+      "effects": [
+        {
+          "type": "CritFuryBonusPercent",
+          "magnitude": 50
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_mom_1",
+      "characterId": "bear",
+      "displayName": "Momentum: Rolling",
+      "column": 1,
+      "row": 3,
+      "description": "Each consecutive turn he deals damage adds a stack: +5% crit chance per stack, up to 5. A turn without dealing damage resets it; a hit taken removes one stack.",
+      "prerequisites": [
+        "bear_ein_root"
+      ],
+      "effects": [
+        {
+          "type": "MomentumTier",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_mom_2",
+      "characterId": "bear",
+      "displayName": "Momentum: Building",
+      "column": 1,
+      "row": 6,
+      "description": "Stacks also add +5% crit damage each, and the cap rises to 8.",
+      "prerequisites": [
+        "bear_ein_mom_1"
+      ],
+      "effects": [
+        {
+          "type": "MomentumTier",
+          "magnitude": 2
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_mom_3",
+      "characterId": "bear",
+      "displayName": "Momentum: Unbroken Line",
+      "column": 1,
+      "row": 9,
+      "description": "Hits under 10% of his max health no longer remove a stack.",
+      "prerequisites": [
+        "bear_ein_mom_2"
+      ],
+      "effects": [
+        {
+          "type": "MomentumTier",
+          "magnitude": 3
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_converge",
+      "characterId": "bear",
+      "displayName": "Rampage",
+      "column": 1,
+      "row": 10,
+      "description": "Unlocks Rampage: 70% of a Slam against every enemy. Under 50 Fury it is a normal sweep; at 50 or more it spends half his Fury for double damage; at 100 it spends it all for quadruple. Free, gated at 9 embers spent in this path.",
+      "prerequisites": [
+        "bear_ein_slam_3",
+        "bear_ein_fire_3",
+        "bear_ein_mom_3"
+      ],
+      "minSpent": 9,
+      "grantsSkillId": "rampage"
+    },
+    {
+      "id": "bear_ein_head_1",
+      "characterId": "bear",
+      "displayName": "Headsplitter",
+      "column": 1,
+      "row": 11,
+      "description": "Unlocks Headsplitter: needs 30 Fury and spends all of it. Damage grows with the Fury spent and with how hurt the target is. A kill returns half the Fury spent.",
+      "prerequisites": [
+        "bear_ein_converge"
+      ],
+      "grantsSkillId": "headsplitter"
+    },
+    {
+      "id": "bear_ein_head_2",
+      "characterId": "bear",
+      "displayName": "Headsplitter: Nose for Weakness",
+      "column": 1,
+      "row": 14,
+      "description": "+25% crit chance against targets at or below 30% health.",
+      "prerequisites": [
+        "bear_ein_head_1"
+      ],
+      "effects": [
+        {
+          "type": "CritChanceBelowTargetHealth",
+          "magnitude": 25,
+          "threshold": 30
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_head_3",
+      "characterId": "bear",
+      "displayName": "Headsplitter: Fed by the Kill",
+      "column": 1,
+      "row": 17,
+      "description": "A Headsplitter kill fills Momentum to its maximum.",
+      "prerequisites": [
+        "bear_ein_head_2"
+      ],
+      "effects": [
+        {
+          "type": "KillFillsMomentum"
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_bers_1",
+      "characterId": "bear",
+      "displayName": "Berserk",
+      "column": 1,
+      "row": 12,
+      "description": "Unlocks Berserk: 50 Fury to enter. Half of his defense and magical defense becomes attack. Fury no longer decays when idle but drains 10 each turn, and the form ends at 0 Fury. No Bellow, Hold the Line or shields while it lasts.",
+      "prerequisites": [
+        "bear_ein_converge"
+      ],
+      "grantsSkillId": "berserk"
+    },
+    {
+      "id": "bear_ein_bers_2",
+      "characterId": "bear",
+      "displayName": "Berserk: Open Veins",
+      "column": 1,
+      "row": 15,
+      "description": "+10% crit chance while in Berserk.",
+      "prerequisites": [
+        "bear_ein_bers_1"
+      ],
+      "effects": [
+        {
+          "type": "CritChanceWhileTransformed",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_bers_3",
+      "characterId": "bear",
+      "displayName": "Berserk: Feeding Frenzy",
+      "column": 1,
+      "row": 18,
+      "description": "Each kill while in Berserk adds 20 Fury.",
+      "prerequisites": [
+        "bear_ein_bers_2"
+      ],
+      "effects": [
+        {
+          "type": "FuryOnKillWhileTransformed",
+          "magnitude": 20
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_trance_1",
+      "characterId": "bear",
+      "displayName": "Battle Trance",
+      "column": 1,
+      "row": 13,
+      "description": "At 50 Fury or more, 20% of each hit he takes is paid with Fury instead of health: 1 Fury per 1% of his max health.",
+      "prerequisites": [
+        "bear_ein_converge"
+      ],
+      "effects": [
+        {
+          "type": "BattleTranceTier",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_trance_2",
+      "characterId": "bear",
+      "displayName": "Battle Trance: Deeper",
+      "column": 1,
+      "row": 16,
+      "description": "The share rises to 30%, and doubles while in Berserk.",
+      "prerequisites": [
+        "bear_ein_trance_1"
+      ],
+      "effects": [
+        {
+          "type": "BattleTranceTier",
+          "magnitude": 2
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_trance_3",
+      "characterId": "bear",
+      "displayName": "Battle Trance: Second Skin",
+      "column": 1,
+      "row": 19,
+      "description": "When soaking drops his Fury below 50, he gains Protect for 1 turn.",
+      "prerequisites": [
+        "bear_ein_trance_2"
+      ],
+      "effects": [
+        {
+          "type": "BattleTranceTier",
+          "magnitude": 3
+        }
+      ]
+    },
+    {
+      "id": "bear_ein_cap",
+      "characterId": "bear",
+      "displayName": "Twin Rampage",
+      "column": 1,
+      "row": 20,
+      "description": "Rampage at 100 Fury, when it is off cooldown, sweeps twice: the first is the normal 100-Fury sweep, the second lands at 1x and stuns every enemy it hits for 1 turn. The first sweep's Fury does not refill the bar before the second. 5-turn cooldown on the empowered version. Free, gated at 20 embers spent in this path.",
+      "prerequisites": [
+        "bear_ein_head_3",
+        "bear_ein_bers_3",
+        "bear_ein_trance_3"
+      ],
+      "minSpent": 20,
+      "effects": [
+        {
+          "type": "TwinRampage"
+        }
+      ]
     }
   ]
 }

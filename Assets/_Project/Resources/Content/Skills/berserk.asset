@@ -10,18 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: prism_ward
+  m_Name: berserk
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
   data:
-    Id: prism_ward
-    DisplayName: Prism Ward
-    Description: Light bent into a shell around somebody else. A 20-point shield
-      plus her spell attack, and one turn to spend it.
-    CharacterId: owl
+    Id: berserk
+    DisplayName: Berserk
+    Description: He stops guarding anything. Costs 50 Fury. Half his defense turns
+      into attack, and the Fury drains by ten each turn; when it is gone, so is the
+      rage. No Bellow, no shields while it lasts.
+    CharacterId: bear
     UnlockLevel: 999
-    Effect: 7
-    Targeting: 4
-    ManaCost: 8
+    Effect: 6
+    Targeting: 2
+    ManaCost: 50
     ResourceCost: 0
     SpendsAllResource: 0
     ResourceSpendCap: 0
@@ -34,7 +35,7 @@ MonoBehaviour:
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
     Power: 0
-    FlatAmount: 20
+    FlatAmount: 0
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:
@@ -57,7 +58,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 54
+    SortOrder: 49
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -69,10 +70,10 @@ MonoBehaviour:
       wisdom: 0
       intelligence: 0
       charisma: 0
-    ScalingAxis: 2
+    ScalingAxis: 0
     QueuePushSlots: 0
     Transform:
-      displayName: 
+      displayName: Berserk
       turns: 0
       attackPercent: 0
       speedPercent: 0
@@ -102,16 +103,18 @@ MonoBehaviour:
           hitCueSeconds: 0
         shake: 0
         hitStopSeconds: 0
-      defenseToAttackPercent: 0
-      primaryDrainPerTurn: 0
-      forbidsEffects: []
+      defenseToAttackPercent: 50
+      primaryDrainPerTurn: 10
+      forbidsEffects:
+      - Provoke
+      - Ward
     CooldownTurns: 0
     PlayerSelectable: 1
-    Shake: 0
+    Shake: 0.6
     Approach: 0
-    Stance: 
+    Stance: victory
     ApproachStance: 
-    WindupStance: 
+    WindupStance: victory
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 

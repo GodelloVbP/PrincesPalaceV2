@@ -120,12 +120,12 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 10
-      Reward: 11
-      Amount: 0
+      Reward: 8
+      Amount: 5
       AgainstType: 0
-      HasAgainst: 0
-      SkillId: rampage
-      SkillDisplayName: Rampage
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
       ResourceType: 0
       HasResource: 0

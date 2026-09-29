@@ -48,7 +48,7 @@
     },
     {
       "characterId": "bear",
-      "_comment": "BJORN, THE FURY CURVE -- PLAN_PROGRESSION_V2.md section 4's second column. The four Fury nodes are the whole of his progression's shape and section 5 states what each one changes: 20 per attack at 5 reaches the x2 tier in 3 attacks instead of 4; opening at 25 at 15 makes it 2; 25 per attack at 19 makes it 1; opening at 50 at 26 makes the x2 Slam the opening move of every fight. FuryGainOnAttack and FuryStartOfFight are SET, not summed -- the table says '15 to 20' then '20 to 25', which are two totals -- so the higher collected value wins rather than the two adding. NO SIGNATURE REWARD ANYWHERE: he has no signatureId, and rule 3 refuses one. No MaxMana or ManaRegen either -- fury's capacityRule is Fixed and it is not restoredByManaEffects, so both would resolve clean and pay nothing (AUDIT #145). Slam's two +5 flat nodes at 12 and 24 replace revision 1's third gain bump, which phase 1 found dead at the breakpoints: base 27 to 32 to 37, felt on every slam and multiplied by whichever tier fired.",
+      "_comment": "BJORN, THE FURY CURVE -- PLAN_PROGRESSION_V2.md section 4's second column. The four Fury nodes are the whole of his progression's shape and section 5 states what each one changes: 20 per attack at 5 reaches the x2 tier in 3 attacks instead of 4; opening at 25 at 15 makes it 2; 25 per attack at 19 makes it 1; opening at 50 at 26 makes the x2 Slam the opening move of every fight. FuryGainOnAttack and FuryStartOfFight are SET, not summed -- the table says '15 to 20' then '20 to 25', which are two totals -- so the higher collected value wins rather than the two adding. NO SIGNATURE REWARD ANYWHERE: he has no signatureId, and rule 3 refuses one. No MaxMana or ManaRegen either -- fury's capacityRule is Fixed and it is not restoredByManaEffects, so both would resolve clean and pay nothing (AUDIT #145). Slam's two +5 flat nodes at 12 and 24 replace revision 1's third gain bump, which phase 1 found dead at the breakpoints: base 27 to 32 to 37, felt on every slam and multiplied by whichever tier fired. Level 10 is a plain +5% Physical damage node: Rampage moved out of the reward track and into the Einherjar convergence (talents.json bear_ein_converge), so a Bjorn who never walks that path does not carry it.",
       "levels": [
         { "level": 2,  "reward": "MaxHealth", "amount": 50 },
         { "level": 3,  "reward": "UnlockSkill", "skillId": "placeholder_brawler_provoke" },
@@ -58,7 +58,7 @@
         { "level": 7,  "reward": "ElementalDamagePercent", "amount": 5, "against": "Physical" },
         { "level": 8,  "reward": "Respec" },
         { "level": 9,  "reward": "StatPoint", "amount": 4 },
-        { "level": 10, "reward": "UnlockSkill", "skillId": "rampage" },
+        { "level": 10, "reward": "ElementalDamagePercent", "amount": 5, "against": "Physical" },
         { "level": 11, "reward": "StatPoint", "amount": 4 },
         { "level": 12, "reward": "SkillFlatDelta", "amount": 5, "skillId": "placeholder_brawler_slam" },
         { "level": 13, "reward": "StatPoint", "amount": 4 },

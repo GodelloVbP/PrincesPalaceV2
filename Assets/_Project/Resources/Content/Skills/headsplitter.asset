@@ -10,31 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: prism_ward
+  m_Name: headsplitter
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
   data:
-    Id: prism_ward
-    DisplayName: Prism Ward
-    Description: Light bent into a shell around somebody else. A 20-point shield
-      plus her spell attack, and one turn to spend it.
-    CharacterId: owl
+    Id: headsplitter
+    DisplayName: Headsplitter
+    Description: Everything he has left, brought down on one skull. Needs 30 Fury
+      and spends all of it; the more Fury and the more hurt the target, the harder
+      it lands. A kill gives half the Fury back.
+    CharacterId: bear
     UnlockLevel: 999
-    Effect: 7
-    Targeting: 4
-    ManaCost: 8
+    Effect: 0
+    Targeting: 0
+    ManaCost: 30
     ResourceCost: 0
     SpendsAllResource: 0
     ResourceSpendCap: 0
-    SpendsAllPrimary: 0
+    SpendsAllPrimary: 1
     PercentOfMaxHealthPerPoint: 0
     HitCount: 1
-    DamagePerMissingHealthPercent: 0
-    RefundsSpentOnKillPercent: 0
+    DamagePerMissingHealthPercent: 100
+    RefundsSpentOnKillPercent: 50
     FreeAction: 0
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
-    Power: 0
-    FlatAmount: 20
+    Power: 1
+    FlatAmount: 0
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:
@@ -57,7 +58,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 54
+    SortOrder: 48
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -69,7 +70,7 @@ MonoBehaviour:
       wisdom: 0
       intelligence: 0
       charisma: 0
-    ScalingAxis: 2
+    ScalingAxis: 0
     QueuePushSlots: 0
     Transform:
       displayName: 
@@ -108,10 +109,10 @@ MonoBehaviour:
     CooldownTurns: 0
     PlayerSelectable: 1
     Shake: 0
-    Approach: 0
-    Stance: 
-    ApproachStance: 
-    WindupStance: 
+    Approach: 2
+    Stance: slam
+    ApproachStance: rush
+    WindupStance: overhead
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 
@@ -129,9 +130,9 @@ MonoBehaviour:
     DetonationPercent: 0
     DetonationSplit: 
     Reach:
-      Kind: 0
-      RankMask: 0
-    PhysicalMove: 0
+      Kind: 1
+      RankMask: 1
+    PhysicalMove: 1
     BookOnly: 0
     BookTier: 0
     Elements: []
