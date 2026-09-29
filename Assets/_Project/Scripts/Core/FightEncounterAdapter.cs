@@ -206,6 +206,14 @@ namespace PrincesPalace
 
             state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
 
+            // Crit bonuses ride the effective stats, so an item's or talent's
+            // critChance / critDamage counts, plus a relic's flat bonus; an
+            // unauthored block is the CritRules baseline.
+            state.CritChancePercent = CritRules.PartyChancePercent(stats,
+                RelicModifiers.Apply(0, RelicStat.CritChance, modifiers));
+            state.CritDamagePercent = CritRules.PartyDamagePercent(stats,
+                RelicModifiers.Apply(0, RelicStat.CritDamage, modifiers));
+
             // Balance pass 2: Jo-Sun's Book of Anatomy and Vampire Dentures,
             // the same "flat stat set once at kit-build time from a
             // RelicModifier" shape ArmorPenetration just above already uses.
@@ -330,6 +338,14 @@ namespace PrincesPalace
                 RelicModifiers.Apply(AbilityDerivation.BaseSpeed(stats, scores), RelicStat.Speed, modifiers));
 
             state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
+
+            // Crit bonuses ride the effective stats, so an item's or talent's
+            // critChance / critDamage counts, plus a relic's flat bonus; an
+            // unauthored block is the CritRules baseline.
+            state.CritChancePercent = CritRules.PartyChancePercent(stats,
+                RelicModifiers.Apply(0, RelicStat.CritChance, modifiers));
+            state.CritDamagePercent = CritRules.PartyDamagePercent(stats,
+                RelicModifiers.Apply(0, RelicStat.CritDamage, modifiers));
 
             // Balance pass 2 -- same reasoning as the save-backed overload
             // above.
@@ -581,7 +597,8 @@ namespace PrincesPalace
             // The basic attack, always in the mix unless authored out.
             if (source.AttackWeight > 0f)
             {
-                pool.Add(EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, source.AttackWeight));
+                pool.Add(EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, source.AttackWeight,
+                    crits: source.AttackCrits));
             }
 
             foreach (var reference in source.Abilities)
@@ -595,14 +612,14 @@ namespace PrincesPalace
                     continue;
                 }
 
-                pool.Add(EnemyAbility.Of(Resolve(skill), reference.Weight));
+                pool.Add(EnemyAbility.Of(Resolve(skill), reference.Weight, reference.Crits));
             }
 
             // Every entry dropped or weighted out leaves nothing to draw, and a
             // monster that cannot act is worse than one that only swings.
             if (pool.Count == 0)
             {
-                pool.Add(EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f));
+                pool.Add(EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f, crits: source.AttackCrits));
             }
 
             return new EnemyKit(source, isElite, pool);
