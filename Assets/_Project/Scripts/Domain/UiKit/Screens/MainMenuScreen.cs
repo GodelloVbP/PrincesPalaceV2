@@ -51,22 +51,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef TitleLabel;
 
+        // The left-edge wash behind the title and the menu.
+        public NodeRef LeftScrim;
+
+        // The one column every menu item sits in, first to last. Flow
+        // layout is solved at build time and does not reflow when a child
+        // is hidden, so MainMenuController closes the gap left by a hidden
+        // item at runtime from the authored positions (ColumnReflow).
+        public NodeRef MenuColumn;
+
         // BUILT UNCONDITIONALLY, shown only sometimes. Domain has no
         // SaveSystem to ask at build time whether there is anything to
         // continue into, so the node always exists and MainMenuController
         // decides at runtime whether to show it -- the same split every other
         // screen-can't-know-yet fact in this codebase uses.
-        //
-        // NOT a child of the Play/Exit column, on purpose. A flow container's
-        // remaining children do not reflow when one of them is hidden, so a
-        // conditionally-visible element inside one would leave a gap-shaped
-        // hole the size of a button whenever there was nothing to continue.
-        // Positioned on its own instead: hiding it just means the menu opens
-        // on Play, which is the graceful-degradation answer this house
-        // already gives to a missing thing everywhere else.
         public NodeRef ContinueButton;
+        public NodeRef ContinueCaption;
+        public NodeRef ContinueSubline;
 
-        public NodeRef PlayButton;
+        public NodeRef NewRunButton;
+        public NodeRef LoadButton;
         public NodeRef ExitButton;
 
         public NodeRef SaveSlotPanel;
@@ -257,11 +261,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 screen.Ambience.Root).AsDecor();
             screen.SceneLayer = sceneLayer;
 
+            // --- the wash behind the text ------------------------------------
+            //
+            // Declared right after SceneLayer so it dims the painting and
+            // nothing else. Left edge only: it is gone well before the palace
+            // (canvas x -100), and its bottom edge is above the terrace lantern
+            // at canvas (-643, -272), whose glow must not be dimmed.
+            const float ScrimLeft = -960f;
+            const float ScrimRight = -200f;
+            const float ScrimTop = 540f;
+            const float ScrimBottom = -200f;
+            var leftScrim = Ui.Sprite("LeftScrim", "proc:scrim_left",
+                    Place.At((ScrimLeft + ScrimRight) * 0.5f, (ScrimTop + ScrimBottom) * 0.5f),
+                    UiSize.Fixed(ScrimRight - ScrimLeft, ScrimTop - ScrimBottom))
+                .Coloured("#0A060FD9")
+                .AsDecor();
+            screen.LeftScrim = leftScrim;
+
             // --- the wordmark --------------------------------------------------
             //
-            // Never existed before this: the shipped menu had a painted world
-            // and three buttons floating on it, with nothing saying what game
-            // this is. Gold to match the plaques it sits above.
+            // The placeholder logo: gold text that a sprite replaces later
+            // without moving anything (same node, same box).
             //
             // LEFT-ANCHORED, not centred on the canvas. The painting's own
             // subject -- the palace, floating mid-frame -- sits right of
@@ -269,62 +289,67 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // reflection below it. The left third is comparatively empty sky
             // and stair, which is where every element below is anchored to.
             //
-            // ONE SHARED LEFT EDGE, not one shared centre -- LeftEdgeX plus
-            // each element's own half-width, so a narrower button (Play, Exit)
-            // and a wider one (Continue, which carries a slot number) start
-            // flush with each other and with the title above them rather than
-            // centring under it.
+            // ONE SHARED LEFT EDGE, not one shared centre: LeftEdgeX plus
+            // each element's own half-width, so the title and every menu
+            // item start flush with each other.
             const float LeftEdgeX = -810f;
 
-            // No .Tracked() here -- CeremonialTitle's own spec is what
-            // ApplyTypography actually applies once Role is set; a
-            // node.Tracking value would be silently ignored, so stating one
-            // here would lie.
-            var title = Ui.Label("TitleLabel", UiStrings.GameTitle, new UiVec(760f, 100f), 64,
-                    "#E3C166", Place.At(LeftEdgeX + 380f, 260f))
+            // Two lines ("Prince's" / "Palace") at 96pt: a single line at this
+            // size would run into the palace. No .Tracked() -- CeremonialTitle's
+            // own spec is what ApplyTypography applies once Role is set.
+            const float TitleWidth = 640f;
+            const float TitleHeight = 270f;
+            var title = Ui.Label("TitleLabel", UiStrings.GameTitle, new UiVec(TitleWidth, TitleHeight), 96,
+                    "#E3C166", Place.At(LeftEdgeX + TitleWidth * 0.5f, 355f))
                 .TextAligned(UiTextAlign.Left)
                 .Styled(TypographyRole.CeremonialTitle);
             screen.TitleLabel = title;
 
-            // GOLD, 3:2 KIT CONTAINER, not a flat scrim -- this is the
-            // save-selection surface's own colour, matching the plaques the
-            // wordmark sits above. 840x560, exactly the kit's 3:2 aspect:
-            // the width is asked of the kit instead of authored, so it can
-            // never drift off that aspect. Height is the
-            // fixed side and width follows it: nothing
-            // is declared INSIDE this rect (the title/menu column are
-            // separate siblings positioned independently, not children of
-            // it), so there is nothing to re-fit either way.
-            // .AsDecor() stays: nothing sits inside this container to check
-            // via Ui.ContainerContent, so it keeps behaving exactly as the
-            // flat scrim did -- an opaque background the title is allowed to
-            // sit on top of without an overlap exemption.
-            var scrim = Ui.Container("TextScrim", ButtonTheme.Gold, ContainerRatio.ThreeByTwo,
-                    Place.At(LeftEdgeX + 380f, 60f),
-                    Ui.ContainerSizeForHeight(ContainerRatio.ThreeByTwo, 560f))
-                .AsDecor();
-
             // --- the menu itself ---------------------------------------------
             //
-            // Continue sits ABOVE the column rather than in it -- see the field
-            // comment on why it is not a fourth Column child.
-            var continueButton = Ui.Button("ContinueButton", UiStrings.Continue,
-                    new UiVec(340f, 66f), 24, Place.At(LeftEdgeX + 170f, 90f))
-                .Themed(ButtonTheme.Gold);
+            // Continue is the column's first item and carries a second line
+            // under its caption. ThemedPlate, so the caption is a declared
+            // child (see ExitsScreen's hold button) sitting above the centre
+            // with the subline below it.
+            const float MenuWidth = 400f;
+            var continueSize = Ui.PlateNominalSizeFor(MenuWidth, 80f);
+            var continueButton = Ui.Button("ContinueButton", UiString.Runtime, continueSize, 24)
+                .ThemedPlate(ButtonTheme.Gold);
+            var continueCaption = Ui.Label("ContinueButtonCaption", UiStrings.ContinueSlot,
+                    new UiVec(continueSize.X - 40f, 36f), 24, place: Place.At(0f, 14f))
+                .Styled(TypographyRole.ButtonLabel);
+            var continueSubline = Ui.Label("ContinueSubline", UiStrings.ContinueSubline,
+                    new UiVec(continueSize.X - 40f, 22f), 15, "#F2DB9E", Place.At(0f, -18f))
+                .AsDecor();
+            continueButton.Children.Add(continueCaption);
+            continueButton.Children.Add(continueSubline);
+            continueButton.LayerCaptionWithVisuals(continueCaption, continueSubline);
             screen.ContinueButton = continueButton;
+            screen.ContinueCaption = continueCaption;
+            screen.ContinueSubline = continueSubline;
 
             // 260x60 was 4.333:1 against the FiveByOne plate's true 5:1 --
             // ThemedButtonAspectLintTests. Height down to nominal, width kept.
-            var playExitSize = Ui.PlateNominalSizeFor(260f, 60f);
-            var play = Ui.Button("PlayButton", UiStrings.Play, playExitSize, 24)
+            var itemSize = Ui.PlateNominalSizeFor(260f, 60f);
+            var newRun = Ui.Button("NewRunButton", UiStrings.NewRun, itemSize, 24)
                 .Themed(ButtonTheme.Gold);
-            var exit = Ui.Button("ExitButton", UiStrings.Exit, playExitSize, 24)
+            var load = Ui.Button("LoadButton", UiStrings.Load, itemSize, 24)
+                .Themed(ButtonTheme.Gold);
+            var quit = Ui.Button("ExitButton", UiStrings.Quit, itemSize, 24)
                 .Themed(ButtonTheme.Silver);
-            screen.PlayButton = play;
-            screen.ExitButton = exit;
+            screen.NewRunButton = newRun;
+            screen.LoadButton = load;
+            screen.ExitButton = quit;
 
-            var menuColumn = Ui.Column("MenuButtons", Place.At(LeftEdgeX + 130f, -60f), spacing: 20f,
-                UiAlign.Centre, play, exit);
+            // Top-aligned under the title, left edge shared with it. The
+            // column's centre y is authored so its top sits at y = 190.
+            const float MenuSpacing = 20f;
+            const float MenuTop = 190f;
+            float menuHeight = continueSize.Y + itemSize.Y * 3f + MenuSpacing * 3f;
+            var menuColumn = Ui.Column("MenuButtons",
+                Place.At(LeftEdgeX + MenuWidth * 0.5f, MenuTop - menuHeight * 0.5f), MenuSpacing,
+                UiAlign.Start, continueButton, newRun, load, quit);
+            screen.MenuColumn = menuColumn;
 
             // --- save slots ---------------------------------------------------
             var slotChildren = new List<UiNode>
@@ -524,7 +549,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.ResetConfirmPanel = confirmModal;
 
             screen.Root = Ui.Panel("MainMenuPanel", UiSize.Fill,
-                sceneLayer, scrim, title, continueButton, menuColumn,
+                sceneLayer, leftScrim, title, menuColumn,
                 saveSlotModal, manageSavesModal, confirmModal);
 
             return screen;

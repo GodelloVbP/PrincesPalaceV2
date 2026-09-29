@@ -75,13 +75,13 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator PlayOpensTheSaveSlotModal_AndCancelClosesIt()
+        public IEnumerator LoadOpensTheSaveSlotModal_AndCancelClosesIt()
         {
             yield return LoadMainMenu();
 
             var panel = FindByName("SaveSlotPanel");
-            FindByName("PlayButton").GetComponent<Button>().onClick.Invoke();
-            Assert.IsTrue(panel.activeSelf, "Play should open the save slot modal");
+            FindByName("LoadButton").GetComponent<Button>().onClick.Invoke();
+            Assert.IsTrue(panel.activeSelf, "Load should open the save slot modal");
 
             FindByName("CloseSaveSlotButton").GetComponent<Button>().onClick.Invoke();
             Assert.IsFalse(panel.activeSelf, "Cancel should close it again");
@@ -99,7 +99,7 @@ namespace PrincesPalace.PlayModeTests
             var slotPanel = FindByName("SaveSlotPanel");
             var managePanel = FindByName("ManageSavesPanel");
 
-            FindByName("PlayButton").GetComponent<Button>().onClick.Invoke();
+            FindByName("LoadButton").GetComponent<Button>().onClick.Invoke();
             Assert.IsTrue(slotPanel.activeSelf);
 
             // Start() runs one frame AFTER SetActive, not synchronously, so

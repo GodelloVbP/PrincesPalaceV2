@@ -69,15 +69,15 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMainMenu();
 
             var spec = Typography.Specs[TypographyRole.ButtonLabel];
-            var play = FindText("PlayButtonLabel");
+            var play = FindText("NewRunButtonLabel");
 
-            Assert.IsNotNull(play, "PlayButton is Themed(), so it should carry a PlayButtonLabel child");
+            Assert.IsNotNull(play, "NewRunButton is Themed(), so it should carry a NewRunButtonLabel child");
             Assert.AreEqual(spec.FontAssetName, play.font.name);
             Assert.AreEqual(spec.MaterialName, play.fontSharedMaterial.name);
-            Assert.AreEqual(UiStrings.Play.Format().ToUpperInvariant(), play.text);
+            Assert.AreEqual(UiStrings.NewRun.Format().ToUpperInvariant(), play.text);
         }
 
-        // Pins the reservation b955ceb left open: PlayButton is Themed() at
+        // Pins the reservation b955ceb left open: NewRunButton is Themed() at
         // FontSize 24, below ButtonLabel's 26-30 band. ApplyTypography must
         // pin fontSizeMin to that literal rather than leaving it at the
         // role's own 26 (min > max), which is dead, order-dependent
@@ -88,11 +88,11 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadMainMenu();
 
-            var play = FindText("PlayButtonLabel");
+            var play = FindText("NewRunButtonLabel");
 
-            Assert.IsNotNull(play, "PlayButton is Themed(), so it should carry a PlayButtonLabel child");
+            Assert.IsNotNull(play, "NewRunButton is Themed(), so it should carry a NewRunButtonLabel child");
             Assert.AreEqual(24f, play.fontSizeMax,
-                "PlayButton was authored with FontSize 24 - the explicit literal wins over ButtonLabel's own max");
+                "NewRunButton was authored with FontSize 24 - the explicit literal wins over ButtonLabel's own max");
             Assert.AreEqual(24f, play.fontSizeMin,
                 "an explicit literal below the role's band pins fontSizeMin to it too, so fontSizeMin never " +
                 "exceeds fontSizeMax; auto-sizing can still shrink further if the text does not fit");

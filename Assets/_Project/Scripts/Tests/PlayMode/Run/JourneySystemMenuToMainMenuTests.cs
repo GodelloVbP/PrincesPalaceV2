@@ -80,7 +80,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             TakeOverInput();
 
-            // ContinueButton, not PlayButton: SaveSlotManager.EnterSlot(0)
+            // ContinueButton, not NewRunButton: SaveSlotManager.EnterSlot(0)
             // above already wrote a save to this throwaway root, so by the
             // time the exit reaches the Main Menu a save exists to resume --
             // MainMenuGamepadNavigationTests' own SeedASave is the same

@@ -867,6 +867,19 @@ public static class ProceduralSpriteBaker
             float up = Mathf.Clamp01(y);
             return (1f, Smoothstep(up * up));
         });
+
+        // The main menu's left-edge wash. Both axes shape the alpha: solid at
+        // the sprite's left edge and gone by its right, and solid down to a
+        // quarter of the height above the bottom edge, then gone at the
+        // bottom edge. A wash whose own boundary shows has become a shape on
+        // the screen, so neither the right nor the bottom edge may end on a
+        // visible line. The top is the screen edge and needs no fade.
+        BakeShaded("scrim_left", 128, (nx, ny) =>
+        {
+            float across = 1f - (nx + 1f) * 0.5f;
+            float aboveBottom = Mathf.Clamp01((ny + 1f) * 0.5f / 0.25f);
+            return (1f, Smoothstep(across) * Smoothstep(aboveBottom));
+        });
     }
 
     // The heat under the Continue arrow.
@@ -1174,7 +1187,7 @@ public static class ProceduralSpriteBaker
         "hairline_fade", "rail_ramp", "rail_glow", "shimmer_band", "track_drop",
         "band_fade", "card_ground", "soft_edge_stripe",
         "bar_track", "bar_fill", "bar_bloom",
-        "scrim_band", "dossier_veil", "scrim_floor", "scrim_ceiling",
+        "scrim_band", "dossier_veil", "scrim_floor", "scrim_ceiling", "scrim_left",
     };
 
     private static void Import(string path)

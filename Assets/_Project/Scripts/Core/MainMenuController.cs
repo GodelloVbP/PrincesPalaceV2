@@ -3,6 +3,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -17,23 +18,19 @@ namespace PrincesPalace
     // the built player no matter how correctly the builder assigned it.
     public class MainMenuController : MonoBehaviour
     {
-        // Options went with Reset Progress. It was the only thing the main
-        // menu's own Options panel ever held -- the real settings screen
-        // (audio, display) lives in the in-run system menu, not here -- so
-        // once Reset Progress moved to Manage Saves (see SaveSlotController),
-        // there was nothing left for a main-menu Options entry to open.
-        [SerializeField] internal Button playButton;
+        [SerializeField] internal Button newRunButton;
+        [SerializeField] internal Button loadButton;
         [SerializeField] internal Button exitButton;
         [SerializeField] internal Button closeSaveSlotButton;
         [SerializeField] internal GameObject saveSlotPanel;
 
         // Shown only when a save exists to continue. Built unconditionally by
         // the screen -- Domain has no SaveSystem to ask at build time -- and
-        // toggled here, which is what lets it sit OUTSIDE the Play/Exit
-        // column rather than inside it: a flow container's siblings do not
-        // reflow when one of them is hidden, so a conditional element has to
-        // be positioned on its own to avoid leaving a gap-shaped hole.
+        // toggled here. The column closes the gap it leaves (ReflowMenu).
         [SerializeField] internal Button continueButton;
+        [SerializeField] internal TMP_Text continueCaption;
+        [SerializeField] internal TMP_Text continueSubline;
+        [SerializeField] internal RectTransform menuColumn;
 
         // Cross-controller: the two controllers this screen splits between
         // (Play/Exit/Continue here, the slot list itself on SaveSlotController)
@@ -64,9 +61,20 @@ namespace PrincesPalace
         // contents, not a fixed set with some members hidden.
         private NavContext _navContext;
 
+        // The menu column's buttons as authored, in order, with their solved
+        // top edges. Captured once: ReflowMenu recomputes from these every
+        // time so repeated refreshes never accumulate a shift.
+        private RectTransform[] _menuItems;
+        private float[] _authoredY;
+        private float[] _authoredTop;
+
         private void Start()
         {
-            playButton.onClick.AddListener(() =>
+            // New Run takes the lowest empty slot through the same path a
+            // slot card does; only when all are full does it hand over to the
+            // Load list, which is the one place a full slot can be entered.
+            newRunButton.onClick.AddListener(NewRun);
+            loadButton.onClick.AddListener(() =>
             {
                 Toggle(saveSlotPanel);
                 RefreshNavigation();
@@ -95,8 +103,26 @@ namespace PrincesPalace
                 Navigation.Go(Navigation.Hub);
             });
 
+            CaptureMenuLayout();
             RefreshContinue();
             RegisterNavContext();
+        }
+
+        private void NewRun()
+        {
+            for (int slot = 0; slot < SaveSystem.SlotCount; slot++)
+            {
+                if (SaveSystem.SlotExists(slot))
+                {
+                    continue;
+                }
+
+                saveSlotController.Choose(slot);
+                return;
+            }
+
+            saveSlotPanel.SetActive(true);
+            RefreshNavigation();
         }
 
         // Recomputes whether Continue has anything to continue, and what it
@@ -110,16 +136,59 @@ namespace PrincesPalace
             bool hasSave = _continueSlot >= 0;
 
             continueButton.gameObject.SetActive(hasSave);
-            if (!hasSave) return;
 
-            var label = continueButton.GetComponentInChildren<TMP_Text>(includeInactive: true);
-            label.Set(UiStrings.ContinueSlot, _continueSlot + 1);
+            if (hasSave)
+            {
+                continueCaption.Set(UiStrings.ContinueSlot, _continueSlot + 1);
+
+                var facts = SaveSlotDetail.For(_continueSlot);
+                continueSubline.SetContent(UiStrings.ContinueSubline.Format(
+                    facts.CharacterName, facts.Floor, PlaytimeFormat.Describe(facts.PlaySeconds)));
+            }
+
+            ReflowMenu();
 
             // Continue can appear or vanish out from under an already-pushed
             // context (a save deleted through Manage Saves while its own
             // panel sits on top) -- reconfigure rather than assume Start()
             // already saw the final answer.
             RefreshNavigation();
+        }
+
+        private void CaptureMenuLayout()
+        {
+            var items = new List<RectTransform>();
+            foreach (Transform child in menuColumn)
+            {
+                if (child.GetComponent<Button>() != null) items.Add((RectTransform)child);
+            }
+
+            _menuItems = items.ToArray();
+            _authoredY = new float[_menuItems.Length];
+            _authoredTop = new float[_menuItems.Length];
+            for (int i = 0; i < _menuItems.Length; i++)
+            {
+                var rect = _menuItems[i];
+                _authoredY[i] = rect.anchoredPosition.y;
+                _authoredTop[i] = rect.anchoredPosition.y + rect.rect.height * (1f - rect.pivot.y);
+            }
+        }
+
+        // The column is laid out once at build time with every item present;
+        // moving the items below a hidden one up by the space it occupied is
+        // the runtime half of that layout (ColumnReflow).
+        private void ReflowMenu()
+        {
+            var visible = new bool[_menuItems.Length];
+            for (int i = 0; i < visible.Length; i++) visible[i] = _menuItems[i].gameObject.activeSelf;
+
+            var shifts = ColumnReflow.Shifts(_authoredTop, visible);
+            for (int i = 0; i < _menuItems.Length; i++)
+            {
+                var position = _menuItems[i].anchoredPosition;
+                position.y = _authoredY[i] + shifts[i];
+                _menuItems[i].anchoredPosition = position;
+            }
         }
 
         private static void Toggle(GameObject panel) => panel.SetActive(!panel.activeSelf);
@@ -185,7 +254,7 @@ namespace PrincesPalace
         }
 
         // Rebuilds the declared set and entry from whichever surface is
-        // showing right now -- the base Play/Continue/Exit list, the
+        // showing right now -- the base menu column, the
         // save-slot modal, the manage-saves list, or its own confirm
         // dialog -- the same "walk what's ACTUALLY active" shape
         // SystemMenuController.RefreshSelectables uses for its own
@@ -249,14 +318,14 @@ namespace PrincesPalace
             _navContext.Reconfigure(entry, selectables);
         }
 
-        // Continue (when shown) sits above Play/Exit, top to bottom on
-        // screen (MainMenuScreen's own comment: "Continue sits ABOVE the
-        // column") -- a List, clamp, no wrap:
-        // there is nothing below Exit or above Continue to step onto.
+        // The menu column top to bottom, Continue only when shown -- a List,
+        // clamp, no wrap: there is nothing below Quit or above the first item
+        // to step onto.
         private IEnumerable<Button> MainMenuSelectables()
         {
             if (continueButton != null && continueButton.gameObject.activeSelf) yield return continueButton;
-            yield return playButton;
+            yield return newRunButton;
+            yield return loadButton;
             yield return exitButton;
         }
 

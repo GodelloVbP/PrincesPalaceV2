@@ -115,7 +115,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator AnUntouchedSlotReadsAsEmpty()
         {
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
@@ -128,7 +128,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ChoosingASlot_CreatesItAndSetsTheCurrentSlot()
         {
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
@@ -150,7 +150,7 @@ namespace PrincesPalace.PlayModeTests
             // this independently and disagreed, and one of them printed an `exp`
             // field nothing ever wrote. One manifest entry serves both now.
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
@@ -169,7 +169,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator DeleteAsksFirst_AndDoesNotDeleteUntilConfirmed()
         {
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
@@ -198,7 +198,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ReleasingTheHoldEarly_DeletesNothing()
         {
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             yield return null;
             yield return null;
             Click("Slot0Button");
@@ -230,7 +230,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ConfirmingActuallyDeletes_AndCancellingDoesNot()
         {
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
@@ -260,7 +260,7 @@ namespace PrincesPalace.PlayModeTests
             // Confirmations that appear when nothing is at stake are how people
             // learn to click through the ones that matter.
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
@@ -284,7 +284,7 @@ namespace PrincesPalace.PlayModeTests
             // it now: Back re-shows SaveSlotPanel directly rather than handing
             // the player back to the main menu root to reopen Play themselves.
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
@@ -292,7 +292,7 @@ namespace PrincesPalace.PlayModeTests
             Click("Slot4Button");
             Click("CloseSaveSlotButton");
 
-            Click("PlayButton");
+            Click("LoadButton");
             Click("ManageSavesButton");
             // First-ever activation of Manage Saves in this test, so its own
             // listeners need the same one-frame grace Play's did above.
@@ -312,7 +312,7 @@ namespace PrincesPalace.PlayModeTests
             // player who picks one and immediately quits still finds it there.
             yield return LoadMenu();
 
-            Click("PlayButton");
+            Click("LoadButton");
 
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
@@ -379,7 +379,7 @@ namespace PrincesPalace.PlayModeTests
             // listeners are wired until a player reaches it. Found by this
             // test failing on the assertion below rather than on the one it
             // was written for, which is why that assertion is there.
-            ClickByName("PlayButton");
+            ClickByName("LoadButton");
             yield return null;
             yield return null;
             ClickByName("ManageSavesButton");
@@ -414,7 +414,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator BackFromManageSaves_ReturnsToTheSlotList()
         {
             yield return LoadMenu();
-            Click("PlayButton");
+            Click("LoadButton");
             yield return null;
             yield return null;
             Click("ManageSavesButton");
@@ -481,7 +481,7 @@ namespace PrincesPalace.PlayModeTests
             var continueGo = Named("ContinueButton");
             Assert.IsTrue(continueGo.activeSelf, "fixture: Continue should start visible");
 
-            Click("PlayButton");
+            Click("LoadButton");
             yield return null;
             yield return null;
             Click("ManageSavesButton");

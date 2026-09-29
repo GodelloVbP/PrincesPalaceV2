@@ -81,11 +81,10 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             // No entry-selection assertion here -- see this file's own header.
-            yield return Click(Node("PlayButton"));
-            yield return null; // the save-slot panel opens the frame after the click resolves
-            yield return Click(Node("Slot0Button")); // Choose(0) -> EnterSlot(0) -> Navigation.Go(Hub), a REAL load
+            // New Run -> lowest empty slot (0) -> EnterSlot(0) -> Navigation.Go(Hub), a REAL load
+            yield return Click(Node("NewRunButton"));
 
-            yield return WaitForScene("Hub", 5f, "clicking an empty slot should enter it and load the Hub");
+            yield return WaitForScene("Hub", 5f, "clicking New Run should enter the lowest empty slot and load the Hub");
             yield return null;
             yield return null;
             EngineRoots.GrantToSquad();

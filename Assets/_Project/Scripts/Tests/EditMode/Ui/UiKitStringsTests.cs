@@ -30,7 +30,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void PlainEntries_FormatToThemselves()
         {
-            Assert.AreEqual("Play", UiStrings.Play.Format());
+            Assert.AreEqual("New Run", UiStrings.NewRun.Format());
             Assert.AreEqual("C O M M A N D", UiStrings.CommandTitle.Format());
         }
 

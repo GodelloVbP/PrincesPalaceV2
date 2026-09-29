@@ -22,8 +22,8 @@ namespace PrincesPalace.PlayModeTests
     // opens the relic draft between the gate and the Map -- it is not a
     // screen this journey can skip (RelicDraftController's own header: "a
     // draft you can navigate around is not a draft", so it must be spent,
-    // never merely closed). This segment drives all of it: Play -> an empty
-    // save slot -> Hub -> the descent gate -> the relic draft -> Descend ->
+    // never merely closed). This segment drives all of it: New Run -> the
+    // lowest empty save slot -> Hub -> the descent gate -> the relic draft -> Descend ->
     // the Map -> a plain Fight room's own entry node -> the Fight scene.
     //
     // THE SEED IS CHOSEN, NOT LEFT TO HubController.EnterTheDescent's OWN
@@ -111,15 +111,12 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            AssertSelectedName("PlayButton", "with no save to continue, Play is the entry");
+            AssertSelectedName("NewRunButton", "with no save to continue, New Run is the entry");
 
+            // New Run -> the lowest empty slot (0) -> SaveSlotController.Choose(0)
+            // -> EnterSlot(0) -> Navigation.Go(Hub), a REAL load
             yield return PressSubmit();
-            yield return null; // the reselection onto Slot0Button is next frame
-            AssertSelectedName("Slot0Button",
-                "Submit on Play should open the save-slot panel with its first slot as entry");
-
-            yield return PressSubmit(); // SaveSlotController.Choose(0) -> EnterSlot(0) -> Navigation.Go(Hub), a REAL load
-            yield return WaitForScene("Hub", 5f, "Submit on an empty slot should enter it and load the Hub");
+            yield return WaitForScene("Hub", 5f, "Submit on New Run should enter the lowest empty slot and load the Hub");
             yield return null;
             yield return null; // Start() runs one frame after activation
             EngineRoots.GrantToSquad();

@@ -110,6 +110,37 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(MainMenuScreen.ResetHoldHeight, screen.ResetConfirmYesFill.Node.Size.Y);
         }
 
+        // C2: one column, top to bottom, no item positioned outside it.
+        [Test]
+        public void TheMenuIsOneColumnInReadingOrder()
+        {
+            var screen = MainMenuScreen.Build(new MainMenuInputs(RealSlotCount));
+
+            var names = screen.MenuColumn.Node.Children.Select(c => c.Name).ToArray();
+
+            CollectionAssert.AreEqual(
+                new[] { "ContinueButton", "NewRunButton", "LoadButton", "ExitButton" }, names);
+            Assert.IsFalse(Find(screen.Root, "PlayButton"), "Play is now New Run and Load");
+            Assert.IsFalse(Find(screen.Root, "TextScrim"), "the gold container behind the text is gone");
+        }
+
+        // C1: the wash stays left of the palace (canvas x -100) and above the
+        // terrace lantern glow at canvas y -272. Literals: the lantern and the
+        // palace are painted, not derived.
+        [Test]
+        public void TheLeftScrimClearsThePalaceAndTheLantern()
+        {
+            var screen = MainMenuScreen.Build(new MainMenuInputs(RealSlotCount));
+            var scrim = screen.LeftScrim.Node;
+
+            float right = scrim.Place.Offset.X + scrim.Size.X * 0.5f;
+            float bottom = scrim.Place.Offset.Y - scrim.Size.Y * 0.5f;
+
+            Assert.AreEqual(-200f, right, 0.01f);
+            Assert.AreEqual(-200f, bottom, 0.01f);
+            Assert.IsTrue(scrim.Decor, "a wash must never take a click");
+        }
+
         private static bool Find(UiNode node, string name)
         {
             if (node == null) return false;

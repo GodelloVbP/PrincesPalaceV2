@@ -183,7 +183,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            Click("PlayButton");
+            Click("LoadButton");
 
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md).

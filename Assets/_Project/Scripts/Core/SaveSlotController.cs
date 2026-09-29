@@ -108,7 +108,9 @@ namespace PrincesPalace
             }
         }
 
-        private void Choose(int slot)
+        // Public: the main menu's New Run enters the lowest empty slot
+        // through this same path rather than a second copy of it.
+        public void Choose(int slot)
         {
             // Everything "pick this slot and play it" shares with the main
             // menu's Continue button now lives on SaveSlotManager -- see

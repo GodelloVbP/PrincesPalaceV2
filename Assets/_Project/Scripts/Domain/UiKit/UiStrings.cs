@@ -485,8 +485,9 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString StatMagicalDefense =
             UiString.Define("stat.magdef", "Magical DEF");
 
-        public static readonly UiString Play = UiString.Define("play", "Play");
-        public static readonly UiString Exit = UiString.Define("exit", "Exit");
+        public static readonly UiString NewRun = UiString.Define("new_run", "New Run");
+        public static readonly UiString Load = UiString.Define("load", "Load");
+        public static readonly UiString Quit = UiString.Define("quit", "Quit");
         public static readonly UiString Close = UiString.Define("close", "Close");
         public static readonly UiString Cancel = UiString.Define("cancel", "Cancel");
 
@@ -501,6 +502,11 @@ namespace PrincesPalace.Domain.UiKit
         // MainMenuController.RefreshContinue once a save exists to name.
         public static readonly UiString ContinueSlot =
             UiString.Define("continue_slot", "Continue - Slot {0}", "Continue - Slot 5");
+
+        // Continue's second line: lead character, floor reached, playtime.
+        // The character name is content; the widest sample bounds the box.
+        public static readonly UiString ContinueSubline =
+            UiString.Define("continue_subline", "{0} - Floor {1} - {2}", "Bjorn the Bear - Floor 99 - 999h 59m");
 
         // --- the Reckoning ------------------------------------------------------
         public static readonly UiString ReckoningTitle = UiString.Define("reckoning.title", "THE RECKONING");

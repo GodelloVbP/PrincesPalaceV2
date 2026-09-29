@@ -30,7 +30,7 @@ namespace PrincesPalace.PlayModeTests
     // stock path would have had time for the delay AND four or five repeats.
     //
     // A THREE-BUTTON MENU, seeded on purpose: with no save on disk the menu
-    // is Play over Exit, and a runaway repeat off either one clamps straight
+    // is New Run over Quit, and a runaway repeat off either one clamps straight
     // back where a single correct Move would also have landed. Continue over
     // Play over Exit is the shortest list on which "moved once" and "moved
     // more than once" look different.
@@ -71,7 +71,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.Forget();
         }
 
-        private IEnumerator LoadMenuWithAThreeButtonColumn()
+        private IEnumerator LoadMenuWithAFourButtonColumn()
         {
             SeedASave(0);
 
@@ -87,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual("ContinueButton", Selected(),
-                "fixture: with a save on disk the column is Continue over Play over Exit, and Continue is the entry");
+                "fixture: with a save on disk the column is Continue over New Run over Load over Quit, and Continue is the entry");
         }
 
         // Holds the axis at `value` for HoldSeconds of WALL CLOCK, then
@@ -126,7 +126,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator AnAxisAt0Point3_HeldForASecond_MovesNothing()
         {
-            yield return LoadMenuWithAThreeButtonColumn();
+            yield return LoadMenuWithAFourButtonColumn();
 
             yield return Hold(0f, -0.3f);
 
@@ -138,15 +138,15 @@ namespace PrincesPalace.PlayModeTests
         // 0.8 IS A PRESS -- and exactly one, held or not. Under the stock
         // analog path this same hold produced the first Move, then a repeat
         // half a second later, then one every tenth of a second: Continue to
-        // Play to Exit and stuck there.
+        // New Run to Load to Quit and stuck there.
         [UnityTest]
         public IEnumerator AnAxisAt0Point8_HeldForASecond_MovesExactlyOnce()
         {
-            yield return LoadMenuWithAThreeButtonColumn();
+            yield return LoadMenuWithAFourButtonColumn();
 
             yield return Hold(0f, -0.8f);
 
-            Assert.AreEqual("PlayButton", Selected(),
+            Assert.AreEqual("NewRunButton", Selected(),
                 "one press is one Move -- landing on ExitButton would mean the held stick repeated, " +
                 "which is the 'one flick, two moves' half of the owner's report");
         }
@@ -159,11 +159,11 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator AnAxisRestingJustPastTheOldDeadZone_DriftsAtMostOneStep()
         {
-            yield return LoadMenuWithAThreeButtonColumn();
+            yield return LoadMenuWithAFourButtonColumn();
 
             yield return Hold(0f, -0.65f);
 
-            Assert.AreEqual("PlayButton", Selected(),
+            Assert.AreEqual("NewRunButton", Selected(),
                 "a stick resting past the old 0.6 dead zone used to repeat at ten selections a second " +
                 "because a sub-threshold frame reset m_ConsecutiveMoveCount without touching " +
                 "m_PrevActionTime, so the 0.5s repeat delay never armed. One step is all it may cost now");
@@ -174,16 +174,19 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TwoSeparatePresses_MoveTwice()
         {
-            yield return LoadMenuWithAThreeButtonColumn();
+            yield return LoadMenuWithAFourButtonColumn();
 
             yield return Hold(0f, -1f);
-            Assert.AreEqual("PlayButton", Selected(), "one press down");
+            Assert.AreEqual("NewRunButton", Selected(), "one press down");
 
             yield return Hold(0f, -1f);
-            Assert.AreEqual("ExitButton", Selected(), "a second press, after the stick passed back through rest");
+            Assert.AreEqual("LoadButton", Selected(), "a second press, after the stick passed back through rest");
 
             yield return Hold(0f, -1f);
-            Assert.AreEqual("ExitButton", Selected(), "the List clamps -- there is nothing below Exit");
+            Assert.AreEqual("ExitButton", Selected(), "a third press reaches the last item");
+
+            yield return Hold(0f, -1f);
+            Assert.AreEqual("ExitButton", Selected(), "the List clamps -- there is nothing below Quit");
         }
 
         // The other half of item 3's own brief: a List declares no Left or
@@ -192,10 +195,10 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator LeftAndRight_OnTheMainMenuList_AreNoOps()
         {
-            yield return LoadMenuWithAThreeButtonColumn();
+            yield return LoadMenuWithAFourButtonColumn();
 
             var play = Resources.FindObjectsOfTypeAll<Button>()
-                .First(b => b.name == "PlayButton" && b.gameObject.scene.IsValid());
+                .First(b => b.name == "NewRunButton" && b.gameObject.scene.IsValid());
             Assert.AreEqual(UnityEngine.UI.Navigation.Mode.Explicit, play.navigation.mode,
                 "every member of the menu's List is written Explicit by RuntimeNavWiring -- Automatic would " +
                 "let Unity pick a neighbour by geometry, which would be the other half of 'almost random'");

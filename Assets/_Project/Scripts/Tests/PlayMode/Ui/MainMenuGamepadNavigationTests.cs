@@ -2,6 +2,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Stats;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -108,13 +109,13 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator EntryIsPlayButton_WhenNoSaveExists()
+        public IEnumerator EntryIsNewRunButton_WhenNoSaveExists()
         {
             SharedScene.MarkDirty("asserts the entry Start() picks on a freshly loaded menu, not one a reset put back");
             yield return LoadMenu();
 
-            Assert.AreEqual(Find("PlayButton").gameObject, EventSystem.current.currentSelectedGameObject,
-                "with no save to continue, Play is the first (and topmost) enabled button");
+            Assert.AreEqual(Find("NewRunButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "with no save to continue, New Run is the first (and topmost) enabled button");
         }
 
         [UnityTest]
@@ -125,11 +126,11 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMenu();
 
             Assert.AreEqual(Find("ContinueButton").gameObject, EventSystem.current.currentSelectedGameObject,
-                "Continue sits above Play/Exit on screen and should be the entry when a save exists to continue");
+                "Continue sits above New Run/Load/Quit on screen and should be the entry when a save exists to continue");
         }
 
         [UnityTest]
-        public IEnumerator Down_FromContinue_ReachesPlay()
+        public IEnumerator Down_FromContinue_ReachesNewRun()
         {
             SeedASave(0);
             yield return LoadMenu();
@@ -138,8 +139,101 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             yield return Move(-1f);
-            Assert.AreEqual(Find("PlayButton").gameObject, EventSystem.current.currentSelectedGameObject,
-                "Down from Continue should reach Play");
+            Assert.AreEqual(Find("NewRunButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "Down from Continue should reach New Run");
+        }
+
+        [UnityTest]
+        public IEnumerator Down_FromNewRun_ReachesLoad()
+        {
+            yield return LoadMenu();
+
+            EventSystem.current.SetSelectedGameObject(Find("NewRunButton").gameObject);
+            yield return null;
+
+            yield return Move(-1f);
+            Assert.AreEqual(Find("LoadButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "the column is Continue, New Run, Load, Quit");
+        }
+
+        // C4. Each of these leaves a save behind or navigates, so the shared
+        // menu is dirtied; the hub load is stubbed through Navigation.LoadOverride.
+        private IEnumerator PressNewRun(System.Collections.Generic.List<string> navigated)
+        {
+            yield return LoadMenu();
+            Navigation.LoadOverride = scene => navigated.Add(scene);
+
+            Find("NewRunButton").onClick.Invoke();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator NewRun_WithNoSaves_EntersSlotZeroAndGoesToTheHub()
+        {
+            SharedScene.MarkDirty("New Run writes a save and navigates");
+            var navigated = new System.Collections.Generic.List<string>();
+            yield return PressNewRun(navigated);
+
+            Assert.AreEqual(0, SaveSlotManager.CurrentSlot);
+            Assert.IsTrue(SaveSystem.SlotExists(0), "an empty slot becomes a new save");
+            CollectionAssert.AreEqual(new[] { Navigation.Hub }, navigated);
+        }
+
+        [UnityTest]
+        public IEnumerator NewRun_WithSlotsZeroAndOneFilled_EntersSlotTwo()
+        {
+            SeedASave(0);
+            SeedASave(1);
+            SharedScene.MarkDirty("New Run writes a save and navigates");
+            var navigated = new System.Collections.Generic.List<string>();
+            yield return PressNewRun(navigated);
+
+            Assert.AreEqual(2, SaveSlotManager.CurrentSlot);
+            Assert.IsTrue(SaveSystem.SlotExists(2));
+            CollectionAssert.AreEqual(new[] { Navigation.Hub }, navigated);
+        }
+
+        [UnityTest]
+        public IEnumerator NewRun_WithEverySlotFull_OpensTheListAndOverwritesNothing()
+        {
+            for (int slot = 0; slot < SaveSystem.SlotCount; slot++) SeedASave(slot);
+            SharedScene.MarkDirty("seeded a full roster");
+            var navigated = new System.Collections.Generic.List<string>();
+            yield return PressNewRun(navigated);
+
+            Assert.IsTrue(IsOpen("SaveSlotPanel"), "all five full: New Run hands over to the Load list");
+            Assert.IsEmpty(navigated, "it never enters a slot on its own");
+        }
+
+        [UnityTest]
+        public IEnumerator Continue_ShowsTheSavesCharacterFloorAndPlaytime_OnASecondLine()
+        {
+            SeedASave(0);
+            SharedScene.MarkDirty("asserts the subline Start() wrote from a save present before the load");
+            yield return LoadMenu();
+
+            var subline = Resources.FindObjectsOfTypeAll<TMPro.TMP_Text>()
+                .First(t => t.name == "ContinueSubline" && t.gameObject.scene.IsValid());
+            var facts = SaveSlotDetail.For(0);
+
+            Assert.AreEqual(facts.CharacterName + " - Floor " + facts.Floor + " - " +
+                PlaytimeFormat.Describe(facts.PlaySeconds), subline.text);
+            Assert.IsNotEmpty(facts.CharacterName, "a fresh save names its lead character");
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutASave_ContinueIsHiddenAndNewRunTakesItsPlace()
+        {
+            yield return LoadMenu();
+
+            var continueRect = (RectTransform)Find("ContinueButton").transform;
+            var newRunRect = (RectTransform)Find("NewRunButton").transform;
+            Assert.IsFalse(continueRect.gameObject.activeSelf);
+
+            var column = (RectTransform)newRunRect.parent;
+            Assert.AreEqual(190f, column.anchoredPosition.y + newRunRect.anchoredPosition.y +
+                newRunRect.rect.height * 0.5f, 0.5f,
+                "with Continue hidden the column starts at New Run: its top edge sits where Continue's did");
         }
 
         // A separate test from the one above only because each claim reads
@@ -147,31 +241,31 @@ namespace PrincesPalace.PlayModeTests
         // lifts uGUI's 0.1s re-press gate; JourneyFixture.Move has the
         // measurement).
         [UnityTest]
-        public IEnumerator Down_FromPlay_ReachesExit()
+        public IEnumerator Down_FromLoad_ReachesExit()
         {
             yield return LoadMenu();
 
-            EventSystem.current.SetSelectedGameObject(Find("PlayButton").gameObject);
+            EventSystem.current.SetSelectedGameObject(Find("LoadButton").gameObject);
             yield return null;
 
             yield return Move(-1f);
             Assert.AreEqual(Find("ExitButton").gameObject, EventSystem.current.currentSelectedGameObject,
-                "Down from Play should reach Exit");
+                "Down from Load should reach Quit");
         }
 
         [UnityTest]
-        public IEnumerator Up_FromPlay_ClampsRatherThanWraps_WhenNoSaveExists()
+        public IEnumerator Up_FromNewRun_ClampsRatherThanWraps_WhenNoSaveExists()
         {
             yield return LoadMenu();
 
-            var play = Find("PlayButton");
+            var play = Find("NewRunButton");
             EventSystem.current.SetSelectedGameObject(play.gameObject);
             yield return null;
 
             yield return Move(1f);
 
             Assert.AreEqual(play.gameObject, EventSystem.current.currentSelectedGameObject,
-                "List is clamp by the owner default -- with no Continue shown, Play is first and Up should not wrap to Exit");
+                "List is clamp by the owner default -- with no Continue shown, New Run is first and Up should not wrap to Quit");
         }
 
         // The required action (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3's own
@@ -199,11 +293,11 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator Submit_OnPlayButton_OpensTheSaveSlotPanel_AndEntryBecomesTheFirstSlot()
+        public IEnumerator Submit_OnLoadButton_OpensTheSaveSlotPanel_AndEntryBecomesTheFirstSlot()
         {
             yield return LoadMenu();
 
-            EventSystem.current.SetSelectedGameObject(Find("PlayButton").gameObject);
+            EventSystem.current.SetSelectedGameObject(Find("LoadButton").gameObject);
             yield return null;
 
             _input.SubmitDown = true;
@@ -212,7 +306,7 @@ namespace PrincesPalace.PlayModeTests
             var saveSlotPanel = GameObject.Find("SaveSlotPanel") ?? Resources.FindObjectsOfTypeAll<Transform>()
                 .Select(t => t.gameObject).FirstOrDefault(go => go.name == "SaveSlotPanel" && go.scene.IsValid());
             Assert.IsNotNull(saveSlotPanel, "no SaveSlotPanel in the scene");
-            Assert.IsTrue(saveSlotPanel.activeSelf, "Submit on Play should open the save-slot panel, same as a click");
+            Assert.IsTrue(saveSlotPanel.activeSelf, "Submit on Load should open the save-slot panel, same as a click");
 
             // The reselection is NEXT frame (NavigationInputModule.
             // ReselectIfOutsideDeclaredSet, run once per Process() after
@@ -230,7 +324,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadMenu();
 
-            var play = Find("PlayButton");
+            var play = Find("NewRunButton");
             EventSystem.current.SetSelectedGameObject(play.gameObject);
             yield return null;
 
@@ -242,11 +336,11 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator CancelInsideTheSaveSlotPanel_ClosesItAndRestoresPlayButton()
+        public IEnumerator CancelInsideTheSaveSlotPanel_ClosesItAndRestoresTheMenuEntry()
         {
             yield return LoadMenu();
 
-            EventSystem.current.SetSelectedGameObject(Find("PlayButton").gameObject);
+            EventSystem.current.SetSelectedGameObject(Find("LoadButton").gameObject);
             yield return null;
             _input.SubmitDown = true;
             yield return DriveFrame();
@@ -263,8 +357,8 @@ namespace PrincesPalace.PlayModeTests
 
             yield return null; // the reselection back onto the base menu is next frame
 
-            Assert.AreEqual(Find("PlayButton").gameObject, EventSystem.current.currentSelectedGameObject,
-                "closing the panel should restore the base menu's own entry");
+            Assert.AreEqual(Find("NewRunButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "closing the panel should restore the base menu's own entry (the first shown item)");
         }
 
         // ---- Manage Saves / reset-confirm (AUDIT.md #159) -------------------
@@ -277,7 +371,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadMenu();
 
-            EventSystem.current.SetSelectedGameObject(Find("PlayButton").gameObject);
+            EventSystem.current.SetSelectedGameObject(Find("LoadButton").gameObject);
             yield return null;
             _input.SubmitDown = true;
             yield return DriveFrame();
