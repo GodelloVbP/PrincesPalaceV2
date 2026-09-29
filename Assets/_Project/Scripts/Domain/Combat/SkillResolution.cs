@@ -224,6 +224,12 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.CursedBlood:
                     return 0;
 
+                // The shield's size is worked out at placement from the
+                // holder's live defences (PlantedShield.PointsFor), which this
+                // signature cannot see.
+                case SkillEffect.PlantShield:
+                    return 0;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }
@@ -327,6 +333,11 @@ namespace PrincesPalace.Domain.Combat
 
             int scaledAttack = CombatMath.ScaledAttack(actor, scalingSet, 1f);
             int raw = scaledAttack + flatAmount + power * resourceSpent;
+
+            // IRON RETORT rides every Physical hit, flat (CombatMath
+            // .IronRetortBonus): a skill of his own type gets it exactly as a
+            // plain swing does.
+            if (CombatMath.IsPhysical(type)) raw += CombatMath.IronRetortBonus(actor);
 
             // FLOORED AT 1, NOT SCALED — this is a wool/authored-skill cast
             // (DamageSingle/DamageAll with no fixed damageInstances), and it

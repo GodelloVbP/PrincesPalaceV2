@@ -257,7 +257,10 @@ namespace PrincesPalace.Domain.Combat.Session
             var living = _encounter.LivingPlayerParty.ToList();
             if (living.Count == 0) return null;
 
-            int draw = _rng == null ? 0 : _rng.NextInt(0, living.Count);
+            // A standing taunt (Bellow T2) widens the draw by each preferred
+            // member's extra copies; for a party with none the span is the
+            // living count, exactly as before.
+            int draw = _rng == null ? 0 : _rng.NextInt(0, living.Count + PreferenceExtras(living));
 
             // A taunt is honoured at TELEGRAPH time, not only at resolution:
             // the icon promising someone the provoker has already pulled off
@@ -277,6 +280,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // resolution-time re-check below is what actually decides.
             if (candidates.Count == 0) candidates = living;
 
+            candidates = WeightedByPreference(candidates);
             return candidates[draw % candidates.Count];
         }
 

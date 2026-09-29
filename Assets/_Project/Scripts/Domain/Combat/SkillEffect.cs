@@ -228,6 +228,15 @@ namespace PrincesPalace.Domain.Combat
         //
         // APPENDED, never inserted -- generated assets store this ordinal.
         CursedBlood,
+
+        // BJORN'S PLANT THE SHIELD (Sentinel convergence, and Shieldwall once
+        // the capstone sets CoversParty): puts the planted shield down in
+        // front of the caster (FightSession.PlantShield, Phase 4a). Refused
+        // while one is down or the re-place wait is open
+        // (CombatActions.IsLegalFor). Touches only the caster.
+        //
+        // APPENDED, never inserted -- generated assets store this ordinal.
+        PlantShield,
     }
 
     // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier

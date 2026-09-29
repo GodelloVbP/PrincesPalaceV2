@@ -110,7 +110,30 @@ namespace PrincesPalace.Domain.Combat
             var scaling = attacker.WeaponScaling.IsNeutral && attacker.AbilityScores.strength > 0
                 ? UnarmedStrengthScaling
                 : attacker.WeaponScaling;
-            return Math.Max(1, ScaledAttack(attacker, scaling, BasicAttackPowerMultiplier));
+            // IRON RETORT: a plain attack is a weapon swing, Physical, so the
+            // holder's flat defence bonus rides it as it rides a Physical skill.
+            return Math.Max(1, ScaledAttack(attacker, scaling, BasicAttackPowerMultiplier)
+                               + IronRetortBonus(attacker));
+        }
+
+        // IRON RETORT (Sentinel, Bottom left): flat damage on the holder's
+        // Physical hits, IronRetortPercent percent of the Defense and Magical
+        // Defense he has ABOVE his own base stats (CombatantState
+        // .BaseDefenseTotal), so a fresh Bjorn adds nothing and only gear,
+        // relics, talents and a Fortified status do. Read from the live
+        // figures every time, so a swing, a cast and the card agree, and a
+        // shredded or converted defence shrinks it. Typed resistances are
+        // deliberately not counted. Floored.
+        public static int IronRetortBonus(CombatantState actor)
+        {
+            if (actor == null) return 0;
+
+            int percent = actor.Talents.Best(TalentEffectType.IronRetortPercent);
+            if (percent <= 0) return 0;
+
+            int fortified = StatusEffects.MagnitudeOf(actor, StatusEffectType.Fortified);
+            int above = actor.PhysicalDefense + actor.MagicalDefense + 2 * fortified - actor.BaseDefenseTotal;
+            return above <= 0 ? 0 : (int)((long)above * percent / 100);
         }
 
         // How much of a target's broad Defense (PhysicalDefense or
@@ -145,7 +168,8 @@ namespace PrincesPalace.Domain.Combat
                 return 0;
             }
 
-            int broad = IsPhysical(type) ? target.PhysicalDefense : target.MagicalDefense;
+            int broad = (IsPhysical(type) ? target.PhysicalDefense : target.MagicalDefense)
+                        + StatusEffects.MagnitudeOf(target, StatusEffectType.Fortified);
 
             // Last Stand T1: armour that only exists once he is hurt.
             int bonusPercent = target.Talents.BestBelowHealth(

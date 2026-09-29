@@ -59,6 +59,7 @@ namespace PrincesPalace.Domain.Tests
             { "Reposition", 20 },
             { "Unbroken", 21 },
             { "CursedBlood", 22 },
+            { "PlantShield", 23 },
         };
 
         private static readonly Dictionary<string, int> SkillTargetingOrdinals = new Dictionary<string, int>
@@ -89,6 +90,7 @@ namespace PrincesPalace.Domain.Tests
             { "Thorned", 13 },
             // Bellwether kit M2.
             { "Bleed", 14 },
+            { "Fortified", 15 },
         };
 
         private static readonly Dictionary<string, int> DamageTypeOrdinals = new Dictionary<string, int>

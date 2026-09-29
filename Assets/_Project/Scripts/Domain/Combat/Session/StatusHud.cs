@@ -140,6 +140,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Burn: return "BRN";
                 case StatusEffectType.Thorned: return "THN";
                 case StatusEffectType.Bleed: return "BLD";
+                case StatusEffectType.Fortified: return "FRT";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(type), type,
                         "StatusHud has no three-letter code for this status -- a badge would otherwise print nothing.");
@@ -159,6 +160,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Protect:
                 case StatusEffectType.Shielded:
                 case StatusEffectType.Empowered:
+                case StatusEffectType.Fortified:
                     return true;
                 default:
                     return false;
@@ -243,6 +245,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Burn: return 15;
                 case StatusEffectType.Thorned: return 16;
                 case StatusEffectType.Bleed: return 17;
+                case StatusEffectType.Fortified: return 18;
                 default: return 98;
             }
         }
@@ -342,6 +345,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Bleed tick then meets the holder's physical defence.
                 case StatusEffectType.Bleed:
                     return $"Bleed -- {Wrap(positive, $"{magnitude} physical damage each turn start, before armour")}{stacks}, {duration}";
+                case StatusEffectType.Fortified:
+                    return $"Fortified -- {Wrap(positive, $"+{magnitude} Defense and Magical Defense")}, {duration}";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(summary), summary.Type,
                         "StatusHud has no tooltip for this status -- a badge would otherwise show nothing on hover.");

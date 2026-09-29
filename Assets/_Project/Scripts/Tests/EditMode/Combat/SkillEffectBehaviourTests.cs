@@ -504,6 +504,20 @@ namespace PrincesPalace.Domain.Tests
 
                 Assert.IsTrue(caster.HealConversion.IsActive, "the conversion window did not open");
             }),
+
+            new Row(SkillEffect.PlantShield, "the caster's planted shield goes down", () =>
+            {
+                var caster = Hero("Caster", speed: 30);
+                var encounter = new CombatEncounter(new[] { caster }, new[] { Foe() });
+                var skill = new ResolvedSkill("coverage", "Plant the Shield", "", "hero", 1,
+                    SkillEffect.PlantShield, SkillTargeting.Self, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0);
+                var session = Session(encounter, Kit(skill));
+
+                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+
+                Assert.IsTrue(caster.PlantedShield.IsPlaced, "the shield did not go down");
+            }),
         };
 
         // ---- the four consumers, one case per member -----------------------

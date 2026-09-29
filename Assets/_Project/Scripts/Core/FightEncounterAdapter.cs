@@ -158,6 +158,16 @@ namespace PrincesPalace
             return resolved;
         }
 
+        // The Defense plus Magical Defense a character starts with: the
+        // authored base stats plus what their authored ability scores derive.
+        private static int BaseDefenseTotalOf(CharacterDefinition definition)
+        {
+            var stats = definition.Data.BaseStats;
+            var scores = definition.Data.AbilityScores;
+            return stats.physicalDefense + AbilityDerivation.PhysicalDefenseBonus(scores)
+                   + stats.magicalDefense + AbilityDerivation.MagicalDefenseBonus(scores);
+        }
+
         // The IN-RUN party member: what they actually walk into the room with.
         //
         // THIS IS WHERE EQUIPMENT REACHES COMBAT, and until it existed nothing
@@ -242,6 +252,12 @@ namespace PrincesPalace
             // meant.
             state.PhysicalDefense = RelicModifiers.Apply(stats.physicalDefense, RelicStat.Defence, modifiers);
             state.MagicalDefense = RelicModifiers.Apply(stats.magicalDefense, RelicStat.Defence, modifiers);
+
+            // Where the Iron Retort measures "above his base" from: the
+            // authored base stats and what the authored ability scores derive,
+            // not the gear-and-points total in `stats`, so a fresh character
+            // sits exactly on the line.
+            state.BaseDefenseTotal = BaseDefenseTotalOf(definition);
 
             // And whatever a relic adds against ONE element, on top of those.
             state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
@@ -366,6 +382,7 @@ namespace PrincesPalace
                 stats.physicalDefense + AbilityDerivation.PhysicalDefenseBonus(scores), RelicStat.Defence, modifiers);
             state.MagicalDefense = RelicModifiers.Apply(
                 stats.magicalDefense + AbilityDerivation.MagicalDefenseBonus(scores), RelicStat.Defence, modifiers);
+            state.BaseDefenseTotal = BaseDefenseTotalOf(definition);
 
             // The same relic-typed-resistance line the save-backed overload
             // has -- missed here even though every other relic modifier above

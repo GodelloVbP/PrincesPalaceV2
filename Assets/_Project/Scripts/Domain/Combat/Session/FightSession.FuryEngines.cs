@@ -88,6 +88,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (target == null || !isHit) return;
 
+            PayHoldTheLine(target);
+
             // SENTINEL: per hit taken, on the raw incoming figure. Hits only
             // -- a poison tick keeps his turn from reading idle (the pools
             // still note the activity) but is not a hit and pays nothing.
@@ -130,7 +132,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // ever turns things ON: a test or a caller that set a seam by hand
         // keeps it.
         //
-        // The Sentinel's arm lands with its constellation.
+        // The Juggernaut's arm is FightSession.Juggernaut.cs and the Sentinel's
+        // is FightSession.Sentinel.cs.
         private static void ArmEngineSeams(CombatantState actor)
         {
             var talents = actor?.Talents;
@@ -142,6 +145,7 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             ArmJuggernautSeams(actor, talents);
+            ArmSentinelSeams(actor, talents);
 
             int momentum = talents.Best(TalentEffectType.MomentumTier);
             if (momentum >= 1) actor.Momentum.Enabled = true;

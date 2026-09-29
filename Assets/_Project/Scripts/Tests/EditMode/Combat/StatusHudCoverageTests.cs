@@ -132,7 +132,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(3, StatusHud.SpeedDownCode.Length);
 
             var distinct = codes.Distinct().ToList();
-            Assert.AreEqual(17, codes.Count, "expected fifteen statuses plus two speed presentations");
+            Assert.AreEqual(18, codes.Count, "expected sixteen statuses plus two speed presentations");
             Assert.AreEqual(codes.Count, distinct.Count,
                 $"codes are not unique: {string.Join(", ", codes)}");
         }

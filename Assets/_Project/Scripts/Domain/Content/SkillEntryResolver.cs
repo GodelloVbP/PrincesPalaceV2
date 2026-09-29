@@ -825,6 +825,22 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // THE SENTINEL'S TWO: a shield bash and a replaced button.
+            if (raw.plantedShieldBashPercent != 0
+                && (raw.plantedShieldBashPercent < 0 || raw.plantedShieldBashPercent > 100
+                    || effect != SkillEffect.DamageSingle))
+            {
+                error = $"{label}: plantedShieldBashPercent must be 1-100 and only means anything on a DamageSingle skill, not {effect}.";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(raw.replacesSkillId)
+                && string.Equals(raw.replacesSkillId.Trim(), raw.id, StringComparison.Ordinal))
+            {
+                error = $"{label}: replacesSkillId names the skill itself.";
+                return false;
+            }
+
             if (!TryResolveBellwetherFields(raw, label, effect, targeting, instances,
                     out var ownDamageType, out var damageBySeat, out error))
             {
@@ -962,7 +978,8 @@ namespace PrincesPalace.Domain.Content
                 raw.advanceSlots, raw.physicalMove,
                 ownDamageType, damageBySeat, raw.toSeat,
                 raw.hitCount, raw.damagePerMissingHealthPercent, raw.refundsSpentOnKillPercent,
-                raw.lifestealPercent, raw.oncePerFight, raw.windowTurns, raw.regenPercentOfMaxHealth);
+                raw.lifestealPercent, raw.oncePerFight, raw.windowTurns, raw.regenPercentOfMaxHealth,
+                raw.plantedShieldBashPercent, (raw.replacesSkillId ?? "").Trim());
             error = null;
             return true;
         }
@@ -1627,7 +1644,8 @@ namespace PrincesPalace.Domain.Content
                 case SkillEffect.HealSelf:
                 // Both open a window on the caster and touch nobody else.
                 case SkillEffect.Unbroken:
-                case SkillEffect.CursedBlood: return SkillTargeting.Self;
+                case SkillEffect.CursedBlood:
+                case SkillEffect.PlantShield: return SkillTargeting.Self;
                 case SkillEffect.HealParty:
                 case SkillEffect.RestorePartyMana:
                 case SkillEffect.BuffParty: return SkillTargeting.Party;

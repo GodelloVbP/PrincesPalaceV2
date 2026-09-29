@@ -423,7 +423,7 @@ namespace PrincesPalace.Content
             // THIS character's; a learned book is available because THIS
             // character learned it; a track-collected skill is available
             // because THIS character's own track paid it.
-            return _skills
+            var available = _skills
                 .Where(s => s.Data.PlayerSelectable
                             && (LearnedThisRun(s)
                                 || fromTrack.Contains(s.id)
@@ -434,6 +434,17 @@ namespace PrincesPalace.Content
                 .OrderBy(s => s.Data.UnlockLevel)
                 .ThenBy(s => s.Data.SortOrder)
                 .ToList();
+
+            // A SKILL THAT TAKES OVER ANOTHER'S BUTTON (Plant the Shield over
+            // Brace): once both are owned the replaced one leaves the menu, so
+            // the upgrade is the same button rather than a second one. Done
+            // here, on the one union every reader goes through.
+            var replaced = new HashSet<string>(available
+                .Select(s => s.Data.ReplacesSkillId)
+                .Where(id => !string.IsNullOrEmpty(id)));
+            if (replaced.Count > 0) available.RemoveAll(s => replaced.Contains(s.id));
+
+            return available;
         }
 
         // Drops the cache so the next access reloads from Resources.

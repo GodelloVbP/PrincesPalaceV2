@@ -33,6 +33,19 @@ namespace PrincesPalace.Domain.Bot
     //                   SecondWindBelowHealth, or, under Cursed Blood's window
     //                   (where it converts to damage), whenever a real share
     //                   of his health is missing.
+    //
+    // The Sentinel's three, same shape (identified by effect and fields):
+    //
+    //   Plant the Shield -- whenever it is legal: a shield that is not down is
+    //                       soaking nothing, and the legal menu already holds
+    //                       the wait and the shield-already-down refusals.
+    //   Hold the Line    -- a party buff (BuffParty of Fortified) when nobody
+    //                       in the party carries it yet.
+    //   Bellow           -- a Provoke, at an enemy that is not already
+    //                       provoked, when an ally other than the caster is
+    //                       below BellowAllyBelowHealth of his health (the
+    //                       moment a redirect is worth a turn), or when the
+    //                       cast pays him Fury.
     public static class UtilitySkills
     {
         // Habits, not balance numbers: the same rough shape GreedyDefensive's
@@ -49,6 +62,9 @@ namespace PrincesPalace.Domain.Bot
         // worth a whole Fury bar as a nuke.
         public const float SecondWindNukeMissing = 0.25f;
 
+        // Bellow is worth a turn once an ally is this hurt.
+        public const float BellowAllyBelowHealth = 0.6f;
+
         // The command to play instead of asking the policy, or null.
         public static FightAction? Choose(
             FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal)
@@ -59,6 +75,9 @@ namespace PrincesPalace.Domain.Bot
             FightAction? unbroken = null;
             FightAction? cursed = null;
             FightAction? secondWind = null;
+            FightAction? plant = null;
+            FightAction? hold = null;
+            FightAction? bellow = null;
 
             foreach (var action in legal)
             {
@@ -71,13 +90,40 @@ namespace PrincesPalace.Domain.Bot
                 if (skill.Effect == SkillEffect.Unbroken) unbroken = unbroken ?? action;
                 else if (skill.Effect == SkillEffect.CursedBlood) cursed = cursed ?? action;
                 else if (IsAllInHeal(skill)) secondWind = secondWind ?? action;
+                else if (skill.Effect == SkillEffect.PlantShield) plant = plant ?? action;
+                else if (IsPartyFortify(skill)) hold = hold ?? action;
+                else if (skill.Effect == SkillEffect.Provoke && !bellow.HasValue && IsUnprovoked(action.Target)
+                         && BellowWorthIt(session, actor)) bellow = action;
             }
 
             if (unbroken.HasValue && UnbrokenWorthIt(actor)) return unbroken;
             if (cursed.HasValue && CursedBloodWorthIt(actor)) return cursed;
             if (secondWind.HasValue && SecondWindWorthIt(actor)) return secondWind;
+            if (plant.HasValue) return plant;
+            if (hold.HasValue && !AnyAllyFortified(session, actor)) return hold;
+            if (bellow.HasValue) return bellow;
 
             return null;
+        }
+
+        private static bool IsPartyFortify(ResolvedSkill skill) =>
+            skill.Effect == SkillEffect.BuffParty && skill.AppliesStatus == StatusEffectType.Fortified;
+
+        private static bool IsUnprovoked(CombatantState enemy) =>
+            enemy != null && !enemy.Statuses.Any(s => s.Type == StatusEffectType.Provoked);
+
+        private static bool AnyAllyFortified(FightSession session, CombatantState actor) =>
+            session.Encounter.AlliesOf(actor).Any(a => a.IsAlive
+                && a.Statuses.Any(s => s.Type == StatusEffectType.Fortified));
+
+        // The redirect is worth a turn when an ally other than the caster is
+        // hurt, or when the cast itself pays him Fury.
+        private static bool BellowWorthIt(FightSession session, CombatantState actor)
+        {
+            if (actor.Talents.Best(TalentEffectType.PrimaryGainPerProvokedEnemy) > 0) return true;
+
+            return session.Encounter.AlliesOf(actor).Any(a => a.IsAlive && !ReferenceEquals(a, actor)
+                && a.MaxHealth > 0 && (float)a.CurrentHealth / a.MaxHealth < BellowAllyBelowHealth);
         }
 
         // A HealSelf that spends the whole Fury bar (Second Wind's shape).

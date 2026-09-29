@@ -68,6 +68,12 @@ namespace PrincesPalace.Domain.Combat
         public int PhysicalDefense;
         public int MagicalDefense;
 
+        // The Defense plus Magical Defense of the character's own base stats,
+        // before gear, relics, talents and ability points: the line the Iron
+        // Retort measures "above his base" from. 0 (everything counts) for a
+        // combatant nothing set it on.
+        public int BaseDefenseTotal;
+
         // Resistance to ONE element, on top of the two-way split above. Empty
         // for everything that has not been given any, which is why adding it
         // retuned nothing. See ResistanceByType.

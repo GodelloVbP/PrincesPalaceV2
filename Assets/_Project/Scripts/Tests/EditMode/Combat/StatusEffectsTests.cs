@@ -126,6 +126,41 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // A cleanse asks IsDebuff, and a member with no answer would throw in
+        // a fight rather than here.
+        [Test]
+        public void EveryStatusTypeAnswersIsDebuff()
+        {
+            foreach (var type in (StatusEffectType[])System.Enum.GetValues(typeof(StatusEffectType)))
+            {
+                Assert.DoesNotThrow(() => StatusEffects.IsDebuff(type), $"{type} is neither a harm nor a help");
+            }
+        }
+
+        [Test]
+        public void TheHarmsAreDebuffs_AndTheHelpsAreNot()
+        {
+            foreach (var harm in new[]
+                     {
+                         StatusEffectType.Poison, StatusEffectType.Vulnerable, StatusEffectType.Stun,
+                         StatusEffectType.Provoked, StatusEffectType.Chilled, StatusEffectType.Rooted,
+                         StatusEffectType.Marked, StatusEffectType.Feared, StatusEffectType.Burn,
+                         StatusEffectType.Thorned, StatusEffectType.Bleed,
+                     })
+            {
+                Assert.IsTrue(StatusEffects.IsDebuff(harm), harm.ToString());
+            }
+
+            foreach (var help in new[]
+                     {
+                         StatusEffectType.Regen, StatusEffectType.Protect, StatusEffectType.Shielded,
+                         StatusEffectType.Empowered, StatusEffectType.Fortified,
+                     })
+            {
+                Assert.IsFalse(StatusEffects.IsDebuff(help), help.ToString());
+            }
+        }
+
         // The judgement itself, written down. NOT the same line StackPolicyOf
         // draws: Empowered and Feared both refresh rather than stacking and
         // both carry a real number, so a test that asserted the two tables

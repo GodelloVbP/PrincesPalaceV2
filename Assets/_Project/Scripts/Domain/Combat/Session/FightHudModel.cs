@@ -491,6 +491,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Named for what the player gets, not for the seam under it.
                 case SkillEffect.Unbroken: return "ENDURE";
                 case SkillEffect.CursedBlood: return "CURSE";
+                case SkillEffect.PlantShield: return "PLANT";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
                         "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +

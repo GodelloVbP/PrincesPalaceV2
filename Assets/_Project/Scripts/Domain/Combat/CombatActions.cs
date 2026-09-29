@@ -103,6 +103,27 @@ namespace PrincesPalace.Domain.Combat
                 return false;
             }
 
+            // THE PLANTED SHIELD'S TWO BOARD-STATE RULES, asked here so the
+            // menu, the bot and the cast's refusal read one answer: it cannot
+            // be planted while one stands or the re-place wait runs, and a
+            // Shield Bash has nothing to strike with unless one stands.
+            if (skill != null && actor != null)
+            {
+                if (skill.Effect == SkillEffect.PlantShield && !actor.PlantedShield.CanPlace)
+                {
+                    refusal = actor.PlantedShield.IsPlaced
+                        ? $"{actor.Name}'s shield is already planted."
+                        : $"{actor.Name} cannot plant the shield again yet.";
+                    return false;
+                }
+
+                if (skill.PlantedShieldBashPercent > 0 && !actor.PlantedShield.IsPlaced)
+                {
+                    refusal = $"{actor.Name} has no planted shield to {skill.DisplayName}.";
+                    return false;
+                }
+            }
+
             return IsLegalFor(actor, IsPhysicalMove(skill), out refusal);
         }
 

@@ -269,6 +269,14 @@ namespace PrincesPalace.Domain.Content
             TalentEffectType.FuryEngineJuggernaut,
             TalentEffectType.HealReducesDelayedDamage,
             TalentEffectType.CheatDeathFillsPrimary,
+            TalentEffectType.FuryEngineSentinel,
+            TalentEffectType.PlantedShieldBreakShards,
+            TalentEffectType.ShieldBashShortWait,
+            TalentEffectType.ShieldwallCoversParty,
+            TalentEffectType.SilenceCasterOnSpellHit,
+            TalentEffectType.ReflectGrantsFury,
+            TalentEffectType.SlowsAttacker,
+            TalentEffectType.DisarmsOnBreak,
         };
 
         private static bool TryResolveEffects(RawTalentEntry raw, string label,

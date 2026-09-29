@@ -533,6 +533,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     ResolveCursedBlood(actor, skill);
                     break;
 
+                case SkillEffect.PlantShield:
+                    ResolvePlantShield(actor, skill);
+                    break;
+
                 case SkillEffect.HealSelf:
                 {
                     BeginBeat(actor, actor, isCast: true);
@@ -659,6 +663,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // the one path a player can see, and it is pinned by
                     // FightTalentTests.BellowingAtACorpseIsRefusedRatherThanResolved.
                     int provoked = ApplyProvoke(actor, target);
+                    PayProvokeFury(actor, provoked);
                     AppendMessage(provoked == 1
                         ? $"{actor.Name} bellows - one enemy can see nothing else."
                         : $"{actor.Name} bellows - all {provoked} of them come for him.");
@@ -714,6 +719,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
                         ApplySkillStatus(skill, ally, actor);
+                        CleanseForSkill(actor, skill, ally);
                     }
 
                     AppendMessage($"{actor.Name} lets out {skill.DisplayName}.");
@@ -989,6 +995,11 @@ namespace PrincesPalace.Domain.Combat.Session
                     // GORGE T3: the named skill's own-health bonus, on the raw
                     // figure like the wound bonus above.
                     baseAmount = ApplySkillHealthBonus(baseAmount, skill, actor);
+
+                    // SHIELD BASH: spends the planted shield and adds a share
+                    // of what it soaked, on the raw figure like the bonuses
+                    // above.
+                    baseAmount = ApplyShieldBash(baseAmount, skill, actor);
                 }
 
                 // NO VARIANCE ON A SEAT-SIZED HIT. Its base is a fixed share
@@ -1036,6 +1047,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 skill.HasFixedDamage ? (DamageType?)null : CastTypeOf(actor, skill));
 
             ApplySkillLifesteal(actor, skill, damage);
+
+            ApplySkillSplash(actor, skill, target, damage);
 
             RefundOnKill(actor, skill, target, resourceSpent);
 
@@ -1838,7 +1851,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 // every blow (each is a full swing of this figure).
                 if (skill.Effect == SkillEffect.DamageSingle)
                 {
-                    amount = ApplySkillHealthBonus(ApplyMissingHealthBonus(amount, skill, target), skill, actor)
+                    amount = ApplyShieldBashPreview(
+                                 ApplySkillHealthBonus(ApplyMissingHealthBonus(amount, skill, target), skill, actor),
+                                 skill, actor)
                              * (skill.HitCount < 1 ? 1 : skill.HitCount);
                 }
 
@@ -2014,9 +2029,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // would have put the badge up and slowed nobody, because
             // ApplyChilled is the only path that registers the speed malus.
             // Winter's Rebuke is the first row that authors one.
-            if (!ApplyStatusTo(recipient, type, skill.StatusMagnitude, skill.StatusDuration, caster)) return;
+            // A talent that names this skill can hold its status longer (Hold
+            // the Line T2); it never shortens the authored figure.
+            int turns = System.Math.Max(skill.StatusDuration,
+                caster?.Talents.BestFor(TalentEffectType.SkillStatusTurns, skill.Id) ?? 0);
+            if (!ApplyStatusTo(recipient, type, skill.StatusMagnitude, turns, caster)) return;
 
-            bool isBeneficial = type == StatusEffectType.Regen || type == StatusEffectType.Protect;
+            bool isBeneficial = type == StatusEffectType.Regen || type == StatusEffectType.Protect
+                                || type == StatusEffectType.Fortified;
             AppendMessage(isBeneficial
                 ? $"{recipient.Name} gains {type}!"
                 : $"{recipient.Name} is afflicted with {type}!");

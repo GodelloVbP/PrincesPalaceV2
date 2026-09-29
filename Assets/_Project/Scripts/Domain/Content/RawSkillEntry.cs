@@ -133,6 +133,19 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Percent of the caster's max health the Regen an Unbroken skill opens heals each turn. Required by an Unbroken skill, refused on any other.")]
         public int regenPercentOfMaxHealth;
 
+        // A DAMAGE SKILL THAT SPENDS THE CASTER'S PLANTED SHIELD (Bjorn's
+        // Shield Bash: 30). The cast is refused while no shield is down, takes
+        // it, and adds this percent of everything it soaked this placement to
+        // the blow, before defences. 0 is none.
+        [ContentDoc("Percent of the damage the caster's planted shield absorbed this placement that is added to the hit; the cast consumes the shield and needs one down. Only a DamageSingle skill reads it; 0 means none.")]
+        public int plantedShieldBashPercent;
+
+        // THE BUTTON THIS SKILL TAKES OVER (Plant the Shield replaces Brace).
+        // A character who owns both sees only this one; the replaced skill
+        // returns if this one is not owned.
+        [ContentDoc("Id of a skill of the same character that this skill replaces on the menu once both are owned; empty means it replaces nothing.")]
+        public string replacesSkillId = "";
+
         // A FLAT percent of the CASTER'S own max health, in shield points,
         // added to a Ward. Bjorn's Bulwark is 30: a shield worth roughly
         // three enemy hits at the start of a run, and still worth three of

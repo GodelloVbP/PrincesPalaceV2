@@ -502,6 +502,90 @@ namespace PrincesPalace.Domain.Combat
         // the death save fires, the primary pool fills to its cap. Magnitude
         // is ignored.
         CheatDeathFillsPrimary,
+
+        // ═══ The Sentinel (Bjorn's tank constellation) ═══
+        //
+        // docs/PLAN_BJORN_CONSTELLATIONS.md section 2. APPENDED, like the two
+        // blocks above. The reactive and shield members below are flags or
+        // percents that FightSession.ArmSentinelSeams copies onto
+        // CombatantState.PlantedShield at fight start; the rest are read where
+        // they apply.
+
+        // The root. Sets CombatantState.FuryEngine to Sentinel: Fury per hit
+        // taken, on the raw incoming figure. Magnitude is ignored.
+        FuryEngineSentinel,
+
+        // Iron Retort: the holder's Physical hits gain flat damage equal to
+        // Magnitude percent of the Defense and Magical Defense he has above
+        // his own base stats (CombatMath.IronRetortBonus). Elemental
+        // resistances do not count.
+        IronRetortPercent,
+
+        // The planted shield (CombatantState.PlantedShield): on the
+        // convergence, a broken shield's shards hit the attacker whose blow
+        // broke it. Magnitude is ignored.
+        PlantedShieldBreakShards,
+
+        // Shield Bash T2: the re-place wait after a Bash is the short one.
+        // Magnitude is ignored.
+        ShieldBashShortWait,
+
+        // Shieldwall (the capstone): the planted shield covers every ally as
+        // one pool. Magnitude is ignored.
+        ShieldwallCoversParty,
+
+        // Thornwall T1: Magnitude percent of a physical move's damage on the
+        // holder or his shield returns to the attacker.
+        ThornsPercent,
+
+        // Spellbreaker T1: Magnitude percent of a magic hit on the holder or
+        // his shield is reflected to its caster.
+        ReflectMagicPercent,
+
+        // Spellbreaker T2: a spell that hits the holder or his shield silences
+        // its caster. Magnitude is ignored.
+        SilenceCasterOnSpellHit,
+
+        // Spellbreaker T3: a reflection pays the holder Fury. Magnitude is
+        // ignored.
+        ReflectGrantsFury,
+
+        // Thornwall T2: a physical move that hits the holder or his shield
+        // leaves its attacker slowed (Chilled). Magnitude is ignored.
+        SlowsAttacker,
+
+        // Thornwall T3: a physical hit that breaks the shield disarms its
+        // attacker. Magnitude is ignored.
+        DisarmsOnBreak,
+
+        // SKILL-SCOPED: the status the named skill applies lasts Magnitude
+        // turns when that beats the row's own statusDuration. Hold the Line T2
+        // (2 -> 3).
+        SkillStatusTurns,
+
+        // SKILL-SCOPED: casting the named skill also removes Magnitude debuffs
+        // from each ally it buffs (StatusEffects.IsDebuff, oldest first). Hold
+        // the Line T3 (1).
+        SkillCleansesDebuffs,
+
+        // SKILL-SCOPED: a landed hit of the named skill spills Magnitude
+        // percent of what it dealt onto the target's neighbours, on the rule
+        // Black Ram Mode's splash follows. Shield Bash T3 (100).
+        SkillSplashPercent,
+
+        // The holder gains Magnitude Fury (through the primary pool, so an
+        // engine does not replace it) each time an ally who carries a status
+        // the holder applied is hit. Hold the Line T2 (5).
+        PrimaryGainWhenBuffedAllyHit,
+
+        // Bellow T2: enemies choosing whom to hit count the holder Magnitude
+        // percent more often in the draw (a standing, weighted taunt; the
+        // Provoked status still overrides it). Bellow T2 (200).
+        TargetPreferencePercent,
+
+        // Bellow T3: a Provoke cast pays the holder Magnitude Fury for each
+        // enemy it provoked. Bellow T3 (10).
+        PrimaryGainPerProvokedEnemy,
     }
 
     // One rule a talent grants. Engine-free; the combat pipeline reads these
@@ -562,6 +646,9 @@ namespace PrincesPalace.Domain.Combat
             || type == TalentEffectType.SlamIgnoresDefenseAtFullFury
             || type == TalentEffectType.SkillCooldownTurns
             || type == TalentEffectType.SkillLifestealPercent
-            || type == TalentEffectType.SkillDamageBonusBelowOwnHealth;
+            || type == TalentEffectType.SkillDamageBonusBelowOwnHealth
+            || type == TalentEffectType.SkillStatusTurns
+            || type == TalentEffectType.SkillCleansesDebuffs
+            || type == TalentEffectType.SkillSplashPercent;
     }
 }

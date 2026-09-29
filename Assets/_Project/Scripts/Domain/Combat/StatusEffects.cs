@@ -146,9 +146,52 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Provoked:
                 case StatusEffectType.Empowered:
                 case StatusEffectType.Marked:
+                // A stat buff from one source: recasting it refreshes the
+                // clock, it does not double the armour.
+                case StatusEffectType.Fortified:
                     return StackingPolicy.Refresh;
                 default:
                     return StackingPolicy.Stack;
+            }
+        }
+
+        // IS THIS STATUS A HARM to its holder, the question a cleanse asks.
+        // Hold the Line T3 removes one of these from each ally. A status that
+        // helps its holder (Regen, Protect, Shielded, Empowered, Fortified) is
+        // never taken. Provoked counts: it forces an enemy's target, and on an
+        // ally it is a taunt they did not choose.
+        //
+        // THROWS on an unhandled member, like DurationClock, so a new status
+        // fails StatusEffectsTests.EveryStatusTypeAnswersIsDebuff and not a
+        // fight.
+        public static bool IsDebuff(StatusEffectType type)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Poison:
+                case StatusEffectType.Vulnerable:
+                case StatusEffectType.Stun:
+                case StatusEffectType.Provoked:
+                case StatusEffectType.Chilled:
+                case StatusEffectType.Rooted:
+                case StatusEffectType.Marked:
+                case StatusEffectType.Feared:
+                case StatusEffectType.Burn:
+                case StatusEffectType.Thorned:
+                case StatusEffectType.Bleed:
+                    return true;
+
+                case StatusEffectType.Regen:
+                case StatusEffectType.Protect:
+                case StatusEffectType.Shielded:
+                case StatusEffectType.Empowered:
+                case StatusEffectType.Fortified:
+                    return false;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type,
+                        "StatusEffects.IsDebuff has no answer for this status -- a cleanse would either "
+                        + "strip a buff or leave a harm standing.");
             }
         }
 
@@ -193,6 +236,7 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Burn:
                 case StatusEffectType.Thorned:
                 case StatusEffectType.Bleed:
+                case StatusEffectType.Fortified:
                     return true;
 
                 // A gate or a token. It is on or it is not, and the only
@@ -1251,6 +1295,7 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Rooted:
                 case StatusEffectType.Marked:
                 case StatusEffectType.Shielded:
+                case StatusEffectType.Fortified:
                     return StatusClock.AtTurnEnd;
 
                 default:

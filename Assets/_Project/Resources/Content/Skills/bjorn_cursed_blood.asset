@@ -36,6 +36,8 @@ MonoBehaviour:
     OncePerFight: 1
     WindowTurns: 2
     RegenPercentOfMaxHealth: 0
+    PlantedShieldBashPercent: 0
+    ReplacesSkillId: 
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
     Power: 0

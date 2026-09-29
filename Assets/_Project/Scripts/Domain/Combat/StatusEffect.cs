@@ -206,6 +206,18 @@ namespace PrincesPalace.Domain.Combat
         // FIFTEENTH, Bellwether kit M2 (docs/PLAN_BELLWETHER_KIT.md 1.3/3.2).
         // Any skill, monster rider or weapon modifier applies it by name.
         Bleed,
+
+        // Magnitude points of BOTH broad defences (Defense and Magical
+        // Defense) while this stands: CombatMath.BroadDefense adds it, so a
+        // hit, a preview and the Iron Retort all read one figure. A standing
+        // modifier, aged at the end of the bearer's turn like Protect, and a
+        // second cast refreshes it rather than doubling it.
+        //
+        // SIXTEENTH, Slice C of the Bjorn constellations. Hold the Line puts
+        // it on the whole party. Protect could not be reused: it is a percent
+        // of damage taken, not a stat, so it would not feed the Iron Retort
+        // and does not read as "more armour" on the plate.
+        Fortified,
     }
 
     // WHEN A STATUS'S COUNTER MOVES -- the one question that decides how an

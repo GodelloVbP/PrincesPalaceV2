@@ -69,6 +69,10 @@ namespace PrincesPalace.Domain.Content
         public int WindowTurns;
         public int RegenPercentOfMaxHealth;
 
+        // See RawSkillEntry.plantedShieldBashPercent / replacesSkillId.
+        public int PlantedShieldBashPercent;
+        public string ReplacesSkillId = "";
+
         // The two a Ward alone reads -- see RawSkillEntry's own headers.
         // WardTurns is already resolved here: 0 on the raw row becomes
         // FightTuning.DefaultWardTurns (one turn), so nothing downstream has
@@ -536,8 +540,12 @@ namespace PrincesPalace.Domain.Content
             // APPENDED LAST OF ALL AGAIN (Juggernaut), same positional-argument
             // reason every block above gives.
             int lifestealPercent = 0, bool oncePerFight = false, int windowTurns = 0,
-            int regenPercentOfMaxHealth = 0)
+            int regenPercentOfMaxHealth = 0,
+            // APPENDED LAST OF ALL AGAIN (Sentinel), same reason.
+            int plantedShieldBashPercent = 0, string replacesSkillId = "")
         {
+            PlantedShieldBashPercent = plantedShieldBashPercent;
+            ReplacesSkillId = replacesSkillId ?? "";
             LifestealPercent = lifestealPercent;
             OncePerFight = oncePerFight;
             WindowTurns = windowTurns;
