@@ -1243,9 +1243,10 @@ Status of each item:
   the shield it left behind (`CombatBeat.Shields`) and the player paints it at the impact
   instant, so the crack and the break land on the blow; the idle repaint only reconciles.
   A Shieldwall shows the one planted shield at every standing ally's seat, reading the
-  shared pool. `wall.png` (four shields) is unused pending a party-wide prop.
-- Berserk battle sprite: NOT DONE. Only the concept exists (`Art/Sheets/bjorn_berserk_concept.png`);
-  the stance sheets are not generated and no form is wired.
+  shared pool. `wall.png` (four shields) is unused pending a party-wide prop. The planted
+  shield art is v2 (point-down in a dirt mound, 523x571 canvas); `bjorn_shield_wall-v2.png` is
+  committed as source and, like `wall.png`, unused.
+- Berserk battle sprite: DONE (ddf1b4bf, `Characters/bear_berserk`). The axe backdrop is v2 (96ba87a5).
 - Cursed Blood VFX: NOT DONE.
 
 ### Parallel track — enemy roster

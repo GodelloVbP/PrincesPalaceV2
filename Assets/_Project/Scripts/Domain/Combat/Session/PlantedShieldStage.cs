@@ -144,8 +144,8 @@ namespace PrincesPalace.Domain.Combat.Session
     }
 
     // Where each look's art lives, Resources-relative and extension-free (the
-    // StatusBadgeIcons convention). Sliced from Art/Sheets/bjorn_planted_shield.png
-    // (intact/cracked/broken on one shared canvas, so the tip stays on one
+    // StatusBadgeIcons convention). Sliced from Art/Sheets/bjorn_planted_shield-v2.png
+    // (intact/cracked/broken on one shared canvas, so the dirt mound stays on one
     // ground line across the three):
     //   python tools/slice_actor_sheet.py --sheet <sheet> --actor Characters/<x> \
     //       --grid 3x1 --stances intact,cracked,broken --key white_flood --out-root <scratch>
@@ -158,14 +158,17 @@ namespace PrincesPalace.Domain.Combat.Session
     {
         public const string Folder = "Props/planted_shield/";
 
-        // The slicer's measured ground line for both sheets: the shield's tip
-        // sits this many canvas pixels above the bottom edge, the same "ground
-        // line" the stance manifest records for actors.
+        // The slicer's measured ground line: the dirt mound the shield stands
+        // in sits this many canvas pixels above the bottom edge, the same
+        // "ground line" the stance manifest records for actors.
         public const float GroundLinePixels = 8f;
 
         // The shield's height as a fraction of the figure it stands beside,
-        // measured ground to the top of the idle drawing: chest high.
-        public const float ChestFraction = 0.6f;
+        // measured ground to the top of the idle drawing: chest high. The
+        // fraction applies to the whole canvas, mound included; the mound takes
+        // about a tenth of it, so 0.63 keeps the shield body at the height
+        // 0.6 gave the mound-less art.
+        public const float ChestFraction = 0.63f;
 
         public static string ResourceFor(ShieldLook look)
         {
