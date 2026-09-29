@@ -233,7 +233,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // ---- balance pass 2 -- see FightSession.BalanceRelics2 ----------------
 
         // Ice Fingernail: 10% slow per stack (FallingOffStacks), up to 4
-        // stacks (40%), each stack falling off 3 turns after it lands.
+        // stacks (40%), each stack falling off 5 turns after it lands.
         public const int IceFingernailPercentPerStack = 10;
         public const int IceFingernailMaxStacks = 4;
 

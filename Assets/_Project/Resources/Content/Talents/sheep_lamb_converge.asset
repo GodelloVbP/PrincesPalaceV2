@@ -16,8 +16,8 @@ MonoBehaviour:
     Id: sheep_lamb_converge
     DisplayName: Wail
     Description: 'Unlocks Wail (10 wool, the full pool): applies Protect to the whole
-      party, reducing incoming damage by 50% for 2 turns. 3-turn cooldown. Free,
-      gated at 9 embers spent in this path.'
+      party, reducing incoming damage by 50% for 1 turn. 3-turn cooldown. Free, gated
+      at 9 embers spent in this path.'
     CharacterId: sheep
     Column: 1
     Row: 10

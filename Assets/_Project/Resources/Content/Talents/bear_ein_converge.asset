@@ -15,10 +15,10 @@ MonoBehaviour:
   data:
     Id: bear_ein_converge
     DisplayName: Rampage
-    Description: 'Unlocks Rampage: 70% of a Slam against every enemy. Under 50 Fury
-      it is a normal sweep; at 50 or more it spends half his Fury for double damage;
-      at 100 it spends it all for quadruple. Free, gated at 9 embers spent in this
-      path.'
+    Description: 'Unlocks Rampage: damage plus 9 to every enemy (Slam is damage plus
+      17). Under 50 Fury it is a normal sweep; at 50 or more it spends half his Fury
+      for double damage; at 100 it spends it all for quadruple. Free, gated at 9
+      embers spent in this path.'
     CharacterId: bear
     Column: 1
     Row: 10
