@@ -134,7 +134,13 @@ namespace PrincesPalace.PlayModeTests
             // nav change) raises the raw swing before it ever reaches this
             // formula -- unrelated to the nav-mapping fix this test file is
             // actually about.
-            Assert.AreEqual(8, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
+            // MOVED FROM 8 TO 9: the 5% party crit baseline
+            // (CritRules.BaseChancePercent, PLAN_BJORN_CONSTELLATIONS Phase 1)
+            // is live on every player-side combatant, and SeededRandom(3)'s
+            // one crit draw lands under it here, so this swing is the 8 it
+            // was, crit at 150%, defenses applied = 9. Verified: with the
+            // baseline set to 0 this reads 8 again.
+            Assert.AreEqual(9, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
                 "the exact damage this seeded attack deals");
         }
     }
