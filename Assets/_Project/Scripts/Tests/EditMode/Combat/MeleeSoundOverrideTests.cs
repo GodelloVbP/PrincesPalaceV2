@@ -140,6 +140,27 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheRubberduckBlowCuesAreWiredToTheirSpells()
+        {
+            string json = File.ReadAllText(ContentPath("skills.json"));
+            var expected = new Dictionary<string, string>
+            {
+                ["velvet_shackles"] = "Audio/Sfx/velvet_shackles_impact",
+                ["dark_chains"] = "Audio/Sfx/dark_chains_impact",
+                ["boulder_slam"] = "Audio/Sfx/boulder_slam_impact",
+                ["trunk_slam"] = "Audio/Sfx/trunk_slam_impact",
+                ["bellwether_scratch"] = "Audio/Sfx/bellwether_scratch_impact",
+                ["censer_of_embers"] = "Audio/Sfx/censer_of_embers_impact",
+            };
+            var skills = JsonBlocks.ObjectsInArray(json, "skills");
+            foreach (var pair in expected)
+            {
+                var entry = skills.Single(s => JsonBlocks.String(s, "id") == pair.Key);
+                StringAssert.Contains("\"sfxPath\": \"" + pair.Value + "\"", entry);
+            }
+        }
+
+        [Test]
         public void EveryAuthoredSoundPathNamesAFileUnderResources()
         {
             var missing = new List<string>();

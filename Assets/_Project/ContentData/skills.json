@@ -1028,6 +1028,7 @@
       "appliesStatus": "Rooted",
       "statusDuration": 2,
       "vfx": {
+        "sfxPath": "Audio/Sfx/velvet_shackles_impact",
         "layerFormat": 1,
         "hitCueSeconds": 0.3,
         "layers": [
@@ -1097,6 +1098,7 @@
       "statusMagnitude": 4,
       "statusDuration": 3,
       "vfx": {
+        "sfxPath": "Audio/Sfx/censer_of_embers_impact",
         "layerFormat": 1,
         "hitCueSeconds": 0.3,
         "layers": [
@@ -1470,6 +1472,7 @@
       "flatAmount": 2,
       "manaCost": 0,
       "vfx": {
+        "sfxPath": "Audio/Sfx/boulder_slam_impact",
         "path": "Spells/golem_boulder",
         "fit": "target",
         "seconds": 0.48,
@@ -1565,6 +1568,7 @@
       "windupStance": "attack",
       "approach": "lunge",
       "vfx": {
+        "sfxPath": "Audio/Sfx/trunk_slam_impact",
         "layerFormat": 1,
         "hitCueSeconds": 0.14,
         "layers": [
@@ -1696,6 +1700,7 @@
       "statusMagnitude": 5,
       "statusDuration": 3,
       "vfx": {
+        "sfxPath": "Audio/Sfx/bellwether_scratch_impact",
         "layerFormat": 1,
         "hitCueSeconds": 0.12,
         "layers": [
@@ -1777,6 +1782,7 @@
       "manaCost": 0,
       "stance": "extra",
       "vfx": {
+        "sfxPath": "Audio/Sfx/dark_chains_impact",
         "layerFormat": 1,
         "hitCueSeconds": 0.52,
         "layers": [

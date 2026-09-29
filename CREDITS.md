@@ -92,3 +92,22 @@ licence text is `LICENSE.pdf` in the source pack, kept outside the repo. The
 files are converted to 44.1 kHz 16-bit wav, with the one trim noted above. Like
 the icons above, this credit has no in-game surface yet: there is no credits
 screen, so this file is where it currently lives.
+
+---
+
+## Spell sound effects -- rubberduck
+
+`Assets/_Project/Resources/Audio/Sfx/`
+
+| File | Source clip |
+|---|---|
+| `velvet_shackles_impact.wav` | `chain_01`, trimmed to 0.39s |
+| `dark_chains_impact.wav` | `chain_03`, trimmed to 0.66s |
+| `boulder_slam_impact.wav` | `item_stone_01`, 0.105s lead-in and tail cut to 0.385s |
+| `trunk_slam_impact.wav` | `wood_03`, trimmed to 0.20s |
+| `bellwether_scratch_impact.wav` | `blade_02`, trimmed to 0.254s |
+| `censer_of_embers_impact.wav` | `spell_fire_06`, trimmed to 0.70s |
+
+"80 CC0 RPG SFX" by **rubberduck**, from OpenGameArt. CC0, so no credit is
+required; it is given as a courtesy. Converted to 44.1 kHz 16-bit mono wav with
+a 40ms fade-out on each trim.

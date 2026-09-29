@@ -52,7 +52,7 @@ MonoBehaviour:
       departFrame: 0
       impactX: -1
       impactY: -1
-      sfxPath: 
+      sfxPath: Audio/Sfx/trunk_slam_impact
       groundPath: 
       groundSeconds: 0
       groundImpactFrame: 0

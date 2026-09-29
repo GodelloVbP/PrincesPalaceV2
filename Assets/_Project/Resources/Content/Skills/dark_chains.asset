@@ -52,7 +52,7 @@ MonoBehaviour:
       departFrame: 0
       impactX: -1
       impactY: -1
-      sfxPath: 
+      sfxPath: Audio/Sfx/dark_chains_impact
       groundPath: 
       groundSeconds: 0
       groundImpactFrame: 0
