@@ -126,7 +126,10 @@ namespace PrincesPalace
             AttachTo(canvas);
 
             var canvasRect = (RectTransform)_canvas.transform;
-            var box = BoxIn(canvasRect, _target);
+            var anchor = _target.TryGetComponent<FocusAnchor>(out var anchored) && anchored.Anchor != null
+                ? anchored.Anchor
+                : _target;
+            var box = BoxIn(canvasRect, anchor);
 
             // SCROLLED OUT OF ITS OWN WINDOW. A row a list has clipped away is
             // still active, still focused, and still has a rect -- it is just

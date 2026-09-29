@@ -527,6 +527,11 @@ public static class ScreenRegistry
                 colorMultiplier = 1f,
                 fadeDuration = 0.1f,
             };
+
+            // Hover and selection are one state (exactly one item lit), and
+            // the pad arrow stands level with the caption, not the row centre.
+            result.Attach<HoverSelects>(item.Button);
+            result.Attach<FocusAnchor>(item.Button).Anchor = caption.rectTransform;
         }
     }
 
