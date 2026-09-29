@@ -32,7 +32,7 @@ namespace PrincesPalace
     // game" -- the intent outlived the implementation by the whole rebuild.
     // v2's single EmitButton is a strictly better choke point than v1's
     // several CreateButton variants, so the rule is easier to hold here.
-    public class ButtonPressAnimator : MonoBehaviour, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
+    public class ButtonPressAnimator : MonoBehaviour, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, ISubmitHandler
     {
         // What this button sounds like. Defaults to the shared click, so every
         // button in the game gets one for free from the same choke point that
@@ -49,21 +49,16 @@ namespace PrincesPalace
         // same button that was pressed, so dragging off before releasing
         // correctly makes no sound -- the same reason OnPointerExit clears
         // _isPressed below.
-        public void OnPointerClick(PointerEventData eventData)
-        {
-            // EventSystem still dispatches to a non-Button handler on a
-            // GameObject whose Selectable is non-interactable, so a greyed-out
-            // button would otherwise click audibly while doing nothing.
-            if (_button != null && !_button.interactable)
-            {
-                // A quiet button stays quiet when refused too: its own
-                // controller owns the feedback.
-                if (clickSound != Sound.None) SoundController.Play(Sound.ClickFail);
-                return;
-            }
+        public void OnPointerClick(PointerEventData eventData) => Activate();
 
-            SoundController.Play(clickSound);
-        }
+        // Submit (pad A, Enter) reaches every handler on the selected object,
+        // this one beside Button's own, so the pad clicks exactly as the mouse
+        // does. EventSystem still dispatches to a non-Button handler on a
+        // GameObject whose Selectable is non-interactable, so a greyed-out
+        // button refuses audibly instead of clicking (ButtonCue.Fire).
+        public void OnSubmit(BaseEventData eventData) => Activate();
+
+        public void Activate() => ButtonCue.Fire(this, _button, clickSound);
 
         // Public so tests can assert against the real target instead of
         // duplicating the number (AUDIT.md #18's lesson about a test that

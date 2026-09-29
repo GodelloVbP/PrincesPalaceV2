@@ -72,12 +72,20 @@ namespace PrincesPalace.Domain.UiKit
         // changes while the context stays pushed.
         private readonly Func<INavSubmitClaim> _submitClaim;
 
+        // Whether Cancel would do anything right now, for a context whose
+        // handler is present but sometimes a no-op (the reward summary while
+        // the choice is still open). Null means always live. It exists so the
+        // dispatcher can tell a press that backed out of something from one
+        // that was absorbed, and only the first earns a cue.
+        private readonly Func<bool> _cancelLive;
+
         public NavContext(object entry, IReadOnlyDictionary<string, object> selectables, Action cancel,
             Func<INavCancelClaim> claimant = null, Func<INavTabStrip> tabStrip = null,
             Action systemMenu = null, Func<INavSectionStrip> sectionStrip = null,
-            Func<INavSubmitClaim> submitClaim = null)
+            Func<INavSubmitClaim> submitClaim = null, Func<bool> cancelLive = null)
         {
             _submitClaim = submitClaim;
+            _cancelLive = cancelLive;
             Entry = entry;
             Selectables = selectables ?? EmptySelectables;
             Cancel = cancel;
@@ -112,12 +120,22 @@ namespace PrincesPalace.Domain.UiKit
         // only a pane that declines (or is absent) lets the context's own
         // Cancel run. See INavCancelClaim for why a pane answers per press
         // instead of setting a flag.
-        public void RaiseCancel()
+        //
+        // RETURNS WHETHER THE PRESS BACKED OUT OF SOMETHING: a pane claimed
+        // it, or the context has a live Cancel. A root context (no Cancel)
+        // answers false. The dispatcher plays the close cue off this, so the
+        // engine-free Domain says what happened and Core decides how it
+        // sounds.
+        public bool RaiseCancel()
         {
             var claimant = _claimant?.Invoke();
-            if (claimant != null && claimant.ClaimCancel()) return;
+            if (claimant != null && claimant.ClaimCancel()) return true;
 
-            Cancel?.Invoke();
+            if (Cancel == null) return false;
+
+            bool live = _cancelLive == null || _cancelLive();
+            Cancel.Invoke();
+            return live;
         }
 
         // SUBMIT'S FIRST OFFER. Answers whether the press was spent here; a

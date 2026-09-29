@@ -1046,7 +1046,10 @@ namespace PrincesPalace
         // once per call, plan section 3).
         private void OpenSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
 
-        private void OnBackPressed()
+        private void OnBackPressed() => StepBack();
+
+        // False at Root only: there was nothing to back out of.
+        private bool StepBack()
         {
             // The root case is "nothing happens": FightMenuState.Back()
             // returns false at MenuDepth.Root and only there -- a submenu, an
@@ -1055,7 +1058,7 @@ namespace PrincesPalace
             // out of". Opening the system menu belongs to Start instead
             // (OpenSystemMenu above), so B keeps one meaning in a fight
             // rather than two.
-            if (!_menu.Back()) return;
+            if (!_menu.Back()) return false;
 
             // The stick's ally cursor belongs to one open pick and to nothing
             // else. Left set, a later pick would open with the stick already
@@ -1064,6 +1067,7 @@ namespace PrincesPalace
             _hoveredAllyIndex = -1;
             _hoveredSeat = -1;
             RefreshUi();
+            return true;
         }
 
         private void OnContinuePressed()
@@ -1693,16 +1697,26 @@ namespace PrincesPalace
             _characterSelecting = false;
             _inspectingIntent = false;
             _targetIntentEnemyIndex = -1;
+
+            // Submit here never reaches an EventSystem selection, so nothing
+            // hands the pressed control its own click; the node the marker is
+            // standing on is the one ConfirmFocus presses, and it sounds as
+            // it would under the mouse (ButtonCue.Activate).
+            var pressed = FocusedElement();
             ConfirmFocus();
+            ButtonCue.Activate(pressed);
         }
 
         void IFightNavigationTarget.OnBackPressed()
         {
             if (_session == null || _isBusy) return;
 
+            // Every level B steps out of sounds like the Back button; B at
+            // Root, with nothing to leave, is silent.
             if (IsTargetIntentInspection)
             {
                 SetTargetIntentInspection(false);
+                SoundController.Play(Sound.MenuClose);
                 return;
             }
 
@@ -1711,9 +1725,13 @@ namespace PrincesPalace
             // Asking the menu first would spend the press on a no-op and
             // leave the player stuck on the actor row with no way back to
             // the verbs.
-            if (LeaveInspect()) return;
+            if (LeaveInspect())
+            {
+                SoundController.Play(Sound.MenuClose);
+                return;
+            }
 
-            OnBackPressed();
+            if (StepBack()) SoundController.Play(Sound.MenuClose);
         }
 
         void IFightNavigationTarget.InspectMove(int delta)

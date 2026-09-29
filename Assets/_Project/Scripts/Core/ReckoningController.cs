@@ -358,7 +358,7 @@ namespace PrincesPalace
                 return;
             }
 
-            _navContext = new NavContext(entry, selectables, cancel: HandleCancel);
+            _navContext = new NavContext(entry, selectables, cancel: HandleCancel, cancelLive: () => !_choosing);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 

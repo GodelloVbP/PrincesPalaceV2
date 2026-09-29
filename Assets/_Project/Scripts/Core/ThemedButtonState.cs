@@ -47,7 +47,7 @@ namespace PrincesPalace
     // MayCreateGameObjects would refuse it).
     public class ThemedButtonState : MonoBehaviour,
         IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler,
-        ISelectHandler, IDeselectHandler
+        ISelectHandler, IDeselectHandler, ISubmitHandler
     {
         [SerializeField] public Image Glow;
         [SerializeField] public Image Plate;
@@ -240,17 +240,13 @@ namespace PrincesPalace
         }
 
         // A CLICK, not a press - fires on release over the same button that
-        // was pressed, matching ButtonPressAnimator's own reasoning.
-        public void OnPointerClick(PointerEventData eventData)
-        {
-            if (!Interactable)
-            {
-                if (clickSound != Sound.None) SoundController.Play(Sound.ClickFail);
-                return;
-            }
+        // was pressed, matching ButtonPressAnimator's own reasoning. Submit
+        // sounds the same cue (see ButtonPressAnimator.OnSubmit).
+        public void OnPointerClick(PointerEventData eventData) => Activate();
 
-            SoundController.Play(clickSound);
-        }
+        public void OnSubmit(BaseEventData eventData) => Activate();
+
+        public void Activate() => ButtonCue.Fire(this, _button, clickSound);
 
         // The menu state sets an AMBIENT floor (Open's partial glow, Primary's
         // gold ring); hover/select composes ON TOP as the stronger, temporary

@@ -48,6 +48,11 @@ namespace PrincesPalace
             _instance._source.spatialBlend = 0f;
         }
 
+        // Told of every enum sound asked for, before the clip is resolved, so a
+        // test can count cues in a build with no audio files. Null in play;
+        // TestGlobals.ResetAll puts it back.
+        public static System.Action<Sound> Observer;
+
         // Plays a sound at the player's current effect volume. Silent and
         // harmless if the clip is missing — a game with no audio files should
         // still run, which is the same graceful-degradation posture the rest
@@ -58,6 +63,8 @@ namespace PrincesPalace
             {
                 return;
             }
+
+            Observer?.Invoke(sound);
 
             Bootstrap();
 

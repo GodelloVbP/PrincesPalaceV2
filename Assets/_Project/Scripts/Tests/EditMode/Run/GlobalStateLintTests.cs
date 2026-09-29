@@ -108,6 +108,10 @@ namespace PrincesPalace.Domain.Tests
                 @"SpellPerformancePlayer\.ClockOverride\s*=",
                 @"SpellPerformancePlayer\.ClockOverride\s*=\s*null"),
 
+            ("SoundController.Observer",
+                @"SoundController\.Observer\s*=",
+                @"SoundController\.Observer\s*=\s*null|TestGlobals\.ResetAll\(\)"),
+
             ("RequirementCurve.GearRequirementsEnabled",
                 @"GearRequirementsEnabled\s*=",
                 @"GearRequirementsEnabled\s*=\s*false"),

@@ -263,7 +263,7 @@ namespace PrincesPalace
             // (NavContext.RaiseCancel / INavCancelClaim) -- Party carrying a
             // character spends this press putting them back rather than
             // closing the menu around the player.
-            if (!systemMenuHandled && input.GetButtonDown(cancelButton)) topAtStart.RaiseCancel();
+            if (!systemMenuHandled && input.GetButtonDown(cancelButton)) RaiseCancelWithCue(topAtStart);
 
             // THE SHOULDER SHORTCUT (INavSectionStrip): LB/RB page
             // sections/characters (dossier paging, StepCharacter on the
@@ -721,6 +721,15 @@ namespace PrincesPalace
             // there to go back to, its entry otherwise.
             var resolved = SelectionFor(top);
             EventSystem.current.SetSelectedGameObject(resolved);
+        }
+
+        // A Cancel that backed out of something sounds like the screen's own
+        // Close/Back button (Sound.MenuClose). Here, in Core, because the
+        // Domain context only reports whether the press was spent. Public so a
+        // test can drive the seam without a scene.
+        public static void RaiseCancelWithCue(NavContext context)
+        {
+            if (context.RaiseCancel()) SoundController.Play(Sound.MenuClose);
         }
     }
 }

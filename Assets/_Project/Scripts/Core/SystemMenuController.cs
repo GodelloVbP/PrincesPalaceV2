@@ -416,9 +416,14 @@ namespace PrincesPalace
         private void CloseUnlessTheActivePaneClaimsIt()
         {
             var claimant = ActivePaneCancelClaim();
-            if (claimant != null && claimant.ClaimCancel()) return;
+            if (claimant != null && claimant.ClaimCancel())
+            {
+                SoundController.Play(Sound.MenuClose);
+                return;
+            }
 
             Close();
+            SoundController.Play(Sound.MenuClose);
         }
 
         private void Pause()

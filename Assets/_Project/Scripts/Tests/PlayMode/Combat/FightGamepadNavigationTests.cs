@@ -28,7 +28,11 @@ namespace PrincesPalace.PlayModeTests
         public void PlayFast() => FightBeatPlayer.BeatSpeedMultiplier = 60f;
 
         [TearDown]
-        public void Restore() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        public void Restore()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            SoundController.Observer = null;
+        }
 
         [Test]
         public void WrapCyclesBothDirectionsAtTheEnds()
@@ -894,6 +898,50 @@ namespace PrincesPalace.PlayModeTests
         // One hero, two monsters, and a status on each of the two actors the
         // ring tests read -- so "the box shows THIS actor's statuses" is a
         // literal row count rather than merely "something came up".
+        // The pad reaches the fight's controls without an EventSystem event,
+        // so the cue has to be raised by the dispatcher's own entry points.
+        private static Sound CueOf(string nodeName)
+        {
+            var go = Node(nodeName);
+            var press = go.GetComponent<ButtonPressAnimator>();
+            return press != null ? press.clickSound : go.GetComponent<ThemedButtonState>().clickSound;
+        }
+
+        [UnityTest]
+        public IEnumerator SubmitAtRootSoundsTheFocusedVerbsCueOnce_AndBackSoundsMenuClose()
+        {
+            yield return StandUpAFight();
+            var pad = (IFightNavigationTarget)_fight;
+            var played = new List<Sound>();
+            SoundController.Observer = played.Add;
+
+            var expected = CueOf("Verb0");
+            pad.ConfirmFocus();
+            yield return null;
+
+            CollectionAssert.AreEqual(new[] { expected }, played, "a pad Submit sounds the verb the way its click does");
+
+            played.Clear();
+            pad.OnBackPressed();
+            yield return null;
+
+            CollectionAssert.AreEqual(new[] { Sound.MenuClose }, played, "backing out of the opened level sounds the Back cue");
+        }
+
+        [UnityTest]
+        public IEnumerator BackAtRootIsSilent()
+        {
+            yield return StandUpAFight();
+            var pad = (IFightNavigationTarget)_fight;
+            var played = new List<Sound>();
+            SoundController.Observer = played.Add;
+
+            pad.OnBackPressed();
+            yield return null;
+
+            CollectionAssert.IsEmpty(played, "B at Root has nothing to leave");
+        }
+
         private IEnumerator StandUpAFight()
         {
             yield return LoadFight();
