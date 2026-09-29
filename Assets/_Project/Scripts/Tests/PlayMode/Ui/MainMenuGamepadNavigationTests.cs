@@ -425,6 +425,38 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator CancelOnTheBaseMenu_PlaysNoCloseCue_ButWithTheLoadPanelOpenPlaysItOnce()
+        {
+            yield return LoadMenu();
+            var played = new System.Collections.Generic.List<Sound>();
+            SoundController.Observer = s => played.Add(s);
+            try
+            {
+                EventSystem.current.SetSelectedGameObject(Find("NewRunButton").gameObject);
+                yield return null;
+
+                _input.CancelDown = true;
+                yield return DriveFrame();
+                CollectionAssert.IsEmpty(played, "Cancel at the base menu closes nothing, so it makes no close sound");
+
+                EventSystem.current.SetSelectedGameObject(Find("LoadButton").gameObject);
+                yield return null;
+                _input.SubmitDown = true;
+                yield return DriveFrame();
+                yield return null;
+                played.Clear();
+
+                _input.CancelDown = true;
+                yield return DriveFrame();
+                CollectionAssert.AreEqual(new[] { Sound.MenuClose }, played);
+            }
+            finally
+            {
+                SoundController.Observer = null;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator CancelInsideTheSaveSlotPanel_ClosesItAndRestoresTheMenuEntry()
         {
             yield return LoadMenu();

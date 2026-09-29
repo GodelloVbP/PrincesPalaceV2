@@ -212,7 +212,8 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
+            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel,
+                cancelLive: IsLayerOpen);
             NavigationInputModule.Contexts?.Push(_navContext);
             RefreshNavigation();
         }
@@ -236,9 +237,18 @@ namespace PrincesPalace
         // Load list underneath it still is too (ResetConfirmPanel is a sibling
         // drawn over SaveSlotPanel, not a child that goes with it), so testing
         // list-open before confirm-open would send Cancel to the wrong layer.
+        //
+        // The three layers, topmost-first exclusive, are the one home for "what
+        // is open": HandleCancel and RefreshNavigation dispatch on them and
+        // the Cancel cue (cancelLive) sounds only while one is open.
+        private bool IsConfirmOpen => saveSlotController != null && saveSlotController.IsConfirmOpen;
+        private bool IsSettingsOpen => !IsConfirmOpen && settingsPanel != null && settingsPanel.activeSelf;
+        private bool IsSlotsOpen => !IsConfirmOpen && !IsSettingsOpen && saveSlotPanel != null && saveSlotPanel.activeSelf;
+        private bool IsLayerOpen() => IsConfirmOpen || IsSettingsOpen || IsSlotsOpen;
+
         private void HandleCancel()
         {
-            if (saveSlotController != null && saveSlotController.IsConfirmOpen)
+            if (IsConfirmOpen)
             {
                 // Dismiss(), not a raw SetActive -- it also clears the
                 // pending slot, cancels any hold in progress and puts focus
@@ -247,13 +257,13 @@ namespace PrincesPalace
                 return;
             }
 
-            if (settingsPanel != null && settingsPanel.activeSelf)
+            if (IsSettingsOpen)
             {
                 CloseSettings();
                 return;
             }
 
-            if (saveSlotPanel != null && saveSlotPanel.activeSelf)
+            if (IsSlotsOpen)
             {
                 saveSlotPanel.SetActive(false);
                 RefreshNavigation();
@@ -284,9 +294,9 @@ namespace PrincesPalace
         {
             if (_navContext == null) return;
 
-            bool confirmOpen = saveSlotController != null && saveSlotController.IsConfirmOpen;
-            bool settingsOpen = !confirmOpen && settingsPanel != null && settingsPanel.activeSelf;
-            bool slotsOpen = !confirmOpen && !settingsOpen && saveSlotPanel != null && saveSlotPanel.activeSelf;
+            bool confirmOpen = IsConfirmOpen;
+            bool settingsOpen = IsSettingsOpen;
+            bool slotsOpen = IsSlotsOpen;
 
             Selectable entryButton;
             IEnumerable<Selectable> group;
