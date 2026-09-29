@@ -1,51 +1,63 @@
 # System menu rebuild
 
 The in-game menu opened by Esc / Start over the Hub, Map (with Shop and
-Event) and Fight. Research, captures and the two review rounds behind this
-plan: https://claude.ai/artifact/6CTjZvVkVxgRWawYHjbKdR.
+Event) and Fight. Research, captures and review rounds:
+https://claude.ai/artifact/6CTjZvVkVxgRWawYHjbKdR. Layout numbers,
+states and focus maps live in the design spec, `docs/SPEC_SYSTEM_MENU.md`
+(Phase 1). This plan owns the rules, the spec owns the pixels.
 
-Owner decisions (2026-09-29): one menu, not a pause card plus a game menu.
-Spells and skills are one concept, and spell books are equipped beside the
-gear. Glossary gets its own tab. In a fight everything is viewable and
-nothing can be changed. The last tab is labelled EXIT.
+Owner decisions (2026-09-29): one menu. Spells and skills are one concept,
+and spell books are equipped beside the gear. Glossary is its own tab. In a
+fight everything is viewable and nothing is changeable. The last tab is
+EXIT. The owner asked for the whole plan to be built. Player tests
+therefore run after the build, not before Phase 5 (see Validation).
 
-Out of scope: a visual re-skin, a text-size option (the layout rules below
-keep it possible, see C14), using consumables outside a fight, Start over
-the Reckoning and Relic draft (AUDIT #191), and any save-format change.
+Out of scope: a visual re-skin, a text-size option (C14 keeps it
+possible), using consumables outside a fight, Start over the Reckoning and
+Relic draft (AUDIT #191), and any save-format change.
 
 ## Behavioural contracts
 
-### The frame
+### Model
 
 **C1 Tabs.** Built from one table, `SystemMenuTabs`. Each entry carries a
-key, label, group, visibility by context (C2), hotkey (C8) and pane. A tab
-with no built pane fails the build; placeholders are never shown to
-players.
+key, full label, short label, group, visibility by context, hotkey and
+pane. The build refuses a tab whose pane is missing, so a placeholder can
+never reach a player.
 
-| Tab | Group | Camp | Descent | Fight | Hotkey |
-|---|---|---|---|---|---|
-| CHARACTER | game | ✓ | ✓ | ✓ | C (I opens it on the pack, C4) |
-| PARTY | game | ✓ | ✓ | ✓ | P |
-| RUN | game | – | ✓ | ✓ | R |
-| GLOSSARY | game | ✓ | ✓ | ✓ | G |
-| OPTIONS | system | ✓ | ✓ | ✓ | – |
-| EXIT | system | ✓ | ✓ | ✓ | – |
+| Tab | Group | Camp | Descent | Fight | Hotkey | Lands in |
+|---|---|---|---|---|---|---|
+| CHARACTER | game | ✓ | ✓ | ✓ | C | Phase 2 (content Phase 5) |
+| PARTY | game | ✓ | ✓ | ✓ | P | Phase 2 |
+| RUN | game | – | ✓ | ✓ | R | Phase 3, replacing RUN STATISTICS |
+| GLOSSARY | game | ✓ | ✓ | ✓ | G | Phase 4 |
+| OPTIONS | system | ✓ | ✓ | ✓ | – | as now |
+| EXIT | system | ✓ | ✓ | ✓ | – | Phase 0b |
 
-The game group sits left; the system group sits right, set off by a wider
-gap and a quieter label colour. The bar is laid out from measured label
-widths only. The authored `LabelWidth` column goes, and the build measures
-with TMP the same way `SystemMenuController.ApplyContext` does at runtime.
-That keeps the bar correct under localisation and text scaling.
+The game group sits left; the system group sits right, after a wider gap,
+with a quieter label colour. I is a second key for CHARACTER with a target
+(C4).
 
-**C2 Context.** Every menu instance has one `MenuContext`: `Camp` (Hub),
-`Descent` (Map, Shop, Event) or `Fight`. It replaces the `inDescent` flag on
-`SystemMenuController` and the `lockedForFight` flags on the dossier and
-Party controllers. Panes read `menu.Context`; no pane keeps its own flag.
+**Bar layout and overflow.** Label widths are measured with TMP, both at
+build time and on each open. The authored `LabelWidth` column goes. If the
+full labels do not fit at the tab role's minimum size, the bar uses every
+tab's short label. If the short labels do not fit either, the build fails
+for that language, which is an authoring error. A future text-size option
+never scales the bar past fit. Measuring only detects overflow; the short
+labels and the build failure are the policy.
 
-**C3 Permissions, and fight is read-only.** Every action that changes game
-state is a `MenuAction`, allowed or refused by one Domain table
-`MenuPermissions.Allows(action, context)`. The table below is the whole
-rule:
+**C2 Context.** Each menu instance has one `MenuContext`: `Camp` (Hub),
+`Descent` (Map, Shop, Event) or `Fight`. It is a Domain enum.
+`SystemMenuController` carries it as a serialized field set by
+`ScreenRegistry.WireSystemMenu`. It replaces the menu's `inDescent` flag
+and the `lockedForFight` flags on `CharacterDossierController` and
+`PartyController`. Panes read `menu.Context` and keep no flag of their
+own.
+
+**C3 Permissions: a fight is read-only.** Every state change the menu can
+make is a `MenuAction`. It is allowed or refused by one Domain table,
+`MenuPermissions.Allows(action, context)`, which also returns the refusal
+reason.
 
 | Action | Camp | Descent | Fight |
 |---|---|---|---|
@@ -62,423 +74,470 @@ rule:
 
 ¹ Books exist only inside a descent (`RunSnapshot.unassignedSpellBooks`).
 
-The same table decides both what a control does and how it draws, so the
-two cannot disagree. A refused control keeps its normal look and stays
-focusable and inspectable. Pressing it shows the notice (C11) with the
-reason from the table, for example "Locked during a fight". The domain
-operations (`RunOrchestrator.LearnSpell` / `ReplaceSpell`,
-`EquipmentOps.Equip` / `Unequip`, `TalentOps.Invest` / `Refund`, the
-reward-track claim, `PartyFormation`) take the context and refuse through
-the same table. That guards every caller, not just the menu.
+Enforcement happens in two places, reading the same table:
 
-**C4 Open and close.**
-- Esc or Start opens the menu from any scene root (Hub, Map, Shop, Event,
-  Fight) and pauses (unchanged).
-- Esc or Start while the menu is open closes it, unless the pane claims the
-  press (C5).
-- A hotkey opens the menu on its tab. From inside the menu it switches to
-  that tab. Pressing the key of the tab already showing closes the menu.
-- I opens CHARACTER › LOADOUT with focus in the pack.
-- The pad View button opens RUN in a descent or fight, and CHARACTER at
-  camp.
-- Hub buildings open the menu through the same deep-link API (C9):
-  CHARACTER SHEET opens CHARACTER, the glossary building opens GLOSSARY,
-  and the corner Main Menu button opens EXIT. That last one removes its
-  single-press run end (AUDIT #219).
+- **Controls.** A refused control keeps its normal look and stays
+  focusable and inspectable. Pressing it shows the notice (C11) with the
+  table's reason.
+- **Operations.** The domain operations take the context and refuse
+  through the table too, so every caller is guarded, not just the menu.
+  - Core: `RunOrchestrator.LearnSpell` / `ReplaceSpell` / the new
+    `UnlearnSpell`, `EquipmentOps.Equip` / `Unequip`, `TalentOps.Invest` /
+    `Refund`, and the reward-track claim.
+  - Domain: `PartyFormation` (via its existing mode).
+  - The balance bot passes `Descent`.
 
-**C5 Cancel / B** undoes the innermost pending thing: a picked-up item,
-book or party member, then an open detail or compare card. With nothing
-pending it closes the menu. Moving focus between the rail and content is
-spatial (D-pad), not a level, so B never walks back through regions. This
-keeps the owner's "Cancel steps back a level first" rule, and the levels
-are now the pending states only.
+**C4 Data sources.** Values in the menu come from exactly one of three
+places.
 
-**C6 Switching.**
-- LT / RT step tabs and wrap over the visible tabs. Focus lands on the
-  pane's entry control.
-- LB / RB (Q / E) page within the tab: characters in CHARACTER, categories
-  in GLOSSARY, relic pages in RUN. They do nothing in PARTY, OPTIONS and
-  EXIT, and no prompt is shown there.
-- Mouse: click a tab, click anything.
+| Kind | Examples | Source in Camp / Descent | Source in Fight |
+|---|---|---|---|
+| Permanent | level, XP, attributes, talents, gear worn, titles, reward track | `SaveData` character | same |
+| Run | relics, event buffs, bonus damage, books, pack, gold, carried HP between fights | `RunManager.Run` | same, **except HP** |
+| Fight | current HP, pool, signature, statuses, temporary stat modifiers, cooldowns | – | `IFightMenuSource` |
 
-**C7 Reopen rule.** The menu reopens on the last game-group tab used in the
-same context during this session. It is kept across scene loads in a
-session-static field and never saved. If there is none yet: Camp →
-CHARACTER, Descent → CHARACTER, Fight → RUN. System tabs are never
-remembered, so a battle-speed change never makes the next fight open on
-OPTIONS. Hotkeys and deep links override the rule.
+- **The fight source.** `IFightMenuSource` is implemented by the Fight
+  scene, which registers it with the menu at wiring. In a fight, the
+  current HP, pool and effective stats come from it, never from
+  `RunSnapshot.currentHealth`. That snapshot is written only when the fight
+  ends (`RunEncounter.WriteBackHealth`, called from the fight-end rule at
+  `RunOrchestrator.cs:530`), so mid-fight it is stale.
+- **The displayed moment.** The menu shows what the fight HUD is showing
+  when the menu opens, not the simulation's lead. The session records beats
+  before the beat player paints them. Reading the session could therefore
+  reveal a hit or a death the player hasn't seen yet. The source reads the
+  HUD's painted values.
+- **Stat columns in a fight** show base → effective when a temporary
+  modifier applies, for example "Speed 10 → 13 (Stampede)".
 
-**C8 Hotkeys** come from the tab table (C1), not scattered `GetKeyDown`
-polls. One input handler owns them and forwards to C4.
+### Input and state
 
-**C9 Deep links.** `SystemMenuController.Open(tab, target)`, where `target`
-is optional: a character id, a CHARACTER section, a glossary entry id, a
-relic id. Every entry point uses it, including hotkeys, hub buildings,
-`SheetPanel` and future "what's this?" links (AUDIT #227). `SheetPanel`
-becomes a thin caller of it.
+**C5 Pending states.** There are three, all in panes. They are the only
+"levels" Cancel steps back through.
 
-**C10 Lintel.** Realm title · context line (floor/room, or BETWEEN
-DESCENTS) · gold · embers · a **mode pill** · close. The pill shows the C3
-state for the whole menu: "AT CAMP", "IN A DESCENT", "IN A FIGHT — VIEW
-ONLY". It replaces Party's own status pill.
+| Pending | Created by | Lives in |
+|---|---|---|
+| `SlotArmed(slot)` | A on an empty gear or book slot: focus moves into the pack, filtered to that slot | CHARACTER › LOADOUT |
+| `BookPicked(id)` | A on a pack book while every book slot is full: focus moves to the book slots to choose which to replace | CHARACTER › LOADOUT |
+| `Carry(character)` | picking up a seat or roster card | PARTY |
 
-**C11 One notice.** Refusals and confirmations in the menu go through one
-notice line in a fixed place: text, optional timer, and the device-aware
-prompt if any. It replaces the dossier's `_alreadyKnownRefusal` and
-Party's toast inside the menu. This is the first user of AUDIT #259's
-single notice component.
+Attribute points have no pending state. "+" and "−" commit on press, as
+today. While "+" or "−" is focused, the before → after preview shows.
 
-**C12 Prompt footer.** A fixed strip along the bottom of the panel lists
-what the buttons do for the focused control, for example "A Equip · B Back
-· LB/RB Character · LT/RT Tab". The keyboard shows key names; the pad shows
-glyphs. It switches on `NavigationInputModule.LastInputWasPad`. Glyphs come
-from a device → glyph table (Xbox first; adding PlayStation is one table).
-No glyph art exists yet, so the first set is generated plates with the
-button letter (C14 sizes).
+**C6 Transitions.** Read top to bottom. The first row whose condition holds
+wins. "Cancel pending" means the pending state is dropped with no change to
+game state and focus returns to where it was created.
+
+| Event | Condition | Outcome |
+|---|---|---|
+| B / Esc-as-Cancel | a pending exists | cancel pending |
+| B / Esc-as-Cancel | nothing pending | close menu |
+| Start / Esc-as-SystemMenu | a pending exists | cancel pending (menu stays open) |
+| Start / Esc-as-SystemMenu | nothing pending | close menu |
+| Hotkey or deep link with a **target** (I → LOADOUT pack; hub building; glossary entry) | anywhere | cancel pending, then open or switch to the tab and go to the target. Never closes. |
+| Plain tab hotkey (C, P, R, G) | menu closed | open on that tab (C7 section rule) |
+| Plain tab hotkey | menu open, another tab showing | cancel pending, switch tab |
+| Plain tab hotkey | menu open, that tab showing | cancel pending, close menu |
+| LT / RT | – | cancel pending, step tab |
+| LB / RB (Q / E) | – | cancel pending, page within the tab (C8) |
+| Rail section change, click elsewhere in the tab | a pending exists | cancel pending, then act |
+| Any close (X, hotkey, Esc) | – | cancel pending first; a pending never commits on close |
+| A on a refused control (C3) | – | notice with the reason; no pending created |
+
+Esc drives both SystemMenu and Cancel. The dispatcher already spends an Esc
+press on SystemMenu only (`NavigationInputModule.cs:260-266`). The two Esc
+rows therefore resolve through the SystemMenu path with the same outcomes.
+
+**C7 Reopen rule.** The menu reopens on the last game-group tab and
+CHARACTER section used in the same context, this session. That memory is
+session-static, survives scene loads, and is never saved. With no memory:
+Camp and Descent → CHARACTER › LOADOUT; Fight → RUN. System tabs are never
+remembered. Hotkeys and deep links override the rule, and they update the
+memory.
+
+**C8 Switching.** LT / RT step tabs, wrapping over visible tabs, with
+focus on the pane's entry control. LB / RB (Q / E) page within a tab:
+
+| Tab | What pages |
+|---|---|
+| CHARACTER | characters |
+| GLOSSARY | categories |
+| RUN | relic pages |
+| PARTY, OPTIONS, EXIT | nothing, and no prompt is shown |
+
+The mouse clicks anything.
+
+**C9 Entry points.** `SystemMenuController.Open(tab, target)` is the only
+way in; `target` is optional (a character id, a CHARACTER section, a
+glossary entry id, a relic id).
+
+- **Callers:**
+  - root Esc/Start handlers
+  - the hotkey owner
+  - the pad View button (RUN in a descent or fight, CHARACTER at camp)
+  - hub buildings: CHARACTER SHEET → CHARACTER, the glossary building →
+    GLOSSARY, the corner Main Menu button → EXIT (AUDIT #219)
+  - `SheetPanel`, which becomes a thin caller
+- **One hotkey owner.** Hotkeys are read by one handler that owns every
+  menu hotkey. The three existing C/I owners are removed:
+  - `HubController.cs:381-388`
+  - `MapController.cs:213-214`
+  - `FightController.Input.cs:1564-1565`
+- **When hotkeys fire.** Only when a scene root or the menu is top of the
+  nav stack, which is the same rule as Start today.
+
+**C10 Lintel.** Realm title, context line, gold, embers, a **mode pill**
+and close. The pill states C3 for the whole menu: "AT CAMP", "IN A
+DESCENT", "IN A FIGHT — VIEW ONLY". Party's own status pill goes.
+
+**C11 One notice.** Refusals and confirmations inside the menu go through
+one notice line in a fixed place in the frame: text, an optional timer, and
+the device-aware prompt. It replaces the dossier's `_alreadyKnownRefusal`
+and the in-menu `PartyToast`. It is the first user of AUDIT #259's single
+notice component.
+
+**C12 Prompt footer.** A fixed strip at the bottom of the panel lists what
+the buttons do for the focused control and the current pending state.
+
+- The keyboard shows key names; the pad shows glyphs. It switches on
+  `NavigationInputModule.LastInputWasPad`.
+- Glyphs come from a device → glyph table. Xbox comes first, and
+  PlayStation is one more table. The first glyph set is generated plates
+  with the button letter; no glyph art exists yet.
 
 **C13 One selection language.**
 - Selected tab: bright label plus underline.
 - Pad focus: the one `FocusMarker` arrow.
-- Hover: a plate tint only, no scale. The remaining `.Hovers(...)` calls in
-  menu screens go.
-- A pending pick (item, book, character): gold ring on the source.
+- Hover: a plate tint, no scale. The remaining `.Hovers(...)` calls in menu
+  screens go.
+- A pending source: a gold ring.
 
 **C14 Type and space.**
-- Every label in a menu pane uses a `Typography` role (`.Styled`). There
-  are no unroled literal sizes.
+- Every label in a menu screen takes a `Typography` role.
 - Nothing a player reads renders below 18px body height at 1080p (XAG
-  101). Phase 1 fixes the per-font TMP minimum. Measured Chakra Petch is
-  about 0.93 of font size, so the floor is about TMP 20.
-- Decorative text is exempt and must be marked `AsDecor`.
-- Every variable-length list pages or scrolls in one direction; no screen
-  depends on a fixed row count fitting. This is what later makes a 125% /
-  150% text option possible without a redesign.
-- A build lint enforces the role rule and the floor for the menu screens.
+  101). Phase 1 fixes the per-font TMP floor. Measured Chakra Petch is
+  about 0.93 of font size, so the working floor is TMP 20.
+- The lint checks **every** label and button in a migrated menu screen,
+  whatever its `AsDecor`. `AsDecor` is a raycast and audit flag, and
+  readable headings and values carry it today.
+- Text that carries no information (an ornament numeral, a watermark) opts
+  out with its own `.AllowSmallText("reason")`, following the
+  `AllowOverlap` pattern. It gets a test that the text really is
+  non-essential.
+- Every variable-length list pages or scrolls in one direction. No screen
+  depends on a fixed row count fitting.
 
 ### The tabs
 
 **C15 CHARACTER.**
-- **Portrait strip** across the top: the seated party in stage order (Rear,
-  Middle, Front, left to right, matching the Party screen), then benched
-  roster characters, set apart and dimmed. LB/RB and Q/E page through it.
-  Each portrait carries an attention pip from `CharacterAttention` (C20).
-- **Rail** on the left, always visible: portrait, name, level, XP, then the
-  sections LOADOUT, ATTRIBUTES, SKILLS, REWARD TRACK, each with its pip.
-- **Detail** on the right shows the selected section. Nothing ever covers
-  the rail.
-- Every section is readable in every context; C3 decides what can be
-  changed.
+- **Portrait strip** on top: the seated party in stage order (Rear,
+  Middle, Front, left to right), then benched roster characters, set apart
+  and dimmed. LB/RB and Q/E page through it. Each portrait carries an
+  attention pip (C20).
+- **Rail** on the left, always visible: portrait, name, level and XP, then
+  the sections LOADOUT, ATTRIBUTES, SKILLS and REWARD TRACK, each with its
+  pip. The detail area shows the selected section, and nothing covers the
+  rail.
+- Every section is readable in every context; C3 decides what changes.
 
-**C16 LOADOUT (gear and spell books together).**
+**C16 LOADOUT.**
 - **Slots:** the mannequin's gear slots from `EquipmentSlots.All`, plus a
-  row of spell-book slots (`SpellBooks.MaxSpellSlots`). Both come from
-  those sources, not from layout constants. A character whose pool refuses
-  books (`SpellBooks.CanHold`, today Bjorn with Fury) shows one line, for
-  example "Bjorn fights with Fury and carries no spell books", instead of
-  the book row.
-- **Pack**, beside the slots and never over them: gear, salves and the
-  run's unassigned spell books in one grid, with filters All / Armour /
-  Weapons / Salves / Books.
-  - Books are shown in the pack view; they are not moved into
-    `stockpiledItems`, so no save change.
-  - Focusing a slot filters the pack to what that slot accepts; a book slot
-    filters to Books.
-  - Picking an entry and pressing a slot (or the reverse) equips or places
-    it. The displaced gear or book returns to the pack.
-  - One interaction model covers gear and books.
-- **Compare**: while a pack entry is focused, the affected stats show
-  `280 → 338 (+58)`, which fixes the reversed preview in AUDIT #243. For a
-  book, the skill it teaches (cost, target, effect).
-- **Empty pack**: a sentence ("Nothing carried. Gear from fights and shops
-  lands here."), not a blank box.
+  row of book slots (`SpellBooks.MaxSpellSlots`). Both are generated from
+  those sources. A character whose pool refuses books (`SpellBooks.CanHold`)
+  shows one line instead of the book row, for example "Bjorn fights with
+  Fury and carries no spell books".
+- **Pack**, beside the slots: gear, salves and the run's unassigned books
+  in one grid, with filters All / Armour / Weapons / Salves / Books.
+  - Books are shown in the pack view only; they stay in
+    `unassignedSpellBooks`, so there is no save change.
+- **Flows** (C5, C6):
 
-**C17 ATTRIBUTES.** Six rows. Each row has the value, a − / + stepper beside
-the number (AUDIT #243) and the effect line. Unspent points sit in the
-header. Derived stats list below with a before → after preview while a
-point is pending. Refund follows C3: at camp only, and in a descent the
-row says "Refunds at camp".
+  | Press | Result |
+  |---|---|
+  | A on a pack gear entry | equip to its slot (`EquipmentOps`, as today) |
+  | A on a pack book | place it in the lowest free book slot; all full → `BookPicked` |
+  | A on a worn slot | unequip, or remove the book to the pack (`UnlearnSpell`) |
+  | A on an empty slot | `SlotArmed` |
+
+- **Compare:** while a pack entry is focused, affected stats read
+  `280 → 338 (+58)` (fixes AUDIT #243's reversed preview). A book shows the
+  skill it teaches.
+- **Empty pack:** a sentence, not a blank box.
+
+**C17 ATTRIBUTES.** Six rows. Each row has its value, a − / + stepper beside
+the number, and the effect line. Unspent points sit in the header. The
+derived stats show below with before → after while a stepper is focused.
+Refund follows C3; in a descent the row says "Refunds at camp".
 
 **C18 SKILLS**, the one name for everything a character can do in a fight.
 It matches the fight's SKILL verb.
-- It lists `ContentDatabase.AvailableSkillsFor(character)`, grouped by
-  source:
-  - Innate (level)
-  - From talents
-  - From spell books (this descent)
-  - From the reward track
-- Each row shows the name, cost in the character's own pool name, cooldown,
-  target and reach, and the description.
-- This replaces the old Skills panel, which listed talent-granted skills
-  only ("0 known" for Bjorn).
-- Below it, read-only **TALENTS**: the character's kindled talents (name
-  and description) and embers left. At camp it adds a link to the
-  constellation (the Talents scene). Kindling stays in the hub.
-- "Spell" survives only as "spell book", the item that teaches a skill for
-  this descent. Content-facing renames are listed in C21.
+- **List:** `ContentDatabase.AvailableSkillsFor(character)`, grouped by
+  source: innate (level), talents, spell books (this descent) and reward
+  track.
+- **Each row:** name, cost in the character's own pool name, cooldown,
+  target and reach, and description.
+- **Talents:** below the list, read-only, the kindled talents and the
+  embers left. At camp only, a link to the constellation.
+- **"Spell"** survives only in "spell book".
 
-**C19 REWARD TRACK.** The existing track design, hosted as a section instead
-of a full-pane overlay. If Phase 1's space budget shows it cannot fit the
-detail area at the type floor, it may take the full pane with the rail
-collapsed to its identity header and an explicit Back. The spec decides
-which, not the build. Collecting follows C3.
+**C19 REWARD TRACK.** The existing track, hosted inside the detail area as a
+section. It is re-laid out for that width in the spec; there is no
+full-pane mode. Collecting follows C3.
 
-**C20 CharacterAttention** is a Domain model with no UI of its own. It
-drives the strip pips, rail pips, and later hub and map badges. It
-replaces `MapPendingBook`'s own count. A pip shows when:
-- the character has unspent attribute points;
-- the character has rewards waiting to collect;
+**C20 CharacterAttention.** A Domain model fed plain values by Core. It
+drives the strip and rail pips, and replaces `MapPendingBook`'s own count.
+A pip shows when:
+- the character has unspent attribute points, or
+- the character has rewards waiting to collect, or
 - the character has an empty book slot, can hold books, and the run has
   unassigned books.
 
-Empty gear slots never pip, because that would be noise.
+Empty gear slots never pip.
 
-**C21 Names.** One sweep across menu strings:
+**C21 Names.**
 
 | Today | After |
 |---|---|
 | CHARACTER & INVENTORY | CHARACTER |
 | MAIN MENU (tab) | EXIT |
-| SPELLS (row), "Skills", "The Pack" | LOADOUT, SKILLS, pack inside LOADOUT |
+| SPELLS / Skills / The Pack rows | LOADOUT, SKILLS; the pack sits inside LOADOUT |
 | "Focus / turn" | "{signature} per turn", from content |
-| "MANA" in fight detail for Fury users | the pool's own name |
-| "{n} known" (a literal) | a `UiStrings` entry |
-| Party subtitle "Some skills reach only from the rank they name" | "Melee skills can strike only the enemy front rank." (the real rule, `Reach`) |
+| "MANA" in the fight detail for a Fury user | the pool's own name |
+| "{n} known" (a literal) | `UiStrings` |
+| Party subtitle "Some skills reach only from the rank they name" | "Melee skills can strike only the enemy front rank." (the real `Reach` rule) |
+| Hub building RELICS (opens the glossary) | GLOSSARY |
 
-The wider #236 glossary (HP/Health, Descent/Run, gold formats) stays its
-own sweep.
+**C22 PARTY.** The formation seats, with the facts that decide placement:
+- HP from C4: carried between fights, live in a fight;
+- physical and magical defence;
+- role.
 
-**C22 PARTY.**
-- Formation seats as today. Each seat adds the facts that decide
-  placement: HP (current / max in a descent), physical and magical
-  defence, role.
-- Selecting a card previews the swap with those facts side by side (AUDIT
-  #248).
-- The roster section shows only when a character is unseated or a seat is
-  closed. With everyone seated it hides instead of repeating the seats.
-- Modes follow C3; the status pill moves to the lintel (C10).
+Selecting a card previews the swap with those facts side by side (AUDIT
+#248). The roster shows only when a character is unseated or a seat is
+closed. Modes follow C3. The status pill moves to the lintel.
 
-**C23 RUN** (descent and fight only).
-- **Relics**: icon, name, rarity and full description; paged; count in
-  the header.
-- **Run effects**: active event buffs (Prince's favor +N, special pools
-  full this leg), the run's bonus damage percent, second lives left. None
-  of these shows anywhere today.
-  - Every `EventBuffs` kind needs a row definition, and a test fails on a
-    kind without one.
-- **Supplies**: consumables with count and effect, and gold.
-- **This descent**: the Battle, Fold and Spoils figures from Run
-  statistics, condensed. This tab replaces RUN STATISTICS.
+**C23 RUN** (Descent and Fight):
+- **Relics:** icon, name, rarity and description; paged; count in the
+  header.
+- **Run effects:** active event buffs, bonus damage percent and second
+  lives left. Each `EventBuffs` kind has a row definition, and a test fails
+  on a kind without one.
+- **Supplies:** consumables with counts and effects, and gold.
+- **This descent:** the Battle / Fold / Spoils figures, condensed.
 
-**C24 Relic list, one presenter.** A Domain `RelicListModel` builds rows
-from ids through one `ContentDatabase.GetRelic` lookup: name, rarity,
-description, icon id, plus a row for an unknown id. A Core presenter paints
-it with `Paging`. The Reckoning's RELICS tab, the RUN tab and the Relic
-draft's new "held" strip (AUDIT #241) all use it. The three inline
-`ContentDatabase.Relics.FirstOrDefault` lookups go.
+**C24 One relic presenter.** Assembly direction is Domain ← Core; Domain
+references nothing. So:
+- Domain `RelicListModel` takes plain `RelicRow` records (id, name, rarity
+  text, description, icon id, known) and owns ordering and paging.
+- Core `RelicRows.From(ids)` resolves them through one
+  `ContentDatabase.GetRelic` lookup, including the unknown-id row.
+- A Core presenter paints them.
+
+The Reckoning's RELICS tab, RUN, and the Relic draft's new held strip
+(AUDIT #241) all use it. The three inline `ContentDatabase.Relics.FirstOrDefault`
+lookups go.
 
 **C25 GLOSSARY.**
 - The existing catalog (seven categories, locked entries, paging), re-laid
-  out for the menu pane: rail, list and detail.
-- The standalone 1890×945 glossary modal and its own NavContext are
-  deleted, so there is one glossary. That also resolves AUDIT #173 for the
-  glossary.
-- New category **Statuses**, from the definitions behind the fight's status
-  box, because it is the one thing a player looks up mid-fight.
-- LB/RB step categories.
-- Deep link to an entry (C9).
+  out for the menu pane.
+- The standalone 1890×945 glossary modal and its NavContext are deleted.
+- New category **Statuses**, from the definitions behind the fight's
+  status box.
+- LB/RB step categories. Deep link to an entry (C9).
 
-**C26 OPTIONS.** The pane unchanged. It is shared with the main menu's
-Settings modal, so any change is coordinated with that owner. Type floor
-per C14.
+**C26 OPTIONS.** The pane itself is unchanged. It is shared with the main
+menu's Settings modal, so coordinate with that owner. The type floor comes
+in Phase 6.
 
-**C27 EXIT.** Content unchanged: Return to title and Quit to desktop
-(press twice), and Abandon descent (hold, in a descent only). Label per
-C21.
+**C27 EXIT.** Content unchanged. Label per C21.
 
 ## Growth rules
 
-What must stay a one-place change, and the test that keeps it that way:
-
 | When this grows | You change | Kept honest by |
 |---|---|---|
-| A new tab | one `SystemMenuTabs` entry plus its pane | the build refuses a tab without a pane; the bar lays out from measured widths |
-| A 4th+ character or bench | nothing | the strip pages; roster visibility rule C22 |
-| Gear or book slots | `EquipmentSlots` / `MaxSpellSlots` | slots are generated from them |
-| Many relics (uncapped) | nothing | the relic presenter pages |
-| A new event buff kind | a row definition | a test fails on a kind without a row |
-| A new glossary category | `GlossaryCatalog` | existing catalog tests |
-| A new pad family | one glyph table | the footer reads the table |
-| Localisation / text size | strings only | measured bar, role-only type, one-direction scrolling (C14) |
-| A new mutating action | one `MenuAction` row | the fight read-only test tries every action (Phase 0a) |
+| A new tab | one `SystemMenuTabs` entry plus its pane | the build refuses a paneless tab; the overflow policy (C1) |
+| A 4th+ character or a bench | nothing | the strip pages; roster rule (C22) |
+| Gear or book slots | `EquipmentSlots` / `MaxSpellSlots` | slots are generated |
+| Many relics | nothing | the presenter pages |
+| A new event buff kind | a row definition | a test fails on a kind without one |
+| A new glossary category | `GlossaryCatalog` | the catalog tests |
+| A new pad family | one glyph table | the footer reads it |
+| Localisation / text size | strings, plus short labels | C1 overflow policy, role-only type, one-direction scrolling |
+| A new state change | one `MenuAction` row | the fight read-only tests (Phase 0a) |
 
 ## Phases
 
 Each phase is a green, committed checkpoint through
-`tools/run_tests_parallel.ps1 -Changed`, plus `-BuildScenes` where a tree
-changes. Phases touching the menu's shared files run one at a time.
+`tools/run_tests_parallel.ps1 -Changed`, with `-BuildScenes` whenever a
+tree or a `[SerializeField]` changes. Phases run one at a time.
 
-**0a Fight read-only (C2, C3).** `MenuContext`, `MenuAction`,
-`MenuPermissions`, and domain ops take the context.
-- Every mutating handler goes through the table. This fixes the mid-fight
-  spell-book change: `CharacterDossierController.cs:311-327` is wired above
-  the `:364` lock guard, and `LearnSpell` has no context check.
-- New PlayMode `MenuFightReadOnlyTests`: in the Fight scene, attempt every
-  `MenuAction` through the UI; the save file's bytes are unchanged.
-  EditMode tests pin the table.
-- Route: implementer.
+**0a Fight read-only (C2, C3).**
+- Add `MenuContext`, `MenuAction` and `MenuPermissions`.
+- Serialized context replaces `inDescent` / `lockedForFight`. This changes
+  `ScreenRegistry.WireSystemMenu`, so regenerate the scenes in this phase.
+- Every mutating handler and domain op goes through the table.
+- New `UnlearnSpell`, guarded but not yet wired to UI.
+- **Tests:**
+  - EditMode pins the whole table.
+  - PlayMode `MenuFightReadOnlyTests`:
+    1. In the Fight scene, invoke every refused action through its UI
+       control and through its domain op. Assert unchanged in-memory state
+       (character equipment, attributes and titles, the run's books and
+       learned spells, pack, formation, claimed track level, and the
+       FightSession's actors) and unchanged save bytes.
+    2. Separately, in a sandboxed save, options and exits stay allowed in
+       a fight. Assert the option changes, and that an exit reaches its
+       `EndRun` path.
 
-**0b Tab table cleanup (C1, part of C21).**
-- Remove FloorMap: its enum and table entries, `DefaultFor` fallback,
-  `Built` flag and placeholder. That is 11 lines in 5 files.
-- Relabel to CHARACTER and EXIT.
+  This closes the bug that lets spell books change mid-fight
+  (`CharacterDossierController.cs:311-327`, wired above `:364`).
+
+**0b Tabs cleanup.**
+- Remove FloorMap: the enum, table entries, `DefaultFor`, the `Built` flag
+  and the placeholder.
+- Relabel to CHARACTER and EXIT, add short labels, and build the overflow
+  policy (C1).
 - Delete the stale "three/five tabs" comments.
-- Update the pins in `SystemMenuScreenTests` (positions), `SystemMenuTests`
-  (counts at `:216`, `:238`, `:269`, `:278`), `SystemMenuPaneTests` and
-  `SystemMenuLabelWidthTests`.
-- Route: implementer.
+- **Tests re-pinned:**
+  - `SystemMenuScreenTests` (positions, from the new measured widths)
+  - `SystemMenuTests` (`BetweenRunsTheBarHasFourTabs`,
+    `InADescentTheBarGainsTheTwoRunTabs`, `TheHubNeverShowsTheDescentTabs`)
+  - `SystemMenuPaneTests`
+  - `SystemMenuLabelWidthTests`
+- **Intermediate bar:** CHARACTER, PARTY, RUN STATISTICS (descent/fight),
+  OPTIONS, EXIT.
 
-**0c Hub exits (part of C4).** The corner Main Menu button opens the menu
-on EXIT (AUDIT #219). Route: fixer.
+**0c Hub exit button → `Open(EXIT)`** (AUDIT #219). Uses today's
+`SystemMenuController.Select`, since `Open(tab, target)` lands in Phase 2.
 
 **0d Drift.**
-- Remove `.Hovers(...)` in the dossier (`CharacterDossierScreen.cs:616`,
-  `:1098`).
-- Casing.
-- The empty-pack sentence.
-- Route: fixer.
+- Remove the dossier's `.Hovers` (`CharacterDossierScreen.cs:616`, `:1098`).
+- Fix casing.
+- Add the empty-pack sentence.
 
-**1 Spec, type floor, baseline.** No game code. Owner sign-off ends the
-phase.
-1. Measure the body height of every `Typography` role and the default
-   font at 1080p. Fix the TMP floor per font (C14).
-2. Space budget: what fits in the 1600×804 pane at the floor for each
-   pane in C15-C27.
-3. The design spec (`docs/WORKFLOW.md:50-53`). A 1920×1080 mockup at real
-   sizes of the frame, prompt footer, every CHARACTER section, RUN,
-   GLOSSARY and PARTY, in every interactive state, including fight view-only
-   and empty states.
-4. A focus map per pane: entry control, every D-pad move, wrap, B at each
-   pending state, and press counts for the test tasks.
-5. Baseline test of today's menu with the owner plus 2–4 players, on
-   keyboard and pad. Tasks and records per the Validation section.
-6. The same tasks on the paper spec. Change the spec where people fail,
-   before any build.
+**1 Design spec.** No game code. The output is `docs/SPEC_SYSTEM_MENU.md`:
+1. The type floor per font, measured.
+2. The space budget for the 1600×804 pane minus the footer.
+3. The layout of every pane at 1920×1080, with node sizes.
+4. Every interactive state, including view-only and empty states.
+5. A focus map per pane: the entry control, every D-pad move, wrap,
+   Cancel at each pending state, and press counts for the validation tasks
+   from their fixed starting conditions.
 
-**2 Frame (C1, C4-C14).**
-- Tab groups, context visibility, measured-only bar layout.
-- Hotkey handler.
-- The View button.
-- Reopen rule.
-- `Open(tab, target)`, with `SheetPanel` routed through it.
-- Lintel mode pill.
-- Notice line.
-- Prompt footer and glyph table.
-- Type roles and floor on the frame.
-- The menu-screen type lint.
-- Route: implementer. Escalation to senior only if the input ownership
-  change breaks the dispatch order in `NavigationInputModule.Process`.
+The owner reviews the spec when they return; building proceeds on it,
+since the owner asked for the whole build.
 
-**3 RUN tab (C23, C24).**
-- Extract `RelicListModel` and its presenter.
-- Migrate the Reckoning's RELICS tab first. Its tests
-  (`ReckoningTabTests`, `ReckoningGamepadNavigationTests`) must stay green
-  with no pin changes beyond the row contents.
-- Build RUN.
-- Retire the RUN STATISTICS tab and move its geometry pins out of
-  `SystemMenuPaneTests`.
-- The Relic draft's held strip (AUDIT #241).
-- Route: implementer.
+**2 Frame (C1, C6-C14).**
+- Groups, visibility, measured bar and overflow policy.
+- `Open(tab, target)`, and `SheetPanel` routed through it.
+- The one hotkey owner, with the three old C/I owners removed.
+- The View button, the reopen rule, the lintel pill, the notice line, and
+  the prompt footer with its glyph table.
+- Type roles on the frame.
+- The type lint, **scoped to a migrated-screens list** that starts with the
+  frame and grows each phase.
+- **Intermediate state:** hotkeys C, I, P; tabs as after 0b. Targets exist
+  only for panes that exist.
+- Escalate to senior (`cross-layer`) only if the input-ownership change
+  breaks `NavigationInputModule.Process` dispatch order.
 
-**4 GLOSSARY tab (C25).**
-- Pane layout.
-- Hub building and hotkey open the tab.
+**3 RUN (C23, C24).**
+- `RelicListModel`, `RelicRows` and the presenter.
+- Migrate the Reckoning RELICS tab first. `ReckoningTabTests` and
+  `ReckoningGamepadNavigationTests` stay green with only row-content pins
+  changed.
+- Build RUN, and retire RUN STATISTICS (its pins move).
+- Add the Relic draft held strip (AUDIT #241).
+- Hotkey R and the relic deep link. RUN joins the lint list.
+
+**4 GLOSSARY (C25).**
+- The pane layout; the hub building and G open it.
 - Delete the standalone modal.
-- Statuses category.
+- Add the Statuses category.
 - Rewrite `GlossaryTests`, `GlossaryScreenTests` and
-  `GlossaryGamepadNavigationTests` for the pane.
-- Route: implementer.
+  `GlossaryGamepadNavigationTests`. GLOSSARY joins the lint list.
 
-**5 CHARACTER (C15-C21).** The largest phase, in five commits:
-- 5a Strip, rail and section shell. Move today's content into sections
-  unchanged, and delete the overlays.
-- 5b LOADOUT: book slots join the gear slots, unified pack with a Books
-  filter, compare card. Removing a book to the pack is new behaviour and
-  needs a `RunOrchestrator.UnlearnSpell` beside Learn/Replace, guarded by
-  C3.
-- 5c SKILLS with all sources plus read-only talents.
+**5 CHARACTER (C4, C15-C21).** Five commits:
+- 5a Strip, rail and section shell; today's content moves into sections;
+  overlays deleted.
+- 5b LOADOUT: unified slots and pack, `SlotArmed` / `BookPicked`, compare,
+  `UnlearnSpell` wired.
+- 5c SKILLS with all sources, plus read-only talents.
 - 5d ATTRIBUTES inline.
-- 5e `CharacterAttention` pips, which replace the map's book count.
+- 5e `CharacterAttention` pips, plus `IFightMenuSource` for fight values.
 
-Test impact:
-- `DossierGamepadNavigationTests` (38) is rewritten against the Phase 1
-  focus map, not patched.
-- `DossierSpellSlotsTests`, `DossierSkillsPanelTests`, `DossierEquipTests`,
-  `DossierRefundTests` and `CharacterDossierScreenTests` move to the new
-  sections.
+`DossierGamepadNavigationTests` is rewritten against the spec's focus map,
+not patched. `DossierSpellSlotsTests`, `DossierSkillsPanelTests`,
+`DossierEquipTests`, `DossierRefundTests` and `CharacterDossierScreenTests`
+move to the sections. CHARACTER joins the lint list.
 
-Route: implementer per commit. Senior only on a failed correction cycle.
-
-**6 PARTY (C22).** Seat facts, swap preview, roster visibility rule,
-subtitle fix. Update `PartyScreenTests` and `SystemMenuPartyTests`.
-Route: implementer.
+**6 PARTY, OPTIONS, EXIT (C22, C26, C27).**
+- PARTY: seat facts from C4, swap preview, roster rule, subtitle, pill
+  removed.
+- OPTIONS and EXIT: type floor only.
+- All menu screens are now on the lint list; the scope list is deleted.
 
 **7 Verify.**
-- Rerun the Phase 1 tasks against the baseline (acceptance below).
-- Captures at all four `UiFrames` aspects for every tab, in camp, descent
+- Captures at all four `UiFrames` aspects, for every tab, in camp, descent
   and fight.
-- A hardware pad pass (triggers and View are unverified on hardware, AUDIT
-  #166).
-- Full `tools/run_tests_parallel.ps1`.
+- An audit of the build against the spec, section by section.
+- The full `tools/run_tests_parallel.ps1`.
+- Owner-run: the hardware pad pass (AUDIT #166) and the player tasks below.
 
-## Validation
+## Validation (owner-run, after the build)
 
-**Tasks** (Phase 1 baseline, Phase 1 paper, Phase 7 build), each on
-keyboard and on pad:
+**Fixed starting conditions** for every task and both inputs:
+- the same save fixture (Shawn, Odette and Bjorn seated; two relics; a
+  known pack; one unassigned book);
+- menu memory cleared, so the reopen rule starts from its default;
+- the stated scene: a Fight at turn 1, or the Map.
+
+**Tasks:**
 1. Mid-fight: what does this relic do?
 2. Mid-fight: what does this enemy status mean?
 3. Mid-fight: how much health does Odette have?
 4. Equip the better boots on Shawn.
-5. Put a spell book on Odette.
+5. Put the spell book on Odette.
 6. Spend a stat point.
 7. Put Odette in front.
 8. Leave to the title screen.
 9. Unprompted: "pause whenever you want to check something, and say why".
 
-**Record** per task: completed, wrong turns (a tab or section opened that
-did not hold the answer), presses or time, and where the player hesitated.
+**Record** per task: completed, wrong turns, presses or time, and
+hesitations.
 
-**Accept Phase 5 and 7** only if, against the baseline, on both inputs:
-- no task that completes today fails;
-- the build tasks (4–7) have fewer wrong turns;
-- no build task needs more pad presses;
+**Accept** when:
+- every task completes on both inputs, including tasks 1–3, which are
+  impossible or partial today;
+- any task at zero wrong turns stays at zero;
+- a task with problems in the baseline at least halves its wrong turns;
+- no build task needs more pad presses than the spec's focus map counts;
 - nothing renders under the floor.
 
-If the Phase 1 paper test misses these, the spec changes before any build.
-Five sessions is a first diagnostic pass, not a guarantee.
+If the build fails these, the spec changes first, then the build. The old
+dossier is recoverable from git.
 
 ## Risks
 
-- **Parallel work.** Another session owns the main menu, which hosts the
-  shared Options pane. Coordinate C26 and don't stage its files.
-- **Test churn.** Phases 0b, 3, 4 and 5 rewrite pinned numbers and whole
-  navigation suites. Pins are rewritten from the spec's numbers, never
-  recomputed from the new code (CLAUDE.md gotcha 5).
-- **Space at the floor.** Phase 1 may show a section cannot fit. The spec
-  settles it (C19 is the known case), never the build.
-- **Input ownership.** Hotkeys and View add inputs to
-  `NavigationInputModule`. The dispatch order (Submit claim, base, system
-  menu, Cancel, shoulders, triggers) is pinned by the gamepad suites. Add
-  new inputs after the triggers and don't reorder.
+- **Parallel sessions.** Another session owns the main menu, which shares
+  the Options pane. Stage explicit paths only; don't reformat
+  `OptionsScreen`.
+- **Test churn.** Pins are rewritten from the spec's numbers, never
+  recomputed from new code (CLAUDE.md gotcha 5).
+- **Input dispatch.** Hotkeys and View are added after the triggers in
+  `NavigationInputModule.Process`. Never reorder the existing dispatch.
 
 ## Assumed, say if wrong
 
-- Collecting reward-track rewards and cycling titles count as changes, so
-  they are blocked in a fight.
-- Benched characters appear in the CHARACTER strip, after the seated party.
-- The glossary building in the hub keeps its art, but its label changes
-  from RELICS to GLOSSARY.
-- Hotkeys C, I, P, R, G. None is bound anywhere today.
+- Reward collection and title cycling count as changes, so they are
+  blocked in a fight.
+- Benched characters appear in the CHARACTER strip, after the seated
+  party.
+- The hub's RELICS building is relabelled GLOSSARY.
+- Hotkeys C, I, P, R, G. C and I move from their three current owners to
+  the one owner.
 
 ## Status
 
-Planned 2026-09-29. Nothing built.
+Revised 2026-09-29 after the second review. Build started; see the git log
+for landed phases.
