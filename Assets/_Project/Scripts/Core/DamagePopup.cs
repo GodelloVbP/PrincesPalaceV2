@@ -55,6 +55,13 @@ namespace PrincesPalace
         private const float PeakGlow = 2.7f;
         private const float GlowFraction = 0.30f;
 
+        // A CRITICAL HIT'S OWN STYLE: gold rather than the element colour, a
+        // trailing "!", and a bigger figure. The colour has to differ from
+        // every FightHudPalette element colour, or a crit on a fire hit
+        // would read as a normal fire hit that happens to be large.
+        internal static readonly Color CritColor = new Color(1f, 0.82f, 0.25f, 1f);
+        internal const float CritSizeMultiplier = 1.35f;
+
         private static readonly Color HealColor = new Color(0.42f, 0.86f, 0.45f, 1f);
 
         // The physical fallback if FightHudPalette's own hex ever failed to
@@ -87,6 +94,9 @@ namespace PrincesPalace
         private RectTransform _rect;
         private Coroutine _running;
 
+        // The size multiplier of the number now playing (1 except for a crit).
+        private float _size = 1f;
+
         public bool IsFree => _running == null && !gameObject.activeSelf;
 
         private void Awake()
@@ -104,9 +114,21 @@ namespace PrincesPalace
         // (there is no honest default for a scaled duration), and a
         // parameter after one without a default cannot itself carry one.
         // FightBeatPlayer.PopNumber, the only call site, always passes both.
-        public void Play(Vector2 anchoredStart, int amount, bool isHealing, DamageType damageType, float lifeSeconds) =>
-            PlayContent(anchoredStart, (isHealing ? "+" : "-") + Mathf.Abs(amount),
-                isHealing ? HealColor : ColorForDamageType(damageType), lifeSeconds);
+        //
+        // `crit` restyles a damaging number (see CritColor); a heal never
+        // crits, so it is ignored there rather than restyling a heal.
+        public void Play(Vector2 anchoredStart, int amount, bool isHealing, DamageType damageType, float lifeSeconds,
+                         bool crit = false)
+        {
+            crit &= !isHealing;
+            PlayContent(anchoredStart, TextFor(amount, isHealing, crit),
+                isHealing ? HealColor : crit ? CritColor : ColorForDamageType(damageType), lifeSeconds,
+                crit ? CritSizeMultiplier : 1f);
+        }
+
+        // The pure text seam: "-36" for a hit, "-36!" for a crit, "+12" for a heal.
+        internal static string TextFor(int amount, bool isHealing, bool crit) =>
+            (isHealing ? "+" : "-") + Mathf.Abs(amount) + (crit && !isHealing ? "!" : "");
 
         private static Color ColorForDamageType(DamageType type) =>
             ColorUtility.TryParseHtmlString(FightHudPalette.ForDamageType(type), out var parsed)
@@ -133,8 +155,10 @@ namespace PrincesPalace
         public void PlayAbsorbed(Vector2 anchoredStart, int absorbed, float lifeSeconds) =>
             PlayContent(anchoredStart, "ABSORBED " + Mathf.Abs(absorbed), AbsorbedColor, lifeSeconds);
 
-        private void PlayContent(Vector2 anchoredStart, string text, Color color, float lifeSeconds)
+        private void PlayContent(Vector2 anchoredStart, string text, Color color, float lifeSeconds,
+                                 float size = 1f)
         {
+            _size = size;
             if (_rect == null) _rect = (RectTransform)transform;
 
             // Restarting on a popup that is already running is legitimate --
@@ -150,7 +174,7 @@ namespace PrincesPalace
             // Reclaim keeps whatever scale and glow it was stopped at, and a
             // pool six deep recycles fast enough for that to be visible -- the
             // next number would appear already grown and already dimmed.
-            _rect.localScale = Vector3.one * ScaleAt(0f);
+            _rect.localScale = Vector3.one * (ScaleAt(0f) * _size);
 
             if (label != null)
             {
@@ -198,7 +222,7 @@ namespace PrincesPalace
                 float t = Mathf.Clamp01(elapsed / lifeSeconds);
 
                 _rect.anchoredPosition = start + new Vector2(0f, RiseDistance * t);
-                _rect.localScale = Vector3.one * ScaleAt(t);
+                _rect.localScale = Vector3.one * (ScaleAt(t) * _size);
 
                 if (label != null)
                 {

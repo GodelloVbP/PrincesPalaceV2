@@ -1203,7 +1203,7 @@ namespace PrincesPalace
                     if (result.Target == null) continue;
                     if (!result.Missed && result.Amount <= 0) continue;
 
-                    PopNumber(beat, result.Target, result.Amount, result.Missed);
+                    PopNumber(beat, result.Target, result.Amount, result.Missed, result.Crit);
                 }
 
                 return;
@@ -1244,7 +1244,7 @@ namespace PrincesPalace
 
             if (healthDamage <= 0) return;
 
-            PopNumber(beat, beat.Target, healthDamage, missed: false);
+            PopNumber(beat, beat.Target, healthDamage, missed: false, crit: beat.Crit);
         }
 
         // ONE NUMBER, WHEREVER IT CAME FROM. Both paths above end here, so the
@@ -1260,7 +1260,7 @@ namespace PrincesPalace
         // MEASURED OFF THE SLOT rather than a constant: enemy and party slots
         // are not the same height, and a fixed offset would sit on one and
         // float over the other.
-        private void PopNumber(CombatBeat beat, CombatantState target, int amount, bool missed)
+        private void PopNumber(CombatBeat beat, CombatantState target, int amount, bool missed, bool crit = false)
         {
             var popup = FreePopup();
             if (popup == null) return;   // every one still in flight; the number is dropped, not queued
@@ -1269,7 +1269,7 @@ namespace PrincesPalace
             float lifeSeconds = Scaled(DamagePopup.LifeSeconds);
 
             if (missed) popup.PlayMiss(at, lifeSeconds);
-            else popup.Play(at, amount, beat.IsHealing, beat.DamageType, lifeSeconds);
+            else popup.Play(at, amount, beat.IsHealing, beat.DamageType, lifeSeconds, crit);
         }
 
         // THE ABSORBED POPUP -- ITS OWN CALL, not a branch inside PopNumber,

@@ -617,7 +617,9 @@ namespace PrincesPalace
                 value.gameObject.SetActive(shows);
                 if (shows)
                 {
-                    value.SetContent(intent.ExpectedDamage.ToString());
+                    // A trailing "!" marks a guaranteed crit; the figure
+                    // already includes the multiplier.
+                    value.SetContent(intent.ExpectedDamage + (intent.WillCrit ? "!" : ""));
                     value.color = Hex(lethal ? Domain.UiKit.FightHudPalette.IntentLethal : Domain.UiKit.FightHudPalette.IntentNumber);
                 }
             }
