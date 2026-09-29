@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
-  m_Name: placeholder_brawler_ward_root
+  m_Name: bear_sen_bellow_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
   data:
-    Id: placeholder_brawler_ward_root
-    DisplayName: 'Placeholder: Brace'
-    Description: 'Placeholder kit. Deepens placeholder_brawler_ward (skills.json)
-      by 40%, in sheep_lamb_ward''s own range: 52 points becomes 72.'
+    Id: bear_sen_bellow_3
+    DisplayName: 'Bellow: Fed by Fear'
+    Description: Bellow grants 10 Fury for each enemy it provokes.
     CharacterId: bear
     Column: 0
-    Row: 0
-    Prerequisites: []
+    Row: 9
+    Prerequisites:
+    - bear_sen_bellow_2
     StatBonus:
       maxHealth: 0
       speed: 0
@@ -42,12 +42,12 @@ MonoBehaviour:
     SignatureCapacityBonus: 0
     SignaturePerTurnBonus: 0
     GrantsStartingItemId: 
-    SortOrder: 42
+    SortOrder: 51
     IconPath: 
     MinSpent: 0
     Effects:
-    - Type: 22
-      Magnitude: 40
+    - Type: 81
+      Magnitude: 10
       Threshold: 0
       SkillId: 
     GrantsSkillId: 

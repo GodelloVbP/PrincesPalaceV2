@@ -182,6 +182,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `allowsSpellBooks` | bool | `true` | Whether a character whose primary pool this is may hold spell books. |  |
 | `restoredByManaEffects` | bool | `true` | Whether mana potions, RestorePartyMana and the bot's mana accounting refill this pool. |  |
 | `absorbsDamage` | bool | `false` | Whether this pool soaks incoming damage before health, the way a signature resource can. |  |
+| `engineFed` | bool | `false` | The pool is filled by a talent's Fury engine rather than by its own three gains, so a row that opens empty and authors no gain is still valid. Read by validation only. |  |
 
 ## relics.json -- `RawRelicEntry`
 

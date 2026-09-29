@@ -329,6 +329,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void APoolAnEngineFills_MayStartEmptyAndAuthorNoGain()
+        {
+            var raw = Valid();
+            raw.startRule = "Zero";
+            raw.engineFed = true;
+
+            Assert.IsTrue(Resolve(raw, out var pool, out string error), error);
+            Assert.AreEqual(PoolStartRule.Zero, pool.StartRule);
+            Assert.AreEqual(0, pool.GainOnAttack);
+        }
+
+        [Test]
         public void DuplicateIdsAreRefusedNamingTheId()
         {
             var first = Valid();

@@ -73,13 +73,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(PoolStartRule.Zero, fury.StartRule);
             Assert.AreEqual(0, fury.StartValue);
 
-            // NOTHING PER TURN, and that is the design rather than an
-            // omission: a rage bar that fills while its holder stands still
-            // is a mana bar with an orange skin. Both gains are earned by
-            // damage, in one direction or the other.
+            // NOTHING FROM THE POOL ITSELF: the flat gains are 0 because each
+            // of Bjorn's three root talents is a Fury engine that replaces
+            // them (the Sentinel per hit taken, the Einherjar per damaging
+            // action, the Juggernaut per turn). A Bjorn with no root earns
+            // no Fury from swinging or being hit; the root is free and the
+            // pick is mandatory.
             Assert.AreEqual(0, fury.GainPerTurn);
-            Assert.AreEqual(15, fury.GainOnAttack);
-            Assert.AreEqual(10, fury.GainOnDamageTaken);
+            Assert.AreEqual(0, fury.GainOnAttack);
+            Assert.AreEqual(0, fury.GainOnDamageTaken);
 
             // AND IT DRAINS IF HE DOES NEITHER. Damage is the narrow reading
             // of "idle" (a turn spent on Provoke, an item or a Move decays);

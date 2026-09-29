@@ -1,0 +1,147 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: shield_bash
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  data:
+    Id: shield_bash
+    DisplayName: Shield Bash
+    Description: 'He drives the planted shield into an enemy: a heavy blow that also
+      carries 30% of everything the shield soaked, and stuns it for a turn. The shield
+      is spent, and cannot be planted again for 3 turns.'
+    CharacterId: bear
+    UnlockLevel: 999
+    Effect: 0
+    Targeting: 0
+    ManaCost: 0
+    ResourceCost: 0
+    SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    HitCount: 1
+    DamagePerMissingHealthPercent: 0
+    RefundsSpentOnKillPercent: 0
+    FreeAction: 0
+    LifestealPercent: 0
+    OncePerFight: 0
+    WindowTurns: 0
+    RegenPercentOfMaxHealth: 0
+    PlantedShieldBashPercent: 30
+    ReplacesSkillId: 
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 1
+    Power: 0
+    FlatAmount: 20
+    IgnoresDefense: 0
+    DamageInstances: []
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      fit: 
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers: []
+      layerFormat: 0
+      hitCueSeconds: 0
+    SortOrder: 55
+    Status: 4
+    HasStatus: 1
+    StatusMagnitude: -1
+    StatusDuration: 1
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    ScalingAxis: 0
+    QueuePushSlots: 0
+    Transform:
+      displayName: 
+      turns: 0
+      attackPercent: 0
+      speedPercent: 0
+      temporaryHealthPercent: 0
+      splashPercent: 0
+      spritePath: 
+      hit:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          fit: 
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers: []
+          layerFormat: 0
+          hitCueSeconds: 0
+        shake: 0
+        hitStopSeconds: 0
+      defenseToAttackPercent: 0
+      primaryDrainPerTurn: 0
+      forbidsEffects: []
+    CooldownTurns: 0
+    PlayerSelectable: 1
+    Shake: 0.5
+    Approach: 2
+    Stance: attack
+    ApproachStance: rush
+    WindupStance: overhead
+    SummonEnemyId: 
+    SummonCap: 0
+    IconPath: 
+    AdvanceSlots: 0
+    DamageTypeOverride: 0
+    HasDamageType: 0
+    DamageBySeatMaxHpPercent: 
+    ToSeat: 0
+    HealthCostPercent: 0
+    RequiresStatusType: 0
+    HasRequiresStatus: 0
+    ConsumesStatusType: 0
+    HasConsumesStatus: 0
+    DamageInstancesIfConsumed: []
+    DetonationPercent: 0
+    DetonationSplit: 
+    Reach:
+      Kind: 1
+      RankMask: 1
+    PhysicalMove: 1
+    BookOnly: 0
+    BookTier: 0
+    Elements: []
+    PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

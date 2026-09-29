@@ -19,8 +19,8 @@ MonoBehaviour:
     CapacityRule: 1
     Capacity: 100
     GainPerTurn: 0
-    GainOnAttack: 15
-    GainOnDamageTaken: 10
+    GainOnAttack: 0
+    GainOnDamageTaken: 0
     DecayPerIdleTurn: 10
     DecayUnless: 0
     StartRule: 1

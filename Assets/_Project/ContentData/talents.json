@@ -745,16 +745,348 @@
       ]
     },
     {
-      "id": "placeholder_brawler_ward_root",
+      "id": "bear_sen_root",
       "characterId": "bear",
-      "displayName": "Placeholder: Brace",
+      "displayName": "The Sentinel",
       "column": 0,
       "row": 0,
-      "description": "Placeholder kit. Deepens placeholder_brawler_ward (skills.json) by 40%, in sheep_lamb_ward's own range: 52 points becomes 72.",
+      "description": "Fury comes from being hit: 150 times the blow's size against his maximum health, at least 3 and at most 25 a hit, measured before his defences so armour never cuts his income. A blow his planted shield or Shieldwall soaks counts. None for swinging. Unlocks Brace, a ward worth a fifth of his health. Free, but only one path's root talent can be active at a time; respec to change it.",
       "effects": [
         {
-          "type": "WardReductionPercent",
-          "magnitude": 40
+          "type": "FuryEngineSentinel"
+        }
+      ],
+      "grantsSkillId": "placeholder_brawler_ward"
+    },
+    {
+      "id": "bear_sen_retort_1",
+      "characterId": "bear",
+      "displayName": "Iron Retort",
+      "column": 0,
+      "row": 1,
+      "description": "His Physical hits gain flat damage equal to 10% of the Defense and Magical Defense he has above his base stats. Elemental resistances do not count, and a fresh Bjorn has none above base.",
+      "prerequisites": [
+        "bear_sen_root"
+      ],
+      "effects": [
+        {
+          "type": "IronRetortPercent",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_retort_2",
+      "characterId": "bear",
+      "displayName": "Iron Retort: Hammered",
+      "column": 0,
+      "row": 4,
+      "description": "The share rises to 20%.",
+      "prerequisites": [
+        "bear_sen_retort_1"
+      ],
+      "effects": [
+        {
+          "type": "IronRetortPercent",
+          "magnitude": 20
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_retort_3",
+      "characterId": "bear",
+      "displayName": "Iron Retort: Anvil",
+      "column": 0,
+      "row": 7,
+      "description": "The share rises to 30%.",
+      "prerequisites": [
+        "bear_sen_retort_2"
+      ],
+      "effects": [
+        {
+          "type": "IronRetortPercent",
+          "magnitude": 30
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_hold_1",
+      "characterId": "bear",
+      "displayName": "Hold the Line",
+      "column": 0,
+      "row": 2,
+      "description": "Unlocks Hold the Line: 40 Fury. Every ally gains 15 Defense and 15 Magical Defense for 2 turns.",
+      "prerequisites": [
+        "bear_sen_root"
+      ],
+      "grantsSkillId": "hold_the_line"
+    },
+    {
+      "id": "bear_sen_hold_2",
+      "characterId": "bear",
+      "appliesToSkillId": "hold_the_line",
+      "displayName": "Hold the Line: Rally",
+      "column": 0,
+      "row": 5,
+      "description": "Hold the Line lasts 3 turns, and Bjorn gains 5 Fury each time an ally is hit while it stands.",
+      "prerequisites": [
+        "bear_sen_hold_1"
+      ],
+      "effects": [
+        {
+          "type": "SkillStatusTurns",
+          "magnitude": 3
+        },
+        {
+          "type": "PrimaryGainWhenBuffedAllyHit",
+          "magnitude": 5
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_hold_3",
+      "characterId": "bear",
+      "appliesToSkillId": "hold_the_line",
+      "displayName": "Hold the Line: Steadying Hand",
+      "column": 0,
+      "row": 8,
+      "description": "Casting Hold the Line also cleanses one debuff from each ally.",
+      "prerequisites": [
+        "bear_sen_hold_2"
+      ],
+      "effects": [
+        {
+          "type": "SkillCleansesDebuffs",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_bellow_1",
+      "characterId": "bear",
+      "displayName": "Bellow",
+      "column": 0,
+      "row": 3,
+      "description": "Unlocks Bellow: no Fury, a 3-turn cooldown. One enemy can see nothing else and must aim its next attack at him.",
+      "prerequisites": [
+        "bear_sen_root"
+      ],
+      "grantsSkillId": "placeholder_brawler_provoke"
+    },
+    {
+      "id": "bear_sen_bellow_2",
+      "characterId": "bear",
+      "displayName": "Bellow: Presence",
+      "column": 0,
+      "row": 6,
+      "description": "Enemies choosing whom to hit favour Bjorn even without a Bellow: he counts three times in their draw.",
+      "prerequisites": [
+        "bear_sen_bellow_1"
+      ],
+      "effects": [
+        {
+          "type": "TargetPreferencePercent",
+          "magnitude": 200
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_bellow_3",
+      "characterId": "bear",
+      "displayName": "Bellow: Fed by Fear",
+      "column": 0,
+      "row": 9,
+      "description": "Bellow grants 10 Fury for each enemy it provokes.",
+      "prerequisites": [
+        "bear_sen_bellow_2"
+      ],
+      "effects": [
+        {
+          "type": "PrimaryGainPerProvokedEnemy",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_converge",
+      "characterId": "bear",
+      "displayName": "Plant the Shield",
+      "column": 0,
+      "row": 10,
+      "description": "Unlocks Plant the Shield, which takes over Brace's button: 30 Fury. He sets his shield down in front of himself, worth 2 x (Defense + Magical Defense) + 10% of his maximum health. It takes the blows aimed at him before his health, until it breaks or 3 turns pass; a shield that breaks throws shards back at whoever broke it. 3 turns before it can be planted again. Free, gated at 9 embers spent in this path.",
+      "prerequisites": [
+        "bear_sen_retort_3",
+        "bear_sen_hold_3",
+        "bear_sen_bellow_3"
+      ],
+      "minSpent": 9,
+      "effects": [
+        {
+          "type": "PlantedShieldBreakShards"
+        }
+      ],
+      "grantsSkillId": "plant_the_shield"
+    },
+    {
+      "id": "bear_sen_spell_1",
+      "characterId": "bear",
+      "displayName": "Spellbreaker",
+      "column": 0,
+      "row": 11,
+      "description": "Reflects 15% of magic damage that hits him or his shield back at its caster.",
+      "prerequisites": [
+        "bear_sen_converge"
+      ],
+      "effects": [
+        {
+          "type": "ReflectMagicPercent",
+          "magnitude": 15
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_spell_2",
+      "characterId": "bear",
+      "displayName": "Spellbreaker: Gag",
+      "column": 0,
+      "row": 14,
+      "description": "A spell that hits him or his shield silences its caster for 1 turn. 3-turn cooldown for each enemy.",
+      "prerequisites": [
+        "bear_sen_spell_1"
+      ],
+      "effects": [
+        {
+          "type": "SilenceCasterOnSpellHit"
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_spell_3",
+      "characterId": "bear",
+      "displayName": "Spellbreaker: Feeding on Magic",
+      "column": 0,
+      "row": 17,
+      "description": "A reflected hit also grants Fury equal to half the damage it dealt, within the per-hit limits of his engine.",
+      "prerequisites": [
+        "bear_sen_spell_2"
+      ],
+      "effects": [
+        {
+          "type": "ReflectGrantsFury"
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_bash_1",
+      "characterId": "bear",
+      "displayName": "Shield Bash",
+      "column": 0,
+      "row": 12,
+      "description": "Unlocks Shield Bash: a blow with the planted shield for its base damage plus 30% of what the shield soaked this placement, and a 1-turn stun. It spends the shield.",
+      "prerequisites": [
+        "bear_sen_converge"
+      ],
+      "grantsSkillId": "shield_bash"
+    },
+    {
+      "id": "bear_sen_bash_2",
+      "characterId": "bear",
+      "displayName": "Shield Bash: Quick Hands",
+      "column": 0,
+      "row": 15,
+      "description": "After a Shield Bash the shield can be planted again in 1 turn instead of 3.",
+      "prerequisites": [
+        "bear_sen_bash_1"
+      ],
+      "effects": [
+        {
+          "type": "ShieldBashShortWait"
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_bash_3",
+      "characterId": "bear",
+      "appliesToSkillId": "shield_bash",
+      "displayName": "Shield Bash: Sweep",
+      "column": 0,
+      "row": 18,
+      "description": "Shield Bash also hits the enemies next to its target for the same damage.",
+      "prerequisites": [
+        "bear_sen_bash_2"
+      ],
+      "effects": [
+        {
+          "type": "SkillSplashPercent",
+          "magnitude": 100
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_thorn_1",
+      "characterId": "bear",
+      "displayName": "Thornwall",
+      "column": 0,
+      "row": 13,
+      "description": "Melee physical hits on him or his shield return 15% of their damage to the attacker.",
+      "prerequisites": [
+        "bear_sen_converge"
+      ],
+      "effects": [
+        {
+          "type": "ThornsPercent",
+          "magnitude": 15
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_thorn_2",
+      "characterId": "bear",
+      "displayName": "Thornwall: Barbs",
+      "column": 0,
+      "row": 16,
+      "description": "The attacker is also slowed for 1 turn.",
+      "prerequisites": [
+        "bear_sen_thorn_1"
+      ],
+      "effects": [
+        {
+          "type": "SlowsAttacker"
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_thorn_3",
+      "characterId": "bear",
+      "displayName": "Thornwall: Splinters",
+      "column": 0,
+      "row": 19,
+      "description": "A physical hit that breaks the shield disarms its attacker: -30% attack for 2 turns.",
+      "prerequisites": [
+        "bear_sen_thorn_2"
+      ],
+      "effects": [
+        {
+          "type": "DisarmsOnBreak"
+        }
+      ]
+    },
+    {
+      "id": "bear_sen_cap",
+      "characterId": "bear",
+      "displayName": "Shieldwall",
+      "column": 0,
+      "row": 20,
+      "description": "Plant the Shield covers the whole party instead of only Bjorn: one pool twice the size that soaks every ally's damage before their health. An area attack drains it once per ally it hits. Bjorn gains Fury from the damage it absorbs, at most 40 a turn. Free, gated at 20 embers spent in this path.",
+      "prerequisites": [
+        "bear_sen_spell_3",
+        "bear_sen_bash_3",
+        "bear_sen_thorn_3"
+      ],
+      "minSpent": 20,
+      "effects": [
+        {
+          "type": "ShieldwallCoversParty"
         }
       ]
     },

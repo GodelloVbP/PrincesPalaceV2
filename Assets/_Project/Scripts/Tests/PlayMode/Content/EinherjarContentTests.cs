@@ -156,19 +156,6 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // The Fury income must never silently vanish: the pool's flat gains
-        // stay authored while a build has no engine, so a Bjorn on the other
-        // two placeholder paths still earns Fury.
-        [Test]
-        public void ABjornWithNoEngine_StillEarnsFuryFromThePoolsFlatGains()
-        {
-            var pool = ContentDatabase.PrimaryPoolOf(BjornId);
-
-            Assert.IsNotNull(pool);
-            Assert.Greater(pool.GainOnAttack, 0);
-            Assert.Greater(pool.GainOnDamageTaken, 0);
-        }
-
         [Test]
         public void HackIsTwoBlowsForNoFury_OnAThreeTurnCooldown()
         {

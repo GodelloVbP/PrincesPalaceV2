@@ -183,11 +183,12 @@ namespace PrincesPalace.Domain.Content
             // same reasoning, CharacterEntryResolver uses for a signature
             // resource that gains from none of its triggers.
             bool opensEmpty = startRule == PoolStartRule.Zero;
-            bool canGain = raw.gainPerTurn > 0 || raw.gainOnAttack > 0 || raw.gainOnDamageTaken > 0;
+            bool canGain = raw.gainPerTurn > 0 || raw.gainOnAttack > 0 || raw.gainOnDamageTaken > 0
+                           || raw.engineFed;
             if (opensEmpty && !canGain)
             {
                 error = $"{label}: starts at zero and gains nothing from any of the three triggers, so it would sit " +
-                        "at zero for the whole fight.";
+                        "at zero for the whole fight. A pool a talent's Fury engine fills says engineFed.";
                 return false;
             }
 

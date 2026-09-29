@@ -15,11 +15,11 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_ward
     DisplayName: Brace
-    Description: Placeholder kit. A shield worth 20% of his own health, reusing the
-      Ward effect Shawn's own kit already defines; placeholder_brawler_ward_root
-      in talents.json deepens it by 40%. Not two turns running.
+    Description: 'He braces behind his shield: a ward worth 20% of his own health,
+      reusing the Ward effect Shawn''s own kit already defines. Not two turns running.
+      Plant the Shield takes over this button.'
     CharacterId: bear
-    UnlockLevel: 1
+    UnlockLevel: 999
     Effect: 7
     Targeting: 4
     ManaCost: 0

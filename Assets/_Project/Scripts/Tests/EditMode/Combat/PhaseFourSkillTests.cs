@@ -26,7 +26,7 @@ namespace PrincesPalace.Domain.Tests
     // Every ward number below is SHIELD POINTS: Tuck In 5 a Wool (20 at
     // four, 32 once level 26's +3 lands), Bulwark 30% of the caster's own max
     // health, Prism Ward 20 plus her spell attack, Fleece Ward 50, Brace 20%
-    // of the caster's max health. Wards STACK, and none of the five authors a
+    // of the caster's max health. Wards STACK, and none of the four authors a
     // `wardTurns`, so all five stand for FightTuning.DefaultWardTurns -- one
     // of the wearer's own turns.
     // Mend is untouched, and Prism Ward's scaling term is part of the model:
@@ -166,54 +166,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(slam.WindupStance, rampage.WindupStance);
             Assert.AreEqual(slam.Stance, rampage.Stance);
             Assert.IsNotEmpty(rampage.Stance, "Slam's own stance went blank, so this asserts nothing");
-        }
-
-        // ---- Bulwark -------------------------------------------------------
-
-        // FIFTY PERCENT off the next hit for fifty Fury -- the whole pool for
-        // halving one blow.
-        [Test]
-        public void BulwarkCostsFiftyFromThePrimaryPoolAndWardsForFiftyPercent()
-        {
-            var bulwark = Authored("bear_bulwark");
-
-            Assert.AreEqual(SkillEffect.Ward, bulwark.Effect);
-            Assert.AreEqual(SkillTargeting.SingleAlly, bulwark.Targeting, "it is aimed through the ally picker");
-            Assert.AreEqual(50, bulwark.ManaCost);
-            Assert.AreEqual(0, bulwark.ResourceCost, "Bjorn has no signature resource to spend");
-
-            // 30% OF THE CASTER'S OWN MAX HEALTH, in shield points. Two
-            // literals rather than one, because the whole reason this is a
-            // percentage and not a flat number is that it tracks the bar:
-            // Bjorn's authored level-1 260 gives 78, and this file's 500-health
-            // fixture hero gives 150.
-            Assert.AreEqual(30, bulwark.PercentOfCasterMaxHealth);
-            Assert.AreEqual(0, bulwark.FlatAmount, "Bulwark's size is the percentage, not a flat number");
-
-            var bjorn = Hero(attack: 10, pool: 100);
-            Assert.AreEqual(150, WardPoints(bulwark, bjorn));
-            Assert.AreEqual(78, WardPoints(bulwark, Hero(health: 260, attack: 10, pool: 100)),
-                "Bjorn's own level-1 bar");
-        }
-
-        [Test]
-        public void BulwarkIsRefusedUnderFiftyFury()
-        {
-            var bulwark = Authored("bear_bulwark");
-            var bjorn = Hero(pool: 100);
-            var (session, _) = Fight(new[] { bjorn }, new[] { Foe() }, Kit(bulwark));
-
-            bjorn.PrimaryPool.TrySpend(51); // 49 left
-            Assert.AreEqual(49, bjorn.PrimaryPool.Current);
-
-            Assert.IsFalse(session.CastSkill(0, bjorn), "49 Fury paid for a 50-Fury ward");
-            Assert.AreEqual(49, bjorn.PrimaryPool.Current, "a refused cast must spend nothing");
-
-            bjorn.PrimaryPool.Gain(1); // 50
-            Assert.IsTrue(session.CastSkill(0, bjorn), "50 Fury is exactly the price and must pay it");
-            Assert.AreEqual(0, bjorn.PrimaryPool.Current);
-
-            Assert.IsTrue(StatusEffects.IsWarded(bjorn));
         }
 
         // ---- Second Wind ---------------------------------------------------
@@ -695,13 +647,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(StatusEffects.IsWarded(wearer), "still standing at the start of N+3");
         }
 
-        // AND EVERY SHIPPED WARD SKILL TAKES THAT DEFAULT -- none of the five
+        // AND EVERY SHIPPED WARD SKILL TAKES THAT DEFAULT -- none of the four
         // authors a `wardTurns`, which is the fact the sentence above is only
         // useful in the presence of.
         [TestCase("fleece_ward")]
         [TestCase("tuck_in")]
         [TestCase("placeholder_brawler_ward")]
-        [TestCase("bear_bulwark")]
         [TestCase("prism_ward")]
         public void EveryWardSkillStandsForTheHouseDefault(string id)
         {

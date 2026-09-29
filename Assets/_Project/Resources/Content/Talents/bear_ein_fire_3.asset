@@ -42,7 +42,7 @@ MonoBehaviour:
     SignatureCapacityBonus: 0
     SignaturePerTurnBonus: 0
     GrantsStartingItemId: 
-    SortOrder: 49
+    SortOrder: 69
     IconPath: 
     MinSpent: 0
     Effects:

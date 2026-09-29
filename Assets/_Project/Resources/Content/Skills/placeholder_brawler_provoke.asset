@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_provoke
     DisplayName: Bellow
-    Description: Placeholder kit. Reuses the Provoke effect Shawn's own kit already
-      defines.
+    Description: 'He roars and one enemy can see nothing else: its next attack must
+      be aimed at him. Costs no Fury. Ready again after 3 turns.'
     CharacterId: bear
     UnlockLevel: 999
     Effect: 5
@@ -111,7 +111,7 @@ MonoBehaviour:
       defenseToAttackPercent: 0
       primaryDrainPerTurn: 0
       forbidsEffects: []
-    CooldownTurns: 0
+    CooldownTurns: 3
     PlayerSelectable: 1
     Shake: 0
     Approach: 0

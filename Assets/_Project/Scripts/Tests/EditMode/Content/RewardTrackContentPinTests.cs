@@ -112,6 +112,14 @@ namespace PrincesPalace.Domain.Tests
             if (against.HasValue) Assert.AreEqual(against.Value, entry.Against, $"{track.CharacterId} level {level} element");
         }
 
+        private static void AssertTitle(RewardTrackDefinition track, int level, string title)
+        {
+            var entry = track.At(level);
+            Assert.AreEqual(TrackReward.Identity, entry.Reward, $"{track.CharacterId} level {level} reward");
+            Assert.AreEqual(TrackIdentityKind.Title, entry.IdentityKind, $"{track.CharacterId} level {level} kind");
+            Assert.AreEqual(title, entry.IdentityValue, $"{track.CharacterId} level {level} title");
+        }
+
         // ---- Shawn, level by level -- §4's first column --------------------
 
         [Test]
@@ -185,9 +193,9 @@ namespace PrincesPalace.Domain.Tests
             var t = Bear();
 
             AssertEntry(t, 2, TrackReward.MaxHealth, 50);
-            AssertEntry(t, 3, TrackReward.UnlockSkill, 0, skillId: "placeholder_brawler_provoke");
+            AssertTitle(t, 3, "Recruit");
             AssertEntry(t, 4, TrackReward.StatPoint, 4);
-            AssertEntry(t, 5, TrackReward.FuryGainOnAttack, 20);
+            AssertEntry(t, 5, TrackReward.MaxHealth, 50);
             AssertEntry(t, 6, TrackReward.StatPoint, 4);
             AssertEntry(t, 7, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
             AssertEntry(t, 8, TrackReward.Respec, 0);
@@ -201,8 +209,8 @@ namespace PrincesPalace.Domain.Tests
             AssertEntry(t, 16, TrackReward.StatPoint, 4);
             AssertEntry(t, 17, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
             AssertEntry(t, 18, TrackReward.StatPoint, 4);
-            AssertEntry(t, 19, TrackReward.FuryGainOnAttack, 25);
-            AssertEntry(t, 20, TrackReward.UnlockSkill, 0, skillId: "bear_bulwark");
+            AssertEntry(t, 19, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
+            AssertTitle(t, 20, "Stalwart");
             AssertEntry(t, 21, TrackReward.StatPoint, 4);
             AssertEntry(t, 22, TrackReward.MaxHealth, 50);
             AssertEntry(t, 23, TrackReward.StatPoint, 4);
@@ -215,18 +223,17 @@ namespace PrincesPalace.Domain.Tests
             AssertEntry(t, 30, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
         }
 
-        // THE FURY NODES ARE SET, NOT SUMMED, and this is the only place the
-        // difference is visible as a number: two gain nodes of 20 and 25 read
-        // as 25, not 45. UnlockedAmount is the read site
-        // ContentDatabase.BuildPrimaryPool uses.
-        [TestCase(4, 0)]
-        [TestCase(5, 20)]
-        [TestCase(18, 20)]
-        [TestCase(19, 25)]
-        [TestCase(40, 25)]
-        public void BjornsFuryGainIsTheHighestCollectedNotTheSum(int claimedLevel, int expected)
+        // NO FURY-PER-ATTACK NODE REMAINS: each of his three root talents is a
+        // Fury engine that replaces the pool's flat gains, so such a node could
+        // never pay. UnlockedAmount is the read site ContentDatabase
+        // .BuildPrimaryPool uses; the fallback comes back at every level.
+        [TestCase(1)]
+        [TestCase(5)]
+        [TestCase(19)]
+        [TestCase(40)]
+        public void BjornsTrackAuthorsNoFuryGainOnAttack(int claimedLevel)
         {
-            Assert.AreEqual(expected, Bear().UnlockedAmount(TrackReward.FuryGainOnAttack, claimedLevel, fallback: 0));
+            Assert.AreEqual(-1, Bear().UnlockedAmount(TrackReward.FuryGainOnAttack, claimedLevel, fallback: -1));
         }
 
         [TestCase(14, 0)]
@@ -323,10 +330,13 @@ namespace PrincesPalace.Domain.Tests
         // sampled, because "everything above 30 is Identity" is the rule
         // RewardTrackNodeValidation enforces and this is what it is
         // enforcing against.
-        [TestCase("sheep", "Contractor", "Reaver")]
-        [TestCase("bear", "Bruiser", "Warden")]
-        [TestCase("owl", "Scholar", "Adept")]
-        public void TheIdentityStretchIsTheAuthoredTable(string characterId, string firstTitle, string secondTitle)
+        [TestCase("sheep", "Contractor", "Reaver", 0)]
+        // Bjorn also holds two cosmetic Title placeholders below 30 (levels 3
+        // and 20) where the node-kind rule left no numeric node to place.
+        [TestCase("bear", "Bruiser", "Warden", 2)]
+        [TestCase("owl", "Scholar", "Adept", 0)]
+        public void TheIdentityStretchIsTheAuthoredTable(string characterId, string firstTitle, string secondTitle,
+            int earlyTitles)
         {
             var track = Tracks()[characterId];
 
@@ -341,7 +351,7 @@ namespace PrincesPalace.Domain.Tests
             AssertIdentity(track, 39, TrackIdentityKind.Title, "Legend");
             AssertIdentity(track, 40, TrackIdentityKind.Mastery, "");
 
-            Assert.AreEqual(10, track.CollectedIdentity(RewardTrack.MaxLevel).Count);
+            Assert.AreEqual(10 + earlyTitles, track.CollectedIdentity(RewardTrack.MaxLevel).Count);
         }
 
         private static void AssertIdentity(RewardTrackDefinition track, int level, TrackIdentityKind kind, string value)
@@ -407,8 +417,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var track = Bear();
 
-            Assert.AreEqual(150, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health, 50 at 2/14/22");
-            Assert.AreEqual(25, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Physical, RewardTrack.MaxLevel), "Physical damage, 5 at 7/10/17/28/30");
+            Assert.AreEqual(200, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health, 50 at 2/5/14/22");
+            Assert.AreEqual(30, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Physical, RewardTrack.MaxLevel), "Physical damage, 5 at 7/10/17/19/28/30");
             Assert.AreEqual(10, track.CollectedSkillFlatDelta("placeholder_brawler_slam", RewardTrack.MaxLevel), "Slam base 27 to 37");
         }
 
@@ -426,7 +436,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- what each track teaches, and when -----------------------------
 
         [TestCase("sheep", new[] { "woolgathering", "battering_ram", "tuck_in", "cinderfault", "placeholder_shawn_capstone" })]
-        [TestCase("bear", new[] { "placeholder_brawler_provoke", "bear_bulwark" })]
+        [TestCase("bear", new string[0])]
         [TestCase("owl", new[] { "frost_flare", "lightning_bolt", "mend", "prism_ward" })]
         public void ATrackTeachesExactlyTheseSkillsInThisOrder(string characterId, string[] expected)
         {
@@ -440,7 +450,6 @@ namespace PrincesPalace.Domain.Tests
         // fully-collected check.
         [TestCase("sheep", 2)]
         [TestCase("sheep", 9)]
-        [TestCase("bear", 9)]
         [TestCase("owl", 2)]
         public void NothingIsTaughtBeforeItsOwnNode(string characterId, int claimedLevel)
         {
@@ -470,8 +479,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("LEARN CINDERFAULT", RewardTrackNames.Of(Sheep().At(20)));
             Assert.AreEqual("TITLE: CONTRACTOR", RewardTrackNames.Of(Sheep().At(31)));
 
-            Assert.AreEqual("+20 FURY PER ATTACK", RewardTrackNames.Of(Bear().At(5)));
-            Assert.AreEqual("OPENS AT 25 FURY", RewardTrackNames.Of(Bear().At(15)));
+                        Assert.AreEqual("OPENS AT 25 FURY", RewardTrackNames.Of(Bear().At(15)));
             Assert.AreEqual("SLAM +5", RewardTrackNames.Of(Bear().At(12)));
 
             Assert.AreEqual("+5% SPELL DAMAGE", RewardTrackNames.Of(Owl().At(7)));

@@ -127,6 +127,14 @@ namespace PrincesPalace.Domain.Content
 
         [ContentDoc("Whether this pool soaks incoming damage before health, the way a signature resource can.")]
         public bool absorbsDamage;
+
+        // A POOL FILLED BY A TALENT'S FURY ENGINE, NOT BY ITS OWN GAINS
+        // (Bjorn's Fury: CombatantState.FuryEngine replaces the flat gains for
+        // whoever holds a root talent, so the row's three gains are 0). It
+        // lets a pool that opens empty and authors no gain resolve; it changes
+        // nothing at runtime.
+        [ContentDoc("The pool is filled by a talent's Fury engine rather than by its own three gains, so a row that opens empty and authors no gain is still valid. Read by validation only.")]
+        public bool engineFed;
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

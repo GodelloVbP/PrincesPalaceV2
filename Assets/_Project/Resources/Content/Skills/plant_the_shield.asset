@@ -10,18 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: bear_bulwark
+  m_Name: plant_the_shield
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
   data:
-    Id: bear_bulwark
-    DisplayName: Bulwark
-    Description: Fifty Fury, spent standing in front of somebody. A shield worth
-      30% of Bjorn's own health, and one turn to spend it.
+    Id: plant_the_shield
+    DisplayName: Plant the Shield
+    Description: He sets his shield down in front of himself. It takes the blows
+      meant for him until it breaks or three turns pass, and a shield that breaks
+      throws shards back at whoever broke it. Once it ends he cannot plant it again
+      for 3 turns. Costs 30 Fury.
     CharacterId: bear
     UnlockLevel: 999
-    Effect: 7
-    Targeting: 4
-    ManaCost: 50
+    Effect: 23
+    Targeting: 2
+    ManaCost: 30
     ResourceCost: 0
     SpendsAllResource: 0
     ResourceSpendCap: 0
@@ -36,8 +38,8 @@ MonoBehaviour:
     WindowTurns: 0
     RegenPercentOfMaxHealth: 0
     PlantedShieldBashPercent: 0
-    ReplacesSkillId: 
-    PercentOfCasterMaxHealth: 30
+    ReplacesSkillId: placeholder_brawler_ward
+    PercentOfCasterMaxHealth: 0
     WardTurns: 1
     Power: 0
     FlatAmount: 0
@@ -63,7 +65,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 53
+    SortOrder: 54
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -113,11 +115,11 @@ MonoBehaviour:
       forbidsEffects: []
     CooldownTurns: 0
     PlayerSelectable: 1
-    Shake: 0
+    Shake: 0.3
     Approach: 0
-    Stance: 
+    Stance: victory
     ApproachStance: 
-    WindupStance: 
+    WindupStance: victory
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 

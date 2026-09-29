@@ -29,18 +29,18 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 3
-      Reward: 11
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
-      SkillId: placeholder_brawler_provoke
-      SkillDisplayName: Bellow
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
       ResourceType: 0
       HasResource: 0
       IdentityKindType: 0
-      HasIdentityKind: 0
-      IdentityValue: 
+      HasIdentityKind: 1
+      IdentityValue: Recruit
     - Level: 4
       Reward: 1
       Amount: 4
@@ -55,8 +55,8 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 5
-      Reward: 12
-      Amount: 20
+      Reward: 2
+      Amount: 50
       AgainstType: 0
       HasAgainst: 0
       SkillId: 
@@ -237,10 +237,10 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 19
-      Reward: 12
-      Amount: 25
+      Reward: 8
+      Amount: 5
       AgainstType: 0
-      HasAgainst: 0
+      HasAgainst: 1
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
@@ -250,18 +250,18 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 20
-      Reward: 11
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
-      SkillId: bear_bulwark
-      SkillDisplayName: Bulwark
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
       ResourceType: 0
       HasResource: 0
       IdentityKindType: 0
-      HasIdentityKind: 0
-      IdentityValue: 
+      HasIdentityKind: 1
+      IdentityValue: Stalwart
     - Level: 21
       Reward: 1
       Amount: 4

@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
+  m_Name: bear_sen_hold_1
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
+  data:
+    Id: bear_sen_hold_1
+    DisplayName: Hold the Line
+    Description: 'Unlocks Hold the Line: 40 Fury. Every ally gains 15 Defense and
+      15 Magical Defense for 2 turns.'
+    CharacterId: bear
+    Column: 0
+    Row: 2
+    Prerequisites:
+    - bear_sen_root
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 46
+    IconPath: 
+    MinSpent: 0
+    Effects: []
+    GrantsSkillId: hold_the_line
+    AppliesToSkillId: 
