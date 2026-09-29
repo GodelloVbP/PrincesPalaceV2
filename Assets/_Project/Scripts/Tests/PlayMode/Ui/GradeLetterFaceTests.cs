@@ -10,7 +10,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // QA 2026-09-26: ChakraPetch draws D/0, B/8 and S/5 as one glyph each, so
     // "INT-D" read as "INT-0". ScalingGrades.Display wraps every grade letter
-    // in a <font> tag and GradeFontResolver answers it. The EditMode tests pin
+    // in a <font> tag and TmpAssetResolver answers it. The EditMode tests pin
     // the STRING; this pins what TMP actually DOES with it, on the two
     // surfaces the defect was reported on -- the dossier's attribute line and
     // an item tooltip -- because an unresolved <font> tag is not an error in
@@ -28,7 +28,7 @@ namespace PrincesPalace.PlayModeTests
         [SetUp]
         public void SetUp()
         {
-            GradeFontResolver.Register();
+            TmpAssetResolver.Register();
         }
 
         [TearDown]

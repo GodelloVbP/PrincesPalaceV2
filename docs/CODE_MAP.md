@@ -72,6 +72,7 @@ screenshots all read it.
 | UI kit (declare/solve/audit) | `Domain/UiKit/Ui.cs`, `UiNode.cs`, `UiSolver.cs`, `UiAudit.cs`, `UiStrings.cs` | Engine-free; `UiAudit` runs at four aspects. |
 | UI emit (scene build) | `Editor/SceneBuilder/SceneBuilder.cs`, `UiEmitter.cs`, `ScreenRegistry.cs` | Build audits: `UiTextFitAudit`, `UiCountAudit`, `UiWiringSweep`, `UiNavControlsAudit`, `UiBindingAudit`. |
 | Typography | `Domain/UiKit/Typography.cs`, `Editor/SceneBuilder/TmpBootstrap.Typography.cs`, `SceneBuilder.Typography.cs` | |
+| Description tokens (`**bold**`, `{icon}`) | `Domain/Content/DescriptionMarkup.cs` (grammar, icon table, Validate/Expand), `Core/DescriptionRenderer.cs`, `Core/TmpAssetResolver.cs` (bold/grade fonts, icon sprite asset), `Core/UiText.cs` (`SetContent`), `Editor/SceneBuilder/TmpBootstrap.DescriptionIcons.cs` | Grammar and icon table: `docs/CONTENT_SCHEMA.md`; validated by the skill/talent/relic resolvers. |
 | UI art kit shape | `Domain/UiKit/ButtonPlateArt.cs`, `ContainerArt.cs`, `PcPlateArt.cs`, `PcTheme.cs`, `IdentityMetals.cs` | Measured by `tools/measure_ui_kit.py`, `tools/normalize_pc_plates.py`. |
 | Audio | `Core/SoundController.cs`, `Core/Sound.cs`, `Core/AudioLevels.cs`, `Domain/Audio/` | Self-bootstraps before any scene; not read through `ContentDatabase`. |
 | Settings | `Core/GameSettings.cs` | PlayerPrefs. |
@@ -93,7 +94,7 @@ screenshots all read it.
 - `Core/MapController` → `.Walk`, `.Event`
 - `Core/RewardTrackController` → `.Input`, `.Motion`
 - `Core/TalentController` → `.Motion`
-- `Editor/SceneBuilder/SceneBuilder` → `.Typography`; `Editor/SceneBuilder/TmpBootstrap` → `.Typography`
+- `Editor/SceneBuilder/SceneBuilder` → `.Typography`; `Editor/SceneBuilder/TmpBootstrap` → `.Typography`, `.DescriptionIcons`
 
 ## Tests
 

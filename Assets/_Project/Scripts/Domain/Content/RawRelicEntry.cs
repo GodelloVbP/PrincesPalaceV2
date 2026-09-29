@@ -10,7 +10,7 @@ namespace PrincesPalace.Domain.Content
         public string id;
         [ContentDoc("The name shown for this relic when offered.")]
         public string displayName;
-        [ContentDoc("Flavor/rules text shown to the player.")]
+        [ContentDoc("Flavor/rules text shown to the player. May use **bold** and {icon} tokens (see Description markup at the end of this file).")]
         public string description = "";
 
         // Parsed against RelicEffect by name (case-insensitive) — a typo here

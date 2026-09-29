@@ -208,6 +208,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
+            if (!DescriptionMarkup.Check(label, raw.description, out error)) return false;
 
             // The same two checks every other SpellPresentation goes through
             // (skills, enemies), not a relic-flavoured copy of them.

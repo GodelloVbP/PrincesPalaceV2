@@ -190,7 +190,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 |---|---|---|---|---|
 | `id` | string | (none -- required) | Stable identifier; written into save data via unlock/achievement references. |  |
 | `displayName` | string | (none -- required) | The name shown for this relic when offered. |  |
-| `description` | string | `""` | Flavor/rules text shown to the player. |  |
+| `description` | string | `""` | Flavor/rules text shown to the player. May use **bold** and {icon} tokens (see Description markup at the end of this file). |  |
 | `effect` | string | `""` | Which RelicEffect this grants, matched case-insensitively; empty resolves to None. | None, DualWield, MagicalShield, Bloodlust, ChargingCrystal, BallerinasSlippers, TinFoilPipe, ToothedNecklace, BountyHunterContract, SwordInABox, LuckyDeck, DrownedLantern, FirstRune, SaltLedger, LongCount, MagicMarker, JarOfBearUrine, WorldEndersCrown, CursedIdol, AmassingStar, RampagingBullsHorn, IceFingernail, LoadedDice, MonkeyKingsScepter, SparringSaber, SparringBuckler, EssenceSiphon, DisgruntledLackey, InconspicuousKey, DancersAnklet, BerserkersVest, PhoenixEgg, Kinship, BellwethersBell, TollOfTheFlock |
 | `iconPath` | string | `""` | Editor-time path to this relic's icon under Assets/_Project/Art/Items/Relics/Processed/; empty falls back to a flat accent-coloured circle. |  |
 | `rarity` | string | `""` | How rare the offer is, one of RelicRarity's names; empty means Common. | Common, Uncommon, Rare, UltraRare, Mythic, Godlike |
@@ -214,7 +214,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 |---|---|---|---|---|
 | `id` | string | (none -- required) | Stable identifier; written into save files and never renamed once used. |  |
 | `displayName` | string | (none -- required) | The name shown on the skill's own button. |  |
-| `description` | string | `""` | Flavor text shown to the player; read by no formula. |  |
+| `description` | string | `""` | Flavor/rules text shown to the player; read by no formula. May use **bold** and {icon} tokens (see Description markup at the end of this file). |  |
 | `iconPath` | string | `""` | Editor-time path to this skill's icon (Assets/_Project/Art/...); empty means no art, and the slot hides rather than showing a placeholder. Used today only by bookOnly skills, whose spell-book art carries the glyph baked in. |  |
 | `characterId` | string | `""` | The character this skill belongs to; required so it is never offered to everyone. |  |
 | `unlockLevel` | int | `-1` | The character level this skill becomes available at; see notes for the bookOnly exception. |  |
@@ -296,7 +296,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 |---|---|---|---|---|
 | `id` | string | (none -- required) | Stable identifier; written into save files as an unlocked-talent id. |  |
 | `displayName` | string | (none -- required) | The name shown on this talent's node. |  |
-| `description` | string | `""` | Flavor/rules text shown to the player. |  |
+| `description` | string | `""` | Flavor/rules text shown to the player. May use **bold** and {icon} tokens (see Description markup at the end of this file). |  |
 | `characterId` | string | `""` | The one character who can take this talent, or empty for a node every character shares. |  |
 | `column` | int | `0` | Which of the 3 paths (0-2) this talent sits in. |  |
 | `row` | int | `0` | The slot index (0-20) into that path's fixed skeleton. |  |
@@ -673,3 +673,28 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `layerFormat` | int | `0` | Which revision of the layer vocabulary this block was authored against; 0 means the pre-layer format. |  |
 | `hitCueSeconds` | float | `0` | Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame. |  |
 
+## Description markup
+
+Skill, talent and relic descriptions may carry two authoring tokens; nothing else is interpreted, and a description containing `<` is refused.
+
+- `**text**` renders bold. Every `**` is a delimiter taken in order (first opens, second closes), so markers must balance, may not be empty, and do not nest. There is no escape: write "2 to the 3rd", not `2**3`.
+- `{name}` renders an inline icon; `name` must be a token in the table below, and an unknown one fails the content build naming the row. An icon may sit inside a bold run.
+
+When the bold face or the icon sprite asset is unavailable at runtime, bold drops to plain text and an icon to its plain word. Wool, HP, gold and Fury have no icon art and stay words.
+
+| Token | Sprite (Resources/Icons/Ability) | Plain word |
+|---|---|---|
+| `{fire}` | `element_fire` | Fire |
+| `{ice}` | `element_ice` | Ice |
+| `{nature}` | `element_nature` | Nature |
+| `{physical}` | `element_physical` | Physical |
+| `{poison}` | `element_poison` | Poison |
+| `{arcane}` | `element_arcane` | Arcane |
+| `{earth}` | `element_earth` | Earth |
+| `{lightning}` | `element_lightning` | Lightning |
+| `{water}` | `element_water` | Water |
+| `{wind}` | `element_wind` | Wind |
+| `{void}` | `element_void` | Void |
+| `{mana}` | `resource_mana` | mana |
+| `{cooldown}` | `resource_cooldown` | cooldown |
+| `{cost}` | `resource_cost` | cost |

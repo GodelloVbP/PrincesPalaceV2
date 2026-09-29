@@ -73,7 +73,7 @@ namespace PrincesPalace.Domain.Stats
 
         // The face every player-facing grade letter is drawn in. Matches the
         // generated asset name in TmpBootstrap.Typography.cs (the
-        // FunctionalHeading role's face), and Core.GradeFace resolves it at
+        // FunctionalHeading role's face), and Core.TmpAssetResolver resolves it at
         // runtime from the shipped TTF -- see there for why a runtime font.
         public const string DisplayFontName = "SourceSans3-SemiBold SDF";
 

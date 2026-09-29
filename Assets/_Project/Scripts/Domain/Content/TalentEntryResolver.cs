@@ -202,6 +202,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
+            if (!DescriptionMarkup.Check(label, raw.description, out error)) return false;
 
             resolvedTalent = new ResolvedTalent(raw.id, raw.displayName, raw.description ?? "",
                 (raw.characterId ?? "").Trim(), raw.column, raw.row,

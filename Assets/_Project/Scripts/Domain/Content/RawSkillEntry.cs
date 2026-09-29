@@ -15,7 +15,7 @@ namespace PrincesPalace.Domain.Content
         public string id;
         [ContentDoc("The name shown on the skill's own button.")]
         public string displayName;
-        [ContentDoc("Flavor text shown to the player; read by no formula.")]
+        [ContentDoc("Flavor/rules text shown to the player; read by no formula. May use **bold** and {icon} tokens (see Description markup at the end of this file).")]
         public string description = "";
 
         [ContentDoc("Editor-time path to this skill's icon (Assets/_Project/Art/...); empty means no art, and the slot hides rather than showing a placeholder. Used today only by bookOnly skills, whose spell-book art carries the glyph baked in.")]

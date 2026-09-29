@@ -939,6 +939,7 @@ namespace PrincesPalace.Domain.Content
             if (!SpellLayerRules.TryCheck(label, raw.vfx, out error)) return false;
 
             if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
+            if (!DescriptionMarkup.Check(label, raw.description, out error)) return false;
 
             if (!TryResolveElements(raw, label, instances, out var elements, out error))
             {

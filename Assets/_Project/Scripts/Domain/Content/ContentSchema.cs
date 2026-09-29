@@ -163,6 +163,10 @@ namespace PrincesPalace.Domain.Content
                 }
             }
 
+            sb.Append("## Description markup\n\n");
+            sb.Append(DescriptionMarkup.GrammarDoc);
+            sb.Append(DescriptionMarkup.IconTableDoc());
+
             return sb.ToString();
         }
 

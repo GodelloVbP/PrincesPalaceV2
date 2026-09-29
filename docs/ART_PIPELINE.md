@@ -1114,6 +1114,20 @@ swing should play `impact_burst` alone.
 Each documents its kit's exact expected filenames and any kit-specific
 sizing/tiling requirements.
 
+### Description icons (`Resources/Icons/DescriptionIcons/`)
+
+The inline icons in skill, talent and relic descriptions (`{fire}`, `{mana}`,
+...) are one TMP sprite asset packed from `Resources/Icons/Ability/*.png`
+(64px), listed in `DescriptionMarkup.Icons`. After changing one of those PNGs or
+the list, run `Prince's Palace/Generate Description Icons` (or
+`-executeMethod TmpBootstrap.GenerateDescriptionIcons`, Editor closed) and
+commit `DescriptionIcons.asset`, `DescriptionIcons_Atlas.png` and their `.meta`
+files. The generator reads the PNGs as bytes, so the source icons' importer
+settings are untouched; diff `Art/` and `Resources/Icons/Ability` after the run
+anyway. A sprite asset missing an icon the list names makes every icon render
+as its plain word (`TmpAssetResolver.IconSprites`). Wool, HP, gold and Fury
+have no icon art and stay words.
+
 ## 7. Outstanding tracker
 
 - **`Relics.png`** — the Relic screen's background, 1672×941, opaque, no

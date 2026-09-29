@@ -33,10 +33,14 @@ namespace PrincesPalace
         // words came from the manifest or from data -- and so the lint can tell
         // a legitimate content name from a literal smuggled through
         // UiString.FromContent("...").
+        //
+        // Also the one place description tokens (**bold**, {icon}) become
+        // rich text, through DescriptionRenderer; a string with no token
+        // reaches the label unchanged.
         public static void SetContent(this TMP_Text label, string value)
         {
             if (label == null) return;
-            label.text = value ?? string.Empty;
+            label.text = DescriptionRenderer.Render(value);
         }
     }
 }
