@@ -2234,17 +2234,21 @@ Re-confirms without duplicating #44, #45, #80, #81, #84, #92, #104, #146,
 below ends with a `Route:` line naming the agent and verification gate, and a
 `Blocked:` line where the fix cannot land until another branch merges.
 
-### 219. Three buttons end a run on a single press, unlike the System Menu's hold
+### 219. Two buttons end a run on a single press, unlike the System Menu's hold
 
-`Core/MapController.cs:169-177` (`abandonButton`), `Core/HubController.cs:155-159`
-(`mainMenuButton`), and `Core/MainMenuController.cs:78-84` (`exitButton`) all
-call `RunManager.EndRun()` straight from `onClick`. The System Menu's Exits
-pane states the house rule for exactly this cost in its own header comment
-(`Domain/UiKit/Screens/ExitsScreen.cs:11-16`): "TWO GESTURES, NOT ONE" — the
-two lesser exits arm-then-fire, abandon is a 1.2s hold (`HoldFillMath`,
-used from `ExitsScreen.cs` around line 209). These three callers are outside
-that pane and skip the gesture entirely, so a single misclick anywhere on
-the map, hub or main menu throws away a run. Fix the class, not the
+`Core/MapController.cs:169-177` (`abandonButton`) and
+`Core/MainMenuController.cs:78-84` (`exitButton`) still call
+`RunManager.EndRun()` straight from `onClick`. The third caller this entry
+listed, the hub's corner `mainMenuButton`, is fixed (System Menu plan 0c): it now
+opens the System Menu on its Exit tab, so leaving takes the arm-then-fire
+gesture. The two above stay open.
+
+The System Menu's Exits pane states the house rule for exactly this cost in
+its own header comment (`Domain/UiKit/Screens/ExitsScreen.cs:11-16`): "TWO
+GESTURES, NOT ONE" — the two lesser exits arm-then-fire, abandon is a 1.2s
+hold (`HoldFillMath`, used from `ExitsScreen.cs` around line 209). The two
+open callers are outside that pane and skip the gesture entirely, so a single
+misclick on the map or main menu throws away a run. Fix the class, not the
 instance: route every `EndRun()` caller outside Exits through the same
 hold/confirm, and add a test that enumerates `EndRun()` call sites so a new
 one can't reintroduce this.

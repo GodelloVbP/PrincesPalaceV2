@@ -17,10 +17,9 @@ namespace PrincesPalace.PlayModeTests
     // binds the SystemMenu axis as well as Cancel
     // (ProjectSettings/InputManager.asset), so this file keeps the key
     // presses for opening and closing the menu rather than inventing a HUD
-    // icon that does not exist -- FightController.LeaveFight and HubController's own
-    // mainMenuButton are both a DIFFERENT shortcut (straight to the Main
-    // Menu, ending the run), not "open the system menu", so there is no
-    // button standing in for it.
+    // icon that does not exist -- FightController.LeaveFight is a DIFFERENT
+    // shortcut (straight to the Main Menu, ending the run), not "open the
+    // system menu", so there is no button standing in for it.
     //
     // WHAT REPLACES THE PAD'S "MoveUp proves Fight's branch is inert
     // underneath the open menu": a mouse-specific version of the same claim

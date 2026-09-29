@@ -155,16 +155,11 @@ namespace PrincesPalace
             // exist yet, and a button that logs is more honest than one that
             // loads an empty scene.
             startRunButton.onClick.AddListener(StartOrResumeRun);
-            // Going to the title ENDS the run first. Leaving a descent, or
-            // anything that is not continuing it, kills it -- no exceptions --
-            // and EndRun is what settles the books, so skipping it here would
-            // throw away embers the run had already earned rather than just
-            // ending it.
-            mainMenuButton.onClick.AddListener(() =>
-            {
-                RunManager.EndRun();
-                Navigation.Go(Navigation.MainMenu);
-            });
+            // The corner button opens the menu on its Exit tab instead of
+            // leaving. Going to the title ends the run (EndRun banks the
+            // embers), so a single press must not do it: the Exit pane's
+            // arm-then-fire rule is the one gesture for every way out.
+            mainMenuButton.onClick.AddListener(OpenExitTab);
 
             WireNavigation();
             RegisterNavContext();
@@ -414,6 +409,15 @@ namespace PrincesPalace
         public void HandleEscape()
         {
             SystemMenuController.OpenFromRoot(systemMenu);
+        }
+
+        // The corner Main Menu button's action. Select follows Open in the same
+        // breath, which the controller supports: its first-frame default only
+        // applies while nothing has chosen a tab.
+        internal void OpenExitTab()
+        {
+            if (!SystemMenuController.OpenFromRoot(systemMenu)) return;
+            systemMenu.Select(SystemMenuTab.Exit);
         }
 
         // The key read above is deliberately separated from the action here:

@@ -10,6 +10,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -106,10 +107,10 @@ namespace PrincesPalace.PlayModeTests
         // committed to a descent and the save has no run in it, and any exit
         // taken here calls EndRun with nothing to end.
         //
-        // Driven through the hub's OWN way out rather than through the system
-        // menu's quit: both reach the same RunManager.EndRun, and the hub's
-        // button needs no menu opened over a screen that is mid-zoom. The point
-        // is the seam the press reaches, not which button reaches it.
+        // Driven through the hub's corner button, which opens the menu on its
+        // Exit tab, then the pane's arm-then-fire Title exit. The point is the
+        // seam the exit reaches (RunManager.EndRun), from a screen that is
+        // mid-zoom.
         [UnityTest]
         public IEnumerator LeavingMidDescentTransitionKeepsTheGearTheStockpileAndTheRunCount()
         {
@@ -139,8 +140,17 @@ namespace PrincesPalace.PlayModeTests
                 "fixture: the transition already seeded the run, so the press below is not landing " +
                 "in the window this test is about");
 
-            // Out, mid-zoom.
+            // Out, mid-zoom: the corner button opens the menu, and the exit
+            // takes its two presses.
             Click(hub, "MainMenuButton");
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsTrue(menu.IsOpen, "the corner button did not open the system menu");
+            var title = menu.GetComponentsInChildren<Button>(includeInactive: true)
+                .First(b => b.name == "ExitTitle");
+            title.onClick.Invoke();
+            title.onClick.Invoke();
             yield return null;
 
             Assert.IsFalse(character.equipment.IsEmpty(EquipmentSlot.Weapon1),
@@ -152,6 +162,41 @@ namespace PrincesPalace.PlayModeTests
                 "leaving during the descent transition counted a run that never happened");
 
             CollectionAssert.Contains(_navigated, Navigation.MainMenu, "the way out did not go anywhere");
+        }
+
+        // ---- the corner button ----------------------------------------------------------
+
+        // One press must not end a run (AUDIT #219): the button opens the menu
+        // on its Exit tab, and leaving takes the pane's two presses.
+        [UnityTest]
+        public IEnumerator TheCornerMainMenuButtonOpensTheExitTabAndLeavesOnlyOnTheSecondPress()
+        {
+            yield return OpenTheHub();
+            RunManager.StartRun(4242);
+            Assert.IsTrue(RunManager.HasRun, "fixture: no run to end");
+
+            var hub = Object.FindAnyObjectByType<HubController>();
+            Click(hub, "MainMenuButton");
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsTrue(menu.IsOpen, "the corner button did not open the system menu");
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Exit), menu.SelectedIndex,
+                "the corner button did not land on the Exit tab");
+            Assert.IsTrue(RunManager.HasRun, "one press on the corner button ended the run");
+            CollectionAssert.IsEmpty(_navigated, "one press on the corner button left the hub");
+
+            var title = menu.GetComponentsInChildren<Button>(includeInactive: true)
+                .First(b => b.name == "ExitTitle");
+            title.onClick.Invoke();
+            Assert.IsTrue(RunManager.HasRun, "arming the Title exit ended the run");
+
+            title.onClick.Invoke();
+            yield return null;
+
+            Assert.IsFalse(RunManager.HasRun, "the second press did not end the run");
+            CollectionAssert.AreEqual(new[] { Navigation.MainMenu }, _navigated);
         }
 
         // ---- C7: a scene arriving over a live transition ------------------------------------
