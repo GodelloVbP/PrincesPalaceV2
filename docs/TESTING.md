@@ -34,6 +34,8 @@ result is void once a file relevant to it changes.
   file, a global-state write, `-BuildScenes`, or the safety net (HEAD more
   than 5 commits or 24h past the last green full run in
   `tools/.last-full-green`).
+- Selection rules are pinned by `powershell -File tools/test_select_test.ps1`
+  (pure PowerShell, no Unity); run it after touching `tools/test_select.ps1`.
 - `-Changed -DryRun` prints the selection and stops; `-ChangedPaths a,b`
   resolves given paths (for checking, not gating).
 - The full run (`run_tests_parallel.ps1`, ~3 min, ~6 GB RAM) splits PlayMode

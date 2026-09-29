@@ -22,6 +22,12 @@
 # what it gives up (a test that reaches the change only through another
 # production type or a Shared helper) is what the safety net is for.
 #
+# ENGINE OBJECTS ARE ONE NODE. A partial type over $FacadeMinFiles production
+# files (FightSession) is what tests name; the helpers it calls (DamagePipeline,
+# CritRules) are named only by its files. A change reaching such a type inside
+# its own Domain folder seeds the type too (Get-FacadeSeeds), so the fixtures
+# that pin seeded fight numbers are one hop away from the damage path.
+#
 # WHAT A NAME SCAN CANNOT SEE, and what the gate does instead (per file):
 #   - not a .cs file (content JSON, art, fonts, resources)   -> the area map
 #   - a HUB type changed: named by $SelectHubShare or more of the production
@@ -47,6 +53,9 @@
 
 $SelectDepth = 1
 $SelectHubShare = 0.05
+# A type declared across this many production files is a partial "engine
+# object" (FightSession is twelve): one type to a test, many files to the graph.
+$FacadeMinFiles = 3
 $LastGreenMaxCommits = 5
 $LastGreenMaxHours = 24
 $LastFullGreenFile = Join-Path $PSScriptRoot ".last-full-green"
@@ -444,6 +453,55 @@ function Get-AreaClasses {
     return @($Index.Keys | Where-Object { $Index[$_].Area -ne $shared -and $Areas -contains $Index[$_].Area })
 }
 
+# The engine object a seed belongs to. A test names FightSession, never the
+# DamagePipeline, CritRules or StatusCombos its partial files call, so one hop
+# from those helpers lands on FightSession.*.cs and stops one short of the
+# fixtures that pin the fight's seeded numbers. A partial type spread over
+# $FacadeMinFiles or more production files is one unit, so a seed that any of
+# its files reaches, through referrers inside the seed's own domain folder at
+# any depth, promotes that type to a seed too. The scope is Domain/Combat, not
+# Domain/Stats: a type in another folder that merely calls the engine is the
+# ordinary hub and area-map case, and an unscoped walk is the full-suite
+# closure the header measured.
+function Get-ScopeKey {
+    param([string]$Rel)
+    $seg = $Rel -split '/'
+    # Assets/_Project/Scripts/<Layer>[/<Area>/...]
+    $n = if ($seg.Count -gt 5 -and $seg[3] -eq 'Domain') { 5 } else { [Math]::Min(4, $seg.Count - 1) }
+    return ($seg[0..($n - 1)] -join '/')
+}
+
+function Get-FacadeSeeds {
+    param($Graph, [string[]]$Seeds, [string]$Path)
+    $scope = Get-ScopeKey -Rel $Path
+    $out = @()
+    # Breadth-first over referrers inside the scope, unbounded: CritRules is
+    # named only by DamagePipeline, which FightSession's files name, and that
+    # is two hops from the fixtures.
+    $seenType = @{}
+    $seenFile = @{}
+    $queue = New-Object System.Collections.Generic.Queue[string]
+    foreach ($t in $Seeds) { $seenType[$t] = $true; $queue.Enqueue($t) }
+    while ($queue.Count -gt 0) {
+        $t = $queue.Dequeue()
+        if (-not $Graph.RefBy.ContainsKey($t)) { continue }
+        foreach ($f in @($Graph.RefBy[$t])) {
+            if ($Graph.IsTest[$f] -or $seenFile.ContainsKey($f)) { continue }
+            if ((Get-ScopeKey -Rel $Graph.Rel[$f]) -ne $scope) { continue }
+            $seenFile[$f] = $true
+            foreach ($p in @($Graph.Declares[$f])) {
+                if ($seenType.ContainsKey($p)) { continue }
+                $seenType[$p] = $true
+                $queue.Enqueue($p)
+                if (-not $Graph.DeclaredIn.ContainsKey($p)) { continue }
+                $prod = @($Graph.DeclaredIn[$p] | Where-Object { -not $Graph.IsTest[$_] })
+                if ($prod.Count -ge $FacadeMinFiles) { $out += $p }
+            }
+        }
+    }
+    return @($out | Sort-Object -Unique)
+}
+
 # --- the selection ----------------------------------------------------------
 #
 # Returns:
@@ -520,6 +578,7 @@ function Resolve-GateSelection {
         if ($null -ne $new) { $seeds += [PP.TestSelect.RefGraph]::DeclaredTypes($new) }
         if ($null -ne $old) { $seeds += [PP.TestSelect.RefGraph]::DeclaredTypes($old) }
         $seeds = @($seeds | Sort-Object -Unique)
+        $seeds = @($seeds + @(Get-FacadeSeeds -Graph $g -Seeds $seeds -Path $path) | Sort-Object -Unique)
         $seedFiles = @()
         if ($g.IndexOf.ContainsKey($path)) { $seedFiles += $g.IndexOf[$path] }
 
@@ -721,17 +780,41 @@ function Write-MapGapReport {
         $u | Add-Member -NotePropertyName Sel -NotePropertyValue $sel -Force
     }
     $classMap = Get-TestClasses -Index $Index
+    $g = Get-RefGraph
+    $byFileAll = Get-ClassesByFile -Index $Index
 
     foreach ($c in $FailingClasses) {
         $area = if ($Index.ContainsKey($c)) { $Index[$c].Area } else { "?" }
         Write-Host ""
         Write-Host "  $c (area $area)"
         $gaps = 0
+        $bystanders = @()
+        $testFiles = @($byFileAll.Keys | Where-Object { @($byFileAll[$_]) -contains $c } | ForEach-Object { if ($g.IndexOf.ContainsKey($_)) { $g.IndexOf[$_] } })
         foreach ($u in $units) {
             if ($u.Sel.Full) { continue }
             if (@($u.Sel.Classes) -contains $c) { continue }
             $live = @($u.Sel.Files | Where-Object { $_.Kind -eq "names" -or $_.Kind -eq "areas" })
             if ($live.Count -eq 0) { continue }
+            # A commit that skipped the class is a suspect only if some changed
+            # file has a reference path to it at ANY depth. Without that, every
+            # unrelated commit in the window is listed beside the real cause.
+            $reach = @()
+            $hops = @{}
+            foreach ($r in $live) {
+                if ($r.Kind -ne "names") { continue }
+                $fi = if ($g.IndexOf.ContainsKey($r.Path)) { $g.IndexOf[$r.Path] } else { -1 }
+                if ($fi -lt 0) { continue }
+                $cl = $g.Close([string[]]@($g.Declares[$fi]), [int[]]@($fi), -1)
+                $best = -1
+                foreach ($tf in $testFiles) {
+                    if ($cl.Depth.ContainsKey($tf) -and ($best -lt 0 -or $cl.Depth[$tf] -lt $best)) { $best = $cl.Depth[$tf] }
+                }
+                if ($best -ge 0) { $reach += $r.Path; $hops[$r.Path] = $best }
+            }
+            if ($reach.Count -eq 0 -and @($live | Where-Object { $_.Kind -eq "areas" }).Count -eq 0) {
+                $bystanders += $u.Label
+                continue
+            }
             $gaps++
             Write-Host "    skipped by $($u.Label):"
             foreach ($r in $live) {
@@ -739,11 +822,18 @@ function Write-MapGapReport {
                 $mapText = if ($areas.Count -eq 0) { "none (a test file maps to its own classes)" }
                            elseif ($areas -contains $area) { "$($areas -join '+') (includes $area)" }
                            else { "$($areas -join '+') (EXCLUDES $area)" }
-                Write-Host "      $($r.Path) -> $($r.Kind), $(@($r.Classes).Count) classes; area map: $mapText"
+                $path = if ($reach -contains $r.Path) { "reaches $c in $($hops[$r.Path]) hops (the gate follows $SelectDepth); a big hop count on a widely-named type is coincidence, a small one on an engine file is the gap" }
+                        elseif ($r.Kind -eq "areas") { "not C#: no name path to test" }
+                        else { "no reference path to $c at any depth" }
+                Write-Host "      $($r.Path) -> $($r.Kind), $(@($r.Classes).Count) classes; area map: $mapText; $path"
             }
         }
+        if ($bystanders.Count -gt 0) {
+            Write-Host "    not suspects (no changed file reaches $c at any depth): $($bystanders -join '; ')"
+        }
         if ($gaps -eq 0) {
-            Write-Host "    every change in the window selected it or ran full: not a selection gap (a flake, or order-dependence on a fixture a slice did not run)"
+            $why = if ($bystanders.Count -gt 0) { "every change that skipped it has no reference path to it, so the name scan could not have selected it" } else { "every change in the window selected it or ran full" }
+            Write-Host "    ${why}: not a selection-rule gap (a flake, order-dependence on a fixture a slice did not run, or a link through a scene or data file)"
         }
     }
     Write-Host ""
