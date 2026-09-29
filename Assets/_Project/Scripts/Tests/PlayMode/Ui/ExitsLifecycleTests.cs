@@ -112,13 +112,21 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenThePane("Map", withRun: true);
 
             var hold = Hold();
-            _exits.DriveGamepadAbandonHold(true);
-            hold.Advance(ExitsController.HoldSeconds * 0.9f);
-            _exits.DriveGamepadAbandonHold(false);
+            var submit = false;
+            HoldToConfirm.SubmitLevelOverride = () => submit;
+            hold.Tick(0f);
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(hold.gameObject);
+
+            submit = true;
+            hold.Tick(0f);
+            hold.Tick(ExitsController.HoldSeconds * 0.9f);
+            submit = false;
+            hold.Tick(0f);
             CollectionAssert.IsEmpty(_navigated, "releasing Submit before the hold completes must preserve the run");
 
-            _exits.DriveGamepadAbandonHold(true);
-            hold.Advance(ExitsController.HoldSeconds);
+            submit = true;
+            hold.Tick(0f);
+            hold.Tick(ExitsController.HoldSeconds);
             yield return null;
 
             CollectionAssert.AreEqual(new[] { Navigation.Hub }, _navigated,

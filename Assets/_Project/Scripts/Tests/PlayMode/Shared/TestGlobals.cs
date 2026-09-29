@@ -73,6 +73,7 @@ namespace PrincesPalace.PlayModeTests
             // the same frame the previous test ended on reads ConsumedThisFrame
             // as true and the menu silently declines to open.
             EscapeKey.Reset();
+            HoldToConfirm.SubmitLevelOverride = null;
 
             // THE SECOND GLOBAL THE LINT CANNOT SEE, same shape as EscapeKey
             // above: NavigationInputModule.LastInputWasPad is written by

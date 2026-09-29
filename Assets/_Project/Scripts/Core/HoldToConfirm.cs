@@ -5,7 +5,8 @@ using UnityEngine.EventSystems;
 namespace PrincesPalace
 {
     // Press and keep pressing. Reports progress while held, fires once at the
-    // end, and forgets everything the moment the pointer leaves or lifts.
+    // end, and forgets everything the moment the pointer leaves or lifts. Also
+    // held by Submit (pad A, Enter) while this object is the selected one.
     //
     // Attached at RUNTIME by the controller, the same way HoverIndex and
     // BarSlider are: it carries two delegates, neither of which a scene can
@@ -39,7 +40,13 @@ namespace PrincesPalace
         public float Progress01 =>
             Seconds <= 0f ? 0f : Mathf.Clamp01(_elapsed / Seconds);
 
-        public void OnPointerDown(PointerEventData eventData) => Begin();
+        // A pointer press takes over a Submit hold, so releasing Submit no
+        // longer cancels it.
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            _submitHold = false;
+            Begin();
+        }
 
         public void OnPointerUp(PointerEventData eventData) => Cancel();
 
@@ -63,15 +70,58 @@ namespace PrincesPalace
 
         public void Cancel()
         {
+            _submitHold = false;
             if (!_held && _elapsed <= 0f) return;
             _held = false;
             _elapsed = 0f;
             Report();
         }
 
-        private void Update()
+        // Null reads the legacy Input Manager's Submit level (pad A, Enter).
+        // A test cannot hold a real button down, so it swaps the level here;
+        // TestGlobals.ResetAll puts it back.
+        public static Func<bool> SubmitLevelOverride;
+
+        private static bool SubmitLevel() =>
+            SubmitLevelOverride != null ? SubmitLevelOverride() : Input.GetButton("Submit");
+
+        // True while the current hold was started by Submit rather than a
+        // pointer, so the poll only ever cancels its own hold.
+        private bool _submitHold;
+        private bool _submitWasDown;
+
+        private void OnEnable() => _submitWasDown = SubmitLevel();
+
+        private void Update() => Tick(Time.unscaledDeltaTime);
+
+        // Submit level is the pad and keyboard route, not gated on
+        // NavigationInputModule.LastInputWasPad: Enter on a selected control is
+        // the same "activate" as A, and the module's own Submit is likewise
+        // device-agnostic. Selection is the consent to hold -- a pointer hover
+        // never selects, so a mouse user cannot start one with Enter by accident.
+        //
+        // A hold starts only on a fresh press (level false -> true) seen while
+        // selected. The press that opened the dialog or moved selection here is
+        // already down, so it is ignored until released; OnEnable seeds the
+        // previous level for the same reason.
+        public void Tick(float unscaledDelta)
         {
-            if (_held) Advance(Time.unscaledDeltaTime);
+            bool down = SubmitLevel();
+            bool selected = EventSystem.current != null
+                && EventSystem.current.currentSelectedGameObject == gameObject;
+
+            if (_submitHold)
+            {
+                if (!down || !selected) Cancel();
+            }
+            else if (!_held && down && !_submitWasDown && selected)
+            {
+                Begin();
+                _submitHold = true;
+            }
+            _submitWasDown = down;
+
+            if (_held) Advance(unscaledDelta);
         }
 
         // SPLIT FROM Update so it can be tested. Everything below is reachable
@@ -94,6 +144,7 @@ namespace PrincesPalace
             // to tear this object down, and a hold left at full would otherwise
             // fire a second time if it survived.
             _held = false;
+            _submitHold = false;
             _elapsed = 0f;
             Progress?.Invoke(0f);
             Completed?.Invoke();

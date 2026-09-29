@@ -367,9 +367,8 @@ namespace PrincesPalace
         // Yes then No, left to right (ResetConfirmButtons' own Row order) --
         // a Rail, wrap by default. Entry is forced to No rather
         // than following the Rail's own first member: the destructive
-        // button needs a HELD press to do anything at all (HoldToConfirm is
-        // pointer-only, see its own header -- a stray gamepad Submit on Yes
-        // is inert either way), but the focus marker still points at whatever
+        // button needs a HELD press to do anything at all (a tap of Submit on
+        // Yes is inert), but the focus marker still points at whatever
         // is selected, and resting that arrow on the delete button the
         // instant this dialog opens is the wrong default regardless.
         private IEnumerable<Button> ConfirmSelectables()
