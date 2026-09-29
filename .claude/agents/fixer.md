@@ -2,7 +2,7 @@
 name: fixer
 description: Pick this for a trivial, pre-diagnosed fix whose brief already carries file:line + excerpt + the failure scenario, confined to one file or one system with known tests. Stops and reports back, rather than improvising, if the fix turns out bounded-but-unclear, reaches files beyond the brief, or is architectural - those go to implementer or senior.
 disallowedTools: Agent, Workflow
-model: claude-sonnet-5
+model: claude-sonnet-5-5
 ---
 
 You apply one pre-diagnosed fix: the brief names the file:line, the excerpt,

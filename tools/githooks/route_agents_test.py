@@ -6,8 +6,8 @@
 Each case is a whole hook payload -- tool_name and tool_input in, allow or
 deny out -- run the way the hook itself is invoked: JSON on stdin, a decision
 on stdout. The five routed agents are reader (sonnet), fixer (sonnet),
-implementer (opus), verifier (sonnet), and senior (opus); claude-code-guide (haiku or sonnet)
-is the one built-in agent this project also allows. Everything else --
+implementer (sonnet), verifier (sonnet), and senior (opus); claude-code-guide
+(haiku or sonnet) is the one built-in agent this project also allows. Everything else --
 general-purpose, Explore, Plan, claude, a missing subagent_type, a model
 override on a routed agent, a model naming Fable, a bare "opus" alias, an
 Opus id that is not exactly claude-opus-5-5, isolation: "remote", and the
@@ -48,12 +48,13 @@ class AllowsEachRoutedAgentTests(unittest.TestCase):
 
     def test_each_type_with_its_own_pinned_model_named_explicitly(self):
         self.assertAllowed({"subagent_type": "reader", "model": "sonnet"})
-        self.assertAllowed({"subagent_type": "reader", "model": "claude-sonnet-5"})
+        self.assertAllowed({"subagent_type": "reader", "model": "claude-sonnet-5-5"})
         self.assertAllowed({"subagent_type": "fixer", "model": "sonnet"})
-        self.assertAllowed({"subagent_type": "fixer", "model": "claude-sonnet-5"})
-        self.assertAllowed({"subagent_type": "implementer", "model": "claude-opus-5-5"})
+        self.assertAllowed({"subagent_type": "fixer", "model": "claude-sonnet-5-5"})
+        self.assertAllowed({"subagent_type": "implementer", "model": "sonnet"})
+        self.assertAllowed({"subagent_type": "implementer", "model": "claude-sonnet-5-5"})
         self.assertAllowed({"subagent_type": "verifier", "model": "sonnet"})
-        self.assertAllowed({"subagent_type": "verifier", "model": "claude-sonnet-5"})
+        self.assertAllowed({"subagent_type": "verifier", "model": "claude-sonnet-5-5"})
         self.assertAllowed({"subagent_type": "senior", "model": "claude-opus-5-5", "prompt": ESCALATION_PROMPT})
 
     def test_claude_code_guide_allows_either_of_its_two_models(self):
@@ -201,9 +202,8 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
         self.assertDenied({"subagent_type": "reader", "model": "claude-opus-5-5"})
 
     def test_fixer_may_not_be_moved_to_opus_or_haiku(self):
-        # Owner decision 2026-09-24: fixer is the Sonnet lane for easy
-        # fixes; a harder fix goes to implementer by subagent_type, not
-        # by overriding fixer's model.
+        # fixer is the Sonnet lane for easy fixes; a harder fix goes to
+        # implementer by subagent_type, not by overriding fixer's model.
         self.assertDenied({"subagent_type": "fixer", "model": "claude-opus-5-5"})
         self.assertDenied({"subagent_type": "fixer", "model": "opus"})
         self.assertDenied({"subagent_type": "fixer", "model": "haiku"})
@@ -212,8 +212,11 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
     def test_verifier_may_not_be_moved_to_opus(self):
         self.assertDenied({"subagent_type": "verifier", "model": "claude-opus-5-5"})
 
-    def test_implementer_may_not_be_downgraded_off_opus(self):
-        self.assertDenied({"subagent_type": "implementer", "model": "sonnet"})
+    def test_implementer_is_refused_on_opus_and_haiku(self):
+        # The Opus lane is senior-only: implementer stays on Sonnet
+        # regardless of how the orchestrator judges the difficulty.
+        self.assertDenied({"subagent_type": "implementer", "model": "claude-opus-5-5"})
+        self.assertDenied({"subagent_type": "implementer", "model": "opus"})
         self.assertDenied({"subagent_type": "implementer", "model": "haiku"})
 
     def test_senior_may_not_be_downgraded_off_opus(self):
@@ -222,6 +225,12 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
 
     def test_claude_code_guide_may_not_be_moved_to_opus(self):
         self.assertDenied({"subagent_type": "claude-code-guide", "model": "claude-opus-5-5"})
+
+    def test_plain_sonnet_5_is_no_longer_an_allowed_pin(self):
+        # claude-sonnet-5 (plain Sonnet 5) is retired in favour of
+        # claude-sonnet-5-5 for every Sonnet-pinned agent.
+        for subagent_type in ("reader", "fixer", "verifier", "implementer"):
+            self.assertDenied({"subagent_type": subagent_type, "model": "claude-sonnet-5"})
 
 
 class DeniesRemoteIsolationTests(unittest.TestCase):

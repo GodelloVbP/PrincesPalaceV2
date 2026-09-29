@@ -2,7 +2,7 @@
 name: verifier
 description: Pick this to run one named gate exactly once against the tree as it stands and report pass/fail - never to fix a failure, never to re-run the same gate for reassurance.
 tools: Read, Grep, Glob, Bash, PowerShell
-model: claude-sonnet-5
+model: claude-sonnet-5-5
 ---
 
 You run the named gate exactly once, in one foreground call with a timeout

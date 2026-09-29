@@ -14,43 +14,43 @@ out to be whatever the orchestrator felt like in the moment. A written
 preference is exactly as strong as whoever happens to be reading it; this
 hook makes the routing a fact about the tool call instead.
 
-As of 2026-09-24, `implementer` moved to Opus 5.5 at medium effort and
-`reader` moved to Sonnet 5 (owner decision) -- the per-token cost
-rationale that used to justify keeping Sonnet as the default implementer
-no longer holds, so this hook no longer encodes one. `implementer` and
-`senior` now run the same model and effort; what still separates them is
-`senior`'s `Escalation:` gate below, which is a process control (stating
-a reason before an escalation-shaped change proceeds), not a cost
-control anymore. Before every implementation launch the orchestrator
-still triages: is this doable as a bounded change, or does it go deep
-architectural? Doable goes to `implementer`; deep architectural goes to
-`senior`, with a stated reason.
+Sonnet 5.5 is the default lane for the four working agents: reader,
+fixer, implementer and verifier all run on `claude-sonnet-5-5` (or the
+bare `sonnet` alias). Opus 5.5 is reserved for `senior` alone. That split
+is what separates the cost tiers: routing a bounded issue to `implementer`
+stays on Sonnet regardless of how the orchestrator judges its difficulty,
+and the only way work reaches Opus is through `senior`'s `Escalation:`
+gate below -- a process control (stating a reason before an
+escalation-shaped change proceeds), not a per-call judgment call. Before
+every implementation launch the orchestrator triages: is this doable as
+a bounded change, or does it go deep architectural? Doable goes to
+`implementer`; deep architectural goes to `senior`, with a stated reason.
 
-Also 2026-09-24 (owner decision): easy fixes run on Sonnet 5, harder ones
-stay on Opus 5.5. `fixer` is that Sonnet lane -- a trivial fix whose brief
-already carries file:line, excerpt and failure scenario, confined to one
-file or system. It is pinned to sonnet/claude-sonnet-5 exactly like reader
-and verifier, so an Opus or haiku override on it is refused: the choice
-between `fixer` and `implementer` is made by picking the subagent_type,
-never by a per-call model field.
+`fixer` covers a trivial fix whose brief already carries file:line,
+excerpt and failure scenario, confined to one file or system. It is
+pinned to the same Sonnet set as reader, implementer and verifier, so an
+Opus or haiku override on it is refused: the choice between `fixer` and
+`implementer` is made by picking the subagent_type, never by a per-call
+model field.
 
 Five project agents exist under .claude/agents/ (reader/sonnet,
-fixer/sonnet, implementer/opus, verifier/sonnet, senior/opus), each pinned to one
-model in its own frontmatter. claude-code-guide is a built-in agent this
-project also allows, at haiku or sonnet. Nothing else is a valid
-subagent_type for the Agent tool: general-purpose, Explore, Plan, claude,
-and any typo or omission are all refused, because each is a way to land back
-on the orchestrator's own model instead of the pinned one. A model override
-on tool_input is refused for the same reason even when the subagent_type is
-one of the five -- the whole point of a pinned agent is that its model is
-not a per-call decision. isolation: "remote" is refused because a remote
-launch is not covered by this hook's own visibility into what ran.
+fixer/sonnet, implementer/sonnet, verifier/sonnet, senior/opus), each
+pinned to one model set in its own frontmatter. claude-code-guide is a
+built-in agent this project also allows, at haiku or sonnet. Nothing else
+is a valid subagent_type for the Agent tool: general-purpose, Explore,
+Plan, claude, and any typo or omission are all refused, because each is a
+way to land back on the orchestrator's own model instead of the pinned
+one. A model override on tool_input is refused for the same reason even
+when the subagent_type is one of the five -- the whole point of a pinned
+agent is that its model is not a per-call decision. isolation: "remote"
+is refused because a remote launch is not covered by this hook's own
+visibility into what ran.
 
-The only Opus this project allows is exactly `claude-opus-5-5` -- the
-owner excluded every other Opus ("no Opus 5") on 2026-09-24, so the bare
-`opus` alias is no longer an allowed spelling for `implementer` or
-`senior` and any model string containing "opus" that isn't the exact id
-is refused by name, the same way a Fable model is.
+The only Opus this project allows is exactly `claude-opus-5-5`, and it is
+`senior`'s alone -- `implementer` is refused on `claude-opus-5-5`, the
+bare `opus` alias, and `haiku`, the same way any model string containing
+"opus" that isn't the exact id is refused by name for anyone else, the
+same way a Fable model is.
 
 `senior` also requires its brief to carry a line `Escalation: <criterion>`
 naming one of two-failed-cycles, architecture, or cross-layer -- this hook
@@ -96,10 +96,10 @@ import sys
 # built-in agent this project also allows, since it answers questions about
 # Claude Code itself rather than doing project work.
 PINNED_MODELS = {
-    "reader": {"sonnet", "claude-sonnet-5"},
-    "fixer": {"sonnet", "claude-sonnet-5"},
-    "implementer": {"claude-opus-5-5"},
-    "verifier": {"sonnet", "claude-sonnet-5"},
+    "reader": {"sonnet", "claude-sonnet-5-5"},
+    "fixer": {"sonnet", "claude-sonnet-5-5"},
+    "implementer": {"sonnet", "claude-sonnet-5-5"},
+    "verifier": {"sonnet", "claude-sonnet-5-5"},
     "senior": {"claude-opus-5-5"},
     "claude-code-guide": {"haiku", "sonnet"},
 }
