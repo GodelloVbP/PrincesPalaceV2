@@ -119,6 +119,16 @@ namespace PrincesPalace.Domain.UiKit
         public const float RestoreWidth = 280f;
         public const float RestoreHeight = 56f;
 
+        // The restore button sits under column 0's last card; column 0 is full
+        // to the pane floor, so the note that explains the pane sits beside the
+        // button in column 1 (which only holds the Gameplay card), on the
+        // button's own centre line, rather than below it.
+        public static float RestoreCentreY(IReadOnlyList<OptionGroupDef> groups) =>
+            ContentTop - ColumnHeight(groups, 0) + RestoreHeight * 0.5f;
+
+        public const float NoteWidth = 520f;
+        public const float NoteHeight = 18f;
+
         // ---- the no-scrolling guard ---------------------------------------------
 
         // The tallest column, including the gaps between cards and the restore

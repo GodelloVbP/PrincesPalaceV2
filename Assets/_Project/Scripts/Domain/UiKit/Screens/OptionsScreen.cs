@@ -95,15 +95,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // APPLIES IMMEDIATELY, and the pane says so rather than leaving the
             // player hunting for a confirm button that is not there.
             //
-            // ContentBottom + 12f, not ContentBottom - 14f: the Silver 2:1
-            // container's own inset leaves only a 4px margin below
-            // ContentBottom, so 14px below it would escape the container's
-            // own content inset. Nothing else occupies this strip, so
-            // sitting just inside the floor costs nothing.
+            // Column 1, on the Restore button's centre line: column 0 runs to
+            // the pane floor, so there is no room under the button, and a note
+            // placed inside its rect drew through its border.
             children.Add(Ui.Label("OptionsAppliesNote", UiStrings.OptionsAppliesImmediately,
-                    new UiVec(520f, 18f), 13, Body,
-                    Place.At(OptionsLayout.ColumnCentreX(0), OptionsLayout.ContentBottom + 12f))
-                .AsDecor()
+                    new UiVec(OptionsLayout.NoteWidth, OptionsLayout.NoteHeight), 13, Body,
+                    Place.At(OptionsLayout.ColumnCentreX(1), OptionsLayout.RestoreCentreY(groups)))
                 .Styled(TypographyRole.Body));
 
             // BARE, not a kit container. This pane sits on the shared

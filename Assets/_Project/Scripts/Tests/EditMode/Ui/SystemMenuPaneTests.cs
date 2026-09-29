@@ -46,6 +46,33 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(height, PartyLayout.PaneHeight, 0.001f, "Party is not the pane's height");
         }
 
+        // The footer note once sat at ContentBottom + 12 under the Restore
+        // button, inside its rect, and the text drew through the button's border.
+        [Test]
+        public void OptionsFooterNoteIsClearOfTheRestoreButton()
+        {
+            var groups = OptionRows.Groups;
+            float restoreY = OptionsLayout.RestoreCentreY(groups);
+            Assert.AreEqual(-312.22f, restoreY, 0.01f);
+
+            // Restore: centre (-380, -312.22), 280 x 56 -> x [-520, -240], y [-340.22, -284.22].
+            Assert.AreEqual(-380f, OptionsLayout.ColumnCentreX(0), 0.01f);
+            Assert.AreEqual(280f, OptionsLayout.RestoreWidth, 0.01f);
+            Assert.AreEqual(56f, OptionsLayout.RestoreHeight, 0.01f);
+            // Note: centre (380, -312.22), 520 x 18 -> x [120, 640], y [-321.22, -303.22].
+            Assert.AreEqual(380f, OptionsLayout.ColumnCentreX(1), 0.01f);
+            Assert.AreEqual(520f, OptionsLayout.NoteWidth, 0.01f);
+            Assert.AreEqual(18f, OptionsLayout.NoteHeight, 0.01f);
+
+            float restoreRight = -380f + 140f;
+            float noteLeft = 380f - 260f;
+            Assert.Less(restoreRight, noteLeft, "the note's rect intersects the Restore button's");
+
+            // Both stay above the pane floor (-353.78) and inside the column's right edge.
+            Assert.GreaterOrEqual(restoreY - 28f, OptionsLayout.ContentBottom);
+            Assert.LessOrEqual(380f + 260f, OptionsLayout.HalfWidth);
+        }
+
         // And their contents reach the floor rather than stopping in the middle
         // of it. Stated as a floor on how much of the usable height the tallest
         // thing in each pane uses -- an exact fit would be a change-detector,
