@@ -25,8 +25,12 @@ namespace PrincesPalace.Domain.Tests
     {
         private static TalentEffectSet Talents(params TalentEffect[] effects) => new TalentEffectSet(effects);
 
+        // The id every fixture Slam carries; a skill-scoped rule is stamped
+        // with it the way the resolver stamps a node's appliesToSkillId.
+        private const string SlamId = "slam";
+
         private static TalentEffect T(TalentEffectType type, int magnitude = 0, int threshold = 0) =>
-            new TalentEffect(type, magnitude, threshold);
+            new TalentEffect(type, magnitude, threshold, TalentEffect.IsSkillScoped(type) ? SlamId : "");
 
         private static CombatantState Bjorn(TalentEffectSet talents, int critChance = 0, int fury = 0)
         {
@@ -261,6 +265,27 @@ namespace PrincesPalace.Domain.Tests
             var halfFoe = Foe(physicalDefense: 100);
             Fight(half, new[] { Strike("slam", 10, tiers: SlamTiers) }, halfFoe).CastSkill(0, halfFoe);
             Assert.AreEqual(970, halfFoe.CurrentHealth, "(20 + 10) x 2 = 60, x 100 / 200 = 30: no ignore below the full tier");
+        }
+
+        [Test]
+        public void ASecondSingleTargetPoolTierSkill_DoesNotInheritTheSlamRiders()
+        {
+            // Same shape as the Slam (DamageSingle + poolTiers), different id.
+            // Every rider is set to certain-crit / big values so a leak shows.
+            var bjorn = Bjorn(Talents(Engine,
+                T(TalentEffectType.SlamCritChanceAtFury, 15),
+                T(TalentEffectType.SlamCritRestoresFury, 10),
+                T(TalentEffectType.SlamIgnoresDefenseAtFullFury, 50)), critChance: 0, fury: 100);
+            var foe = Foe(physicalDefense: 100);
+            var session = Fight(bjorn, new[] { Strike("other_tier_strike", 10, tiers: SlamTiers) }, foe);
+
+            session.CastSkill(0, foe);
+
+            Assert.AreEqual(940, foe.CurrentHealth, "(20 + 10) x 4 = 120, x 100 / 200 = 60: no defense ignored");
+            Assert.AreEqual(0, bjorn.CastCritChanceBonus);
+            Assert.AreEqual(0, bjorn.CastIgnoreDefensePercent);
+            Assert.AreEqual(0, bjorn.Talents.BestFor(TalentEffectType.SlamCritChanceAtFury, "other_tier_strike"));
+            Assert.AreEqual(15, bjorn.Talents.BestFor(TalentEffectType.SlamCritChanceAtFury, "slam"));
         }
 
         // ---- Bloodfire and the crit bonus ------------------------------------------------------

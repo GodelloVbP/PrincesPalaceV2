@@ -50,4 +50,6 @@ MonoBehaviour:
     - Type: 31
       Magnitude: 25
       Threshold: 0
+      SkillId: 
     GrantsSkillId: gift_mana
+    AppliesToSkillId: 

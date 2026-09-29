@@ -50,3 +50,4 @@ MonoBehaviour:
     MinSpent: 0
     Effects: []
     GrantsSkillId: berserk
+    AppliesToSkillId: 

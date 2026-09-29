@@ -48,3 +48,4 @@ MonoBehaviour:
     MinSpent: 0
     Effects: []
     GrantsSkillId: headbutt
+    AppliesToSkillId: 

@@ -53,3 +53,4 @@ MonoBehaviour:
     MinSpent: 9
     Effects: []
     GrantsSkillId: black_ram_mode
+    AppliesToSkillId: 

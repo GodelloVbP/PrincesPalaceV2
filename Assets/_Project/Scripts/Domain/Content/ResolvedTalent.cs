@@ -54,6 +54,11 @@ namespace PrincesPalace.Domain.Content
         // empty — see RawTalentEntry.grantsSkillId.
         public string GrantsSkillId = "";
 
+        // The skill this node's skill-scoped effects upgrade, or empty --
+        // see RawTalentEntry.appliesToSkillId. Each such effect also carries
+        // the id (TalentEffect.SkillId), which is what combat reads.
+        public string AppliesToSkillId = "";
+
         // True when this node is available to everyone rather than owned by
         // one character.
         public bool IsShared => string.IsNullOrEmpty(CharacterId);
@@ -75,9 +80,10 @@ namespace PrincesPalace.Domain.Content
             AbilityScoreBlock abilityScoreBonus, int maxManaBonus, int skillManaCostReduction,
             int signatureCapacityBonus, int signaturePerTurnBonus, string grantsStartingItemId, int sortOrder,
             string iconPath = "", int minSpent = 0, IReadOnlyList<TalentEffect> effects = null,
-            string grantsSkillId = "")
+            string grantsSkillId = "", string appliesToSkillId = "")
         {
             Effects = ToArray(effects);
+            AppliesToSkillId = appliesToSkillId ?? "";
             GrantsSkillId = grantsSkillId ?? "";
             Id = id ?? "";
             DisplayName = displayName ?? "";

@@ -49,4 +49,6 @@ MonoBehaviour:
     - Type: 41
       Magnitude: 30
       Threshold: 0
+      SkillId: placeholder_brawler_slam
     GrantsSkillId: 
+    AppliesToSkillId: placeholder_brawler_slam

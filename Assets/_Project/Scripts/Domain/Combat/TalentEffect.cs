@@ -363,12 +363,12 @@ namespace PrincesPalace.Domain.Combat
         // gain for swinging or being hit. Magnitude is ignored.
         FuryEngineEinherjar,
 
-        // "Slam" below is the caster's single-target pool-tier strike (a
-        // DamageSingle skill with poolTiers) -- Bjorn's base Slam. The
-        // vocabulary has no skill-id parameter on purpose (docs/
-        // CODE_STANDARDS.md section 10: no skill id in code), and that shape
-        // is what a Fury-tier blow is, so a second such skill would be
-        // upgraded by the same nodes.
+        // "Slam" below is whichever skill the node names in appliesToSkillId
+        // (Bjorn's base Slam), carried on the effect as TalentEffect.SkillId
+        // and read through TalentEffectSet.BestFor. The skill is named by
+        // content, never inferred from its shape and never spelled in code
+        // (docs/CODE_STANDARDS.md section 10), so a second single-target
+        // poolTiers skill is not upgraded by these nodes.
 
         // A Slam that crits restores Magnitude Fury.
         SlamCritRestoresFury,
@@ -461,11 +461,26 @@ namespace PrincesPalace.Domain.Combat
         // above and enforced by TalentEntryResolver.
         public int Threshold;
 
-        public TalentEffect(TalentEffectType type, int magnitude, int threshold = 0)
+        // The skills.json id this rule upgrades, or empty for a rule that is
+        // not skill-scoped. Stamped by TalentEntryResolver from the node's
+        // appliesToSkillId, and only ever non-empty for the members in
+        // IsSkillScoped.
+        public string SkillId;
+
+        public TalentEffect(TalentEffectType type, int magnitude, int threshold = 0, string skillId = "")
         {
             Type = type;
             Magnitude = magnitude;
             Threshold = threshold;
+            SkillId = skillId ?? "";
         }
+
+        // The rules that upgrade one named skill rather than the holder as a
+        // whole. Add a member here and the resolver demands appliesToSkillId
+        // on every node that authors it.
+        public static bool IsSkillScoped(TalentEffectType type) =>
+            type == TalentEffectType.SlamCritRestoresFury
+            || type == TalentEffectType.SlamCritChanceAtFury
+            || type == TalentEffectType.SlamIgnoresDefenseAtFullFury;
     }
 }

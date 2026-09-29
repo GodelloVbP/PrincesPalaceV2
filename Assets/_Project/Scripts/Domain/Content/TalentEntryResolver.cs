@@ -156,6 +156,30 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            string appliesToSkillId = (raw.appliesToSkillId ?? "").Trim();
+            bool hasScoped = false;
+            foreach (var effect in effects) hasScoped |= TalentEffect.IsSkillScoped(effect.Type);
+            if (hasScoped && appliesToSkillId.Length == 0)
+            {
+                error = $"{label}: a skill-scoped effect needs appliesToSkillId naming the skill it upgrades.";
+                return false;
+            }
+
+            if (!hasScoped && appliesToSkillId.Length > 0)
+            {
+                error = $"{label}: appliesToSkillId '{appliesToSkillId}' would do nothing -- the node has no skill-scoped effect. Remove it.";
+                return false;
+            }
+
+            for (int i = 0; i < effects.Count; i++)
+            {
+                if (TalentEffect.IsSkillScoped(effects[i].Type))
+                {
+                    effects[i] = new TalentEffect(effects[i].Type, effects[i].Magnitude,
+                        effects[i].Threshold, appliesToSkillId);
+                }
+            }
+
             string grantsSkillId = (raw.grantsSkillId ?? "").Trim();
 
             // A talent that grants nothing costs an ember and does nothing —
@@ -185,7 +209,7 @@ namespace PrincesPalace.Domain.Content
                 raw.statBonus, raw.abilityScoreBonus, raw.maxManaBonus, raw.skillManaCostReduction,
                 raw.signatureCapacityBonus, raw.signaturePerTurnBonus,
                 (raw.grantsStartingItemId ?? "").Trim(), sortOrder, raw.iconPath ?? "", raw.minSpent,
-                effects, grantsSkillId);
+                effects, grantsSkillId, appliesToSkillId);
             error = null;
             return true;
         }

@@ -51,4 +51,6 @@ MonoBehaviour:
     - Type: 22
       Magnitude: 40
       Threshold: 0
+      SkillId: 
     GrantsSkillId: fleece_ward
+    AppliesToSkillId: 

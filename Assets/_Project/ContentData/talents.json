@@ -775,6 +775,7 @@
     {
       "id": "bear_ein_slam_1",
       "characterId": "bear",
+      "appliesToSkillId": "placeholder_brawler_slam",
       "displayName": "Slam: Bloodied Edge",
       "column": 1,
       "row": 1,
@@ -792,6 +793,7 @@
     {
       "id": "bear_ein_slam_2",
       "characterId": "bear",
+      "appliesToSkillId": "placeholder_brawler_slam",
       "displayName": "Slam: Fury's Edge",
       "column": 1,
       "row": 4,
@@ -809,6 +811,7 @@
     {
       "id": "bear_ein_slam_3",
       "characterId": "bear",
+      "appliesToSkillId": "placeholder_brawler_slam",
       "displayName": "Slam: Through the Plate",
       "column": 1,
       "row": 7,

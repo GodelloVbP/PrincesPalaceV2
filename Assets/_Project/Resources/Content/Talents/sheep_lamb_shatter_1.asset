@@ -50,4 +50,6 @@ MonoBehaviour:
     - Type: 34
       Magnitude: 100
       Threshold: 0
+      SkillId: 
     GrantsSkillId: shatter
+    AppliesToSkillId: 

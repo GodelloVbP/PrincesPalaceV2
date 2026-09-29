@@ -49,3 +49,4 @@ MonoBehaviour:
     MinSpent: 0
     Effects: []
     GrantsSkillId: headsplitter
+    AppliesToSkillId: 

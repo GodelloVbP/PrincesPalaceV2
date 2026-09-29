@@ -50,4 +50,6 @@ MonoBehaviour:
     - Type: 33
       Magnitude: 0
       Threshold: 0
+      SkillId: 
     GrantsSkillId: gift_haste
+    AppliesToSkillId: 

@@ -112,6 +112,15 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("A skills.json id this talent adds to the owner's combat strip.")]
         public string grantsSkillId = "";
 
+        // The skills.json id a skill-scoped rule on this node upgrades -- the
+        // Einherjar's Slam nodes name their Slam here. Names the skill
+        // instead of letting combat infer it from a skill's shape (a
+        // single-target poolTiers strike), so a second skill of that shape
+        // cannot inherit the riders by accident. Required on a node that
+        // carries a skill-scoped effect, refused on any other.
+        [ContentDoc("A skills.json id (owned by this talent's character) that this node's skill-scoped effects (the Slam* rules) upgrade; required with such an effect, refused without one.")]
+        public string appliesToSkillId = "";
+
         // Editor-time path to this talent's archetype glyph, loaded by
         // SceneBuilder — see RelicDefinition.iconPath's own comment. Empty
         // (the default) is a supported state, not a hole: 315 unique icons

@@ -109,6 +109,45 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void ASlamRule_NeedsTheSkillItUpgrades_AndStampsItOnTheEffect()
+        {
+            var effect = new RawTalentEffect { type = "SlamCritChanceAtFury", magnitude = 15 };
+            StringAssert.Contains("appliesToSkillId", TalentError(effect));
+
+            var raw = new RawTalentEntry
+            {
+                id = "t", displayName = "T", characterId = "bear", effects = new[] { effect },
+                appliesToSkillId = "the_slam",
+            };
+            Assert.IsTrue(TalentEntryResolver.TryResolveAll(new List<RawTalentEntry> { raw }, out var resolved, out _));
+            Assert.AreEqual("the_slam", resolved[0].Effects[0].SkillId);
+            Assert.AreEqual("the_slam", resolved[0].AppliesToSkillId);
+        }
+
+        [Test]
+        public void AppliesToSkillId_IsRefusedOnANodeWithNoSkillScopedRule()
+        {
+            var raw = new RawTalentEntry
+            {
+                id = "t", displayName = "T", characterId = "bear", appliesToSkillId = "the_slam",
+                effects = new[] { new RawTalentEffect { type = "FuryEngineEinherjar" } },
+            };
+            TalentEntryResolver.TryResolveAll(new List<RawTalentEntry> { raw }, out _, out var errors);
+
+            StringAssert.Contains("skill-scoped", string.Join("; ", errors));
+        }
+
+        [Test]
+        public void TheNamedSkill_MustExistAndBelongToTheNodesCharacter()
+        {
+            var owners = new Dictionary<string, string> { ["the_slam"] = "bear", ["hoot"] = "owl" };
+
+            Assert.IsNull(CatalogueCrossChecks.TalentAppliedSkill("t", "bear", false, "the_slam", owners));
+            StringAssert.Contains("unknown", CatalogueCrossChecks.TalentAppliedSkill("t", "bear", false, "slamm", owners));
+            StringAssert.Contains("owl", CatalogueCrossChecks.TalentAppliedSkill("t", "bear", false, "hoot", owners));
+        }
+
+        [Test]
         public void TheFlagEffects_TakeNoMagnitude()
         {
             Assert.IsNull(TalentError(new RawTalentEffect { type = "FuryEngineEinherjar" }));

@@ -47,3 +47,4 @@ MonoBehaviour:
     MinSpent: 0
     Effects: []
     GrantsSkillId: provoke
+    AppliesToSkillId: 

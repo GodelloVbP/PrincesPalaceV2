@@ -52,3 +52,4 @@ MonoBehaviour:
     MinSpent: 9
     Effects: []
     GrantsSkillId: rampage
+    AppliesToSkillId: 

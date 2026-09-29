@@ -848,13 +848,13 @@ namespace PrincesPalace.Domain.Combat.Session
         private static void SetStrikeContext(CombatantState actor, ResolvedSkill skill,
             PoolTierResolution.Result poolTier)
         {
-            if (!IsFuryTierStrike(skill) || !poolTier.Fired) return;
+            if (!poolTier.Fired) return;
 
             var talents = actor.Talents;
-            actor.CastCritChanceBonus = talents.Best(TalentEffectType.SlamCritChanceAtFury);
+            actor.CastCritChanceBonus = talents.BestFor(TalentEffectType.SlamCritChanceAtFury, skill.Id);
             if (poolTier.Tier.Spend >= 1f)
             {
-                actor.CastIgnoreDefensePercent = talents.Best(TalentEffectType.SlamIgnoresDefenseAtFullFury);
+                actor.CastIgnoreDefensePercent = talents.BestFor(TalentEffectType.SlamIgnoresDefenseAtFullFury, skill.Id);
             }
         }
 
@@ -863,11 +863,6 @@ namespace PrincesPalace.Domain.Combat.Session
             actor.CastCritChanceBonus = 0;
             actor.CastIgnoreDefensePercent = 0;
         }
-
-        // "Slam": the single-target strike that spends Fury tiers. See the
-        // note above TalentEffectType.SlamCritRestoresFury.
-        private static bool IsFuryTierStrike(ResolvedSkill skill) =>
-            skill.Effect == SkillEffect.DamageSingle && skill.PoolTiers != null && skill.PoolTiers.Length > 0;
 
         private void ResolveOneStrike(CombatantState actor, ResolvedSkill skill, CombatantState target,
             int resourceSpent, PoolTierResolution.Result poolTier)

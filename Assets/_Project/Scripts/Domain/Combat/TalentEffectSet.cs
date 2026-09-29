@@ -76,6 +76,25 @@ namespace PrincesPalace.Domain.Combat
             return best;
         }
 
+        // Best, restricted to the rules that name this skill. A skill-scoped
+        // rule (TalentEffect.IsSkillScoped) is invisible to every other
+        // skill, and an empty skill id matches nothing.
+        public int BestFor(TalentEffectType type, string skillId)
+        {
+            if (string.IsNullOrEmpty(skillId)) return 0;
+
+            int best = 0;
+            foreach (var effect in _effects)
+            {
+                if (effect.Type == type && effect.SkillId == skillId && effect.Magnitude > best)
+                {
+                    best = effect.Magnitude;
+                }
+            }
+
+            return best;
+        }
+
         // The strongest magnitude among the entries of this type whose health
         // threshold is currently SATISFIED — the "replace, not stack" rule
         // for tiered health gates (TalentEffectType.WoolPerTurnBelowHealth's

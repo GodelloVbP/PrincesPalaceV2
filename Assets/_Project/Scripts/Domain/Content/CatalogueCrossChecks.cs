@@ -84,6 +84,31 @@ namespace PrincesPalace.Domain.Content
             return null;
         }
 
+        // A skill-scoped node's target skill must exist and belong to the
+        // node's own character; BestFor would otherwise match nothing, and the
+        // node would upgrade no skill, silently.
+        public static string TalentAppliedSkill(string talentId, string talentCharacterId, bool sharedByEveryCharacter,
+            string appliesToSkillId, IReadOnlyDictionary<string, string> skillOwnerById)
+        {
+            if (string.IsNullOrEmpty(appliesToSkillId))
+            {
+                return null;
+            }
+
+            if (!skillOwnerById.TryGetValue(appliesToSkillId, out string owner))
+            {
+                return $"Talent '{talentId}' applies to unknown skill id '{appliesToSkillId}'.";
+            }
+
+            if (sharedByEveryCharacter || owner != talentCharacterId)
+            {
+                return $"Talent '{talentId}' belongs to '{talentCharacterId}' but applies to skill " +
+                       $"'{appliesToSkillId}', which belongs to '{owner}'. A node upgrades its own character's skill.";
+            }
+
+            return null;
+        }
+
         public static string TalentStartingItem(string talentId, string grantsStartingItemId, ICollection<string> itemIds)
         {
             if (string.IsNullOrEmpty(grantsStartingItemId) || itemIds.Contains(grantsStartingItemId))

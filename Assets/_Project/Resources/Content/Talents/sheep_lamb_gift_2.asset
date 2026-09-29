@@ -50,4 +50,6 @@ MonoBehaviour:
     - Type: 32
       Magnitude: 50
       Threshold: 0
+      SkillId: 
     GrantsSkillId: gift_fury
+    AppliesToSkillId: 

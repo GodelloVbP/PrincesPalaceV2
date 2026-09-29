@@ -187,9 +187,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // SLAM T1: a crit on the Fury-tier strike restores Fury.
         private void PaySlamCritFury(CombatantState actor, ResolvedSkill skill)
         {
-            if (!IsFuryTierStrike(skill)) return;
-
-            int gain = actor.Talents.Best(TalentEffectType.SlamCritRestoresFury);
+            int gain = actor.Talents.BestFor(TalentEffectType.SlamCritRestoresFury, skill.Id);
             if (gain <= 0) return;
 
             GrantPrimary(actor, gain);

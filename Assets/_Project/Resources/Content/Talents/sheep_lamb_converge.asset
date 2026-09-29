@@ -51,3 +51,4 @@ MonoBehaviour:
     MinSpent: 9
     Effects: []
     GrantsSkillId: wail
+    AppliesToSkillId: 

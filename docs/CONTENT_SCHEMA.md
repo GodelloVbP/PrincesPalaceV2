@@ -304,6 +304,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `grantsStartingItemId` | string | `""` | An items.json id granted once into the owner's stash when this talent is taken. |  |
 | `effects` | RawTalentEffect[] (below) | `[]` | Non-numeric rules this talent grants; see RawTalentEffect. |  |
 | `grantsSkillId` | string | `""` | A skills.json id this talent adds to the owner's combat strip. |  |
+| `appliesToSkillId` | string | `""` | A skills.json id (owned by this talent's character) that this node's skill-scoped effects (the Slam* rules) upgrade; required with such an effect, refused without one. |  |
 | `iconPath` | string | `""` | Editor-time path to this talent's archetype glyph; empty is a supported state, most talents share a small set of archetype icons. |  |
 
 ## upgrades.json -- `RawUpgradeEntry`

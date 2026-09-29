@@ -53,4 +53,6 @@ MonoBehaviour:
     - Type: 38
       Magnitude: 0
       Threshold: 0
+      SkillId: 
     GrantsSkillId: hack
+    AppliesToSkillId: 

@@ -221,6 +221,9 @@ namespace PrincesPalace.Content
                 AddIfRefused(errors, CatalogueCrossChecks.TalentGrantedSkill(talent.id, talent.Data.CharacterId,
                     talent.IsSharedByEveryCharacter, talent.Data.GrantsSkillId, skillOwnerById));
 
+                AddIfRefused(errors, CatalogueCrossChecks.TalentAppliedSkill(talent.id, talent.Data.CharacterId,
+                    talent.IsSharedByEveryCharacter, talent.Data.AppliesToSkillId, skillOwnerById));
+
                 // RequirementResolver's greatest-fixpoint guarantee (order
                 // independent, unique largest legal set — see its own
                 // header comment) only holds when every ability-score BONUS

@@ -49,4 +49,6 @@ MonoBehaviour:
     - Type: 16
       Magnitude: 25
       Threshold: 50
+      SkillId: 
     GrantsSkillId: 
+    AppliesToSkillId: 
