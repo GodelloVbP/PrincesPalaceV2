@@ -48,9 +48,10 @@ can be retuned rather than redrawn by hand.
 
 ### Status badge icons — also not third-party
 
-`Assets/_Project/Resources/Status/*.png` (all fourteen: the twelve
-`StatusEffectType` members plus the two speed presentations, `speed.png` and
-`speed_down.png`) were generated for this project from
+`Assets/_Project/Resources/Status/*.png` (the sixteen
+`StatusEffectType` members' icons, the two speed presentations, `speed.png` and
+`speed_down.png`, and the two engine-window badges `silenced.png` and
+`disarmed.png`) were generated for this project from
 `docs/STATUS_ICON_PROMPTS.md`, the frozen art contract that fixed each
 glyph's composition, palette and size ahead of generation, and carry no
 third-party licence. These are party STATUS badges, not enemy-intent badges,

@@ -1,6 +1,6 @@
 # Image prompts: status-effect glyphs
 
-Based on the revised [status-effect UI plan](PLAN_STATUS_EFFECT_UI.md), sections 3–6. Fourteen complete standalone prompts: twelve statuses and two presentations of signed speed effects. No frames or Broken badge in this batch. These are prompts, not generated assets.
+Based on the revised [status-effect UI plan](PLAN_STATUS_EFFECT_UI.md), sections 3–6. Seventeen complete standalone prompts: twelve statuses and two presentations of signed speed effects (prompts 1-14), then Fortified, Silenced and Disarmed for Bjorn's constellations (15-17; Silenced and Disarmed are engine windows on `CombatantState.Suppression`, shown as badges by `StatusHud.SilenceRow`/`DisarmRow`). No frames or Broken badge in this batch. These are prompts, not generated assets.
 
 ## Production contract
 
@@ -154,6 +154,36 @@ SUBJECT: One simple side-view boot pointing right beneath one broad downward-poi
 Place the subject on a perfectly flat pure green #00FF00 field extending to all four edges, including all intended open gaps. Green is BACKGROUND ONLY. Keep every subject colour free of green dominance: green channel must not exceed the larger of red and blue. Do not add green reflections or colour spill. Paint the subject fully opaque; no translucency. Return exactly one image, not a contact sheet, mockup or alternate views.
 ```
 
+### 15. Fortified — `fortified.png`
+
+```text
+Create one square 1024 x 1024 fantasy combat HUD glyph. Flat cel-shaded graphic compatible with a painterly fantasy game, but with NO brush texture or fine painted detail. Design for a 24-pixel glyph inside a 36-pixel badge. Centre the subject in a consistent 76% safe box with clear margins. Use two broad subject tones and at most one broad highlight, plus a thick dark-plum #302036 silhouette outline. Important strokes and open gaps should survive at roughly two pixels at final glyph size. No gradients, glow, cast shadows, text, letters, numbers, UI container, decorative border or enclosing badge frame. Circular shapes are allowed only when the subject calls for them.
+
+SUBJECT: The top of a stone battlement: a short, thick wall section with three square merlons and two open square gaps between them, sitting on a solid block base. Slate blue-grey #7A8594 with deep slate #4B5361 shadow on the right faces and one ivory highlight along the top edge. No shield, no flag, no bricks drawn as individual lines - at most two broad horizontal mortar bands. The crenellated silhouette carries recognition.
+
+Place the subject on a perfectly flat pure green #00FF00 field extending to all four edges, including all intended open gaps. Green is BACKGROUND ONLY. Keep every subject colour free of green dominance: green channel must not exceed the larger of red and blue. Do not add green reflections or colour spill. Paint the subject fully opaque; no translucency. Return exactly one image, not a contact sheet, mockup or alternate views.
+```
+
+### 16. Silenced — `silenced.png`
+
+```text
+Create one square 1024 x 1024 fantasy combat HUD glyph. Flat cel-shaded graphic compatible with a painterly fantasy game, but with NO brush texture or fine painted detail. Design for a 24-pixel glyph inside a 36-pixel badge. Centre the subject in a consistent 76% safe box with clear margins. Use two broad subject tones and at most one broad highlight, plus a thick dark-plum #302036 silhouette outline. Important strokes and open gaps should survive at roughly two pixels at final glyph size. No gradients, glow, cast shadows, text, letters, numbers, UI container, decorative border or enclosing badge frame. Circular shapes are allowed only when the subject calls for them.
+
+SUBJECT: A closed spellbook seen at a slight angle, bound shut by one thick iron band with a heavy padlock at the front edge. Deep violet cover #5B3A7A with dark plum #3A2450 shadow, iron band and lock in steel grey #8A8FA0, one ivory highlight on the cover corner. No runes, letters, glow or sparks. The locked-shut book silhouette carries recognition.
+
+Place the subject on a perfectly flat pure green #00FF00 field extending to all four edges, including all intended open gaps. Green is BACKGROUND ONLY. Keep every subject colour free of green dominance: green channel must not exceed the larger of red and blue. Do not add green reflections or colour spill. Paint the subject fully opaque; no translucency. Return exactly one image, not a contact sheet, mockup or alternate views.
+```
+
+### 17. Disarmed — `disarmed.png`
+
+```text
+Create one square 1024 x 1024 fantasy combat HUD glyph. Flat cel-shaded graphic compatible with a painterly fantasy game, but with NO brush texture or fine painted detail. Design for a 24-pixel glyph inside a 36-pixel badge. Centre the subject in a consistent 76% safe box with clear margins. Use two broad subject tones and at most one broad highlight, plus a thick dark-plum #302036 silhouette outline. Important strokes and open gaps should survive at roughly two pixels at final glyph size. No gradients, glow, cast shadows, text, letters, numbers, UI container, decorative border or enclosing badge frame. Circular shapes are allowed only when the subject calls for them.
+
+SUBJECT: A short broad sword snapped in two: the hilt and lower blade upright on the left, the broken upper blade tumbling away to the upper right with a clear open gap between the pieces. Steel grey #9AA0AE blade with slate #5E6472 shadow, brown #7A4E2E grip and crossguard, one ivory highlight on the blade. No blood, motion lines or sparks. The visible break and gap carry recognition.
+
+Place the subject on a perfectly flat pure green #00FF00 field extending to all four edges, including all intended open gaps. Green is BACKGROUND ONLY. Keep every subject colour free of green dominance: green channel must not exceed the larger of red and blue. Do not add green reflections or colour spill. Paint the subject fully opaque; no translucency. Return exactly one image, not a contact sheet, mockup or alternate views.
+```
+
 ## Delivery manifest
 
 | File | Proposed runtime resource |
@@ -172,6 +202,9 @@ Place the subject on a perfectly flat pure green #00FF00 field extending to all 
 | feared.png | Status/feared |
 | speed.png | Status/speed |
 | speed_down.png | Status/speed_down |
+| fortified.png | Status/fortified (StatusEffectType.Fortified) |
+| silenced.png | Status/silenced (StatusHud.SilenceSlug, a `Suppression` window, not a status) |
+| disarmed.png | Status/disarmed (StatusHud.DisarmSlug, a `Suppression` window, not a status) |
 
 Approved outputs go to `Assets/_Project/Resources/Status/`. Resource wiring, including speed variants and ordinary status IconKind fields, belongs to implementation; a file alone does not establish it.
 

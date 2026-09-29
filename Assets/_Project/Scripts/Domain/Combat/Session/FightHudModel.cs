@@ -1228,6 +1228,14 @@ namespace PrincesPalace.Domain.Combat.Session
                     actor.Transformation.PrimaryDrainPerTurn > 0 ? actor.PrimaryPool?.DisplayName : null));
             }
 
+            // SILENCE AND DISARM are engine windows on the combatant, not
+            // statuses (Suppression.cs); they read off the actor like the
+            // transformation above, so a no-session caller shows them too.
+            if (actor.Suppression.IsSilenced)
+                rows.Add(StatusHud.SilenceRow(actor.Suppression.Silence.TurnsRemaining));
+            if (actor.Suppression.IsDisarmed)
+                rows.Add(StatusHud.DisarmRow(actor.Suppression.DisarmPercent, actor.Suppression.Disarm.TurnsRemaining));
+
             // THE RALLY (PLAN_BELLWETHER_KIT 1.7 / 3.9): a fight-long stack
             // count, so the badge reads "x3" rather than a turn count.
             if (session != null)

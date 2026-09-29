@@ -39,6 +39,8 @@ namespace PrincesPalace.PlayModeTests
 
             yield return "Status/" + StatusHud.SpeedUpSlug;
             yield return "Status/" + StatusHud.SpeedDownSlug;
+            yield return "Status/" + StatusHud.SilenceSlug;
+            yield return "Status/" + StatusHud.DisarmSlug;
         }
 
         // THIS is the guarantee that matters: every one of the fourteen must
@@ -49,10 +51,6 @@ namespace PrincesPalace.PlayModeTests
         // exact trap EnemyIntentIconTests' own version of this test exists
         // to catch. The 256x256 check catches a fourth: a master dropped in
         // unresized, which would blow out every badge's layout math.
-        // FORTIFIED IS THE SAME STATED GAP (Bjorn's Hold the Line): the badge
-        // draws its FRT code until the art is commissioned (Phase 7 of
-        // docs/PLAN_BJORN_CONSTELLATIONS.md).
-        //
         // BURN AND THORNED ARE A STATED GAP, NOT A REGRESSION (spell-expansion
         // milestone E, docs/PLAN_SPELL_EXPANSION.md section 6's stage 5
         // checklist): "register the key, let LoadSprite degrade to a blank
@@ -65,14 +63,13 @@ namespace PrincesPalace.PlayModeTests
         {
             StatusEffectType.Burn,
             StatusEffectType.Thorned,
-            StatusEffectType.Fortified,
         };
 
         [Test]
         public void EveryStatusIconResolvesToArtworkThatActuallyLoaded()
         {
             var paths = AllResourcePaths().ToList();
-            Assert.AreEqual(18, paths.Count, "expected sixteen statuses plus two speed presentations");
+            Assert.AreEqual(20, paths.Count, "expected sixteen statuses plus two speed and two suppression presentations");
 
             var awaitingArtPaths = AwaitingArt
                 .Select(t => FightHudModel.StatusBadgeIcons.ResourceFor(t))

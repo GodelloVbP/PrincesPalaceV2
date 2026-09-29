@@ -116,6 +116,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // Tier.ImmediateExchange already means for Shielded and Empowered.
         private const int TransformTableIndex = 14;
 
+        // ---- engine windows, as statuses ---------------------------------------
+        //
+        // Silence and Disarm are TurnWindows on CombatantState.Suppression
+        // (Domain/Combat/Suppression.cs), not StatusEffectTypes, for the same
+        // reason the transformation and the speed buffs are not: the row model
+        // is keyed on what to show, not on what mechanism produced it. Each
+        // reads off the combatant in FightHudModel.StatusRowsFor beside the
+        // transform, so every surface that paints a status row shows them with
+        // no per-surface code. Both are maluses that restrict what the holder
+        // may do, so they sort with the action-restricting tier.
+        public const string SilenceCode = "SIL";
+        public const string SilenceSlug = "silenced";
+        public const string DisarmCode = "DSM";
+        public const string DisarmSlug = "disarmed";
+
+        private const int SilenceTableIndex = 19;
+        private const int DisarmTableIndex = 20;
+
         // ---- codes, slugs and polarity, one switch each ----------------------
 
         public static string CodeFor(StatusEffectType type)
@@ -259,6 +277,9 @@ namespace PrincesPalace.Domain.Combat.Session
         private static int SpeedSortKey(bool positive) =>
             ((int)Tier.Rest * 10 + (int)(positive ? Bucket.Benefit : Bucket.Harm)) * 100
                 + (positive ? SpeedUpTableIndex : SpeedDownTableIndex);
+
+        private static int WindowSortKey(int tableIndex) =>
+            ((int)Tier.ActionRestriction * 10 + (int)Bucket.Control) * 100 + tableIndex;
 
         private static int TransformSortKey() =>
             ((int)Tier.ImmediateExchange * 10 + (int)Bucket.Benefit) * 100 + TransformTableIndex;
@@ -480,6 +501,22 @@ namespace PrincesPalace.Domain.Combat.Session
                              "It grows each round.";
             return new FightHudModel.StatusRow(RallyCode, RallySlug, tooltip, true, stacks,
                 TransformSortKey(), counterText: "×" + stacks);
+        }
+
+        public static FightHudModel.StatusRow SilenceRow(int turnsRemaining)
+        {
+            return new FightHudModel.StatusRow(
+                SilenceCode, SilenceSlug,
+                $"Silenced -- {Wrap(false, "cannot cast")}, {Plural(turnsRemaining, "turn")}",
+                false, CounterFor(turnsRemaining), WindowSortKey(SilenceTableIndex));
+        }
+
+        public static FightHudModel.StatusRow DisarmRow(int attackPercent, int turnsRemaining)
+        {
+            return new FightHudModel.StatusRow(
+                DisarmCode, DisarmSlug,
+                $"Disarmed -- {Wrap(false, $"-{attackPercent}% attack")}, {Plural(turnsRemaining, "turn")}",
+                false, CounterFor(turnsRemaining), WindowSortKey(DisarmTableIndex));
         }
 
         public static FightHudModel.StatusRow SpeedRow(string sourceName, int granted, int turnsLeft)

@@ -555,5 +555,29 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(Enum.IsDefined(typeof(EnemyIntentKind), kind), $"{type} resolved to an undefined EnemyIntentKind");
             }
         }
+
+        // ---- engine windows (Suppression) -----------------------------------
+
+        [Test]
+        public void ASilencedAndDisarmedCombatantShowsBothWindowsWithTheirTurns()
+        {
+            var actor = Combatant();
+            Assert.IsEmpty(FightHudModel.StatusRowsFor(null, actor), "a clean combatant shows no window badge");
+
+            actor.Suppression.TrySilence(2, 3, false);
+            actor.Suppression.ApplyDisarm(30, 3, false);
+
+            var rows = FightHudModel.StatusRowsFor(null, actor);
+            var silence = rows.Find(r => r.Slug == StatusHud.SilenceSlug);
+            var disarm = rows.Find(r => r.Slug == StatusHud.DisarmSlug);
+
+            Assert.AreEqual(2, silence.Counter);
+            Assert.IsFalse(silence.IsPositive);
+            StringAssert.Contains("cannot cast", silence.Tooltip);
+            Assert.AreEqual(3, disarm.Counter);
+            StringAssert.Contains("-30% attack", disarm.Tooltip);
+            Assert.AreEqual("Status/silenced", FightHudModel.StatusBadgeIcons.ResourceFor(silence));
+            Assert.AreEqual("Status/disarmed", FightHudModel.StatusBadgeIcons.ResourceFor(disarm));
+        }
     }
 }
