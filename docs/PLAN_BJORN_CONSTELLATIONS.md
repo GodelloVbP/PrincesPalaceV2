@@ -1073,6 +1073,56 @@ mechanics start.
   Juggernaut-relevant parts of 4h (Gorge, Unbroken skills). Content:
   Juggernaut's 21 `talents.json` rows plus Second Wind's `grantsSkillId`
   wiring. Bot pass: Juggernaut vs the reworked reward track.
+  **Slice B status (built; commits 77590987 mechanics, 643c5626 content).**
+  - DONE: `FightSession.ArmJuggernautSeams` (from `ArmEngineSeams`) arms the
+    engine (`FuryEngineJuggernaut`), per-holder cooldown overrides
+    (`SkillCooldownTurns`, skill-scoped: the root names `second_wind` in
+    `appliesToSkillId`, so no skill id is spelled in code), Unyielding
+    (`UnyieldingTier`, one tiered member), Ignore Pain (`DelayedDamagePercent`
+    with Threshold = turns, `HealReducesDelayedDamage`) and Blood Price
+    (`ShortfallPaidInHealthPermille`). Blood Price T2 is `BloodPaidDamagePercent`
+    read in `AttackBonusFor` with the cast's blood-paid fact; T3 is the existing
+    `CheatDeathOncePerFight` plus `CheatDeathFillsPrimary`, filled in the one
+    cheat-death branch of `CombatMath.ApplyDamageDetailed`. New general
+    mechanics: Wrath (`DamagePerMissingHealth`, in `AttackBonusFor`), Thick
+    Blood (`MaxHealthPercent`, applied last in `ContentDatabase.EffectiveStats`,
+    and `HealthCurveRegen`, the root's Fury curve as a turn-start heal through the
+    heal funnel), Gorge (skill-row `lifestealPercent`, plus the skill-scoped
+    `SkillLifestealPercent` and `SkillDamageBonusBelowOwnHealth`). Unbroken and
+    Cursed Blood are `SkillEffect.Unbroken` / `CursedBlood` (`windowTurns`,
+    `regenPercentOfMaxHealth`); `oncePerFight` is a real skill field (the menu
+    shows USED). All 21 rows plus `gorge`, `unbroken`, `bjorn_cursed_blood`;
+    bot valuations in `Domain/Bot/UtilitySkills.cs` (Unbroken, Cursed Blood and
+    Second Wind, one pre-pass for every archetype).
+  - Reward track: the level-30 `second_wind` unlock became +5% Physical (Second
+    Wind is a root grant, not base kit); an owner call for a real replacement.
+  - NOT DONE / left on purpose: `pools.json` flat Fury gains (Sentinel needs
+    them until Slice C); Sentinel's placeholders; `bear_bulwark`'s row and its
+    level-20 track unlock (the plan drops Bulwark but assigns its removal to no
+    slice); the track's two `FuryGainOnAttack` nodes (inert under any engine); a
+    HUD read of the health price when Blood Price is short and a dedicated beat
+    for a converted Regen tick (view decisions); the Unyielding speed figure
+    stays the placeholder 20.
+  - Bot pass (100 runs per archetype, seed 1, depth cap 40, `-GrantTalent`;
+    mean depth RandomLegal / GreedyAggressive / GreedyDefensive / Lookahead2 /
+    ProtectTheFront, share capped in brackets for the last four): no talents
+    8.9 / 24.0 / 20.4 / 33.9 (60%) / 24.4; root only 13.4 / 33.2 (27%) / 35.1
+    (46%) / 37.4 (81%) / 35.0 (34%); whole path 35.0 / 40.0 (80%) / 39.8 (95%) /
+    40.0 (99%) / 39.9 (86%). Root-only is NOT worse than no path (it is the
+    opposite of Slice A: a per-turn income is worth Fury the no-root Bjorn never
+    has). At cap 100 (60 runs, GA / GD / PTF) the whole path is 58.3 / 61.4 / 63.4
+    and the root alone 39.3 / 43.5 / 43.5; by branch on top of the root, Thick
+    Blood 64.7 / 69.4 / 67.4, Wrath 44.7 / 47.5 / 47.3, Gorge 41.4 / 44.5 / 42.2.
+    The bottom row without the convergence already caps 98-100% at 40; adding
+    Unbroken does not raise it (39.0-40.0). **OPEN OWNER FORK: Thick Blood is the
+    outlier** (see report): its 20% max health and 2-8% curve regen out-heal the
+    current roster, the exact failure section 4 warns of, so no number was
+    changed. Halving the regen (1-3%, ceiling 4%) costs 4-6 depth; taking the
+    health percent to about zero with that costs another 10. The enemy-roster
+    track's crowd-control and caster additions have not landed, so Unyielding,
+    Unbroken's Unstoppable and Cursed Blood's enemy side are barely tested by
+    this pass. Gorge's 30 flat and Unbroken's use rate (bot habit: at or below
+    35% health) are first values.
 - **Slice C — Sentinel**: mechanics 4a, 4f, plus the Sentinel-relevant
   parts of 4h (Hold the Line, Bellow upgrades). Content: Sentinel's 21
   `talents.json` rows plus Brace/Plant the Shield's `grantsSkillId` wiring.
