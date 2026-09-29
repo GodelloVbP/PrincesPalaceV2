@@ -442,6 +442,18 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly List<string> Messages = new List<string>();
         public Dictionary<CombatantState, Vitals> Snapshot;
 
+        // WHOSE PLANTED SHIELD STOOD, AND HOW BADLY HURT, when this beat
+        // resolved -- only the holders with something to draw (a placement, or
+        // one this beat broke); everyone else is absent. A Shieldwall's pool
+        // is read off its holder, and the wall reaches allies who are not this
+        // beat's target, which is why every party member is checked at commit
+        // rather than only the ones the beat touched. Recorded rather than
+        // read live for the reason Snapshot is: the view shows the crack on
+        // the blow that crossed half, not on the round's last beat. Empty on a
+        // beat built by hand.
+        public readonly Dictionary<CombatantState, ShieldSnapshot> Shields =
+            new Dictionary<CombatantState, ShieldSnapshot>();
+
         // The voice line this beat's TARGET earned, if any. Decided when the
         // beat resolves and carried, not looked up during playback: live health
         // has already moved on by then, so asking "are they low?" at playback

@@ -86,6 +86,7 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             _recordingBeat.Snapshot = SnapshotVitals();
+            RecordShields(_recordingBeat);
 
             // Captured before the turn advances, so Current really is this
             // beat's actor. The depth comes from FightHudSpec rather than, as
@@ -478,6 +479,30 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             _immediateMessages.Add(message);
+        }
+
+        // One watch per holder, fed at every commit so a break is seen by the
+        // beat that caused it even when the placement ended between two beats.
+        private readonly Dictionary<CombatantState, PlantedShieldWatch> _shieldWatches =
+            new Dictionary<CombatantState, PlantedShieldWatch>();
+
+        private void RecordShields(CombatBeat beat)
+        {
+            if (_encounter == null) return;
+
+            foreach (var member in _encounter.PlayerParty)
+            {
+                if (member == null) continue;
+
+                if (!_shieldWatches.TryGetValue(member, out var watch))
+                {
+                    watch = new PlantedShieldWatch();
+                    _shieldWatches[member] = watch;
+                }
+
+                var snapshot = watch.Snapshot(member.PlantedShield);
+                if (snapshot.Placed || snapshot.Broke) beat.Shields[member] = snapshot;
+            }
         }
 
         private Dictionary<CombatantState, Vitals> SnapshotVitals()

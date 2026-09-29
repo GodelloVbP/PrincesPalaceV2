@@ -201,6 +201,14 @@ namespace PrincesPalace
         // before the blow, once with what stood after.
         internal Action<IReadOnlyDictionary<CombatantState, Vitals>> PaintVitals;
 
+        // PaintVitals' twin for the planted shield: what each holder's shield
+        // was after the beat, with the beat's vitals so a Shieldwall knows who
+        // was still standing. Called at the impact instant only, so a crack
+        // shows on the blow that crossed half and the broken frame plays on the
+        // blow that broke it, not at the end of the round.
+        internal Action<IReadOnlyDictionary<CombatantState, ShieldSnapshot>,
+                        IReadOnlyDictionary<CombatantState, Vitals>> PaintShields;
+
         // PaintVitals' twin for POSITION: which formation the stage should be
         // drawing. Called once at the top of each beat, and with null when
         // playback ends -- after which live state is the moment being shown.
@@ -652,6 +660,7 @@ namespace PrincesPalace
             // log because its picture failed.
             Guard(() => LogBeat(beat));
             Guard(() => PaintVitals?.Invoke(beat.Snapshot));
+            Guard(() => PaintShields?.Invoke(beat.Shields, beat.Snapshot));
             Guard(() => FadeTheFallen?.Invoke(beat));
             Guard(() =>
             {
@@ -1078,6 +1087,7 @@ namespace PrincesPalace
                 PoseVictims(beat);
 
                 PaintVitals?.Invoke(beat.Snapshot);
+                PaintShields?.Invoke(beat.Shields, beat.Snapshot);
 
                 // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT --
                 // firing it beside PlayVfx would put a spell's own sound a

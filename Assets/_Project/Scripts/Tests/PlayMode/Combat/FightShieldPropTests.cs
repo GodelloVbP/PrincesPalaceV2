@@ -1,10 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
@@ -12,7 +14,9 @@ namespace PrincesPalace.PlayModeTests
     // The planted shield is a stage prop the fight view draws in front of its
     // holder's seat: intact while more than half the placed size is left,
     // cracked at or below half, broken for a moment after a break and then
-    // gone, and a Shieldwall draws the wall on every standing ally instead.
+    // gone, and a Shieldwall draws that same shield at every standing ally's
+    // seat, one shared pool cracking and breaking everywhere together. The
+    // crack and the break land on the beat that caused them.
     public class FightShieldPropTests
     {
         private FightController _fight;
@@ -78,14 +82,23 @@ namespace PrincesPalace.PlayModeTests
             var hero = session.Encounter.PlayerParty[0];
             var foe = session.Encounter.Enemies[0];
 
-            session.PlantShield(hero);
+            // Planted inside a beat, as a real Plant the Shield is, so the
+            // beat log has seen the shield stand before it breaks.
+            session.BeatAroundForTest(hero, hero, () => session.PlantShield(hero));
+            session.DrainBeats();
             _fight.RefreshShieldPropsForTest();
             Assert.AreEqual("intact", PropName(0));
 
-            session.StrikeForTest(foe, hero, 100000, DamageType.Physical);
+            var breaking = session.BeatAroundForTest(foe, hero,
+                () => session.StrikeForTest(foe, hero, 100000, DamageType.Physical));
+            session.DrainBeats();
             Assert.IsFalse(hero.PlantedShield.IsPlaced, "fixture: the hit broke the shield");
 
+            // A live repaint alone never shows a break: only the beat does.
             _fight.RefreshShieldPropsForTest();
+            Assert.IsNull(PropName(0), "an idle repaint cannot tell a break from an expiry");
+
+            _fight.PaintShieldsForTest(breaking);
             Assert.AreEqual("broken", PropName(0));
 
             // Cleared by its own timer, not by the next repaint.
@@ -95,7 +108,44 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator AShieldwallDrawsTheWallOnEveryStandingAlly()
+        public IEnumerator TheShieldCracksOnTheCrossingBlowAndBreaksOnTheBreakingBlow()
+        {
+            yield return OpenTheFight();
+            FightBeatPlayer.BeatSpeedMultiplier = 4f;
+            var session = _fight.Session;
+            var hero = session.Encounter.PlayerParty[0];
+            var foe = session.Encounter.Enemies[0];
+
+            session.PlantShield(hero);
+            session.DrainBeats();
+
+            var crossing = session.BeatAroundForTest(foe, hero,
+                () => hero.PlantedShield.Ward.Magnitude = hero.PlantedShield.PlacedPoints / 2);
+            var breaking = session.BeatAroundForTest(foe, hero,
+                () => session.StrikeForTest(foe, hero, 100000, DamageType.Physical));
+            session.DrainBeats();
+            Assert.IsFalse(hero.PlantedShield.IsPlaced, "fixture: the round has already resolved to a break");
+
+            _fight.PlayBeatsForTest(new List<CombatBeat> { crossing, breaking });
+
+            // Live state is already broken and nothing repaints it while busy,
+            // so a cracked prop can only have come from the crossing beat.
+            var seen = new List<string>();
+            float deadline = Time.realtimeSinceStartup + 30f;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                string name = PropName(0);
+                if (name != null && (seen.Count == 0 || seen[seen.Count - 1] != name)) seen.Add(name);
+                if (name == "broken") break;
+                yield return null;
+            }
+
+            CollectionAssert.AreEqual(new[] { "cracked", "broken" }, seen,
+                "the crack shows on the crossing blow and the break on the breaking blow, nothing before");
+        }
+
+        [UnityTest]
+        public IEnumerator AShieldwallDrawsOneShieldAtEveryStandingAllyAndCracksTogether()
         {
             yield return OpenTheFight();
             var session = _fight.Session;
@@ -110,8 +160,17 @@ namespace PrincesPalace.PlayModeTests
             {
                 if (!party[i].IsAlive) continue;
 
-                int slot = i;
-                Assert.AreEqual("wall", PropName(slot), $"{party[i].Name} stands behind the wall");
+                Assert.AreEqual("intact", PropName(i), $"{party[i].Name} has one shield, not a wall strip");
+            }
+
+            hero.PlantedShield.Ward.Magnitude = hero.PlantedShield.PlacedPoints / 2;
+            _fight.RefreshShieldPropsForTest();
+
+            for (int i = 0; i < party.Count; i++)
+            {
+                if (!party[i].IsAlive) continue;
+
+                Assert.AreEqual("cracked", PropName(i), $"{party[i].Name} reads the shared pool");
             }
         }
     }

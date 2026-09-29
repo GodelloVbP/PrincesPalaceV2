@@ -1239,8 +1239,11 @@ Status of each item:
   (shield/axe/paw) to sprite and its own tint; `TalentController.ApplyBackdrop` swaps
   on path and character step, and a plot with no row keeps the nebula.
 - Planted shield (intact, cracked, broken) and Shieldwall: DONE as a stage prop
-  (`FightController.ShieldProps.cs`, `Resources/Props/planted_shield/`). It paints when
-  the view is idle, so a break reads at the end of the round, not on the blow.
+  (`FightController.ShieldProps.cs`, `Resources/Props/planted_shield/`). Each beat carries
+  the shield it left behind (`CombatBeat.Shields`) and the player paints it at the impact
+  instant, so the crack and the break land on the blow; the idle repaint only reconciles.
+  A Shieldwall shows the one planted shield at every standing ally's seat, reading the
+  shared pool. `wall.png` (four shields) is unused pending a party-wide prop.
 - Berserk battle sprite: NOT DONE. Only the concept exists (`Art/Sheets/bjorn_berserk_concept.png`);
   the stance sheets are not generated and no form is wired.
 - Cursed Blood VFX: NOT DONE.

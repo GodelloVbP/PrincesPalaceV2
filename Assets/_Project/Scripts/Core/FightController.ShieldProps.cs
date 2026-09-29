@@ -18,35 +18,34 @@ namespace PrincesPalace
     // slot's ground line -- the shield is drawn with a free point, so its tip
     // is the sprite's bottom edge and sits on that line.
     //
-    // WHEN IT PAINTS. Like the enemy status row, only when the view is idle
-    // (RefreshStage skips it while busy): CombatBeat carries no shield
-    // snapshot, so painting from live state mid-round would show a break several
-    // beats before the blow that caused it. The prop therefore updates once a
-    // round has finished playing, and a break reads then.
+    // WHEN IT PAINTS. On the blow: every beat carries the shield state it left
+    // behind (CombatBeat.Shields) and FightBeatPlayer hands it to PaintShields
+    // at the impact instant, beside the damage popup, so the crack shows on the
+    // blow that crossed half and the broken frame plays on the blow that broke
+    // it. The idle repaint (RefreshStage, when not busy) reconciles from live
+    // state after a Move, a plant or the fight opening; it never invents a
+    // break, because a break is an event only a beat can carry.
     //
-    // SHIELDWALL. The wall art is four shields edge to edge at a two-to-one
-    // aspect; at chest height it spans about one seat, not the party. So while
-    // any ally's Shieldwall is up, every standing party figure gets the wall in
-    // front of him, which reads as one wall along the front line and needs no
-    // stage-level geometry.
+    // SHIELDWALL. One planted shield per standing ally, all reading the one
+    // shared pool, so the wall cracks and breaks at every seat together
+    // (PlantedShieldStage.Resolve). The four-shield wall art is not loaded.
     public partial class FightController
     {
         // How long the broken prop stays before it is cleared, scaled by the
         // battle-speed preset like every other beat of presentation.
         private const float BrokenShieldSeconds = 1.2f;
 
-        private readonly Dictionary<CombatantState, PlantedShieldWatch> _shieldWatches =
-            new Dictionary<CombatantState, PlantedShieldWatch>();
-
-        // Per slot: the look being held while its broken frame plays out.
-        private readonly Dictionary<int, ShieldLook> _shieldHeld = new Dictionary<int, ShieldLook>();
+        // Per slot: the look on screen, and which break the clear timer belongs
+        // to, so a timer from an earlier break cannot clear a newer one.
+        private readonly Dictionary<int, ShieldLook> _shieldShown = new Dictionary<int, ShieldLook>();
+        private readonly Dictionary<int, int> _shieldBreakToken = new Dictionary<int, int>();
 
         private readonly Dictionary<string, Sprite> _shieldArt = new Dictionary<string, Sprite>();
 
         private void ResetShieldProps()
         {
-            _shieldWatches.Clear();
-            _shieldHeld.Clear();
+            _shieldShown.Clear();
+            _shieldBreakToken.Clear();
             HideAllShieldProps();
         }
 
@@ -60,39 +59,36 @@ namespace PrincesPalace
             }
         }
 
+        // The live reconciliation: what the shields are now, never a break.
         private void RefreshShieldProps()
         {
             if (_session == null || partyShieldProps == null) return;
 
             var party = _session.Encounter.PlayerParty;
-            bool wallUp = false;
-            var looks = new ShieldLook[partyShieldProps.Length];
-
-            for (int i = 0; i < party.Count; i++)
+            var shields = new Dictionary<CombatantState, ShieldSnapshot>();
+            foreach (var member in party)
             {
-                var member = party[i];
-                if (member == null) continue;
-
-                if (!_shieldWatches.TryGetValue(member, out var watch))
-                {
-                    watch = new PlantedShieldWatch();
-                    _shieldWatches[member] = watch;
-                }
-
-                var look = watch.Observe(member.PlantedShield);
-                if (look == ShieldLook.Wall && member.IsAlive) wallUp = true;
-
-                int slot = SlotIndexOf(member);
-                if (slot < 0 || slot >= looks.Length) continue;
-
-                if (look == ShieldLook.Broken)
-                {
-                    _shieldHeld[slot] = ShieldLook.Broken;
-                    StartCoroutine(ClearBrokenShield(slot));
-                }
-
-                looks[slot] = look;
+                if (member != null) shields[member] = ShieldSnapshot.Of(member.PlantedShield);
             }
+
+            ApplyShieldLooks(PlantedShieldStage.Resolve(party, shields, m => m.IsAlive));
+        }
+
+        // The beat's moment: the shields as the blow left them, with standing
+        // judged by the beat's own vitals rather than the round's end.
+        private void PaintShields(IReadOnlyDictionary<CombatantState, ShieldSnapshot> shields,
+                                  IReadOnlyDictionary<CombatantState, Vitals> vitals)
+        {
+            if (_session == null || partyShieldProps == null || shields == null) return;
+
+            var party = _session.Encounter.PlayerParty;
+            ApplyShieldLooks(PlantedShieldStage.Resolve(party, shields, m =>
+                vitals != null && vitals.TryGetValue(m, out var v) ? v.Health > 0 : m.IsAlive));
+        }
+
+        private void ApplyShieldLooks(IReadOnlyDictionary<CombatantState, ShieldLook> looks)
+        {
+            var party = _session.Encounter.PlayerParty;
 
             for (int slot = 0; slot < partyShieldProps.Length; slot++)
             {
@@ -105,27 +101,41 @@ namespace PrincesPalace
                     if (SlotIndexOf(party[i]) == slot) { member = party[i]; break; }
                 }
 
-                var look = looks[slot];
+                var look = ShieldLook.None;
+                if (member != null && IsOnStage(member)) looks.TryGetValue(member, out look);
 
-                // A wall covers every standing ally, and only a wall does: a
-                // lone placement is never drawn on somebody else's seat. A held
-                // broken frame shows until its timer clears it.
-                if (wallUp && member != null && member.IsAlive) look = ShieldLook.Wall;
-                else if (look == ShieldLook.Wall) look = ShieldLook.None;
-                else if (look == ShieldLook.None && _shieldHeld.TryGetValue(slot, out var held)) look = held;
+                _shieldShown.TryGetValue(slot, out var shown);
 
-                if (member == null || !IsOnStage(member)) look = ShieldLook.None;
+                if (look == ShieldLook.Broken)
+                {
+                    int token = _shieldBreakToken.TryGetValue(slot, out var last) ? last + 1 : 1;
+                    _shieldBreakToken[slot] = token;
+                    StartCoroutine(ClearBrokenShield(slot, token));
+                }
+                else if (look == ShieldLook.None && shown == ShieldLook.Broken)
+                {
+                    // The broken frame plays out its own timer; nothing else
+                    // repaints over it.
+                    look = ShieldLook.Broken;
+                }
 
+                _shieldShown[slot] = look;
                 PaintShieldProp(image, member, look);
             }
         }
 
-        private IEnumerator ClearBrokenShield(int slot)
+        private IEnumerator ClearBrokenShield(int slot, int token)
         {
             yield return new WaitForSecondsRealtime(FightBeatPlayer.Scaled(BrokenShieldSeconds));
 
-            _shieldHeld.Remove(slot);
-            if (!_isBusy) RefreshShieldProps();
+            if (!_shieldBreakToken.TryGetValue(slot, out var current) || current != token) yield break;
+            if (!_shieldShown.TryGetValue(slot, out var shown) || shown != ShieldLook.Broken) yield break;
+
+            _shieldShown[slot] = ShieldLook.None;
+            if (partyShieldProps != null && slot < partyShieldProps.Length && partyShieldProps[slot] != null)
+            {
+                partyShieldProps[slot].gameObject.SetShown(false);
+            }
         }
 
         private void PaintShieldProp(Image image, CombatantState member, ShieldLook look)
@@ -176,8 +186,9 @@ namespace PrincesPalace
             return sprite;
         }
 
-        // Test seams: what a party slot's prop currently shows, or null; and a
-        // repaint that does not wait for the view to go idle.
+        // Test seams: what a party slot's prop currently shows, or null; a
+        // repaint that does not wait for the view to go idle; and the beat's
+        // own impact paint, for a test that plays a beat by hand.
         public Sprite ShieldPropSpriteForTest(int slot) =>
             partyShieldProps != null && slot >= 0 && slot < partyShieldProps.Length
             && partyShieldProps[slot] != null && partyShieldProps[slot].gameObject.activeSelf
@@ -185,5 +196,15 @@ namespace PrincesPalace
                 : null;
 
         public void RefreshShieldPropsForTest() => RefreshShieldProps();
+
+        public void PaintShieldsForTest(CombatBeat beat) => PaintShields(beat.Shields, beat.Snapshot);
+
+        // Plays hand-recorded beats the way AfterResolution does: busy for the
+        // whole playback, so the idle repaint cannot stand in for the beats.
+        public void PlayBeatsForTest(IReadOnlyList<CombatBeat> beats)
+        {
+            _isBusy = true;
+            beatPlayer.Play(beats, OnPlaybackFinished);
+        }
     }
 }

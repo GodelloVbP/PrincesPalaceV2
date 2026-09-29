@@ -218,8 +218,10 @@ namespace PrincesPalace
                      partyHitFlashes, partyNameplates, _partySlotPlaced, StageSide.Left,
                      mirrored: true, null, field: PartyFieldToShow());
 
-            // Idle only, for the reason the enemy status row is: no beat
-            // carries a shield snapshot, so a live read mid-round runs ahead.
+            // Idle only: mid-round the beats paint the shield at their own
+            // impact (PaintShields), and a live read here would run ahead of
+            // them. This is the reconciliation after a Move, a plant or the
+            // fight opening.
             if (!_isBusy) RefreshShieldProps();
         }
 

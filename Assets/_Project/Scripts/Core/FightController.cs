@@ -795,6 +795,7 @@ namespace PrincesPalace
             beatPlayer.SlotFor = SlotFor;
             beatPlayer.AnimatorFor = AnimatorFor;
             beatPlayer.PaintVitals = PaintVitals;
+            beatPlayer.PaintShields = PaintShields;
             beatPlayer.PaintFormation = PaintFormation;
             beatPlayer.PaintTurnOrder = PaintTurnOrder;
             beatPlayer.FormationIsMoving = FormationIsMoving;

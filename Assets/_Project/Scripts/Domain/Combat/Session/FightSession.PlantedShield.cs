@@ -559,6 +559,17 @@ namespace PrincesPalace.Domain.Combat.Session
             DealDamage(attacker, target, outcome.Damage, type, KillCredit.Nobody);
         }
 
+        // Records ONE beat around `blow` (a StrikeForTest, a plant) exactly as
+        // the resolution paths do -- open, act, commit -- and hands it back, so
+        // a test can read what the beat carries without staging a whole turn.
+        public CombatBeat BeatAroundForTest(CombatantState actor, CombatantState target, Action blow)
+        {
+            NewBeat(BeatCause.Action, actor, target, StageApproach.Hold);
+            blow();
+            CommitBeat();
+            return _beats[_beats.Count - 1];
+        }
+
         public void SettleShieldReactionsForTest(bool physicalMove) => SettleShieldReactions(physicalMove);
     }
 }
