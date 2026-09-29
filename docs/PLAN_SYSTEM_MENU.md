@@ -410,10 +410,9 @@ tree or a `[SerializeField]` changes. Phases run one at a time.
 **0c Hub exit button → `Open(EXIT)`** (AUDIT #219). Uses today's
 `SystemMenuController.Select`, since `Open(tab, target)` lands in Phase 2.
 
-**0d Drift.**
-- Remove the dossier's `.Hovers` (`CharacterDossierScreen.cs:616`, `:1098`).
-- Fix casing.
-- Add the empty-pack sentence.
+**0d Drift** is folded into Phase 5. The dossier's hover scales, its row
+casing and its empty pack are all rebuilt there, so fixing them first
+would be thrown away.
 
 **1 Design spec.** No game code. The output is `docs/SPEC_SYSTEM_MENU.md`:
 1. The type floor per font, measured.

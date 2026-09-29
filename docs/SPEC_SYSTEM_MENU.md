@@ -40,13 +40,18 @@ exists for ornaments only.
 ## 2. Frame
 
 ```
-y (canvas)  element                     size
-+514        lintel (above panel)        1600 × 52
-+450..-450  panel                       1600 × 900
-  +402      tab bar                     1600 × 96
-  -402..+354 content pane               1600 × 756
-  -426      footer (notice | prompts)   1600 × 48
+element                          size          place
+lintel                           1600 × 52     directly above the panel (as today)
+panel                            1600 × 900    as today
+  tab bar                        1600 × 96     top of the panel
+  content pane                   1600 × 804    unchanged
+footer (notice | prompts)        1600 × 48     directly below the panel, 4 px gap
 ```
+
+The footer sits outside the panel, mirroring the lintel, so no pane loses
+height. Lintel + panel + footer = 1004 of 1080. In the pane sections below,
+"1600 × 756" budgets remain the design target: they leave 48 px of each pane
+free for pane-level headers and pagers.
 
 - **Lintel:** title (FunctionalHeading 24, tracked), context line (Body
   20), gold, embers (TacticalData 22), mode pill (Body 20 in a 1px-rimmed
