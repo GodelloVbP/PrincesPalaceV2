@@ -564,6 +564,40 @@ namespace PrincesPalace.Domain.UiKit
             return slot >= 0 && slot < stars.GetLength(0) ? -stars[slot, 1] : 0f;
         }
 
+        // ---- an edge between two stars --------------------------------------------
+        //
+        // One straight quad per connection: centred on the midpoint, as long as
+        // the gap, turned to face along it. The screen tree bakes this once per
+        // edge and the controller re-derives it on every character switch, so
+        // both call this and a rotated edge cannot end somewhere the stones are
+        // not.
+        public readonly struct EdgeSegment
+        {
+            public readonly float MidX;
+            public readonly float MidY;
+            public readonly float Length;
+            public readonly float AngleDegrees;
+
+            public EdgeSegment(float midX, float midY, float length, float angleDegrees)
+            {
+                MidX = midX;
+                MidY = midY;
+                Length = length;
+                AngleDegrees = angleDegrees;
+            }
+        }
+
+        public static EdgeSegment SegmentBetween(float ax, float ay, float bx, float by)
+        {
+            float dx = bx - ax;
+            float dy = by - ay;
+            return new EdgeSegment(
+                (ax + bx) * 0.5f,
+                (ay + by) * 0.5f,
+                (float)System.Math.Sqrt(dx * dx + dy * dy),
+                (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI));
+        }
+
         // ---- the path-only API: Shawn's figures ----------------------------------
         //
         // What the screen tree and the controller call today. It predates the

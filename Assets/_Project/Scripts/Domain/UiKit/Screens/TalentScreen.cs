@@ -560,9 +560,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // allegiance draws its own figure out of the same 21 slots, so where a
         // stone sits depends on which constellation it belongs to and no longer
         // on a column index times a pitch.
+        //
+        // BUILT FOR SHAWN, the default when a scene opens with nothing loaded.
+        // TalentController.Relayout moves every stone and edge to the selected
+        // character's figures on first paint and on each switch, so this is
+        // only what the scene file and the audit see.
         private static UiVec PositionOf(int path, int slot) => new UiVec(
-            ConstellationLayout.TreeOriginX + ConstellationLayout.StarX(path, slot),
-            ConstellationLayout.TreeOriginY + ConstellationLayout.StarY(path, slot));
+            ConstellationLayout.TreeOriginX + ConstellationLayout.StarX(ConstellationLayout.ShawnId, path, slot),
+            ConstellationLayout.TreeOriginY + ConstellationLayout.StarY(ConstellationLayout.ShawnId, path, slot));
 
         private UiNode BuildOrb(int path, int slot)
         {
@@ -718,16 +723,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // A thin quad stretched between the two, rotated to face along the
             // line. One node per connection rather than a line renderer: the
             // emitter builds Images, and a rotated quad is a line.
-            float dx = b.X - a.X;
-            float dy = b.Y - a.Y;
-            float length = (float)System.Math.Sqrt(dx * dx + dy * dy);
-            float angle = (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI);
+            var segment = ConstellationLayout.SegmentBetween(a.X, a.Y, b.X, b.Y);
+            float length = segment.Length;
+            float angle = segment.AngleDegrees;
+            float midX = segment.MidX;
+            float midY = segment.MidY;
 
             // A HAIRLINE UNTIL IT IS LIT -- see ConstellationLayout.EdgeDimWidth
             // for the measurement. The weight argument lives on the glow,
             // which is where it is always true.
             var edge = Ui.Solid($"Edge{path}_{parent}_{slot}", EdgeDim,
-                    Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f),
+                    Place.At(midX, midY),
                     UiSize.Fixed(length, ConstellationLayout.EdgeDimWidth))
                 .Rotated(angle)
                 .AsDecor()
@@ -742,7 +748,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // same picture; only one of them can be reasoned about.
             var glow = Ui.Sprite($"Edge{path}_{parent}_{slot}Glow", EdgeStripeKey,
                     new UiVec(length, ConstellationLayout.EdgeGlowWidth),
-                    Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f))
+                    Place.At(midX, midY))
                 .Coloured(EdgeGlow)
                 .Rotated(angle)
                 .Inactive()

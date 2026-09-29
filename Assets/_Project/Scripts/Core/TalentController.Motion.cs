@@ -58,7 +58,7 @@ namespace PrincesPalace
             _pushFrom = CurrentPush();
             _pushTo = _selectedSlot < 0
                 ? 0f
-                : ConstellationLayout.PushInOffset(ConstellationLayout.StarX(_path, _selectedSlot));
+                : ConstellationLayout.PushInOffset(ConstellationLayout.StarX(Current?.definitionId, _path, _selectedSlot));
             _pushElapsed = 0f;
         }
 

@@ -849,5 +849,20 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(9.2f, ConstellationLayout.HaloCrackleSeconds);
         }
+
+        // Literal values: a 3-4-5 triangle gives length 5, and a rise equal to
+        // the run is 45 degrees.
+        [Test]
+        public void SegmentBetweenGivesMidpointLengthAndAngle()
+        {
+            var flat = ConstellationLayout.SegmentBetween(0f, 0f, 3f, 4f);
+            Assert.AreEqual(1.5f, flat.MidX, 1e-4f);
+            Assert.AreEqual(2f, flat.MidY, 1e-4f);
+            Assert.AreEqual(5f, flat.Length, 1e-4f);
+
+            var diagonal = ConstellationLayout.SegmentBetween(10f, 10f, 20f, 20f);
+            Assert.AreEqual(45f, diagonal.AngleDegrees, 1e-3f);
+            Assert.AreEqual(-90f, ConstellationLayout.SegmentBetween(0f, 5f, 0f, 0f).AngleDegrees, 1e-3f);
+        }
     }
 }

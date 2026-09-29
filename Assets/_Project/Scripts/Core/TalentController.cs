@@ -24,6 +24,7 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform sky;
         [SerializeField] internal Button[] orbs;
 
+        [SerializeField] internal GameObject[] edges;
         [SerializeField] internal GameObject[] edgeGlows;
         [SerializeField] internal int[] edgeChildSlots;
         [SerializeField] internal int[] edgeParentSlots;
@@ -171,7 +172,80 @@ namespace PrincesPalace
             // own Start() does -- RefreshOrbNavigation (called from Refresh)
             // reconfigures the pushed context rather than creating it.
             RegisterNavContext();
+            Relayout();
             Refresh();
+        }
+
+        // ---- the figures -------------------------------------------------------
+
+        // EVERY STONE AND EDGE MOVED TO THE SELECTED CHARACTER'S FIGURES.
+        //
+        // The scene bakes one character's plots, and the pager switches
+        // characters inside that scene, so the sky is re-placed from the same
+        // ConstellationLayout the build used. An id with no figure draws the
+        // spire, which is what the layout does for any unplotted character.
+        private void Relayout()
+        {
+            string id = Current?.definitionId;
+            int slots = TalentScreen.OrbCount;
+
+            for (int path = 0; path < TalentPage.PathCount; path++)
+            {
+                for (int slot = 0; slot < slots; slot++)
+                {
+                    int index = TalentScreen.OrbIndex(path, slot);
+                    if (orbs == null || index >= orbs.Length || orbs[index] == null) continue;
+
+                    ((RectTransform)orbs[index].transform).anchoredPosition = StarAt(id, path, slot);
+                }
+            }
+
+            if (edgeGlows == null || edgeChildSlots == null || edgeParentSlots == null) return;
+
+            int perPath = Domain.Talents.TalentSkeleton.EdgesPerPath;
+            int count = Mathf.Min(edgeGlows.Length, Mathf.Min(edgeChildSlots.Length, edgeParentSlots.Length));
+            if (perPath <= 0) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (edgeGlows[i] == null) continue;
+
+                int path = i / perPath;
+                var a = StarAt(id, path, edgeParentSlots[i]);
+                var b = StarAt(id, path, edgeChildSlots[i]);
+                var segment = ConstellationLayout.SegmentBetween(a.x, a.y, b.x, b.y);
+
+                if (edges != null && i < edges.Length && edges[i] != null)
+                {
+                    PlaceEdge((RectTransform)edges[i].transform, segment);
+                }
+
+                var glow = (RectTransform)edgeGlows[i].transform;
+                PlaceEdge(glow, segment);
+
+                // The lit core is a child of the glow at its centre and turned
+                // with it, so only its length changes.
+                var crackle = glow.GetComponentInChildren<TalentEdgeCrackle>(true);
+                if (crackle != null)
+                {
+                    var core = (RectTransform)crackle.transform;
+                    core.sizeDelta = new Vector2(segment.Length, core.sizeDelta.y);
+                }
+
+                var spark = glow.GetComponentInChildren<TalentEdgeSpark>(true);
+                if (spark != null) spark.SetLength(segment.Length);
+            }
+        }
+
+        private static Vector2 StarAt(string characterId, int path, int slot) => new Vector2(
+            ConstellationLayout.TreeOriginX + ConstellationLayout.StarX(characterId, path, slot),
+            ConstellationLayout.TreeOriginY + ConstellationLayout.StarY(characterId, path, slot));
+
+        private static void PlaceEdge(RectTransform rect, ConstellationLayout.EdgeSegment segment)
+        {
+            rect.anchoredPosition = new Vector2(segment.MidX, segment.MidY);
+            rect.sizeDelta = new Vector2(segment.Length, rect.sizeDelta.y);
+            rect.localEulerAngles = new Vector3(0f, 0f, segment.AngleDegrees);
         }
 
         private void Wire()
@@ -248,6 +322,7 @@ namespace PrincesPalace
             // the selection cannot survive the switch -- it would describe an
             // orb that is no longer under the cursor.
             _selectedSlot = -1;
+            Relayout();
 
             // A kindling beat mid-flight belongs to the character it started
             // on. Left running, DriveKindling keeps painting that beat's

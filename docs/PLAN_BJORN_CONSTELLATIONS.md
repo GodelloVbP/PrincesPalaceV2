@@ -547,6 +547,14 @@ every character switch (and on first paint):
 Gamepad navigation is slot-topology based (`TalentController.cs:~1090`,
 DxSlot/Parents), not positional, so it needs no change.
 
+**Unity-side status: items 1-5 DONE.** `TalentController.Relayout()` runs from
+`Start` and `StepCharacter` (new `edges` field auto-bound to the dim edge
+rects); edge arithmetic is `ConstellationLayout.SegmentBetween`, called by
+`BuildEdge` and `Relayout`; `AimPushIn` takes the character overload;
+`TalentScreen.PositionOf` names `ShawnId` explicitly; `TalentRelayoutTests`
+covers sheep -> bear -> sheep. Per-silhouette background swap NOT done: it
+needs the Phase 7 sprites, and no keyed lookup exists to hang it on yet.
+
 **Gate:** `tools/run_tests_parallel.ps1 -Changed -BuildScenes` (a
 `[SerializeField]` and the screen's build output move), and `UiAudit` must
 pass at all four canvas aspects. The page panels already carry
