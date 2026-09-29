@@ -124,6 +124,13 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator SettingsModal_OverTheMenu()
+        {
+            SaveSlots(0);
+            yield return Capture("settings_modal.png", () => Named("SettingsButton").onClick.Invoke());
+        }
+
+        [UnityTest]
         public IEnumerator DeleteConfirm_OverTheLoadList()
         {
             SaveSlots(0, 2);
