@@ -149,12 +149,11 @@ namespace PrincesPalace.Domain.Combat
         //
         // This is a SUBSTITUTION, recorded here rather than only in a commit
         // message because content authors read this file. The handoff (§6.3)
-        // specifies "cannot be critically hit below 25% max HP" — and this
-        // game has no critical hits, in any file, so that node would have
-        // been inert content the resolver could not tell from a typo. A spike
-        // cap keeps the intent exactly ("the burst that kills you cannot
-        // happen") on a hook that exists today. If crits land later this is
-        // the node to revisit.
+        // specifies "cannot be critically hit below 25% max HP". The spike
+        // cap stands in for it and keeps the intent ("the burst that kills you
+        // cannot happen") while also covering a telegraphed authored crit.
+        // Swapping it for a real crit immunity is a balance decision, not a
+        // follow-on of the crit system, and has not been taken.
         DamageCapPercentBelowHealth,
 
         // Once per fight, a hit that would reduce you to 0 leaves you at 1.

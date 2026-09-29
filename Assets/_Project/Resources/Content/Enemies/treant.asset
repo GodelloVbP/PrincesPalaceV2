@@ -22,6 +22,8 @@ MonoBehaviour:
       manaRegen: 0
       physicalDefense: 30
       magicalDefense: 5
+      critChance: 0
+      critDamage: 0
     ExpReward: 40
     CurrencyReward: 24
     IsBoss: 0
@@ -59,10 +61,13 @@ MonoBehaviour:
     Abilities:
     - SkillId: trunk_slam
       Weight: 3
+      Crits: 0
     - SkillId: spore_cloud
       Weight: 2
+      Crits: 0
     Schedule: []
     AttackWeight: 2
+    AttackCrits: 0
     SkillName: 
     SkillPower: 1.5
     SkillChance: 0.35

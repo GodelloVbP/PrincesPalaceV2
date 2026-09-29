@@ -169,6 +169,11 @@ namespace PrincesPalace.Domain.Tests
                 // for ArmorPenetration or Resistance.
                 if (stat == RelicStat.WeaknessBonus || stat == RelicStat.Lifesteal) continue;
 
+                // The crit stats are flat points added to the party baseline
+                // (CritRules), so a percent-of-a-percent twin would read the
+                // same way as it would for Lifesteal.
+                if (stat == RelicStat.CritChance || stat == RelicStat.CritDamage) continue;
+
                 var types = Enum.GetValues(typeof(RelicModifierType))
                     .Cast<RelicModifierType>()
                     .Where(t => t != RelicModifierType.None)

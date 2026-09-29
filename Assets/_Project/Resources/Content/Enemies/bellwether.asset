@@ -22,6 +22,8 @@ MonoBehaviour:
       manaRegen: 0
       physicalDefense: 20
       magicalDefense: 20
+      critChance: 0
+      critDamage: 0
     ExpReward: 30
     CurrencyReward: 18
     IsBoss: 0
@@ -113,16 +115,20 @@ MonoBehaviour:
     Abilities:
     - SkillId: bellwether_scratch
       Weight: 1
+      Crits: 0
     - SkillId: dark_chains
       Weight: 0
+      Crits: 0
     - SkillId: death_knell
       Weight: 0
+      Crits: 0
     Schedule:
     - OnTurns: 0100000005000000
       Skills:
       - dark_chains
       - death_knell
     AttackWeight: 0
+    AttackCrits: 0
     SkillName: 
     SkillPower: 1.5
     SkillChance: 0.35

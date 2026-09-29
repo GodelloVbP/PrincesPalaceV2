@@ -81,6 +81,12 @@ namespace PrincesPalace.Domain.Content
         // the two stay separate fields that sum at the one read site
         // rather than one shared bag.
         LifestealPercent,
+
+        // Flat crit bonuses in percent points, on top of CritRules' party
+        // baseline and any gear critChance / critDamage. Appended, never
+        // inserted.
+        CritChanceFlat,
+        CritDamageFlat,
     }
 
     // One numeric change, exactly as typed into relics.json.
@@ -187,6 +193,10 @@ namespace PrincesPalace.Domain.Content
                         return RelicStat.WeaknessBonus;
                     case RelicModifierType.LifestealPercent:
                         return RelicStat.Lifesteal;
+                    case RelicModifierType.CritChanceFlat:
+                        return RelicStat.CritChance;
+                    case RelicModifierType.CritDamageFlat:
+                        return RelicStat.CritDamage;
                     default:
                         return RelicStat.None;
                 }
@@ -218,6 +228,10 @@ namespace PrincesPalace.Domain.Content
         // and .LifestealPercent respectively.
         WeaknessBonus,
         Lifesteal,
+
+        // See RelicModifierType.CritChanceFlat / .CritDamageFlat.
+        CritChance,
+        CritDamage,
     }
 
     // Folds a set of modifiers into a single change per stat.

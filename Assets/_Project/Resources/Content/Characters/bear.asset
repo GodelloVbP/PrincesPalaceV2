@@ -23,6 +23,8 @@ MonoBehaviour:
       manaRegen: 0
       physicalDefense: 40
       magicalDefense: 12
+      critChance: 0
+      critDamage: 0
     AbilityScores:
       strength: 12
       dexterity: 12

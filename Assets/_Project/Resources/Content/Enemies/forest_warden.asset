@@ -22,6 +22,8 @@ MonoBehaviour:
       manaRegen: 0
       physicalDefense: 30
       magicalDefense: 10
+      critChance: 0
+      critDamage: 0
     ExpReward: 100
     CurrencyReward: 60
     IsBoss: 1
@@ -59,12 +61,16 @@ MonoBehaviour:
     Abilities:
     - SkillId: overhead_slam
       Weight: 3
+      Crits: 0
     - SkillId: roar
       Weight: 2
+      Crits: 0
     - SkillId: grapple
       Weight: 2
+      Crits: 0
     Schedule: []
     AttackWeight: 0
+    AttackCrits: 0
     SkillName: 
     SkillPower: 1.5
     SkillChance: 0.35

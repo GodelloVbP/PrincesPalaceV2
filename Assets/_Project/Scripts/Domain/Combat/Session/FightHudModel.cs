@@ -1623,8 +1623,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 ? " each"
                 : "";
 
+            // An authored crit is guaranteed, so the telegraph says so: the
+            // figure already includes the multiplier (EnemyIntent.WillCrit).
+            string crit = intent.WillCrit ? " (critical)" : "";
             string lethal = intent.IsLethal ? " (lethal)" : "";
-            return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}{lethal}" + ThenLine(intent);
+            return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}{crit}{lethal}" + ThenLine(intent);
         }
 
         // "\nDeath Knell next" for a scheduled step with one to come.

@@ -22,6 +22,8 @@ MonoBehaviour:
       manaRegen: 0
       physicalDefense: 45
       magicalDefense: 10
+      critChance: 0
+      critDamage: 0
     ExpReward: 35
     CurrencyReward: 20
     IsBoss: 0
@@ -59,8 +61,10 @@ MonoBehaviour:
     Abilities:
     - SkillId: boulder_slam
       Weight: 1
+      Crits: 0
     Schedule: []
     AttackWeight: 0
+    AttackCrits: 0
     SkillName: 
     SkillPower: 1.5
     SkillChance: 0.35

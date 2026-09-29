@@ -193,7 +193,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             var pool = new List<EnemyAbility>
             {
-                EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f - chance),
+                EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f - chance,
+                    crits: source != null && source.AttackCrits),
             };
 
             if (chance > 0f)

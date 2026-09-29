@@ -164,6 +164,14 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The relative weight of the monster's plain attack against its ability weights; 0 removes plain attacks entirely.")]
         public float attackWeight = 1f;
 
+        // THE PLAIN ATTACK IS AUTHORED TO CRIT: every plain swing this monster
+        // lands is a guaranteed critical hit (CritRules' damage multiplier),
+        // and the telegraph shows it. Monsters have no random crit chance, so
+        // this and RawEnemyAbility.crits are the only ways one ever crits.
+        // Refused with attackWeight 0, which never swings.
+        [ContentDoc("Every plain attack this monster lands is a guaranteed critical hit, shown in its telegraph (monsters never crit at random); refused with attackWeight 0.")]
+        public bool attackCrits;
+
         // Benched, not deleted. An inactive monster keeps its full entry
         // here — stats, weakness, rewards, the lot — but no asset is built
         // for it, so it cannot spawn. Used to narrow the pool to the
@@ -337,6 +345,13 @@ namespace PrincesPalace.Domain.Content
         // only if EVERY entry is zero.
         [ContentDoc("The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0.")]
         public float weight = 1f;
+
+        // AUTHORED TO CRIT, for THIS monster's use of the skill only -- a
+        // guaranteed critical hit on every damaging hit it lands, shown in the
+        // telegraph. Per ability line rather than on the skill row, so one
+        // monster's Overhead Slam can crit without every caster of it doing so.
+        [ContentDoc("Every damaging hit of this ability, as this monster uses it, is a guaranteed critical hit shown in its telegraph (monsters never crit at random).")]
+        public bool crits;
     }
 
     // JsonUtility can't deserialize a bare top-level JSON array, so

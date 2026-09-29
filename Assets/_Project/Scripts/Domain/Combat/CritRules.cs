@@ -33,6 +33,19 @@ namespace PrincesPalace.Domain.Combat
         // negative bonus says.
         public const int MinDamagePercent = 100;
 
+        // The two party stats (StatBlock.critChance / critDamage) are bonuses
+        // on the baselines above, so an unauthored block means the baseline.
+        // These turn a party member's effective stats into the two
+        // CombatantState fields at kit-build time.
+        // `relicBonus` is a relic's flat contribution (RelicStat.CritChance /
+        // CritDamage), summed before the clamp so a relic and gear cannot
+        // together push the total past it.
+        public static int PartyChancePercent(StatBlock stats, int relicBonus = 0) =>
+            ClampChance(BaseChancePercent + stats.critChance + relicBonus);
+
+        public static int PartyDamagePercent(StatBlock stats, int relicBonus = 0) =>
+            Math.Max(MinDamagePercent, BaseDamagePercent + stats.critDamage + relicBonus);
+
         // The chance this attacker actually rolls at. 0 for enemies, always --
         // see this class' header. Momentum's live stacks (EinherjarSeams) ride
         // on top of the total here, the one place a chance is read, so the

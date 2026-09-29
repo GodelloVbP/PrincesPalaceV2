@@ -29,6 +29,16 @@ namespace PrincesPalace.Domain.Stats
         // them into a reduction on a curve that cannot reach immunity. See
         // DamagePipeline's canonical mitigation equation.
         PhysicalDefense,
-        MagicalDefense
+        MagicalDefense,
+
+        // CRITICAL HITS. APPENDED, never
+        // inserted: content stores these as ordinals. Both are BONUSES on top
+        // of the party baseline in CritRules (5% chance, 150% damage), so a
+        // block nobody authored still means "the baseline" and every existing
+        // StatBlock keeps its meaning. Percent points, not ratings: +3 chance
+        // is 8% total, +25 damage is a 175% crit. See CritRules for the whole
+        // rule and DamagePipeline.AfterDefences for where it lands.
+        CritChance,
+        CritDamage
     }
 }

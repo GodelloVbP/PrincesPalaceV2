@@ -18,10 +18,14 @@ namespace PrincesPalace.Domain.Content
         public string SkillId;
         public float Weight;
 
-        public EnemyAbilityRef(string skillId, float weight)
+        // Authored to crit -- see RawEnemyAbility.crits and EnemyAbility.Crits.
+        public bool Crits;
+
+        public EnemyAbilityRef(string skillId, float weight, bool crits = false)
         {
             SkillId = (skillId ?? "").Trim();
             Weight = weight;
+            Crits = crits;
         }
     }
 
@@ -136,6 +140,9 @@ namespace PrincesPalace.Domain.Content
 
         // The basic attack's own weight in that pool. See RawEnemyEntry.
         public float AttackWeight = 1f;
+
+        // The plain attack is authored to crit. See RawEnemyEntry.attackCrits.
+        public bool AttackCrits;
 
         // Empty SkillName means this monster has no second action at all.
         public string SkillName = "";

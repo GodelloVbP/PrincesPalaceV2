@@ -22,6 +22,8 @@ MonoBehaviour:
       manaRegen: 0
       physicalDefense: 5
       magicalDefense: 20
+      critChance: 0
+      critDamage: 0
     ExpReward: 22
     CurrencyReward: 14
     IsBoss: 0
@@ -59,8 +61,10 @@ MonoBehaviour:
     Abilities:
     - SkillId: bog_mud_burst
       Weight: 2
+      Crits: 0
     Schedule: []
     AttackWeight: 3
+    AttackCrits: 0
     SkillName: 
     SkillPower: 1.5
     SkillChance: 0.35

@@ -37,9 +37,19 @@ namespace PrincesPalace.Domain.Stats
         public int physicalDefense;
         public int magicalDefense;
 
+        // Critical-hit BONUSES in percent points on top of CritRules' party
+        // baseline (see StatType.CritChance), so zero means "the baseline",
+        // not "never crits". Appended and optional on the constructor for the
+        // same compatibility reason as the set stats above.
+        public int critChance;
+        public int critDamage;
+
         public StatBlock(int maxHealth, int speed, int attack,
-            int manaRegen = 0, int physicalDefense = 0, int magicalDefense = 0)
+            int manaRegen = 0, int physicalDefense = 0, int magicalDefense = 0,
+            int critChance = 0, int critDamage = 0)
         {
+            this.critChance = critChance;
+            this.critDamage = critDamage;
             this.maxHealth = maxHealth;
             this.speed = speed;
             this.attack = attack;
@@ -62,6 +72,8 @@ namespace PrincesPalace.Domain.Stats
                     case StatType.ManaRegen: return manaRegen;
                     case StatType.PhysicalDefense: return physicalDefense;
                     case StatType.MagicalDefense: return magicalDefense;
+                    case StatType.CritChance: return critChance;
+                    case StatType.CritDamage: return critDamage;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(stat), stat, "StatBlock has no field wired up for this StatType.");
                 }
@@ -81,6 +93,8 @@ namespace PrincesPalace.Domain.Stats
                 case StatType.ManaRegen: return new StatBlock(0, 0, 0, manaRegen: value);
                 case StatType.PhysicalDefense: return new StatBlock(0, 0, 0, physicalDefense: value);
                 case StatType.MagicalDefense: return new StatBlock(0, 0, 0, magicalDefense: value);
+                case StatType.CritChance: return new StatBlock(0, 0, 0, critChance: value);
+                case StatType.CritDamage: return new StatBlock(0, 0, 0, critDamage: value);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(stat), stat, "StatBlock cannot build a block for this StatType.");
             }
@@ -94,7 +108,9 @@ namespace PrincesPalace.Domain.Stats
                 a.attack + b.attack,
                 a.manaRegen + b.manaRegen,
                 a.physicalDefense + b.physicalDefense,
-                a.magicalDefense + b.magicalDefense);
+                a.magicalDefense + b.magicalDefense,
+                a.critChance + b.critChance,
+                a.critDamage + b.critDamage);
         }
 
         // The comparison a hover panel diffs two loadouts with — negative
@@ -108,7 +124,9 @@ namespace PrincesPalace.Domain.Stats
                 a.attack - b.attack,
                 a.manaRegen - b.manaRegen,
                 a.physicalDefense - b.physicalDefense,
-                a.magicalDefense - b.magicalDefense);
+                a.magicalDefense - b.magicalDefense,
+                a.critChance - b.critChance,
+                a.critDamage - b.critDamage);
         }
 
         // Clamps every stat to at least `floor`. Useful once talents or
@@ -122,7 +140,9 @@ namespace PrincesPalace.Domain.Stats
                 Math.Max(floor, attack),
                 Math.Max(floor, manaRegen),
                 Math.Max(floor, physicalDefense),
-                Math.Max(floor, magicalDefense));
+                Math.Max(floor, magicalDefense),
+                Math.Max(floor, critChance),
+                Math.Max(floor, critDamage));
         }
 
         // Multiplies every stat by the same factor and rounds to the nearest
@@ -141,7 +161,11 @@ namespace PrincesPalace.Domain.Stats
                 Rounding.AwayFromZero(attack * multiplier),
                 Rounding.AwayFromZero(manaRegen * multiplier),
                 Rounding.AwayFromZero(physicalDefense * multiplier),
-                Rounding.AwayFromZero(magicalDefense * multiplier));
+                Rounding.AwayFromZero(magicalDefense * multiplier),
+                // The crit pair is not scaled: percent points, and a tier
+                // multiplier is about a body's size, not its luck.
+                critChance,
+                critDamage);
         }
 
         // Like Scaled, but attack and the two broad defenses each ride their
@@ -163,7 +187,9 @@ namespace PrincesPalace.Domain.Stats
                 Rounding.AwayFromZero(attack * attackMultiplier),
                 Rounding.AwayFromZero(manaRegen * multiplier),
                 Rounding.AwayFromZero(physicalDefense * defenseMultiplier),
-                Rounding.AwayFromZero(magicalDefense * defenseMultiplier));
+                Rounding.AwayFromZero(magicalDefense * defenseMultiplier),
+                critChance,
+                critDamage);
         }
 
         public bool Equals(StatBlock other)
@@ -173,7 +199,9 @@ namespace PrincesPalace.Domain.Stats
                 && attack == other.attack
                 && manaRegen == other.manaRegen
                 && physicalDefense == other.physicalDefense
-                && magicalDefense == other.magicalDefense;
+                && magicalDefense == other.magicalDefense
+                && critChance == other.critChance
+                && critDamage == other.critDamage;
         }
 
         public override bool Equals(object obj)
@@ -191,13 +219,15 @@ namespace PrincesPalace.Domain.Stats
                 hash = (hash * 397) ^ manaRegen;
                 hash = (hash * 397) ^ physicalDefense;
                 hash = (hash * 397) ^ magicalDefense;
+                hash = (hash * 397) ^ critChance;
+                hash = (hash * 397) ^ critDamage;
                 return hash;
             }
         }
 
         public override string ToString()
         {
-            return $"HP {maxHealth}, SPD {speed}, ATK {attack}, MPR {manaRegen}, PDEF {physicalDefense}, MDEF {magicalDefense}";
+            return $"HP {maxHealth}, SPD {speed}, ATK {attack}, MPR {manaRegen}, PDEF {physicalDefense}, MDEF {magicalDefense}, CRIT +{critChance}%, CDMG +{critDamage}%";
         }
     }
 }

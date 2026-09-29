@@ -260,7 +260,7 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
-                abilities.Add(new EnemyAbilityRef(id, entry.weight));
+                abilities.Add(new EnemyAbilityRef(id, entry.weight, entry.crits));
             }
 
             // Every weight at zero is a monster authored as able to do nothing
@@ -279,9 +279,10 @@ namespace PrincesPalace.Domain.Content
             // authored and never read. The same "no meaning on this row"
             // refusal SkillEntryResolver makes for fields its effect ignores.
             if (raw.attackWeight == 0f
-                && (raw.attackHoldsPosition || !string.IsNullOrWhiteSpace(raw.attackApproach)))
+                && (raw.attackHoldsPosition || !string.IsNullOrWhiteSpace(raw.attackApproach) || raw.attackCrits))
             {
-                string field = raw.attackHoldsPosition ? "attackHoldsPosition" : "attackApproach";
+                string field = raw.attackHoldsPosition ? "attackHoldsPosition"
+                    : raw.attackCrits ? "attackCrits" : "attackApproach";
                 error = $"{label}: {field} is authored on a row with attackWeight 0, which never makes a plain " +
                         "attack -- it would never be read. Drop the field, or give the plain attack a weight.";
                 return false;
@@ -350,6 +351,7 @@ namespace PrincesPalace.Domain.Content
                 Rollable = raw.rollable,
                 RallyAttackPercentPerStack = rally.attackPercentPerStack,
                 RallyMaxStacks = rally.maxStacks,
+                AttackCrits = raw.attackCrits,
                 RallyStance = rallyStance,
                 RallyVfx = rallyVfx.Copy(),
                 Schedule = schedule,

@@ -28,6 +28,8 @@ MonoBehaviour:
     manaRegen: 1
     physicalDefense: 0
     magicalDefense: 17
+    critChance: 0
+    critDamage: 0
   abilityScoreBonus:
     strength: 0
     dexterity: 0

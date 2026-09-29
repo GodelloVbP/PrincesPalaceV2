@@ -78,6 +78,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `skillChance` | float | `-1` | The legacy second action's odds of being picked on any given turn. |  |
 | `abilities` | RawEnemyAbility[] (below) | `[]` | This monster's real skills (skills.json ids) with relative selection weights; replaces skillName/skillPower/skillChance when non-empty. |  |
 | `attackWeight` | float | `1` | The relative weight of the monster's plain attack against its ability weights; 0 removes plain attacks entirely. |  |
+| `attackCrits` | bool | `false` | Every plain attack this monster lands is a guaranteed critical hit, shown in its telegraph (monsters never crit at random); refused with attackWeight 0. |  |
 | `active` | bool | `true` | Whether this monster can actually spawn; false benches the entry without deleting it. |  |
 | `facing` | string | `"right"` | Which way this monster's art is drawn in its source file, so the stage knows whether to mirror it. | Left, Right |
 | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | VFX played over the target when this monster's skill lands; see SpellPresentation. |  |
@@ -378,6 +379,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `skillId` | string | `""` | A skill id from skills.json this monster may draw. |  |
 | `weight` | float | `1` | The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0. |  |
+| `crits` | bool | `false` | Every damaging hit of this ability, as this monster uses it, is a guaranteed critical hit shown in its telegraph (monsters never crit at random). |  |
 
 ### `RawEnemyRally`
 
@@ -533,7 +535,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `type` | string | `""` | Which RelicModifierType this changes, matched case-insensitively. | None, AttackPercent, DefensePercent, MaxHealthPercent, MaxManaPercent, SpeedPercent, ResistanceFlat, AttackFlat, DefenseFlat, MaxHealthFlat, MaxManaFlat, SpeedFlat, ArmorPenetrationFlat, WeaknessDamageBonusPercent, LifestealPercent |
+| `type` | string | `""` | Which RelicModifierType this changes, matched case-insensitively. | None, AttackPercent, DefensePercent, MaxHealthPercent, MaxManaPercent, SpeedPercent, ResistanceFlat, AttackFlat, DefenseFlat, MaxHealthFlat, MaxManaFlat, SpeedFlat, ArmorPenetrationFlat, WeaknessDamageBonusPercent, LifestealPercent, CritChanceFlat, CritDamageFlat |
 | `amount` | int | `0` | How much this modifier changes the stat, percent or flat depending on type. |  |
 | `damageType` | string | `""` | A DamageType name (or 'magical' for every non-Physical type), required by ResistanceFlat only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
 
