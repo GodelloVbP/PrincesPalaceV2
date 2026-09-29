@@ -1054,7 +1054,7 @@ mechanics start.
   - The reuse pass trimmed no node: 14 new `TalentEffectType` members, and the
     plan's `ExecuteDamageBonusPercent` for Headsplitter T2 was not taken
     because T2 is a crit-chance node.
-  - NOT DONE: the Fury pool's flat gains stay (see "Decisions" below); the
+  - NOT DONE: the Fury pool's flat gains stay (done in Slice C: both are 0); the
     transformed Berserk battle sprite (`spritePath` empty, art); a HUD read of
     Momentum stacks and the Berserk drain (the status badge names the Fury
     upkeep, nothing shows stacks); Blood Price T2, Bellow/Hold the Line
@@ -1096,7 +1096,8 @@ mechanics start.
     Second Wind, one pre-pass for every archetype).
   - Reward track: the level-30 `second_wind` unlock became +5% Physical (Second
     Wind is a root grant, not base kit); an owner call for a real replacement.
-  - NOT DONE / left on purpose: `pools.json` flat Fury gains (Sentinel needs
+  - NOT DONE / left on purpose (the first four were done in Slice C):
+    `pools.json` flat Fury gains (Sentinel needs
     them until Slice C); Sentinel's placeholders; `bear_bulwark`'s row and its
     level-20 track unlock (the plan drops Bulwark but assigns its removal to no
     slice); the track's two `FuryGainOnAttack` nodes (inert under any engine); a
@@ -1127,6 +1128,76 @@ mechanics start.
   parts of 4h (Hold the Line, Bellow upgrades). Content: Sentinel's 21
   `talents.json` rows plus Brace/Plant the Shield's `grantsSkillId` wiring.
   Bot pass: Sentinel vs the reworked reward track.
+  **Slice C status (built; commits 072c7dac mechanics, 581788fb content).**
+  - DONE: `FightSession.ArmSentinelSeams` (from `ArmEngineSeams` at `Begin`)
+    sets the Sentinel engine (`FuryEngineSentinel`) and every `PlantedShield`
+    switch, one talent member per switch (`PlantedShieldBreakShards`,
+    `ShieldBashShortWait`, `ShieldwallCoversParty`, `ThornsPercent`,
+    `ReflectMagicPercent`, `SilenceCasterOnSpellHit`, `ReflectGrantsFury`,
+    `SlowsAttacker`, `DisarmsOnBreak`). New general mechanics, none a special
+    case: Iron Retort (`CombatMath.IronRetortBonus`, measured from the new
+    `CombatantState.BaseDefenseTotal`); the `Fortified` status (a flat
+    Defense and Magical Defense buff, read in `BroadDefense`) with Hold the
+    Line as a plain `BuffParty`; skill-scoped `SkillStatusTurns`,
+    `SkillCleansesDebuffs` (`StatusEffects.IsDebuff`) and `SkillSplashPercent`;
+    `PrimaryGainWhenBuffedAllyHit`, `PrimaryGainPerProvokedEnemy` and the
+    weighted taunt `TargetPreferencePercent`; `SkillEffect.PlantShield`; Shield
+    Bash as a `DamageSingle` row with `plantedShieldBashPercent` (not a new
+    effect); a `replacesSkillId` row field so Plant the Shield takes over
+    Brace's button. All 21 rows, plus `hold_the_line`, `plant_the_shield` and
+    `shield_bash`; bot valuations in `UtilitySkills` (plant whenever legal, Hold
+    the Line while nobody is fortified, Bellow when an ally is hurt or it pays
+    Fury). Third engine landed: `pools.json` fury flat gains are 0 (with a
+    validation-only `engineFed` pool flag), `placeholder_brawler_ward_root` and
+    `bear_bulwark` are removed (a save holding the talent drops it on load and
+    the embers refund), Brace and Bellow are root and talent grants.
+  - Reward track (owner call for real replacements): the two
+    `FuryGainOnAttack` nodes and the Bellow and Bulwark unlocks are gone. The
+    node-kind rule forbids neighbours of one kind, so level 5 is MaxHealth 50,
+    level 19 Physical 5%, and levels 3 and 20 are cosmetic Titles ("Recruit",
+    "Stalwart").
+  - NOT DONE / open: art (planted shield with cracked and broken states,
+    Shieldwall, the Fortified badge icon, which draws its FRT code until it
+    lands); HUD badges for Silence and Disarm; the Hold the Line figure (+15 to
+    both defences) and Shield Bash's flat 20 are first values; the taunt
+    weight (counted three times) is a first value and only matters for enemy
+    abilities that reach past the front rank.
+  - Bot pass (mean depth, seed 1, `-GrantTalent`; capped share in brackets;
+    RandomLegal / GreedyAggressive / GreedyDefensive / Lookahead2 /
+    ProtectTheFront, 100 runs per cell, depth cap 40, flat Fury gains 0 in
+    every row):
+
+    | Build | RandomLegal | GreedyAggressive | GreedyDefensive | Lookahead2 | ProtectTheFront |
+    |---|---|---|---|---|---|
+    | No path | 8.6 (0%) | 20.3 (4%) | 21.9 (4%) | 29.7 (43%) | 21.2 (4%) |
+    | Sentinel root | 8.2 (0%) | 21.5 (3%) | 18.1 (4%) | 30.7 (47%) | 21.8 (5%) |
+    | Sentinel whole path | 11.9 (1%) | 30.3 (26%) | 28.7 (19%) | 34.4 (65%) | 28.4 (19%) |
+    | Einherjar root | 10.2 (0%) | 24.6 (11%) | 25.1 (7%) | 33.2 (60%) | 24.7 (8%) |
+    | Einherjar whole path | 12.4 (0%) | 28.3 (12%) | 31.5 (23%) | 37.8 (85%) | 28.4 (17%) |
+    | Juggernaut root | 15.0 (0%) | 34.6 (38%) | 35.0 (37%) | 38.6 (87%) | 36.0 (41%) |
+    | Juggernaut whole path | 36.8 (7%) | 40.0 (89%) | 40.0 (97%) | 40.0 (99%) | 40.0 (94%) |
+
+    At cap 100 (60 runs, GreedyAggressive / GreedyDefensive / ProtectTheFront):
+    Sentinel root 21.6 / 20.2 / 23.3, whole path 36.5 / 31.6 / 33.7; by bottom
+    branch on top of the root, Iron Retort 24.1 / 21.6 / 26.1, Hold the Line
+    19.9 / 20.2 / 22.1, Bellow 26.1 / 21.2 / 23.6.
+  - Reading it: the Sentinel root alone is within noise of no path (a per-hit
+    engine pays Fury only for damage taken, and the flat gains it replaces were
+    the same income), and the whole path lands level with the Einherjar and far
+    below the Juggernaut (40.0 at cap 40, 89-99% capped). **OPEN OWNER FORK:
+    the three paths are not comparable**; no number was changed, as the brief
+    says. Hold the Line adds nothing measurable alone (the bot casts it on 2-3%
+    of turns, on a 40 Fury price and a 2-turn window); Bellow is the strongest
+    bottom branch but the bot Bellows on about 30% of its turns once T3 pays
+    Fury, which is a habit of the valuation and not a balance reading.
+  - **The flat gains going to 0 costs a Bjorn with no path his income**: he now
+    earns no Fury at all (the two `FuryStartOfFight` track nodes at levels 15
+    and 26 are his only source). The plan chose this ("With no root chosen,
+    Bjorn earns no Fury"), and no path moves from 24.0 / 20.4 / 24.4 (Slice B's
+    baseline with flat gains) to 20.3 / 21.9 / 21.2 for GreedyAggressive /
+    GreedyDefensive / ProtectTheFront (Lookahead2 33.9 to 29.7): lower for the
+    two archetypes that lean on Slam's Fury tiers, level for the third. It only matters until the mandatory
+    root pick is enforced on the Talents screen, which is not built.
 
 `talents.json` (63 rows total across the three slices) and `skills.json`;
 remove the placeholder kit rows that the trees replace, and the
