@@ -55,6 +55,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // measurement rather than by eye: the design's empty sky sits at luma
         // 6.4 and this brings the nebula to 6.9, where it stops competing with
         // an ember and starts being the dark the ember is bright against.
+        //
+        // The default for a plot with no painting of its own; a plot that has
+        // one carries its own tint (TalentBackdrops).
         private const string BackgroundTint = "#3E3A58";
 
         // One orb per slot per path. Declared rather than pooled: the skeleton
@@ -69,6 +72,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public UiNode Root;
 
         public NodeRef Sky;
+        public NodeRef Background;
         public NodeRef EmberCount;
         public NodeRef PrevPathButton;
         public NodeRef NextPathButton;
@@ -218,6 +222,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Coloured("#000000D9")
                 .AsDecor();
 
+            var background = Ui.Sprite("TalentBackground", BackgroundKey, Place.Stretch(), UiSize.Fill)
+                .Coloured(BackgroundTint)
+                .AsDecor();
+            screen.Background = background;
+
             var children = new List<UiNode>
             {
                 // TURNED DOWN TO A THIRD, and that is the single largest
@@ -229,9 +238,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // nothing to be brighter THAN, which is why the stones read as
                 // washed out no matter what is done to them. The painting is
                 // the room, not the subject.
-                Ui.Sprite("TalentBackground", BackgroundKey, Place.Stretch(), UiSize.Fill)
-                    .Coloured(BackgroundTint)
-                    .AsDecor(),
+                background,
             };
 
             children.AddRange(screen.BuildSkyLayers());

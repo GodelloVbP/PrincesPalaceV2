@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Domain.Talents;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
@@ -120,6 +121,50 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             foreach (int slot in new[] { 0, 10, 20 }) AssertOrb(talents, first, 0, slot);
             AssertEdge(talents, first, 0, 0, 1);
+        }
+
+        // THE BACKDROP FOLLOWS (character, path). Shawn's plots have no
+        // painting and keep the default nebula; each of Bjorn's three paths
+        // swaps in its own sprite and tint from TalentBackdrops.
+        [UnityTest]
+        public IEnumerator EachPlotShowsItsOwnBackdropAndAnUnpaintedPlotKeepsTheDefault()
+        {
+            yield return SceneManager.LoadSceneAsync("Talents", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            var nebula = talents.BackdropSpriteForTest;
+            var nebulaTint = talents.BackdropTintForTest;
+            Assert.IsNotNull(nebula, "fixture: the default nebula is baked");
+
+            Press(talents, "NextCharacterButton");
+            yield return null;
+
+            var seen = new System.Collections.Generic.HashSet<Sprite>();
+            for (int path = 0; path < TalentPage.PathCount; path++)
+            {
+                if (path > 0)
+                {
+                    Press(talents, "NextPathButton");
+                    yield return null;
+                }
+
+                var row = TalentBackdrops.For(ConstellationLayout.PlotId("bear", path));
+                Assert.IsNotNull(row, $"bear path {path} has no backdrop row");
+                Assert.AreNotSame(nebula, talents.BackdropSpriteForTest, $"bear path {path} still shows the default nebula");
+                Assert.AreEqual(System.IO.Path.GetFileName(row.SpriteKey), talents.BackdropSpriteForTest.name + ".png");
+                Assert.IsTrue(ColorUtility.TryParseHtmlString(row.TintHex, out var tint));
+                Assert.AreEqual(tint.r, talents.BackdropTintForTest.r, 0.002f, $"bear path {path} tint");
+                seen.Add(talents.BackdropSpriteForTest);
+            }
+
+            Assert.AreEqual(TalentPage.PathCount, seen.Count, "each path must show a different painting");
+
+            Press(talents, "PrevCharacterButton");
+            yield return null;
+            Assert.AreSame(nebula, talents.BackdropSpriteForTest, "Shawn's plot has no painting and must fall back to the nebula");
+            Assert.AreEqual(nebulaTint, talents.BackdropTintForTest);
         }
     }
 }

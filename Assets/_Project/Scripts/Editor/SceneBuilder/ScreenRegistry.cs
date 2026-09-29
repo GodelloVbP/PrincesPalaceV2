@@ -927,6 +927,25 @@ public static class ScreenRegistry
                 talents.orbReachableSprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbReachableKey);
                 talents.orbCostlySprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbCostlyKey);
 
+                // Each plot's own painting, from the TalentBackdrops table; the
+                // default nebula stays on the baked image for any plot without a
+                // row. A row whose art is missing is still written, with a null
+                // sprite, so the controller falls back to the default.
+                talents.background = result.Image(screen.Background);
+                var backdrops = new List<TalentController.Backdrop>();
+                foreach (var entry in TalentBackdrops.All)
+                {
+                    ColorUtility.TryParseHtmlString(entry.TintHex, out var tint);
+                    backdrops.Add(new TalentController.Backdrop
+                    {
+                        plotId = entry.PlotId,
+                        sprite = SceneBuilder.LoadSpriteByKey(entry.SpriteKey),
+                        tint = tint,
+                    });
+                }
+
+                talents.backdrops = backdrops.ToArray();
+
                 // Which stone each gated collar belongs to, and which stone each
                 // edge feeds. Plain int arrays, so no NodeRef and no binder:
                 // the collar arrays it does fill are SHORTER than the orb

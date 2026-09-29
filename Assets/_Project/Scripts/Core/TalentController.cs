@@ -22,6 +22,21 @@ namespace PrincesPalace
     public partial class TalentController : MonoBehaviour, INavTabStrip, INavSectionStrip
     {
         [SerializeField] internal RectTransform sky;
+
+        // The sky's painting. The scene bakes the default nebula and its tint;
+        // each entry of `backdrops` is one plot's own painting (TalentBackdrops
+        // is the data), swapped in by ApplyBackdrop. A plot with no entry, or an
+        // entry whose sprite failed to load, keeps the default.
+        [SerializeField] internal Image background;
+        [SerializeField] internal Backdrop[] backdrops;
+
+        [System.Serializable]
+        internal struct Backdrop
+        {
+            public string plotId;
+            public Sprite sprite;
+            public Color tint;
+        }
         [SerializeField] internal Button[] orbs;
 
         [SerializeField] internal GameObject[] edges;
@@ -203,6 +218,7 @@ namespace PrincesPalace
         private void Relayout()
         {
             string id = Current?.definitionId;
+            ApplyBackdrop();
             int slots = TalentScreen.OrbCount;
 
             for (int path = 0; path < TalentPage.PathCount; path++)
@@ -252,6 +268,49 @@ namespace PrincesPalace
                 if (spark != null) spark.SetLength(segment.Length);
             }
         }
+
+        // THE BACKDROP FOLLOWS THE PAGE. Which painting shows is a function of
+        // (character, path) through the plot id, so it is re-derived on every
+        // path step and character step rather than tracked.
+        private Sprite _defaultBackdrop;
+        private Color _defaultBackdropTint;
+        private bool _backdropCaptured;
+
+        private void ApplyBackdrop()
+        {
+            if (background == null) return;
+
+            if (!_backdropCaptured)
+            {
+                _defaultBackdrop = background.sprite;
+                _defaultBackdropTint = background.color;
+                _backdropCaptured = true;
+            }
+
+            string plot = ConstellationLayout.PlotId(Current?.definitionId, _path);
+            var sprite = _defaultBackdrop;
+            var tint = _defaultBackdropTint;
+
+            if (backdrops != null)
+            {
+                for (int i = 0; i < backdrops.Length; i++)
+                {
+                    if (backdrops[i].plotId != plot || backdrops[i].sprite == null) continue;
+
+                    sprite = backdrops[i].sprite;
+                    tint = backdrops[i].tint;
+                    break;
+                }
+            }
+
+            background.sprite = sprite;
+            background.color = tint;
+        }
+
+        // Test seams for the sky's painting; InternalsVisibleTo names the
+        // Editor assembly only.
+        public Sprite BackdropSpriteForTest => background != null ? background.sprite : null;
+        public Color BackdropTintForTest => background != null ? background.color : Color.clear;
 
         private static Vector2 StarAt(string characterId, int path, int slot) => new Vector2(
             ConstellationLayout.TreeOriginX + ConstellationLayout.StarX(characterId, path, slot),
@@ -321,6 +380,7 @@ namespace PrincesPalace
             _slideFrom = _path;
             _path = next;
             _slideElapsed = 0f;
+            ApplyBackdrop();
             _sliding = true;
 
             _selectedSlot = -1;
