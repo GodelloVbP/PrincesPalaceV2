@@ -416,13 +416,7 @@ namespace PrincesPalace
             if (_kindlingSlot >= 0)
             {
                 int kindledIndex = TalentScreen.OrbIndex(_kindlingPath, _kindlingSlot);
-                if (kindledIndex >= 0 && kindledIndex < orbs.Length && orbs[kindledIndex] != null)
-                {
-                    var rect = orbs[kindledIndex].transform as RectTransform;
-                    if (rect != null) rect.localScale = Vector3.one;
-                }
-
-                if (Has(orbGlows, kindledIndex)) orbGlows[kindledIndex].rectTransform.localScale = Vector3.one;
+                SettleStone(kindledIndex);
 
                 _kindlingSlot = -1;
                 _kindlingPath = -1;

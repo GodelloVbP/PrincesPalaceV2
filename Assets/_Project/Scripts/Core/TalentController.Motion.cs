@@ -43,23 +43,25 @@ namespace PrincesPalace
         private float _pushFrom;
         private float _pushTo;
 
-        // A second kindle re-points the beat, so the stone it stops owning
-        // would keep whatever scale its last frame wrote (up to 1.18 mid-catch)
-        // and nothing else ever writes that rect. Settled here, before the
-        // beat moves on.
+        // A stone the beat no longer owns goes back to its resting scale, and
+        // so does its glow. Nothing else writes an orb's rect scale, so a
+        // stone left at its last mid-catch size (up to 1.18) would stay there.
+        private void SettleStone(int index)
+        {
+            if (index >= 0 && index < orbs.Length && orbs[index] != null)
+            {
+                var rect = orbs[index].transform as RectTransform;
+                if (rect != null) rect.localScale = Vector3.one;
+            }
+
+            if (Has(orbGlows, index)) orbGlows[index].rectTransform.localScale = Vector3.one;
+        }
+
+        // A second kindle re-points the beat, so the stone it stops owning is
+        // settled here, before the beat moves on.
         private void BeginKindling(int path, int slot)
         {
-            if (_kindlingSlot >= 0)
-            {
-                int outgoing = TalentScreen.OrbIndex(_kindlingPath, _kindlingSlot);
-                if (outgoing >= 0 && outgoing < orbs.Length && orbs[outgoing] != null)
-                {
-                    var rect = orbs[outgoing].transform as RectTransform;
-                    if (rect != null) rect.localScale = Vector3.one;
-                }
-
-                if (Has(orbGlows, outgoing)) orbGlows[outgoing].rectTransform.localScale = Vector3.one;
-            }
+            if (_kindlingSlot >= 0) SettleStone(TalentScreen.OrbIndex(_kindlingPath, _kindlingSlot));
 
             _kindlingPath = path;
             _kindlingSlot = slot;
@@ -311,17 +313,8 @@ namespace PrincesPalace
                 // explicitly rather than left at whatever the last frame
                 // produced: CatchScale returns exactly 1 at its end, but a beat
                 // interrupted by a respec never reaches its end.
-                if (index >= 0 && index < orbs.Length && orbs[index] != null)
-                {
-                    var rect = orbs[index].transform as RectTransform;
-                    if (rect != null) rect.localScale = Vector3.one;
-                }
-
-                if (Has(orbGlows, index))
-                {
-                    orbGlows[index].rectTransform.localScale = Vector3.one;
-                    orbGlows[index].color = GlowTaken;
-                }
+                SettleStone(index);
+                if (Has(orbGlows, index)) orbGlows[index].color = GlowTaken;
 
                 if (Has(orbRings, index)) orbRings[index].color = RingOff;
 
