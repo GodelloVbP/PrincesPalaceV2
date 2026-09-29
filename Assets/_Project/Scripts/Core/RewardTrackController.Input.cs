@@ -287,22 +287,11 @@ namespace PrincesPalace
             // watermark is still a single integer: a claim starts where the
             // last one stopped, so there is no hole to store.
             //
-            // The max-health nodes are the reason this also has to go through
-            // ScaleCarriedHealth below: collecting one moves a character's
-            // maximum, and a run that is carrying their current health has to
-            // be told, or the bar grows a permanently empty tail.
-            //
-            // THE READ ORDER IS WHAT MAKES THIS WORK: EffectiveStats sums
-            // the track's MaxHealth entries at levels <= claimedTrackLevel,
-            // so `maxBefore` is a photograph taken BEFORE the claim moves
-            // the watermark on the next line, and `EffectiveStats` inside
-            // ScaleCarriedHealth is one taken after. Reading maxBefore any
-            // later silently makes the scale a no-op.
-            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
-
-            if (!character.ClaimTrackRewards(RewardTracks.For(character), throughLevel)) return;
-
-            RunEncounter.ScaleCarriedHealth(character, maxBefore);
+            // The max-health nodes are why the claim goes through
+            // RewardTracks.Claim: collecting one moves a character's maximum,
+            // and a run that is carrying their current health has to be told,
+            // or the bar grows a permanently empty tail.
+            if (!RewardTracks.Claim(Context, character, throughLevel)) return;
 
             SaveSlotManager.SaveCurrent();
 

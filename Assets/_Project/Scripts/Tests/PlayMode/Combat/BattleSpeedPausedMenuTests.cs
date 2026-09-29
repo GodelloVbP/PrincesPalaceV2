@@ -27,7 +27,7 @@ namespace PrincesPalace.PlayModeTests
     // OptionsController.Step writing through GameSettings -- so this drives
     // all three for real, in the Fight scene the game actually opens the
     // menu in (ScreenRegistry.cs:126 wires a real SystemMenuController there,
-    // lockedForFight: true).
+    // MenuContext.Fight).
     //
     // THE STRUCTURAL ASSERTION, not a re-derived wall-clock prediction:
     // proving "the interrupted beat's impact lands when its ORIGINAL pace

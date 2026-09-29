@@ -171,9 +171,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef AttributesCloseButton;
         public NodeRef AttributesUnspentPoints;
 
-        // Shown only while a run is in progress -- the same refund lock
-        // CharacterDossierController.Refund already enforces
-        // (lockedForFight || InDescent). Inactive otherwise.
+        // Shown wherever a refund is refused -- the same lock
+        // CharacterDossierController.Refund enforces (MenuPermissions
+        // RefundAttribute). Inactive at camp.
         public NodeRef AttributesLockNote;
 
         // One row per ability score. AttributeRowSteps is the row itself --

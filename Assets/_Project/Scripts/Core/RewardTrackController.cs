@@ -24,6 +24,12 @@ namespace PrincesPalace
     // visible, countable and clickable rather than a single flat state.
     public partial class RewardTrackController : MonoBehaviour
     {
+        // The menu this track opens from. Its context decides whether a claim
+        // is allowed (MenuPermissions); a track with no menu reads as camp.
+        [SerializeField] internal SystemMenuController menu;
+
+        private MenuContext Context => menu != null ? menu.Context : MenuContext.Camp;
+
         [SerializeField] internal RectTransform viewport;
         [SerializeField] internal RectTransform content;
         [SerializeField] internal RectTransform railFill;

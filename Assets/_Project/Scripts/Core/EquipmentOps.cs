@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -28,6 +29,11 @@ namespace PrincesPalace
     // write, and honestly so: the sheet saves immediately because gear lost to
     // a crash between an equip and a save is unforgivable, TakeOffer saves
     // once after the whole take, and the bot's equip pass saves once per pass.
+    // EVERY CALLER NAMES ITS MenuContext, and a context that MenuPermissions
+    // refuses gets false with nothing changed, so a fight cannot change gear by
+    // any route, not only through the sheet's own buttons. The bot passes
+    // Descent.
+    //
     // Folding SaveCurrent in here would make two of them write more often than
     // they mean to -- and a save write was 91% of a bot batch's wall clock
     // before BotRunDriver.InMemorySaves existed.
@@ -41,6 +47,7 @@ namespace PrincesPalace
         // hands over only an id looks for the plain, unrolled stack and
         // silently fails to find a rolled one or a caravan lot.
         public static bool Equip(
+            MenuContext context,
             SaveData save,
             Character character,
             ItemInstance instance,
@@ -48,6 +55,7 @@ namespace PrincesPalace
             bool isEquippable,
             EquipmentSlot? preferredSlot = null)
         {
+            if (!MenuPermissions.Allows(MenuAction.EquipGear, context)) return false;
             if (save == null || character?.equipment == null) return false;
 
             // MEASURED BEFORE THE SWAP, because the swap is what moves it.
@@ -67,6 +75,7 @@ namespace PrincesPalace
 
         // The positional form, for an ordinary copy.
         public static bool Equip(
+            MenuContext context,
             SaveData save,
             Character character,
             string itemId,
@@ -77,7 +86,7 @@ namespace PrincesPalace
             int riftTier = 0,
             EquipmentSlot? preferredSlot = null)
         {
-            return Equip(save, character, new ItemInstance(itemId, plus, modifierIds, riftTier),
+            return Equip(context, save, character, new ItemInstance(itemId, plus, modifierIds, riftTier),
                 itemSlot, isEquippable, preferredSlot);
         }
 
@@ -87,8 +96,9 @@ namespace PrincesPalace
         // Scales carried health BOTH WAYS, and that symmetry is the point:
         // scaling only on the way in would make an equip/unequip cycle a
         // healing exploit.
-        public static bool Unequip(SaveData save, Character character, EquipmentSlot slot)
+        public static bool Unequip(MenuContext context, SaveData save, Character character, EquipmentSlot slot)
         {
+            if (!MenuPermissions.Allows(MenuAction.UnequipGear, context)) return false;
             if (save == null || character?.equipment == null) return false;
 
             int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;

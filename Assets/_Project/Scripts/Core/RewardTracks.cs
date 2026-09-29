@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Progression;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -52,6 +53,28 @@ namespace PrincesPalace
 
         public static RewardTrackDefinition For(Character character) =>
             For(character?.definitionId);
+
+        // Collects `character`'s track rewards up to `throughLevel`, refusing
+        // through MenuPermissions before it touches anything. False when the
+        // context may not collect, or when there is nothing new to collect.
+        //
+        // The Core half Character.ClaimTrackRewards cannot own (Data cannot
+        // reach ContentDatabase): a max-health node moves the maximum the run
+        // carries current health against, so the maximum is read BEFORE the
+        // watermark moves and the carried health rescaled after. Does not
+        // persist; the caller writes the save once its own repaint is ready.
+        public static bool Claim(MenuContext context, Character character, int throughLevel)
+        {
+            if (character == null) return false;
+            if (!MenuPermissions.Allows(MenuAction.CollectReward, context)) return false;
+
+            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+
+            if (!character.ClaimTrackRewards(For(character), throughLevel)) return false;
+
+            RunEncounter.ScaleCarriedHealth(character, maxBefore);
+            return true;
+        }
 
         // Drops the cache so the next lookup rebuilds from Resources.
         public static void Reset() => Cache.Clear();

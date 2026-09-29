@@ -160,9 +160,9 @@ namespace PrincesPalace.PlayModeTests
         // health a point through AbilityDerivation, so the maximum moves by 20
         // and the run keeps holding the old absolute.
         //
-        // AND IT IS REACHABLE MID-DESCENT ON PURPOSE. Spend guards on
-        // lockedForFight only, while Refund beside it also guards on
-        // InDescent -- the asymmetry is deliberate (a placed point is a
+        // AND IT IS REACHABLE MID-DESCENT ON PURPOSE. MenuPermissions lets
+        // SpendAttribute through in a descent while RefundAttribute is
+        // camp-only -- the asymmetry is deliberate (a placed point is a
         // decision you may make in the field, taking one back is not), which
         // is what makes this a live bug rather than an unreachable one.
         //

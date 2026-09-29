@@ -33,28 +33,24 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text embersValue;
         [SerializeField] internal Button closeButton;
 
-        // Whether THIS SCENE is part of a descent. Set at build time: false in
-        // the hub, true on the map and in a fight.
+        // Which part of the game this scene is (MenuContext). Set at build time
+        // by ScreenRegistry.WireSystemMenu, and every pane reads it here rather
+        // than keeping a flag of its own; MenuPermissions turns it into what a
+        // control may change.
         //
-        // Not RunManager.HasRun, which was the first answer and the wrong one.
-        // A run exists from the moment the relic draft is rolled, and that
-        // draft is offered IN THE HUB and deliberately survives leaving and
-        // coming back -- RelicDraftTests pins that. So HasRun is true while the
-        // player is standing in the hub with no descent under way, and Floor
-        // map and Run statistics appeared on a screen with no floor and no run
-        // to describe.
+        // Not RunManager.HasRun. A run exists from the moment the relic draft
+        // is rolled, and that draft is offered IN THE HUB and deliberately
+        // survives leaving and coming back -- RelicDraftTests pins that. So
+        // HasRun is true while the player stands in the hub with no descent
+        // under way, and the run tabs appeared on a screen with no floor and no
+        // run to describe. Which scene you are in cannot be got wrong at
+        // runtime.
         //
-        // Which scene you are in cannot be got wrong at runtime, and the hub is
-        // never part of a descent by construction.
-        //
-        // The observation above is now also a model: RunSnapshot's
-        // DescentIsUnderWay (forwarded as RunManager.DescentIsUnderWay) is what
-        // EndRun asks before it strips gear, because it read hasRun and stripped
-        // a roster over a draft that never left the hub. This field is NOT that
-        // question and does not become it -- on the map at the entry node this
-        // scene is part of a descent while nothing has moved yet, so
-        // DescentIsUnderWay is still false and these two tabs must still show.
-        [SerializeField] internal bool inDescent;
+        // Nor is it RunManager.DescentIsUnderWay, the question EndRun asks
+        // before it strips gear: on the map at the entry node this scene is part
+        // of a descent while nothing has moved yet, so DescentIsUnderWay is
+        // still false and the run tabs must still show.
+        [SerializeField] internal MenuContext context;
 
         private bool _wired;
         private int _selected;
@@ -88,11 +84,11 @@ namespace PrincesPalace
 
         public int SelectedIndex => _selected;
 
-        // Whether this scene is part of a descent, for the panes that need the
-        // same answer. Exposed rather than copied: the Main menu pane hides its
-        // abandon card between descents, and a second serialized bool over
-        // there would be one more thing that can disagree with the bar.
-        public bool InDescent => inDescent;
+        public MenuContext Context => context;
+
+        // Whether this scene is part of a descent (the map and a fight): the
+        // tab set and the Exit pane's abandon card key on it.
+        public bool InDescent => context != MenuContext.Camp;
 
         // The tabs on show, as indices into SystemMenuTabs.All. Exposed because
         // "which tabs does this context have" is the single most testable claim
@@ -102,7 +98,7 @@ namespace PrincesPalace
         private void Start()
         {
             Wire();
-            if (!_chosen) Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inDescent)));
+            if (!_chosen) Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(InDescent)));
         }
 
         private void Wire()
@@ -468,7 +464,7 @@ namespace PrincesPalace
         // bar without the scene being rebuilt.
         public void ApplyContext()
         {
-            bool inRun = inDescent;
+            bool inRun = InDescent;
             _visible = new List<int>(SystemMenuTabs.VisibleIndices(inRun));
 
             var defs = SystemMenuTabs.Visible(inRun);

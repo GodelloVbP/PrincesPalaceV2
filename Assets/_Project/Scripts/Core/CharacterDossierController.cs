@@ -82,34 +82,23 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] skillNames;
         [SerializeField] internal TMP_Text[] skillDescriptions;
 
-        // The fight's copy is readable and inert; every other copy is live.
-        //
-        // Decided at BUILD time rather than sniffed at runtime, which is the
-        // arrangement CharacterOverlayController already used for exactly this
-        // -- gear is locked for the duration of a battle, and the sheet the
-        // fight shows must not be able to change the fight it is describing.
-        // Putting C and I on this menu made that invariant this screen's
-        // problem: before, those keys reached a panel that had already been
-        // wired inert.
-        [SerializeField] internal bool lockedForFight;
-
-        // Public because the serialized field is internal and the PlayMode test
-        // assembly cannot see internals. Same name the overlay exposed, so the
-        // test that pins "the fight's copy is inert" reads unchanged.
-        public bool EquipLocked => lockedForFight;
-
         // The menu this dossier lives in -- same shape as ExitsController.menu,
-        // and for the same reason: a second serialized bool here would be one
-        // more thing that can disagree with the menu's own state. Set by
+        // and for the same reason: a second flag here would be one more thing
+        // that can disagree with the menu's own state. Set by
         // ScreenRegistry.WireSystemMenu, not part of WireDossier's signature,
         // because it is not carried by WireDossier's own parameters.
         //
-        // Gates the dossier's refund minus: only the hub copy of this screen
-        // (InDescent false) shows it, so a build revised mid-run can only be
-        // reconsidered between descents, never undone inside one.
+        // Its context is what every change below asks MenuPermissions about:
+        // the fight's copy reads everything and changes nothing, and only the
+        // hub's copy shows the refund minus, so a build revised mid-run can
+        // only be reconsidered between descents, never undone inside one.
         [SerializeField] internal SystemMenuController menu;
 
-        public bool InDescent => menu != null && menu.InDescent;
+        // A dossier with no menu reads as camp; the build refuses a null
+        // reference (UiWiringSweep), so that is a fixture's case only.
+        public MenuContext Context => menu != null ? menu.Context : MenuContext.Camp;
+
+        private bool Allows(MenuAction action) => MenuPermissions.Allows(action, Context);
 
         [SerializeField] internal Button[] slotCells;
         [SerializeField] internal Image[] slotIcons;
@@ -291,23 +280,26 @@ namespace PrincesPalace
             if (nextCharacterButton != null) nextCharacterButton.onClick.AddListener(() => Step(1));
             if (packRow != null) packRow.onClick.AddListener(TogglePack);
 
-            // Wired ABOVE the lockedForFight guard, so the track opens from the
-            // fight's copy of the dossier too. It changes nothing -- it is a
-            // list of what levelling gives -- and a player checking what is
-            // coming mid-battle is exactly when they would want to.
+            // Opening the track is viewing: it is a list of what levelling
+            // gives, and a player checking what is coming mid-battle is exactly
+            // when they would want to. Claiming from it asks MenuPermissions.
             if (trackRow != null) trackRow.onClick.AddListener(ShowTrack);
             if (packCloseButton != null) packCloseButton.onClick.AddListener(() => ShowPack(false));
 
             if (spellsRow != null) spellsRow.onClick.AddListener(ToggleSpells);
             if (spellsCloseButton != null) spellsCloseButton.onClick.AddListener(() => ShowSpells(false));
 
-            // Wired ABOVE the lockedForFight guard too, same reasoning as
-            // trackRow/spellsRow just above: this pane names what the
-            // character can already do, nothing it opens edits the fight
-            // it would be describing.
+            // Viewing too, same reasoning as trackRow/spellsRow just above:
+            // this pane names what the character can already do.
             if (skillsRow != null) skillsRow.onClick.AddListener(ToggleSkills);
             if (skillsCloseButton != null) skillsCloseButton.onClick.AddListener(() => ShowSkills(false));
 
+            // EVERY HANDLER IS ATTACHED IN EVERY CONTEXT. The ones that change
+            // something ask MenuPermissions when pressed (Spend, Refund,
+            // EquipFromPack, UnequipSlot, PressSlot), so the fight's copy
+            // refuses through the same table as everything else instead of
+            // by having no listener, and the ones that only look (selecting a
+            // book, sorting or scrolling the pack) work everywhere.
             if (spellSlots != null)
             {
                 for (int i = 0; i < spellSlots.Length; i++)
@@ -338,35 +330,24 @@ namespace PrincesPalace
             AttachHovers(unassignedRows, OnUnassignedHover);
 
             // Opening/closing the attributes panel is VIEWING, same as the
-            // hovers just above -- wired above the lockedForFight guard
-            // below so the fight's own locked copy can still show what a
-            // score does, even though spending or refunding a point inside
-            // it (wired below the guard, with the rest of Pack/Spells/
-            // Skills' own row+panel pairs) stays barred.
+            // hovers just above: the fight's copy can still show what a score
+            // does, even though spending or refunding a point inside it is
+            // refused.
             if (attributesRow != null) attributesRow.onClick.AddListener(() => ShowAttributes(true));
             if (attributesCloseButton != null) attributesCloseButton.onClick.AddListener(() => ShowAttributes(false));
 
-            // Wired above the lockedForFight guard, same reasoning as
-            // AttachHovers just above it -- the fight's own locked copy of
-            // this sheet still takes Move/Submit (equipping is what is
-            // barred, not looking), so it should still show where the stick
-            // is standing. The arrow Core/FocusMarker.cs draws needs nothing
+            // The fight's copy still takes Move/Submit (changing gear is what
+            // is refused, not looking), so it shows where the stick is
+            // standing. The arrow Core/FocusMarker.cs draws needs nothing
             // from this screen; the SelectIndex components that back the
             // tooltip are created by AttachHovers/TooltipFocusRouter.Register
             // a few lines above.
 
             // Clicking equips; clicking a worn slot takes it off. A screen that
             // could only put gear ON would be a trap, so both gestures exist.
-            //
-            // Not attached at all in a fight, rather than attached and refused:
-            // a button that visibly does nothing invites the player to press it
-            // again, and there is nowhere on this screen to explain why.
-            if (lockedForFight) return;
 
             // The "+" per score, which is what Character.Invest's own comment
-            // describes. Below the lockedForFight guard for the same reason the equip
-            // handlers are: a stat point spent mid-battle would change the
-            // fight the sheet is describing.
+            // describes.
             //
             // Indexed by CELL, not by AbilityScore. The grid is re-ordered per
             // character so the build reads highest-first, so which score a cell
@@ -385,9 +366,8 @@ namespace PrincesPalace
                 }
             }
 
-            // THE "-" PER SCORE, beside the plus for the same reasons: below
-            // the lockedForFight guard, indexed by cell and resolved through
-            // _cellOrder at click time.
+            // THE "-" PER SCORE, beside the plus: indexed by cell and resolved
+            // through _cellOrder at click time.
             if (attributeMinuses != null)
             {
                 for (int i = 0; i < attributeMinuses.Length; i++)
@@ -1312,9 +1292,13 @@ namespace PrincesPalace
             bool slotOccupied = run?.learnedSpells != null
                 && run.learnedSpells.Exists(e => e != null && e.characterId == character.definitionId && e.slot == slot);
 
+            // Refused here as well as inside the operations, so a refused
+            // press changes nothing and repaints nothing.
+            if (!Allows(slotOccupied ? MenuAction.ReplaceBook : MenuAction.PlaceBook)) return;
+
             var result = slotOccupied
-                ? RunOrchestrator.ReplaceSpell(character.definitionId, skillId, slot)
-                : RunOrchestrator.LearnSpell(character.definitionId, skillId, slot);
+                ? RunOrchestrator.ReplaceSpell(Context, character.definitionId, skillId, slot)
+                : RunOrchestrator.LearnSpell(Context, character.definitionId, skillId, slot);
 
             // The full result is read, not just `.Applied`, so AlreadyKnown
             // -- the moment the player finds out they picked a duplicate --
@@ -1573,20 +1557,18 @@ namespace PrincesPalace
         private void PaintAttributesPanel(Character character)
         {
             int points = character?.unspentStatPoints ?? 0;
-            bool canSpend = points > 0 && !lockedForFight;
+            bool canSpend = points > 0 && Allows(MenuAction.SpendAttribute);
 
             if (attributesUnspentPoints != null)
             {
                 attributesUnspentPoints.SetContent(UnspentPointsLabel(points, canSpend));
             }
 
-            // THE SAME LOCK Refund ENFORCES (lockedForFight || InDescent),
+            // THE SAME LOCK Refund ENFORCES (MenuPermissions.RefundAttribute),
             // stated in the panel rather than left for a quiet minus button
             // to imply -- see DossierAttributesLocked's own comment.
-            bool locked = lockedForFight || InDescent;
-            if (attributesLockNote != null) attributesLockNote.SetActive(locked);
-
-            bool canRefundAny = !lockedForFight && !InDescent;
+            bool canRefundAny = Allows(MenuAction.RefundAttribute);
+            if (attributesLockNote != null) attributesLockNote.SetActive(!canRefundAny);
 
             for (int i = 0; i < SheetStats.Abilities.Length; i++)
             {
@@ -2137,15 +2119,15 @@ namespace PrincesPalace
         // the run holding the old figure against a maximum that had just
         // risen, growing the permanently-empty tail RunEncounter.
         // ScaleCarriedHealth's header describes. This is reachable on purpose:
-        // Spend guards on lockedForFight alone, while Refund below also guards
-        // on InDescent. TalentOps.Invest is the Core half that wraps the
+        // MenuPermissions lets Spend through in a descent and Refund below only
+        // at camp. TalentOps.Invest is the Core half that wraps the
         // measure/rescale pair, the same one Kindle and Respec ride.
         private void Spend(int index)
         {
-            if (lockedForFight) return;
+            if (!Allows(MenuAction.SpendAttribute)) return;
             if (!TryResolveCell(index, out var character, out var score)) return;
 
-            if (!TalentOps.Invest(character, score)) return;
+            if (!TalentOps.Invest(Context, character, score)) return;
 
             // Written immediately. A placed point is permanent until a respec,
             // so losing one to a crash costs the player a level's reward.
@@ -2161,10 +2143,10 @@ namespace PrincesPalace
         // clicked -- Spend guards inside the method for the same reason.
         private void Refund(int index)
         {
-            if (lockedForFight || InDescent) return;
+            if (!Allows(MenuAction.RefundAttribute)) return;
             if (!TryResolveCell(index, out var character, out var score)) return;
 
-            if (!TalentOps.Refund(character, score)) return;
+            if (!TalentOps.Refund(Context, character, score)) return;
 
             SaveSlotManager.SaveCurrent();
             Refresh();
@@ -2231,7 +2213,7 @@ namespace PrincesPalace
         private void PaintStatSpending(Character character)
         {
             int points = character?.unspentStatPoints ?? 0;
-            bool canSpend = points > 0 && !lockedForFight;
+            bool canSpend = points > 0 && Allows(MenuAction.SpendAttribute);
 
             if (unspentPoints != null)
             {
@@ -2259,7 +2241,7 @@ namespace PrincesPalace
             // so the button and the model can never disagree about it.
             if (attributeMinuses == null) return;
 
-            bool canRefund = !lockedForFight && !InDescent;
+            bool canRefund = Allows(MenuAction.RefundAttribute);
             for (int i = 0; i < attributeMinuses.Length; i++)
             {
                 if (attributeMinuses[i] == null) continue;
@@ -2523,6 +2505,8 @@ namespace PrincesPalace
 
         private void EquipFromPack(int index)
         {
+            if (!Allows(MenuAction.EquipGear)) return;
+
             var squad = Squad();
             if (squad.Count == 0 || index >= _bag.Count) return;
 
@@ -2542,7 +2526,7 @@ namespace PrincesPalace
             // The "measure max health before the swap, rescale carried health
             // after it" pair lives inside EquipmentOps.Equip, shared across
             // every screen and the bot rather than duplicated per caller.
-            if (!EquipmentOps.Equip(save, character, item.Instance, item.Slot, item.IsEquippable))
+            if (!EquipmentOps.Equip(Context, save, character, item.Instance, item.Slot, item.IsEquippable))
             {
                 return;
             }
@@ -2564,6 +2548,8 @@ namespace PrincesPalace
 
         private void UnequipSlot(int index)
         {
+            if (!Allows(MenuAction.UnequipGear)) return;
+
             var squad = Squad();
             if (squad.Count == 0 || index >= EquipmentSlots.All.Length) return;
 
@@ -2573,7 +2559,7 @@ namespace PrincesPalace
 
             // Scales carried health both ways -- see EquipmentOps.Unequip's
             // own symmetry note.
-            if (!EquipmentOps.Unequip(save, character, EquipmentSlots.All[index]))
+            if (!EquipmentOps.Unequip(Context, save, character, EquipmentSlots.All[index]))
             {
                 return;
             }

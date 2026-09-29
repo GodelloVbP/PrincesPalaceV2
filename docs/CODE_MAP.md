@@ -62,6 +62,7 @@ screenshots all read it.
 | Events | `Core/Bot/RunOrchestrator.Event.cs`, `Domain/Events/`, `Core/RunEventContext.cs` | Authoring: `docs/EVENTS.md`. |
 | Shop stock/pricing | `Core/Bot/RunOrchestrator.Shop.cs`, `Domain/Rewards/ShopStock.cs`, `ShopPricing.cs` | |
 | Equip / talents / item preview | `Core/EquipmentOps.cs`, `Core/TalentOps.cs`, `Core/ItemDescription.cs` | One rule each, shared by screens and bot. |
+| Menu permissions (a fight is read-only) | `Domain/UiKit/MenuContext.cs`, `MenuAction.cs`, `MenuPermissions.cs`, `Domain/Party/PartyModes.cs` | One table (`docs/PLAN_SYSTEM_MENU.md` C3). Controls and the Core ops (`EquipmentOps`, `TalentOps`, `RunOrchestrator.Spells`, `RewardTracks.Claim`) both ask it. |
 | Progression | `Domain/Progression/`, `Core/RewardTracks.cs`, `Core/CharacterIdentity.cs`, `Core/Achievements.cs` | |
 | Content pipeline | `Assets/_Project/ContentData/*.json` → `Domain/Content/*EntryResolver.cs` → `Editor/ContentBuilder.cs` → `Core/Content/ContentDatabase.cs` | Field reference: `docs/CONTENT_SCHEMA.md` (`tools/content_schema.ps1`). |
 | Save | `Core/SaveSystem.cs`, `Data/SaveData.cs`, `Core/SaveSlotManager.cs` | Versioned `Migrate()` + additive `Reconcile()`. |

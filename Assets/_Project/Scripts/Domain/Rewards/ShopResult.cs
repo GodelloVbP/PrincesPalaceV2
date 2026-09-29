@@ -45,6 +45,10 @@ namespace PrincesPalace.Domain.Rewards
 
         // The test-only refusal seam fired. Never reachable in a build.
         Injected,
+
+        // A spell-book operation the menu context does not allow
+        // (MenuPermissions). Nothing was touched.
+        NotPermitted,
     }
 
     public enum ShopOutcome

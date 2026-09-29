@@ -9,6 +9,7 @@ using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Relics;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -802,8 +803,9 @@ namespace PrincesPalace
                 //
                 // EquipmentOps.Equip carries the "measure max health first,
                 // rescale carried health after" pair; TakeOffer still owns
-                // the SaveCurrent below it.
-                if (!EquipmentOps.Equip(save, character, offer.Instance, itemDef.equipSlot,
+                // the SaveCurrent below it. Taking an offer is a descent act,
+                // not a menu press, so it names Descent whatever scene it runs in.
+                if (!EquipmentOps.Equip(MenuContext.Descent, save, character, offer.Instance, itemDef.equipSlot,
                                         itemDef.IsEquippable))
                 {
                     return;

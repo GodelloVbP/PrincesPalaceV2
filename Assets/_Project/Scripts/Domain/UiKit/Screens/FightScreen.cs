@@ -470,8 +470,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The character sheet, reachable mid-fight.
             //
-            // Readable, never editable: ScreenRegistry sets lockedForFight on
-            // this copy, so a player can check what they are wearing against
+            // Readable, never editable: ScreenRegistry gives this copy the
+            // Fight menu context, so a player can check what they are wearing against
             // what is hitting them without being able to re-plate between
             // swings. Declared BEFORE the reckoning and the defeat screen, so
             // an end-of-fight modal still draws over it.

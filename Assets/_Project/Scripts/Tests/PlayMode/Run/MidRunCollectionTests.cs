@@ -24,10 +24,13 @@ namespace PrincesPalace.PlayModeTests
     //
     // What this drives: a real run, a real room, the real verbs until the
     // enemy is down, the real settlement (FightBootstrap.OnFightEnded is
-    // what pays the experience at all), the real system menu opened inside
-    // the Fight scene, the real node pressed, and then a second real room --
-    // none of that chain is reachable by asserting against a session built
-    // by hand.
+    // what pays the experience at all), the real system menu opened on the
+    // Map, the real node pressed, and then a second real room -- none of
+    // that chain is reachable by asserting against a session built by hand.
+    //
+    // THE MAP, NOT THE FIGHT SCENE. Collecting is refused in a fight
+    // (MenuPermissions CollectReward: a fight is read-only), so a level earned
+    // in the fight is collected on the way to the next room.
     //
     // THE ONE DIAL IS EXPERIENCE, NOT LEVEL. FightSettlementTests steers its
     // outcomes by levelling a squad to 90, and that is exactly what this test
@@ -115,6 +118,7 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.DoesNotContain(kitBefore.Skills.Select(s => s.Id), Woolgathering,
                 "fixture: Woolgathering was already in the opening kit");
 
+            var sessionOne = fight.Session;
             yield return PlayToTheEnd(fight);
             Assert.IsTrue(fight.Session.PlayerWon,
                 "Shawn lost the room, so no experience was paid and this test is pinning nothing");
@@ -130,10 +134,10 @@ namespace PrincesPalace.PlayModeTests
             // after it -- which is the half of §6 a player has to be told
             // about, and the reason the card says "from your next fight".
             CollectionAssert.DoesNotContain(
-                fight.Session.KitFor(shawnInFight).Skills.Select(s => s.Id), Woolgathering,
+                sessionOne.KitFor(shawnInFight).Skills.Select(s => s.Id), Woolgathering,
                 "the fight that paid for the level also handed over the skill");
 
-            // ---- collected, through the fight's own system menu -------------
+            // ---- collected, through the map's system menu -------------------
 
             yield return CollectLevelThreeThroughTheMenu();
 
@@ -146,7 +150,7 @@ namespace PrincesPalace.PlayModeTests
             // STILL NOT IN THIS FIGHT'S KIT, now for the interesting reason:
             // it has been collected and the kit is simply not rebuilt.
             CollectionAssert.DoesNotContain(
-                fight.Session.KitFor(shawnInFight).Skills.Select(s => s.Id), Woolgathering,
+                sessionOne.KitFor(shawnInFight).Skills.Select(s => s.Id), Woolgathering,
                 "collecting rebuilt the kit of a fight already in progress");
 
             // ---- fight two: the skill is ACTIVE ----------------------------
@@ -256,17 +260,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(settled, "the fight is over and FightEnded never fired");
         }
 
-        // ---- the menu, opened where the plan says it can be -------------------
+        // ---- the menu, opened where a claim is allowed --------------------------
         //
-        // §6: "collected (system menu, available in hub, map and fight)". The
-        // dossier's track row is wired ABOVE its own lockedForFight guard for
-        // exactly this -- see CharacterDossierController's own note -- so the
-        // path below is the one a player has inside a fight and not a back
-        // door around it.
+        // §6 says "collected (system menu, available in hub, map and fight)";
+        // the fight has since become read-only (MenuPermissions), so the map's
+        // copy is the one a player collects from between the two rooms.
         private IEnumerator CollectLevelThreeThroughTheMenu()
         {
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(menu, "the Fight scene has no SystemMenuController");
+            Assert.IsNotNull(menu, "the Map scene has no SystemMenuController");
 
             menu.Open();
             menu.Select(0);

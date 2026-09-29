@@ -6,6 +6,7 @@ using PrincesPalace.Domain.Bot;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -231,7 +232,7 @@ namespace PrincesPalace
                     // the wrong stack and fail to find the very entry that was
                     // just scored. An instance is a snapshot, so the entry
                     // leaving the bag underneath it cannot change it.
-                    if (!EquipmentOps.Equip(save, character, pick.Instance, item.equipSlot,
+                    if (!EquipmentOps.Equip(MenuContext.Descent, save, character, pick.Instance, item.equipSlot,
                                             item.IsEquippable, preferredSlot: slot))
                     {
                         continue;

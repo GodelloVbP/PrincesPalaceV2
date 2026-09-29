@@ -245,12 +245,15 @@ namespace PrincesPalace.PlayModeTests
             run.unassignedSpellBooks.Add(Book);
             SaveSlotManager.SaveCurrent();
 
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            // THE MAP, not the hub: books are placed during a descent only
+            // (MenuPermissions PlaceBook), so at camp the press is refused
+            // before the duplicate check this test is about.
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
             yield return null;
             yield return null;
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            Assert.IsNotNull(menu, "the map has no SystemMenuController");
             menu.Open();
             menu.Select(0);
             yield return null;
@@ -325,12 +328,15 @@ namespace PrincesPalace.PlayModeTests
             run.unassignedSpellBooks.Add(Book);
             SaveSlotManager.SaveCurrent();
 
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            // THE MAP, not the hub: at camp a slot press is refused outright
+            // (MenuPermissions PlaceBook), which would pass this test whether
+            // or not the stale selection survived.
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
             yield return null;
             yield return null;
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            Assert.IsNotNull(menu, "the map has no SystemMenuController");
             menu.Open();
             menu.Select(0);
             yield return null;

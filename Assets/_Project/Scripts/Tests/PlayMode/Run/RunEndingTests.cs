@@ -330,7 +330,7 @@ namespace PrincesPalace.PlayModeTests
         // question. RunOrchestrator.StartRun runs on the descent-gate PRESS,
         // in the hub, with the relic draft opening over the hub afterwards --
         // so between the press and the first room, hasRun is true and nothing
-        // has been walked. SystemMenuController's own `inDescent` comment says
+        // has been walked. SystemMenuController's own `context` comment says
         // this outright ("HasRun is true while the player is standing in the
         // hub with no descent under way") and had to carry a second flag for it.
         //

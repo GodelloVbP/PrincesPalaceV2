@@ -9,6 +9,7 @@ using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -1030,7 +1031,7 @@ namespace PrincesPalace
                 }
 
                 run.unassignedSpellBooks.Add(id);
-                var learned = RunOrchestrator.LearnSpell(learner.definitionId, id,
+                var learned = RunOrchestrator.LearnSpell(MenuContext.Descent, learner.definitionId, id,
                     RunOrchestrator.CanLearn(learner.definitionId));
                 if (!learned.Applied)
                 {
@@ -1309,7 +1310,7 @@ namespace PrincesPalace
 
                 if (choice.Assign)
                 {
-                    var result = RunOrchestrator.LearnSpell(choice.CharacterId, skillId, choice.Slot);
+                    var result = RunOrchestrator.LearnSpell(MenuContext.Descent, choice.CharacterId, skillId, choice.Slot);
                     assignmentTrace.Assigned = result.Applied;
                     assignmentTrace.CharacterId = choice.CharacterId;
                     assignmentTrace.Slot = choice.Slot;

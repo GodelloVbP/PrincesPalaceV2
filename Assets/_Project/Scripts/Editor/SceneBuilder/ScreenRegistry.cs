@@ -138,8 +138,7 @@ public static class ScreenRegistry
 
                 // Held, not discarded: the fight's Cancel at MenuDepth.Root
                 // opens this (FightController.OnBackPressed, AUDIT.md #155).
-                fight.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true,
-                    inDescent: true);
+                fight.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, MenuContext.Fight);
 
                 fight.submenuRowRects = screen.SubmenuRows.Select(result.Rect).ToArray();
 
@@ -643,8 +642,7 @@ public static class ScreenRegistry
                 // handler opens this (MapController.HandleSystemMenu). It
                 // opens on Start, not Cancel, so the map's Cancel is a no-op
                 // and this is the only way in.
-                map.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
-                    inDescent: true);
+                map.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, MenuContext.Descent);
 
                 // The painted room icons. Bound here rather than in the
                 // controller because "Assets/..." is an editor-only address and
@@ -1028,8 +1026,7 @@ public static class ScreenRegistry
         // The hub's own NavContext.Cancel now opens this directly (plan
         // section 3/4) instead of racing it against a separate Escape poll,
         // so HubController needs the controller in hand.
-        hub.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
-            inDescent: false);
+        hub.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, MenuContext.Camp);
     }
 
     // The overarching menu's wiring, shared by every scene that carries one.
@@ -1044,8 +1041,7 @@ public static class ScreenRegistry
     // roots. Each caller needs the controller in hand, which is why this
     // returns it.
     private static SystemMenuController WireSystemMenu(
-        UiEmitResult result, NodeRef host, SystemMenuScreen menu, bool lockedForFight,
-        bool inDescent)
+        UiEmitResult result, NodeRef host, SystemMenuScreen menu, MenuContext context)
     {
         var controller = result.Attach<SystemMenuController>(host);
         UiAutoBind.Bind(result, controller, menu);
@@ -1053,25 +1049,26 @@ public static class ScreenRegistry
         controller.panel = result.Go(menu.Root);
 
         // Decided here rather than sniffed at runtime: the hub is not a
-        // descent, and no state can make it one.
-        controller.inDescent = inDescent;
+        // descent, and no state can make it one. Every pane reads it back
+        // through the controller (menu.Context).
+        controller.context = context;
 
         CharacterDossierController dossierController = null;
         if (menu.Dossier != null)
         {
-            dossierController = WireDossier(result, menu.Dossier, lockedForFight);
+            dossierController = WireDossier(result, menu.Dossier);
 
             // Not on WireDossier's own signature: WireDossier does not carry
             // the SystemMenuController it would need, and WireSystemMenu has
             // `controller` in hand already. Same shape as ExitsController.menu
-            // below -- only the hub copy of the dossier (InDescent false)
-            // shows the refund minus.
+            // below -- the dossier asks the menu's context what it may change.
             dossierController.menu = controller;
         }
 
         if (menu.RewardTrack != null)
         {
             var trackController = WireRewardTrack(result, menu.RewardTrack);
+            trackController.menu = controller;
 
             // The dossier's door into it, and the typed handle ShowTrack()
             // calls ShowFor on. Bound here rather than in WireDossier because
@@ -1088,7 +1085,7 @@ public static class ScreenRegistry
         }
         if (menu.Options != null) WireOptions(result, menu.Options);
         if (menu.RunStats != null) WireRunStats(result, menu.RunStats);
-        if (menu.Party != null) WireParty(result, menu.Party, controller, lockedForFight);
+        if (menu.Party != null) WireParty(result, menu.Party, controller);
         if (menu.Exits != null) WireExits(result, menu.Exits, controller);
 
         return controller;
@@ -1096,11 +1093,10 @@ public static class ScreenRegistry
 
     // The Party pane, inside the system menu.
     //
-    // `menu` and `lockedForFight` are the two fields UiAutoBind cannot
-    // reach -- the same residual ExitsController.menu and CharacterDossier
-    // Controller.lockedForFight already carry, for the same reason: neither
-    // is a NodeRef, so nothing on PartyScreen has a same-named member for the
-    // binder to match against.
+    // `menu` is a field UiAutoBind cannot reach -- the same residual
+    // ExitsController.menu carries, for the same reason: it is not a NodeRef,
+    // so nothing on PartyScreen has a same-named member for the binder to
+    // match against.
     //
     // `seatBadgeTexts` is the one PARTY-SPECIFIC residual: PartyScreen.
     // BuildSeat parents a text label under each badge's OutlineBox but never
@@ -1108,13 +1104,12 @@ public static class ScreenRegistry
     // so it is reached here the same way ExitsController.exitLabels reaches
     // a button's own child label -- `searchChildren: true`.
     private static PartyController WireParty(
-        UiEmitResult result, PartyScreen party, SystemMenuController menu, bool lockedForFight)
+        UiEmitResult result, PartyScreen party, SystemMenuController menu)
     {
         var controller = result.Attach<PartyController>(party.Root);
         UiAutoBind.Bind(result, controller, party);
 
         controller.menu = menu;
-        controller.lockedForFight = lockedForFight;
         controller.seatBadgeTexts = party.SeatBadges.Select(badge => result.Tmp(badge, searchChildren: true)).ToArray();
 
         // The roster card's title row is a BUTTON, so UiAutoBind fills
@@ -1324,11 +1319,10 @@ public static class ScreenRegistry
     // ItemDefinition with an authored iconPath -- an item whose art is missing
     // disables its Image rather than painting a white quad.
     private static CharacterDossierController WireDossier(
-        UiEmitResult result, CharacterDossierScreen dossier, bool lockedForFight)
+        UiEmitResult result, CharacterDossierScreen dossier)
     {
         var controller = result.Attach<CharacterDossierController>(dossier.Root);
         UiAutoBind.Bind(result, controller, dossier);
-        controller.lockedForFight = lockedForFight;
 
         controller.packSortTabs = dossier.PackFilterTabs.Select(result.Button).ToArray();
 

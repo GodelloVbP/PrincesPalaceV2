@@ -69,7 +69,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsNotNull(sheet,
                 "the character sheet is not reachable during a fight -- it was never mounted in the scene");
-            Assert.IsTrue(sheet.EquipLocked,
+            Assert.IsFalse(MenuPermissions.Allows(MenuAction.EquipGear, sheet.Context),
                 "the fight's copy of the sheet is EDITABLE: gear could be swapped between swings");
         }
 
@@ -229,7 +229,7 @@ namespace PrincesPalace.PlayModeTests
             var sheet = Sheet();
 
             Assert.IsNotNull(sheet, "the hub lost its character sheet");
-            Assert.IsFalse(sheet.EquipLocked,
+            Assert.IsTrue(MenuPermissions.Allows(MenuAction.EquipGear, sheet.Context),
                 "the hub's sheet is locked -- equipment cannot be changed anywhere");
         }
     }

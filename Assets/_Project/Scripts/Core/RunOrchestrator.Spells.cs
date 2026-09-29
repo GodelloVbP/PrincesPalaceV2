@@ -3,6 +3,7 @@ using System.Linq;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -11,6 +12,12 @@ namespace PrincesPalace
     // purchase only ever appends to run.unassignedSpellBooks
     // (RunOrchestrator.Shop.cs's BuyBook); this file is what moves an entry
     // out of that pool and into a character's three slots.
+    //
+    // MENU PERMISSIONS COME FIRST. Every operation here takes the MenuContext
+    // of whoever asks and refuses through MenuPermissions before it looks at
+    // anything else, so a fight (or a camp, where no book exists) cannot change
+    // a book by any route, not only through the menu's own controls. The bot
+    // passes Descent.
     //
     // SAME THREE-PART SHAPE AS EVERY SHOP MUTATION (§2f): validate touching
     // nothing, apply unable to fail, persist exactly once. The duplicate
@@ -52,8 +59,8 @@ namespace PrincesPalace
         // caller is expected to have checked CanLearn first and to offer
         // ReplaceSpell instead when it returns -1, so NoFreeSlot reaching a
         // player is a caller bug, not a normal refusal.
-        public static ShopResult LearnSpell(string characterId, string skillId) =>
-            LearnSpell(characterId, skillId, CanLearn(characterId));
+        public static ShopResult LearnSpell(MenuContext context, string characterId, string skillId) =>
+            LearnSpell(context, characterId, skillId, CanLearn(characterId));
 
         // Same mutation, an EXPLICIT target slot instead of "the lowest
         // free one" -- for a caller whose UI shows fixed, numbered slots
@@ -62,9 +69,12 @@ namespace PrincesPalace
         // CanLearn's own tie-break happens to prefer. Refuses NoFreeSlot if
         // the named slot is already occupied -- that is what ReplaceSpell
         // is for.
-        public static ShopResult LearnSpell(string characterId, string skillId, int slot)
+        public static ShopResult LearnSpell(MenuContext context, string characterId, string skillId, int slot)
         {
             // 1. VALIDATE.
+            if (!MenuPermissions.Allows(MenuAction.PlaceBook, context))
+                return ShopResult.Refused(ShopRefusal.NotPermitted);
+
             var run = RunManager.Run;
             if (run == null) return ShopResult.Refused(ShopRefusal.NoShop);
             if (string.IsNullOrEmpty(characterId) || string.IsNullOrEmpty(skillId))
@@ -102,9 +112,12 @@ namespace PrincesPalace
         // rather than being destroyed: a full character never has to be
         // told what they are giving up forever, only which slot they are
         // handing this one instead.
-        public static ShopResult ReplaceSpell(string characterId, string skillId, int slot)
+        public static ShopResult ReplaceSpell(MenuContext context, string characterId, string skillId, int slot)
         {
             // 1. VALIDATE.
+            if (!MenuPermissions.Allows(MenuAction.ReplaceBook, context))
+                return ShopResult.Refused(ShopRefusal.NotPermitted);
+
             var run = RunManager.Run;
             if (run == null) return ShopResult.Refused(ShopRefusal.NoShop);
             if (string.IsNullOrEmpty(characterId) || string.IsNullOrEmpty(skillId))
@@ -149,6 +162,36 @@ namespace PrincesPalace
             run.unassignedSpellBooks.Remove(skillId);
             existing.skillId = skillId;
             run.unassignedSpellBooks.Add(displaced);
+
+            // 3. PERSIST.
+            return Persisted(0);
+        }
+
+        // Takes the book out of `characterId`'s `slot` and returns it to
+        // run.unassignedSpellBooks, so nothing is destroyed. Refuses BadIndex
+        // for a slot that holds nothing.
+        public static ShopResult UnlearnSpell(MenuContext context, string characterId, int slot)
+        {
+            // 1. VALIDATE.
+            if (!MenuPermissions.Allows(MenuAction.RemoveBook, context))
+                return ShopResult.Refused(ShopRefusal.NotPermitted);
+
+            var run = RunManager.Run;
+            if (run == null) return ShopResult.Refused(ShopRefusal.NoShop);
+            if (string.IsNullOrEmpty(characterId)) return ShopResult.Refused(ShopRefusal.BadIndex);
+            if (slot < 0 || slot >= SpellBooks.MaxSpellSlots) return ShopResult.Refused(ShopRefusal.BadIndex);
+
+            run.learnedSpells ??= new List<LearnedSpellEntry>();
+            var existing = run.learnedSpells
+                .FirstOrDefault(e => e != null && e.characterId == characterId && e.slot == slot);
+            if (existing == null) return ShopResult.Refused(ShopRefusal.BadIndex);
+
+            if (Refused()) return ShopResult.Refused(ShopRefusal.Injected);
+
+            // 2. APPLY.
+            run.unassignedSpellBooks ??= new List<string>();
+            run.learnedSpells.Remove(existing);
+            run.unassignedSpellBooks.Add(existing.skillId);
 
             // 3. PERSIST.
             return Persisted(0);

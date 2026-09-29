@@ -902,8 +902,8 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DossierAttributesTitle =
             UiString.Define("dossier.attributes_title", "ATTRIBUTES");
 
-        // The same lock CharacterDossierController.Refund already enforces
-        // (lockedForFight || InDescent) -- named here because the compact
+        // The same lock CharacterDossierController.Refund enforces
+        // (MenuPermissions RefundAttribute) -- named here because the compact
         // grid's own minus buttons only ever went quiet with no explanation,
         // and a panel with the room to say why should say why.
         public static readonly UiString DossierAttributesLocked =
@@ -1439,6 +1439,16 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("party.toast.reposition_only_during_run", "Mid-run you can only reposition.");
         public static readonly UiString PartyToastPartyNeverEmpty =
             UiString.Define("party.toast.party_never_empty", "The party can never be empty.");
+
+        // ---- why the menu refused a change (MenuPermissions) ------------------------
+        public static readonly UiString MenuLockedInFight =
+            UiString.Define("menu.refused.fight", "Locked during a fight");
+        public static readonly UiString MenuRefundAtCamp =
+            UiString.Define("menu.refused.refund", "Refunds at camp");
+        public static readonly UiString MenuPartyAtCamp =
+            UiString.Define("menu.refused.party", "Party changes happen at camp");
+        public static readonly UiString MenuBooksInDescent =
+            UiString.Define("menu.refused.books", "Spell books are placed during a descent");
 
         // Every entry declared above, derived rather than restated.
         //

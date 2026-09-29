@@ -8,6 +8,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -18,8 +19,8 @@ namespace PrincesPalace.PlayModeTests
     // them. A build revised mid-run would be a free undo on every fight
     // decision the run has made so far, so the map and fight copies must both
     // refuse it, for the two different reasons each already refuses equip
-    // changes: the map is mid-run (inDescent), the fight is mid-battle
-    // (lockedForFight).
+    // changes: the map is mid-run (MenuContext.Descent), the fight is
+    // mid-battle (MenuContext.Fight).
     public class DossierRefundTests
     {
         private string _root;
@@ -135,7 +136,7 @@ namespace PrincesPalace.PlayModeTests
 
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
             Assert.IsNotNull(dossier, "the fight scene has no dossier controller");
-            Assert.IsTrue(dossier.EquipLocked, "fixture: the fight's copy should be locked");
+            Assert.AreEqual(MenuContext.Fight, dossier.Context, "fixture: the fight's copy should be locked");
 
             InvestOnePointInEveryScore(SquadFixture.FirstLiveMember());
 

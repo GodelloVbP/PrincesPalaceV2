@@ -101,18 +101,14 @@ namespace PrincesPalace
         [SerializeField] internal GameObject rosterDropZone;
 
         // The menu this pane lives in -- same shape as ExitsController.menu
-        // and CharacterDossierController.menu, and for the same reason: mode
-        // reads menu.InDescent rather than a second copy of the same fact.
-        // NOT RunManager.HasRun -- see SystemMenuController.inDescent's own
-        // comment for why that answers a different question (a run exists
-        // the moment the relic draft rolls, which happens IN THE HUB, so
-        // HasRun is true in the hub with no descent under way).
+        // and CharacterDossierController.menu, and for the same reason: the
+        // mode and every permission read menu.Context rather than a second
+        // copy of the same fact. NOT RunManager.HasRun -- see
+        // SystemMenuController.context's own comment for why that answers a
+        // different question.
         [SerializeField] internal SystemMenuController menu;
 
-        // The fight's copy is readable and inert, the same rule as the
-        // dossier's own lockedForFight -- decided at BUILD time
-        // (ScreenRegistry.WireParty), never sniffed at runtime.
-        [SerializeField] internal bool lockedForFight;
+        private MenuContext Context => menu != null ? menu.Context : MenuContext.Camp;
 
         // ---- the glow tokens ----------------------------------------------------
         //
@@ -353,9 +349,7 @@ namespace PrincesPalace
                 seats.Add(id);
             }
 
-            var mode = lockedForFight
-                ? PartyMode.ViewOnly
-                : (menu != null && menu.InDescent ? PartyMode.Run : PartyMode.Camp);
+            var mode = PartyModes.For(Context);
 
             // NO RUN-MODIFIER SYSTEM EXISTS to ask which seat, if any, is
             // locked for this run -- see PartyFormation's own header
@@ -1190,6 +1184,7 @@ namespace PrincesPalace
         // of which runs a save-on-exit hook (see Persist's own header).
         private void CycleTitle(int index)
         {
+            if (!MenuPermissions.Allows(MenuAction.CycleTitle, Context)) return;
             if (_rosterIds == null || index < 0 || index >= _rosterIds.Count) return;
 
             var character = CharacterFor(_rosterIds[index]);

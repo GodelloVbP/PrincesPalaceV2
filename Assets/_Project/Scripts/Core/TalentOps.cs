@@ -1,6 +1,7 @@
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.Talents;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -147,20 +148,26 @@ namespace PrincesPalace
         // that is EquipmentOps' own header, quoted in RescalingCarriedHealth
         // below.
         //
-        // Both directions, though only investing is reachable inside a descent
-        // (the dossier's Refund also guards on InDescent, its Spend does not):
-        // a refund lowers the maximum, and lowering a maximum without rescaling
-        // is the healing exploit's mirror image, which is exactly what the
-        // respec case was.
-        public static bool Invest(Character character, AbilityScore score)
+        // Both directions, though MenuPermissions lets a refund through only at
+        // camp: a refund lowers the maximum, and lowering a maximum without
+        // rescaling is the healing exploit's mirror image, which is exactly
+        // what the respec case was.
+        //
+        // Both take the caller's MenuContext and refuse through MenuPermissions
+        // before touching anything, so a fight cannot move a point by any route
+        // and a refund is a camp-only act however it is reached. The bot passes
+        // Descent.
+        public static bool Invest(MenuContext context, Character character, AbilityScore score)
         {
+            if (!MenuPermissions.Allows(MenuAction.SpendAttribute, context)) return false;
             if (character == null) return false;
 
             return RescalingCarriedHealth(character, () => character.Invest(score));
         }
 
-        public static bool Refund(Character character, AbilityScore score)
+        public static bool Refund(MenuContext context, Character character, AbilityScore score)
         {
+            if (!MenuPermissions.Allows(MenuAction.RefundAttribute, context)) return false;
             if (character == null) return false;
 
             return RescalingCarriedHealth(character, () => character.Refund(score));

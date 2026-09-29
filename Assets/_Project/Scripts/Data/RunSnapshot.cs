@@ -50,8 +50,8 @@ namespace PrincesPalace
         // and that draft is offered in the hub and deliberately survives
         // leaving and coming back (RelicDraftTests pins it). So `hasRun` is
         // true while the player is standing in the hub with nothing under way
-        // -- SystemMenuController's `inDescent` comment states exactly this,
-        // and had to carry a second flag because of it: a caller reading
+        // -- SystemMenuController's `context` comment states exactly this,
+        // and had to carry a scene-fixed context because of it: a caller reading
         // `hasRun` alone treats the two alike, so the hub's Main Menu button
         // on a drafted-but-unwalked run would strip every roster character's
         // gear and the whole stockpile and count a lifetimeRunsEnded.

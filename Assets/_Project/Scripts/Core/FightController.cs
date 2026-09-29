@@ -355,7 +355,7 @@ namespace PrincesPalace
         [SerializeField] internal Button continueButton;
 
         // The character sheet, mounted in this scene so it is reachable
-        // mid-fight. Wired with lockedForFight set, so it reads and never
+        // mid-fight. Wired with the Fight menu context, so it reads and never
         // edits.
         [SerializeField] internal GameObject characterSheetPanel;
 

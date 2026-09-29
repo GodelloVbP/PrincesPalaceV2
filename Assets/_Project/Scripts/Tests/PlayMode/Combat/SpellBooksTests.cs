@@ -13,6 +13,7 @@ using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -76,7 +77,7 @@ namespace PrincesPalace.PlayModeTests
             foreach (string id in ExpansionBookIds)
             {
                 GiveOneUnassignedCopy(id);
-                Assert.AreEqual(ShopOutcome.Refused, RunOrchestrator.LearnSpell("bear", id).Outcome, id);
+                Assert.AreEqual(ShopOutcome.Refused, RunOrchestrator.LearnSpell(MenuContext.Descent, "bear", id).Outcome, id);
                 CollectionAssert.DoesNotContain(
                     ContentDatabase.AvailableSkillsFor(new Character { definitionId = "bear", level = 99 })
                         .Select(skill => skill.id).ToList(), id, id);
@@ -92,7 +93,7 @@ namespace PrincesPalace.PlayModeTests
                 RunManager.Run.learnedSpells.Clear();
                 RunManager.Run.unassignedSpellBooks.Clear();
                 GiveOneUnassignedCopy(id);
-                Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(CharacterId, id).Outcome, id);
+                Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, id).Outcome, id);
                 Assert.IsTrue(SaveSlotManager.SaveCurrent(), id);
 
                 var loaded = SaveSystem.Load(0);
@@ -176,7 +177,7 @@ namespace PrincesPalace.PlayModeTests
                 "and it is per character -- Shawn's own first slot is still free");
 
             GiveOneUnassignedCopy();
-            var result = RunOrchestrator.LearnSpell("bear", SkillId);
+            var result = RunOrchestrator.LearnSpell(MenuContext.Descent, "bear", SkillId);
             Assert.AreEqual(ShopOutcome.Refused, result.Outcome);
             CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, SkillId,
                 "a refused learn must leave the book on the pile rather than consuming it");
@@ -361,7 +362,7 @@ namespace PrincesPalace.PlayModeTests
                 "a book-only skill must not be granted by levelling, even at max level");
 
             GiveOneUnassignedCopy();
-            RunOrchestrator.LearnSpell(CharacterId, SkillId);
+            RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, SkillId);
 
             var after = ContentDatabase.AvailableSkillsFor(character).Select(s => s.id).ToList();
             CollectionAssert.Contains(after, SkillId, "learning the book is what grants it");
@@ -399,7 +400,7 @@ namespace PrincesPalace.PlayModeTests
                 "nothing should grant a book before it is learned");
 
             GiveOneUnassignedCopy();
-            var result = RunOrchestrator.LearnSpell(OtherCharacterId, SkillId);
+            var result = RunOrchestrator.LearnSpell(MenuContext.Descent, OtherCharacterId, SkillId);
             Assert.AreEqual(ShopOutcome.Ok, result.Outcome,
                 "the shop already lets anyone buy this book; learning it must agree");
 
@@ -416,7 +417,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(4242UL);
 
             GiveOneUnassignedCopy();
-            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(OtherCharacterId, SkillId).Outcome);
+            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(MenuContext.Descent, OtherCharacterId, SkillId).Outcome);
 
             var shawn = new Character { definitionId = CharacterId, level = 9 };
 
@@ -437,7 +438,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(4242UL);
 
             GiveOneUnassignedCopy();
-            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(OtherCharacterId, SkillId).Outcome);
+            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(MenuContext.Descent, OtherCharacterId, SkillId).Outcome);
 
             var odette = new Character { definitionId = OtherCharacterId, level = 9 };
             var available = ContentDatabase.AvailableSkillsFor(odette);
@@ -493,7 +494,7 @@ namespace PrincesPalace.PlayModeTests
             // And it stays stock while only SOME of the squad know it -- the
             // pool only drops a book everyone fielded already has.
             GiveOneUnassignedCopy();
-            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(OtherCharacterId, SkillId).Outcome);
+            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(MenuContext.Descent, OtherCharacterId, SkillId).Outcome);
 
             CollectionAssert.Contains(
                 RunOrchestrator.ShopBookCandidatesForTest().Select(c => c.SkillId).ToList(), SkillId,
@@ -549,7 +550,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(4242UL);
             GiveOneUnassignedCopy();
 
-            var result = RunOrchestrator.LearnSpell(CharacterId, SkillId);
+            var result = RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, SkillId);
 
             Assert.IsTrue(result.Applied);
             var run = RunManager.Run;
@@ -567,8 +568,8 @@ namespace PrincesPalace.PlayModeTests
             GiveOneUnassignedCopy();
             GiveOneUnassignedCopy();
 
-            var first = RunOrchestrator.LearnSpell(CharacterId, SkillId);
-            var second = RunOrchestrator.LearnSpell("other", SkillId);
+            var first = RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, SkillId);
+            var second = RunOrchestrator.LearnSpell(MenuContext.Descent, "other", SkillId);
 
             Assert.IsTrue(first.Applied);
             Assert.IsTrue(second.Applied);
@@ -580,7 +581,7 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.StartRun(4242UL);
 
-            var result = RunOrchestrator.LearnSpell(CharacterId, SkillId);
+            var result = RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, SkillId);
 
             Assert.AreEqual(ShopOutcome.Refused, result.Outcome);
             Assert.AreEqual(ShopRefusal.NotOwned, result.Reason);
@@ -592,10 +593,10 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.StartRun(4242UL);
             GiveOneUnassignedCopy();
-            RunOrchestrator.LearnSpell(CharacterId, SkillId);
+            RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, SkillId);
 
             GiveOneUnassignedCopy();
-            var result = RunOrchestrator.LearnSpell(CharacterId, SkillId);
+            var result = RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, SkillId);
 
             Assert.AreEqual(ShopOutcome.Refused, result.Outcome);
             Assert.AreEqual(ShopRefusal.AlreadyKnown, result.Reason);
@@ -616,7 +617,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             GiveOneUnassignedCopy();
-            var result = RunOrchestrator.LearnSpell(CharacterId, SkillId);
+            var result = RunOrchestrator.LearnSpell(MenuContext.Descent, CharacterId, SkillId);
 
             Assert.AreEqual(ShopOutcome.Refused, result.Outcome);
             Assert.AreEqual(ShopRefusal.NoFreeSlot, result.Reason);
@@ -633,7 +634,7 @@ namespace PrincesPalace.PlayModeTests
                 new LearnedSpellEntry { characterId = CharacterId, skillId = "old_spell", slot = 1 });
             GiveOneUnassignedCopy();
 
-            var result = RunOrchestrator.ReplaceSpell(CharacterId, SkillId, 1);
+            var result = RunOrchestrator.ReplaceSpell(MenuContext.Descent, CharacterId, SkillId, 1);
 
             Assert.IsTrue(result.Applied);
             var run = RunManager.Run;
@@ -651,7 +652,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(4242UL);
             GiveOneUnassignedCopy();
 
-            var result = RunOrchestrator.ReplaceSpell(CharacterId, SkillId, 1);
+            var result = RunOrchestrator.ReplaceSpell(MenuContext.Descent, CharacterId, SkillId, 1);
 
             Assert.AreEqual(ShopOutcome.Refused, result.Outcome);
             Assert.AreEqual(ShopRefusal.BadIndex, result.Reason);
@@ -668,7 +669,7 @@ namespace PrincesPalace.PlayModeTests
             GiveOneUnassignedCopy();
 
             // Trying to replace slot 1 with a spell already sitting in slot 0.
-            var result = RunOrchestrator.ReplaceSpell(CharacterId, SkillId, 1);
+            var result = RunOrchestrator.ReplaceSpell(MenuContext.Descent, CharacterId, SkillId, 1);
 
             Assert.AreEqual(ShopOutcome.Refused, result.Outcome);
             Assert.AreEqual(ShopRefusal.AlreadyKnown, result.Reason);
