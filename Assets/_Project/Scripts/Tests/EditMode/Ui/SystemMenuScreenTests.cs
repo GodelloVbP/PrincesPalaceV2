@@ -13,9 +13,9 @@ namespace PrincesPalace.Domain.Tests
     // way, but that changing the tab table is a one-line change which cannot
     // silently break the layout.
     //
-    // THE THREE-TAB LAYOUT IS ONLY EVER CHECKED HERE. The scene on disk carries
+    // THE FOUR-TAB LAYOUT IS ONLY EVER CHECKED HERE. The scene on disk carries
     // the five-tab bar, because that is the set with the most parts and a scene
-    // is generated once; the three-tab layout is applied at runtime by
+    // is generated once; the four-tab layout is applied at runtime by
     // SystemMenuController. So UiAudit -- which re-solves what was emitted --
     // cannot see it, and these tests stand in for that: same overlap, inset and
     // flush-right checks, done against the arithmetic instead of the tree.
@@ -76,37 +76,50 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // The design stated the ORIGINAL three/five-tab numbers outright, so
-        // those were pinned as literals rather than recomputed. Party has no
-        // such design table for the bar itself -- adding a fourth out-of-run tab is what pushed this row
-        // out of Mode A (three tabs or fewer) into Mode B, a real behaviour
-        // change the arithmetic is built to absorb, not a bug. These literals
-        // are hand-derived from SystemMenuLayout's own published formula
-        // (MeasuredPadX/MeasuredRounding/GapFor) once, off to the side, the
-        // same role the design's table played before Party existed -- a
-        // caught regression, not a formula proving itself.
+        // Pinned as literals, hand-derived once from SystemMenuLayout's rules
+        // (measured mode: box = label + 2 * 24 rounded to 4, the gap shares out
+        // the rest of the 1520px row, flush right) over the authored label
+        // widths 121 / 63 / 164 / 88 / 43 for CHARACTER / PARTY / RUN STATISTICS /
+        // OPTIONS / EXIT.
+        //
+        // Camp: boxes 168 112 136 92 = 508, gap (1520 - 508) / 3 = 337.33.
         [Test]
         public void TheOutOfRunRowMatchesItsOwnArithmetic()
         {
             var lefts = SystemMenuLayout.TabLefts(OutOfRun);
             var widths = SystemMenuLayout.TabWidths(OutOfRun);
 
-            Assert.AreEqual(4, OutOfRun.Count,
-                "out of a run the menu should have four tabs now Party is always visible");
-            CollectionAssert.AreEqual(new[] { 320f, 116f, 140f, 168f }, widths);
-            AssertNearlyEqual(new[] { 40f, 618.6667f, 993.3333f, 1392f }, lefts);
+            Assert.AreEqual(4, OutOfRun.Count, "at camp the menu should have four tabs");
+            CollectionAssert.AreEqual(new[] { 168f, 112f, 136f, 92f }, widths);
+            AssertNearlyEqual(new[] { 40f, 545.3333f, 994.6667f, 1468f }, lefts);
+            Assert.AreEqual(337.3333f, SystemMenuLayout.GapFor(OutOfRun), 0.01f);
+
+            var dividers = new[] { -423.3333f, 26f, 499.3333f };
+            for (int i = 0; i < dividers.Length; i++)
+            {
+                Assert.AreEqual(dividers[i], SystemMenuLayout.DividerCentreX(OutOfRun, i), 0.01f,
+                    $"divider {i}");
+            }
         }
 
+        // Descent: boxes 168 112 212 136 92 = 720, gap (1520 - 720) / 4 = 200.
         [Test]
         public void TheInRunRowMatchesItsOwnArithmetic()
         {
             var lefts = SystemMenuLayout.TabLefts(InRun);
             var widths = SystemMenuLayout.TabWidths(InRun);
 
-            Assert.AreEqual(6, InRun.Count, "in a run the menu should have six tabs now Party is among them");
-            CollectionAssert.AreEqual(new[] { 320f, 116f, 168f, 216f, 140f, 168f }, widths);
-            AssertNearlyEqual(new[] { 40f, 438.4f, 632.8f, 879.2f, 1173.6f, 1392f }, lefts);
-            Assert.AreEqual(78.4f, SystemMenuLayout.GapFor(InRun), 0.01f);
+            Assert.AreEqual(5, InRun.Count, "in a descent the menu should have five tabs");
+            CollectionAssert.AreEqual(new[] { 168f, 112f, 212f, 136f, 92f }, widths);
+            AssertNearlyEqual(new[] { 40f, 408f, 720f, 1132f, 1468f }, lefts);
+            Assert.AreEqual(200f, SystemMenuLayout.GapFor(InRun), 0.01f);
+
+            var dividers = new[] { -492f, -180f, 232f, 568f };
+            for (int i = 0; i < dividers.Length; i++)
+            {
+                Assert.AreEqual(dividers[i], SystemMenuLayout.DividerCentreX(InRun, i), 0.01f,
+                    $"divider {i}");
+            }
         }
 
         private static void AssertNearlyEqual(float[] expected, IReadOnlyList<float> actual)
@@ -118,19 +131,20 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // The underline marks the WORD, not the box. In the three-tab mode the
-        // boxes are 420 wide and the words are not, so an underline sized to
-        // the box reads as a second divider.
+        // The underline marks the WORD, not the box. The boxes are wider than
+        // their words, so an underline sized to the box reads as a second
+        // divider. Label width + 24 for CHARACTER / PARTY / OPTIONS / EXIT.
         [Test]
         public void TheUnderlineIsTheLabelsWidthNotTheBoxs()
         {
             var tabs = OutOfRun;
             var widths = SystemMenuLayout.TabWidths(tabs);
+            var expected = new[] { 145f, 87f, 112f, 67f };
 
+            Assert.AreEqual(expected.Length, tabs.Count, "a tab was added without an expectation here");
             for (int i = 0; i < tabs.Count; i++)
             {
-                Assert.AreEqual(tabs[i].LabelWidth + SystemMenuLayout.UnderlineOverhang,
-                    SystemMenuLayout.UnderlineWidth(tabs[i]), 0.01f);
+                Assert.AreEqual(expected[i], SystemMenuLayout.UnderlineWidth(tabs[i]), 0.01f, tabs[i].Key);
                 Assert.Less(SystemMenuLayout.UnderlineWidth(tabs[i]), widths[i],
                     $"{tabs[i].Key}'s underline is as wide as its box");
             }
@@ -158,7 +172,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(SystemMenuTabs.Count, wordy.Count, "the count is unchanged");
             Assert.IsFalse(SystemMenuLayout.StripFits(wordy),
-                "six 448px boxes need 2808px in a 1520px row and the guard let them through");
+                "five 448px boxes need 2240px in a 1520px row and the guard let them through");
         }
 
         [Test]
@@ -170,7 +184,7 @@ namespace PrincesPalace.Domain.Tests
             }).ToList();
 
             Assert.IsTrue(SystemMenuLayout.StripFits(plusOne),
-                "a seventh tab no longer fits, so the bar is full at six");
+                "a sixth tab no longer fits, so the bar is full at five");
         }
 
         // ---- the tree matches the table ----------------------------------------
@@ -217,7 +231,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var screen = SystemMenuScreen.Build();
 
-            Assert.IsNotNull(screen.Dossier, "the Character & Inventory pane has no dossier in it");
+            Assert.IsNotNull(screen.Dossier, "the Character pane has no dossier in it");
             Assert.IsNotNull(screen.Dossier.Root);
         }
 
@@ -269,9 +283,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var out_ = OutOfRun.Select(t => t.Tab).ToList();
 
-            CollectionAssert.DoesNotContain(out_, SystemMenuTab.FloorMap);
             CollectionAssert.DoesNotContain(out_, SystemMenuTab.RunStats);
-            CollectionAssert.Contains(out_, SystemMenuTab.CharacterInventory);
+            CollectionAssert.Contains(out_, SystemMenuTab.Character);
         }
 
         // Relative order has to survive the filter, or the bar reshuffles as a
@@ -287,29 +300,12 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheDefaultTabSuitsTheContext()
+        public void TheDefaultTabIsCharacterInEveryContext()
         {
-            Assert.AreEqual(SystemMenuTab.CharacterInventory, SystemMenuTabs.DefaultFor(inRun: false),
-                "opened in the hub, the menu should land on the squad");
-
-            // The design's rule is that a player opening this mid-run is asking
-            // about the run, so Floor map is where it should land -- but only
-            // once that pane has something in it. Landing there today would
-            // open the menu on the words "CONTENT TO COME" every time, which
-            // reads as a broken screen rather than as an unfinished one.
-            //
-            // Written against Built rather than pinned to today's answer, so
-            // filling that pane makes the design's rule take effect and this
-            // test follow it, with no edit here. That is the whole reason the
-            // flag exists rather than a comment saying "change this later".
-            var floorMap = SystemMenuTabs.All[SystemMenuTabs.IndexOf(SystemMenuTab.FloorMap)];
-            var expected = floorMap.Built ? SystemMenuTab.FloorMap : SystemMenuTab.CharacterInventory;
-
-            Assert.AreEqual(expected, SystemMenuTabs.DefaultFor(inRun: true),
-                floorMap.Built
-                    ? "opened during a run, the menu should land on where the player is"
-                    : "Floor map is still a placeholder, so the mid-run default has to fall back "
-                      + "to the dossier rather than open on 'CONTENT TO COME'");
+            Assert.AreEqual(SystemMenuTab.Character, SystemMenuTabs.DefaultFor(inRun: false),
+                "opened at camp, the menu should land on the squad");
+            Assert.AreEqual(SystemMenuTab.Character, SystemMenuTabs.DefaultFor(inRun: true),
+                "opened in a descent, the menu should land on the squad");
         }
 
         // ---- no frame anywhere in the menu ---------------------------------------

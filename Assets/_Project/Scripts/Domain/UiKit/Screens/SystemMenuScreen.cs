@@ -11,17 +11,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // THE BAR IS BUILT IN MEASURED MODE and re-laid at runtime.
     //
     // That needs saying because it looks like a violation of this project's
-    // first rule. The tab SET is context-driven -- four tabs out of a run,
-    // six in one -- and the two sets use different layout rules, but a scene
-    // is generated once. So the build authors every tab at its five-tab
-    // position and SystemMenuController re-applies SystemMenuLayout for
-    // whichever set is showing. The arithmetic still lives in exactly one
-    // place; only the moment it runs moved.
+    // first rule. The tab SET is context-driven -- four tabs at camp, five in
+    // a descent -- and a scene is generated once. So the build authors every
+    // tab at its five-tab position and SystemMenuController re-applies
+    // SystemMenuLayout for whichever set is showing. The arithmetic still
+    // lives in exactly one place; only the moment it runs moved.
     //
-    // The cost is that UiAudit only ever sees the five-tab layout, since that
-    // is what is on disk. SystemMenuLayoutTests covers the three-tab one
-    // instead -- same overlap and flush-right checks, done against the numbers
-    // rather than against the emitted scene.
+    // UiAudit therefore only sees the five-tab layout, since that is what is
+    // on disk. SystemMenuScreenTests pins the four-tab one against the numbers
+    // instead: same overlap and flush-right checks, without an emitted scene.
     public sealed class SystemMenuScreen
     {
         // ---- the design pass's tokens ------------------------------------------
@@ -64,7 +62,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> TabUnderlines = new List<NodeRef>();
         public List<NodeRef> TabDividers = new List<NodeRef>();
         public List<NodeRef> Panes = new List<NodeRef>();
-        public List<NodeRef> PanePlaceholders = new List<NodeRef>();
 
         // partyRosterCardCount defaults to 3, matching how many characters
         // characters.json authors today -- a COMPATIBILITY default, not a
@@ -92,8 +89,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     $"The system menu's {tabs.Count} tabs need " +
                     $"{SystemMenuLayout.StripWidth(authored):F0}px at minimum padding but the bar row is " +
                     $"{SystemMenuLayout.RowWidth:F0}px. Shorten a label, widen the panel, or the bar needs " +
-                    "to wrap or scroll - it cannot simply be given another entry. The design's own fallback " +
-                    "is to shorten the first tab to CHARACTER before either of those.");
+                    "to wrap or scroll - it cannot simply be given another entry.");
             }
 
             var barChildren = new List<UiNode>();
@@ -135,14 +131,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 // TRACKED, and this is not decoration.
                 //
-                // SystemMenuTabDef.LabelWidth carries the design's measurement
-                // at 18px Chakra Petch with .14em letter-spacing, and the whole
-                // bar -- box widths, gaps, dividers, underline -- is arithmetic
-                // over those numbers. Drawn at the font's own spacing the same
-                // label is about a quarter narrower, so every box had 50px of
-                // air the design never put there and the underline overhung its
-                // own word by 40px a side. Measured: 215.5px drawn against 272
-                // authored, and 265.9 with this line.
+                // SystemMenuTabDef.LabelWidth is the label's width at 18px
+                // Chakra Petch with .14em letter-spacing, and the whole bar --
+                // box widths, gaps, dividers, underline -- is arithmetic over
+                // those numbers. Drawn at the font's own spacing a label is
+                // about a quarter narrower, so every box would carry air the
+                // layout never put there and the underline would overhang its
+                // own word.
                 var button = Ui.Button($"SystemTab{def.Key}", def.Label,
                         new UiVec(w, SystemMenuLayout.TabHeight), 18,
                         Place.At(x, 0f))
@@ -152,9 +147,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Quiet()
                     .Tracked(SystemMenuLayout.TabLabelTracking);
 
-                // WIDTH IS THE LABEL'S, not the box's. A rule as wide as a
-                // generous three-tab box reads as a second divider rather than
-                // as a marker for the word above it.
+                // WIDTH IS THE LABEL'S, not the box's. A rule as wide as the
+                // box reads as a second divider rather than as a marker for
+                // the word above it.
                 var underline = Ui.Solid($"SystemTab{def.Key}Underline", GoldLight,
                         new UiVec(SystemMenuLayout.UnderlineWidth(def.LabelWidth),
                                   SystemMenuLayout.UnderlineHeight),
@@ -206,75 +201,59 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 var def = owners[i];
 
-                var placeholder = Ui.Label($"SystemPane{def.Key}Placeholder",
-                        UiStrings.SystemPlaceholder, new UiVec(800f, 40f), 18, TextMuted,
-                        Place.At(0f, 0f))
-                    .AsDecor();
+                var contents = new List<UiNode>();
 
-                var contents = new List<UiNode> { placeholder };
+                // A tab with no branch here has no pane, and the build refuses
+                // it rather than shipping an empty box.
+                switch (def.Tab)
+                {
+                    case SystemMenuTab.Character:
+                        var dossier = CharacterDossierScreen.Build();
+                        screen.Dossier = dossier;
+                        contents.Add(dossier.Root);
 
-                // The panes with real content. FOUR OF FIVE now; only Floor map
-                // is still the placeholder, and it is the one that hosts an
-                // existing screen (Run Map) rather than declaring its own.
-                //
-                // Each hosted screen keeps its placeholder DECLARED but
-                // switched off, so a pane still has something to show if its
-                // screen is ever pulled -- and so the tab's Built flag has
-                // something to be checked against. SystemMenuPaneTests pins the
-                // two together: a tab claiming content it does not have would
-                // otherwise send DefaultFor onto the words CONTENT TO COME.
-                if (def.Tab == SystemMenuTab.CharacterInventory)
-                {
-                    var dossier = CharacterDossierScreen.Build();
-                    screen.Dossier = dossier;
-                    contents.Add(dossier.Root);
-                    placeholder.Inactive();
+                        // THE REWARD TRACK, over the dossier rather than
+                        // beside it as another tab: the dossier answers "what
+                        // am I now" and the track answers "what is coming",
+                        // and the door between them is one nav row.
+                        //
+                        // Same construction as the dossier's own pack panel,
+                        // which opens over column A from a nav row and closes
+                        // on its own button. LAST in the pane so it draws over
+                        // everything.
+                        var track = RewardTrackScreen.Build();
+                        screen.RewardTrack = track;
+                        contents.Add(track.Root);
+                        break;
 
-                    // THE REWARD TRACK, over the dossier rather than beside it
-                    // as a sixth tab.
-                    //
-                    // The tab bar's positions are AUTHORED design numbers,
-                    // pinned by SystemMenuScreenTests for exactly the three-tab
-                    // and five-tab rows -- a sixth would mean inventing a
-                    // layout somebody had specified. Over the dossier is also
-                    // where it belongs: the dossier answers "what am I now" and
-                    // the track answers "what is coming", and the door between
-                    // them is one nav row.
-                    //
-                    // Same construction as the dossier's own pack panel, which
-                    // opens over column A from a nav row and closes on its own
-                    // button. LAST in the pane so it draws over everything.
-                    var track = RewardTrackScreen.Build();
-                    screen.RewardTrack = track;
-                    contents.Add(track.Root);
-                }
-                else if (def.Tab == SystemMenuTab.Party)
-                {
-                    var party = PartyScreen.Build(new PartyInputs(partyRosterCardCount));
-                    screen.Party = party;
-                    contents.Add(party.Root);
-                    placeholder.Inactive();
-                }
-                else if (def.Tab == SystemMenuTab.Options)
-                {
-                    var options = OptionsScreen.Build();
-                    screen.Options = options;
-                    contents.Add(options.Root);
-                    placeholder.Inactive();
-                }
-                else if (def.Tab == SystemMenuTab.RunStats)
-                {
-                    var stats = RunStatsScreen.Build();
-                    screen.RunStats = stats;
-                    contents.Add(stats.Root);
-                    placeholder.Inactive();
-                }
-                else if (def.Tab == SystemMenuTab.MainMenu)
-                {
-                    var exits = ExitsScreen.Build();
-                    screen.Exits = exits;
-                    contents.Add(exits.Root);
-                    placeholder.Inactive();
+                    case SystemMenuTab.Party:
+                        var party = PartyScreen.Build(new PartyInputs(partyRosterCardCount));
+                        screen.Party = party;
+                        contents.Add(party.Root);
+                        break;
+
+                    case SystemMenuTab.Options:
+                        var options = OptionsScreen.Build();
+                        screen.Options = options;
+                        contents.Add(options.Root);
+                        break;
+
+                    case SystemMenuTab.RunStats:
+                        var stats = RunStatsScreen.Build();
+                        screen.RunStats = stats;
+                        contents.Add(stats.Root);
+                        break;
+
+                    case SystemMenuTab.Exit:
+                        var exits = ExitsScreen.Build();
+                        screen.Exits = exits;
+                        contents.Add(exits.Root);
+                        break;
+
+                    default:
+                        throw new System.InvalidOperationException(
+                            $"The system menu tab {def.Tab} has no pane. Add its screen to " +
+                            "SystemMenuScreen.Build before listing it in SystemMenuTabs.All.");
                 }
 
                 var pane = Ui.Panel($"SystemPane{def.Key}",
@@ -284,7 +263,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive();
 
                 screen.Panes.Add(pane);
-                screen.PanePlaceholders.Add(placeholder);
                 paneChildren.Add(pane);
             }
 

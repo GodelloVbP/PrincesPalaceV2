@@ -143,22 +143,6 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
-        // A menu that opens itself onto "CONTENT TO COME" reads as broken. The
-        // design wants Floor map during a run; that pane is a placeholder, so
-        // the default has to fall back until it is built.
-        [Test]
-        public void TheDefaultTabIsNeverAPlaceholder()
-        {
-            foreach (bool inRun in new[] { false, true })
-            {
-                var tab = SystemMenuTabs.DefaultFor(inRun);
-                var def = SystemMenuTabs.All[SystemMenuTabs.IndexOf(tab)];
-
-                Assert.IsTrue(def.Built,
-                    $"the menu opens on '{def.Key}' when inRun={inRun}, and that pane is still a placeholder");
-            }
-        }
-
         // The default also has to be a tab the context actually shows -- opening
         // onto a pane whose tab is hidden leaves no way back to it.
         [Test]
@@ -175,7 +159,7 @@ namespace PrincesPalace.PlayModeTests
 
         // Silent-wrong-answer guard: if IndexOf ever fell back to returning
         // 0 for anything it could not find, every miss would come back as
-        // Character & Inventory instead of throwing.
+        // the Character tab instead of throwing.
         [Test]
         public void EveryTabInTheEnumIsInTheTable()
         {
@@ -206,9 +190,9 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the context rule ---------------------------------------------------
         //
-        // The tab SET is decided at runtime, and the three-tab layout exists
+        // The tab SET is decided at runtime, and the four-tab layout exists
         // ONLY at runtime -- the scene on disk carries the five-tab bar. So
-        // nothing in the build can catch a three-tab bar that lays out wrong,
+        // nothing in the build can catch a four-tab bar that lays out wrong,
         // and these are the only things standing between that and a player.
 
         [UnityTest]
@@ -223,26 +207,24 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(
                 new[]
                 {
-                    SystemMenuTabs.IndexOf(SystemMenuTab.CharacterInventory),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Character),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Party),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Options),
-                    SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Exit),
                 },
                 _menu.VisibleTabs.ToArray(),
-                "out of a run the bar should carry exactly the four tabs that have something to show " +
-                "(Party joined this set - it is meaningful at camp)");
+                "at camp the bar should carry exactly the four tabs that have something to show");
         }
 
         [UnityTest]
-        public IEnumerator InADescentTheBarGainsTheTwoRunTabs()
+        public IEnumerator InADescentTheBarGainsTheRunTab()
         {
             // ON THE MAP, not in the hub with hasRun poked true: a run
             // exists from the moment the relic draft is rolled, and that
             // draft is offered in the HUB and deliberately survives leaving
             // and coming back -- so "a run exists" is true while the player
-            // stands in the hub with no descent under way, and Floor map
-            // and Run statistics would show up on a screen with no floor to
-            // name.
+            // stands in the hub with no descent under way, and Run statistics
+            // would show up on a screen with no floor to name.
             //
             // The tab set is a property of the scene, so this asks the
             // scene.
@@ -256,14 +238,24 @@ namespace PrincesPalace.PlayModeTests
             menu.Open();
             yield return null;
 
-            Assert.AreEqual(SystemMenuTabs.Count, menu.VisibleTabs.Count,
-                "in a descent every tab should be present");
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Character),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Party),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.RunStats),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Options),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Exit),
+                },
+                menu.VisibleTabs.ToArray(),
+                "in a descent the bar should carry all five tabs, Run statistics between Party and Options");
+            Assert.AreEqual(5, menu.VisibleTabs.Count);
         }
 
         // The other half, and the one the author actually reported: standing in
-        // the hub there is no floor and no descent, so those two tabs have
-        // nothing to describe and must not be there -- even mid-run, which is a
-        // state the hub can genuinely be in.
+        // the hub there is no floor and no descent, so the Run statistics tab
+        // has nothing to describe and must not be there -- even mid-run, which
+        // is a state the hub can genuinely be in.
         [UnityTest]
         public IEnumerator TheHubNeverShowsTheDescentTabs()
         {
@@ -278,11 +270,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(4, _menu.VisibleTabs.Count,
                 "the hub showed the descent tabs; it has no descent to describe");
 
-            foreach (var absent in new[] { SystemMenuTab.FloorMap, SystemMenuTab.RunStats })
-            {
-                CollectionAssert.DoesNotContain(_menu.VisibleTabs.ToList(),
-                    SystemMenuTabs.IndexOf(absent), $"{absent} is showing in the hub");
-            }
+            CollectionAssert.DoesNotContain(_menu.VisibleTabs.ToList(),
+                SystemMenuTabs.IndexOf(SystemMenuTab.RunStats), "Run statistics is showing in the hub");
         }
 
         // The tabs that are not in this context must be SWITCHED OFF, not merely

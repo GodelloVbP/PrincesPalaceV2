@@ -30,12 +30,10 @@ namespace PrincesPalace.Domain.UiKit
         // LETTER-SPACING, in hundredths of an em, and it is part of the layout
         // rather than of the styling.
         //
-        // Every SystemMenuTabDef.LabelWidth was measured at 18px Chakra Petch
-        // with .14em tracking, and the entire bar is arithmetic over those
-        // numbers. Draw the labels at the font's own spacing and they come out
-        // about a quarter narrower than the boxes built for them -- measured,
-        // "CHARACTER & INVENTORY" is 215.5px untracked against the 272 this
-        // table claims, and 265.9 with the tracking on. So the two belong
+        // Every SystemMenuTabDef.LabelWidth is the width of its label at 18px
+        // Chakra Petch with .14em tracking, and the entire bar is arithmetic
+        // over those numbers. Drawn at the font's own spacing a label comes out
+        // about a quarter narrower than the box built for it, so the two belong
         // together: change this and the widths are lies.
         //
         // SystemMenuLabelWidthTests holds them to each other.
@@ -85,13 +83,11 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the two modes ------------------------------------------------------
         //
-        // ONE COMPONENT, TWO RULES, and the split is forced rather than chosen.
-        //
-        // Merging Character and Inventory produced a label no uniform box could
-        // hold, and the in-run set is five tabs, which no uniform width fits --
-        // five boxes wide enough for "CHARACTER & INVENTORY" need 2100px in a
-        // 1520px row. So a small set gets even, generous boxes, and a large set
-        // sizes each box to its own label and shares out what is left.
+        // ONE COMPONENT, TWO RULES. A small set gets even, generous boxes, and
+        // a large set sizes each box to its own label and shares out what is
+        // left, because no uniform width fits labels as different in length as
+        // EXIT and RUN STATISTICS. Both real sets (four and five tabs) use
+        // the measured rule.
         //
         // The threshold is a count, not a measurement, because the design
         // states it as one: three or fewer is Mode A.

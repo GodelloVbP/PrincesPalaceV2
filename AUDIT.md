@@ -2444,9 +2444,10 @@ content changes may need -BuildContent too.
 
 ### 234. Placeholder text reaches players
 
-Three strings ship as live UI copy: "CONTENT TO COME"
-(`Domain/UiKit/UiStrings.cs:1230`), "PORTRAIT PENDING" (`UiStrings.cs:740`),
-"Art pending" (`UiStrings.cs:1428`). House style is graceful degradation on
+Two strings ship as live UI copy: "PORTRAIT PENDING" (`UiStrings.ShopKeeperPending`
+in `Domain/UiKit/UiStrings.cs`) and "Art pending" (`party.card.tag_art_pending`).
+"CONTENT TO COME" is gone: the System Menu's placeholder panes were deleted
+with the FloorMap tab (System Menu plan 0b). House style is graceful degradation on
 missing content (CLAUDE.md) — the element should hide, not announce its own
 absence. (The stale "(... not built yet.)" room messages are being fixed
 separately on this branch, per the brief — not duplicated here.)

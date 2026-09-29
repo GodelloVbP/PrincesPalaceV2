@@ -239,7 +239,7 @@ namespace PrincesPalace.PlayModeTests
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub has no SystemMenuController");
             menu.Open();
-            menu.Select(SystemMenuTab.CharacterInventory);
+            menu.Select(SystemMenuTab.Character);
             yield return null;
 
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);

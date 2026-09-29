@@ -6,7 +6,7 @@ using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The system menu's two new content panes: Run statistics and Main menu.
+    // The system menu's Run statistics and Exit panes.
     //
     // UiAudit re-solves whatever the scene build emits, so overlap, overflow
     // and duplicate names in these trees are already covered at build time and
@@ -39,8 +39,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(width, RunStatsLayout.PaneWidth, 0.001f, "Run statistics is not the pane's width");
             Assert.AreEqual(height, RunStatsLayout.PaneHeight, 0.001f, "Run statistics is not the pane's height");
 
-            Assert.AreEqual(width, ExitsLayout.PaneWidth, 0.001f, "the Main menu pane is not the pane's width");
-            Assert.AreEqual(height, ExitsLayout.PaneHeight, 0.001f, "the Main menu pane is not the pane's height");
+            Assert.AreEqual(width, ExitsLayout.PaneWidth, 0.001f, "the Exit pane is not the pane's width");
+            Assert.AreEqual(height, ExitsLayout.PaneHeight, 0.001f, "the Exit pane is not the pane's height");
 
             Assert.AreEqual(width, PartyLayout.PaneWidth, 0.001f, "Party is not the pane's width");
             Assert.AreEqual(height, PartyLayout.PaneHeight, 0.001f, "Party is not the pane's height");
@@ -243,7 +243,7 @@ namespace PrincesPalace.Domain.Tests
         // The Options pane's container theme/ratio and content inset are
         // covered by KitContainerPlacementTests, not repeated here.
 
-        // ---- the Main menu pane --------------------------------------------------
+        // ---- the Exit pane --------------------------------------------------
 
         // The Exits pane's container theme/ratio and content inset are
         // covered by KitContainerPlacementTests, not repeated here.
@@ -252,7 +252,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheExitsStackStaysInsideThePane()
         {
             Assert.IsTrue(ExitsLayout.StackFits,
-                $"the Main menu pane reaches y {ExitsLayout.StackBottom:F0} against a floor of " +
+                $"the Exit pane reaches y {ExitsLayout.StackBottom:F0} against a floor of " +
                 $"{ExitsLayout.ContentBottom:F0}");
         }
 
@@ -320,7 +320,7 @@ namespace PrincesPalace.Domain.Tests
             var screen = ExitsScreen.Build();
 
             Assert.AreEqual(ExitsLayout.ExitCount, screen.ExitButtons.Count,
-                "the Main menu pane does not declare the exits its layout is measured for");
+                "the Exit pane does not declare the exits its layout is measured for");
             Assert.AreEqual(screen.ExitButtons.Count, screen.ExitHovers.Count,
                 "an exit has a button and no hover plate, or the other way round");
 
@@ -350,51 +350,34 @@ namespace PrincesPalace.Domain.Tests
                 "the separator outlives the card it separates from");
         }
 
-        // ---- the Built flag has to mean something ---------------------------------
+        // ---- every tab has a pane behind it ----------------------------------------
 
-        // A tab claiming content it does not have is worse than one admitting
-        // it: DefaultFor reads this flag to decide where the menu opens, so a
-        // lie here lands the player on the words CONTENT TO COME.
+        // The build refuses a tab with no branch, so this pins the other half:
+        // each listed tab really hosts its own screen class, and the table of
+        // expectations covers every tab so a new entry cannot skip the check.
         [Test]
-        public void EveryTabMarkedBuiltHasItsPlaceholderSwitchedOff()
-        {
-            var screen = SystemMenuScreen.Build();
-            var owners = SystemMenuTabs.PaneOwners;
-
-            for (int i = 0; i < owners.Count; i++)
-            {
-                var def = owners[i];
-                bool placeholderShowing = !screen.PanePlaceholders[i].Node.StartInactive;
-
-                Assert.AreEqual(!def.Built, placeholderShowing,
-                    $"the {def.Key} tab says Built={def.Built} but its pane " +
-                    (placeholderShowing ? "still shows the placeholder" : "hides the placeholder"));
-            }
-        }
-
-        // The panes that are built are built from their own screen classes, so
-        // this catches a pane wired to nothing as well as a flag out of step.
-        [Test]
-        public void TheBuiltPanesHostARealScreen()
+        public void EveryTabHostsARealScreen()
         {
             var screen = SystemMenuScreen.Build();
 
             var hosted = new Dictionary<SystemMenuTab, bool>
             {
-                { SystemMenuTab.CharacterInventory, screen.Dossier != null },
+                { SystemMenuTab.Character, screen.Dossier != null },
                 { SystemMenuTab.Party, screen.Party != null },
                 { SystemMenuTab.Options, screen.Options != null },
                 { SystemMenuTab.RunStats, screen.RunStats != null },
-                { SystemMenuTab.MainMenu, screen.Exits != null },
+                { SystemMenuTab.Exit, screen.Exits != null },
             };
+
+            Assert.AreEqual(SystemMenuTabs.Count, hosted.Count,
+                "a tab was added without an expectation here");
 
             foreach (var pair in hosted)
             {
-                Assert.IsTrue(SystemMenuTabs.All[SystemMenuTabs.IndexOf(pair.Key)].Built,
-                    $"{pair.Key} hosts a screen but is not marked Built");
-                Assert.IsTrue(pair.Value, $"{pair.Key} is marked Built but hosts nothing");
+                Assert.IsTrue(pair.Value, $"{pair.Key} is listed but hosts nothing");
             }
         }
+
         // ---- the loadout silhouette ---------------------------------------------
         //
         // THE HANDOVER'S OWN RULE: scale the whole panel as one unit, never

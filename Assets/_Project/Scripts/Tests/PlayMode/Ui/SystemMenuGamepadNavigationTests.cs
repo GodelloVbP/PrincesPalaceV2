@@ -290,11 +290,11 @@ namespace PrincesPalace.PlayModeTests
             _menu.Open();
             yield return null;
 
-            // Fixture check: DefaultFor(inRun: false) is CharacterInventory,
-            // out of the hub's own four visible tabs (CharacterInventory,
-            // Party, Options, MainMenu -- FloorMap/RunStats are RunOnly).
-            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.CharacterInventory), _menu.SelectedIndex,
-                "fixture: the menu should open on CharacterInventory outside a run");
+            // Fixture check: DefaultFor(inRun: false) is Character, out of the
+            // hub's own four visible tabs (Character, Party, Options, Exit --
+            // RunStats is RunOnly).
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Character), _menu.SelectedIndex,
+                "fixture: the menu should open on Character outside a run");
 
             _input.TriggerRight = 1f;
             yield return DriveFrame();
@@ -322,8 +322,8 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
             _input.TriggerLeft = 0f;
 
-            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu), _menu.SelectedIndex,
-                "TabPrev from the first visible tab should wrap to the last one (MainMenu, out of the hub's " +
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Exit), _menu.SelectedIndex,
+                "TabPrev from the first visible tab should wrap to the last one (Exit, out of the hub's " +
                 "own four visible tabs) -- the owner default every other group in this project wraps by");
         }
 

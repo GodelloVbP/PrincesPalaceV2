@@ -430,7 +430,7 @@ namespace PrincesPalace.PlayModeTests
 
                 // And the exits, with abandon showing -- which it only does in a
                 // descent, so this scene is the only place the card can be seen.
-                menu.Select(SystemMenuTab.MainMenu);
+                menu.Select(SystemMenuTab.Exit);
                 yield return new WaitForSecondsRealtime(0.4f);
 
                 string exitsPath = Path.Combine(OutputDir, "SystemMenu_main_menu.png");

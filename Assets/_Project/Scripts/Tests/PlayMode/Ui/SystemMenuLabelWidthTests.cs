@@ -23,8 +23,8 @@ namespace PrincesPalace.PlayModeTests
     // freely. What the authored figures still do is give the BUILD something to
     // emit from -- the scene exists before any text does -- which is why the
     // first test below keeps them honest: UiAudit and the capacity guard both
-    // run against the authored bar, and an approximation that drifts far enough
-    // would audit a bar the player never sees.
+    // run against the authored bar, and a figure that drifts far enough would
+    // audit a bar the player never sees.
     //
     // Nothing could see it. Domain has no font metrics by design, the EditMode
     // suite is Domain-only, and UiTextFitAudit only asks whether text OVERFLOWS
@@ -35,14 +35,11 @@ namespace PrincesPalace.PlayModeTests
     // wearing, and that is not answerable anywhere else.
     public class SystemMenuLabelWidthTests
     {
-        // The authored numbers came off a browser at .14em, which adds a
-        // trailing space after the last glyph that TMP does not, and were then
-        // rounded. Measured, the gap runs 3.7 to 6.1px across the five labels.
-        //
-        // Wide enough not to fail on that, narrow enough to catch what matters:
-        // dropping the tracking moves these by 19 to 57px, and renaming a tab
-        // without re-measuring moves them further.
-        private const float Tolerance = 8f;
+        // The authored figures are the widths TMP draws, rounded to whole
+        // pixels, so half a pixel of rounding plus a little font-metric noise
+        // is all the slack there is. Dropping the tracking moves a label by 19
+        // to 57px, and renaming a tab without re-measuring moves it further.
+        private const float Tolerance = 1f;
 
         [TearDown]
         public void Restore() => SharedScene.AfterTest();
@@ -67,6 +64,8 @@ namespace PrincesPalace.PlayModeTests
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub has no SystemMenuController");
 
+            var wrong = new System.Collections.Generic.List<string>();
+
             foreach (var def in SystemMenuTabs.All)
             {
                 var label = LabelFor(menu, def.Key);
@@ -81,11 +80,16 @@ namespace PrincesPalace.PlayModeTests
 
                 float drawn = label.GetPreferredValues(label.text, Mathf.Infinity, Mathf.Infinity).x;
 
-                Assert.AreEqual(def.LabelWidth, drawn, Tolerance,
-                    $"the {def.Key} tab claims a label {def.LabelWidth:F0}px wide and TMP draws it " +
-                    $"{drawn:F1}px. The bar's boxes, gaps, dividers and underline are all arithmetic " +
-                    "over the claim, so re-measure it rather than nudging the layout.");
+                if (Mathf.Abs(def.LabelWidth - drawn) > Tolerance)
+                {
+                    wrong.Add($"{def.Key} claims {def.LabelWidth:F0}px, TMP draws {drawn:F1}px");
+                }
             }
+
+            Assert.IsEmpty(wrong,
+                "The bar's boxes, gaps, dividers and underline are arithmetic over each tab's claimed " +
+                "label width, so re-measure a wrong claim rather than nudging the layout: " +
+                string.Join("; ", wrong));
         }
 
         // The lintel's title carries the design's other tracking value, and it

@@ -15,7 +15,7 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.PlayModeTests
 {
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b, item 1: the character dossier,
-    // inside the system menu's Character & Inventory tab. Four groups (the
+    // inside the system menu's Character tab. Four groups (the
     // loadout's two files, the ability scores, the pack window and its sort
     // tabs) plus the explicit links between them, and the focus-driven
     // tooltip job 1 built.

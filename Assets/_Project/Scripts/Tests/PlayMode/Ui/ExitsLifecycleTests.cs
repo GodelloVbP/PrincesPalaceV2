@@ -287,7 +287,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_menu, $"{scene} has no SystemMenuController");
 
             _menu.Open();
-            _menu.Select(SystemMenuTab.MainMenu);
+            _menu.Select(SystemMenuTab.Exit);
 
             // Two frames: Start() lands on the one after activation, and
             // OnEnable's context pass has to have run before anything is read.

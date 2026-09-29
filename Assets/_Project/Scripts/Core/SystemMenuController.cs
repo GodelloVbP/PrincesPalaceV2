@@ -13,7 +13,7 @@ namespace PrincesPalace
     //
     // IT LAYS THE BAR OUT AT RUNTIME, which reads like a violation of this
     // project's generated-scenes rule and is not one. The tab SET depends on
-    // context -- three tabs between runs, five during one -- and a scene is
+    // context -- four tabs at camp, five in a descent -- and a scene is
     // generated once, so the build authors every tab at its five-tab position
     // and this re-applies SystemMenuLayout for whichever set is showing. The
     // arithmetic is still in exactly one place. See SystemMenuScreen's header.
@@ -336,7 +336,7 @@ namespace PrincesPalace
         // Rewired here rather than declared once at build time because WHICH
         // tabs are visible is a runtime fact ApplyContext has just
         // recomputed, and the five-tab authored layout on disk is not what a
-        // three-tab context shows (SystemMenuScreen's own header explains why
+        // four-tab context shows (SystemMenuScreen's own header explains why
         // the scene cannot know that). Only VISIBLE tabs are chained; a
         // hidden tab's Explicit links are left whatever they were, which does
         // not matter -- it is inactive, and Unity never routes a Move onto an
@@ -538,9 +538,8 @@ namespace PrincesPalace
             }
 
             // A tab that just vanished cannot stay selected. Falls back to this
-            // context's default rather than to index 0, which after leaving a
-            // run would have been Character & Inventory anyway but after some
-            // future reordering would not.
+            // context's default rather than to index 0, so reordering the
+            // table cannot change where the menu lands.
             if (!_visible.Contains(_selected))
             {
                 Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inRun)));
@@ -605,8 +604,8 @@ namespace PrincesPalace
         // interface's own header on why). _visible is INDICES into
         // SystemMenuTabs.All, not slot positions, so the step is taken in
         // slot space (0..VisibleTabs.Count-1) and translated back --
-        // stepping _selected directly by +-1 would walk hidden tabs between
-        // two visible ones on a three-tab context.
+        // stepping _selected directly by +-1 would walk the hidden Run
+        // statistics tab, between two visible ones at camp.
         public void StepTab(int direction)
         {
             if (_visible.Count == 0) return;

@@ -163,7 +163,7 @@ namespace PrincesPalace.PlayModeTests
 
             var menu = Menu();
             menu.Open();
-            menu.Select(SystemMenuTab.CharacterInventory);
+            menu.Select(SystemMenuTab.Character);
             yield return null;
 
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);

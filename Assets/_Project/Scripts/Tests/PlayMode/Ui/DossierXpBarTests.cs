@@ -323,7 +323,7 @@ namespace PrincesPalace.PlayModeTests
 
             if (_menu.IsOpen) _menu.Close();
             _menu.Open();
-            _menu.Select(SystemMenuTab.CharacterInventory);
+            _menu.Select(SystemMenuTab.Character);
             yield return null;
             yield return null;
 

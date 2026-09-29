@@ -1182,31 +1182,17 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the overarching menu ------------------------------------------
         //
-        // Labels only. What each tab CONTAINS is a design job; these exist so
-        // the bar can be built and measured before any of it lands.
-        // ONE label where there were two. The dossier was always both halves,
-        // so a separate Inventory tab was a second door onto the same room.
-        public static readonly UiString SystemTabCharacterInventory =
-            UiString.Define("system.tab.character_inventory", "CHARACTER & INVENTORY");
+        // Tab labels only; what each tab contains lives in its pane.
+        public static readonly UiString SystemTabCharacter =
+            UiString.Define("system.tab.character", "CHARACTER");
         public static readonly UiString SystemTabParty =
             UiString.Define("system.tab.party", "PARTY");
-        public static readonly UiString SystemTabFloorMap =
-            UiString.Define("system.tab.floor_map", "FLOOR MAP");
         public static readonly UiString SystemTabRunStats =
             UiString.Define("system.tab.run_stats", "RUN STATISTICS");
         public static readonly UiString SystemTabOptions =
             UiString.Define("system.tab.options", "OPTIONS");
-        public static readonly UiString SystemTabMainMenu =
-            UiString.Define("system.tab.main_menu", "MAIN MENU");
-        // NOT parameterised. It was "{0} - content to come" with the tab name
-        // as the argument, and nothing ever supplied one -- so every pane
-        // rendered the manifest's SAMPLE text and all four read "OPTIONS -
-        // content to come" whichever tab was open. A screenshot caught it; the
-        // behaviour tests could not, because they assert which pane is showing
-        // and not what it says. The bar overhead already names the tab, so the
-        // pane never needed to.
-        public static readonly UiString SystemPlaceholder =
-            UiString.Define("system.placeholder", "CONTENT TO COME");
+        public static readonly UiString SystemTabExit =
+            UiString.Define("system.tab.exit", "EXIT");
         public static readonly UiString SystemMenuTitle =
             UiString.Define("system.title", "DIVINE PRINCIPALITY");
         public static readonly UiString SystemBetweenDescents =

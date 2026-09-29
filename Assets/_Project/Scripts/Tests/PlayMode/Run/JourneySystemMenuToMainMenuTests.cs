@@ -13,7 +13,7 @@ namespace PrincesPalace.PlayModeTests
     // rather than chaining onto another segment's class (every segment in
     // this suite reconstructs its own precondition).
     //
-    // The system menu's "Main Menu" tab is ExitsScreen (ExitsController) --
+    // The system menu's Exit tab is ExitsScreen (ExitsController) --
     // three ways out, none on one press (that file's own header). This
     // segment takes "Title": arm, then fire, the same two-press rule the
     // mouse path takes through ExitTitle's own onClick.
@@ -62,7 +62,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return PressTriggerLeft(); // wraps from the first visible tab to the last one, MainMenu (owner's 2026-09-19 hardware-round call moved tab-stepping off LB/RB onto LT/RT)
 
-            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu), menu.SelectedIndex,
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Exit), menu.SelectedIndex,
                 "one TriggerLeft pull from the default tab should wrap to the last visible tab, MainMenu, outside a run");
 
             AssertSelectedName("ExitTitle",

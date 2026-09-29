@@ -12,8 +12,8 @@ namespace PrincesPalace.PlayModeTests
     // regression. Opening the menu still has no click equivalent (this
     // plan's own brief names this exact case, and JourneySystemMenuMidFight
     // MouseTests' header says why the mouse's own ESC key covers it) -- but
-    // reaching the Main Menu tab does: SystemMenuController's own tab
-    // buttons are real Buttons, so this clicks SystemTabMainMenu directly
+    // reaching the Exit tab does: SystemMenuController's own tab
+    // buttons are real Buttons, so this clicks SystemTabExit directly
     // rather than pressing the shoulder shortcut, and clicks ExitTitle twice
     // rather than pressing Submit twice on whatever Move walked onto.
     public class JourneySystemMenuToMainMenuMouseTests : JourneyFixture
@@ -63,10 +63,10 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub (the owner's 2026-09-19 call moved this off Cancel)");
 
-            yield return Click(Node("SystemTabMainMenu")); // the tab strip's own real Button, not the shoulder shortcut
+            yield return Click(Node("SystemTabExit")); // the tab strip's own real Button, not the shoulder shortcut
 
-            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu), menu.SelectedIndex,
-                "clicking the Main Menu tab should select it directly");
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Exit), menu.SelectedIndex,
+                "clicking the Exit tab should select it directly");
 
             yield return Click(Node("ExitTitle")); // ExitsController.Press(0) -- arms Title, does not yet leave
             Assert.IsTrue(menu.IsOpen, "the first click should only ARM leaving, not fire it");

@@ -24,10 +24,8 @@ namespace PrincesPalace
     {
         public static bool IsOpen(GameObject panel) => panel != null && panel.activeSelf;
 
-        // BOTH KEYS LAND ON ONE TAB now. The design pass merged Character and
-        // Inventory into a single tab, because the dossier was always both --
-        // it carries its own pack -- and a second tab onto the same pane was a
-        // second door onto one room.
+        // BOTH KEYS LAND ON ONE TAB: the dossier is both character and
+        // inventory, since it carries its own pack.
         //
         // So the switch-vs-close rule below has nothing left to switch between
         // and collapses to a plain toggle. The `inventory` argument stays in the
@@ -35,7 +33,7 @@ namespace PrincesPalace
         // its pack already up, and removing it would be a rewiring of every
         // caller to say the same thing.
         private static SystemMenuTab TabFor(bool inventory) =>
-            SystemMenuTab.CharacterInventory;
+            SystemMenuTab.Character;
 
         // THE SWITCH-VS-CLOSE RULE, retargeted at the pack rather than at a
         // tab: I and C each mean a real state (pack up / pack down), so

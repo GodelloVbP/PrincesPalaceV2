@@ -99,7 +99,7 @@ namespace PrincesPalace
                 // is a gameplay change and not a presentation one: stat points,
                 // Favor, max health and experience-find no longer arrive at the
                 // end of a fight. They arrive when the track is opened and
-                // collected, from the system menu's Character & Inventory pane.
+                // collected, from the system menu's Character pane.
                 //
                 // WHAT MAKES THIS SAFE: the WATERMARK decides what is owed,
                 // not any call site, so a character who levelled before the

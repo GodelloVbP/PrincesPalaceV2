@@ -231,7 +231,7 @@ namespace PrincesPalace.PlayModeTests
             var fight = Object.FindAnyObjectByType<FightController>();
             var menu = Menu();
             menu.Open();
-            menu.Select(SystemMenuTab.CharacterInventory);
+            menu.Select(SystemMenuTab.Character);
             yield return null;
 
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
@@ -370,7 +370,7 @@ namespace PrincesPalace.PlayModeTests
 
             var menu = Menu();
             menu.Open();
-            menu.Select(SystemMenuTab.CharacterInventory);
+            menu.Select(SystemMenuTab.Character);
             yield return null;
 
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
@@ -455,7 +455,7 @@ namespace PrincesPalace.PlayModeTests
 
             var menu = Menu();
             menu.Open();
-            menu.Select(SystemMenuTab.MainMenu);
+            menu.Select(SystemMenuTab.Exit);
             yield return null;
 
             // Two presses: the first only arms it (SystemMenuExitsTests).

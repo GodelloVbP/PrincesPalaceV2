@@ -18,7 +18,7 @@ namespace PrincesPalace.PlayModeTests
     // Winning a fight opens the RECKONING (an item pick), proven at the
     // screen level by ReckoningGamepadNavigationTests. The REWARD TRACK
     // (RewardTrackController) is a separate screen reached from the System
-    // Menu's Character & Inventory tab, not opened automatically by a win.
+    // Menu's Character tab, not opened automatically by a win.
     //
     // This class proves both, as two separate journeys: the fight-to-
     // Reckoning path stays one continuous session (win, take or skip,
@@ -213,7 +213,7 @@ namespace PrincesPalace.PlayModeTests
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub scene has no SystemMenuController");
 
-            yield return PressSystemMenu(); // opens the menu on its default tab, Character & Inventory outside a run
+            yield return PressSystemMenu(); // opens the menu on its default tab, Character outside a run
             Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub");
 
             yield return MoveDown(); // the tab's own Down lands on the first equipment slot, Head

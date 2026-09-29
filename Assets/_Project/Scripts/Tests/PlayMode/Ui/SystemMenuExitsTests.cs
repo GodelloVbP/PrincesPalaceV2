@@ -174,7 +174,7 @@ namespace PrincesPalace.PlayModeTests
             Click("ExitTitle");
             _menu.Select(SystemMenuTab.Options);
             yield return null;
-            _menu.Select(SystemMenuTab.MainMenu);
+            _menu.Select(SystemMenuTab.Exit);
             yield return null;
 
             Assert.AreEqual(-1, _exits.ArmedIndex,
@@ -356,7 +356,7 @@ namespace PrincesPalace.PlayModeTests
             if (_menu.IsOpen) _menu.Close();
 
             _menu.Open();
-            _menu.Select(SystemMenuTab.MainMenu);
+            _menu.Select(SystemMenuTab.Exit);
 
             // Two frames: Start() lands on the one after activation, and
             // OnEnable's context pass has to have run before anything is read.
