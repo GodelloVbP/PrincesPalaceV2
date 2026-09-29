@@ -8,7 +8,7 @@ namespace PrincesPalace
     // driven through anchors. Growing sizeDelta.x from a pinned edge is what
     // lets one number track the hold; growing from the centre would grow
     // both ways at once and paint outside the track. Shared by
-    // ExitsController's abandon hold and ResetProgressController's confirm
+    // ExitsController's abandon hold and SaveSlotController's confirm
     // hold -- both pivot-left rects with a fixed height. Not the same
     // mechanism as FightController.Hud.cs's own SetFill, which drives an HP
     // bar through anchor-stretch on purpose.

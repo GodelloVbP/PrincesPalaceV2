@@ -929,13 +929,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ChooseSlotHeader =
             UiString.Define("choose_slot_header", "Choose a Slot");
 
-        // What an EMPTY Manage Saves row's Top line says. Not "Slot {0}:
-        // Empty" any more -- the card now carries its own number badge, so
-        // repeating the slot number in the sentence next to it said the same
-        // thing twice. Plain rather than templated for the same reason
-        // NewDescent below is: the badge is where the number lives now.
-        public static readonly UiString SlotEmpty = UiString.Define("slot_empty", "Empty");
-
         // The number badge on a slot card. A template rather than raw text at
         // the call site for the same Contract A reason every other authored
         // string is -- a slot's own numeral is UI copy, not content, even
@@ -957,25 +950,19 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString SlotGold =
             UiString.Define("slot_gold", "{0} GOLD", "99999 GOLD");
 
-        // What an EMPTY slot invites in the CHOOSE list specifically -- not in
-        // Manage Saves, which still just says "Empty" because deleting is not
-        // an invitation to start anything. "Empty" is accurate and does
-        // nothing; this is the same fact stated as the thing an empty slot is
-        // actually FOR.
+        // What an EMPTY slot invites: the fact stated as the thing an empty
+        // slot is actually FOR.
         public static readonly UiString NewDescent = UiString.Define("new_descent", "New Descent");
 
         // --- destructive actions -------------------------------------------
         //
-        // Reached from the slot list itself now, not from a separate Options
-        // screen -- ManageSaves serves as both the button that opens it and
-        // the panel's own heading, the same one-entry-two-uses shape SlotButton
-        // already has.
-        public static readonly UiString ManageSaves =
-            UiString.Define("manage_saves", "Manage Saves");
-        public static readonly UiString ManageSavesWarning =
-            UiString.Define("manage_saves_warning",
-                "Deleting a slot removes its run, its wallet and everything unlocked in it. There is no way back.");
+        // Delete sits on each filled slot card in the Load list.
         public static readonly UiString Delete = UiString.Define("delete", "Delete");
+
+        // The hold button's caption: names the gesture without naming a
+        // device, since the same hold is a pointer press, Submit on a pad or
+        // Submit on a keyboard.
+        public static readonly UiString HoldToDelete = UiString.Define("hold_to_delete", "Hold to Delete");
         public static readonly UiString ConfirmDelete =
             UiString.Define("confirm_delete", "Delete slot {0}? This cannot be undone.",
                             "Delete slot 5? This cannot be undone.");

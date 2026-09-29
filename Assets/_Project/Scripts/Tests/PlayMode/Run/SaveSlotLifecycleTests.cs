@@ -86,25 +86,21 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, SaveSlotManager.CurrentSlot, "the press did not enter the slot it named");
         }
 
-        // ---- B11: the manage-saves panel and its hold ----------------------------------
+        // ---- B11: the Delete confirmation and its hold ---------------------------------
 
-        // A HALF-FINISHED DELETE MUST NOT SURVIVE ANYTHING, and this panel
-        // states the claim twice: HoldToConfirm cancels itself in OnDisable,
-        // and ResetProgressController calls Cancel again on the way IN rather
-        // than inheriting it -- "the hold is not half-pressed the moment you
-        // open it" is a claim this panel makes, so it says so.
+        // A HALF-FINISHED DELETE MUST NOT SURVIVE ANYTHING, and the list states
+        // the claim twice: HoldToConfirm cancels itself in OnDisable, and
+        // SaveSlotController calls Cancel again on the way IN rather than
+        // inheriting it -- "the hold is not half-pressed the moment you open
+        // it" is a claim the dialog makes, so it says so.
         //
-        // ONE CORRECTION TO SCENARIOS.md's B11 ROW, found while writing this
-        // and worth stating because the row's wording -- "the confirm hold
-        // cancelled by the disable" of the PANEL -- does not hold.
-        // ResetConfirmPanel is a SIBLING of the manage-saves modal under
-        // MainMenuPanel, not a child of it (MainMenuScreen: `Ui.Panel(
-        // "MainMenuPanel", ..., saveSlotModal, manageSavesModal,
-        // confirmModal)`), so closing the manage-saves panel disables neither
-        // the confirmation nor its hold. What makes that safe is the
-        // confirmation's own full-screen scrim covering the Back button
-        // underneath it: containment by scrim rather than by hierarchy. The
-        // disables asserted below are therefore the ones that actually happen.
+        // ResetConfirmPanel is a SIBLING of the Load modal under MainMenuPanel,
+        // not a child of it (MainMenuScreen: `Ui.Panel("MainMenuPanel", ...,
+        // saveSlotModal, confirmModal)`), so closing the Load modal disables
+        // neither the confirmation nor its hold. What makes that safe is the
+        // confirmation's own full-screen scrim covering the list underneath
+        // it: containment by scrim rather than by hierarchy. The disables
+        // asserted below are therefore the ones that actually happen.
         [UnityTest]
         public IEnumerator AHalfFinishedDeleteIsForgottenByEveryWayOutOfTheConfirmation()
         {
@@ -114,15 +110,11 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return OpenTheSlotList();
 
-            Click("ManageSavesButton");
-            yield return null;
-            yield return null;
-
-            var reset = Object.FindAnyObjectByType<ResetProgressController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(reset, "the main menu has no ResetProgressController");
+            var reset = Object.FindAnyObjectByType<SaveSlotController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(reset, "the main menu has no SaveSlotController");
             Assert.IsTrue(SaveSystem.SlotExists(0), "fixture: there is no slot to delete");
 
-            Click("ResetSlot0DeleteButton");
+            Click("Slot0DeleteButton");
 
             var confirmation = Named("ResetConfirmPanel");
             var hold = Named("ResetConfirmYesButton").GetComponent<HoldToConfirm>();
@@ -130,7 +122,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(confirmation.activeSelf, "fixture: the confirmation never opened");
 
             hold.Begin();
-            hold.Advance(ResetProgressController.HoldSeconds * 0.9f);
+            hold.Advance(SaveSlotController.HoldSeconds * 0.9f);
             Assert.IsTrue(hold.Holding, "fixture: nothing was being held");
 
             // The way out a player takes: Cancel.
@@ -142,7 +134,7 @@ namespace PrincesPalace.PlayModeTests
 
             // And asking again arrives fresh, which is the claim the panel
             // makes explicitly rather than inheriting.
-            Click("ResetSlot0DeleteButton");
+            Click("Slot0DeleteButton");
             yield return null;
 
             Assert.AreEqual(0f, hold.Progress01, 0.0001f,
@@ -152,7 +144,7 @@ namespace PrincesPalace.PlayModeTests
             // The component's own defence, driven directly: the confirmation
             // disabled while a hold is live.
             hold.Begin();
-            hold.Advance(ResetProgressController.HoldSeconds * 0.9f);
+            hold.Advance(SaveSlotController.HoldSeconds * 0.9f);
             confirmation.SetActive(false);
             yield return null;
 
@@ -165,7 +157,7 @@ namespace PrincesPalace.PlayModeTests
             // the delete button opens the confirmation rather than deleting.
             yield return Cycle(reset.gameObject);
 
-            Click("ResetSlot0DeleteButton");
+            Click("Slot0DeleteButton");
             yield return null;
 
             Assert.IsTrue(SaveSystem.SlotExists(0),

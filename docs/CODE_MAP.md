@@ -15,7 +15,7 @@ prefix: `Tests/{EditMode,PlayMode}/<area>/<Prefix>*Tests.cs`.
 
 | Screen | Tree | Controller | Layout helpers (`Domain/UiKit/`) | Wiring (`ScreenRegistry`) | Test prefix |
 |---|---|---|---|---|---|
-| Main Menu / Save Slots | `MainMenuScreen.cs`, `MainMenuAmbience.cs` | `Core/MainMenuController.cs`, `Core/SaveSlotController.cs`, `Core/ResetProgressController.cs` | — | `MainMenu()` scene | `MainMenu`, `SaveSlot` |
+| Main Menu / Save Slots | `MainMenuScreen.cs`, `MainMenuAmbience.cs` | `Core/MainMenuController.cs`, `Core/SaveSlotController.cs` | — | `MainMenu()` scene | `MainMenu`, `SaveSlot` |
 | Hub | `HubScreen.cs`, `HubAmbience.cs` | `Core/HubController.cs`, `Core/HubBuildingLooper.cs` | `HubAnchors.cs` | `Hub()` scene, `DressHub` | `Hub` |
 | Relic draft (in Hub) | `RelicDraftScreen.cs` | `Core/RelicDraftController.cs` | `OfferRowLayout.cs` | `WireRelicDraft` | `RelicDraft` |
 | Glossary (in Hub) | `GlossaryScreen.cs` | `Core/GlossaryController.cs`, `Core/GlossaryEntries.cs` | `Paging.cs` | `WireGlossary` | `Glossary` |

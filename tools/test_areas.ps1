@@ -910,7 +910,7 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Core/EmberFlare\.cs$'; Areas = @('ui', 'hub', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(CharacterVoice|DamagePopup|FocusMarker|FrameSequenceLoader|ListScroll|OptionsController|ThemedButtonState)\.cs$'; Areas = @('ui', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(DebugMenuController|GlossaryController|KenBurnsDrift|LanternFlicker|MoteDrift|RelicDraftController|SlowDrift|StarTwinkle)\.cs$'; Areas = @('ui', 'hub') }
-    @{ Pattern = '^Assets/_Project/Scripts/Core/(CharacterIdentity|ExitsController|HoldToConfirm|ItemDescription|OptionRow|PartyController|ResetProgressController|RewardTrackController(\.\w+)?|RoomResolver|RunEncounter|RunEventContext|RunLedger|SquadTrack)\.cs$'; Areas = @('ui', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(CharacterIdentity|ExitsController|HoldToConfirm|ItemDescription|OptionRow|PartyController|RewardTrackController(\.\w+)?|RoomResolver|RunEncounter|RunEventContext|RunLedger|SquadTrack)\.cs$'; Areas = @('ui', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Data/'; Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/UI/';   Areas = @('ui') }

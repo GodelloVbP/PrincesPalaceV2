@@ -207,8 +207,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ButtonTracking_LongWordsNotAtAll()
         {
-            // "Manage Saves" is 12 characters - past the <=10 band.
-            Assert.AreEqual(0f, Ui.ButtonTracking(UiStrings.ManageSaves));
+            // "Hold to Delete" is 14 characters - past the <=10 band.
+            Assert.AreEqual(0f, Ui.ButtonTracking(UiStrings.HoldToDelete));
         }
 
         // --- ThemedPlate: caption-preserving mode --------------------------------

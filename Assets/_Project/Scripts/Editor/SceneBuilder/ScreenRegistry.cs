@@ -447,14 +447,14 @@ public static class ScreenRegistry
                 var menu = result.Attach<MainMenuController>(screen.Root);
                 UiAutoBind.Bind(result, menu, screen);
 
-                // THREE CONTROLLERS OFF ONE SCREEN OBJECT, so each gets its own
+                // TWO CONTROLLERS OFF ONE SCREEN OBJECT, so each gets its own
                 // Bind against the same MainMenuScreen. The slot cards are the
                 // sub-object case: a SlotCardRefs is not a NodeRef field, so
                 // every column of it is still written out below.
                 var slots = result.Attach<SaveSlotController>(screen.SaveSlotPanel);
                 UiAutoBind.Bind(result, slots, screen);
                 // Cross-controller: MainMenuController owns the one NavContext
-                // this scene shares between its own buttons and the slot list
+                // this scene shares between its own buttons and the Load list
                 // (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3a) -- not auto-bound,
                 // since SaveSlotController is not one of UiAutoBind's five
                 // typed lookups.
@@ -463,34 +463,18 @@ public static class ScreenRegistry
                 slots.slotTops = screen.ChooseCards.Select(c => result.Tmp(c.Top)).ToArray();
                 slots.slotDetails = screen.ChooseCards.Select(c => result.Tmp(c.Detail)).ToArray();
                 slots.slotGolds = screen.ChooseCards.Select(c => result.Tmp(c.Gold)).ToArray();
-                slots.managePanel = result.Go(screen.ManageSavesPanel);
+                slots.confirmPanel = result.Go(screen.ResetConfirmPanel);
+                slots.confirmLabel = result.Tmp(screen.ResetConfirmLabel);
+                slots.confirmYesButton = result.Button(screen.ResetConfirmYesButton);
+                slots.confirmFill = result.Rect(screen.ResetConfirmYesFill);
+                slots.confirmNoButton = result.Button(screen.ResetConfirmNoButton);
 
-                var reset = result.Attach<ResetProgressController>(screen.ManageSavesPanel);
-                UiAutoBind.Bind(result, reset, screen);
-                reset.slotNumbers = screen.ManageCards.Select(c => result.Tmp(c.Number)).ToArray();
-                reset.slotTops = screen.ManageCards.Select(c => result.Tmp(c.Top)).ToArray();
-                reset.slotDetails = screen.ManageCards.Select(c => result.Tmp(c.Detail)).ToArray();
-                reset.slotFilledWashes = screen.ManageCards.Select(c => result.Go(c.FilledWash)).ToArray();
-                reset.slotEmptyWashes = screen.ManageCards.Select(c => result.Go(c.EmptyWash)).ToArray();
-                reset.confirmPanel = result.Go(screen.ResetConfirmPanel);
-                reset.confirmLabel = result.Tmp(screen.ResetConfirmLabel);
-                reset.confirmYesButton = result.Button(screen.ResetConfirmYesButton);
-                reset.confirmFill = result.Rect(screen.ResetConfirmYesFill);
-                reset.confirmNoButton = result.Button(screen.ResetConfirmNoButton);
-                reset.backButton = result.Button(screen.CloseManageSavesButton);
-                // Cross-controller, same reasoning as menu.saveSlotController
-                // above (AUDIT.md #159): the confirm dialog joins the one
-                // shared NavContext MainMenuController owns.
-                menu.resetProgressController = reset;
-
-                // NOT subscribing SaveSlotController.Refresh to a C# event here.
-                // This Wire step runs at BUILD time and delegates do not
-                // serialise, so the subscription would silently not exist in the
-                // shipped scene -- and the wiring sweep could not catch it,
-                // because it only sees serialized object references. The Play
-                // panel refreshes in OnEnable instead, which covers the only
-                // path that matters: delete in Manage Saves, reopen Play. The
-                // same reasoning is why ResetProgressController reaches
+                // NOT subscribing anything to a C# event here. This Wire step
+                // runs at BUILD time and delegates do not serialise, so the
+                // subscription would silently not exist in the shipped scene --
+                // and the wiring sweep could not catch it, because it only sees
+                // serialized object references. The list refreshes in OnEnable
+                // instead, and SaveSlotController reaches
                 // MainMenuController.RefreshContinue with GetComponentInParent
                 // at runtime rather than a delegate wired here.
                 DressAmbience(result, screen);

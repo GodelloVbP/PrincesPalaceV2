@@ -14,7 +14,7 @@ namespace PrincesPalace.Domain.Tests
     // MainMenuScreen.Build from an EditMode test, so that sentence described a
     // test that did not exist -- the only thing that ever audited this screen
     // was a full scene build, and every layout change to it (the wordmark, the
-    // left-anchored composition, Continue, Manage Saves, the delete hold) went
+    // left-anchored composition, Continue, the delete hold) went
     // in without the fast feedback loop every sibling screen already has. This
     // is that test, the same shape DebugMenuScreenTests and a dozen others use.
     public class MainMenuScreenTests
@@ -57,17 +57,16 @@ namespace PrincesPalace.Domain.Tests
             var screen = MainMenuScreen.Build(new MainMenuInputs(RealSlotCount));
 
             Assert.IsTrue(screen.SaveSlotPanel.Node.StartInactive);
-            Assert.IsTrue(screen.ManageSavesPanel.Node.StartInactive);
             Assert.IsTrue(screen.ResetConfirmPanel.Node.StartInactive);
         }
 
-        // The two parallel arrays UiCountAudit (E4) checks against at build
+        // The parallel arrays UiCountAudit (E4) checks against at build
         // time -- pinned here too, so a mismatch shows up in the same ~1ms
         // pass as the layout errors rather than only in a full scene build.
-        // ChooseCards/ManageCards are not E4-bound themselves (see
-        // MainMenuScreen.SlotCardRefs's own comment on why), but they are
-        // built off SlotButtons/DeleteButtons in the same loop iteration, so
-        // pinning their counts here catches the same class of drift.
+        // ChooseCards is not E4-bound itself (see MainMenuScreen.SlotCardRefs's
+        // own comment on why), but it is built off SlotButtons in the same
+        // loop iteration, so pinning its count here catches the same class of
+        // drift.
         [TestCase(1)]
         [TestCase(5)]
         [TestCase(8)]
@@ -78,7 +77,33 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(slotCount, screen.SlotButtons.Count);
             Assert.AreEqual(slotCount, screen.ChooseCards.Count);
             Assert.AreEqual(slotCount, screen.DeleteButtons.Count);
-            Assert.AreEqual(slotCount, screen.ManageCards.Count);
+        }
+
+        // C5: a card and its Delete are SIBLINGS in one row, never a Button
+        // nested in a Button, and the Manage Saves surface is gone.
+        [Test]
+        public void EachSlotIsARowHoldingItsCardAndItsDelete()
+        {
+            var screen = MainMenuScreen.Build(new MainMenuInputs(RealSlotCount));
+
+            var row = Find(screen.Root, "Slot2Row");
+            Assert.IsNotNull(row);
+            CollectionAssert.AreEqual(new[] { "Slot2Button", "Slot2DeleteButton" },
+                row.Children.Select(c => c.Name).ToArray());
+            foreach (var name in new[] { "ManageSavesPanel", "ManageSavesButton", "CloseManageSavesButton", "ResetSlot0Row" })
+            {
+                Assert.IsNull(Find(screen.Root, name), name + " was removed with Manage Saves");
+            }
+        }
+
+        // 560x112 is exactly 5:1, the FiveByOne plate's own aspect: the card
+        // plate is not stretched. Literals, not the constants under test.
+        [Test]
+        public void TheSlotCardIsAnUnstretchedFiveByOnePlate()
+        {
+            Assert.AreEqual(560f, MainMenuScreen.CardSize.X, 0.01f);
+            Assert.AreEqual(112f, MainMenuScreen.CardSize.Y, 0.01f);
+            Assert.AreEqual(0f, Ui.PlateAspectError(MainMenuScreen.CardSize.X, MainMenuScreen.CardSize.Y), 0.0001f);
         }
 
         // Continue is BUILT UNCONDITIONALLY -- see its own field comment on
@@ -90,7 +115,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var root = Tree();
 
-            bool found = Find(root, "ContinueButton");
+            bool found = Find(root, "ContinueButton") != null;
             Assert.IsTrue(found, "ContinueButton must exist in the built tree for the controller to toggle");
         }
 
@@ -120,8 +145,8 @@ namespace PrincesPalace.Domain.Tests
 
             CollectionAssert.AreEqual(
                 new[] { "ContinueButton", "NewRunButton", "LoadButton", "ExitButton" }, names);
-            Assert.IsFalse(Find(screen.Root, "PlayButton"), "Play is now New Run and Load");
-            Assert.IsFalse(Find(screen.Root, "TextScrim"), "the gold container behind the text is gone");
+            Assert.IsNull(Find(screen.Root, "PlayButton"), "Play is now New Run and Load");
+            Assert.IsNull(Find(screen.Root, "TextScrim"), "the gold container behind the text is gone");
         }
 
         // C1: the wash stays left of the palace (canvas x -100) and above the
@@ -141,17 +166,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(scrim.Decor, "a wash must never take a click");
         }
 
-        private static bool Find(UiNode node, string name)
+        private static UiNode Find(UiNode node, string name)
         {
-            if (node == null) return false;
-            if (node.Name == name) return true;
+            if (node == null) return null;
+            if (node.Name == name) return node;
 
             foreach (var child in node.Children)
             {
-                if (Find(child, name)) return true;
+                var hit = Find(child, name);
+                if (hit != null) return hit;
             }
 
-            return false;
+            return null;
         }
     }
 }

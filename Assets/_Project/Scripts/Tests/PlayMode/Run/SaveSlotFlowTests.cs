@@ -63,7 +63,6 @@ namespace PrincesPalace.PlayModeTests
             yield return SharedScene.Ensure("MainMenu");
 
             if (IsOpen("ResetConfirmPanel")) Click("ResetConfirmNoButton");
-            if (IsOpen("ManageSavesPanel")) Click("CloseManageSavesButton");
             if (IsOpen("SaveSlotPanel")) Click("CloseSaveSlotButton");
         }
 
@@ -78,7 +77,7 @@ namespace PrincesPalace.PlayModeTests
 
         private static void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
 
-        // Delete is a HOLD now, not a click -- see ResetProgressController's
+        // Delete is a HOLD now, not a click -- see SaveSlotController's
         // own header on why onClick fires on release regardless of what the
         // press was for. Driven the same way SystemMenuExitsTests already
         // drives ExitsScreen's identical abandon-hold: through the component's
@@ -95,7 +94,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(hold, $"'{name}' has no hold behaviour attached");
 
             hold.Begin();
-            hold.Advance(ResetProgressController.HoldSeconds);
+            hold.Advance(SaveSlotController.HoldSeconds);
         }
 
         // A slot's card is several TMP_Text nodes now (Number/Top/Detail/Gold,
@@ -107,9 +106,6 @@ namespace PrincesPalace.PlayModeTests
 
         private static string SlotGold(int slot) =>
             Named($"Slot{slot}Gold").GetComponent<TMP_Text>().text;
-
-        private static string ResetTop(int slot) =>
-            Named($"ResetSlot{slot}Top").GetComponent<TMP_Text>().text;
 
         [UnityTest]
         public IEnumerator AnUntouchedSlotReadsAsEmpty()
@@ -143,26 +139,21 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.Contains("GOLD", SlotGold(2), "the gold figure should show once the slot is filled");
         }
 
+        // C5: Delete exists only where there is a save to delete.
         [UnityTest]
-        public IEnumerator BothScreensDescribeTheSameSlotIdentically()
+        public IEnumerator DeleteShowsOnAFilledSlotOnly()
         {
-            // v1's actual bug: the Play screen and the Options screen formatted
-            // this independently and disagreed, and one of them printed an `exp`
-            // field nothing ever wrote. One manifest entry serves both now.
             yield return LoadMenu();
             Click("LoadButton");
-            // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
-            yield return null;
-            yield return null;
-            Click("Slot1Button");
-            Click("ManageSavesButton");
-            // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
 
-            Assert.AreEqual(SlotTop(1), ResetTop(1));
+            Assert.IsFalse(Named("Slot1DeleteButton").activeSelf, "an empty slot has nothing to delete");
+
+            Click("Slot1Button");
+
+            Assert.IsTrue(Named("Slot1DeleteButton").activeSelf, "a filled slot offers its Delete");
+            Assert.IsFalse(Named("Slot3DeleteButton").activeSelf, "its neighbours stay without one");
         }
 
         [UnityTest]
@@ -175,16 +166,11 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
             Click("Slot0Button");
-            Click("ManageSavesButton");
-            // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
-            yield return null;
-            yield return null;
 
             var confirm = Named("ResetConfirmPanel");
             Assert.IsFalse(confirm.activeSelf, "the confirmation should start closed");
 
-            Click("ResetSlot0DeleteButton");
+            Click("Slot0DeleteButton");
 
             Assert.IsTrue(confirm.activeSelf, "Delete should open the confirmation, not delete");
             Assert.IsTrue(SaveSystem.SlotExists(0), "the slot must survive until the deletion is confirmed");
@@ -202,17 +188,14 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
             Click("Slot0Button");
-            Click("ManageSavesButton");
-            yield return null;
-            yield return null;
 
-            Click("ResetSlot0DeleteButton");
+            Click("Slot0DeleteButton");
 
             var hold = Named("ResetConfirmYesButton").GetComponent<HoldToConfirm>();
             Assert.IsNotNull(hold, "the confirm button has no hold behaviour attached");
 
             hold.Begin();
-            hold.Advance(ResetProgressController.HoldSeconds * 0.9f);
+            hold.Advance(SaveSlotController.HoldSeconds * 0.9f);
             hold.Cancel();
 
             Assert.IsTrue(SaveSystem.SlotExists(0), "a released hold must not delete anything");
@@ -220,7 +203,7 @@ namespace PrincesPalace.PlayModeTests
             // AND A FRESH HOLD STARTS FROM ZERO, not from where the last one
             // was let go -- two 90% holds must never sum to one whole one.
             hold.Begin();
-            hold.Advance(ResetProgressController.HoldSeconds * 0.9f);
+            hold.Advance(SaveSlotController.HoldSeconds * 0.9f);
 
             Assert.IsTrue(SaveSystem.SlotExists(0),
                 "a released hold carried its progress into the next one, so two partial holds deleted the slot");
@@ -237,41 +220,33 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             Click("Slot0Button");
             Click("Slot1Button");
-            Click("ManageSavesButton");
-            // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
-            yield return null;
-            yield return null;
 
-            Click("ResetSlot0DeleteButton");
+            Click("Slot0DeleteButton");
             Click("ResetConfirmNoButton");
             Assert.IsTrue(SaveSystem.SlotExists(0), "Cancel must leave the slot intact");
             Assert.IsFalse(Named("ResetConfirmPanel").activeSelf, "Cancel should close the confirmation");
 
-            Click("ResetSlot1DeleteButton");
+            Click("Slot1DeleteButton");
             HoldToDelete("ResetConfirmYesButton");
             Assert.IsFalse(SaveSystem.SlotExists(1), "Delete should actually delete once confirmed");
-            Assert.AreEqual("Empty", ResetTop(1), "and the row should say so");
+            Assert.AreEqual("New Descent", SlotTop(1), "and the card should say so");
+            Assert.IsFalse(Named("Slot1DeleteButton").activeSelf, "and its Delete should be gone with the save");
         }
 
         [UnityTest]
         public IEnumerator DeletingAnAlreadyEmptySlot_DoesNotOpenAPointlessConfirmation()
         {
             // Confirmations that appear when nothing is at stake are how people
-            // learn to click through the ones that matter.
+            // learn to click through the ones that matter. The Delete is hidden
+            // on an empty slot, so this presses it the way a stray event could.
             yield return LoadMenu();
             Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
             yield return null;
             yield return null;
-            Click("ManageSavesButton");
-            // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (.claude/rules/tests.md "Writing tests").
-            yield return null;
-            yield return null;
 
-            Click("ResetSlot3DeleteButton");
+            Click("Slot3DeleteButton");
 
             Assert.IsFalse(Named("ResetConfirmPanel").activeSelf);
         }
@@ -279,10 +254,8 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator ReopeningPlayAfterADeletion_ShowsTheSlotAsEmptyAgain()
         {
-            // No cross-panel event wires these together - the Play list refreshes
-            // in OnEnable, and Manage Saves' own Back button is what triggers
-            // it now: Back re-shows SaveSlotPanel directly rather than handing
-            // the player back to the main menu root to reopen Play themselves.
+            // No cross-panel event wires these together: the list refreshes in
+            // OnEnable, so closing and reopening it re-reads the disk.
             yield return LoadMenu();
             Click("LoadButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
@@ -293,14 +266,8 @@ namespace PrincesPalace.PlayModeTests
             Click("CloseSaveSlotButton");
 
             Click("LoadButton");
-            Click("ManageSavesButton");
-            // First-ever activation of Manage Saves in this test, so its own
-            // listeners need the same one-frame grace Play's did above.
-            yield return null;
-            yield return null;
-            Click("ResetSlot4DeleteButton");
+            Click("Slot4DeleteButton");
             HoldToDelete("ResetConfirmYesButton");
-            Click("CloseManageSavesButton");
 
             Assert.AreEqual("New Descent", SlotTop(4));
         }
@@ -373,20 +340,15 @@ namespace PrincesPalace.PlayModeTests
             // InternalsVisibleTo is granted to the Editor assembly only -- a
             // PlayMode test is deliberately kept from reaching into controller
             // state, so it has to press what a player presses.
-            // OPEN PLAY THEN MANAGE SAVES, because that is where the reset UI
-            // lives and both panels start inactive -- so
-            // ResetProgressController.Start has not run and none of its
-            // listeners are wired until a player reaches it. Found by this
-            // test failing on the assertion below rather than on the one it
-            // was written for, which is why that assertion is there.
+            // OPEN THE LOAD LIST, because the panel starts inactive -- so
+            // SaveSlotController.Start has not run and none of its listeners
+            // are wired until a player reaches it. Found by this test failing
+            // on the assertion below rather than on the one it was written
+            // for, which is why that assertion is there.
             ClickByName("LoadButton");
             yield return null;
             yield return null;
-            ClickByName("ManageSavesButton");
-            yield return null;
-            yield return null;
-
-            ClickByName($"ResetSlot{Slot}DeleteButton");
+            ClickByName($"Slot{Slot}DeleteButton");
             yield return null;
 
             // PROVES THE CLICK LANDED. Start() wires these listeners a frame
@@ -394,7 +356,7 @@ namespace PrincesPalace.PlayModeTests
             // with nothing attached -- and then the assertion at the bottom
             // fails for a reason that has nothing to do with what it is testing.
             var confirm = FindGo("ResetConfirmPanel");
-            Assert.IsNotNull(confirm, "the reset screen has no ResetConfirmPanel");
+            Assert.IsNotNull(confirm, "the main menu has no ResetConfirmPanel");
             Assert.IsTrue(confirm.activeInHierarchy,
                 "the delete button did not open the confirmation, so its listener was not wired yet " +
                 "and nothing below this line is testing what it claims to");
@@ -406,26 +368,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(SaveSystem.SlotExists(Slot),
                 "the deleted slot was written straight back from the in-memory copy, so the save and " +
                 "everything on it survived being deleted");
-        }
-
-        // ---- Manage Saves lives inside the slot flow now, not on the root --
-
-        [UnityTest]
-        public IEnumerator BackFromManageSaves_ReturnsToTheSlotList()
-        {
-            yield return LoadMenu();
-            Click("LoadButton");
-            yield return null;
-            yield return null;
-            Click("ManageSavesButton");
-            yield return null;
-            yield return null;
-
-            Click("CloseManageSavesButton");
-
-            Assert.IsFalse(Named("ManageSavesPanel").activeSelf);
-            Assert.IsTrue(Named("SaveSlotPanel").activeSelf,
-                "Back should return to the list it was opened from, not to the main menu root");
         }
 
         // ---- Continue --------------------------------------------------------
@@ -484,11 +426,7 @@ namespace PrincesPalace.PlayModeTests
             Click("LoadButton");
             yield return null;
             yield return null;
-            Click("ManageSavesButton");
-            yield return null;
-            yield return null;
-
-            Click("ResetSlot0DeleteButton");
+            Click("Slot0DeleteButton");
             HoldToDelete("ResetConfirmYesButton");
 
             Assert.IsFalse(continueGo.activeSelf,

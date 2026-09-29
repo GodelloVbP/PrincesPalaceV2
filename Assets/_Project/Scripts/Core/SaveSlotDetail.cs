@@ -6,13 +6,9 @@ namespace PrincesPalace
 {
     // The facts a save-slot card shows, resolved from disk in ONE place.
     //
-    // Supersedes SaveSlotLabel, which built a single sentence ("Slot 1: 320
-    // gold") for both the Play screen and Manage Saves. The card now shows a
-    // number badge, two lines of detail and (Play only) a gold figure, and
-    // the two screens say different things about an EMPTY slot -- Choose
-    // invites ("New Descent"), Manage Saves states it ("Empty") -- so this
-    // hands back the facts and leaves the wording to whichever controller is
-    // asking. SaveSlotLabel could only ever serve one sentence to both.
+    // Hands back the facts and leaves the wording to the controller asking:
+    // one sentence could not serve a number badge, two lines of detail and a
+    // gold figure, and an EMPTY slot reads differently from a filled one.
     public readonly struct SaveSlotFacts
     {
         public readonly bool Filled;
