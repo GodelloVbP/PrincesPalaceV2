@@ -60,6 +60,7 @@ namespace PrincesPalace.PlayModeTests
             if (NavSceneReuse.Reused)
             {
                 if (IsOpen("ResetConfirmPanel")) Find("ResetConfirmNoButton").onClick.Invoke();
+                if (IsOpen("SettingsPanel")) Find("CloseSettingsButton").onClick.Invoke();
                 if (IsOpen("SaveSlotPanel")) Find("CloseSaveSlotButton").onClick.Invoke();
                 _menu.RefreshContinue();
             }
@@ -152,7 +153,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Move(-1f);
             Assert.AreEqual(Find("LoadButton").gameObject, EventSystem.current.currentSelectedGameObject,
-                "the column is Continue, New Run, Load, Quit");
+                "the column is Continue, New Run, Load, Settings, Quit");
         }
 
         // C4. Each of these leaves a save behind or navigates, so the shared
@@ -240,7 +241,7 @@ namespace PrincesPalace.PlayModeTests
         // lifts uGUI's 0.1s re-press gate; JourneyFixture.Move has the
         // measurement).
         [UnityTest]
-        public IEnumerator Down_FromLoad_ReachesExit()
+        public IEnumerator Down_FromLoad_ReachesSettings()
         {
             yield return LoadMenu();
 
@@ -248,8 +249,97 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             yield return Move(-1f);
+            Assert.AreEqual(Find("SettingsButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "Down from Load should reach Settings");
+        }
+
+        [UnityTest]
+        public IEnumerator Down_FromSettings_ReachesExit()
+        {
+            yield return LoadMenu();
+
+            EventSystem.current.SetSelectedGameObject(Find("SettingsButton").gameObject);
+            yield return null;
+
+            yield return Move(-1f);
             Assert.AreEqual(Find("ExitButton").gameObject, EventSystem.current.currentSelectedGameObject,
-                "Down from Load should reach Quit");
+                "Down from Settings should reach Quit");
+        }
+
+        // C7/C8. Settings is the Options pane in a modal: the same controller
+        // and GameSettings persistence as the system menu's tab.
+        private IEnumerator OpenSettings()
+        {
+            yield return LoadMenu();
+
+            EventSystem.current.SetSelectedGameObject(Find("SettingsButton").gameObject);
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+            yield return null; // reselection onto the first row
+        }
+
+        [UnityTest]
+        public IEnumerator Submit_OnSettings_OpensThePanel_WithTheFirstRowSelected()
+        {
+            yield return OpenSettings();
+
+            Assert.IsTrue(IsOpen("SettingsPanel"), "Submit on Settings opens the Options modal");
+            Assert.AreEqual("OptionsRowsound", Selected.name, "entry is the first Options row");
+        }
+
+        [UnityTest]
+        public IEnumerator ChangingASettingInTheModal_PersistsThroughGameSettings()
+        {
+            float saved = GameSettings.SoundVolume;
+            try
+            {
+                GameSettings.SetSoundVolume(0.5f);
+                yield return OpenSettings();
+
+                yield return Step(1f, 0f);
+
+                Assert.AreEqual(0.55f, GameSettings.SoundVolume, 0.001f, "Right on the Sound row raises it by 5%");
+                Assert.AreEqual(0.55f, PlayerPrefs.GetFloat("settings.soundVolume"), 0.001f,
+                    "and the change is written to PlayerPrefs, which is what the next boot loads");
+            }
+            finally
+            {
+                GameSettings.SetSoundVolume(saved);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator CancelInsideSettings_ClosesIt_AndFocusReturnsToTheSettingsItem()
+        {
+            yield return OpenSettings();
+
+            _input.CancelDown = true;
+            yield return DriveFrame();
+            yield return null;
+
+            Assert.IsFalse(IsOpen("SettingsPanel"), "Cancel closes the Settings modal");
+            Assert.AreEqual(Find("SettingsButton").gameObject, Selected,
+                "focus goes back to the item that opened it");
+        }
+
+        [UnityTest]
+        public IEnumerator DownThroughTheRows_ReachesRestoreDefaults_ThenClose()
+        {
+            yield return OpenSettings();
+
+            int rowCount = Object.FindObjectsByType<OptionRow>(FindObjectsInactive.Include)
+                .Count(r => r.gameObject.scene.IsValid());
+            Assert.Greater(rowCount, 1, "fixture: the pane has rows to walk");
+
+            for (int i = 0; i < rowCount - 1; i++) yield return Step(0f, -1f);
+            Assert.AreEqual("OptionsRowbattlespeed", Selected.name, "fixture: the walk ends on the last row");
+
+            yield return Step(0f, -1f);
+            Assert.AreEqual("OptionsRestoreDefaults", Selected.name, "the last row's Down leads to Restore defaults");
+
+            yield return Step(0f, -1f);
+            Assert.AreEqual("CloseSettingsButton", Selected.name, "and Down again to Close");
         }
 
         [UnityTest]

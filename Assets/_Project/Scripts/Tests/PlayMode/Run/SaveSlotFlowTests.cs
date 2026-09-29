@@ -121,6 +121,17 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator AnEmptySlotShowsNoGoldFigure()
+        {
+            yield return LoadMenu();
+            Click("LoadButton");
+            yield return null;
+            yield return null;
+
+            Assert.IsFalse(Named("Slot0Gold").activeSelf, "an empty card must not read '0 GOLD'");
+        }
+
+        [UnityTest]
         public IEnumerator ChoosingASlot_CreatesItAndSetsTheCurrentSlot()
         {
             yield return LoadMenu();

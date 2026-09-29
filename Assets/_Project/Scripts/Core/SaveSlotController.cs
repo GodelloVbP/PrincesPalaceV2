@@ -114,7 +114,10 @@ namespace PrincesPalace
                     ? UiStrings.SlotDetail.Format(facts.Floor, PlaytimeFormat.Describe(facts.PlaySeconds))
                     : "");
 
-                slotGolds[i].Set(UiStrings.SlotGold, facts.Gold);
+                // An empty slot has no gold to show; "0 GOLD" there read as a
+                // save with nothing in it.
+                slotGolds[i].gameObject.SetActive(facts.Filled);
+                if (facts.Filled) slotGolds[i].Set(UiStrings.SlotGold, facts.Gold);
 
                 deleteButtons[i].gameObject.SetActive(facts.Filled);
 

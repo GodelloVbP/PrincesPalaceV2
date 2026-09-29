@@ -487,6 +487,7 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString NewRun = UiString.Define("new_run", "New Run");
         public static readonly UiString Load = UiString.Define("load", "Load");
+        public static readonly UiString Settings = UiString.Define("settings", "Settings");
         public static readonly UiString Quit = UiString.Define("quit", "Quit");
         public static readonly UiString Close = UiString.Define("close", "Close");
         public static readonly UiString Cancel = UiString.Define("cancel", "Cancel");

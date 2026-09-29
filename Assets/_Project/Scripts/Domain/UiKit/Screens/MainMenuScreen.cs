@@ -69,7 +69,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef NewRunButton;
         public NodeRef LoadButton;
+        public NodeRef SettingsButton;
         public NodeRef ExitButton;
+
+        // The Options pane, unchanged, hosted in a modal over the menu.
+        // Wired by ScreenRegistry.WireOptions, the same call the system menu's
+        // Options tab goes through, so both surfaces share one controller type.
+        public OptionsScreen Options;
+        public NodeRef SettingsPanel;
+        public NodeRef CloseSettingsButton;
 
         // The Load list: one row per slot, each a card and its own Delete.
         public NodeRef SaveSlotPanel;
@@ -268,20 +276,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Themed(ButtonTheme.Gold);
             var load = Ui.Button("LoadButton", UiStrings.Load, itemSize, 24)
                 .Themed(ButtonTheme.Gold);
+            var settings = Ui.Button("SettingsButton", UiStrings.Settings, itemSize, 24)
+                .Themed(ButtonTheme.Gold);
             var quit = Ui.Button("ExitButton", UiStrings.Quit, itemSize, 24)
                 .Themed(ButtonTheme.Silver);
             screen.NewRunButton = newRun;
             screen.LoadButton = load;
+            screen.SettingsButton = settings;
             screen.ExitButton = quit;
 
             // Top-aligned under the title, left edge shared with it. The
             // column's centre y is authored so its top sits at y = 190.
             const float MenuSpacing = 20f;
             const float MenuTop = 190f;
-            float menuHeight = continueSize.Y + itemSize.Y * 3f + MenuSpacing * 3f;
+            float menuHeight = continueSize.Y + itemSize.Y * 4f + MenuSpacing * 4f;
             var menuColumn = Ui.Column("MenuButtons",
                 Place.At(LeftEdgeX + MenuWidth * 0.5f, MenuTop - menuHeight * 0.5f), MenuSpacing,
-                UiAlign.Start, continueButton, newRun, load, quit);
+                UiAlign.Start, continueButton, newRun, load, settings, quit);
             screen.MenuColumn = menuColumn;
 
             // --- save slots ---------------------------------------------------
@@ -326,6 +337,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Ui.Column("SaveSlotColumn", Place.At(0f, 0f), spacing: 10f, UiAlign.Centre, slotChildren))
                 .Inactive();
             screen.SaveSlotPanel = saveSlotModal;
+
+            // --- settings -----------------------------------------------------
+            //
+            // OptionsScreen.Build() is a bare pane: in the system menu it sits
+            // on that frame's fill and rim, so the modal supplies its own
+            // (same tokens) and a Close under it. The stack is offset up so
+            // the Close fits between the frame and the screen's bottom edge.
+            var options = OptionsScreen.Build();
+            screen.Options = options;
+
+            var paneSize = new UiVec(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight);
+            var frameChildren = new List<UiNode>
+            {
+                Ui.Solid("SettingsFill", "#1A1024F5", paneSize, Place.At(0f, 0f)).AsDecor(),
+                options.Root,
+            };
+            frameChildren.AddRange(Ui.Rim("Settings", paneSize, FightHudPalette.BorderGold));
+
+            const float SettingsFrameY = 50f;
+            var settingsFrame = Ui.Panel("SettingsFrame", Place.At(0f, SettingsFrameY),
+                UiSize.Fixed(paneSize.X, paneSize.Y), frameChildren);
+
+            var settingsClose = Ui.Button("CloseSettingsButton", UiStrings.Close, footerButtonSize, 18,
+                    Place.At(0f, SettingsFrameY - paneSize.Y * 0.5f - 12f - footerButtonSize.Y * 0.5f))
+                .Closes()
+                .Themed(ButtonTheme.Silver);
+            screen.CloseSettingsButton = settingsClose;
+
+            var settingsModal = Ui.Modal("SettingsPanel", "#0A0614ED",
+                Ui.Panel("SettingsStack", Place.Stretch(), UiSize.Fill, settingsFrame, settingsClose))
+                .Inactive();
+            screen.SettingsPanel = settingsModal;
 
             // --- the confirmation gate on a destructive action -----------------
             //
@@ -423,7 +466,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             screen.Root = Ui.Panel("MainMenuPanel", UiSize.Fill,
                 sceneLayer, leftScrim, title, menuColumn,
-                saveSlotModal, confirmModal);
+                saveSlotModal, settingsModal, confirmModal);
 
             return screen;
         }

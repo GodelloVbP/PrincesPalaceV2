@@ -58,6 +58,18 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(screen.SaveSlotPanel.Node.StartInactive);
             Assert.IsTrue(screen.ResetConfirmPanel.Node.StartInactive);
+            Assert.IsTrue(screen.SettingsPanel.Node.StartInactive);
+        }
+
+        // C7: the Options pane is hosted as built, and the modal gives it its
+        // own way out.
+        [Test]
+        public void TheSettingsModalHostsTheOptionsPaneAndAClose()
+        {
+            var screen = MainMenuScreen.Build(new MainMenuInputs(RealSlotCount));
+
+            Assert.AreSame(screen.Options.Root, Find(screen.SettingsPanel.Node, "OptionsPane"));
+            Assert.AreEqual(UiClickCue.Close, screen.CloseSettingsButton.Node.Click);
         }
 
         // The parallel arrays UiCountAudit (E4) checks against at build
@@ -144,7 +156,7 @@ namespace PrincesPalace.Domain.Tests
             var names = screen.MenuColumn.Node.Children.Select(c => c.Name).ToArray();
 
             CollectionAssert.AreEqual(
-                new[] { "ContinueButton", "NewRunButton", "LoadButton", "ExitButton" }, names);
+                new[] { "ContinueButton", "NewRunButton", "LoadButton", "SettingsButton", "ExitButton" }, names);
             Assert.IsNull(Find(screen.Root, "PlayButton"), "Play is now New Run and Load");
             Assert.IsNull(Find(screen.Root, "TextScrim"), "the gold container behind the text is gone");
         }

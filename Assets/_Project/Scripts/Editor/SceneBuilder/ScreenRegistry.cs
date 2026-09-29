@@ -459,6 +459,8 @@ public static class ScreenRegistry
                 // since SaveSlotController is not one of UiAutoBind's five
                 // typed lookups.
                 menu.saveSlotController = slots;
+                // The same call the system menu's Options tab goes through.
+                menu.optionsController = WireOptions(result, screen.Options);
                 slots.slotNumbers = screen.ChooseCards.Select(c => result.Tmp(c.Number)).ToArray();
                 slots.slotTops = screen.ChooseCards.Select(c => result.Tmp(c.Top)).ToArray();
                 slots.slotDetails = screen.ChooseCards.Select(c => result.Tmp(c.Detail)).ToArray();

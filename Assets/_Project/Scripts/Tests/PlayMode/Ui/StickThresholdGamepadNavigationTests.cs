@@ -87,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual("ContinueButton", Selected(),
-                "fixture: with a save on disk the column is Continue over New Run over Load over Quit, and Continue is the entry");
+                "fixture: with a save on disk the column is Continue over New Run over Load over Settings over Quit, and Continue is the entry");
         }
 
         // Holds the axis at `value` for HoldSeconds of WALL CLOCK, then
@@ -138,7 +138,7 @@ namespace PrincesPalace.PlayModeTests
         // 0.8 IS A PRESS -- and exactly one, held or not. Under the stock
         // analog path this same hold produced the first Move, then a repeat
         // half a second later, then one every tenth of a second: Continue to
-        // New Run to Load to Quit and stuck there.
+        // New Run to Load to Settings and on to Quit.
         [UnityTest]
         public IEnumerator AnAxisAt0Point8_HeldForASecond_MovesExactlyOnce()
         {
@@ -183,7 +183,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("LoadButton", Selected(), "a second press, after the stick passed back through rest");
 
             yield return Hold(0f, -1f);
-            Assert.AreEqual("ExitButton", Selected(), "a third press reaches the last item");
+            Assert.AreEqual("SettingsButton", Selected(), "a third press steps on to Settings");
+
+            yield return Hold(0f, -1f);
+            Assert.AreEqual("ExitButton", Selected(), "a fourth press reaches the last item");
 
             yield return Hold(0f, -1f);
             Assert.AreEqual("ExitButton", Selected(), "the List clamps -- there is nothing below Quit");

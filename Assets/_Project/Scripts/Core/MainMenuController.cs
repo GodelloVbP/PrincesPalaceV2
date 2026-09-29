@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
@@ -20,9 +21,18 @@ namespace PrincesPalace
     {
         [SerializeField] internal Button newRunButton;
         [SerializeField] internal Button loadButton;
+        [SerializeField] internal Button settingsButton;
         [SerializeField] internal Button exitButton;
         [SerializeField] internal Button closeSaveSlotButton;
         [SerializeField] internal GameObject saveSlotPanel;
+
+        // The Options pane in a modal. Its controller is the system menu's own
+        // OptionsController, so a setting changed here persists through
+        // GameSettings exactly as it does in a run. Assigned by ScreenRegistry
+        // from WireOptions' return value.
+        [SerializeField] internal GameObject settingsPanel;
+        [SerializeField] internal Button closeSettingsButton;
+        [SerializeField] internal OptionsController optionsController;
 
         // Shown only when a save exists to continue. Built unconditionally by
         // the screen -- Domain has no SaveSystem to ask at build time -- and
@@ -71,6 +81,12 @@ namespace PrincesPalace
                 Toggle(saveSlotPanel);
                 RefreshNavigation();
             });
+            settingsButton.onClick.AddListener(() =>
+            {
+                settingsPanel.SetActive(true);
+                RefreshNavigation();
+            });
+            closeSettingsButton.onClick.AddListener(CloseSettings);
             // Settled BEFORE the process goes away. Quitting is not
             // continuing the run, so it ends it, and ending it is what pays out
             // what the run earned -- quitting straight to the desktop would
@@ -231,10 +247,29 @@ namespace PrincesPalace
                 return;
             }
 
+            if (settingsPanel != null && settingsPanel.activeSelf)
+            {
+                CloseSettings();
+                return;
+            }
+
             if (saveSlotPanel != null && saveSlotPanel.activeSelf)
             {
                 saveSlotPanel.SetActive(false);
                 RefreshNavigation();
+            }
+        }
+
+        // Focus goes back to the item that opened the panel, not to the
+        // column's first item the way closing the Load list does.
+        private void CloseSettings()
+        {
+            settingsPanel.SetActive(false);
+            RefreshNavigation();
+
+            if (EventSystem.current != null && settingsButton != null)
+            {
+                EventSystem.current.SetSelectedGameObject(settingsButton.gameObject);
             }
         }
 
@@ -250,14 +285,20 @@ namespace PrincesPalace
             if (_navContext == null) return;
 
             bool confirmOpen = saveSlotController != null && saveSlotController.IsConfirmOpen;
-            bool slotsOpen = !confirmOpen && saveSlotPanel != null && saveSlotPanel.activeSelf;
+            bool settingsOpen = !confirmOpen && settingsPanel != null && settingsPanel.activeSelf;
+            bool slotsOpen = !confirmOpen && !settingsOpen && saveSlotPanel != null && saveSlotPanel.activeSelf;
 
-            Button entryButton;
-            IEnumerable<Button> group;
+            Selectable entryButton;
+            IEnumerable<Selectable> group;
             if (confirmOpen)
             {
                 entryButton = WireConfirmNavigation();
                 group = ConfirmSelectables();
+            }
+            else if (settingsOpen)
+            {
+                entryButton = WireSettingsNavigation();
+                group = SettingsSelectables();
             }
             else if (slotsOpen)
             {
@@ -302,7 +343,39 @@ namespace PrincesPalace
             if (continueButton != null && continueButton.gameObject.activeSelf) yield return continueButton;
             yield return newRunButton;
             yield return loadButton;
+            yield return settingsButton;
             yield return exitButton;
+        }
+
+        // Every Selectable under the panel, the way SystemMenuController
+        // declares its Options pane: a click on a stepper button must not be
+        // read as leaving the declared set. Rows Up/Down through the group
+        // OptionsController.Wire applied; Left/Right on a row is OptionRow's
+        // own OnMove. Restore and Close are chained below the last row.
+        private IEnumerable<Selectable> SettingsSelectables()
+        {
+            if (settingsPanel == null) return System.Array.Empty<Selectable>();
+            return settingsPanel.GetComponentsInChildren<Selectable>(includeInactive: false);
+        }
+
+        private Selectable WireSettingsNavigation()
+        {
+            var rows = optionsController != null && optionsController.rows != null
+                ? optionsController.rows.Where(r => r != null).ToList()
+                : new List<OptionRow>();
+            var restore = optionsController != null ? optionsController.restoreDefaults : null;
+
+            var links = new List<UiNavLink<Selectable>?>();
+            if (rows.Count > 0)
+            {
+                links.AddRange(RuntimeNavWiring.LinkBoth(rows[rows.Count - 1], UiNavDirection.Down, restore));
+            }
+
+            links.AddRange(RuntimeNavWiring.LinkBoth(restore, UiNavDirection.Down, closeSettingsButton));
+
+            RuntimeNavWiring.Apply(RuntimeNavWiring.Group("optionsRows", UiNavGroupKind.List, rows), links);
+
+            return rows.Count > 0 ? rows[0] : closeSettingsButton;
         }
 
         private Button WireMainMenuNavigation()
