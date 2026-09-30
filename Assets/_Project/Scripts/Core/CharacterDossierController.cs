@@ -172,6 +172,7 @@ namespace PrincesPalace
 
             WireLoadout();
             WireAttributes();
+            WireSkills();
             PaintPagerGlyphs();
         }
 
@@ -436,7 +437,8 @@ namespace PrincesPalace
         public void ShowSection(CharacterSection section, bool focusRow)
         {
             Wire();
-            if (section != _section) CancelPending();
+            bool entering = section != _section;
+            if (entering) CancelPending();
 
             _section = section;
             MenuMemory.RememberSection(Context, section);
@@ -452,6 +454,9 @@ namespace PrincesPalace
             SetSectionShown(attributesSection, section == CharacterSection.Attributes);
             SetSectionShown(skillsSection, section == CharacterSection.Skills);
             SetSectionShown(rewardTrackSection, section == CharacterSection.RewardTrack);
+
+            // The list opens at its head each visit, like the pack.
+            if (entering && section == CharacterSection.Skills) ResetSkillsWindow();
 
             if (section == CharacterSection.RewardTrack && trackScreen != null && trackScreen.isActiveAndEnabled)
             {
@@ -504,6 +509,7 @@ namespace PrincesPalace
             {
                 case CharacterSection.Loadout: return LoadoutEntry();
                 case CharacterSection.Attributes: return AttributesEntry();
+                case CharacterSection.Skills: return SkillsEntryControl();
                 case CharacterSection.RewardTrack: return trackScreen != null ? trackScreen.Entry : null;
                 default: return null;
             }
@@ -533,6 +539,7 @@ namespace PrincesPalace
 
             if (_section == CharacterSection.Loadout) DeclareLoadout(groups, links);
             else if (_section == CharacterSection.Attributes) DeclareAttributes(groups, links);
+            else if (_section == CharacterSection.Skills) DeclareSkills(groups, links);
 
             RuntimeNavWiring.Apply(groups.Where(g => g != null), links);
         }
@@ -644,6 +651,14 @@ namespace PrincesPalace
 
             int cell = IndexIn(packCells, focused.gameObject);
             if (cell >= 0) return Row(PackCellPrompt(cell));
+
+            // The skill and talent rows only inform, so A is not offered on them;
+            // the constellation link is the one press in the list.
+            if (Owns(skillRows, focused.gameObject)) return MenuPrompts.ReadOnly(tab, paged: _chips.Count > 1);
+            if (skillLink != null && focused.gameObject == skillLink.gameObject)
+            {
+                return Row(new MenuPrompt(PromptButton.Confirm, UiStrings.PromptOpen));
+            }
 
             if (Owns(attributePluses, focused.gameObject))
             {

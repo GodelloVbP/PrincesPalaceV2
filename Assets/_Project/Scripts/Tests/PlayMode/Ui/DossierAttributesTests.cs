@@ -372,5 +372,83 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(worst, DossierPane.DrawnText(value), "the widest preview is cut in its row");
             Assert.AreEqual(1, value.textInfo.lineCount);
         }
+
+        // ---- the derived rows' names and feeds (plan C21) ---------------------------------
+
+        private static int RowIndexOf(SheetStat stat) => System.Array.IndexOf(SheetStats.Derived, stat);
+
+        private static bool StatRowDrawn(SheetStat stat) =>
+            DossierPane.Label($"DossierStatName{RowIndexOf(stat)}").gameObject.activeInHierarchy
+            && DossierPane.Label($"DossierStatValue{RowIndexOf(stat)}").gameObject.activeInHierarchy;
+
+        private static bool StatRowLit(SheetStat stat) =>
+            Resources.FindObjectsOfTypeAll<RectTransform>()
+                .First(r => r.gameObject.scene.IsValid() && r.name == $"DossierStatHighlight{RowIndexOf(stat)}")
+                .gameObject.activeSelf;
+
+        private IEnumerator ShowCharacter(string id)
+        {
+            yield return OpenAttributesAtCamp(points: 0);
+            Assert.IsTrue(_dossier.SelectCharacter(id), $"fixture: {id} is not on the strip");
+            _dossier.Refresh();
+            yield return null;
+        }
+
+        // The row that read "Focus / turn" for everyone is written in the
+        // character's own resource.
+        [UnityTest]
+        public IEnumerator ShawnsSignatureRowIsNamedForHisWool()
+        {
+            yield return ShowCharacter("sheep");
+
+            Assert.AreEqual("Wool per turn", DossierPane.TextOf($"DossierStatName{RowIndexOf(SheetStat.SignatureGain)}"));
+            Assert.IsTrue(StatRowDrawn(SheetStat.SignatureGain));
+            Assert.AreNotEqual("-", DossierPane.TextOf($"DossierStatValue{RowIndexOf(SheetStat.SignatureGain)}"));
+        }
+
+        [UnityTest]
+        public IEnumerator ACharacterWithNoSignatureHasNoSignatureRowInsteadOfADash()
+        {
+            foreach (string id in new[] { "owl", "bear" })
+            {
+                yield return ShowCharacter(id);
+
+                Assert.IsFalse(StatRowDrawn(SheetStat.SignatureGain), $"{id} has no signature resource but the sheet draws its row");
+
+                DossierPane.Select($"DossierAttrPlus{RowOf(AbilityScore.Charisma)}");
+                yield return null;
+                Assert.IsFalse(StatRowLit(SheetStat.SignatureGain), $"{id}: Charisma lights a row that is not drawn");
+            }
+        }
+
+        // Wisdom sets base regen, and Wisdom's own effect line says so, so the
+        // row lights and previews for a mana user.
+        [UnityTest]
+        public IEnumerator FocusOnWisdomLightsManaRegenForAManaUser()
+        {
+            yield return ShowCharacter("owl");
+
+            DossierPane.Select($"DossierAttrPlus{RowOf(AbilityScore.Wisdom)}");
+            yield return null;
+
+            Assert.IsTrue(StatRowLit(SheetStat.ManaRegen), "Wisdom feeds Mana Regen and the row is dark");
+            Assert.IsTrue(StatRowLit(SheetStat.MaxMana));
+            Assert.IsFalse(StatRowLit(SheetStat.Speed));
+        }
+
+        // Bjorn's Fury has a fixed capacity and a fixed income, so Wisdom moves
+        // neither of the pool rows for him.
+        [UnityTest]
+        public IEnumerator FocusOnWisdomLightsNeitherPoolRowForAFuryUser()
+        {
+            yield return ShowCharacter("bear");
+
+            DossierPane.Select($"DossierAttrPlus{RowOf(AbilityScore.Wisdom)}");
+            yield return null;
+
+            Assert.IsFalse(StatRowLit(SheetStat.ManaRegen), "Wisdom does not move a Fixed pool's income");
+            Assert.IsFalse(StatRowLit(SheetStat.MaxMana));
+            Assert.IsTrue(StatRowLit(SheetStat.MagicalDefense), "Wisdom still mitigates magic for him");
+        }
     }
 }

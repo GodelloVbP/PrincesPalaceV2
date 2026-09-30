@@ -476,8 +476,16 @@ namespace PrincesPalace.Domain.UiKit
         // roster; the gap only opens for a pool named longer than that.
         public static readonly UiString StatMaxPool =
             UiString.Define("stat.maxpool", "Max {0}", "Max Moonlight");
+
+        // The signature row's BAKED name; the dossier writes StatSignaturePerTurn
+        // over it with the character's own resource ("Wool per turn"), the same
+        // baked-then-named split StatMaxMana and StatMaxPool make.
         public static readonly UiString StatSignatureGain =
-            UiString.Define("stat.signaturegain", "Focus / turn");
+            UiString.Define("stat.signaturegain", "Signature per turn");
+        public static readonly UiString SignatureNameFallback =
+            UiString.Define("stat.signaturefallback", "Signature");
+        public static readonly UiString StatSignaturePerTurn =
+            UiString.Define("stat.signatureperturn", "{0} per turn", "Moonlight per turn");
         public static readonly UiString StatManaRegen = UiString.Define("stat.manaregen", "Mana Regen");
 
         // Formerly stat.physres/stat.magres, keyed to PhysicalResistance/
@@ -972,6 +980,65 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString SkillsEmpty =
             UiString.Define("character.skills.empty", "Nothing learned yet.");
+
+        // The SKILLS list's group headers, one per SkillSource (plan C18).
+        public static readonly UiString SkillsGroupInnate =
+            UiString.Define("character.skills.group.innate", "INNATE");
+        public static readonly UiString SkillsGroupTalent =
+            UiString.Define("character.skills.group.talent", "FROM TALENTS");
+        public static readonly UiString SkillsGroupSpellBook =
+            UiString.Define("character.skills.group.spell_book", "FROM SPELL BOOKS");
+        public static readonly UiString SkillsGroupRewardTrack =
+            UiString.Define("character.skills.group.reward_track", "FROM THE REWARD TRACK");
+        public static readonly UiString SkillsGroupTaught =
+            UiString.Define("character.skills.group.taught", "TAUGHT");
+
+        // Below the skills: what the character has kindled, and what is left.
+        public static readonly UiString SkillsTalentsHeading =
+            UiString.Define("character.skills.talents", "TALENTS");
+        public static readonly UiString SkillsTalentsNone =
+            UiString.Define("character.skills.talents_none", "No talents kindled yet.");
+        public static readonly UiString SkillsEmbersOne =
+            UiString.Define("character.skills.embers_one", "1 ember unspent");
+        public static readonly UiString SkillsEmbers =
+            UiString.Define("character.skills.embers", "{0} embers unspent", "999 embers unspent");
+        public static readonly UiString SkillsConstellationLink =
+            UiString.Define("character.skills.constellation", "Open the constellation");
+
+        // A skill row's right-hand facts, joined by SkillListing.
+        public static readonly UiString SkillMetaJoin =
+            UiString.Define("character.skills.meta_join", "{0}  ·  {1}",
+                "999 Moonlight + 999 Moonlight  ·  Cooldown 99  ·  All enemies  ·  Ranks 1, 2, 3");
+        public static readonly UiString SkillCostFree =
+            UiString.Define("character.skills.cost_free", "Free");
+        public static readonly UiString SkillCostAmount =
+            UiString.Define("character.skills.cost_amount", "{0} {1}", "999 Moonlight");
+        public static readonly UiString SkillCostAll =
+            UiString.Define("character.skills.cost_all", "All {0}", "All Moonlight");
+        public static readonly UiString SkillCostSpends =
+            UiString.Define("character.skills.cost_spends", "Spends {0}", "Spends Moonlight");
+        public static readonly UiString SkillCostHealth =
+            UiString.Define("character.skills.cost_health", "{0}% HP", "100% HP");
+        public static readonly UiString SkillCostJoin =
+            UiString.Define("character.skills.cost_join", "{0} + {1}", "999 Moonlight + 999 Moonlight");
+        public static readonly UiString SkillCooldown =
+            UiString.Define("character.skills.cooldown", "Cooldown {0}", "Cooldown 99");
+        public static readonly UiString SkillOncePerFight =
+            UiString.Define("character.skills.once_per_fight", "Once per fight");
+        public static readonly UiString SkillTargetEnemy =
+            UiString.Define("character.skills.target_enemy", "One enemy");
+        public static readonly UiString SkillTargetEnemies =
+            UiString.Define("character.skills.target_enemies", "All enemies");
+        public static readonly UiString SkillTargetSelf =
+            UiString.Define("character.skills.target_self", "Self");
+        public static readonly UiString SkillTargetParty =
+            UiString.Define("character.skills.target_party", "Party");
+        public static readonly UiString SkillTargetAlly =
+            UiString.Define("character.skills.target_ally", "One ally");
+        public static readonly UiString SkillReachFront =
+            UiString.Define("character.skills.reach_front", "Front rank only");
+        public static readonly UiString SkillReachRanks =
+            UiString.Define("character.skills.reach_ranks", "Ranks {0}", "Ranks 1, 2, 3");
 
         public static readonly UiString PromptChooseFromPack =
             UiString.Define("menu.prompt.choose_from_pack", "Choose from pack");

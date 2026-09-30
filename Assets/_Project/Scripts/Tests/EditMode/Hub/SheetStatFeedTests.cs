@@ -44,6 +44,7 @@ namespace PrincesPalace.Domain.Tests
                 { SheetStat.MaxHealth, AbilityDerivation.MaxHealthBonus(scores) },
                 { SheetStat.PhysicalDefense, AbilityDerivation.PhysicalDefenseBonus(scores) },
                 { SheetStat.MaxMana, AbilityDerivation.MaxManaBonus(scores) },
+                { SheetStat.ManaRegen, AbilityDerivation.ManaRegenBonus(scores) },
                 { SheetStat.MagicalDefense, AbilityDerivation.MagicalDefenseBonus(scores) },
                 { SheetStat.SignatureGain, AbilityDerivation.SignatureGainBonus(scores) },
             };
@@ -74,15 +75,28 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // The one truly gear-only row left. Physical/Magical Defense moved
-        // OFF this list in Phase 2 -- Constitution and Wisdom derive them now
-        // (AbilityDerivation.PhysicalDefenseBonus/MagicalDefenseBonus) -- so
-        // only ManaRegen remains fed by nothing but gear and talents.
+        // Wisdom sets the character's base regen (floor(WIS / 4)), which is what
+        // Wisdom's own effect line says ("mana regen 3 per turn"); the row was
+        // fed by nothing, so it never lit and never previewed.
         [Test]
-        public void ManaRegenIsFedByNoAttribute()
+        public void WisdomFeedsManaRegen()
         {
-            CollectionAssert.IsEmpty(SheetStats.FedBy(SheetStat.ManaRegen),
-                "ManaRegen comes from gear and talents only; no attribute derives it.");
+            CollectionAssert.AreEqual(new[] { AbilityScore.Wisdom }, SheetStats.FedBy(SheetStat.ManaRegen));
+            CollectionAssert.Contains(SheetStats.Feeds(AbilityScore.Wisdom), SheetStat.ManaRegen);
+        }
+
+        // Literal pins on the preview: four points of Wisdom buy one regen.
+        [TestCase(12, 13, 0)]
+        [TestCase(14, 15, 0)]
+        [TestCase(15, 16, 1)]
+        [TestCase(16, 17, 0)]
+        [TestCase(11, 12, 1)]
+        public void OnePointOfWisdomMovesManaRegenOnlyAcrossAMultipleOfFour(int before, int after, int delta)
+        {
+            var scores = new AbilityScoreBlock(10, 10, 10, before, 10, 10);
+            var raised = scores.With(AbilityScore.Wisdom, after);
+
+            Assert.AreEqual(delta, SheetStats.ScoreDelta(SheetStat.ManaRegen, scores, raised));
         }
 
         // Recorded rather than asserted away: Intelligence and (as of Phase 2)
@@ -133,6 +147,11 @@ namespace PrincesPalace.Domain.Tests
                 "mana is WisdomDerived and every character shipped today carries it");
 
             CollectionAssert.IsEmpty(SheetStats.FedBy(SheetStat.MaxMana, PoolCapacityRule.Fixed));
+            CollectionAssert.IsEmpty(SheetStats.FedBy(SheetStat.ManaRegen, PoolCapacityRule.Fixed),
+                "a Fixed pool's income is its authored number too (PoolPrecedence.GainPerTurn)");
+            Assert.AreEqual(0, SheetStats.ScoreDelta(SheetStat.ManaRegen,
+                new AbilityScoreBlock(10, 10, 10, 15, 10, 10), new AbilityScoreBlock(10, 10, 10, 16, 10, 10),
+                PoolCapacityRule.Fixed));
 
             CollectionAssert.AreEqual(
                 new[] { SheetStat.MagicalDefense },

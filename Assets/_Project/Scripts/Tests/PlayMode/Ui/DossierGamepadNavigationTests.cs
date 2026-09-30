@@ -399,16 +399,110 @@ namespace PrincesPalace.PlayModeTests
             AssertSelected("DossierAttrPlus1", "rows are a list");
         }
 
-        // SKILLS has no focusable rows yet (phase 5c), so Right stays put.
-        [UnityTest]
-        public IEnumerator Skills_RightFromTheRail_StaysOnTheRail()
+        // ---- SKILLS (spec section 9: a list; Down past the last row reaches the link) ----------
+
+        // Bjorn's list, with `talents` kindled. Two talents make it longer than
+        // the window, so the last stretch is reached by scrolling.
+        private IEnumerator OpenBjornsSkills(params string[] talents)
         {
             yield return OpenTheCharacterTab();
+
+            var bjorn = SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == "bear");
+            bjorn.level = 1;
+            bjorn.claimedTrackLevel = 0;
+            bjorn.unlockedTalentIds.Clear();
+            foreach (string talent in talents) bjorn.unlockedTalentIds.Add(talent);
+
+            Assert.IsTrue(_dossier.SelectCharacter("bear"), "fixture: Bjorn is not on the strip");
+            _dossier.Refresh();
+
             Select("DossierSection2");
             yield return null;
+            Assert.AreEqual(CharacterSection.Skills, _dossier.Section);
+        }
+
+        [UnityTest]
+        public IEnumerator Skills_RightFromTheRail_ReachesTheFirstRow_AndLeftReturns()
+        {
+            yield return OpenBjornsSkills();
 
             yield return Right();
-            AssertSelected("DossierSection2", "SKILLS has nothing to enter yet");
+            AssertSelected("DossierSkillRow0", "SKILLS' entry is the first row");
+
+            yield return Left();
+            AssertSelected("DossierSection2", "Left from a row reaches the rail");
+        }
+
+        [UnityTest]
+        public IEnumerator Skills_UpFromTheFirstRow_ReachesTheSelectedTab()
+        {
+            yield return OpenBjornsSkills();
+            Select("DossierSkillRow0");
+
+            yield return Up();
+
+            AssertSelected(TabName, "Up off the list's first row is the tab");
+        }
+
+        // Header, Slam, header, the two talent skills, header, the two talents,
+        // the embers line and the link: six controls the pad can stand on.
+        [UnityTest]
+        public IEnumerator Skills_DownPastTheLastRowReachesTheLink_ScrollingTheWindowToShowIt()
+        {
+            yield return OpenBjornsSkills("bear_sen_root", "bear_sen_bellow_1");
+            Select("DossierSkillRow0");
+            Assert.AreEqual(0, _dossier.SkillsTop);
+
+            var seen = new List<string> { "Slam" };
+            for (int press = 0; press < 4; press++)
+            {
+                yield return Down();
+                seen.Add(DossierPane.TextOf(DossierPane.SelectedName + "Name"));
+            }
+
+            CollectionAssert.AreEqual(new[] { "Slam", "Bellow", "Brace", "The Sentinel", "Bellow" }, seen,
+                "Down walks the rows in list order, skipping the headers");
+            Assert.IsFalse(DossierPane.Control("DossierSkillLink").gameObject.activeInHierarchy,
+                "the link is below the window until the list is scrolled");
+
+            yield return Down();
+
+            AssertSelected("DossierSkillLink", "Down off the last row reaches the camp's link");
+            Assert.AreEqual(2, _dossier.SkillsTop, "the window scrolled just far enough to show it");
+
+            yield return Down();
+            AssertSelected("DossierSkillLink", "nothing is below the link");
+        }
+
+        [UnityTest]
+        public IEnumerator Skills_UpFromTheLinkWalksBackToTheHeadOfTheList()
+        {
+            yield return OpenBjornsSkills("bear_sen_root", "bear_sen_bellow_1");
+            Select("DossierSkillRow0");
+            for (int press = 0; press < 5; press++) yield return Down();
+            AssertSelected("DossierSkillLink", "fixture: the link was not reached");
+
+            for (int press = 0; press < 5; press++) yield return Up();
+
+            AssertSelected("DossierSkillRow0", "Up retraces the rows");
+            Assert.AreEqual(0, _dossier.SkillsTop, "and the window is back at its head, showing the first group's name");
+            Assert.IsTrue(DossierPane.Control("DossierSkillRow0").gameObject.activeInHierarchy);
+        }
+
+        // Scrolling the window under the pad keeps it on the same content while
+        // that is still in view.
+        [UnityTest]
+        public IEnumerator Skills_TheWheelKeepsFocusOnTheSameContent()
+        {
+            yield return OpenBjornsSkills("bear_sen_root", "bear_sen_bellow_1");
+            Select("DossierSkillRow2");
+            string name = DossierPane.TextOf("DossierSkillRow2Name");
+
+            _dossier.ScrollSkills(2);
+            yield return null;
+
+            Assert.AreEqual(name, DossierPane.TextOf(DossierPane.SelectedName + "Name"),
+                "the window moved under the pad and focus followed the row it was on");
         }
 
         // ---- LB / RB -----------------------------------------------------------------------

@@ -389,7 +389,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("Bleed", TextOf("GlossaryDetailName"));
             Assert.AreEqual("BLD  ·  Detriment", TextOf("GlossaryDetailMeta"));
             Assert.AreEqual(
-                "Bleed -- X physical damage each turn start, before armour. Separate applications add together.",
+                "X physical damage each turn start, before armour. Separate applications add together.",
                 TextOf("GlossaryDetailBody"));
         }
 

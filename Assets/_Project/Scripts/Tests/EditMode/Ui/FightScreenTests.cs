@@ -890,7 +890,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void PoolMembersAreTheOnlyRuntimePositionedElements()
         {
-            // The exemption's whole boundary, asserted. If a FIFTH pool ever
+            // The exemption's whole boundary, asserted. If a SIXTH pool ever
             // appears, this test is where the decision gets re-made rather than
             // where it quietly widens.
             //
@@ -912,8 +912,14 @@ namespace PrincesPalace.Domain.Tests
             // that pool and the damage numbers, which is its whole draw order.
             var pools = AllNodes(Screen().Root).Where(n => n.Kind == UiNodeKind.Pool).Select(n => n.Name).ToList();
 
+            // DossierSkillsPool is the fifth, and the decision was made: it comes
+            // with the system menu the fight embeds, and the CHARACTER tab's SKILLS
+            // list stands one node per visible entry in a window that scrolls by
+            // entry, with headers, rows and notes of different heights -- a
+            // placement nothing static can solve. Its four kinds share one pool
+            // because none of them is ever shown at another's spot.
             CollectionAssert.AreEquivalent(
-                new[] { "SpellVfx", "SpellParticles", "SpellGroundVfx", "DamagePopups" }, pools);
+                new[] { "SpellVfx", "SpellParticles", "SpellGroundVfx", "DamagePopups", "DossierSkillsPool" }, pools);
         }
 
         // ---- the tree does not restate a string ------------------------------------

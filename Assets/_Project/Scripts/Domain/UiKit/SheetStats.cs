@@ -118,7 +118,7 @@ namespace PrincesPalace.Domain.UiKit
         // is the only thing that actually converts a score into a stat:
         //
         //   Constitution -> Health, Physical Defense
-        //   Wisdom       -> Max Mana, Magical Defense
+        //   Wisdom       -> Max Mana, Mana Regen, Magical Defense
         //   Dexterity    -> Speed
         //   Charisma     -> signature gain
         //
@@ -148,11 +148,12 @@ namespace PrincesPalace.Domain.UiKit
         // than printing a misleading "+0".
 
         // THE PRIMARY POOL'S CAPACITY RULE DECIDES WHETHER WISDOM FEEDS THE
-        // POOL ROW AT ALL, and it has to: a Fixed pool is exactly its
-        // authored capacity from every source (PoolCapacityRule.Fixed), so
-        // for its owner Wisdom moves that number by nothing. Lighting the row
-        // anyway would be the precise lie this table exists to prevent -- the
-        // row highlights and the figure never changes.
+        // POOL ROWS AT ALL, and it has to: a Fixed pool is exactly its
+        // authored capacity and its authored income from every source
+        // (PoolCapacityRule.Fixed, PoolPrecedence.GainPerTurn), so for its
+        // owner Wisdom moves neither number. Lighting the row anyway would be
+        // the precise lie this table exists to prevent -- the row highlights
+        // and the figure never changes.
         //
         // A RULE ENUM RATHER THAN THE POOL. Domain/UiKit cannot see
         // ContentDatabase, and the sheet needs exactly one bit of the
@@ -169,6 +170,10 @@ namespace PrincesPalace.Domain.UiKit
                 case SheetStat.PhysicalDefense: return new[] { AbilityScore.Constitution };
                 case SheetStat.Speed: return new[] { AbilityScore.Dexterity };
                 case SheetStat.MaxMana:
+                    return primaryPoolRule == PoolCapacityRule.WisdomDerived
+                        ? new[] { AbilityScore.Wisdom }
+                        : System.Array.Empty<AbilityScore>();
+                case SheetStat.ManaRegen:
                     return primaryPoolRule == PoolCapacityRule.WisdomDerived
                         ? new[] { AbilityScore.Wisdom }
                         : System.Array.Empty<AbilityScore>();
@@ -238,12 +243,13 @@ namespace PrincesPalace.Domain.UiKit
         // row: the change in its attribute-derived half. One answer for the
         // stepper preview (a point spent or refunded) and for the compare
         // column (an item that shifts scores), so the two cannot round
-        // differently. Zero for a row no score feeds, and for the pool row of a
-        // pool whose capacity Wisdom does not move.
+        // differently. Zero for a row no score feeds, and for the pool rows of a
+        // pool Wisdom does not move.
         public static int ScoreDelta(SheetStat stat, AbilityScoreBlock before, AbilityScoreBlock after,
                                      PoolCapacityRule primaryPoolRule = PoolCapacityRule.WisdomDerived)
         {
-            if (stat == SheetStat.MaxMana && primaryPoolRule != PoolCapacityRule.WisdomDerived) return 0;
+            bool poolRow = stat == SheetStat.MaxMana || stat == SheetStat.ManaRegen;
+            if (poolRow && primaryPoolRule != PoolCapacityRule.WisdomDerived) return 0;
             return DerivedBonus(stat, after) - DerivedBonus(stat, before);
         }
 
@@ -258,6 +264,7 @@ namespace PrincesPalace.Domain.UiKit
                 case SheetStat.MaxHealth: return AbilityDerivation.MaxHealthBonus(scores);
                 case SheetStat.PhysicalDefense: return AbilityDerivation.PhysicalDefenseBonus(scores);
                 case SheetStat.MaxMana: return AbilityDerivation.MaxManaBonus(scores);
+                case SheetStat.ManaRegen: return AbilityDerivation.ManaRegenBonus(scores);
                 case SheetStat.MagicalDefense: return AbilityDerivation.MagicalDefenseBonus(scores);
                 case SheetStat.SignatureGain: return AbilityDerivation.SignatureGainBonus(scores);
 

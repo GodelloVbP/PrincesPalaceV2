@@ -56,20 +56,21 @@ namespace PrincesPalace.Domain.Tests
 
         // Literal pins on the words a player reads, spread over the shapes: a
         // stacking tick, a one-shot, a state, a two-part status, and each of
-        // the presentation-only ones.
-        [TestCase("Poison", "Poison -- X damage each turn start. Separate applications add together.", "PSN", false)]
-        [TestCase("Stunned", "Stunned -- turn skipped.", "STN", false)]
-        [TestCase("Rooted", "Rooted -- Skill Only.", "RTD", false)]
-        [TestCase("Feared", "Feared -- turn skipped and X% more damage taken.", "FER", false)]
-        [TestCase("Fortified", "Fortified -- +X Defense and Magical Defense.", "FRT", true)]
-        [TestCase("Shielded", "Shielded -- X shield.", "SHD", true)]
-        [TestCase("Speed up", "Speed up -- +X Speed.", "SP+", true)]
-        [TestCase("Speed down", "Speed down -- -X Speed.", "SP-", false)]
-        [TestCase("Transformed", "Transformed -- transformed.", "FRM", true)]
-        [TestCase("Rallied", "Rallied -- +X% attack. It lasts the rest of the fight and grows each round.", "RLY", true)]
-        [TestCase("Silenced", "Silenced -- cannot cast.", "SIL", false)]
-        [TestCase("Disarmed", "Disarmed -- -X% attack.", "DSM", false)]
-        public void ADefinitionReadsAsTheFightsTooltipWithTheNumberLeftOpen(
+        // the presentation-only ones. The body is a sentence without the name:
+        // the glossary's heading already says it.
+        [TestCase("Poison", "X damage each turn start. Separate applications add together.", "PSN", false)]
+        [TestCase("Stunned", "Turn skipped.", "STN", false)]
+        [TestCase("Rooted", "Skill Only.", "RTD", false)]
+        [TestCase("Feared", "Turn skipped and X% more damage taken.", "FER", false)]
+        [TestCase("Fortified", "+X Defense and Magical Defense.", "FRT", true)]
+        [TestCase("Shielded", "X shield.", "SHD", true)]
+        [TestCase("Speed up", "+X Speed.", "SP+", true)]
+        [TestCase("Speed down", "-X Speed.", "SP-", false)]
+        [TestCase("Transformed", "Transformed.", "FRM", true)]
+        [TestCase("Rallied", "+X% attack. It lasts the rest of the fight and grows each round.", "RLY", true)]
+        [TestCase("Silenced", "Cannot cast.", "SIL", false)]
+        [TestCase("Disarmed", "-X% attack.", "DSM", false)]
+        public void ADefinitionReadsAsTheFightsTooltipClauseWithTheNumberLeftOpen(
             string name, string description, string code, bool positive)
         {
             var definition = Named(name);
@@ -81,7 +82,8 @@ namespace PrincesPalace.Domain.Tests
 
         // THE ONE-SOURCE CHECK. Every engine status's glossary clause is the
         // clause its live badge shows: put a number where the X is and it is
-        // inside the fight's own tooltip.
+        // inside the fight's own tooltip, which keeps its "Name -- clause"
+        // shape even though the glossary body drops the name.
         [Test]
         public void EveryEngineDefinitionsClauseIsInsideItsLiveTooltip()
         {

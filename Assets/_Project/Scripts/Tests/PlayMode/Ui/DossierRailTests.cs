@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace.Domain.UiKit;
@@ -40,6 +41,9 @@ namespace PrincesPalace.PlayModeTests
         {
             SharedScene.AfterTest();
             TestGlobals.ResetAll();
+            TalentController.RequestedCharacterId = null;
+            RunManager.ResetForTests();
+            Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -174,50 +178,170 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- SKILLS ------------------------------------------------------------------------
 
-        private static void GrantShawn(params string[] talentIds)
+        // A character as a save would hold them at the start of a descent's
+        // camp: level 1, nothing collected, nothing kindled, nothing taught.
+        private static Character Fresh(string id)
         {
-            var shawn = SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == "sheep");
-            shawn.unlockedTalentIds.Clear();
-            foreach (var id in talentIds) shawn.unlockedTalentIds.Add(id);
+            var character = SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == id);
+            character.level = 1;
+            character.claimedTrackLevel = 0;
+            character.unlockedTalentIds.Clear();
+            character.unlockedSkillIds.Clear();
+            return character;
+        }
+
+        private IEnumerator OpenSkillsOf(string id, params string[] talents)
+        {
+            yield return OpenTheCharacterTab("sheep", "bear", "owl");
+
+            var character = Fresh(id);
+            foreach (string talent in talents) character.unlockedTalentIds.Add(talent);
+
+            _dossier.SelectCharacter(id);
+            DossierPane.Press(DossierPane.SectionRow(CharacterSection.Skills));
+            _dossier.Refresh();
+            yield return null;
+            Assert.AreEqual(CharacterSection.Skills, _dossier.Section);
+        }
+
+        private static bool Shown(string name) => Rect(name).gameObject.activeInHierarchy;
+
+        // The old list counted only talent-granted skills and read "0 known"
+        // for Bjorn, who fights with Slam from level 1.
+        [UnityTest]
+        public IEnumerator ABrandNewBjornListsHisInnateSlamUnderInnate()
+        {
+            yield return OpenSkillsOf("bear");
+
+            Assert.AreEqual("INNATE", DossierPane.TextOf("DossierSkillHeader0"));
+            Assert.AreEqual("Slam", DossierPane.TextOf("DossierSkillRow0Name"));
+            Assert.AreEqual("Spends Fury  ·  One enemy  ·  Front rank only",
+                DossierPane.TextOf("DossierSkillRow0Meta"), "the cost is in Bjorn's own pool, and Slam is melee");
+            StringAssert.StartsWith("Deal damage plus 17 to one target.", DossierPane.TextOf("DossierSkillRow0Description"));
+            Assert.IsFalse(Shown("DossierSkillRow1"), "nothing else is his yet");
         }
 
         [UnityTest]
-        public IEnumerator TheSkillsSectionListsOneRowPerGrantedSkill()
+        public IEnumerator BelowTheSkillsTheTalentsBlockSaysNoneKindledAndHowManyEmbersAreLeft()
         {
-            yield return OpenTheCharacterTab("sheep", "bear", "owl");
-            GrantShawn("sheep_ram_provoke_1", "sheep_ram_charge_1");
-            _dossier.SelectCharacter("sheep");
+            yield return OpenSkillsOf("bear");
 
-            DossierPane.Press(DossierPane.SectionRow(CharacterSection.Skills));
-            yield return null;
+            Assert.AreEqual("TALENTS", DossierPane.TextOf("DossierSkillHeader1"));
+            Assert.AreEqual("No talents kindled yet.", DossierPane.TextOf("DossierSkillNote0"));
+            Assert.AreEqual("30 embers unspent", DossierPane.TextOf("DossierSkillNote1"));
+        }
 
-            Assert.AreEqual(CharacterSection.Skills, _dossier.Section);
-            Assert.AreEqual("Provoke", DossierPane.TextOf("DossierSkill0Name"));
-            Assert.AreEqual("The target's next attack must hit you.", DossierPane.TextOf("DossierSkill0Description"));
-            Assert.AreEqual("Headbutt", DossierPane.TextOf("DossierSkill1Name"));
+        [UnityTest]
+        public IEnumerator SkillsFromTalentsGroupUnderTheirOwnHeaderAndTheTalentsListBelow()
+        {
+            yield return OpenSkillsOf("bear", "bear_sen_root", "bear_sen_bellow_1");
 
-            for (int i = 2; i < DossierLayout.SkillsVisible; i++)
+            Assert.AreEqual("INNATE", DossierPane.TextOf("DossierSkillHeader0"));
+            Assert.AreEqual("FROM TALENTS", DossierPane.TextOf("DossierSkillHeader1"));
+            Assert.AreEqual("TALENTS", DossierPane.TextOf("DossierSkillHeader2"));
+
+            CollectionAssert.AreEqual(
+                new[] { "Slam", "Bellow", "Brace", "The Sentinel", "Bellow" },
+                Enumerable.Range(0, 5).Select(i => DossierPane.TextOf($"DossierSkillRow{i}Name")).ToArray());
+            Assert.AreEqual("Free  ·  Cooldown 3  ·  One enemy", DossierPane.TextOf("DossierSkillRow1Meta"));
+            Assert.AreEqual("", DossierPane.TextOf("DossierSkillRow3Meta"), "a talent has no cost line");
+        }
+
+        // A signature cost is written in the signature's own name.
+        [UnityTest]
+        public IEnumerator AWoolSkillIsCostedInWool()
+        {
+            yield return OpenSkillsOf("sheep", "sheep_ram_charge_1");
+
+            Assert.AreEqual("2 Wool  ·  One enemy", MetaOfRow("Headbutt"));
+        }
+
+        // Rows are read by scrolling the window to them.
+        private string MetaOfRow(string name)
+        {
+            _dossier.ScrollSkills(-1000);
+
+            for (int step = 0; step <= _dossier.SkillEntryCount; step++)
             {
-                Assert.IsFalse(Rect($"DossierSkill{i}Name").gameObject.activeInHierarchy,
-                    $"DossierSkill{i}Name is showing with nothing granted for it");
+                for (int i = 0; i < DossierLayout.SkillsRowSlots; i++)
+                {
+                    if (Shown($"DossierSkillRow{i}") && DossierPane.TextOf($"DossierSkillRow{i}Name") == name)
+                    {
+                        return DossierPane.TextOf($"DossierSkillRow{i}Meta");
+                    }
+                }
+
+                _dossier.ScrollSkills(1);
             }
 
-            Assert.IsFalse(Rect("DossierSkillsEmptyHint").gameObject.activeInHierarchy);
+            Assert.Fail($"no row named {name} in the list");
+            return null;
         }
 
         [UnityTest]
-        public IEnumerator ACharacterWithNoGrantedSkills_SeesTheEmptySentence()
+        public IEnumerator AtCampTheConstellationLinkOpensTheTalentsSceneOnTheShownCharacter()
         {
-            yield return OpenTheCharacterTab("sheep", "bear", "owl");
-            GrantShawn();
-            _dossier.SelectCharacter("sheep");
+            yield return OpenSkillsOf("bear");
+            string loaded = null;
+            Navigation.LoadOverride = scene => loaded = scene;
 
-            DossierPane.Press(DossierPane.SectionRow(CharacterSection.Skills));
+            Assert.IsTrue(Shown("DossierSkillLink"), "the camp offers the constellation");
+            Assert.AreEqual("Open the constellation",
+                DossierPane.Need("DossierSkillLink").GetComponentInChildren<TMP_Text>(includeInactive: true).text);
+
+            DossierPane.Press("DossierSkillLink");
+
+            Assert.AreEqual(Navigation.Talents, loaded, "the link did not take the hub's Talents route");
+            Assert.AreEqual("bear", TalentController.RequestedCharacterId, "and it did not ask for Bjorn's page");
+            Assert.IsFalse(_menu.IsOpen, "the menu is still up over the scene it left");
+        }
+
+        [UnityTest]
+        public IEnumerator InADescentTheTalentsAreReadableAndThereIsNoConstellationLink()
+        {
+            RunManager.StartRun(4242UL);
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
             yield return null;
 
-            Assert.IsTrue(Rect("DossierSkillsEmptyHint").gameObject.activeInHierarchy);
-            Assert.AreEqual("Nothing learned yet.", DossierPane.TextOf("DossierSkillsEmptyHint"));
-            Assert.IsFalse(Rect("DossierSkill0Name").gameObject.activeInHierarchy);
+            _menu = DossierPane.Menu();
+            _dossier = DossierPane.Dossier();
+            _menu.Open(SystemMenuTab.Character);
+            yield return null;
+
+            Fresh("bear").unlockedTalentIds.Add("bear_sen_bellow_1");
+            _dossier.SelectCharacter("bear");
+            _dossier.ShowSection(CharacterSection.Skills, focusRow: false);
+            _dossier.Refresh();
+            yield return null;
+
+            Assert.AreEqual("TALENTS", DossierPane.TextOf("DossierSkillHeader2"));
+            Assert.IsFalse(Shown("DossierSkillLink"), "the constellation is a camp building");
+
+            // Reading the whole list to its end never finds it.
+            _dossier.ScrollSkills(1000);
+            yield return null;
+            Assert.IsFalse(Shown("DossierSkillLink"));
+        }
+
+        // A press does nothing on a row, so the footer offers no A there; the
+        // link is the one press in the list.
+        [UnityTest]
+        public IEnumerator TheFooterOffersNoSelectOnARowAndOpenOnTheLink()
+        {
+            yield return OpenSkillsOf("bear");
+
+            DossierPane.Select("DossierSkillRow0");
+            yield return null;
+            CollectionAssert.AreEqual(new[] { PromptButton.Cancel, PromptButton.Tabs, PromptButton.Pages },
+                _menu.CurrentPrompts().Select(p => p.Button).ToArray());
+
+            DossierPane.Select("DossierSkillLink");
+            yield return null;
+            var prompts = _menu.CurrentPrompts();
+            CollectionAssert.AreEqual(new[] { PromptButton.Confirm, PromptButton.Cancel },
+                prompts.Select(p => p.Button).ToArray());
+            Assert.AreEqual("Open", prompts[0].Label.Format());
         }
 
         // Nothing covers the rail: every section leaves it standing.

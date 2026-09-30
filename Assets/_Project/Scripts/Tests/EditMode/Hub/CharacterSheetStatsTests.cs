@@ -99,6 +99,19 @@ namespace PrincesPalace.Domain.Tests
                 "the BAKED label is still the untemplated entry -- see StatMaxPool's own note");
         }
 
+        // THE SIGNATURE ROW IS NAMED BY THE CHARACTER'S OWN RESOURCE, the same
+        // split as the pool row above: "Wool per turn" once the dossier knows
+        // whose sheet it is, and a generic word in the baked scene.
+        [Test]
+        public void TheSignatureRowIsNamedByTheCharactersOwnResource()
+        {
+            Assert.AreEqual("Wool per turn", UiStrings.StatSignaturePerTurn.Format("Wool"));
+            Assert.AreEqual("Signature per turn", SheetStats.LabelFor(SheetStat.SignatureGain).Format(),
+                "the BAKED label carries no invented resource name");
+            Assert.AreEqual("stat.signaturegain", SheetStats.LabelFor(SheetStat.SignatureGain).Key);
+            StringAssert.DoesNotContain("Focus", SheetStats.LabelFor(SheetStat.SignatureGain).Format());
+        }
+
         // Distinct values in every field, so a row reading the wrong one
         // cannot pass by coincidence.
         private static StatBlock Stats() => new StatBlock

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.Talents;
 using UnityEngine;
@@ -313,13 +314,19 @@ namespace PrincesPalace.Content
         // cost showing. Hiding it would mean the kit visibly changes shape
         // from turn to turn as mana and Wool move, which reads as buttons
         // appearing at random rather than as a resource being short.
-        public static IReadOnlyList<SkillDefinition> AvailableSkillsFor(Character character)
+        public static IReadOnlyList<SkillDefinition> AvailableSkillsFor(Character character) =>
+            SkillSourcesFor(character).Select(e => e.Skill).ToList();
+
+        // AvailableSkillsFor with the route each skill came in by, for the
+        // CHARACTER tab's SKILLS section (plan C18). The same list in the same
+        // order; the union below is the one place the five routes are read.
+        public static IReadOnlyList<SourcedSkill> SkillSourcesFor(Character character)
         {
             EnsureLoaded();
 
             if (character == null)
             {
-                return new List<SkillDefinition>();
+                return new List<SourcedSkill>();
             }
 
             // A skill is available by LEVEL, same as always, OR because it
@@ -423,16 +430,36 @@ namespace PrincesPalace.Content
             // THIS character's; a learned book is available because THIS
             // character learned it; a track-collected skill is available
             // because THIS character's own track paid it.
-            var available = _skills
-                .Where(s => s.Data.PlayerSelectable
-                            && (LearnedThisRun(s)
-                                || fromTrack.Contains(s.id)
-                                || byLevel.Contains(s)
-                                || (s.Data.CharacterId == character.definitionId
-                                    && (character.unlockedSkillIds.Contains(s.id)
-                                        || granted.Contains(s)))))
-                .OrderBy(s => s.Data.UnlockLevel)
-                .ThenBy(s => s.Data.SortOrder)
+            //
+            // THE SOURCE IS DECIDED HERE AND NOWHERE ELSE: a skill reachable
+            // by two routes is filed under the first that holds, in
+            // SkillSource's declaration order, so the CHARACTER tab groups the
+            // list without re-deriving this predicate (and cannot disagree
+            // with what the fight offers).
+            SkillSource? SourceOf(SkillDefinition s)
+            {
+                bool own = s.Data.CharacterId == character.definitionId;
+
+                if (byLevel.Contains(s)) return SkillSource.Innate;
+                if (own && granted.Contains(s)) return SkillSource.Talent;
+                if (LearnedThisRun(s)) return SkillSource.SpellBook;
+                if (fromTrack.Contains(s.id)) return SkillSource.RewardTrack;
+                if (own && character.unlockedSkillIds.Contains(s.id)) return SkillSource.Taught;
+                return null;
+            }
+
+            var available = new List<SourcedSkill>();
+            foreach (var s in _skills)
+            {
+                if (!s.Data.PlayerSelectable) continue;
+
+                var source = SourceOf(s);
+                if (source.HasValue) available.Add(new SourcedSkill(s, source.Value));
+            }
+
+            available = available
+                .OrderBy(e => e.Skill.Data.UnlockLevel)
+                .ThenBy(e => e.Skill.Data.SortOrder)
                 .ToList();
 
             // A SKILL THAT TAKES OVER ANOTHER'S BUTTON (Plant the Shield over
@@ -440,9 +467,9 @@ namespace PrincesPalace.Content
             // the upgrade is the same button rather than a second one. Done
             // here, on the one union every reader goes through.
             var replaced = new HashSet<string>(available
-                .Select(s => s.Data.ReplacesSkillId)
+                .Select(e => e.Skill.Data.ReplacesSkillId)
                 .Where(id => !string.IsNullOrEmpty(id)));
-            if (replaced.Count > 0) available.RemoveAll(s => replaced.Contains(s.id));
+            if (replaced.Count > 0) available.RemoveAll(e => replaced.Contains(e.Skill.id));
 
             return available;
         }

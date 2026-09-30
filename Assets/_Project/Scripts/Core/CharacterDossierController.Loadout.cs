@@ -830,6 +830,8 @@ namespace PrincesPalace
             for (int i = 0; i < SheetStats.Derived.Length; i++)
             {
                 var stat = SheetStats.Derived[i];
+                if (!StatApplies(stat)) { SetCompareRow(i, "", "", TextBright); continue; }
+
                 SetCompareRow(i, StatLabel(stat), DisplayValue(character, stat, stats, _scores), TextBright);
             }
         }
@@ -957,6 +959,8 @@ namespace PrincesPalace
             for (int i = 0; i < SheetStats.Derived.Length; i++)
             {
                 var stat = SheetStats.Derived[i];
+                if (!StatApplies(stat)) { SetCompareRow(i, "", "", TextBright); continue; }
+
                 SetCompareRow(i, StatLabel(stat), DisplayValue(character, stat, stats, _scores), TextBright);
             }
         }

@@ -127,10 +127,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> StatValues = new List<NodeRef>();
         public List<NodeRef> StatHighlights = new List<NodeRef>();
 
-        // ---- SKILLS -----------------------------------------------------------------------
-        public List<NodeRef> SkillNames = new List<NodeRef>();
-        public List<NodeRef> SkillDescriptions = new List<NodeRef>();
-        public NodeRef SkillsEmptyHint;
+        // ---- SKILLS: four pools of nodes the controller places by entry -----------------
+        public List<NodeRef> SkillHeaders = new List<NodeRef>();
+        public List<NodeRef> SkillRows = new List<NodeRef>();
+        public List<NodeRef> SkillRowNames = new List<NodeRef>();
+        public List<NodeRef> SkillRowMetas = new List<NodeRef>();
+        public List<NodeRef> SkillRowDescriptions = new List<NodeRef>();
+        public List<NodeRef> SkillNotes = new List<NodeRef>();
+        public NodeRef SkillLink;
+        public NodeRef SkillsScrollTrack;
+        public NodeRef SkillsScrollThumb;
 
         public static CharacterDossierScreen Build()
         {
@@ -812,41 +818,121 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- SKILLS --------------------------------------------------------------------------
 
+        // The list is windowed by entry (SkillsListModel), so the tree holds
+        // one pool of nodes per kind of entry and the controller stands each
+        // where the window puts it. Every pooled node starts inactive and
+        // parked at the top; the pool is exempt from overlap because its
+        // members never coexist at one spot.
         private UiNode BuildSkills()
         {
             var children = new List<UiNode>();
 
-            for (int i = 0; i < DossierLayout.SkillsVisible; i++)
-            {
-                var name = Words($"DossierSkill{i}Name", UiString.Runtime,
-                        new UiVec(DossierLayout.SkillWidth, DossierLayout.SkillNameHeight), 22, Text,
-                        Place.At(DossierLayout.SkillCentreX, DossierLayout.SkillNameCentreY(i)),
-                        TypographyRole.Body, UiTextAlign.Left)
-                    .Inactive();
-                var description = Words($"DossierSkill{i}Description", UiString.Runtime,
-                        new UiVec(DossierLayout.SkillWidth, DossierLayout.SkillDescriptionHeight), 20, TextSecondary,
-                        Place.At(DossierLayout.SkillCentreX, DossierLayout.SkillDescriptionCentreY(i)),
-                        TypographyRole.Body, UiTextAlign.TopLeft)
-                    .Truncated()
-                    .Inactive();
+            var width = DossierLayout.SkillsRowWidth;
+            var rowSize = new UiVec(width, DossierLayout.SkillsRowHeight);
 
-                SkillNames.Add(name);
-                SkillDescriptions.Add(description);
-                children.Add(name);
-                children.Add(description);
-            }
+            var pool = Ui.Pool("DossierSkillsPool",
+                DossierLayout.SkillsHeaderSlots + DossierLayout.SkillsRowSlots + DossierLayout.SkillsNoteSlots + 1,
+                index =>
+                {
+                    if (index < DossierLayout.SkillsHeaderSlots) return BuildSkillHeader(index, width);
 
-            var empty = Words("DossierSkillsEmptyHint", UiStrings.SkillsEmpty,
-                    new UiVec(DossierLayout.SkillWidth, 30f), 20, TextSecondary,
-                    Place.At(DossierLayout.SkillCentreX, DossierLayout.SkillNameCentreY(0)),
-                    TypographyRole.Body, UiTextAlign.Left)
-                .Inactive();
-            SkillsEmptyHint = empty;
-            children.Add(empty);
+                    index -= DossierLayout.SkillsHeaderSlots;
+                    if (index < DossierLayout.SkillsRowSlots) return BuildSkillRow(index, rowSize);
+
+                    index -= DossierLayout.SkillsRowSlots;
+                    if (index < DossierLayout.SkillsNoteSlots) return BuildSkillNote(index, width);
+
+                    return BuildSkillLink();
+                }).AllowOverlap("a pool's own rect is the whole section because its members are placed at runtime; it draws nothing itself and takes no clicks");
+            children.Add(pool);
+
+            var track = Ui.Solid("DossierSkillsScrollTrack", FightHudPalette.ScrollTrack,
+                new UiVec(DossierLayout.ScrollbarWidth, DossierLayout.DetailHeight),
+                Place.At(DossierLayout.SkillsScrollbarCentreX, 0f));
+            var thumb = Ui.Solid("DossierSkillsScrollThumb", FightHudPalette.ScrollThumb,
+                    new UiVec(DossierLayout.ScrollbarWidth, DossierLayout.DetailHeight),
+                    Place.At(DossierLayout.SkillsScrollbarCentreX, 0f))
+                .AsDecor();
+            SkillsScrollTrack = track;
+            SkillsScrollThumb = thumb;
+            children.Add(track);
+            children.Add(thumb);
 
             var section = Section("DossierSkills", children).Inactive();
             SkillsSection = section;
             return section;
+        }
+
+        private UiNode BuildSkillHeader(int index, float width)
+        {
+            var header = Words($"DossierSkillHeader{index}", UiString.Runtime,
+                    new UiVec(width, DossierLayout.SkillsHeaderHeight), 24, TextSecondary,
+                    Place.At(DossierLayout.SkillsRowCentreX, 0f), TypographyRole.FunctionalHeading, UiTextAlign.BottomLeft)
+                .Inactive();
+            SkillHeaders.Add(header);
+            return header;
+        }
+
+        private UiNode BuildSkillNote(int index, float width)
+        {
+            var note = Words($"DossierSkillNote{index}", UiString.Runtime,
+                    new UiVec(width, DossierLayout.SkillsNoteHeight), 20, TextMuted,
+                    Place.At(DossierLayout.SkillsRowCentreX, 0f), TypographyRole.Body, UiTextAlign.Left)
+                .Truncated()
+                .Inactive();
+            SkillNotes.Add(note);
+            return note;
+        }
+
+        // A focusable row: the pad reads it, a press does nothing. Skills and
+        // kindled talents share it; a talent leaves the right-hand line empty.
+        private UiNode BuildSkillRow(int index, UiVec size)
+        {
+            var name = Words($"DossierSkillRow{index}Name", UiString.Runtime,
+                    new UiVec(DossierLayout.SkillsNameWidth, DossierLayout.SkillsNameHeight), 22, Text,
+                    Place.At(DossierLayout.SkillsNameX, DossierLayout.SkillsLineY),
+                    TypographyRole.Body, UiTextAlign.Left)
+                .Truncated();
+            var meta = Words($"DossierSkillRow{index}Meta", UiString.Runtime,
+                    new UiVec(DossierLayout.SkillsMetaWidth, DossierLayout.SkillsNameHeight), 20, TextMuted,
+                    Place.At(DossierLayout.SkillsMetaX, DossierLayout.SkillsLineY),
+                    TypographyRole.Body, UiTextAlign.Right)
+                .Truncated();
+            var description = Words($"DossierSkillRow{index}Description", UiString.Runtime,
+                    new UiVec(size.X - DossierLayout.SkillsInset * 2f, DossierLayout.SkillsDescriptionHeight), 20,
+                    TextSecondary, Place.At(0f, DossierLayout.SkillsDescriptionY),
+                    TypographyRole.Body, UiTextAlign.TopLeft)
+                .Clamped();
+            var rule = Ui.Solid($"DossierSkillRow{index}Rule", Rule, new UiVec(size.X, 1f),
+                    Place.At(0f, -size.Y * 0.5f + 0.5f))
+                .AsDecor();
+
+            var row = Cell($"DossierSkillRow{index}", size, Place.At(DossierLayout.SkillsRowCentreX, 0f)).Inactive();
+            row.Children.Add(rule);
+            row.Children.Add(name);
+            row.Children.Add(meta);
+            row.Children.Add(description);
+
+            SkillRows.Add(row);
+            SkillRowNames.Add(name);
+            SkillRowMetas.Add(meta);
+            SkillRowDescriptions.Add(description);
+            return row;
+        }
+
+        // The constellation link: a Body 20 plate, not a full row.
+        private UiNode BuildSkillLink()
+        {
+            var size = new UiVec(DossierLayout.SkillsLinkWidth, DossierLayout.SkillsLinkPlateHeight);
+            var link = Ui.Button("DossierSkillLink", UiStrings.SkillsConstellationLink, size, 20,
+                    Place.At(DossierLayout.SkillsLinkCentreX, 0f))
+                .NoChrome()
+                .Styled(TypographyRole.Body)
+                .Inactive();
+            foreach (var edge in Ui.Rim("DossierSkillLink", size, SocketRim)) link.Children.Add(edge);
+
+            SkillLink = link;
+            return link;
         }
 
         // ---- REWARD TRACK ----------------------------------------------------------------------

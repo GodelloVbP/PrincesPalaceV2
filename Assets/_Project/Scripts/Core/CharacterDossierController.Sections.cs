@@ -19,8 +19,7 @@ namespace PrincesPalace
     // "-" / "+" pair, and the derived stats beside them. A "+" or "-" commits
     // on press (plan C5: attribute points have no pending state).
     //
-    // SKILLS lists the character's talent-granted skills (phase 5c widens it
-    // to every source).
+    // SKILLS is its own partial (CharacterDossierController.Skills.cs).
     public partial class CharacterDossierController
     {
         [SerializeField] internal TMP_Text attributesUnspent;
@@ -36,10 +35,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] statNames;
         [SerializeField] internal TMP_Text[] statValues;
         [SerializeField] internal GameObject[] statHighlights;
-
-        [SerializeField] internal TMP_Text[] skillNames;
-        [SerializeField] internal TMP_Text[] skillDescriptions;
-        [SerializeField] internal GameObject skillsEmptyHint;
 
         // Which score sits in which row: highest first, so the shape of a build
         // reads off the top. FROZEN while one character is on screen, so
@@ -62,6 +57,12 @@ namespace PrincesPalace
         private string _primaryPoolName = ManaDisplayNameFallback;
         private bool _canHoldSpellBooks = true;
 
+        // The character's signature resource, by its own name ("Wool"): what a
+        // skill's cost and the per-turn row are written in. Blank when they
+        // have none, and the per-turn row goes with it.
+        private bool _hasSignature;
+        private string _signatureName = "";
+
         private const string ManaDisplayNameFallback = "Mana";
 
         private static readonly Color StepperLive = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Text);
@@ -78,6 +79,13 @@ namespace PrincesPalace
             _primaryPoolRule = pool?.CapacityRule ?? PoolCapacityRule.WisdomDerived;
             _primaryPoolName = string.IsNullOrWhiteSpace(pool?.DisplayName) ? ManaDisplayNameFallback : pool.DisplayName;
             _canHoldSpellBooks = SpellBooks.CanHold(pool);
+
+            var definition = ContentDatabase.GetCharacter(character.definitionId);
+            _hasSignature = definition?.Data != null && definition.Data.HasSignatureResource;
+            _signatureName = !_hasSignature ? ""
+                : string.IsNullOrWhiteSpace(definition.Data.SignatureDisplayName)
+                    ? UiStrings.SignatureNameFallback.Format()
+                    : definition.Data.SignatureDisplayName;
 
             if (_rowOrder.Count == 0 || _rowOrderFor != character.definitionId)
             {
@@ -198,7 +206,20 @@ namespace PrincesPalace
                 }
 
                 if (Has(statHighlights, i)) statHighlights[i].SetShown(false);
-                if (stat == SheetStat.MaxMana && Has(statNames, i)) statNames[i].SetContent(StatLabel(stat));
+
+                // The pool and signature rows carry the character's own words;
+                // a row that does not apply to them is not drawn.
+                bool applies = StatApplies(stat);
+                if (Has(statNames, i))
+                {
+                    statNames[i].gameObject.SetShown(applies);
+                    if (applies && (stat == SheetStat.MaxMana || stat == SheetStat.SignatureGain))
+                    {
+                        statNames[i].SetContent(StatLabel(stat));
+                    }
+                }
+
+                if (Has(statValues, i)) statValues[i].gameObject.SetShown(applies);
             }
         }
 
@@ -226,7 +247,7 @@ namespace PrincesPalace
             for (int i = 0; i < SheetStats.Derived.Length && i < statHighlights.Length; i++)
             {
                 var stat = SheetStats.Derived[i];
-                bool lit = fed.Contains(stat);
+                bool lit = fed.Contains(stat) && StatApplies(stat);
                 if (statHighlights[i] != null) statHighlights[i].SetShown(lit);
                 if (!Has(statValues, i)) continue;
 
@@ -333,36 +354,24 @@ namespace PrincesPalace
             }
         }
 
-        // ---- SKILLS -----------------------------------------------------------------------
-
-        // Talent-granted only, which is what this pane can count without a
-        // fight session in hand (ContentDatabase.TalentGrantedSkillsFor).
-        private void RefreshSkills(Character character)
-        {
-            var skills = ContentDatabase.TalentGrantedSkillsFor(character);
-
-            if (skillsEmptyHint != null) skillsEmptyHint.SetShown(skills.Count == 0);
-
-            for (int i = 0; skillNames != null && i < skillNames.Length; i++)
-            {
-                bool present = i < skills.Count;
-                skillNames[i].gameObject.SetShown(present);
-                if (Has(skillDescriptions, i)) skillDescriptions[i].gameObject.SetShown(present);
-                if (!present) continue;
-
-                skillNames[i].SetContent(skills[i].Data.DisplayName);
-                if (Has(skillDescriptions, i)) skillDescriptions[i].SetContent(skills[i].Data.Description);
-            }
-        }
-
         // ---- the numbers, shared by ATTRIBUTES and the compare column ------------------------
 
         // A stat's name as the sheet says it: the pool row carries the pool's
         // own name, everything else is authored copy.
-        private string StatLabel(SheetStat stat) =>
-            stat == SheetStat.MaxMana
-                ? UiStrings.StatMaxPool.Format(_primaryPoolName)
-                : SheetStats.LabelFor(stat).Format();
+        private string StatLabel(SheetStat stat)
+        {
+            switch (stat)
+            {
+                case SheetStat.MaxMana: return UiStrings.StatMaxPool.Format(_primaryPoolName);
+                case SheetStat.SignatureGain: return UiStrings.StatSignaturePerTurn.Format(_signatureName);
+                default: return SheetStats.LabelFor(stat).Format();
+            }
+        }
+
+        // Whether this character has the row at all: a signature row for
+        // someone with no signature would read "-" beside a name that is not
+        // theirs.
+        private bool StatApplies(SheetStat stat) => stat != SheetStat.SignatureGain || _hasSignature;
 
         private static string DisplayValue(Character character, SheetStat stat, StatBlock stats, AbilityScoreBlock scores) =>
             TryCurrentValue(character, stat, stats, scores, out int value) ? SheetStats.DisplayText(stat, value) : "-";

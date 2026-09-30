@@ -410,19 +410,60 @@ namespace PrincesPalace.Domain.UiKit
         public static float DerivedNameCentreX => DX(DerivedLeft + DerivedNameWidth * 0.5f);
         public static float DerivedValueCentreX => DX(DerivedLeft + DerivedNameWidth + DerivedValueWidth * 0.5f);
 
-        // ---- SKILLS (spec 3.3; phase 5c redesigns it) ------------------------------------
+        // ---- SKILLS (spec 3.3) ------------------------------------------------------------
 
-        public const int SkillsVisible = 8;
-        public const float SkillRowHeight = 76f;
-        public const float SkillWidth = 900f;
-        public const float SkillNameHeight = 30f;
-        public const float SkillDescriptionHeight = 44f;
-        public static float SkillCentreX => DX(SkillWidth * 0.5f);
+        // One vertical list of entries of four heights, windowed by whole
+        // entries (SkillsListModel). The scrollbar sits at the detail's right
+        // edge, so the rows are 24 narrower than the detail.
+        public const float SkillsScrollbarGap = 16f;
+        public const float SkillsRowWidth = DetailWidth - ScrollbarWidth - SkillsScrollbarGap;   // 1172
 
-        public static float SkillNameCentreY(int index) =>
-            DY(index * SkillRowHeight + SkillNameHeight * 0.5f);
+        public const float SkillsHeaderHeight = 44f;
+        public const float SkillsRowHeight = 96f;
+        public const float SkillsNoteHeight = 44f;
+        public const float SkillsLinkHeight = 64f;
 
-        public static float SkillDescriptionCentreY(int index) =>
-            DY(index * SkillRowHeight + SkillNameHeight + SkillDescriptionHeight * 0.5f);
+        // How many of each a window can hold. Rows are what the height bounds
+        // (660 / 96); the headers are one per group, and a list has at most
+        // the five skill groups and TALENTS; a list has two notes at most (the
+        // empty sentence and the embers line) and one link.
+        public const int SkillsRowSlots = 6;
+        public const int SkillsHeaderSlots = 6;
+        public const int SkillsNoteSlots = 3;
+
+        // Inside a row, from its centre. A Body 22 name line is 29 px, and a
+        // Body 20 line 26.5: the description box holds two of them.
+        public const float SkillsInset = 16f;
+        public const float SkillsNameWidth = 440f;
+        public const float SkillsNameHeight = 30f;
+        public const float SkillsMetaWidth = SkillsRowWidth - SkillsInset * 2f - SkillsNameWidth - 8f;   // 692
+        public const float SkillsDescriptionHeight = 54f;
+        public const float SkillsLineTop = 6f;
+        public const float SkillsDescriptionTop = SkillsLineTop + SkillsNameHeight + 2f;                  // 38
+
+        public static float SkillsNameX => -SkillsRowWidth * 0.5f + SkillsInset + SkillsNameWidth * 0.5f;
+        public static float SkillsMetaX => SkillsRowWidth * 0.5f - SkillsInset - SkillsMetaWidth * 0.5f;
+        public static float SkillsLineY => SkillsRowHeight * 0.5f - SkillsLineTop - SkillsNameHeight * 0.5f;
+        public static float SkillsDescriptionY => SkillsRowHeight * 0.5f - SkillsDescriptionTop - SkillsDescriptionHeight * 0.5f;
+
+        // The link is a plate, not a full row.
+        public const float SkillsLinkWidth = 420f;
+        public const float SkillsLinkPlateHeight = 48f;
+
+        public static float SkillsRowCentreX => DX(SkillsRowWidth * 0.5f);
+        public static float SkillsLinkCentreX => DX(SkillsInset + SkillsLinkWidth * 0.5f);
+
+        // An entry's centre when it starts `fromTop` below the list's top.
+        public static float SkillsCentreY(float fromTop, float height) => DY(fromTop + height * 0.5f);
+
+        public static float SkillsScrollbarCentreX => DX(SkillsRowWidth + SkillsScrollbarGap + ScrollbarWidth * 0.5f);
+
+        // The thumb's length says how much of the list is on screen.
+        public static float SkillsThumbHeight(float shown, float total)
+        {
+            if (total <= 0f || shown >= total) return DetailHeight;
+            float height = DetailHeight * shown / total;
+            return height < ScrollThumbMinHeight ? ScrollThumbMinHeight : height;
+        }
     }
 }

@@ -1227,6 +1227,31 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(HasStat(panel, "MANA"), "this skill spends no mana; MANA must not appear");
         }
 
+        // The primary-pool cost row is the pool's own name: "MANA" beside a Fury
+        // user's number names a resource Bjorn does not have.
+        [Test]
+        public void TheCostRowOfAFuryUserIsNamedFuryNotMana()
+        {
+            var skill = new ResolvedSkill("gorge", "Gorge", "Bites.", "bjorn", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 30,
+                resourceCost: 0, spendsAllResource: false, power: 10, flatAmount: 0,
+                ignoresDefense: false, damageInstances: null, presentation: SpellPresentation.None, sortOrder: 0);
+
+            var pool = new ResourcePool("fury", "Fury", 100, 0, 0, 0);
+            pool.Gain(50);
+            var hero = new CombatantState("Bjorn", true, 300, pool, 20, 20);
+            var foe = new CombatantState("Foe", false, 1000, 0, 1, 1);
+            var kit = new PlayerKit("bjorn", CharacterRole.Tank, new[] { skill }, null, null);
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(3)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.IsTrue(HasStat(panel, "FURY"), "the pool's own name, upper case, like every other key on the card");
+            Assert.IsFalse(HasStat(panel, "MANA"));
+        }
+
         // ---- DamageType: the skill model exposes it, FightHudModel resolves it --
 
         [Test]

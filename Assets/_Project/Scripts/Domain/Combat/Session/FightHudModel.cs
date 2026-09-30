@@ -640,6 +640,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // unit is worse than a bare number.
         private static string PrimaryTagOf(CombatantState actor) => actor?.PrimaryPool?.ShortTag ?? "";
 
+        // The label of the card's primary-pool cost row: the pool's own name
+        // ("FURY" for Bjorn), not "MANA" for someone who has none. `manaCost`
+        // means "spent from the primary pool", so the row is that pool's.
+        private static string PrimaryPoolLabelOf(CombatantState actor)
+        {
+            string name = actor?.PrimaryPool?.DisplayName;
+            return string.IsNullOrWhiteSpace(name) ? UiStrings.DetailStatMana.Format() : name.ToUpperInvariant();
+        }
+
         // What the POWER stat shows: pre-mitigation damage from the caster's
         // OWN stats/relics/buffs, before the target's armor/resistance/
         // reduction touches it. Was `skill.Power` printed verbatim, which
@@ -691,7 +700,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int cooldownRemaining = session?.CooldownRemaining(actor, skill.Id) ?? 0;
             string primaryTag = PrimaryTagOf(actor);
 
-            AddIfApplicable(panel.Stats, "MANA", ManaCostLabel(skill, primaryTag));
+            AddIfApplicable(panel.Stats, PrimaryPoolLabelOf(actor), ManaCostLabel(skill, primaryTag));
             AddIfApplicable(panel.Stats, "COST", ResourceOrHealthCostLabel(skill, actor, resourceName));
             AddIfApplicable(panel.Stats, "COOLDOWN", CooldownRowFor(actor, skill, cooldownRemaining));
             AddIfApplicable(panel.Stats, "POWER", PowerLabel(session, actor, skill));

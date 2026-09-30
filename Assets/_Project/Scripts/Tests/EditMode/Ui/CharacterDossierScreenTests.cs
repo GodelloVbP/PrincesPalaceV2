@@ -332,5 +332,91 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(300f, DossierLayout.DerivedValueWidth, 0.001f);
             Assert.AreEqual(470f, DossierLayout.DerivedNameWidth + DossierLayout.DerivedValueWidth, 0.001f);
         }
+
+        // ---- SKILLS ---------------------------------------------------------------------------
+
+        // The pane pools its nodes by the kind of entry the window can hold, so
+        // the tree must carry exactly as many as the model bounds it to.
+        [Test]
+        public void TheSkillsPoolsHoldWhatTheWindowCanShow()
+        {
+            var screen = CharacterDossierScreen.Build();
+
+            Assert.AreEqual(6, screen.SkillRows.Count);
+            Assert.AreEqual(6, screen.SkillRowNames.Count);
+            Assert.AreEqual(6, screen.SkillRowMetas.Count);
+            Assert.AreEqual(6, screen.SkillRowDescriptions.Count);
+            Assert.AreEqual(6, screen.SkillHeaders.Count);
+            Assert.AreEqual(3, screen.SkillNotes.Count);
+            Assert.IsNotNull(screen.SkillLink);
+            Assert.IsNotNull(screen.SkillsScrollTrack);
+            Assert.IsNotNull(screen.SkillsScrollThumb);
+        }
+
+        [Test]
+        public void ASkillRowIsAFocusableButtonHoldingANameAMetaLineAndTwoDescriptionLines()
+        {
+            var screen = CharacterDossierScreen.Build();
+            var row = screen.SkillRows[0].Node;
+
+            Assert.AreEqual(UiNodeKind.Button, row.Kind);
+            Assert.AreEqual(1172f, row.Size.X, 0.001f);
+            Assert.AreEqual(96f, row.Size.Y, 0.001f);
+
+            var name = screen.SkillRowNames[0].Node;
+            var meta = screen.SkillRowMetas[0].Node;
+            var description = screen.SkillRowDescriptions[0].Node;
+
+            Assert.AreEqual(22, name.FontSize);
+            Assert.GreaterOrEqual(name.Size.Y, 22 * 1.33f, "a Body 22 line needs its 29 px or TMP draws nothing");
+            Assert.AreEqual(20, meta.FontSize);
+            Assert.AreEqual(20, description.FontSize);
+            Assert.GreaterOrEqual(description.Size.Y, 2 * 20 * 1.33f, "the description holds two Body 20 lines");
+            Assert.IsTrue(description.Clamps, "the description wraps to two lines and ends in an ellipsis past them");
+            Assert.IsTrue(name.Truncates);
+            Assert.IsTrue(meta.Truncates);
+        }
+
+        [Test]
+        public void ASkillRowsThreeLinesSitInsideItWithoutOverlap()
+        {
+            float rowTop = DossierLayout.SkillsRowHeight * 0.5f;
+            float nameTop = DossierLayout.SkillsLineY + DossierLayout.SkillsNameHeight * 0.5f;
+            float nameBottom = DossierLayout.SkillsLineY - DossierLayout.SkillsNameHeight * 0.5f;
+            float descTop = DossierLayout.SkillsDescriptionY + DossierLayout.SkillsDescriptionHeight * 0.5f;
+            float descBottom = DossierLayout.SkillsDescriptionY - DossierLayout.SkillsDescriptionHeight * 0.5f;
+
+            Assert.LessOrEqual(nameTop, rowTop);
+            Assert.LessOrEqual(descTop, nameBottom, "the description starts under the name line");
+            Assert.GreaterOrEqual(descBottom, -rowTop, "and ends inside the row");
+
+            // Name and meta share the first line without touching.
+            float nameRight = DossierLayout.SkillsNameX + DossierLayout.SkillsNameWidth * 0.5f;
+            float metaLeft = DossierLayout.SkillsMetaX - DossierLayout.SkillsMetaWidth * 0.5f;
+            Assert.Less(nameRight, metaLeft);
+            Assert.AreEqual(692f, DossierLayout.SkillsMetaWidth, 0.001f);
+        }
+
+        // The window is as tall as the detail and the rows leave room for the
+        // scrollbar at its right edge.
+        [Test]
+        public void TheSkillsRowsLeaveRoomForTheScrollbar()
+        {
+            Assert.AreEqual(1172f, DossierLayout.SkillsRowWidth, 0.001f);
+            Assert.AreEqual(1196f, DossierLayout.SkillsRowWidth + DossierLayout.SkillsScrollbarGap + DossierLayout.ScrollbarWidth,
+                0.001f);
+            Assert.AreEqual(594f, DossierLayout.SkillsScrollbarCentreX, 0.001f, "the bar sits at the detail's right edge");
+        }
+
+        [Test]
+        public void TheConstellationLinkIsA420By48PlateWithItsWords()
+        {
+            var link = CharacterDossierScreen.Build().SkillLink.Node;
+
+            Assert.AreEqual(UiNodeKind.Button, link.Kind);
+            Assert.AreEqual(420f, link.Size.X, 0.001f);
+            Assert.AreEqual(48f, link.Size.Y, 0.001f);
+            Assert.AreEqual(20, link.FontSize);
+        }
     }
 }

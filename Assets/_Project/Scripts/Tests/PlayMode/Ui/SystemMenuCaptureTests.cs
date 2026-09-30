@@ -306,7 +306,19 @@ namespace PrincesPalace.PlayModeTests
                 yield return new WaitForSecondsRealtime(0.3f);
                 yield return Capture("SystemMenu_character_attributes.png");
 
+                // Bjorn, who has the most to group: his innate Slam, the skills
+                // three kindled talents hand him, and the talents themselves
+                // under them. The save is put back below.
+                var bjorn = save.roster.First(c => c.definitionId == "bear");
+                bjorn.unlockedTalentIds.Clear();
+                foreach (string talent in new[] { "bear_sen_root", "bear_sen_hold_1", "bear_sen_bellow_1" })
+                {
+                    bjorn.unlockedTalentIds.Add(talent);
+                }
+
+                Assert.IsTrue(dossier.SelectCharacter("bear"), "fixture: Bjorn is not on the strip");
                 dossier.ShowSection(CharacterSection.Skills, focusRow: true);
+                dossier.Refresh();
                 yield return new WaitForSecondsRealtime(0.3f);
                 yield return Capture("SystemMenu_character_skills.png");
             }

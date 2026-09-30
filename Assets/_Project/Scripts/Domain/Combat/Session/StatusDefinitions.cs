@@ -36,9 +36,12 @@ namespace PrincesPalace.Domain.Combat.Session
             Note = note ?? "";
         }
 
-        // "Poison -- X damage each turn start.", the tooltip's own shape.
+        // "X damage each turn start.": the tooltip's clause as a sentence. The
+        // glossary shows the name as the entry's heading, so the body does not
+        // repeat it; the fight's tooltip keeps its own "Name -- clause" shape in
+        // StatusHud.
         public string Description =>
-            $"{Name} -- {Effect}." + (Note.Length > 0 ? " " + Note : "");
+            char.ToUpperInvariant(Effect[0]) + Effect.Substring(1) + "." + (Note.Length > 0 ? " " + Note : "");
     }
 
     // EVERY STATUS A BADGE CAN SHOW, as one list -- the source the Glossary's

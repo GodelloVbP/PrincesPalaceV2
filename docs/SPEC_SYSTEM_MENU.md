@@ -188,7 +188,10 @@ took it, so "Physical DEF 1000 (75%) → 1200 (79%) (+200)" sits on one line.
   - the value is Body, not TacticalData: that role's material tints a plain
     number violet
 - **Derived stats** fill the right 470 px as one column of 8, 44 apart, name
-  170 and value 300 wide. The row fed by the focused attribute is lit
+  170 and value 300 wide. The pool and signature rows carry the character's
+  own words (C21): "Max Fury", and "{signature} per turn" ("Wool per turn"),
+  which is not drawn at all for a character with no signature. Wisdom feeds Max
+  Mana and Mana Regen for a WisdomDerived pool, and neither for a Fixed one. The row fed by the focused attribute is lit
   (`SheetStats.Feeds`). While a `+` or `−` that would do something is focused,
   each lit row reads `before → after` (green for a gain, red for a loss, one
   line, e.g. `29 (22%) → 31 (23%)`), from the same `SheetStats.ScoreDelta` the
@@ -199,17 +202,38 @@ took it, so "Physical DEF 1000 (75%) → 1200 (79%) (+200)" sits on one line.
 
 ### 3.3 SKILLS (C18)
 
-- **One vertical scroll list.** Group headers are FunctionalHeading 24:
-  INNATE, FROM TALENTS, FROM SPELL BOOKS, FROM THE REWARD TRACK. Empty
-  groups are hidden.
-- **Row**, 96 tall:
-  - line 1: name (Body 22 SemiBold), then cost in pool name, cooldown and
-    target/reach (TacticalData 20, right)
-  - line 2: description (Body 20, up to 2 lines)
-- **TALENTS**, after the skills in the same list: the kindled talents as
-  2-line rows (name, description), plus the line "{n} embers unspent".
-  At camp only, a link row "Open the constellation" (a Body 20 plate)
-  loads the Talents scene through the existing hub route.
+- **One vertical list**, `ContentDatabase.SkillSourcesFor` (the same union
+  `AvailableSkillsFor` returns, each skill filed under the first route that
+  holds it). Group headers are FunctionalHeading 24 in a 44 box: INNATE, FROM
+  TALENTS, FROM SPELL BOOKS, FROM THE REWARD TRACK, and TAUGHT for a skill
+  handed over outright (`unlockedSkillIds`, the seam an event teacher writes
+  through). Empty groups are hidden; a character with no skills sees "Nothing
+  learned yet." in their place.
+- **Window.** The list scrolls by whole entries, never by pixels, so a row is
+  not cut at the window's edge. Rows are 1172 wide (the detail less an 8 px
+  scrollbar and a 16 gap); the wheel, a drag and the track scroll it, and the
+  pad moves it by Down and Up off the window's edges. Focus follows the
+  content: after the window moves, the pad stands on the row it was on.
+- **Row**, 96 tall, a focusable button:
+  - line 1: name (Body 22, 30 tall, left 440), then the right-hand line (Body 20
+    muted, right, 692 wide): cost in the character's own pool name ("6 Mana",
+    "30 Fury", "2 Wool", "20% HP", "Spends Fury" for a poolTiers skill, "Free"),
+    the cooldown ("Cooldown 3", "Once per fight"), the target ("One enemy",
+    "All enemies", "One ally", "Party", "Self"), and for a single-enemy skill
+    its reach ("Front rank only" for melee, "Ranks 1, 2" for an authored
+    list). Empty parts are left out; the parts are joined by a middle dot.
+  - line 2: description (Body 20, up to 2 lines, 54 tall, through
+    `DescriptionRenderer`)
+  - A does nothing on a row, so the footer shows no A there.
+  - Costs are the fight's: reward-track discounts are applied
+    (`ApplyRewardTrackSkillDeltas`).
+- **TALENTS**, after the skills in the same list: a TALENTS header, the
+  kindled talents as 96-tall rows (name and description, nothing on the right),
+  then "{n} embers unspent" (a 44 note; "1 ember unspent" for one). The block is
+  read-only and shows in every context. **The link is the only part that is
+  camp-only:** "Open the constellation" (a 420 x 48 Body 20 plate in a 64 slot)
+  sets `TalentController.RequestedCharacterId` to the shown character and takes
+  the hub's Talents route; A on it shows "Open" in the footer.
 
 ### 3.4 REWARD TRACK (C19)
 
@@ -348,8 +372,10 @@ or opening lands.
       returns to the pack cell.
   - **ATTRIBUTES:** entry is the first attribute's +. Rows are a list; −
     and + are a rail within the row.
-  - **SKILLS:** entry is the first row. It is a list; Down past the last
-    row reaches the constellation link at camp.
+  - **SKILLS:** entry is the first row in view. It is a list; Down past the
+    last row reaches the constellation link at camp, scrolling the window to
+    show it. Up off the first row goes to the tab, and the window returns to
+    its head.
   - **REWARD TRACK:** as today (`RewardTrackController.Input`), entered
     from the rail.
 - **PARTY:** entry is the Rear seat. Seats are a rail; Down goes to the
