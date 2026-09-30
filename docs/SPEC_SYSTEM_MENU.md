@@ -160,8 +160,11 @@ took it, so "Physical DEF 1000 (75%) → 1200 (79%) (+200)" sits on one line.
   - Filter row: 5 chips (All, Armour, Weapons, Salves, Books), 78 × 44,
     4 apart, Body 20.
   - Grid: 3 × 4 cells of 112 × 112, each with a 64 px icon, a rarity
-    tick, a count badge (Body 20) and a tier ring. No names in the
-    cell; the compare column names the focused entry.
+    tick, a count badge (Body 20) and a tier ring. A cell whose item has
+    no art (the salves, AUDIT #131) prints the item's name instead, Body 20
+    in a 96 × 80 box (three lines, ellipsis after) that stops above the count
+    badge; a cell with art has no name, and the compare column names the
+    focused entry. The gear and book cells do the same in an 80 × 80 box.
   - The grid scrolls vertically (the scrollbar exists today).
   - Footer: "Carried {n}" (Body 20).
   - The empty state is a Body 20 sentence centred in the grid: "Nothing
@@ -181,7 +184,9 @@ took it, so "Physical DEF 1000 (75%) → 1200 (79%) (+200)" sits on one line.
     authored one is seven lines) take the column from under the kind line
     down, and no stat rows show. The description and the rows are hidden while
     it does
-  - nothing focused: the character's derived stats
+  - nothing focused: the character's derived stats, listed from 72 (under the
+    "Stats" heading). The list starts under the last head line that has words:
+    72 with a name only, 100 under a kind line, 212 under a description.
 
 ### 3.2 ATTRIBUTES (C17)
 

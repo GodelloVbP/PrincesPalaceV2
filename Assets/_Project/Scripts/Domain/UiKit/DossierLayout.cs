@@ -346,11 +346,37 @@ namespace PrincesPalace.Domain.UiKit
         public const float CompareLineHeight = 27f;
         public const float CompareRowHeight = CompareLineHeight * 2f;
 
-        public static float CompareNameLineCentreY(int index) =>
-            DY(CompareRowsTop + index * CompareRowHeight + CompareLineHeight * 0.5f);
+        public static float CompareNameLineCentreY(int index) => CompareNameLineCentreY(index, CompareRowsTop);
 
-        public static float CompareValueLineCentreY(int index) =>
-            DY(CompareRowsTop + index * CompareRowHeight + CompareLineHeight * 1.5f);
+        public static float CompareValueLineCentreY(int index) => CompareValueLineCentreY(index, CompareRowsTop);
+
+        public static float CompareNameLineCentreY(int index, float rowsTop) =>
+            DY(rowsTop + index * CompareRowHeight + CompareLineHeight * 0.5f);
+
+        public static float CompareValueLineCentreY(int index, float rowsTop) =>
+            DY(rowsTop + index * CompareRowHeight + CompareLineHeight * 1.5f);
+
+        // The rows sit under the last head line that has words, so a head
+        // with nothing under its name does not leave a hole above the list.
+        // Only the eight-row layout needs the full CompareRowsTop; a head
+        // without a description gives back the description's 108.
+        public const float CompareRowsTopUnderName = 72f;
+        public const float CompareRowsTopUnderKind = 100f;
+
+        public static float CompareRowsTopFor(bool hasKind, bool hasDescription) =>
+            hasDescription ? CompareRowsTop : hasKind ? CompareRowsTopUnderKind : CompareRowsTopUnderName;
+
+        // ---- a name in place of missing art ---------------------------------------------
+
+        // Three Body 20 lines (26.6 each) in every cell that can lack art.
+        // The pack's box stops above the count badge in the bottom-right
+        // corner (which spans -52..-26 from the cell's centre).
+        public const float NameLineHeight = 27f;
+        public const float PackNameWidth = 96f;
+        public const float PackNameHeight = NameLineHeight * 3f - 1f;   // 80
+        public const float PackNameOffsetY = 15f;
+        public const float SlotNameWidth = 80f;
+        public const float SlotNameHeight = NameLineHeight * 3f - 1f;   // 80
 
         // ---- ATTRIBUTES (spec 3.2) ------------------------------------------------------
 

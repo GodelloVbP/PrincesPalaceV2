@@ -68,6 +68,10 @@ namespace PrincesPalace.Domain.UiKit
         // The id the cell's icon is found by: an item's, or the skill's.
         public string IconId => Kind == PackEntryKind.Book ? BookId : Item.Id;
 
+        // What the cell says when it has no art to show (ItemIcons.Apply
+        // returned false).
+        public string DisplayName => Kind == PackEntryKind.Book ? BookName : Item.Name;
+
         public bool IsWeapon => Kind == PackEntryKind.Gear && EquipmentSlots.IsWeaponSlot(Item.Slot);
     }
 

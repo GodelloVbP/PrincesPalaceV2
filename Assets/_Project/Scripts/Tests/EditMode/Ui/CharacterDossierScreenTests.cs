@@ -247,6 +247,37 @@ namespace PrincesPalace.Domain.Tests
             Assert.LessOrEqual(lastBottom, DossierLayout.DetailHeight);
         }
 
+        // A cell that can lack art carries a label for the item's name, boxed
+        // for three Body 20 lines; the label must fit the cell it sits in.
+        [Test]
+        public void EveryCellThatCanLackArtHasAThreeLineNameLabel()
+        {
+            var screen = CharacterDossierScreen.Build();
+
+            Assert.AreEqual(12, screen.PackNames.Count);
+            Assert.AreEqual(EquipmentSlots.All.Length, screen.SlotNames.Count);
+            Assert.AreEqual(SpellBooks.MaxSpellSlots, screen.BookNames.Count);
+
+            Assert.LessOrEqual(DossierLayout.PackNameWidth, DossierLayout.PackCell);
+            Assert.LessOrEqual(DossierLayout.PackNameHeight, DossierLayout.PackCell);
+            Assert.GreaterOrEqual(DossierLayout.PackNameHeight, 3f * 20f * 1.33f);
+            Assert.LessOrEqual(DossierLayout.SlotNameWidth, DossierLayout.SlotSize);
+            Assert.GreaterOrEqual(DossierLayout.SlotNameHeight, 3f * 20f * 1.33f);
+
+            // Under the count badge, which spans -52..-26 from the cell's centre.
+            Assert.GreaterOrEqual(DossierLayout.PackNameOffsetY - DossierLayout.PackNameHeight * 0.5f, -26f);
+        }
+
+        // The rows hang under the last head line with words.
+        [Test]
+        public void TheCompareRowsCloseUpUnderAShorterHead()
+        {
+            Assert.AreEqual(212f, DossierLayout.CompareRowsTopFor(true, true), 0.001f);
+            Assert.AreEqual(100f, DossierLayout.CompareRowsTopFor(true, false), 0.001f);
+            Assert.AreEqual(72f, DossierLayout.CompareRowsTopFor(false, false), 0.001f);
+            Assert.AreEqual(244.5f, DossierLayout.CompareNameLineCentreY(0, 72f), 0.001f);
+        }
+
         // The columns fill the detail area exactly, in order.
         [Test]
         public void TheThreeLoadoutColumnsFillTheDetailArea()

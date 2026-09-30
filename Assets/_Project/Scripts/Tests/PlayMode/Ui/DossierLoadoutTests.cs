@@ -292,6 +292,51 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(DossierPane.Label("DossierCompareDescription").gameObject.activeInHierarchy);
         }
 
+        // A salve with no art (AUDIT #131) names itself in its cell, and a
+        // cell that has art does not.
+        [UnityTest]
+        public IEnumerator AnArtlessPackCellDrawsItsName()
+        {
+            yield return OpenOnTheMap(Shawn);
+
+            Pack("health_potion", "health_potion", ItemFor(EquipmentSlot.Head).id);
+
+            string potion = DossierPane.PackItemCell(_dossier, "health_potion");
+            string cell = potion.Substring("DossierPackCell".Length);
+            var name = DossierPane.Label("DossierPackName" + cell);
+
+            Assert.IsTrue(name.gameObject.activeInHierarchy, "an artless cell shows no name");
+            StringAssert.Contains("Health", DossierPane.DrawnText(name), "the cell does not say what it holds");
+            Assert.Greater(name.textInfo.characterCount, 0, "the name label built no mesh");
+
+            string gear = DossierPane.PackItemCell(_dossier, ItemFor(EquipmentSlot.Head).id)
+                .Substring("DossierPackCell".Length);
+            Assert.IsFalse(DossierPane.Label("DossierPackName" + gear).gameObject.activeInHierarchy,
+                "a cell with art also prints its name over it");
+        }
+
+        // Nothing focused: the derived list starts under the "Stats" heading,
+        // not below the description a focused entry would fill.
+        [UnityTest]
+        public IEnumerator TheStatListClosesUpUnderItsHeadingWhenNothingIsFocused()
+        {
+            yield return OpenOnTheMap(Shawn);
+
+            EventSystem.current.SetSelectedGameObject(null);
+            _dossier.Refresh();
+            yield return null;
+
+            var first = DossierPane.Label("DossierCompareStat0Name").rectTransform;
+            Assert.AreEqual(244.5f, first.anchoredPosition.y, 0.01f, "the list did not close up under the heading");
+            Assert.IsNotEmpty(DossierPane.DrawnTextOf("DossierCompareStat0Name"), "the first stat draws nothing");
+
+            Pack(ItemFor(EquipmentSlot.Head).id);
+            DossierPane.Select(DossierPane.PackItemCell(_dossier, ItemFor(EquipmentSlot.Head).id));
+            yield return null;
+
+            Assert.AreEqual(104.5f, first.anchoredPosition.y, 0.01f, "a gear summary needs the room the list gave up");
+        }
+
         // ---- the strip's pager plates are the footer's ---------------------------------------------
 
         [UnityTest]

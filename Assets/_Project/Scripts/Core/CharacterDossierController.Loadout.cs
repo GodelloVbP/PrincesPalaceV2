@@ -31,6 +31,7 @@ namespace PrincesPalace
         [SerializeField] internal Image[] slotRarityTicks;
         [SerializeField] internal Image[] slotRiftGlows;
         [SerializeField] internal TMP_Text[] slotCaptions;
+        [SerializeField] internal TMP_Text[] slotNames;
         [SerializeField] internal GameObject[] slotArmedRims;
 
         // ---- the book row, SpellBooks.MaxSpellSlots long ----------------------------
@@ -38,6 +39,7 @@ namespace PrincesPalace
         [SerializeField] internal Button[] bookCells;
         [SerializeField] internal Image[] bookIcons;
         [SerializeField] internal TMP_Text[] bookCaptions;
+        [SerializeField] internal TMP_Text[] bookNames;
         [SerializeField] internal GameObject[] bookArmedRims;
         [SerializeField] internal TMP_Text noBooksLine;
 
@@ -49,6 +51,7 @@ namespace PrincesPalace
         [SerializeField] internal Image[] packRarityTicks;
         [SerializeField] internal Image[] packRiftGlows;
         [SerializeField] internal TMP_Text[] packCounts;
+        [SerializeField] internal TMP_Text[] packNames;
         [SerializeField] internal GameObject[] packArmedRims;
         [SerializeField] internal Image packScrollTrack;
         [SerializeField] internal RectTransform packScrollThumb;
@@ -182,7 +185,9 @@ namespace PrincesPalace
                 // ACTIVATE the icon object, not just its Image: the node is
                 // declared inactive so an empty slot draws nothing, and
                 // ItemIcons.Apply only sets `enabled`.
-                if (Has(slotIcons, i)) slotIcons[i].gameObject.SetShown(ItemIcons.Apply(slotIcons[i], icons, item?.id));
+                bool hasArt = Has(slotIcons, i) && ItemIcons.Apply(slotIcons[i], icons, item?.id);
+                if (Has(slotIcons, i)) slotIcons[i].gameObject.SetShown(hasArt);
+                ShowNameInCell(slotNames, i, item != null && !hasArt, item?.displayName);
 
                 if (Has(slotRarityTicks, i))
                 {
@@ -214,6 +219,16 @@ namespace PrincesPalace
 
                 if (Has(slotArmedRims, i)) slotArmedRims[i].SetShown(_pending.ArmsGear && _pending.GearSlot == i);
             }
+        }
+
+        // The name stands in for art that is not there, so a cell is never a
+        // blank square (AUDIT #131: the salves have no icon yet).
+        private static void ShowNameInCell(TMP_Text[] names, int i, bool show, string name)
+        {
+            if (!Has(names, i)) return;
+
+            names[i].gameObject.SetShown(show);
+            if (show) names[i].SetContent(name ?? "");
         }
 
         private bool WornAt(int slotIndex)
@@ -250,7 +265,9 @@ namespace PrincesPalace
                 string skillId = BookIn(character.definitionId, i);
                 var skill = string.IsNullOrEmpty(skillId) ? null : ContentDatabase.GetSkill(skillId);
 
-                if (Has(bookIcons, i)) bookIcons[i].gameObject.SetShown(ItemIcons.Apply(bookIcons[i], icons, skillId));
+                bool hasArt = Has(bookIcons, i) && ItemIcons.Apply(bookIcons[i], icons, skillId);
+                if (Has(bookIcons, i)) bookIcons[i].gameObject.SetShown(hasArt);
+                ShowNameInCell(bookNames, i, skill != null && !hasArt, skill?.Data.DisplayName);
 
                 if (Has(bookCaptions, i))
                 {
@@ -339,7 +356,9 @@ namespace PrincesPalace
 
                 var e = entry.Value;
 
-                if (Has(packIcons, i)) packIcons[i].gameObject.SetShown(ItemIcons.Apply(packIcons[i], icons, e.IconId));
+                bool hasArt = Has(packIcons, i) && ItemIcons.Apply(packIcons[i], icons, e.IconId);
+                if (Has(packIcons, i)) packIcons[i].gameObject.SetShown(hasArt);
+                ShowNameInCell(packNames, i, !hasArt, e.DisplayName);
 
                 bool item = e.Kind != PackEntryKind.Book;
                 if (Has(packRarityTicks, i))
@@ -982,6 +1001,27 @@ namespace PrincesPalace
             }
 
             if (compareBody != null) compareBody.gameObject.SetShown(false);
+
+            PlaceCompareRows(DossierLayout.CompareRowsTopFor(!string.IsNullOrEmpty(kind), !string.IsNullOrEmpty(description)));
+        }
+
+        // The rows start under the last head line that has words, so "Stats"
+        // over the character's own numbers has no hole between them.
+        private void PlaceCompareRows(float rowsTop)
+        {
+            for (int i = 0; i < SheetStats.Derived.Length; i++)
+            {
+                MoveTo(compareStatNames, i, DossierLayout.CompareNameLineCentreY(i, rowsTop));
+                MoveTo(compareStatValues, i, DossierLayout.CompareValueLineCentreY(i, rowsTop));
+            }
+        }
+
+        private static void MoveTo(TMP_Text[] labels, int i, float centreY)
+        {
+            if (!Has(labels, i)) return;
+
+            var rect = labels[i].rectTransform;
+            rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, centreY);
         }
 
         // A book or a salve: its words take the column, and no stat row shows.

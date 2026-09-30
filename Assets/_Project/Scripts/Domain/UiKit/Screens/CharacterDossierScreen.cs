@@ -79,6 +79,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SlotRarityTicks = new List<NodeRef>();
         public List<NodeRef> SlotRiftGlows = new List<NodeRef>();
         public List<NodeRef> SlotCaptions = new List<NodeRef>();
+        public List<NodeRef> SlotNames = new List<NodeRef>();
         public List<NodeRef> SlotArmedRims = new List<NodeRef>();
 
         // The book row, SpellBooks.MaxSpellSlots long, or the one line that
@@ -87,6 +88,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> BookCells = new List<NodeRef>();
         public List<NodeRef> BookIcons = new List<NodeRef>();
         public List<NodeRef> BookCaptions = new List<NodeRef>();
+        public List<NodeRef> BookNames = new List<NodeRef>();
         public List<NodeRef> BookArmedRims = new List<NodeRef>();
         public NodeRef NoBooksLine;
 
@@ -98,6 +100,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PackRarityTicks = new List<NodeRef>();
         public List<NodeRef> PackRiftGlows = new List<NodeRef>();
         public List<NodeRef> PackCounts = new List<NodeRef>();
+        public List<NodeRef> PackNames = new List<NodeRef>();
         public List<NodeRef> PackArmedRims = new List<NodeRef>();
         public NodeRef PackScrollTrack;
         public NodeRef PackScrollThumb;
@@ -186,6 +189,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             Ui.Button(name, UiString.Runtime, size, 20, place)
                 .NoChrome()
                 .Styled(TypographyRole.Body);
+
+        // The item's name, drawn in its cell while it has no art: an empty
+        // square tells the player nothing about what is in it. The controller
+        // shows it only when ItemIcons.Apply found no sprite.
+        private static UiNode NameInCell(string name, UiVec size, float offsetY) =>
+            Words(name, UiString.Runtime, size, 20, Text, Place.At(0f, offsetY), TypographyRole.Body, UiTextAlign.Centre)
+                .Clamped()
+                .Inactive();
 
         // The gold ring that marks a pending state's source (plan C13), built
         // as four edges under one panel the controller switches on.
@@ -483,11 +494,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(-size.X * 0.5f + 9f, size.Y * 0.5f - 9f))
                 .Inactive().AsDecor();
             var armed = PendingRing($"DossierSlotArmed{key}", size);
+            var worn = NameInCell($"DossierSlotName{key}",
+                new UiVec(DossierLayout.SlotNameWidth, DossierLayout.SlotNameHeight), 0f);
 
             var cell = Cell($"DossierSlot{key}", size, Place.At(at.X, at.Y));
             cell.Children.Add(Ui.Solid($"DossierSlot{key}Fill", SocketFill, size, Place.At(0f, 0f)).AsDecor());
             foreach (var edge in Ui.Rim($"DossierSlot{key}", size, SocketRim)) cell.Children.Add(edge);
             cell.Children.Add(icon);
+            cell.Children.Add(worn);
             cell.Children.Add(glow);
             cell.Children.Add(tick);
             cell.Children.Add(armed);
@@ -504,6 +518,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             SlotRarityTicks.Add(tick);
             SlotArmedRims.Add(armed);
             SlotCaptions.Add(caption);
+            SlotNames.Add(worn);
 
             yield return cell;
             yield return caption;
@@ -518,11 +533,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var icon = Ui.Sprite($"DossierBook{index}Icon", null, new UiVec(iconSize, iconSize), Place.At(0f, 0f))
                 .Inactive().AsDecor();
             var armed = PendingRing($"DossierBook{index}Armed", size);
+            var learned = NameInCell($"DossierBook{index}Name",
+                new UiVec(DossierLayout.SlotNameWidth, DossierLayout.SlotNameHeight), 0f);
 
             var cell = Cell($"DossierBook{index}", size, Place.At(at.X, at.Y));
             cell.Children.Add(Ui.Solid($"DossierBook{index}Fill", SocketFill, size, Place.At(0f, 0f)).AsDecor());
             foreach (var edge in Ui.Rim($"DossierBook{index}", size, SocketRim)) cell.Children.Add(edge);
             cell.Children.Add(icon);
+            cell.Children.Add(learned);
             cell.Children.Add(armed);
 
             var captionAt = DossierLayout.BookCaptionCentre(index);
@@ -535,6 +553,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             BookIcons.Add(icon);
             BookArmedRims.Add(armed);
             BookCaptions.Add(caption);
+            BookNames.Add(learned);
 
             yield return cell;
             yield return caption;
@@ -587,12 +606,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.At(size.X * 0.5f - 26f, -size.Y * 0.5f + 17f), TypographyRole.Body, UiTextAlign.Right)
                     .Inactive();
                 var armed = PendingRing($"DossierPackArmed{i}", size);
+                var named = NameInCell($"DossierPackName{i}",
+                    new UiVec(DossierLayout.PackNameWidth, DossierLayout.PackNameHeight), DossierLayout.PackNameOffsetY);
 
                 var cell = Cell($"DossierPackCell{i}", size, Place.At(at.X, at.Y)).Inactive();
                 cell.Children.Add(Ui.Solid($"DossierPackCell{i}Fill", SocketFill, size, Place.At(0f, 0f)).AsDecor());
                 foreach (var edge in Ui.Rim($"DossierPackCell{i}", size, SocketRim)) cell.Children.Add(edge);
                 cell.Children.Add(glow);
                 cell.Children.Add(icon);
+                cell.Children.Add(named);
                 cell.Children.Add(tick);
                 cell.Children.Add(count);
                 cell.Children.Add(armed);
@@ -602,6 +624,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 PackRiftGlows.Add(glow);
                 PackRarityTicks.Add(tick);
                 PackCounts.Add(count);
+                PackNames.Add(named);
                 PackArmedRims.Add(armed);
                 children.Add(cell);
             }
