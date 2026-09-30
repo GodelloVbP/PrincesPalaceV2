@@ -508,17 +508,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float x = cx - DossierLayout.ContentAWidth * 0.5f
                           + DossierLayout.PackSortButtonWidth * (i + 0.5f);
 
-                // SILVER THEMED PLATE, like GlossaryScreen.BuildCategory's own
-                // rail tabs: the flat NoChrome box this drew was 84x32
+                // SILVER THEMED PLATE: the flat NoChrome box this drew was 84x32
                 // (2.625:1), past Legacy's own tolerance
                 // (ThemedButtonAspectLintTests). Width kept, height down to
                 // Legacy's honest 28.
                 // ThemedPlate, not Themed(), because a hand-declared Caption
-                // is what GlossaryScreen's own comment recommends for a row
-                // that would otherwise fight a generated <button>Label for
-                // the same box -- here there is no generated label to fight,
-                // but the shape is copied for consistency with the rest of
-                // this pass. The sort's selected state stays exactly what it
+                // is what the kit recommends for a row that would otherwise
+                // fight a generated <button>Label for the same box -- here
+                // there is no generated label to fight, but the shape is
+                // copied for consistency with the rest of this pass. The sort's selected state stays exactly what it
                 // was: PackSortUnderlines below, driven by
                 // CharacterDossierController.RefreshSortMarkers -- this
                 // change touches only the plate, not that seam.

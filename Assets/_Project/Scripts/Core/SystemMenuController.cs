@@ -13,8 +13,8 @@ namespace PrincesPalace
     //
     // IT LAYS THE BAR OUT AT RUNTIME, which reads like a violation of this
     // project's generated-scenes rule and is not one. The tab SET depends on
-    // context -- four tabs at camp, five in a descent -- and a scene is
-    // generated once, so the build authors every tab at its five-tab position
+    // context -- five tabs at camp, six in a descent -- and a scene is
+    // generated once, so the build authors every tab at its six-tab position
     // and this re-applies SystemMenuLayout for whichever set is showing. The
     // arithmetic is still in exactly one place. See SystemMenuScreen's header.
     public class SystemMenuController : MonoBehaviour, INavTabStrip
@@ -278,7 +278,14 @@ namespace PrincesPalace
             // A relic: page the RUN pane to it and put focus on its row.
             if (tab == SystemMenuTab.Run)
             {
-                if (target.Kind == MenuTargetKind.Relic) RunPane()?.ShowRelic(target.Id);
+                if (target.Kind == MenuTargetKind.Relic) PaneOf<RunController>(tab)?.ShowRelic(target.Id);
+                return;
+            }
+
+            // A glossary entry: its category, its page, its row.
+            if (tab == SystemMenuTab.Glossary)
+            {
+                if (target.Kind == MenuTargetKind.GlossaryEntry) PaneOf<GlossaryController>(tab)?.ShowEntry(target.Id);
                 return;
             }
 
@@ -293,23 +300,17 @@ namespace PrincesPalace
             if (target.Is(MenuTargetKind.Section, MenuSections.Pack)) dossier.ShowPack(true);
         }
 
-        private RunController RunPane()
+        // The controller a tab's pane hosts. Found rather than wired: the menu
+        // only knows its panes, and each pane's controller is its own.
+        private T PaneOf<T>(SystemMenuTab tab) where T : Component
         {
-            int pane = SystemMenuTabs.PaneIndexFor(SystemMenuTabs.IndexOf(SystemMenuTab.Run));
+            int pane = SystemMenuTabs.PaneIndexFor(SystemMenuTabs.IndexOf(tab));
             return panes != null && pane < panes.Length && panes[pane] != null
-                ? panes[pane].GetComponentInChildren<RunController>(includeInactive: true)
+                ? panes[pane].GetComponentInChildren<T>(includeInactive: true)
                 : null;
         }
 
-        // Found rather than wired: the menu only knows its panes, and the
-        // dossier is the Character pane's controller.
-        private CharacterDossierController Dossier()
-        {
-            int pane = SystemMenuTabs.PaneIndexFor(SystemMenuTabs.IndexOf(SystemMenuTab.Character));
-            return panes != null && pane < panes.Length && panes[pane] != null
-                ? panes[pane].GetComponentInChildren<CharacterDossierController>(includeInactive: true)
-                : null;
-        }
+        private CharacterDossierController Dossier() => PaneOf<CharacterDossierController>(SystemMenuTab.Character);
 
         // Restores the clock even if the object is torn down while open -- a
         // scene change with the menu up would otherwise leave the next scene
@@ -458,13 +459,16 @@ namespace PrincesPalace
         //
         // Rewired here rather than declared once at build time because WHICH
         // tabs are visible is a runtime fact ApplyContext has just
-        // recomputed, and the five-tab authored layout on disk is not what a
-        // four-tab context shows (SystemMenuScreen's own header explains why
+        // recomputed, and the six-tab authored layout on disk is not what a
+        // five-tab context shows (SystemMenuScreen's own header explains why
         // the scene cannot know that). Only VISIBLE tabs are chained; a
         // hidden tab's Explicit links are left whatever they were, which does
         // not matter -- it is inactive, and Unity never routes a Move onto an
         // inactive Selectable.
-        private void RefreshNavLinks()
+        //
+        // Internal so a pane whose entry moves under it (the glossary's is the
+        // category being read) can re-point the tab's Down link when it does.
+        internal void RefreshNavLinks()
         {
             if (tabButtons == null) return;
 
@@ -586,7 +590,7 @@ namespace PrincesPalace
         // Which tabs this context has, and where they sit.
         //
         // Runs on every open rather than once, because the answer changes: a
-        // player who starts a run and reopens the menu must get the five-tab
+        // player who starts a run and reopens the menu must get the six-tab
         // bar without the scene being rebuilt.
         public void ApplyContext()
         {

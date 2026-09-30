@@ -224,7 +224,16 @@ The pane is 1520 × 756.
 - **Category order:** Relics, Statuses, Monsters, Skills (was "Spells",
   C21), Items, Talents, Mechanics, Deeds.
 - **Statuses** comes from the status definitions behind the fight's
-  status box (`StatusHud`).
+  status box (`StatusHud`, listed by `StatusDefinitions`): name, a
+  `CODE · Benefit|Detriment` meta line, and the tooltip's own sentence with the
+  number left as X.
+- **As built** (`GlossaryLayout`): rail rows 64 with a 4 gap, each a name over
+  its "unlocked / total" count; list rows 64 with the pager 12 under the last
+  row; the detail's icon (120) sits left of the name and meta, the body under
+  both at the column's full width. Selection follows focus on the rail and in
+  the list, so nothing there takes A. LB/RB clamp at the first and last
+  category. Metas are mixed case: Body 20 in caps would sit under the caps
+  floor.
 
 ## 6. PARTY (C22)
 

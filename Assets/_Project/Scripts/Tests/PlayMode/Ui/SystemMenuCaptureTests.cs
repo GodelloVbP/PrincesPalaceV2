@@ -129,6 +129,41 @@ namespace PrincesPalace.PlayModeTests
             yield return Capture("SystemMenu_roster_titles.png");
         }
 
+        // THE GLOSSARY, on its Statuses category with an entry focused: the rail
+        // with counts, a page of eight rows with the pager, and the detail with
+        // its badge and the fight's own sentence. Reached by the deep link a
+        // status in the fight will use, so the picture is also the proof that
+        // the link pages to the entry and focuses its row.
+        //
+        // A capture because what can be wrong is not a value: whether the
+        // three columns read as a set, and whether a two-line row, a 28 point
+        // name and an eight-line body all fit their boxes, is a question for
+        // eyes.
+        [UnityTest]
+        public IEnumerator CaptureTheGlossaryOnTheStatuses()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+
+            // Poison sits on the second page, so the pager and a turned page are
+            // both in shot.
+            menu.Open(SystemMenuTab.Glossary, MenuTarget.Glossary("poison"));
+            yield return null;
+            yield return null;
+
+            yield return new WaitForSecondsRealtime(0.4f);
+            yield return Capture("SystemMenu_glossary.png");
+        }
+
         private static IEnumerator OpenTheTrack(int level, int claimed)
         {
             yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);

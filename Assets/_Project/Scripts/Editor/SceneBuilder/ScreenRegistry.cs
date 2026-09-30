@@ -412,7 +412,7 @@ public static class ScreenRegistry
                 // The ONE whose screen does not exist yet. This array is the one
                 // place that list lives, and it shrinks as they land -- the
                 // character overlay took CharacterSheet out of it, and the
-                // glossary has now taken Relics.
+                // glossary tab has now taken Relics.
                 hub.unbuiltButtons = new[]
                 {
                     result.Button(screen.PrincipalityButton),
@@ -420,7 +420,6 @@ public static class ScreenRegistry
 
                 WireCharacterOverlay(result, screen, hub);
                 WireRelicDraft(result, screen, hub);
-                WireGlossary(result, screen, hub);
                 hub.debugMenuPanel = WireDebugMenu(result, screen.Debug);
             },
         };
@@ -1111,6 +1110,7 @@ public static class ScreenRegistry
         }
         if (menu.Options != null) WireOptions(result, menu.Options);
         if (menu.Run != null) WireRun(result, menu.Run, controller);
+        if (menu.Glossary != null) WireGlossary(result, menu.Glossary, controller);
         if (menu.Party != null) WireParty(result, menu.Party, controller);
         if (menu.Exits != null) WireExits(result, menu.Exits, controller);
 
@@ -1467,18 +1467,22 @@ public static class ScreenRegistry
         return controller;
     }
 
-    private static void WireGlossary(UiEmitResult result, HubScreen screen, HubController hub)
+    // The GLOSSARY pane, inside the system menu.
+    //
+    // Icons for the categories with art, in one table keyed by id. Items and
+    // relics are the only two with baked art; a status's badge is Resources
+    // art loaded when its row is described, and the rest resolve to nothing
+    // and ItemIcons disables the Image -- the same graceful posture the
+    // character pane takes.
+    private static GlossaryController WireGlossary(
+        UiEmitResult result, GlossaryScreen glossary, SystemMenuController menu)
     {
-        var glossary = screen.Glossary;
         var controller = result.Attach<GlossaryController>(glossary.Root);
         UiAutoBind.Bind(result, controller, glossary);
 
+        controller.menu = menu;
         controller.detailLockedByLabel = result.Tmp(glossary.DetailLockedBy);
 
-        // Icons for EVERY category at once, in two parallel arrays. Items and
-        // relics are the only two with art today; the rest resolve to nothing
-        // and ItemIcons disables the Image, which is the same graceful posture
-        // the character overlay already takes.
         var withArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
             .Select(i => (i.id, i.iconPath))
@@ -1491,7 +1495,7 @@ public static class ScreenRegistry
             .Select(a => new IconEntry(a.Item1, SceneBuilder.LoadSpriteByKey(a.Item2)))
             .ToArray();
 
-        hub.glossaryPanel = result.Go(glossary.Root);
+        return controller;
     }
 
     private static void WireRelicDraft(UiEmitResult result, HubScreen screen, HubController hub)

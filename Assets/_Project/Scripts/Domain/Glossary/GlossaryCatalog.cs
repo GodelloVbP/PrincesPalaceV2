@@ -12,8 +12,15 @@ namespace PrincesPalace.Domain.Glossary
     public enum GlossaryCategory
     {
         Relics,
+
+        // The badges the fight draws, from StatusDefinitions: the one category
+        // whose rows are neither content assets nor hand-written prose.
+        Statuses,
         Monsters,
-        Spells,
+
+        // Every skill in the game, under the name the fight's SKILL verb and
+        // the Character tab's SKILLS section use (plan C21).
+        Skills,
         Items,
         Talents,
 
@@ -78,7 +85,8 @@ namespace PrincesPalace.Domain.Glossary
     // free to test when it lives somewhere without an engine in it.
     public static class GlossaryCatalog
     {
-        public const int RowsPerPage = 10;
+        // The list column's eight rows (spec section 5).
+        public const int RowsPerPage = 8;
 
         public static readonly IReadOnlyList<GlossaryCategory> Categories =
             System.Enum.GetValues(typeof(GlossaryCategory)).Cast<GlossaryCategory>().ToList();
@@ -90,8 +98,9 @@ namespace PrincesPalace.Domain.Glossary
             switch (category)
             {
                 case GlossaryCategory.Relics: return "RELICS";
+                case GlossaryCategory.Statuses: return "STATUSES";
                 case GlossaryCategory.Monsters: return "MONSTERS";
-                case GlossaryCategory.Spells: return "SPELLS";
+                case GlossaryCategory.Skills: return "SKILLS";
                 case GlossaryCategory.Items: return "ITEMS";
                 case GlossaryCategory.Talents: return "TALENTS";
                 case GlossaryCategory.Mechanics: return "MECHANICS";

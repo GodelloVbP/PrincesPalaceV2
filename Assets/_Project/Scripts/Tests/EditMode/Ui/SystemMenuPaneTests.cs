@@ -39,6 +39,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(width, RunLayout.PaneWidth, 0.001f, "RUN is not the pane's width");
             Assert.AreEqual(height, RunLayout.PaneHeight, 0.001f, "RUN is not the pane's height");
 
+            Assert.AreEqual(width, GlossaryLayout.PaneWidth, 0.001f, "GLOSSARY is not the pane's width");
+            Assert.AreEqual(height, GlossaryLayout.PaneHeight, 0.001f, "GLOSSARY is not the pane's height");
+
             Assert.AreEqual(width, ExitsLayout.PaneWidth, 0.001f, "the Exit pane is not the pane's width");
             Assert.AreEqual(height, ExitsLayout.PaneHeight, 0.001f, "the Exit pane is not the pane's height");
 
@@ -263,6 +266,7 @@ namespace PrincesPalace.Domain.Tests
                 { SystemMenuTab.Party, screen.Party != null },
                 { SystemMenuTab.Options, screen.Options != null },
                 { SystemMenuTab.Run, screen.Run != null },
+                { SystemMenuTab.Glossary, screen.Glossary != null },
                 { SystemMenuTab.Exit, screen.Exits != null },
             };
 

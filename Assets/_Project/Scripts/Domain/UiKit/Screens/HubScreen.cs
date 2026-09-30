@@ -58,11 +58,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // navigate around is not a draft.
         public RelicDraftScreen Draft;
 
-        // What the Relics building opens now. That building has been dimmed
-        // and unpressable since the hub was built, because relics were never
-        // a screen's worth of thing on their own -- a record of ALL content is.
-        public GlossaryScreen Glossary;
-
         public HubAmbience.Layer Ambience;
 
         // Node -> Resources folder, for the runtime frame looper. Recorded at
@@ -83,7 +78,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Declared FAR TO NEAR: declaration order is painter's order, so a
             // nearer building draws over a further one with nothing sorting
             // anything -- the fight stage's rule, reused.
-            var relics = screen.Staged("RelicsBuilding", UiStrings.HubRelics, "empty_plot", HubAnchors.Relics);
+            var relics = screen.Staged("RelicsBuilding", UiStrings.HubGlossary, "empty_plot", HubAnchors.Relics);
             var talents = screen.Staged("TalentsBuilding", UiStrings.HubTalents, "talents", HubAnchors.Talents);
             var characterSheet = screen.Staged("CharacterSheetBuilding", UiStrings.HubCharacterSheet, "character_sheet", HubAnchors.CharacterSheet);
             var principality = screen.Staged("PrincipalityBuilding", UiStrings.HubPrincipality, "principality", HubAnchors.Principality);
@@ -173,9 +168,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var draft = RelicDraftScreen.Build();
             screen.Draft = draft;
 
-            var glossary = GlossaryScreen.Build();
-            screen.Glossary = glossary;
-
             // Gold, 5:1 KIT CONTAINER. Width holds at 520; ContainerSizeForWidth
             // derives the matching 104 height from FiveByOne's own 5.0
             // aspect. CurrencyLabel's own 500x80 box clears the kit's
@@ -208,7 +200,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 mainMenu,
                 draft.Root,
-                glossary.Root,
 
                 // The overarching menu opens on top of everything the hub can
                 // be showing...

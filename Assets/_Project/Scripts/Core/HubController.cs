@@ -23,7 +23,6 @@ namespace PrincesPalace
         [SerializeField] internal GameObject characterOverlayPanel;
         [SerializeField] internal GameObject debugMenuPanel;
         [SerializeField] internal RelicDraftController relicDraft;
-        [SerializeField] internal GameObject glossaryPanel;
         [SerializeField] internal Button principalityButton;
         [SerializeField] internal Button characterSheetButton;
         [SerializeField] internal Button relicsButton;
@@ -147,11 +146,12 @@ namespace PrincesPalace
             // An overlay, not a scene load: it opens over the hub and the hub
             // is still standing behind it when it closes.
             characterSheetButton.onClick.AddListener(() => SetCharacterOverlay(true));
-            // The Relics building opens the RECORD, not a relic screen.
-            // Relics stopped being permanent progression, so a screen about
-            // owning them had nothing to show; a record of every relic,
-            // monster, spell, item, talent and deed does.
-            relicsButton.onClick.AddListener(() => SetGlossary(true));
+            // The Relics building opens the GLOSSARY tab: a record of every
+            // relic, status, monster, skill, item, talent, rule and deed. (Relics
+            // stopped being permanent progression, so a screen about owning them
+            // had nothing to show. The node keeps its name: it is the art
+            // anchor's key.)
+            relicsButton.onClick.AddListener(OpenGlossary);
             // The two that go somewhere. The other four are screens that do not
             // exist yet, and a button that logs is more honest than one that
             // loads an empty scene.
@@ -295,8 +295,8 @@ namespace PrincesPalace
         // -- fixed at Start() because none of these six ever appears or
         // disappears afterward (unlike SystemMenu's tabs or Map's rooms):
         // principalityButton stays permanently disabled rather than hidden,
-        // and the other five are always on screen. The debug menu, glossary,
-        // relic draft and character overlay covering the hub without pushing
+        // and the other five are always on screen. The debug menu, relic
+        // draft and character overlay covering the hub without pushing
         // their own context yet (HandleEscape's own header) is pre-existing,
         // named debt, not something this pass changes.
         private Dictionary<string, object> Selectables()
@@ -339,7 +339,7 @@ namespace PrincesPalace
         private void Update()
         {
             // GATED ON TOP OF STACK: a modal covering the hub -- the system
-            // menu, the glossary, the relic draft, the debug menu itself --
+            // menu, the relic draft, the debug menu itself --
             // must not also see F1 land underneath it. (The menu's own keys,
             // C, I, P and View, are not read here: NavigationInputModule
             // reads them once and hands them to the top context.)
@@ -372,14 +372,13 @@ namespace PrincesPalace
         // RegisterNavContext), called once a frame by the ONE dispatch point
         // rather than raced against a second poll.
         //
-        // The debug menu, the glossary and the relic draft each push their
-        // own NavContext (RelicDraftController/GlossaryController/
-        // DebugMenuController), so while any of them is open it -- not the
-        // hub -- is top of stack, and this handler never runs; the
-        // dispatcher calls THEIR context's own Cancel instead (Close for the
-        // first two, a deliberate no-op for the draft -- see
+        // The debug menu and the relic draft each push their own NavContext
+        // (RelicDraftController/DebugMenuController), so while either is open
+        // it -- not the hub -- is top of stack, and this handler never runs;
+        // the dispatcher calls THEIR context's own Cancel instead (Close for
+        // the debug menu, a deliberate no-op for the draft -- see
         // RelicDraftController.RefreshNavigation's own header). What is left
-        // here is exactly the one thing that is never one of those three
+        // here is exactly the one thing that is never one of those two
         // branches: open the overarching menu.
         // Named for the key that still reaches it -- escape binds the
         // SystemMenu axis as well as Cancel -- but it is the START button's
@@ -388,6 +387,13 @@ namespace PrincesPalace
         public void HandleEscape()
         {
             SystemMenuController.OpenFromRoot(systemMenu);
+        }
+
+        // The glossary building's action: the menu on its Glossary tab.
+        internal void OpenGlossary()
+        {
+            if (systemMenu == null || systemMenu.IsOpen) return;
+            systemMenu.Open(SystemMenuTab.Glossary);
         }
 
         // The corner Exit button's action: the menu on its Exit tab.
@@ -414,14 +420,6 @@ namespace PrincesPalace
 
         public void SetCharacterOverlay(bool open, bool inventory = false) =>
             SheetPanel.Set(characterOverlayPanel, open, inventory);
-
-        public bool GlossaryIsOpen => glossaryPanel != null && glossaryPanel.activeSelf;
-
-        public void SetGlossary(bool open)
-        {
-            if (glossaryPanel == null) return;
-            glossaryPanel.SetActive(open);
-        }
 
         public bool DebugMenuIsOpen => debugMenuPanel != null && debugMenuPanel.activeSelf;
 

@@ -32,7 +32,7 @@ namespace PrincesPalace.PlayModeTests
     // EVERY RESET HERE, AND EVERY FIXTURE'S OWN, RUNS ONLY WHEN Reused. On a
     // fresh load they would be no-ops at best, and at worst they would supply
     // the very state a test is there to see production supply -- the menu's
-    // default tab, the glossary's first category, the entry selection. Gated,
+    // default tab, the entry selection. Gated,
     // a forced-reload run (PP_SHARED_SCENE_RELOAD=1) checks exactly what the
     // fixtures checked before sharing.
     internal static class NavSceneReuse
@@ -116,7 +116,6 @@ namespace PrincesPalace.PlayModeTests
             if (menu != null && menu.IsOpen) menu.Close();
             if (menu != null) menu.Select(SystemMenuTabs.DefaultFor(menu.Context));
             if (hub.CharacterOverlayIsOpen) hub.SetCharacterOverlay(false);
-            if (hub.GlossaryIsOpen) hub.SetGlossary(false);
             if (hub.DebugMenuIsOpen) hub.SetDebugMenu(false);
             return hub;
         }

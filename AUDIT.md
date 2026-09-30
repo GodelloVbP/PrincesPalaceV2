@@ -1619,6 +1619,11 @@ The main menu's own modals absorb Start too, but the MainMenu scene carries no s
 `:856`: Fight, Map, Hub). There is nothing there for Start to open, so nothing there is being
 absorbed FROM. The same is true of Shop, Talents and the Reckoning.
 
+**Update (system menu Phase 4):** the glossary is no longer in the list. It is a tab of the menu
+(`GlossaryController` builds no `NavContext` now), so Start over it is the menu's own Start, and the
+hub building, the `G` hotkey and `Open(Glossary, entry)` all reach it. The debug menu, the relic
+draft and the main menu's modals are still absorbing.
+
 ### 174. OWNER'S CALL: Start over a Party carry puts the character back down rather than being ignored
 
 `SystemMenuController.cs:245` wires the menu's own context `systemMenu:
@@ -2319,6 +2324,12 @@ cue, and a visible refusal on an illegal press.
 Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
 
 ### 227. No onboarding, and the glossary is reachable only from the Hub
+
+**Update (system menu Phase 4):** the glossary half is fixed. It is the GLOSSARY tab of the system
+menu, so it opens from a descent and from a fight (`G`, or LT/RT), and
+`SystemMenuController.Open(SystemMenuTab.Glossary, MenuTarget.Glossary(entryId))` deep-links to an
+entry (category, page and row). Nothing in the fight calls that link yet, and the first-run hints
+and the unexplained jargon below are untouched.
 
 `Core/HubController.cs` `SetGlossary(bool)` (466-470), called only from the
 hub's relics button (line 145) — it takes no entry id, so nothing elsewhere

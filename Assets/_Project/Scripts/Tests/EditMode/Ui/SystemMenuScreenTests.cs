@@ -13,24 +13,24 @@ namespace PrincesPalace.Domain.Tests
     // way, but that changing the tab table is a one-line change which cannot
     // silently break the layout.
     //
-    // THE FOUR-TAB LAYOUT IS ONLY EVER CHECKED HERE. The scene on disk carries
-    // the five-tab bar, because that is the set with the most parts and a scene
-    // is generated once; the four-tab layout is applied at runtime by
+    // THE FIVE-TAB LAYOUT IS ONLY EVER CHECKED HERE. The scene on disk carries
+    // the six-tab bar, because that is the set with the most parts and a scene
+    // is generated once; the five-tab layout is applied at runtime by
     // SystemMenuController. So UiAudit -- which re-solves what was emitted --
     // cannot see it, and these tests stand in for that: same overlap, inset and
     // flush-right checks, done against the arithmetic instead of the tree.
     public class SystemMenuScreenTests
     {
         // The tab labels as if TMP had measured them, in SystemMenuTabs.All
-        // order (CHARACTER, PARTY, RUN, OPTIONS, EXIT) -- the spec's
+        // order (CHARACTER, PARTY, RUN, GLOSSARY, OPTIONS, EXIT) -- the spec's
         // 18.3px-a-character estimate at 24 caps, rounded. The real widths come
         // from the Editor's measurement; SystemMenuLabelWidthTests holds the
         // built boxes to what is drawn. The arithmetic below is the rule, and
         // does not care where the widths came from.
-        private static readonly float[] Full = { 165f, 92f, 55f, 128f, 73f };
+        private static readonly float[] Full = { 165f, 92f, 55f, 147f, 128f, 73f };
 
-        // CHAR, PARTY, RUN, OPTS, EXIT.
-        private static readonly float[] Short = { 90f, 92f, 55f, 73f, 73f };
+        // CHAR, PARTY, RUN, LORE, OPTS, EXIT.
+        private static readonly float[] Short = { 90f, 92f, 55f, 73f, 73f, 73f };
 
         private static SystemMenuBar Bar(bool inRun, float[] full = null, float[] brief = null)
         {
@@ -44,7 +44,7 @@ namespace PrincesPalace.Domain.Tests
         private static IReadOnlyList<SystemMenuTabDef> OutOfRun => SystemMenuTabs.Visible(inRun: false);
         private static IReadOnlyList<SystemMenuTabDef> InRun => SystemMenuTabs.Visible(inRun: true);
 
-        private static float[] Same(float width) => new[] { width, width, width, width, width };
+        private static float[] Same(float width) => new[] { width, width, width, width, width, width };
 
         // ---- both sets lay out legally -----------------------------------------
 
@@ -94,8 +94,8 @@ namespace PrincesPalace.Domain.Tests
         // A hairline stands between ADJACENT tabs of a group and nowhere else: the
         // gap between the groups is empty by design, and a divider in the middle
         // of it read as a tab that had lost its label.
-        [TestCase(false, new[] { true, false, true })]
-        [TestCase(true, new[] { true, true, false, true })]
+        [TestCase(false, new[] { true, true, false, true })]
+        [TestCase(true, new[] { true, true, true, false, true })]
         public void ADividerFollowsOnlyATabWhoseNeighbourIsInTheSameGroup(bool inRun, bool[] expected)
         {
             var tabs = SystemMenuTabs.Visible(inRun);
@@ -124,44 +124,46 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Pinned as literals, hand-derived from the rule over Full above: a box
-        // is its label + 48 rounded to 4 (212 / 140 / 304 / 176 / 120), 48
+        // is its label + 48 rounded to 4 (212 / 140 / 104 / 196 / 176 / 120), 48
         // between boxes of a group, the system group flush right, the group gap
         // whatever is left.
         //
-        // Camp: game 212 + 48 + 140 = 400 from x 40; system 176 + 48 + 120 =
-        // 344 ending at 1560, so from 1216; group gap 1216 - 440 = 776.
+        // Camp: game 212 + 48 + 140 + 48 + 196 = 644 from x 40, ending at 684;
+        // system 176 + 48 + 120 = 344 ending at 1560, so from 1216; group gap
+        // 1216 - 684 = 532.
         [Test]
         public void TheCampBarMatchesItsOwnArithmetic()
         {
             var bar = Bar(inRun: false);
 
             Assert.IsFalse(bar.ShortLabels);
-            CollectionAssert.AreEqual(new[] { 212f, 140f, 176f, 120f }, bar.Widths);
-            CollectionAssert.AreEqual(new[] { 40f, 300f, 1216f, 1440f }, bar.Lefts);
-            Assert.AreEqual(776f, bar.GroupGap, 0.01f);
-            Assert.AreEqual(840f, bar.Needed, 0.01f);
+            CollectionAssert.AreEqual(new[] { 212f, 140f, 196f, 176f, 120f }, bar.Widths);
+            CollectionAssert.AreEqual(new[] { 40f, 300f, 488f, 1216f, 1440f }, bar.Lefts);
+            Assert.AreEqual(532f, bar.GroupGap, 0.01f);
+            Assert.AreEqual(1084f, bar.Needed, 0.01f);
 
-            var centres = new[] { -654f, -430f, 504f, 700f };
+            var centres = new[] { -654f, -430f, -214f, 504f, 700f };
             for (int i = 0; i < centres.Length; i++) Assert.AreEqual(centres[i], bar.CentreX(i), 0.01f, $"centre {i}");
 
-            var dividers = new[] { -524f, 28f, 616f };
+            var dividers = new[] { -524f, -336f, 150f, 616f };
             for (int i = 0; i < dividers.Length; i++) Assert.AreEqual(dividers[i], bar.DividerCentreX(i), 0.01f, $"divider {i}");
         }
 
-        // Descent: game 212 + 48 + 140 + 48 + 104 = 552 from x 40, ending at 592;
-        // the system group is where it was; group gap 1216 - 592 = 624.
+        // Descent: game 212 + 48 + 140 + 48 + 104 + 48 + 196 = 796 from x 40,
+        // ending at 836; the system group is where it was; group gap
+        // 1216 - 836 = 380.
         [Test]
         public void TheDescentBarMatchesItsOwnArithmetic()
         {
             var bar = Bar(inRun: true);
 
             Assert.IsFalse(bar.ShortLabels);
-            CollectionAssert.AreEqual(new[] { 212f, 140f, 104f, 176f, 120f }, bar.Widths);
-            CollectionAssert.AreEqual(new[] { 40f, 300f, 488f, 1216f, 1440f }, bar.Lefts);
-            Assert.AreEqual(624f, bar.GroupGap, 0.01f);
-            Assert.AreEqual(992f, bar.Needed, 0.01f);
+            CollectionAssert.AreEqual(new[] { 212f, 140f, 104f, 196f, 176f, 120f }, bar.Widths);
+            CollectionAssert.AreEqual(new[] { 40f, 300f, 488f, 640f, 1216f, 1440f }, bar.Lefts);
+            Assert.AreEqual(380f, bar.GroupGap, 0.01f);
+            Assert.AreEqual(1236f, bar.Needed, 0.01f);
 
-            var dividers = new[] { -524f, -336f, 104f, 616f };
+            var dividers = new[] { -524f, -336f, -184f, 226f, 616f };
             for (int i = 0; i < dividers.Length; i++) Assert.AreEqual(dividers[i], bar.DividerCentreX(i), 0.01f, $"divider {i}");
         }
 
@@ -171,7 +173,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheUnderlineIsTheLabelsWidthNotTheBoxs()
         {
             var bar = Bar(inRun: false);
-            var expected = new[] { 189f, 116f, 152f, 97f };
+            var expected = new[] { 189f, 116f, 171f, 152f, 97f };
 
             for (int i = 0; i < expected.Length; i++)
             {
@@ -183,44 +185,46 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- overflow: full labels, then short labels, then refusal -------------
 
-        // The boundary, to the pixel. Four labels of 284 make four 332 boxes:
-        // 2 * 332 + 48 per group = 712 each, plus the 96 minimum group gap =
-        // 1520, exactly the row. Fits, with a group gap of exactly 96.
+        // The boundary, to the pixel. Five labels of 208 make five 256 boxes:
+        // 3 * 256 + 2 * 48 = 864 for the game group, 2 * 256 + 48 = 560 for the
+        // system group, plus the 96 minimum group gap = 1520, exactly the row.
+        // Fits, with a group gap of exactly 96.
         [Test]
         public void FullLabelsThatJustFitAreKept()
         {
-            var bar = Bar(inRun: false, full: Same(284f));
+            var bar = Bar(inRun: false, full: Same(208f));
 
             Assert.IsFalse(bar.ShortLabels);
-            CollectionAssert.AreEqual(new[] { 40f, 420f, 848f, 1228f }, bar.Lefts);
+            CollectionAssert.AreEqual(new[] { 40f, 344f, 648f, 1000f, 1304f }, bar.Lefts);
             Assert.AreEqual(96f, bar.GroupGap, 0.01f);
             Assert.AreEqual(1520f, bar.Needed, 0.01f);
         }
 
-        // One step wordier: 288 makes 336 boxes, 1536 needed. Every label goes
+        // One step wordier: 212 makes 260 boxes, 1540 needed. Every label goes
         // short at once -- never a mix -- and the short set is what is laid out.
         [Test]
         public void ALabelSetJustTooWideFallsBackToShortLabelsTogether()
         {
-            var bar = Bar(inRun: false, full: Same(288f));
+            var bar = Bar(inRun: false, full: Same(212f));
 
             Assert.IsTrue(bar.ShortLabels);
-            CollectionAssert.AreEqual(new[] { 140f, 140f, 120f, 120f }, bar.Widths);
-            CollectionAssert.AreEqual(new[] { 90f, 92f, 73f, 73f }, bar.LabelWidths);
+            CollectionAssert.AreEqual(new[] { 140f, 140f, 120f, 120f, 120f }, bar.Widths);
+            CollectionAssert.AreEqual(new[] { 90f, 92f, 73f, 73f, 73f }, bar.LabelWidths);
         }
 
-        // Wordy full labels on the five-tab set. Short boxes 140 / 140 / 104 /
-        // 120 / 120: game 140 + 48 + 140 + 48 + 104 = 480 from x 40, ending at
-        // 520; system 120 + 48 + 120 = 288 from 1272; group gap 1272 - 520 = 752.
+        // Wordy full labels on the six-tab set. Short boxes 140 / 140 / 104 /
+        // 120 / 120 / 120: game 140 + 48 + 140 + 48 + 104 + 48 + 120 = 648 from
+        // x 40, ending at 688; system 120 + 48 + 120 = 288 from 1272; group gap
+        // 1272 - 688 = 584.
         [Test]
         public void AWordySetFallsBackToTheShortLabels()
         {
             var bar = Bar(inRun: true, full: Same(400f));
 
             Assert.IsTrue(bar.ShortLabels);
-            CollectionAssert.AreEqual(new[] { 140f, 140f, 104f, 120f, 120f }, bar.Widths);
-            CollectionAssert.AreEqual(new[] { 40f, 228f, 416f, 1272f, 1440f }, bar.Lefts);
-            Assert.AreEqual(752f, bar.GroupGap, 0.01f);
+            CollectionAssert.AreEqual(new[] { 140f, 140f, 104f, 120f, 120f, 120f }, bar.Widths);
+            CollectionAssert.AreEqual(new[] { 40f, 228f, 416f, 568f, 1272f, 1440f }, bar.Lefts);
+            Assert.AreEqual(584f, bar.GroupGap, 0.01f);
         }
 
         [Test]
@@ -228,7 +232,7 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.Throws<System.InvalidOperationException>(
                 () => Bar(inRun: true, full: Same(400f), brief: Same(400f)),
-                "five 448px boxes cannot be laid out in a 1520px row, short labels or not");
+                "six 448px boxes cannot be laid out in a 1520px row, short labels or not");
         }
 
         [Test]
@@ -258,7 +262,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheCurrentTabsFitAtTheirFullLabels()
         {
             Assert.IsFalse(Bar(inRun: true).ShortLabels,
-                "the five-tab bar no longer fits at full labels, so it has lost its wording");
+                "the six-tab bar no longer fits at full labels, so it has lost its wording");
         }
 
         [Test]
@@ -280,6 +284,7 @@ namespace PrincesPalace.Domain.Tests
                 (SystemMenuTab.Character, SystemMenuTabGroup.Game, "CHARACTER", "CHAR", 'C'),
                 (SystemMenuTab.Party, SystemMenuTabGroup.Game, "PARTY", "PARTY", 'P'),
                 (SystemMenuTab.Run, SystemMenuTabGroup.Game, "RUN", "RUN", 'R'),
+                (SystemMenuTab.Glossary, SystemMenuTabGroup.Game, "GLOSSARY", "LORE", 'G'),
                 (SystemMenuTab.Options, SystemMenuTabGroup.System, "OPTIONS", "OPTS", SystemMenuTabDef.NoHotkey),
                 (SystemMenuTab.Exit, SystemMenuTabGroup.System, "EXIT", "EXIT", SystemMenuTabDef.NoHotkey),
             };
@@ -307,7 +312,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheHotkeysAreTheTabKeysThePackKeyAndView()
         {
             var axes = SystemMenuTabs.Hotkeys.Select(h => h.Axis).ToList();
-            CollectionAssert.AreEqual(new[] { "HotkeyC", "HotkeyP", "HotkeyR", "HotkeyI", "View" }, axes);
+            CollectionAssert.AreEqual(new[] { "HotkeyC", "HotkeyP", "HotkeyR", "HotkeyG", "HotkeyI", "View" }, axes);
 
             var pack = SystemMenuTabs.HotkeyFor('I');
             Assert.AreEqual(SystemMenuTab.Character, pack.Tab);
@@ -327,7 +332,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(SystemMenuTab.Run, SystemMenuTabs.ViewTabFor(MenuContext.Fight));
         }
 
-        // The scene's bar is the five-tab arrangement, built from whatever the
+        // The scene's bar is the six-tab arrangement, built from whatever the
         // caller measured: the boxes and centres the tree carries are the ones
         // Arrange gives for those widths.
         [Test]
@@ -414,7 +419,7 @@ namespace PrincesPalace.Domain.Tests
             var screen = SystemMenuScreen.Build();
 
             Assert.AreEqual(SystemMenuTabs.Count - 1, screen.TabDividers.Count,
-                "the bar cannot draw a divider for every gap the five-tab set has");
+                "the bar cannot draw a divider for every gap the six-tab set has");
         }
 
         [Test]

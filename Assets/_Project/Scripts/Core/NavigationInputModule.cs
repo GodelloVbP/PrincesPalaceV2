@@ -254,7 +254,7 @@ namespace PrincesPalace
             // RaiseSystemMenu answering whether the context HAD a handler is
             // the only thing that tells the two cases apart, and it is why
             // this is not simply `if (menu) else if (cancel)`: a modal --
-            // the glossary, the debug menu, the relic draft -- declares no
+            // the debug menu, the relic draft -- declares no
             // systemMenu handler, absorbs the press, and must still get its
             // Cancel, or Escape would stop closing it.
             bool systemMenuHandled = input.GetButtonDown(SystemMenuButton) && topAtStart.RaiseSystemMenu();

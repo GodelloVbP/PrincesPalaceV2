@@ -23,9 +23,12 @@ namespace PrincesPalace.Domain.Combat.Session
     // SpeedRow and TransformRow (S6's review) -- every one of those has a real caller
     // outside this file (FightHudModel.StatusRowsFor, the icon resource
     // lookups, StatusHudCoverageTests' own CodeFor/SortKeyFor coverage).
-    // CounterFor, IsPositive, SpeedSortKey and TooltipFor are composition
+    // CounterFor, SpeedSortKey and TooltipFor are composition
     // steps RowFor/SpeedRow assemble from -- nothing outside this file has
-    // ever called one of those four directly, so they stay private.
+    // ever called one of those three directly, so they stay private.
+    // The wording (EffectPhrase, NameFor, StacksInTooltip, IsPositive and the
+    // presentation clauses) is public for StatusDefinitions, which is how the
+    // Glossary reads it: one place says what a status does.
     public static class StatusHud
     {
         // At or above this many of the holder's own turns remaining, a
@@ -170,7 +173,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // for each of the twelve -- no per-type table entry needed here.
         public static string SlugFor(StatusEffectType type) => type.ToString().ToLowerInvariant();
 
-        private static bool IsPositive(StatusEffectType type)
+        public static bool IsPositive(StatusEffectType type)
         {
             switch (type)
             {
@@ -303,76 +306,115 @@ namespace PrincesPalace.Domain.Combat.Session
         // since wards started stacking, for the same reason.
         private static string TooltipFor(StatusEffects.StatusSummary summary)
         {
-            bool positive = IsPositive(summary.Type);
-            string duration = DurationPhrase(summary.SoonestTurns);
-            string stacks = summary.Instances > 1 ? $" across {summary.Instances} stacks" : "";
-            int magnitude = summary.Magnitude;
-
-            switch (summary.Type)
+            // NEVER REACHED FOR A WARD. Wards stack, so they do not get a
+            // badge each -- RowFor sends Shielded to WardRow, which takes the
+            // whole summary rather than one entry. Kept as a throw rather than
+            // a duplicate of WardTooltip so the two can never drift into saying
+            // different things about the same shield.
+            if (summary.Type == StatusEffectType.Shielded)
             {
-                case StatusEffectType.Poison:
-                    return $"Poison -- {Wrap(positive, $"{magnitude} damage each turn start")}{stacks}, {duration}";
-                case StatusEffectType.Regen:
-                    return $"Regen -- {Wrap(positive, $"{magnitude} healing each turn start")}{stacks}, {duration}";
-                case StatusEffectType.Protect:
-                    return $"Protect -- {Wrap(positive, $"{magnitude}% less damage taken")}{stacks}, {duration}";
-                case StatusEffectType.Vulnerable:
-                    return $"Vulnerable -- {Wrap(positive, $"{magnitude}% more damage taken")}{stacks}, {duration}";
-                case StatusEffectType.Stun:
-                    return $"Stunned -- {Wrap(positive, "turn skipped")}, {duration}";
-                // NEVER REACHED FOR A WARD. Wards stack, so they do not get a
-                // badge each -- RowFor sends Shielded to WardRow, which takes
-                // the whole summary rather than one entry. Kept as a throw
-                // rather than a duplicate of WardTooltip so the two can never
-                // drift into saying different things about the same shield.
-                case StatusEffectType.Shielded:
-                    throw new System.InvalidOperationException(
-                        "A ward's badge is built from StatusEffects.SummariseWards, not from one entry -- "
-                        + "see StatusHud.WardRow.");
+                throw new System.InvalidOperationException(
+                    "A ward's badge is built from StatusEffects.SummariseWards, not from one entry -- "
+                    + "see StatusHud.WardRow.");
+            }
+
+            bool positive = IsPositive(summary.Type);
+            string effect = Wrap(positive, EffectPhrase(summary.Type, summary.Magnitude.ToString()));
+            string stacks = StacksInTooltip(summary.Type) && summary.Instances > 1
+                ? $" across {summary.Instances} stacks"
+                : "";
+
+            return $"{NameFor(summary.Type)} -- {effect}{stacks}, {DurationPhrase(summary.SoonestTurns)}";
+        }
+
+        // ---- the wording, shared with the glossary ---------------------------------
+        //
+        // The clause after "NAME -- " for one status, with the live number
+        // spliced in as `magnitude`. The Glossary's Statuses category calls
+        // this with "X", so what the record says about Poison is the sentence
+        // the fight shows on the badge with the number left open, and there is
+        // one place a status is worded (StatusDefinitions lists them).
+        //
+        // THROWS on a status with no wording rather than returning "": a badge
+        // (or a glossary row) that says nothing on hover is the same bug as a
+        // missing code.
+        //
+        // Feared is BOTH halves -- StatusEffects.HasStun counts it as a stun,
+        // and DamageTakenMultiplier adds its Magnitude beside Vulnerable's (see
+        // StatusEffectType.Feared's own header). Fear.Apply sets Magnitude to
+        // Fear.VulnerablePercent every time it is cast, so reading Magnitude
+        // here still prints 25 and stays correct if that is ever authored
+        // differently.
+        //
+        // Burn's magnitude is the summed, snapshotted tick strength
+        // (StatusEffects.MagnitudeOf), so a recast's number is already the new
+        // sum the next time the badge redraws. Bleed says "before armour"
+        // because a Bleed tick then meets the holder's physical defence.
+        public static string EffectPhrase(StatusEffectType type, string magnitude)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Poison: return $"{magnitude} damage each turn start";
+                case StatusEffectType.Regen: return $"{magnitude} healing each turn start";
+                case StatusEffectType.Protect: return $"{magnitude}% less damage taken";
+                case StatusEffectType.Vulnerable: return $"{magnitude}% more damage taken";
+                case StatusEffectType.Stun: return "turn skipped";
+                case StatusEffectType.Shielded: return $"{magnitude} shield";
                 case StatusEffectType.Provoked:
-                    return $"Provoked -- {Wrap(positive, $"must attack its provoker, for {magnitude}% less damage to them")}, {duration}";
-                case StatusEffectType.Empowered:
-                    return $"Empowered -- {Wrap(positive, $"next attack deals {magnitude}% more")}, {duration}";
-                case StatusEffectType.Chilled:
-                    return $"Chilled -- {Wrap(positive, $"-{magnitude}% Speed")}{stacks}, {duration}";
-                case StatusEffectType.Rooted:
-                    return $"Rooted -- {Wrap(positive, "Skill Only")}, {duration}";
-                case StatusEffectType.Marked:
-                    return $"Marked -- {Wrap(positive, "open to focused attacks")}, {duration}";
-
-                // Feared is BOTH halves -- StatusEffects.HasStun counts it as
-                // a stun, and DamageTakenMultiplier adds its Magnitude
-                // beside Vulnerable's (see StatusEffectType.Feared's own
-                // header). Fear.Apply sets Magnitude to Fear.VulnerablePercent
-                // (25) every time it is cast, so reading Magnitude here
-                // rather than the constant directly still always prints 25
-                // and stays correct if that ever authors differently.
-                case StatusEffectType.Feared:
-                    return $"Feared -- {Wrap(positive, $"turn skipped and {magnitude}% more damage taken")}, {duration}";
-
-                // THE SUMMED, SNAPSHOTTED TICK STRENGTH -- summary.Magnitude
-                // is StatusEffects.MagnitudeOf's sum across live instances
-                // (D3), and each instance's own Magnitude is 1.5's snapshot,
-                // taken once at application and never re-read. A recast adds
-                // a second instance rather than restating the first, so this
-                // number is already the NEW sum the moment the badge next
-                // redraws -- there is nothing here for a recast to leave
-                // stale.
-                case StatusEffectType.Burn:
-                    return $"Burn -- {Wrap(positive, $"{magnitude} damage each turn start")}{stacks}, {duration}";
+                    return $"must attack its provoker, for {magnitude}% less damage to them";
+                case StatusEffectType.Empowered: return $"next attack deals {magnitude}% more";
+                case StatusEffectType.Chilled: return $"-{magnitude}% Speed";
+                case StatusEffectType.Rooted: return "Skill Only";
+                case StatusEffectType.Marked: return "open to focused attacks";
+                case StatusEffectType.Feared: return $"turn skipped and {magnitude}% more damage taken";
+                case StatusEffectType.Burn: return $"{magnitude} damage each turn start";
                 case StatusEffectType.Thorned:
-                    return $"Thorned -- {Wrap(positive, $"{magnitude} damage each turn start, and again after a physical move")}{stacks}, {duration}";
-                // "before armour": the badge sums the stored snapshots, and a
-                // Bleed tick then meets the holder's physical defence.
-                case StatusEffectType.Bleed:
-                    return $"Bleed -- {Wrap(positive, $"{magnitude} physical damage each turn start, before armour")}{stacks}, {duration}";
-                case StatusEffectType.Fortified:
-                    return $"Fortified -- {Wrap(positive, $"+{magnitude} Defense and Magical Defense")}, {duration}";
+                    return $"{magnitude} damage each turn start, and again after a physical move";
+                case StatusEffectType.Bleed: return $"{magnitude} physical damage each turn start, before armour";
+                case StatusEffectType.Fortified: return $"+{magnitude} Defense and Magical Defense";
                 default:
-                    throw new System.ArgumentOutOfRangeException(nameof(summary), summary.Type,
+                    throw new System.ArgumentOutOfRangeException(nameof(type), type,
                         "StatusHud has no tooltip for this status -- a badge would otherwise show nothing on hover.");
             }
         }
+
+        // What a badge's tooltip calls the status. Stun is the one whose name
+        // is not its enum member's.
+        public static string NameFor(StatusEffectType type) =>
+            type == StatusEffectType.Stun ? "Stunned" : type.ToString();
+
+        // Whether the tooltip adds "across N stacks": the statuses whose
+        // instances sum into one number. The others are a state (Rooted,
+        // Marked) or a one-shot (Stun, Empowered, Provoked, Feared) that a
+        // second application does not add to, and Fortified is not summed.
+        public static bool StacksInTooltip(StatusEffectType type)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Poison:
+                case StatusEffectType.Regen:
+                case StatusEffectType.Protect:
+                case StatusEffectType.Vulnerable:
+                case StatusEffectType.Chilled:
+                case StatusEffectType.Burn:
+                case StatusEffectType.Thorned:
+                case StatusEffectType.Bleed:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        // The clauses of the presentation-only statuses (no StatusEffectType
+        // behind them), so the row builders below and the glossary read one
+        // wording.
+        public static string SpeedEffect(bool positive, string amount) =>
+            $"{(positive ? "+" : "-")}{amount} Speed";
+
+        public const string TransformedEffect = "transformed";
+        public const string SilenceEffect = "cannot cast";
+        public static string RallyEffect(string percent) => $"+{percent}% attack";
+        public static string DisarmEffect(string percent) => $"-{percent}% attack";
 
         // The signed flat grant a relic speed buff/malus is -- one per
         // source, `sourceName` already resolved by the caller (a relic's
@@ -481,7 +523,7 @@ namespace PrincesPalace.Domain.Combat.Session
             return new FightHudModel.StatusRow(
                 TransformCode,
                 TransformSlug,
-                $"{name} -- {Wrap(true, "transformed")}, {duration}",
+                $"{name} -- {Wrap(true, TransformedEffect)}, {duration}",
                 true,
                 permanent ? -1 : CounterFor(turnsRemaining),
                 TransformSortKey());
@@ -497,7 +539,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public static FightHudModel.StatusRow RallyRow(int stacks, int attackPercent)
         {
-            string tooltip = $"Rallied x{stacks} -- {Wrap(true, $"+{attackPercent}% attack")} for the rest of the fight. " +
+            string tooltip = $"Rallied x{stacks} -- {Wrap(true, RallyEffect(attackPercent.ToString()))} for the rest of the fight. " +
                              "It grows each round.";
             return new FightHudModel.StatusRow(RallyCode, RallySlug, tooltip, true, stacks,
                 TransformSortKey(), counterText: "×" + stacks);
@@ -507,7 +549,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             return new FightHudModel.StatusRow(
                 SilenceCode, SilenceSlug,
-                $"Silenced -- {Wrap(false, "cannot cast")}, {Plural(turnsRemaining, "turn")}",
+                $"Silenced -- {Wrap(false, SilenceEffect)}, {Plural(turnsRemaining, "turn")}",
                 false, CounterFor(turnsRemaining), WindowSortKey(SilenceTableIndex));
         }
 
@@ -515,7 +557,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             return new FightHudModel.StatusRow(
                 DisarmCode, DisarmSlug,
-                $"Disarmed -- {Wrap(false, $"-{attackPercent}% attack")}, {Plural(turnsRemaining, "turn")}",
+                $"Disarmed -- {Wrap(false, DisarmEffect(attackPercent.ToString()))}, {Plural(turnsRemaining, "turn")}",
                 false, CounterFor(turnsRemaining), WindowSortKey(DisarmTableIndex));
         }
 

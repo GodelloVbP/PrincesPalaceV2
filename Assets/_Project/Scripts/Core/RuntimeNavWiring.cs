@@ -15,8 +15,8 @@ namespace PrincesPalace
     // UiNavWiring pass -- never gained a single consumer.
     // The evidence, screen by screen, is that the navigable set is a RUNTIME
     // fact everywhere this phase touches:
-    //   - SystemMenu's tab strip: the scene carries five tabs, a context
-    //     shows three, and WHICH three is recomputed in ApplyContext
+    //   - SystemMenu's tab strip: the scene carries six tabs, a context
+    //     shows five or six, and WHICH is recomputed in ApplyContext
     //     (SystemMenuScreen's own header says the scene cannot know).
     //   - RewardTrack: the collect button is hidden whenever nothing is owed
     //     (PaintCollectButton), so the rail's Down target exists or does not

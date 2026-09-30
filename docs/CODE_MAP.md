@@ -18,7 +18,6 @@ prefix: `Tests/{EditMode,PlayMode}/<area>/<Prefix>*Tests.cs`.
 | Main Menu / Save Slots | `MainMenuScreen.cs`, `MainMenuAmbience.cs` | `Core/MainMenuController.cs`, `Core/SaveSlotController.cs` | — | `MainMenu()` scene | `MainMenu`, `SaveSlot` |
 | Hub | `HubScreen.cs`, `HubAmbience.cs` | `Core/HubController.cs`, `Core/HubBuildingLooper.cs` | `HubAnchors.cs` | `Hub()` scene, `DressHub` | `Hub` |
 | Relic draft (in Hub) | `RelicDraftScreen.cs` | `Core/RelicDraftController.cs` | `OfferRowLayout.cs` | `WireRelicDraft` | `RelicDraft` |
-| Glossary (in Hub) | `GlossaryScreen.cs` | `Core/GlossaryController.cs`, `Core/GlossaryEntries.cs` | `Paging.cs` | `WireGlossary` | `Glossary` |
 | Debug menu (in Hub) | `DebugMenuScreen.cs` | `Core/DebugMenuController.cs` | — | `WireDebugMenu` | `DebugMenu` |
 | Talents | `TalentScreen.cs` | `Core/TalentController.cs` (+`.Motion`) | `ConstellationLayout.cs` | `Talents()` scene | `Talent` |
 | Run Map | `MapScreen.cs` | `Core/MapController.cs` (+`.Walk`, `.Event`) | `MapLayout.cs`, `MapWalk.cs` | `Map()` scene | `Map` |
@@ -33,6 +32,7 @@ prefix: `Tests/{EditMode,PlayMode}/<area>/<Prefix>*Tests.cs`.
 | Party (tab) | `PartyScreen.cs` | `Core/PartyController.cs`, `Core/PartyDragSource.cs` | `PartyLayout.cs`; model in `Domain/Party/` | `WireParty` | `Party` |
 | Options (tab) | `OptionsScreen.cs` | `Core/OptionsController.cs`, `Core/OptionRow.cs`; settings `Core/GameSettings.cs` | `OptionsLayout.cs`, `OptionRows.cs` | `WireOptions` | `Options` |
 | Run (tab) | `RunScreen.cs` | `Core/RunController.cs` | `RunLayout.cs`, `RunStatRows.cs`, `RunEffectRows.cs` | `WireRun` | `SystemMenuRun` |
+| Glossary (tab) | `GlossaryScreen.cs` | `Core/GlossaryController.cs`, `Core/GlossaryEntries.cs` | `GlossaryLayout.cs`, `Paging.cs`; model `Domain/Glossary/GlossaryCatalog.cs`, `Domain/Combat/Session/StatusDefinitions.cs` | `WireGlossary` | `Glossary` |
 | Exits (tab) | `ExitsScreen.cs` | `Core/ExitsController.cs` | `ExitsLayout.cs` | `WireExits` | `Exits` |
 
 **To add a screen:** tree in `Domain/UiKit/Screens/`, strings in

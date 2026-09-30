@@ -12,8 +12,8 @@ namespace PrincesPalace.Domain.UiKit
     //
     // The set is context-driven, not fixed. A tab that cannot be used is
     // absent, never greyed: a greyed tab asks the player to work out why, and
-    // there is nowhere on a tab to answer. At camp the menu has four tabs;
-    // in a descent or a fight it has five, because RUN has something to show
+    // there is nowhere on a tab to answer. At camp the menu has five tabs;
+    // in a descent or a fight it has six, because RUN has something to show
     // there.
     public enum SystemMenuTab
     {
@@ -29,6 +29,10 @@ namespace PrincesPalace.Domain.UiKit
         // The descent at a glance: relics, effects in force, supplies and the
         // figures. Run-only.
         Run,
+
+        // Everything the game contains, by category (plan C25). Not RunOnly:
+        // a player looks things up at camp as much as in a fight.
+        Glossary,
         Options,
         Exit,
     }
@@ -108,6 +112,9 @@ namespace PrincesPalace.Domain.UiKit
             new SystemMenuTabDef(SystemMenuTab.Run, "Run",
                 UiStrings.SystemTabRun, UiStrings.SystemTabRunShort,
                 SystemMenuTabGroup.Game, hotkey: 'R', runOnly: true, pages: UiStrings.PromptPagesRun),
+            new SystemMenuTabDef(SystemMenuTab.Glossary, "Glossary",
+                UiStrings.SystemTabGlossary, UiStrings.SystemTabGlossaryShort,
+                SystemMenuTabGroup.Game, hotkey: 'G', pages: UiStrings.PromptPagesGlossary),
             new SystemMenuTabDef(SystemMenuTab.Options, "Options",
                 UiStrings.SystemTabOptions, UiStrings.SystemTabOptionsShort,
                 SystemMenuTabGroup.System),
@@ -168,8 +175,8 @@ namespace PrincesPalace.Domain.UiKit
         //
         // Which tabs are VISIBLE varies at runtime; which panes EXIST cannot,
         // because the scene is generated once and UiCountAudit pins the array
-        // lengths. So the build makes all five and the controller shows the
-        // four or five the context calls for.
+        // lengths. So the build makes all six and the controller shows the
+        // five or six the context calls for.
         public static IReadOnlyList<SystemMenuTabDef> PaneOwners => All;
 
         // Pane index and tab index are the same while no two tabs share a

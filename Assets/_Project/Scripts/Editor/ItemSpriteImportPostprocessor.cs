@@ -8,7 +8,7 @@ using UnityEditor;
 //
 //     pack cell           64px      DossierLayout.PackIconSize
 //     equipment slot      74px      DossierLayout.SlotSize
-//     glossary detail    140px      GlossaryScreen
+//     glossary detail    120px      GlossaryLayout.DetailIconSize
 //     relic draft card   160px      RelicDraftScreen
 //     reckoning offer    200px      ReckoningScreen
 //

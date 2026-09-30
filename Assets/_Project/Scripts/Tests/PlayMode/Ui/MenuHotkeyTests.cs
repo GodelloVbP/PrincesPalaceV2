@@ -35,6 +35,7 @@ namespace PrincesPalace.PlayModeTests
         private const string I = "HotkeyI";
         private const string P = "HotkeyP";
         private const string R = "HotkeyR";
+        private const string G = "HotkeyG";
         private const string View = "View";
 
         [SetUp]
@@ -332,6 +333,50 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab, "R switched to a tab camp does not have");
         }
 
+        // ---- G: the glossary, in every context ---------------------------------------
+
+        [UnityTest]
+        public IEnumerator G_OpensTheGlossaryAtCampAndClosesOnItsOwnTab()
+        {
+            yield return LoadHub();
+
+            yield return Press(G);
+            Assert.IsTrue(_menu.IsOpen, "G did not open the menu");
+            Assert.AreEqual(SystemMenuTab.Glossary, _menu.SelectedTab);
+
+            yield return Press(C);
+            Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab, "C from the glossary should switch, not close");
+
+            yield return Press(G);
+            Assert.AreEqual(SystemMenuTab.Glossary, _menu.SelectedTab, "G from Character should switch to the glossary");
+
+            yield return Press(G);
+            Assert.IsFalse(_menu.IsOpen, "G on the Glossary tab should close the menu");
+            Assert.AreEqual(1f, Time.timeScale, 0.0001f, "closing by hotkey left the game paused");
+        }
+
+        [UnityTest]
+        public IEnumerator G_OpensTheGlossaryInADescent()
+        {
+            yield return LoadMap();
+
+            yield return Press(G);
+
+            Assert.IsTrue(_menu.IsOpen, "G did not open the menu on the map");
+            Assert.AreEqual(SystemMenuTab.Glossary, _menu.SelectedTab);
+        }
+
+        [UnityTest]
+        public IEnumerator G_OpensTheGlossaryOverAFight()
+        {
+            yield return LoadFight();
+
+            yield return Press(G);
+
+            Assert.IsTrue(_menu.IsOpen, "G did not open the menu over a fight");
+            Assert.AreEqual(SystemMenuTab.Glossary, _menu.SelectedTab);
+        }
+
         // ---- the pad's View button --------------------------------------------------
 
         [UnityTest]
@@ -379,19 +424,20 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadHub();
 
             var hub = Object.FindAnyObjectByType<HubController>();
-            hub.SetGlossary(true);
+            hub.SetDebugMenu(true);
             yield return null;
-            Assert.IsTrue(hub.GlossaryIsOpen, "fixture: the glossary did not open");
+            Assert.IsTrue(hub.DebugMenuIsOpen, "fixture: the debug menu did not open");
 
             yield return Press(C);
             yield return Press(P);
+            yield return Press(G);
             yield return Press(I);
             yield return Press(View);
 
-            Assert.IsFalse(_menu.IsOpen, "a hotkey reached the menu through an open glossary");
-            Assert.IsTrue(hub.GlossaryIsOpen, "a hotkey closed the glossary");
+            Assert.IsFalse(_menu.IsOpen, "a hotkey reached the menu through an open debug menu");
+            Assert.IsTrue(hub.DebugMenuIsOpen, "a hotkey closed the debug menu");
 
-            hub.SetGlossary(false);
+            hub.SetDebugMenu(false);
             yield return null;
 
             yield return Press(C);

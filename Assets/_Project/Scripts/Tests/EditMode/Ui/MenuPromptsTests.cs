@@ -127,7 +127,17 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // LB/RB is offered only where there is a page to turn: with one page
-        // the footer does not advertise a button that does nothing.
+        // the tab still says what it pages, but the footer does not advertise a
+        // button that does nothing.
+        [Test]
+        public void TheGlossaryPagesCategoriesAndSaysSo()
+        {
+            var row = MenuPrompts.Defaults(SystemMenuTabs.Def(SystemMenuTab.Glossary));
+
+            Assert.AreEqual("A Select | B Close | LT/RT Tab | LB/RB Category",
+                Labels(MenuPrompts.Resolve(row, MenuContext.Camp, PromptDevice.Xbox)));
+        }
+
         [Test]
         public void WithOnePageThePagerPromptIsLeftOut()
         {

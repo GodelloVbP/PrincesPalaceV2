@@ -3,51 +3,36 @@ using PrincesPalace.Domain.Glossary;
 
 namespace PrincesPalace.Domain.UiKit.Screens
 {
-    // Everything the game contains, in one place.
+    // Everything the game contains, in one place: the GLOSSARY pane of the
+    // system menu (plan C25, spec section 5, layout in GlossaryLayout).
     //
     // Three columns: what KIND of thing (the rail), which one (the list), and
-    // what it is (the plate). That shape is why this is one screen rather than
-    // six -- a category is a value in GlossaryCategory plus a case in the Core
-    // adapter, and the tree below never learns what a relic is.
+    // what it is (the detail). That shape is why this is one pane rather than
+    // one per kind -- a category is a value in GlossaryCategory plus a case in
+    // the Core adapter, and the tree below never learns what a relic is.
     //
-    // Replaces the Relics building, which had been dimmed-and-unpressable
-    // since the hub was built.
+    // A category, a row and the pager are Buttons, not because pressing one
+    // picks anything (selection follows focus, so the detail is always the
+    // focused row) but because the pad reads the pane by moving focus, and a
+    // row that cannot be focused cannot be read on a pad. The pager's two
+    // arrows are the exception: pressing one turns the page.
+    //
+    // NO CARD CHROME. Like RUN, the pane sits on the menu's shared fill and the
+    // columns are separated by space and a hairline, not by boxes.
+    //
+    // Type roles: FunctionalHeading (all caps, 24) for the category names, Body
+    // for everything else. Not TacticalData: its material tints text violet.
     public sealed class GlossaryScreen
     {
-        // Silver, 2:1 KIT CONTAINER: TwoByOne needs the box GROWN to pass
-        // ValidateContainerAspect at a size that still contains every child
-        // once TwoByOne's own inset (3.5% each side, 5.5% top/bottom) is
-        // carved out of it: CloseButton's 840px right edge and the
-        // title/pager rows' ~417px top/bottom edges are the two extremes
-        // that set the floor. 945 clears both with room to spare (content
-        // half-width 872, half-height 420) and keeps the frame inside the
-        // +-960/+-540 safe area every UiFrames.All frame guarantees at
-        // minimum -- PanelWidth/PanelHeight derive from it rather than
-        // restating the two numbers.
-        private static readonly UiVec FrameSize = Ui.ContainerSizeForHeight(ContainerRatio.TwoByOne, 945f);
-        public static float PanelWidth => FrameSize.X;
-        public static float PanelHeight => FrameSize.Y;
-
-        private const float RailX = -700f;
-        private const float RailTop = 300f;
-
-        // 84, up from 76: BuildCategory's plate grew 66 -> 80 tall (see its
-        // own comment -- 240x66 was 21.2% off the Legacy plate's true 3:1,
-        // ThemedButtonAspectLintTests) and needs at least that much pitch to
-        // not overlap its neighbour. Seven categories at 84 span RailTop
-        // down to RailTop - 6*84 = -204, comfortably inside the 2:1 frame's
-        // +-420 content half-height.
-        private const float RailPitch = 84f;
-
-        private const float ListX = -180f;
-        private const float ListTop = 290f;
-        private const float ListPitch = 68f;
-
-        private const float PlateX = 480f;
+        private const string Rule = "#C8AAE61F";
+        private const string Name = FightHudPalette.TextPrimary;
+        private const string Muted = FightHudPalette.TextMuted;
+        private const string Body = FightHudPalette.TextPrimary;
+        private const string Heading = FightHudPalette.GoldText;
+        private const string LockedNote = "#D9A87E";
+        private const string MarkerDark = "#F2DB9E00";
 
         public UiNode Root;
-        public NodeRef Frame;
-        public NodeRef CloseButton;
 
         public List<NodeRef> CategoryButtons = new List<NodeRef>();
         public List<NodeRef> CategoryLabels = new List<NodeRef>();
@@ -73,175 +58,101 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public static GlossaryScreen Build()
         {
             var screen = new GlossaryScreen();
-
-            var inside = new List<UiNode>
-            {
-                Ui.Label("GlossaryTitle", UiStrings.GlossaryTitle, new UiVec(900f, 56f), 34, "#F2DB9E",
-                    Place.At(-360f, 388f)).AsDecor()
-                    .Styled(TypographyRole.FunctionalHeading),
-            };
+            var children = new List<UiNode>();
 
             // ---- the rail: one button per category, built from the enum -----
             for (int i = 0; i < GlossaryCatalog.Categories.Count; i++)
             {
-                inside.Add(screen.BuildCategory(i, GlossaryCatalog.Categories[i]));
+                children.Add(screen.BuildCategory(i));
             }
 
             // ---- the list ---------------------------------------------------
             for (int i = 0; i < GlossaryCatalog.RowsPerPage; i++)
             {
-                inside.Add(screen.BuildRow(i));
+                children.Add(screen.BuildRow(i));
             }
 
-            var empty = Ui.Label("GlossaryEmptyHint", UiStrings.GlossaryEmpty, new UiVec(480f, 40f), 18,
-                    "#7E6E9E", Place.At(ListX, 0f))
-                .AsDecor()
-                .Inactive();
-            screen.EmptyHint = empty;
-            inside.Add(empty);
+            screen.BuildListFurniture(children);
+            screen.BuildDetail(children);
 
-            var pager = Ui.Pager("GlossaryPrevPage", Place.At(ListX - 200f, -390f),
-                "GlossaryNextPage", Place.At(ListX + 200f, -390f), new UiVec(52f, 44f), 20,
-                "GlossaryPageLabel", UiStrings.GlossaryPage, Place.At(ListX, -390f),
-                new UiVec(260f, 34f), 16, "#B8A8D9");
-            pager.Label.AsDecor();
-            screen.PageLabel = pager.Label;
-            screen.PrevPageButton = pager.Prev;
-            screen.NextPageButton = pager.Next;
-            inside.Add(pager.Label);
-            inside.Add(pager.Prev);
-            inside.Add(pager.Next);
+            // Two hairlines between the columns, so the three read as a set
+            // without boxes.
+            children.Add(Divider("GlossaryRailRule", GlossaryLayout.RailLeft + GlossaryLayout.RailWidth + GlossaryLayout.ColumnGap * 0.5f));
+            children.Add(Divider("GlossaryListRule", GlossaryLayout.ListLeft + GlossaryLayout.ListWidth + GlossaryLayout.ColumnGap * 0.5f));
 
-            // ---- the plate ---------------------------------------------------
-            //
-            // Silver, 3:4 KIT CONTAINER, sized exactly on ThreeByFour:
-            // width holds at 660, height at 780 (ContainerSizeForHeight
-            // derives 585 -- narrower, so this container's own footprint
-            // SHRINKS inside GlossaryFrame rather than pushing that frame's
-            // resize further). The kit's own content inset (6.9% each side)
-            // leaves 504px of usable width, so DetailName/Meta/Body/LockedBy
-            // are solved to 480 -- narrower text, same font size,
-            // comfortably inside.
-            //
-            // Every child here is inside the Container's own
-            // ContainerContent, so its coordinates are LOCAL TO THE PLATE
-            // (0-centred) rather than offset by PlateX -- PlateX names only
-            // where the plate itself sits in the frame.
-            var detailPlateSize = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 780f);
-            const float DetailContentWidth = 480f;
+            // The ground is the whole content area (the hosted-pane contract),
+            // the working area a stretched child inside it.
+            var ground = Ui.Panel("GlossaryPane", Place.At(0f, 0f),
+                UiSize.Fixed(GlossaryLayout.PaneWidth, GlossaryLayout.PaneHeight));
+            ground.Children.Add(Ui.Panel("GlossaryPaneContent",
+                Place.Stretch(GlossaryLayout.InsetX, GlossaryLayout.InsetX, GlossaryLayout.InsetY, GlossaryLayout.InsetY),
+                UiSize.Fill, children));
 
-            var icon = Ui.Sprite("GlossaryDetailIcon", null, Place.At(0f, 250f),
-                    UiSize.Fixed(140f, 140f))
-                .AsDecor();
-            var detailName = Ui.Label("GlossaryDetailName", UiString.Runtime, new UiVec(DetailContentWidth, 50f), 26,
-                    "#EDE6FF", Place.At(0f, 140f))
-                .AsDecor();
-            var detailMeta = Ui.Label("GlossaryDetailMeta", UiString.Runtime, new UiVec(DetailContentWidth, 34f), 17,
-                    "#B8A8D9", Place.At(0f, 92f))
-                .AsDecor();
-            var detailBody = Ui.Label("GlossaryDetailBody", UiString.Runtime, new UiVec(DetailContentWidth, 240f), 16,
-                    "#9C8FC4", Place.At(0f, -60f))
-                .AsDecor()
-                .Styled(TypographyRole.Body);
-            var lockedBy = Ui.Label("GlossaryDetailLockedBy", UiStrings.GlossaryLockedBy,
-                    new UiVec(DetailContentWidth, 60f), 16, "#D9A87E", Place.At(0f, -230f))
-                .AsDecor()
-                .Inactive();
-
-            screen.DetailIcon = icon;
-            screen.DetailName = detailName;
-            screen.DetailMeta = detailMeta;
-            screen.DetailBody = detailBody;
-            screen.DetailLockedBy = lockedBy;
-
-            var detailPlate = Ui.Container("GlossaryDetailPlate", ButtonTheme.Silver, ContainerRatio.ThreeByFour,
-                Place.At(PlateX, 0f), detailPlateSize);
-            Ui.ContainerContent(detailPlate, ContainerRatio.ThreeByFour, "GlossaryDetailContent",
-                icon, detailName, detailMeta, detailBody, lockedBy);
-            inside.Add(detailPlate);
-
-            // 200x54 was 3.704:1 against the Legacy plate's true 3:1 --
-            // ThemedButtonAspectLintTests. Height up to nominal, width kept;
-            // the extra height comes off the TOP (button re-centred so its
-            // old top edge at y=417 is unchanged), because it grew toward
-            // the frame's own top edge and 390 + new-half overflowed it by
-            // 2.8px at every aspect -- UiAudit ChildContainment.
-            const float CloseOldTopEdge = 390f + 54f * 0.5f;
-            var closeSize = Ui.PlateNominalSizeFor(200f, 54f);
-            var closeY = CloseOldTopEdge - closeSize.Y * 0.5f;
-            var close = Ui.Button("GlossaryCloseButton", UiStrings.Close, closeSize, 16,
-                    Place.At(740f, closeY))
-                .Closes()
-                .Themed(ButtonTheme.Silver)
-                // Floats over the detail plate's top-right corner by design
-                // (declared after it, so it draws on top) -- the flat
-                // #1E1430D0 panel this replaced was AsDecor and so exempt
-                // from this check without saying so; GlossaryDetailPlate is
-                // a real audited Container now (its OWN content has to be
-                // checked, which is the whole point), so the corner overlap
-                // it always had with Close needs stating instead of hiding.
-                .AllowOverlap(
-                    "GlossaryCloseButton floats over the detail plate's top-right corner by design - it is " +
-                    "declared last so it draws on top, same as every close/X control that sits on the panel " +
-                    "it closes");
-            screen.CloseButton = close;
-            inside.Add(close);
-
-            var frame = Ui.Container("GlossaryFrame", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                Place.At(0f, 0f), FrameSize);
-            Ui.ContainerContent(frame, ContainerRatio.TwoByOne, "GlossaryFrameContent", inside.ToArray());
-            screen.Frame = frame;
-
-            var content = Ui.Panel("GlossaryContent", Place.At(0f, 0f), UiSize.Fill, frame);
-            screen.Root = Ui.Modal("GlossaryPanel", "#0A0614F0", content).Inactive();
+            screen.Root = ground;
             return screen;
         }
 
-        // BLUE, CAPTION-PRESERVING PLATE. The brief called for plain
-        // Themed(Blue), but this row already declares its own Marker/
-        // Caption/Count children -- Themed() would add a SECOND, blank
-        // generated Label (node.Text is UiString.Runtime here) sharing
-        // Visuals' box without being LAYERED against them, which A1 would
-        // correctly report as the generated label sitting on top of the
-        // hand-authored caption. ThemedPlate() is the kit's own answer for
-        // exactly this shape (see FightScreen's submenu rows and BACK row,
-        // migrated the same way) -- same plate, no redundant label.
-        private UiNode BuildCategory(int index, GlossaryCategory category)
-        {
-            float y = RailTop - index * RailPitch;
+        private static UiNode Divider(string name, float x) =>
+            Ui.Solid(name, Rule, new UiVec(1f, GlossaryLayout.AreaHeight), Place.At(x, 0f)).AsDecor();
 
-            // The marker is a separate layer from the label, so "which category
-            // am I on" and "what is it called" stay two channels -- the same
-            // split the draft cards make between selection and rarity.
-            var marker = Ui.Solid($"GlossaryCategory{index}Marker", "#F2DB9E00",
-                    Place.Frac(new UiVec(0f, 0f), new UiVec(0f, 1f), right: -5f), UiSize.Fill)
+        // A rail button is always there; a list row starts hidden and is shown
+        // by the controller for as many entries as the page has.
+        private static UiNode Row(string name, UiVec size, Place place, bool shownAtStart, params UiNode[] parts)
+        {
+            var row = Ui.Button(name, UiString.Runtime, size, 20, place)
+                .NoChrome()
+                .Quiet()
+                .Styled(TypographyRole.Body);
+            if (!shownAtStart) row = row.Inactive();
+            foreach (var part in parts) row.Children.Add(part);
+            return row;
+        }
+
+        // The selection tick along a row's left edge, dark until its row is the
+        // one being read. A separate layer from the label, so "which one am I
+        // on" and "what is it called" stay two channels.
+        private static UiNode Marker(string name) =>
+            Ui.Solid(name, MarkerDark, Place.Frac(new UiVec(0f, 0f), new UiVec(0f, 1f), right: -4f), UiSize.Fill)
                 .AsDecor();
+
+        private static UiNode Text(string name, UiString text, UiVec size, int fontSize, string colour,
+                                   Place place, TypographyRole role, UiTextAlign align)
+        {
+            return Ui.Label(name, text, size, fontSize, colour, place)
+                .Styled(role)
+                .TextAligned(align)
+                .AsDecor();
+        }
+
+        // ---- the rail ---------------------------------------------------------------
+
+        private UiNode BuildCategory(int index)
+        {
+            float width = GlossaryLayout.RailWidth;
+            float textWidth = width - GlossaryLayout.CategoryInset * 2f;
+
+            var marker = Marker($"GlossaryCategory{index}Marker");
 
             // Caption, NOT Label. UiEmitter generates a child called
             // "<button>Label" for every button's own text, so a hand-declared
             // child by that name collides with it and every lookup silently
-            // takes the emitter's empty one. A4 caught this on the first run.
-            var label = Ui.Label($"GlossaryCategory{index}Caption", UiString.Runtime, new UiVec(180f, 32f), 19,
-                    "#EDE6FF", Place.At(-14f, 10f))
+            // takes the emitter's empty one.
+            var label = Text($"GlossaryCategory{index}Caption", UiString.Runtime,
+                new UiVec(textWidth, GlossaryLayout.CategoryLabelHeight), 24, Name,
+                Place.At(0f, 12f), TypographyRole.FunctionalHeading, UiTextAlign.Left);
+
+            var count = Text($"GlossaryCategory{index}Count", UiStrings.GlossaryCount,
+                new UiVec(textWidth, GlossaryLayout.CategoryCountHeight), 20, Muted,
+                Place.At(0f, -14f), TypographyRole.Body, UiTextAlign.Left);
+
+            var rule = Ui.Solid($"GlossaryCategory{index}Rule", Rule, new UiVec(width, 1f),
+                    Place.At(0f, -GlossaryLayout.CategoryRowHeight * 0.5f + 0.5f))
                 .AsDecor();
 
-            var count = Ui.Label($"GlossaryCategory{index}Count", UiStrings.GlossaryCount, new UiVec(180f, 24f), 13,
-                    "#7E6E9E", Place.At(-14f, -16f))
-                .AsDecor();
-
-            // 240x66 was 21.2% off the Legacy plate's true 3:1 --
-            // ThemedButtonAspectLintTests. Height up to nominal (240x80),
-            // width kept; RailPitch grew to match (its own comment says how
-            // much room that leaves).
-            var categorySize = Ui.PlateNominalSizeFor(240f, 66f);
-            var button = Ui.Button($"GlossaryCategory{index}", UiString.Runtime,
-                    categorySize, 12, Place.At(RailX, y))
-                .ThemedPlate(ButtonTheme.Blue);
-
-            button.Children.Add(marker);
-            button.Children.Add(label);
-            button.Children.Add(count);
-            button.LayerCaptionWithVisuals(marker, label, count);
+            var button = Row($"GlossaryCategory{index}",
+                new UiVec(width, GlossaryLayout.CategoryRowHeight),
+                Place.At(GlossaryLayout.CentreX(GlossaryLayout.RailLeft, width), GlossaryLayout.CategoryCentreY(index)),
+                shownAtStart: true, rule, marker, label, count);
 
             CategoryButtons.Add(button);
             CategoryMarkers.Add(marker);
@@ -250,49 +161,116 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
-        // CHROMELESS, HAIRLINE ROW -- was a Silver ThemedPlate at 500x60
-        // (8.3:1), a ratio no plate shape lands within the container kit's
-        // own tolerance of (ThemedButtonAspectLintTests). The honest resize
-        // (500x83.3 on Row6x1) only fits 8 of GlossaryCatalog.RowsPerPage's
-        // 10 rows in the list's vertical span between the title and the
-        // pager, so this follows CharacterDossierScreen.BuildNavRow's
-        // precedent instead, same as DebugMenuScreen.BuildRow's own row:
-        // no plate, a hairline rule under the row.
+        // ---- the list ---------------------------------------------------------------
+
         private UiNode BuildRow(int index)
         {
-            float y = ListTop - index * ListPitch;
+            float width = GlossaryLayout.ListWidth;
+            float textWidth = width - GlossaryLayout.ListRowInset * 2f;
 
-            var marker = Ui.Solid($"GlossaryRow{index}Marker", "#F2DB9E00",
-                    Place.Frac(new UiVec(0f, 0f), new UiVec(0f, 1f), right: -4f), UiSize.Fill)
+            var marker = Marker($"GlossaryRow{index}Marker");
+
+            var name = Text($"GlossaryRow{index}Name", UiString.Runtime,
+                new UiVec(textWidth, GlossaryLayout.ListNameHeight), 22, Name,
+                Place.At(0f, 11f), TypographyRole.Body, UiTextAlign.Left);
+            name = name.Truncated();
+
+            var meta = Text($"GlossaryRow{index}Meta", UiString.Runtime,
+                new UiVec(textWidth, GlossaryLayout.ListMetaHeight), 20, Muted,
+                Place.At(0f, -15f), TypographyRole.Body, UiTextAlign.Left);
+            meta = meta.Truncated();
+
+            var rule = Ui.Solid($"GlossaryRow{index}Rule", Rule, new UiVec(width, 1f),
+                    Place.At(0f, -GlossaryLayout.ListRowHeight * 0.5f + 0.5f))
                 .AsDecor();
 
-            var name = Ui.Label($"GlossaryRow{index}Name", UiString.Runtime, new UiVec(440f, 30f), 18,
-                    "#EDE6FF", Place.At(-10f, 10f))
-                .AsDecor();
-
-            var meta = Ui.Label($"GlossaryRow{index}Meta", UiString.Runtime, new UiVec(440f, 22f), 13,
-                    "#7E6E9E", Place.At(-10f, -14f))
-                .AsDecor();
-
-            var rule = Ui.Solid($"GlossaryRow{index}Rule", "#4A3E5C", new UiVec(500f, 1f),
-                    Place.At(0f, -30f + 0.5f))
-                .AsDecor();
-
-            var row = Ui.Button($"GlossaryRow{index}", UiString.Runtime,
-                    new UiVec(500f, 60f), 1, Place.At(ListX, y))
-                .NoChrome()
-                .Hovers(1.01f);
-
-            row.Children.Add(rule);
-            row.Children.Add(marker);
-            row.Children.Add(name);
-            row.Children.Add(meta);
+            var row = Row($"GlossaryRow{index}",
+                new UiVec(width, GlossaryLayout.ListRowHeight),
+                Place.At(GlossaryLayout.CentreX(GlossaryLayout.ListLeft, width), GlossaryLayout.ListRowCentreY(index)),
+                shownAtStart: false, rule, marker, name, meta);
 
             Rows.Add(row);
             RowMarkers.Add(marker);
             RowNames.Add(name);
             RowMetas.Add(meta);
             return row;
+        }
+
+        // The empty hint and the pager, under the rows.
+        private void BuildListFurniture(List<UiNode> children)
+        {
+            var empty = Ui.Label("GlossaryEmptyHint", UiStrings.GlossaryEmpty,
+                    new UiVec(GlossaryLayout.ListWidth, 40f), 20, Muted,
+                    Place.At(GlossaryLayout.CentreX(GlossaryLayout.ListLeft, GlossaryLayout.ListWidth),
+                        GlossaryLayout.ListRowCentreY(0)))
+                .Styled(TypographyRole.Body)
+                .TextAligned(UiTextAlign.Left)
+                .AsDecor()
+                .Inactive();
+            EmptyHint = empty;
+            children.Add(empty);
+
+            var pager = Ui.Pager("GlossaryPrevPage", Place.At(GlossaryLayout.PagerPrevX, GlossaryLayout.PagerCentreY),
+                "GlossaryNextPage", Place.At(GlossaryLayout.PagerNextX, GlossaryLayout.PagerCentreY),
+                new UiVec(GlossaryLayout.PagerArrowWidth, GlossaryLayout.PagerArrowHeight), 24,
+                "GlossaryPageLabel", UiStrings.GlossaryPage,
+                Place.At(GlossaryLayout.PagerLabelX, GlossaryLayout.PagerCentreY),
+                new UiVec(GlossaryLayout.PagerLabelWidth, 34f), 20, Name);
+            pager.Prev.Styled(TypographyRole.Body).Inactive();
+            pager.Next.Styled(TypographyRole.Body).Inactive();
+            pager.Label.Styled(TypographyRole.Body).AsDecor().Inactive();
+            PageLabel = pager.Label;
+            PrevPageButton = pager.Prev;
+            NextPageButton = pager.Next;
+            children.Add(pager.Label);
+            children.Add(pager.Prev);
+            children.Add(pager.Next);
+        }
+
+        // ---- the detail -------------------------------------------------------------
+
+        private void BuildDetail(List<UiNode> children)
+        {
+            var icon = Ui.Sprite("GlossaryDetailIcon", null,
+                    Place.At(GlossaryLayout.DetailIconCentreX, GlossaryLayout.DetailIconCentreY),
+                    UiSize.Fixed(GlossaryLayout.DetailIconSize, GlossaryLayout.DetailIconSize))
+                .AsDecor();
+
+            float textCentre = GlossaryLayout.CentreX(GlossaryLayout.DetailTextLeft, GlossaryLayout.DetailTextWidth);
+
+            var name = Text("GlossaryDetailName", UiString.Runtime,
+                new UiVec(GlossaryLayout.DetailTextWidth, GlossaryLayout.DetailNameHeight), 28, Heading,
+                Place.At(textCentre, GlossaryLayout.DetailNameCentreY), TypographyRole.Body, UiTextAlign.Left);
+
+            var meta = Text("GlossaryDetailMeta", UiString.Runtime,
+                new UiVec(GlossaryLayout.DetailTextWidth, GlossaryLayout.DetailMetaHeight), 20, Muted,
+                Place.At(textCentre, GlossaryLayout.DetailMetaCentreY), TypographyRole.Body, UiTextAlign.Left);
+
+            float bodyCentre = GlossaryLayout.CentreX(GlossaryLayout.DetailLeft, GlossaryLayout.DetailWidth);
+
+            var body = Text("GlossaryDetailBody", UiString.Runtime,
+                new UiVec(GlossaryLayout.DetailWidth, GlossaryLayout.DetailBodyHeight), 20, Body,
+                Place.At(bodyCentre, GlossaryLayout.DetailBodyCentreY), TypographyRole.Body, UiTextAlign.TopLeft);
+
+            var lockedBy = Ui.Label("GlossaryDetailLockedBy", UiStrings.GlossaryLockedBy,
+                    new UiVec(GlossaryLayout.DetailWidth, GlossaryLayout.DetailLockedByHeight), 20, LockedNote,
+                    Place.At(bodyCentre, GlossaryLayout.DetailLockedByCentreY))
+                .Styled(TypographyRole.Body)
+                .TextAligned(UiTextAlign.TopLeft)
+                .AsDecor()
+                .Inactive();
+
+            DetailIcon = icon;
+            DetailName = name;
+            DetailMeta = meta;
+            DetailBody = body;
+            DetailLockedBy = lockedBy;
+
+            children.Add(icon);
+            children.Add(name);
+            children.Add(meta);
+            children.Add(body);
+            children.Add(lockedBy);
         }
     }
 }

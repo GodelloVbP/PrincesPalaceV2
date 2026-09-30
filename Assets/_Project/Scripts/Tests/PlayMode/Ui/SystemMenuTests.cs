@@ -60,48 +60,9 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // CANCEL, WITH SOMETHING ELSE ALREADY UP.
-        //
-        // GlossaryController (and DebugMenuController, and
-        // RelicDraftController) push their OWN NavContext on open: while
-        // the glossary is up it, not the hub, is top of the stack, so the
-        // real dispatcher calls the GLOSSARY's own Cancel handler
-        // (GlossaryController.Close) and never reaches HandleEscape at all
-        // -- GlossaryGamepadNavigationTests'
-        // Cancel_ClosesTheGlossary_AndTheGateIsReselected proves that
-        // through the real dispatcher, the only place this claim can still
-        // be tested honestly.
-        //
-        // What is left for THIS file to pin is narrower and still real:
-        // HandleEscape itself no longer knows the glossary exists, so
-        // calling it directly no longer closes a glossary a caller happened
-        // to switch on by hand -- it only ever opens the system menu, full
-        // stop. A regression that reintroduced a priority branch like that
-        // would fail this by closing the glossary here too.
-        [UnityTest]
-        public IEnumerator HandleEscapeNoLongerKnowsAboutTheGlossary_ItOnlyEverOpensTheMenu()
-        {
-            yield return OpenTheHub();
-
-            var hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(hub, "the hub has no HubController");
-
-            hub.SetGlossary(true);
-            Assert.IsFalse(_menu.IsOpen);
-
-            hub.HandleEscape();
-
-            Assert.IsTrue(hub.GlossaryIsOpen,
-                "HandleEscape should no longer special-case the glossary -- that panel closes through its " +
-                "own NavContext.Cancel now, never through the hub's handler directly");
-            Assert.IsTrue(_menu.IsOpen, "HandleEscape's only remaining job is opening the system menu");
-
-            yield return null;
-        }
-
-        // The other half: with nothing else up, Cancel must still open it.
-        // A guard that fixed a race by never opening at all would pass the
-        // test above and be useless.
+        // CANCEL, WITH NOTHING ELSE UP, opens the menu. (The debug menu and the
+        // relic draft push their own NavContext and answer Cancel themselves, so
+        // the hub's handler is never reached while one is open.)
         [UnityTest]
         public IEnumerator CancelWithNothingElseUpOpensTheMenu()
         {
@@ -173,9 +134,9 @@ namespace PrincesPalace.PlayModeTests
 
         // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). What a test
         // leaves up is the menu (open, which also leaves the clock paused --
-        // Close puts back the clock Open found) and the glossary; both are
-        // put back here through the controllers' own calls. On a fresh load
-        // neither is open and this does nothing.
+        // Close puts back the clock Open found), which is put back here through
+        // the controller's own call. On a fresh load it is not open and this
+        // does nothing.
         private IEnumerator OpenTheHub()
         {
             yield return SharedScene.Ensure("Hub");
@@ -184,20 +145,18 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_menu, "the hub has no SystemMenuController");
 
             if (_menu.IsOpen) _menu.Close();
-            var hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
-            if (hub != null && hub.GlossaryIsOpen) hub.SetGlossary(false);
             Time.timeScale = 1f;
         }
 
         // ---- the context rule ---------------------------------------------------
         //
-        // The tab SET is decided at runtime, and the four-tab layout exists
-        // ONLY at runtime -- the scene on disk carries the five-tab bar. So
-        // nothing in the build can catch a four-tab bar that lays out wrong,
+        // The tab SET is decided at runtime, and the five-tab layout exists
+        // ONLY at runtime -- the scene on disk carries the six-tab bar. So
+        // nothing in the build can catch a five-tab bar that lays out wrong,
         // and these are the only things standing between that and a player.
 
         [UnityTest]
-        public IEnumerator BetweenRunsTheBarHasFourTabs()
+        public IEnumerator BetweenRunsTheBarHasFiveTabs()
         {
             yield return OpenTheHub();
 
@@ -210,11 +169,12 @@ namespace PrincesPalace.PlayModeTests
                 {
                     SystemMenuTabs.IndexOf(SystemMenuTab.Character),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Party),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Glossary),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Options),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Exit),
                 },
                 _menu.VisibleTabs.ToArray(),
-                "at camp the bar should carry exactly the four tabs that have something to show");
+                "at camp the bar should carry exactly the five tabs that have something to show");
         }
 
         [UnityTest]
@@ -245,12 +205,13 @@ namespace PrincesPalace.PlayModeTests
                     SystemMenuTabs.IndexOf(SystemMenuTab.Character),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Party),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Run),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Glossary),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Options),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Exit),
                 },
                 menu.VisibleTabs.ToArray(),
-                "in a descent the bar should carry all five tabs, RUN between Party and Options");
-            Assert.AreEqual(5, menu.VisibleTabs.Count);
+                "in a descent the bar should carry all six tabs, RUN between Party and Glossary");
+            Assert.AreEqual(6, menu.VisibleTabs.Count);
         }
 
         // The other half, and the one the author actually reported: standing in
@@ -268,7 +229,7 @@ namespace PrincesPalace.PlayModeTests
             _menu.Open();
             yield return null;
 
-            Assert.AreEqual(4, _menu.VisibleTabs.Count,
+            Assert.AreEqual(5, _menu.VisibleTabs.Count,
                 "the hub showed the descent tabs; it has no descent to describe");
 
             CollectionAssert.DoesNotContain(_menu.VisibleTabs.ToList(),

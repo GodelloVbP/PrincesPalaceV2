@@ -55,8 +55,7 @@ namespace PrincesPalace.Domain.Tests
             // PartyPlate/Blue/TwoByOne: the fight HUD's party card is a flat
             // Ui.OutlineBox now, not a kit container -- FightScreen.
             // BuildPartyPlate's own header has the measured reason. The 2x1
-            // PNG itself still has two live users (EnemyPlate*Frame,
-            // GlossaryFrame) and is still pinned against its own art by
+            // PNG itself still has a live user (EnemyPlate*Frame) and is still pinned against its own art by
             // UiKitAspectPinTests.
 
             // SubmenuContainer/Violet/ThreeByFour: FightScreen.
@@ -80,19 +79,6 @@ namespace PrincesPalace.Domain.Tests
                 Ui.ContainerSizeForWidth(ContainerRatio.FiveByOne, 520f).X,
                 Ui.ContainerSizeForWidth(ContainerRatio.FiveByOne, 520f).Y)
                 .SetName("CurrencyPlate/Gold/FiveByOne");
-
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => GlossaryScreen.Build().Frame.Node),
-                "GlossaryFrameContent", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                GlossaryScreen.PanelWidth, GlossaryScreen.PanelHeight)
-                .SetName("GlossaryFrame/Silver/TwoByOne");
-
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => Walk(GlossaryScreen.Build().Root).First(n => n.Name == "GlossaryDetailPlate")),
-                "GlossaryDetailContent", ButtonTheme.Silver, ContainerRatio.ThreeByFour,
-                Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 780f).X,
-                Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 780f).Y)
-                .SetName("GlossaryDetailPlate/Silver/ThreeByFour");
 
             yield return new TestCaseData(
                 (System.Func<UiNode>)(() => Walk(TalentScreen.Build().Root).First(n => n.Name == "RespecDialogCard")),

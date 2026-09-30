@@ -906,21 +906,20 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("dossier.attributes_locked", "Reallocation is locked until you return to the hub.");
 
         // --- the glossary --------------------------------------------------------
-        public static readonly UiString GlossaryTitle = UiString.Define("glossary.title", "THE RECORD");
         public static readonly UiString GlossaryCount =
             UiString.Define("glossary.count", "{0} / {1}", "999 / 999");
         public static readonly UiString GlossaryPage =
-            UiString.Define("glossary.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
+            UiString.Define("glossary.page", "{0} / {1}", "99 / 99");
         public static readonly UiString GlossaryEmpty =
-            UiString.Define("glossary.empty", "NOTHING RECORDED HERE YET");
+            UiString.Define("glossary.empty", "Nothing recorded here yet.");
         // Locked rows are LISTED, not hidden -- a glossary that hides what you
         // have not found cannot tell you what there is to find. The name shows
         // and the body is replaced by this.
-        public static readonly UiString GlossaryLocked = UiString.Define("glossary.locked", "NOT YET FOUND");
+        public static readonly UiString GlossaryLocked = UiString.Define("glossary.locked", "Not yet found.");
         public static readonly UiString GlossaryLockedBy =
             UiString.Define("glossary.locked_by", "Unlocked by: {0}", "Unlocked by: Clear a hundred rooms");
         public static readonly UiString GlossaryPick =
-            UiString.Define("glossary.pick", "CHOOSE AN ENTRY");
+            UiString.Define("glossary.pick", "Choose an entry to read it.");
 
         // --- save slots -----------------------------------------------------
         public static readonly UiString ChooseSlotHeader =
@@ -974,7 +973,9 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString HubTalents = UiString.Define("hub_talents", "TALENTS");
         public static readonly UiString HubPrincipality = UiString.Define("hub_principality", "PRINCIPALITY");
         public static readonly UiString HubCharacterSheet = UiString.Define("hub_character_sheet", "CHARACTER\nSHEET");
-        public static readonly UiString HubRelics = UiString.Define("hub_relics", "RELICS");
+        // The building that opens the glossary tab (SystemMenuTab.Glossary). Its node is
+        // still RelicsBuilding: the name is the art anchor's key.
+        public static readonly UiString HubGlossary = UiString.Define("hub_glossary", "GLOSSARY");
         public static readonly UiString HubExit = UiString.Define("hub_exit", "Exit");
 
         // --- the fight screen -------------------------------------------------
@@ -1187,6 +1188,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("system.tab.run", "RUN");
         public static readonly UiString SystemTabOptions =
             UiString.Define("system.tab.options", "OPTIONS");
+        public static readonly UiString SystemTabGlossary =
+            UiString.Define("system.tab.glossary", "GLOSSARY");
         public static readonly UiString SystemTabExit =
             UiString.Define("system.tab.exit", "EXIT");
 
@@ -1201,6 +1204,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("system.tab.run.short", "RUN");
         public static readonly UiString SystemTabOptionsShort =
             UiString.Define("system.tab.options.short", "OPTS");
+        public static readonly UiString SystemTabGlossaryShort =
+            UiString.Define("system.tab.glossary.short", "LORE");
         public static readonly UiString SystemTabExitShort =
             UiString.Define("system.tab.exit.short", "EXIT");
         public static readonly UiString SystemMenuTitle =
@@ -1497,6 +1502,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("menu.prompt.pages.character", "Character");
         public static readonly UiString PromptPagesRun =
             UiString.Define("menu.prompt.pages.run", "Page");
+        public static readonly UiString PromptPagesGlossary =
+            UiString.Define("menu.prompt.pages.glossary", "Category");
         public static readonly UiString PromptOpen = UiString.Define("menu.prompt.open", "Open");
         public static readonly UiString PromptEquip = UiString.Define("menu.prompt.equip", "Equip");
         public static readonly UiString PromptUnequip = UiString.Define("menu.prompt.unequip", "Unequip");

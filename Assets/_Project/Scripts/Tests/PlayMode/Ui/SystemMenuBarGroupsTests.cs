@@ -61,14 +61,15 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var boxes = Boxes(menu);
-            Assert.AreEqual(4, boxes.Length, "the camp bar should have four tabs");
+            Assert.AreEqual(5, boxes.Length, "the camp bar should have five tabs");
 
             Assert.AreEqual(40f, boxes[0].Left, 0.5f, "the game group does not start at the left inset");
-            Assert.AreEqual(1560f, boxes[3].Right, 0.5f, "the system group does not end flush at the right inset");
+            Assert.AreEqual(1560f, boxes[4].Right, 0.5f, "the system group does not end flush at the right inset");
 
             Assert.AreEqual(48f, boxes[1].Left - boxes[0].Right, 0.5f, "Character and Party are not 48px apart");
-            Assert.AreEqual(48f, boxes[3].Left - boxes[2].Right, 0.5f, "Options and Exit are not 48px apart");
-            Assert.GreaterOrEqual(boxes[2].Left - boxes[1].Right, 96f,
+            Assert.AreEqual(48f, boxes[2].Left - boxes[1].Right, 0.5f, "Party and Glossary are not 48px apart");
+            Assert.AreEqual(48f, boxes[4].Left - boxes[3].Right, 0.5f, "Options and Exit are not 48px apart");
+            Assert.GreaterOrEqual(boxes[3].Left - boxes[2].Right, 96f,
                 "the gap between the groups is under its 96px minimum");
         }
 
@@ -82,14 +83,15 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var boxes = Boxes(menu);
-            Assert.AreEqual(5, boxes.Length, "the descent bar should have five tabs");
+            Assert.AreEqual(6, boxes.Length, "the descent bar should have six tabs");
 
             Assert.AreEqual(40f, boxes[0].Left, 0.5f);
-            Assert.AreEqual(1560f, boxes[4].Right, 0.5f);
+            Assert.AreEqual(1560f, boxes[5].Right, 0.5f);
             Assert.AreEqual(48f, boxes[1].Left - boxes[0].Right, 0.5f);
             Assert.AreEqual(48f, boxes[2].Left - boxes[1].Right, 0.5f);
-            Assert.AreEqual(48f, boxes[4].Left - boxes[3].Right, 0.5f);
-            Assert.GreaterOrEqual(boxes[3].Left - boxes[2].Right, 96f);
+            Assert.AreEqual(48f, boxes[3].Left - boxes[2].Right, 0.5f);
+            Assert.AreEqual(48f, boxes[5].Left - boxes[4].Right, 0.5f);
+            Assert.GreaterOrEqual(boxes[4].Left - boxes[3].Right, 96f);
         }
 
         [UnityTest]

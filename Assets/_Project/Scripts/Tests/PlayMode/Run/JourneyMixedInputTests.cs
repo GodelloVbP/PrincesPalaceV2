@@ -181,7 +181,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(menu.IsOpen, "Start should have opened the system menu");
 
             // A fight opens the menu on RUN (plan C7), so the pad's own tab shortcut (LT/RT, not LB/RB)
-            // takes two steps right, past OPTIONS, to MainMenu -- landing on ExitTitle (its own entry).
+            // takes three steps right, past GLOSSARY and OPTIONS, to MainMenu -- landing on ExitTitle
+            // (its own entry).
+            yield return PressTriggerRight();
             yield return PressTriggerRight();
             yield return PressTriggerRight();
             AssertSelectedName("ExitTitle", "the trigger shortcut should land on the MainMenu pane's own entry");

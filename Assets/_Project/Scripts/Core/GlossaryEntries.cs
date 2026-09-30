@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Glossary;
@@ -15,19 +16,16 @@ namespace PrincesPalace
     // so adding a category is a value in GlossaryCategory plus one case here --
     // never a new screen, never a new controller.
     //
-    // Core rather than Domain because every source but one is a
-    // ScriptableObject -- Mechanics() is the exception, and stays here
-    // anyway so all six categories are built in the one place this file's
-    // own job description promises.
+    // Core rather than Domain because most sources are a ScriptableObject.
     public static class GlossaryEntries
     {
         // EVERY category in one pass, with the achievement facts gathered
         // ONCE.
         //
-        // The controller needs all six regardless -- the rail shows an
+        // The controller needs every category regardless -- the rail shows an
         // "unlocked of total" count per category -- and building them one at a
         // time meant Relics and Deeds each re-derived the same AchievementFacts
-        // by sweeping the roster and the whole run ledger. Six calls, two full
+        // by sweeping the roster and the whole run ledger. One call per category, two full
         // fact gathers, repeated on every category click.
         public static List<List<GlossaryEntry>> All(SaveData save)
         {
@@ -50,7 +48,8 @@ namespace PrincesPalace
             {
                 case GlossaryCategory.Relics: return Relics(earned);
                 case GlossaryCategory.Monsters: return Monsters();
-                case GlossaryCategory.Spells: return Spells();
+                case GlossaryCategory.Statuses: return Statuses();
+                case GlossaryCategory.Skills: return Skills();
                 case GlossaryCategory.Items: return Items();
                 case GlossaryCategory.Talents: return Talents();
                 case GlossaryCategory.Mechanics: return Mechanics();
@@ -80,6 +79,18 @@ namespace PrincesPalace
                 .ToList();
         }
 
+        // One row per badge the fight can draw (StatusDefinitions). The body is
+        // the tooltip's own sentence with the number left as X, so the record
+        // and the fight cannot say different things about a status.
+        private static List<GlossaryEntry> Statuses() =>
+            StatusDefinitions.All
+                .Select(d => new GlossaryEntry(
+                    d.Slug, d.Name,
+                    $"{d.Code}  ·  {(d.Positive ? "Benefit" : "Detriment")}",
+                    d.Description,
+                    iconId: d.Slug))
+                .ToList();
+
         private static List<GlossaryEntry> Monsters() =>
             ContentDatabase.Enemies
                 .Where(e => e != null)
@@ -87,7 +98,7 @@ namespace PrincesPalace
                     e.id, e.Data.DisplayName,
                     // Off BaseStats, which is where an enemy's numbers actually
                     // live -- there are no maxHealth/attack fields beside it.
-                    $"{e.Data.BaseStats.maxHealth} HP  ·  {e.Data.BaseStats.attack} ATK{(e.Data.IsBoss ? "  ·  BOSS" : "")}",
+                    $"{e.Data.BaseStats.maxHealth} HP  ·  {e.Data.BaseStats.attack} ATK{(e.Data.IsBoss ? "  ·  Boss" : "")}",
                     // Enemies carry no authored prose, so the row says what it
                     // actually knows rather than showing an empty plate.
                     AffinityLine(e),
@@ -128,7 +139,7 @@ namespace PrincesPalace
             return string.Join(", ", types.Take(types.Count - 1)) + " and " + types[types.Count - 1];
         }
 
-        private static List<GlossaryEntry> Spells() =>
+        private static List<GlossaryEntry> Skills() =>
             ContentDatabase.Skills
                 .Where(s => s != null)
                 .Select(s => new GlossaryEntry(
@@ -161,7 +172,7 @@ namespace PrincesPalace
                 .Where(i => i != null)
                 .Select(i => new GlossaryEntry(
                     i.id, i.displayName,
-                    $"{i.kind}  ·  TIER {i.tier}",
+                    $"{i.kind}  ·  Tier {i.tier}",
                     i.description,
                     iconId: i.id))
                 .ToList();
@@ -191,26 +202,26 @@ namespace PrincesPalace
         {
             return new List<GlossaryEntry>
             {
-                new GlossaryEntry("mech_strength", "Strength", "ABILITY SCORE",
+                new GlossaryEntry("mech_strength", "Strength", "Ability score",
                     "Multiplies STR-graded weapons: every point above 10 hits harder, every point below hits " +
                     "softer. Grants no other stat -- offense lives at the weapon, not the sheet."),
-                new GlossaryEntry("mech_dexterity", "Dexterity", "ABILITY SCORE",
+                new GlossaryEntry("mech_dexterity", "Dexterity", "Ability score",
                     $"+1 Speed for every {AbilityDerivation.SpeedDivisor} points above 10 (and the same " +
                     "below). Also multiplies DEX-graded weapons, the same way Strength does for STR ones."),
-                new GlossaryEntry("mech_constitution", "Constitution", "ABILITY SCORE",
+                new GlossaryEntry("mech_constitution", "Constitution", "Ability score",
                     $"+{AbilityDerivation.HealthPerPoint} Max Health and +{AbilityDerivation.PhysicalDefensePerPoint} " +
                     "Physical Defense per point above 10 -- and the same amount lost per point below it."),
-                new GlossaryEntry("mech_intelligence", "Intelligence", "ABILITY SCORE",
+                new GlossaryEntry("mech_intelligence", "Intelligence", "Ability score",
                     "Multiplies INT-graded spells, the same way Strength multiplies STR-graded weapons. Grants " +
                     "no other stat."),
-                new GlossaryEntry("mech_wisdom", "Wisdom", "ABILITY SCORE",
+                new GlossaryEntry("mech_wisdom", "Wisdom", "Ability score",
                     $"+{AbilityDerivation.ManaPerPoint} Max Mana and +{AbilityDerivation.MagicalDefensePerPoint} " +
                     "Magical Defense per point above 10, and multiplies WIS-graded spells on top."),
-                new GlossaryEntry("mech_charisma", "Charisma", "ABILITY SCORE",
+                new GlossaryEntry("mech_charisma", "Charisma", "Ability score",
                     $"Fills this character's signature resource faster: +1 gain per turn for every " +
                     $"{AbilityDerivation.SignatureGainDivisor} points above 10 (and slower for every " +
                     $"{AbilityDerivation.SignatureGainDivisor} below)."),
-                new GlossaryEntry("mech_defense", "Physical & Magical Defense", "MECHANIC",
+                new GlossaryEntry("mech_defense", "Physical & Magical Defense", "Mechanic",
                     "Defense cuts incoming damage along a curve, not a flat percentage: damage taken is " +
                     "multiplied by 100 / (100 + Defense). " +
                     $"25 Defense blocks {ItemStatLines.DamageReductionPercent(25)}% of a hit, " +
@@ -219,7 +230,7 @@ namespace PrincesPalace
                     $"300 blocks {ItemStatLines.DamageReductionPercent(300)}% -- every extra point buys a " +
                     "little less than the one before it, so no amount of Defense makes a character " +
                     "untouchable."),
-                new GlossaryEntry("mech_hone", "Honing", "MECHANIC",
+                new GlossaryEntry("mech_hone", "Honing", "Mechanic",
                     $"Honing raises a weapon's damage by {ItemUpgrade.PercentPerPlus}% per plus, up to " +
                     $"+{ItemUpgrade.MaxPlus} -- a fully honed weapon deals {1f + ItemUpgrade.PercentPerPlus * ItemUpgrade.MaxPlus / 100f:0.0}x " +
                     "its base damage. Worn armour hones the same way, for whatever stats it grants."),
@@ -238,7 +249,7 @@ namespace PrincesPalace
                     bool earned = AchievementProgress.IsEarned(a.Data, facts);
                     return new GlossaryEntry(
                         a.id, a.Data.DisplayName,
-                        earned ? "EARNED" : "NOT YET",
+                        earned ? "Earned" : "Not yet",
                         a.Data.Description,
                         locked: !earned,
                         lockedBy: "",

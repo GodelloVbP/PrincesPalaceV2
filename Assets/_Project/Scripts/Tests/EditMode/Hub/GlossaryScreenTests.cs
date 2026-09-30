@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -8,65 +7,125 @@ using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
+    // The GLOSSARY pane's geometry and tree (plan C25, spec section 5) and the
+    // catalog it pages over. UiAudit re-solves the whole menu at four aspects
+    // (SystemMenuScreenTests, MenuTypeLintTests), so overlap, overflow and the
+    // type floor are covered there; what is pinned here is the arithmetic in
+    // literals and the pairing of nodes to what fills them.
     public class GlossaryScreenTests
     {
-        private static UiNode Tree() => GlossaryScreen.Build().Root;
+        private static GlossaryScreen Screen() => GlossaryScreen.Build();
+
+        // ---- the columns ---------------------------------------------------------------
 
         [Test]
-        public void TheScreenAuditsCleanAtEveryFrame()
+        public void TheThreeColumnsAreTheSpecs280520And672AndFillTheAreaExactly()
         {
-            foreach (var frame in UiFrames.All)
-            {
-                var solved = UiSolver.Solve(Tree(), frame);
-                var errors = UiAudit.Run(solved, frame);
+            Assert.AreEqual(1520f, GlossaryLayout.AreaWidth, 0.001f);
+            Assert.AreEqual(756f, GlossaryLayout.AreaHeight, 0.001f);
 
-                Assert.IsEmpty(errors,
-                    $"at {UiFrames.Describe(frame)}, first 5 of {errors.Count}: " +
-                    string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
-            }
+            Assert.AreEqual(280f, GlossaryLayout.RailWidth, 0.001f);
+            Assert.AreEqual(520f, GlossaryLayout.ListWidth, 0.001f);
+            Assert.AreEqual(672f, GlossaryLayout.DetailWidth, 0.001f);
+
+            Assert.AreEqual(-760f, GlossaryLayout.RailLeft, 0.001f);
+            Assert.AreEqual(-456f, GlossaryLayout.ListLeft, 0.001f);
+            Assert.AreEqual(88f, GlossaryLayout.DetailLeft, 0.001f);
+            Assert.AreEqual(760f, GlossaryLayout.DetailLeft + GlossaryLayout.DetailWidth, 0.001f,
+                "the detail column does not end at the area's right edge");
         }
 
         [Test]
-        public void CloseWearsSilverAndTheRailWearsAThemedPlate()
+        public void ThePaneIsTheWholeContentArea()
         {
-            // Balance-bot, 2026-09-02: the rail moved off the gold-fallback
-            // plate onto ThemedPlate (caption-preserving, so the pooled
-            // marker/label/count children are untouched) -- see
-            // BuildCategory's own comment for why plain Themed() does not
-            // fit a row that already declares its own caption children.
-            //
-            // 2026-09-07 (ThemedButtonAspectLintTests): the row LIST moved
-            // OFF a plate entirely -- 500x60 is 8.3:1, a ratio no plate
-            // shape lands within the container kit's own tolerance of, and
-            // the honest resize (500x83.3 on Row6x1) only fits 8 of the 10
-            // rows GlossaryCatalog.RowsPerPage pages by. Rows are now
-            // chromeless with a hairline rule, same shape as
-            // DebugMenuScreen.BuildRow / CharacterDossierScreen.BuildNavRow.
-            var screen = GlossaryScreen.Build();
+            Assert.AreEqual(1600f, GlossaryLayout.PaneWidth, 0.001f);
+            Assert.AreEqual(804f, GlossaryLayout.PaneHeight, 0.001f);
+        }
 
-            Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
-            Assert.AreEqual(ButtonTheme.Blue, screen.CategoryButtons[0].Node.Theme);
-            Assert.IsTrue(screen.CategoryButtons[0].Node.CaptionPreserving);
-            Assert.IsTrue(screen.Rows[0].Node.Chromeless, "8.3:1 fits no plate shape -- hairline row instead");
+        // ---- the rail ---------------------------------------------------------------------
+
+        [Test]
+        public void TheRailStacksEveryCategoryInsideTheArea()
+        {
+            Assert.AreEqual(346f, GlossaryLayout.CategoryCentreY(0), 0.001f);
+            Assert.AreEqual(-130f, GlossaryLayout.CategoryCentreY(7), 0.001f);
+
+            float bottom = GlossaryLayout.CategoryCentreY(GlossaryCatalog.Categories.Count - 1)
+                           - GlossaryLayout.CategoryRowHeight * 0.5f;
+            Assert.GreaterOrEqual(bottom, -GlossaryLayout.AreaHeight * 0.5f, "the last category leaves the area");
+        }
+
+        // ---- the list ----------------------------------------------------------------------
+
+        [Test]
+        public void TheListIsEightRowsOf64WithThePagerUnderThem()
+        {
+            Assert.AreEqual(8, GlossaryCatalog.RowsPerPage);
+            Assert.AreEqual(64f, GlossaryLayout.ListRowHeight, 0.001f);
+            Assert.AreEqual(346f, GlossaryLayout.ListRowCentreY(0), 0.001f);
+            Assert.AreEqual(-102f, GlossaryLayout.ListRowCentreY(7), 0.001f);
+            Assert.AreEqual(-134f, GlossaryLayout.ListRowsBottom, 0.001f);
+
+            Assert.AreEqual(-168f, GlossaryLayout.PagerCentreY, 0.001f);
+            Assert.AreEqual(-196f, GlossaryLayout.PagerLabelX, 0.001f);
+            Assert.AreEqual(-290f, GlossaryLayout.PagerPrevX, 0.001f);
+            Assert.AreEqual(-102f, GlossaryLayout.PagerNextX, 0.001f);
+
+            float pagerTop = GlossaryLayout.PagerCentreY + GlossaryLayout.PagerArrowHeight * 0.5f;
+            Assert.Less(pagerTop, GlossaryLayout.ListRowsBottom, "the pager runs into the last row");
         }
 
         [Test]
-        public void ItAuditsCleanInsideTheHubItMountsIn()
+        public void TheNameAndMetaLinesFitInsideTheirRow()
         {
-            var errors = UiAudit.RunAllFrames(HubScreen.Build().Root);
-
-            Assert.IsEmpty(errors,
-                "first 5 of " + errors.Count + ": " +
-                string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
+            Assert.LessOrEqual(GlossaryLayout.ListNameHeight + GlossaryLayout.ListMetaHeight,
+                GlossaryLayout.ListRowHeight);
         }
+
+        // ---- the detail --------------------------------------------------------------------
+
+        [Test]
+        public void TheDetailIsAnIconBesideTheNameAndMetaWithTheBodyUnderThem()
+        {
+            Assert.AreEqual(148f, GlossaryLayout.DetailIconCentreX, 0.001f);
+            Assert.AreEqual(318f, GlossaryLayout.DetailIconCentreY, 0.001f);
+            Assert.AreEqual(232f, GlossaryLayout.DetailTextLeft, 0.001f);
+            Assert.AreEqual(528f, GlossaryLayout.DetailTextWidth, 0.001f);
+            Assert.AreEqual(350f, GlossaryLayout.DetailNameCentreY, 0.001f);
+            Assert.AreEqual(309f, GlossaryLayout.DetailMetaCentreY, 0.001f);
+            Assert.AreEqual(34f, GlossaryLayout.DetailBodyCentreY, 0.001f);
+            Assert.AreEqual(-204f, GlossaryLayout.DetailLockedByCentreY, 0.001f);
+
+            float metaBottom = GlossaryLayout.DetailMetaCentreY - GlossaryLayout.DetailMetaHeight * 0.5f;
+            float iconBottom = GlossaryLayout.DetailIconCentreY - GlossaryLayout.DetailIconSize * 0.5f;
+            Assert.GreaterOrEqual(metaBottom, iconBottom - 0.001f, "the meta line drops below the icon");
+
+            float bodyTop = GlossaryLayout.DetailBodyCentreY + GlossaryLayout.DetailBodyHeight * 0.5f;
+            Assert.LessOrEqual(bodyTop, iconBottom, "the body starts over the icon");
+
+            float lockedBottom = GlossaryLayout.DetailLockedByCentreY - GlossaryLayout.DetailLockedByHeight * 0.5f;
+            Assert.GreaterOrEqual(lockedBottom, -GlossaryLayout.AreaHeight * 0.5f, "the lock note leaves the area");
+        }
+
+        // The Defense curve is the longest entry the glossary authors, and the
+        // body box is what it has to fit; UiTextFitAudit measures a sample, this
+        // pins the box's own height against a plain floor on how tall it is.
+        [Test]
+        public void TheBodyBoxIsTallEnoughForAnEightLineEntry()
+        {
+            Assert.GreaterOrEqual(GlossaryLayout.DetailBodyHeight, 8 * 30f);
+        }
+
+        // ---- the tree ------------------------------------------------------------------------
 
         [Test]
         public void ThereIsOneRailButtonPerCategory()
         {
             // Built by walking the enum, so appending a category adds a button
             // and nothing else. If this ever fails, someone hard-coded a count.
-            var screen = GlossaryScreen.Build();
+            var screen = Screen();
 
+            Assert.AreEqual(8, GlossaryCatalog.Categories.Count);
             Assert.AreEqual(GlossaryCatalog.Categories.Count, screen.CategoryButtons.Count);
             Assert.AreEqual(screen.CategoryButtons.Count, screen.CategoryLabels.Count);
             Assert.AreEqual(screen.CategoryButtons.Count, screen.CategoryCounts.Count);
@@ -76,7 +135,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ThereIsOneRowPerPageSlot()
         {
-            var screen = GlossaryScreen.Build();
+            var screen = Screen();
 
             Assert.AreEqual(GlossaryCatalog.RowsPerPage, screen.Rows.Count);
             Assert.AreEqual(screen.Rows.Count, screen.RowNames.Count);
@@ -85,42 +144,67 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryCategoryHasADisplayName()
+        public void ARailButtonAndARowAreQuietChromelessBodyButtons()
         {
-            // Spelled out rather than ToString(), so a category is never
-            // discovered to be rendering as its enum member name.
-            foreach (var category in GlossaryCatalog.Categories)
-            {
-                string name = GlossaryCatalog.DisplayName(category);
+            // No plate: the pane sits on the menu's fill like RUN, and a row
+            // that is only read has no click cue to make.
+            var screen = Screen();
 
-                Assert.IsNotEmpty(name);
-                Assert.AreNotEqual(category.ToString(), name,
-                    $"{category} is falling through to ToString()");
+            foreach (var button in screen.CategoryButtons.Concat(screen.Rows))
+            {
+                Assert.IsTrue(button.Node.Chromeless, $"{button.Node.Name} wears a plate");
+                Assert.AreEqual(UiClickCue.Silent, button.Node.Click, $"{button.Node.Name} makes a click cue");
+                Assert.AreEqual(TypographyRole.Body, button.Node.Role, $"{button.Node.Name} has no Body role");
+            }
+        }
+
+        // The rail is there from the first frame; a row is shown by the
+        // controller for as many entries as the page holds. A rail button that
+        // started hidden was unreachable by the pad.
+        [Test]
+        public void TheRailStartsShownAndTheRowsStartHidden()
+        {
+            var screen = Screen();
+
+            foreach (var button in screen.CategoryButtons)
+            {
+                Assert.IsFalse(button.Node.StartInactive, $"{button.Node.Name} starts hidden");
+            }
+
+            foreach (var row in screen.Rows)
+            {
+                Assert.IsTrue(row.Node.StartInactive, $"{row.Node.Name} starts shown with nothing in it");
             }
         }
 
         [Test]
-        public void AddingACategoryCannotSilentlyShareADisplayName()
+        public void ThePaneNoLongerCarriesAModalFrameOrAClose()
         {
-            var names = GlossaryCatalog.Categories.Select(GlossaryCatalog.DisplayName).ToList();
+            // The standalone 1890x945 glossary and its Close button are gone;
+            // the menu's own frame and close are the only ones.
+            var names = Walk(Screen().Root).Select(n => n.Name).ToList();
 
-            CollectionAssert.AllItemsAreUnique(names);
+            CollectionAssert.DoesNotContain(names, "GlossaryFrame");
+            CollectionAssert.DoesNotContain(names, "GlossaryCloseButton");
+            CollectionAssert.DoesNotContain(names, "GlossaryPanel");
         }
 
         [Test]
-        public void TheScreenAndTheLockNoteStartHidden()
+        public void TheHintsTheLockNoteAndThePagerStartHidden()
         {
-            var screen = GlossaryScreen.Build();
+            var screen = Screen();
 
-            Assert.IsTrue(screen.Root.StartInactive);
             Assert.IsTrue(screen.DetailLockedBy.Node.StartInactive);
             Assert.IsTrue(screen.EmptyHint.Node.StartInactive);
+            Assert.IsTrue(screen.PrevPageButton.Node.StartInactive);
+            Assert.IsTrue(screen.NextPageButton.Node.StartInactive);
+            Assert.IsTrue(screen.PageLabel.Node.StartInactive);
         }
 
         [Test]
         public void SelectionMarkersStartInvisible()
         {
-            var screen = GlossaryScreen.Build();
+            var screen = Screen();
 
             foreach (var marker in screen.CategoryMarkers.Concat(screen.RowMarkers))
             {
@@ -133,7 +217,7 @@ namespace PrincesPalace.Domain.Tests
         {
             // Decor clears the raycast, so a label cannot eat the click meant
             // for the button it sits on.
-            foreach (var node in Walk(Tree()))
+            foreach (var node in Walk(Screen().Root))
             {
                 bool isChild = node.Name.StartsWith("GlossaryCategory") || node.Name.StartsWith("GlossaryRow");
                 if (!isChild || node.Kind == UiNodeKind.Button) continue;
@@ -142,7 +226,45 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // ---- the paging rules ------------------------------------------------------
+        // ---- the categories ------------------------------------------------------------------
+
+        // Spec section 5 and plan C21: the rail's order, and "Skills" where the
+        // rail said "Spells".
+        [Test]
+        public void TheCategoriesRunRelicsStatusesMonstersSkillsItemsTalentsMechanicsDeeds()
+        {
+            CollectionAssert.AreEqual(
+                new[] { "RELICS", "STATUSES", "MONSTERS", "SKILLS", "ITEMS", "TALENTS", "MECHANICS", "DEEDS" },
+                GlossaryCatalog.Categories.Select(GlossaryCatalog.DisplayName).ToList());
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    GlossaryCategory.Relics, GlossaryCategory.Statuses, GlossaryCategory.Monsters,
+                    GlossaryCategory.Skills, GlossaryCategory.Items, GlossaryCategory.Talents,
+                    GlossaryCategory.Mechanics, GlossaryCategory.Achievements,
+                },
+                GlossaryCatalog.Categories.ToList());
+        }
+
+        [Test]
+        public void EveryCategoryHasADisplayName()
+        {
+            foreach (var category in GlossaryCatalog.Categories)
+            {
+                Assert.IsNotEmpty(GlossaryCatalog.DisplayName(category));
+            }
+        }
+
+        [Test]
+        public void AddingACategoryCannotSilentlyShareADisplayName()
+        {
+            var names = GlossaryCatalog.Categories.Select(GlossaryCatalog.DisplayName).ToList();
+
+            CollectionAssert.AllItemsAreUnique(names);
+        }
+
+        // ---- the paging rules ------------------------------------------------------------------
 
         private static List<GlossaryEntry> Entries(int count) =>
             Enumerable.Range(0, count).Select(i => new GlossaryEntry("id" + i, "Name " + i, "", "")).ToList();
@@ -158,17 +280,17 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AFullPageDoesNotCreateAnEmptyNextOne()
         {
-            // Exactly RowsPerPage entries is ONE page, not two. The off-by-one
-            // here is the classic, and it shows up as a blank page the player
-            // can flip to.
-            Assert.AreEqual(1, GlossaryCatalog.PageCount(GlossaryCatalog.RowsPerPage));
-            Assert.AreEqual(2, GlossaryCatalog.PageCount(GlossaryCatalog.RowsPerPage + 1));
+            // Exactly eight entries is ONE page, not two. The off-by-one here
+            // is the classic, and it shows up as a blank page the player can
+            // flip to.
+            Assert.AreEqual(1, GlossaryCatalog.PageCount(8));
+            Assert.AreEqual(2, GlossaryCatalog.PageCount(9));
         }
 
         [Test]
         public void PagingIsClampedAtBothEnds()
         {
-            var entries = Entries(GlossaryCatalog.RowsPerPage * 2);
+            var entries = Entries(16);
 
             Assert.AreEqual(0, GlossaryCatalog.ClampPage(-5, entries.Count));
             Assert.AreEqual(1, GlossaryCatalog.ClampPage(99, entries.Count));
@@ -177,15 +299,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheLastPageIsShortRatherThanPadded()
         {
-            var entries = Entries(GlossaryCatalog.RowsPerPage + 3);
+            var entries = Entries(11);
 
             Assert.AreEqual(3, GlossaryCatalog.Page(entries, 1).Count);
+            Assert.AreEqual("Name 8", GlossaryCatalog.Page(entries, 1)[0].Name);
         }
 
         [Test]
         public void UnlockedCountIgnoresLockedEntries()
         {
-            // The rail says "17 of 40", which is what makes a glossary
+            // The rail says "17 / 40", which is what makes a glossary
             // something to fill in rather than a reference table.
             var mixed = new List<GlossaryEntry>
             {

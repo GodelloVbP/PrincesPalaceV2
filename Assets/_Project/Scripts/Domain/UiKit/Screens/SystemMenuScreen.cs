@@ -11,16 +11,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // THE BAR IS BUILT FROM MEASURED WIDTHS and re-laid at runtime.
     //
     // That needs saying because it looks like a violation of this project's
-    // first rule. The tab SET is context-driven -- four tabs at camp, five in
+    // first rule. The tab SET is context-driven -- five tabs at camp, six in
     // a descent -- and a scene is generated once. So the build authors every
-    // tab at its five-tab position and SystemMenuController re-applies
+    // tab at its six-tab position and SystemMenuController re-applies
     // SystemMenuLayout for whichever set is showing. The arithmetic still
     // lives in exactly one place; only the moment it runs moved. The widths
     // come from the Editor, which measures the very labels it is about to
     // emit; Domain has no font.
     //
-    // UiAudit therefore only sees the five-tab layout, since that is what is
-    // on disk. SystemMenuScreenTests pins the four-tab one against the numbers
+    // UiAudit therefore only sees the six-tab layout, since that is what is
+    // on disk. SystemMenuScreenTests pins the five-tab one against the numbers
     // instead: same overlap and flush-right checks, without an emitted scene.
     public sealed class SystemMenuScreen
     {
@@ -43,6 +43,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public PartyScreen Party;
         public OptionsScreen Options;
         public RunScreen Run;
+        public GlossaryScreen Glossary;
         public ExitsScreen Exits;
 
         public UiNode Root;
@@ -240,6 +241,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         var run = RunScreen.Build();
                         screen.Run = run;
                         contents.Add(run.Root);
+                        break;
+
+                    case SystemMenuTab.Glossary:
+                        var glossary = GlossaryScreen.Build();
+                        screen.Glossary = glossary;
+                        contents.Add(glossary.Root);
                         break;
 
                     case SystemMenuTab.Exit:
