@@ -106,8 +106,38 @@ screen, so this file is where it currently lives.
 | `boulder_slam_impact.wav` | `item_stone_01`, 0.105s lead-in and tail cut to 0.385s |
 | `trunk_slam_impact.wav` | `wood_03`, trimmed to 0.20s |
 | `bellwether_scratch_impact.wav` | `blade_02`, trimmed to 0.254s |
-| `censer_of_embers_impact.wav` | `spell_fire_06`, trimmed to 0.70s |
 
 "80 CC0 RPG SFX" by **rubberduck**, from OpenGameArt. CC0, so no credit is
 required; it is given as a courtesy. Converted to 44.1 kHz 16-bit mono wav with
 a 40ms fade-out on each trim.
+
+---
+
+## Spell sound effects -- Leonardo Calvo
+
+`Assets/_Project/Resources/Audio/Sfx/`
+
+"Magic Spell SFX" by **Leonardo Calvo**, <https://thesoundrack.itch.io/freemagicspellsfx>.
+Licensed under **Creative Commons BY 4.0** -- <https://creativecommons.org/licenses/by/4.0/>.
+The clips were trimmed, faded and resampled to 44.1 kHz 16-bit mono wav.
+
+| File | Source clip |
+|---|---|
+| `winters_rebuke_impact.wav` | Ice `fast_impact_07` |
+| `vipers_bite_impact.wav` | Acid `squish_whoosh_impact_04` |
+| `spore_cloud_impact.wav` | Acid `poison_gas_02` |
+| `ashen_reckoning_impact.wav` | Fire `burst_impact_short_03` |
+| `censer_of_embers_impact.wav` | Fire `fireball_burst_warm_05` |
+| `blackglass_spear_impact.wav` | Dark `raven_metallic_02` |
+| `death_knell_impact.wav` | Dark `charge_impact_03` |
+| `court_of_whispers_impact.wav` | Dark `curse_03` |
+| `gale_scythe_cast.wav`, `gale_scythe_impact.wav` | Wind `short_rise_whoosh_02`, `air_sharp_shoot_02` |
+| `thorn_tithe_impact.wav` | Earth `morph_rocks_02` |
+| `crownfall_impact.wav` | Lightning `zap_blast_sparkle_bright_02` |
+| `borrowed_moment_impact.wav` | Wind `short_spacious_whoosh_04` |
+| `palace_passage_impact.wav` | Dark `warp_03` |
+| `cinderfault_eruption_impact.wav` | Earth `impact_ground_rock_debris_02` |
+| `prismatic_orb_earth_impact.wav` | Earth `stone_dry_impact_03` |
+| `prismatic_orb_fire_impact.wav` | Fire `fireball_burst_bright_03` |
+| `prismatic_orb_wind_impact.wav` | Wind `air_impact_splash_02` |
+| `prismatic_orb_water_cast.wav`, `prismatic_orb_water_impact.wav` | Water `bubble_power_02`, `impact_ball_03` |

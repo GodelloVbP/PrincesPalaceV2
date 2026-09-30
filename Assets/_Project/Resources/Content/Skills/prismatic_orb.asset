@@ -154,7 +154,7 @@ MonoBehaviour:
         departFrame: 0
         impactX: -1
         impactY: -1
-        sfxPath: 
+        sfxPath: Audio/Sfx/prismatic_orb_earth_impact
         groundPath: 
         groundSeconds: 0
         groundImpactFrame: 0
@@ -515,13 +515,13 @@ MonoBehaviour:
         departFrame: 0
         impactX: -1
         impactY: -1
-        sfxPath: 
+        sfxPath: Audio/Sfx/prismatic_orb_water_impact
         groundPath: 
         groundSeconds: 0
         groundImpactFrame: 0
         groundAspect: 0
         groundImpactY: -1
-        castSfxPath: Audio/Sfx/prismatic_orb_water_startup
+        castSfxPath: Audio/Sfx/prismatic_orb_water_cast
         layers:
         - id: charge
           render: sprite
@@ -860,7 +860,7 @@ MonoBehaviour:
         departFrame: 0
         impactX: -1
         impactY: -1
-        sfxPath: 
+        sfxPath: Audio/Sfx/prismatic_orb_fire_impact
         groundPath: 
         groundSeconds: 0
         groundImpactFrame: 0
@@ -1205,7 +1205,7 @@ MonoBehaviour:
         departFrame: 0
         impactX: -1
         impactY: -1
-        sfxPath: 
+        sfxPath: Audio/Sfx/prismatic_orb_wind_impact
         groundPath: 
         groundSeconds: 0
         groundImpactFrame: 0

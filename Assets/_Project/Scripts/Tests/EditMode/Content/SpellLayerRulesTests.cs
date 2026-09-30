@@ -968,7 +968,7 @@ namespace PrincesPalace.Domain.Tests
                 impactFrame = 5,
                 impactX = 0.5f,
                 impactY = 0.129f,
-                sfxPath = "Audio/Sfx/cinderfault_impact",
+                sfxPath = "Audio/Sfx/cinderfault_eruption_impact",
                 groundPath = "Spells/cinderfault_ground",
                 groundImpactY = 0.063f,
                 castSfxPath = "Audio/Sfx/cinderfault_pressure",

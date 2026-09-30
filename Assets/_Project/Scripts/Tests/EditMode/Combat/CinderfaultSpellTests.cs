@@ -104,7 +104,7 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"path\": \"Spells/cinderfault_ground\"", entry);
             StringAssert.Contains("\"path\": \"Spells/cinderfault_eruption\"", entry);
             StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/cinderfault_startup\"", entry);
-            StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/cinderfault_impact\"", entry);
+            StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/cinderfault_eruption_impact\"", entry);
 
             // ONE CUE, AUTHORED, and it is HALF the instant the pre-layer
             // block landed on: (0.78s x 5/9) / 2, chasing the feel of

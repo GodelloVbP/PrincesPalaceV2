@@ -221,12 +221,36 @@
       "peakDb": 0.0
     },
     {
+      "path": "Sfx/ashen_reckoning_impact",
+      "gainDb": -5.7,
+      "gain": 0.5188,
+      "metric": "rms",
+      "measuredDb": -12.3,
+      "peakDb": -2.6
+    },
+    {
       "path": "Sfx/bellwether_scratch_impact",
       "gainDb": -0.82,
       "gain": 0.9099,
       "metric": "rms",
       "measuredDb": -20.5,
       "peakDb": -0.2
+    },
+    {
+      "path": "Sfx/blackglass_spear_impact",
+      "gainDb": -2.6,
+      "gain": 0.7413,
+      "metric": "rms",
+      "measuredDb": -15.4,
+      "peakDb": -3.7
+    },
+    {
+      "path": "Sfx/borrowed_moment_impact",
+      "gainDb": -1.3,
+      "gain": 0.861,
+      "metric": "rms",
+      "measuredDb": -16.7,
+      "peakDb": -3.3
     },
     {
       "path": "Sfx/boulder_slam_impact",
@@ -246,19 +270,19 @@
     },
     {
       "path": "Sfx/censer_of_embers_impact",
-      "gainDb": 10.35,
-      "gain": 3.2923,
+      "gainDb": -0.5,
+      "gain": 0.9441,
       "metric": "rms",
-      "measuredDb": -31.4,
-      "peakDb": -11.3
+      "measuredDb": -17.5,
+      "peakDb": -2.4
     },
     {
-      "path": "Sfx/cinderfault_impact",
-      "gainDb": -0.15,
-      "gain": 0.9829,
+      "path": "Sfx/cinderfault_eruption_impact",
+      "gainDb": -7.6,
+      "gain": 0.4169,
       "metric": "rms",
-      "measuredDb": -18.2,
-      "peakDb": -0.8
+      "measuredDb": -10.4,
+      "peakDb": -0.9
     },
     {
       "path": "Sfx/cinderfault_pressure",
@@ -285,6 +309,22 @@
       "peakDb": -1.5
     },
     {
+      "path": "Sfx/court_of_whispers_impact",
+      "gainDb": -2.4,
+      "gain": 0.7586,
+      "metric": "rms",
+      "measuredDb": -15.6,
+      "peakDb": -4.3
+    },
+    {
+      "path": "Sfx/crownfall_impact",
+      "gainDb": -4.1,
+      "gain": 0.6237,
+      "metric": "rms",
+      "measuredDb": -13.9,
+      "peakDb": -2.4
+    },
+    {
       "path": "Sfx/dark_chains_impact",
       "gainDb": 2.75,
       "gain": 1.3725,
@@ -293,11 +333,35 @@
       "peakDb": -3.8
     },
     {
+      "path": "Sfx/death_knell_impact",
+      "gainDb": -5.0,
+      "gain": 0.5623,
+      "metric": "rms",
+      "measuredDb": -13.0,
+      "peakDb": -3.5
+    },
+    {
       "path": "Sfx/frost_flare",
       "gainDb": -1.1,
       "gain": 0.881,
       "metric": "rms",
       "measuredDb": -16.9,
+      "peakDb": 0.1
+    },
+    {
+      "path": "Sfx/gale_scythe_cast",
+      "gainDb": -1.3,
+      "gain": 0.861,
+      "metric": "rms",
+      "measuredDb": -16.7,
+      "peakDb": -3.6
+    },
+    {
+      "path": "Sfx/gale_scythe_impact",
+      "gainDb": -1.09,
+      "gain": 0.8821,
+      "metric": "rms",
+      "measuredDb": -19.1,
       "peakDb": 0.1
     },
     {
@@ -357,6 +421,14 @@
       "peakDb": -5.0
     },
     {
+      "path": "Sfx/palace_passage_impact",
+      "gainDb": -2.8,
+      "gain": 0.7244,
+      "metric": "rms",
+      "measuredDb": -15.2,
+      "peakDb": -2.8
+    },
+    {
       "path": "Sfx/press play",
       "gainDb": 4.73,
       "gain": 1.7239,
@@ -365,12 +437,44 @@
       "peakDb": -5.7
     },
     {
-      "path": "Sfx/prismatic_orb_water_startup",
-      "gainDb": 9.68,
-      "gain": 3.0479,
+      "path": "Sfx/prismatic_orb_earth_impact",
+      "gainDb": -1.8,
+      "gain": 0.8128,
       "metric": "rms",
-      "measuredDb": -35.4,
-      "peakDb": -10.7
+      "measuredDb": -16.2,
+      "peakDb": -1.7
+    },
+    {
+      "path": "Sfx/prismatic_orb_fire_impact",
+      "gainDb": -0.4,
+      "gain": 0.955,
+      "metric": "rms",
+      "measuredDb": -17.6,
+      "peakDb": -2.5
+    },
+    {
+      "path": "Sfx/prismatic_orb_water_cast",
+      "gainDb": -1.8,
+      "gain": 0.8128,
+      "metric": "rms",
+      "measuredDb": -16.2,
+      "peakDb": -0.3
+    },
+    {
+      "path": "Sfx/prismatic_orb_water_impact",
+      "gainDb": -5.0,
+      "gain": 0.5623,
+      "metric": "rms",
+      "measuredDb": -13.0,
+      "peakDb": -1.1
+    },
+    {
+      "path": "Sfx/prismatic_orb_wind_impact",
+      "gainDb": 1.9,
+      "gain": 1.2445,
+      "metric": "rms",
+      "measuredDb": -19.9,
+      "peakDb": -4.4
     },
     {
       "path": "Sfx/shawn_hit_1",
@@ -405,6 +509,14 @@
       "peakDb": 0.3
     },
     {
+      "path": "Sfx/spore_cloud_impact",
+      "gainDb": 1.6,
+      "gain": 1.2023,
+      "metric": "rms",
+      "measuredDb": -19.6,
+      "peakDb": -5.5
+    },
+    {
       "path": "Sfx/start-up intro",
       "gainDb": 5.06,
       "gain": 1.7906,
@@ -429,6 +541,14 @@
       "peakDb": -1.5
     },
     {
+      "path": "Sfx/thorn_tithe_impact",
+      "gainDb": -3.1,
+      "gain": 0.6998,
+      "metric": "rms",
+      "measuredDb": -14.9,
+      "peakDb": -2.4
+    },
+    {
       "path": "Sfx/trunk_slam_impact",
       "gainDb": -1.04,
       "gain": 0.8872,
@@ -451,6 +571,22 @@
       "metric": "rms",
       "measuredDb": -19.6,
       "peakDb": -3.4
+    },
+    {
+      "path": "Sfx/vipers_bite_impact",
+      "gainDb": 0.1,
+      "gain": 1.0116,
+      "metric": "rms",
+      "measuredDb": -18.1,
+      "peakDb": -1.8
+    },
+    {
+      "path": "Sfx/winters_rebuke_impact",
+      "gainDb": -0.79,
+      "gain": 0.9131,
+      "metric": "rms",
+      "measuredDb": -20.6,
+      "peakDb": -0.2
     }
   ]
 }

@@ -202,7 +202,7 @@ namespace PrincesPalace.Domain.Tests
         internal static SpellPresentation Cinderfault() => new SpellPresentation
         {
             layerFormat = 1,
-            sfxPath = "Audio/Sfx/cinderfault_impact",
+            sfxPath = "Audio/Sfx/cinderfault_eruption_impact",
             castSfxPath = "Audio/Sfx/cinderfault_pressure",
             hitCueSeconds = 0.21666667f,
             layers = new[]

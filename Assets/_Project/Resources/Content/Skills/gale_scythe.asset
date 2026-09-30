@@ -55,13 +55,13 @@ MonoBehaviour:
       departFrame: 0
       impactX: -1
       impactY: -1
-      sfxPath: 
+      sfxPath: Audio/Sfx/gale_scythe_impact
       groundPath: 
       groundSeconds: 0
       groundImpactFrame: 0
       groundAspect: 0
       groundImpactY: -1
-      castSfxPath: 
+      castSfxPath: Audio/Sfx/gale_scythe_cast
       layers:
       - id: ritual
         render: sprite

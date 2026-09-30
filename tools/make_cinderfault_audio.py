@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Synthesise Cinderfault's two PLACEHOLDER cues.
+"""Synthesise Cinderfault's two PLACEHOLDER cues. UNUSED: both were replaced by
+recordings (cinderfault_startup, cinderfault_eruption_impact), and this tool
+would re-emit a cinderfault_impact.wav that nothing references.
 
     Assets/_Project/Resources/Audio/Sfx/cinderfault_pressure.wav
     Assets/_Project/Resources/Audio/Sfx/cinderfault_impact.wav

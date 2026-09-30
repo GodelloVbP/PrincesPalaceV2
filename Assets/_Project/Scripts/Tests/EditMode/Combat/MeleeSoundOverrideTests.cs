@@ -136,7 +136,51 @@ namespace PrincesPalace.Domain.Tests
                 StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/mud_burst_impact\"", entry);
             }
 
-            StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/prismatic_orb_water_startup\"", json);
+            var orb = JsonBlocks.ObjectsInArray(json, "skills").Single(s => JsonBlocks.String(s, "id") == "prismatic_orb");
+            foreach (var path in new[]
+            {
+                "\"sfxPath\": \"Audio/Sfx/prismatic_orb_earth_impact\"",
+                "\"sfxPath\": \"Audio/Sfx/prismatic_orb_fire_impact\"",
+                "\"sfxPath\": \"Audio/Sfx/prismatic_orb_wind_impact\"",
+                "\"castSfxPath\": \"Audio/Sfx/prismatic_orb_water_cast\"",
+                "\"sfxPath\": \"Audio/Sfx/prismatic_orb_water_impact\"",
+            })
+                StringAssert.Contains(path, orb);
+        }
+
+        [Test]
+        public void TheSpellPackCuesAreWiredToTheirSpells()
+        {
+            string json = File.ReadAllText(ContentPath("skills.json"));
+            var impact = new Dictionary<string, string>
+            {
+                ["winters_rebuke"] = "winters_rebuke_impact",
+                ["vipers_bite"] = "vipers_bite_impact",
+                ["spore_cloud"] = "spore_cloud_impact",
+                ["ashen_reckoning"] = "ashen_reckoning_impact",
+                ["censer_of_embers"] = "censer_of_embers_impact",
+                ["blackglass_spear"] = "blackglass_spear_impact",
+                ["death_knell"] = "death_knell_impact",
+                ["court_of_whispers"] = "court_of_whispers_impact",
+                ["gale_scythe"] = "gale_scythe_impact",
+                ["thorn_tithe"] = "thorn_tithe_impact",
+                ["cinderfault"] = "cinderfault_eruption_impact",
+                ["crownfall"] = "crownfall_impact",
+                ["borrowed_moment"] = "borrowed_moment_impact",
+                ["palace_passage"] = "palace_passage_impact",
+            };
+            var skills = JsonBlocks.ObjectsInArray(json, "skills");
+            foreach (var pair in impact)
+            {
+                var entry = skills.Single(s => JsonBlocks.String(s, "id") == pair.Key);
+                StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/" + pair.Value + "\"", entry);
+            }
+
+            StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/gale_scythe_cast\"",
+                skills.Single(s => JsonBlocks.String(s, "id") == "gale_scythe"));
+
+            // No Holy pack: gilded_aegis is silent by design, not by omission.
+            StringAssert.DoesNotContain("SfxPath", skills.Single(s => JsonBlocks.String(s, "id") == "gilded_aegis"));
         }
 
         [Test]
