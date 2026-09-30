@@ -826,14 +826,7 @@ namespace PrincesPalace
 
             SetCompareHead(UiStrings.CompareStats.Format(), "", "");
 
-            var stats = ContentDatabase.EffectiveStats(character);
-            for (int i = 0; i < SheetStats.Derived.Length; i++)
-            {
-                var stat = SheetStats.Derived[i];
-                if (!StatApplies(stat)) { SetCompareRow(i, "", "", TextBright); continue; }
-
-                SetCompareRow(i, StatLabel(stat), DisplayValue(character, stat, stats, _scores), TextBright);
-            }
+            PaintCurrentStatRows(character);
         }
 
         private void PaintCompareForGearSlot(int index)
@@ -941,6 +934,8 @@ namespace PrincesPalace
             int row = 0;
             foreach (var stat in SheetStats.Derived)
             {
+                if (!StatApplies(stat)) continue;
+
                 int delta = DeltaFor(stat, comparison, previewScores);
                 if (delta == 0 || !TryCurrentValue(character, stat, stats, _scores, out int now)) continue;
 
@@ -953,16 +948,22 @@ namespace PrincesPalace
             return row;
         }
 
+        // Every stat that applies to this character, closed up in order: a
+        // row that does not apply leaves no hole, and the rows past the last
+        // are blank.
         private void PaintCurrentStatRows(Character character)
         {
             var stats = ContentDatabase.EffectiveStats(character);
-            for (int i = 0; i < SheetStats.Derived.Length; i++)
-            {
-                var stat = SheetStats.Derived[i];
-                if (!StatApplies(stat)) { SetCompareRow(i, "", "", TextBright); continue; }
 
-                SetCompareRow(i, StatLabel(stat), DisplayValue(character, stat, stats, _scores), TextBright);
+            int row = 0;
+            foreach (var stat in SheetStats.Derived)
+            {
+                if (!StatApplies(stat)) continue;
+
+                SetCompareRow(row++, StatLabel(stat), DisplayValue(character, stat, stats, _scores), TextBright);
             }
+
+            for (int i = row; i < SheetStats.Derived.Length; i++) SetCompareRow(i, "", "", TextBright);
         }
 
         private void HideStatRows()

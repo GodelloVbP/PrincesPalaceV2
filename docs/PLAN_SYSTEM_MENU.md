@@ -102,6 +102,12 @@ places.
   `RunSnapshot.currentHealth`. That snapshot is written only when the fight
   ends (`RunEncounter.WriteBackHealth`, called from the fight-end rule at
   `RunOrchestrator.cs:530`), so mid-fight it is stale.
+- **As built (5e).** `IFightMenuSource` is a Core interface over the Domain
+  shape `FightMemberFacts` (health, pool, signature, temporary stat
+  modifiers). `FightController.Bind` hands itself to
+  `SystemMenuController.FightSource`; the controller records what it painted
+  where it paints (`RefreshPcPlate`, `PaintVitals`), and `FightModifiers` lists
+  the speed buffs, form grants and armour shred the status badges show.
 - **The displayed moment.** The menu shows what the fight HUD is showing
   when the menu opens, not the simulation's lead. The session records beats
   before the beat player paints them. Reading the session could therefore
@@ -292,7 +298,10 @@ A pip shows when:
 - the character has an empty book slot, can hold books, and the run has
   unassigned books.
 
-Empty gear slots never pip.
+Empty gear slots never pip. Built as `CharacterAttention` (Domain) over
+`CharacterAttentionFeed` (Core). The map's hint reads the same feed and says
+`ATTENTION NEEDED: {n}`, where n counts the characters whose strip chip is
+lit, not the reasons.
 
 **C21 Names.**
 

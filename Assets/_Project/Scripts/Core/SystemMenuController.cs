@@ -93,6 +93,15 @@ namespace PrincesPalace
 
         public bool IsOpen => panel != null && panel.activeSelf;
 
+        // WHERE A FIGHT'S VALUES COME FROM (plan C4). The Fight scene hands
+        // itself over when a fight is bound; every other scene leaves it null,
+        // and only a menu whose context is Fight ever asks.
+        public IFightMenuSource FightSource { get; set; }
+
+        // Raised once the menu has closed, so a scene that shows something the
+        // menu can change (the map's attention hint) repaints it.
+        public event System.Action Closed;
+
         public int SelectedIndex => _selected;
 
         public MenuContext Context => context;
@@ -234,6 +243,7 @@ namespace PrincesPalace
             panel.SetShown(false);
             Resume();
             PopNavContext();
+            Closed?.Invoke();
         }
 
         public void Toggle()

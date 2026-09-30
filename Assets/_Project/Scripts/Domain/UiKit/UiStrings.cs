@@ -307,12 +307,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapGold =
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
         public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
-        // A book waiting to be placed (docs/PLAN_SHOP.md §7.1 point 4) -- the
-        // map's nudge toward the dossier's assignment panel, since neither
-        // the shop nor the dossier is guaranteed to be the next thing opened
-        // after a purchase or a drop.
-        public static readonly UiString MapPendingBook =
-            UiString.Define("map.pending_book", "SPELL BOOKS TO PLACE: {0}", "SPELL BOOKS TO PLACE: 99");
+        // The map's hint that somebody wants looking at (plan C20): how many characters carry a pip in
+        // the CHARACTER tab. It counts characters, not books, because a point or a reward is owed
+        // just as much as a book is.
+        public static readonly UiString MapAttention =
+            UiString.Define("map.attention", "ATTENTION NEEDED: {0}", "ATTENTION NEEDED: 99");
         // The hint at the fog, past the last generated column. A leg is rolled
         // whole and nothing exists beyond it until the party reaches the
         // boundary, so this is an honest "there is more" rather than a false
@@ -458,6 +457,15 @@ namespace PrincesPalace.Domain.UiKit
         // makes of it.
         public static readonly UiString StatPreview =
             UiString.Define("stat.preview", "{0} → {1}", "1000 (75%) → 1000 (75%)");
+
+        // A derived row the fight has moved: the sheet's figure, what it is now,
+        // and what did it ("10 → 13 (Stampede)"), plan C4.
+        public static readonly UiString StatEffective =
+            UiString.Define("stat.effective", "{0} → {1} ({2})", "1000 → 1000 (Stampede)");
+
+        // What a shredded armour point is called when the fight is the source.
+        public static readonly UiString FightModifierArmourShred =
+            UiString.Define("fight.modifier.armour_shred", "Armour shred");
         public static readonly UiString StatAttack = UiString.Define("stat.attack", "Attack");
         public static readonly UiString StatSpeed = UiString.Define("stat.speed", "Speed");
         public static readonly UiString StatMaxMana = UiString.Define("stat.maxmana", "Max Mana");
@@ -885,6 +893,11 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString CharacterLevel =
             UiString.Define("character.level", "Level {0}", "Level 100");
+
+        // The rail's level line in a fight, where the character's current
+        // health is worth more than a second look at the level (plan C4).
+        public static readonly UiString CharacterLevelHealth =
+            UiString.Define("character.level_health", "Level {0} · {1}/{2} HP", "Level 100 · 9999/9999 HP");
         public static readonly UiString CharacterXpToNext =
             UiString.Define("character.xp_to_next", "{0} to the next level", "99999 to the next level");
         public static readonly UiString CharacterXpMax =

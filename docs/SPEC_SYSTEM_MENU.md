@@ -116,6 +116,17 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
 - **Rail:** the identity block is 260 tall. Below it, 4 section rows at
   64 each (label FunctionalHeading 24 caps, pip at the right). The
   selected row shows a bright label and a 3 px gold bar on its left edge.
+  In a fight the level line reads `Level 40 · 180/240 HP`, the health the HUD
+  is showing (`IFightMenuSource`, plan C4); at camp and in a descent it is
+  the level alone.
+- **Pips (plan C20):** lit by `CharacterAttention`, fed by
+  `CharacterAttentionFeed`. A rail row lights for what its section is owed:
+  ATTRIBUTES for unspent points, REWARD TRACK for levels reached and not
+  collected, LOADOUT for an empty book slot the character can use while the
+  run holds an unplaced book (never for a character whose pool refuses books,
+  never for gear). SKILLS never lights. A chip lights when any row would. They
+  repaint on every refresh (spend, place, remove) and after a claim, and the
+  map's `ATTENTION NEEDED: {n}` line counts the characters whose chip is lit.
 
 ### 3.1 LOADOUT (C16), detail 1196 × 660
 
@@ -192,7 +203,12 @@ took it, so "Physical DEF 1000 (75%) → 1200 (79%) (+200)" sits on one line.
   own words (C21): "Max Fury", and "{signature} per turn" ("Wool per turn"),
   which is not drawn at all for a character with no signature. Wisdom feeds Max
   Mana and Mana Regen for a WisdomDerived pool, and neither for a Fixed one. The row fed by the focused attribute is lit
-  (`SheetStats.Feeds`). While a `+` or `−` that would do something is focused,
+  (`SheetStats.Feeds`). The Mana Regen row is not drawn for a Fixed pool (Bjorn's
+Fury takes its income from no source), here and in the compare column, and the
+rows that remain close up. In a fight a stat the fight has moved reads `sheet →
+now (source)`, e.g. `10 → 7 (Chilled)` (speed buffs and maluses, a form's
+grants, shredded armour), the sheet's figure being the base. While a `+` or `−`
+that would do something is focused,
   each lit row reads `before → after` (green for a gain, red for a loss, one
   line, e.g. `29 (22%) → 31 (23%)`), from the same `SheetStats.ScoreDelta` the
   compare column uses. A stepper that would do nothing (no points, refused
@@ -318,7 +334,9 @@ The pane is 1520 × 756.
 - **Seats:** 3 × 488 wide, 420 tall, drawn Rear | Middle | Front
   (facing-enemy ribbon on the right).
   - Each seat shows the sprite (200 tall), name (Body 22 SemiBold), role
-    (Body 20), an HP bar with "HP 180 / 240" (TacticalData 22) and
+    (Body 20), an HP bar with "HP 180 / 240" (TacticalData 22; in a fight the
+    numbers come from `IFightMenuSource`, the same facts CHARACTER's rail
+    reads) and
     "Phys def 40 · Mag def 20" (TacticalData 20).
   - While carrying, each target seat's badge reads "Swap with {name}", and
     both characters' HP and defence show in the badge (C22 preview).

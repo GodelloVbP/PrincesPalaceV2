@@ -63,6 +63,11 @@ namespace PrincesPalace
         private bool _hasSignature;
         private string _signatureName = "";
 
+        // What the fight is showing about the shown character, or null outside
+        // a fight and for someone who is not in it (plan C4). Re-read on every
+        // refresh: the HUD repaints between the menu's opening and its paints.
+        private FightMemberFacts _fight;
+
         private const string ManaDisplayNameFallback = "Mana";
 
         private static readonly Color StepperLive = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Text);
@@ -79,6 +84,8 @@ namespace PrincesPalace
             _primaryPoolRule = pool?.CapacityRule ?? PoolCapacityRule.WisdomDerived;
             _primaryPoolName = string.IsNullOrWhiteSpace(pool?.DisplayName) ? ManaDisplayNameFallback : pool.DisplayName;
             _canHoldSpellBooks = SpellBooks.CanHold(pool);
+
+            _fight = FightFactsFor(character.definitionId);
 
             var definition = ContentDatabase.GetCharacter(character.definitionId);
             _hasSignature = definition?.Data != null && definition.Data.HasSignatureResource;
@@ -192,13 +199,29 @@ namespace PrincesPalace
             if (label != null) label.color = live ? StepperLive : StepperIdle;
         }
 
+        // Only in a fight, only for someone the HUD is showing: the source is
+        // the fight's own record of what it has painted, never the run's
+        // carried health (plan C4).
+        private FightMemberFacts FightFactsFor(string characterId)
+        {
+            if (Context != MenuContext.Fight || menu == null || menu.FightSource == null) return null;
+
+            return menu.FightSource.TryGetMember(characterId, out var facts) ? facts : null;
+        }
+
         private void RefreshStats(Character character)
         {
             var stats = ContentDatabase.EffectiveStats(character);
 
+            // Rows that do not apply are not drawn and leave no gap: the rest
+            // close up in order, so a character with no regen row reads as a
+            // shorter list rather than a list with a hole in it.
+            int slot = 0;
             for (int i = 0; i < SheetStats.Derived.Length; i++)
             {
                 var stat = SheetStats.Derived[i];
+                if (StatApplies(stat)) PlaceStatRow(i, slot++);
+
                 if (Has(statValues, i))
                 {
                     statValues[i].SetContent(DisplayValue(character, stat, stats, _scores));
@@ -221,6 +244,19 @@ namespace PrincesPalace
 
                 if (Has(statValues, i)) statValues[i].gameObject.SetShown(applies);
             }
+        }
+
+        private void PlaceStatRow(int row, int slot)
+        {
+            float y = DossierLayout.DerivedRowCentreY(slot);
+            SetRowY(Has(statHighlights, row) ? statHighlights[row].transform : null, y);
+            SetRowY(Has(statNames, row) ? statNames[row].transform : null, y);
+            SetRowY(Has(statValues, row) ? statValues[row].transform : null, y);
+        }
+
+        private static void SetRowY(Transform node, float y)
+        {
+            if (node is RectTransform rect) rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
         }
 
         // THE mechanic: light the rows this score actually feeds, and while a
@@ -368,13 +404,35 @@ namespace PrincesPalace
             }
         }
 
-        // Whether this character has the row at all: a signature row for
+        // Whether this character has the row at all. A signature row for
         // someone with no signature would read "-" beside a name that is not
-        // theirs.
-        private bool StatApplies(SheetStat stat) => stat != SheetStat.SignatureGain || _hasSignature;
+        // theirs, and regen for a Fixed pool would name an income that pool
+        // never takes from any source (its gain is authored, pools.json), the
+        // same rule SheetStats.FedBy states for Wisdom.
+        private bool StatApplies(SheetStat stat)
+        {
+            switch (stat)
+            {
+                case SheetStat.SignatureGain: return _hasSignature;
+                case SheetStat.ManaRegen: return _primaryPoolRule != PoolCapacityRule.Fixed;
+                default: return true;
+            }
+        }
 
-        private static string DisplayValue(Character character, SheetStat stat, StatBlock stats, AbilityScoreBlock scores) =>
-            TryCurrentValue(character, stat, stats, scores, out int value) ? SheetStats.DisplayText(stat, value) : "-";
+        // The value as the row prints it. In a fight, a stat the fight has
+        // moved reads "sheet -> now (source)" (plan C4), from the same base
+        // the sheet shows and the delta the HUD's own buff badges report.
+        private string DisplayValue(Character character, SheetStat stat, StatBlock stats, AbilityScoreBlock scores)
+        {
+            if (!TryCurrentValue(character, stat, stats, scores, out int value)) return "-";
+
+            if (_fight != null && _fight.Modifies(stat))
+            {
+                return UiStrings.StatEffective.Format(value, Mathf.Max(0, value + _fight.DeltaFor(stat)), _fight.SourcesFor(stat));
+            }
+
+            return SheetStats.DisplayText(stat, value);
+        }
 
         // What a stat reads as RIGHT NOW, from the model. False means there
         // is no number to show, which is not the same thing as zero.

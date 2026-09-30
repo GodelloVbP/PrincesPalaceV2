@@ -1193,6 +1193,26 @@ namespace PrincesPalace.Domain.Combat.Session
             return figures;
         }
 
+        // What a speed buff is called: the relic that granted it, else the
+        // source's own name. One home for the badge row and the system menu's
+        // "Speed 10 -> 13 (source)".
+        public static string SpeedSourceName(PlayerKit kit, object source)
+        {
+            if (kit != null && source is RelicEffect relicSource)
+            {
+                foreach (var relic in kit.Relics)
+                {
+                    // Equals(...), not ==, now that Source is `object` -- see
+                    // FightSession.SpeedBuffs.ActiveSpeedBuffs' own comment on
+                    // why `==` between a boxed enum and `object` would compare
+                    // by reference instead of by value.
+                    if (relic.Effect == relicSource) return relic.DisplayName;
+                }
+            }
+
+            return source is StatusEffectType status ? StatusHud.NameFor(status) : source.ToString();
+        }
+
         public static List<StatusRow> StatusRowsFor(FightSession session, CombatantState actor)
         {
             var rows = new List<StatusRow>();
@@ -1277,21 +1297,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // on top of the status's own.
                     if (buff.Source is StatusEffectType) continue;
 
-                    string name = null;
-                    if (kit != null && buff.Source is RelicEffect relicSource)
-                    {
-                        foreach (var relic in kit.Relics)
-                        {
-                            // Equals(...), not ==, now that Source is
-                            // `object` -- see FightSession.SpeedBuffs.
-                            // ActiveSpeedBuffs' own comment on why `==`
-                            // between a boxed enum and `object` would
-                            // silently compare by reference instead of by
-                            // value.
-                            if (relic.Effect == relicSource) { name = relic.DisplayName; break; }
-                        }
-                    }
-                    name ??= buff.Source.ToString();
+                    string name = SpeedSourceName(kit, buff.Source);
 
                     rows.Add(StatusHud.SpeedRow(name, buff.Granted, buff.TurnsLeft));
                 }

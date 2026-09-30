@@ -40,7 +40,7 @@ namespace PrincesPalace
         [SerializeField] internal Image[] trailCores;
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
-        [SerializeField] internal TMP_Text pendingBookLabel;
+        [SerializeField] internal TMP_Text attentionLabel;
 
         // What the room the party just walked into did. Empty between rooms,
         // rather than left showing the last one's result under a new heading.
@@ -130,6 +130,8 @@ namespace PrincesPalace
             // Refresh with no context yet to reconfigure would silently wire
             // nothing on the very first paint.
             RegisterNavContext();
+
+            if (systemMenu != null) systemMenu.Closed += RefreshAttention;
 
             // A debug grant can move the gold, the pending-book count and the
             // leg itself; the map repaints after each one rather than on the
@@ -229,8 +231,27 @@ namespace PrincesPalace
         // reaches the menu's own handler, never this.
         private void HandleSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
 
+        // THE MAP'S HINT THAT A CHARACTER WANTS LOOKING AT (plan C20): how many
+        // characters carry a pip in the CHARACTER tab, from the same model and
+        // the same feed, so the count is the number of pips the player will
+        // find. Neither the shop nor the menu is guaranteed to be the next
+        // thing opened after a purchase or a drop, so the map says so; it is
+        // repainted when the menu closes because that is when the answer moves.
+        private void RefreshAttention()
+        {
+            if (attentionLabel == null) return;
+
+            var run = RunManager.Run;
+            int lit = run == null ? 0 : CharacterAttentionFeed.CountLit(SaveSlotManager.CurrentSave, run);
+
+            attentionLabel.gameObject.SetActive(lit > 0);
+            if (lit > 0) attentionLabel.Set(UiStrings.MapAttention, lit);
+        }
+
         private void OnDestroy()
         {
+            if (systemMenu != null) systemMenu.Closed -= RefreshAttention;
+
             if (_navContext == null) return;
 
             NavigationInputModule.Contexts?.Remove(_navContext);
@@ -301,7 +322,7 @@ namespace PrincesPalace
                 HideBackdrops(0);
                 fog.gameObject.SetShown(false);
                 walker.gameObject.SetShown(false);
-                if (pendingBookLabel != null) pendingBookLabel.gameObject.SetActive(false);
+                if (attentionLabel != null) attentionLabel.gameObject.SetActive(false);
                 RefreshNavLinks(null, null);
                 return;
             }
@@ -312,12 +333,7 @@ namespace PrincesPalace
             depthLabel.Set(UiStrings.MapDepth, RunManager.Run.step, RunManager.Run.floor);
             goldLabel.Set(UiStrings.MapGold, RunManager.Run.gold);
 
-            if (pendingBookLabel != null)
-            {
-                int pending = RunManager.Run.unassignedSpellBooks?.Count ?? 0;
-                pendingBookLabel.gameObject.SetActive(pending > 0);
-                if (pending > 0) pendingBookLabel.Set(UiStrings.MapPendingBook, pending);
-            }
+            RefreshAttention();
 
             // Painted from the LAST resolved room, which Arrive has already
             // written by the time this runs. A fight clears it on the way out,

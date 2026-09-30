@@ -170,6 +170,10 @@ namespace PrincesPalace
                 trackScreen.ExitTo = SectionRow(CharacterSection.RewardTrack);
             }
 
+            // A claim is the one change the track makes that this pane's own
+            // handlers do not see.
+            if (trackScreen != null) trackScreen.Claimed += PaintAttention;
+
             WireLoadout();
             WireAttributes();
             WireSkills();
@@ -286,6 +290,7 @@ namespace PrincesPalace
             PaintStrip();
             PaintIdentity(character);
             PaintRail();
+            PaintAttention();
             RefreshLoadout(character);
             RefreshAttributes(character);
             RefreshSkills(character);
@@ -408,7 +413,14 @@ namespace PrincesPalace
         private void PaintIdentity(Character character)
         {
             if (characterName != null) characterName.SetContent(DisplayNameOf(character.definitionId));
-            if (levelLine != null) levelLine.Set(UiStrings.CharacterLevel, character.level);
+            if (levelLine != null)
+            {
+                // In a fight the line carries the health the HUD is showing
+                // (plan C4), never the run's carried figure: that one is
+                // written when the fight ends.
+                if (_fight != null) levelLine.Set(UiStrings.CharacterLevelHealth, character.level, _fight.Health, _fight.MaxHealth);
+                else levelLine.Set(UiStrings.CharacterLevel, character.level);
+            }
             if (portrait != null) PaintPortrait(portrait, character.definitionId, 1f);
 
             int next = Character.ExpToNextLevel(character.level);
@@ -489,6 +501,36 @@ namespace PrincesPalace
                 if (Has(sectionBars, i)) sectionBars[i].color = selected ? GoldBar : Clear;
             }
         }
+
+        // THE PIPS (plan C20): a chip's when its character wants looking at at
+        // all, a rail row's when that section is what they are owed. Both from
+        // CharacterAttention over the same feed the map's hint reads, so the
+        // three cannot disagree. Repainted by every Refresh -- which every
+        // spend, placement and removal ends in -- and by a track claim.
+        private void PaintAttention()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            var run = RunManager.Run;
+
+            int start = CharacterStrip.WindowStart(_index, _chips.Count, DossierLayout.ChipCapacity);
+            for (int i = 0; chipPips != null && i < chipPips.Length; i++)
+            {
+                if (chipPips[i] == null) continue;
+
+                int at = start + i;
+                chipPips[i].SetShown(at < _chips.Count
+                    && CharacterAttention.Any(CharacterAttentionFeed.For(RosterEntry(save, _chips[at].Id), run)));
+            }
+
+            var facts = CharacterAttentionFeed.For(Current(), run);
+            for (int i = 0; sectionPips != null && i < sectionPips.Length && i < CharacterSections.All.Length; i++)
+            {
+                if (sectionPips[i] != null) sectionPips[i].SetShown(CharacterAttention.Lights(CharacterSections.All[i], facts));
+            }
+        }
+
+        private static Character RosterEntry(SaveData save, string id) =>
+            save?.roster?.FirstOrDefault(c => c != null && c.definitionId == id);
 
         private Button SectionRow(CharacterSection section)
         {

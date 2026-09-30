@@ -270,8 +270,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     TypographyRole.Body, UiTextAlign.Left)
                 .Truncated();
 
-            // Attention (plan C20) arrives in phase 5e; the slot is here so the
-            // chip's layout does not move when it does.
+            // Attention (plan C20): lit by CharacterAttention when this
+            // character has something waiting in any section.
             var pip = Ui.Sprite($"DossierChip{index}Pip", "proc:solid_circle",
                     new UiVec(DossierLayout.ChipPipSize, DossierLayout.ChipPipSize),
                     Place.At(DossierLayout.ChipPipX, DossierLayout.ChipPipY))
@@ -381,7 +381,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(-width * 0.5f + DossierLayout.SectionInset + textWidth * 0.5f, 0f),
                 TypographyRole.FunctionalHeading, UiTextAlign.Left);
 
-            // Attention (plan C20), lit in phase 5e.
+            // Attention (plan C20): lit by CharacterAttention when this
+            // section is what the character is owed.
             var pip = Ui.Sprite($"DossierSection{index}Pip", "proc:solid_circle",
                     new UiVec(DossierLayout.SectionPipSize, DossierLayout.SectionPipSize),
                     Place.At(width * 0.5f - DossierLayout.SectionInset - DossierLayout.SectionPipSize * 0.5f, 0f))

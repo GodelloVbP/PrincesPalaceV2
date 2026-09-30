@@ -651,6 +651,7 @@ namespace PrincesPalace
             WireInput();
             WirePlayback();
             ResetStagePresentation();
+            RegisterMenuSource();
 
             // After the class backdrop, which a request-driven one replaces.
             // The opening round is shown below, once the opening beats are
@@ -1019,6 +1020,10 @@ namespace PrincesPalace
                 }
                 if (Has(pcHpFills, plate)) SetFill(pcHpFills[plate], recordedPc.Health, maxHealth);
                 if (Has(pcMpFills, plate)) SetFill(pcMpFills[plate], recordedPc.Primary, maxPrimary);
+
+                // What the system menu reports (IFightMenuSource): this beat's
+                // moment, not the round's end.
+                RecordPaintedVitals(member, recordedPc, maxHealth, maxPrimary);
             }
         }
 

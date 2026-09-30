@@ -1106,6 +1106,8 @@ namespace PrincesPalace
 
             if (member == null) return;
 
+            RecordPaintedPlate(member);
+
             if (Has(pcNames, i)) pcNames[i].SetContent(member.Name);
 
             if (Has(pcHpValues, i))

@@ -322,6 +322,10 @@ namespace PrincesPalace
             int claimedBefore = _claimed;
             Refresh();
 
+            // Told once the watermark has moved, so whatever hosts the track
+            // (the CHARACTER rail's pip) can stop asking for it.
+            Claimed?.Invoke();
+
             // One burst per level collected, ascending, 130ms apart. Fired
             // against what the screen showed a moment ago rather than against
             // the save, because the save has already moved.

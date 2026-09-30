@@ -185,6 +185,9 @@ namespace PrincesPalace
         // nothing.
         public void ShowFor(string characterId) => _characterId = characterId;
 
+        // Raised after a claim has been paid and the track repainted.
+        public event System.Action Claimed;
+
         // Where Left and Up go when they leave the track: the dossier's REWARD
         // TRACK rail row, set by the dossier. Runtime-only, like the dossier
         // that sets it; null leaves the track's edge a wall.

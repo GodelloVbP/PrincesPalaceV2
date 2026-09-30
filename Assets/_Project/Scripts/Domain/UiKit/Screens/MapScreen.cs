@@ -139,11 +139,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef AbandonButton;
         public NodeRef RoomMessageLabel;
 
-        // "A book is waiting to be placed" (docs/PLAN_SHOP.md §7.1 point 4).
-        // Shown whenever run.unassignedSpellBooks is non-empty; the nudge
-        // toward the dossier's assignment panel, since nothing else on the
-        // map says a purchase or a drop is still sitting unplaced.
-        public NodeRef PendingBookLabel;
+        // "Somebody wants looking at": how many characters carry a pip in the
+        // CHARACTER tab (plan C20). Shown whenever that is more than none; a
+        // book bought, a level gained or a reward earned is otherwise silent on
+        // the map.
+        public NodeRef AttentionLabel;
 
         // The same overlay the hub and the fight mount. Live here:
         // between rooms is when gear is meant to change.
@@ -196,15 +196,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(690f, 452f)).Styled(TypographyRole.TacticalData);
 
             // Under the gold chip, same column, one row down (404, matching
-            // depth's own band) -- the shop and the dossier both write to
-            // run.unassignedSpellBooks and neither is guaranteed to be the
-            // next thing the player opens, so the map is where a pending
-            // book has to say so.
-            var pendingBook = Ui.Label("MapPendingBookLabel", UiStrings.MapPendingBook, new UiVec(320f, 32f), 16,
+            // depth's own band) -- neither the shop nor the menu is guaranteed
+            // to be the next thing the player opens, so the map is where a
+            // pending book, point or reward has to say so.
+            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(320f, 32f), 16,
                     "#E7B25C", Place.At(690f, 404f))
                 .Styled(TypographyRole.TacticalData)
                 .Inactive();
-            screen.PendingBookLabel = pendingBook;
+            screen.AttentionLabel = attention;
 
             // SILVER: leaving the descent, matching Cancel/Back everywhere
             // else in the kit. Room-node buttons are NOT themed here -- the
@@ -318,7 +317,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, pendingBook, abandon, roomMessage, shop.Root, eventRoom.Root, systemMenu.Root,
+                viewport, title, depth, gold, attention, abandon, roomMessage, shop.Root, eventRoom.Root, systemMenu.Root,
                 debug.Root);
 
             return screen;
