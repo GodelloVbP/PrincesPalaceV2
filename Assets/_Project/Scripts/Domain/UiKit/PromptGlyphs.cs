@@ -32,6 +32,9 @@ namespace PrincesPalace.Domain.UiKit
 
         View,
         Start,
+
+        // What opens the menu on CHARACTER: the C hotkey, or Start on a pad.
+        Character,
     }
 
     // What a button is drawn as: the letters on its plate, and the tint of
@@ -93,6 +96,7 @@ namespace PrincesPalace.Domain.UiKit
                 case PromptButton.Tabs: return new PromptGlyph("LT/RT", Plain);
                 case PromptButton.View: return new PromptGlyph("View", Plain);
                 case PromptButton.Start: return new PromptGlyph("Start", Plain);
+                case PromptButton.Character: return new PromptGlyph("Start", Plain);
                 default: throw new System.ArgumentOutOfRangeException(nameof(button), button, null);
             }
         }
@@ -108,6 +112,7 @@ namespace PrincesPalace.Domain.UiKit
                 case PromptButton.Pages: return new PromptGlyph("Q/E", Plain);
                 case PromptButton.Tabs: return new PromptGlyph("Click", Plain);
                 case PromptButton.Start: return new PromptGlyph("Esc", Plain);
+                case PromptButton.Character: return new PromptGlyph("C", Plain);
 
                 // No keys: the keyboard reaches these through the pointer and
                 // the hotkeys, so a prompt naming them is dropped.

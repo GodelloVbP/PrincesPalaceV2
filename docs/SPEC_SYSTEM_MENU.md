@@ -22,7 +22,9 @@ Floors, enforced by the menu type lint:
 
 - **Mixed case: TMP 20** (≈ 18.8 px body).
 - **All caps: TMP 24** (≈ 17.3 px cap height; caps read larger than their
-  pixel height, and the tab bar carries no descenders).
+  pixel height, and the tab bar carries no descenders). A line of capitals and
+  digits with no lower case, like "HP 180 / 240", is caps to the lint and
+  takes 24.
 - Numbers in stat rows: TMP 22 (tabular, Chakra Petch).
 
 Roles used in the menu (`Typography.cs`):
@@ -326,27 +328,46 @@ The pane is 1520 × 756.
 
 ## 6. PARTY (C22)
 
-The pane is 1520 × 756.
+The pane is 1488 × 716 (`SystemMenuLayout.PaneContentHalfWidth/Height`; the
+1520 × 756 above was the design target and the audit's number wins).
 
-- **Header** (64): "FORMATION" (FunctionalHeading 24) and the subtitle
-  (Body 20): "The front rank takes the enemies' blows. Melee skills can
-  strike only the enemy front rank."
-- **Seats:** 3 × 488 wide, 420 tall, drawn Rear | Middle | Front
-  (facing-enemy ribbon on the right).
-  - Each seat shows the sprite (200 tall), name (Body 22 SemiBold), role
-    (Body 20), an HP bar with "HP 180 / 240" (TacticalData 22; in a fight the
-    numbers come from `IFightMenuSource`, the same facts CHARACTER's rail
-    reads) and
-    "Phys def 40 · Mag def 20" (TacticalData 20).
-  - While carrying, each target seat's badge reads "Swap with {name}", and
-    both characters' HP and defence show in the badge (C22 preview).
-- **Roster** (when C22 shows it): a row of 160-wide cards (Body 20).
+- **Header row** (40): "FORMATION" (FunctionalHeading 24), the hint or the
+  carry banner (Body 20), the Cancel and Send to bench links while carrying,
+  and "{n}/3 positions filled" at the right. No status pill: the lintel's mode
+  pill states the mode and a refusal is a notice.
+- **Subtitle row** (32): "The front rank takes the enemies' blows. Melee
+  skills can strike only the enemy front rank." (Body 20), and the ribbon
+  "FACING THE ENEMY ->" (TacticalData 24 caps) at its right end.
+- **Seats:** 3 × 492 wide, 370 tall, drawn Rear | Middle | Front. Top down:
+  the seat label (TacticalData 24 caps, 32), the sprite (160), name (Body 22),
+  role (Body 20), the HP bar (12 tall, 412 wide), "HP 180 / 240" (Body 24: it
+  is capitals and digits, so the caps floor holds it; Body, not TacticalData,
+  because that material tints numbers violet) and "Phys def 40 · Mag def 20"
+  (Body 20).
+  - Health is `PartyMemberFacts.Resolve`: full at camp, the run's carried
+    figure in a descent (full when the run holds no entry), and in a fight
+    `IFightMenuSource`, the same facts CHARACTER's rail reads, with the fight's
+    defence deltas applied. A member the fight is not showing reads the run's
+    carried figure.
+  - While carrying, each target seat's badge (468 × 130, over the sprite)
+    reads "Swap with {name}" / "Replace {name}" / "Place {name} here", with two
+    columns of name, HP and "Phys 40 · Mag 20": the carried character on the
+    left, the seat's occupant on the right. An empty seat has only the carried
+    column.
+- **Roster** (`PartyFormation.RosterVisible`: a character sits out or a seat is
+  closed; otherwise the section is hidden): a hairline, the heading and a row
+  of 176 × 194 cards (Body 20 lines: name, title picker, role, tag).
 
 ## 7. OPTIONS and EXIT
 
 The layouts are unchanged; every label reaches the floor. OPTIONS is
-shared with the main menu's Settings modal. It is resized in place, and
-that owner is told.
+shared with the main menu's Settings modal and is resized in place: row
+labels, notes, values and step arrows Body 20 in 27 px boxes (a label with a
+note takes the two lines about the row's centre), card headings
+FunctionalHeading 24, the footer note 640 wide, RESTORE DEFAULTS at 26. EXIT:
+plates 28, notes Body 20 in 27 px boxes, the abandon heading 24, and the
+separator gaps close from 56 to 40 so the taller notes keep the stack inside
+the pane.
 
 ## 8. States and prompts
 
@@ -397,7 +418,9 @@ or opening lands.
   - **REWARD TRACK:** as today (`RewardTrackController.Input`), entered
     from the rail.
 - **PARTY:** entry is the Rear seat. Seats are a rail; Down goes to the
-  roster when shown.
+  roster only when it is shown (it is not in the graph while everyone is
+  seated). Placing the last unseated character hides the roster and sends
+  focus to the first seat.
 - **RUN:** entry is the first relic row. Two focus columns, matching where
   the focusable rows are: the relic list, and the effects and supplies
   stacked as one list (the stats column has nothing to focus). Left and

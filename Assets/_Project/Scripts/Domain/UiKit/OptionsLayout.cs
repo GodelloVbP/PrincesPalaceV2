@@ -104,6 +104,14 @@ namespace PrincesPalace.Domain.UiKit
         public const float ValueWidth = 70f;
         public static float SliderValueCentreX => CardContentHalf - ValueWidth * 0.5f;
 
+        // A Body 20 line draws in 1.33 x its size (27), or TMP draws nothing.
+        public const float LineHeight = 27f;
+
+        // A label with a note under it, and the note: two lines about the row's
+        // centre line (the row is RowHeight - 8 = 70 tall).
+        public const float LabelWithNoteY = 14f;
+        public const float NoteY = -14f;
+
         public const float StepButtonSize = 34f;
         public static float StepPrevCentreX => ControlLeft + StepButtonSize * 0.5f;
         public static float StepNextCentreX => CardContentHalf - StepButtonSize * 0.5f;
@@ -126,8 +134,8 @@ namespace PrincesPalace.Domain.UiKit
         public static float RestoreCentreY(IReadOnlyList<OptionGroupDef> groups) =>
             ContentTop - ColumnHeight(groups, 0) + RestoreHeight * 0.5f;
 
-        public const float NoteWidth = 520f;
-        public const float NoteHeight = 18f;
+        public const float NoteWidth = 640f;
+        public const float NoteHeight = 27f;
 
         // ---- the no-scrolling guard ---------------------------------------------
 

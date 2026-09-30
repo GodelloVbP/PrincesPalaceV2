@@ -456,8 +456,14 @@ namespace PrincesPalace.PlayModeTests
             AssertRefusalIsSaid(menu, MenuAction.CollectReward, fight, "collecting all",
                 () => Press(menu, "TrackCollectButton"));
 
+            // Someone sits out, so the roster is shown: with everyone seated the
+            // section is hidden and the player has no card to press. (A title
+            // picker itself appears only for a character with a title.)
+            SaveSlotManager.CurrentSave.selectedCharacterIds = new List<string> { Holder, "owl" };
             menu.Select(SystemMenuTab.Party);
             yield return null;
+            Assert.IsTrue(Need(menu, "PartyCard0Button").gameObject.activeInHierarchy,
+                "fixture: the roster is hidden, so its cards are not controls a player can reach");
             AssertRefusalIsSaid(menu, MenuAction.RepositionParty, fight, "picking up a seat",
                 () => Press(menu, "PartySeat0Button"));
             AssertRefusalIsSaid(menu, MenuAction.SwapParty, fight, "benching",

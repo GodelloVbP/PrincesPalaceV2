@@ -31,7 +31,7 @@ debt), and a struck finding gets its number removed.
 - Map: #226, #254
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
-- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214, #248
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #219, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #112, #123, #220, #255
 - Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
@@ -2567,14 +2567,7 @@ describes; the party plate sits bottom-left, similarly far from the party
 figures. A layout call, not a bug — owner to decide whether plates should
 move nearer their figures or stay in the fixed HUD band.
 
-### 248. Swapping party members shows no stat comparison
-
-`Domain/UiKit/Screens/PartyScreen.cs` has no tooltip or comparison node at
-all (grep for `Tooltip`/`Compare` in the file returns nothing) — unlike the
-Reckoning offer tooltip and the dossier item tooltip, both of which preview a
-stat change before the player commits.
-
-Route: implementer.
+### ~~248. Swapping party members shows no stat comparison~~ — fixed in the System menu 6 commit (PARTY): while carrying, each target seat's badge previews the swap with both characters' HP and defences side by side (`PartySeatFactsTests`)
 
 ### 249. Wide and narrow aspects show seams
 

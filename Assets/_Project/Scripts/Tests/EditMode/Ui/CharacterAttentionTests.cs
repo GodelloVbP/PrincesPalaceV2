@@ -5,7 +5,7 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.Domain.Tests
 {
     // WHEN A CHARACTER WANTS LOOKING AT (plan C20): the truth table for the
-    // chip pip, the rail pips and the map's count. The rule is three ORed
+    // chip pip, the rail pips and the map's hint. The rule is three ORed
     // conditions, and the two that are easy to get wrong are the book one (it
     // needs a holder, a free slot AND a book to place) and the gear one (an
     // empty gear slot never lights anything, so it is not even an input).
@@ -107,24 +107,73 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(CharacterAttention.Any(Facts()));
         }
 
+        // The map names what waits, over the whole roster, and only what holds.
         [Test]
-        public void TheMapCountsCharactersNotReasons()
+        public void TheMapNamesEveryReasonSomeoneHolds()
         {
             var party = new List<AttentionFacts>
             {
-                Facts(points: 4, rewards: 3, emptySlots: 2, books: 1),   // three reasons, one character
+                Facts(points: 4),
                 Facts(),
-                Facts(rewards: 1),
+                Facts(rewards: 1, emptySlots: 2, books: 1),
             };
 
-            Assert.AreEqual(2, CharacterAttention.CountLit(party));
+            Assert.AreEqual(
+                AttentionReasons.PointsToSpend | AttentionReasons.RewardsWaiting | AttentionReasons.BooksToPlace,
+                CharacterAttention.ReasonsFor(party));
         }
 
         [Test]
-        public void NobodyToCountIsZero()
+        public void AReasonNobodyHoldsIsNotNamed()
         {
-            Assert.AreEqual(0, CharacterAttention.CountLit(null));
-            Assert.AreEqual(0, CharacterAttention.CountLit(new List<AttentionFacts>()));
+            var party = new List<AttentionFacts> { Facts(rewards: 2), Facts(rewards: 1) };
+
+            Assert.AreEqual(AttentionReasons.RewardsWaiting, CharacterAttention.ReasonsFor(party));
+        }
+
+        [Test]
+        public void ABookWithNowhereToGoIsNotAReason()
+        {
+            var party = new List<AttentionFacts> { Facts(emptySlots: 0, books: 3), Facts(holds: false, emptySlots: 3, books: 3) };
+
+            Assert.AreEqual(AttentionReasons.None, CharacterAttention.ReasonsFor(party));
+        }
+
+        [Test]
+        public void NobodyToAskIsNoReason()
+        {
+            Assert.AreEqual(AttentionReasons.None, CharacterAttention.ReasonsFor(null));
+            Assert.AreEqual(AttentionReasons.None, CharacterAttention.ReasonsFor(new List<AttentionFacts>()));
+        }
+
+        [Test]
+        public void EverySectionThatLightsHasAReasonAndSkillsHasNone()
+        {
+            foreach (var section in CharacterSections.All)
+            {
+                bool lights = CharacterAttention.Lights(section, Facts(points: 1, rewards: 1, emptySlots: 1, books: 1));
+                Assert.AreEqual(lights, CharacterAttention.ReasonOf(section) != AttentionReasons.None, section.ToString());
+            }
+        }
+
+        // ---- the hint's words ----------------------------------------------------------
+
+        [Test]
+        public void TheHintNamesTheReasonsThatHoldAndTheKeyThatOpensThem()
+        {
+            Assert.AreEqual("Points to spend · Rewards waiting · Books to place — press C",
+                AttentionHint.Text(AttentionReasons.PointsToSpend | AttentionReasons.RewardsWaiting
+                                   | AttentionReasons.BooksToPlace, PromptDevice.Keyboard));
+            Assert.AreEqual("Rewards waiting — press C",
+                AttentionHint.Text(AttentionReasons.RewardsWaiting, PromptDevice.Keyboard));
+            Assert.AreEqual("Points to spend · Books to place — press Start",
+                AttentionHint.Text(AttentionReasons.PointsToSpend | AttentionReasons.BooksToPlace, PromptDevice.Xbox));
+        }
+
+        [Test]
+        public void NothingWaitingIsNoHint()
+        {
+            Assert.AreEqual("", AttentionHint.Text(AttentionReasons.None, PromptDevice.Keyboard));
         }
     }
 }

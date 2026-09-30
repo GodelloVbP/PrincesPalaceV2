@@ -4,10 +4,12 @@ namespace PrincesPalace.Domain.UiKit
     // shape (a hosted pane, top-down stacked sections, a build-time guard on
     // the one dimension that grows with content).
     //
-    // FOUR SECTIONS TOP TO BOTTOM: a header row (banner + status), Formation
-    // (the hero -- 3 FIXED seats, never more), a hairline, and Roster (N cards,
-    // N being the only thing here that can outgrow its row). Messages are the
-    // menu's footer notice, not a part of this pane.
+    // TOP TO BOTTOM: a header row (heading, the hint, the links, the count), a
+    // subtitle row (the rank rule and the ribbon), Formation (the hero -- 3
+    // FIXED seats, never more), and, only while someone is unseated or a seat
+    // is closed, a hairline and Roster (N cards, N being the only thing here
+    // that can outgrow its row). Messages are the menu's footer notice, and the
+    // mode is the lintel's pill; neither is a part of this pane.
     public static class PartyLayout
     {
         // Still the FRAME's declared size (SystemMenuPaneTests.EveryHostedPane
@@ -38,52 +40,55 @@ namespace PrincesPalace.Domain.UiKit
         public static float UsableWidth => ContentRight - ContentLeft;
         public static float UsableHeight => ContentTop - ContentBottom;
 
-        // ---- header row: banner + links + status pill ---------------------------
-
-        public const float HeaderHeight = 56f;
+        // ---- header row: heading, the hint, the links, the count -----------------------
+        //
+        // ONE ROW, and a subtitle row under it that also carries the ribbon: the
+        // type floor (plan C14) makes every line taller, and Formation, its
+        // seats and the roster all have to fit the pane at once.
+        //
+        // A label's box is at least 1.33 x its font size or TMP draws nothing
+        // (CharacterDossierScreenTests.EveryLabelThatTruncatesOrClampsIsBoxed
+        // ForAtLeastOneLine), so 24 needs 32 and 20 needs 27.
+        public const float HeaderHeight = 40f;
         public static float HeaderCentreY => ContentTop - HeaderHeight * 0.5f;
 
-        // DECLARED ONCE rather than derived from the links either side of it:
-        // the banner's real content is one sentence, so its box only has to be
-        // wide enough for the longest authored copy, not for whatever is left
-        // over once the status pill claims its own space. The gap this leaves
-        // before the status pill is deliberate slack, same call RunStats makes
-        // about the space under its shortest card.
-        public const float BannerWidth = 640f;
-        public static float BannerCentreX => ContentLeft + BannerWidth * 0.5f;
+        public const float HeaderGap = 16f;
+        public const float FormationHeadingWidth = 200f;
+        public const float FormationHeadingHeight = 32f;
 
-        public const float LinkGap = 20f;
-        public const float CancelLinkWidth = 90f;
-        public const float BenchLinkWidth = 170f;
-        public const float LinkHeight = 24f;
+        public static float FormationHeadingCentreX => ContentLeft + FormationHeadingWidth * 0.5f;
+
+        // Sized for the longer of the two authored hints.
+        public const float BannerWidth = 560f;
+        public const float BannerHeight = 32f;
+        public static float BannerCentreX =>
+            ContentLeft + FormationHeadingWidth + HeaderGap + BannerWidth * 0.5f;
+
+        public const float CancelLinkWidth = 110f;
+        public const float BenchLinkWidth = 190f;
+        public const float LinkHeight = 32f;
 
         public static float CancelLinkCentreX =>
-            BannerCentreX + BannerWidth * 0.5f + LinkGap + CancelLinkWidth * 0.5f;
+            BannerCentreX + BannerWidth * 0.5f + HeaderGap + CancelLinkWidth * 0.5f;
 
         public static float BenchLinkCentreX =>
-            CancelLinkCentreX + CancelLinkWidth * 0.5f + LinkGap + BenchLinkWidth * 0.5f;
+            CancelLinkCentreX + CancelLinkWidth * 0.5f + HeaderGap + BenchLinkWidth * 0.5f;
 
-        public const float StatusPillWidth = 300f;
-        public const float StatusPillHeight = 34f;
-        public static float StatusPillCentreX => ContentRight - StatusPillWidth * 0.5f;
+        public const float FilledCountWidth = 260f;
+        public static float FilledCountCentreX => ContentRight - FilledCountWidth * 0.5f;
 
-        // ---- Formation heading row ------------------------------------------------
+        // ---- the subtitle row: the rank rule, and the ribbon at its right ---------------
 
-        public const float HeaderToFormationGap = 14f;
-        public const float FormationHeadingHeight = 26f;
-        public const float FormationHeadingWidth = 400f;
-        public const float FormationHeadingToSubtitleGap = 2f;
-        public const float FormationSubtitleHeight = 18f;
-        public const float FormationHeadingToPanelGap = 10f;
+        public const float SubtitleHeight = 32f;
+        public const float RibbonWidth = 320f;
+        public const float RibbonHeight = 32f;
 
-        public static float FormationHeadingCentreY =>
-            ContentTop - HeaderHeight - HeaderToFormationGap - FormationHeadingHeight * 0.5f;
+        public static float SubtitleWidth => UsableWidth - RibbonWidth - HeaderGap;
+        public static float SubtitleCentreX => ContentLeft + SubtitleWidth * 0.5f;
+        public static float RibbonCentreX => ContentRight - RibbonWidth * 0.5f;
+        public static float SubtitleCentreY => ContentTop - HeaderHeight - SubtitleHeight * 0.5f;
 
-        public static float FormationSubtitleCentreY =>
-            FormationHeadingCentreY - FormationHeadingHeight * 0.5f
-            - FormationHeadingToSubtitleGap - FormationSubtitleHeight * 0.5f;
-
-        // ---- the Formation panel: 3 fixed seats, never more ------------------------
+        // ---- the Formation panel: 3 fixed seats, never more ------------------------------
         //
         // SEAT COUNT IS FIXED at 3 -- the fight stage has exactly 3 party
         // slots (FightHudSpec.StageSlotsPerSide's own party half) -- so unlike
@@ -91,43 +96,46 @@ namespace PrincesPalace.Domain.UiKit
         // a designer to outgrow.
         public const int SeatCount = 3;
 
-        public const float RibbonHeight = 26f;
-        public const float RibbonToColumnsGap = 10f;
+        public const float HeaderToPanelGap = 6f;
 
-        public const float ColumnTopPad = 14f;
-        public const float SeatLabelHeight = 22f;
-        public const float SeatLabelToBadgeGap = 8f;
-        public const float BadgeHeight = 26f;
-        public const float BadgeToArtGap = 10f;
+        // One seat, top down. Every height is a line of the type on it.
+        public const float ColumnTopPad = 6f;
+        public const float SeatLabelHeight = 32f;
+        public const float SeatLabelToArtGap = 4f;
 
-        // THE DESIGN'S OWN FIGURE. Every seat's art slot is this tall
-        // regardless of what fills it -- a real stance, a monogram standee, or
-        // nothing loaded yet -- which is what makes FeetLine below a real
-        // shared line rather than an average.
-        public const float ArtHeight = 150f;
+        // Every seat's art slot is this tall regardless of what fills it -- a
+        // real stance, a monogram standee, or nothing loaded yet -- which is
+        // what makes FeetLine below a real shared line rather than an average.
+        public const float ArtHeight = 160f;
 
         public const float ArtToGlowGap = 2f;
-        public const float GlowHeight = 14f;
-        public const float GlowToNameGap = 10f;
-        public const float NameHeight = 24f;
-        public const float NameToRoleGap = 2f;
-        public const float RoleHeight = 20f;
-        public const float ColumnBottomPad = 14f;
+        public const float GlowHeight = 12f;
+        public const float GlowToNameGap = 4f;
+        public const float NameHeight = 30f;
+        public const float NameToRoleGap = 0f;
+        public const float RoleHeight = 28f;
+        public const float RoleToBarGap = 8f;
+        public const float BarHeight = 12f;
+        public const float BarToHpGap = 4f;
+        // "HP 180 / 240" is capitals and digits with no descender, so it is held
+        // to the all-caps floor of 24 (MenuTypeFloor), and a 24 line needs 32.
+        public const float HpHeight = 32f;
+        public const float DefHeight = 28f;
+        public const float ColumnBottomPad = 8f;
 
         // DERIVED, not authored -- the panel's height is a consequence of what
         // a column stacks, the same relationship a card's height has to
         // its rows.
         public static float ColumnStackHeight =>
-            ColumnTopPad + SeatLabelHeight + SeatLabelToBadgeGap + BadgeHeight + BadgeToArtGap
-            + ArtHeight + ArtToGlowGap + GlowHeight + GlowToNameGap + NameHeight + NameToRoleGap
-            + RoleHeight + ColumnBottomPad;
+            ColumnTopPad + SeatLabelHeight + SeatLabelToArtGap + ArtHeight + ArtToGlowGap + GlowHeight
+            + GlowToNameGap + NameHeight + NameToRoleGap + RoleHeight + RoleToBarGap + BarHeight
+            + BarToHpGap + HpHeight + DefHeight + ColumnBottomPad;
 
         public static float FormationPanelWidth => UsableWidth;
-        public static float FormationPanelHeight => RibbonHeight + RibbonToColumnsGap + ColumnStackHeight;
+        public static float FormationPanelHeight => ColumnStackHeight;
 
         public static float FormationPanelCentreY =>
-            FormationSubtitleCentreY - FormationSubtitleHeight * 0.5f
-            - FormationHeadingToPanelGap - FormationPanelHeight * 0.5f;
+            ContentTop - HeaderHeight - SubtitleHeight - HeaderToPanelGap - FormationPanelHeight * 0.5f;
 
         // ---- the 3 columns, in PANEL-LOCAL space (panel centre = 0,0) ------------
 
@@ -157,17 +165,11 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float SeatCentreX(int seatIndex) => ColumnCentreX(VisualColumnForSeat(seatIndex));
 
-        public static float RibbonCentreY => FormationPanelHeight * 0.5f - RibbonHeight * 0.5f;
-        public static float RibbonRuleY => FormationPanelHeight * 0.5f - RibbonHeight - RibbonToColumnsGap * 0.5f;
-
-        public static float ColumnTop => FormationPanelHeight * 0.5f - RibbonHeight - RibbonToColumnsGap;
+        public static float ColumnTop => FormationPanelHeight * 0.5f;
 
         public static float SeatLabelCentreY => ColumnTop - ColumnTopPad - SeatLabelHeight * 0.5f;
 
-        public static float BadgeCentreY =>
-            SeatLabelCentreY - SeatLabelHeight * 0.5f - SeatLabelToBadgeGap - BadgeHeight * 0.5f;
-
-        public static float ArtTop => BadgeCentreY - BadgeHeight * 0.5f - BadgeToArtGap;
+        public static float ArtTop => ColumnTop - ColumnTopPad - SeatLabelHeight - SeatLabelToArtGap;
         public static float ArtCentreY => ArtTop - ArtHeight * 0.5f;
 
         // THE SHARED LINE. Every seat's art slot is the same fixed height, so
@@ -178,67 +180,98 @@ namespace PrincesPalace.Domain.UiKit
         public static float GlowCentreY => FeetLine - ArtToGlowGap - GlowHeight * 0.5f;
         public static float NameCentreY => GlowCentreY - GlowHeight * 0.5f - GlowToNameGap - NameHeight * 0.5f;
         public static float RoleCentreY => NameCentreY - NameHeight * 0.5f - NameToRoleGap - RoleHeight * 0.5f;
+        public static float BarCentreY => RoleCentreY - RoleHeight * 0.5f - RoleToBarGap - BarHeight * 0.5f;
+        public static float HpCentreY => BarCentreY - BarHeight * 0.5f - BarToHpGap - HpHeight * 0.5f;
+        public static float DefCentreY => HpCentreY - HpHeight * 0.5f - DefHeight * 0.5f;
+
+        public static float BarWidth => ColumnWidth - 80f;
+
+        // THE VITALS: bar, HP line and defence line as one node, so a seat
+        // nobody sits in switches all three off together. Its children are
+        // placed in its own frame (VitalsLocalY).
+        public static float VitalsHeight => BarHeight + BarToHpGap + HpHeight + DefHeight;
+        public static float VitalsCentreY => (BarCentreY + BarHeight * 0.5f + DefCentreY - DefHeight * 0.5f) * 0.5f;
+        public static float VitalsLocalY(float panelY) => panelY - VitalsCentreY;
 
         // The seat's own click target and its ring/scrim overlay all share this
         // box -- ColumnTop down to the panel's own floor.
         public static float ColumnButtonHeight => ColumnStackHeight;
         public static float ColumnButtonCentreY => ColumnTop - ColumnStackHeight * 0.5f;
 
+        // ---- the carry preview (plan C22), over the seat's art -----------------------
+        //
+        // A title ("Swap with Odette") and two columns, the carried character
+        // beside the one in the seat, each a name, HP and both defences. It sits
+        // over the art rather than below it because the stack under the art is
+        // already full; the sprite is what the player already knows.
+        public const float BadgeTitleHeight = 30f;
+        public const float BadgeNameHeight = 28f;
+        public const float BadgeHpHeight = 32f;
+        public const float BadgeDefHeight = 28f;
+        private const float BadgePad = 6f;
+
+        public const float BadgeHeight =
+            BadgePad + BadgeTitleHeight + BadgeNameHeight + BadgeHpHeight + BadgeDefHeight + BadgePad;
+        public const float BadgeColumnHeight = BadgeNameHeight + BadgeHpHeight + BadgeDefHeight;
+        public static float BadgeWidth => ColumnWidth - 24f;
+        public static float BadgeCentreY => ArtTop - BadgeHeight * 0.5f;
+
+        // In BADGE-local space (badge centre = 0,0).
+        public static float BadgeTitleCentreY => BadgeHeight * 0.5f - BadgePad - BadgeTitleHeight * 0.5f;
+
+        // The column as one node, centred under the title.
+        public static float BadgeColumnCentreY => BadgeTitleCentreY - BadgeTitleHeight * 0.5f - BadgeColumnHeight * 0.5f;
+
+        // Inside a column, measured from the column's own centre.
+        public static float BadgeNameCentreY => BadgeColumnHeight * 0.5f - BadgeNameHeight * 0.5f;
+        public static float BadgeHpCentreY => BadgeNameCentreY - BadgeNameHeight * 0.5f - BadgeHpHeight * 0.5f;
+        public static float BadgeDefCentreY => BadgeHpCentreY - BadgeHpHeight * 0.5f - BadgeDefHeight * 0.5f;
+
+        public static float BadgeColumnWidth => BadgeWidth * 0.5f - 12f;
+        public static float BadgeColumnCentreX(int column) => (column == 0 ? -1f : 1f) * BadgeWidth * 0.25f;
+
         // ---- the hairline between Formation and Roster -----------------------------
 
-        public const float FormationToHairlineGap = 14f;
+        public const float FormationToHairlineGap = 10f;
         public const float HairlineHeight = 1f;
-        public const float HairlineToRosterGap = 14f;
+        public const float HairlineToRosterGap = 10f;
 
         public static float HairlineCentreY =>
             FormationPanelCentreY - FormationPanelHeight * 0.5f - FormationToHairlineGap;
 
         // ---- Roster: N cards, the one dimension that can outgrow its row -----------
+        //
+        // Shown only while someone is unseated or a seat is closed
+        // (PartyFormation.RosterVisible); the section is one node so that is
+        // one switch.
 
-        public const float RosterHeadingHeight = 24f;
+        public const float RosterHeadingHeight = 32f;
         // Sized to "ROSTER" itself, left-aligned at ContentLeft -- the rest of
         // this row, out to ContentRight, is empty in every state.
         public const float RosterHeadingWidth = 300f;
-        public const float RosterHeadingToRowGap = 12f;
+        public const float RosterHeadingToRowGap = 6f;
 
         public static float RosterHeadingCentreY =>
-            HairlineCentreY - HairlineToRosterGap - RosterHeadingHeight * 0.5f;
+            HairlineCentreY - HairlineHeight * 0.5f - HairlineToRosterGap - RosterHeadingHeight * 0.5f;
 
-        public const float CardWidth = 150f;
-        // Proportional to the handoff's 10px gap on a 112px card -- scaled up
-        // with the wider card this kit's own button/plate widths call for.
-        public const float CardGap = 14f;
+        public const float CardWidth = 176f;
+        public const float CardGap = 12f;
 
-        // A TITLE ROW UNDER THE NAME, and the card is exactly as tall as it was
-        // before it. The 16px it needs come out of the
-        // two pads (4 each) and the art slot (8) rather than out of the card's
-        // height, and that is not tidiness -- the roster row has 5.56px of
-        // clearance over the pane's own floor, so growing the card by anything
-        // at all would have run it off the bottom of the panel. The art slot
-        // gives up 8 of 76; the monogram standee that stands in it when a
-        // character has no stance art is sized off that height and comes down
-        // with it, from 47 to 42.
+        // The card is a column of Body 20 lines under its art, and it is as tall
+        // as the pane has left under Formation: the roster row must stay inside
+        // ContentBottom (SystemMenuPaneTests reads RosterRowCentreY for how much
+        // of the pane the roster uses).
         public const float CardTopPad = 6f;
-        public const float CardArtHeight = 68f;
-        public const float CardArtToNameGap = 6f;
-        public const float CardNameHeight = 20f;
-        public const float CardNameToTitleGap = 2f;
-
-        // 14, for a title set at 11 against the name's 14 -- the title is
-        // subordinate to the name and has to read as belonging to it rather
-        // than as a second name.
-        public const float CardTitleHeight = 14f;
-        public const float CardTitleToRoleGap = 2f;
-        public const float CardRoleHeight = 16f;
-        public const float CardRoleToTagGap = 4f;
-        public const float CardTagHeight = 16f;
+        public const float CardArtHeight = 66f;
+        public const float CardArtToNameGap = 4f;
+        public const float CardNameHeight = 28f;
+        public const float CardNameToTitleGap = 0f;
+        public const float CardTitleHeight = 28f;
+        public const float CardTitleToRoleGap = 0f;
+        public const float CardRoleHeight = 28f;
+        public const float CardRoleToTagGap = 0f;
+        public const float CardTagHeight = 28f;
         public const float CardBottomPad = 6f;
-
-        // CardNameToRoleGap is kept as the name it had, now spelled as the two
-        // gaps either side of the title -- the constant was the distance from
-        // the name to the line under it, and that is still what
-        // CardNameToTitleGap is.
-        public const float CardNameToRoleGap = CardNameToTitleGap;
 
         public static float CardHeight =>
             CardTopPad + CardArtHeight + CardArtToNameGap + CardNameHeight + CardNameToTitleGap
@@ -256,6 +289,16 @@ namespace PrincesPalace.Domain.UiKit
             return left + CardWidth * (index + 0.5f) + CardGap * index;
         }
 
+        // THE ROSTER SECTION, one node from the hairline to the foot of the
+        // cards, so hiding the roster is one switch. Its children are placed in
+        // ITS frame: RosterLocalY turns a pane-frame Y into that.
+        public static float RosterSectionTop => HairlineCentreY + HairlineHeight * 0.5f;
+        public static float RosterSectionBottom => RosterRowCentreY - CardHeight * 0.5f;
+        public static float RosterSectionHeight => RosterSectionTop - RosterSectionBottom;
+        public static float RosterSectionCentreY => (RosterSectionTop + RosterSectionBottom) * 0.5f;
+
+        public static float RosterLocalY(float paneY) => paneY - RosterSectionCentreY;
+
         // ---- a card's own insides, in CARD-LOCAL space (card centre = 0,0) --------
 
         public static float CardTop => CardHeight * 0.5f;
@@ -268,8 +311,8 @@ namespace PrincesPalace.Domain.UiKit
 
         // THE TITLE, AND THE PICKER THAT CHOOSES IT, are the same rect: the
         // line the player reads is the thing they click to change it. A
-        // separate chevron beside it would be a second target 14px tall on a
-        // 150px card, and a title the player cannot change is not worth a
+        // separate chevron beside it would be a second target on a
+        // 176px card, and a title the player cannot change is not worth a
         // control at all.
         public static float CardTitleCentreY =>
             CardNameCentreY - CardNameHeight * 0.5f - CardNameToTitleGap - CardTitleHeight * 0.5f;

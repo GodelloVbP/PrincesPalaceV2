@@ -194,6 +194,13 @@ namespace PrincesPalace
 
         private void Update()
         {
+            // The hint names a key, and the key follows the device in hand.
+            if (attentionLabel != null && attentionLabel.gameObject.activeSelf
+                && _attentionPad != NavigationInputModule.LastInputWasPad)
+            {
+                RefreshAttention();
+            }
+
             if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
             {
                 return;
@@ -231,22 +238,32 @@ namespace PrincesPalace
         // reaches the menu's own handler, never this.
         private void HandleSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
 
-        // THE MAP'S HINT THAT A CHARACTER WANTS LOOKING AT (plan C20): how many
-        // characters carry a pip in the CHARACTER tab, from the same model and
-        // the same feed, so the count is the number of pips the player will
-        // find. Neither the shop nor the menu is guaranteed to be the next
-        // thing opened after a purchase or a drop, so the map says so; it is
-        // repainted when the menu closes because that is when the answer moves.
+        // THE MAP'S HINT THAT A CHARACTER WANTS LOOKING AT (plan C20): what
+        // waits, from the same model and the same feed as the strip's pips, so
+        // it names only what the player will find lit. Neither the shop nor the
+        // menu is guaranteed to be the next thing opened after a purchase or a
+        // drop, so the map says so; it is repainted when the menu closes
+        // because that is when the answer moves, and when the last input
+        // changes device because the key it names changes with it.
         private void RefreshAttention()
         {
             if (attentionLabel == null) return;
 
             var run = RunManager.Run;
-            int lit = run == null ? 0 : CharacterAttentionFeed.CountLit(SaveSlotManager.CurrentSave, run);
+            var reasons = run == null
+                ? AttentionReasons.None
+                : CharacterAttentionFeed.ReasonsFor(SaveSlotManager.CurrentSave, run);
 
-            attentionLabel.gameObject.SetActive(lit > 0);
-            if (lit > 0) attentionLabel.Set(UiStrings.MapAttention, lit);
+            _attentionPad = NavigationInputModule.LastInputWasPad;
+            attentionLabel.gameObject.SetActive(reasons != AttentionReasons.None);
+            if (reasons != AttentionReasons.None)
+            {
+                attentionLabel.Set(UiStrings.MapAttention, AttentionHint.Named(reasons),
+                    AttentionHint.Key(PromptGlyphs.DeviceFor(_attentionPad)));
+            }
         }
+
+        private bool _attentionPad;
 
         private void OnDestroy()
         {

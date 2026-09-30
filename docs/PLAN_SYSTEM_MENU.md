@@ -299,9 +299,12 @@ A pip shows when:
   unassigned books.
 
 Empty gear slots never pip. Built as `CharacterAttention` (Domain) over
-`CharacterAttentionFeed` (Core). The map's hint reads the same feed and says
-`ATTENTION NEEDED: {n}`, where n counts the characters whose strip chip is
-lit, not the reasons.
+`CharacterAttentionFeed` (Core). The map's hint reads the same feed and names
+what waits, only the reasons that hold, in the pips' order: "Points to spend ·
+Rewards waiting · Books to place — press C" (`AttentionHint`; the key is
+`PromptGlyphs`' `Character` button, so a pad says Start and the line follows
+the device in hand). It replaced `ATTENTION NEEDED: {n}`, which had lost the
+reason.
 
 **C21 Names.**
 
@@ -313,7 +316,7 @@ lit, not the reasons.
 | "Focus / turn" | "{signature} per turn", from content |
 | "MANA" in the fight detail for a Fury user | the pool's own name |
 | "{n} known" (a literal) | `UiStrings` |
-| Party subtitle "Some skills reach only from the rank they name" | "Melee skills can strike only the enemy front rank." (the real `Reach` rule) |
+| Party subtitle "Some skills reach only from the rank they name" | "The front rank takes the enemies' blows. Melee skills can strike only the enemy front rank." (the real `Reach` rule) |
 | Hub building RELICS (opens the glossary) | GLOSSARY |
 
 **C22 PARTY.** The formation seats, with the facts that decide placement:
@@ -323,7 +326,10 @@ lit, not the reasons.
 
 Selecting a card previews the swap with those facts side by side (AUDIT
 #248). The roster shows only when a character is unseated or a seat is
-closed. Modes follow C3. The status pill moves to the lintel.
+closed (`PartyFormation.RosterVisible`). Modes follow C3. The status pill moved
+to the lintel. A character the fight is not showing (benched, or carried at
+zero and never fielded) reads the run's carried health, which is not stale for
+them.
 
 **C23 RUN** (Descent and Fight):
 - **Relics:** icon, name, rarity and description; paged; count in the
@@ -354,9 +360,9 @@ lookups go.
   status box.
 - LB/RB step categories. Deep link to an entry (C9).
 
-**C26 OPTIONS.** The pane itself is unchanged. It is shared with the main
-menu's Settings modal, so coordinate with that owner. The type floor comes
-in Phase 6.
+**C26 OPTIONS.** The layout is unchanged; every label reaches the floor. It
+is shared with the main menu's Settings modal, so the same tree, resized in
+place, serves both (Phase 6).
 
 **C27 EXIT.** Content unchanged. Label per C21.
 
@@ -482,8 +488,10 @@ move to the sections. CHARACTER joins the lint list.
 **6 PARTY, OPTIONS, EXIT (C22, C26, C27).**
 - PARTY: seat facts from C4, swap preview, roster rule, subtitle, pill
   removed.
-- OPTIONS and EXIT: type floor only.
-- All menu screens are now on the lint list; the scope list is deleted.
+- OPTIONS and EXIT: type floor only. Exit's separator gaps close from 56 to
+  40 so the taller notes still fit the stack.
+- The lint walks the whole menu tree; the scope list is deleted, and only the
+  rows borrowed from other screens keep a name prefix.
 
 **7 Verify.**
 - Captures at all four `UiFrames` aspects, for every tab, in camp, descent

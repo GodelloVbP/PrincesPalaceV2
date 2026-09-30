@@ -410,14 +410,14 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheMenu("Hub");
             var line = TextOf("SystemFooterNotice");
 
-            _menu.SetStateLine(UiStrings.PartyStatusCamp);
-            Assert.AreEqual("AT CAMP — Swap freely.", line.text);
+            _menu.SetStateLine(UiStrings.SystemModeCamp);
+            Assert.AreEqual("AT CAMP", line.text);
 
             _menu.ShowNotice(UiStrings.MenuLockedInFight);
             Assert.AreEqual("Locked during a fight", line.text, "the notice did not win the line");
 
             yield return new WaitForSecondsRealtime(MenuNotice.DefaultSeconds + MenuNotice.FadeSeconds + 0.3f);
-            Assert.AreEqual("AT CAMP — Swap freely.", line.text, "the state line did not come back");
+            Assert.AreEqual("AT CAMP", line.text, "the state line did not come back");
 
             _menu.ClearStateLine();
             Assert.AreEqual("", line.text);

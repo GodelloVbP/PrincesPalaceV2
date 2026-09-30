@@ -29,8 +29,11 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text banner;
         [SerializeField] internal Button cancelLink;
         [SerializeField] internal Button benchLink;
-        [SerializeField] internal TMP_Text statusText;
         [SerializeField] internal TMP_Text filledCount;
+
+        // The roster's hairline, heading and cards as one node: shown only
+        // while someone is unseated or a seat is closed.
+        [SerializeField] internal GameObject rosterSection;
 
         // ---- seats, front-first (index 0 = front), length PartySeat.Count -----
         [SerializeField] internal Button[] seatButtons;
@@ -45,13 +48,25 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] seatScrims;
         [SerializeField] internal TMP_Text[] seatScrimCaptions;
 
-        // The label INSIDE each badge. PartyScreen.BuildSeat only kept a
-        // NodeRef for the badge's own OutlineBox (screen.SeatBadges) -- the
-        // text child is built and parented but never captured -- so this is
-        // the one seat field UiAutoBind cannot reach and ScreenRegistry.
-        // WireParty fills it by reading the badge's own child, the same way
-        // ExitsController.exitLabels reaches a button's child label.
+        // The carry preview's words (plan C22): a title, and two columns -- the
+        // character carried and the one in the seat -- each a name, HP and
+        // both defences.
         [SerializeField] internal TMP_Text[] seatBadgeTexts;
+        [SerializeField] internal GameObject[] seatBadgeCarriedColumns;
+        [SerializeField] internal TMP_Text[] seatBadgeCarriedNames;
+        [SerializeField] internal TMP_Text[] seatBadgeCarriedHps;
+        [SerializeField] internal TMP_Text[] seatBadgeCarriedDefs;
+        [SerializeField] internal GameObject[] seatBadgeSeatedColumns;
+        [SerializeField] internal TMP_Text[] seatBadgeSeatedNames;
+        [SerializeField] internal TMP_Text[] seatBadgeSeatedHps;
+        [SerializeField] internal TMP_Text[] seatBadgeSeatedDefs;
+
+        // The facts that decide placement (plan C22): HP as a bar and as
+        // numbers, and both defences, switched off together for an empty seat.
+        [SerializeField] internal GameObject[] seatVitals;
+        [SerializeField] internal RectTransform[] seatHpFills;
+        [SerializeField] internal TMP_Text[] seatHpTexts;
+        [SerializeField] internal TMP_Text[] seatDefTexts;
 
         // One drag surface per seat, attached at build time (ScreenRegistry.
         // WireParty) but configured here at runtime -- see PartyDragSource's
@@ -434,7 +449,12 @@ namespace PrincesPalace
             if (cancelLink != null && cancelLink.gameObject.activeSelf) links.Add(cancelLink);
             if (benchLink != null && benchLink.gameObject.activeSelf) links.Add(benchLink);
 
-            var allLinks = new List<UiNavLink<Selectable>?>(CrossLinks());
+            // A hidden roster is not a group and has no cross links: Down from a
+            // seat has nowhere to go, rather than into cards nobody can see.
+            bool rosterShown = rosterSection != null && rosterSection.activeSelf;
+            var cards = rosterShown ? (IEnumerable<Selectable>)cardButtons : new Selectable[0];
+
+            var allLinks = new List<UiNavLink<Selectable>?>(rosterShown ? CrossLinks() : new UiNavLink<Selectable>?[0]);
             if (links.Count > 0)
             {
                 foreach (var seat in SeatsInVisualOrder())
@@ -449,7 +469,7 @@ namespace PrincesPalace
                 new[]
                 {
                     RuntimeNavWiring.Group("partySeats", UiNavGroupKind.Rail, SeatsInVisualOrder()),
-                    RuntimeNavWiring.Group("partyRoster", UiNavGroupKind.Rail, cardButtons),
+                    RuntimeNavWiring.Group("partyRoster", UiNavGroupKind.Rail, cards),
                     RuntimeNavWiring.Group("partyLinks", UiNavGroupKind.Rail, links),
                 },
                 allLinks);
@@ -811,6 +831,8 @@ namespace PrincesPalace
             _seatArtScale = PartyArtScale.ScaleFor(PartyLayout.ArtHeight, canvasHeights);
             _cardArtScale = PartyArtScale.ScaleFor(PartyLayout.CardArtHeight, canvasHeights);
 
+            rosterSection.SetShown(Formation.RosterVisible);
+
             for (int i = 0; i < PartySeat.Count; i++) PaintSeat(i);
 
             int cardCount = cardButtons?.Length ?? 0;
@@ -821,6 +843,20 @@ namespace PrincesPalace
             }
 
             RefreshNavigation();
+            KeepFocusOnAControlThatIsShown();
+        }
+
+        // A card placed into the last unseated seat hides the roster it was
+        // picked up from, and the selection with it. Focus goes to the first
+        // seat as drawn, the same place opening the pane starts.
+        private void KeepFocusOnAControlThatIsShown()
+        {
+            var events = EventSystem.current;
+            var focused = events != null ? events.currentSelectedGameObject : null;
+            if (focused == null || focused.activeInHierarchy || !focused.transform.IsChildOf(transform)) return;
+
+            var first = At(seatButtons, SeatAtColumn(0));
+            if (first != null) events.SetSelectedGameObject(first.gameObject);
         }
 
         private void PaintHeader()
@@ -836,18 +872,7 @@ namespace PrincesPalace
             cancelLink.SetShown(hasSelection);
             benchLink.SetShown(Formation.CanSendToBench);
 
-            if (statusText != null) statusText.Set(StatusStringFor(Formation.Mode));
             if (filledCount != null) filledCount.Set(UiStrings.PartyFilledCount, Formation.FilledCount);
-        }
-
-        private static UiString StatusStringFor(PartyMode mode)
-        {
-            switch (mode)
-            {
-                case PartyMode.Camp: return UiStrings.PartyStatusCamp;
-                case PartyMode.Run: return UiStrings.PartyStatusRun;
-                default: return UiStrings.PartyStatusFight;
-            }
         }
 
         private void PaintSeat(int seat)
@@ -864,7 +889,7 @@ namespace PrincesPalace
 
             bool showBadge = badge != PartySeatBadge.None;
             SetShown(seatBadges, seat, showBadge);
-            if (showBadge) SetSeatBadgeText(seat, badge, occupantId);
+            if (showBadge) PaintBadge(seat, badge, occupantId);
 
             var art = occupantId != null ? ArtFor(occupantId) : null;
             bool hasArt = art != null;
@@ -881,6 +906,9 @@ namespace PrincesPalace
             SetContent(seatNames, seat, occupantId != null ? DisplayNameOf(occupantId) : "");
             SetContent(seatRoles, seat, occupantId != null ? RoleNameOf(occupantId) : "");
 
+            SetShown(seatVitals, seat, occupantId != null);
+            if (occupantId != null) PaintVitals(seat, occupantId);
+
             SetShown(seatRings, seat, selectedHere || isDestination);
 
             bool scrimmed = closed || locked;
@@ -892,23 +920,87 @@ namespace PrincesPalace
             }
         }
 
-        private void SetSeatBadgeText(int seat, PartySeatBadge badge, string occupantId)
+        // THE CARRY PREVIEW (plan C22): who goes where, with both characters'
+        // health and defences side by side. The carried character is always
+        // in the left column; the right one is whoever sits in the seat, and
+        // an empty seat has none.
+        private void PaintBadge(int seat, PartySeatBadge badge, string occupantId)
         {
-            var text = At(seatBadgeTexts, seat);
-            if (text == null) return;
+            string carriedId = Formation.SelectedId;
 
-            switch (badge)
+            var title = At(seatBadgeTexts, seat);
+            if (title != null)
             {
-                case PartySeatBadge.PlaceHere:
-                    text.Set(UiStrings.PartyBadgePlace, DisplayNameOf(Formation.SelectedId));
-                    break;
-                case PartySeatBadge.Replace:
-                    text.Set(UiStrings.PartyBadgeReplace, DisplayNameOf(occupantId));
-                    break;
-                case PartySeatBadge.SwapWith:
-                    text.Set(UiStrings.PartyBadgeSwap, DisplayNameOf(occupantId));
-                    break;
+                switch (badge)
+                {
+                    case PartySeatBadge.PlaceHere:
+                        title.Set(UiStrings.PartyBadgePlace, DisplayNameOf(carriedId));
+                        break;
+                    case PartySeatBadge.Replace:
+                        title.Set(UiStrings.PartyBadgeReplace, DisplayNameOf(occupantId));
+                        break;
+                    case PartySeatBadge.SwapWith:
+                        title.Set(UiStrings.PartyBadgeSwap, DisplayNameOf(occupantId));
+                        break;
+                }
             }
+
+            PaintBadgeColumn(seatBadgeCarriedColumns, seatBadgeCarriedNames, seatBadgeCarriedHps,
+                seatBadgeCarriedDefs, seat, carriedId);
+            PaintBadgeColumn(seatBadgeSeatedColumns, seatBadgeSeatedNames, seatBadgeSeatedHps,
+                seatBadgeSeatedDefs, seat, badge == PartySeatBadge.PlaceHere ? null : occupantId);
+        }
+
+        private void PaintBadgeColumn(GameObject[] columns, TMP_Text[] names, TMP_Text[] hps, TMP_Text[] defs,
+                                      int seat, string id)
+        {
+            SetShown(columns, seat, id != null);
+            if (id == null) return;
+
+            SetContent(names, seat, DisplayNameOf(id));
+
+            var facts = FactsFor(id);
+            At(hps, seat)?.Set(UiStrings.PartySeatHp, facts.Health, facts.MaxHealth);
+            At(defs, seat)?.Set(UiStrings.PartyBadgeDefences, facts.PhysicalDefense, facts.MagicalDefense);
+        }
+
+        // THE FACTS THAT DECIDE PLACEMENT, on the seat itself: the bar's fill is
+        // a width against the track's left edge, never an anchor.
+        private void PaintVitals(int seat, string id)
+        {
+            var facts = FactsFor(id);
+
+            At(seatHpTexts, seat)?.Set(UiStrings.PartySeatHp, facts.Health, facts.MaxHealth);
+            At(seatDefTexts, seat)?.Set(UiStrings.PartySeatDefences, facts.PhysicalDefense, facts.MagicalDefense);
+
+            var fill = At(seatHpFills, seat);
+            if (fill != null) fill.sizeDelta = new Vector2(PartyLayout.BarWidth * facts.HealthFraction, fill.sizeDelta.y);
+        }
+
+        // WHERE EACH FACT COMES FROM is PartyMemberFacts.Resolve's rule (plan
+        // C4); this only knows where the values are kept. The fight's
+        // own record of what it has painted is asked for in a fight and never
+        // otherwise, and the run's carried health is the snapshot's per-
+        // character entry.
+        private PartyMemberFacts FactsFor(string id)
+        {
+            var character = CharacterFor(id);
+            if (character == null) return default;
+
+            var stats = ContentDatabase.EffectiveStats(character);
+
+            int? carried = null;
+            var run = RunManager.Run;
+            if (run != null && RunEncounter.HealthByCharacter(run).TryGetValue(id, out int health)) carried = health;
+
+            FightMemberFacts fight = null;
+            if (Context == MenuContext.Fight && menu != null && menu.FightSource != null)
+            {
+                menu.FightSource.TryGetMember(id, out fight);
+            }
+
+            return PartyMemberFacts.Resolve(Context, stats.maxHealth, stats.physicalDefense,
+                stats.magicalDefense, carried, fight);
         }
 
         private void PaintCard(int index)

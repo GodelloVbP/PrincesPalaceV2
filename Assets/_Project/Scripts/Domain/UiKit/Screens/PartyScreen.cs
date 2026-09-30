@@ -6,11 +6,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
     //
     // Domain cannot see ContentDatabase, so the roster count arrives as an
     // input rather than being counted here -- same reasoning, same shape, as
-    // MainMenuInputs.SlotCount reading off SaveSystem.SlotCount. Wiring the
-    // REAL count (ContentDatabase.LoadOrdered<CharacterDefinition>().Count) is
-    // a later package's job; SystemMenuScreen.Build's own default keeps this
-    // buildable today against the three characters characters.json actually
-    // authors.
+    // MainMenuInputs.SlotCount reading off SaveSystem.SlotCount.
+    // SystemMenuScreen.Build's own default keeps this buildable against the
+    // three characters characters.json authors.
     public readonly struct PartyInputs
     {
         public readonly int RosterCardCount;
@@ -21,16 +19,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         }
     }
 
-    // The Party pane: Formation (3 fixed seats) above Roster (N cards), hosted
-    // in the system menu exactly as the dossier, Options and Run statistics
-    // are -- its own screen class, its own controller (a later package), and
-    // the menu knows nothing about either.
+    // The Party pane: Formation (3 fixed seats) above Roster (N cards, shown
+    // only while someone sits out or a seat is closed), hosted in the system
+    // menu exactly as the dossier, Options and Run statistics are -- its own
+    // screen class and its own controller (Core/PartyController.cs).
     //
-    // NO CONTROLLER, NO DOMAIN MODEL, NO SCREENREGISTRY WIRING HERE. Every
-    // state this pane can ever be in -- a badge preview, a selection ring, a
-    // locked or closed scrim, a monogram standing in for missing art -- is
-    // declared now, inactive, because the scene is generated once
-    // and a controller can only show or hide a node that already exists in it.
+    // Every state this pane can ever be in -- a carry preview, a selection
+    // ring, a locked or closed scrim, a monogram standing in for missing art --
+    // is declared here, inactive, because the scene is generated once and a
+    // controller can only show or hide a node that already exists in it.
     //
     // SEATS ARE INDEXED FRONT-FIRST (0 = front, matching the front-rank rule
     // -- squad index 0 is what takes the enemies' blows) but
@@ -93,9 +90,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef Banner;
         public NodeRef CancelLink;
         public NodeRef BenchLink;
-        public NodeRef StatusPill;
-        public NodeRef StatusText;
         public NodeRef FilledCount;
+
+        // The roster's hairline, heading, drop zone and cards as one node: the
+        // controller shows it only while someone is unseated or a seat is
+        // closed (PartyFormation.RosterVisible).
+        public NodeRef RosterSection;
 
         // ---- P4: drag-and-drop ------------------------------------------------------
 
@@ -113,6 +113,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ---- per seat, in FRONT-FIRST (seat-index) order, length SeatCount ------
         public List<NodeRef> SeatButtons = new List<NodeRef>();
         public List<NodeRef> SeatBadges = new List<NodeRef>();
+
+        // The carry preview's words (plan C22): a title, and two columns -- the
+        // character being carried and the one in the seat -- each a name, HP and
+        // both defences. A seat with nobody in it previews only the carried
+        // column.
+        public List<NodeRef> SeatBadgeTexts = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeCarriedColumns = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeCarriedNames = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeCarriedHps = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeCarriedDefs = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeSeatedColumns = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeSeatedNames = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeSeatedHps = new List<NodeRef>();
+        public List<NodeRef> SeatBadgeSeatedDefs = new List<NodeRef>();
+
+        // The facts that decide placement (plan C22), on the seat itself.
+        public List<NodeRef> SeatVitals = new List<NodeRef>();
+        public List<NodeRef> SeatHpFills = new List<NodeRef>();
+        public List<NodeRef> SeatHpTexts = new List<NodeRef>();
+        public List<NodeRef> SeatDefTexts = new List<NodeRef>();
         public List<NodeRef> SeatArts = new List<NodeRef>();
         public List<NodeRef> SeatMonogramPlates = new List<NodeRef>();
         public List<NodeRef> SeatMonogramLetters = new List<NodeRef>();
@@ -180,13 +200,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var children = new List<UiNode>();
             children.AddRange(BuildHeader(screen));
-            children.AddRange(BuildFormationHeading(screen));
+            children.AddRange(BuildSubtitleRow());
             children.Add(BuildFormationPanel(screen));
-            children.Add(Ui.Solid("PartyHairline", CardRim,
-                    new UiVec(PartyLayout.UsableWidth, PartyLayout.HairlineHeight),
-                    Place.At(0f, PartyLayout.HairlineCentreY))
-                .AsDecor());
-            children.AddRange(BuildRoster(screen, rosterCount));
+            children.Add(BuildRosterSection(screen, rosterCount));
 
             // APPENDED LAST, so it draws over every other node on the pane --
             // "top-most" per the P4 brief.
@@ -202,87 +218,81 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
-        // ---- header: banner + links + status pill ----------------------------------
+        // ---- header: heading, the hint, the links, the count -------------------------
+        //
+        // No status pill: the lintel's mode pill states the mode for the whole
+        // menu, and a refusal goes to the menu's notice.
 
         private static IEnumerable<UiNode> BuildHeader(PartyScreen screen)
         {
             float y = PartyLayout.HeaderCentreY;
 
+            yield return Ui.Label("PartyFormationHeading", UiStrings.PartyFormationHeading,
+                    new UiVec(PartyLayout.FormationHeadingWidth, PartyLayout.FormationHeadingHeight), 24, Heading,
+                    Place.At(PartyLayout.FormationHeadingCentreX, y))
+                .AsDecor()
+                .TextAligned(UiTextAlign.Left)
+                .Styled(TypographyRole.FunctionalHeading);
+
             var banner = Ui.Label("PartyBanner", UiStrings.PartyBannerDefault,
-                    new UiVec(PartyLayout.BannerWidth, PartyLayout.HeaderHeight), 16, TextPrimary,
+                    new UiVec(PartyLayout.BannerWidth, PartyLayout.BannerHeight), 20, TextPrimary,
                     Place.At(PartyLayout.BannerCentreX, y))
                 .AsDecor()
                 .TextAligned(UiTextAlign.Left)
                 .Styled(TypographyRole.Body);
             screen.Banner = banner;
+            yield return banner;
 
             var cancel = Ui.Button("PartyCancelLink", UiStrings.PartyCancel,
-                    new UiVec(PartyLayout.CancelLinkWidth, PartyLayout.LinkHeight), 14,
+                    new UiVec(PartyLayout.CancelLinkWidth, PartyLayout.LinkHeight), 20,
                     Place.At(PartyLayout.CancelLinkCentreX, y))
                 .NoChrome()
+                .Styled(TypographyRole.Body)
                 .Inactive();
             screen.CancelLink = cancel;
+            yield return cancel;
 
             var bench = Ui.Button("PartyBenchLink", UiStrings.PartySendToBench,
-                    new UiVec(PartyLayout.BenchLinkWidth, PartyLayout.LinkHeight), 14,
+                    new UiVec(PartyLayout.BenchLinkWidth, PartyLayout.LinkHeight), 20,
                     Place.At(PartyLayout.BenchLinkCentreX, y))
                 .NoChrome()
+                .Styled(TypographyRole.Body)
                 .Inactive();
             screen.BenchLink = bench;
-
-            var statusText = Ui.Label("PartyStatusText", UiString.Runtime,
-                    new UiVec(PartyLayout.StatusPillWidth - 24f, PartyLayout.StatusPillHeight), 14, GoldLight,
-                    Place.At(6f, 0f))
-                .AsDecor()
-                .Styled(TypographyRole.TacticalData);
-
-            var statusDot = Ui.Solid("PartyStatusDot", GoldLight, new UiVec(8f, 8f),
-                    Place.At(-PartyLayout.StatusPillWidth * 0.5f + 18f, 0f))
-                .AsDecor();
-
-            var statusPill = Ui.OutlineBox("PartyStatusPill", Place.At(PartyLayout.StatusPillCentreX, y),
-                new UiVec(PartyLayout.StatusPillWidth, PartyLayout.StatusPillHeight),
-                CardFill, BadgeRim, new[] { statusDot, statusText });
-            screen.StatusPill = statusPill;
-            screen.StatusText = statusText;
-
-            yield return banner;
-            yield return cancel;
             yield return bench;
-            yield return statusPill;
-        }
-
-        // ---- Formation's own heading row -------------------------------------------
-
-        private static IEnumerable<UiNode> BuildFormationHeading(PartyScreen screen)
-        {
-            yield return Ui.Label("PartyFormationHeading", UiStrings.PartyFormationHeading,
-                    new UiVec(PartyLayout.FormationHeadingWidth, PartyLayout.FormationHeadingHeight), 18, Heading,
-                    Place.At(-PartyLayout.UsableWidth * 0.5f + PartyLayout.FormationHeadingWidth * 0.5f,
-                             PartyLayout.FormationHeadingCentreY))
-                .AsDecor()
-                .TextAligned(UiTextAlign.Left)
-                .Styled(TypographyRole.FunctionalHeading);
 
             var filled = Ui.Label("PartyFormationFilledCount", UiString.Runtime,
-                    new UiVec(PartyLayout.FormationHeadingWidth, PartyLayout.FormationHeadingHeight), 15, Body,
-                    Place.At(PartyLayout.UsableWidth * 0.5f - PartyLayout.FormationHeadingWidth * 0.5f,
-                             PartyLayout.FormationHeadingCentreY))
+                    new UiVec(PartyLayout.FilledCountWidth, PartyLayout.FormationHeadingHeight), 20, Body,
+                    Place.At(PartyLayout.FilledCountCentreX, y))
                 .AsDecor()
                 .TextAligned(UiTextAlign.Right)
                 .Styled(TypographyRole.Body);
             screen.FilledCount = filled;
             yield return filled;
+        }
+
+        // The rank rule, and the ribbon that says which way the seats face at
+        // the right end of the same row.
+        private static IEnumerable<UiNode> BuildSubtitleRow()
+        {
+            float y = PartyLayout.SubtitleCentreY;
 
             yield return Ui.Label("PartyFormationSubtitle", UiStrings.PartyFormationSubtitle,
-                    new UiVec(PartyLayout.UsableWidth, PartyLayout.FormationSubtitleHeight), 13, Body,
-                    Place.At(0f, PartyLayout.FormationSubtitleCentreY))
+                    new UiVec(PartyLayout.SubtitleWidth, PartyLayout.SubtitleHeight), 20, Body,
+                    Place.At(PartyLayout.SubtitleCentreX, y))
                 .AsDecor()
                 .TextAligned(UiTextAlign.Left)
                 .Styled(TypographyRole.Body);
+
+            yield return Ui.Label("PartyFormationRibbon", UiStrings.PartyFacingRibbon,
+                    new UiVec(PartyLayout.RibbonWidth, PartyLayout.RibbonHeight), 24, Body,
+                    Place.At(PartyLayout.RibbonCentreX, y))
+                .AsDecor()
+                .TextAligned(UiTextAlign.Right)
+                .Styled(TypographyRole.TacticalData);
         }
 
-        // ---- the Formation panel: ribbon + 3 seat columns --------------------------
+        // ---- the Formation panel: 3 seat columns -----------------------------------
 
         private static UiNode BuildFormationPanel(PartyScreen screen)
         {
@@ -294,17 +304,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Ui.Solid("PartyFormationFill", CardFill, new UiVec(w, h), Place.At(0f, 0f)).AsDecor(),
             };
             children.AddRange(Ui.Rim("PartyFormation", new UiVec(w, h), CardRim));
-
-            children.Add(Ui.Label("PartyFormationRibbon", UiStrings.PartyFacingRibbon,
-                    new UiVec(w - 40f, PartyLayout.RibbonHeight), 13, Body,
-                    Place.At(0f, PartyLayout.RibbonCentreY))
-                .AsDecor()
-                .TextAligned(UiTextAlign.Right)
-                .Styled(TypographyRole.TacticalData));
-
-            children.Add(Ui.Solid("PartyFormationRibbonRule", CardRim, new UiVec(w, 1f),
-                    Place.At(0f, PartyLayout.RibbonRuleY))
-                .AsDecor());
 
             for (int gap = 0; gap < PartyLayout.SeatCount - 1; gap++)
             {
@@ -335,8 +334,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             string stem = $"PartySeat{seatIndex}";
 
             var button = Ui.Button(stem + "Button", UiString.Runtime, size,
-                    18, Place.At(PartyLayout.SeatCentreX(seatIndex), buttonCentreY))
-                .NoChrome();
+                    20, Place.At(PartyLayout.SeatCentreX(seatIndex), buttonCentreY))
+                .NoChrome()
+                .Styled(TypographyRole.Body);
 
             float LocalY(float panelY) => panelY - buttonCentreY;
 
@@ -377,33 +377,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var letter = Ui.Label(stem + "MonogramLetter", UiString.Runtime,
                     new UiVec(monogramSize, monogramSize), 40, MonogramLetter,
                     Place.At(0f, LocalY(PartyLayout.ArtCentreY)))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.FunctionalHeading);
             button.Children.Add(letter);
             screen.SeatMonogramLetters.Add(letter);
 
             var label = Ui.Label(stem + "Label", SeatLabelFor(seatIndex),
-                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.SeatLabelHeight), 14, Body,
+                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.SeatLabelHeight), 24, Body,
                     Place.At(0f, LocalY(PartyLayout.SeatLabelCentreY)))
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
             button.Children.Add(label);
 
-            var badge = Ui.OutlineBox(stem + "Badge", Place.At(0f, LocalY(PartyLayout.BadgeCentreY)),
-                new UiVec(PartyLayout.ColumnWidth - 40f, PartyLayout.BadgeHeight), BadgeFill, BadgeRim,
-                new[]
-                {
-                    Ui.Label(stem + "BadgeText", UiString.Runtime,
-                            new UiVec(PartyLayout.ColumnWidth - 56f, PartyLayout.BadgeHeight), 13, GoldLight,
-                            Place.At(0f, 0f))
-                        .AsDecor()
-                        .Styled(TypographyRole.TacticalData),
-                });
-            badge.AsDecor().Inactive();
+            var badge = BuildBadge(screen, stem, LocalY(PartyLayout.BadgeCentreY));
             button.Children.Add(badge);
             screen.SeatBadges.Add(badge);
 
             var name = Ui.Label(stem + "Name", UiString.Runtime,
-                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.NameHeight), 17, NameText,
+                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.NameHeight), 22, NameText,
                     Place.At(0f, LocalY(PartyLayout.NameCentreY)))
                 .AsDecor()
                 .Styled(TypographyRole.Body);
@@ -411,12 +402,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.SeatNames.Add(name);
 
             var role = Ui.Label(stem + "Role", UiString.Runtime,
-                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.RoleHeight), 13, RoleText,
+                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.RoleHeight), 20, RoleText,
                     Place.At(0f, LocalY(PartyLayout.RoleCentreY)))
                 .AsDecor()
                 .Styled(TypographyRole.Body);
             button.Children.Add(role);
             screen.SeatRoles.Add(role);
+
+            button.Children.Add(BuildVitals(screen, stem, LocalY(PartyLayout.VitalsCentreY)));
 
             var ring = Ui.OutlineBox(stem + "Ring", Place.At(0f, 0f), size, null, RingGold);
             ring.AsDecor().Inactive();
@@ -424,7 +417,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.SeatRings.Add(ring);
 
             var scrimCaption = Ui.Label(stem + "ScrimCaption", UiString.Runtime,
-                    new UiVec(PartyLayout.ColumnWidth - 32f, 22f), 13, ScrimCaption,
+                    new UiVec(PartyLayout.ColumnWidth - 32f, 30f), 20, ScrimCaption,
                     Place.At(0f, LocalY(PartyLayout.RoleCentreY)))
                 .AsDecor()
                 .Styled(TypographyRole.Body);
@@ -440,6 +433,114 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
+        // THE FACTS THAT DECIDE PLACEMENT (plan C22): an HP bar with its
+        // numbers, and both defences. On Body, not TacticalData: that role's
+        // material tints numbers violet, and a number that reads as a link is
+        // wrong here (spec section 2).
+        private static UiNode BuildVitals(PartyScreen screen, string stem, float centreY)
+        {
+            float barW = PartyLayout.BarWidth;
+
+            var track = Ui.Solid(stem + "HpTrack", FightHudPalette.Track,
+                    new UiVec(barW, PartyLayout.BarHeight),
+                    Place.At(0f, PartyLayout.VitalsLocalY(PartyLayout.BarCentreY)))
+                .AsDecor();
+
+            // Grows from the track's left edge: a left pivot and a width, never
+            // anchors, which would be measured against the seat.
+            var fill = Ui.Solid(stem + "HpFill", FightHudPalette.HpBright,
+                    new UiVec(barW, PartyLayout.BarHeight),
+                    Place.At(-barW * 0.5f, PartyLayout.VitalsLocalY(PartyLayout.BarCentreY), new UiVec(0f, 0.5f)))
+                .AsDecor();
+            screen.SeatHpFills.Add(fill);
+
+            var hp = Ui.Label(stem + "Hp", UiStrings.PartySeatHp,
+                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.HpHeight), 24, TextPrimary,
+                    Place.At(0f, PartyLayout.VitalsLocalY(PartyLayout.HpCentreY)))
+                .AsDecor()
+                .Styled(TypographyRole.Body);
+            screen.SeatHpTexts.Add(hp);
+
+            var defences = Ui.Label(stem + "Defences", UiStrings.PartySeatDefences,
+                    new UiVec(PartyLayout.ColumnWidth - 16f, PartyLayout.DefHeight), 20, Body,
+                    Place.At(0f, PartyLayout.VitalsLocalY(PartyLayout.DefCentreY)))
+                .AsDecor()
+                .Styled(TypographyRole.Body);
+            screen.SeatDefTexts.Add(defences);
+
+            var vitals = Ui.Panel(stem + "Vitals", Place.At(0f, centreY),
+                UiSize.Fixed(PartyLayout.ColumnWidth - 16f, PartyLayout.VitalsHeight),
+                new[] { track, fill, hp, defences });
+            vitals.AsDecor();
+            screen.SeatVitals.Add(vitals);
+            return vitals;
+        }
+
+        // THE CARRY PREVIEW: a title ("Swap with Odette") over two columns, the
+        // carried character beside the one in the seat. Declared inactive like
+        // every state; the controller writes the words.
+        private static UiNode BuildBadge(PartyScreen screen, string stem, float centreY)
+        {
+            var title = Ui.Label(stem + "BadgeText", UiString.Runtime,
+                    new UiVec(PartyLayout.BadgeWidth - 16f, PartyLayout.BadgeTitleHeight), 22, GoldLight,
+                    Place.At(0f, PartyLayout.BadgeTitleCentreY))
+                .AsDecor()
+                .Styled(TypographyRole.Body);
+            screen.SeatBadgeTexts.Add(title);
+
+            var carried = BuildBadgeColumn(stem + "BadgeCarried", 0,
+                out var carriedName, out var carriedHp, out var carriedDef);
+            screen.SeatBadgeCarriedColumns.Add(carried);
+            screen.SeatBadgeCarriedNames.Add(carriedName);
+            screen.SeatBadgeCarriedHps.Add(carriedHp);
+            screen.SeatBadgeCarriedDefs.Add(carriedDef);
+
+            var seated = BuildBadgeColumn(stem + "BadgeSeated", 1,
+                out var seatedName, out var seatedHp, out var seatedDef);
+            screen.SeatBadgeSeatedColumns.Add(seated);
+            screen.SeatBadgeSeatedNames.Add(seatedName);
+            screen.SeatBadgeSeatedHps.Add(seatedHp);
+            screen.SeatBadgeSeatedDefs.Add(seatedDef);
+
+            var badge = Ui.OutlineBox(stem + "Badge", Place.At(0f, centreY),
+                new UiVec(PartyLayout.BadgeWidth, PartyLayout.BadgeHeight), BadgeFill, BadgeRim,
+                new[] { title, carried, seated });
+            badge.AsDecor().Inactive();
+            return badge;
+        }
+
+        // One column of the preview: name, HP, defences, three rows of the
+        // badge's own grid.
+        private static UiNode BuildBadgeColumn(string name, int column,
+                                               out NodeRef nameLabel, out NodeRef hpLabel, out NodeRef defLabel)
+        {
+            float w = PartyLayout.BadgeColumnWidth;
+
+            var nameNode = Ui.Label(name + "Name", UiString.Runtime,
+                    new UiVec(w, PartyLayout.BadgeNameHeight), 20, GoldLight,
+                    Place.At(0f, PartyLayout.BadgeNameCentreY))
+                .AsDecor()
+                .Styled(TypographyRole.Body);
+            var hpNode = Ui.Label(name + "Hp", UiStrings.PartySeatHp,
+                    new UiVec(w, PartyLayout.BadgeHpHeight), 24, TextPrimary,
+                    Place.At(0f, PartyLayout.BadgeHpCentreY))
+                .AsDecor()
+                .Styled(TypographyRole.Body);
+            var defNode = Ui.Label(name + "Defences", UiStrings.PartyBadgeDefences,
+                    new UiVec(w, PartyLayout.BadgeDefHeight), 20, Body,
+                    Place.At(0f, PartyLayout.BadgeDefCentreY))
+                .AsDecor()
+                .Styled(TypographyRole.Body);
+
+            nameLabel = nameNode;
+            hpLabel = hpNode;
+            defLabel = defNode;
+
+            return Ui.Panel(name, Place.At(PartyLayout.BadgeColumnCentreX(column), PartyLayout.BadgeColumnCentreY),
+                UiSize.Fixed(w, PartyLayout.BadgeColumnHeight),
+                new[] { nameNode, hpNode, defNode });
+        }
+
         private static UiString SeatLabelFor(int seatIndex)
         {
             switch (seatIndex)
@@ -450,30 +551,46 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
         }
 
-        // ---- Roster: heading + N cards ----------------------------------------------
+        // ---- Roster: hairline, heading, N cards -------------------------------------
+        //
+        // ONE SECTION NODE, so "shown only while someone is unseated or a seat
+        // is closed" is one switch. Its children are placed in its own frame.
 
-        private static IEnumerable<UiNode> BuildRoster(PartyScreen screen, int count)
+        private static UiNode BuildRosterSection(PartyScreen screen, int count)
         {
-            yield return Ui.Label("PartyRosterHeading", UiStrings.PartyRosterHeading,
-                    new UiVec(PartyLayout.RosterHeadingWidth, PartyLayout.RosterHeadingHeight), 18, Heading,
-                    Place.At(-PartyLayout.UsableWidth * 0.5f + PartyLayout.RosterHeadingWidth * 0.5f,
-                             PartyLayout.RosterHeadingCentreY))
-                .AsDecor()
-                .TextAligned(UiTextAlign.Left)
-                .Styled(TypographyRole.FunctionalHeading);
+            var children = new List<UiNode>
+            {
+                Ui.Solid("PartyHairline", CardRim,
+                        new UiVec(PartyLayout.UsableWidth, PartyLayout.HairlineHeight),
+                        Place.At(0f, PartyLayout.RosterLocalY(PartyLayout.HairlineCentreY)))
+                    .AsDecor(),
 
-            // BEFORE the cards, so it draws BEHIND them (uGUI draws later
-            // siblings on top) -- a card ends the drag on top of it, and the
-            // gap between cards ends the drag directly on it. Both count as
-            // a roster drop; PartyController.EndDrag treats landing on a
-            // card the same as landing on this zone, so this node only has
-            // to cover the gaps, not steal the cards' own raycasts.
-            yield return BuildRosterDropZone(screen, count);
+                Ui.Label("PartyRosterHeading", UiStrings.PartyRosterHeading,
+                        new UiVec(PartyLayout.RosterHeadingWidth, PartyLayout.RosterHeadingHeight), 24, Heading,
+                        Place.At(-PartyLayout.UsableWidth * 0.5f + PartyLayout.RosterHeadingWidth * 0.5f,
+                                 PartyLayout.RosterLocalY(PartyLayout.RosterHeadingCentreY)))
+                    .AsDecor()
+                    .TextAligned(UiTextAlign.Left)
+                    .Styled(TypographyRole.FunctionalHeading),
+
+                // BEFORE the cards, so it draws BEHIND them (uGUI draws later
+                // siblings on top) -- a card ends the drag on top of it, and the
+                // gap between cards ends the drag directly on it. Both count as
+                // a roster drop; PartyController.EndDrag treats landing on a
+                // card the same as landing on this zone, so this node only has
+                // to cover the gaps, not steal the cards' own raycasts.
+                BuildRosterDropZone(screen, count),
+            };
 
             for (int i = 0; i < count; i++)
             {
-                yield return BuildCard(screen, i, count);
+                children.Add(BuildCard(screen, i, count));
             }
+
+            var section = Ui.Panel("PartyRosterSection", Place.At(0f, PartyLayout.RosterSectionCentreY),
+                UiSize.Fixed(PartyLayout.UsableWidth, PartyLayout.RosterSectionHeight), children);
+            screen.RosterSection = section;
+            return section;
         }
 
         private static UiNode BuildRosterDropZone(PartyScreen screen, int count)
@@ -481,7 +598,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var size = new UiVec(PartyLayout.RosterRowWidth(count), PartyLayout.RosterDropZoneHeight);
 
             var zone = Ui.Solid("PartyRosterDropZone", "#00000000", size,
-                Place.At(0f, PartyLayout.RosterRowCentreY));
+                Place.At(0f, PartyLayout.RosterLocalY(PartyLayout.RosterRowCentreY)));
 
             // NOT AsDecor -- decor forces raycastTarget off (UiEmitter), and
             // being a real raycast target is this node's entire job. It
@@ -498,11 +615,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var size = new UiVec(PartyLayout.CardWidth, PartyLayout.CardHeight);
             float x = PartyLayout.CardCentreX(index, count);
-            float y = PartyLayout.RosterRowCentreY;
+            float y = PartyLayout.RosterLocalY(PartyLayout.RosterRowCentreY);
             string stem = $"PartyCard{index}";
+            float lineWidth = PartyLayout.CardWidth - 8f;
 
-            var button = Ui.Button(stem + "Button", UiString.Runtime, size, 15, Place.At(x, y))
-                .NoChrome();
+            var button = Ui.Button(stem + "Button", UiString.Runtime, size, 20, Place.At(x, y))
+                .NoChrome()
+                .Styled(TypographyRole.Body);
 
             var wash = Ui.Solid(stem + "Wash", DimWash, size, Place.At(0f, 0f)).AsDecor().Inactive();
             button.Children.Add(wash);
@@ -524,9 +643,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.CardMonogramPlates.Add(plate);
 
             var letter = Ui.Label(stem + "MonogramLetter", UiString.Runtime,
-                    new UiVec(monogramSize, monogramSize), 22, MonogramLetter,
+                    new UiVec(monogramSize, monogramSize), 30, MonogramLetter,
                     Place.At(0f, PartyLayout.CardArtCentreY))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.FunctionalHeading);
             button.Children.Add(letter);
             screen.CardMonogramLetters.Add(letter);
 
@@ -543,7 +663,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.CardPortraitFrames.Add(portraitFrame);
 
             var name = Ui.Label(stem + "Name", UiString.Runtime,
-                    new UiVec(PartyLayout.CardWidth - 12f, PartyLayout.CardNameHeight), 14, NameText,
+                    new UiVec(lineWidth, PartyLayout.CardNameHeight), 20, NameText,
                     Place.At(0f, PartyLayout.CardNameCentreY))
                 .AsDecor()
                 .Styled(TypographyRole.Body);
@@ -554,7 +674,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // Hidden outright for a character with no collected Title -- which
             // is every character below level 31, so for most of a career this
-            // row is 14px of air under the name. A disabled control there would
+            // row is a line of air under the name. A disabled control there would
             // advertise a feature the player has no way to reach yet.
             //
             // A BUTTON RATHER THAN A LABEL even when only one title is
@@ -562,15 +682,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // is nothing to cycle to) rather than the tree emitting two
             // different things depending on how far a save has got.
             var title = Ui.Button(stem + "Title", UiString.Runtime,
-                    new UiVec(PartyLayout.CardWidth - 12f, PartyLayout.CardTitleHeight), 11,
+                    new UiVec(lineWidth, PartyLayout.CardTitleHeight), 20,
                     Place.At(0f, PartyLayout.CardTitleCentreY))
                 .NoChrome()
+                .Styled(TypographyRole.Body)
                 .Inactive();
             button.Children.Add(title);
             screen.CardTitles.Add(title);
 
             var role = Ui.Label(stem + "Role", UiString.Runtime,
-                    new UiVec(PartyLayout.CardWidth - 12f, PartyLayout.CardRoleHeight), 11, RoleText,
+                    new UiVec(lineWidth, PartyLayout.CardRoleHeight), 20, RoleText,
                     Place.At(0f, PartyLayout.CardRoleCentreY))
                 .AsDecor()
                 .Styled(TypographyRole.Body);
@@ -578,19 +699,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.CardRoles.Add(role);
 
             var tag = Ui.Label(stem + "Tag", UiString.Runtime,
-                    new UiVec(PartyLayout.CardWidth - 12f, PartyLayout.CardTagHeight), 11, GoldLight,
+                    new UiVec(lineWidth, PartyLayout.CardTagHeight), 20, GoldLight,
                     Place.At(0f, PartyLayout.CardTagCentreY))
                 .AsDecor()
                 .Styled(TypographyRole.Body);
             button.Children.Add(tag);
             screen.CardTags.Add(tag);
 
+            // Over the art's top edge: its words are caps, so 24.
             var selectedTag = Ui.OutlineBox(stem + "SelectedTag",
-                Place.At(0f, size.Y * 0.5f - 12f), new UiVec(72f, 18f), BadgeFill, BadgeRim,
+                Place.At(0f, size.Y * 0.5f - 22f), new UiVec(150f, 36f), BadgeFill, BadgeRim,
                 new[]
                 {
                     Ui.Label(stem + "SelectedTagText", UiStrings.PartySelectedTag,
-                            new UiVec(64f, 16f), 10, GoldLight, Place.At(0f, 0f))
+                            new UiVec(142f, 32f), 24, GoldLight, Place.At(0f, 0f))
                         .AsDecor()
                         .Styled(TypographyRole.TacticalData),
                 });
@@ -635,7 +757,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var letter = Ui.Label("PartyDragGhostMonogramLetter", UiString.Runtime,
                     new UiVec(monogramSize, monogramSize), 40, MonogramLetter, Place.At(0f, 0f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.FunctionalHeading);
             screen.DragGhostMonogramLetter = letter;
 
             var ghost = Ui.Panel("PartyDragGhost", Place.At(0f, 0f), UiSize.Fixed(w, h),

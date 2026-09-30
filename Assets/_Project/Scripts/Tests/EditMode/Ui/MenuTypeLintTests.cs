@@ -8,7 +8,8 @@ using PrincesPalace.Domain.UiKit.Screens;
 namespace PrincesPalace.Domain.Tests
 {
     // THE MENU TYPE FLOOR (plan C14, spec section 1), as a lint over the solved
-    // trees of the screens that have been migrated to it.
+    // tree of the whole system menu and the rows outside it that share its
+    // presenter.
     //
     // Every label and button carries a Typography role and draws at or over the
     // floor: mixed case 20, all caps 24. The walk visits EVERY node whatever
@@ -16,10 +17,10 @@ namespace PrincesPalace.Domain.Tests
     // readable headings and values carry it. The one exemption is
     // UiNode.AllowSmallText, which needs a reason.
     //
-    // THE SCOPE IS A LIST, and it is the only thing a later phase edits: a pane
-    // joins Scoped when its own phase migrates it, and the last phase deletes
-    // the list. Panes still on literal sizes are not on it yet -- and each
-    // scoped screen names the subtrees the lint leaves to those phases.
+    // THE SCOPE IS THE SYSTEM MENU TREE ITSELF -- frame and every pane -- so a
+    // pane added tomorrow is held to the floor without anyone remembering to
+    // list it. The rows that live in other screens are named by the prefix of
+    // the nodes they own.
     public class MenuTypeLintTests
     {
         private readonly struct Scope
@@ -27,54 +28,42 @@ namespace PrincesPalace.Domain.Tests
             public readonly string Name;
             public readonly Func<UiNode> Build;
 
-            // Subtrees left to the phase that migrates them, by root node name.
-            public readonly string[] SkippedSubtrees;
-
             // When set, only nodes whose name starts with it are checked: a
             // screen outside the menu joins the list by the rows it touched,
             // not wholesale.
             public readonly string OnlyNamePrefix;
 
             // Fewer than this checked means the walk found nothing, or the
-            // part lost its labels.
+            // screen lost its labels.
             public readonly int MinimumNodes;
 
-            public Scope(string name, Func<UiNode> build, int minimumNodes, string onlyNamePrefix,
-                         params string[] skipped)
+            public Scope(string name, Func<UiNode> build, int minimumNodes, string onlyNamePrefix)
             {
                 Name = name;
                 Build = build;
                 MinimumNodes = minimumNodes;
                 OnlyNamePrefix = onlyNamePrefix;
-                SkippedSubtrees = skipped;
             }
         }
 
-        // The frame -- lintel, bar, footer -- of the system menu, and the panes
-        // migrated so far: CHARACTER (the reward track with it), RUN and
-        // GLOSSARY. The other panes are their phases' to add. Then
-        // the rows outside the menu that share its presenter: the Reckoning's
-        // relic tab and the relic draft's held strip.
-        //
-        // The frame authors the tab buttons, the lintel's title, context,
-        // pill, gold, embers, Esc and close, and the footer's notice and its
-        // prompt slots of two labels each, so 20 is what it cannot fall under.
         private static readonly Scope[] Scoped =
         {
-            new Scope("system menu frame, CHARACTER, RUN and GLOSSARY panes", () => SystemMenuScreen.Build().Root, 400, null,
-                "SystemPaneParty", "SystemPaneOptions", "SystemPaneExit"),
+            new Scope("system menu: frame and every pane", () => SystemMenuScreen.Build().Root, MenuMinimumNodes, null),
             new Scope("reckoning relics tab", () => ReckoningScreen.Build().Root, 15, "ReckoningRelic"),
             new Scope("relic draft held strip", () => RelicDraftScreen.Build().Root, 9, "DraftHeld"),
+            new Scope("map attention hint", () => MapScreen.Build().Root, 1, "MapAttention"),
         };
 
-        private static IEnumerable<SolvedNode> Walk(SolvedNode node, string[] skipped)
-        {
-            if (skipped.Contains(node.Name)) yield break;
+        // What the whole menu checks today is 627 labels and buttons; a walk
+        // that finds well under that has stopped seeing a pane (the per-pane test below names which).
+        private const int MenuMinimumNodes = 500;
 
+        private static IEnumerable<SolvedNode> Walk(SolvedNode node)
+        {
             yield return node;
             foreach (var child in node.Children)
             {
-                foreach (var found in Walk(child, skipped))
+                foreach (var found in Walk(child))
                 {
                     yield return found;
                 }
@@ -83,14 +72,13 @@ namespace PrincesPalace.Domain.Tests
 
         // Every problem in a tree, as "path: what is wrong", and how many
         // labels and buttons it looked at.
-        private static List<string> Problems(UiNode root, string[] skipped, out int checkedCount,
-                                             string onlyNamePrefix = null)
+        private static List<string> Problems(UiNode root, out int checkedCount, string onlyNamePrefix = null)
         {
             var solved = UiSolver.Solve(root, UiFrames.Reference);
             var problems = new List<string>();
             checkedCount = 0;
 
-            foreach (var node in Walk(solved, skipped))
+            foreach (var node in Walk(solved))
             {
                 if (node.Source.Kind != UiNodeKind.Label && node.Source.Kind != UiNodeKind.Button) continue;
                 if (onlyNamePrefix != null && !node.Name.StartsWith(onlyNamePrefix, StringComparison.Ordinal)) continue;
@@ -108,7 +96,7 @@ namespace PrincesPalace.Domain.Tests
         {
             foreach (var scope in Scoped)
             {
-                var problems = Problems(scope.Build(), scope.SkippedSubtrees, out int count, scope.OnlyNamePrefix);
+                var problems = Problems(scope.Build(), out int count, scope.OnlyNamePrefix);
 
                 Assert.GreaterOrEqual(count, scope.MinimumNodes,
                     $"'{scope.Name}': only {count} labels and buttons were checked, so the walk is not " +
@@ -125,23 +113,30 @@ namespace PrincesPalace.Domain.Tests
         {
             var solved = UiSolver.Solve(SystemMenuScreen.Build().Root, UiFrames.Reference);
 
-            var decorLabels = Walk(solved, new[] { "SystemMenuContent" })
+            var decorLabels = Walk(solved)
                 .Where(n => n.Source.Kind == UiNodeKind.Label && n.Source.Decor)
                 .ToList();
 
-            Assert.Greater(decorLabels.Count, 10,
-                "the frame's readable text is decor, and the lint must be covering it");
+            Assert.Greater(decorLabels.Count, 100,
+                "the menu's readable text is decor, and the lint must be covering it");
         }
 
-        [Test]
-        public void ThePaneSubtreesAreLeftToTheirOwnPhases()
+        // Every pane is inside the walk: one label from each pane's own tree.
+        [TestCase("SystemPaneCharacter")]
+        [TestCase("SystemPaneParty")]
+        [TestCase("SystemPaneRun")]
+        [TestCase("SystemPaneGlossary")]
+        [TestCase("SystemPaneOptions")]
+        [TestCase("SystemPaneExit")]
+        public void EveryPaneIsInsideTheWalk(string pane)
         {
             var solved = UiSolver.Solve(SystemMenuScreen.Build().Root, UiFrames.Reference);
 
-            Assert.IsTrue(solved.Descendants().Any(n => n.Name == "SystemMenuContent"),
-                "fixture: the frame has no content host to skip");
-            Assert.IsFalse(Walk(solved, new[] { "SystemMenuContent" }).Any(n => n.Name == "SystemMenuContent"),
-                "the skipped subtree was walked");
+            var host = Walk(solved).FirstOrDefault(n => n.Name == pane);
+            Assert.IsNotNull(host, $"the menu tree has no '{pane}'");
+
+            int labels = Walk(host).Count(n => n.Source.Kind == UiNodeKind.Label || n.Source.Kind == UiNodeKind.Button);
+            Assert.Greater(labels, 5, $"'{pane}' has no labels for the lint to look at");
         }
 
         // ---- the lint can fail ------------------------------------------------------
@@ -155,7 +150,7 @@ namespace PrincesPalace.Domain.Tests
             var tree = Tree(Ui.Label("Tiny", UiStrings.PromptSelect, new UiVec(200f, 30f), 14, null, Place.At(0f, 0f))
                 .Styled(TypographyRole.Body));
 
-            var problems = Problems(tree, Array.Empty<string>(), out int count);
+            var problems = Problems(tree, out int count);
 
             Assert.AreEqual(1, count);
             Assert.AreEqual(1, problems.Count, string.Join("\n", problems));
@@ -168,7 +163,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var tree = Tree(Ui.Label("Bare", UiStrings.PromptSelect, new UiVec(200f, 30f), 40, null, Place.At(0f, 0f)));
 
-            var problems = Problems(tree, Array.Empty<string>(), out _);
+            var problems = Problems(tree, out _);
 
             Assert.AreEqual(1, problems.Count, "a big literal is still not held to the floor without a role");
             StringAssert.Contains("no Typography role", problems[0]);

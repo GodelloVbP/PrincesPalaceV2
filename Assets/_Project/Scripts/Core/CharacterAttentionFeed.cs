@@ -26,13 +26,13 @@ namespace PrincesPalace
                 run?.unassignedSpellBooks?.Count ?? 0);
         }
 
-        // How many characters want looking at, over the whole roster: the
-        // strip pips the same set, so the map's number is the number of pips.
-        public static int CountLit(SaveData save, RunSnapshot run)
+        // What waits over the whole roster: the map's hint names these, from
+        // the same facts the strip pips, so it never names what no pip shows.
+        public static AttentionReasons ReasonsFor(SaveData save, RunSnapshot run)
         {
-            if (save?.roster == null) return 0;
+            if (save?.roster == null) return AttentionReasons.None;
 
-            return CharacterAttention.CountLit(save.roster.Where(c => c != null).Select(c => For(c, run)));
+            return CharacterAttention.ReasonsFor(save.roster.Where(c => c != null).Select(c => For(c, run)));
         }
 
         private static int EmptyBookSlots(RunSnapshot run, string characterId)

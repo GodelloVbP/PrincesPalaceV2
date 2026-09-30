@@ -95,6 +95,11 @@ namespace PrincesPalace.Domain.Party
             }
         }
 
+        // Whether the roster is worth showing (plan C22): a character sits out,
+        // or a seat is closed. With everyone seated the seats are the whole
+        // story and the roster only repeats them.
+        public bool RosterVisible => FilledCount < _roster.Count || MaxSeats < PartySeat.Count;
+
         // A copy, not the live array -- callers get IReadOnlyList<string> in
         // the signature but a cast back to string[] must not be able to
         // mutate seating out from under the commands that are supposed to

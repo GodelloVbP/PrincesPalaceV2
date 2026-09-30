@@ -122,7 +122,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var blockChildren = new List<UiNode>();
 
-            var button = Ui.Button($"Exit{key}", label, size, 17, Place.At(0f, buttonY))
+            var button = Ui.Button($"Exit{key}", label, size, 28, Place.At(0f, buttonY))
                 .Themed(ButtonTheme.Silver);
 
             // A WASH, not a scale: scaling the button would grow its label
@@ -143,9 +143,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             blockChildren.Add(hover);
 
             blockChildren.Add(Ui.Label($"Exit{key}Note", note,
-                    new UiVec(ExitsLayout.ExitWidth, ExitsLayout.NoteHeight), 13, TextMuted,
+                    new UiVec(ExitsLayout.ExitWidth, ExitsLayout.NoteHeight), 20, TextMuted,
                     Place.At(0f, ExitsLayout.ExitNoteCentreY))
-                .AsDecor());
+                .AsDecor()
+                .Styled(TypographyRole.Body));
 
             var block = Ui.Panel($"Exit{key}Block",
                 Place.At(0f, ExitsLayout.ExitBlockCentreY(index, withAbandon: true)),
@@ -170,14 +171,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             cardChildren.AddRange(Ui.Rim("ExitAbandonCard", new UiVec(w, h), RedRim));
 
             cardChildren.Add(Ui.Label("ExitAbandonHeading", UiStrings.ExitAbandonHeading,
-                    new UiVec(w - 40f, ExitsLayout.AbandonHeadingHeight), 16, RedText,
+                    new UiVec(w - 40f, ExitsLayout.AbandonHeadingHeight), 24, RedText,
                     Place.At(0f, ExitsLayout.AbandonHeadingCentreY))
-                .AsDecor());
+                .AsDecor()
+                .Styled(TypographyRole.FunctionalHeading));
 
             cardChildren.Add(Ui.Label("ExitAbandonNote", UiStrings.ExitAbandonNote,
-                    new UiVec(w - 40f, ExitsLayout.AbandonNoteHeight), 13, TextMuted,
+                    new UiVec(w - 40f, ExitsLayout.AbandonNoteHeight), 20, TextMuted,
                     Place.At(0f, ExitsLayout.AbandonNoteCentreY))
-                .AsDecor());
+                .AsDecor()
+                .Styled(TypographyRole.Body));
 
             var holdSize = new UiVec(ExitsLayout.HoldWidth, ExitsLayout.HoldHeight);
 
@@ -229,12 +232,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // states), styled ButtonLabel like every other themed caption,
             // and added AFTER holdFillClip so it draws above the hold fill --
             // UiEmitter's child order is draw order.
-            var hold = Ui.Button("ExitAbandonHold", UiString.Runtime, holdSize, 16,
+            var hold = Ui.Button("ExitAbandonHold", UiString.Runtime, holdSize, 28,
                     Place.At(0f, ExitsLayout.HoldCentreY))
                 .Quiet()
                 .ThemedPlate(ButtonTheme.Crimson);
             hold.Children.Add(holdFillClip);
-            var holdCaption = Ui.Label("ExitAbandonHoldCaption", UiStrings.ExitAbandonHold, holdSize, 16,
+            var holdCaption = Ui.Label("ExitAbandonHoldCaption", UiStrings.ExitAbandonHold, holdSize, 28,
                     place: Place.At(0f, 0f))
                 .Styled(TypographyRole.ButtonLabel);
             hold.Children.Add(holdCaption);

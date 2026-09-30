@@ -62,18 +62,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-380f, OptionsLayout.ColumnCentreX(0), 0.01f);
             Assert.AreEqual(280f, OptionsLayout.RestoreWidth, 0.01f);
             Assert.AreEqual(56f, OptionsLayout.RestoreHeight, 0.01f);
-            // Note: centre (380, -312.22), 520 x 18 -> x [120, 640], y [-321.22, -303.22].
+            // Note: centre (380, -312.22), 640 x 27 (one Body 20 line) -> x [60, 700], y [-325.72, -298.72].
             Assert.AreEqual(380f, OptionsLayout.ColumnCentreX(1), 0.01f);
-            Assert.AreEqual(520f, OptionsLayout.NoteWidth, 0.01f);
-            Assert.AreEqual(18f, OptionsLayout.NoteHeight, 0.01f);
+            Assert.AreEqual(640f, OptionsLayout.NoteWidth, 0.01f);
+            Assert.AreEqual(27f, OptionsLayout.NoteHeight, 0.01f);
 
             float restoreRight = -380f + 140f;
-            float noteLeft = 380f - 260f;
+            float noteLeft = 380f - 320f;
             Assert.Less(restoreRight, noteLeft, "the note's rect intersects the Restore button's");
 
             // Both stay above the pane floor (-353.78) and inside the column's right edge.
             Assert.GreaterOrEqual(restoreY - 28f, OptionsLayout.ContentBottom);
-            Assert.LessOrEqual(380f + 260f, OptionsLayout.HalfWidth);
+            Assert.LessOrEqual(380f + 320f, OptionsLayout.HalfWidth);
         }
 
         // And their contents reach the floor rather than stopping in the middle

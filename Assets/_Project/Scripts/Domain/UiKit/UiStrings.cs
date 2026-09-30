@@ -307,11 +307,18 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapGold =
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
         public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
-        // The map's hint that somebody wants looking at (plan C20): how many characters carry a pip in
-        // the CHARACTER tab. It counts characters, not books, because a point or a reward is owed
-        // just as much as a book is.
+        // The map's hint that somebody wants looking at (plan C20): what waits,
+        // from CharacterAttention, and the key that opens the menu on it. Only
+        // the reasons that hold are named, so the sample is all three.
+        public static readonly UiString MapAttentionPoints =
+            UiString.Define("map.attention.points", "Points to spend");
+        public static readonly UiString MapAttentionRewards =
+            UiString.Define("map.attention.rewards", "Rewards waiting");
+        public static readonly UiString MapAttentionBooks =
+            UiString.Define("map.attention.books", "Books to place");
         public static readonly UiString MapAttention =
-            UiString.Define("map.attention", "ATTENTION NEEDED: {0}", "ATTENTION NEEDED: 99");
+            UiString.Define("map.attention", "{0} — press {1}",
+                "Points to spend · Rewards waiting · Books to place — press Start");
         // The hint at the fog, past the last generated column. A leg is rolled
         // whole and nothing exists beyond it until the party reaches the
         // boundary, so this is an honest "there is more" rather than a false
@@ -1555,26 +1562,26 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PartyCancel = UiString.Define("party.cancel", "Cancel");
         public static readonly UiString PartySendToBench = UiString.Define("party.send_to_bench", "Send to bench");
 
-        // Three modes, not two -- Camp (hub, swap freely), Run (map, reposition
-        // only) and ViewOnly (fight, the live encounter owns the order so this
-        // pane changes nothing and is not one of these three pill states; a
-        // fight never opens this pane in a way that needs its own copy here).
-        public static readonly UiString PartyStatusCamp =
-            UiString.Define("party.status.camp", "AT CAMP — Swap freely.");
-        public static readonly UiString PartyStatusRun =
-            UiString.Define("party.status.run", "IN A RUN — Reposition only.");
-        public static readonly UiString PartyStatusFight =
-            UiString.Define("party.status.fight", "IN A FIGHT — Formation fixed.");
-
         public static readonly UiString PartyFormationHeading =
             UiString.Define("party.formation.heading", "FORMATION");
         public static readonly UiString PartyFormationSubtitle =
             UiString.Define("party.formation.subtitle",
-                "The front rank takes the enemies' blows. Some skills reach only from the rank they name.");
+                "The front rank takes the enemies' blows. Melee skills can strike only the enemy front rank.");
         public static readonly UiString PartyFilledCount =
             UiString.Define("party.formation.filled_count", "{0}/3 positions filled", "3/3 positions filled");
         public static readonly UiString PartyFacingRibbon =
             UiString.Define("party.formation.facing_ribbon", "FACING THE ENEMY ->");
+
+        // The facts that decide placement (plan C22), on a seat and in the carry
+        // preview. HP is current over maximum from the context's own source
+        // (PartyMemberFacts); the badge's defences are shorter because its
+        // columns are half a seat wide.
+        public static readonly UiString PartySeatHp =
+            UiString.Define("party.seat.hp", "HP {0} / {1}", "HP 9999 / 9999");
+        public static readonly UiString PartySeatDefences =
+            UiString.Define("party.seat.defences", "Phys def {0} · Mag def {1}", "Phys def 999 · Mag def 999");
+        public static readonly UiString PartyBadgeDefences =
+            UiString.Define("party.badge.defences", "Phys {0} · Mag {1}", "Phys 999 · Mag 999");
 
         public static readonly UiString PartySeatFront = UiString.Define("party.seat.front", "FRONT");
         public static readonly UiString PartySeatMiddle = UiString.Define("party.seat.middle", "MIDDLE");
@@ -1589,7 +1596,7 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString PartyRosterHeading = UiString.Define("party.roster.heading", "ROSTER");
         public static readonly UiString PartyCardTagInParty =
-            UiString.Define("party.card.tag_in_party", "In party · {0}", "In party · Bjorn");
+            UiString.Define("party.card.tag_in_party", "In party · {0}", "In party · MIDDLE");
         public static readonly UiString PartyCardTagArtPending =
             UiString.Define("party.card.tag_art_pending", "Art pending");
         public static readonly UiString PartyCardTagChoosePath =

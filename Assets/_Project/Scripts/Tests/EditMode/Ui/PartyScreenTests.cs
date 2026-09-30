@@ -82,6 +82,190 @@ namespace PrincesPalace.Domain.Tests
                 "the rightmost seat, nearest the ribbon, should read FRONT");
         }
 
+        // ---- the header: the real Reach rule, no status pill (C21, C22) ------------------
+
+        [Test]
+        public void TheSubtitleStatesTheRealReachRule()
+        {
+            Assert.AreEqual(
+                "The front rank takes the enemies' blows. Melee skills can strike only the enemy front rank.",
+                UiStrings.PartyFormationSubtitle.Format());
+
+            var solved = UiSolver.Solve(PartyScreen.Build(new PartyInputs(3)).Root, UiFrames.Reference);
+            var subtitle = Find(solved, "PartyFormationSubtitle");
+            Assert.IsNotNull(subtitle, "the pane has no subtitle");
+            Assert.AreEqual(UiStrings.PartyFormationSubtitle.Key, subtitle.Source.Text.Key);
+        }
+
+        // The lintel's mode pill states the mode, and a refusal goes to the
+        // menu's notice: the pane keeps neither.
+        [Test]
+        public void ThePaneHasNoStatusPillOfItsOwn()
+        {
+            var solved = UiSolver.Solve(PartyScreen.Build(new PartyInputs(3)).Root, UiFrames.Reference);
+
+            Assert.IsNull(Find(solved, "PartyStatusPill"));
+            Assert.IsNull(Find(solved, "PartyStatusText"));
+            Assert.IsNull(Find(solved, "PartyStatusDot"));
+        }
+
+        // ---- the facts that decide placement (C22) ----------------------------------------
+
+        [Test]
+        public void EverySeatCarriesItsHealthBarItsHpLineAndItsDefenceLine()
+        {
+            var screen = PartyScreen.Build(new PartyInputs(3));
+
+            AssertLength(PartyLayout.SeatCount, screen.SeatVitals, nameof(screen.SeatVitals));
+            AssertLength(PartyLayout.SeatCount, screen.SeatHpFills, nameof(screen.SeatHpFills));
+            AssertLength(PartyLayout.SeatCount, screen.SeatHpTexts, nameof(screen.SeatHpTexts));
+            AssertLength(PartyLayout.SeatCount, screen.SeatDefTexts, nameof(screen.SeatDefTexts));
+
+            Assert.AreEqual(UiStrings.PartySeatHp.Key, screen.SeatHpTexts[0].Node.Text.Key);
+            Assert.AreEqual(UiStrings.PartySeatDefences.Key, screen.SeatDefTexts[0].Node.Text.Key);
+            Assert.AreEqual("HP {0} / {1}", UiStrings.PartySeatHp.Template);
+            Assert.AreEqual("Phys def {0} · Mag def {1}", UiStrings.PartySeatDefences.Template);
+        }
+
+        // Grows by width from the track's left edge, so it is pivoted there.
+        [Test]
+        public void TheHealthFillGrowsFromTheTracksLeftEdge()
+        {
+            var solved = UiSolver.Solve(PartyScreen.Build(new PartyInputs(3)).Root, UiFrames.Reference);
+
+            var track = Find(solved, "PartySeat0HpTrack");
+            var fill = Find(solved, "PartySeat0HpFill");
+
+            Assert.AreEqual(track.Rect.Left, fill.Rect.Left, 0.01f);
+            Assert.AreEqual(track.Rect.Width, fill.Rect.Width, 0.01f);
+            Assert.AreEqual(412f, PartyLayout.BarWidth, 0.01f, "a seat is 492 wide and the bar keeps 40 px each side");
+        }
+
+        [Test]
+        public void TheCarryPreviewHasATitleAndTwoColumnsOfThreeLinesPerSeat()
+        {
+            var screen = PartyScreen.Build(new PartyInputs(3));
+
+            foreach (var list in new[]
+            {
+                screen.SeatBadgeTexts, screen.SeatBadgeCarriedColumns, screen.SeatBadgeCarriedNames,
+                screen.SeatBadgeCarriedHps, screen.SeatBadgeCarriedDefs, screen.SeatBadgeSeatedColumns,
+                screen.SeatBadgeSeatedNames, screen.SeatBadgeSeatedHps, screen.SeatBadgeSeatedDefs,
+            })
+            {
+                AssertLength(PartyLayout.SeatCount, list, "a carry preview list");
+            }
+
+            var solved = UiSolver.Solve(screen.Root, UiFrames.Reference);
+            var carried = Find(solved, "PartySeat0BadgeCarried");
+            var seated = Find(solved, "PartySeat0BadgeSeated");
+            Assert.Less(carried.Rect.Right, seated.Rect.Left, "the two columns overlap: they sit side by side");
+            Assert.AreEqual(carried.Rect.Centre.Y, seated.Rect.Centre.Y, 0.01f);
+
+            Assert.AreEqual(130f, PartyLayout.BadgeHeight, 0.01f);
+            Assert.AreEqual(468f, PartyLayout.BadgeWidth, 0.01f);
+        }
+
+        // ---- the roster is one node, and it fits under Formation --------------------------
+
+        [Test]
+        public void TheRosterIsOneSectionHoldingItsHairlineHeadingAndCards()
+        {
+            var screen = PartyScreen.Build(new PartyInputs(3));
+
+            Assert.IsTrue(screen.RosterSection.IsValid, "no roster section node was declared");
+            Assert.IsFalse(screen.RosterSection.Node.StartInactive,
+                "the section starts shown: the controller decides whether the roster is worth its space");
+
+            var section = screen.RosterSection.Node;
+            var names = new HashSet<string>();
+            void Collect(UiNode node)
+            {
+                names.Add(node.Name);
+                if (node.Children == null) return;
+                foreach (var child in node.Children) Collect(child);
+            }
+
+            Collect(section);
+
+            foreach (var expected in new[] { "PartyHairline", "PartyRosterHeading", "PartyRosterDropZone",
+                                             "PartyCard0Button", "PartyCard2Button" })
+            {
+                Assert.IsTrue(names.Contains(expected), $"'{expected}' is not inside the roster section");
+            }
+
+            Assert.IsFalse(names.Contains("PartySeat0Button"), "a seat is inside the roster section");
+        }
+
+        [TestCase(1)]
+        [TestCase(3)]
+        public void TheRosterRowStaysInsideThePaneUnderTheSeats(int rosterCount)
+        {
+            var solved = UiSolver.Solve(PartyScreen.Build(new PartyInputs(rosterCount)).Root, UiFrames.Reference);
+
+            var seats = Find(solved, "PartyFormationPanel");
+            var section = Find(solved, "PartyRosterSection");
+
+            Assert.Less(section.Rect.Top, seats.Rect.Bottom + 0.01f, "the roster starts above the seats' foot");
+            Assert.GreaterOrEqual(PartyLayout.RosterSectionBottom, PartyLayout.ContentBottom,
+                "the roster's cards run off the pane's floor");
+            Assert.AreEqual(194f, PartyLayout.CardHeight, 0.01f);
+            Assert.AreEqual(176f, PartyLayout.CardWidth, 0.01f);
+            Assert.AreEqual(7, PartyLayout.MaxRosterCards(), "176 px cards and a 12 px gap in 1480 px");
+        }
+
+        // ---- the type floor: every line boxed for its own font (C14) ----------------------
+
+        // A label whose box is shorter than one line of its own font draws
+        // nothing in TMP: a Body 20 line is 26.5 px measured, 1.33 of the size.
+        [Test]
+        public void EveryLabelAndButtonIsBoxedForAtLeastOneLineOfItsFont()
+        {
+            var tooShort = new List<string>();
+
+            void Walk(UiNode node)
+            {
+                if ((node.Kind == UiNodeKind.Label || node.Kind == UiNodeKind.Button) && node.Theme == null
+                    && node.FontSize > 0 && node.Size.Y < node.FontSize * 1.33f - 0.01f)
+                {
+                    tooShort.Add($"{node.Name} ({node.Size.Y} < {node.FontSize * 1.33f})");
+                }
+
+                if (node.Children == null) return;
+                foreach (var child in node.Children) Walk(child);
+            }
+
+            Walk(PartyScreen.Build(new PartyInputs(3)).Root);
+
+            Assert.IsEmpty(tooShort, "boxed below one line, so TMP draws nothing: " + string.Join(", ", tooShort));
+        }
+
+        // The pane's own text, pinned by literal: what a seat reads at.
+        [Test]
+        public void ASeatsLinesAreOnTheRolesAndSizesTheSpecNames()
+        {
+            var solved = UiSolver.Solve(PartyScreen.Build(new PartyInputs(3)).Root, UiFrames.Reference);
+
+            void Expect(string name, TypographyRole role, int size)
+            {
+                var node = Find(solved, name)?.Source;
+                Assert.IsNotNull(node, $"no node '{name}'");
+                Assert.AreEqual(role, node.Role, name);
+                Assert.AreEqual(size, node.FontSize, name);
+            }
+
+            Expect("PartySeat0Name", TypographyRole.Body, 22);
+            Expect("PartySeat0Role", TypographyRole.Body, 20);
+            Expect("PartySeat0Hp", TypographyRole.Body, 24);
+            Expect("PartySeat0Defences", TypographyRole.Body, 20);
+            Expect("PartySeat0Label", TypographyRole.TacticalData, 24);
+            Expect("PartySeat0BadgeText", TypographyRole.Body, 22);
+            Expect("PartyCard0Name", TypographyRole.Body, 20);
+            Expect("PartyCard0Tag", TypographyRole.Body, 20);
+            Expect("PartyFormationSubtitle", TypographyRole.Body, 20);
+            Expect("PartyFormationHeading", TypographyRole.FunctionalHeading, 24);
+        }
+
         // ---- the shared bottom lines -------------------------------------------------
 
         [Test]

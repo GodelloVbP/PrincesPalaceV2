@@ -87,10 +87,12 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // A descent: the map, exactly Shawn, Odette and Bjorn on the roster
-        // (so a count over the roster is a count over three), one book in the
-        // pack and none placed.
+        // (so what the hint names is what three characters hold), one book in
+        // the pack and none placed. The pad is the device in hand, so the hint
+        // names Start.
         private IEnumerator OpenInADescent()
         {
+            NavigationInputModule.ResetInputDeviceForTests();
             RunManager.StartRun(4242UL);
 
             var save = SaveSlotManager.CurrentSave;
@@ -284,8 +286,8 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenInADescent();
 
             Assert.IsTrue(HintShown, "a book waiting, and the map said nothing");
-            Assert.AreEqual("ATTENTION NEEDED: 2", DossierPane.TextOf("MapAttentionLabel"),
-                "Shawn and Odette hold books; Bjorn does not: two characters carry a pip");
+            Assert.AreEqual("Books to place — press Start", DossierPane.TextOf("MapAttentionLabel"),
+                "a book waits, and nothing else is owed: the hint names that alone");
 
             yield return OpenLoadoutOf(Shawn);
             DossierPane.Press(DossierPane.PackBookCell(_dossier, Book));
@@ -300,7 +302,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(HintShown, "the book came back to the pack and the map did not say so");
-            Assert.AreEqual("ATTENTION NEEDED: 2", DossierPane.TextOf("MapAttentionLabel"));
+            Assert.AreEqual("Books to place — press Start", DossierPane.TextOf("MapAttentionLabel"));
         }
 
         [UnityTest]
@@ -315,7 +317,25 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(HintShown, "two points to spend and the map said nothing");
-            Assert.AreEqual("ATTENTION NEEDED: 1", DossierPane.TextOf("MapAttentionLabel"), "one character owes a choice");
+            Assert.AreEqual("Points to spend — press Start", DossierPane.TextOf("MapAttentionLabel"),
+                "a point is owed and no book waits: only the point is named");
+        }
+
+        [UnityTest]
+        public IEnumerator TheMapNamesEveryReasonThatHoldsInThePipsOwnOrder()
+        {
+            yield return OpenInADescent();
+            var save = SaveSlotManager.CurrentSave;
+            save.roster.First(c => c.definitionId == Bjorn).unspentStatPoints = 2;
+            save.roster.First(c => c.definitionId == Odette).claimedTrackLevel = 25;
+
+            yield return OpenLoadoutOf(Bjorn);
+            _menu.Close();
+            yield return null;
+
+            Assert.AreEqual("Points to spend · Rewards waiting · Books to place — press Start",
+                DossierPane.TextOf("MapAttentionLabel"),
+                "a point (Bjorn), a reward (Odette) and a book (Shawn) all wait");
         }
 
         // The carried figure is not the fight's: outside a fight the rail's

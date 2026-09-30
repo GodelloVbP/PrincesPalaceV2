@@ -85,7 +85,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // brief's one reset action -- which means dropping the .NoChrome()
             // this row used before there was a semantic kit to reach for.
             var restore = Ui.Button("OptionsRestoreDefaults", UiStrings.OptionsRestoreDefaults,
-                    new UiVec(OptionsLayout.RestoreWidth, OptionsLayout.RestoreHeight), 14,
+                    new UiVec(OptionsLayout.RestoreWidth, OptionsLayout.RestoreHeight), 26,
                     Place.At(OptionsLayout.ColumnCentreX(0),
                              nextTop[0] - OptionsLayout.RestoreHeight * 0.5f))
                 .Themed(ButtonTheme.Crimson);
@@ -99,7 +99,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the pane floor, so there is no room under the button, and a note
             // placed inside its rect drew through its border.
             children.Add(Ui.Label("OptionsAppliesNote", UiStrings.OptionsAppliesImmediately,
-                    new UiVec(OptionsLayout.NoteWidth, OptionsLayout.NoteHeight), 13, Body,
+                    new UiVec(OptionsLayout.NoteWidth, OptionsLayout.NoteHeight), 20, Body,
                     Place.At(OptionsLayout.ColumnCentreX(1), OptionsLayout.RestoreCentreY(groups)))
                 .Styled(TypographyRole.Body));
 
@@ -129,7 +129,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 CardRim));
 
             cardChildren.Add(Ui.Label($"OptionsCard{group.Key}Heading", group.Heading,
-                    new UiVec(OptionsLayout.HeadingWidth, OptionsLayout.HeadingHeight), 18, Heading,
+                    new UiVec(OptionsLayout.HeadingWidth, OptionsLayout.HeadingHeight), 24, Heading,
                     Place.At(-OptionsLayout.CardContentHalf + OptionsLayout.HeadingWidth * 0.5f,
                              OptionsLayout.HeadingCentreY(rows)))
                 .AsDecor()
@@ -163,20 +163,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
             string key = row.Key;
             var children = new List<UiNode>();
 
-            // The label sits a little high when there is a note under it, so the
-            // pair reads as one block rather than as two rows.
-            float labelY = row.HasNote ? 9f : 0f;
+            // The label sits high when there is a note under it, so the pair
+            // reads as one block rather than as two rows: two Body 20 lines at
+            // their 27 px boxes, one above the row's centre line and one below.
+            float labelY = row.HasNote ? OptionsLayout.LabelWithNoteY : 0f;
 
             children.Add(Ui.Label($"OptionsRow{key}Label", row.Label,
-                    new UiVec(OptionsLayout.LabelWidth, 20f), 15, Value,
+                    new UiVec(OptionsLayout.LabelWidth, OptionsLayout.LineHeight), 20, Value,
                     Place.At(OptionsLayout.LabelCentreX, labelY))
-                .AsDecor());
+                .AsDecor()
+                .Styled(TypographyRole.Body));
 
             if (row.HasNote)
             {
                 children.Add(Ui.Label($"OptionsRow{key}Note", row.Note,
-                        new UiVec(OptionsLayout.LabelWidth, 16f), 12, Body,
-                        Place.At(OptionsLayout.LabelCentreX, -11f))
+                        new UiVec(OptionsLayout.LabelWidth, OptionsLayout.LineHeight), 20, Body,
+                        Place.At(OptionsLayout.LabelCentreX, OptionsLayout.NoteY))
                     .AsDecor()
                     .Styled(TypographyRole.Body));
             }
@@ -199,9 +201,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AsDecor();
 
                 var value = Ui.Label($"OptionsRow{key}Value", UiString.Runtime,
-                        new UiVec(OptionsLayout.ValueWidth, 20f), 14, Value,
+                        new UiVec(OptionsLayout.ValueWidth, OptionsLayout.LineHeight), 20, Value,
                         Place.At(OptionsLayout.SliderValueCentreX, 0f))
-                    .AsDecor();
+                    .AsDecor()
+                    .Styled(TypographyRole.Body);
 
                 screen.SliderKeys.Add(key);
                 screen.SliderTracks.Add(track);
@@ -216,19 +219,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 // NOT THEMED: square icon buttons (step size both axes).
                 var prev = Ui.Button($"OptionsRow{key}Prev", UiStrings.OverlayPrev,
-                        new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 14,
+                        new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 20,
                         Place.At(OptionsLayout.StepPrevCentreX, 0f))
-                    .NoChrome();
+                    .NoChrome()
+                    .Styled(TypographyRole.Body);
 
                 var next = Ui.Button($"OptionsRow{key}Next", UiStrings.OverlayNext,
-                        new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 14,
+                        new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 20,
                         Place.At(OptionsLayout.StepNextCentreX, 0f))
-                    .NoChrome();
+                    .NoChrome()
+                    .Styled(TypographyRole.Body);
 
                 var stepValue = Ui.Label($"OptionsRow{key}Value", UiString.Runtime,
-                        new UiVec(OptionsLayout.StepValueWidth, 20f), 14, Value,
+                        new UiVec(OptionsLayout.StepValueWidth, OptionsLayout.LineHeight), 20, Value,
                         Place.At(OptionsLayout.StepValueCentreX, 0f))
-                    .AsDecor();
+                    .AsDecor()
+                    .Styled(TypographyRole.Body);
 
                 screen.StepperKeys.Add(key);
                 screen.StepPrev.Add(prev);

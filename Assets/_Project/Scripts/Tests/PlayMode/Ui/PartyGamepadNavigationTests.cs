@@ -395,6 +395,53 @@ namespace PrincesPalace.PlayModeTests
                 "same SendToBench the mouse click calls");
         }
 
+        // THE ROSTER IS HIDDEN WHEN EVERYONE IS SEATED (plan C22), so Down from a
+        // seat has nowhere to go: it must not land on a card nobody can see.
+        [UnityTest]
+        public IEnumerator Down_FromASeat_WithEveryoneSeated_GoesNowhere()
+        {
+            yield return OpenTheParty();
+
+            var roster = _menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .First(t => t.name == "PartyRosterSection").gameObject;
+            Assert.IsFalse(roster.activeSelf, "fixture: everyone is seated, so the roster is hidden");
+
+            Select(Seat(PartySeat.Rear));
+            yield return null;
+
+            _input.Vertical = -1f;
+            yield return DriveFrame();
+            _input.Vertical = 0f;
+
+            Assert.AreEqual(Seat(PartySeat.Rear), EventSystem.current.currentSelectedGameObject,
+                "Down moved focus onto a card in a hidden roster");
+        }
+
+        [UnityTest]
+        public IEnumerator Down_FromASeat_WithSomeoneUnseated_ReachesTheRoster()
+        {
+            yield return OpenTheParty();
+
+            SaveSlotManager.CurrentSave.selectedCharacterIds = new List<string> { "owl", "sheep" };
+            _party.Refresh();
+            yield return null;
+
+            var roster = _menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .First(t => t.name == "PartyRosterSection").gameObject;
+            Assert.IsTrue(roster.activeSelf, "fixture: Bjorn sits out, so the roster is shown");
+
+            Select(Seat(PartySeat.Rear));
+            yield return null;
+
+            _input.Vertical = -1f;
+            yield return DriveFrame();
+            _input.Vertical = 0f;
+
+            var focused = EventSystem.current.currentSelectedGameObject;
+            Assert.IsNotNull(focused);
+            StringAssert.StartsWith("PartyCard", focused.name, "Down from a seat should reach the roster's cards");
+        }
+
         [UnityTest]
         public IEnumerator CarryingFromTheRoster_OnlyCancelIsReachable_NotBench()
         {

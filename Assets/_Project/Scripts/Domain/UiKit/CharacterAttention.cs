@@ -39,6 +39,18 @@ namespace PrincesPalace.Domain.UiKit
         }
     }
 
+    // Why the map should say a character wants looking at: the three things
+    // a pip can mean, named so the hint can tell the player what waits
+    // rather than only that something does.
+    [System.Flags]
+    public enum AttentionReasons
+    {
+        None = 0,
+        PointsToSpend = 1,
+        RewardsWaiting = 2,
+        BooksToPlace = 4,
+    }
+
     public static class CharacterAttention
     {
         // Whether one rail section carries a pip. SKILLS never does: it lists
@@ -73,18 +85,37 @@ namespace PrincesPalace.Domain.UiKit
             return false;
         }
 
-        // How many characters want looking at: the number the map states.
-        public static int CountLit(IEnumerable<AttentionFacts> characters)
+        // The reason a lit section stands for. Skills lights nothing, so it
+        // has none.
+        public static AttentionReasons ReasonOf(CharacterSection section)
         {
-            int lit = 0;
-            if (characters == null) return lit;
+            switch (section)
+            {
+                case CharacterSection.Loadout: return AttentionReasons.BooksToPlace;
+                case CharacterSection.Attributes: return AttentionReasons.PointsToSpend;
+                case CharacterSection.RewardTrack: return AttentionReasons.RewardsWaiting;
+                case CharacterSection.Skills: return AttentionReasons.None;
+                default: throw new System.ArgumentOutOfRangeException(nameof(section), section, null);
+            }
+        }
+
+        // What waits, over the whole roster: every reason at least one
+        // character holds. Derived from Lights, so the hint can never name
+        // something no pip shows.
+        public static AttentionReasons ReasonsFor(IEnumerable<AttentionFacts> characters)
+        {
+            var reasons = AttentionReasons.None;
+            if (characters == null) return reasons;
 
             foreach (var facts in characters)
             {
-                if (Any(facts)) lit++;
+                foreach (var section in CharacterSections.All)
+                {
+                    if (Lights(section, facts)) reasons |= ReasonOf(section);
+                }
             }
 
-            return lit;
+            return reasons;
         }
     }
 }

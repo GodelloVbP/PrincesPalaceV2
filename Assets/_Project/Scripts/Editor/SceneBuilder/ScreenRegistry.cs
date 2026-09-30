@@ -1116,12 +1116,6 @@ public static class ScreenRegistry
     // ExitsController.menu carries, for the same reason: it is not a NodeRef,
     // so nothing on PartyScreen has a same-named member for the binder to
     // match against.
-    //
-    // `seatBadgeTexts` is the one PARTY-SPECIFIC residual: PartyScreen.
-    // BuildSeat parents a text label under each badge's OutlineBox but never
-    // captures a NodeRef for it (only the badge box itself, as SeatBadges),
-    // so it is reached here the same way ExitsController.exitLabels reaches
-    // a button's own child label -- `searchChildren: true`.
     private static PartyController WireParty(
         UiEmitResult result, PartyScreen party, SystemMenuController menu)
     {
@@ -1129,13 +1123,12 @@ public static class ScreenRegistry
         UiAutoBind.Bind(result, controller, party);
 
         controller.menu = menu;
-        controller.seatBadgeTexts = party.SeatBadges.Select(badge => result.Tmp(badge, searchChildren: true)).ToArray();
 
         // The roster card's title row is a BUTTON, so UiAutoBind fills
         // `cardTitles` with the Buttons and cannot also reach the label
         // EmitButton bakes underneath each one. Same `searchChildren: true`
-        // route as seatBadgeTexts above, and for the same reason: the text
-        // lives on a GameObject the tree never declared.
+        // route ExitsController.exitLabels takes, and for the same reason: the
+        // text lives on a GameObject the tree never declared.
         controller.cardTitleTexts = party.CardTitles
             .Select(title => result.Tmp(title, searchChildren: true))
             .ToArray();
@@ -1144,13 +1137,8 @@ public static class ScreenRegistry
         // reward track's own block gives: E4 exists to catch a strip SIZED
         // from one collection and FILLED from another, and every array here is
         // built by `.Select` over the very NodeRef list the nodes were
-        // appended to (party.SeatBadges, party.CardTitles). The binding it
+        // appended to (party.CardTitles). The binding it
         // would check is that list's count compared with itself.
-        //
-        // THIS ALSO RETIRES seatBadgeTexts FROM UiCountAuditCoverageLintTests'
-        // KnownOffenders, where it sat as "a real gap the bug-hunt found". It
-        // was never a gap of that shape -- the allowlist was catching every
-        // unmarked site and this one had simply never been explained.
         //
         // P4: one drag surface per seat/card button. Attached here so
         // UiWiringSweep sees the arrays (the same shape as FightController.

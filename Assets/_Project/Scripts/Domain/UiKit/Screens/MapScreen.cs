@@ -195,13 +195,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(320f, 40f), 22, "#F2DB9E",
                 Place.At(690f, 452f)).Styled(TypographyRole.TacticalData);
 
-            // Under the gold chip, same column, one row down (404, matching
-            // depth's own band) -- neither the shop nor the menu is guaranteed
-            // to be the next thing the player opens, so the map is where a
-            // pending book, point or reward has to say so.
-            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(320f, 32f), 16,
-                    "#E7B25C", Place.At(690f, 404f))
-                .Styled(TypographyRole.TacticalData)
+            // Under the gold chip, one row down (404, matching depth's own
+            // band) -- neither the shop nor the menu is guaranteed to be the
+            // next thing the player opens, so the map is where a pending book,
+            // point or reward has to say so, and the line names them. 640 wide,
+            // right-aligned and ending 30 px inside the screen's edge, holds
+            // all three reasons and the key at Body 20 clear of the depth
+            // line (which stops at x 210).
+            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(640f, 32f), 20,
+                    "#E7B25C", Place.At(610f, 404f))
+                .TextAligned(UiTextAlign.Right)
+                .Styled(TypographyRole.Body)
                 .Inactive();
             screen.AttentionLabel = attention;
 

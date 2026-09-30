@@ -64,8 +64,9 @@ namespace PrincesPalace.Domain.UiKit
         // the run. Not decoration: both of these end a descent, and a player
         // who thinks "return to title" parks one is owed the correction before
         // the click rather than after it.
+        // A Body 20 line draws in 1.33 x its size (27), or TMP draws nothing.
         public const float NoteGap = 10f;
-        public const float NoteHeight = 20f;
+        public const float NoteHeight = 27f;
 
         // A PROPERTY, not a const: ExitHeight is a static readonly field,
         // not a compile-time literal, and a const expression cannot
@@ -115,7 +116,7 @@ namespace PrincesPalace.Domain.UiKit
         // ---- the rule that sets abandon apart ------------------------------------
 
         public const float SeparatorWidth = 980f;
-        public const float SeparatorGap = 56f;
+        public const float SeparatorGap = 40f;
 
         public static float SeparatorY => PairBottom - SeparatorGap;
 
@@ -124,9 +125,9 @@ namespace PrincesPalace.Domain.UiKit
         public const float AbandonWidth = 840f;
 
         public const float AbandonPadY = 26f;
-        public const float AbandonHeadingHeight = 30f;
+        public const float AbandonHeadingHeight = 32f;
         public const float AbandonHeadingGap = 10f;
-        public const float AbandonNoteHeight = 20f;
+        public const float AbandonNoteHeight = 27f;
         public const float AbandonNoteGap = 22f;
 
         public const float HoldWidth = 620f;
