@@ -32,7 +32,7 @@ debt), and a struck finding gets its number removed.
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214
-- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #219, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
+- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #112, #123, #220, #255
 - Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
@@ -2201,26 +2201,7 @@ Re-confirms without duplicating #44, #45, #80, #81, #84, #92, #104, #146,
 below ends with a `Route:` line naming the agent and verification gate, and a
 `Blocked:` line where the fix cannot land until another branch merges.
 
-### 219. Two buttons end a run on a single press, unlike the System Menu's hold
-
-`Core/MapController.cs:169-177` (`abandonButton`) and
-`Core/MainMenuController.cs:78-84` (`exitButton`) still call
-`RunManager.EndRun()` straight from `onClick`. The third caller this entry
-listed, the hub's corner `mainMenuButton`, is fixed (System Menu plan 0c): it now
-opens the System Menu on its Exit tab, so leaving takes the arm-then-fire
-gesture. The two above stay open.
-
-The System Menu's Exits pane states the house rule for exactly this cost in
-its own header comment (`Domain/UiKit/Screens/ExitsScreen.cs:11-16`): "TWO
-GESTURES, NOT ONE" — the two lesser exits arm-then-fire, abandon is a 1.2s
-hold (`HoldFillMath`, used from `ExitsScreen.cs` around line 209). The two
-open callers are outside that pane and skip the gesture entirely, so a single
-misclick on the map or main menu throws away a run. Fix the class, not the
-instance: route every `EndRun()` caller outside Exits through the same
-hold/confirm, and add a test that enumerates `EndRun()` call sites so a new
-one can't reintroduce this.
-
-Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+### ~~219. Two buttons end a run on a single press, unlike the System Menu's hold~~ — fixed: the map's abandon button opens the system menu on its Exit tab (as the hub corner button does, `7764c6fe`), and the title's Quit asks through `SaveSlotController.Ask`, the same hold dialog Delete uses; `UiKitLintTests.EndingARunIsReachedOnlyFromAGatedExit` pins the `EndRun()` call sites
 
 ### 220. A failed save is invisible outside the shop
 

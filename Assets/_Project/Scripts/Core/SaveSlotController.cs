@@ -43,6 +43,7 @@ namespace PrincesPalace
         [SerializeField] internal GameObject confirmPanel;
         [SerializeField] internal TMP_Text confirmLabel;
         [SerializeField] internal Button confirmYesButton;
+        [SerializeField] internal TMP_Text confirmYesCaption;
         [SerializeField] internal RectTransform confirmFill;
         [SerializeField] internal Button confirmNoButton;
 
@@ -52,9 +53,12 @@ namespace PrincesPalace
         // timing for it here.
         public const float HoldSeconds = 1.2f;
 
-        // Which slot the open confirmation is about. -1 when nothing is
-        // pending, so a stray Yes cannot delete slot 0.
-        private int _pendingSlot = -1;
+        // What the open dialog will do when its hold completes, and where
+        // focus goes if it is dismissed. Null when nothing is pending, so a
+        // stray hold cannot fire a stale action. The dialog is the menu's one
+        // hold gate: a delete and the Quit both ask through Ask.
+        private System.Action _pending;
+        private Selectable _returnTo;
 
         private HoldToConfirm _hold;
 
@@ -81,7 +85,7 @@ namespace PrincesPalace
             _hold = confirmYesButton.gameObject.AddComponent<HoldToConfirm>();
             _hold.Seconds = HoldSeconds;
             _hold.Progress = SetFill;
-            _hold.Completed = ConfirmDelete;
+            _hold.Completed = Confirmed;
 
             confirmNoButton.onClick.AddListener(Dismiss);
 
@@ -154,8 +158,19 @@ namespace PrincesPalace
         {
             if (!SaveSystem.SlotExists(slot)) return;
 
-            _pendingSlot = slot;
-            confirmLabel.Set(UiStrings.ConfirmDelete, slot + 1);
+            Ask(UiStrings.ConfirmDelete, UiStrings.HoldToDelete,
+                () => DeleteSlot(slot), deleteButtons[slot], slot + 1);
+        }
+
+        // Opens the dialog for any action that must not fire on one press.
+        // Focus returns to `returnTo` when the player says No.
+        internal void Ask(UiString prompt, UiString holdCaption, System.Action onConfirmed,
+            Selectable returnTo, params object[] promptArgs)
+        {
+            _pending = onConfirmed;
+            _returnTo = returnTo;
+            confirmLabel.Set(prompt, promptArgs);
+            confirmYesCaption.Set(holdCaption);
             confirmPanel.SetActive(true);
 
             // STATED RATHER THAN INHERITED: HoldToConfirm cancels itself when
@@ -168,11 +183,18 @@ namespace PrincesPalace
             GetComponentInParent<MainMenuController>()?.RefreshNavigation();
         }
 
-        private void ConfirmDelete()
+        private void Confirmed()
         {
-            if (_pendingSlot < 0) return;
+            var action = _pending;
+            if (action == null) return;
 
-            int slot = _pendingSlot;
+            _pending = null;
+            _returnTo = null;
+            action();
+        }
+
+        private void DeleteSlot(int slot)
+        {
             SaveSystem.DeleteSlot(slot);
 
             // DROP THE CACHE, or the file comes straight back.
@@ -196,7 +218,6 @@ namespace PrincesPalace
             var menu = GetComponentInParent<MainMenuController>();
             menu?.RefreshContinue();
 
-            _pendingSlot = -1;
             confirmPanel.SetActive(false);
             SetFill(0f);
 
@@ -213,15 +234,16 @@ namespace PrincesPalace
         // click takes, so a pad Cancel and a click on No leave identical state.
         internal void Dismiss()
         {
-            int slot = _pendingSlot;
-            _pendingSlot = -1;
+            var back = _returnTo;
+            _pending = null;
+            _returnTo = null;
             confirmPanel.SetActive(false);
             _hold?.Cancel();
             SetFill(0f);
             GetComponentInParent<MainMenuController>()?.RefreshNavigation();
 
-            // Back onto the Delete that asked, not the list's first card.
-            if (slot >= 0) Select(deleteButtons[slot]);
+            // Back onto the button that asked, not the list's first card.
+            Select(back);
         }
 
         private static void Select(Selectable target)

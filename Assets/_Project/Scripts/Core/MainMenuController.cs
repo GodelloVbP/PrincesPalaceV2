@@ -87,17 +87,10 @@ namespace PrincesPalace
                 RefreshNavigation();
             });
             closeSettingsButton.onClick.AddListener(CloseSettings);
-            // Settled BEFORE the process goes away. Quitting is not
-            // continuing the run, so it ends it, and ending it is what pays out
-            // what the run earned -- quitting straight to the desktop would
-            // bank nothing.
-            exitButton.onClick.AddListener(() =>
-            {
-                RunManager.EndRun();
-                // Navigation.Quit, not Application.Quit: the system menu grew a
-                // second quit and one of the two had to be the door. See Navigation.
-                Navigation.Quit();
-            });
+            // One press only asks: the dialog's hold is the gesture that ends
+            // a run, the same rule as the system menu's Exit pane.
+            exitButton.onClick.AddListener(() => saveSlotController.Ask(
+                UiStrings.ConfirmQuit, UiStrings.HoldToQuit, Quit, exitButton));
             closeSaveSlotButton.onClick.AddListener(() =>
             {
                 saveSlotPanel.SetActive(false);
@@ -114,6 +107,17 @@ namespace PrincesPalace
             CaptureMenuLayout();
             RefreshContinue();
             RegisterNavContext();
+        }
+
+        // Settled BEFORE the process goes away. Quitting is not continuing
+        // the run, so it ends it, and ending it is what pays out what the run
+        // earned -- quitting straight to the desktop would bank nothing.
+        private void Quit()
+        {
+            RunManager.EndRun();
+            // Navigation.Quit, not Application.Quit: the system menu grew a
+            // second quit and one of the two had to be the door. See Navigation.
+            Navigation.Quit();
         }
 
         private void NewRun()

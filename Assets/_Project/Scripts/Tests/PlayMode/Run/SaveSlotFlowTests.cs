@@ -44,6 +44,7 @@ namespace PrincesPalace.PlayModeTests
         {
             SharedScene.AfterTest();
             Navigation.Reset();
+            RunManager.ResetForTests();
 
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -242,6 +243,41 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(SaveSystem.SlotExists(1), "Delete should actually delete once confirmed");
             Assert.AreEqual("New Descent", SlotTop(1), "and the card should say so");
             Assert.IsFalse(Named("Slot1DeleteButton").activeSelf, "and its Delete should be gone with the save");
+        }
+
+        // AUDIT #219: the title's Quit ends the run and closes the game, so a
+        // press only asks. The dialog's hold, the same one Delete uses, quits.
+        [UnityTest]
+        public IEnumerator QuitAsksFirstAndOnlyTheHoldQuitsAndEndsTheRun()
+        {
+            yield return LoadMenu();
+            int quits = 0;
+            Navigation.QuitOverride = () => quits++;
+            RunManager.StartRun(4242);
+            Assert.IsTrue(RunManager.HasRun, "fixture: no run to end");
+
+            Click("ExitButton");
+            yield return null;
+
+            Assert.IsTrue(IsOpen("ResetConfirmPanel"), "Quit did not ask for confirmation");
+            Assert.AreEqual(0, quits, "one press on Quit quit the game");
+            Assert.IsTrue(RunManager.HasRun, "one press on Quit ended the run");
+
+            var hold = Named("ResetConfirmYesButton").GetComponent<HoldToConfirm>();
+            hold.Begin();
+            hold.Advance(SaveSlotController.HoldSeconds * 0.9f);
+            hold.Cancel();
+            Assert.AreEqual(0, quits, "a released hold quit the game");
+
+            Click("ResetConfirmNoButton");
+            Assert.AreEqual(0, quits, "No quit the game");
+            Assert.IsTrue(RunManager.HasRun, "No ended the run");
+
+            Click("ExitButton");
+            HoldToDelete("ResetConfirmYesButton");
+
+            Assert.AreEqual(1, quits, "the full hold did not quit");
+            Assert.IsFalse(RunManager.HasRun, "quitting did not end the run");
         }
 
         [UnityTest]

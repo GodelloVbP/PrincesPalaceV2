@@ -1125,6 +1125,9 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ConfirmDelete =
             UiString.Define("confirm_delete", "Delete slot {0}? This cannot be undone.",
                             "Delete slot 5? This cannot be undone.");
+        public static readonly UiString HoldToQuit = UiString.Define("hold_to_quit", "Hold to Quit");
+        public static readonly UiString ConfirmQuit =
+            UiString.Define("confirm_quit", "Quit to desktop? A run in progress ends and pays out what it earned.");
 
         // --- combat ---------------------------------------------------------
         public static readonly UiString CommandTitle = UiString.Define("command_title", "C O M M A N D");

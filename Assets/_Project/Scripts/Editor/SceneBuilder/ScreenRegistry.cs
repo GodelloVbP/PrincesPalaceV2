@@ -466,6 +466,7 @@ public static class ScreenRegistry
                 slots.confirmPanel = result.Go(screen.ResetConfirmPanel);
                 slots.confirmLabel = result.Tmp(screen.ResetConfirmLabel);
                 slots.confirmYesButton = result.Button(screen.ResetConfirmYesButton);
+                slots.confirmYesCaption = result.Tmp(screen.ResetConfirmYesCaption);
                 slots.confirmFill = result.Rect(screen.ResetConfirmYesFill);
                 slots.confirmNoButton = result.Button(screen.ResetConfirmNoButton);
 

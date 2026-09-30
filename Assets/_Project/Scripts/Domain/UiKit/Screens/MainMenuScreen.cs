@@ -152,6 +152,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // separately because the controller resizes it every frame the hold
         // is live, which the button reference alone cannot do.
         public NodeRef ResetConfirmYesButton;
+        public NodeRef ResetConfirmYesCaption;
         public NodeRef ResetConfirmYesFill;
         public NodeRef ResetConfirmNoButton;
 
@@ -567,6 +568,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     place: Place.At(0f, 0f))
                 .Styled(TypographyRole.ButtonLabel);
             holdButton.Children.Add(holdCaption);
+            screen.ResetConfirmYesCaption = holdCaption;
             holdButton.LayerCaptionWithVisuals(holdFillClip, holdCaption);
 
             var confirmYes = holdButton;

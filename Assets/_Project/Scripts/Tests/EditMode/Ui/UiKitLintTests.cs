@@ -186,6 +186,26 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void EndingARunIsReachedOnlyFromAGatedExit()
+        {
+            // AUDIT #219: a button that calls EndRun from its own onClick throws a
+            // descent away on one misclick. The Exit pane (hold or two presses)
+            // and the title's Quit (hold dialog) are the gated callers; the bots
+            // and RunManager itself have no button. A new caller has to route
+            // through one of the gates, then be named here.
+            var allowed = new[] { "ExitsController.cs", "MainMenuController.cs", "RunManager.cs", "RunOrchestrator.cs", "BotRunDriver.cs" };
+            var hits = Matches(@"EndRun\(\)").ToList();
+            Assert.Greater(hits.Count, 0, "the scan found no EndRun call at all - the rule is vacuous");
+
+            var offenders = hits
+                .Where(h => !allowed.Contains(Path.GetFileName(h.File)) && !h.Text.TrimStart().StartsWith("//"))
+                .ToList();
+            Assert.IsEmpty(offenders,
+                "RunManager.EndRun ends a run and must sit behind the Exit pane's hold/arm-then-fire or the " +
+                "title's Quit dialog, never a bare onClick.\n" + Describe(offenders));
+        }
+
+        [Test]
         public void TheLintItselfIsNotVacuous()
         {
             // Proves the machinery finds real code, so a green run above means

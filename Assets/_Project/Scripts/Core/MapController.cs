@@ -168,13 +168,16 @@ namespace PrincesPalace
                 nodeButtons[i].onClick.AddListener(() => OnNodePressed(index));
             }
 
-            abandonButton.onClick.AddListener(() =>
-            {
-                // EndRun settles the books itself, so walking away from a
-                // descent still pays out every ember its bosses have earned.
-                RunManager.EndRun();
-                Navigation.Go(Navigation.Hub);
-            });
+            // Opens the menu on its Exit tab rather than ending the run: the
+            // Exit pane's hold-to-abandon is the one gesture that gives up a
+            // descent (AUDIT #219; the hub's corner button does the same).
+            abandonButton.onClick.AddListener(OpenExitTab);
+        }
+
+        internal void OpenExitTab()
+        {
+            if (!SystemMenuController.OpenFromRoot(systemMenu)) return;
+            systemMenu.Select(SystemMenuTab.Exit);
         }
 
         // ---- the character sheet, between rooms --------------------------------
