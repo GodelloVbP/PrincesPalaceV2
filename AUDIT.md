@@ -1143,6 +1143,10 @@ consistent with each other and not part of this finding.
 2. Leave it on the graceful-degradation path and note in the row why (a stated placeholder,
    rather than an unnoticed gap).
 
+The RUN pane's Supplies rows draw both potions with no icon: that is this gap, not a wiring
+fault (the icon table reaches the pane; `SystemMenuRunTests.ASupplyRowShowsItsItemsArtExactlyWhenTheItemHasAny`
+fails the day art is authored and the row does not show it).
+
 ### ~~132. The bog witch is the only monster weak to the element it attacks with~~ — fixed in `8a4c32d6`: neither filed option. The owner re-authored the pair outright — weak to Wind and Arcane, resistant to Water and Earth
 ### 133. Four enemy stance PNGs nothing can play
 

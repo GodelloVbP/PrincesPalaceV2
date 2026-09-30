@@ -42,9 +42,10 @@ namespace PrincesPalace.Domain.UiKit
     {
         // The row when no pane has anything more specific to say: the frame's
         // own buttons. The pager prompt is there only where the tab pages
-        // something (SystemMenuTabDef.Pages, plan C8), so a tab with nothing to
-        // page never advertises LB/RB.
-        public static IReadOnlyList<MenuPrompt> Defaults(SystemMenuTabDef tab)
+        // something (SystemMenuTabDef.Pages, plan C8) and there is more than one
+        // page to turn (`paged`), so LB/RB is never advertised where it does
+        // nothing.
+        public static IReadOnlyList<MenuPrompt> Defaults(SystemMenuTabDef tab, bool paged = true)
         {
             var row = new List<MenuPrompt>
             {
@@ -53,7 +54,24 @@ namespace PrincesPalace.Domain.UiKit
                 new MenuPrompt(PromptButton.Tabs, UiStrings.PromptTab),
             };
 
-            if (tab.Pages.IsValid) row.Add(new MenuPrompt(PromptButton.Pages, tab.Pages));
+            if (paged && tab.Pages.IsValid) row.Add(new MenuPrompt(PromptButton.Pages, tab.Pages));
+            return row;
+        }
+
+        // The row for a pane whose focusable rows only inform (RUN, GLOSSARY):
+        // no A, because pressing one does nothing and a prompt for a no-op is
+        // worse than none. A pane answers this from IMenuPromptSource for its
+        // own rows and falls back to Defaults for the tab bar, where A does
+        // select a tab.
+        public static IReadOnlyList<MenuPrompt> ReadOnly(SystemMenuTabDef tab, bool paged = true)
+        {
+            var row = new List<MenuPrompt>
+            {
+                new MenuPrompt(PromptButton.Cancel, UiStrings.PromptClose),
+                new MenuPrompt(PromptButton.Tabs, UiStrings.PromptTab),
+            };
+
+            if (paged && tab.Pages.IsValid) row.Add(new MenuPrompt(PromptButton.Pages, tab.Pages));
             return row;
         }
 

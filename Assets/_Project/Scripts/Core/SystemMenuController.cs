@@ -723,10 +723,21 @@ namespace PrincesPalace
                 else contextLine.Set(UiStrings.SystemBetweenDescents);
             }
 
-            if (goldValue != null) goldValue.Set(UiStrings.SystemGold, save?.Gold ?? 0);
+            if (goldValue != null) goldValue.Set(UiStrings.SystemGold, LintelGold(context, save, RunManager.Run));
             if (embersValue != null) embersValue.Set(UiStrings.SystemEmbers, save?.EmberTotal() ?? 0);
 
             RefreshModePill();
+        }
+
+        // THE LINTEL'S GOLD HAS ONE SOURCE PER CONTEXT (plan C4). Gold picked up
+        // on a descent lives on the run until it ends, and only then reaches the
+        // save, so the save's figure in a descent is the wallet the player left
+        // at camp, and it disagreed with the RUN pane's own gold line (which
+        // reads the run) by the whole of what was picked up since.
+        internal static int LintelGold(MenuContext context, SaveData save, RunSnapshot run)
+        {
+            if (context == MenuContext.Camp) return save?.Gold ?? 0;
+            return run != null && run.hasRun ? run.gold : 0;
         }
 
         // THE PILL FITS ITS WORDS. Its left edge is fixed and its width follows
@@ -787,17 +798,29 @@ namespace PrincesPalace
             var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
             if (selected != null) focused = selected.GetComponent<Selectable>();
 
+            IReadOnlyList<MenuPrompt> row = null;
             var activePane = ActivePane();
             if (activePane != null)
             {
                 foreach (var source in activePane.GetComponentsInChildren<IMenuPromptSource>(includeInactive: false))
                 {
-                    var answer = source.PromptsFor(focused);
-                    if (answer != null) return answer;
+                    row = source.PromptsFor(focused);
+                    if (row != null) break;
                 }
             }
 
-            return MenuPrompts.Defaults(SystemMenuTabs.All[_selected]);
+            row = row ?? MenuPrompts.Defaults(SystemMenuTabs.All[_selected]);
+
+            // A on the tab that is already showing selects nothing, and the menu
+            // opens with focus there, so without this the footer of a pane whose
+            // rows are read-only offered "A Select" the moment it opened. On any
+            // other tab A does switch to it.
+            if (focused != null && focused == SelectedTabButton())
+            {
+                row = row.Where(p => p.Button != PromptButton.Confirm).ToList();
+            }
+
+            return row;
         }
 
         // THE TRIGGER SHORTCUT (INavTabStrip): LT/RT step tabs, freeing

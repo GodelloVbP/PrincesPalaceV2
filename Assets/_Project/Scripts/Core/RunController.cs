@@ -411,19 +411,20 @@ namespace PrincesPalace
 
         // ---- the footer ---------------------------------------------------------------------
 
-        // No "A": nothing on this pane does anything when pressed, and a prompt
-        // for a no-op is worse than none. The frame's own row answers for the
-        // tab bar.
+        // No "A" on the pane's own rows (or with nothing focused): nothing on
+        // it does anything when pressed. Elsewhere (the tab bar) the frame's row
+        // answers, and the frame drops A on the tab that is already showing.
+        // Either way LB/RB is offered only while the relics span more than one
+        // page.
         IReadOnlyList<MenuPrompt> IMenuPromptSource.PromptsFor(Selectable focused)
         {
-            if (focused == null || !IsOwnRow(focused)) return null;
+            Wire();
+            var tab = SystemMenuTabs.Def(SystemMenuTab.Run);
+            bool paged = Relics.Model.IsPaged;
 
-            return new[]
-            {
-                new MenuPrompt(PromptButton.Cancel, UiStrings.PromptClose),
-                new MenuPrompt(PromptButton.Tabs, UiStrings.PromptTab),
-                new MenuPrompt(PromptButton.Pages, SystemMenuTabs.Def(SystemMenuTab.Run).Pages),
-            };
+            return focused == null || IsOwnRow(focused)
+                ? MenuPrompts.ReadOnly(tab, paged)
+                : MenuPrompts.Defaults(tab, paged);
         }
 
         private bool IsOwnRow(Selectable focused)

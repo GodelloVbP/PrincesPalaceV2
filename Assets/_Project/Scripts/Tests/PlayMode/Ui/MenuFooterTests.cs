@@ -187,20 +187,31 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the prompts follow the device (C12) ----------------------------------------
 
+        // The frame's row is read on ANOTHER tab's button: A on the tab that is
+        // already showing selects nothing, so the row drops it there (below).
         [UnityTest]
         public IEnumerator TheDefaultRowIsSelectCloseTabAndTheCharacterPager()
         {
             yield return OpenTheMenu("Hub");
-            yield return Focus(Need("SystemTabCharacter"));
+            yield return Focus(Need("SystemTabParty"));
 
             Assert.AreEqual("A Select | B Close | LT/RT Tab | LB/RB Character", Prompts());
+        }
+
+        [UnityTest]
+        public IEnumerator OnTheTabAlreadyShowingTheRowHasNoSelect()
+        {
+            yield return OpenTheMenu("Hub");
+            yield return Focus(Need("SystemTabCharacter"));
+
+            Assert.AreEqual("B Close | LT/RT Tab | LB/RB Character", Prompts());
         }
 
         [UnityTest]
         public IEnumerator ThePromptsSwitchToKeyNamesOnTheMouseAndBackOnThePad()
         {
             yield return OpenTheMenu("Hub");
-            yield return Focus(Need("SystemTabCharacter"));
+            yield return Focus(Need("SystemTabParty"));
             Assert.AreEqual("A Select | B Close | LT/RT Tab | LB/RB Character", Prompts(), "fixture: not the pad's row");
 
             yield return UsePointer();
@@ -215,7 +226,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ATabThatPagesNothingShowsNoPagerPrompt()
         {
             yield return OpenTheMenu("Hub", SystemMenuTab.Party);
-            yield return Focus(Need("SystemTabParty"));
+            yield return Focus(Need("SystemTabCharacter"));
 
             Assert.AreEqual("A Select | B Close | LT/RT Tab", Prompts());
         }
@@ -224,7 +235,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ThePadGlyphsWearTheirButtonColours()
         {
             yield return OpenTheMenu("Hub");
-            yield return Focus(Need("SystemTabCharacter"));
+            yield return Focus(Need("SystemTabParty"));
 
             Assert.IsTrue(ColorUtility.TryParseHtmlString(PromptGlyphs.Green, out var green));
             Assert.IsTrue(ColorUtility.TryParseHtmlString(PromptGlyphs.Red, out var red));

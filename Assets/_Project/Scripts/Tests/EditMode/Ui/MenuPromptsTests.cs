@@ -126,6 +126,41 @@ namespace PrincesPalace.Domain.Tests
                 Labels(MenuPrompts.Resolve(row, MenuContext.Descent, PromptDevice.Keyboard)));
         }
 
+        // LB/RB is offered only where there is a page to turn: with one page
+        // the footer does not advertise a button that does nothing.
+        [Test]
+        public void WithOnePageThePagerPromptIsLeftOut()
+        {
+            var run = SystemMenuTabs.Def(SystemMenuTab.Run);
+
+            Assert.AreEqual("A Select | B Close | LT/RT Tab",
+                Labels(MenuPrompts.Resolve(MenuPrompts.Defaults(run, paged: false), MenuContext.Descent, PromptDevice.Xbox)));
+            Assert.AreEqual("B Close | LT/RT Tab",
+                Labels(MenuPrompts.Resolve(MenuPrompts.ReadOnly(run, paged: false), MenuContext.Descent, PromptDevice.Xbox)));
+        }
+
+        // A pane whose rows only inform has no A: pressing one does nothing.
+        [Test]
+        public void AReadOnlyRowOffersNoSelect()
+        {
+            var run = SystemMenuTabs.Def(SystemMenuTab.Run);
+            var row = MenuPrompts.ReadOnly(run);
+
+            Assert.AreEqual("B Close | LT/RT Tab | LB/RB Page",
+                Labels(MenuPrompts.Resolve(row, MenuContext.Descent, PromptDevice.Xbox)));
+            Assert.AreEqual("Esc Close | Click Tab | Q/E Page",
+                Labels(MenuPrompts.Resolve(row, MenuContext.Descent, PromptDevice.Keyboard)));
+        }
+
+        [Test]
+        public void AReadOnlyRowForATabThatPagesNothingHasNoPagerEither()
+        {
+            var row = MenuPrompts.ReadOnly(SystemMenuTabs.Def(SystemMenuTab.Party));
+
+            Assert.AreEqual("B Close | LT/RT Tab",
+                Labels(MenuPrompts.Resolve(row, MenuContext.Camp, PromptDevice.Xbox)));
+        }
+
         // ---- a prompt in a context --------------------------------------------------
 
         private static readonly MenuPrompt Equip =

@@ -481,6 +481,147 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("Page", prompts.Last().Label.Format());
         }
 
+        // A on the tab that is already showing selects nothing, and the menu
+        // opens with focus there, so the footer offers no A on it (the state the
+        // pane is in the moment it opens, and in a capture). It still names the
+        // pager while there is one.
+        [UnityTest]
+        public IEnumerator OnTheTabAlreadyShowingTheFooterOffersNoSelect()
+        {
+            ARunWithEverything(relics: 7);
+            yield return LoadMap();
+
+            _menu.Open(SystemMenuTab.Run);
+            yield return null;
+            yield return null;
+            EventSystem.current.SetSelectedGameObject(Named("SystemTabRun"));
+            yield return null;
+
+            CollectionAssert.AreEqual(
+                new[] { PromptButton.Cancel, PromptButton.Tabs, PromptButton.Pages },
+                _menu.CurrentPrompts().Select(p => p.Button).ToList());
+        }
+
+        // On any other tab A does switch to it, so the frame's row stands there.
+        [UnityTest]
+        public IEnumerator OnAnotherTabTheFrameOffersSelect()
+        {
+            ARunWithEverything(relics: 7);
+            yield return LoadMap();
+
+            _menu.Open(SystemMenuTab.Run);
+            yield return null;
+            yield return null;
+            EventSystem.current.SetSelectedGameObject(Named("SystemTabParty"));
+            yield return null;
+
+            CollectionAssert.AreEqual(
+                new[] { PromptButton.Confirm, PromptButton.Cancel, PromptButton.Tabs, PromptButton.Pages },
+                _menu.CurrentPrompts().Select(p => p.Button).ToList());
+        }
+
+        // LB/RB turn relic pages, so with one page there is nothing for them to
+        // do and the footer says nothing about them, on the rows or off them.
+        [UnityTest]
+        public IEnumerator WithOneRelicPageTheFooterNamesNoPager()
+        {
+            ARunWithEverything(relics: 3);
+            yield return LoadMap();
+
+            _menu.Open(SystemMenuTab.Run);
+            yield return null;
+            yield return null;
+
+            EventSystem.current.SetSelectedGameObject(Named("RunRelic0"));
+            yield return null;
+            CollectionAssert.AreEqual(
+                new[] { PromptButton.Cancel, PromptButton.Tabs },
+                _menu.CurrentPrompts().Select(p => p.Button).ToList());
+
+            EventSystem.current.SetSelectedGameObject(Named("SystemTabParty"));
+            yield return null;
+            CollectionAssert.AreEqual(
+                new[] { PromptButton.Confirm, PromptButton.Cancel, PromptButton.Tabs },
+                _menu.CurrentPrompts().Select(p => p.Button).ToList());
+        }
+
+        // ---- the lintel's gold: one source per context (plan C4) -----------------------
+
+        [UnityTest]
+        public IEnumerator InADescentTheLintelShowsTheRunsGoldAndNotTheSaves()
+        {
+            ARunWithEverything(relics: 1);
+            SaveSlotManager.CurrentSave.Gold = 7;
+            yield return LoadMap();
+
+            _menu.Open(SystemMenuTab.Run);
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual("Gold 128", TextOf("SystemLintelGold"));
+            Assert.AreEqual("128", TextOf("RunGoldValue"), "fixture: the pane's own gold line");
+        }
+
+        [UnityTest]
+        public IEnumerator InAFightTheLintelShowsTheRunsGoldToo()
+        {
+            ARunWithEverything(relics: 1);
+            SaveSlotManager.CurrentSave.Gold = 7;
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+            Find();
+
+            _menu.Open(SystemMenuTab.Run);
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual("Gold 128", TextOf("SystemLintelGold"));
+        }
+
+        [UnityTest]
+        public IEnumerator AtCampTheLintelShowsTheSavesGold()
+        {
+            SaveSlotManager.CurrentSave.Gold = 7;
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+            Find();
+
+            _menu.Open();
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual("Gold 7", TextOf("SystemLintelGold"));
+        }
+
+        // ---- supplies art -----------------------------------------------------------
+
+        // A supply row shows its item's art exactly when the item authors some.
+        // Both potions author none today (AUDIT #131 records them as icon-less on
+        // purpose), so their rows leave the icon off; the day art lands in
+        // items.json this fails if the pane's icon table did not come with it.
+        [UnityTest]
+        public IEnumerator ASupplyRowShowsItsItemsArtExactlyWhenTheItemHasAny()
+        {
+            ARunWithEverything(relics: 1);
+            yield return LoadMap();
+
+            _menu.Open(SystemMenuTab.Run);
+            yield return null;
+            yield return null;
+
+            var stacks = RunOrchestrator.BuildSatchel();
+            Assert.GreaterOrEqual(stacks.Count, 2, "fixture: the satchel holds both potions");
+
+            for (int i = 0; i < stacks.Count && i < 4; i++)
+            {
+                bool authored = !string.IsNullOrEmpty(ContentDatabase.GetItem(stacks[i].ItemId).iconPath);
+                Assert.AreEqual(authored, Named($"RunSupply{i}Icon").GetComponent<Image>().enabled,
+                    $"{stacks[i].ItemId}: the icon is {(authored ? "missing" : "showing")} against its content");
+            }
+        }
+
         // ---- fixture -----------------------------------------------------------------
 
         private void Find()
