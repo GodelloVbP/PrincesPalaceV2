@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
@@ -254,6 +255,63 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenSkillsOf("sheep", "sheep_ram_charge_1");
 
             Assert.AreEqual("2 Wool  ·  One enemy", MetaOfRow("Headbutt"));
+        }
+
+        // NO WORD A PLAYER NEEDS ENDS IN AN ELLIPSIS. Every skill and every
+        // talent the game authors, on all three characters, read through the
+        // whole list a window at a time: the name, the right-hand line and the
+        // description must each fit the box they are drawn in. The description
+        // box was once two nominal lines tall and drew one and an ellipsis.
+        [UnityTest]
+        public IEnumerator EveryDescriptionInTheListIsShownWholeNeverCutToAnEllipsis()
+        {
+            yield return OpenTheCharacterTab("sheep", "bear", "owl");
+
+            var cut = new List<string>();
+            int rows = 0, tall = 0;
+
+            foreach (string id in new[] { "sheep", "bear", "owl" })
+            {
+                var character = Fresh(id);
+                character.level = 40;
+                character.claimedTrackLevel = 40;
+                foreach (var talent in ContentDatabase.Talents) character.unlockedTalentIds.Add(talent.id);
+
+                _dossier.SelectCharacter(id);
+                DossierPane.Press(DossierPane.SectionRow(CharacterSection.Skills));
+                _dossier.Refresh();
+                yield return null;
+
+                _dossier.ScrollSkills(-1000);
+
+                for (int step = 0; step <= _dossier.SkillEntryCount; step++)
+                {
+                    for (int i = 0; i < DossierLayout.SkillsRowSlots; i++)
+                    {
+                        if (!Shown($"DossierSkillRow{i}")) continue;
+
+                        var description = Rect($"DossierSkillRow{i}Description").GetComponent<TMP_Text>();
+                        var name = Rect($"DossierSkillRow{i}Name").GetComponent<TMP_Text>();
+                        var meta = Rect($"DossierSkillRow{i}Meta").GetComponent<TMP_Text>();
+
+                        foreach (var label in new[] { description, name, meta })
+                        {
+                            label.ForceMeshUpdate();
+                            if (label.isTextOverflowing) cut.Add($"{id}: \"{name.text}\" {label.name} is cut");
+                        }
+
+                        rows++;
+                        if (description.textInfo.lineCount > DossierLayout.SkillsMinDescriptionLines) tall++;
+                    }
+
+                    _dossier.ScrollSkills(1);
+                    yield return null;
+                }
+            }
+
+            Assert.IsEmpty(cut.Distinct().ToList(), "text that ends in an ellipsis: " + string.Join("; ", cut.Distinct().Take(8)));
+            Assert.Greater(rows, 100, "fixture: the walk read hardly any rows");
+            Assert.Greater(tall, 0, "fixture: no description needed more than two lines, so a taller row was never exercised");
         }
 
         // Rows are read by scrolling the window to them.

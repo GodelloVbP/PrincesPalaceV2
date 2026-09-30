@@ -361,7 +361,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(UiNodeKind.Button, row.Kind);
             Assert.AreEqual(1172f, row.Size.X, 0.001f);
-            Assert.AreEqual(96f, row.Size.Y, 0.001f);
+            Assert.AreEqual(100f, row.Size.Y, 0.001f, "38 above the description, 58 for two lines at 29 each, 4 below");
 
             var name = screen.SkillRowNames[0].Node;
             var meta = screen.SkillRowMetas[0].Node;
@@ -372,6 +372,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(20, meta.FontSize);
             Assert.AreEqual(20, description.FontSize);
             Assert.GreaterOrEqual(description.Size.Y, 2 * 20 * 1.33f, "the description holds two Body 20 lines");
+            Assert.AreEqual(58f, description.Size.Y, 0.001f,
+                "two lines at 29: a box of exactly two nominal lines (54) drew one and an ellipsis");
             Assert.IsTrue(description.Clamps, "the description wraps to two lines and ends in an ellipsis past them");
             Assert.IsTrue(name.Truncates);
             Assert.IsTrue(meta.Truncates);

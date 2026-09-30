@@ -1570,7 +1570,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PartyFilledCount =
             UiString.Define("party.formation.filled_count", "{0}/3 positions filled", "3/3 positions filled");
         public static readonly UiString PartyFacingRibbon =
-            UiString.Define("party.formation.facing_ribbon", "FACING THE ENEMY ->");
+            UiString.Define("party.formation.facing_ribbon", "FACING THE ENEMY →");
 
         // The facts that decide placement (plan C22), on a seat and in the carry
         // preview. HP is current over maximum from the context's own source

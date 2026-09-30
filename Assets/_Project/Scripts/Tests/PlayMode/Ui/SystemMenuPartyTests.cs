@@ -642,6 +642,53 @@ namespace PrincesPalace.PlayModeTests
                 "the benched member was handed back by the load, so Bench is undone by quitting");
         }
 
+        // ---- the carry preview stays legible over a sprite -----------------------------------------
+
+        [UnityTest]
+        public IEnumerator TheCarryPreviewIsOpaque_AndTheSpriteUnderItIsDimmedWhileItShows()
+        {
+            yield return LoadScene("Hub");
+
+            SaveSlotManager.CurrentSave.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            var art = NodeOf("PartySeat1Art").GetComponent<Image>();
+            Assert.AreEqual(Color.white, art.color, "fixture: nothing is carried, so no sprite is dimmed");
+
+            party.ClickSeat(PartySeat.Front);
+            yield return null;
+
+            Assert.IsTrue(IsActive("PartySeat1Badge"), "fixture: the carry did not put a preview on the middle seat");
+            var plate = NodeOf("PartySeat1BadgeFill").GetComponent<Image>();
+            Assert.AreEqual(1f, plate.color.a, 0.001f, "the plate lets the sprite behind it reach the words");
+            Assert.Less(art.color.r, 0.5f, "the sprite under the plate is still at full brightness");
+
+            party.Cancel();
+            yield return null;
+
+            Assert.IsFalse(IsActive("PartySeat1Badge"));
+            Assert.AreEqual(Color.white, art.color, "the sprite stayed dimmed after the preview went");
+        }
+
+        // The ribbon's arrow is U+2192, which the two static atlases lack: it
+        // has to come from the fallback, or the ribbon ends in a missing-glyph
+        // box.
+        [UnityTest]
+        public IEnumerator TheFacingRibbonsArrowIsInAFontThatDrawsIt()
+        {
+            yield return LoadScene("Hub");
+            OpenParty();
+            yield return null;
+
+            var ribbon = NodeOf("PartyFormationRibbon").GetComponent<TMP_Text>();
+
+            StringAssert.EndsWith("→", ribbon.text);
+            Assert.IsTrue(ribbon.font.HasCharacter('→', searchFallbacks: true, tryAddCharacter: true),
+                "the ribbon's font and its fallbacks have no arrow, so it would draw a box");
+        }
+
         // ---- fixture --------------------------------------------------------------
 
         // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene) while

@@ -23,7 +23,7 @@ namespace PrincesPalace
     // (see ScreenRegistry.WireParty for the residual it cannot see: the menu
     // reference, the lock flag, each seat badge's own text label and the drag
     // sources, none of which UiAutoBind's five typed lookups can reach).
-    public class PartyController : MonoBehaviour, INavCancelClaim, IMenuPromptSource, IMenuPending
+    public class PartyController : MonoBehaviour, INavPaneEntry, INavCancelClaim, IMenuPromptSource, IMenuPending
     {
         // ---- header -----------------------------------------------------------
         [SerializeField] internal TMP_Text banner;
@@ -443,6 +443,12 @@ namespace PrincesPalace
         // column 0, an arbitrary pick the same way Hub's own gate Up-link is
         // (WireNavigation's header there says why: whichever the header sits
         // over dead centre gets no better claim than any other column).
+        // INavPaneEntry: the leftmost seat as drawn, which is the rear one (spec
+        // section 9). Without this the menu's generic answer -- the first
+        // Selectable in tree order -- was the FRONT seat, the far end of the row
+        // from where a reader starts and two more presses to the rear.
+        public Selectable NavEntry => At(seatButtons, SeatAtColumn(0));
+
         private void RefreshNavigation()
         {
             var links = new List<Selectable>();
@@ -875,6 +881,12 @@ namespace PrincesPalace
             if (filledCount != null) filledCount.Set(UiStrings.PartyFilledCount, Formation.FilledCount);
         }
 
+        // What a sprite looks like while the carry preview's opaque plate sits on
+        // its upper part: the part that still shows below the plate is dimmed
+        // with the rest of the seat's picture, so the seat reads as "being
+        // replaced" rather than as a sprite with a card stuck on it.
+        private static readonly Color ArtBehindBadge = new Color(0.35f, 0.35f, 0.4f, 1f);
+
         private void PaintSeat(int seat)
         {
             var seatIds = Formation.SeatIds;
@@ -894,6 +906,8 @@ namespace PrincesPalace
             var art = occupantId != null ? ArtFor(occupantId) : null;
             bool hasArt = art != null;
             SetArt(seatArts, seat, art);
+            var seatArt = At(seatArts, seat);
+            if (seatArt != null) seatArt.color = showBadge ? ArtBehindBadge : Color.white;
             ScaleArt(At(seatArts, seat), art, _seatArtScale);
             GroundArt(At(seatArts, seat), FloorYAt(_seatArtFloorY, seat), art,
                 occupantId != null ? BattleSpritePathFor(occupantId) : null);

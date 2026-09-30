@@ -94,7 +94,7 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the window -------------------------------------------------------------------
 
-        // Heights: header 44, row 96, note 44, link 64, in a 660 window.
+        // Heights: header 44, row 100 (two description lines), note 44, link 64, in a 660 window.
         private static List<SkillsEntry> ManySkills(int count, bool link = true)
         {
             var skills = new List<SkillListRow>();
@@ -107,7 +107,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var entries = ManySkills(10);
 
-            // header 44 + six rows 576 = 620; a seventh row (716) does not fit.
+            // header 44 + six rows 600 = 644; a seventh row (744) does not fit.
             Assert.AreEqual(7, SkillsListModel.Fit(entries, 0, 660f));
         }
 
@@ -200,15 +200,60 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheSlotCountsMatchTheLayoutsBounds()
         {
-            // 660 tall holds six 96 rows and no seventh.
+            // 660 tall holds six 100 rows and no seventh.
             Assert.AreEqual(6, DossierLayout.SkillsRowSlots);
-            Assert.AreEqual(96f, DossierLayout.SkillsRowHeight, 0.001f);
+            Assert.AreEqual(100f, DossierLayout.SkillsRowHeight, 0.001f);
             Assert.AreEqual(660f, DossierLayout.DetailHeight, 0.001f);
 
             // Five sources and TALENTS: six headers, two notes at most and a link.
             Assert.AreEqual(5, System.Enum.GetValues(typeof(SkillSource)).Length);
             Assert.AreEqual(6, DossierLayout.SkillsHeaderSlots);
             Assert.AreEqual(3, DossierLayout.SkillsNoteSlots);
+        }
+
+        // ---- a description is shown whole -------------------------------------------------
+
+        // A row that cut its description to one line and an ellipsis hid what a
+        // skill does, so a row grows to the lines its words take (Core measures
+        // the label and hands the count in).
+        [Test]
+        public void ARowGrowsToTheLinesItsDescriptionNeeds()
+        {
+            var skills = new List<SkillListRow> { Row(SkillSource.Innate, "Slam") };
+
+            var two = SkillsListModel.Build(skills, new List<TalentListRow>(), 0, false, text => 2);
+            var three = SkillsListModel.Build(skills, new List<TalentListRow>(), 0, false, text => 3);
+            var one = SkillsListModel.Build(skills, new List<TalentListRow>(), 0, false, text => 1);
+
+            Assert.AreEqual(100f, two.Single(e => e.Kind == SkillsEntryKind.Skill).Height, 0.001f);
+            Assert.AreEqual(129f, three.Single(e => e.Kind == SkillsEntryKind.Skill).Height, 0.001f);
+            Assert.AreEqual(3, three.Single(e => e.Kind == SkillsEntryKind.Skill).BodyLines);
+            Assert.AreEqual(100f, one.Single(e => e.Kind == SkillsEntryKind.Skill).Height, 0.001f,
+                "a short description still gets the two lines the spec gives every row");
+        }
+
+        [Test]
+        public void ATalentRowGrowsTheSameWay()
+        {
+            var entries = SkillsListModel.Build(Skills((SkillSource.Innate, "Slam")),
+                new List<TalentListRow> { new TalentListRow("Converge", "long words") }, 0, false, text => 4);
+
+            var talent = entries.Single(e => e.Kind == SkillsEntryKind.Talent);
+            Assert.AreEqual(4, talent.BodyLines);
+            Assert.AreEqual(158f, talent.Height, 0.001f);
+        }
+
+        [Test]
+        public void TheWindowCountsARowsOwnHeight()
+        {
+            var skills = new List<SkillListRow>();
+            for (int i = 0; i < 5; i++) skills.Add(Row(SkillSource.Innate, "Skill " + i));
+
+            // header 44 + five rows of 129 = 689 does not fit 660; the header and four rows do.
+            var entries = SkillsListModel.Build(skills, new List<TalentListRow>(), 0, false, text => 3);
+
+            Assert.AreEqual(5, SkillsListModel.Fit(entries, 0, 660f), "header + four 129 rows = 560");
+            Assert.AreEqual(5, SkillsListModel.Fit(entries, 1, 660f), "five 129 rows are 645, and the next header would make 689");
         }
     }
 }

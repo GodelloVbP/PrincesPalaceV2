@@ -127,6 +127,35 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Phys def {0} · Mag def {1}", UiStrings.PartySeatDefences.Template);
         }
 
+        // ONE HEALTH COLOUR, on the pane and on the fight's party plates. The
+        // fill is the HUD's own HpBright; a pane that used its own tint would
+        // read as a different meter to the player who has just left a fight.
+        [Test]
+        public void TheHealthFillIsTheColourTheFightsPartyPlatesUse()
+        {
+            var seat = Declared(PartyScreen.Build(new PartyInputs(3)).Root, "PartySeat0HpFill");
+            var plate = Declared(FightScreen.Build().Root, "PcPlate0HpFill");
+
+            Assert.AreEqual("#E07A62", plate.ColorHex, "fixture: the fight plate's fill moved");
+            Assert.AreEqual(plate.ColorHex, seat.ColorHex, "the pane's health bar is a different colour from the fight's");
+        }
+
+        // The carry preview sits over a sprite, and words on a see-through plate
+        // read through it onto the art.
+        [Test]
+        public void TheCarryPreviewPlateIsOpaque()
+        {
+            var badge = Declared(PartyScreen.Build(new PartyInputs(3)).Root, "PartySeat0BadgeFill");
+
+            Assert.IsTrue(badge.ColorHex.EndsWith("FF"), $"the badge plate {badge.ColorHex} lets the sprite show through");
+        }
+
+        [Test]
+        public void TheFacingRibbonPointsWithAnArrowGlyphNotTwoAsciiCharacters()
+        {
+            Assert.AreEqual("FACING THE ENEMY →", UiStrings.PartyFacingRibbon.Format());
+        }
+
         // Grows by width from the track's left edge, so it is pivoted there.
         [Test]
         public void TheHealthFillGrowsFromTheTracksLeftEdge()
@@ -442,6 +471,22 @@ namespace PrincesPalace.Domain.Tests
 
         private static List<string> NotActive(IEnumerable<NodeRef> refs) =>
             refs.Where(r => r.Node.StartInactive).Select(r => r.Node.Name).ToList();
+
+        private static UiNode Declared(UiNode root, string name)
+        {
+            var found = new Stack<UiNode>();
+            found.Push(root);
+            while (found.Count > 0)
+            {
+                var node = found.Pop();
+                if (node.Name == name) return node;
+                if (node.Children == null) continue;
+                foreach (var child in node.Children) found.Push(child);
+            }
+
+            Assert.Fail($"no node named '{name}' in the declared tree");
+            return null;
+        }
 
         private static SolvedNode Find(SolvedNode root, string name) =>
             root.Name == name ? root : root.Descendants().FirstOrDefault(n => n.Name == name);

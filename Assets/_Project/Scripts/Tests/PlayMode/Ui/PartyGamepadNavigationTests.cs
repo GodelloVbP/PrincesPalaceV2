@@ -290,6 +290,63 @@ namespace PrincesPalace.PlayModeTests
                 "the marker did not follow the selection");
         }
 
+        // THE ARROW NEVER STANDS ON WORDS. The Front seat is the pane's
+        // right-hand column, directly under the "FACING THE ENEMY" ribbon, and
+        // its arrow (above a square control) once landed on the ribbon's first
+        // letters ("ACING"). Checked against every visible word on the canvas
+        // that is not the seat's own, for each seat, with the arrow's own bob
+        // reach added so the swing cannot touch a letter either.
+        [UnityTest]
+        public IEnumerator TheFocusMarkerStandsOnNoWords_OnAnySeat()
+        {
+            yield return OpenTheParty();
+
+            var stood = new List<string>();
+            foreach (int seat in new[] { PartySeat.Rear, PartySeat.Middle, PartySeat.Front })
+            {
+                Select(Seat(seat));
+                yield return null;
+                yield return null;
+
+                var marker = NavigationInputModule.Marker;
+                Assert.IsTrue(marker.IsShown, $"seat {seat}: the marker is not drawn");
+
+                var box = WorldBounds((RectTransform)marker.transform);
+                box.Expand(new Vector3(FocusMarkerPlacement.BobAmplitude * 2f, FocusMarkerPlacement.BobAmplitude * 2f, 1000f));
+
+                var target = Seat(seat).transform;
+                var covered = new List<string>();
+                foreach (var text in _menu.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: false))
+                {
+                    if (text == null || !text.enabled || text.color.a < 0.05f) continue;
+                    if (string.IsNullOrWhiteSpace(text.text) || text.transform.IsChildOf(target)) continue;
+
+                    var ink = text.textBounds;
+                    if (ink.size.x <= 0f || ink.size.y <= 0f) continue;
+
+                    var a = text.transform.TransformPoint(ink.min);
+                    var b = text.transform.TransformPoint(ink.max);
+                    var inkBox = new Bounds((a + b) * 0.5f, new Vector3(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y), 1f));
+                    inkBox.center = new Vector3(inkBox.center.x, inkBox.center.y, box.center.z);
+
+                    if (box.Intersects(inkBox)) covered.Add($"\"{text.text}\" ({text.name})");
+                }
+
+                if (covered.Count > 0) stood.Add($"seat {seat} (arrow at {marker.LocalPosition}): {string.Join(", ", covered)}");
+            }
+
+            Assert.IsEmpty(stood, "the arrow stands on words: " + string.Join(" | ", stood));
+        }
+
+        private static Bounds WorldBounds(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            var bounds = new Bounds(corners[0], Vector3.zero);
+            for (int i = 1; i < 4; i++) bounds.Encapsulate(corners[i]);
+            return bounds;
+        }
+
         // ---- the links row (plan phase 3, item 3 -- the phase 2 gap named in ----
         // ---- the plan's own status header) --------------------------------------
 

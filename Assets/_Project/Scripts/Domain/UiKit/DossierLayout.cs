@@ -419,32 +419,58 @@ namespace PrincesPalace.Domain.UiKit
         public const float SkillsRowWidth = DetailWidth - ScrollbarWidth - SkillsScrollbarGap;   // 1172
 
         public const float SkillsHeaderHeight = 44f;
-        public const float SkillsRowHeight = 96f;
         public const float SkillsNoteHeight = 44f;
         public const float SkillsLinkHeight = 64f;
 
         // How many of each a window can hold. Rows are what the height bounds
-        // (660 / 96); the headers are one per group, and a list has at most
+        // (660 / 100); the headers are one per group, and a list has at most
         // the five skill groups and TALENTS; a list has two notes at most (the
         // empty sentence and the embers line) and one link.
         public const int SkillsRowSlots = 6;
         public const int SkillsHeaderSlots = 6;
         public const int SkillsNoteSlots = 3;
 
-        // Inside a row, from its centre. A Body 22 name line is 29 px, and a
-        // Body 20 line 26.5: the description box holds two of them.
+        // Inside a row, from its top. A Body 22 name line is 29 px, and a Body
+        // 20 line 26.5 plus its 5% line spacing: a description box of exactly
+        // two nominal lines (54) drew the first and ended in an ellipsis
+        // instead of the second, so a line is budgeted at 29.
         public const float SkillsInset = 16f;
         public const float SkillsNameWidth = 440f;
         public const float SkillsNameHeight = 30f;
         public const float SkillsMetaWidth = SkillsRowWidth - SkillsInset * 2f - SkillsNameWidth - 8f;   // 692
-        public const float SkillsDescriptionHeight = 54f;
+        public const float SkillsDescriptionLine = 29f;
+        public const int SkillsMinDescriptionLines = 2;
+        public const float SkillsDescriptionHeight = SkillsMinDescriptionLines * SkillsDescriptionLine;  // 58
         public const float SkillsLineTop = 6f;
         public const float SkillsDescriptionTop = SkillsLineTop + SkillsNameHeight + 2f;                  // 38
+        public const float SkillsRowBottomPad = 4f;
+
+        // A row holds its description whole: two lines at least, more when the
+        // words need them (Core measures the real label and says how many).
+        public const float SkillsRowHeight = SkillsDescriptionTop + SkillsDescriptionHeight + SkillsRowBottomPad;   // 100
+
+        public static float SkillsDescriptionHeightFor(int lines) =>
+            System.Math.Max(SkillsMinDescriptionLines, lines) * SkillsDescriptionLine;
+
+        public static float SkillsRowHeightFor(int lines) =>
+            SkillsDescriptionTop + SkillsDescriptionHeightFor(lines) + SkillsRowBottomPad;
 
         public static float SkillsNameX => -SkillsRowWidth * 0.5f + SkillsInset + SkillsNameWidth * 0.5f;
         public static float SkillsMetaX => SkillsRowWidth * 0.5f - SkillsInset - SkillsMetaWidth * 0.5f;
-        public static float SkillsLineY => SkillsRowHeight * 0.5f - SkillsLineTop - SkillsNameHeight * 0.5f;
-        public static float SkillsDescriptionY => SkillsRowHeight * 0.5f - SkillsDescriptionTop - SkillsDescriptionHeight * 0.5f;
+
+        // Placements from a row of `rowHeight`, in the row's own frame (centre
+        // origin): the base row (two lines) for the built tree, a taller one
+        // for a description that needs more.
+        public static float SkillsLineYFor(float rowHeight) =>
+            rowHeight * 0.5f - SkillsLineTop - SkillsNameHeight * 0.5f;
+
+        public static float SkillsDescriptionYFor(float rowHeight, int lines) =>
+            rowHeight * 0.5f - SkillsDescriptionTop - SkillsDescriptionHeightFor(lines) * 0.5f;
+
+        public static float SkillsRuleYFor(float rowHeight) => -rowHeight * 0.5f + 0.5f;
+
+        public static float SkillsLineY => SkillsLineYFor(SkillsRowHeight);
+        public static float SkillsDescriptionY => SkillsDescriptionYFor(SkillsRowHeight, SkillsMinDescriptionLines);
 
         // The link is a plate, not a full row.
         public const float SkillsLinkWidth = 420f;

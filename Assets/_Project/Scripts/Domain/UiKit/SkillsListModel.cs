@@ -53,12 +53,21 @@ namespace PrincesPalace.Domain.UiKit
         public readonly string Meta;
         public readonly string Body;
 
-        public SkillsEntry(SkillsEntryKind kind, string title, string meta = "", string body = "")
+        // How many lines the row's description takes (two at least), and so
+        // how tall the entry stands. Fixed for every other kind.
+        public readonly int BodyLines;
+        public readonly float Height;
+
+        public SkillsEntry(SkillsEntryKind kind, string title, string meta = "", string body = "", int bodyLines = 0)
         {
             Kind = kind;
             Title = title ?? "";
             Meta = meta ?? "";
             Body = body ?? "";
+            BodyLines = System.Math.Max(DossierLayout.SkillsMinDescriptionLines, bodyLines);
+            Height = kind == SkillsEntryKind.Skill || kind == SkillsEntryKind.Talent
+                ? DossierLayout.SkillsRowHeightFor(BodyLines)
+                : SkillsListModel.HeightOf(kind);
         }
 
         // What the pad can stand on. Headers and notes only inform; the rows
@@ -78,6 +87,8 @@ namespace PrincesPalace.Domain.UiKit
     // stops at that bound, so the pools cannot be overrun by any list.
     public static class SkillsListModel
     {
+        // A row's height is its entry's (SkillsEntry.Height); this answers for
+        // the kind at its base size, which a row of two lines is.
         public static float HeightOf(SkillsEntryKind kind)
         {
             switch (kind)
@@ -112,10 +123,17 @@ namespace PrincesPalace.Domain.UiKit
         // hidden), then the talents, the embers line and, at camp, the link.
         // `skills` arrive in the order the character's strip has them, and each
         // group keeps it.
+        //
+        // `descriptionLines` says how many lines a description takes in the
+        // label that draws it; Domain cannot measure type, so Core hands the
+        // measure in. Without one every description is taken as two lines.
         public static List<SkillsEntry> Build(IReadOnlyList<SkillListRow> skills,
                                               IReadOnlyList<TalentListRow> talents,
-                                              int embersLeft, bool showLink)
+                                              int embersLeft, bool showLink,
+                                              System.Func<string, int> descriptionLines = null)
         {
+            int LinesOf(string text) => descriptionLines == null ? 0 : descriptionLines(text);
+
             var entries = new List<SkillsEntry>();
 
             if (skills == null || skills.Count == 0)
@@ -137,7 +155,7 @@ namespace PrincesPalace.Domain.UiKit
                             headed = true;
                         }
 
-                        entries.Add(new SkillsEntry(SkillsEntryKind.Skill, row.Name, row.Meta, row.Description));
+                        entries.Add(new SkillsEntry(SkillsEntryKind.Skill, row.Name, row.Meta, row.Description, LinesOf(row.Description)));
                     }
                 }
             }
@@ -152,7 +170,7 @@ namespace PrincesPalace.Domain.UiKit
             {
                 foreach (var talent in talents)
                 {
-                    entries.Add(new SkillsEntry(SkillsEntryKind.Talent, talent.Name, "", talent.Description));
+                    entries.Add(new SkillsEntry(SkillsEntryKind.Talent, talent.Name, "", talent.Description, LinesOf(talent.Description)));
                 }
             }
 
@@ -178,7 +196,7 @@ namespace PrincesPalace.Domain.UiKit
             for (int i = System.Math.Max(0, top); i < entries.Count; i++)
             {
                 var kind = entries[i].Kind;
-                used += HeightOf(kind);
+                used += entries[i].Height;
                 if (used > viewport + 0.001f) break;
 
                 int taken;

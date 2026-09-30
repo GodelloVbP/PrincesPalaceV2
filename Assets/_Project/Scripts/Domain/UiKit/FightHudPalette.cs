@@ -22,7 +22,10 @@ namespace PrincesPalace.Domain.UiKit
         public const string PanelRed = "#1F0F14DE";          // 0.87
         public const string PanelGold = "#241610E8";         // 0.91
         public const string PanelPrimary = "#33190CE8";      // 0.91
-        public const string PanelActive = "#583216F2";       // 0.95
+        // Opaque, and its only user is the Party pane's plates over a sprite
+        // (the carry preview): 5% of a picture reaching the letters is what
+        // "translucent" read as.
+        public const string PanelActive = "#583216FF";       // 1.00
         public const string RowQuiet = "#100918C7";          // 0.78
         public const string SubmenuRowFill = "#120A1AD1";    // 0.82
         public const string Track = "#0E070CD9";             // 0.85

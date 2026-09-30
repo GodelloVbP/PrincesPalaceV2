@@ -555,5 +555,134 @@ dossier is recoverable from git.
 
 ## Status
 
-Revised 2026-09-29 after the second review. Build started; see the git log
-for landed phases.
+Revised 2026-09-30. Phases 0a-6 landed (see the git log); Phase 7 is built and
+audited below. What is left is the owner's: the captures to look at
+(`tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests`, files
+`SystemMenu_aspect_<tab>_<w>x<h>.png` for loadout, skills, party, run,
+glossary, options and exit at the four `UiFrames` aspects, and
+`fight_character` for the Fight context), the hardware pad pass (AUDIT #166)
+and the player tasks under Validation.
+
+## Audit (Phase 7)
+
+The build against the spec and the contracts, one line each. "Matches" means
+read against the code and pinned by the named test; "fixed" and "amended" are
+this phase's own changes, with the reason.
+
+**Contracts**
+
+- **C1 Tabs**: matches. `SystemMenuTabs.All` carries key, both labels, group,
+  hotkey, run-only and the pager label; every entry builds a pane; the bar
+  measures on each open and falls back to short labels
+  (`SystemMenuLabelWidthTests`, `SystemMenuBarGroupsTests`, `SystemMenuPaneTests`).
+- **C2 Context**: matches. `MenuContext` is a Domain enum set by
+  `ScreenRegistry.WireSystemMenu`; no `inDescent` or `lockedForFight` remains.
+- **C3 Permissions**: matches. One table, `MenuPermissions`; controls and the
+  Core operations both read it, and the bot passes `Descent`
+  (`MenuPermissionsTests`, `MenuFightReadOnlyTests`).
+- **C4 Data sources**: matches. The Fight scene registers `IFightMenuSource`;
+  the rail, PARTY and the compare column read the HUD's painted values, never
+  the snapshot (`FightMenuSourceTests`, `PartyMemberFactsTests`).
+- **C5 Pending states**: matches. `SlotArmed`, `BookPicked` and `Carry` live in
+  the panes; attribute points commit on press (`DossierLoadoutTests`,
+  `MenuHotkeyTests`).
+- **C6 Transitions**: matches. Cancel steps back a level before it closes, and
+  every close, tab change and hotkey drops the pending first
+  (`StartOpensSystemMenuTests`, `MenuHotkeyRuleTests`).
+- **C7 Reopen rule**: matches. Per context, session-static, system tabs never
+  remembered, hotkeys update it (`MenuMemoryTests`, `MenuHotkeyTests`).
+- **C8 Switching**: matches. LT/RT step tabs and wrap; LB/RB page characters,
+  categories and relics, and PARTY, OPTIONS and EXIT show no pager prompt
+  (`MenuPromptsTests`).
+- **C9 Entry points**: matches. `Open(tab, target)` is the way in; the three
+  old C/I owners are gone; the hub's glossary building and corner button call
+  it. AUDIT #219 keeps its other two callers (map abandon, main-menu exit), as
+  its entry says.
+- **C10 Lintel**: matches. The mode pill reads AT CAMP, IN A DESCENT and IN A
+  FIGHT — VIEW ONLY (`MenuPromptsTests.ThePillNamesEachContext`).
+- **C11 One notice**: matches. Refusals and confirmations go to the footer's
+  notice; the dossier's refusal field and the party toast are gone.
+- **C12 Prompt footer**: matches. Keyboard names or glyph plates by
+  `LastInputWasPad`; the pair set follows the focus and the pending state
+  (`MenuFooterTests`, `MenuPromptsTests`).
+- **C13 One selection language**: fixed. The arrow (the one `FocusMarker`)
+  drew on top of the Party subtitle and ribbon: a word was dropped as a
+  neighbour whenever a raycast-blocking backdrop sat behind it. Draw order now
+  decides, so an unrelated hit hides a word only if it is drawn after it
+  (`PartyGamepadNavigationTests.TheFocusMarkerStandsOnNoWords_OnAnySeat`).
+- **C14 Type and space**: matches. The lint walks every label and button in the
+  menu tree, decor included, with the floors the spec states
+  (`MenuTypeLintTests`); every list pages or scrolls one way.
+- **C15 CHARACTER**: matches. Strip in stage order with the bench after it, a
+  rail that nothing covers, pips from one model (`DossierRailTests`).
+- **C16 LOADOUT**: matches. Slots and books generated from
+  `EquipmentSlots.All` and `SpellBooks.MaxSpellSlots`, one pack with filters,
+  compare as `280 → 338 (+58)` (`DossierLoadoutTests`).
+- **C17 ATTRIBUTES**: matches. Steppers beside the value, unspent in the
+  header, `before → after` while a stepper is focused, "Refunds at camp" in a
+  descent (`DossierAttributesTests`, `DossierDerivedRowsTests`).
+- **C18 SKILLS**: fixed. Descriptions were cut to one line and an ellipsis (the
+  box was two nominal lines, 54, and a Body 20 line with its spacing is about
+  27.6). A row now grows to the lines its words need, measured on the label; no
+  text in the list may end in an ellipsis, and a test reads every authored
+  skill and talent on all three characters
+  (`DossierRailTests.EveryDescriptionInTheListIsShownWholeNeverCutToAnEllipsis`).
+  Spec 3.3 amended: the row is 100 tall at two lines, 29 a line after that.
+- **C19 REWARD TRACK**: matches. Hosted in the detail at 1196 × 660 with no
+  frame of its own; collecting follows C3 (`RewardTrackScreenTests`).
+- **C20 CharacterAttention**: matches. One Domain model over one Core feed
+  drives the pips and the map hint, which names only reasons that hold
+  (`CharacterAttentionTests`, `DossierAttentionTests`, `MapAttentionHintTests`).
+- **C21 Names**: matches. CHARACTER, EXIT, LOADOUT and SKILLS, "{signature} per
+  turn", the real Reach subtitle, the glossary's Skills category and the hub's
+  GLOSSARY building.
+- **C22 PARTY**: fixed. Seat facts, swap preview, roster rule and lintel pill
+  matched. Three defects from 1080p captures: the carry badge was translucent
+  over the sprite (now opaque, sprite dimmed while it shows; spec 6 amended),
+  the ribbon used ASCII "->" (now "→", and a test says the font has it), and the
+  pane opened on the front seat instead of the rear (now `INavPaneEntry`; that
+  is what made task 7 two presses over). The HP bar's salmon is `HpBright`, the
+  same token as the fight's party plates (pinned equal in `PartyScreenTests`);
+  a full bar reading as damage is the game's own health colour, not a Party
+  defect, and is the owner's call.
+- **C23 RUN**: matches. Relics paged, run effects with a row definition per
+  `EventBuffs` kind (a test fails on a missing one), supplies, and the
+  descent's figures (`RunPaneScreenTests`, `SystemMenuRunTests`,
+  `RunEffectRowTests`).
+- **C24 One relic presenter**: matches. `RelicListModel` (Domain),
+  `RelicRows.From` and `RelicListPresenter` (Core) serve the Reckoning, RUN and
+  the draft's held strip; the one remaining `Relics.FirstOrDefault` builds
+  fight effects and is not a presenter.
+- **C25 GLOSSARY**: matches. Eight categories with Statuses, locked entries,
+  LB/RB categories, deep link; the standalone modal and its context are gone
+  (`GlossaryGamepadNavigationTests`).
+- **C26 OPTIONS**: matches. Same tree as the main menu's Settings, resized in
+  place, at the floor (`OptionsPaneTests`).
+- **C27 EXIT**: matches. Content unchanged, labels per C21, separator gaps 40
+  (`SystemMenuExitsTests`).
+
+**Spec sections**
+
+- **1 Type floor**: matches (`MenuTypeLintTests.TheFloorsAreThoseTheSpecStates`).
+- **2 Frame**: matches. Lintel 52, panel 1600 × 900, bar 96, footer 48 with a
+  4 px gap, pill 36, tab gap 48 and group gap at least 96 (`SystemMenuLayout`,
+  `MenuFooterLayout`).
+- **3 CHARACTER, 3.1-3.4**: matches, and 3.3 amended (above). Strip chips
+  240 × 64, rail 300, detail 1196 × 660, columns 404 / 408 / 352.
+- **4 RUN, 5 GLOSSARY**: matches, at 1520 × 756 (`RunLayout`, `GlossaryLayout`).
+- **6 PARTY**: amended: opaque badge and dimmed sprite, "→" ribbon, the arrow
+  standing below the seat, and the health colour stated. The pane is 1488 × 716
+  as the section already says.
+- **7 OPTIONS and EXIT**: matches.
+- **8 States and prompts**: matches (`MenuPromptsTests`, `MenuFooterTests`).
+- **9 Focus maps**: matches, with one fix: PARTY's entry is now the rear seat
+  (`PartyController.NavEntry`).
+- **10 Press counts**: matches. Journey tests hold every pad count from the
+  fixed start: 1 (plus one per relic down), 4 + n, 2, 9, 8, 4, 6 and 4
+  (`JourneyCharacterLoadoutTests`, `JourneySystemMenuPressCountTests`).
+
+**Captures**: `SystemMenuCaptureTests.CaptureEveryTabAtEveryAspect` and
+`CaptureTheFightsCharacterViewAtEveryAspect` write one PNG per tab per aspect;
+their walks also run headless (`TheAspectWalkReachesEveryTabInADescent`,
+`TheFightsCharacterViewOpensViewOnly`), so only the pictures wait for the
+owner's screenshot pass.

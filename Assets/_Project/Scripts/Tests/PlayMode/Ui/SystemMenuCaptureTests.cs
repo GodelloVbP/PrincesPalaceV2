@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -388,6 +389,251 @@ namespace PrincesPalace.PlayModeTests
             CanvasCapture.RenderToFile(canvas, path, (int)UiFrames.FourThree.X, (int)UiFrames.FourThree.Y);
             Assert.IsTrue(File.Exists(path));
             Debug.Log($"[SystemMenuCapture] wrote {path}");
+        }
+
+        // ---- EVERY TAB AT EVERY ASPECT (plan phase 7) --------------------------------------------
+        //
+        // One picture per tab per UiFrames aspect, in a descent so RUN exists,
+        // named SystemMenu_aspect_<tab>_<w>x<h>.png, plus the fight's CHARACTER
+        // (view only, with the mode pill) at each aspect too. The layout is
+        // audited at these four frames by UiAudit; what a capture answers is
+        // whether it reads: the ultra-wide frame must not strand the panel, and
+        // the 4:3 frame must not crowd it.
+        //
+        // THE WALK IS ONE ITERATOR, and a second test runs it without a camera.
+        // The capture test is skipped on a runner with no graphics device, and
+        // an iterator that only ever runs there would carry its first exception
+        // to the owner's screenshot pass. Walking the same tabs and asserting
+        // each is showing is the part a headless gate can hold.
+        private static readonly (string Name, SystemMenuTab Tab, CharacterSection? Section)[] AspectTabs =
+        {
+            ("loadout", SystemMenuTab.Character, CharacterSection.Loadout),
+            ("skills", SystemMenuTab.Character, CharacterSection.Skills),
+            ("party", SystemMenuTab.Party, null),
+            ("run", SystemMenuTab.Run, null),
+            ("glossary", SystemMenuTab.Glossary, null),
+            ("options", SystemMenuTab.Options, null),
+            ("exit", SystemMenuTab.Exit, null),
+        };
+
+        private string _captureRoot;
+
+        // A throwaway save, so a capture that starts a run and equips gear
+        // leaves the real slot alone.
+        private void UseAThrowawaySave()
+        {
+            _captureRoot = Path.Combine(Path.GetTempPath(), "pp-menu-aspect-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_captureRoot);
+            SaveSystem.RootOverride = _captureRoot;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+            Navigation.LoadOverride = _ => { };
+        }
+
+        private void DropTheThrowawaySave()
+        {
+            Navigation.Reset();
+            TestGlobals.ResetAll();
+            RunManager.ResetForTests();
+            SaveSystem.RootOverride = null;
+            SaveSlotManager.Forget();
+            Time.timeScale = 1f;
+            if (_captureRoot != null && Directory.Exists(_captureRoot)) Directory.Delete(_captureRoot, recursive: true);
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureEveryTabAtEveryAspect()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            yield return WalkEveryTab(capture: true);
+        }
+
+        [UnityTest]
+        public IEnumerator TheAspectWalkReachesEveryTabInADescent()
+        {
+            yield return WalkEveryTab(capture: false);
+        }
+
+        private IEnumerator WalkEveryTab(bool capture)
+        {
+            UseAThrowawaySave();
+            try
+            {
+                // A descent with something on every tab: Bjorn with kindled
+                // talents (the longest skills list), a worn item and a spare
+                // for the pack, an unplaced book, three relics with the longest
+                // descriptions, an event buff, bonus damage and two consumables.
+                var save = SaveSlotManager.CurrentSave;
+                save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
+
+                var bjorn = save.roster.First(c => c.definitionId == "bear");
+                foreach (string talent in new[] { "bear_sen_root", "bear_sen_hold_1", "bear_sen_bellow_1" })
+                {
+                    bjorn.unlockedTalentIds.Add(talent);
+                }
+
+                var art = ContentDatabase.Equippables.Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath)).ToList();
+                var slotWithTwo = art.GroupBy(i => i.equipSlot).First(g => g.Count() >= 2);
+                var worn = slotWithTwo.OrderBy(i => i.tier).First();
+                var spare = slotWithTwo.OrderByDescending(i => i.tier).First(i => i.id != worn.id);
+                InventoryOps.Add(save.stockpiledItems, worn.id);
+                Assert.IsTrue(EquipmentOps.Equip(MenuContext.Camp, save, bjorn, worn.id, worn.equipSlot, worn.IsEquippable),
+                    "fixture: the worn item could not be put on");
+                InventoryOps.Add(save.stockpiledItems, spare.id);
+                InventoryOps.Add(save.stockpiledItems, "health_potion", 2);
+                InventoryOps.Add(save.stockpiledItems, "mana_potion", 1);
+
+                RunManager.StartRun(4242UL);
+                var run = RunManager.Run;
+                var book = ContentDatabase.Skills.FirstOrDefault(sk => sk != null && !string.IsNullOrWhiteSpace(sk.iconPath))
+                           ?? ContentDatabase.Skills.First(sk => sk != null);
+                run.unassignedSpellBooks.Add(book.id);
+                run.relicIds.Clear();
+                run.relicIds.AddRange(ContentDatabase.Relics
+                    .Where(r => r != null)
+                    .OrderByDescending(r => r.Data.Description.Length)
+                    .Take(3)
+                    .Select(r => r.id));
+                run.eventBuffs.Add(new PrincesPalace.Domain.Events.EventBuffEntry
+                {
+                    kind = PrincesPalace.Domain.Events.EventBuffs.PrincesFavor, amount = 2,
+                });
+                run.bonusDamagePercent = 6;
+                RunLedger.RecordRoom(run, won: true, expGained: 15, step: 3);
+                RunManager.BankPayout(40);
+                RunLedger.Fold(run, LoudFight(), new[] { "a", "b" });
+
+                yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+
+                var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(menu, "the Map scene has no SystemMenuController");
+                Assert.AreEqual(MenuContext.Descent, menu.Context, "fixture: the map's menu is not the descent's");
+
+                var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
+
+                menu.Open(SystemMenuTab.Character);
+                yield return null;
+                Assert.IsTrue(dossier.SelectCharacter("bear"), "fixture: Bjorn is not on the strip");
+
+                foreach (var tab in AspectTabs)
+                {
+                    menu.Select(tab.Tab);
+                    if (tab.Section.HasValue)
+                    {
+                        dossier.ShowSection(tab.Section.Value, focusRow: false);
+                        dossier.Refresh();
+                    }
+
+                    if (capture) yield return new WaitForSecondsRealtime(0.4f);
+                    yield return null;
+
+                    Assert.IsTrue(menu.IsOpen, $"{tab.Name}: the menu closed");
+                    Assert.AreEqual(tab.Tab, menu.SelectedTab, $"{tab.Name}: the wrong tab is showing");
+                    if (tab.Section.HasValue) Assert.AreEqual(tab.Section.Value, dossier.Section, $"{tab.Name}: the wrong section");
+
+                    if (capture) yield return CaptureAtEveryAspect(tab.Name);
+                }
+
+                menu.Close();
+            }
+            finally
+            {
+                DropTheThrowawaySave();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureTheFightsCharacterViewAtEveryAspect()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            yield return WalkTheFightsCharacterView(capture: true);
+        }
+
+        [UnityTest]
+        public IEnumerator TheFightsCharacterViewOpensViewOnly()
+        {
+            yield return WalkTheFightsCharacterView(capture: false);
+        }
+
+        // The Fight context once: CHARACTER, every section readable and none
+        // changeable, with the lintel's mode pill saying so. Health, pool and
+        // effective stats are the fight's own (plan C4).
+        private IEnumerator WalkTheFightsCharacterView(bool capture)
+        {
+            UseAThrowawaySave();
+            FightBeatPlayer.BeatSpeedMultiplier = 60f;
+            try
+            {
+                SaveSlotManager.CurrentSave.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
+                RunManager.StartRun(4242UL);
+
+                yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+
+                var fight = Object.FindAnyObjectByType<FightController>();
+                Assert.IsNotNull(fight, "the Fight scene has no FightController");
+                var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(menu, "the Fight scene carries no SystemMenuController");
+
+                var heroes = new List<string> { "sheep", "bear", "owl" };
+                var enemies = ContentDatabase.Enemies.Where(e => e != null).Take(2).Select(e => e.id).ToList();
+                var built = FightEncounterAdapter.Build(heroes, enemies, new PrincesPalace.Domain.Rng.SeededRandom(3));
+                built.Session.Begin();
+                fight.Bind(built.Session, PrincesPalace.Domain.Rewards.EncounterClass.Normal);
+                yield return null;
+                for (int i = 0; i < 120 && !built.Session.IsPlayerTurn; i++) yield return null;
+
+                menu.Open(SystemMenuTab.Character);
+                if (capture) yield return new WaitForSecondsRealtime(0.5f);
+                yield return null;
+
+                Assert.AreEqual(MenuContext.Fight, menu.Context, "fixture: this is not the fight's menu");
+                Assert.IsTrue(menu.IsOpen);
+                Assert.AreEqual(SystemMenuTab.Character, menu.SelectedTab);
+                Assert.IsFalse(MenuPermissions.Allows(MenuAction.EquipGear, menu.Context),
+                    "a fight's character view must be view only");
+
+                if (capture) yield return CaptureAtEveryAspect("fight_character");
+
+                menu.Close();
+            }
+            finally
+            {
+                DropTheThrowawaySave();
+            }
+        }
+
+        private static IEnumerator CaptureAtEveryAspect(string tab)
+        {
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas, $"{tab}: no root canvas to capture");
+
+            Directory.CreateDirectory(OutputDir);
+            foreach (var frame in UiFrames.All)
+            {
+                int width = (int)frame.X;
+                int height = (int)frame.Y;
+                string path = Path.Combine(OutputDir, $"SystemMenu_aspect_{tab}_{width}x{height}.png");
+
+                CanvasCapture.RenderToFile(canvas, path, width, height);
+                Assert.IsTrue(File.Exists(path), $"no capture written to {path}");
+                Debug.Log($"[SystemMenuCapture] wrote {path}");
+                yield return null;
+            }
         }
 
         // Backs up save_slot_{CurrentSlot}.json verbatim, and restores it

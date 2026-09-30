@@ -234,7 +234,7 @@ namespace PrincesPalace
                 var otherBox = BoxIn(canvasRect, rect);
                 if (!Reached(otherBox) || !IsNeighbour(other.transform, root)) continue;
                 if (!VisibleThroughEveryClip(canvasRect, rect, otherBox)) continue;
-                if (!DrawnOnTop(other.transform, rect, otherBox, canvasRect, root)) continue;
+                if (!DrawnOnTop(other.transform, other.targetGraphic, otherBox, canvasRect, root)) continue;
                 _obstacles.Add(otherBox);
             }
 
@@ -249,7 +249,7 @@ namespace PrincesPalace
                 var ink = InkIn(canvasRect, text);
                 if (ink.Width <= 0f || ink.Height <= 0f || !Reached(ink)) continue;
                 if (!VisibleThroughEveryClip(canvasRect, text.rectTransform, ink)) continue;
-                if (!DrawnOnTop(text.transform, text.rectTransform, ink, canvasRect, root)) continue;
+                if (!DrawnOnTop(text.transform, text, ink, canvasRect, root)) continue;
                 _obstacles.Add(ink);
             }
         }
@@ -272,11 +272,20 @@ namespace PrincesPalace
         // inside (a label on its own plate). Nothing hit at all counts as on
         // top -- a bare label on the stage has nothing to test against, and
         // wrongly keeping an obstacle only costs a marker a side.
+        //
+        // AN UNRELATED HIT HIDES THE OBSTACLE ONLY IF IT IS DRAWN AFTER IT. A
+        // label is never a raycast target, so under a modal the first hit at a
+        // label is the modal's own backdrop (SystemMenuPanelDimmer), which sits
+        // BEHIND the panel's words. Treating every unrelated hit as a cover
+        // dropped every word in the system menu from the neighbours, and the
+        // Party arrow stood on the subtitle and the "facing the enemy" ribbon.
+        // The raycaster's own order (sorting layer, canvas order, graphic
+        // depth) is the draw order, so the obstacle's rank is read the same way.
         private static readonly List<RaycastResult> Hits = new List<RaycastResult>();
         private static PointerEventData _probe;
         private static EventSystem _probeSystem;
 
-        private static bool DrawnOnTop(Transform obstacle, RectTransform rect, UiRect box,
+        private static bool DrawnOnTop(Transform obstacle, Graphic drawn, UiRect box,
             RectTransform canvasRect, Canvas root)
         {
             var events = EventSystem.current;
@@ -297,8 +306,23 @@ namespace PrincesPalace
             events.RaycastAll(_probe, Hits);
             if (Hits.Count == 0 || Hits[0].gameObject == null) return true;
 
-            var top = Hits[0].gameObject.transform;
-            return top == obstacle || top.IsChildOf(obstacle) || obstacle.IsChildOf(top);
+            var hit = Hits[0];
+            var top = hit.gameObject.transform;
+            if (top == obstacle || top.IsChildOf(obstacle) || obstacle.IsChildOf(top)) return true;
+
+            return DrawnAfter(drawn, hit);
+        }
+
+        private static bool DrawnAfter(Graphic drawn, RaycastResult hit)
+        {
+            if (drawn == null || drawn.canvas == null || !(hit.module is GraphicRaycaster)) return false;
+
+            var canvas = drawn.canvas;
+            int layer = SortingLayer.GetLayerValueFromID(canvas.sortingLayerID);
+            int hitLayer = SortingLayer.GetLayerValueFromID(hit.sortingLayer);
+            if (layer != hitLayer) return layer > hitLayer;
+            if (canvas.sortingOrder != hit.sortingOrder) return canvas.sortingOrder > hit.sortingOrder;
+            return drawn.depth > hit.depth;
         }
 
         private static readonly List<CanvasGroup> Groups = new List<CanvasGroup>();

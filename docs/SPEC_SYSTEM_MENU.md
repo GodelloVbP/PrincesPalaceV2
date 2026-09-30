@@ -232,7 +232,8 @@ that would do something is focused,
   scrollbar and a 16 gap); the wheel, a drag and the track scroll it, and the
   pad moves it by Down and Up off the window's edges. Focus follows the
   content: after the window moves, the pad stands on the row it was on.
-- **Row**, 96 tall, a focusable button:
+- **Row**, 100 tall for a two-line description and taller for a longer one, a
+  focusable button:
   - line 1: name (Body 22, 30 tall, left 440), then the right-hand line (Body 20
     muted, right, 692 wide): cost in the character's own pool name ("6 Mana",
     "30 Fury", "2 Wool", "20% HP", "Spends Fury" for a poolTiers skill, "Free"),
@@ -240,8 +241,15 @@ that would do something is focused,
     "All enemies", "One ally", "Party", "Self"), and for a single-enemy skill
     its reach ("Front rank only" for melee, "Ranks 1, 2" for an authored
     list). Empty parts are left out; the parts are joined by a middle dot.
-  - line 2: description (Body 20, up to 2 lines, 54 tall, through
-    `DescriptionRenderer`)
+  - line 2: description (Body 20, through `DescriptionRenderer`), in a box of
+    29 px a line: two lines at least (58), and as many more as the words need.
+    Core measures the description on the real label (`DescriptionLines`) and
+    the entry's height follows (`SkillsEntry.Height`: 38 above the box, the
+    box, 4 below), so no description ends in an ellipsis. The box was once 54,
+    two nominal lines, and drew one line and an ellipsis because a Body 20 line
+    is 26.5 px plus its line spacing. The longest authored description is a
+    talent's, at 304 characters, three lines. The window still scrolls by whole
+    entries, and a taller row simply leaves fewer in view
   - A does nothing on a row, so the footer shows no A there.
   - Costs are the fight's: reward-track discounts are applied
     (`ApplyRewardTrackSkillDeltas`).
@@ -337,7 +345,8 @@ The pane is 1488 × 716 (`SystemMenuLayout.PaneContentHalfWidth/Height`; the
   pill states the mode and a refusal is a notice.
 - **Subtitle row** (32): "The front rank takes the enemies' blows. Melee
   skills can strike only the enemy front rank." (Body 20), and the ribbon
-  "FACING THE ENEMY ->" (TacticalData 24 caps) at its right end.
+  "FACING THE ENEMY →" (TacticalData 24 caps; U+2192 comes from the fallback
+  font, and a test says the font has it) at its right end.
 - **Seats:** 3 × 492 wide, 370 tall, drawn Rear | Middle | Front. Top down:
   the seat label (TacticalData 24 caps, 32), the sprite (160), name (Body 22),
   role (Body 20), the HP bar (12 tall, 412 wide), "HP 180 / 240" (Body 24: it
@@ -353,7 +362,23 @@ The pane is 1488 × 716 (`SystemMenuLayout.PaneContentHalfWidth/Height`; the
     reads "Swap with {name}" / "Replace {name}" / "Place {name} here", with two
     columns of name, HP and "Phys 40 · Mag 20": the carried character on the
     left, the seat's occupant on the right. An empty seat has only the carried
-    column.
+    column. **The badge is opaque and the sprite is dimmed while it shows.** The
+    seat has no free space to put the badge beside the sprite (the stack is
+    full to its 8 px foot), so it sits over the sprite's upper part on a plate
+    with no see-through (`FightHudPalette.PanelActive`, alpha 1: a translucent
+    plate let the art reach the letters), and the part of the sprite that still
+    shows below it is tinted to 35 % (`PartyController.ArtBehindBadge`), so the
+    seat reads as being replaced, not as a sprite with a card on it.
+  - **The health bar is the fight's colour.** The fill is `HpBright`, the same
+    token as the party plates in the fight (`PartyScreenTests` pins the two
+    equal), so a full bar is the salmon the player already knows as health; it
+    changes with the HUD, not on its own.
+  - **The pad arrow** never stands on words. The Front seat sits under the
+    ribbon and the other two under the subtitle, so the arrow (above a square
+    control) has to take the edge below: `FocusMarker` counts every visible
+    word as a neighbour, and a word is hidden by another control only when that
+    control is drawn after it (a modal's backdrop sits behind the panel's
+    words, and used to hide all of them from the marker).
 - **Roster** (`PartyFormation.RosterVisible`: a character sits out or a seat is
   closed; otherwise the section is hidden): a hairline, the heading and a row
   of 176 × 194 cards (Body 20 lines: name, title picker, role, tag).
@@ -448,5 +473,11 @@ brackets.
 | 7 Odette to the front | Start, RT (PARTY), A (carry Rear), Right×2, A: 6 [P, click, click] |
 | 8 Leave to title | Start, LT (wrap to EXIT), A, A: 4 [Esc, click EXIT, click, click] |
 
-Phase 7 asserts the pad counts in a PlayMode journey test per task. A
-count above this table is a regression.
+Phase 7 asserts the pad counts in a PlayMode journey test per task
+(`JourneyCharacterLoadoutTests` for 4 and 5, `JourneySystemMenuPressCountTests`
+for 1-3 and 6-8), from the plan's fixed start. A count above this table is a
+regression. The built focus map matches every figure; task 7 needed a fix: PARTY
+opened on the front seat (the menu's generic "first control in tree order"),
+which made the rear seat two presses away, so `PartyController` now declares its
+entry (`INavPaneEntry`) as the leftmost seat, the rear one, as section 9 says.
+Task 2's `n` is measured on the third status (`n` = 2, six presses).

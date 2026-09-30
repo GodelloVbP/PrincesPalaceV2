@@ -127,7 +127,7 @@ namespace PrincesPalace
             // The constellation is a camp building: the link is offered where
             // the player can walk to it (plan C18).
             _skillEntries = SkillsListModel.Build(skills, talents, ContentDatabase.EmbersLeftFor(character),
-                showLink: Context == MenuContext.Camp);
+                showLink: Context == MenuContext.Camp, descriptionLines: DescriptionLines);
 
             if (!sameCharacter)
             {
@@ -158,7 +158,7 @@ namespace PrincesPalace
             {
                 int index = _skillsTop + i;
                 var entry = _skillEntries[index];
-                float height = SkillsListModel.HeightOf(entry.Kind);
+                float height = entry.Height;
                 float centre = DossierLayout.SkillsCentreY(y, height);
                 y += height;
 
@@ -175,6 +175,7 @@ namespace PrincesPalace
                     case SkillsEntryKind.Talent:
                         if (!Has(skillRows, rows)) break;
                         PlaceAt(skillRows[rows], centre);
+                        FitSkillRow(rows, entry);
                         if (Has(skillRowNames, rows)) skillRowNames[rows].SetContent(entry.Title);
                         if (Has(skillRowMetas, rows)) skillRowMetas[rows].SetContent(entry.Meta);
                         if (Has(skillRowDescriptions, rows)) skillRowDescriptions[rows].SetContent(entry.Body);
@@ -199,6 +200,48 @@ namespace PrincesPalace
 
             PaintSkillsThumb(shown);
             KeepSkillsFocus();
+        }
+
+        // How many lines `text` takes in the description label, measured on the
+        // label itself (font, size, spacing and width) so no description is ever
+        // drawn into a box that cuts it. Two at least: the base row.
+        private int DescriptionLines(string text)
+        {
+            var label = Has(skillRowDescriptions, 0) ? skillRowDescriptions[0] : null;
+            if (label == null || string.IsNullOrEmpty(text)) return DossierLayout.SkillsMinDescriptionLines;
+
+            string shown = DescriptionRenderer.Render(text);
+            float wanted = label.GetPreferredValues(shown, label.rectTransform.rect.width, Mathf.Infinity).y;
+            return Mathf.Max(DossierLayout.SkillsMinDescriptionLines,
+                Mathf.CeilToInt(wanted / DossierLayout.SkillsDescriptionLine));
+        }
+
+        // Stands pooled row `slot` at the height its entry needs: the row itself,
+        // its two lines from the top, the description box and the rule under it.
+        private void FitSkillRow(int slot, SkillsEntry entry)
+        {
+            var row = (RectTransform)skillRows[slot].transform;
+            row.sizeDelta = new Vector2(row.sizeDelta.x, entry.Height);
+
+            if (Has(skillRowNames, slot)) SetY(skillRowNames[slot], DossierLayout.SkillsLineYFor(entry.Height));
+            if (Has(skillRowMetas, slot)) SetY(skillRowMetas[slot], DossierLayout.SkillsLineYFor(entry.Height));
+
+            if (Has(skillRowDescriptions, slot))
+            {
+                var box = skillRowDescriptions[slot].rectTransform;
+                box.sizeDelta = new Vector2(box.sizeDelta.x, DossierLayout.SkillsDescriptionHeightFor(entry.BodyLines));
+                box.anchoredPosition = new Vector2(box.anchoredPosition.x,
+                    DossierLayout.SkillsDescriptionYFor(entry.Height, entry.BodyLines));
+            }
+
+            var rule = row.Find(row.name + "Rule") as RectTransform;
+            if (rule != null) rule.anchoredPosition = new Vector2(rule.anchoredPosition.x, DossierLayout.SkillsRuleYFor(entry.Height));
+        }
+
+        private static void SetY(TMP_Text label, float y)
+        {
+            var rect = label.rectTransform;
+            rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
         }
 
         private static void HideAll(TMP_Text[] labels)
@@ -227,10 +270,10 @@ namespace PrincesPalace
         private void PaintSkillsThumb(int shown)
         {
             float total = 0f;
-            foreach (var entry in _skillEntries) total += SkillsListModel.HeightOf(entry.Kind);
+            foreach (var entry in _skillEntries) total += entry.Height;
 
             float visible = 0f;
-            for (int i = 0; i < shown; i++) visible += SkillsListModel.HeightOf(_skillEntries[_skillsTop + i].Kind);
+            for (int i = 0; i < shown; i++) visible += _skillEntries[_skillsTop + i].Height;
 
             bool scrolls = SkillsListModel.MaxTop(_skillEntries, SkillsViewport) > 0;
             if (skillsScrollTrack != null) skillsScrollTrack.gameObject.SetShown(scrolls);
