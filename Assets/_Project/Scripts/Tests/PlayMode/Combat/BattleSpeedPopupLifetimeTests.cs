@@ -118,6 +118,12 @@ namespace PrincesPalace.PlayModeTests
                 (4f / 3f, true, 0.6375f),
             };
 
+            // A pinned, coarse frame (10 fps) so the outcome does not depend on how
+            // loaded the machine is: a full run's uneven frames used to decide whether
+            // the beat's own waits (each rounded up to a frame) outran the popup.
+            const float frame = 0.1f;
+            Time.captureDeltaTime = frame;
+
             bool checkedThePause = false;
 
             foreach (var (playerSpeed, missed, expectedLife) in cases)
@@ -169,12 +175,10 @@ namespace PrincesPalace.PlayModeTests
                 // FightBeatPlayer.Scaled(0.85f) recomputed here, which would
                 // make this assertion true by construction rather than by
                 // measurement.
-                // Generous rather than exactly "one frame": batchmode frame
-                // pacing is uneven (SpellPerformancePlayer's own header cites
-                // a single frame measured at 24ms and another at 57ms), and
-                // this test polls once per frame on TOP of whatever frame the
-                // engine itself is landing on.
-                float tolerance = Mathf.Max(Time.smoothDeltaTime * 6f, 0.1f);
+                // One frame, exactly: the frame is pinned above, so the popup's own
+                // life is quantised to it, and this test observes activation up to a
+                // frame after it happened.
+                float tolerance = frame + 0.001f;
 
                 float deadline = Time.realtimeSinceStartup + expectedLife * 4f + 3f;
                 while (!popup.IsFree && Time.realtimeSinceStartup < deadline)
@@ -187,6 +191,16 @@ namespace PrincesPalace.PlayModeTests
                 float actualLife = Time.time - activatedAt;
                 Assert.That(actualLife, Is.InRange(expectedLife - tolerance, expectedLife + tolerance),
                     because + $": expected life {expectedLife}, measured {actualLife}");
+
+                // The beat's tail (settle + gap, each rounded up to a frame) is not
+                // ordered against the popup's reclaim: at player 4/3 the popup can go
+                // free first. What matters is that the playback does finish, before
+                // the next case supersedes it.
+                float finishDeadline = Time.realtimeSinceStartup + 10f;
+                while (!finished && Time.realtimeSinceStartup < finishDeadline)
+                {
+                    yield return null;
+                }
 
                 Assert.IsTrue(finished, because + ": the single-beat playback never reached its onFinished");
             }
