@@ -63,6 +63,7 @@ namespace PrincesPalace.PlayModeTests
         [TestCase("HotkeyC", "c")]
         [TestCase("HotkeyI", "i")]
         [TestCase("HotkeyP", "p")]
+        [TestCase("HotkeyR", "r")]
         public void AKeyboardHotkeyIsBoundToItsLetter(string axis, string key)
         {
             var entry = Only(axis);

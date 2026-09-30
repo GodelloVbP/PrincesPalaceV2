@@ -22,15 +22,15 @@ namespace PrincesPalace.Domain.Tests
     public class SystemMenuScreenTests
     {
         // The tab labels as if TMP had measured them, in SystemMenuTabs.All
-        // order (CHARACTER, PARTY, RUN STATISTICS, OPTIONS, EXIT) -- the spec's
+        // order (CHARACTER, PARTY, RUN, OPTIONS, EXIT) -- the spec's
         // 18.3px-a-character estimate at 24 caps, rounded. The real widths come
         // from the Editor's measurement; SystemMenuLabelWidthTests holds the
         // built boxes to what is drawn. The arithmetic below is the rule, and
         // does not care where the widths came from.
-        private static readonly float[] Full = { 165f, 92f, 256f, 128f, 73f };
+        private static readonly float[] Full = { 165f, 92f, 55f, 128f, 73f };
 
-        // CHAR, PARTY, STATS, OPTS, EXIT.
-        private static readonly float[] Short = { 90f, 92f, 91f, 73f, 73f };
+        // CHAR, PARTY, RUN, OPTS, EXIT.
+        private static readonly float[] Short = { 90f, 92f, 55f, 73f, 73f };
 
         private static SystemMenuBar Bar(bool inRun, float[] full = null, float[] brief = null)
         {
@@ -91,6 +91,38 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // A hairline stands between ADJACENT tabs of a group and nowhere else: the
+        // gap between the groups is empty by design, and a divider in the middle
+        // of it read as a tab that had lost its label.
+        [TestCase(false, new[] { true, false, true })]
+        [TestCase(true, new[] { true, true, false, true })]
+        public void ADividerFollowsOnlyATabWhoseNeighbourIsInTheSameGroup(bool inRun, bool[] expected)
+        {
+            var tabs = SystemMenuTabs.Visible(inRun);
+
+            Assert.AreEqual(tabs.Count - 1, expected.Length, "fixture: one answer per gap");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Assert.AreEqual(expected[i], SystemMenuLayout.DividerFollows(tabs, i),
+                    $"the gap after {tabs[i].Key}");
+            }
+
+            Assert.IsFalse(SystemMenuLayout.DividerFollows(tabs, tabs.Count - 1), "nothing follows the last tab");
+        }
+
+        [Test]
+        public void TheBuiltBarLeavesTheGroupGapWithoutADivider()
+        {
+            var screen = SystemMenuScreen.Build();
+            var tabs = SystemMenuTabs.All;
+
+            for (int i = 0; i < screen.TabDividers.Count; i++)
+            {
+                Assert.AreEqual(SystemMenuLayout.DividerFollows(tabs, i), !screen.TabDividers[i].Node.StartInactive,
+                    $"divider {i} is authored on/off against the gap it sits in");
+            }
+        }
+
         // Pinned as literals, hand-derived from the rule over Full above: a box
         // is its label + 48 rounded to 4 (212 / 140 / 304 / 176 / 120), 48
         // between boxes of a group, the system group flush right, the group gap
@@ -116,20 +148,20 @@ namespace PrincesPalace.Domain.Tests
             for (int i = 0; i < dividers.Length; i++) Assert.AreEqual(dividers[i], bar.DividerCentreX(i), 0.01f, $"divider {i}");
         }
 
-        // Descent: game 212 + 48 + 140 + 48 + 304 = 752 from x 40, ending at 792;
-        // the system group is where it was; group gap 1216 - 792 = 424.
+        // Descent: game 212 + 48 + 140 + 48 + 104 = 552 from x 40, ending at 592;
+        // the system group is where it was; group gap 1216 - 592 = 624.
         [Test]
         public void TheDescentBarMatchesItsOwnArithmetic()
         {
             var bar = Bar(inRun: true);
 
             Assert.IsFalse(bar.ShortLabels);
-            CollectionAssert.AreEqual(new[] { 212f, 140f, 304f, 176f, 120f }, bar.Widths);
+            CollectionAssert.AreEqual(new[] { 212f, 140f, 104f, 176f, 120f }, bar.Widths);
             CollectionAssert.AreEqual(new[] { 40f, 300f, 488f, 1216f, 1440f }, bar.Lefts);
-            Assert.AreEqual(424f, bar.GroupGap, 0.01f);
-            Assert.AreEqual(1192f, bar.Needed, 0.01f);
+            Assert.AreEqual(624f, bar.GroupGap, 0.01f);
+            Assert.AreEqual(992f, bar.Needed, 0.01f);
 
-            var dividers = new[] { -524f, -336f, 204f, 616f };
+            var dividers = new[] { -524f, -336f, 104f, 616f };
             for (int i = 0; i < dividers.Length; i++) Assert.AreEqual(dividers[i], bar.DividerCentreX(i), 0.01f, $"divider {i}");
         }
 
@@ -177,18 +209,18 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEqual(new[] { 90f, 92f, 73f, 73f }, bar.LabelWidths);
         }
 
-        // Wordy full labels on the five-tab set. Short boxes 140 / 140 / 140 /
-        // 120 / 120: game 140 * 3 + 96 = 516 from x 40, ending at 556; system
-        // 120 + 48 + 120 = 288 from 1272; group gap 1272 - 556 = 716.
+        // Wordy full labels on the five-tab set. Short boxes 140 / 140 / 104 /
+        // 120 / 120: game 140 + 48 + 140 + 48 + 104 = 480 from x 40, ending at
+        // 520; system 120 + 48 + 120 = 288 from 1272; group gap 1272 - 520 = 752.
         [Test]
         public void AWordySetFallsBackToTheShortLabels()
         {
             var bar = Bar(inRun: true, full: Same(400f));
 
             Assert.IsTrue(bar.ShortLabels);
-            CollectionAssert.AreEqual(new[] { 140f, 140f, 140f, 120f, 120f }, bar.Widths);
+            CollectionAssert.AreEqual(new[] { 140f, 140f, 104f, 120f, 120f }, bar.Widths);
             CollectionAssert.AreEqual(new[] { 40f, 228f, 416f, 1272f, 1440f }, bar.Lefts);
-            Assert.AreEqual(716f, bar.GroupGap, 0.01f);
+            Assert.AreEqual(752f, bar.GroupGap, 0.01f);
         }
 
         [Test]
@@ -247,7 +279,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 (SystemMenuTab.Character, SystemMenuTabGroup.Game, "CHARACTER", "CHAR", 'C'),
                 (SystemMenuTab.Party, SystemMenuTabGroup.Game, "PARTY", "PARTY", 'P'),
-                (SystemMenuTab.RunStats, SystemMenuTabGroup.Game, "RUN STATISTICS", "STATS", SystemMenuTabDef.NoHotkey),
+                (SystemMenuTab.Run, SystemMenuTabGroup.Game, "RUN", "RUN", 'R'),
                 (SystemMenuTab.Options, SystemMenuTabGroup.System, "OPTIONS", "OPTS", SystemMenuTabDef.NoHotkey),
                 (SystemMenuTab.Exit, SystemMenuTabGroup.System, "EXIT", "EXIT", SystemMenuTabDef.NoHotkey),
             };
@@ -275,7 +307,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheHotkeysAreTheTabKeysThePackKeyAndView()
         {
             var axes = SystemMenuTabs.Hotkeys.Select(h => h.Axis).ToList();
-            CollectionAssert.AreEqual(new[] { "HotkeyC", "HotkeyP", "HotkeyI", "View" }, axes);
+            CollectionAssert.AreEqual(new[] { "HotkeyC", "HotkeyP", "HotkeyR", "HotkeyI", "View" }, axes);
 
             var pack = SystemMenuTabs.HotkeyFor('I');
             Assert.AreEqual(SystemMenuTab.Character, pack.Tab);
@@ -291,8 +323,8 @@ namespace PrincesPalace.Domain.Tests
         public void ViewOpensTheRunInADescentAndTheSquadAtCamp()
         {
             Assert.AreEqual(SystemMenuTab.Character, SystemMenuTabs.ViewTabFor(MenuContext.Camp));
-            Assert.AreEqual(SystemMenuTab.RunStats, SystemMenuTabs.ViewTabFor(MenuContext.Descent));
-            Assert.AreEqual(SystemMenuTab.RunStats, SystemMenuTabs.ViewTabFor(MenuContext.Fight));
+            Assert.AreEqual(SystemMenuTab.Run, SystemMenuTabs.ViewTabFor(MenuContext.Descent));
+            Assert.AreEqual(SystemMenuTab.Run, SystemMenuTabs.ViewTabFor(MenuContext.Fight));
         }
 
         // The scene's bar is the five-tab arrangement, built from whatever the
@@ -442,7 +474,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var out_ = OutOfRun.Select(t => t.Tab).ToList();
 
-            CollectionAssert.DoesNotContain(out_, SystemMenuTab.RunStats);
+            CollectionAssert.DoesNotContain(out_, SystemMenuTab.Run);
             CollectionAssert.Contains(out_, SystemMenuTab.Character);
         }
 
@@ -458,13 +490,13 @@ namespace PrincesPalace.Domain.Tests
                 "the out-of-run tabs are not in the order the in-run bar puts them");
         }
 
-        [TestCase(MenuContext.Camp)]
-        [TestCase(MenuContext.Descent)]
-        [TestCase(MenuContext.Fight)]
-        public void TheDefaultTabIsCharacterInEveryContext(MenuContext context)
+        [TestCase(MenuContext.Camp, SystemMenuTab.Character)]
+        [TestCase(MenuContext.Descent, SystemMenuTab.Character)]
+        [TestCase(MenuContext.Fight, SystemMenuTab.Run)]
+        public void WithNothingRememberedTheMenuLandsOnTheSquadExceptInAFight(MenuContext context, SystemMenuTab expected)
         {
-            Assert.AreEqual(SystemMenuTab.Character, SystemMenuTabs.DefaultFor(context),
-                "with nothing remembered the menu should land on the squad");
+            Assert.AreEqual(expected, SystemMenuTabs.DefaultFor(context),
+                "with nothing remembered the menu should land on the squad, or on the run in a fight");
         }
 
         // ---- no frame anywhere in the menu ---------------------------------------

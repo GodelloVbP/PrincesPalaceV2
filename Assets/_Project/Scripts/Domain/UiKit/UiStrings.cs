@@ -545,10 +545,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("reckoning.no_relics", "YOU CARRY NOTHING INTO THE DARK");
         public static readonly UiString ReckoningRelicHeld =
             UiString.Define("reckoning.relic_held", "HELD FOR THIS DESCENT");
-        // Which page of the relic list is up. Only shown when there is more
-        // than one: the shop sells relics with no cap and rerolls its shelf.
-        public static readonly UiString ReckoningRelicPage =
-            UiString.Define("reckoning.relic_page", "{0} / {1}", "99 / 99");
         public static readonly UiString ReckoningTallyHeading =
             UiString.Define("reckoning.tally_heading", "WHAT THEY DID, THIS FIGHT");
         // Reuses the defeat screen's shape on purpose: the same four numbers
@@ -1187,8 +1183,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("system.tab.character", "CHARACTER");
         public static readonly UiString SystemTabParty =
             UiString.Define("system.tab.party", "PARTY");
-        public static readonly UiString SystemTabRunStats =
-            UiString.Define("system.tab.run_stats", "RUN STATISTICS");
+        public static readonly UiString SystemTabRun =
+            UiString.Define("system.tab.run", "RUN");
         public static readonly UiString SystemTabOptions =
             UiString.Define("system.tab.options", "OPTIONS");
         public static readonly UiString SystemTabExit =
@@ -1201,8 +1197,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("system.tab.character.short", "CHAR");
         public static readonly UiString SystemTabPartyShort =
             UiString.Define("system.tab.party.short", "PARTY");
-        public static readonly UiString SystemTabRunStatsShort =
-            UiString.Define("system.tab.run_stats.short", "STATS");
+        public static readonly UiString SystemTabRunShort =
+            UiString.Define("system.tab.run.short", "RUN");
         public static readonly UiString SystemTabOptionsShort =
             UiString.Define("system.tab.options.short", "OPTS");
         public static readonly UiString SystemTabExitShort =
@@ -1266,11 +1262,11 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("options.applies",
                 "Changes apply immediately. Battle speed applies from the next action.");
 
-        // ---- the Run statistics pane ---------------------------------------
+        // ---- the RUN pane ---------------------------------------------------
         //
-        // Seventeen figures and no header. What is ABSENT is the design's
-        // elapsed / days / turns -- nothing counts them -- and its floor/room
-        // header, which the lintel already prints two inches above this pane.
+        // The figures of its THIS DESCENT column. What is ABSENT is the
+        // design's elapsed / days / turns -- nothing counts them -- and its
+        // floor/room header, which the lintel already prints above the pane.
         // See RunStatRows.
         public static readonly UiString RunStatBattle = UiString.Define("runstat.battle", "BATTLE");
         public static readonly UiString RunStatFold = UiString.Define("runstat.fold", "THE FOLD");
@@ -1278,19 +1274,9 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString RunStatDamageDealt =
             UiString.Define("runstat.damage_dealt", "Damage dealt");
-        // The two below are the breakdown of the row above them, which is why
-        // they are one word each: read down the card they are a total and its
-        // parts, and a card that says "Physical damage dealt" under "Damage
-        // dealt" reads as two unrelated totals.
-        public static readonly UiString RunStatDamagePhysical =
-            UiString.Define("runstat.damage_physical", "Physical");
-        public static readonly UiString RunStatDamageOther =
-            UiString.Define("runstat.damage_other", "Other");
         public static readonly UiString RunStatDamageTaken =
             UiString.Define("runstat.damage_taken", "Damage taken");
         public static readonly UiString RunStatHealed = UiString.Define("runstat.healed", "Healing done");
-        public static readonly UiString RunStatShielded =
-            UiString.Define("runstat.shielded", "Shielding raised");
         public static readonly UiString RunStatKills = UiString.Define("runstat.kills", "Foes felled");
         public static readonly UiString RunStatTimesDowned =
             UiString.Define("runstat.times_downed", "Times downed");
@@ -1302,13 +1288,54 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("runstat.deepest_room", "Deepest room");
         public static readonly UiString RunStatBosses = UiString.Define("runstat.bosses", "Bosses felled");
 
-        public static readonly UiString RunStatGoldHeld = UiString.Define("runstat.gold_held", "Gold held");
         public static readonly UiString RunStatGoldEarned =
             UiString.Define("runstat.gold_earned", "Gold earned");
         public static readonly UiString RunStatExpEarned =
             UiString.Define("runstat.exp_earned", "Experience earned");
         public static readonly UiString RunStatRelics = UiString.Define("runstat.relics", "Relics carried");
         public static readonly UiString RunStatPack = UiString.Define("runstat.pack", "Items in pack");
+
+        // ---- the RUN pane's columns and the shared relic list ----------------------
+        public static readonly UiString RunRelicsHeading =
+            UiString.Define("run.relics_heading", "RELICS · {0}", "RELICS · 99");
+        public static readonly UiString RunEffectsHeading = UiString.Define("run.effects_heading", "RUN EFFECTS");
+        public static readonly UiString RunSuppliesHeading = UiString.Define("run.supplies_heading", "SUPPLIES");
+        public static readonly UiString RunDescentHeading = UiString.Define("run.descent_heading", "THIS DESCENT");
+        public static readonly UiString RunNoRelics =
+            UiString.Define("run.no_relics", "You carry no relics on this descent.");
+        public static readonly UiString RunNoEffects =
+            UiString.Define("run.no_effects", "No effects on this descent.");
+        public static readonly UiString RunNoSupplies =
+            UiString.Define("run.no_supplies", "No consumables carried.");
+        public static readonly UiString RunSupplyCount =
+            UiString.Define("run.supply_count", "×{0}", "×99");
+        public static readonly UiString RunSupplyGold =
+            UiString.Define("run.supply_gold", "Gold");
+        public static readonly UiString RunSupplyMore =
+            UiString.Define("run.supply_more", "and {0} more", "and 99 more");
+
+        // One definition per EventBuffs kind (RunEffectRows).
+        public static readonly UiString RunEffectFavor = UiString.Define("run.effect.favor", "Prince's favor");
+        public static readonly UiString RunEffectFavorAmount =
+            UiString.Define("run.effect.favor_amount", "+{0}", "+99");
+        public static readonly UiString RunEffectFillLeg =
+            UiString.Define("run.effect.fill_leg", "Special pools full each turn — this leg");
+        public static readonly UiString RunEffectFillRun =
+            UiString.Define("run.effect.fill_run", "Special pools full each turn — this run");
+        public static readonly UiString RunEffectBonusDamage =
+            UiString.Define("run.effect.bonus_damage", "Bonus damage");
+        public static readonly UiString RunEffectBonusDamageAmount =
+            UiString.Define("run.effect.bonus_damage_amount", "+{0} %", "+99 %");
+        public static readonly UiString RunEffectSecondLives =
+            UiString.Define("run.effect.second_lives", "Second lives");
+        public static readonly UiString RunEffectSecondLivesAmount =
+            UiString.Define("run.effect.second_lives_amount", "{0}", "99");
+
+        // The shared relic list (RelicRows, RelicListPresenter). The page label
+        // only shows when there is more than one page: the shop sells relics
+        // with no cap and rerolls its shelf.
+        public static readonly UiString RelicUnknown = UiString.Define("relic.unknown", "Unknown relic");
+        public static readonly UiString RelicPage = UiString.Define("relic.page", "{0} / {1}", "99 / 99");
 
         // ---- the Main menu pane --------------------------------------------
         //
@@ -1468,6 +1495,8 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PromptTab = UiString.Define("menu.prompt.tab", "Tab");
         public static readonly UiString PromptPagesCharacter =
             UiString.Define("menu.prompt.pages.character", "Character");
+        public static readonly UiString PromptPagesRun =
+            UiString.Define("menu.prompt.pages.run", "Page");
         public static readonly UiString PromptOpen = UiString.Define("menu.prompt.open", "Open");
         public static readonly UiString PromptEquip = UiString.Define("menu.prompt.equip", "Equip");
         public static readonly UiString PromptUnequip = UiString.Define("menu.prompt.unequip", "Unequip");

@@ -180,7 +180,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(menu, "the Fight scene carries no SystemMenuController");
             Assert.IsTrue(menu.IsOpen, "Start should have opened the system menu");
 
-            yield return PressTriggerLeft(); // the pad's own tab shortcut (owner's 2026-09-19 hardware-round call moved this off LB/RB onto LT/RT) -- wraps to MainMenu, landing on ExitTitle (its own entry)
+            // A fight opens the menu on RUN (plan C7), so the pad's own tab shortcut (LT/RT, not LB/RB)
+            // takes two steps right, past OPTIONS, to MainMenu -- landing on ExitTitle (its own entry).
+            yield return PressTriggerRight();
+            yield return PressTriggerRight();
             AssertSelectedName("ExitTitle", "the trigger shortcut should land on the MainMenu pane's own entry");
 
             var exits = Object.FindAnyObjectByType<ExitsController>(FindObjectsInactive.Include);

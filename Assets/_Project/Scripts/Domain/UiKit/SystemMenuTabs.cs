@@ -13,8 +13,8 @@ namespace PrincesPalace.Domain.UiKit
     // The set is context-driven, not fixed. A tab that cannot be used is
     // absent, never greyed: a greyed tab asks the player to work out why, and
     // there is nowhere on a tab to answer. At camp the menu has four tabs;
-    // in a descent or a fight it has five, because Run statistics has
-    // something to show there.
+    // in a descent or a fight it has five, because RUN has something to show
+    // there.
     public enum SystemMenuTab
     {
         // The dossier, which carries its own pack. C and I are both keys onto
@@ -25,7 +25,10 @@ namespace PrincesPalace.Domain.UiKit
         // Listed before the run-only tab so its position relative to it is the
         // same in both sets.
         Party,
-        RunStats,
+
+        // The descent at a glance: relics, effects in force, supplies and the
+        // figures. Run-only.
+        Run,
         Options,
         Exit,
     }
@@ -102,9 +105,9 @@ namespace PrincesPalace.Domain.UiKit
             new SystemMenuTabDef(SystemMenuTab.Party, "Party",
                 UiStrings.SystemTabParty, UiStrings.SystemTabPartyShort,
                 SystemMenuTabGroup.Game, hotkey: 'P'),
-            new SystemMenuTabDef(SystemMenuTab.RunStats, "RunStats",
-                UiStrings.SystemTabRunStats, UiStrings.SystemTabRunStatsShort,
-                SystemMenuTabGroup.Game, runOnly: true),
+            new SystemMenuTabDef(SystemMenuTab.Run, "Run",
+                UiStrings.SystemTabRun, UiStrings.SystemTabRunShort,
+                SystemMenuTabGroup.Game, hotkey: 'R', runOnly: true, pages: UiStrings.PromptPagesRun),
             new SystemMenuTabDef(SystemMenuTab.Options, "Options",
                 UiStrings.SystemTabOptions, UiStrings.SystemTabOptionsShort,
                 SystemMenuTabGroup.System),
@@ -157,7 +160,7 @@ namespace PrincesPalace.Domain.UiKit
         // The pad's View button: the run at a glance where there is a run, the
         // squad at camp.
         public static SystemMenuTab ViewTabFor(MenuContext context) =>
-            context == MenuContext.Camp ? SystemMenuTab.Character : SystemMenuTab.RunStats;
+            context == MenuContext.Camp ? SystemMenuTab.Character : SystemMenuTab.Run;
 
         public static int Count => All.Count;
 
@@ -210,9 +213,12 @@ namespace PrincesPalace.Domain.UiKit
         public static IReadOnlyList<SystemMenuTabDef> Visible(bool inRun) =>
             VisibleIndices(inRun).Select(i => All[i]).ToList();
 
-        // Where the menu opens when nothing is remembered: Character in every
-        // context. Callers go through MenuMemory.TabFor, the one seam for "the
-        // tab to open on"; a tab the caller names wins over both.
-        public static SystemMenuTab DefaultFor(MenuContext context) => SystemMenuTab.Character;
+        // Where the menu opens when nothing is remembered (plan C7): the squad
+        // at camp and on the map, the run in a fight, where a player opens the
+        // menu to look something up. Callers go through MenuMemory.TabFor, the
+        // one seam for "the tab to open on"; a tab the caller names wins over
+        // both.
+        public static SystemMenuTab DefaultFor(MenuContext context) =>
+            context == MenuContext.Fight ? SystemMenuTab.Run : SystemMenuTab.Character;
     }
 }

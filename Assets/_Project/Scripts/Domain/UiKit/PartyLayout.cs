@@ -1,6 +1,6 @@
 namespace PrincesPalace.Domain.UiKit
 {
-    // The Party pane's geometry, as pure arithmetic -- mirrors RunStatsLayout's
+    // The Party pane's geometry, as pure arithmetic -- mirrors OptionsLayout's
     // shape (a hosted pane, top-down stacked sections, a build-time guard on
     // the one dimension that grows with content).
     //
@@ -24,7 +24,7 @@ namespace PrincesPalace.Domain.UiKit
         public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
 
         // A small slack margin over the pane's own content inset, not a
-        // second authored pad -- same pattern as RunStatsLayout.PadX/
+        // second authored pad -- same pattern as OptionsLayout.PadX/
         // PadTop/PadBottom.
         public const float PadX = 4f;
         public const float PadTop = 4f;
@@ -115,8 +115,8 @@ namespace PrincesPalace.Domain.UiKit
         public const float ColumnBottomPad = 14f;
 
         // DERIVED, not authored -- the panel's height is a consequence of what
-        // a column stacks, the same relationship RunStatsLayout.CardHeight
-        // states for its own rows.
+        // a column stacks, the same relationship a card's height has to
+        // its rows.
         public static float ColumnStackHeight =>
             ColumnTopPad + SeatLabelHeight + SeatLabelToBadgeGap + BadgeHeight + BadgeToArtGap
             + ArtHeight + ArtToGlowGap + GlowHeight + GlowToNameGap + NameHeight + NameToRoleGap

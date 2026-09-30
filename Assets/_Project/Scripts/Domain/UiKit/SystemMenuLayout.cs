@@ -74,7 +74,7 @@ namespace PrincesPalace.Domain.UiKit
         //
         // Every hosted pane's own HalfWidth/HalfHeight reads these instead of
         // Width * 0.5f / Height * 0.5f -- CharacterDossierScreen,
-        // RewardTrackScreen, OptionsScreen, PartyScreen, RunStatsScreen and
+        // RewardTrackScreen, OptionsScreen, PartyScreen, RunScreen and
         // ExitsScreen all lay their content out against these, so a pane's
         // declared frame (Width/Height, still PanelWidth x ContentHeight --
         // SystemMenuPaneTests.EveryHostedPaneIsTheSizeOfTheContentArea pins
@@ -210,6 +210,13 @@ namespace PrincesPalace.Domain.UiKit
                 fits: needed <= RowWidth);
         }
 
+        // Whether a hairline stands between tab `slot` and the next one.
+        // Dividers separate ADJACENT tabs of one group; the gap between the
+        // groups is empty by design, and a hairline in the middle of it read as
+        // a tab that had lost its label.
+        public static bool DividerFollows(IReadOnlyList<SystemMenuTabDef> tabs, int slot) =>
+            slot >= 0 && slot + 1 < tabs.Count && tabs[slot].Group == tabs[slot + 1].Group;
+
         public static float UnderlineWidth(float labelWidth) =>
             labelWidth + UnderlineOverhang;
 
@@ -303,8 +310,9 @@ namespace PrincesPalace.Domain.UiKit
         public float CentreX(int index) =>
             -SystemMenuLayout.HalfWidth + Lefts[index] + Widths[index] * 0.5f;
 
-        // The divider that follows tab `index`, centred in the gap after it
-        // (the group gap after the last game tab).
+        // The divider that follows tab `index`, centred in the gap after it.
+        // Only meaningful where SystemMenuLayout.DividerFollows says one
+        // belongs: across the group gap this is the middle of empty space.
         public float DividerCentreX(int index)
         {
             float rightOfThis = Lefts[index] + Widths[index];

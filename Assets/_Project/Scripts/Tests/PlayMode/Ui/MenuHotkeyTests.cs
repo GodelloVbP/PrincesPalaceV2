@@ -34,6 +34,7 @@ namespace PrincesPalace.PlayModeTests
         private const string C = "HotkeyC";
         private const string I = "HotkeyI";
         private const string P = "HotkeyP";
+        private const string R = "HotkeyR";
         private const string View = "View";
 
         [SetUp]
@@ -281,6 +282,56 @@ namespace PrincesPalace.PlayModeTests
                 "cancelling the carry changed the formation");
         }
 
+        // ---- R: the run, where there is one ------------------------------------------
+
+        [UnityTest]
+        public IEnumerator R_OpensTheRunTabInADescentAndClosesOnItsOwnTab()
+        {
+            yield return LoadMap();
+
+            yield return Press(R);
+            Assert.IsTrue(_menu.IsOpen, "R did not open the menu on the map");
+            Assert.AreEqual(SystemMenuTab.Run, _menu.SelectedTab);
+
+            yield return Press(C);
+            Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab, "C from Run should switch, not close");
+
+            yield return Press(R);
+            Assert.AreEqual(SystemMenuTab.Run, _menu.SelectedTab, "R from Character should switch to Run");
+
+            yield return Press(R);
+            Assert.IsFalse(_menu.IsOpen, "R on the Run tab should close the menu");
+            Assert.AreEqual(1f, Time.timeScale, 0.0001f, "closing by hotkey left the game paused");
+        }
+
+        [UnityTest]
+        public IEnumerator R_InAFightOpensTheRunTab()
+        {
+            yield return LoadFight();
+
+            yield return Press(R);
+
+            Assert.IsTrue(_menu.IsOpen, "R did not open the menu over a fight");
+            Assert.AreEqual(SystemMenuTab.Run, _menu.SelectedTab);
+        }
+
+        // Camp has no run to show. The key is spent on nothing rather than on a
+        // menu the player did not ask for.
+        [UnityTest]
+        public IEnumerator R_AtCampDoesNothing()
+        {
+            yield return LoadHub();
+
+            yield return Press(R);
+            Assert.IsFalse(_menu.IsOpen, "R opened a menu at camp, where there is no RUN tab");
+
+            yield return Press(C);
+            Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab);
+            yield return Press(R);
+            Assert.IsTrue(_menu.IsOpen, "R closed or moved the menu it has no tab in");
+            Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab, "R switched to a tab camp does not have");
+        }
+
         // ---- the pad's View button --------------------------------------------------
 
         [UnityTest]
@@ -304,7 +355,7 @@ namespace PrincesPalace.PlayModeTests
             yield return Press(View);
 
             Assert.IsTrue(_menu.IsOpen, "View did not open the menu on the map");
-            Assert.AreEqual(SystemMenuTab.RunStats, _menu.SelectedTab);
+            Assert.AreEqual(SystemMenuTab.Run, _menu.SelectedTab);
         }
 
         [UnityTest]
@@ -315,7 +366,7 @@ namespace PrincesPalace.PlayModeTests
             yield return Press(View);
 
             Assert.IsTrue(_menu.IsOpen, "View did not open the menu over a fight");
-            Assert.AreEqual(SystemMenuTab.RunStats, _menu.SelectedTab);
+            Assert.AreEqual(SystemMenuTab.Run, _menu.SelectedTab);
         }
 
         // ---- absorbed by a modal ----------------------------------------------------
@@ -439,7 +490,7 @@ namespace PrincesPalace.PlayModeTests
             yield return StartPress();
             Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab,
                 "the descent inherited the camp's memory; each context keeps its own");
-            _menu.Select(SystemMenuTab.RunStats);
+            _menu.Select(SystemMenuTab.Run);
             _menu.Close();
             yield return null;
 
@@ -452,8 +503,22 @@ namespace PrincesPalace.PlayModeTests
 
             yield return LoadMap();
             yield return StartPress();
-            Assert.AreEqual(SystemMenuTab.RunStats, _menu.SelectedTab,
+            Assert.AreEqual(SystemMenuTab.Run, _menu.SelectedTab,
                 "the descent's memory did not survive a scene load");
+        }
+
+        // Plan C7: with no memory, a fight reopens on RUN, where the menu is
+        // opened to look something up.
+        [UnityTest]
+        public IEnumerator AFightOpensOnRunWhenNothingIsRemembered()
+        {
+            yield return LoadFight();
+
+            yield return StartPress();
+
+            Assert.IsTrue(_menu.IsOpen, "Start did not open the menu over the fight");
+            Assert.AreEqual(SystemMenuTab.Run, _menu.SelectedTab,
+                "a fight with no memory should open on RUN, not on the squad");
         }
 
         [UnityTest]
@@ -479,8 +544,8 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadHub();
 
-            // RunStats is a run-only tab; the camp has none to show.
-            _menu.Open(SystemMenuTab.RunStats);
+            // Run is a run-only tab; the camp has none to show.
+            _menu.Open(SystemMenuTab.Run);
             yield return null;
 
             Assert.IsTrue(_menu.IsOpen);

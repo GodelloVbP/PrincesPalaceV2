@@ -60,8 +60,20 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text pageLabel;
 
         // Art, as two parallel arrays -- a scene serialises arrays and does not
-        // serialise dictionaries. Same shape the character overlay uses.
+        // serialise dictionaries. Same shape the character overlay uses. Also
+        // the held strip's table: it shows relics, and so does this.
         [SerializeField] internal IconEntry[] icons;
+
+        // The held strip (AUDIT #241): what this descent already carries, by
+        // the shared relic presenter. Compact, icon and name, paged past its
+        // chips.
+        [SerializeField] internal GameObject heldHeading;
+        [SerializeField] internal GameObject[] heldRows;
+        [SerializeField] internal Image[] heldIcons;
+        [SerializeField] internal TMP_Text[] heldNames;
+        [SerializeField] internal Button heldPrevPageButton;
+        [SerializeField] internal Button heldNextPageButton;
+        [SerializeField] internal TMP_Text heldPageLabel;
 
         // The selection glow's RGB is baked into the sprite's own colour at
         // build time (Ui.ThemeGlowHex(Violet), see RelicDraftScreen.BuildCard)
@@ -69,6 +81,7 @@ namespace PrincesPalace
         // own focus glow uses (FocusGlowAlpha), rather than a second colour
         // pair that could disagree with the theme.
 
+        private RelicListPresenter _held;
         private readonly List<RelicOption> _offer = new List<RelicOption>();
         private int _selected = -1;
         private bool _wired;
@@ -115,6 +128,23 @@ namespace PrincesPalace
 
             if (prevPageButton != null) prevPageButton.onClick.AddListener(() => StepPage(-1));
             if (nextPageButton != null) nextPageButton.onClick.AddListener(() => StepPage(1));
+
+            Held.WirePager();
+            Held.Paged = RefreshNavigation;
+        }
+
+        private RelicListPresenter Held =>
+            _held ?? (_held = new RelicListPresenter(new RelicListWidgets(
+                heldRows, heldIcons, heldNames, null, null,
+                heldPrevPageButton, heldNextPageButton, heldPageLabel, null, icons)));
+
+        // Everything this descent holds so far, in held order. The heading
+        // shows only when there is something under it: round one holds nothing.
+        private void PaintHeld()
+        {
+            var held = RunManager.Run?.relicIds;
+            Held.Show(held);
+            if (heldHeading != null) heldHeading.SetActive(held != null && held.Count > 0);
         }
 
         // Rolls a fresh offer and shows it. Called by the hub when a run starts.
@@ -180,6 +210,8 @@ namespace PrincesPalace
             bool anything = _offer.Count > 0;
             if (emptyHint != null) emptyHint.SetActive(!anything);
 
+            PaintHeld();
+
             // Paging shows only when there is more than one page. Nothing
             // offers more than RelicPool.OfferCount at once today -- see this
             // file's own header -- so this is dormant rather than dead: hidden
@@ -211,11 +243,11 @@ namespace PrincesPalace
                 if (!present) continue;
 
                 var option = _offer[absolute];
-                var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == option.Id);
+                var row = RelicRows.Row(option.Id);
 
-                cardNames[i].SetContent(definition?.Data.DisplayName ?? option.Id);
+                cardNames[i].SetContent(row.Name);
                 cardRarities[i].Set(UiStrings.DraftRarity, RelicRarityNames.Of(option.Rarity));
-                cardBodies[i].SetContent(definition?.Data.Description ?? "");
+                cardBodies[i].SetContent(row.Known ? row.Description : "");
 
                 ItemIcons.Apply(cardIcons[i], icons, option.Id);
 
@@ -277,6 +309,13 @@ namespace PrincesPalace
 
             var selectables = new Dictionary<string, object>();
             foreach (var card in active) selectables[card.name] = card.gameObject;
+
+            // The held strip's arrows, when it pages: a mouse click on one
+            // must not be read as focus leaving the declared set.
+            foreach (var arrow in new[] { heldPrevPageButton, heldNextPageButton })
+            {
+                if (arrow != null && arrow.gameObject.activeSelf) selectables[arrow.name] = arrow.gameObject;
+            }
             if (descendButton != null) selectables[descendButton.name] = descendButton.gameObject;
 
             object entry = active.Count > 0 ? active[0].gameObject

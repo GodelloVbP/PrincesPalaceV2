@@ -170,28 +170,28 @@ namespace PrincesPalace.PlayModeTests
                 "the Options pane grew more BarSlider components by being opened again");
         }
 
-        // ---- B12: the run statistics pane -------------------------------------------
+        // ---- B12: the RUN pane -------------------------------------------------------
 
         // OnEnable => Refresh(), and the figures move while the pane is shut --
-        // that is what a descent is. SystemMenuRunStatsTests pins the FIGURES
+        // that is what a descent is. SystemMenuRunTests pins the FIGURES
         // against a run it built; this pins that re-opening repaints them.
         [UnityTest]
-        public IEnumerator ReOpeningRunStatsRepaintsTheFiguresRatherThanShowingTheOldOnes()
+        public IEnumerator ReOpeningTheRunPaneRepaintsTheFiguresRatherThanShowingTheOldOnes()
         {
             RunManager.StartRun(4242);
             RunManager.BankPayout(40);
 
             yield return OpenTheMenu("Map");
 
-            _menu.Select(SystemMenuTab.RunStats);
+            _menu.Select(SystemMenuTab.Run);
             yield return null;
             yield return null;
 
-            var stats = Object.FindAnyObjectByType<RunStatsController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(stats, "the Map's menu has no RunStatsController");
+            var stats = Object.FindAnyObjectByType<RunController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(stats, "the Map's menu has no RunController");
 
-            var label = Named("RunStatsValuegold_earned")?.GetComponent<TMP_Text>();
-            Assert.IsNotNull(label, "the run statistics pane has no gold_earned figure");
+            var label = Named("RunStatValuegold_earned")?.GetComponent<TMP_Text>();
+            Assert.IsNotNull(label, "the RUN pane has no gold_earned figure");
             Assert.AreEqual("40", label.text, "fixture: the pane is not reading the run's gold");
 
             // What a descent does while the pane is shut.

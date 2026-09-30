@@ -133,6 +133,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef RelicEmptyHint;
         public List<NodeRef> RelicRows = new List<NodeRef>();
+        public List<NodeRef> RelicIcons = new List<NodeRef>();
         public List<NodeRef> RelicNames = new List<NodeRef>();
         public List<NodeRef> RelicMetas = new List<NodeRef>();
         public List<NodeRef> RelicBodies = new List<NodeRef>();
@@ -259,6 +260,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float RelicHeadingY = 52f;
         private const float RelicTopRowY = 2f;
         private const float RelicRowPitch = 60f;
+
+        // Inside a 1040-wide row, from its centre: the icon at the left, the
+        // name-over-rarity block after it, the description over the rest.
+        private const float RelicIconSize = 44f;
+        private const float RelicIconX = -520f + 12f + RelicIconSize * 0.5f;
+        private const float RelicNameWidth = 300f;
+        private const float RelicNameX = -520f + 68f + RelicNameWidth * 0.5f;
+        private const float RelicBodyWidth = 648f;
+        private const float RelicBodyX = 520f - 12f - RelicBodyWidth * 0.5f;
 
         private const float TabY = 100f;
         private const float TabPitch = 250f;
@@ -584,7 +594,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var children = new List<UiNode>
             {
-                Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(460f, 34f), 20,
+                Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(460f, 34f), 24,
                     "#B8A8D9", Place.At(0f, RelicHeadingY)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
 
@@ -592,11 +602,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // no band below the rows to put it in -- that is Continue's.
             var pager = Ui.Pager("ReckoningRelicPrevPage", Place.At(330f, RelicHeadingY),
                 "ReckoningRelicNextPage", Place.At(500f, RelicHeadingY), new UiVec(52f, 44f), 20,
-                "ReckoningRelicPageLabel", UiStrings.ReckoningRelicPage, Place.At(415f, RelicHeadingY),
-                new UiVec(100f, 34f), 16, "#B8A8D9");
-            pager.Label.AsDecor().Inactive();
-            pager.Prev.Inactive();
-            pager.Next.Inactive();
+                "ReckoningRelicPageLabel", UiStrings.RelicPage, Place.At(415f, RelicHeadingY),
+                new UiVec(100f, 34f), 20, "#B8A8D9");
+            pager.Label.AsDecor().Styled(TypographyRole.Body).Inactive();
+            pager.Prev.Styled(TypographyRole.Body).Inactive();
+            pager.Next.Styled(TypographyRole.Body).Inactive();
             RelicPageLabel = pager.Label;
             RelicPrevPageButton = pager.Prev;
             RelicNextPageButton = pager.Next;
@@ -608,20 +618,37 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 float y = RelicTopRowY - i * RelicRowPitch;
 
-                var name = Ui.Label("ReckoningRelic" + i + "Name", UiString.Runtime, new UiVec(420f, 30f), 21,
-                        "#EDE6FF", Place.At(-280f, 12f))
+                // ONE LINE PER RELIC at the menu type floor (plan C14): the
+                // icon, the name over its rarity, and the description on the
+                // rest of the line, cut with an ellipsis where it runs long.
+                // The full text is the RUN pane's job; this tab is a glance
+                // between fights and its band has room for four 56px rows.
+                var icon = Ui.Sprite("ReckoningRelic" + i + "Icon", null,
+                        Place.At(RelicIconX, 0f), UiSize.Fixed(RelicIconSize, RelicIconSize))
                     .AsDecor();
-                var meta = Ui.Label("ReckoningRelic" + i + "Meta", UiString.Runtime, new UiVec(420f, 24f), 14,
-                        "#B8A8D9", Place.At(-280f, -14f))
+                var name = Ui.Label("ReckoningRelic" + i + "Name", UiString.Runtime, new UiVec(RelicNameWidth, 28f), 22,
+                        "#EDE6FF", Place.At(RelicNameX, 14f))
+                    .Styled(TypographyRole.Body)
+                    .TextAligned(UiTextAlign.Left)
+                    .Truncated()
                     .AsDecor();
-                var body = Ui.Label("ReckoningRelic" + i + "Body", UiString.Runtime, new UiVec(520f, 44f), 14,
-                        "#9C8FC4", Place.At(240f, 0f))
+                var meta = Ui.Label("ReckoningRelic" + i + "Meta", UiString.Runtime, new UiVec(RelicNameWidth, 26f), 20,
+                        "#B8A8D9", Place.At(RelicNameX, -14f))
+                    .Styled(TypographyRole.Body)
+                    .TextAligned(UiTextAlign.Left)
+                    .AsDecor();
+                var body = Ui.Label("ReckoningRelic" + i + "Body", UiString.Runtime, new UiVec(RelicBodyWidth, 30f), 20,
+                        "#9C8FC4", Place.At(RelicBodyX, 0f))
+                    .Styled(TypographyRole.Body)
+                    .TextAligned(UiTextAlign.Left)
+                    .Truncated()
                     .AsDecor();
 
                 var row = Ui.Panel("ReckoningRelic" + i, Place.At(0f, y), UiSize.Fixed(1040f, 56f),
-                        name, meta, body)
+                        icon, name, meta, body)
                     .Inactive();
 
+                RelicIcons.Add(icon);
                 RelicRows.Add(row);
                 RelicNames.Add(name);
                 RelicMetas.Add(meta);
@@ -629,8 +656,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 children.Add(row);
             }
 
-            var empty = Ui.Label("ReckoningRelicEmpty", UiStrings.ReckoningNoRelics, new UiVec(900f, 44f), 20,
+            var empty = Ui.Label("ReckoningRelicEmpty", UiStrings.ReckoningNoRelics, new UiVec(900f, 44f), 24,
                     "#7E6E9E", Place.At(0f, -100f))
+                .Styled(TypographyRole.Body)
                 .AsDecor()
                 .Inactive();
             RelicEmptyHint = empty;

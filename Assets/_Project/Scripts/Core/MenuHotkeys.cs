@@ -18,6 +18,12 @@ namespace PrincesPalace
             if (menu == null) return;
 
             var tab = hotkey.TabIn(menu.Context);
+
+            // A key for a tab this context does not have does nothing: R at
+            // camp has no run to show, and opening the menu on some other tab
+            // in answer to it would be a menu the player did not ask for.
+            if (!menu.HasTab(tab)) return;
+
             bool open = menu.IsOpen;
 
             var outcome = MenuHotkeyRule.Resolve(

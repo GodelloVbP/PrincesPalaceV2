@@ -47,7 +47,7 @@ namespace PrincesPalace.Domain.Tests
             yield return ReckoningScreen.Build().Root;
             yield return RelicDraftScreen.Build().Root;
             yield return RewardTrackScreen.Build().Root;
-            yield return RunStatsScreen.Build().Root;
+            yield return RunScreen.Build().Root;
             yield return SystemMenuScreen.Build().Root;
             yield return TalentScreen.Build().Root;
         }

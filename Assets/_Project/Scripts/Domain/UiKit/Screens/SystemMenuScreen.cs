@@ -42,7 +42,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public RewardTrackScreen RewardTrack;
         public PartyScreen Party;
         public OptionsScreen Options;
-        public RunStatsScreen RunStats;
+        public RunScreen Run;
         public ExitsScreen Exits;
 
         public UiNode Root;
@@ -160,15 +160,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 barChildren.Add(underline);
             }
 
-            // One divider per gap. Built for the widest set and switched off
-            // down to (visible - 1) at runtime, for the same reason the tabs
-            // are: the scene cannot know which set it will be showing.
+            // One divider per gap between adjacent tabs of a group. Built for
+            // the widest set and re-placed and re-shown at runtime, for the
+            // same reason the tabs are: the scene cannot know which set it will
+            // be showing. The gap between the groups gets none, so the one the
+            // build authors there is off until the controller places it.
             for (int i = 0; i < tabs.Count - 1; i++)
             {
                 var divider = Ui.Solid($"SystemTabDivider{i}", Hairline,
                         new UiVec(SystemMenuLayout.DividerWidth, SystemMenuLayout.DividerHeight),
                         Place.At(bar.DividerCentreX(i), 0f))
                     .AsDecor();
+                if (!SystemMenuLayout.DividerFollows(tabs, i)) divider.Inactive();
 
                 screen.TabDividers.Add(divider);
                 barChildren.Add(divider);
@@ -233,10 +236,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         contents.Add(options.Root);
                         break;
 
-                    case SystemMenuTab.RunStats:
-                        var stats = RunStatsScreen.Build();
-                        screen.RunStats = stats;
-                        contents.Add(stats.Root);
+                    case SystemMenuTab.Run:
+                        var run = RunScreen.Build();
+                        screen.Run = run;
+                        contents.Add(run.Root);
                         break;
 
                     case SystemMenuTab.Exit:
@@ -408,14 +411,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(SystemMenuLayout.PillMaxWidth, SystemMenuLayout.PillHeight),
                 Place.At(SystemMenuLayout.PillCentreX(SystemMenuLayout.PillMaxWidth), 0f), pillLabel);
 
+            // Body, not TacticalData: that role's material carries a violet face
+            // colour by design, and it multiplies whatever colour the node asks
+            // for, so a TextPrimary number came out violet and read as a link.
             var gold = Ui.Label("SystemLintelGold", UiString.Runtime, new UiVec(150f, 30f), 22, TextPrimary,
                     Place.At(379f, 0f))
-                .Styled(TypographyRole.TacticalData)
+                .Styled(TypographyRole.Body)
                 .AsDecor();
 
             var embers = Ui.Label("SystemLintelEmbers", UiString.Runtime, new UiVec(170f, 30f), 22, TextPrimary,
                     Place.At(551f, 0f))
-                .Styled(TypographyRole.TacticalData)
+                .Styled(TypographyRole.Body)
                 .AsDecor();
 
             // The lintel's Esc is a glyph like the footer's, from the same

@@ -292,7 +292,7 @@ namespace PrincesPalace.PlayModeTests
 
             // Fixture check: the Camp default is Character, out of the
             // hub's own four visible tabs (Character, Party, Options, Exit --
-            // RunStats is RunOnly).
+            // Run is RunOnly).
             Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Character), _menu.SelectedIndex,
                 "fixture: the menu should open on Character outside a run");
 

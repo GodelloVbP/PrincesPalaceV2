@@ -101,6 +101,10 @@ namespace PrincesPalace
         // tab set and the Exit pane's abandon card key on it.
         public bool InDescent => context != MenuContext.Camp;
 
+        // Whether this context has the tab at all: a run-only tab is absent at
+        // camp. Answers from the context, not from a layout that has not run.
+        public bool HasTab(SystemMenuTab tab) => !SystemMenuTabs.Def(tab).RunOnly || InDescent;
+
         // The tabs on show, as indices into SystemMenuTabs.All. Exposed because
         // "which tabs does this context have" is the single most testable claim
         // the context rule makes.
@@ -269,7 +273,16 @@ namespace PrincesPalace
         // ignored, so a target can name something a later phase builds.
         private void ApplyTarget(SystemMenuTab tab, MenuTarget target)
         {
-            if (tab != SystemMenuTab.Character || target.IsNone) return;
+            if (target.IsNone) return;
+
+            // A relic: page the RUN pane to it and put focus on its row.
+            if (tab == SystemMenuTab.Run)
+            {
+                if (target.Kind == MenuTargetKind.Relic) RunPane()?.ShowRelic(target.Id);
+                return;
+            }
+
+            if (tab != SystemMenuTab.Character) return;
 
             var dossier = Dossier();
             if (dossier == null) return;
@@ -278,6 +291,14 @@ namespace PrincesPalace
             // that follows should open over the character asked for.
             if (target.Kind == MenuTargetKind.CharacterId) dossier.SelectCharacter(target.Id);
             if (target.Is(MenuTargetKind.Section, MenuSections.Pack)) dossier.ShowPack(true);
+        }
+
+        private RunController RunPane()
+        {
+            int pane = SystemMenuTabs.PaneIndexFor(SystemMenuTabs.IndexOf(SystemMenuTab.Run));
+            return panes != null && pane < panes.Length && panes[pane] != null
+                ? panes[pane].GetComponentInChildren<RunController>(includeInactive: true)
+                : null;
         }
 
         // Found rather than wired: the menu only knows its panes, and the
@@ -389,7 +410,7 @@ namespace PrincesPalace
         // whatever is CURRENTLY active -- the tab bar plus every Selectable
         // under the currently-shown pane, walked generically rather than
         // enumerated per pane. A pane this phase has not given its own
-        // navigation groups (Dossier, Run statistics, Main menu) still
+        // navigation groups (Dossier, Main menu) still
         // needs its buttons counted here, or the dispatcher's
         // own reselection rule (NavigationInputModule.
         // ReselectIfOutsideDeclaredSet) would force a mouse click on one of
@@ -460,6 +481,9 @@ namespace PrincesPalace
                 RuntimeNavWiring.Group("systemMenuTabs", UiNavGroupKind.Rail, visibleButtons),
                 new[] { RuntimeNavWiring.Link(SelectedTabButton(), UiNavDirection.Down, ActivePaneEntry()) });
         }
+
+        // The selected tab's button, for a pane that links Up to it.
+        internal Selectable SelectedTabSelectable => SelectedTabButton();
 
         private Selectable SelectedTabButton() =>
             tabButtons != null && _selected >= 0 && _selected < tabButtons.Length ? tabButtons[_selected] : null;
@@ -619,12 +643,13 @@ namespace PrincesPalace
                 }
             }
 
-            // One divider per gap, and only for the gaps this set has.
+            // One divider per gap between adjacent tabs of a group, and only
+            // for the gaps this set has: never across the group gap.
             if (tabDividers != null)
             {
                 for (int i = 0; i < tabDividers.Length; i++)
                 {
-                    bool shown = i < defs.Count - 1;
+                    bool shown = SystemMenuLayout.DividerFollows(defs, i);
                     tabDividers[i].SetShown(shown);
                     if (!shown) continue;
 
@@ -785,7 +810,7 @@ namespace PrincesPalace
         // SystemMenuTabs.All, not slot positions, so the step is taken in
         // slot space (0..VisibleTabs.Count-1) and translated back --
         // stepping _selected directly by +-1 would walk the hidden Run
-        // statistics tab, between two visible ones at camp.
+        // tab, between two visible ones at camp.
         public void StepTab(int direction)
         {
             if (_visible.Count == 0) return;
@@ -804,7 +829,7 @@ namespace PrincesPalace
             // ApplyContext's own tab-Down link uses (INavPaneEntry first,
             // else the first active Selectable in tree order); falls back
             // to the tab button itself when the pane declares nothing
-            // selectable at all (RunStats today), so selection is never
+            // selectable at all (none today), so selection is never
             // left dangling on a pane with nothing to enter.
             var entry = ActivePaneEntry();
             var target = entry != null ? entry.gameObject : SelectedTabButton()?.gameObject;

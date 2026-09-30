@@ -67,6 +67,9 @@ namespace PrincesPalace
         // does not serialise dictionaries. Same shape the overlay uses.
         [SerializeField] internal IconEntry[] icons;
 
+        // Relic art, by relic id: the RELICS tab's rows (RelicListPresenter).
+        [SerializeField] internal IconEntry[] relicArt;
+
         [SerializeField] internal Button[] tabButtons;
         [SerializeField] internal Image[] tabMarkers;
         [SerializeField] internal GameObject[] pages;
@@ -79,6 +82,7 @@ namespace PrincesPalace
 
         [SerializeField] internal GameObject relicEmptyHint;
         [SerializeField] internal GameObject[] relicRows;
+        [SerializeField] internal Image[] relicIcons;
         [SerializeField] internal TMP_Text[] relicNames;
         [SerializeField] internal TMP_Text[] relicMetas;
         [SerializeField] internal TMP_Text[] relicBodies;
@@ -164,7 +168,7 @@ namespace PrincesPalace
         private static readonly Color MarkerDark = new Color(0.95f, 0.86f, 0.62f, 0f);
 
         private int _tab;
-        private int _relicPage;
+        private RelicListPresenter _relics;
         private bool _choosing;
 
         // Degrees per second. Slow: this is a glow behind an object, and a
@@ -224,8 +228,7 @@ namespace PrincesPalace
 
             continueButton.onClick.AddListener(() => Dismissed?.Invoke());
 
-            if (relicPrevPageButton != null) relicPrevPageButton.onClick.AddListener(() => StepRelicPage(-1));
-            if (relicNextPageButton != null) relicNextPageButton.onClick.AddListener(() => StepRelicPage(1));
+            Relics.WirePager();
 
             for (int i = 0; i < offerButtons.Length; i++)
             {
@@ -532,7 +535,7 @@ namespace PrincesPalace
             _choosing = choosing;
 
             _tab = 0;
-            _relicPage = 0;
+            Relics.Model.SetPage(0);
             PaintTabs();
             PaintRelics();
             PaintTally();
@@ -921,58 +924,23 @@ namespace PrincesPalace
 
         // ---- what the descent is carrying ----------------------------------------------
 
+        // The one relic presenter, over this screen's own widgets.
+        private RelicListPresenter Relics =>
+            _relics ?? (_relics = new RelicListPresenter(new RelicListWidgets(
+                relicRows, relicIcons, relicNames, relicMetas, relicBodies,
+                relicPrevPageButton, relicNextPageButton, relicPageLabel, relicEmptyHint, relicArt)));
+
         private void PaintRelics()
         {
             // The RUN'S relics, read straight off the snapshot. The Reckoning
             // is the only screen a player sees between fights, so it is where
-            // "what am I actually carrying" belongs.
+            // "what am I actually carrying" belongs. PAGED, never truncated:
+            // the shop sells relics with no cap.
             var held = RunManager.HasRun
                 ? RunManager.Run.relicIds ?? new List<string>()
                 : new List<string>();
 
-            if (relicEmptyHint != null) relicEmptyHint.SetActive(held.Count == 0);
-
-            // PAGED, never truncated: the shop sells relics with no cap, and
-            // truncating would silently lose everything after the last row.
-            // Same reasoning as the unknown-id row below.
-            int pageSize = relicRows.Length;
-            int pageCount = Paging.PageCount(held.Count, pageSize);
-            _relicPage = Paging.Clamp(_relicPage, held.Count, pageSize);
-            var page = Paging.Slice(held, _relicPage, pageSize);
-
-            bool paged = pageCount > 1;
-            if (relicPageLabel != null)
-            {
-                relicPageLabel.gameObject.SetActive(paged);
-                if (paged) relicPageLabel.Set(UiStrings.ReckoningRelicPage, _relicPage + 1, pageCount);
-            }
-
-            if (relicPrevPageButton != null) relicPrevPageButton.gameObject.SetActive(paged);
-            if (relicNextPageButton != null) relicNextPageButton.gameObject.SetActive(paged);
-
-            for (int i = 0; i < relicRows.Length; i++)
-            {
-                bool present = i < page.Count;
-                relicRows[i].SetActive(present);
-                if (!present) continue;
-
-                var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == page[i]);
-
-                // A relic id naming content that is gone still gets a row: the
-                // player is carrying SOMETHING and a silently shorter list
-                // would be worse than an honest unknown.
-                relicNames[i].SetContent(definition?.Data.DisplayName ?? page[i]);
-                relicMetas[i].SetContent(definition == null ? "" : Domain.Content.RelicRarityNames.Of(definition.Data.Rarity));
-                relicBodies[i].SetContent(definition?.Data.Description ?? "");
-            }
-        }
-
-        // Clamped rather than wrapping, as Glossary's pager is: an arrow
-        // pressed past either end does nothing.
-        private void StepRelicPage(int direction)
-        {
-            _relicPage += direction;
-            PaintRelics();
+            Relics.Show(held);
         }
 
         private bool RelicPagerShown() =>

@@ -30,26 +30,41 @@ namespace PrincesPalace.Domain.Tests
             // Subtrees left to the phase that migrates them, by root node name.
             public readonly string[] SkippedSubtrees;
 
-            public Scope(string name, Func<UiNode> build, params string[] skipped)
+            // When set, only nodes whose name starts with it are checked: a
+            // screen outside the menu joins the list by the rows it touched,
+            // not wholesale.
+            public readonly string OnlyNamePrefix;
+
+            // Fewer than this checked means the walk found nothing, or the
+            // part lost its labels.
+            public readonly int MinimumNodes;
+
+            public Scope(string name, Func<UiNode> build, int minimumNodes, string onlyNamePrefix,
+                         params string[] skipped)
             {
                 Name = name;
                 Build = build;
+                MinimumNodes = minimumNodes;
+                OnlyNamePrefix = onlyNamePrefix;
                 SkippedSubtrees = skipped;
             }
         }
 
-        // The frame -- lintel, bar, footer -- of the system menu. Its panes
-        // (everything under SystemMenuContent) are the later phases' to add.
+        // The frame -- lintel, bar, footer -- of the system menu, and the panes
+        // migrated so far: RUN. The other panes are their phases' to add. Then
+        // the rows outside the menu that share its presenter: the Reckoning's
+        // relic tab and the relic draft's held strip.
+        //
+        // The frame authors the tab buttons, the lintel's title, context,
+        // pill, gold, embers, Esc and close, and the footer's notice and its
+        // prompt slots of two labels each, so 20 is what it cannot fall under.
         private static readonly Scope[] Scoped =
         {
-            new Scope("system menu frame", () => SystemMenuScreen.Build().Root, "SystemMenuContent"),
+            new Scope("system menu frame and RUN pane", () => SystemMenuScreen.Build().Root, 60, null,
+                "SystemPaneCharacter", "SystemPaneParty", "SystemPaneOptions", "SystemPaneExit"),
+            new Scope("reckoning relics tab", () => ReckoningScreen.Build().Root, 15, "ReckoningRelic"),
+            new Scope("relic draft held strip", () => RelicDraftScreen.Build().Root, 9, "DraftHeld"),
         };
-
-        // Fewer than this checked in a scope means the walk found nothing, or
-        // the frame lost its labels: the frame authors the tab buttons, the
-        // lintel's title, context, pill, gold, embers, Esc and close, the
-        // footer's notice and its prompt slots of two labels each.
-        private const int MinimumNodesPerScope = 20;
 
         private static IEnumerable<SolvedNode> Walk(SolvedNode node, string[] skipped)
         {
@@ -67,7 +82,8 @@ namespace PrincesPalace.Domain.Tests
 
         // Every problem in a tree, as "path: what is wrong", and how many
         // labels and buttons it looked at.
-        private static List<string> Problems(UiNode root, string[] skipped, out int checkedCount)
+        private static List<string> Problems(UiNode root, string[] skipped, out int checkedCount,
+                                             string onlyNamePrefix = null)
         {
             var solved = UiSolver.Solve(root, UiFrames.Reference);
             var problems = new List<string>();
@@ -76,6 +92,7 @@ namespace PrincesPalace.Domain.Tests
             foreach (var node in Walk(solved, skipped))
             {
                 if (node.Source.Kind != UiNodeKind.Label && node.Source.Kind != UiNodeKind.Button) continue;
+                if (onlyNamePrefix != null && !node.Name.StartsWith(onlyNamePrefix, StringComparison.Ordinal)) continue;
 
                 checkedCount++;
                 var problem = MenuTypeFloor.Problem(node.Source);
@@ -90,9 +107,9 @@ namespace PrincesPalace.Domain.Tests
         {
             foreach (var scope in Scoped)
             {
-                var problems = Problems(scope.Build(), scope.SkippedSubtrees, out int count);
+                var problems = Problems(scope.Build(), scope.SkippedSubtrees, out int count, scope.OnlyNamePrefix);
 
-                Assert.GreaterOrEqual(count, MinimumNodesPerScope,
+                Assert.GreaterOrEqual(count, scope.MinimumNodes,
                     $"'{scope.Name}': only {count} labels and buttons were checked, so the walk is not " +
                     "looking at the screen");
                 Assert.IsEmpty(problems, $"'{scope.Name}' has text under the menu type floor:\n" +

@@ -16,7 +16,7 @@ namespace PrincesPalace
     // Fills and drives the Party pane: the model lives in
     // Domain/Party/PartyFormation.cs, engine-free; this is the translation
     // layer that turns a save into that model and the model's outcomes back
-    // into a save, the same split RunStatsController and
+    // into a save, the same split RunController and
     // CharacterDossierController already draw.
     //
     // NAMES MIRROR PartyScreen's OWN FIELD NAMES so UiAutoBind can bind them

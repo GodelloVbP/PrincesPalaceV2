@@ -109,7 +109,6 @@ namespace PrincesPalace.Domain.Tests
             "WireReckoning:controller.icons",
             "WireReckoning:controller.offerRects",
             "WireGlossary:controller.icons",
-            "WireRelicDraft:controller.icons",
         };
 
         private struct Site

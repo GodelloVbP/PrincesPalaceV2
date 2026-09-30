@@ -54,7 +54,8 @@ height. Lintel + panel + footer = 1004 of 1080. In the pane sections below,
 free for pane-level headers and pagers.
 
 - **Lintel:** title (FunctionalHeading 24, tracked), context line (Body
-  20), gold, embers (TacticalData 22), mode pill (FunctionalHeading 24 in a
+  20), gold, embers (Body 22: TacticalData's material tints text violet,
+  and a number that reads as a link is wrong here), mode pill (FunctionalHeading 24 in a
   1px-rimmed plate, 36 tall, fitted to its words), ESC glyph plus close. The
   pill's words are all caps, so it takes the caps floor of 24 (section 1)
   rather than Body 20.
@@ -181,21 +182,34 @@ The pane is 1520 × 756.
 
 | Column | x | width | content |
 |---|---|---|---|
-| Relics | 0 | 640 | header "RELICS · {n}", a page of 6 rows, pager |
+| Relics | 0 | 640 | header "RELICS · {n}" with the pager on its line, a page of 5 rows |
 | Effects + supplies | 664 | 400 | RUN EFFECTS list, then SUPPLIES list |
 | This descent | 1088 | 432 | condensed stats |
 
-- **Relic row**, 88 tall: icon 56, name (Body 22 SemiBold) with rarity
-  (TacticalData 20, rarity colour), description (Body 20, 2 lines). An
-  unknown id shows its raw id and "Unknown relic".
-- **Run effects row**, 56 tall: label (Body 20) and value (TacticalData
-  22), for example "Prince's favor +2", "Special pools full each turn —
-  this leg", "Bonus damage +6 %", "Second lives 1". With none: "No effects
-  on this descent."
-- **Supplies:** one row per consumable (icon 40, name, ×count, effect),
-  then gold.
+Geometry lives in `RunLayout`; `RunPaneScreenTests` pins it in literals. The
+pane uses Body for names, rarity, descriptions and figures, not
+TacticalData: that role's material tints its text violet, which would turn a
+rarity colour or a plain number lilac.
+
+- **Relic row**, 132 tall (was 88): icon 64, name (Body 22) with rarity
+  (Body 20, rarity colour) on one line, description (Body 20) under it.
+  The longest authored description is 154 characters, three lines in the
+  528-wide text column; a row that clips what a relic does defeats the pane,
+  so `EveryAuthoredRelicDescriptionFitsItsRow` measures every one. Five rows
+  fit under the heading line. An unknown id shows its raw id and "Unknown
+  relic".
+- **Run effects row**, 64 tall: label (Body 20) and value (Body 22), for
+  example "Prince's favor +2", "Special pools full each turn — this leg",
+  "Bonus damage +6 %", "Second lives 1". With none: "No effects on this
+  descent." Four rows: one per `EventBuffs` kind plus bonus damage and
+  second lives (`RunEffectRows`).
+- **Supplies:** one row per consumable stack, four rows (icon 44, name,
+  ×count, effect line; "and {n} more" past four), then the run's gold.
 - **This descent:** Battle (5 rows), The Fold (4) and Spoils (4) headings
-  (FunctionalHeading 24), rows 36 apart at TacticalData 20/22.
+  (FunctionalHeading 24), rows 36 apart at Body 20/22. Battle: damage dealt,
+  damage taken, healing done, foes felled, times downed. The Fold: floor,
+  rooms cleared, deepest room, bosses. Spoils: gold earned, experience,
+  relics carried, items in pack.
 
 ## 5. GLOSSARY (C25)
 
@@ -283,9 +297,13 @@ or opening lands.
     from the rail.
 - **PARTY:** entry is the Rear seat. Seats are a rail; Down goes to the
   roster when shown.
-- **RUN:** entry is the first relic row. The relic list, effects list and
-  supplies list are three columns: Left and Right move between them, Up and
-  Down move within. LB/RB page the relics.
+- **RUN:** entry is the first relic row. Two focus columns, matching where
+  the focusable rows are: the relic list, and the effects and supplies
+  stacked as one list (the stats column has nothing to focus). Left and
+  Right cross to the row level with the focused one, Up and Down move
+  within, and Up from a column's first row reaches the selected tab. LB/RB
+  page the relics and focus stays on its slot. The footer offers no A: no
+  row does anything when pressed.
 - **GLOSSARY:** entry is the category rail. Right goes to the list, and the
   detail follows list focus. LB/RB step categories.
 - **OPTIONS, EXIT:** as today.

@@ -501,7 +501,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // below withheld both, which meant "times downed" could not report
             // the one event it exists to report -- every monster swing reaches
             // here with Nobody (FightSession.Enemies.cs), so a party member
-            // dying to a monster wrote nothing, and RunStatsController's row
+            // dying to a monster wrote nothing, and the RUN pane's row
             // and the achievements reading it were structurally always zero.
             Ledger.WentDown(LedgerIdOf(target));
 

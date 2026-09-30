@@ -33,9 +33,20 @@ namespace PrincesPalace.Domain.Events
         // (read by the fight in P3).
         public const string FillSpecialPool = "fillSpecialPool";
 
-        public static bool IsKnownKind(string kind) =>
-            string.Equals(kind, PrincesFavor, StringComparison.Ordinal)
-            || string.Equals(kind, FillSpecialPool, StringComparison.Ordinal);
+        // Every kind above, in the order the RUN pane lists them. A kind added
+        // as a const has to be added here, and RunEffectRowTests fails on a
+        // const that is missing from this list or has no row definition.
+        public static readonly IReadOnlyList<string> Kinds = new[] { PrincesFavor, FillSpecialPool };
+
+        public static bool IsKnownKind(string kind)
+        {
+            foreach (var known in Kinds)
+            {
+                if (string.Equals(kind, known, StringComparison.Ordinal)) return true;
+            }
+
+            return false;
+        }
 
         public static bool IsActive(EventBuffEntry buff, int currentLegStartStep) =>
             buff != null

@@ -12,23 +12,25 @@ namespace PrincesPalace.Domain.Tests
         [TearDown]
         public void Clear() => MenuMemory.Clear();
 
-        [TestCase(MenuContext.Camp)]
-        [TestCase(MenuContext.Descent)]
-        [TestCase(MenuContext.Fight)]
-        public void WithNothingRememberedEveryContextOpensOnCharacter(MenuContext context)
+        // Plan C7: the squad at camp and on the map; in a fight the run, where
+        // the menu is opened to look a relic up.
+        [TestCase(MenuContext.Camp, SystemMenuTab.Character)]
+        [TestCase(MenuContext.Descent, SystemMenuTab.Character)]
+        [TestCase(MenuContext.Fight, SystemMenuTab.Run)]
+        public void WithNothingRememberedEachContextOpensOnItsDefault(MenuContext context, SystemMenuTab expected)
         {
-            Assert.AreEqual(SystemMenuTab.Character, MenuMemory.TabFor(context));
+            Assert.AreEqual(expected, MenuMemory.TabFor(context));
         }
 
         [Test]
         public void AGameTabIsRememberedPerContext()
         {
-            MenuMemory.Remember(MenuContext.Descent, SystemMenuTab.RunStats);
+            MenuMemory.Remember(MenuContext.Descent, SystemMenuTab.Run);
             MenuMemory.Remember(MenuContext.Camp, SystemMenuTab.Party);
 
-            Assert.AreEqual(SystemMenuTab.RunStats, MenuMemory.TabFor(MenuContext.Descent));
+            Assert.AreEqual(SystemMenuTab.Run, MenuMemory.TabFor(MenuContext.Descent));
             Assert.AreEqual(SystemMenuTab.Party, MenuMemory.TabFor(MenuContext.Camp));
-            Assert.AreEqual(SystemMenuTab.Character, MenuMemory.TabFor(MenuContext.Fight),
+            Assert.AreEqual(SystemMenuTab.Run, MenuMemory.TabFor(MenuContext.Fight),
                 "a context nobody used keeps the default");
         }
 
@@ -56,7 +58,7 @@ namespace PrincesPalace.Domain.Tests
         public void ClearForgetsEveryContext()
         {
             MenuMemory.Remember(MenuContext.Camp, SystemMenuTab.Party);
-            MenuMemory.Remember(MenuContext.Descent, SystemMenuTab.RunStats);
+            MenuMemory.Remember(MenuContext.Descent, SystemMenuTab.Run);
 
             MenuMemory.Clear();
 

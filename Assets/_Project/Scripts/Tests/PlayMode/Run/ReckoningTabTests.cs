@@ -249,6 +249,9 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(Named("ReckoningRelic0").activeSelf, "the run's relic is not listed");
             Assert.AreEqual(relic.Data.DisplayName, TextOf("ReckoningRelic0Name"));
+            Assert.AreEqual(Domain.Content.RelicRarityNames.Of(relic.Data.Rarity), TextOf("ReckoningRelic0Meta"),
+                "the row does not name the relic's rarity");
+            Assert.IsNotNull(Named("ReckoningRelic0Icon").GetComponent<Image>(), "the row has no icon node");
             Assert.IsFalse(Named("ReckoningRelicEmpty").activeSelf);
         }
 
@@ -279,7 +282,8 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(Named("ReckoningRelic0").activeSelf);
-            Assert.IsNotEmpty(TextOf("ReckoningRelic0Name"));
+            Assert.AreEqual("relic_that_was_deleted", TextOf("ReckoningRelic0Name"));
+            Assert.AreEqual("Unknown relic", TextOf("ReckoningRelic0Body"));
         }
 
         [UnityTest]

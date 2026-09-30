@@ -104,7 +104,6 @@ namespace PrincesPalace.Domain.Tests
 
         // Plan C8: PARTY, OPTIONS and EXIT page nothing, and no prompt is shown.
         [TestCase(SystemMenuTab.Party)]
-        [TestCase(SystemMenuTab.RunStats)]
         [TestCase(SystemMenuTab.Options)]
         [TestCase(SystemMenuTab.Exit)]
         public void ATabThatPagesNothingShowsNoPagerPrompt(SystemMenuTab tab)
@@ -113,6 +112,18 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual("A Select | B Close | LT/RT Tab",
                 Labels(MenuPrompts.Resolve(row, MenuContext.Camp, PromptDevice.Xbox)));
+        }
+
+        // Plan C8: RUN pages its relics, so its row ends in the pager prompt.
+        [Test]
+        public void RunPagesRelicsAndSaysSo()
+        {
+            var row = MenuPrompts.Defaults(SystemMenuTabs.Def(SystemMenuTab.Run));
+
+            Assert.AreEqual("A Select | B Close | LT/RT Tab | LB/RB Page",
+                Labels(MenuPrompts.Resolve(row, MenuContext.Descent, PromptDevice.Xbox)));
+            Assert.AreEqual("Enter Select | Esc Close | Click Tab | Q/E Page",
+                Labels(MenuPrompts.Resolve(row, MenuContext.Descent, PromptDevice.Keyboard)));
         }
 
         // ---- a prompt in a context --------------------------------------------------

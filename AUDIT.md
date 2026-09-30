@@ -31,7 +31,7 @@ debt), and a struck finding gets its number removed.
 - Map: #226, #254
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
-- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214, #241, #243, #248
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214, #243, #248
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #219, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #112, #123, #220, #255
 - Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
@@ -2481,13 +2481,7 @@ navigation between screens is an instant cut.
 
 Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed.
 
-### 241. The relic draft doesn't show relics already held
-
-`Core/RelicDraftController.cs` `Paint()` (178-247) renders only the three
-offers on the table — nothing shows what the party already carries, so a
-player can't tell if an offer duplicates or synergizes with what they have.
-
-Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+### ~~241. The relic draft doesn't show relics already held~~ — fixed in the System menu 3 commit (RUN + relic presenter): the draft paints a held strip (icon and name, paged) through the shared `RelicListPresenter`
 
 ### 242. Unbuilt hub buildings are dimmed with no reason given
 

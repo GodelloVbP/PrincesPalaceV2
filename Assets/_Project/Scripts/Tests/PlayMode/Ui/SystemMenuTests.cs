@@ -224,7 +224,7 @@ namespace PrincesPalace.PlayModeTests
             // exists from the moment the relic draft is rolled, and that
             // draft is offered in the HUB and deliberately survives leaving
             // and coming back -- so "a run exists" is true while the player
-            // stands in the hub with no descent under way, and Run statistics
+            // stands in the hub with no descent under way, and the RUN tab
             // would show up on a screen with no floor to name.
             //
             // The tab set is a property of the scene, so this asks the
@@ -244,17 +244,17 @@ namespace PrincesPalace.PlayModeTests
                 {
                     SystemMenuTabs.IndexOf(SystemMenuTab.Character),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Party),
-                    SystemMenuTabs.IndexOf(SystemMenuTab.RunStats),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Run),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Options),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Exit),
                 },
                 menu.VisibleTabs.ToArray(),
-                "in a descent the bar should carry all five tabs, Run statistics between Party and Options");
+                "in a descent the bar should carry all five tabs, RUN between Party and Options");
             Assert.AreEqual(5, menu.VisibleTabs.Count);
         }
 
         // The other half, and the one the author actually reported: standing in
-        // the hub there is no floor and no descent, so the Run statistics tab
+        // the hub there is no floor and no descent, so the RUN tab
         // has nothing to describe and must not be there -- even mid-run, which
         // is a state the hub can genuinely be in.
         [UnityTest]
@@ -272,7 +272,7 @@ namespace PrincesPalace.PlayModeTests
                 "the hub showed the descent tabs; it has no descent to describe");
 
             CollectionAssert.DoesNotContain(_menu.VisibleTabs.ToList(),
-                SystemMenuTabs.IndexOf(SystemMenuTab.RunStats), "Run statistics is showing in the hub");
+                SystemMenuTabs.IndexOf(SystemMenuTab.Run), "RUN is showing in the hub");
         }
 
         // The tabs that are not in this context must be SWITCHED OFF, not merely

@@ -1110,7 +1110,7 @@ public static class ScreenRegistry
             }
         }
         if (menu.Options != null) WireOptions(result, menu.Options);
-        if (menu.RunStats != null) WireRunStats(result, menu.RunStats);
+        if (menu.Run != null) WireRun(result, menu.Run, controller);
         if (menu.Party != null) WireParty(result, menu.Party, controller);
         if (menu.Exits != null) WireExits(result, menu.Exits, controller);
 
@@ -1170,21 +1170,50 @@ public static class ScreenRegistry
         return controller;
     }
 
-    // The Run statistics pane, inside the system menu.
+    // The RUN pane, inside the system menu.
     //
     // Keyed like the Options pane's controls rather than index-aligned with
     // RunStatRows: both arrays are built off the SAME declared list here, so
     // they agree by construction, and the key travels with the label so a
     // reordering of the table cannot silently swap two four-digit figures.
-    private static RunStatsController WireRunStats(UiEmitResult result, RunStatsScreen stats)
+    //
+    // statKeys is copied straight off screen.StatKeys, the very list
+    // statValues was bound from, and every other array is filled by
+    // UiAutoBind from the RunScreen node list of the same name, so there is
+    // no second count to audit against.
+    private static RunController WireRun(UiEmitResult result, RunScreen run, SystemMenuController menu)
     {
-        var controller = result.Attach<RunStatsController>(stats.Root);
-        UiAutoBind.Bind(result, controller, stats);
+        var controller = result.Attach<RunController>(run.Root);
+        UiAutoBind.Bind(result, controller, run);
 
-        controller.valueKeys = stats.ValueKeys.ToArray();
+        controller.menu = menu;
+        controller.statKeys = run.StatKeys.ToArray();
+
+        // Relic art for the relic rows and item art for the supplies, one
+        // table: an id names one or the other.
+        controller.icons = ItemIconTable().Concat(RelicIconTable()).ToArray();
 
         return controller;
     }
+
+    // Every relic that authored an icon, baked as an id-keyed table for the
+    // relic presenter's owners (the Reckoning, the draft, the RUN pane).
+    // Resolved here rather than at runtime because Resources loading and
+    // AssetDatabase are different worlds and only the builder has the second.
+    //
+    // A lookup table keyed by id, never sized against a node list.
+    private static IconEntry[] RelicIconTable() =>
+        ContentDatabase.Relics
+            .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
+            .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
+            .ToArray();
+
+    // The same lookup-table shape as RelicIconTable.
+    private static IconEntry[] ItemIconTable() =>
+        ContentDatabase.Items
+            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
+            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+            .ToArray();
 
     // The Main menu pane, inside the system menu.
     //
@@ -1423,6 +1452,8 @@ public static class ScreenRegistry
             .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
             .ToArray();
 
+        controller.relicArt = RelicIconTable();
+
         controller.offerRects = screen.OfferButtons.Select(result.Rect).ToArray();
 
         return controller;
@@ -1469,16 +1500,8 @@ public static class ScreenRegistry
         var controller = result.Attach<RelicDraftController>(draft.Root);
         UiAutoBind.Bind(result, controller, draft);
 
-        // Relic icons, baked as two parallel arrays. Resolved here rather than
-        // at runtime because Resources loading and AssetDatabase are different
-        // worlds and only the builder has the second one.
-        var withArt = ContentDatabase.Relics
-            .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
-            .ToList();
-
-        controller.icons = withArt
-            .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
-            .ToArray();
+        // Relic icons for the offer cards and the held strip.
+        controller.icons = RelicIconTable();
 
         hub.relicDraft = controller;
     }

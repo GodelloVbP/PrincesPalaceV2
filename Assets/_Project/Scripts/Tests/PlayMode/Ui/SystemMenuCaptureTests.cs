@@ -8,6 +8,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.TestTools;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Party;
@@ -372,11 +373,12 @@ namespace PrincesPalace.PlayModeTests
         // The two panes that only exist mid-run, captured FROM the map so the
         // five-tab bar and the in-run lintel are in shot with them.
         //
-        // Run statistics is the one capture on this menu that cannot be judged
-        // any other way: every assertion about it is about a figure, and the
-        // question a screenshot answers -- whether three cards of four to eight
-        // rows read as a set or as an emptier pane than it should be -- is not
-        // one a count of active objects can reach.
+        // RUN is the one capture on this menu that cannot be judged any other
+        // way: every assertion about it is about a figure or a node, and the
+        // question a screenshot answers -- whether three columns of relics,
+        // effects and figures read as a set, and whether a three-line relic
+        // description fits its row -- is not one a count of active objects can
+        // reach.
         [UnityTest]
         public IEnumerator CaptureTheRunOnlyPanes()
         {
@@ -395,11 +397,27 @@ namespace PrincesPalace.PlayModeTests
             try
             {
                 // A run with something to say. Captured against invented
-                // history rather than a fresh run, because a run that has
-                // done nothing prints eighteen zeroes and shows nothing about
-                // the layout.
+                // history rather than a fresh run, because a run that has done
+                // nothing prints zeroes and shows nothing about the layout:
+                // three relics (the longest authored descriptions among them,
+                // so the worst row is in shot), one event buff, bonus damage
+                // and two consumables.
                 RunManager.StartRun(4242);
                 var run = RunManager.Run;
+                run.relicIds.Clear();
+                run.relicIds.AddRange(ContentDatabase.Relics
+                    .Where(r => r != null)
+                    .OrderByDescending(r => r.Data.Description.Length)
+                    .Take(3)
+                    .Select(r => r.id));
+                run.eventBuffs.Add(new PrincesPalace.Domain.Events.EventBuffEntry
+                {
+                    kind = PrincesPalace.Domain.Events.EventBuffs.PrincesFavor, amount = 2,
+                });
+                run.bonusDamagePercent = 6;
+                InventoryOps.Add(SaveSlotManager.CurrentSave.stockpiledItems, "health_potion", 2);
+                InventoryOps.Add(SaveSlotManager.CurrentSave.stockpiledItems, "mana_potion", 1);
+
                 RunLedger.RecordRoom(run, won: true, expGained: 15, step: 3);
                 RunManager.BankPayout(40);
                 RunLedger.RecordRoom(run, won: true, expGained: 30, step: 6);
@@ -420,10 +438,10 @@ namespace PrincesPalace.PlayModeTests
                 Directory.CreateDirectory(OutputDir);
 
                 menu.Open();
-                menu.Select(SystemMenuTab.RunStats);
+                menu.Select(SystemMenuTab.Run);
                 yield return new WaitForSecondsRealtime(0.4f);
 
-                string statsPath = Path.Combine(OutputDir, "SystemMenu_run_stats.png");
+                string statsPath = Path.Combine(OutputDir, "SystemMenu_run.png");
                 CanvasCapture.RenderToFile(canvas, statsPath);
                 Assert.IsTrue(File.Exists(statsPath));
                 Debug.Log($"[SystemMenuCapture] wrote {statsPath}");

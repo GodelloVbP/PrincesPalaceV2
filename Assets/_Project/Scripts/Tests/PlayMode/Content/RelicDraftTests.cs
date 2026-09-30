@@ -299,6 +299,74 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(Named("DraftPageLabel").activeSelf);
         }
 
+        // ---- the held strip (AUDIT #241) ----------------------------------------
+        //
+        // What the descent already carries, under the cards, painted by the
+        // shared relic presenter. Seeded through the run and a second Open,
+        // because a fresh descent holds nothing yet.
+
+        private string HeldName(int slot) =>
+            Named($"DraftHeld{slot}Name").GetComponent<TMPro.TMP_Text>().text;
+
+        private IEnumerator OpenTheDraftHolding(int relics)
+        {
+            yield return OpenTheHub();
+            yield return PressStartRunGateAndWaitForTheDraft();
+
+            var ids = ContentDatabase.Relics.Where(r => r != null).Take(relics).Select(r => r.id).ToList();
+            Assert.AreEqual(relics, ids.Count, "fixture: the content has too few relics");
+            RunManager.Run.relicIds.Clear();
+            RunManager.Run.relicIds.AddRange(ids);
+
+            _draft.Open(1234UL);
+            yield return null;
+            _heldIds = ids;
+        }
+
+        private List<string> _heldIds;
+
+        [UnityTest]
+        public IEnumerator TheHeldStripIsHiddenWhileNothingIsHeld()
+        {
+            yield return OpenTheHub();
+            yield return PressStartRunGateAndWaitForTheDraft();
+
+            Assert.IsEmpty(RunManager.Run.relicIds, "fixture: a fresh descent holds nothing");
+            Assert.IsFalse(Named("DraftHeldHeading").activeSelf, "a heading over an empty strip");
+            Assert.IsFalse(Named("DraftHeld0").activeSelf);
+            Assert.IsFalse(Named("DraftHeldPageLabel").activeSelf);
+        }
+
+        [UnityTest]
+        public IEnumerator TheHeldStripShowsWhatTheDescentCarriesInHeldOrder()
+        {
+            yield return OpenTheDraftHolding(2);
+
+            Assert.IsTrue(Named("DraftHeldHeading").activeSelf, "the strip has no heading over its relics");
+            Assert.AreEqual(ContentDatabase.GetRelic(_heldIds[0]).Data.DisplayName, HeldName(0));
+            Assert.AreEqual(ContentDatabase.GetRelic(_heldIds[1]).Data.DisplayName, HeldName(1));
+            Assert.IsFalse(Named("DraftHeld2").activeSelf, "a third chip with nothing in it");
+            Assert.IsFalse(Named("DraftHeldNextPage").activeSelf, "a pager with one page");
+        }
+
+        [UnityTest]
+        public IEnumerator TheHeldStripPagesPastItsFiveChips()
+        {
+            yield return OpenTheDraftHolding(7);
+
+            Assert.AreEqual("1 / 2", Named("DraftHeldPageLabel").GetComponent<TMPro.TMP_Text>().text);
+            Assert.IsTrue(Named("DraftHeld4").activeSelf);
+            Assert.AreEqual(ContentDatabase.GetRelic(_heldIds[4]).Data.DisplayName, HeldName(4));
+
+            Click("DraftHeldNextPage");
+            yield return null;
+
+            Assert.AreEqual("2 / 2", Named("DraftHeldPageLabel").GetComponent<TMPro.TMP_Text>().text);
+            Assert.AreEqual(ContentDatabase.GetRelic(_heldIds[5]).Data.DisplayName, HeldName(0));
+            Assert.AreEqual(ContentDatabase.GetRelic(_heldIds[6]).Data.DisplayName, HeldName(1));
+            Assert.IsFalse(Named("DraftHeld2").activeSelf, "the short last page is padded");
+        }
+
         // ---- the draft is a single flat round -------------------------------------
         //
         // Every descent drafts RelicPool.StartingRelicsPerDescent, a flat

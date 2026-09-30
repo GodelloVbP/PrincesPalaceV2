@@ -6,7 +6,7 @@ using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The system menu's Run statistics and Exit panes.
+    // The system menu's RUN and Exit panes.
     //
     // UiAudit re-solves whatever the scene build emits, so overlap, overflow
     // and duplicate names in these trees are already covered at build time and
@@ -36,8 +36,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(width, OptionsLayout.PaneWidth, 0.001f, "Options is not the pane's width");
             Assert.AreEqual(height, OptionsLayout.PaneHeight, 0.001f, "Options is not the pane's height");
 
-            Assert.AreEqual(width, RunStatsLayout.PaneWidth, 0.001f, "Run statistics is not the pane's width");
-            Assert.AreEqual(height, RunStatsLayout.PaneHeight, 0.001f, "Run statistics is not the pane's height");
+            Assert.AreEqual(width, RunLayout.PaneWidth, 0.001f, "RUN is not the pane's width");
+            Assert.AreEqual(height, RunLayout.PaneHeight, 0.001f, "RUN is not the pane's height");
 
             Assert.AreEqual(width, ExitsLayout.PaneWidth, 0.001f, "the Exit pane is not the pane's width");
             Assert.AreEqual(height, ExitsLayout.PaneHeight, 0.001f, "the Exit pane is not the pane's height");
@@ -79,7 +79,7 @@ namespace PrincesPalace.Domain.Tests
         // and the failure being guarded against is a pane a THIRD empty.
         [TestCase("dossier")]
         [TestCase("options")]
-        [TestCase("runstats")]
+        [TestCase("run")]
         [TestCase("exits")]
         [TestCase("party")]
         public void EveryPaneUsesMostOfItsHeight(string pane)
@@ -110,9 +110,11 @@ namespace PrincesPalace.Domain.Tests
                     used = OptionsLayout.ColumnHeight(OptionRows.Groups, 0);
                     break;
 
-                case "runstats":
-                    usable = RunStatsLayout.UsableHeight;
-                    used = RunStatsLayout.TallestCard(RunStatRows.Groups);
+                case "run":
+                    // The relic column is the tallest: its last row's bottom
+                    // edge closes the pane.
+                    usable = RunLayout.AreaHeight;
+                    used = RunLayout.Top - RunLayout.RelicRowsBottom;
                     break;
 
                 case "party":
@@ -133,110 +135,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(used / usable, 0.85f,
                 $"the {pane} pane fills only {used / usable:P0} of its height ({used:F0} of " +
                 $"{usable:F0}px), so it reads as a small screen inside a big empty one");
-        }
-
-        // ---- the Run statistics table -------------------------------------------
-
-        [Test]
-        public void EveryRunStatRowHasAKeyAndALabel()
-        {
-            foreach (var row in RunStatRows.AllRows)
-            {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(row.Key), "a run-stat row has no key");
-                Assert.IsTrue(row.Label.IsValid, $"run-stat row '{row.Key}' has no label");
-            }
-        }
-
-        // A duplicate key is not a compile error and does not look wrong: the
-        // pane draws both rows, the controller answers both with the same
-        // figure, and the second row silently becomes a copy of the first.
-        [Test]
-        public void NoTwoRunStatRowsShareAKey()
-        {
-            var keys = RunStatRows.AllRows.Select(r => r.Key).ToList();
-            CollectionAssert.AreEquivalent(keys.Distinct().ToList(), keys,
-                "two run-stat rows share a key, so one of them prints the other's number");
-        }
-
-        // The Run stats pane's container theme/ratio and content inset are
-        // covered by KitContainerPlacementTests, not repeated here.
-
-        [Test]
-        public void TheRunStatCardsFitWithoutScrolling()
-        {
-            Assert.IsTrue(RunStatsLayout.CardsFit(RunStatRows.Groups),
-                $"the tallest card needs {RunStatsLayout.TallestCard(RunStatRows.Groups):F0}px of " +
-                $"{RunStatsLayout.UsableHeight:F0}px - this pane has no scrolling");
-        }
-
-        // The columns are laid out from a width that DIVIDES: three 420s and
-        // two 50s inside 120px insets is exactly 1600. A gap that leaves a
-        // remainder puts one card half a pixel off and gives it a rim that is
-        // one pixel on one side and two on the other.
-        [Test]
-        public void TheRunStatColumnsFillThePaneExactly()
-        {
-            float left = RunStatsLayout.ColumnCentreX(0) - RunStatsLayout.ColumnWidth * 0.5f;
-            float right = RunStatsLayout.ColumnCentreX(2) + RunStatsLayout.ColumnWidth * 0.5f;
-
-            Assert.AreEqual(-RunStatsLayout.HalfWidth + RunStatsLayout.PadX, left, 0.001f,
-                "the first stats column does not start at the declared inset");
-            Assert.AreEqual(RunStatsLayout.HalfWidth - RunStatsLayout.PadX, right, 0.001f,
-                "the last stats column does not end at the declared inset");
-            Assert.AreEqual(System.Math.Round(RunStatsLayout.ColumnWidth), RunStatsLayout.ColumnWidth,
-                "the stats column width is not a whole number of pixels");
-        }
-
-        // Cards are top-aligned, which is the only reason three headings of
-        // three different card heights sit on one line.
-        [Test]
-        public void EveryRunStatCardStartsAtTheSameTop()
-        {
-            var groups = RunStatRows.Groups;
-
-            foreach (var group in groups)
-            {
-                int rows = group.Rows.Count;
-                float top = RunStatsLayout.CardCentreY(groups, rows)
-                            + RunStatsLayout.CardHeight(rows) * 0.5f;
-                Assert.AreEqual(RunStatsLayout.BlockTop(groups), top, 0.001f,
-                    $"the {group.Key} card does not start on the shared top line");
-            }
-        }
-
-        // The block is centred in what the pane has spare, so the tallest card
-        // has the same margin above it as below. Hung from the pane's top it
-        // leaves a quarter of the screen empty underneath and reads as a pane
-        // that failed to finish drawing.
-        [Test]
-        public void TheRunStatBlockIsCentredInThePane()
-        {
-            var groups = RunStatRows.Groups;
-
-            float above = RunStatsLayout.ContentTop - RunStatsLayout.BlockTop(groups);
-            float below = (RunStatsLayout.BlockTop(groups) - RunStatsLayout.TallestCard(groups))
-                          - RunStatsLayout.ContentBottom;
-
-            Assert.AreEqual(above, below, 0.001f,
-                "the stats cards are not centred in the pane - one margin is bigger than the other");
-        }
-
-        // The pane declares one value node per declared row, in order, carrying
-        // that row's key. Index alignment across two files is the drift this
-        // project keeps writing rules against; this is what makes the pairing
-        // provable rather than assumed.
-        [Test]
-        public void TheRunStatsScreenDeclaresOneValuePerRow()
-        {
-            var screen = RunStatsScreen.Build();
-
-            CollectionAssert.AreEqual(
-                RunStatRows.AllRows.Select(r => r.Key).ToList(),
-                screen.ValueKeys,
-                "the Run statistics pane's value nodes do not match its own row table");
-
-            Assert.AreEqual(screen.ValueKeys.Count, screen.Values.Count,
-                "the pane declared a different number of keys and value nodes");
         }
 
         // The Options pane's container theme/ratio and content inset are
@@ -364,7 +262,7 @@ namespace PrincesPalace.Domain.Tests
                 { SystemMenuTab.Character, screen.Dossier != null },
                 { SystemMenuTab.Party, screen.Party != null },
                 { SystemMenuTab.Options, screen.Options != null },
-                { SystemMenuTab.RunStats, screen.RunStats != null },
+                { SystemMenuTab.Run, screen.Run != null },
                 { SystemMenuTab.Exit, screen.Exits != null },
             };
 

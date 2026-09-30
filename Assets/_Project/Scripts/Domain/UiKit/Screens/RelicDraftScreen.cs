@@ -60,6 +60,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> CardHalos = new List<NodeRef>();
         public List<NodeRef> CardBursts = new List<NodeRef>();
 
+        // THE HELD STRIP (AUDIT #241): the relics this descent already
+        // carries, compact, under the card row, painted by the same
+        // RelicListPresenter the Reckoning and the RUN pane use.
+        public NodeRef HeldHeading;
+        public NodeRef HeldPrevPageButton;
+        public NodeRef HeldNextPageButton;
+        public NodeRef HeldPageLabel;
+        public List<NodeRef> HeldRows = new List<NodeRef>();
+        public List<NodeRef> HeldIcons = new List<NodeRef>();
+        public List<NodeRef> HeldNames = new List<NodeRef>();
+
+        // Chips on one page of the strip, and their box. Five 232-wide chips
+        // 12 apart span 1208 of the frame's 1500, leaving the arrows room
+        // either side.
+        public const int HeldChipCount = 5;
+        private const float HeldChipWidth = 232f;
+        private const float HeldChipHeight = 44f;
+        private const float HeldChipGap = 12f;
+        private const float HeldHeadingY = -238f;
+        private const float HeldChipsY = -288f;
+
         public static RelicDraftScreen Build()
         {
             var screen = new RelicDraftScreen();
@@ -113,10 +134,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The counter sits between the cards (which stop at y -210) and
             // Descend (at -350), which is why its y is its own rather than the
             // arrows'.
+            // The counter sits under the next arrow: the strip of held relics
+            // took the band between the cards and Descend that it used to have
+            // to itself.
             var pager = Ui.Pager("DraftPrevPage", Place.At(-660f, 20f),
                 "DraftNextPage", Place.At(660f, 20f), new UiVec(60f, 60f), 22,
-                "DraftPageLabel", UiString.Runtime, Place.At(0f, -280f),
-                new UiVec(300f, 30f), 18, "#B8A8D9");
+                "DraftPageLabel", UiString.Runtime, Place.At(660f, -50f),
+                new UiVec(100f, 30f), 18, "#B8A8D9");
             pager.Prev.Inactive();
             pager.Next.Inactive();
             pager.Label.AsDecor().Styled(TypographyRole.TacticalData).Inactive();
@@ -127,6 +151,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             inside.Add(pager.Prev);
             inside.Add(pager.Next);
             inside.Add(pager.Label);
+
+            screen.BuildHeldStrip(inside);
 
             // Always pressable. A draft the player cannot leave is worse than a
             // draft they decline, and an empty pool has to have an exit.
@@ -174,6 +200,61 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var content = Ui.Panel("DraftContent", Place.At(0f, 0f), UiSize.Fill, frame);
             screen.Root = Ui.Modal("RelicDraftPanel", "#0A0614F0", content).Inactive();
             return screen;
+        }
+
+        // The relics already carried this descent, between the cards and
+        // Descend, so a player can tell an offer that repeats or pairs with
+        // what they hold. Icon and name only: the RUN pane and the glossary
+        // carry the descriptions. Hidden while nothing is held (round one).
+        private void BuildHeldStrip(List<UiNode> inside)
+        {
+            var heading = Ui.Label("DraftHeldHeading", UiStrings.ReckoningRelicHeld, new UiVec(600f, 32f), 24,
+                    "#B8A8D9", Place.At(0f, HeldHeadingY))
+                .Styled(TypographyRole.FunctionalHeading)
+                .AsDecor()
+                .Inactive();
+            HeldHeading = heading;
+            inside.Add(heading);
+
+            float pitch = HeldChipWidth + HeldChipGap;
+            float firstX = -(HeldChipCount - 1) * pitch * 0.5f;
+
+            for (int i = 0; i < HeldChipCount; i++)
+            {
+                var icon = Ui.Sprite($"DraftHeld{i}Icon", null,
+                        Place.At(-HeldChipWidth * 0.5f + 8f + 18f, 0f), UiSize.Fixed(36f, 36f))
+                    .AsDecor();
+
+                var name = Ui.Label($"DraftHeld{i}Name", UiString.Runtime, new UiVec(HeldChipWidth - 60f, 30f), 20,
+                        "#EDE6FF", Place.At(-HeldChipWidth * 0.5f + 52f + (HeldChipWidth - 60f) * 0.5f, 0f))
+                    .Styled(TypographyRole.Body)
+                    .TextAligned(UiTextAlign.Left)
+                    .Truncated()
+                    .AsDecor();
+
+                var chip = Ui.Panel($"DraftHeld{i}", Place.At(firstX + i * pitch, HeldChipsY),
+                        UiSize.Fixed(HeldChipWidth, HeldChipHeight), icon, name)
+                    .Inactive();
+
+                HeldRows.Add(chip);
+                HeldIcons.Add(icon);
+                HeldNames.Add(name);
+                inside.Add(chip);
+            }
+
+            var pager = Ui.Pager("DraftHeldPrevPage", Place.At(-650f, HeldChipsY),
+                "DraftHeldNextPage", Place.At(650f, HeldChipsY), new UiVec(44f, 44f), 24,
+                "DraftHeldPageLabel", UiStrings.RelicPage, Place.At(380f, HeldHeadingY),
+                new UiVec(100f, 30f), 20, "#B8A8D9");
+            pager.Prev.Styled(TypographyRole.Body).Inactive();
+            pager.Next.Styled(TypographyRole.Body).Inactive();
+            pager.Label.Styled(TypographyRole.Body).AsDecor().Inactive();
+            HeldPrevPageButton = pager.Prev;
+            HeldNextPageButton = pager.Next;
+            HeldPageLabel = pager.Label;
+            inside.Add(pager.Prev);
+            inside.Add(pager.Next);
+            inside.Add(pager.Label);
         }
 
         // Copied from ReckoningScreen.BuildOffer -- the item-reward card at the
