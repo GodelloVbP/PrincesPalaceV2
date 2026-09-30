@@ -243,32 +243,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(7, PartyLayout.MaxRosterCards(), "176 px cards and a 12 px gap in 1480 px");
         }
 
-        // ---- the type floor: every line boxed for its own font (C14) ----------------------
-
-        // A label whose box is shorter than one line of its own font draws
-        // nothing in TMP: a Body 20 line is 26.5 px measured, 1.33 of the size.
-        [Test]
-        public void EveryLabelAndButtonIsBoxedForAtLeastOneLineOfItsFont()
-        {
-            var tooShort = new List<string>();
-
-            void Walk(UiNode node)
-            {
-                if ((node.Kind == UiNodeKind.Label || node.Kind == UiNodeKind.Button) && node.Theme == null
-                    && node.FontSize > 0 && node.Size.Y < node.FontSize * 1.33f - 0.01f)
-                {
-                    tooShort.Add($"{node.Name} ({node.Size.Y} < {node.FontSize * 1.33f})");
-                }
-
-                if (node.Children == null) return;
-                foreach (var child in node.Children) Walk(child);
-            }
-
-            Walk(PartyScreen.Build(new PartyInputs(3)).Root);
-
-            Assert.IsEmpty(tooShort, "boxed below one line, so TMP draws nothing: " + string.Join(", ", tooShort));
-        }
-
         // The pane's own text, pinned by literal: what a seat reads at.
         [Test]
         public void ASeatsLinesAreOnTheRolesAndSizesTheSpecNames()

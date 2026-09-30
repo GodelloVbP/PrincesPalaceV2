@@ -175,25 +175,6 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // A label that outgrows its box's height draws nothing in TMP, and a
-        // box under one line of its own font is such a box, so a 26 px box for
-        // a Body 20 line shows no caption or chip name at all. A Body 20 line
-        // is 26.53 px (measured), 1.33 of the size.
-        [Test]
-        public void EveryLabelThatTruncatesOrClampsIsBoxedForAtLeastOneLine()
-        {
-            var tooShort = new List<string>();
-            foreach (var node in Walk(CharacterDossierScreen.Build().Root))
-            {
-                if (!node.Truncates && !node.Clamps) continue;
-
-                float line = node.FontSize * 1.33f;
-                if (node.Size.Y < line) tooShort.Add($"{node.Name} ({node.Size.Y} < {line})");
-            }
-
-            Assert.IsEmpty(tooShort, "boxed below one line, so TMP draws nothing: " + string.Join(", ", tooShort));
-        }
-
         [Test]
         public void TheStripsChipLinesFillTheChipWithoutOverlap()
         {

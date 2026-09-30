@@ -172,12 +172,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var name = Text($"GlossaryRow{index}Name", UiString.Runtime,
                 new UiVec(textWidth, GlossaryLayout.ListNameHeight), 22, Name,
-                Place.At(0f, 11f), TypographyRole.Body, UiTextAlign.Left);
+                Place.At(0f, 12f), TypographyRole.Body, UiTextAlign.Left);
             name = name.Truncated();
 
             var meta = Text($"GlossaryRow{index}Meta", UiString.Runtime,
                 new UiVec(textWidth, GlossaryLayout.ListMetaHeight), 20, Muted,
-                Place.At(0f, -15f), TypographyRole.Body, UiTextAlign.Left);
+                Place.At(0f, -16.5f), TypographyRole.Body, UiTextAlign.Left);
             meta = meta.Truncated();
 
             var rule = Ui.Solid($"GlossaryRow{index}Rule", Rule, new UiVec(width, 1f),

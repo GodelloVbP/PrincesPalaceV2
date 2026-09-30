@@ -273,8 +273,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(width * 0.5f - 8f - RunLayout.SupplyCountWidth * 0.5f, 16f), UiTextAlign.Right);
 
                 float effectWidth = width - 64f - 8f;
-                var effect = Ui.Label($"RunSupply{i}Effect", UiString.Runtime, new UiVec(effectWidth, 26f), 20, Muted,
-                        Place.At(textLeft + effectWidth * 0.5f, -16f))
+                var effect = Ui.Label($"RunSupply{i}Effect", UiString.Runtime, new UiVec(effectWidth, 27f), 20, Muted,
+                        Place.At(textLeft + effectWidth * 0.5f, -16.5f))
                     .Styled(TypographyRole.Body)
                     .TextAligned(UiTextAlign.Left)
                     .Truncated()

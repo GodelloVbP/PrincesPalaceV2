@@ -53,7 +53,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float ListRowHeight = 64f;
         public const float ListRowInset = 12f;
         public const float ListNameHeight = 30f;
-        public const float ListMetaHeight = 26f;
+        public const float ListMetaHeight = 27f;
 
         public static float ListRowCentreY(int slot) => Top - ListRowHeight * 0.5f - slot * ListRowHeight;
 
