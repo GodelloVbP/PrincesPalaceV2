@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -167,7 +168,7 @@ namespace PrincesPalace.Domain.Tests
         {
             foreach (var slot in EquipmentSlots.All)
             {
-                Assert.IsNotEmpty(EquipmentSlots.DisplayName(slot), $"{slot} has no display name");
+                Assert.IsNotEmpty(UiStrings.EquipmentSlotName(slot).Format(), $"{slot} has no display name");
             }
         }
 

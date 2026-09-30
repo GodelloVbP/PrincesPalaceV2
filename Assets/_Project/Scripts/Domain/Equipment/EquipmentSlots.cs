@@ -4,32 +4,16 @@ namespace PrincesPalace.Domain.Equipment
 {
     // Everything the rest of the game needs to know ABOUT slots, as opposed
     // to what is currently in them (EquipmentLoadout). Kept separate so the
-    // "a weapon fits either hand" rule and the display names each exist
-    // exactly once — the UI, the JSON resolver and the equip service all
-    // call in here rather than re-deciding.
+    // "a weapon fits either hand" rule and the slot list each exist
+    // exactly once (the names live in UiStrings.EquipmentSlotName): the UI,
+    // the JSON resolver and the equip service all call in here rather than
+    // re-deciding.
     public static class EquipmentSlots
     {
         // Declaration order of the enum, which is also paperdoll order.
         // Rebuilt from Enum.GetValues rather than hand-listed so adding a
         // slot cannot silently miss the UI.
         public static readonly EquipmentSlot[] All = (EquipmentSlot[])Enum.GetValues(typeof(EquipmentSlot));
-
-        public static string DisplayName(EquipmentSlot slot)
-        {
-            switch (slot)
-            {
-                case EquipmentSlot.Head: return "Head";
-                case EquipmentSlot.Necklace: return "Necklace";
-                case EquipmentSlot.Torso: return "Torso";
-                case EquipmentSlot.Legs: return "Legs";
-                case EquipmentSlot.Shoes: return "Shoes";
-                case EquipmentSlot.Gloves: return "Gloves";
-                case EquipmentSlot.Weapon1: return "Weapon 1";
-                case EquipmentSlot.Weapon2: return "Weapon 2";
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(slot), slot, "EquipmentSlots has no display name wired up for this slot.");
-            }
-        }
 
         // True when an item that belongs in `itemSlot` may be worn in
         // `characterSlot`. The only asymmetry in the whole system: an item

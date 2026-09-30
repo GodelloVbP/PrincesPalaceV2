@@ -116,6 +116,202 @@ namespace PrincesPalace.PlayModeTests
 
         private string Notice => DossierPane.TextOf("SystemFooterNotice");
 
+        // ---- what is drawn: a label's string can be set while TMP draws none of it
+        // (its box shorter than one line), so these read the built mesh ---------------------
+
+        [UnityTest]
+        public IEnumerator EveryGearSlotDrawsItsName_AndEveryBookSlotItsNumber()
+        {
+            yield return OpenOnTheMap(Odette);
+
+            foreach (var slot in EquipmentSlots.All)
+            {
+                Assert.AreEqual(UiStrings.EquipmentSlotName(slot).Format(),
+                    DossierPane.DrawnTextOf("DossierSlotCaption" + slot),
+                    $"the {slot} slot draws no caption");
+            }
+
+            Assert.AreEqual("Head", DossierPane.DrawnTextOf("DossierSlotCaptionHead"));
+            Assert.AreEqual("Weapon 2", DossierPane.DrawnTextOf("DossierSlotCaptionWeapon2"));
+
+            for (int i = 0; i < SpellBooks.MaxSpellSlots; i++)
+            {
+                Assert.AreEqual($"Book {i + 1}", DossierPane.DrawnTextOf($"DossierBook{i}Caption"),
+                    $"the empty book slot {i} draws no caption");
+            }
+        }
+
+        // A filled book slot is captioned with the book, cut to its caption.
+        [UnityTest]
+        public IEnumerator AFilledBookSlotDrawsTheBooksName()
+        {
+            yield return OpenOnTheMap(Odette);
+            Learned(Odette, BookA, 1);
+            _dossier.Refresh();
+
+            string name = ContentDatabase.GetSkill(BookA).Data.DisplayName;
+            string drawn = DossierPane.DrawnTextOf("DossierBook1Caption");
+            Assert.IsNotEmpty(drawn, "the filled book slot draws no caption");
+            Assert.AreEqual(name.Substring(0, Mathf.Min(4, name.Length)), drawn.Substring(0, Mathf.Min(4, drawn.Length)),
+                "the caption is not the book's name");
+        }
+
+        [UnityTest]
+        public IEnumerator EveryStripChipDrawsItsNameAndSeat_AndABenchedOneIsDimmed()
+        {
+            yield return OpenOnTheMap(Odette);
+
+            Assert.AreEqual("Odette", DossierPane.DrawnTextOf("DossierChip0Name"));
+            Assert.AreEqual("Rear", DossierPane.DrawnTextOf("DossierChip0Seat"));
+            Assert.AreEqual("Shawn", DossierPane.DrawnTextOf("DossierChip1Name"));
+            Assert.AreEqual("Middle", DossierPane.DrawnTextOf("DossierChip1Seat"));
+            Assert.AreEqual("Bjorn", DossierPane.DrawnTextOf("DossierChip2Name"));
+            Assert.AreEqual("Front", DossierPane.DrawnTextOf("DossierChip2Seat"));
+        }
+
+        // The generic net under the three above: any label that ends in an
+        // ellipsis or wraps inside a box and has words must draw at least a
+        // glyph of them.
+        [UnityTest]
+        public IEnumerator NoLabelOnTheCharacterTabHasWordsAndDrawsNone()
+        {
+            yield return OpenOnTheMap(Odette);
+            Pack(ItemFor(EquipmentSlot.Head).id);
+
+            var silent = new List<string>();
+            int checkedLabels = 0;
+            foreach (var text in _dossier.GetComponentsInChildren<TMP_Text>(includeInactive: false))
+            {
+                if (!text.gameObject.activeInHierarchy || string.IsNullOrWhiteSpace(text.text)) continue;
+                if (text.overflowMode != TextOverflowModes.Ellipsis) continue;
+
+                checkedLabels++;
+                if (string.IsNullOrEmpty(DossierPane.DrawnText(text))) silent.Add(text.name);
+            }
+
+            Assert.Greater(checkedLabels, 12, "the scan found almost nothing to check");
+            Assert.IsEmpty(silent, "labels with words that draw none: " + string.Join(", ", silent));
+        }
+
+        // ---- the compare column at its longest ---------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator TheLongestDeltaFitsItsRowOnOneLine_WithoutTouchingTheNextRow()
+        {
+            yield return OpenOnTheMap(Odette);
+
+            int defence = Enumerable.Range(0, SheetStats.Derived.Length)
+                .First(i => SheetStats.Derived[i] == SheetStat.PhysicalDefense);
+            string worst = LoadoutCompare.DeltaText(
+                SheetStats.DisplayText(SheetStat.PhysicalDefense, 1000),
+                SheetStats.DisplayText(SheetStat.PhysicalDefense, 1200), 200);
+
+            // Every row at the worst the column can be asked to hold.
+            var values = new List<TMP_Text>();
+            var names = new List<TMP_Text>();
+            for (int i = 0; i < SheetStats.Derived.Length; i++)
+            {
+                var value = DossierPane.Label($"DossierCompareStat{i}Value");
+                value.SetContent(worst);
+                DossierPane.Label($"DossierCompareStat{i}Name").SetContent(UiStrings.StatPhysicalDefense.Format());
+                values.Add(value);
+                names.Add(DossierPane.Label($"DossierCompareStat{i}Name"));
+            }
+
+            Assert.AreEqual(worst, DossierPane.DrawnText(values[defence]), "the delta was cut or wrapped in its row");
+            Assert.AreEqual(1, values[defence].textInfo.lineCount, "the delta wrapped onto a second line");
+            Assert.LessOrEqual(values[defence].preferredWidth, values[defence].rectTransform.rect.width,
+                "the delta is wider than its row");
+
+            var all = new List<TMP_Text>();
+            for (int i = 0; i < values.Count; i++) { all.Add(names[i]); all.Add(values[i]); }
+
+            for (int a = 0; a < all.Count; a++)
+            {
+                for (int b = a + 1; b < all.Count; b++)
+                {
+                    Assert.IsFalse(DossierPane.Overlap(all[a].rectTransform, all[b].rectTransform),
+                        $"{all[a].name} overlaps {all[b].name}");
+                }
+            }
+        }
+
+        // The focused item's summary wraps to its four lines instead of ending
+        // at "..." after the first.
+        [UnityTest]
+        public IEnumerator AGearSummaryWrapsInsteadOfTruncating()
+        {
+            yield return OpenOnTheMap(Odette);
+
+            var longest = ContentDatabase.Equippables
+                .OrderByDescending(i => ItemDescription.CardSummary(i, 0).Length)
+                .First();
+            Pack(longest.id);
+
+            DossierPane.Select(DossierPane.PackItemCell(_dossier, longest.id));
+            yield return null;
+
+            var description = DossierPane.Label("DossierCompareDescription");
+            string drawn = DossierPane.DrawnText(description);
+
+            Assert.IsNotEmpty(drawn, "the summary draws nothing");
+            StringAssert.DoesNotContain("…", drawn, "the summary of the longest item still ends in an ellipsis");
+            Assert.LessOrEqual(description.textInfo.lineCount, 4, "the summary needs more than four lines");
+        }
+
+        // A book's words take the column the stat rows leave: the description
+        // and the rows are hidden while the body shows.
+        [UnityTest]
+        public IEnumerator ABooksWordsShowInTheBody_AndTheStatRowsStandDown()
+        {
+            yield return OpenOnTheMap(Odette);
+
+            string id = ContentDatabase.Skills
+                .Where(s => s.Data.Description != null)
+                .OrderByDescending(s => s.Data.Description.Length)
+                .First().Data.Id;
+            Books(id);
+
+            DossierPane.Select(DossierPane.PackBookCell(_dossier, id));
+            yield return null;
+
+            var body = DossierPane.Label("DossierCompareBody");
+            Assert.IsTrue(body.gameObject.activeInHierarchy, "a book's words have no place to show");
+            Assert.IsFalse(DossierPane.Label("DossierCompareDescription").gameObject.activeInHierarchy);
+            Assert.AreEqual("", DossierPane.TextOf("DossierCompareStat0Value"), "a stat row shows for a book");
+
+            string drawn = DossierPane.DrawnText(body);
+            StringAssert.DoesNotContain("…", drawn, "the longest book description is cut");
+
+            // And back: a gear entry shows the description and the rows, not the body.
+            Pack(ItemFor(EquipmentSlot.Head).id);
+            DossierPane.Select(DossierPane.PackItemCell(_dossier, ItemFor(EquipmentSlot.Head).id));
+            yield return null;
+
+            Assert.IsFalse(DossierPane.Label("DossierCompareBody").gameObject.activeInHierarchy, "the body stays over a gear entry");
+            Assert.IsTrue(DossierPane.Label("DossierCompareDescription").gameObject.activeInHierarchy);
+        }
+
+        // ---- the strip's pager plates are the footer's ---------------------------------------------
+
+        [UnityTest]
+        public IEnumerator TheStripsPagerPlatesAreTheFootersGlyphPlates()
+        {
+            yield return OpenOnTheMap(Odette);
+            yield return null;
+
+            var device = PromptGlyphs.DeviceFor(NavigationInputModule.LastInputWasPad);
+            Assert.AreEqual(PromptGlyphs.For(device, PromptButton.PageBack).Text, DossierPane.TextOf("DossierStripPrevPlateText"));
+            Assert.AreEqual(PromptGlyphs.For(device, PromptButton.PageForward).Text, DossierPane.TextOf("DossierStripNextPlateText"));
+
+            // Same rim and fill as a footer plate, so they read as one control.
+            Assert.AreEqual(DossierPane.ColourOf("SystemPrompt0GlyphRim"), DossierPane.ColourOf("DossierStripPrevPlateRim"));
+            Assert.AreEqual(DossierPane.ColourOf("SystemPrompt0GlyphFill"), DossierPane.ColourOf("DossierStripPrevPlateFill"));
+
+            // Read the footer's own letters at the same size.
+            Assert.AreEqual(DossierPane.Label("SystemPrompt0GlyphText").fontSize, DossierPane.Label("DossierStripPrevPlateText").fontSize);
+        }
+
         // ---- gear ------------------------------------------------------------------------
 
         [UnityTest]
@@ -260,7 +456,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsNull(BookIn(Shawn, 0), "the book stayed in its slot");
             CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, BookA, "the removed book did not reach the pack");
-            Assert.AreEqual("Empty", DossierPane.TextOf("DossierBook0Caption"));
+            Assert.AreEqual("Book 1", DossierPane.TextOf("DossierBook0Caption"));
         }
 
         [UnityTest]

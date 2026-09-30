@@ -43,6 +43,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ---- the strip ------------------------------------------------------------
         public NodeRef StripPrev;
         public NodeRef StripNext;
+        public NodeRef StripPrevPlate;
+        public NodeRef StripNextPlate;
         public NodeRef StripPrevGlyph;
         public NodeRef StripNextGlyph;
         public NodeRef StripDivider;
@@ -106,6 +108,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef CompareName;
         public NodeRef CompareKind;
         public NodeRef CompareDescription;
+        public NodeRef CompareBody;
         public List<NodeRef> CompareStatNames = new List<NodeRef>();
         public List<NodeRef> CompareStatValues = new List<NodeRef>();
 
@@ -193,10 +196,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var children = new List<UiNode>();
 
-            var prev = StripPager("DossierStripPrev", DossierLayout.PagerPrevX, out var prevGlyph);
-            var next = StripPager("DossierStripNext", DossierLayout.PagerNextX, out var nextGlyph);
+            var prev = StripPager("DossierStripPrev", DossierLayout.PagerPrevX, out var prevPlate, out var prevGlyph);
+            var next = StripPager("DossierStripNext", DossierLayout.PagerNextX, out var nextPlate, out var nextGlyph);
             StripPrev = prev;
             StripNext = next;
+            StripPrevPlate = prevPlate;
+            StripNextPlate = nextPlate;
             StripPrevGlyph = prevGlyph;
             StripNextGlyph = nextGlyph;
             children.Add(prev);
@@ -219,21 +224,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         }
 
         // The LB and RB plates: the button the pad would press, drawn where
-        // the mouse can press it. The letters follow the device (Q and E on
-        // the keyboard).
-        private static UiNode StripPager(string name, float x, out UiNode glyph)
+        // the mouse can press it. The plate is the footer's own glyph plate
+        // (SystemMenuScreen.GlyphPlate), and the controller fills its letters
+        // and refits its width, so it reads as the same control as the footer's
+        // prompt and follows the device (Q and E on the keyboard).
+        private static UiNode StripPager(string name, float x, out UiNode plate, out UiNode letters)
         {
             var size = new UiVec(DossierLayout.PagerWidth, DossierLayout.PagerHeight);
-            glyph = Words(name + "Glyph", UiString.Runtime, size, 22, Text, Place.At(0f, 0f),
-                TypographyRole.Body, UiTextAlign.Centre);
+            plate = SystemMenuScreen.GlyphPlate(name + "Plate", UiString.Runtime, DossierLayout.PagerPlateWidth,
+                Place.At(0f, 0f), out letters);
 
             var button = Ui.Button(name, UiString.Runtime, size, 22, Place.At(x, 0f))
                 .NoChrome()
                 .Quiet()
                 .Styled(TypographyRole.Body);
-            button.Children.Add(Ui.Solid(name + "Fill", SocketFill, size, Place.At(0f, 0f)).AsDecor());
-            foreach (var edge in Ui.Rim(name, size, SocketRim)) button.Children.Add(edge);
-            button.Children.Add(glyph);
+            button.Children.Add(plate);
             return button;
         }
 
@@ -457,7 +462,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private IEnumerable<UiNode> BuildGearSlot(EquipmentSlot slot)
         {
-            string key = EquipmentSlots.DisplayName(slot).Replace(" ", "");
+            string key = slot.ToString();
             var at = DossierLayout.GearCentre(slot);
             var size = new UiVec(DossierLayout.SlotSize, DossierLayout.SlotSize);
             float iconSize = DossierLayout.SlotSize - 16f;
@@ -515,7 +520,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var captionAt = DossierLayout.BookCaptionCentre(index);
             var caption = Words($"DossierBook{index}Caption", UiString.Runtime,
-                    new UiVec(DossierLayout.SlotCaptionWidth, DossierLayout.SlotCaptionHeight), 20, TextMuted,
+                    new UiVec(DossierLayout.BookCaptionWidth, DossierLayout.SlotCaptionHeight), 20, TextMuted,
                     Place.At(captionAt.X, captionAt.Y), TypographyRole.Body, UiTextAlign.Centre)
                 .Truncated();
 
@@ -641,24 +646,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
             CompareKind = kind;
             children.Add(kind);
 
+            // A gear summary wraps to four lines rather than cutting itself at
+            // the first.
             var description = Words("DossierCompareDescription", UiString.Runtime,
                     new UiVec(width, DossierLayout.CompareDescriptionHeight), 20, Text,
                     Place.At(x, DossierLayout.CompareDescriptionCentreY), TypographyRole.Body, UiTextAlign.TopLeft)
-                .Truncated();
+                .Clamped();
             CompareDescription = description;
             children.Add(description);
 
+            // A book's or a salve's words take the column the stat rows would
+            // have had; the controller shows one or the other, so the overlap
+            // with the description and the rows is never on screen (decoration,
+            // which the audit already leaves out of overlap).
+            var body = Words("DossierCompareBody", UiString.Runtime,
+                    new UiVec(width, DossierLayout.CompareBodyHeight), 20, Text,
+                    Place.At(x, DossierLayout.CompareBodyCentreY), TypographyRole.Body, UiTextAlign.TopLeft)
+                .Clamped();
+            CompareBody = body;
+            children.Add(body);
+
             for (int i = 0; i < SheetStats.Derived.Length; i++)
             {
-                float y = DossierLayout.CompareRowCentreY(i);
-
                 var statName = Words($"DossierCompareStat{i}Name", UiString.Runtime,
-                        new UiVec(DossierLayout.CompareStatNameWidth, DossierLayout.CompareRowHeight), 20, TextSecondary,
-                        Place.At(DossierLayout.CompareStatNameCentreX, y), TypographyRole.Body, UiTextAlign.Left)
+                        new UiVec(width, DossierLayout.CompareLineHeight), 20, TextSecondary,
+                        Place.At(x, DossierLayout.CompareNameLineCentreY(i)), TypographyRole.Body, UiTextAlign.Left)
                     .Truncated();
                 var value = Words($"DossierCompareStat{i}Value", UiString.Runtime,
-                    new UiVec(DossierLayout.CompareStatValueWidth, DossierLayout.CompareRowHeight), 22, Text,
-                    Place.At(DossierLayout.CompareStatValueCentreX, y), TypographyRole.Body, UiTextAlign.Right);
+                        new UiVec(width, DossierLayout.CompareLineHeight), 20, Text,
+                        Place.At(x, DossierLayout.CompareValueLineCentreY(i)), TypographyRole.Body, UiTextAlign.Left)
+                    .Truncated();
 
                 CompareStatNames.Add(statName);
                 CompareStatValues.Add(value);
@@ -674,17 +691,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>();
 
             var unspent = Words("DossierAttributesUnspent", UiString.Runtime,
-                new UiVec(400f, DossierLayout.AttributesHeaderHeight), 20, Gold,
-                Place.At(DossierLayout.DX(200f), DossierLayout.AttributesHeaderCentreY),
+                new UiVec(DossierLayout.AttributeRowWidth * 0.5f, DossierLayout.AttributesHeaderHeight), 20, Gold,
+                Place.At(DossierLayout.DX(DossierLayout.AttributeRowWidth * 0.25f), DossierLayout.AttributesHeaderCentreY),
                 TypographyRole.Body, UiTextAlign.Left);
             AttributesUnspent = unspent;
             children.Add(unspent);
 
-            var lockNote = Words("DossierAttributesLockNote", UiStrings.MenuRefundAtCamp,
-                    new UiVec(280f, DossierLayout.AttributesHeaderHeight), 20, TextMuted,
-                    Place.At(DossierLayout.DX(DossierLayout.AttributeRowWidth - 140f), DossierLayout.AttributesHeaderCentreY),
-                    TypographyRole.Body, UiTextAlign.Right)
-                .Inactive();
+            // Why a change is refused, in the words of MenuPermissions; empty
+            // when nothing is.
+            var lockNote = Words("DossierAttributesLockNote", UiString.Runtime,
+                new UiVec(DossierLayout.AttributeRowWidth * 0.5f, DossierLayout.AttributesHeaderHeight), 20, TextMuted,
+                Place.At(DossierLayout.DX(DossierLayout.AttributeRowWidth * 0.75f), DossierLayout.AttributesHeaderCentreY),
+                TypographyRole.Body, UiTextAlign.Right);
             AttributesLockNote = lockNote;
             children.Add(lockNote);
 
@@ -708,8 +726,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(DossierLayout.DerivedNameCentreX, y), TypographyRole.Body, UiTextAlign.Left);
 
                 var value = Words($"DossierStatValue{i}", UiString.Runtime,
-                    new UiVec(DossierLayout.DerivedValueWidth, DossierLayout.DerivedRowHeight - 12f), 22, Text,
-                    Place.At(DossierLayout.DerivedValueCentreX, y), TypographyRole.Body, UiTextAlign.Right);
+                        new UiVec(DossierLayout.DerivedValueWidth, DossierLayout.DerivedRowHeight - 12f), 22, Text,
+                        Place.At(DossierLayout.DerivedValueCentreX, y), TypographyRole.Body, UiTextAlign.Right)
+                    .Truncated();
 
                 StatHighlights.Add(highlight);
                 StatNames.Add(name);
@@ -726,43 +745,47 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // One ability score. The rows are filled highest-first per character,
         // so a row is generic and the controller decides which score it holds.
-        // The "-" and "+" are the row's controls: always drawn, always
-        // focusable, and a press that cannot do anything says why (plan C3).
+        // The minus and the plus are the row's controls, right after the value:
+        // always drawn, always focusable, and a press that cannot do anything
+        // says why (plan C3).
         private UiNode BuildAttributeRow(int index)
         {
-            float half = DossierLayout.AttributeRowWidth * 0.5f;
-            float y = DossierLayout.AttributeTopLineY;
-
             var name = Words($"DossierAttrName{index}", UiString.Runtime,
                 new UiVec(DossierLayout.AttributeNameWidth, DossierLayout.AttributeTopLineHeight), 24, Text,
-                Place.At(-half + DossierLayout.AttributeNameWidth * 0.5f, y),
+                Place.At(DossierLayout.RowX(DossierLayout.AttributeNameLeft, DossierLayout.AttributeNameWidth),
+                    DossierLayout.RowY(0f, DossierLayout.AttributeTopLineHeight)),
                 TypographyRole.FunctionalHeading, UiTextAlign.Left);
 
-            float valueLeft = -half + DossierLayout.AttributeNameWidth;
             var value = Words($"DossierAttrValue{index}", UiString.Runtime,
                 new UiVec(DossierLayout.AttributeValueWidth, DossierLayout.AttributeTopLineHeight), 26, Gold,
-                Place.At(valueLeft + DossierLayout.AttributeValueWidth * 0.5f, y), TypographyRole.Body, UiTextAlign.Left);
+                Place.At(DossierLayout.RowX(DossierLayout.AttributeValueLeft, DossierLayout.AttributeValueWidth),
+                    DossierLayout.RowY(0f, DossierLayout.AttributeTopLineHeight)),
+                TypographyRole.Body, UiTextAlign.Left);
 
-            float investedLeft = valueLeft + DossierLayout.AttributeValueWidth;
             var invested = Words($"DossierAttrInvested{index}", UiString.Runtime,
                 new UiVec(DossierLayout.AttributeInvestedWidth, DossierLayout.AttributeTopLineHeight), 20, TextMuted,
-                Place.At(investedLeft + DossierLayout.AttributeInvestedWidth * 0.5f, y), TypographyRole.Body, UiTextAlign.Left);
+                Place.At(DossierLayout.RowX(DossierLayout.AttributeInvestedLeft, DossierLayout.AttributeInvestedWidth),
+                    DossierLayout.RowY(0f, DossierLayout.AttributeTopLineHeight)),
+                TypographyRole.Body, UiTextAlign.Left);
 
+            // Two lines, ending in an ellipsis only if a third would be needed.
             var effect = Words($"DossierAttrEffect{index}", UiString.Runtime,
-                    new UiVec(DossierLayout.AttributeEffectWidth, DossierLayout.AttributeEffectHeight), 20, TextSecondary,
-                    Place.At(-half + DossierLayout.AttributeEffectWidth * 0.5f, DossierLayout.AttributeEffectY),
+                    new UiVec(DossierLayout.AttributeRowWidth, DossierLayout.AttributeEffectHeight), 20, TextSecondary,
+                    Place.At(DossierLayout.RowX(0f, DossierLayout.AttributeRowWidth),
+                        DossierLayout.RowY(DossierLayout.AttributeEffectTop, DossierLayout.AttributeEffectHeight)),
                     TypographyRole.Body, UiTextAlign.TopLeft)
-                .Truncated();
+                .Clamped();
 
             var stepper = new UiVec(DossierLayout.StepperSize, DossierLayout.StepperSize);
+            float stepperY = DossierLayout.RowY(0f, DossierLayout.AttributeTopLineHeight);
             var minus = Stepper($"DossierAttrMinus{index}", UiStrings.DossierRefundPoint, stepper,
-                DossierLayout.MinusX, DossierLayout.StepperY);
+                DossierLayout.RowX(DossierLayout.MinusLeft, DossierLayout.StepperSize), stepperY);
             var plus = Stepper($"DossierAttrPlus{index}", UiStrings.DossierSpendPoint, stepper,
-                DossierLayout.PlusX, DossierLayout.StepperY);
+                DossierLayout.RowX(DossierLayout.PlusLeft, DossierLayout.StepperSize), stepperY);
 
             var row = Ui.Panel($"DossierAttrRow{index}",
                 Place.At(DossierLayout.AttributeRowCentreX, DossierLayout.AttributeRowCentreY(index)),
-                UiSize.Fixed(DossierLayout.AttributeRowWidth, DossierLayout.AttributeRowHeight - 2f),
+                UiSize.Fixed(DossierLayout.AttributeRowWidth, DossierLayout.AttributeRowInner),
                 name, value, invested, effect, minus, plus);
 
             AttributeNames.Add(name);
@@ -774,9 +797,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return row;
         }
 
+        // A plate the size of a finger with its glyph at 32, well over the
+        // type floor so a plus or minus reads at a glance.
+        public const int StepperGlyphSize = 32;
+
         private static UiNode Stepper(string name, UiString text, UiVec size, float x, float y)
         {
-            var button = Ui.Button(name, text, size, 24, Place.At(x, y))
+            var button = Ui.Button(name, text, size, StepperGlyphSize, Place.At(x, y))
                 .NoChrome()
                 .Styled(TypographyRole.Body);
             foreach (var edge in Ui.Rim(name, size, SocketRim)) button.Children.Add(edge);

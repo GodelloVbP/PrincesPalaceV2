@@ -112,14 +112,14 @@ namespace PrincesPalace.Domain.Tests
         // Today's arrangement in four rows (spec 3.1): Head top centre with
         // Necklace beside it, the left file down Torso, Gloves, Legs, the
         // right file Weapon 1, Weapon 2, Shoes level with them.
-        [TestCase(EquipmentSlot.Head, -378f, 286f)]
+        [TestCase(EquipmentSlot.Head, -396f, 286f)]
         [TestCase(EquipmentSlot.Necklace, -546f, 286f)]
-        [TestCase(EquipmentSlot.Torso, -546f, 170f)]
-        [TestCase(EquipmentSlot.Gloves, -546f, 54f)]
-        [TestCase(EquipmentSlot.Legs, -546f, -62f)]
-        [TestCase(EquipmentSlot.Weapon1, -210f, 170f)]
-        [TestCase(EquipmentSlot.Weapon2, -210f, 54f)]
-        [TestCase(EquipmentSlot.Shoes, -210f, -62f)]
+        [TestCase(EquipmentSlot.Torso, -546f, 164f)]
+        [TestCase(EquipmentSlot.Gloves, -546f, 42f)]
+        [TestCase(EquipmentSlot.Legs, -546f, -80f)]
+        [TestCase(EquipmentSlot.Weapon1, -246f, 164f)]
+        [TestCase(EquipmentSlot.Weapon2, -246f, 42f)]
+        [TestCase(EquipmentSlot.Shoes, -246f, -80f)]
         public void EachGearSlotSitsWhereTheSpecPutsIt(EquipmentSlot slot, float x, float y)
         {
             var at = DossierLayout.GearCentre(slot);
@@ -146,16 +146,61 @@ namespace PrincesPalace.Domain.Tests
             var screen = CharacterDossierScreen.Build();
             Assert.AreEqual(SpellBooks.MaxSpellSlots, screen.BookCells.Count);
 
-            Assert.AreEqual(-226f, DossierLayout.BookCentre(0).Y, 0.001f);
-            Assert.AreEqual(-546f, DossierLayout.BookCentre(0).X, 0.001f);
-            Assert.AreEqual(-378f, DossierLayout.BookCentre(1).X, 0.001f);
-            Assert.AreEqual(-210f, DossierLayout.BookCentre(2).X, 0.001f);
+            Assert.AreEqual(-246f, DossierLayout.BookCentre(0).Y, 0.001f);
+            Assert.AreEqual(-534f, DossierLayout.BookCentre(0).X, 0.001f);
+            Assert.AreEqual(-396f, DossierLayout.BookCentre(1).X, 0.001f);
+            Assert.AreEqual(-258f, DossierLayout.BookCentre(2).X, 0.001f);
 
             // The lowest gear caption ends above the heading.
             Assert.LessOrEqual(3 * DossierLayout.SlotPitch + DossierLayout.SlotSize + DossierLayout.SlotCaptionGap
                                + DossierLayout.SlotCaptionHeight, DossierLayout.BooksHeadingTop);
             Assert.LessOrEqual(DossierLayout.BookRowTop + DossierLayout.SlotSize + DossierLayout.SlotCaptionGap
                                + DossierLayout.SlotCaptionHeight, DossierLayout.DetailHeight);
+        }
+
+        // A caption sits under its cell and clears the cell below it.
+        [Test]
+        public void EveryGearCaptionSitsBetweenItsCellAndTheNextRow()
+        {
+            float captionBottom = DossierLayout.SlotSize + DossierLayout.SlotCaptionGap + DossierLayout.SlotCaptionHeight;
+            Assert.AreEqual(120f, captionBottom, 0.001f);
+            Assert.Greater(DossierLayout.SlotPitch, captionBottom, "a caption runs into the cell below it");
+
+            foreach (var slot in EquipmentSlots.All)
+            {
+                var cell = DossierLayout.GearCentre(slot);
+                var caption = DossierLayout.GearCaptionCentre(slot);
+                Assert.AreEqual(cell.X, caption.X, 0.001f, $"{slot}'s caption is not under its cell");
+                Assert.AreEqual(-61f, caption.Y - cell.Y, 0.001f, $"{slot}'s caption is not 61 below its cell's centre");
+            }
+        }
+
+        // A label that outgrows its box's height draws nothing in TMP, and a
+        // box under one line of its own font is such a box, so a 26 px box for
+        // a Body 20 line shows no caption or chip name at all. A Body 20 line
+        // is 26.53 px (measured), 1.33 of the size.
+        [Test]
+        public void EveryLabelThatTruncatesOrClampsIsBoxedForAtLeastOneLine()
+        {
+            var tooShort = new List<string>();
+            foreach (var node in Walk(CharacterDossierScreen.Build().Root))
+            {
+                if (!node.Truncates && !node.Clamps) continue;
+
+                float line = node.FontSize * 1.33f;
+                if (node.Size.Y < line) tooShort.Add($"{node.Name} ({node.Size.Y} < {line})");
+            }
+
+            Assert.IsEmpty(tooShort, "boxed below one line, so TMP draws nothing: " + string.Join(", ", tooShort));
+        }
+
+        [Test]
+        public void TheStripsChipLinesFillTheChipWithoutOverlap()
+        {
+            Assert.AreEqual(30f, DossierLayout.ChipLineHeight, 0.001f);
+            Assert.LessOrEqual(2 * DossierLayout.ChipLineHeight, DossierLayout.ChipHeight);
+            Assert.AreEqual(DossierLayout.ChipLineHeight, DossierLayout.ChipNameY - DossierLayout.ChipSeatY, 0.001f,
+                "the name and seat lines overlap");
         }
 
         [Test]
@@ -166,9 +211,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(12, screen.PackCells.Count);
             Assert.AreEqual(5, screen.FilterChips.Count);
 
-            Assert.AreEqual(-78f, DossierLayout.PackCellCentre(0).X, 0.001f);
+            Assert.AreEqual(-122f, DossierLayout.PackCellCentre(0).X, 0.001f);
             Assert.AreEqual(216f, DossierLayout.PackCellCentre(0).Y, 0.001f);
-            Assert.AreEqual(174f, DossierLayout.PackCellCentre(11).X, 0.001f);
+            Assert.AreEqual(130f, DossierLayout.PackCellCentre(11).X, 0.001f);
             Assert.AreEqual(-162f, DossierLayout.PackCellCentre(11).Y, 0.001f);
 
             // Grid, gap and scrollbar stay inside the 408 column.
@@ -192,10 +237,37 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(SheetStats.Derived.Length, screen.CompareStatNames.Count);
             Assert.AreEqual(SheetStats.Derived.Length, screen.CompareStatValues.Count);
-            Assert.AreEqual(448f, DossierLayout.CompareCentreX, 0.001f);
+            Assert.AreEqual(422f, DossierLayout.CompareCentreX, 0.001f);
+            Assert.AreEqual(352f, DossierLayout.CompareWidth, 0.001f);
 
+            // A stat is two lines: 54 a row, eight rows end at 644 of 660.
+            Assert.AreEqual(54f, DossierLayout.CompareRowHeight, 0.001f);
             float lastBottom = DossierLayout.CompareRowsTop + SheetStats.Derived.Length * DossierLayout.CompareRowHeight;
+            Assert.AreEqual(644f, lastBottom, 0.001f);
             Assert.LessOrEqual(lastBottom, DossierLayout.DetailHeight);
+        }
+
+        // The columns fill the detail area exactly, in order.
+        [Test]
+        public void TheThreeLoadoutColumnsFillTheDetailArea()
+        {
+            Assert.AreEqual(420f, DossierLayout.PackLeft, 0.001f);
+            Assert.AreEqual(844f, DossierLayout.CompareLeft, 0.001f);
+            Assert.AreEqual(DossierLayout.DetailWidth, DossierLayout.CompareLeft + DossierLayout.CompareWidth, 0.001f);
+            Assert.LessOrEqual(DossierLayout.SlotsLeft + DossierLayout.SlotsWidth + DossierLayout.ColumnGap,
+                DossierLayout.PackLeft);
+        }
+
+        // The compare column has a body for a book's or a salve's words, which
+        // the rows would otherwise crowd out.
+        [Test]
+        public void TheCompareColumnHasABodyForABooksWords()
+        {
+            var screen = CharacterDossierScreen.Build();
+            Assert.IsNotNull(screen.CompareBody);
+            Assert.IsTrue(screen.CompareDescription.Node.Clamps, "a gear summary should wrap, not cut at the first line");
+            Assert.IsFalse(screen.CompareDescription.Node.Truncates);
+            Assert.AreEqual(108f, screen.CompareDescription.Node.Size.Y, 0.001f, "four lines of a summary");
         }
 
         // ---- one selection language (plan C13) ------------------------------------------------
@@ -221,7 +293,44 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(44f, DossierLayout.StepperSize, 0.001f);
 
             float rowsBottom = DossierLayout.AttributeRowsTop + SheetStats.Abilities.Length * DossierLayout.AttributeRowHeight;
+            Assert.AreEqual(652f, rowsBottom, 0.001f);
             Assert.LessOrEqual(rowsBottom, DossierLayout.DetailHeight);
+        }
+
+        // Spec 3.2: the buttons sit right after the value, not at the far end
+        // of the row.
+        [Test]
+        public void TheSteppersSitRightAfterTheValue()
+        {
+            float valueRight = DossierLayout.AttributeValueLeft + DossierLayout.AttributeValueWidth;
+            Assert.AreEqual(156f, valueRight, 0.001f);
+            Assert.AreEqual(164f, DossierLayout.MinusLeft, 0.001f);
+            Assert.AreEqual(216f, DossierLayout.PlusLeft, 0.001f);
+            Assert.LessOrEqual(DossierLayout.MinusLeft - valueRight, 16f, "a gap between the value and its minus");
+
+            // 44 x 44 and legible: the glyph is 32, over the type floor.
+            Assert.AreEqual(44f, DossierLayout.StepperSize, 0.001f);
+            Assert.AreEqual(32, CharacterDossierScreen.StepperGlyphSize);
+        }
+
+        // The effect line may take two lines and sits inside its row.
+        [Test]
+        public void TheEffectLineHoldsTwoBodyLinesInsideItsRow()
+        {
+            Assert.GreaterOrEqual(DossierLayout.AttributeEffectHeight, 2 * 20 * 1.33f);
+            Assert.LessOrEqual(DossierLayout.AttributeEffectTop + DossierLayout.AttributeEffectHeight,
+                DossierLayout.AttributeRowInner);
+
+            var node = CharacterDossierScreen.Build().AttributeEffects[0].Node;
+            Assert.IsTrue(node.Clamps, "the effect line should wrap");
+            Assert.IsFalse(node.Truncates, "the effect line should not cut at one line");
+        }
+
+        [Test]
+        public void TheDerivedValueColumnHoldsABeforeAndAfterOnOneLine()
+        {
+            Assert.AreEqual(300f, DossierLayout.DerivedValueWidth, 0.001f);
+            Assert.AreEqual(470f, DossierLayout.DerivedNameWidth + DossierLayout.DerivedValueWidth, 0.001f);
         }
     }
 }

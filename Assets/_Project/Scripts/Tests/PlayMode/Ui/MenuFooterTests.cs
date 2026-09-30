@@ -397,7 +397,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("B Close | LT/RT Tab | LB/RB Character", Prompts());
         }
 
-        private static string SlotName(EquipmentSlot slot) => "DossierSlot" + EquipmentSlots.DisplayName(slot).Replace(" ", "");
+        private static string SlotName(EquipmentSlot slot) => "DossierSlot" + slot.ToString();
 
         // ---- the notice (C11) ---------------------------------------------------------------
 

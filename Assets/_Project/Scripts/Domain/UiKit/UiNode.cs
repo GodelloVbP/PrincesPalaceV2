@@ -230,6 +230,12 @@ namespace PrincesPalace.Domain.UiKit
         // measure at build time.
         public bool Truncates;
 
+        // Label only. Wraps as usual and ends in an ellipsis when the words
+        // outgrow the box's height, instead of running over what is below it:
+        // a description with a fixed number of lines. Truncates and Clamps say
+        // different things about the same box, so a label takes one of them.
+        public bool Clamps;
+
         // Label only. A label with no plate of the kit's behind it -- the
         // fight log, the ENEMIES heading -- whose background is whatever the
         // stage art and the spells put there. The emitter adds OverArtEdge,
@@ -424,6 +430,9 @@ namespace PrincesPalace.Domain.UiKit
         // caption already gets (UiEmitter.WireThemedButton), exposed on the
         // plain Label path for a runtime string with no authored ceiling.
         public UiNode Truncated() { Truncates = true; return this; }
+
+        // See Clamps.
+        public UiNode Clamped() { Clamps = true; return this; }
 
         // Drawn straight on the art, with no kit plate behind it -- see
         // DrawsOverArt's own comment.

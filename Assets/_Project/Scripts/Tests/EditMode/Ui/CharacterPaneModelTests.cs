@@ -145,6 +145,73 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("40 → 31 (-9)", LoadoutCompare.DeltaText("40", "31", -9));
         }
 
+        // What one point does to a derived row (the stepper preview and the
+        // compare column read it from one place). Pinned in literals against
+        // AbilityDerivation's own table: 20 health and 2 physical defence a
+        // Constitution point, 2 mana and 2 magical defence a Wisdom point,
+        // 1 speed per 2 Dexterity, 1 signature gain per 4 Charisma.
+        [Test]
+        public void OnePointMovesTheRowsItFeedsByTheirPerPointRate()
+        {
+            var ten = new Domain.Stats.AbilityScoreBlock(10, 10, 10, 10, 10, 10);
+            var con = ten.With(Domain.Stats.AbilityScore.Constitution, 11);
+            var wis = ten.With(Domain.Stats.AbilityScore.Wisdom, 11);
+
+            Assert.AreEqual(20, SheetStats.ScoreDelta(SheetStat.MaxHealth, ten, con));
+            Assert.AreEqual(2, SheetStats.ScoreDelta(SheetStat.PhysicalDefense, ten, con));
+            Assert.AreEqual(0, SheetStats.ScoreDelta(SheetStat.Speed, ten, con));
+            Assert.AreEqual(0, SheetStats.ScoreDelta(SheetStat.Attack, ten, con));
+
+            Assert.AreEqual(2, SheetStats.ScoreDelta(SheetStat.MaxMana, ten, wis));
+            Assert.AreEqual(2, SheetStats.ScoreDelta(SheetStat.MagicalDefense, ten, wis));
+
+            // A refund is the same rate, the other way.
+            Assert.AreEqual(-20, SheetStats.ScoreDelta(SheetStat.MaxHealth, con, ten));
+        }
+
+        [Test]
+        public void SpeedAndSignatureGainMoveInSteps()
+        {
+            var ten = new Domain.Stats.AbilityScoreBlock(10, 10, 10, 10, 10, 10);
+
+            Assert.AreEqual(0, SheetStats.ScoreDelta(SheetStat.Speed, ten,
+                ten.With(Domain.Stats.AbilityScore.Dexterity, 11)), "the first Dexterity point is mid-step");
+            Assert.AreEqual(1, SheetStats.ScoreDelta(SheetStat.Speed, ten,
+                ten.With(Domain.Stats.AbilityScore.Dexterity, 12)));
+
+            Assert.AreEqual(0, SheetStats.ScoreDelta(SheetStat.SignatureGain, ten,
+                ten.With(Domain.Stats.AbilityScore.Charisma, 13)));
+            Assert.AreEqual(1, SheetStats.ScoreDelta(SheetStat.SignatureGain, ten,
+                ten.With(Domain.Stats.AbilityScore.Charisma, 14)));
+        }
+
+        // Wisdom moves nothing in a pool whose capacity is fixed.
+        [Test]
+        public void AFixedPoolIsNotMovedByWisdom()
+        {
+            var ten = new Domain.Stats.AbilityScoreBlock(10, 10, 10, 10, 10, 10);
+            var wis = ten.With(Domain.Stats.AbilityScore.Wisdom, 11);
+
+            Assert.AreEqual(0, SheetStats.ScoreDelta(SheetStat.MaxMana, ten, wis, Domain.Content.PoolCapacityRule.Fixed));
+            Assert.AreEqual(2, SheetStats.ScoreDelta(SheetStat.MagicalDefense, ten, wis, Domain.Content.PoolCapacityRule.Fixed));
+        }
+
+        // The slot names live in the string manifest, once each.
+        [Test]
+        public void EveryGearSlotHasItsNameInTheManifest()
+        {
+            CollectionAssert.AreEqual(
+                new[] { "Head", "Necklace", "Torso", "Legs", "Shoes", "Gloves", "Weapon 1", "Weapon 2" },
+                EquipmentSlots.All.Select(slot => UiStrings.EquipmentSlotName(slot).Format()).ToArray());
+        }
+
+        [Test]
+        public void AnEmptyBookSlotIsCaptionedByItsNumber()
+        {
+            Assert.AreEqual("Book 1", UiStrings.LoadoutBookSlot.Format(1));
+            Assert.AreEqual("Book 3", UiStrings.LoadoutBookSlot.Format(3));
+        }
+
         // ---- pending states ---------------------------------------------------------------
 
         [Test]

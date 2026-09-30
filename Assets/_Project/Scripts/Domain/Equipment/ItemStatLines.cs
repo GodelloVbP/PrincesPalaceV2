@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Equipment
 {
@@ -302,7 +303,7 @@ namespace PrincesPalace.Domain.Equipment
 
         private static string SlotNames(IReadOnlyList<EquipmentSlot> slots)
         {
-            return string.Join(", ", slots.Select(EquipmentSlots.DisplayName));
+            return string.Join(", ", slots.Select(s => UiStrings.EquipmentSlotName(s).Format()));
         }
 
         // PUBLIC: Core.ItemDescription's affix comparison (ITEM-MODIFIER PLAN

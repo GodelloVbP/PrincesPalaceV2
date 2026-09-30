@@ -31,7 +31,7 @@ debt), and a struck finding gets its number removed.
 - Map: #226, #254
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
-- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214, #243, #248
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214, #248
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #219, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #112, #123, #220, #255
 - Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
@@ -2508,9 +2508,7 @@ dimmed and made non-interactable, but nothing tells the player why.
 Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed; add
 -BuildScenes if a caption node is added.
 
-### 243. The dossier attributes modal fights the player
-
-Partly resolved by phase 5b: the modal is gone (ATTRIBUTES is a section of the CHARACTER tab, steppers beside their rows), and the compare column reads `280 → 338 (+58)`, old before new (`LoadoutCompare.DeltaText`). Open for phase 5d: the `before → after` line on the derived stat while a stepper is focused.
+### ~~243. The dossier attributes modal fights the player~~ — resolved by the CHARACTER tab's ATTRIBUTES (phases 5b and 5d): the modal is gone, the steppers sit beside the value they change, the effect line wraps, and a focused stepper shows `before → after` on the rows its score feeds (`DossierAttributesTests`)
 
 Capture `docs/captures/qa-2026-09-26/fixed/round2/Dossier_attributes.png`:
 the "+" buttons render roughly 10px wide at the far right of the row, about

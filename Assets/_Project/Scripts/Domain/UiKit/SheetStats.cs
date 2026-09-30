@@ -234,6 +234,19 @@ namespace PrincesPalace.Domain.UiKit
             return "One more point: " + string.Join(", ", parts);
         }
 
+        // What moving the scores from `before` to `after` does to one derived
+        // row: the change in its attribute-derived half. One answer for the
+        // stepper preview (a point spent or refunded) and for the compare
+        // column (an item that shifts scores), so the two cannot round
+        // differently. Zero for a row no score feeds, and for the pool row of a
+        // pool whose capacity Wisdom does not move.
+        public static int ScoreDelta(SheetStat stat, AbilityScoreBlock before, AbilityScoreBlock after,
+                                     PoolCapacityRule primaryPoolRule = PoolCapacityRule.WisdomDerived)
+        {
+            if (stat == SheetStat.MaxMana && primaryPoolRule != PoolCapacityRule.WisdomDerived) return 0;
+            return DerivedBonus(stat, after) - DerivedBonus(stat, before);
+        }
+
         // The attribute-derived HALF of a stat, which is the only half a score
         // can move. Gear is deliberately absent: this answers "what does my CON
         // do", not "what is my Health".

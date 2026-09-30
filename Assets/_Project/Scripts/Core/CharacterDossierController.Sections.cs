@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
@@ -23,7 +24,7 @@ namespace PrincesPalace
     public partial class CharacterDossierController
     {
         [SerializeField] internal TMP_Text attributesUnspent;
-        [SerializeField] internal GameObject attributesLockNote;
+        [SerializeField] internal TMP_Text attributesLockNote;
         [SerializeField] internal TMP_Text[] attributeNames;
         [SerializeField] internal TMP_Text[] attributeValues;
         [SerializeField] internal TMP_Text[] attributeInvested;
@@ -65,6 +66,7 @@ namespace PrincesPalace
 
         private static readonly Color StepperLive = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Text);
         private static readonly Color StepperIdle = Hex(Domain.UiKit.Screens.CharacterDossierScreen.TextMuted);
+        private static readonly Color StatPlain = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Text);
 
         private void ResolveCharacter(Character character)
         {
@@ -93,29 +95,30 @@ namespace PrincesPalace
             {
                 int row = i;
                 attributePluses[i].onClick.AddListener(() => Spend(row));
-                WatchRow(attributePluses[i], row);
+                WatchRow(attributePluses[i], row, +1);
             }
 
             for (int i = 0; attributeMinuses != null && i < attributeMinuses.Length; i++)
             {
                 int row = i;
                 attributeMinuses[i].onClick.AddListener(() => Refund(row));
-                WatchRow(attributeMinuses[i], row);
+                WatchRow(attributeMinuses[i], row, -1);
             }
         }
 
-        // Focus or the pointer on a row's "-" or "+" lights the stats that
-        // score actually feeds, the sheet's one mechanic.
-        private void WatchRow(Button stepper, int row)
+        // Focus or the pointer on a row's minus or plus lights the stats that
+        // score actually feeds and shows what a press would make of them, the
+        // sheet's one mechanic.
+        private void WatchRow(Button stepper, int row, int step)
         {
             var go = stepper.gameObject;
             var select = go.GetComponent<SelectIndex>() ?? go.AddComponent<SelectIndex>();
             select.Index = row;
-            select.Changed = LightRowsFor;
+            select.Changed = (r, entered) => PreviewStep(r, step, entered);
 
             var hover = go.GetComponent<HoverIndex>() ?? go.AddComponent<HoverIndex>();
             hover.Index = row;
-            hover.Changed = LightRowsFor;
+            hover.Changed = (r, entered) => PreviewStep(r, step, entered);
         }
 
         private void RefreshAttributes(Character character)
@@ -131,8 +134,17 @@ namespace PrincesPalace
                 else attributesUnspent.Set(UiStrings.AttributesUnspent, points);
             }
 
-            // The refund lock, said rather than left to a quiet "-".
-            if (attributesLockNote != null) attributesLockNote.SetShown(!canRefund);
+            // What the menu refuses here, in MenuPermissions' own words: a
+            // descent refunds at camp, a fight changes nothing. Empty when
+            // nothing is refused.
+            if (attributesLockNote != null)
+            {
+                var refused = MenuPermissions.Reason(MenuAction.SpendAttribute, Context);
+                if (string.IsNullOrEmpty(refused.Key)) refused = MenuPermissions.Reason(MenuAction.RefundAttribute, Context);
+
+                if (string.IsNullOrEmpty(refused.Key)) attributesLockNote.SetContent("");
+                else attributesLockNote.Set(refused);
+            }
 
             for (int i = 0; i < SheetStats.Abilities.Length; i++)
             {
@@ -163,6 +175,7 @@ namespace PrincesPalace
             }
 
             RefreshStats(character);
+            RepaintPreviewForSelection();
         }
 
         private static void PaintStepper(Button stepper, bool live)
@@ -178,25 +191,76 @@ namespace PrincesPalace
             for (int i = 0; i < SheetStats.Derived.Length; i++)
             {
                 var stat = SheetStats.Derived[i];
-                if (Has(statValues, i)) statValues[i].SetContent(DisplayValue(character, stat, stats, _scores));
+                if (Has(statValues, i))
+                {
+                    statValues[i].SetContent(DisplayValue(character, stat, stats, _scores));
+                    statValues[i].color = StatPlain;
+                }
+
                 if (Has(statHighlights, i)) statHighlights[i].SetShown(false);
                 if (stat == SheetStat.MaxMana && Has(statNames, i)) statNames[i].SetContent(StatLabel(stat));
             }
         }
 
-        // THE mechanic: light the rows this score actually feeds.
-        private void LightRowsFor(int row, bool entered)
+        // THE mechanic: light the rows this score actually feeds, and while a
+        // stepper that would do something is under the focus, write what each
+        // becomes, "29 (22%) -> 31 (23%)". A stepper that would do nothing (no
+        // points, refused here, nothing invested) lights the rows and previews
+        // no change: a number that will not happen is a lie.
+        private void PreviewStep(int row, int step, bool entered)
         {
             if (statHighlights == null || row < 0 || row >= _rowOrder.Count) return;
 
+            var character = Current();
+            if (character == null) return;
+
+            var score = _rowOrder[row];
             var fed = entered
-                ? new HashSet<SheetStat>(SheetStats.Feeds(_rowOrder[row], _primaryPoolRule))
+                ? new HashSet<SheetStat>(SheetStats.Feeds(score, _primaryPoolRule))
                 : new HashSet<SheetStat>();
+
+            bool live = entered && StepWouldHappen(character, score, step);
+            var after = _scores.With(score, _scores[score] + step);
+            var stats = ContentDatabase.EffectiveStats(character);
 
             for (int i = 0; i < SheetStats.Derived.Length && i < statHighlights.Length; i++)
             {
-                if (statHighlights[i] != null) statHighlights[i].SetShown(fed.Contains(SheetStats.Derived[i]));
+                var stat = SheetStats.Derived[i];
+                bool lit = fed.Contains(stat);
+                if (statHighlights[i] != null) statHighlights[i].SetShown(lit);
+                if (!Has(statValues, i)) continue;
+
+                if (!lit || !live || !TryCurrentValue(character, stat, stats, _scores, out int now))
+                {
+                    statValues[i].SetContent(DisplayValue(character, stat, stats, _scores));
+                    statValues[i].color = StatPlain;
+                    continue;
+                }
+
+                int delta = SheetStats.ScoreDelta(stat, _scores, after, _primaryPoolRule);
+                statValues[i].SetContent(UiStrings.StatPreview.Format(
+                    SheetStats.DisplayText(stat, now), SheetStats.DisplayText(stat, now + delta)));
+                statValues[i].color = delta > 0 ? Good : delta < 0 ? Bad : StatPlain;
             }
+        }
+
+        private bool StepWouldHappen(Character character, AbilityScore score, int step) =>
+            step > 0
+                ? MenuPermissions.Allows(MenuAction.SpendAttribute, Context) && character.unspentStatPoints > 0
+                : MenuPermissions.Allows(MenuAction.RefundAttribute, Context) && character.investedAbilityScores[score] > 0;
+
+        // A press moved the numbers under a stepper that still has the focus,
+        // and no select event will come to say so: show the preview again.
+        private void RepaintPreviewForSelection()
+        {
+            var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            if (selected == null) return;
+
+            int plus = IndexIn(attributePluses, selected);
+            if (plus >= 0) { PreviewStep(plus, +1, entered: true); return; }
+
+            int minus = IndexIn(attributeMinuses, selected);
+            if (minus >= 0) PreviewStep(minus, -1, entered: true);
         }
 
         // Places one of this character's unspent points into the score in
@@ -339,11 +403,8 @@ namespace PrincesPalace
                 case SheetStat.PhysicalDefense: return comparison.StatDelta.physicalDefense;
                 case SheetStat.MagicalDefense: return comparison.StatDelta.magicalDefense;
                 case SheetStat.MaxMana:
-                    return _primaryPoolRule != PoolCapacityRule.WisdomDerived
-                        ? 0
-                        : AbilityDerivation.MaxManaBonus(previewScores) - AbilityDerivation.MaxManaBonus(_scores);
                 case SheetStat.SignatureGain:
-                    return AbilityDerivation.SignatureGainBonus(previewScores) - AbilityDerivation.SignatureGainBonus(_scores);
+                    return SheetStats.ScoreDelta(stat, _scores, previewScores, _primaryPoolRule);
                 default: return 0;
             }
         }

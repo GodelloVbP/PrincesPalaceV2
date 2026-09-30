@@ -59,6 +59,7 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text compareName;
         [SerializeField] internal TMP_Text compareKind;
         [SerializeField] internal TMP_Text compareDescription;
+        [SerializeField] internal TMP_Text compareBody;
         [SerializeField] internal TMP_Text[] compareStatNames;
         [SerializeField] internal TMP_Text[] compareStatValues;
 
@@ -208,7 +209,7 @@ namespace PrincesPalace
                 if (Has(slotCaptions, i))
                 {
                     if (blocked) slotCaptions[i].Set(UiStrings.LoadoutTwoHanded);
-                    else slotCaptions[i].SetContent(EquipmentSlots.DisplayName(slot));
+                    else slotCaptions[i].Set(UiStrings.EquipmentSlotName(slot));
                 }
 
                 if (Has(slotArmedRims, i)) slotArmedRims[i].SetShown(_pending.ArmsGear && _pending.GearSlot == i);
@@ -253,7 +254,7 @@ namespace PrincesPalace
 
                 if (Has(bookCaptions, i))
                 {
-                    if (skill == null) bookCaptions[i].Set(UiStrings.LoadoutSlotEmpty);
+                    if (skill == null) bookCaptions[i].Set(UiStrings.LoadoutBookSlot, i + 1);
                     else bookCaptions[i].SetContent(skill.Data.DisplayName);
                 }
 
@@ -531,7 +532,7 @@ namespace PrincesPalace
                 return;
             }
 
-            Arm(LoadoutPending.ArmGear(index), UiStrings.LoadoutArmedLine, EquipmentSlots.DisplayName(slot));
+            Arm(LoadoutPending.ArmGear(index), UiStrings.LoadoutArmedLine, UiStrings.EquipmentSlotName(slot).Format());
         }
 
         // A filled book slot gives its book back to the pack; an empty one
@@ -844,7 +845,7 @@ namespace PrincesPalace
 
             if (item == null)
             {
-                SetCompareHead(EquipmentSlots.DisplayName(slot), UiStrings.CompareEmptySlot.Format(), "");
+                SetCompareHead(UiStrings.EquipmentSlotName(slot).Format(), UiStrings.CompareEmptySlot.Format(), "");
                 PaintCurrentStatRows(character);
                 return;
             }
@@ -884,8 +885,7 @@ namespace PrincesPalace
             string description = skill.Data.Description ?? "";
             string body = string.IsNullOrWhiteSpace(description) ? cost : $"{cost}\n{description}";
 
-            SetCompareHead(skill.Data.DisplayName, UiStrings.CompareKindBook.Format(), body);
-            HideStatRows();
+            SetCompareBody(skill.Data.DisplayName, UiStrings.CompareKindBook.Format(), body);
         }
 
         private void PaintCompareForPackCell(int cell)
@@ -917,8 +917,7 @@ namespace PrincesPalace
 
             if (e.Kind == PackEntryKind.Salve)
             {
-                SetCompareHead(RarityColors.Wrap(item, e.Item.Plus), UiStrings.CompareKindSalve.Format(), description);
-                HideStatRows();
+                SetCompareBody(RarityColors.Wrap(item, e.Item.Plus), UiStrings.CompareKindSalve.Format(), description);
                 return;
             }
 
@@ -971,7 +970,26 @@ namespace PrincesPalace
         {
             if (compareName != null) compareName.SetContent(name ?? "");
             if (compareKind != null) compareKind.SetContent(kind ?? "");
-            if (compareDescription != null) compareDescription.SetContent(description ?? "");
+            if (compareDescription != null)
+            {
+                compareDescription.gameObject.SetShown(true);
+                compareDescription.SetContent(description ?? "");
+            }
+
+            if (compareBody != null) compareBody.gameObject.SetShown(false);
+        }
+
+        // A book or a salve: its words take the column, and no stat row shows.
+        private void SetCompareBody(string name, string kind, string body)
+        {
+            SetCompareHead(name, kind, "");
+            HideStatRows();
+
+            if (compareDescription != null) compareDescription.gameObject.SetShown(false);
+            if (compareBody == null) return;
+
+            compareBody.gameObject.SetShown(true);
+            compareBody.SetContent(body ?? "");
         }
 
         private void SetCompareRow(int index, string name, string value, Color colour)

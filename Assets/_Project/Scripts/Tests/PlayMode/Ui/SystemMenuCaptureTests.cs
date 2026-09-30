@@ -317,7 +317,7 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        private static string SlotName(EquipmentSlot slot) => "DossierSlot" + EquipmentSlots.DisplayName(slot).Replace(" ", "");
+        private static string SlotName(EquipmentSlot slot) => "DossierSlot" + slot.ToString();
 
         private static string PackCellOf(CharacterDossierController dossier, System.Func<PackEntry, bool> which)
         {

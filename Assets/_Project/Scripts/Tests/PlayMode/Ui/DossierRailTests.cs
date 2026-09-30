@@ -98,6 +98,8 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual("Odette", DossierPane.TextOf("DossierChip2Name"), "the benched character is not after the seated");
             Assert.AreEqual("Benched", DossierPane.TextOf("DossierChip2Seat"));
+            Assert.AreEqual("Odette", DossierPane.DrawnTextOf("DossierChip2Name"), "the benched chip draws no name");
+            Assert.AreEqual("Benched", DossierPane.DrawnTextOf("DossierChip2Seat"), "the benched chip draws no seat");
 
             var name = Resources.FindObjectsOfTypeAll<TMP_Text>().First(t => t.name == "DossierChip2Name" && t.gameObject.scene.IsValid());
             var seated = Resources.FindObjectsOfTypeAll<TMP_Text>().First(t => t.name == "DossierChip0Name" && t.gameObject.scene.IsValid());

@@ -102,7 +102,17 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
   pip (12 px gold dot, top right). The selected chip gets a gold rim, the
   others a hairline. Benched chips sit after a 32 px divider at 60 %
   alpha. More chips than fit: the strip pages, and LB/RB steps through
-  every chip regardless.
+  every chip regardless. The name and the seat are 30-tall lines: a Body 20
+  line is 26.5 px, and TMP draws nothing at all in a box shorter than its
+  line, which is how the first build shipped chips with a portrait only.
+  Every label that truncates or clamps is tested to be boxed for one line
+  (`CharacterDossierScreenTests`), and a PlayMode net checks that a label with
+  words draws some (`DossierLoadoutTests`).
+- **Pager plates:** the LB and RB plates at the strip's ends are the footer's
+  glyph plate (`SystemMenuScreen.GlyphPlate`: the same rimmed 32-tall plate,
+  TacticalData 24 letters), painted from `PromptGlyphs` for the last device
+  used and refitted to their letters, so they read as the same control as the
+  footer's prompt.
 - **Rail:** the identity block is 260 tall. Below it, 4 section rows at
   64 each (label FunctionalHeading 24 caps, pip at the right). The
   selected row shows a bright label and a 3 px gold bar on its left edge.
@@ -111,19 +121,28 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
 
 | Column | x (detail frame) | width | content |
 |---|---|---|---|
-| Slots | 0 | 440 | the mannequin with 8 gear slots, then the book row |
-| Pack | 464 | 408 | filters, a 3-column grid, and the count |
-| Compare | 896 | 300 | the focused entry, and deltas |
+| Slots | 0 | 404 | the mannequin with 8 gear slots, then the book row |
+| Pack | 420 | 408 | filters, a 3-column grid, and the count |
+| Compare | 844 | 352 | the focused entry, and deltas |
 
-- **Slots:** cells are 88 × 88, captions below at Body 20, row pitch 116.
-  The gear hangs in four rows (`DossierLayout.GearCell`): Head top centre
+The columns are 16 apart. The pack keeps 408 because five 78-wide filter chips
+need it; the slot column gave up what the gear files did not use (gear files at
+52, 202 and 352, so the figure keeps 20 either side), and the compare column
+took it, so "Physical DEF 1000 (75%) → 1200 (79%) (+200)" sits on one line.
+
+- **Slots:** cells are 88 × 88, captions below at Body 20 in a 30-tall box
+  (2 below the cell), row pitch 122. Every gear cell carries its slot name
+  (`UiStrings.EquipmentSlotName`, so a language can change it), every book
+  cell "Book 1".."Book 3" or, once filled, the book's name (128 wide, cut to
+  fit). The gear hangs in four rows (`DossierLayout.GearCell`): Head top centre
   with Necklace beside it on the left; Torso, Gloves, Legs down the left;
   Weapon 1, Weapon 2, Shoes down the right, level with them. The armour
-  stand sits between at its own aspect (about 169 × 362). The book row
-  sits under it: the heading "SPELL BOOKS" (FunctionalHeading 24, 34
-  tall), then `MaxSpellSlots` cells of
-  88 × 88 with captions. A character who can't hold books gets one Body
-  20 line in place of the book row.
+  stand sits between at its own aspect (about 169 × 360), starting under
+  Head's caption. The book row sits under it: the heading "SPELL BOOKS"
+  (FunctionalHeading 24, 34 tall), then `MaxSpellSlots` cells of 88 × 88 with
+  captions, centred at 64, 202 and 340 so the 128-wide captions stay inside the
+  column. A character who can't hold books gets one Body 20 line in place of the
+  book row.
 - **Pack:**
   - Filter row: 5 chips (All, Armour, Weapons, Salves, Books), 78 × 44,
     4 apart, Body 20.
@@ -137,23 +156,46 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
 - **Compare**, showing the focused pack entry or worn slot:
   - name (FunctionalHeading 24, rarity colour)
   - kind · tier (Body 20)
-  - description (Body 20, wraps)
-  - for gear: a delta list, one row per affected stat,
-    `Health  280 → 338  (+58)` (Body 20, gains green, losses red)
-  - for a book: the skill it teaches (cost, target, effect)
+  - for gear: the summary (Body 20) wraps to four lines and ends in an
+    ellipsis only past the fourth (it once cut itself at the first), then a
+    delta list, one row per affected stat. A row is two Body 20 lines of 27:
+    the stat's name, and under it `280 → 338 (+58)` (gains green, losses
+    red). Two lines because the longest real delta, `1000 (75%) → 1200
+    (79%) (+200)`, does not share a line with a name. Eight rows end at 644 of
+    660, and a test lays out that longest delta in every row and checks it
+    fits on one line with no row touching the next
+  - for a book or a salve: its words (cost, then description; the longest
+    authored one is seven lines) take the column from under the kind line
+    down, and no stat rows show. The description and the rows are hidden while
+    it does
   - nothing focused: the character's derived stats
 
 ### 3.2 ATTRIBUTES (C17)
 
-- **Header:** "{n} points to spend" (Body 20), or "Refunds at camp" in a
-  descent.
-- **Six rows**, 72 tall, 700 wide:
-  - left: the name (FunctionalHeading 24) and value (TacticalData 26)
-  - right of the value: `[−] [+]` buttons, 44 × 44
-  - below: the effect line (Body 20)
-- **Derived stats** fill the right 470 px as a two-column list of 8, 44
-  apart. The row fed by the focused attribute is lit. While a stepper is
-  focused, its row shows `before → after`.
+- **Header:** one line above the rows. Left, "{n} points to spend" (Body 20);
+  right, why a change is refused, in the words of `MenuPermissions`: "Refunds
+  at camp" in a descent, "Locked during a fight" in a fight, nothing at camp.
+- **Six rows**, 700 wide on a 102 pitch (a 100 panel), 40 below the top:
+  - top line (44): the name (FunctionalHeading 24, 96 wide), the value
+    (Body 26, gold, 56 wide), then the `[−] [+]` buttons, 44 × 44 and 8 apart,
+    with their glyphs at 32 (`−` is U+2212; the font has it, and a test says
+    so). They start 8 after the value, so the eye that reads "CON 9" finds
+    them without crossing the pane (they were about 500 px away at the far
+    right), then the points invested (Body 20, muted)
+  - below (54): the effect line (Body 20), wrapping to two lines and ending in
+    an ellipsis only past the second; Wisdom's, which names three things, needs
+    both
+  - the value is Body, not TacticalData: that role's material tints a plain
+    number violet
+- **Derived stats** fill the right 470 px as one column of 8, 44 apart, name
+  170 and value 300 wide. The row fed by the focused attribute is lit
+  (`SheetStats.Feeds`). While a `+` or `−` that would do something is focused,
+  each lit row reads `before → after` (green for a gain, red for a loss, one
+  line, e.g. `29 (22%) → 31 (23%)`), from the same `SheetStats.ScoreDelta` the
+  compare column uses. A stepper that would do nothing (no points, refused
+  here, nothing invested) lights the rows and previews no change. A press
+  redraws the preview for the next press, because focus stays on the stepper.
+- Points commit on press (plan C5): there is no pending point.
 
 ### 3.3 SKILLS (C18)
 

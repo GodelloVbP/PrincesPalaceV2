@@ -6,14 +6,16 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // ATTRIBUTES (plan C17; phase 5d redesigns it): one row per score, its
-    // "-" and "+" committing on press (no pending state, plan C5), a header
-    // saying how many points wait, and the refund lock said where it applies.
+    // ATTRIBUTES (plan C17, spec 3.2): one row per score, its minus and plus
+    // right beside the value and committing on press (no pending state, plan
+    // C5), a header saying how many points wait and why a change is refused,
+    // and the derived stats showing before -> after under a focused stepper.
     //
     // The rows are sorted highest-first per character, so a row is found by
     // the score its label names, never by index.
@@ -148,8 +150,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(1, Shown.unspentStatPoints, "the camp's minus did not refund");
             Assert.AreEqual(0, Shown.investedAbilityScores[AbilityScore.Strength]);
-            Assert.IsFalse(DossierPane.Control("DossierAttrPlus0").transform.parent.parent
-                .Find("DossierAttributesLockNote").gameObject.activeSelf, "the camp shows the refund lock");
+            Assert.AreEqual("", DossierPane.TextOf("DossierAttributesLockNote"), "the camp shows the refund lock");
         }
 
         [UnityTest]
@@ -176,8 +177,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, Shown.investedAbilityScores[AbilityScore.Wisdom], "a descent refunded a point");
             Assert.AreEqual("Refunds at camp", Notice);
             Assert.AreEqual("Refunds at camp", DossierPane.TextOf("DossierAttributesLockNote"));
-            Assert.IsTrue(Resources.FindObjectsOfTypeAll<TMPro.TMP_Text>()
-                .First(t => t.name == "DossierAttributesLockNote" && t.gameObject.scene.IsValid()).gameObject.activeSelf);
         }
 
         // Focus on a stepper lights the stats its score feeds: Constitution
@@ -198,6 +197,180 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(highlights[$"DossierStatHighlight{health}"], "Max Health is not lit for Constitution");
             Assert.IsFalse(highlights[$"DossierStatHighlight{speed}"], "Speed is lit for Constitution");
+        }
+
+        // ---- the preview: before -> after while a stepper is focused (spec 3.2) ------
+
+        private static TMPro.TMP_Text StatValue(SheetStat stat) =>
+            DossierPane.Label($"DossierStatValue{System.Array.IndexOf(SheetStats.Derived, stat)}");
+
+        private int HealthNow => ContentDatabase.EffectiveStats(Shown).maxHealth;
+
+        // A plus on Constitution would add 20 Max Health and 2 Physical DEF
+        // (AbilityDerivation, pinned in its own tests): the row says what it is
+        // and what it would be, old first.
+        [UnityTest]
+        public IEnumerator AFocusedPlusShowsWhatItWouldMakeOfTheRowsItFeeds()
+        {
+            yield return OpenAttributesAtCamp(points: 1);
+            int health = HealthNow;
+
+            DossierPane.Select($"DossierAttrPlus{RowOf(AbilityScore.Constitution)}");
+            yield return null;
+
+            Assert.AreEqual($"{health} → {health + 20}", StatValue(SheetStat.MaxHealth).text,
+                "the lit Max Health row does not read before, then after");
+            StringAssert.Contains("→", StatValue(SheetStat.PhysicalDefense).text, "Physical DEF is fed by Constitution too");
+            Assert.Greater(StatValue(SheetStat.MaxHealth).color.g, StatValue(SheetStat.MaxHealth).color.r, "a gain is not green");
+
+            // Rows Constitution does not feed keep their plain figure.
+            StringAssert.DoesNotContain("→", StatValue(SheetStat.Speed).text);
+            StringAssert.DoesNotContain("→", StatValue(SheetStat.Attack).text);
+        }
+
+        [UnityTest]
+        public IEnumerator AFocusedMinusShowsTheRefund()
+        {
+            yield return OpenAttributesAtCamp(points: 1);
+            int row = RowOf(AbilityScore.Constitution);
+            DossierPane.Press($"DossierAttrPlus{row}");
+            int health = HealthNow;
+
+            DossierPane.Select($"DossierAttrMinus{row}");
+            yield return null;
+
+            Assert.AreEqual($"{health} → {health - 20}", StatValue(SheetStat.MaxHealth).text);
+            Assert.Greater(StatValue(SheetStat.MaxHealth).color.r, StatValue(SheetStat.MaxHealth).color.g, "a loss is not red");
+        }
+
+        // A stepper that would do nothing lights the rows and promises nothing.
+        [UnityTest]
+        public IEnumerator AStepperThatWouldDoNothingPreviewsNoChange()
+        {
+            yield return OpenAttributesAtCamp(points: 0);
+            int health = HealthNow;
+
+            DossierPane.Select($"DossierAttrPlus{RowOf(AbilityScore.Constitution)}");
+            yield return null;
+            Assert.AreEqual(health.ToString(), StatValue(SheetStat.MaxHealth).text, "a plus with no point to spend previews a change");
+
+            DossierPane.Select($"DossierAttrMinus{RowOf(AbilityScore.Constitution)}");
+            yield return null;
+            Assert.AreEqual(health.ToString(), StatValue(SheetStat.MaxHealth).text, "a minus with nothing invested previews a change");
+        }
+
+        // Leaving the stepper puts the plain figures back.
+        [UnityTest]
+        public IEnumerator LeavingTheStepperRestoresThePlainFigures()
+        {
+            yield return OpenAttributesAtCamp(points: 1);
+            int health = HealthNow;
+
+            DossierPane.Select($"DossierAttrPlus{RowOf(AbilityScore.Constitution)}");
+            yield return null;
+            DossierPane.Select(DossierPane.SectionRow(CharacterSection.Attributes));
+            yield return null;
+
+            Assert.AreEqual(health.ToString(), StatValue(SheetStat.MaxHealth).text);
+        }
+
+        // The press moves the numbers under a stepper that keeps the focus, so
+        // its preview is redrawn for the next press.
+        [UnityTest]
+        public IEnumerator AfterAPressTheFocusedStepperPreviewsTheNextPoint()
+        {
+            yield return OpenAttributesAtCamp(points: 2);
+            int row = RowOf(AbilityScore.Constitution);
+
+            DossierPane.Select($"DossierAttrPlus{row}");
+            yield return null;
+            DossierPane.Press($"DossierAttrPlus{row}");
+            yield return null;
+
+            int health = HealthNow;
+            Assert.AreEqual($"{health} → {health + 20}", StatValue(SheetStat.MaxHealth).text,
+                "the preview did not follow the press");
+
+            DossierPane.Press($"DossierAttrPlus{row}");
+            yield return null;
+            Assert.AreEqual(0, Shown.unspentStatPoints);
+            Assert.AreEqual(HealthNow.ToString(), StatValue(SheetStat.MaxHealth).text,
+                "with the last point spent the plus still promises a change");
+        }
+
+        // ---- the layout, as it is drawn ------------------------------------------------------------
+
+        // "-" and "+" are drawn, at a size that reads, in a font that has them.
+        [UnityTest]
+        public IEnumerator TheSteppersDrawALegibleMinusAndPlus()
+        {
+            yield return OpenAttributesAtCamp(points: 1);
+
+            var minus = DossierPane.Label("DossierAttrMinus0Label");
+            var plus = DossierPane.Label("DossierAttrPlus0Label");
+
+            Assert.AreEqual("−", DossierPane.DrawnText(minus), "the minus draws nothing");
+            Assert.AreEqual("+", DossierPane.DrawnText(plus));
+            Assert.GreaterOrEqual(minus.fontSize, 32f);
+            Assert.GreaterOrEqual(plus.fontSize, 32f);
+            Assert.IsTrue(minus.font.HasCharacter('−', searchFallbacks: true, tryAddCharacter: true),
+                "the font has no minus sign, so the refund button draws a missing-glyph box");
+        }
+
+        // Measured on screen: a score's value and its plus are neighbours, not
+        // the width of the pane apart.
+        [UnityTest]
+        public IEnumerator EachStepperSitsBesideItsValue()
+        {
+            yield return OpenAttributesAtCamp(points: 1);
+
+            for (int i = 0; i < 6; i++)
+            {
+                var value = DossierPane.Label($"DossierAttrValue{i}").rectTransform;
+                var plus = DossierPane.Need($"DossierAttrPlus{i}").GetComponent<RectTransform>();
+                var minus = DossierPane.Need($"DossierAttrMinus{i}").GetComponent<RectTransform>();
+
+                Assert.Less(Mathf.Abs(plus.position.x - value.position.x), 200f, $"row {i}: the plus is far from its value");
+                Assert.Greater(minus.position.x, value.position.x, $"row {i}: the minus is not after the value");
+                Assert.Less(minus.position.x, plus.position.x, $"row {i}: the minus is not before the plus");
+                Assert.AreEqual(plus.position.y, value.position.y, 1f, $"row {i}: the plus is not level with its value");
+                Assert.IsFalse(DossierPane.Overlap(minus, plus), $"row {i}: the steppers overlap");
+                Assert.IsFalse(DossierPane.Overlap(value, minus), $"row {i}: the value runs under the minus");
+            }
+        }
+
+        // The longest effect line (Wisdom's, which names three things) shows
+        // whole on two lines rather than ending in "...".
+        [UnityTest]
+        public IEnumerator EveryEffectLineIsDrawnWholeOnAtMostTwoLines()
+        {
+            yield return OpenAttributesAtCamp(points: 0);
+
+            for (int i = 0; i < 6; i++)
+            {
+                var effect = DossierPane.Label($"DossierAttrEffect{i}");
+                string drawn = DossierPane.DrawnText(effect);
+                Assert.IsNotEmpty(drawn, $"row {i}'s effect line draws nothing");
+                StringAssert.DoesNotContain("…", drawn, $"row {i}'s effect line is cut: {drawn}");
+                Assert.LessOrEqual(effect.textInfo.lineCount, 2, $"row {i}'s effect line needs more than two lines");
+            }
+        }
+
+        // The widest row a preview can ask of the derived column.
+        [UnityTest]
+        public IEnumerator ADerivedRowHoldsItsWidestPreviewOnOneLine()
+        {
+            yield return OpenAttributesAtCamp(points: 0);
+
+            string worst = UiStrings.StatPreview.Format(
+                SheetStats.DisplayText(SheetStat.PhysicalDefense, 1000),
+                SheetStats.DisplayText(SheetStat.PhysicalDefense, 1200));
+
+            var value = StatValue(SheetStat.PhysicalDefense);
+            value.SetContent(worst);
+
+            Assert.AreEqual(worst, DossierPane.DrawnText(value), "the widest preview is cut in its row");
+            Assert.AreEqual(1, value.textInfo.lineCount);
         }
     }
 }

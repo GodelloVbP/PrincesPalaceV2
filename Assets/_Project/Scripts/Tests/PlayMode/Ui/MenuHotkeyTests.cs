@@ -108,7 +108,7 @@ namespace PrincesPalace.PlayModeTests
             dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
             dossier.Refresh();
 
-            string slot = "DossierSlot" + Domain.Equipment.EquipmentSlots.DisplayName(item.equipSlot).Replace(" ", "");
+            string slot = "DossierSlot" + item.equipSlot;
             _menu.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
                 .First(b => b.name == slot).onClick.Invoke();
             Assert.IsTrue(dossier.HasPending, "fixture: the slot did not arm");

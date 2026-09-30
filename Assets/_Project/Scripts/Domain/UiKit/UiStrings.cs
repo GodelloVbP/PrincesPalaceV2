@@ -279,7 +279,7 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("dossier.spend_point", "+");
 
         public static readonly UiString DossierRefundPoint =
-            UiString.Define("dossier.refund_point", "-");
+            UiString.Define("dossier.refund_point", "−");
         // ---- the hub -------------------------------------------------------
 
         // Three currencies, not two. Embers is what talents actually cost and
@@ -453,6 +453,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString StatCharisma = UiString.Define("stat.cha", "CHA");
 
         public static readonly UiString StatMaxHealth = UiString.Define("stat.health", "Health");
+
+        // A derived row while a stepper is on it: what it is, then what one press
+        // makes of it.
+        public static readonly UiString StatPreview =
+            UiString.Define("stat.preview", "{0} → {1}", "1000 (75%) → 1000 (75%)");
         public static readonly UiString StatAttack = UiString.Define("stat.attack", "Attack");
         public static readonly UiString StatSpeed = UiString.Define("stat.speed", "Speed");
         public static readonly UiString StatMaxMana = UiString.Define("stat.maxmana", "Max Mana");
@@ -879,10 +884,41 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString LoadoutBooksHeading =
             UiString.Define("character.loadout.books", "SPELL BOOKS");
-        public static readonly UiString LoadoutSlotEmpty =
-            UiString.Define("character.loadout.slot_empty", "Empty");
         public static readonly UiString LoadoutTwoHanded =
             UiString.Define("character.loadout.two_handed", "Two-handed");
+
+        // The gear slots' names, one string each so a language can change
+        // them; EquipmentSlotName picks by slot.
+        public static readonly UiString SlotHead = UiString.Define("equipment.slot.head", "Head");
+        public static readonly UiString SlotNecklace = UiString.Define("equipment.slot.necklace", "Necklace");
+        public static readonly UiString SlotTorso = UiString.Define("equipment.slot.torso", "Torso");
+        public static readonly UiString SlotLegs = UiString.Define("equipment.slot.legs", "Legs");
+        public static readonly UiString SlotShoes = UiString.Define("equipment.slot.shoes", "Shoes");
+        public static readonly UiString SlotGloves = UiString.Define("equipment.slot.gloves", "Gloves");
+        public static readonly UiString SlotWeapon1 = UiString.Define("equipment.slot.weapon1", "Weapon 1");
+        public static readonly UiString SlotWeapon2 = UiString.Define("equipment.slot.weapon2", "Weapon 2");
+
+        // "Book 1".."Book 3": the caption of a book slot with no book in it.
+        public static readonly UiString LoadoutBookSlot =
+            UiString.Define("character.loadout.book_slot", "Book {0}", "Book 3");
+
+        public static UiString EquipmentSlotName(Equipment.EquipmentSlot slot)
+        {
+            switch (slot)
+            {
+                case Equipment.EquipmentSlot.Head: return SlotHead;
+                case Equipment.EquipmentSlot.Necklace: return SlotNecklace;
+                case Equipment.EquipmentSlot.Torso: return SlotTorso;
+                case Equipment.EquipmentSlot.Legs: return SlotLegs;
+                case Equipment.EquipmentSlot.Shoes: return SlotShoes;
+                case Equipment.EquipmentSlot.Gloves: return SlotGloves;
+                case Equipment.EquipmentSlot.Weapon1: return SlotWeapon1;
+                case Equipment.EquipmentSlot.Weapon2: return SlotWeapon2;
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(slot), slot,
+                        "UiStrings has no name wired up for this slot.");
+            }
+        }
 
         public static readonly UiString PackCarried =
             UiString.Define("character.pack.carried", "Carried {0}", "Carried 999");

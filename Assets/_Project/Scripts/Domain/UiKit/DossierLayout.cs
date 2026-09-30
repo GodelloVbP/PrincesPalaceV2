@@ -46,6 +46,10 @@ namespace PrincesPalace.Domain.UiKit
         public const float PagerWidth = 56f;
         public const float PagerHeight = 40f;
 
+        // The glyph plate drawn on the pager: the footer's own plate, refitted
+        // to its letters between these bounds.
+        public const float PagerPlateWidth = 48f;
+
         public const float PagerPrevX = Left + PagerWidth * 0.5f;
         public const float PagerNextX = -Left - PagerWidth * 0.5f;
 
@@ -77,9 +81,12 @@ namespace PrincesPalace.Domain.UiKit
         public const float ChipTextRight = ChipWidth * 0.5f - ChipInset - ChipPipSize - 4f;
         public const float ChipTextWidth = ChipTextRight - ChipTextLeft;
         public const float ChipTextCentreX = ChipTextLeft + ChipTextWidth * 0.5f;
-        public const float ChipLineHeight = 26f;
-        public const float ChipNameY = 13f;
-        public const float ChipSeatY = -13f;
+        // A label whose box is shorter than one line of its font draws nothing
+        // (TMP clips the first line before it starts), so a Body 20 line is
+        // never boxed below its 26.5 px line: two 30s make the chip's 60 of 64.
+        public const float ChipLineHeight = 30f;
+        public const float ChipNameY = 15f;
+        public const float ChipSeatY = -15f;
         public const float ChipPipX = ChipWidth * 0.5f - ChipInset - ChipPipSize * 0.5f;
         public const float ChipPipY = ChipHeight * 0.5f - ChipInset - ChipPipSize * 0.5f;
 
@@ -114,8 +121,8 @@ namespace PrincesPalace.Domain.UiKit
         public const float PortraitSize = 120f;
         public static float PortraitCentreY => RailY(PortraitSize * 0.5f);
 
-        public const float NameHeight = 36f;
-        public static float NameCentreY => RailY(128f + NameHeight * 0.5f);
+        public const float NameHeight = 40f;
+        public static float NameCentreY => RailY(126f + NameHeight * 0.5f);
 
         public const float LevelHeight = 26f;
         public static float LevelCentreY => RailY(166f + LevelHeight * 0.5f);
@@ -143,23 +150,32 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- LOADOUT (spec 3.1) ------------------------------------------------------
 
+        // 404 + 16 + 408 + 16 + 352 = 1196. The pack keeps 408 because five
+        // filter chips of 78 need it; the slot column gives up what the gear
+        // files do not use, so that the compare column can hold "Physical DEF
+        // 1000 (75%) -> 1200 (79%) (+200)" on one line.
+        public const float ColumnGap = 16f;
         public const float SlotsLeft = 0f;
-        public const float SlotsWidth = 440f;
-        public const float PackLeft = 464f;
+        public const float SlotsWidth = 404f;
+        public const float PackLeft = SlotsLeft + SlotsWidth + ColumnGap;   // 420
         public const float PackWidth = 408f;
-        public const float CompareLeft = 896f;
-        public const float CompareWidth = 300f;
+        public const float CompareLeft = PackLeft + PackWidth + ColumnGap;  // 844
+        public const float CompareWidth = DetailWidth - CompareLeft;        // 352
 
         public const float SlotSize = 88f;
-        public const float SlotPitch = 116f;
+
+        // A caption is one Body 20 line (26.5 px) and needs a box at least that
+        // tall, or TMP draws nothing: 30 under a 2 px gap, then 4 clear before
+        // the next cell.
+        public const float SlotPitch = 122f;
         public const float SlotCaptionWidth = 104f;
-        public const float SlotCaptionHeight = 26f;
+        public const float SlotCaptionHeight = 30f;
         public const float SlotCaptionGap = 2f;
 
         // The three files the gear hangs in, as x from the column's left.
         public const float FileLeftX = 52f;
-        public const float FileCentreX = 220f;
-        public const float FileRightX = 388f;
+        public const float FileCentreX = 202f;
+        public const float FileRightX = 352f;
 
         public const int GearRows = 4;
 
@@ -202,24 +218,31 @@ namespace PrincesPalace.Domain.UiKit
 
         // The figure the gear hangs on, between the files and under Head: the
         // armour stand art at its own aspect (264 x 564).
-        public const float FigureTop = 100f;
-        public const float FigureBottom = 462f;
+        public const float FigureTop = 126f;
+        public const float FigureBottom = 486f;
         public const float FigureHeight = FigureBottom - FigureTop;
         public const float FigureWidth = FigureHeight * 264f / 564f;
         public static UiVec FigureCentre => new UiVec(DX(SlotsLeft + FileCentreX), DY((FigureTop + FigureBottom) * 0.5f));
 
         // The book row, under the gear.
-        public const float BooksHeadingTop = 474f;
+        public const float BooksHeadingTop = 494f;
         public const float BooksHeadingHeight = 34f;
         public static float BooksHeadingCentreY => DY(BooksHeadingTop + BooksHeadingHeight * 0.5f);
-        public const float BookRowTop = 512f;
+        public const float BookRowTop = 532f;
 
-        // Spread across the column, matching the gear files for three slots.
+        // A book's caption is its name once filled, so it is wider than a gear
+        // caption: the neighbours' centres are 138 apart, the first and last
+        // sit half a caption inside the column.
+        public const float BookCaptionWidth = 128f;
+
+        // Spread across the column, the middle one under Head.
         public static float BookFileX(int index)
         {
             int count = SpellBooks.MaxSpellSlots;
             if (count <= 1) return FileCentreX;
-            return FileLeftX + index * (FileRightX - FileLeftX) / (count - 1);
+            float first = BookCaptionWidth * 0.5f;
+            float last = SlotsWidth - BookCaptionWidth * 0.5f;
+            return first + index * (last - first) / (count - 1);
         }
 
         public static UiVec BookCentre(int index) =>
@@ -298,56 +321,87 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float CompareNameHeight = 64f;
         public static float CompareNameCentreY => DY(CompareNameHeight * 0.5f);
-        public const float CompareKindHeight = 26f;
-        public static float CompareKindCentreY => DY(70f + CompareKindHeight * 0.5f);
-        public const float CompareDescriptionHeight = 196f;
-        public static float CompareDescriptionCentreY => DY(104f + CompareDescriptionHeight * 0.5f);
 
-        public const float CompareRowsTop = 312f;
-        public const float CompareRowHeight = 32f;
-        public const float CompareStatNameWidth = 140f;
-        public const float CompareStatValueWidth = CompareWidth - CompareStatNameWidth;
+        // Body 20 lines are 26.5 px: no box under that (see ChipLineHeight).
+        public const float CompareKindTop = 66f;
+        public const float CompareKindHeight = 30f;
+        public static float CompareKindCentreY => DY(CompareKindTop + CompareKindHeight * 0.5f);
 
-        public static float CompareRowCentreY(int index) =>
-            DY(CompareRowsTop + CompareRowHeight * 0.5f + index * CompareRowHeight);
+        // Four lines of a gear summary; a longer one ends in an ellipsis.
+        public const float CompareDescriptionTop = 100f;
+        public const float CompareDescriptionHeight = 108f;
+        public static float CompareDescriptionCentreY =>
+            DY(CompareDescriptionTop + CompareDescriptionHeight * 0.5f);
 
-        public static float CompareStatNameCentreX => DX(CompareLeft + CompareStatNameWidth * 0.5f);
-        public static float CompareStatValueCentreX =>
-            DX(CompareLeft + CompareStatNameWidth + CompareStatValueWidth * 0.5f);
+        // The words of a book or a salve, which have no stat rows to make room
+        // for: the whole column under the kind line. Shown INSTEAD of the
+        // description and the rows.
+        public const float CompareBodyHeight = 448f;
+        public static float CompareBodyCentreY => DY(CompareDescriptionTop + CompareBodyHeight * 0.5f);
 
-        // ---- ATTRIBUTES (spec 3.2; phase 5d redesigns it) ------------------------------
+        // A stat is two lines, its name and under it what it becomes, because
+        // "10 (9%) -> 29 (22%) (+19)" does not share a line with a name in 352.
+        // Eight of them end at 644 of 660.
+        public const float CompareRowsTop = 212f;
+        public const float CompareLineHeight = 27f;
+        public const float CompareRowHeight = CompareLineHeight * 2f;
 
+        public static float CompareNameLineCentreY(int index) =>
+            DY(CompareRowsTop + index * CompareRowHeight + CompareLineHeight * 0.5f);
+
+        public static float CompareValueLineCentreY(int index) =>
+            DY(CompareRowsTop + index * CompareRowHeight + CompareLineHeight * 1.5f);
+
+        // ---- ATTRIBUTES (spec 3.2) ------------------------------------------------------
+
+        // The header line: points to spend on the left, why a change is
+        // refused on the right.
         public const float AttributesHeaderHeight = 30f;
         public static float AttributesHeaderCentreY => DY(AttributesHeaderHeight * 0.5f);
 
-        public const float AttributeRowsTop = 44f;
+        // Six rows on a 102 pitch, each a 100 panel: a 44 top line (name,
+        // value, the steppers, the points invested), then the effect line,
+        // which may take two lines. 40 + 6 x 102 = 652 of 660.
+        public const float AttributeRowsTop = 40f;
         public const float AttributeRowWidth = 700f;
-        public const float AttributeRowHeight = 84f;
+        public const float AttributeRowHeight = 102f;
+        public const float AttributeRowInner = 100f;
         public static float AttributeRowCentreX => DX(AttributeRowWidth * 0.5f);
 
         public static float AttributeRowCentreY(int index) =>
             DY(AttributeRowsTop + AttributeRowHeight * 0.5f + index * AttributeRowHeight);
 
-        // Inside a row, from its centre.
+        // Inside a row, x from its left edge and y from its top edge. The
+        // steppers sit right after the value, so the eye that reads "CON 9"
+        // finds the buttons for it without crossing the pane.
+        public const float AttributeTopLineHeight = 44f;
+        public const float AttributeNameLeft = 0f;
+        public const float AttributeNameWidth = 96f;
+        public const float AttributeValueLeft = 100f;
+        public const float AttributeValueWidth = 56f;
         public const float StepperSize = 44f;
         public const float StepperGap = 8f;
-        public const float StepperY = AttributeRowHeight * 0.5f - 4f - StepperSize * 0.5f;
-        public const float PlusX = AttributeRowWidth * 0.5f - StepperSize * 0.5f;
-        public const float MinusX = PlusX - StepperSize - StepperGap;
-        public const float AttributeNameWidth = 110f;
-        public const float AttributeValueWidth = 70f;
-        public const float AttributeInvestedWidth = 200f;
-        public const float AttributeTopLineHeight = 34f;
-        public const float AttributeTopLineY = AttributeRowHeight * 0.5f - 4f - AttributeTopLineHeight * 0.5f;
-        public const float AttributeEffectWidth = 600f;
-        public const float AttributeEffectHeight = 44f;
-        public const float AttributeEffectY = -AttributeRowHeight * 0.5f + 2f + AttributeEffectHeight * 0.5f;
+        public const float MinusLeft = 164f;
+        public const float PlusLeft = MinusLeft + StepperSize + StepperGap;   // 216
+        public const float AttributeInvestedLeft = PlusLeft + StepperSize + 16f;   // 276
+        public const float AttributeInvestedWidth = 220f;
+
+        // Two Body 20 lines are 53 px; 54 holds them.
+        public const float AttributeEffectTop = 46f;
+        public const float AttributeEffectHeight = 54f;
+
+        // A point inside a row, in the row's own centred frame.
+        public static float RowX(float fromLeft, float width) => -AttributeRowWidth * 0.5f + fromLeft + width * 0.5f;
+        public static float RowY(float fromTop, float height) => AttributeRowInner * 0.5f - fromTop - height * 0.5f;
 
         public const float DerivedLeft = 726f;
         public const float DerivedWidth = DetailWidth - DerivedLeft;   // 470
         public const float DerivedRowHeight = 44f;
-        public const float DerivedNameWidth = 280f;
-        public const float DerivedValueWidth = DerivedWidth - DerivedNameWidth;
+
+        // A row shows "1000 (75%) -> 1020 (76%)" while a stepper is on it, which
+        // the value column has to hold on one line.
+        public const float DerivedNameWidth = 170f;
+        public const float DerivedValueWidth = DerivedWidth - DerivedNameWidth;   // 300
 
         public static float DerivedRowCentreY(int index) =>
             DY(AttributeRowsTop + DerivedRowHeight * 0.5f + index * DerivedRowHeight);

@@ -69,7 +69,7 @@ namespace PrincesPalace.PlayModeTests
         public static void AssertSelected(string name, string because) =>
             Assert.AreEqual(name, SelectedName, because);
 
-        public static string SlotName(EquipmentSlot slot) => "DossierSlot" + EquipmentSlots.DisplayName(slot).Replace(" ", "");
+        public static string SlotName(EquipmentSlot slot) => "DossierSlot" + slot.ToString();
 
         // The rail row of a section: DossierSection{index in CharacterSections}.
         public static string SectionRow(CharacterSection section) => "DossierSection" + CharacterSections.IndexOf(section);
@@ -95,6 +95,60 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(t => t.name == name && t.gameObject.scene.IsValid());
             Assert.IsNotNull(text, $"the pane drew no label named {name}");
             return text.text;
+        }
+
+        // What a label actually draws: its text after the mesh is built, so a
+        // label the layout clipped to nothing (TMP draws no line that does not
+        // fit its box's height) or ended in an ellipsis reads differently from
+        // its string, which TextOf would still return.
+        public static string DrawnText(TMPro.TMP_Text text)
+        {
+            text.ForceMeshUpdate();
+
+            var drawn = new System.Text.StringBuilder();
+            var info = text.textInfo;
+            for (int i = 0; i < info.characterCount; i++)
+            {
+                var c = info.characterInfo[i];
+                if (c.isVisible || c.character == ' ') drawn.Append(c.character);
+            }
+
+            return drawn.ToString().Trim();
+        }
+
+        public static TMPro.TMP_Text Label(string name)
+        {
+            var text = Resources.FindObjectsOfTypeAll<TMPro.TMP_Text>()
+                .FirstOrDefault(t => t.name == name && t.gameObject.scene.IsValid());
+            Assert.IsNotNull(text, $"the pane drew no label named {name}");
+            return text;
+        }
+
+        public static string DrawnTextOf(string name) => DrawnText(Label(name));
+
+        // A graphic's colour by name, for comparing two plates that must match.
+        public static Color ColourOf(string name)
+        {
+            var graphic = Resources.FindObjectsOfTypeAll<UnityEngine.UI.Graphic>()
+                .FirstOrDefault(g => g.name == name && g.gameObject.scene.IsValid());
+            Assert.IsNotNull(graphic, $"the pane drew no graphic named {name}");
+            return graphic.color;
+        }
+
+        // Whether two labels' boxes cover the same pixels, in screen space.
+        public static bool Overlap(RectTransform a, RectTransform b)
+        {
+            var ra = ScreenRect(a);
+            var rb = ScreenRect(b);
+            return ra.Overlaps(rb) && Mathf.Min(ra.xMax, rb.xMax) - Mathf.Max(ra.xMin, rb.xMin) > 0.5f
+                                   && Mathf.Min(ra.yMax, rb.yMax) - Mathf.Max(ra.yMin, rb.yMin) > 0.5f;
+        }
+
+        private static Rect ScreenRect(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
         // The strip's first chip, as a fresh open shows it: the dossier keeps

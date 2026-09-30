@@ -356,7 +356,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // letters are TacticalData at 24, which is both readable and over the
         // all-caps floor for "LB" and "RT". Its width is the caller's; the
         // footer refits it to the measured letters.
-        private static UiNode GlyphPlate(string name, UiString text, float width, Place place, out UiNode letters)
+        public static UiNode GlyphPlate(string name, UiString text, float width, Place place, out UiNode letters)
         {
             letters = Ui.Label(name + "Text", text, new UiVec(width, MenuFooterLayout.GlyphHeight),
                     GlyphLetterSize, PromptGlyphs.Plain, Place.Stretch())

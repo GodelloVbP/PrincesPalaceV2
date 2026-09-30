@@ -258,6 +258,10 @@ public static class UiEmitter
             text.overflowMode = TextOverflowModes.Ellipsis;
         }
 
+        // Clamped() -- see UiNode.Clamps. Wrapping stays on: only the end of
+        // the last line that fits gives way.
+        if (node.Clamps) text.overflowMode = TextOverflowModes.Ellipsis;
+
         // OverArt() -- see UiNode.DrawsOverArt. A component rather than a
         // material written here, because a material built at scene-build time
         // is not an asset and would not survive the scene save; the component

@@ -219,7 +219,7 @@ namespace PrincesPalace.PlayModeTests
             return menu;
         }
 
-        private static string SlotName(EquipmentSlot slot) => "DossierSlot" + EquipmentSlots.DisplayName(slot).Replace(" ", "");
+        private static string SlotName(EquipmentSlot slot) => "DossierSlot" + slot.ToString();
 
         // A gear slot the fixture leaves empty: any slot the worn item is not in.
         private string EmptySlotName() => SlotName(EquipmentSlots.All.First(slot => slot != _worn.equipSlot));

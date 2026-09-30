@@ -29,6 +29,8 @@ namespace PrincesPalace
         // ---- the strip -----------------------------------------------------------
         [SerializeField] internal Button stripPrev;
         [SerializeField] internal Button stripNext;
+        [SerializeField] internal RectTransform stripPrevPlate;
+        [SerializeField] internal RectTransform stripNextPlate;
         [SerializeField] internal TMP_Text stripPrevGlyph;
         [SerializeField] internal TMP_Text stripNextGlyph;
         [SerializeField] internal GameObject stripDivider;
@@ -344,8 +346,24 @@ namespace PrincesPalace
         private void PaintPagerGlyphs()
         {
             var device = PromptGlyphs.DeviceFor(NavigationInputModule.LastInputWasPad);
-            if (stripPrevGlyph != null) stripPrevGlyph.SetContent(PromptGlyphs.For(device, PromptButton.PageBack).Text);
-            if (stripNextGlyph != null) stripNextGlyph.SetContent(PromptGlyphs.For(device, PromptButton.PageForward).Text);
+            PaintPagerGlyph(stripPrevPlate, stripPrevGlyph, PromptGlyphs.For(device, PromptButton.PageBack));
+            PaintPagerGlyph(stripNextPlate, stripNextGlyph, PromptGlyphs.For(device, PromptButton.PageForward));
+        }
+
+        // The footer's own plate: the letters, their tint and a width refitted
+        // to them, from the same table and the same arithmetic.
+        private static void PaintPagerGlyph(RectTransform plate, TMP_Text letters, PromptGlyph glyph)
+        {
+            if (letters == null) return;
+
+            letters.SetContent(glyph.Text);
+            if (ColorUtility.TryParseHtmlString(glyph.TintHex, out var tint)) letters.color = tint;
+
+            if (plate != null)
+            {
+                float width = MenuFooterLayout.PlateWidthFor(letters.GetPreferredValues(glyph.Text).x);
+                plate.sizeDelta = new Vector2(width, MenuFooterLayout.GlyphHeight);
+            }
         }
 
         private static string SeatWord(StripChip chip)

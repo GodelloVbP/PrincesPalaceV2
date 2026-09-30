@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -379,7 +380,7 @@ namespace PrincesPalace.Domain.Tests
 
             StringAssert.Contains("+6 Attack", body);
             StringAssert.Contains("Also breaks", body);
-            StringAssert.Contains(EquipmentSlots.DisplayName(EquipmentSlot.Shoes), body);
+            StringAssert.Contains(UiStrings.EquipmentSlotName(EquipmentSlot.Shoes).Format(), body);
             StringAssert.Contains(ItemStatLines.LossHex, body);
         }
 
