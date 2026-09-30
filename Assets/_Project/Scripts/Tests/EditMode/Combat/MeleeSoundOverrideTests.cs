@@ -183,6 +183,66 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.DoesNotContain("SfxPath", skills.Single(s => JsonBlocks.String(s, "id") == "gilded_aegis"));
         }
 
+        // Each cast cue is the tail of a riser, cut to the seconds between the
+        // beat opening and the blow (a Hold beat with no windup pose:
+        // FightBeatPlayer plays castSfxPath, then waits hitCueSeconds). A cue
+        // longer than that spends its peak after the impact; shorter, it ends
+        // in silence before it. Seconds are literals, per tools/make_spell_cast_cues.py.
+        [Test]
+        public void TheSpellCastCuesFitTheirBlows()
+        {
+            string json = File.ReadAllText(ContentPath("skills.json"));
+            var skills = JsonBlocks.ObjectsInArray(json, "skills");
+            var single = new (string spell, string cue, float seconds)[]
+            {
+                ("winters_rebuke", "winters_rebuke_cast", 0.46f),
+                ("vipers_bite", "vipers_bite_cast", 0.30f),
+                ("spore_cloud", "spore_cloud_cast", 0.35f),
+                ("ashen_reckoning", "ashen_reckoning_cast", 0.30f),
+                ("censer_of_embers", "censer_of_embers_cast", 0.30f),
+                ("blackglass_spear", "blackglass_spear_cast", 0.46f),
+                ("death_knell", "death_knell_cast", 0.50f),
+                ("court_of_whispers", "court_of_whispers_cast", 0.30f),
+                ("palace_passage", "palace_passage_cast", 0.30f),
+                ("thorn_tithe", "thorn_tithe_cast", 0.30f),
+                ("crownfall", "crownfall_cast", 0.50f),
+                ("borrowed_moment", "borrowed_moment_cast", 0.30f),
+                ("cinderfault", "cinderfault_startup", 0.2167f),
+            };
+            foreach (var (spell, cue, seconds) in single)
+            {
+                var entry = skills.Single(s => JsonBlocks.String(s, "id") == spell);
+                StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/" + cue + "\"", entry);
+                var hit = Regex.Match(entry, "\"hitCueSeconds\": ([0-9.]+)");
+                Assert.IsTrue(hit.Success, spell + " has no hitCueSeconds");
+                Assert.AreEqual(seconds, float.Parse(hit.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), 0.001f, spell + " hitCueSeconds");
+                AssertWavSeconds(cue, seconds);
+            }
+
+            // The orb's elements share one skill row, so the pairing is checked
+            // against the impact path each cast sits beside.
+            var orb = new (string element, float seconds)[]
+            {
+                ("earth", 0.3467f), ("fire", 0.4167f), ("wind", 0.4167f),
+            };
+            foreach (var (element, seconds) in orb)
+            {
+                StringAssert.IsMatch(
+                    "\"sfxPath\": \"Audio/Sfx/prismatic_orb_" + element + "_impact\",[ \r\n]+\"castSfxPath\": \"Audio/Sfx/prismatic_orb_" + element + "_cast\"",
+                    json);
+                AssertWavSeconds("prismatic_orb_" + element + "_cast", seconds);
+            }
+        }
+
+        private static void AssertWavSeconds(string cue, float expected)
+        {
+            string path = Path.Combine(ResourcesRoot(), "Audio", "Sfx", cue + ".wav");
+            Assert.IsTrue(File.Exists(path), cue + ".wav is missing");
+            // 44-byte header, 16-bit mono at 44.1 kHz: what the cutting tool writes.
+            float seconds = (new FileInfo(path).Length - 44) / 2f / 44100f;
+            Assert.AreEqual(expected, seconds, 0.002f, cue + " length");
+        }
+
         [Test]
         public void TheRubberduckBlowCuesAreWiredToTheirSpells()
         {

@@ -288,6 +288,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/winters_rebuke_impact",
+        "castSfxPath": "Audio/Sfx/winters_rebuke_cast",
         "hitCueSeconds": 0.46,
         "layers": [
           {
@@ -424,6 +425,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/vipers_bite_impact",
+        "castSfxPath": "Audio/Sfx/vipers_bite_cast",
         "hitCueSeconds": 0.3,
         "layers": [
           {
@@ -505,6 +507,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/crownfall_impact",
+        "castSfxPath": "Audio/Sfx/crownfall_cast",
         "hitCueSeconds": 0.5,
         "layers": [
           {
@@ -622,6 +625,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/ashen_reckoning_impact",
+        "castSfxPath": "Audio/Sfx/ashen_reckoning_cast",
         "hitCueSeconds": 0.3,
         "layers": [
           {
@@ -698,6 +702,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/blackglass_spear_impact",
+        "castSfxPath": "Audio/Sfx/blackglass_spear_cast",
         "hitCueSeconds": 0.46,
         "layers": [
           {
@@ -824,6 +829,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/borrowed_moment_impact",
+        "castSfxPath": "Audio/Sfx/borrowed_moment_cast",
         "hitCueSeconds": 0.3,
         "layers": [
           {
@@ -967,6 +973,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/palace_passage_impact",
+        "castSfxPath": "Audio/Sfx/palace_passage_cast",
         "hitCueSeconds": 0.3,
         "layers": [
           {
@@ -1108,6 +1115,7 @@
       "statusDuration": 3,
       "vfx": {
         "sfxPath": "Audio/Sfx/censer_of_embers_impact",
+        "castSfxPath": "Audio/Sfx/censer_of_embers_cast",
         "layerFormat": 1,
         "hitCueSeconds": 0.3,
         "layers": [
@@ -1179,6 +1187,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/thorn_tithe_impact",
+        "castSfxPath": "Audio/Sfx/thorn_tithe_cast",
         "hitCueSeconds": 0.3,
         "layers": [
           {
@@ -1253,6 +1262,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/court_of_whispers_impact",
+        "castSfxPath": "Audio/Sfx/court_of_whispers_cast",
         "hitCueSeconds": 0.3,
         "layers": [
           {
@@ -1619,6 +1629,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/spore_cloud_impact",
+        "castSfxPath": "Audio/Sfx/spore_cloud_cast",
         "hitCueSeconds": 0.35,
         "layers": [
           {
@@ -1876,6 +1887,7 @@
       "vfx": {
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/death_knell_impact",
+        "castSfxPath": "Audio/Sfx/death_knell_cast",
         "hitCueSeconds": 0.5,
         "layers": [
           {
@@ -2192,6 +2204,7 @@
           "vfx": {
             "layerFormat": 1,
             "sfxPath": "Audio/Sfx/prismatic_orb_earth_impact",
+            "castSfxPath": "Audio/Sfx/prismatic_orb_earth_cast",
             "hitCueSeconds": 0.3467,
             "layers": [
               {
@@ -2461,6 +2474,7 @@
           "vfx": {
             "layerFormat": 1,
             "sfxPath": "Audio/Sfx/prismatic_orb_fire_impact",
+            "castSfxPath": "Audio/Sfx/prismatic_orb_fire_cast",
             "hitCueSeconds": 0.4167,
             "layers": [
               {
@@ -2585,6 +2599,7 @@
           "vfx": {
             "layerFormat": 1,
             "sfxPath": "Audio/Sfx/prismatic_orb_wind_impact",
+            "castSfxPath": "Audio/Sfx/prismatic_orb_wind_cast",
             "hitCueSeconds": 0.4167,
             "layers": [
               {

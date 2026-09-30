@@ -160,7 +160,7 @@ MonoBehaviour:
         groundImpactFrame: 0
         groundAspect: 0
         groundImpactY: -1
-        castSfxPath: 
+        castSfxPath: Audio/Sfx/prismatic_orb_earth_cast
         layers:
         - id: charge
           render: sprite
@@ -866,7 +866,7 @@ MonoBehaviour:
         groundImpactFrame: 0
         groundAspect: 0
         groundImpactY: -1
-        castSfxPath: 
+        castSfxPath: Audio/Sfx/prismatic_orb_fire_cast
         layers:
         - id: charge
           render: sprite
@@ -1211,7 +1211,7 @@ MonoBehaviour:
         groundImpactFrame: 0
         groundAspect: 0
         groundImpactY: -1
-        castSfxPath: 
+        castSfxPath: Audio/Sfx/prismatic_orb_wind_cast
         layers:
         - id: charge
           render: sprite

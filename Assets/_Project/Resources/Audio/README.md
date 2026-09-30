@@ -84,7 +84,7 @@ code change. A spell with a wind-up worth hearing names a second path,
 
 | File | Length | Note |
 |---|---|---|
-| `cinderfault_startup.wav` | 0.39s | Cinderfault's `castSfxPath`. The owner's 2.49s recording, cut to the same pre-rupture window the synth used (0.78s x 5/9 less a 40ms gap = 0.393s) with a 60ms fade-out. Only its opening swell fits the window; the rest of the recording is dropped. |
+| `cinderfault_startup.wav` | 0.22s | Cinderfault's `castSfxPath`. The owner's 2.49s recording, cut to the 0.2167s before the rupture (`hitCueSeconds`) as the tail of its build: the swell climbs from -30 dB to within 3 dB of its plateau by 0.49s, so the window is 0.273-0.490s, 50ms fade-in. Its loudest 20ms is at 1.02s, but past 0.49s it is a steady roar with no build left. The earlier cut kept the quiet first 0.39s. |
 | `cinderfault_pressure.wav` | 0.39s | **PLACEHOLDER, no longer referenced.** The synthesised pressure cue `cinderfault_startup` replaced; still emitted by `tools/make_cinderfault_audio.py`. |
 | `cinderfault_eruption_impact.wav` | 1.00s | Cinderfault's `sfxPath`. Calvo Earth `impact_ground_rock_debris_02`, a ground impact with debris (rms -16 dB source), cut at the transient with a 150ms fade. Replaced the synthesised `cinderfault_impact`. |
 | `winters_rebuke_impact.wav` | 0.90s | Calvo Ice `fast_impact_07`, the earliest transient of the eight fast impacts. |
@@ -102,6 +102,21 @@ code change. A spell with a wind-up worth hearing names a second path,
 | `borrowed_moment_impact.wav` | 0.60s | Calvo Wind `short_spacious_whoosh_04`, a whoosh for an ally moving earlier. |
 | `palace_passage_impact.wav` | 1.00s | Calvo Dark `warp_03`, the only warp in the packs, for the seat swap. |
 | `prismatic_orb_earth_impact.wav`, `_fire_`, `_wind_` | 0.90s each | Per-element `sfxPath`. Calvo Earth `stone_dry_impact_03`, Fire `fireball_burst_bright_03`, Wind `air_impact_splash_02`. |
+| `winters_rebuke_cast.wav` | 0.46s | `castSfxPath`. Calvo Ice `charge_impact_09`, window 0.57-1.03s. |
+| `vipers_bite_cast.wav` | 0.30s | `castSfxPath`. Calvo Acid `cast_charge_splash_impact_03`, window 0.09-0.39s. |
+| `spore_cloud_cast.wav` | 0.35s | `castSfxPath`. Calvo Acid `cast_riser_liquid_impact_03`, window 0.07-0.42s. |
+| `ashen_reckoning_cast.wav` | 0.30s | `castSfxPath`. Calvo Acid `cast_charge_splash_impact_02` (it consumes Poison), window 0.24-0.54s. |
+| `censer_of_embers_cast.wav` | 0.30s | `castSfxPath`. Calvo Fire `charge_explosion_wet_06`, window 1.33-1.63s. |
+| `blackglass_spear_cast.wav` | 0.46s | `castSfxPath`. Calvo Dark `cast_energy_riser_03`, window 0.85-1.31s. |
+| `death_knell_cast.wav` | 0.50s | `castSfxPath`. Calvo Dark `cast_energy_riser_01`, window 2.20-2.70s. |
+| `court_of_whispers_cast.wav` | 0.30s | `castSfxPath`. Calvo Dark `cast_energy_ball_01`, window 0.68-0.98s. |
+| `palace_passage_cast.wav` | 0.30s | `castSfxPath`. Calvo Dark `cast_energy_riser_metallic_02`, window 0.85-1.15s. |
+| `thorn_tithe_cast.wav` | 0.30s | `castSfxPath`. Calvo Earth `cast_rise_ground_04`, window 1.94-2.24s. |
+| `crownfall_cast.wav` | 0.50s | `castSfxPath`. Calvo Lightning `impact_thunder_dark_dry_02`: the Lightning pack has no riser or charge, so this is the one clip with a rumble building into its peak at 0.45s. 50ms of silence in front lets that peak land on the blow. Weakest match of the set. |
+| `borrowed_moment_cast.wav` | 0.30s | `castSfxPath`. Calvo Wind `cast_air_short_rise_whoosh_01`, window 0.04-0.34s. |
+| `prismatic_orb_earth_cast.wav` | 0.35s | Earth element's `castSfxPath`. Calvo Earth `cast_magic_whoosh_02`, window 0.88-1.23s. |
+| `prismatic_orb_fire_cast.wav` | 0.42s | Fire element's `castSfxPath`. Calvo Fire `charge_explosion_wet_03`, window 0.90-1.32s. |
+| `prismatic_orb_wind_cast.wav` | 0.42s | Wind element's `castSfxPath`. Calvo Wind `cast_air_rise_sharp_shoot_04`, window 0.39-0.81s. |
 | `prismatic_orb_water_cast.wav` | 0.45s | Water element's `castSfxPath`. Calvo Water `bubble_power_02`, cut to the 0.4167s blow cue. Replaced the owner's `prismatic_orb_water_startup`. |
 | `prismatic_orb_water_impact.wav` | 0.60s | Water element's `sfxPath`. Calvo Water `impact_ball_03`. |
 | `velvet_shackles_impact.wav` | 0.39s | Velvet Shackles' `sfxPath`. rubberduck `chain_01` (CC0), no lead-in, cut where it decays below -40 dB. |
@@ -110,6 +125,17 @@ code change. A spell with a wind-up worth hearing names a second path,
 | `trunk_slam_impact.wav` | 0.20s | Trunk Slam's `sfxPath`. rubberduck `wood_03`, the highest mean level of the five wood clips (-20.9 dB), no lead-in. |
 | `bellwether_scratch_impact.wav` | 0.25s | Bellwether Scratch's `sfxPath`. rubberduck `blade_02`, fuller than `blade_01` (-21.4 vs -22.6 dB mean) and shorter than `blade_03`. |
 
+**Cast cues are riser tails.** A charge builds toward a peak, so its head is the
+quiet part. Each `*_cast.wav` (and `cinderfault_startup`) is the window that ends
+where the source's build first reaches -3 dB of its loudest 30 ms, as long as the
+spell's `hitCueSeconds` (a spell is a Hold beat with no windup pose, so the cast
+cue fires as the beat opens and the blow lands `hitCueSeconds` later), with a
+50ms fade-in. The peak lands on the blow and the impact cue carries on.
+`tools/make_spell_cast_cues.py` holds the table and rebuilds them; a
+`hitCueSeconds` change means editing its length there. Battle speed above 1x
+shortens the wait but not the clip, so the cast then outlasts the blow by the
+difference.
+
 `tools/make_cinderfault_audio.py` is unused: its pressure cue was replaced by
 `cinderfault_startup` and its impact cue by `cinderfault_eruption_impact`, and
 re-running it would re-emit `cinderfault_impact.wav` unreferenced.
@@ -117,8 +143,7 @@ re-running it would re-emit `cinderfault_impact.wav` unreferenced.
 The Calvo clips were cut from the 48 kHz wav (Acid, Fire, Lightning, Water,
 Wind) or the 96 kHz wav (Dark, Earth, Ice, which ship no 48 kHz folder),
 resampled to 44.1 kHz mono 16-bit, started at the first transient, ended where
-they decay below -40 dB or at a cap, with a fade-out. `mud_burst_*`,
-`cinderfault_startup` and the rubberduck cues above are untouched. There is no
+they decay below -40 dB or at a cap, with a fade-out. `mud_burst_*` and the rubberduck cues above are untouched. There is no
 Holy or Arcane pack, so `gilded_aegis` is silent and `crownfall` borrows a
 lightning strike.
 
