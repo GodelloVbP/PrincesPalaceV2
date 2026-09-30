@@ -190,9 +190,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // off. The pane is the FULL content area rather than an inset
             // one, and every hosted screen is authored AT that size rather
             // than inset into it -- centring a smaller screen inside a
-            // bigger box reads as a small screen inside a big empty one;
-            // see DossierLayout's header for why scaling could not fix that
-            // instead.
+            // bigger box reads as a small screen inside a big empty one.
             var paneChildren = new List<UiNode>();
             var owners = SystemMenuTabs.PaneOwners;
 
@@ -207,22 +205,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 switch (def.Tab)
                 {
                     case SystemMenuTab.Character:
+                        // The reward track is one of the dossier's sections,
+                        // built into its detail area; it is kept here too
+                        // because WireSystemMenu wires it beside the dossier.
                         var dossier = CharacterDossierScreen.Build();
                         screen.Dossier = dossier;
+                        screen.RewardTrack = dossier.RewardTrack;
                         contents.Add(dossier.Root);
-
-                        // THE REWARD TRACK, over the dossier rather than
-                        // beside it as another tab: the dossier answers "what
-                        // am I now" and the track answers "what is coming",
-                        // and the door between them is one nav row.
-                        //
-                        // Same construction as the dossier's own pack panel,
-                        // which opens over column A from a nav row and closes
-                        // on its own button. LAST in the pane so it draws over
-                        // everything.
-                        var track = RewardTrackScreen.Build();
-                        screen.RewardTrack = track;
-                        contents.Add(track.Root);
                         break;
 
                     case SystemMenuTab.Party:

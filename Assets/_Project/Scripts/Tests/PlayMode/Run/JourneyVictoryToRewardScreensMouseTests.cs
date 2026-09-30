@@ -204,7 +204,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator ReachingTheRewardTrack_ThroughTheSystemMenu_ClicksTheOwedLevel_CollectsExactlyOnce_MouseOnly()
+        public IEnumerator ReachingTheRewardTrack_ThroughTheSystemMenu_ClicksCollect_CollectsExactlyOnce_MouseOnly()
         {
             SaveSlotManager.EnterSlot(0);
 
@@ -236,7 +236,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub");
 
             // Reached by clicking the row directly -- no Grid-then-List walk.
-            yield return Click(Node("DossierTrackRow")); // ShowTrack() -- opens the panel over column A
+            yield return Click(Node("DossierSection3")); // the rail's REWARD TRACK row shows the section
             yield return null;
             yield return null; // Start() runs one frame after activation
             TakeOverInput();
@@ -280,28 +280,11 @@ namespace PrincesPalace.PlayModeTests
                 "clicking the collect button should claim through the earned level, exactly once");
             Assert.AreNotEqual(before, character0.claimedTrackLevel, "the claim should actually have happened");
 
-            // Cancel steps back exactly one level rather than closing the
-            // whole menu. Still PressCancel and not a click -- the panel's
-            // Close button is the mouse's own way out and is already
-            // covered on the pad path; what is being proven here is that
-            // the ESC a mouse player still has costs them the same one
-            // level it costs a pad player.
-            //
-            // Held before the press for the same reason the pad twin holds
-            // it: Node() cannot find a deactivated object.
-            var trackPanel = Node("RewardTrackPanel");
-            Assert.IsNotNull(trackPanel, "the reward track panel is not in this scene");
-
+            // The track is a section, not a level: the ESC a mouse player
+            // still has closes the menu, as B does on a pad.
             yield return PressCancel();
 
-            Assert.IsFalse(trackPanel.activeSelf, "the first Cancel should close the reward track");
-            Assert.IsTrue(menu.IsOpen, "and leave the character sheet standing behind it");
-
-            yield return PressCancel();
-
-            Assert.IsFalse(menu.IsOpen,
-                "only from the pane's base level does Cancel close the menu -- with the track shut there " +
-                "is nothing left for the dossier to claim the press for");
+            Assert.IsFalse(menu.IsOpen, "Esc with nothing pending should close the menu");
         }
     }
 }

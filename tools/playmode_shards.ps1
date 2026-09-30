@@ -145,9 +145,9 @@ function Get-PlayModeShardPlan {
 
 # The classes in the order a single unsharded run executes them: NUnit sorts
 # by full name (namespace.class), ordinal, case-insensitive -- checked against
-# a real test-results-PlayMode.xml, where DossierEquipTests (namespace
-# PrincesPalace.Tests.PlayMode) runs after every PrincesPalace.PlayModeTests
-# fixture and a culture sort would have put it among the Dossier* ones. The
+# a real test-results-PlayMode.xml, where a class in namespace
+# PrincesPalace.Tests.PlayMode ran after every PrincesPalace.PlayModeTests
+# fixture and a culture sort would have put it among its neighbours. The
 # namespace is read off each class's file.
 function Get-ClassRunOrder {
     param([hashtable]$Index, [string[]]$Classes)

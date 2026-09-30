@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
@@ -241,78 +240,6 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // ---- against the dossier's real geometry, at the new 420x420 size ---
-
-        // ITEM-MODIFIER PLAN / "roughly square tooltips" (2026-09-22):
-        // BuildTooltip moved off its old 300x480 sliver onto
-        // ItemComparisonPanel's shared 420x420 shape. Beside's own clamp is
-        // general (AcrossAWholeBlockOfAnchors above already proves both axes
-        // for arbitrary geometry) but a panel this much wider deserves its
-        // own pin against the two anchors furthest from centre: the
-        // rightmost pack cell (column A, hugging the left wall) and the
-        // lowest equipment slot on EACH file (column B, a left-file and a
-        // right-file anchor exercise opposite branches of the right/left
-        // check). DossierLayout's own methods, not restated literals, so a
-        // future layout change cannot silently invalidate this pin without
-        // the numbers here moving with it.
-        private const float DossierMargin = 8f;
-
-        private static void AssertInsideDossier(UiVec at, float tooltipHalf)
-        {
-            float halfW = DossierLayout.HalfWidth;
-            float halfH = DossierLayout.HalfHeight;
-
-            Assert.GreaterOrEqual(at.X - tooltipHalf, -halfW + DossierMargin, "left edge inside the dossier");
-            Assert.LessOrEqual(at.X + tooltipHalf, halfW - DossierMargin, "right edge inside the dossier");
-            Assert.GreaterOrEqual(at.Y - tooltipHalf, -halfH + DossierMargin, "bottom edge inside the dossier");
-            Assert.LessOrEqual(at.Y + tooltipHalf, halfH - DossierMargin, "top edge inside the dossier");
-        }
-
-        [Test]
-        public void TheDossierTooltipAt420_StaysInsideThePanelBesideTheRightmostPackSlot()
-        {
-            float halfW = DossierLayout.HalfWidth;
-            float halfH = DossierLayout.HalfHeight;
-
-            int rightmostColumn = (int)DossierLayout.PackColumns - 1;
-            float anchorX = DossierLayout.ColumnACentreX + DossierLayout.PackCellCentreX(rightmostColumn);
-            float anchorY = DossierLayout.PackCellCentreY(0);
-
-            var at = TooltipPlacement.Beside(
-                anchorX, anchorY, DossierLayout.PackCellWidth, DossierLayout.PackCellHeight,
-                420f, 420f,
-                -halfW + DossierMargin, halfW - DossierMargin,
-                -halfH + DossierMargin, halfH - DossierMargin);
-
-            AssertInsideDossier(at, 210f);
-        }
-
-        [Test]
-        public void TheDossierTooltipAt420_StaysInsideThePanelBesideTheLowestEquipmentSlot()
-        {
-            float halfW = DossierLayout.HalfWidth;
-            float halfH = DossierLayout.HalfHeight;
-
-            // Legs (left file) and Shoes (right file) share the lowest
-            // authored row (SlotGeometry's own top: 452 for both), which is
-            // exactly why both are checked here rather than one: a left-file
-            // anchor tries "right, into the mannequin" first and a
-            // right-file anchor tries "right, off the panel" first, and only
-            // running both proves the clamp holds for either starting side.
-            foreach (var slot in new[] { EquipmentSlot.Legs, EquipmentSlot.Shoes })
-            {
-                var anchor = DossierLayout.SlotAt(slot);
-
-                var at = TooltipPlacement.Beside(
-                    anchor.X, anchor.Y, DossierLayout.SlotSize, DossierLayout.SlotSize,
-                    420f, 420f,
-                    -halfW + DossierMargin, halfW - DossierMargin,
-                    -halfH + DossierMargin, halfH - DossierMargin);
-
-                AssertInsideDossier(at, 210f);
-            }
-        }
-
         // ---- keep-out rects (QA 2026-09-26, owner: "if something blocks the
         // head and upper slots we have to change that") ----------------------
         //
@@ -375,62 +302,6 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(-136f, at.X, 0.01f);
             Assert.AreEqual(0f, at.Y, 0.01f);
-        }
-
-        // THE DOSSIER, walked: every visible pack cell and every equipment
-        // slot, at the tooltip's shortest, typical and tallest heights. The
-        // box must stay inside the dossier, clear its own anchor, and cover
-        // none of the mannequin, the slots or the Carried row
-        // (DossierLayout.TooltipKeepOut). The QA captures had the Coif's box
-        // over HEAD/NECKLACE/GLOVES and the Torso's over LEGS and Carried.
-        [TestCase(120f)]
-        [TestCase(290f)]
-        [TestCase(420f)]
-        public void NoDossierTooltip_CoversTheLoadoutOrTheCarriedRow(float height)
-        {
-            var keepOut = DossierLayout.TooltipKeepOut();
-            float halfW = DossierLayout.HalfWidth;
-            float halfH = DossierLayout.HalfHeight;
-            float m = DossierLayout.TooltipMargin;
-
-            var anchors = new System.Collections.Generic.List<(string Name, UiRect Rect)>();
-            for (int row = 0; row < DossierLayout.PackVisibleRows; row++)
-            {
-                for (int col = 0; col < (int)DossierLayout.PackColumns; col++)
-                {
-                    anchors.Add(($"pack r{row}c{col}", new UiRect(
-                        new UiVec(DossierLayout.ColumnACentreX + DossierLayout.PackCellCentreX(col),
-                                  DossierLayout.PackCellCentreY(row)),
-                        new UiVec(DossierLayout.PackCellWidth, DossierLayout.PackCellHeight))));
-                }
-            }
-            foreach (var slot in EquipmentSlots.All)
-            {
-                anchors.Add(($"slot {slot}", new UiRect(DossierLayout.SlotAt(slot),
-                    new UiVec(DossierLayout.SlotSize, DossierLayout.SlotSize))));
-            }
-
-            foreach (var (name, anchor) in anchors)
-            {
-                var at = TooltipPlacement.Beside(
-                    anchor.Centre.X, anchor.Centre.Y, anchor.Width, anchor.Height,
-                    DossierLayout.TooltipWidth, height,
-                    -halfW + m, halfW - m, -halfH + m, halfH - m,
-                    keepOut: keepOut);
-
-                var box = new UiRect(at, new UiVec(DossierLayout.TooltipWidth, height));
-
-                Assert.IsTrue(new UiRect(UiVec.Zero, new UiVec(2f * (halfW - m), 2f * (halfH - m))).Contains(box),
-                    $"{name} at height {height}: the box {box.Left:F0}..{box.Right:F0} x {box.Bottom:F0}..{box.Top:F0} leaves the dossier");
-                Assert.IsFalse(box.Overlaps(anchor), $"{name} at height {height}: the box covers its own anchor");
-
-                for (int i = 0; i < keepOut.Length; i++)
-                {
-                    Assert.IsFalse(box.Overlaps(keepOut[i]),
-                        $"{name} at height {height}: the box {box.Left:F0}..{box.Right:F0} x {box.Bottom:F0}..{box.Top:F0} " +
-                        $"covers keep-out {i} ({keepOut[i].Left:F0}..{keepOut[i].Right:F0} x {keepOut[i].Bottom:F0}..{keepOut[i].Top:F0})");
-                }
-            }
         }
     }
 }

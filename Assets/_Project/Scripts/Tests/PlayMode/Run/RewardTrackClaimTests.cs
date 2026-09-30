@@ -57,21 +57,20 @@ namespace PrincesPalace.PlayModeTests
 
         // Opens the hub, levels the squad, and gets the reward track on screen.
         //
-        // The same path SystemMenuCaptureTests takes, because it is the only
-        // one there is: the panel is an inactive child of the dossier, inside a
-        // pane of the system menu, inside the hub.
+        // The same path a player takes: the track is the dossier's REWARD
+        // TRACK section, inside a pane of the system menu, inside the hub.
         //
-        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The track the
-        // last test left open is closed with its own close button and the
-        // menu under it is closed too, so the open below is a first open: the
-        // track paints from the save in its OnEnable, which is what makes the
-        // level and watermark set here reach it.
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The dossier the
+        // last test left on the track is put back on LOADOUT and the menu
+        // closed, so the press below is a first show: the track paints from
+        // the save in its OnEnable, which is what makes the level and
+        // watermark set here reach it.
         private static IEnumerator OpenTheTrack(int level, int claimed)
         {
             yield return SharedScene.Ensure("Hub");
 
-            var track = Object.FindAnyObjectByType<RewardTrackController>(FindObjectsInactive.Include);
-            if (track != null && track.gameObject.activeSelf) Find("TrackCloseButton").onClick.Invoke();
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            if (dossier != null) dossier.ShowSection(Domain.UiKit.CharacterSection.Loadout, focusRow: false);
             var open = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             if (open != null && open.IsOpen) open.Close();
 
@@ -90,8 +89,8 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var row = menu.GetComponentsInChildren<Button>(true)
-                .FirstOrDefault(b => b.name == "DossierTrackRow");
-            Assert.IsNotNull(row, "the dossier has no reward-track row");
+                .FirstOrDefault(b => b.name == "DossierSection3");
+            Assert.IsNotNull(row, "the dossier's rail has no REWARD TRACK row");
             row.onClick.Invoke();
 
             // TWICE. Start() runs one frame after SetActive(true), not
@@ -162,7 +161,7 @@ namespace PrincesPalace.PlayModeTests
             collect.onClick.Invoke();
             yield return null;
 
-            var character = SquadFixture.FirstLiveMember();
+            var character = DossierPane.Shown();
             Assert.AreEqual(30, character.claimedTrackLevel,
                 "pressing collect did not move the watermark to the level reached");
             Assert.Greater(character.unspentStatPoints, 0,
@@ -180,7 +179,7 @@ namespace PrincesPalace.PlayModeTests
             collect.onClick.Invoke();
             yield return null;
 
-            int points = SquadFixture.FirstLiveMember().unspentStatPoints;
+            int points = DossierPane.Shown().unspentStatPoints;
 
             // The button has hidden itself by now, which is most of the answer.
             // Pressing it anyway is the half that matters: hiding a control is
@@ -189,7 +188,7 @@ namespace PrincesPalace.PlayModeTests
             collect.onClick.Invoke();
             yield return null;
 
-            Assert.AreEqual(points, SquadFixture.FirstLiveMember().unspentStatPoints,
+            Assert.AreEqual(points, DossierPane.Shown().unspentStatPoints,
                 "stat points were paid a second time for levels already collected");
         }
 
@@ -230,11 +229,11 @@ namespace PrincesPalace.PlayModeTests
             // A claim always begins at the watermark and always moves it,
             // so stopping at 20 leaves the watermark at 20 and 21 upward
             // still owed. One number, no hole.
-            Assert.AreEqual(20, SquadFixture.FirstLiveMember().claimedTrackLevel,
+            Assert.AreEqual(20, DossierPane.Shown().claimedTrackLevel,
                 "pressing a waiting node paid past the node that was pressed");
 
             // And the rest is still owed rather than lost.
-            Assert.AreEqual(10, RewardTrack.UnclaimedCount(30, SquadFixture.FirstLiveMember().claimedTrackLevel),
+            Assert.AreEqual(10, RewardTrack.UnclaimedCount(30, DossierPane.Shown().claimedTrackLevel),
                 "the levels above the pressed node stopped being owed");
         }
 
@@ -266,7 +265,7 @@ namespace PrincesPalace.PlayModeTests
             float deadline = Time.realtimeSinceStartup + 0.15f;
             while (Time.realtimeSinceStartup < deadline) yield return null;
 
-            Assert.AreEqual(30, SquadFixture.FirstLiveMember().claimedTrackLevel,
+            Assert.AreEqual(30, DossierPane.Shown().claimedTrackLevel,
                 "pressing an unreached node paid something out");
             Assert.AreNotEqual(before, content.anchoredPosition.x,
                 "pressing an unreached node did nothing at all");

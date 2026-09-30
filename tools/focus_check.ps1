@@ -15,7 +15,7 @@ param(
     # A PlayMode capture fixture driven through tools/screenshot.ps1 -Runtime,
     # which needs a real graphics device and so goes through Start-UnityQuiet's
     # WINDOWED path -- the one the guard actually has work to do on.
-    [string]$RuntimeFilter = "DossierTooltipCaptureTests",
+    [string]$RuntimeFilter = "SystemMenuCaptureTests",
 
     # Mode Command: any tools/ entry point (run_tests_parallel.ps1, an area
     # slice, ...), watched the same way as the two built-in modes, without

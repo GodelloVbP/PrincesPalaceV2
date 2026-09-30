@@ -829,9 +829,9 @@ $PathAreas = @(
     #
     # Checked against where the tests actually sit, not against where the
     # subject sounds like it belongs. That is why CharacterDossierScreen.cs
-    # and DossierLayout.cs are NOT here: the dossier's four fixtures
-    # (CharacterDossierScreen, DossierEquip, DossierPack, DossierXpBar) are
-    # all in Tests/*/Ui, so the generic row below is already right for them.
+    # and DossierLayout.cs are NOT here: the dossier's fixtures
+    # (CharacterDossierScreen, DossierLoadout, DossierRail, DossierAttributes)
+    # are all in Tests/*/Ui, so the generic row below is already right for them.
     @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/(HubAnchors|ConstellationLayout|SheetStats)\.cs$'; Areas = @('hub', 'ui') }
     # Three more UiKit files whose fixtures are NOT in the ui area, found by
     # the same sweep as the hub row: MapLayoutTests and RewardTrackLayoutTests
@@ -901,7 +901,7 @@ $PathAreas = @(
     # on every row: these rows add areas, they never take the old one away.
     # Whole filenames, partials included, so Navigation does not also claim
     # NavigationInputModule by prefix. Re-derive before adding a guess here.
-    @{ Pattern = '^Assets/_Project/Scripts/Core/(CanvasCapture|CharacterDossierController)\.cs$'; Areas = @('ui', 'art', 'combat', 'hub', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(CanvasCapture|CharacterDossierController(\.[A-Za-z]+)?)\.cs$'; Areas = @('ui', 'art', 'combat', 'hub', 'run') }
     # SystemMenuController sets Time.timeScale; Navigation owns every scene load.
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Navigation|SystemMenuController)\.cs$'; Areas = @('ui', 'combat', 'hub', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(GameSettings|HoverIndex|NavigationInputModule|ReckoningController|RewardTracks|RunOrchestrator\.Spells)\.cs$'; Areas = @('ui', 'combat', 'run') }

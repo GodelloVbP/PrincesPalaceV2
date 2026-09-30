@@ -226,8 +226,11 @@ namespace PrincesPalace
             ApplyTarget(SystemMenuTabs.All[index].Tab, target);
         }
 
+        // Any close drops the active pane's pending state first: a pending
+        // state never commits on close (plan C6).
         public void Close()
         {
+            CancelPending();
             panel.SetShown(false);
             Resume();
             PopNavContext();
@@ -241,20 +244,20 @@ namespace PrincesPalace
         // The tab showing, as a value rather than an index into the table.
         public SystemMenuTab SelectedTab => SystemMenuTabs.All[_selected].Tab;
 
-        // DROPS EVERY PENDING STATE THE ACTIVE PANE HOLDS, with no change to
-        // game state (plan C5, C6). A hotkey does it before it switches or
-        // closes; a plain Close() does not, so a pane the player left with
-        // its pack up still has it up when they come back (C7). The seam is the one Cancel already uses,
-        // INavCancelClaim, asked until the pane has nothing left to spend a
-        // press on: a Party carry is put back, the dossier's overlays close.
-        // Bounded, because a claim that answers true forever would otherwise
-        // hang the frame; the deepest pane has five levels.
+        // DROPS THE PENDING STATE THE ACTIVE PANE HOLDS, with no change to game
+        // state (plan C5, C6): the dossier's SlotArmed or BookPicked, Party's
+        // Carry. The ONE SEAM for "let go before anything else happens" --
+        // Close, a tab switch, a hotkey and a deep link all come through here
+        // (IMenuPending), so no path can leave a pending state behind or let
+        // it commit on its own.
         public void CancelPending()
         {
-            for (int i = 0; i < 8; i++)
+            var activePane = ActivePane();
+            if (activePane == null) return;
+
+            foreach (var owner in activePane.GetComponentsInChildren<IMenuPending>(includeInactive: true))
             {
-                var claimant = ActivePaneCancelClaim();
-                if (claimant == null || !claimant.ClaimCancel()) return;
+                if (owner.HasPending) owner.CancelPending();
             }
         }
 
@@ -266,7 +269,7 @@ namespace PrincesPalace
             if (!target.Is(MenuTargetKind.Section, MenuSections.Pack)) return false;
 
             var dossier = Dossier();
-            return dossier != null && dossier.IsPackShown;
+            return dossier != null && dossier.IsPackFocused;
         }
 
         // Points the tab at its target. A kind the tab has no place for yet is
@@ -295,9 +298,9 @@ namespace PrincesPalace
             if (dossier == null) return;
 
             // The character first: choosing one repaints the pane, and the pack
-            // that follows should open over the character asked for.
+            // that follows should be the character asked for's.
             if (target.Kind == MenuTargetKind.CharacterId) dossier.SelectCharacter(target.Id);
-            if (target.Is(MenuTargetKind.Section, MenuSections.Pack)) dossier.ShowPack(true);
+            if (target.Is(MenuTargetKind.Section, MenuSections.Pack)) dossier.FocusPack();
         }
 
         // The controller a tab's pane hosts. Found rather than wired: the menu
@@ -437,9 +440,14 @@ namespace PrincesPalace
                 if (all[i] != null) selectables[$"s{i}"] = all[i].gameObject;
             }
 
-            var entry = _selected >= 0 && tabButtons != null && _selected < tabButtons.Length
-                ? TabObject(_selected)
-                : null;
+            // WHERE OPENING LANDS: the pane's entry (spec section 9), the same
+            // control LT/RT land on, else the selected tab.
+            var paneEntry = ActivePaneEntry();
+            var entry = paneEntry != null && paneEntry.gameObject.activeInHierarchy
+                ? paneEntry.gameObject
+                : _selected >= 0 && tabButtons != null && _selected < tabButtons.Length
+                    ? TabObject(_selected)
+                    : null;
 
             _navContext.Reconfigure(entry, selectables);
         }
@@ -775,6 +783,8 @@ namespace PrincesPalace
         // A line that stays until cleared, under whatever notice is up.
         public void SetStateLine(UiString text) => notice?.SetState(text);
 
+        public void SetStateLine(UiString text, params object[] args) => notice?.SetState(text, args);
+
         public void ClearStateLine() => notice?.ClearState();
 
         // THE REFUSAL EVERY PANE SHARES: true when MenuPermissions refuses the
@@ -870,6 +880,10 @@ namespace PrincesPalace
         // ignores the system group).
         public void Select(int index)
         {
+            // A switch drops the pending state of the tab being left (plan C6);
+            // the same tab again is not a switch.
+            if (IsOpen && index != _selected) CancelPending();
+
             SelectCore(index, audible: true);
             if (IsOpen) MenuMemory.Remember(context, SystemMenuTabs.All[_selected].Tab);
         }

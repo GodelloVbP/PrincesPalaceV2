@@ -7,7 +7,7 @@ using UnityEditor;
 // 250-295 x 384. They are drawn at:
 //
 //     pack cell           64px      DossierLayout.PackIconSize
-//     equipment slot      74px      DossierLayout.SlotSize
+//     equipment slot      72px      DossierLayout.SlotSize - 16
 //     glossary detail    120px      GlossaryLayout.DetailIconSize
 //     relic draft card   160px      RelicDraftScreen
 //     reckoning offer    200px      ReckoningScreen

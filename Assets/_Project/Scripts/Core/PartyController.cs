@@ -23,7 +23,7 @@ namespace PrincesPalace
     // (see ScreenRegistry.WireParty for the residual it cannot see: the menu
     // reference, the lock flag, each seat badge's own text label and the drag
     // sources, none of which UiAutoBind's five typed lookups can reach).
-    public class PartyController : MonoBehaviour, INavCancelClaim, IMenuPromptSource
+    public class PartyController : MonoBehaviour, INavCancelClaim, IMenuPromptSource, IMenuPending
     {
         // ---- header -----------------------------------------------------------
         [SerializeField] internal TMP_Text banner;
@@ -524,6 +524,12 @@ namespace PrincesPalace
             if (source != null) EventSystem.current?.SetSelectedGameObject(source);
             return true;
         }
+
+        // IMenuPending: a carry is the Party pane's pending state (plan C5),
+        // put back the same way Cancel puts it back.
+        public bool HasPending => Formation != null && Formation.SelectedId != null;
+
+        void IMenuPending.CancelPending() => ((INavCancelClaim)this).ClaimCancel();
 
         private GameObject CarrySourceObject()
         {

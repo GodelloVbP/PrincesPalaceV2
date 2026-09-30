@@ -278,8 +278,8 @@ namespace PrincesPalace.PlayModeTests
             menu.Select(0);
             yield return null;
 
-            var trackRow = AllButtons(menu).FirstOrDefault(b => b.name == "DossierTrackRow");
-            Assert.IsNotNull(trackRow, "the dossier has no reward-track row");
+            var trackRow = AllButtons(menu).FirstOrDefault(b => b.name == "DossierSection3");
+            Assert.IsNotNull(trackRow, "the dossier's rail has no REWARD TRACK row");
             trackRow.onClick.Invoke();
             yield return null;
 

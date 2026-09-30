@@ -1,814 +1,374 @@
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // The character dossier's geometry, as pure arithmetic.
+    // The CHARACTER pane's geometry (spec section 3), as pure arithmetic.
     //
-    // IT FILLS THE PANE. The handover authors this screen at 1360x766 and says
-    // to scale the whole panel as one unit rather than reflow it, and for a
-    // while it was placed at exactly that size and centred in the system menu's
-    // 1600x804 content pane -- which cost 118px of dead margin down each side
-    // and left all three columns stopping about 200px short of the floor. It
-    // read as a small screen sitting inside a big empty one, which is what it
-    // was.
+    // A portrait strip across the top, a rail down the left that nothing ever
+    // covers, and a detail area showing the rail's selected section. Every
+    // section is a panel the size of the detail area, placed at its centre,
+    // with its own children measured from that centre: DX and DY turn the
+    // spec's left/top offsets into that frame once, here.
     //
-    // Uniform scale cannot fix that, and it is worth saying why rather than
-    // leaving it to be rediscovered: the authored panel is 1.775 wide for every
-    // 1 tall and the pane is 1.990, so scaling to fill the height leaves 86px a
-    // side and scaling to fill the width overflows the height by 97. There is
-    // no scale factor that fills this box. So the frame is authored AT the
-    // pane's size and the columns take their share of it.
-    //
-    // What the handover's rule was actually protecting is kept: the mannequin
-    // slots and their leader hairlines are still the handover's own numbers,
-    // still positioned against each other, and FromStage scales them as one
-    // unit -- so the stage grows without a single slot being re-authored, which
-    // is the reflow the handover was warning against. Nothing shrinks either,
-    // so its legibility floor holds.
-    //
-    // Coordinates are measured from the DOSSIER's own centre, like every other
-    // screen in this project.
+    // Pane coordinates are measured from the pane's centre, the frame every
+    // node in this project is placed in.
     public static class DossierLayout
     {
-        // The pane it fills, read from the menu rather than restated, so a
-        // panel resize cannot leave the dossier behind at the old size.
+        // The hosted-pane contract: the whole content area.
         public const float Width = SystemMenuLayout.PanelWidth;                              // 1600
         public const float Height = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight; // 804
 
-        // NO OUTER FRAME: a frame wrapping column A's own Blue 3:4 card
-        // would compete with it rather than house it. Column A keeps its
-        // card; the pane around it has no frame at all, and no flat ground
-        // wash either -- the system menu's own pane background already
-        // grounds it. HalfWidth/HalfHeight are a plain half of the declared
-        // frame.
-        //
-        // COLUMN A'S OWN CARD IS GRAPHIC-LESS TOO: BuildColumnAFrame draws
-        // no Container, only a plain Panel at this same rect, so this
-        // screen draws no kit frame at all.
-        public static float HalfWidth => Width * 0.5f;
-        public static float HalfHeight => Height * 0.5f;
+        public const float InsetX = 40f;
+        public const float InsetY = 24f;
+        public const float AreaWidth = Width - InsetX * 2f;    // 1520
+        public const float AreaHeight = Height - InsetY * 2f;  // 756
 
-        public static float ContentWidth => HalfWidth * 2f;
+        public const float Left = -AreaWidth * 0.5f;
+        public const float Top = AreaHeight * 0.5f;
 
-        // Three columns, no gap; the dividers are borders.
-        //
-        // COLUMN A ONLY HAS TO CLEAR ITS OWN card's content height, not a
-        // second outer container's -- 449 (374 base, plus 75 the loadout
-        // column gives up, a tenth of its width).
-        public const float ColumnBGivesUp = 75f;
-        public const float ColumnAWidth = 374f + ColumnBGivesUp;  // 449
+        // ---- the strip -------------------------------------------------------------
 
-        // WIDTH-BOUND. Still measured off the 3:4 KIT'S aspect
-        // (Ui.ContainerSizeForWidth below) even though no container art
-        // renders here (see the comment above) -- 0.75 is still the shape
-        // this card is authored to, only the painted border is gone. Column
-        // A's width is set by the three-column split above and cannot grow
-        // without taking 124px off the loadout stage, so the height is what
-        // moves -- the card sits centred in the 804-tall pane with ~103px
-        // of empty column above and below it, and everything measured from
-        // ColumnATop/ColumnABottom moves in with it. What actually absorbs
-        // the difference is the portrait, per PortraitHeight's own note.
-        public static float ColumnAFrameHeight =>
-            Ui.ContainerSizeForWidth(ContainerRatio.ThreeByFour, ColumnAWidth).Y;   // 598.67, was 763.61
-        public const float ColumnCWidth = 480f;
+        public const float StripHeight = 72f;
+        public const float StripCentreY = Top - StripHeight * 0.5f;
 
-        public static float ColumnBWidth => ContentWidth - ColumnAWidth - ColumnCWidth;   // 671
+        public const float ChipWidth = 240f;
+        public const float ChipHeight = 64f;
+        public const float ChipGap = 16f;
 
-        // 32f -- there is no outer container border to eat a second margin
-        // on top of this one; see the comment above.
-        public const float PadY = 32f;
-        // 34: the 3:4 kit's own left/right inset caps column A's content at
-        // 449 * (1 - 0.138) = 387.0, so a wider pad here would hang every
-        // full-width row in the column (portrait, sub-line, XP labels, all
-        // four nav rows) past that content bound. 34 puts ContentAWidth at
-        // 381 with 3px of margin a side, matching ColumnAContentMargin's
-        // own slack on the vertical.
-        public const float ColumnAPadX = 34f;
-        public const float ColumnBPadLeft = 40f;
-        public const float ColumnCPadX = 40f;
+        // The gap that holds the divider between the seated party and the
+        // bench, in place of the ordinary one.
+        public const float DividerGap = 32f;
 
-        // Centre x of each column, measured from the panel centre.
-        public static float ColumnACentreX => -HalfWidth + ColumnAWidth * 0.5f;
-        public static float ColumnBCentreX => -HalfWidth + ColumnAWidth + ColumnBWidth * 0.5f;
-        public static float ColumnCCentreX => HalfWidth - ColumnCWidth * 0.5f;
+        // The LB/RB plates at the strip's ends. Clickable with the mouse; the
+        // pad reaches the same step with its shoulders, never by moving focus
+        // here (spec section 9: the strip is not in the D-pad graph).
+        public const float PagerWidth = 56f;
+        public const float PagerHeight = 40f;
 
-        // The two dividers sit on the column boundaries.
-        public static float DividerAtoB => -HalfWidth + ColumnAWidth;
-        public static float DividerBtoC => HalfWidth - ColumnCWidth;
+        public const float PagerPrevX = Left + PagerWidth * 0.5f;
+        public const float PagerNextX = -Left - PagerWidth * 0.5f;
 
-        // ---- column A -----------------------------------------------------------
+        public const float ChipsLeft = Left + PagerWidth + ChipGap;
 
-        public static float ContentAWidth => ColumnAWidth - ColumnAPadX * 2f;      // 381, was 389
+        // As many chips as fit between the pagers with the divider drawn:
+        // 5 x 240 + 4 x 16 + 16 = 1280 of 1376.
+        public const int ChipCapacity = 5;
 
-        // Everything in column A stacks from the top, so each y is the one
-        // above it minus its own height. Stated as running totals rather than
-        // as a flow container because the pack panel has to cover the column
-        // exactly and a flow would fight that.
-        //
-        // MEASURED AGAINST THE FRAME PANEL'S OWN HEIGHT, not the shared panel
-        // HalfHeight/PadY -- ColumnAFrameHeight is shorter than the full 804
-        // pane, so content stacking against the pane's own edges would sit
-        // past this frame's edge. 0.052/0.055 are the kit's measured
-        // Container/3:4 top/bottom insets (ContainerArt.Inset) from when
-        // this frame still painted one; the numbers stay now that it does
-        // not, since changing them would move the identity content this
-        // pass is not meant to touch. The extra 3px is slack over the
-        // audit's own 0.01 containment tolerance, not a second inset.
-        private const float ColumnAFrameInsetTop = 0.052f;
-        private const float ColumnAFrameInsetBottom = 0.055f;
-        private const float ColumnAContentMargin = 3f;
-
-        public static float ColumnATop =>
-            ColumnAFrameHeight * (0.5f - ColumnAFrameInsetTop) - ColumnAContentMargin;
-        public static float ColumnABottom =>
-            -ColumnAFrameHeight * (0.5f - ColumnAFrameInsetBottom) + ColumnAContentMargin;
-
-        // Square-ish, because the Image carries preserveAspect: a box taller
-        // than the art's own aspect letterboxes rather than filling, so height
-        // past about the content width buys empty bars and nothing else. This
-        // is why column A cannot simply be filled by growing the portrait.
-        //
-        // DERIVED, NOT AUTHORED: ColumnATop/Bottom run 265.2 to -263.4,
-        // because the 3:4 card is 598.67 tall at a true 0.75 aspect.
-        // Everything BELOW the portrait -- name, sub-line, XP row, the
-        // track readout, four nav rows -- is a fixed 422px of gaps and
-        // boxes, so the portrait absorbs whatever height is left over.
-        //
-        // THAT LEAVES THE PORTRAIT AT ~107px. It is a preserveAspect
-        // sprite, so it letterboxes to roughly 80x107 in a 356-wide column:
-        // legible, audited clean, and noticeably small. The alternative is
-        // to stop being width-bound and give column A 573px (which would
-        // restore a taller card and portrait) by taking 124px off the
-        // loadout stage beside it -- a proportion change to the screen, so
-        // it is left as a call for whoever owns that tradeoff rather than
-        // folded in here.
-        public static float PortraitHeight => ColumnATop - ColumnABottom - 422f; // ~106.6, was 219.4
-
-        public static float PortraitCentreY => ColumnATop - PortraitHeight * 0.5f;
-        // Each step is the PREVIOUS box's half-height, then this box's, then the
-        // gap between them. Written that way rather than as one number because
-        // the name's box is 42 tall and the sub-line's 24, and a step that
-        // forgets either of those overlaps them -- which is exactly what the
-        // sibling-overlap audit refused when this was first widened.
-        public static float NameCentreY => PortraitCentreY - PortraitHeight * 0.5f - 24f - 21f;
-        public static float SubLineCentreY => NameCentreY - 21f - 12f - 6f;
-        public static float XpRowCentreY => SubLineCentreY - 12f - 8f - 20f;
-
-        // The reward-track line, directly under the XP bar because it answers
-        // the question the bar raises: the bar says how far to the next level,
-        // this says what that level is worth. Same step arithmetic as the rows
-        // above -- previous box's half-height, the gap, then this box's half.
-        public const float TrackRowHeight = 30f;
-        public static float TrackRowCentreY => XpRowCentreY - 20f - 8f - TrackRowHeight * 0.5f;
-
-        public const float NavRowHeight = 56f;
-
-        // THE TWO NAV ROWS ARE A FOOTER, measured up from the column's floor
-        // rather than down from the XP bar above them.
-        //
-        // Stacked immediately under the identity block they left 200px of the
-        // column empty beneath them, which is most of what made this screen
-        // read as too small for its box. Anchored to the bottom they close the
-        // column, and the space that is left falls between two groups that mean
-        // different things -- who this is, and what you can open -- which is
-        // where negative space belongs.
-        public static float PackRowCentreY => ColumnABottom + NavRowHeight * 0.5f;
-        public static float SkillsRowCentreY => PackRowCentreY + NavRowHeight;
-
-        // The reward track's NAV ROW, third in the footer stack -- distinct
-        // from TrackRowCentreY above, which is the one-line "what does the next
-        // level give" readout under the XP bar. Two different things about the
-        // same track, at opposite ends of the column.
-        public static float TrackNavRowCentreY => SkillsRowCentreY + NavRowHeight;
-
-        // The spell-books nav row (docs/PLAN_SHOP.md §1g, gate 3), fourth in
-        // the footer stack -- one more NavRowHeight up from Track. Audited
-        // like everything else on this screen rather than assumed to fit:
-        // the "200px of empty column" the footer's own header comment
-        // records is what leaves room for a fourth row without shrinking
-        // anything above it.
-        public static float SpellsNavRowCentreY => TrackNavRowCentreY + NavRowHeight;
-
-        // ---- the XP bar ---------------------------------------------------------
-        //
-        // IN THE LAYOUT rather than computed in the screen, because there are
-        // two readers: the screen authors the track and the fill at this width,
-        // and the controller grows the fill BY width to show a fraction of it.
-        // While the screen owned the number the controller could not have it,
-        // which is how the fill came to be driven by anchors instead -- and
-        // anchors are relative to the PARENT, so a bar meant to cross 226px of
-        // track crossed that fraction of the whole column and ran out into the
-        // loadout beside it.
-        public const float XpLabelWidth = 30f;
-        public const float XpLabelGap = 10f;
-        public const float XpRemainingWidth = 70f;
-
-        public static float XpTrackWidth =>
-            ContentAWidth - XpLabelWidth - XpLabelGap - XpRemainingWidth;
-
-        // Left edge of the track, from column A's centre.
-        public static float XpTrackLeft =>
-            -ContentAWidth * 0.5f + XpLabelWidth + XpLabelGap;
-
-        // ---- the pack, over column A --------------------------------------------
-        //
-        // TWO ABREAST AND SCROLLING, not a four-across grid with no way to
-        // reach a 25th item.
-        //
-        // Two columns rather than four is what buys each entry enough width to
-        // carry its NAME beside its icon. A four-across grid of bare icons in a
-        // 389px column gave every item a 95px square and nothing to read: with
-        // generated gear the pack fills with stacks that differ only by tier and
-        // plus, and those are invisible on an icon.
-        //
-        // The list SCROLLS rather than paging. Paging was recorded as the real
-        // fix for "24 of 27" and never built; scrolling is the same fix without
-        // asking the player to remember which page a thing was on.
-        // 30 and 32: the close and sort buttons' captions read at 15px, the
-        // same as the cells beside them, so the row has to be tall enough
-        // to hold that without reading as decoration.
-        public const float PackHeaderHeight = 30f;
-
-        public const float PackSortRowHeight = 32f;
-        public const float PackSortGap = 8f;
-        public const float PackSortButtonWidth = 84f;
-
-        public static float PackSortCentreY => ColumnATop - PackHeaderHeight - PackSortRowHeight * 0.5f;
-
-        // The scrollbar lives inside the content width, to the right of the
-        // rows, so the list never has to guess whether one is present.
-        public const float PackScrollbarWidth = 8f;
-        public const float PackScrollbarGap = 10f;
-
-        public const float PackColumns = 2f;
-        public const float PackColumnGap = 10f;
-
-        public static float PackListWidth =>
-            ContentAWidth - PackScrollbarWidth - PackScrollbarGap;
-
-        public static float PackCellWidth =>
-            (PackListWidth - PackColumnGap * (PackColumns - 1f)) / PackColumns;
-
-        // THE ICON ON TOP, THE NAME UNDER IT.
-        //
-        // Side by side, a 44px icon left about 110px for the name at 11px --
-        // which is not a legible width for "Studded Leather Coif +1", and the
-        // icon was too small to identify at a glance either. Stacking gives the
-        // name the cell's FULL width and the icon room to be identified.
-        public const float PackRowGap = 8f;
-        public const float PackCellPadY = 6f;
-        public const float PackIconGap = 4f;
-
-        // HOW MANY CELLS ARE VISIBLE IS THE AUTHORED NUMBER, and the cell
-        // size follows from it, not the other way round: a fixed cell size
-        // with the row count falling out of whatever height is left makes
-        // "how much of the pack can I see at once" a consequence nobody
-        // chose, rather than a deliberate one.
-        //
-        // Three rows, six cells. The pack is RUN-SCOPED -- inventory lives on
-        // RunSnapshot, not on the save, so it starts empty every descent and a
-        // player is rarely holding more than a handful. Six on screen with a
-        // scrollbar for the rest fits what is actually in there, and the
-        // scrollbar already existed for the overflow.
-        public const int PackVisibleRows = 3;
-
-        public static float PackCellHeight =>
-            (PackListHeight - PackRowGap * (PackVisibleRows - 1)) / PackVisibleRows;
-
-        // BOUND ON BOTH AXES: PackNameHeight is a pure residual (cell height
-        // minus the icon, the gap and padding), so if the icon or cell size
-        // ever changes without re-checking this, the residual can go to
-        // zero or negative -- a name squeezed to nothing, or an icon
-        // hanging out of its own cell, and neither fails loudly on its own.
-        //
-        // So the name gets a floor and the icon takes what is left, rather
-        // than the other way round. 44px is three lines at 14 or two at 18 --
-        // enough for "Annotated Vellum Ink-stained Gloves +2", which is what
-        // the two-abreast layout exists to make readable in the first place.
-        public const float PackIconPadX = 4f;
-        public const float PackNameMinHeight = 44f;
-
-        public static float PackIconSize
+        // A chip's centre when the window's divider falls before chip
+        // `dividerIndex` (-1: no divider). The chips from the divider on move
+        // right by the difference between the two gaps.
+        public static float ChipCentreX(int slot, int dividerIndex)
         {
-            get
+            float left = ChipsLeft + slot * (ChipWidth + ChipGap);
+            if (dividerIndex >= 0 && slot >= dividerIndex) left += DividerGap - ChipGap;
+            return left + ChipWidth * 0.5f;
+        }
+
+        public static float DividerCentreX(int dividerIndex) =>
+            ChipCentreX(dividerIndex, dividerIndex) - ChipWidth * 0.5f - DividerGap * 0.5f;
+
+        // Inside a chip, from its centre.
+        public const float ChipPortraitSize = 48f;
+        public const float ChipInset = 8f;
+        public const float ChipPortraitX = -ChipWidth * 0.5f + ChipInset + ChipPortraitSize * 0.5f;
+        public const float ChipTextLeft = -ChipWidth * 0.5f + ChipInset + ChipPortraitSize + 12f;
+        public const float ChipPipSize = 12f;
+        public const float ChipTextRight = ChipWidth * 0.5f - ChipInset - ChipPipSize - 4f;
+        public const float ChipTextWidth = ChipTextRight - ChipTextLeft;
+        public const float ChipTextCentreX = ChipTextLeft + ChipTextWidth * 0.5f;
+        public const float ChipLineHeight = 26f;
+        public const float ChipNameY = 13f;
+        public const float ChipSeatY = -13f;
+        public const float ChipPipX = ChipWidth * 0.5f - ChipInset - ChipPipSize * 0.5f;
+        public const float ChipPipY = ChipHeight * 0.5f - ChipInset - ChipPipSize * 0.5f;
+
+        // ---- the body: rail and detail --------------------------------------------
+
+        public const float StripGap = 24f;
+        public const float BodyTop = Top - StripHeight - StripGap;   // 282
+        public const float BodyHeight = 660f;
+        public const float BodyCentreY = BodyTop - BodyHeight * 0.5f;
+
+        public const float RailWidth = 300f;
+        public const float RailGap = 24f;
+        public const float RailCentreX = Left + RailWidth * 0.5f;
+
+        public const float DetailWidth = AreaWidth - RailWidth - RailGap;   // 1196
+        public const float DetailHeight = BodyHeight;                        // 660
+        public const float DetailLeft = Left + RailWidth + RailGap;
+        public const float DetailCentreX = DetailLeft + DetailWidth * 0.5f;
+        public const float DetailCentreY = BodyCentreY;
+
+        public const float RailRuleX = Left + RailWidth + RailGap * 0.5f;
+
+        // Rail-local y, from the rail's top edge.
+        public static float RailY(float fromTop) => BodyHeight * 0.5f - fromTop;
+
+        // Detail-local x and y, from the detail's left and top edges.
+        public static float DX(float fromLeft) => -DetailWidth * 0.5f + fromLeft;
+        public static float DY(float fromTop) => DetailHeight * 0.5f - fromTop;
+
+        // ---- the rail: who, then where -----------------------------------------------
+
+        public const float PortraitSize = 120f;
+        public static float PortraitCentreY => RailY(PortraitSize * 0.5f);
+
+        public const float NameHeight = 36f;
+        public static float NameCentreY => RailY(128f + NameHeight * 0.5f);
+
+        public const float LevelHeight = 26f;
+        public static float LevelCentreY => RailY(166f + LevelHeight * 0.5f);
+
+        // The XP bar spans the rail; the fill grows from its left edge.
+        public const float XpTrackWidth = RailWidth;
+        public const float XpTrackHeight = 6f;
+        public static float XpTrackCentreY => RailY(204f + XpTrackHeight * 0.5f);
+        public const float XpLabelHeight = 26f;
+        public static float XpLabelCentreY => RailY(214f + XpLabelHeight * 0.5f);
+
+        public const float IdentityHeight = 260f;
+        public static float IdentityRuleY => RailY(IdentityHeight);
+
+        public const float SectionTop = IdentityHeight + 24f;
+        public const float SectionRowHeight = 64f;
+        public const float SectionInset = 20f;
+        public const float SectionBarWidth = 3f;
+        public const float SectionBarHeight = 40f;
+        public const float SectionPipSize = 12f;
+        public const float SectionLabelHeight = 32f;
+
+        public static float SectionRowCentreY(int index) =>
+            RailY(SectionTop + SectionRowHeight * 0.5f + index * SectionRowHeight);
+
+        // ---- LOADOUT (spec 3.1) ------------------------------------------------------
+
+        public const float SlotsLeft = 0f;
+        public const float SlotsWidth = 440f;
+        public const float PackLeft = 464f;
+        public const float PackWidth = 408f;
+        public const float CompareLeft = 896f;
+        public const float CompareWidth = 300f;
+
+        public const float SlotSize = 88f;
+        public const float SlotPitch = 116f;
+        public const float SlotCaptionWidth = 104f;
+        public const float SlotCaptionHeight = 26f;
+        public const float SlotCaptionGap = 2f;
+
+        // The three files the gear hangs in, as x from the column's left.
+        public const float FileLeftX = 52f;
+        public const float FileCentreX = 220f;
+        public const float FileRightX = 388f;
+
+        public const int GearRows = 4;
+
+        // TODAY'S ARRANGEMENT, IN FOUR ROWS: Head top centre and Necklace
+        // beside it; Torso, Gloves, Legs down the left; Weapon 1, Weapon 2,
+        // Shoes down the right, level with Torso, Gloves and Legs. One table
+        // read by the screen for positions and by the controller for the
+        // focus grid, so where a slot is drawn and where a press lands cannot
+        // disagree.
+        public static void GearCell(EquipmentSlot slot, out int row, out float fileX)
+        {
+            switch (slot)
             {
-                float byWidth = PackCellWidth - PackIconPadX * 2f;
-                float byHeight = PackCellHeight - PackCellPadY * 2f - PackIconGap - PackNameMinHeight;
-                return byHeight < byWidth ? byHeight : byWidth;
+                case EquipmentSlot.Head: row = 0; fileX = FileCentreX; return;
+                case EquipmentSlot.Necklace: row = 0; fileX = FileLeftX; return;
+                case EquipmentSlot.Torso: row = 1; fileX = FileLeftX; return;
+                case EquipmentSlot.Gloves: row = 2; fileX = FileLeftX; return;
+                case EquipmentSlot.Legs: row = 3; fileX = FileLeftX; return;
+                case EquipmentSlot.Weapon1: row = 1; fileX = FileRightX; return;
+                case EquipmentSlot.Weapon2: row = 2; fileX = FileRightX; return;
+                case EquipmentSlot.Shoes: row = 3; fileX = FileRightX; return;
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(slot), slot,
+                        "The loadout has no cell for this slot -- add it to GearCell.");
             }
         }
 
-        // WHATEVER THE ICON LEAVES, which is now never less than
-        // PackNameMinHeight: the icon is capped so this cannot be squeezed
-        // out. Where the cell is tall enough that the icon is width-bound
-        // instead, the surplus still goes to the name rather than to empty
-        // space.
-        public static float PackNameHeight =>
-            PackCellHeight - PackCellPadY * 2f - PackIconGap - PackIconSize;
-
-        // Measured from the cell's own centre.
-        public static float PackIconCentreY =>
-            PackCellHeight * 0.5f - PackCellPadY - PackIconSize * 0.5f;
-
-        public static float PackNameCentreY =>
-            PackIconCentreY - PackIconSize * 0.5f - PackIconGap - PackNameHeight * 0.5f;
-
-        public static float PackListTop =>
-            ColumnATop - PackHeaderHeight - PackSortRowHeight - PackSortGap;
-
-        // Clear of the carried footer and its rule.
-        public static float PackFooterY => -HalfHeight + PadY + 16f;
-        public static float PackListBottom => PackFooterY + 34f;
-
-        public static float PackListHeight => PackListTop - PackListBottom;
-
-        public static int PackVisibleCells => PackVisibleRows * (int)PackColumns;
-
-        public static float PackCellCentreX(int column) =>
-            -ContentAWidth * 0.5f + PackCellWidth * 0.5f + column * (PackCellWidth + PackColumnGap);
-
-        public static float PackCellCentreY(int row) =>
-            PackListTop - PackCellHeight * 0.5f - row * (PackCellHeight + PackRowGap);
-
-        public static float PackScrollbarCentreX =>
-            ContentAWidth * 0.5f - PackScrollbarWidth * 0.5f;
-
-        // The track spans exactly the rows it scrolls, so the thumb's position
-        // reads against the list rather than against the panel.
-        public static float PackTrackHeight =>
-            PackVisibleRows * PackCellHeight + (PackVisibleRows - 1) * PackRowGap;
-
-        public static float PackTrackCentreY => PackListTop - PackTrackHeight * 0.5f;
-
-        // The whole list fits when there is nothing to scroll, which is what
-        // keeps the thumb from becoming a stub on a nearly-empty pack.
-        public const float PackThumbMinHeight = 32f;
-
-        public static float PackThumbHeight(int itemCount)
+        public static UiVec GearCentre(EquipmentSlot slot)
         {
-            if (itemCount <= PackVisibleCells) return PackTrackHeight;
-
-            float fraction = PackVisibleCells / (float)itemCount;
-            float height = PackTrackHeight * fraction;
-            return height < PackThumbMinHeight ? PackThumbMinHeight : height;
+            GearCell(slot, out int row, out float fileX);
+            return new UiVec(DX(SlotsLeft + fileX), DY(row * SlotPitch + SlotSize * 0.5f));
         }
 
-        // ---- column B: the loadout stage ----------------------------------------
-
-        // The handover's stage is 560x658 with the mannequin at left 148, top 92
-        // inside it, 264x564. Those are top-left offsets in the stage; this
-        // converts them once, here, rather than at eight call sites.
-        // THE HANDOVER'S OWN STAGE, kept as the coordinate system its sixteen
-        // slot and leader positions are written in. Nothing below re-authors
-        // them; FromStage scales them.
-        public const float AuthoredStageWidth = 560f;
-        public const float AuthoredStageHeight = 658f;
-
-        // ONE SCALE FOR BOTH AXES, and this is the handover's own rule finally
-        // obeyed rather than worked around.
-        //
-        // It said: scale the whole panel as one unit, never convert individual
-        // values to percentages, because the mannequin slots and their leader
-        // hairlines are positioned against each other and only stay coherent
-        // under UNIFORM scale. Growing the stage 1.179 across and 1.109 down
-        // broke exactly that -- the body stretched wider than it grew tall
-        // while the slots moved on a different ratio again, so every icon crept
-        // off the part of the figure it names. That is the "icons are very
-        // misplaced on the silhouette".
-        //
-        // The scale is whatever the smaller axis allows, so the stage is as
-        // large as it can be without either overflowing or distorting.
-        public const float StagePadX = 20f;
-
-        public static float StageFitWidth => ColumnBWidth - StagePadX * 2f;
-
-        // HalfHeight * 2f, NOT Height: this reduces to the same value either
-        // way, but stays HalfHeight * 2f so it keeps reading from the one
-        // HalfHeight everything else in the column does, rather than
-        // restating Height as a second name for it.
-        public static float StageFitHeight => HalfHeight * 2f - PadY * 2f;
-
-        public static float StageScale
+        public static UiVec GearCaptionCentre(EquipmentSlot slot)
         {
-            get
-            {
-                float byWidth = StageFitWidth / AuthoredStageWidth;
-                float byHeight = StageFitHeight / AuthoredStageHeight;
-                return byWidth < byHeight ? byWidth : byHeight;
-            }
+            GearCell(slot, out int row, out float fileX);
+            return new UiVec(DX(SlotsLeft + fileX),
+                DY(row * SlotPitch + SlotSize + SlotCaptionGap + SlotCaptionHeight * 0.5f));
         }
 
-        public static float StageWidth => AuthoredStageWidth * StageScale;
-        public static float StageHeight => AuthoredStageHeight * StageScale;
+        // The figure the gear hangs on, between the files and under Head: the
+        // armour stand art at its own aspect (264 x 564).
+        public const float FigureTop = 100f;
+        public const float FigureBottom = 462f;
+        public const float FigureHeight = FigureBottom - FigureTop;
+        public const float FigureWidth = FigureHeight * 264f / 564f;
+        public static UiVec FigureCentre => new UiVec(DX(SlotsLeft + FileCentreX), DY((FigureTop + FigureBottom) * 0.5f));
 
-        // PERFECTLY CENTRED IN ITS OWN COLUMN, both ways.
-        //
-        // A top inset would sit the stage high in a column whose height it
-        // does not match. Centred, the figure is in the middle of the
-        // space that belongs to it -- the only arrangement that does not
-        // need a number tuned by eye.
-        public static float StageCentreY => 0f;
+        // The book row, under the gear.
+        public const float BooksHeadingTop = 474f;
+        public const float BooksHeadingHeight = 34f;
+        public static float BooksHeadingCentreY => DY(BooksHeadingTop + BooksHeadingHeight * 0.5f);
+        public const float BookRowTop = 512f;
 
-        public static float StageTop => StageCentreY + StageHeight * 0.5f;
-
-        // Scaled off the handover's figures rather than restated, so the
-        // mannequin and the slots hung on it can never drift apart. The
-        // mannequin is centred in the stage by the handover's own numbers --
-        // 148 clear on each side of a 264 figure in 560 -- so centring the
-        // stage centres the figure.
-        public static float MannequinWidth => 264f * StageScale;
-        public static float MannequinHeight => 564f * StageScale;
-        public static float MannequinLeft => 148f * StageScale;
-        public static float MannequinTop => 92f * StageScale;
-
-        // 86, NOT 96, and the ceiling is the spacing rather than the room.
-        //
-        // Slots sit 98 authored units apart because that is where the body
-        // parts are. At 96 the boxes cleared each other by two units and the
-        // left file rendered as one unbroken strip -- four sockets reading as a
-        // single tall box, which is worse than the small ones were. 86 leaves a
-        // 12-unit gutter, which is what makes them read as four things.
-        public static float SlotSize => 86f * StageScale;
-
-
-        // ---- where the body ACTUALLY is ----------------------------------------
-        //
-        // The handover placed every slot against a figure filling the whole
-        // 264x564 mannequin box. The drawn figure does not fill it, and the
-        // reason is in the PNG rather than in any layout code: UiEmitter does
-        // not set preserveAspect, so the sprite is stretched to the box exactly
-        // -- but the artwork carries transparent margins, 8% at the top and 9%
-        // at the bottom. Measured off the outline's own alpha: its opaque
-        // content runs y 126..1395 of 1536, which lands at 46..512 of 564.
-        //
-        // So the body occupies stage y 138..604, and the slots were laid out
-        // around 92..656. The head slot floated about 100px clear of the head,
-        // and everything below it sat progressively low.
-        //
-        // The first attempt at this assumed preserveAspect was on and
-        // letterboxing the figure into the middle 324px. That was wrong, and
-        // wrong in a way worth recording: it compressed the column so hard that
-        // the slots overlapped each other, which looked like a different bug
-        // entirely. The number below came from measuring the art, not from
-        // reasoning about what the emitter probably did.
-        //
-        // FRACTIONS OF THE ART, not pixels of a particular box, and that is the
-        // difference between this surviving a resize and silently lying about
-        // one. These were 46 and 466 against a 564-tall mannequin; the moment
-        // the stage grew, a slot column tuned to the drawn figure would have
-        // been tuned to a figure 17% taller than the numbers describing it.
-        //
-        // Straight off the outline's alpha: opaque content runs y 126..1395 of
-        // 1536.
-        public const float BodyTopFraction = 126f / 1536f;
-        public const float BodyHeightFraction = 1269f / 1536f;
-
-        // Properties rather than consts: MannequinHeight is derived from the
-        // stage scale, which is now computed from the column it has to fit
-        // rather than authored.
-        public static float BodyTopInBox => MannequinHeight * BodyTopFraction;
-        public static float BodyHeightInBox => MannequinHeight * BodyHeightFraction;
-
-        public static float BodyTop => MannequinTop + BodyTopInBox;
-
-        // A y authored against a box-filling figure, moved onto the drawn one.
-        // Proportional rather than clamped, so a slot the handover put ABOVE
-        // the body -- the head slot is one -- stays proportionally above it.
-        public static float OnBody(float authoredCentreY)
+        // Spread across the column, matching the gear files for three slots.
+        public static float BookFileX(int index)
         {
-            float fraction = (authoredCentreY - MannequinTop) / MannequinHeight;
-            return BodyTop + fraction * BodyHeightInBox;
+            int count = SpellBooks.MaxSpellSlots;
+            if (count <= 1) return FileCentreX;
+            return FileLeftX + index * (FileRightX - FileLeftX) / (count - 1);
         }
 
-        // As FromStage, but with the top read against the figure that is really
-        // drawn rather than the one the handover assumed.
-        // `authoredTop` is in the handover's stage; OnBody works in the drawn
-        // one, so it is scaled on the way in and unscaled on the way out --
-        // FromStage scales its `top` argument again.
-        private static UiVec OnBodyFromStage(float left, float authoredTop, float w, float h)
-        {
-            float centre = OnBody(authoredTop * StageScale + h * 0.5f);
-            return FromStage(left, (centre - h * 0.5f) / StageScale, w, h);
-        }
+        public static UiVec BookCentre(int index) =>
+            new UiVec(DX(SlotsLeft + BookFileX(index)), DY(BookRowTop + SlotSize * 0.5f));
 
-        // A point given as (left, top) in the HANDOVER's stage, converted into
-        // dossier coordinates on the stage this build actually draws.
-        //
-        // THE ONE PLACE THE SCALE IS APPLIED. Every slot and leader below is
-        // still written in the handover's numbers against its 560x658 stage, so
-        // growing the stage is two constants rather than thirty-two edits --
-        // and the slots keep their relationship to each other and to the
-        // figure, which is the whole of what the handover's "never reflow" rule
-        // was protecting.
-        //
-        // Widths and heights scale too. A slot whose BOX grew but whose OFFSET
-        // did not would drift further out of place the further down the figure
-        // it sat.
-        public static UiVec FromStage(float left, float top, float w, float h)
+        public static UiVec BookCaptionCentre(int index) =>
+            new UiVec(DX(SlotsLeft + BookFileX(index)),
+                DY(BookRowTop + SlotSize + SlotCaptionGap + SlotCaptionHeight * 0.5f));
+
+        // What stands in the book row for a character who cannot carry books.
+        public const float NoBooksHeight = 60f;
+        public static UiVec NoBooksCentre =>
+            new UiVec(DX(SlotsLeft + SlotsWidth * 0.5f), DY(BookRowTop + NoBooksHeight * 0.5f));
+
+        // ---- the pack, beside the slots ----------------------------------------------
+
+        public const float FilterHeight = 44f;
+        // Five chips across the pack; "Weapons" at 20 is the widest caption.
+        public const float FilterWidth = 78f;
+        public const float FilterGap = 4f;
+
+        public static float FilterCentreX(int index) =>
+            DX(PackLeft + FilterWidth * 0.5f + index * (FilterWidth + FilterGap));
+
+        public static float FilterCentreY => DY(FilterHeight * 0.5f);
+
+        public const float PackGridTop = 58f;
+        public const float PackCell = 112f;
+        public const float PackCellGap = 14f;
+        public const int PackColumns = 3;
+        public const int PackRows = 4;
+        public const int PackVisibleCells = PackColumns * PackRows;
+        public const float PackIconSize = 64f;
+
+        public const float PackGridWidth = PackColumns * PackCell + (PackColumns - 1) * PackCellGap;   // 364
+        public const float PackGridHeight = PackRows * PackCell + (PackRows - 1) * PackCellGap;        // 490
+
+        public static UiVec PackCellCentre(int visibleIndex)
         {
+            int column = visibleIndex % PackColumns;
+            int row = visibleIndex / PackColumns;
             return new UiVec(
-                ColumnBCentreX - StageWidth * 0.5f + left * StageScale + w * 0.5f,
-                StageCentreY + StageHeight * 0.5f - top * StageScale - h * 0.5f);
+                DX(PackLeft + PackCell * 0.5f + column * (PackCell + PackCellGap)),
+                DY(PackGridTop + PackCell * 0.5f + row * (PackCell + PackCellGap)));
         }
 
-        // Where each slot sits, straight from the handover's table.
-        // TWO ALIGNED FILES. The x is the file's, the y is the body's.
-        //
-        // Authoring an x per slot, hugging the box to the figure's outline,
-        // would drift out of step the moment the box's width changes -- a
-        // wider box would sit ON the arms. The vertical positions are still
-        // anatomy -- a slot has to sit level with the part it names, which
-        // is what the leader points at -- but the horizontal never was, and
-        // pinning each file to one x is what lets the box grow.
-        // Close enough to the figure that the leader reads as a tie rather
-        // than as a long walk, and far enough that a 86-wide box clears the
-        // silhouette's arms.
-        // Centred on the figure, for the two slots whose body part is.
-        public const float CentreFileX = 237f;
+        public static UiVec PackGridCentre =>
+            new UiVec(DX(PackLeft + PackGridWidth * 0.5f), DY(PackGridTop + PackGridHeight * 0.5f));
 
-        public const float FileLeftX = 56f;
-        public const float FileRightX = 424f;
+        // The scrollbar, right of the grid: a track and a thumb the controller
+        // sizes and moves.
+        public const float ScrollbarWidth = 8f;
+        public const float ScrollbarGap = 10f;
+        public static float ScrollbarCentreX => DX(PackLeft + PackGridWidth + ScrollbarGap + ScrollbarWidth * 0.5f);
+        public const float ScrollThumbMinHeight = 32f;
 
-        // A LEADER'S TOP IS ITS SLOT'S TOP PLUS THIS, always. An independent
-        // literal in LeaderAt's own switch would let a slot move in SlotAt
-        // without LeaderAt following, leaving a leader pointing at the
-        // wrong position. SlotGeometry below is the one table both methods
-        // read a slot's top and file from, so there is nothing to drift out
-        // of step.
-        private const float LeaderVerticalOffset = 37f;
-
-        // top + file for every slot except Head, which both SlotAt and
-        // LeaderAt special-case on their own (see each method's own comment
-        // on why Head has no leader and needs no file). One switch, read by
-        // both methods, so a slot cannot be moved by editing one copy of its
-        // top and leaving the other stale.
-        private static void SlotGeometry(EquipmentSlot slot, out float top, out bool left)
+        // The thumb's length says how much of the pack is on screen.
+        public static float ScrollThumbHeight(int rows)
         {
-            left = true;
-
-            switch (slot)
-            {
-                case EquipmentSlot.Necklace: top = 150f; break;
-                case EquipmentSlot.Torso: top = 248f; break;
-                case EquipmentSlot.Gloves: top = 350f; break;
-                case EquipmentSlot.Legs: top = 452f; break;
-                case EquipmentSlot.Weapon1: top = 248f; left = false; break;
-                case EquipmentSlot.Weapon2: top = 350f; left = false; break;
-                default: top = 452f; left = false; break;  // Shoes
-            }
+            if (rows <= PackRows) return PackGridHeight;
+            float height = PackGridHeight * PackRows / rows;
+            return height < ScrollThumbMinHeight ? ScrollThumbMinHeight : height;
         }
 
-        // The raw top SlotAt hands to OnBodyFromStage for `slot`, in the
-        // handover's stage coordinates -- before StageScale or OnBody bend it
-        // onto the drawn figure. Head has no such top of its own (it is
-        // pinned to the centre line at authored y 0, see SlotAt's own
-        // comment); returning 0f for it keeps this total rather than partial,
-        // which is what lets DossierLayoutTests assert LeaderTop's offset
-        // for every OTHER slot without a special case of its own.
-        //
-        // Exposed (rather than folded back into SlotAt) so a test can compare
-        // it against LeaderTop without inverting OnBodyFromStage's transform
-        // -- the two box heights involved (a slot icon vs. a 1px hairline)
-        // make the transform's OUTPUT differ by more than just this offset,
-        // so the offset can only be checked before the transform runs.
-        public static float SlotTop(EquipmentSlot slot)
-        {
-            if (slot == EquipmentSlot.Head) return 0f;
-            SlotGeometry(slot, out float top, out _);
-            return top;
-        }
+        public const float CarriedTop = 560f;
+        public const float CarriedHeight = 26f;
+        public static UiVec CarriedCentre =>
+            new UiVec(DX(PackLeft + PackGridWidth * 0.5f), DY(CarriedTop + CarriedHeight * 0.5f));
 
-        // As SlotTop, but LeaderAt's own top -- always exactly SlotTop plus
-        // LeaderVerticalOffset, which is the fact this whole refactor exists
-        // to guarantee. DossierLayoutTests.LeaderTopTracksItsSlotTopByOffset
-        // pins the 37 as a literal against this.
-        public static float LeaderTop(EquipmentSlot slot) => SlotTop(slot) + LeaderVerticalOffset;
+        public const float PackEmptyWidth = 320f;
+        public const float PackEmptyHeight = 80f;
 
-        public static UiVec SlotAt(EquipmentSlot slot)
-        {
-            // HEAD IS ON THE CENTRE LINE, directly above the figure's
-            // head, and needs no leader: being right above the thing it
-            // belongs to says it better than a hairline can. In the left
-            // file it was the slot that looked most stranded, since the
-            // head sits centre-top and the leader had to run most of the
-            // way across the figure to reach it.
-            //
-            // SHOES DOES NOT GET THE SAME TREATMENT, and it was tried:
-            // centred below the feet it landed on the figure's shins,
-            // because the legs reach within a few units of the stage floor
-            // and there is no room under them. It sits at the foot of the
-            // right file instead, level with LEGS on the left, which at
-            // least makes the two files balance.
-            if (slot == EquipmentSlot.Head) return OnBodyFromStage(CentreFileX, 0f, SlotSize, SlotSize);
+        // ---- compare, beside the pack --------------------------------------------------
 
-            SlotGeometry(slot, out float top, out bool left);
-            return OnBodyFromStage(left ? FileLeftX : FileRightX, top, SlotSize, SlotSize);
-        }
+        public static float CompareCentreX => DX(CompareLeft + CompareWidth * 0.5f);
 
-        // The hairline that ties a slot back to the body: left, top, width in
-        // stage coordinates, 1px tall.
-        //
-        // ITS WIDTH SCALES TOO. A leader spans the gap between the slot column
-        // and the figure, and that gap is in stage coordinates -- so a leader
-        // left at the handover's own length on a stage 18% wider stops short of
-        // the body it is supposed to tie the slot to, which reads as eight
-        // hairlines pointing at nothing.
-        //
-        // One table and one scale point: SlotGeometry sets the handover's
-        // top/file numbers -- the same table SlotAt reads -- and everything
-        // after is common, so a slot cannot be scaled or moved by editing one
-        // copy and missing the other.
-        public static UiVec LeaderAt(EquipmentSlot slot, out float width)
-        {
-            // NO LEADER for the centred slot. Width 0 is the signal, and
-            // BuildSlot skips the hairline rather than emitting a zero-wide
-            // graphic -- which UiAudit's A6 would refuse anyway, correctly.
-            if (slot == EquipmentSlot.Head)
-            {
-                width = 0f;
-                return UiVec.Zero;
-            }
+        public const float CompareNameHeight = 64f;
+        public static float CompareNameCentreY => DY(CompareNameHeight * 0.5f);
+        public const float CompareKindHeight = 26f;
+        public static float CompareKindCentreY => DY(70f + CompareKindHeight * 0.5f);
+        public const float CompareDescriptionHeight = 196f;
+        public static float CompareDescriptionCentreY => DY(104f + CompareDescriptionHeight * 0.5f);
 
-            // ONLY THE BODY END IS AUTHORED here. Where a leader stops is
-            // anatomy -- it reaches into the figure at the part its slot
-            // names, which is why these numbers are not round. Where it
-            // STARTS is wherever the box happens to be, so it is derived from
-            // the file rather than authored beside it, and where its TOP sits
-            // is LeaderTop -- the slot's own SlotGeometry top plus
-            // LeaderVerticalOffset, not a second independent literal.
-            float bodyEnd;
+        public const float CompareRowsTop = 312f;
+        public const float CompareRowHeight = 32f;
+        public const float CompareStatNameWidth = 140f;
+        public const float CompareStatValueWidth = CompareWidth - CompareStatNameWidth;
 
-            switch (slot)
-            {
-                case EquipmentSlot.Necklace: bodyEnd = 262f; break;
-                case EquipmentSlot.Torso: bodyEnd = 238f; break;
-                case EquipmentSlot.Gloves: bodyEnd = 212f; break;
-                case EquipmentSlot.Legs: bodyEnd = 242f; break;
-                case EquipmentSlot.Weapon1: bodyEnd = 348f; break;
-                case EquipmentSlot.Weapon2: bodyEnd = 348f; break;
-                default: bodyEnd = 330f; break;  // Shoes
-            }
+        public static float CompareRowCentreY(int index) =>
+            DY(CompareRowsTop + CompareRowHeight * 0.5f + index * CompareRowHeight);
 
-            SlotGeometry(slot, out _, out bool left);
-            float top = LeaderTop(slot);
+        public static float CompareStatNameCentreX => DX(CompareLeft + CompareStatNameWidth * 0.5f);
+        public static float CompareStatValueCentreX =>
+            DX(CompareLeft + CompareStatNameWidth + CompareStatValueWidth * 0.5f);
 
-            float boxEdge = left ? FileLeftX + 86f : FileRightX;
-            float from = left ? boxEdge : bodyEnd;
-            width = (left ? bodyEnd - boxEdge : boxEdge - bodyEnd) * StageScale;
+        // ---- ATTRIBUTES (spec 3.2; phase 5d redesigns it) ------------------------------
 
-            return OnBodyFromStage(from, top, width, 1f);
-        }
+        public const float AttributesHeaderHeight = 30f;
+        public static float AttributesHeaderCentreY => DY(AttributesHeaderHeight * 0.5f);
 
-        // ---- column C: the numbers ----------------------------------------------
+        public const float AttributeRowsTop = 44f;
+        public const float AttributeRowWidth = 700f;
+        public const float AttributeRowHeight = 84f;
+        public static float AttributeRowCentreX => DX(AttributeRowWidth * 0.5f);
 
-        public const float ContentCWidth = ColumnCWidth - ColumnCPadX * 2f;       // 400
+        public static float AttributeRowCentreY(int index) =>
+            DY(AttributeRowsTop + AttributeRowHeight * 0.5f + index * AttributeRowHeight);
 
-        // The "+" that spends a stat point, in the cell's top-right corner.
-        //
-        // A CHILD of the cell rather than a sibling over it: siblings that
-        // overlap need an AllowOverlap exemption and would take clicks along a
-        // shared edge, whereas a child is contained by construction and uGUI
-        // routes the click to it because it is deeper.
-        public const float AttributePlusSize = 22f;
-        public const float AttributePlusInset = 13f;
+        // Inside a row, from its centre.
+        public const float StepperSize = 44f;
+        public const float StepperGap = 8f;
+        public const float StepperY = AttributeRowHeight * 0.5f - 4f - StepperSize * 0.5f;
+        public const float PlusX = AttributeRowWidth * 0.5f - StepperSize * 0.5f;
+        public const float MinusX = PlusX - StepperSize - StepperGap;
+        public const float AttributeNameWidth = 110f;
+        public const float AttributeValueWidth = 70f;
+        public const float AttributeInvestedWidth = 200f;
+        public const float AttributeTopLineHeight = 34f;
+        public const float AttributeTopLineY = AttributeRowHeight * 0.5f - 4f - AttributeTopLineHeight * 0.5f;
+        public const float AttributeEffectWidth = 600f;
+        public const float AttributeEffectHeight = 44f;
+        public const float AttributeEffectY = -AttributeRowHeight * 0.5f + 2f + AttributeEffectHeight * 0.5f;
 
-        public const float AttributeCellHeight = 86f;
-        public const float AttributeRows = 2f;
-        public const float AttributeColumns = 3f;
-        public const float AttributeCellWidth = ContentCWidth / AttributeColumns;
+        public const float DerivedLeft = 726f;
+        public const float DerivedWidth = DetailWidth - DerivedLeft;   // 470
+        public const float DerivedRowHeight = 44f;
+        public const float DerivedNameWidth = 280f;
+        public const float DerivedValueWidth = DerivedWidth - DerivedNameWidth;
 
-        // Properties, not consts: kept that way because PadY is still a
-        // design choice rather than a literal worth inlining here.
-        public static float ColumnCTop => HalfHeight - PadY;
-        public const float SectionLabelHeight = 24f;
-        public static float AttributeBlockTop => ColumnCTop - SectionLabelHeight - 12f;
+        public static float DerivedRowCentreY(int index) =>
+            DY(AttributeRowsTop + DerivedRowHeight * 0.5f + index * DerivedRowHeight);
 
-        public static float AttributeCellCentreX(int column) =>
-            ColumnCCentreX - ContentCWidth * 0.5f + AttributeCellWidth * (column + 0.5f);
+        public static float DerivedCentreX => DX(DerivedLeft + DerivedWidth * 0.5f);
+        public static float DerivedNameCentreX => DX(DerivedLeft + DerivedNameWidth * 0.5f);
+        public static float DerivedValueCentreX => DX(DerivedLeft + DerivedNameWidth + DerivedValueWidth * 0.5f);
 
-        public static float AttributeCellCentreY(int row) =>
-            AttributeBlockTop - AttributeCellHeight * (row + 0.5f);
+        // ---- SKILLS (spec 3.3; phase 5c redesigns it) ------------------------------------
 
-        // The stat list starts under the attribute block, with the handover's
-        // 18px gap and its own rule.
-        public static float StatListTop =>
-            AttributeBlockTop - AttributeCellHeight * AttributeRows - 22f;
+        public const int SkillsVisible = 8;
+        public const float SkillRowHeight = 76f;
+        public const float SkillWidth = 900f;
+        public const float SkillNameHeight = 30f;
+        public const float SkillDescriptionHeight = 44f;
+        public static float SkillCentreX => DX(SkillWidth * 0.5f);
 
-        // Taller, because the list is what closes column C: at a shorter
-        // row height, eight derived stats would end well above the floor
-        // and the column would read as half-drawn
-        // (SystemMenuPaneTests.EveryPaneUsesMostOfItsHeight). 56 closes the
-        // column at eight rows, with MaxStatRows still leaving one row of
-        // headroom to grow into.
-        public const float StatRowHeight = 56f;
+        public static float SkillNameCentreY(int index) =>
+            DY(index * SkillRowHeight + SkillNameHeight * 0.5f);
 
-        public static float StatRowCentreY(int index) =>
-            StatListTop - StatRowHeight * (index + 0.5f);
-
-        // How many rows fit before the list runs out of column, so a stat added
-        // to SheetStats.Derived cannot silently fall off the bottom.
-        public static int MaxStatRows()
-        {
-            float usable = StatListTop - (-HalfHeight + PadY);
-            return (int)(usable / StatRowHeight);
-        }
-
-        public static bool StatListFits(int count) => count <= MaxStatRows();
-
-        // ---- the attributes panel (modal, covers the whole dossier) -------------
-        //
-        // Sized well inside Width/Height (1600x804) rather than filling the
-        // pane edge to edge, so Ui.Modal's own dimmer reads as "the dossier,
-        // interrupted" instead of a second opaque screen -- the same reason
-        // TalentScreen's respec dialog and every other Ui.Modal content node
-        // in this project sits centred at less than the full canvas.
-        public const float AttributesCardWidth = 1240f;
-        public const float AttributesCardHeight = 700f;
-        public const float AttributesContentWidth = AttributesCardWidth - 96f;   // 48px margin a side
-
-        public const float AttributesHeaderHeight = 40f;
-        public const float AttributesSubHeaderHeight = 26f;
-        public const float AttributesRowHeight = 88f;
-        public const float AttributesRowGap = 10f;
-
-        // The steppers sit at the row's own right edge, mouse-only siblings
-        // of the row's Left/Right/Submit handling -- same "child buttons
-        // beside the thing they adjust" shape the compact grid's own plus/
-        // minus already use, just two DOSSIER STEP buttons side by side
-        // instead of stacked in a cell's corner (this row is 1000+px wide,
-        // not an 86px cell).
-        public const float AttributesStepSize = 32f;
-        public const float AttributesStepGap = 10f;
-
-        public static float AttributesTop => AttributesCardHeight * 0.5f - 30f;
-        public static float AttributesSubHeaderY => AttributesTop - AttributesHeaderHeight;
-        public static float AttributesRowsTop =>
-            AttributesSubHeaderY - AttributesSubHeaderHeight - 16f;
-
-        public static float AttributesRowCentreY(int row) =>
-            AttributesRowsTop - AttributesRowHeight * (row + 0.5f) - AttributesRowGap * row;
-
-        // The two steppers' local X, right-aligned within the row.
-        public static float AttributesStepPlusX =>
-            AttributesContentWidth * 0.5f - AttributesStepSize * 0.5f;
-
-        public static float AttributesStepMinusX =>
-            AttributesStepPlusX - AttributesStepSize - AttributesStepGap;
-
-        // What is left for the row's own text (name/value line, then the
-        // effect line beneath it) once the steppers' own column, plus a
-        // 24px gap ahead of it, is spoken for.
-        private const float AttributesStepGutter = 24f;
-
-        public static float AttributesTextRight =>
-            AttributesStepMinusX - AttributesStepSize * 0.5f - AttributesStepGutter;
-
-        public static float AttributesTextWidth =>
-            AttributesTextRight - (-AttributesContentWidth * 0.5f);
-
-        // The text box is NOT centred on the row (cx=0) the way Skills'
-        // name/description labels are -- it has to make room for the
-        // steppers at the row's right edge, so its own centre sits left of
-        // zero by half of what the stepper column and its gutter took.
-        public static float AttributesTextCentreX =>
-            (-AttributesContentWidth * 0.5f + AttributesTextRight) * 0.5f;
-
-        // ---- the hover tooltip ---------------------------------------------------
-
-        // Built at this size (ItemComparisonPanel's shared shape); at runtime
-        // only its height changes, down to what its text measures.
-        public const float TooltipWidth = 420f;
-        public const float TooltipMaxHeight = 420f;
-        public const float TooltipTitleHeight = 30f;
-
-        // Clear air between the tooltip and the dossier's own frame.
-        public const float TooltipMargin = 8f;
-
-        // WHAT A TOOLTIP MAY NEVER COVER, in the dossier's own space. The
-        // mannequin, every
-        // equipment slot, and the pack's Carried row: the loadout is what a
-        // hovered item is being weighed against, so a box over it hides the
-        // evidence it was opened to answer. Handed to TooltipPlacement.Beside
-        // as keep-out rects; the pack's other cells and the stats column are
-        // deliberately NOT here -- something has to give way, and the box
-        // itself carries the VS.-EQUIPPED deltas the stats column would show.
-        public static UiRect[] TooltipKeepOut()
-        {
-            var rects = new System.Collections.Generic.List<UiRect>();
-
-            var mannequin = FromStage(MannequinLeft, MannequinTop, MannequinWidth, MannequinHeight);
-            rects.Add(new UiRect(mannequin, new UiVec(MannequinWidth, MannequinHeight)));
-
-            foreach (var slot in EquipmentSlots.All)
-            {
-                rects.Add(new UiRect(SlotAt(slot), new UiVec(SlotSize, SlotSize)));
-            }
-
-            // The Carried label and its count share one footer row across the
-            // pack's content width (CharacterDossierScreen.BuildPack).
-            rects.Add(new UiRect(new UiVec(ColumnACentreX, PackFooterY), new UiVec(ContentAWidth, 20f)));
-
-            return rects.ToArray();
-        }
+        public static float SkillDescriptionCentreY(int index) =>
+            DY(index * SkillRowHeight + SkillNameHeight + SkillDescriptionHeight * 0.5f);
     }
 }

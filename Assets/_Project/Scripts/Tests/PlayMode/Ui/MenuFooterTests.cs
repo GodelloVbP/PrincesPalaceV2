@@ -268,38 +268,46 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the prompts follow the focus and the pending state --------------------------
 
-        // A worn slot offers Unequip, an empty one has no A, a pack cell offers
-        // Equip and B steps back out of the pack rather than closing.
+        // Spec section 8, LOADOUT: a worn slot offers Unequip, an empty one
+        // Choose from pack, a pack cell Equip -- and while a slot is armed the
+        // pack cell's B steps back out of it rather than closing.
         [UnityTest]
-        public IEnumerator TheDossierSaysWhatAWornSlotAnEmptySlotAndAPackCellDo()
+        public IEnumerator TheLoadoutSaysWhatAWornSlotAnEmptySlotAndAPackCellDo()
         {
             var save = SaveSlotManager.CurrentSave;
             var character = save.ActiveSquad().First(c => c != null);
             var wearables = ContentDatabase.Equippables;
             var worn = wearables.First();
-            var spare = wearables.First(item => item.id != worn.id);
+            var spare = wearables.First(item => item.equipSlot != worn.equipSlot);
 
             InventoryOps.Add(save.stockpiledItems, worn.id);
             Assert.IsTrue(EquipmentOps.Equip(MenuContext.Camp, save, character, worn.id, worn.equipSlot, worn.IsEquippable),
                 "fixture: the first wearable could not be put on");
+            save.stockpiledItems.Clear();
             InventoryOps.Add(save.stockpiledItems, spare.id);
-
-            var empty = EquipmentSlots.All.First(s => string.IsNullOrEmpty(character.equipment.Get(s)));
+            Assert.IsTrue(string.IsNullOrEmpty(character.equipment.Get(spare.equipSlot)), "fixture: the spare's slot is taken");
 
             yield return OpenTheMenu("Hub");
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
-            dossier.Refresh();
+            dossier.SelectCharacter(character.definitionId);
 
             yield return Focus(Need(SlotName(worn.equipSlot)));
             Assert.AreEqual("A Unequip | B Close", Prompts(), "a worn slot");
 
-            yield return Focus(Need(SlotName(empty)));
-            Assert.AreEqual("B Close", Prompts(), "an empty slot has nothing for A to do yet");
+            yield return Focus(Need(SlotName(spare.equipSlot)));
+            Assert.AreEqual("A Choose from pack | B Close", Prompts(), "an empty slot");
 
-            dossier.ShowPack(true);
-            yield return DriveFrame();
             yield return Focus(Need("DossierPackCell0"));
-            Assert.AreEqual("A Equip | B Back", Prompts(), "a pack cell, with the pack open");
+            Assert.AreEqual("A Equip | B Close", Prompts(), "a pack cell, nothing pending");
+
+            // A on the empty slot arms it: focus goes into the pack, and B
+            // there steps back out of the armed slot.
+            yield return Focus(Need(SlotName(spare.equipSlot)));
+            Input.SubmitDown = true;
+            yield return DriveFrame();
+            yield return DriveFrame();
+            Assert.IsTrue(dossier.HasPending, "fixture: the slot did not arm");
+            Assert.AreEqual("A Equip | B Back", Prompts(), "a pack cell while a slot is armed");
         }
 
         // The same table the controls consult: in a fight the mutating prompt
@@ -316,7 +324,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return OpenTheMenu("Fight");
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
-            dossier.Refresh();
+            dossier.SelectCharacter(character.definitionId);
 
             yield return Focus(Need(SlotName(worn.equipSlot)));
             Assert.AreEqual("A Unequip (locked) | B Close", Prompts());
@@ -360,21 +368,33 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("A Pick up (locked) | B Close", Prompts());
         }
 
-        // The reward track is hosted over the dossier and answers for its own
-        // controls, so B says Back there.
+        // The reward track answers for its own controls; it is a section, not
+        // a level, so B says Close there.
         [UnityTest]
-        public IEnumerator TheRewardTrackStepsBackRatherThanClosing()
+        public IEnumerator TheRewardTrackSaysCloseForB()
         {
             yield return OpenTheMenu("Hub");
-            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
-            dossier.Refresh();
 
-            Need("DossierTrackRow").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            Need("DossierSection3").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
             yield return DriveFrame();
             yield return DriveFrame();
 
-            var prompts = Prompts();
-            StringAssert.Contains("B Back", prompts, "the row said the wrong thing for B over the reward track");
+            var dot = _menu.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: false)
+                .First(b => b.name.StartsWith("TrackDot"));
+            yield return Focus(dot.gameObject);
+
+            StringAssert.Contains("B Close", Prompts(), "the row said the wrong thing for B on the reward track");
+        }
+
+        // The rail: selection follows focus, so there is no A, and the row
+        // names the character pager.
+        [UnityTest]
+        public IEnumerator TheRailOffersNoSelectButNamesTheCharacterPager()
+        {
+            yield return OpenTheMenu("Hub");
+            yield return Focus(Need("DossierSection0"));
+
+            Assert.AreEqual("B Close | LT/RT Tab | LB/RB Character", Prompts());
         }
 
         private static string SlotName(EquipmentSlot slot) => "DossierSlot" + EquipmentSlots.DisplayName(slot).Replace(" ", "");

@@ -51,7 +51,8 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // The frame -- lintel, bar, footer -- of the system menu, and the panes
-        // migrated so far: RUN and GLOSSARY. The other panes are their phases' to add. Then
+        // migrated so far: CHARACTER (the reward track with it), RUN and
+        // GLOSSARY. The other panes are their phases' to add. Then
         // the rows outside the menu that share its presenter: the Reckoning's
         // relic tab and the relic draft's held strip.
         //
@@ -60,8 +61,8 @@ namespace PrincesPalace.Domain.Tests
         // prompt slots of two labels each, so 20 is what it cannot fall under.
         private static readonly Scope[] Scoped =
         {
-            new Scope("system menu frame, RUN and GLOSSARY panes", () => SystemMenuScreen.Build().Root, 100, null,
-                "SystemPaneCharacter", "SystemPaneParty", "SystemPaneOptions", "SystemPaneExit"),
+            new Scope("system menu frame, CHARACTER, RUN and GLOSSARY panes", () => SystemMenuScreen.Build().Root, 400, null,
+                "SystemPaneParty", "SystemPaneOptions", "SystemPaneExit"),
             new Scope("reckoning relics tab", () => ReckoningScreen.Build().Root, 15, "ReckoningRelic"),
             new Scope("relic draft held strip", () => RelicDraftScreen.Build().Root, 9, "DraftHeld"),
         };

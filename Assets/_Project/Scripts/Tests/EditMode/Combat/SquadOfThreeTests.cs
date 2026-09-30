@@ -129,11 +129,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void DossierPaging_CyclesThroughAllThreeSquadMembersAndBackToTheFirst()
         {
-            // The dossier's own Step() (Core/CharacterDossierController.cs)
-            // is `(_index + by + squad.Count) % squad.Count` over
-            // SaveData.ActiveSquad() -- already fully general over squad
-            // size, so this test is pinning that arithmetic directly rather
-            // than standing up the MonoBehaviour (which needs a scene).
+            // The CHARACTER strip steps with CharacterStrip.Step, which is
+            // `(index + by + count) % count` -- already fully general over
+            // squad size, so this test is pinning that arithmetic directly
+            // rather than standing up the MonoBehaviour (which needs a scene).
             //
             // SYNTHETIC IDS. These were the three real character ids, which
             // made a modulo test into a pin on characters.json that this

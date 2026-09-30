@@ -726,9 +726,9 @@ namespace PrincesPalace
         // ---- depth of field --------------------------------------------------------
 
         // Nodes fall from full strength to .32 once they are 300px off the
-        // window's centre, over the next 620. The rail is 1600 wide and holds
-        // about eight and a half nodes; without this, all eight compete equally
-        // and the screen reads as a wall of captions.
+        // window's centre, over the next 620. The rail is 1196 wide and holds
+        // about seven nodes; without this, all seven compete equally and the
+        // screen reads as a wall of captions.
         private void PaintDepthOfField()
         {
             if (dots == null || content == null) return;

@@ -1095,18 +1095,11 @@ public static class ScreenRegistry
             var trackController = WireRewardTrack(result, menu.RewardTrack);
             trackController.menu = controller;
 
-            // The dossier's door into it, and the typed handle ShowTrack()
-            // calls ShowFor on. Bound here rather than in WireDossier because
-            // both are the one thing the dossier needs that lives on another
-            // screen -- WireDossier's own signature does not carry the
-            // RewardTrack screen to reach for. Both wiring calls above
-            // already return their controller, so this is a straight field
-            // assignment rather than a GetComponent re-find.
-            if (dossierController != null)
-            {
-                dossierController.trackPanel = result.Go(menu.RewardTrack.Root);
-                dossierController.trackScreen = trackController;
-            }
+            // The dossier shows the track as its REWARD TRACK section and
+            // tells it whose track to paint, so it holds the typed handle.
+            // A straight assignment: both wiring calls return their
+            // controller.
+            if (dossierController != null) dossierController.trackScreen = trackController;
         }
         if (menu.Options != null) WireOptions(result, menu.Options);
         if (menu.Run != null) WireRun(result, menu.Run, controller);
@@ -1374,27 +1367,6 @@ public static class ScreenRegistry
         var controller = result.Attach<CharacterDossierController>(dossier.Root);
         UiAutoBind.Bind(result, controller, dossier);
 
-        controller.packSortTabs = dossier.PackFilterTabs.Select(result.Button).ToArray();
-
-        // NO CountBindings: packSortTabs is built directly off
-        // dossier.PackFilterTabs, the very list it is meant to agree with,
-        // so a count check here would only compare that list with itself --
-        // same reasoning as attributeRowSteps immediately below, and as
-        // WireOptions' own rows line. Stated explicitly now rather than
-        // left as a bare KnownOffenders allowlist entry with no comment on
-        // the site itself to say why.
-
-        // AttributeRow (Core/CharacterDossierController.cs), attached HERE at
-        // build time -- the exact seam WireOptions above uses for OptionRow.
-        // Not one of UiAutoBind's five bindable types, so it is filled
-        // explicitly rather than skipped silently.
-        controller.attributeRowSteps = dossier.AttributeRowSteps.Select(result.Attach<AttributeRow>).ToArray();
-
-        // NO CountBindings, same reason WireOptions' own rows line states:
-        // attributeRowSteps is built directly off dossier.AttributeRowSteps,
-        // the very list it is meant to agree with, so a count check here
-        // would only compare that list with itself.
-
         // No portrait array, and its absence is the point: baking every
         // character with a portraitPath here as an IconEntry would make the
         // scene a photograph of the roster, so a character authored after
@@ -1403,8 +1375,8 @@ public static class ScreenRegistry
         // by id at the moment the dossier draws.
         // Items plus book-only skills, in one table -- the same Items+Relics
         // concat-then-select shape WireGlossary already uses. A skill's
-        // iconPath carries the glyph baked into the book art, so the spell
-        // slots read off the same table rather than a second one.
+        // iconPath carries the glyph baked into the book art, so the book
+        // slots and the pack's books read off the same table as the gear.
         var withArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
             .Select(i => (i.id, i.iconPath))

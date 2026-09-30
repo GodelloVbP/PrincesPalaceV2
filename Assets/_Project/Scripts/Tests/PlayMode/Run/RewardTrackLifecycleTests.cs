@@ -91,7 +91,7 @@ namespace PrincesPalace.PlayModeTests
             // NOTHING PAID. Level 10 is already collected and level 38 has
             // not been reached, so neither press has anything to claim and a
             // glide that also claimed would be visible here.
-            Assert.AreEqual(30, SquadFixture.FirstLiveMember().claimedTrackLevel,
+            Assert.AreEqual(30, DossierPane.Shown().claimedTrackLevel,
                 "gliding to a node paid something out");
         }
 
@@ -137,14 +137,14 @@ namespace PrincesPalace.PlayModeTests
 
             // AND IT IS STILL WIRED EXACTLY ONCE. Wire() is guarded by _wired,
             // so a node press after the cycle claims once, not twice.
-            SquadFixture.FirstLiveMember().claimedTrackLevel = 0;
+            DossierPane.Shown().claimedTrackLevel = 0;
             Refresh();
             yield return null;
 
             Press("TrackDot20");
             yield return null;
 
-            Assert.AreEqual(20, SquadFixture.FirstLiveMember().claimedTrackLevel,
+            Assert.AreEqual(20, DossierPane.Shown().claimedTrackLevel,
                 "pressing a node after a close/open cycle did not collect exactly up to that node");
         }
 
@@ -162,7 +162,7 @@ namespace PrincesPalace.PlayModeTests
             Press("TrackCollectButton");
             yield return null;
 
-            var member = SquadFixture.FirstLiveMember();
+            var member = DossierPane.Shown();
             int claimed = member.claimedTrackLevel;
             int points = member.unspentStatPoints;
             Assert.AreEqual(30, claimed, "fixture: the collect did not pay");
@@ -198,7 +198,7 @@ namespace PrincesPalace.PlayModeTests
             Press("TrackCollectButton");
             yield return null;
 
-            var member = SquadFixture.FirstLiveMember();
+            var member = DossierPane.Shown();
             string characterId = member.definitionId;
             int claimed = member.claimedTrackLevel;
             int points = member.unspentStatPoints;
@@ -227,9 +227,8 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- fixture ----------------------------------------------------------------------
 
-        // The same path SystemMenuCaptureTests takes, because it is the only
-        // one there is: the panel is an inactive child of the dossier, inside a
-        // pane of the system menu, inside the hub.
+        // The same path a player takes: the track is the dossier's REWARD
+        // TRACK section, inside a pane of the system menu, inside the hub.
         private static IEnumerator OpenTheTrack(int level, int claimed)
         {
             yield return SceneManager.LoadSceneAsync(Navigation.Hub, LoadSceneMode.Single);
@@ -251,8 +250,8 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var row = menu.GetComponentsInChildren<Button>(true)
-                .FirstOrDefault(b => b.name == "DossierTrackRow");
-            Assert.IsNotNull(row, "the dossier has no reward-track row");
+                .FirstOrDefault(b => b.name == "DossierSection3");
+            Assert.IsNotNull(row, "the dossier's rail has no REWARD TRACK row");
             row.onClick.Invoke();
 
             // TWICE. Start() runs one frame after SetActive(true), not

@@ -11,36 +11,13 @@ namespace PrincesPalace.Domain.UiKit
     // The shop needs to show a selected gear card's stats, its affix lines
     // and the delta against whatever the picked party character has
     // equipped -- one body string ItemDescription.ComparisonBody already
-    // renders in full. This is deliberately a shared Domain/UiKit builder
-    // rather than a one-off inside ShopScreen: CharacterDossierScreen's own
-    // tooltip is built onto this SAME shape too (BuildTooltip calls
-    // ItemComparisonPanel.Build with the "DossierTooltip" name prefix --
-    // see BuildTooltip's own header in CharacterDossierScreen.cs). Two
-    // callers today, ShopScreen's ShopDetailPanel and
-    // CharacterDossierScreen's DossierTooltip, both through this one
-    // builder, so a third, screen-local copy of "fill + rim + title + body"
-    // would be the exact duplication this builder exists to close.
-    //
-    // ROUGHLY SQUARE AND READABLE: ~420x420 and
-    // a body font of 15 or larger. Both are CALLER-supplied rather than
-    // baked in here: a size and a type scale are content, not shape, and
-    // the dossier's own eventual migration needs its own numbers without
-    // this file changing under it (docs/CODE_STANDARDS.md "Build the model", "no
-    // configurability without a demonstrated purpose" -- this one already
-    // has its second, named caller).
+    // renders in full. The size and the type scale are CALLER-supplied:
+    // they are content, not shape.
     public static class ItemComparisonPanel
     {
-        // The dossier tooltip's own plate colour and hairline, carried over
-        // rather than re-picked: "the reference shape the dossier tooltip
-        // will later be matched to" means match its palette too, not just
-        // its silhouette.
-        //
-        // FULLY OPAQUE. It was #1D1226F2 (95%), and the 5% that got through
-        // was enough: over the dossier's pack the bright gear art and the
-        // cell names showed faintly under the tooltip's text.
-        // This panel is a READING surface that stands over art by design --
-        // the dossier places it over neighbouring pack cells, the shop over
-        // its offer strip -- so nothing may show through it at all.
+        // FULLY OPAQUE: a reading surface that stands over art by design (the
+        // shop places it beside its offer strip), so nothing may show through
+        // it at all.
         public const string PlateHex = "#1D1226FF";
         public static readonly string RimHex = FightHudPalette.Hairline;
 
@@ -50,8 +27,8 @@ namespace PrincesPalace.Domain.UiKit
         // How tall the panel has to be to hold a title of `titleHeight` and
         // a body that measures `bodyHeight` -- the inverse of Build's own
         // carve-up, so a caller that sizes the panel to its text at runtime
-        // (the dossier's hover tooltip) cannot disagree with the builder
-        // about where the pads and the gap go.
+        // cannot disagree with the builder about where the pads and the gap
+        // go.
         public static float HeightFor(float titleHeight, float bodyHeight) =>
             Pad + titleHeight + TitleToBodyGap + bodyHeight + Pad;
 
@@ -124,8 +101,7 @@ namespace PrincesPalace.Domain.UiKit
 
             // Body: everything under the title down to the bottom pad, so it
             // grows and shrinks with the panel. Its declared Size is still the
-            // built-size box (the solver ignores it for an edge-anchored node,
-            // DossierTooltipTextFitTests reads it as the worst-case capacity).
+            // built-size box: the solver ignores it for an edge-anchored node.
             float bodyInsetTop = Pad + titleHeight + TitleToBodyGap;
             float bodyHeight = size.Y - bodyInsetTop - Pad;
             var body = Ui.Label(name + "Body", UiString.Runtime,

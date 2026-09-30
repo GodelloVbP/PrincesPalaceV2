@@ -214,19 +214,17 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("Fight", SceneManager.GetActiveScene().name, "one Submit should not have navigated away yet");
         }
 
-        // ---- (c) focus over pointer on the Dossier's pack --------------------
+        // ---- (c) focus over pointer on the LOADOUT pack ----------------------
         //
-        // docs/GAMEPAD_NAVIGATION_PLAN.md section 7's own Tooltips contract:
-        // "Pointer enters another node while a selected node's tooltip is up
-        // -> nothing: focus wins." Selection is set directly the same way
-        // DossierTooltipCaptureTests' own capture pass already does ("the
-        // selection, not a pointer: this is the path with no cursor to
-        // anchor to") -- a pad having reached this cell is
-        // DossierGamepadNavigationTests' own proven claim, not this test's;
-        // what is new here is a REAL mouse hover, through the module's own
-        // raycast, arriving on top of that selection.
+        // docs/GAMEPAD_NAVIGATION_PLAN.md section 7's own contract, now for
+        // the compare column: "Pointer enters another node while a selected
+        // node is described -> nothing: focus wins." Selection is set
+        // directly -- a pad having reached this cell is
+        // DossierGamepadNavigationTests' own claim; what is new here is a REAL
+        // mouse hover, through the module's own raycast, arriving on top of
+        // that selection.
         [UnityTest]
-        public IEnumerator SelectedPackItem_KeepsItsTooltip_WhileTheMouseHoversAnotherItem_AndOnceItLeaves()
+        public IEnumerator SelectedPackItem_KeepsTheCompareColumn_WhileTheMouseHoversAnotherItem_AndOnceItLeaves()
         {
             SaveSlotManager.EnterSlot(0);
 
@@ -235,11 +233,8 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             TakeOverInput();
             // A fresh scene's own layout can still be mid-settle the frame it
-            // activates -- this suite found that gap under the full parallel
-            // gate (never under a single-class or single-area slice), so every
-            // mouse click aimed at a screen coordinate waits real time here
-            // first, not just the two engine frames TakeOverInput's own callers
-            // already pay.
+            // activates, so every mouse move aimed at a screen coordinate waits
+            // real time here first.
             yield return new WaitForSecondsRealtime(0.5f);
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub has no SystemMenuController");
@@ -250,8 +245,7 @@ namespace PrincesPalace.PlayModeTests
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
             Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
 
-            // Two items, so cells 0 and 1 both hold something -- the same
-            // shape DossierGamepadNavigationTests' own OpenThePack uses.
+            // Two items, so cells 0 and 1 both hold something.
             var pair = ContentDatabase.Equippables
                 .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
                 .OrderBy(i => i.tier)
@@ -264,7 +258,7 @@ namespace PrincesPalace.PlayModeTests
             foreach (var item in pair) InventoryOps.Add(save.stockpiledItems, item.id);
             SaveSlotManager.SaveCurrent();
 
-            dossier.ShowPack(true);
+            dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
             dossier.Refresh();
             yield return null;
 
@@ -273,37 +267,26 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(cell0, "the pack drew no DossierPackCell0");
             Assert.IsNotNull(cell1, "the pack drew no DossierPackCell1");
 
-            // THE PAD'S OWN HALF: select cell0 (the entry a Move walk already
-            // reaches, DossierGamepadNavigationTests' own claim).
             EventSystem.current.SetSelectedGameObject(cell0);
-            yield return new WaitForSecondsRealtime(0.6f); // real seconds -- the tooltip settles on unscaled time
+            yield return null;
 
-            var tooltip = Node("DossierTooltip");
-            Assert.IsNotNull(tooltip, "the dossier drew no tooltip");
-            Assert.IsTrue(tooltip.activeSelf, "selecting a pack cell should have opened the tooltip");
+            string nameForSelected = CompareName();
+            Assert.AreNotEqual(UiStrings.CompareStats.Format(), nameForSelected,
+                "selecting a pack cell should have put it in the compare column");
 
-            string titleForSelected = Node("DossierTooltipTitle")?.GetComponent<TMPro.TMP_Text>()?.text;
-            string bodyForSelected = Node("DossierTooltipBody")?.GetComponent<TMPro.TMP_Text>()?.text;
-            Assert.IsNotEmpty(titleForSelected, "the tooltip should describe the selected item");
-
-            // THE MOUSE'S OWN HALF: hover a DIFFERENT cell -- focus must win,
-            // so the box stays exactly what it was.
+            // THE MOUSE'S OWN HALF: hover a DIFFERENT cell -- focus must win.
             yield return MoveMouseTo(cell1);
-
-            Assert.AreEqual(titleForSelected, Node("DossierTooltipTitle")?.GetComponent<TMPro.TMP_Text>()?.text,
-                "the pointer entering another node while a selection is live must change nothing -- the " +
-                "selected node's own tooltip stays up");
-            Assert.AreEqual(bodyForSelected, Node("DossierTooltipBody")?.GetComponent<TMPro.TMP_Text>()?.text);
+            Assert.AreEqual(nameForSelected, CompareName(),
+                "the pointer entering another node while a selection is live must change nothing");
 
             // The mouse leaves entirely -- still nothing changes, since the
             // selection was never the pointer's to give up.
             yield return MoveMouseToWorldPoint(new Vector3(5f, 5f, 0f));
-
-            Assert.AreEqual(titleForSelected, Node("DossierTooltipTitle")?.GetComponent<TMPro.TMP_Text>()?.text,
-                "moving the mouse off the pack entirely must still describe the SELECTED item -- there is no " +
-                "pointer claim left to fall back to, and none should be needed");
-            Assert.AreEqual(bodyForSelected, Node("DossierTooltipBody")?.GetComponent<TMPro.TMP_Text>()?.text);
+            Assert.AreEqual(nameForSelected, CompareName(),
+                "moving the mouse off the pack must still describe the SELECTED item");
         }
+
+        private static string CompareName() => Node("DossierCompareName")?.GetComponent<TMPro.TMP_Text>()?.text;
 
         // ---- (d) pad pickup, then a mouse drag begins on a seat -------------------
         //

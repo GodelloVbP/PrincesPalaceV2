@@ -98,7 +98,7 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
 ```
 
 - **Strip chips:** 240 × 64 each, 16 apart. Each chip holds a 48 px
-  portrait, the name (Body 20), the seat (TacticalData 20, muted) and a
+  portrait, the name (Body 20), the seat (Body 20, muted) and a
   pip (12 px gold dot, top right). The selected chip gets a gold rim, the
   others a hairline. Benched chips sit after a 32 px divider at 60 %
   alpha. More chips than fit: the strip pages, and LB/RB steps through
@@ -112,21 +112,23 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
 | Column | x (detail frame) | width | content |
 |---|---|---|---|
 | Slots | 0 | 440 | the mannequin with 8 gear slots, then the book row |
-| Pack | 464 | 388 | filters, a 3-column grid, and the count |
-| Compare | 876 | 320 | the focused entry, and deltas |
+| Pack | 464 | 408 | filters, a 3-column grid, and the count |
+| Compare | 896 | 300 | the focused entry, and deltas |
 
 - **Slots:** cells are 88 × 88, captions below at Body 20, row pitch 116.
-  The gear layout keeps today's arrangement: Head top centre; Necklace,
-  Torso, Gloves, Legs on the left; Weapon 1, Weapon 2, Shoes on the right;
-  silhouette 200 wide between. The book row sits under it: the heading
-  "SPELL BOOKS" (FunctionalHeading 24), then `MaxSpellSlots` cells of
+  The gear hangs in four rows (`DossierLayout.GearCell`): Head top centre
+  with Necklace beside it on the left; Torso, Gloves, Legs down the left;
+  Weapon 1, Weapon 2, Shoes down the right, level with them. The armour
+  stand sits between at its own aspect (about 169 × 362). The book row
+  sits under it: the heading "SPELL BOOKS" (FunctionalHeading 24, 34
+  tall), then `MaxSpellSlots` cells of
   88 × 88 with captions. A character who can't hold books gets one Body
   20 line in place of the book row.
 - **Pack:**
-  - Filter row: 5 chips (All, Armour, Weapons, Salves, Books), 44 tall,
-    Body 20.
+  - Filter row: 5 chips (All, Armour, Weapons, Salves, Books), 78 × 44,
+    4 apart, Body 20.
   - Grid: 3 × 4 cells of 112 × 112, each with a 64 px icon, a rarity
-    tick, a count badge (TacticalData 20) and a tier ring. No names in the
+    tick, a count badge (Body 20) and a tier ring. No names in the
     cell; the compare column names the focused entry.
   - The grid scrolls vertically (the scrollbar exists today).
   - Footer: "Carried {n}" (Body 20).
@@ -137,7 +139,7 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
   - kind · tier (Body 20)
   - description (Body 20, wraps)
   - for gear: a delta list, one row per affected stat,
-    `Health  280 → 338  (+58)` (TacticalData 22, gains green, losses red)
+    `Health  280 → 338  (+58)` (Body 20, gains green, losses red)
   - for a book: the skill it teaches (cost, target, effect)
   - nothing focused: the character's derived stats
 
@@ -169,12 +171,17 @@ The pane is 1600 × 756. Insets are 40 horizontally, giving 1520 wide.
 
 ### 3.4 REWARD TRACK (C19)
 
-The existing `RewardTrackScreen` is re-laid into 1196 × 660. The summary
-row and focus card stay on top. The rail node pitch drops from 190 to 170,
-showing 7 nodes. The ribbon ("THE WHOLE ASCENT") spans 1196. Every caption
-goes to the floor: captions Body 20; the ribbon labels and level numbers
-TacticalData 20. `RewardTrackLayout` takes the width as an input instead of
-the pane constant.
+The existing `RewardTrackScreen` is re-laid into 1196 × 660, with no
+close button or frame of its own (B closes the menu). Top to bottom: the
+summary row, the focus card (180 tall), the rail band, the ribbon ("THE
+WHOLE ASCENT", inset 24 each side, so 1148 wide). The rail node pitch
+drops from 190 to 170, showing 7 nodes. Every caption goes to the floor:
+captions, ribbon numbers and level numbers Body 20; caps labels
+FunctionalHeading 24 in 34-tall boxes. `RewardTrackLayout` reads the
+width from `DossierLayout.DetailWidth` instead of the pane constant.
+
+TacticalData is not used on this tab: its colour is the violet accent,
+which reads as a state on numbers that are plain values.
 
 ## 4. RUN (C23)
 
@@ -271,7 +278,6 @@ Prompt sets by state (pad glyph / keyboard key):
 | PARTY `Carry` | A Place · B Put back |
 | Any refused control (C3) | the prompt stays; pressing shows the notice |
 | Fight context | the mode pill reads "IN A FIGHT — VIEW ONLY" and every mutating prompt label gets a lock suffix, e.g. "A Equip (locked)". The suffix is computed from `MenuPermissions`, so it follows the table in every context: a book at camp or a refund in a descent is "(locked)" too |
-| LOADOUT, empty slot (today's dossier) | no A prompt: choosing from the pack for a slot arrives with `SlotArmed` (Phase 5b) |
 
 Keyboard names: Enter (A), Esc (B and close), Q/E (LB/RB), mouse click
 for tabs, and the C/I/P/R/G hotkeys shown as a hint in each tab's tooltip.

@@ -184,17 +184,15 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var row = menu.GetComponentsInChildren<UnityEngine.UI.Button>(true)
-                .FirstOrDefault(b => b.name == "DossierTrackRow");
-            Assert.IsNotNull(row, "the dossier has no reward-track row");
+                .FirstOrDefault(b => b.name == "DossierSection3");
+            Assert.IsNotNull(row, "the dossier's rail has no REWARD TRACK row");
             row.onClick.Invoke();
 
             // LONG ENOUGH FOR THE FLY-IN TO LAND, which 0.5s was not.
             //
-            // The panel opens at the rail's left edge and travels to the
-            // player's own node over 380ms of delay plus 2100 of easing. Half a
-            // second in, the shipped capture was a picture of levels 11 to 19
-            // with the window box parked over them -- structurally correct,
-            // about a screen nobody will ever be looking at.
+            // The section opens at the rail's left edge and travels to the
+            // player's own node over 380ms of delay plus 2100 of easing; half a
+            // second in, the capture is of a screen nobody will look at.
             yield return new WaitForSecondsRealtime(3f);
         }
 
@@ -213,6 +211,16 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
+        // THE CHARACTER TAB: the frame with LOADOUT showing, then LOADOUT with
+        // gear worn, a pack holding gear and a book and a pack item in the
+        // compare column, then the same with an empty slot ARMED (plan C5),
+        // then the equip itself -- and ATTRIBUTES and SKILLS.
+        //
+        // The fixture is this test's own: the character on screen, a worn item
+        // and a different pack item for the same slot, so the equip at the end
+        // is a real change and the capture after it cannot be a picture of a
+        // click that was ignored. Equipping writes the save, so the file is
+        // put back as it was, and the run this starts for the book is ended.
         [UnityTest]
         public IEnumerator CaptureTheSkeletonOnEachTab()
         {
@@ -228,116 +236,106 @@ namespace PrincesPalace.PlayModeTests
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub has no SystemMenuController - the menu was never embedded");
 
-            menu.Open();
-            menu.Select(0);   // Character, which is the pane the dossier lives in
+            menu.Open(SystemMenuTab.Character);
             yield return new WaitForSecondsRealtime(0.5f);
+            yield return Capture("SystemMenu_skeleton.png");
 
-            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
-                .FirstOrDefault(c => c.isRootCanvas);
-            Assert.IsNotNull(canvas);
-
-            Directory.CreateDirectory(OutputDir);
-            string path = Path.Combine(OutputDir, "SystemMenu_skeleton.png");
-            CanvasCapture.RenderToFile(canvas, path);
-            Assert.IsTrue(File.Exists(path));
-            Debug.Log($"[SystemMenuCapture] wrote {path}");
-
-            // And the pack open, over column A, which is the other half of the
-            // Character pane and the state the Inventory tab lands on.
-            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
-            dossier.ShowPack(true);
-            yield return new WaitForSecondsRealtime(0.3f);
-
-            string packPath = Path.Combine(OutputDir, "SystemMenu_pack.png");
-            CanvasCapture.RenderToFile(canvas, packPath);
-            Assert.IsTrue(File.Exists(packPath));
-            Debug.Log($"[SystemMenuCapture] wrote {packPath}");
-
-            // Hovering a pack item, which is the state that has to be LOOKED at
-            // rather than asserted: the tooltip and the would-be stat values
-            // appear together, and whether they collide or read as one thing is
-            // not something a count of active objects can answer.
-            //
-            // Driven through ExecuteEvents rather than by calling the handler,
-            // so the HoverIndex component attached at runtime is exercised too
-            // -- a hover that works only when invoked directly is not a hover.
-            // Found by the name the screen emits rather than through the
-            // controller's fields, which are internal to the runtime assembly.
-            // Widening them so a screenshot could reach them would be the tail
-            // wagging the dog; the emitted name is already a stable contract,
-            // because UiAudit fails the build on a duplicate one.
-            var firstCell = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude)
-                .FirstOrDefault(b => b.name == "DossierPackCell0");
-            Assert.IsNotNull(firstCell, "the pack drew no cell named DossierPackCell0");
-
-            ExecuteEvents.Execute(firstCell.gameObject, new PointerEventData(EventSystem.current),
-                                  ExecuteEvents.pointerEnterHandler);
-            yield return new WaitForSecondsRealtime(0.3f);
-
-            string hoverPath = Path.Combine(OutputDir, "SystemMenu_pack_hover.png");
-            CanvasCapture.RenderToFile(canvas, hoverPath);
-            Assert.IsTrue(File.Exists(hoverPath));
-            Debug.Log($"[SystemMenuCapture] wrote {hoverPath}");
-
-            // And the equip itself. Clicking the cell is the whole gesture, so
-            // the shot after it is the proof that the item moved onto the
-            // mannequin and out of the pack rather than merely being previewed.
-            //
-            // Equipping WRITES THE SAVE, which makes this the one capture that
-            // can change what the next run sees. It already did: two runs in a
-            // row produced different weapons in hand and a stat going up in one
-            // shot and down in the next, which reads as a bug in the preview
-            // rather than as drift in the fixture. So the file is put back
-            // exactly as it was, and the manager's cache dropped with it.
             string backup = BackupSave();
-
-            var whoever = SaveSlotManager.CurrentSave?.ActiveSquad()?.FirstOrDefault(c => c != null);
-            var wornBefore = whoever?.equipment == null ? null
-                : EquipmentSlots.All.Select(sl => whoever.equipment.Get(sl)).ToArray();
-
-            firstCell.onClick.Invoke();
-            yield return new WaitForSecondsRealtime(0.4f);
-
-            // A capture of an unchanged screen is indistinguishable from a
-            // capture of a click that was ignored, so the shot is not allowed to
-            // stand on its own.
-            if (wornBefore != null)
+            try
             {
-                var wornAfter = EquipmentSlots.All.Select(sl => whoever.equipment.Get(sl)).ToArray();
-                Debug.Log("[SystemMenuCapture] equip changed: " + string.Join(", ",
-                    EquipmentSlots.All.Select((sl, i) => new { sl, i })
-                        .Where(x => wornBefore[x.i] != wornAfter[x.i])
-                        .Select(x => $"{x.sl}: '{wornBefore[x.i]}' -> '{wornAfter[x.i]}'")));
+                var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
 
-                Assert.IsFalse(wornBefore.SequenceEqual(wornAfter),
-                    "the pack click changed nothing on the character: " +
-                    string.Join(", ", EquipmentSlots.All.Select((sl, i) => $"{sl}='{wornBefore[i]}'")));
+                var save = SaveSlotManager.CurrentSave;
+                var character = save.roster.First(c => c.definitionId == dossier.CharacterId);
+
+                // Two items for one slot, both with art: one worn, one packed.
+                var art = ContentDatabase.Equippables.Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath)).ToList();
+                var slotWithTwo = art.GroupBy(i => i.equipSlot).First(g => g.Count() >= 2);
+                var worn = slotWithTwo.OrderBy(i => i.tier).First();
+                var better = slotWithTwo.OrderByDescending(i => i.tier).First(i => i.id != worn.id);
+                var other = art.First(i => i.equipSlot != worn.equipSlot);
+
+                foreach (var slot in EquipmentSlots.All) EquipMove.TryUnequip(character.equipment, save.stockpiledItems, slot);
+                save.stockpiledItems.Clear();
+                InventoryOps.Add(save.stockpiledItems, worn.id);
+                Assert.IsTrue(EquipmentOps.Equip(MenuContext.Camp, save, character, worn.id, worn.equipSlot, worn.IsEquippable),
+                    "fixture: the worn item could not be put on");
+                InventoryOps.Add(save.stockpiledItems, better.id);
+                InventoryOps.Add(save.stockpiledItems, other.id);
+
+                // A run, so the pack holds a book beside the gear.
+                RunManager.StartRun(4242UL);
+                var book = ContentDatabase.Skills.FirstOrDefault(sk => sk != null && !string.IsNullOrWhiteSpace(sk.iconPath))
+                           ?? ContentDatabase.Skills.First(sk => sk != null);
+                RunManager.Run.unassignedSpellBooks.Add(book.id);
+
+                dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+                dossier.Refresh();
+                yield return null;
+
+                // The better item in the compare column: its deltas are the
+                // thing the owner reads this capture for.
+                var betterCell = Cell(PackCellOf(dossier, e => e.Kind == PackEntryKind.Gear && e.Item.Id == better.id));
+                EventSystem.current.SetSelectedGameObject(betterCell.gameObject);
+                yield return new WaitForSecondsRealtime(0.3f);
+                yield return Capture("SystemMenu_character_loadout.png");
+
+                // An empty slot armed: focus in the pack, filtered to it.
+                var emptySlot = other.equipSlot;
+                Assert.IsTrue(string.IsNullOrEmpty(character.equipment.Get(emptySlot)), "fixture: the slot to arm is not empty");
+                Cell(SlotName(emptySlot)).onClick.Invoke();
+                yield return new WaitForSecondsRealtime(0.3f);
+                Assert.IsTrue(dossier.HasPending, "the empty slot did not arm");
+                yield return Capture("SystemMenu_character_armed.png");
+
+                dossier.CancelPending();
+                yield return null;
+
+                // And the equip itself, which must change what is worn.
+                string before = character.equipment.Get(worn.equipSlot);
+                Cell(PackCellOf(dossier, e => e.Kind == PackEntryKind.Gear && e.Item.Id == better.id)).onClick.Invoke();
+                yield return new WaitForSecondsRealtime(0.4f);
+
+                Assert.AreNotEqual(before, character.equipment.Get(worn.equipSlot),
+                    "the pack click changed nothing on the character");
+                Assert.AreEqual(better.id, character.equipment.Get(worn.equipSlot));
+                yield return Capture("SystemMenu_pack_equipped.png");
+
+                dossier.ShowSection(CharacterSection.Attributes, focusRow: true);
+                yield return new WaitForSecondsRealtime(0.3f);
+                yield return Capture("SystemMenu_character_attributes.png");
+
+                dossier.ShowSection(CharacterSection.Skills, focusRow: true);
+                yield return new WaitForSecondsRealtime(0.3f);
+                yield return Capture("SystemMenu_character_skills.png");
             }
-
-            string equipPath = Path.Combine(OutputDir, "SystemMenu_pack_equipped.png");
-            CanvasCapture.RenderToFile(canvas, equipPath);
-            Assert.IsTrue(File.Exists(equipPath));
-            Debug.Log($"[SystemMenuCapture] wrote {equipPath}");
-
-            // NO try/finally: an assertion thrown between BackupSave() and here
-            // would skip this restore and leave the real save mutated. Known
-            // and accepted for this capture (equip is a single step with a
-            // narrow failure window); CaptureTheParty below does the same
-            // backup/restore across a longer sequence of commits and DOES wrap
-            // it, because that window is wide enough to matter.
-            RestoreSave(backup);
+            finally
+            {
+                RunManager.ResetForTests();
+                RestoreSave(backup);
+            }
         }
 
-        // The Options pane, on its own rather
-        // than tacked onto the end of CaptureTheSkeletonOnEachTab the way an
-        // earlier pass here had it. That test's own equip-and-verify step
-        // ("the pack click changed nothing on the character") is a
-        // pre-existing failure under real graphics, unrelated to battle
-        // speed and unrelated to Options -- entangling this capture with it
-        // meant a bug in equipment gear pack clicking could silently block
-        // the one piece of evidence this plan's G4 needs. Standalone, it
-        // does not.
+        private static string SlotName(EquipmentSlot slot) => "DossierSlot" + EquipmentSlots.DisplayName(slot).Replace(" ", "");
+
+        private static string PackCellOf(CharacterDossierController dossier, System.Func<PackEntry, bool> which)
+        {
+            int index = dossier.VisiblePack.ToList().FindIndex(e => which(e));
+            Assert.GreaterOrEqual(index, 0, "the pack shows no such entry");
+            return "DossierPackCell" + (index - dossier.ScrollRow * DossierLayout.PackColumns);
+        }
+
+        private static Button Cell(string name)
+        {
+            var button = Object.FindObjectsByType<Button>(FindObjectsInactive.Include).FirstOrDefault(b => b.name == name);
+            Assert.IsNotNull(button, $"the pane drew no control named {name}");
+            return button;
+        }
+
+        // The Options pane, on its own: one capture per failure, so a
+        // regression elsewhere never blocks the one piece of evidence this
+        // pane's plan needs.
         [UnityTest]
         public IEnumerator CaptureTheOptionsPane()
         {

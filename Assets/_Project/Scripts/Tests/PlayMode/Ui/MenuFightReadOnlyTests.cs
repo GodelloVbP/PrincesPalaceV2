@@ -221,6 +221,36 @@ namespace PrincesPalace.PlayModeTests
 
         private static string SlotName(EquipmentSlot slot) => "DossierSlot" + EquipmentSlots.DisplayName(slot).Replace(" ", "");
 
+        // A gear slot the fixture leaves empty: any slot the worn item is not in.
+        private string EmptySlotName() => SlotName(EquipmentSlots.All.First(slot => slot != _worn.equipSlot));
+
+        // The pack cell showing the first entry that matches, by where the
+        // LOADOUT pack actually drew it (the pack is a window over a list).
+        private static string PackCellOf(CharacterDossierController dossier, System.Func<PackEntry, bool> which)
+        {
+            int index = dossier.VisiblePack.ToList().FindIndex(e => which(e));
+            Assert.GreaterOrEqual(index, 0, "the pack shows no such entry");
+            return "DossierPackCell" + (index - dossier.ScrollRow * DossierLayout.PackColumns);
+        }
+
+        private static string PackBookCell(CharacterDossierController dossier, string bookId) =>
+            PackCellOf(dossier, e => e.Kind == PackEntryKind.Book && e.BookId == bookId);
+
+        private string PackedGearCell(CharacterDossierController dossier) =>
+            PackCellOf(dossier, e => e.Kind == PackEntryKind.Gear && e.Item.Id == _packed.id);
+
+        // The Holder's dossier, on LOADOUT: the strip opens on the rear seat,
+        // and the fixture seats the Holder in front.
+        private static CharacterDossierController HoldersDossier()
+        {
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
+            Assert.IsTrue(dossier.SelectCharacter(Holder), "fixture: the Holder is not on the strip");
+            dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+            dossier.Refresh();
+            return dossier;
+        }
+
         // ---- the fight refuses everything, both ways ----------------------------
 
         [UnityTest]
@@ -235,44 +265,40 @@ namespace PrincesPalace.PlayModeTests
             menu.Select(SystemMenuTab.Character);
             yield return null;
 
-            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            var dossier = HoldersDossier();
             Assert.AreEqual(MenuContext.Fight, dossier.Context, "fixture: this is not the fight's dossier");
-            dossier.Refresh();
             yield return null;
 
             string before = Photo();
             byte[] bytesBefore = SaveBytes();
             string partyBefore = Party(fight);
 
-            // Gear: put the pack item on, take the worn one off.
-            dossier.ShowPack(true);
-            yield return null;
-            Press(menu, "DossierPackCell0");
+            // Gear: put the pack item on, take the worn one off, arm an empty
+            // slot and press the pack under it.
+            Press(menu, PackedGearCell(dossier));
             Press(menu, SlotName(_worn.equipSlot));
+            Press(menu, EmptySlotName());
+            Assert.IsFalse(dossier.HasPending, "a refused slot armed itself in a fight");
+            Press(menu, PackedGearCell(dossier));
 
-            // Attributes: the compact grid's and the panel's plus and minus, on
-            // every cell (which cell holds the invested score is per character).
+            // Attributes: plus and minus on every row (which row holds the
+            // invested score is per character).
             for (int i = 0; i < 6; i++)
             {
                 Press(menu, $"DossierAttrPlus{i}");
                 Press(menu, $"DossierAttrMinus{i}");
-                Press(menu, $"DossierAttrRowPlus{i}");
-                Press(menu, $"DossierAttrRowMinus{i}");
             }
 
-            // Books: select each spare in turn and press the empty slot (learn)
-            // and the placed one (replace). Selecting a book is viewing.
-            dossier.ShowSpells(true);
-            yield return null;
-            for (int row = 0; row < 2; row++)
-            {
-                Press(menu, $"DossierUnassigned{row}");
-                Press(menu, "DossierSpellSlot1");
-                Press(menu, "DossierSpellSlot0");
-            }
+            // Books: each spare from the pack, the placed one off its slot, and
+            // the empty slot armed.
+            Press(menu, PackBookCell(dossier, SpareBook));
+            Press(menu, PackBookCell(dossier, SecondSpareBook));
+            Press(menu, "DossierBook0");
+            Press(menu, "DossierBook1");
+            Assert.IsFalse(dossier.HasPending, "a refused book slot armed itself in a fight");
 
-            // Rewards: open the track and press the node that collects.
-            Press(menu, "DossierTrackRow");
+            // Rewards: show the track and press the node that collects.
+            Press(menu, "DossierSection3");
             yield return null;
             Press(menu, $"TrackDot{Level}");
             Press(menu, "TrackCollectButton");
@@ -399,35 +425,31 @@ namespace PrincesPalace.PlayModeTests
             menu.Select(SystemMenuTab.Character);
             yield return null;
 
-            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
-            dossier.Refresh();
+            var dossier = HoldersDossier();
             yield return null;
 
             const MenuContext fight = MenuContext.Fight;
 
-            dossier.ShowPack(true);
-            yield return null;
             AssertRefusalIsSaid(menu, MenuAction.EquipGear, fight, "equipping from the pack",
-                () => Press(menu, "DossierPackCell0"));
+                () => Press(menu, PackedGearCell(dossier)));
             AssertRefusalIsSaid(menu, MenuAction.UnequipGear, fight, "taking a worn item off",
                 () => Press(menu, SlotName(_worn.equipSlot)));
+            AssertRefusalIsSaid(menu, MenuAction.EquipGear, fight, "choosing from the pack for an empty slot",
+                () => Press(menu, EmptySlotName()));
 
             AssertRefusalIsSaid(menu, MenuAction.SpendAttribute, fight, "spending a point",
                 () => Press(menu, "DossierAttrPlus0"));
-            AssertRefusalIsSaid(menu, MenuAction.SpendAttribute, fight, "spending a point on the attributes panel",
-                () => Press(menu, "DossierAttrRowPlus0"));
             AssertRefusalIsSaid(menu, MenuAction.RefundAttribute, fight, "refunding a point",
                 () => Press(menu, "DossierAttrMinus0"));
 
-            dossier.ShowSpells(true);
-            yield return null;
-            Press(menu, "DossierUnassigned0");
-            AssertRefusalIsSaid(menu, MenuAction.PlaceBook, fight, "placing a book in an empty slot",
-                () => Press(menu, "DossierSpellSlot1"));
-            AssertRefusalIsSaid(menu, MenuAction.ReplaceBook, fight, "replacing a placed book",
-                () => Press(menu, "DossierSpellSlot0"));
+            AssertRefusalIsSaid(menu, MenuAction.PlaceBook, fight, "placing a book from the pack",
+                () => Press(menu, PackBookCell(dossier, SpareBook)));
+            AssertRefusalIsSaid(menu, MenuAction.RemoveBook, fight, "taking a placed book off",
+                () => Press(menu, "DossierBook0"));
+            AssertRefusalIsSaid(menu, MenuAction.PlaceBook, fight, "choosing a book for an empty slot",
+                () => Press(menu, "DossierBook1"));
 
-            Press(menu, "DossierTrackRow");
+            Press(menu, "DossierSection3");
             yield return null;
             AssertRefusalIsSaid(menu, MenuAction.CollectReward, fight, "collecting on a node",
                 () => Press(menu, $"TrackDot{Level}"));
@@ -476,8 +498,7 @@ namespace PrincesPalace.PlayModeTests
             menu.Select(SystemMenuTab.Character);
             yield return null;
 
-            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
-            dossier.Refresh();
+            HoldersDossier();
             yield return null;
 
             AssertRefusalIsSaid(menu, MenuAction.RefundAttribute, MenuContext.Descent, "refunding in a descent",
@@ -506,14 +527,11 @@ namespace PrincesPalace.PlayModeTests
             menu.Select(SystemMenuTab.Character);
             yield return null;
 
-            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
-            dossier.Refresh();
-            dossier.ShowSpells(true);
+            var dossier = HoldersDossier();
             yield return null;
 
-            Press(menu, "DossierUnassigned0");
             AssertRefusalIsSaid(menu, MenuAction.PlaceBook, MenuContext.Camp, "placing a book at camp",
-                () => Press(menu, "DossierSpellSlot1"));
+                () => Press(menu, PackBookCell(dossier, SpareBook)));
             Assert.AreEqual("Spell books are placed during a descent", NoticeLine(menu).text);
         }
 
@@ -536,16 +554,13 @@ namespace PrincesPalace.PlayModeTests
             menu.Select(SystemMenuTab.Character);
             yield return null;
 
-            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            var dossier = HoldersDossier();
             Assert.AreEqual(MenuContext.Descent, dossier.Context, "fixture: this is not the map's dossier");
-            dossier.Refresh();
             yield return null;
 
             // Gear.
             string worn = shawn.equipment.Get(_packed.equipSlot);
-            dossier.ShowPack(true);
-            yield return null;
-            Press(menu, "DossierPackCell0");
+            Press(menu, PackedGearCell(dossier));
             Assert.AreNotEqual(worn, shawn.equipment.Get(_packed.equipSlot), "a descent did not equip from the pack");
 
             // Attributes: a point goes in, a refund is still refused.
@@ -557,22 +572,19 @@ namespace PrincesPalace.PlayModeTests
             Press(menu, "DossierAttrPlus0");
             Assert.AreEqual(unspent - 1, shawn.unspentStatPoints, "a descent did not spend a point");
 
-            // Books: learn into the empty slot, then replace the placed one.
-            dossier.ShowSpells(true);
-            yield return null;
+            // Books: a spare from the pack goes to the lowest free slot, and the
+            // placed one comes off its slot back into the pack.
             var run = RunManager.Run;
-            Press(menu, "DossierUnassigned0");
-            Press(menu, "DossierSpellSlot1");
+            Press(menu, PackBookCell(dossier, SpareBook));
             Assert.IsTrue(run.learnedSpells.Any(e => e.characterId == Holder && e.slot == 1 && e.skillId == SpareBook),
-                "a descent did not learn the book into the empty slot");
-            Press(menu, "DossierUnassigned0");
-            Press(menu, "DossierSpellSlot0");
-            Assert.IsTrue(run.learnedSpells.Any(e => e.characterId == Holder && e.slot == 0 && e.skillId == SecondSpareBook),
-                "a descent did not replace the placed book");
-            CollectionAssert.Contains(run.unassignedSpellBooks, PlacedBook, "the replaced book did not return to the pool");
+                "a descent did not learn the book into the lowest free slot");
+            Press(menu, "DossierBook0");
+            Assert.IsFalse(run.learnedSpells.Any(e => e.characterId == Holder && e.slot == 0),
+                "a descent did not take the placed book off its slot");
+            CollectionAssert.Contains(run.unassignedSpellBooks, PlacedBook, "the removed book did not return to the pool");
 
             // Rewards.
-            Press(menu, "DossierTrackRow");
+            Press(menu, "DossierSection3");
             yield return null;
             Press(menu, $"TrackDot{Level}");
             Assert.AreEqual(Level, shawn.claimedTrackLevel, "a descent did not collect the waiting rewards");

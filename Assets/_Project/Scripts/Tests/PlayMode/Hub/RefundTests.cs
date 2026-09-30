@@ -5,9 +5,7 @@ using PrincesPalace.Domain.Stats;
 namespace PrincesPalace.PlayModeTests
 {
     // Character.Refund, the dossier minus's model-side half. See
-    // CharacterDossierScreenTests.TheMinusSitsOppositeThePlusInsideItsCell for
-    // the button's geometry and DossierRefundTests for which copies of the
-    // screen show it.
+    // DossierAttributesTests for which copies of the screen refund.
     //
     // PlayMode, not EditMode: Character is save-shaped mutable state in Core
     // (Data/Character.cs), and docs/CODE_STANDARDS.md "Layering" draws the EditMode line at

@@ -66,7 +66,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- scrolling ------------------------------------------------------------
 
-        private const float Window = 1520f;
+        // The frame's own width: the viewport spans the detail area.
+        private const float Window = 1196f;
 
         [Test]
         public void ScrollingCentresTheLevelAskedFor()
@@ -138,37 +139,60 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the bands ------------------------------------------------------------
 
+        // The frame is the CHARACTER tab's detail area, 1196 x 660 (spec 3.4),
+        // and each band is written as a y down from its top edge.
         [Test]
-        public void TheBandsSitWhereTheHandoffPutsThem()
+        public void TheFrameIsTheDetailArea()
         {
-            // Panel 1600x804, y measured down from the PANE's own content
-            // top -- not the raw panel top-left. Each of these four
-            // moves by exactly the same delta (-44.22, ContentTop's drop
-            // from 402 to 357.78, SystemMenuLayout.PaneContentHalfHeight's
-            // own declared inset): the yFromTop constants themselves (43,
-            // 193, 396) are untouched, only the reference they are read
-            // against shifted. RibbonCentreY moves further, because
-            // RibbonTopFromTop/BottomFromTop were ALSO pulled up 60px on top
-            // of that -- see their own comment for why the ribbon needed
-            // more than the uniform shift to clear the pane's tighter
-            // bottom inset.
-            Assert.AreEqual(314.78f, RewardTrackLayout.SummaryCentreY, 0.001f, "summary band, was 359");
-            Assert.AreEqual(164.78f, RewardTrackLayout.CardCentreY, 0.001f, "focus card, was 209");
-            Assert.AreEqual(-38.22f, RewardTrackLayout.BandCentreY, 0.001f, "rail band, was 6");
-            Assert.AreEqual(-307.22f, RewardTrackLayout.RibbonCentreY, 0.001f, "ascent ribbon, was -323");
+            Assert.AreEqual(1196f, RewardTrackLayout.FrameWidth, 0.001f);
+            Assert.AreEqual(660f, RewardTrackLayout.FrameHeight, 0.001f);
+            Assert.AreEqual(330f, RewardTrackLayout.ContentTop, 0.001f);
         }
 
-        // THE ONE THE WHOLE BAND IS BUILT AROUND. The rail has to land on the
-        // panel's exact vertical centre while the band around it is 112 above
-        // and 100 below, and RailOffsetY is what reconciles those.
         [Test]
-        public void TheRailLandsOnThePanelsExactVerticalCentre()
+        public void TheBandsStackDownTheFrame()
         {
-            Assert.AreEqual(0f, RewardTrackLayout.BandCentreY + RewardTrackLayout.RailOffsetY, 0.001f);
+            // summary 0..56, card 58..238, band 244..522, ribbon 562..648.
+            Assert.AreEqual(302f, RewardTrackLayout.SummaryCentreY, 0.001f, "summary row");
+            Assert.AreEqual(182f, RewardTrackLayout.CardCentreY, 0.001f, "focus card");
+            Assert.AreEqual(-53f, RewardTrackLayout.BandCentreY, 0.001f, "rail band");
+            Assert.AreEqual(-275f, RewardTrackLayout.RibbonCentreY, 0.001f, "ascent ribbon");
+        }
 
-            // RailYFromTop tracks ContentTop (see its own comment), so
-            // RailOffsetY reduces to -BandCentreY exactly.
-            Assert.AreEqual(38.22f, RewardTrackLayout.RailOffsetY, 0.001f);
+        [Test]
+        public void TheBandsDoNotOverlapAndStayInTheFrame()
+        {
+            float cardTop = 148f - RewardTrackLayout.CardHeight * 0.5f;
+            float cardBottom = 148f + RewardTrackLayout.CardHeight * 0.5f;
+
+            Assert.GreaterOrEqual(RewardTrackLayout.SummaryYFromTop - RewardTrackLayout.CollectHeight * 0.5f, 0f,
+                "the collect plate leaves the frame's top");
+            Assert.LessOrEqual(RewardTrackLayout.SummaryYFromTop + RewardTrackLayout.CollectHeight * 0.5f, cardTop);
+            Assert.LessOrEqual(cardBottom, RewardTrackLayout.BandTopFromTop);
+            Assert.LessOrEqual(RewardTrackLayout.BandBottomFromTop,
+                RewardTrackLayout.RibbonLabelYFromTop - RewardTrackLayout.RibbonLabelHeight * 0.5f);
+            Assert.LessOrEqual(RewardTrackLayout.RibbonLabelYFromTop + RewardTrackLayout.RibbonLabelHeight * 0.5f,
+                RewardTrackLayout.RibbonTopFromTop);
+            Assert.LessOrEqual(RewardTrackLayout.RibbonBottomFromTop, RewardTrackLayout.FrameHeight);
+        }
+
+        // The rail sits 184 below the band's top and 94 above its foot, and
+        // RailOffsetY is what moves the scrolled content (measured from the
+        // rail) onto it.
+        [Test]
+        public void TheRailSitsWhereTheBandPutsIt()
+        {
+            Assert.AreEqual(-98f, RewardTrackLayout.BandCentreY + RewardTrackLayout.RailOffsetY, 0.001f);
+            Assert.AreEqual(-45f, RewardTrackLayout.RailOffsetY, 0.001f);
+            Assert.AreEqual(184f, RewardTrackLayout.RailToBandTop, 0.001f);
+        }
+
+        // Seven nodes across the frame (spec 3.4).
+        [Test]
+        public void TheWindowShowsSevenNodes()
+        {
+            Assert.AreEqual(170f, RewardTrackLayout.NodePitch, 0.001f);
+            Assert.AreEqual(7, (int)(Window / RewardTrackLayout.NodePitch));
         }
 
         // The scrolled content is measured from the RAIL at its centre, not
@@ -194,19 +218,13 @@ namespace PrincesPalace.Domain.Tests
                 RewardTrackLayout.CaptionBottomY + 0.001f,
                 "the NEXT mark has climbed above the caption again");
 
-            // And it stops above the filler disc it points at, which is
-            // eighty-seven of the ninety-nine nodes it can hang over.
-            //
-            // NOT ABOVE A MILESTONE'S, and that is the design's own geometry
-            // rather than an oversight in this test: a milestone disc reaches
-            // 22 above the rail and its plate ring 29, so on those twelve
-            // levels the tick's last few pixels cross the ring. The tick fades
-            // to nothing along its length, so what crosses is its transparent
-            // end -- and shortening it for those twelve would leave it hanging
-            // in mid-air on the other eighty-seven.
+            // And it stops above whatever node it points at: 31 above the
+            // rail, over a milestone's plate ring at 29.
             float tickBottom = RewardTrackLayout.NextMarkTopY - RewardTrackLayout.NextMarkHeight;
-            Assert.GreaterOrEqual(tickBottom, RewardTrackLayout.NodeDiameter * 0.5f - 0.001f,
-                "the NEXT mark's tick runs into the filler disc it hangs over");
+            Assert.AreEqual(31f, tickBottom, 0.001f);
+            Assert.GreaterOrEqual(tickBottom,
+                RewardTrackLayout.PlateRingDiameter(RewardTrack.MaxLevel) * 0.5f - 0.001f,
+                "the NEXT mark's tick runs into the milestone ring it hangs over");
         }
 
         [Test]
@@ -258,39 +276,21 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the summary row ----------------------------------------------------------
 
-        // The centred summary is computed from the two buttons rather than
-        // measured, so relabelling either one cannot leave it underneath. That
-        // collision really happened: a full-width label centred under CLOSE,
-        // refused by UiAudit because the button draws later and would have
-        // taken the clicks while hiding the end of the sentence.
+        // Collect at the frame's left edge, the five parts after it, and the
+        // reward's name running to the frame's right edge.
         [Test]
-        public void TheSummaryClearsBothButtonsOnItsRow()
+        public void TheSummaryRunsFromTheCollectButtonToTheFramesEdge()
         {
-            float summaryHalf = RewardTrackLayout.SummaryWidth * 0.5f;
+            Assert.AreEqual(-598f, RewardTrackLayout.CollectCentreX - RewardTrackLayout.CollectWidth * 0.5f, 0.001f);
 
-            float collectRight = RewardTrackLayout.CollectCentreX
-                                 + RewardTrackLayout.CollectWidth * 0.5f;
-            float closeLeft = RewardTrackLayout.CloseCentreX - RewardTrackLayout.CloseWidth * 0.5f;
+            float collectRight = RewardTrackLayout.CollectCentreX + RewardTrackLayout.CollectWidth * 0.5f;
+            float firstLeft = RewardTrackLayout.SummaryPartX(0) - RewardTrackLayout.LevelWordWidth * 0.5f;
+            Assert.AreEqual(20f, firstLeft - collectRight, 0.001f, "the gap after the collect button");
 
-            Assert.Less(-summaryHalf, 0f, "the summary has no width at all");
-            Assert.Greater(-summaryHalf, collectRight, "the summary sits under the collect button");
-            Assert.Less(summaryHalf, closeLeft, "the summary sits under CLOSE");
-        }
-
-        [Test]
-        public void BothButtonsKeepTheSameClearanceFromThePanelsEdge()
-        {
-            // The pane's own declared content half-width, not the raw
-            // panel's -- see CollectCentreX/
-            // CloseCentreX's own comment.
-            float half = SystemMenuLayout.PaneContentHalfWidth;
-
-            Assert.AreEqual(RewardTrackLayout.SummaryInsetX,
-                RewardTrackLayout.CollectCentreX - RewardTrackLayout.CollectWidth * 0.5f + half,
-                0.001f);
-            Assert.AreEqual(RewardTrackLayout.SummaryInsetX,
-                half - RewardTrackLayout.CloseCentreX - RewardTrackLayout.CloseWidth * 0.5f,
-                0.001f);
+            float lastRight = RewardTrackLayout.SummaryPartX(4) + RewardTrackLayout.NextRewardWidth * 0.5f;
+            Assert.AreEqual(598f, lastRight, 0.001f);
+            Assert.AreEqual(484f, RewardTrackLayout.NextRewardWidth, 0.001f,
+                "the longest reward name measures about 450 at 20");
         }
 
         // ---- the seal pip -------------------------------------------------------------
@@ -382,19 +382,21 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // LEVEL 100 IS THE CONSTRAINT, not the widest numeral, and the two are
-        // not the same question. Its dot sits at 705.6 of the ribbon's own 720,
-        // so its label has 14.4px either side -- at 40 wide it escaped by 5.6
-        // and UiAudit refused the build.
+        // THE LAST LEVEL IS THE CONSTRAINT, not the widest numeral: its label
+        // has to stay inside the ribbon. Every landmark's number does.
         [Test]
-        public void TheLastRibbonNumberFitsInsideTheRibbon()
+        public void EveryRibbonNumberFitsInsideTheRibbon()
         {
             float half = RewardTrackLayout.RibbonWidth * 0.5f;
-            float right = RewardTrackLayout.RibbonOffsetX(RewardTrack.MaxLevel)
-                          + RewardTrackLayout.RibbonNumberWidth * 0.5f;
 
-            Assert.LessOrEqual(right, half + 0.001f,
-                "the last milestone's number runs off the end of the ribbon");
+            foreach (int level in RewardTrackLayout.MilestoneLevels())
+            {
+                float x = RewardTrackLayout.RibbonNumberX(level);
+                Assert.LessOrEqual(Mathf.Abs(x) + RewardTrackLayout.RibbonNumberWidth * 0.5f, half + 0.001f,
+                    $"level {level}'s number runs off the end of the ribbon");
+            }
+
+            Assert.AreEqual(1148f, RewardTrackLayout.RibbonWidth, 0.001f);
         }
 
         [Test]
@@ -402,14 +404,14 @@ namespace PrincesPalace.Domain.Tests
         {
             float width = RewardTrackLayout.RibbonWindowWidth(Window);
 
-            // 1520 of 7,600 drawn across 1440. The content is 40 node
+            // 1196 of 6,800 drawn across 1148. The content is 40 node
             // pitches wide -- 39 levels plus half a pitch of padding at each
-            // end -- at 190 apiece, and it was 19,000 while the cap was 100.
-            Assert.AreEqual(1520f / 7600f * 1440f, width, 0.001f);
+            // end -- at 170 apiece.
+            Assert.AreEqual(1196f / 6800f * 1148f, width, 0.001f);
 
-            // Which is about eight nodes of thirty-nine. Still the clearest
+            // Which is about seven nodes of thirty-nine: the clearest
             // statement this screen makes about how little of the track the
-            // rail shows -- a fifth of it now rather than a twelfth.
+            // rail shows.
             Assert.Less(width, RewardTrackLayout.RibbonWidth * 0.25f);
         }
 
@@ -488,8 +490,8 @@ namespace PrincesPalace.Domain.Tests
         {
             float centre = -RewardTrackLayout.NodeX(21);
 
-            Assert.AreEqual(21, RewardTrackLayout.LevelAtCentre(centre - 94f));
-            Assert.AreEqual(21, RewardTrackLayout.LevelAtCentre(centre + 94f));
+            Assert.AreEqual(21, RewardTrackLayout.LevelAtCentre(centre - 84f));
+            Assert.AreEqual(21, RewardTrackLayout.LevelAtCentre(centre + 84f));
         }
 
         [Test]

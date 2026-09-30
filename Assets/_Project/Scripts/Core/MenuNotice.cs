@@ -64,9 +64,11 @@ namespace PrincesPalace
         }
 
         // The persistent line: it stays until ClearState, under any notice.
-        public void SetState(UiString text)
+        public void SetState(UiString text) => SetState(text, System.Array.Empty<object>());
+
+        public void SetState(UiString text, object[] args)
         {
-            _state = text.Format();
+            _state = text.Format(args);
             Paint();
         }
 

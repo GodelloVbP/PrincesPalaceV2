@@ -24,6 +24,25 @@ namespace PrincesPalace.Domain.UiKit
         bool ClaimCancel();
     }
 
+    // A PANE THAT CAN HOLD A PENDING STATE (plan C5): the dossier's SlotArmed
+    // and BookPicked, Party's Carry. The menu asks it to let go before any
+    // close, tab switch, hotkey or deep link (plan C6), so a pending state is
+    // never left behind and never commits on its own.
+    //
+    // Separate from INavCancelClaim on purpose: Cancel asks "is there a level
+    // to step back through", this asks "is there an open transaction", and a
+    // pane may have the first without the second.
+    //
+    // Contract: drop the pending state with no change to game state and put
+    // focus back where it was created. A pane with nothing pending does
+    // nothing.
+    public interface IMenuPending
+    {
+        bool HasPending { get; }
+
+        void CancelPending();
+    }
+
     // FIRST REFUSAL ON A SUBMIT PRESS, for a context whose Submit means
     // something other than "press the selected Button" -- the dialogue stage,
     // where Submit/A/Enter advances a line with no row selected at all

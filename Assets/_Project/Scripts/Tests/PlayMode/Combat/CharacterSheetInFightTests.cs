@@ -97,17 +97,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(fight.CharacterSheetIsOpen, "pressing the same key again did not close it");
         }
 
-        // The switch-vs-close rule this used to pin ("pressing the other
-        // pane's key switches panes rather than closing") was retired when
-        // Character and Inventory merged into one tab -- correctly, at the
-        // time, since there was nothing left to switch between. It came back
-        // when the pack argument was wired to CharacterDossierController.
-        // ShowPack: I and C each mean a real state again (pack up / pack
-        // down), so the same rule the old test asserted applies again, just
-        // retargeted at the pack instead of at a tab. A user report is what
-        // caught the gap between the two: pressing I then C closed the whole
-        // sheet instead of switching the pack down, because the toggle was
-        // only ever comparing open-vs-closed.
+        // I and C drive the same screen and mean two states: C is the
+        // CHARACTER tab, I is the same tab with focus in the LOADOUT pack
+        // (MenuTarget.Pack). Pressing the other key switches between them; the
+        // same key asking for what is already showing closes the sheet.
         [UnityTest]
         public IEnumerator BothKeysDriveTheSameScreenAndTheOtherOneSwitchesThePack()
         {
@@ -122,17 +115,17 @@ namespace PrincesPalace.PlayModeTests
             fight.ToggleCharacterSheet(inventory: false);
             yield return null;
             Assert.IsTrue(fight.CharacterSheetIsOpen, "C did not open the character screen");
-            Assert.IsFalse(dossier.IsPackShown, "C should open WITHOUT the pack");
+            Assert.IsFalse(dossier.IsPackFocused, "C should open on the rail, not in the pack");
 
             // THE OTHER KEY SWITCHES, it does not close. This is the exact
             // gesture the report named: I while the sheet is already open
-            // (via C) should bring the pack up and leave the sheet open, not
+            // (via C) should move focus into the pack and leave the sheet open, not
             // close the whole screen.
             fight.ToggleCharacterSheet(inventory: true);
             yield return null;
             Assert.IsTrue(fight.CharacterSheetIsOpen,
                 "pressing the OTHER key while open should switch the pack, not close the sheet");
-            Assert.IsTrue(dossier.IsPackShown, "I should have brought the pack up");
+            Assert.IsTrue(dossier.IsPackFocused, "I should have moved focus into the pack");
 
             // THE SAME KEY, ASKING FOR WHAT IS ALREADY SHOWING, closes it --
             // this is the one case that still has to behave like a plain

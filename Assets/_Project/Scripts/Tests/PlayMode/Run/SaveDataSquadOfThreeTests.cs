@@ -209,9 +209,9 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void DossierPaging_CyclesThroughAllThreeSquadMembersAndBackToTheFirst()
         {
-            // Pins the exact arithmetic CharacterDossierController.Step uses
-            // -- (_index + by + squad.Count) % squad.Count -- over the real
-            // three-member squad a save actually produces.
+            // Pins the wrap-around stepping the CHARACTER strip uses
+            // (CharacterStrip.Step) -- (index + by + count) % count -- over
+            // the real three-member squad a save actually produces.
             SaveData.TestSquadOfThreeEnabled = true;
             var save = SaveData.CreateNew();
             var squad = save.ActiveSquad();

@@ -25,8 +25,8 @@ namespace PrincesPalace.PlayModeTests
     // WHAT THIS DOES, from PlayModeTestProfiler.TestStarted:
     //   - before every TEST, a null override becomes a freshly emptied
     //     sandbox. A fixture that sets its own root in [SetUp] replaces it,
-    //     as it always did; one that sets none (DossierXpBarTests, the
-    //     FightBootstrap fixtures) now reads and writes an empty folder,
+    //     as it always did; one that sets none (the FightBootstrap
+    //     fixtures) now reads and writes an empty folder,
     //     which is what the real one was on a clean machine;
     //   - before every FIXTURE, a sandbox the last fixture left standing is
     //     emptied too, so the sandbox cannot become the next cross-fixture

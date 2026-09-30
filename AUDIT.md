@@ -601,7 +601,7 @@ argument the hook could scan.
 
 ## Findings from the Prismatic Orb pass, 2026-09-08
 
-### 104. The dossier's unassigned spell-book list reads as empty when it is not
+### ~~104. The dossier's unassigned spell-book list reads as empty when it is not~~ — resolved by the CHARACTER tab's LOADOUT (phase 5b): the UNASSIGNED panel is gone; an unassigned book is a pack cell with its art (Books filter), named in the compare column, and A places it (`DossierLoadoutTests`)
 
 Reported from play with a screenshot: the map's status line says `SPELL BOOKS
 TO PLACE: 6`, the dossier's SPELL BOOKS panel shows three `EMPTY` slots and an
@@ -2509,6 +2509,8 @@ Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed; add
 -BuildScenes if a caption node is added.
 
 ### 243. The dossier attributes modal fights the player
+
+Partly resolved by phase 5b: the modal is gone (ATTRIBUTES is a section of the CHARACTER tab, steppers beside their rows), and the compare column reads `280 → 338 (+58)`, old before new (`LoadoutCompare.DeltaText`). Open for phase 5d: the `before → after` line on the derived stat while a stepper is focused.
 
 Capture `docs/captures/qa-2026-09-26/fixed/round2/Dossier_attributes.png`:
 the "+" buttons render roughly 10px wide at the far right of the row, about

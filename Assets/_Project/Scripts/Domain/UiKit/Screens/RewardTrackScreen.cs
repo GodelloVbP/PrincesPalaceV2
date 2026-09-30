@@ -6,6 +6,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // The reward track: one long line, a card that says what you are looking
     // at, and a ribbon that shows the whole hundred at once.
     //
+    // The CHARACTER tab's REWARD TRACK section (plan C19, spec 3.4): built
+    // into the tab's detail area by CharacterDossierScreen, laid out for that
+    // frame by RewardTrackLayout, and shown when the rail selects it.
+    //
     // A battle pass, read left to right. The rail was the whole screen once and
     // the brief's own open questions were all versions of the same complaint --
     // it is airy, nothing marks what is next, and eight nodes of ninety-nine
@@ -60,11 +64,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string BandWash = "#2E22442E";
         public const string BandEdgeTop = "#F2DB9E29";
         public const string BandEdgeBottom = "#F2DB9E1F";
-
-        // The panel's own furniture: four corner brackets and a wash at the
-        // middle, both of them the difference between a ground and a rect.
-        public const string PanelWash = "#2E224452";
-        public const string CornerBracket = "#F2DB9E4D";
 
         // The rail, in three weights: the dim line under everything, the lit
         // half over it, and the bloom under that.
@@ -241,7 +240,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef CollectButton;
         public NodeRef CollectCaption;
         public NodeRef CollectPip;
-        public NodeRef CloseButton;
 
         public NodeRef Card;
         public NodeRef CardMat;
@@ -286,99 +284,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RibbonDots = new List<NodeRef>();
         public List<NodeRef> RibbonNumbers = new List<NodeRef>();
 
-        // NOT migrated to TypographyRole in this pass, deliberately, unlike
-        // the other four screens: almost every label here is one of a
-        // hundred-plus pooled/runtime nodes (TrackCaption*, TrackLevel*,
-        // TrackRibbonNumber*, the card's own fields) with its own tuned font
-        // constant already threaded through RewardTrackLayout (CardCaptionFont,
-        // MilestoneCaptionFont, and a dozen more) -- a role's own size band
-        // and uppercase rule would fight numbers this class was carefully
-        // measured against, for text that is not a title, heading or button
-        // caption in the first place.
+        // Every label takes a Typography role at or over the menu's type
+        // floor (plan C14): Body for words and figures, FunctionalHeading for
+        // the authored capitals. Not TacticalData: its material tints text
+        // violet, and the track colours its numbers by state.
         public static RewardTrackScreen Build()
         {
             var screen = new RewardTrackScreen();
 
             var children = new List<UiNode>();
-            children.AddRange(BuildPanelFurniture());
             children.AddRange(BuildRailBand(screen));
             children.Add(BuildCard(screen));
             children.AddRange(BuildRibbon(screen));
             children.AddRange(BuildSummaryRow(screen));
 
-            // BARE, not a kit container, UNLIKE THE OTHER FOUR HOSTED PANES
-            // this still needs an opaque ground of its own: it opens OVER
-            // the dossier's own content within the same parent pane rather
-            // than sitting only on the shared, translucent SystemMenuFill
-            // (#1A1024F5, 96%) every other pane relies on -- three columns
-            // of numbers must not read through a hundred captions underneath.
-            // The flat #120A18FA Solid ground carries that opacity itself.
-            //
-            // AND IT TAKES THE POINTER, which is why it is not AsDecor. A
-            // ground that hides the dossier from the eye but not from the
-            // raycaster lets every hover and click on an empty stretch of
-            // this panel land on the dossier row drawn underneath -- a
-            // highlight and a button nobody could see.
-            var ground = Ui.SystemMenuPane("RewardTrackPanel", "RewardTrackPanelContent",
-                new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), children.ToArray());
-            ground.Children.Insert(0, Ui.Solid("RewardTrackPanelFill", Ground + "FA",
-                    new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), Place.At(0f, 0f)));
-            ground.Inactive();
+            // A SECTION, the size of the detail area and bare: it sits on the
+            // menu's own fill beside the rail, and the dossier shows exactly
+            // one section at a time, so nothing lies under it to hide.
+            var ground = Ui.Panel("RewardTrackPanel", Place.At(0f, 0f),
+                    UiSize.Fixed(RewardTrackLayout.FrameWidth, RewardTrackLayout.FrameHeight), children)
+                .Inactive();
 
             screen.Root = ground;
 
             return screen;
-        }
-
-        // ---- the panel's own ground ------------------------------------------
-
-        // A WASH AT THE MIDDLE AND FOUR CORNERS, which is all the difference
-        // between a painted ground and a filled rect -- and this screen is
-        // 1600x804 of one flat colour with three bands of content on it, so it
-        // has more of that rect showing than anything else in the game.
-        //
-        // Neither is information. Both are the reason the eye reads the panel
-        // as an object with edges and a centre rather than as the absence of
-        // one, which is what the brief's "the screen is airy" was describing
-        // and what no amount of moving the content around can fix.
-        private static IEnumerable<UiNode> BuildPanelFurniture()
-        {
-            // Bigger than the panel it sits in, on purpose: the design's
-            // gradient is stated by its RADII, 72% of the width and 58% of the
-            // height, so the ellipse is nearly one and a half panels across and
-            // what shows is its middle.
-            yield return Ui.Sprite("TrackPanelWash", "proc:radial_glow",
-                    new UiVec(RewardTrackLayout.WashWidth, RewardTrackLayout.WashHeight),
-                    Place.At(0f, 0f))
-                .Coloured(PanelWash)
-                .AsDecor()
-                .AllowOverflow("the wash is a gradient wider and taller than the panel because only its centre is meant to be seen - clipping it to the panel would put the ellipse's own edge on screen, which is the one part of a radial gradient that must never show");
-
-            float cx = RewardTrackLayout.CornerCentreX;
-            float cy = RewardTrackLayout.CornerCentreY;
-            float arm = RewardTrackLayout.CornerArm;
-            float stroke = RewardTrackLayout.CornerStroke;
-
-            // Eight hairlines, two per corner. Written as a loop over the four
-            // sign pairs rather than as eight authored positions, because eight
-            // positions is eight chances to mistype one and the mistake would
-            // be a corner three pixels out of true.
-            for (int i = 0; i < 4; i++)
-            {
-                float sx = (i & 1) == 0 ? -1f : 1f;
-                float sy = (i & 2) == 0 ? 1f : -1f;
-                string corner = $"{((i & 2) == 0 ? "Top" : "Bottom")}{((i & 1) == 0 ? "Left" : "Right")}";
-
-                yield return Ui.Solid($"TrackCorner{corner}H", CornerBracket,
-                        new UiVec(arm, stroke),
-                        Place.At(cx * sx, (cy + arm * 0.5f - stroke * 0.5f) * sy))
-                    .AsDecor();
-
-                yield return Ui.Solid($"TrackCorner{corner}V", CornerBracket,
-                        new UiVec(stroke, arm),
-                        Place.At((cx + arm * 0.5f - stroke * 0.5f) * sx, cy * sy))
-                    .AsDecor();
-            }
         }
 
         // ---- the rail band --------------------------------------------------
@@ -392,12 +321,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // and bottom thirds empty. Two of those thirds now have bands of
             // their own, and this gives the middle one an edge so the rail
             // reads as running THROUGH something rather than across a void.
-            // PaneContentWidth, NOT PanelWidth -- see RewardTrackLayout.
-            // BandEdgeWidth's own comment: this is a child of the
-            // container's content panel, 1488 wide rather than the declared
-            // 1600 frame.
             yield return Ui.Sprite("TrackBandWash", "proc:band_fade",
-                    new UiVec(RewardTrackLayout.PaneContentWidth, RewardTrackLayout.BandHeight),
+                    new UiVec(RewardTrackLayout.FrameWidth, RewardTrackLayout.BandHeight),
                     Place.At(0f, RewardTrackLayout.BandCentreY))
                 .Coloured(BandWash)
                 .AsDecor();
@@ -515,7 +440,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     RewardTrackLayout.StretchLabelFont, CompletionWord,
                     Place.At(RewardTrackLayout.CompletionLabelOffsetX,
                              RewardTrackLayout.StretchLabelY))
-                .Tracked(26f)
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(26f)
                 .AsDecor());
 
             railChildren.Add(Ui.Label("TrackPrestigeWord", UiStrings.TrackPrestige,
@@ -524,7 +450,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     RewardTrackLayout.StretchLabelFont, PrestigeWord,
                     Place.At(RewardTrackLayout.PrestigeLabelOffsetX,
                              RewardTrackLayout.StretchLabelY))
-                .Tracked(26f)
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(26f)
                 .AsDecor());
 
             // NOTHING MARKED THE NEXT REWARD, which was one of the brief's six
@@ -545,7 +472,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                                   RewardTrackLayout.NextLabelHeight),
                         RewardTrackLayout.NextLabelFont, Caret,
                         Place.At(0f, RewardTrackLayout.NextLabelCentreY))
-                    .Tracked(24f)
+                    .Styled(TypographyRole.FunctionalHeading)
+                    .TrackedOverRole(24f)
                     .AsDecor(),
 
                 // Fading DOWNWARD, toward the node: a line that stops dead
@@ -581,18 +509,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverflow("the content rect is deliberately wider than the window it sits in - that overflow IS the scroll, and TrackViewport clips it - and it is twelve pixels taller because everything inside is measured from the rail at its centre while the band around it reaches further above that line than below");
             screen.Content = content;
 
-            // The window. A coordinate frame and a mask, never a surface.
-            //
-            // PaneContentWidth, NOT PanelWidth -- this is a child of the
-            // container's content panel, 1488 wide rather than the declared
-            // 1600 frame; the controller
-            // reads viewport.rect.width at runtime for every scroll/ribbon
-            // computation (RewardTrackController.Input.cs, .cs), so the
-            // narrower rect also carries through to those correctly rather
-            // than needing a second update.
+            // The window. A coordinate frame and a mask, never a surface. The
+            // controller reads viewport.rect.width at runtime for every
+            // scroll and ribbon computation, so this width carries through.
             var viewport = Ui.Panel("TrackViewport",
                     Place.At(0f, RewardTrackLayout.BandCentreY),
-                    UiSize.Fixed(RewardTrackLayout.PaneContentWidth, RewardTrackLayout.BandHeight),
+                    UiSize.Fixed(RewardTrackLayout.FrameWidth, RewardTrackLayout.BandHeight),
                     content)
                 .Clipping();
             screen.Viewport = viewport;
@@ -739,9 +661,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // no-op -- a hundred dots that do nothing when pressed teach the
             // player that none of them do.
             //
-            // Hovers(1.16) rather than the default press animation, so these
-            // click silently; the controller plays the claim's own sound,
-            // which is the one that carries meaning.
+            // Quiet, so these click silently; the controller plays the claim's
+            // own sound, which is the one that carries meaning. Hover is the
+            // kit's rim, never a scale (plan C13).
             //
             // proc:disc_metal, not proc:solid_circle: see that bake's header
             // for why a flat gold coin reads as tarnish.
@@ -758,15 +680,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Pooled with pinned Place/UiSize per level, measured by this
             // class's own audit and RewardTrackLayout's tests either way.
             var dot = Ui.Button($"TrackDot{level}", UiString.Runtime,
-                    new UiVec(diameter, diameter), 1, Place.At(x, 0f))
-                .Hovers(1.16f);
+                    new UiVec(diameter, diameter), 20, Place.At(x, 0f))
+                .Quiet()
+                .Styled(TypographyRole.Body);
             dot.SpriteKey = "proc:disc_metal";
             Dots.Add(dot);
 
             // The mat, the mark and the seal are CHILDREN of the disc rather
-            // than its siblings, so the hover scales the whole node instead of
-            // sliding a disc out from under its own icon. All decoration, so
-            // none of them takes the click meant for the disc.
+            // than its siblings, so they move with it. All decoration, so none
+            // of them takes the click meant for the disc.
 
             // THE ART SLOT'S MAT. Handoff section 8 turns every disc into a
             // slot for painted art; until that art lands the slot draws its
@@ -842,7 +764,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             yield return dot;
 
-            // The reward, above. Two lines of room -- the longest thing the
+            // The reward, above. Four lines of room -- the longest thing the
             // track says is "YOUR SECOND LIFE RETURNS AT EVERY BOSS", which is
             // what set NodePitch in the first place.
             var caption = Ui.Label($"TrackCaption{level}", UiString.Runtime,
@@ -850,14 +772,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     milestone ? RewardTrackLayout.MilestoneCaptionFont : RewardTrackLayout.CaptionFont,
                     TextToCome,
                     Place.At(x, RewardTrackLayout.CaptionY))
+                .Styled(TypographyRole.Body)
                 .TextAligned(UiTextAlign.Bottom)
                 .AsDecor();
             Captions.Add(caption);
             yield return caption;
 
-            // The level, below, and set as a FIGURE rather than as a label --
-            // 15 filler and 22 milestone, up from 12 and 16. A rail whose
-            // landmarks are numbers has to be countable from across the panel.
+            // The level, below, and set as a FIGURE rather than as a label: a
+            // rail whose landmarks are numbers has to be countable from across
+            // the panel.
             var number = Ui.Label($"TrackLevel{level}", UiString.Runtime,
                     new UiVec(RewardTrackLayout.CaptionWidth, RewardTrackLayout.LevelNumberHeight),
                     milestone
@@ -865,6 +788,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         : RewardTrackLayout.LevelNumberFont,
                     TextToCome,
                     Place.At(x, RewardTrackLayout.LevelNumberY))
+                .Styled(TypographyRole.Body)
                 .AsDecor();
             LevelNumbers.Add(number);
             yield return number;
@@ -904,7 +828,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(RewardTrackLayout.CardKickerWidth, RewardTrackLayout.CardKickerHeight),
                     RewardTrackLayout.CardKickerFont, TextQuiet,
                     Place.At(RewardTrackLayout.CardKickerCentreX, RewardTrackLayout.CardHeaderY))
-                .Tracked(26f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(10f)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
             screen.CardKicker = kicker;
@@ -924,7 +849,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     RewardTrackLayout.CardLevelWordFont, TextQuiet,
                     Place.At(RewardTrackLayout.CardLevelWordCentreX,
                              RewardTrackLayout.CardHeaderY))
-                .Tracked(24f)
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(4f)
                 .TextAligned(UiTextAlign.Right)
                 .AsDecor());
 
@@ -932,7 +858,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(RewardTrackLayout.CardLevelWidth, RewardTrackLayout.CardLevelHeight),
                     RewardTrackLayout.CardLevelFont, TextCollected,
                     Place.At(RewardTrackLayout.CardLevelCentreX, RewardTrackLayout.CardHeaderY))
-                .Tracked(4f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(4f)
                 .TextAligned(UiTextAlign.Right)
                 .AsDecor();
             screen.CardLevel = level;
@@ -944,7 +871,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(RewardTrackLayout.CardTextWidth, RewardTrackLayout.CardCaptionHeight),
                     RewardTrackLayout.CardCaptionFont, Gold,
                     Place.At(RewardTrackLayout.CardTextCentreX, RewardTrackLayout.CardCaptionY))
-                .Tracked(5f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(5f)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
             screen.CardCaption = caption;
@@ -976,7 +904,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                               RewardTrackLayout.CardStateHeight),
                     RewardTrackLayout.CardStateFont, TextQuiet,
                     Place.At(RewardTrackLayout.CardStateCentreX, RewardTrackLayout.CardStateY))
-                .Tracked(16f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(6f)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
             screen.CardState = state;
@@ -1000,7 +929,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                               RewardTrackLayout.CardStateHeight),
                     RewardTrackLayout.CardStateFont, Gold,
                     Place.At(RewardTrackLayout.CardFightsCentreX, RewardTrackLayout.CardStateY))
-                .Tracked(16f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(6f)
                 .TextAligned(UiTextAlign.Right)
                 .AsDecor();
             screen.CardFights = fights;
@@ -1105,7 +1035,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var glyph = Ui.Label("TrackCardGlyph", UiString.Runtime,
                     new UiVec(RewardTrackLayout.CardArtSize, RewardTrackLayout.CardArtSize),
                     CardGlyphFont, CardGlyphInk, Place.At(x, 0f))
-                .Tracked(6f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(6f)
                 .AsDecor()
                 .Inactive();
             screen.CardGlyph = glyph;
@@ -1126,7 +1057,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     RewardTrackLayout.RibbonLabelFont, TextQuiet,
                     Place.At(RewardTrackLayout.RibbonTitleCentreX,
                              RewardTrackLayout.RibbonLabelCentreY))
-                .Tracked(26f)
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(12f)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
 
@@ -1142,7 +1074,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     RewardTrackLayout.RibbonLabelFont, TextQuiet,
                     Place.At(RewardTrackLayout.RibbonHintCentreX,
                              RewardTrackLayout.RibbonLabelCentreY))
-                .Tracked(20f)
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(4f)
                 .TextAligned(UiTextAlign.Right)
                 .AsDecor();
 
@@ -1236,7 +1169,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(RewardTrackLayout.RibbonNumberWidth,
                                   RewardTrackLayout.RibbonNumberHeight),
                         RewardTrackLayout.RibbonNumberFont, TextQuiet,
-                        Place.At(x, RewardTrackLayout.RibbonNumberY))
+                        Place.At(RewardTrackLayout.RibbonNumberX(level), RewardTrackLayout.RibbonNumberY))
+                    .Styled(TypographyRole.Body)
                     .AsDecor();
                 screen.RibbonNumbers.Add(number);
                 parts.Add(number);
@@ -1251,21 +1185,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.RibbonPlayhead = playhead;
             parts.Add(playhead);
 
-            // THE VISIBLE WINDOW, as a box you can drag. Eight and a half nodes
-            // of ninety-nine works out at 121px of the ribbon's 1440, which is
-            // the clearest statement this screen makes about how much of the
-            // track the rail can actually show.
-            // RewardTrackLayout.PaneContentWidth, NOT PanelWidth -- this
-            // build-time box is the tree's own guess at what
-            // viewport.rect.width will be; the controller
-            // recomputes it from the real rect at runtime, but the two
-            // should agree at build time rather than start 112px apart.
+            // THE VISIBLE WINDOW, as a box you can drag: the clearest
+            // statement this screen makes about how much of the track the rail
+            // can show. Built at the viewport's own width; the controller
+            // recomputes it from the real rect at runtime.
             var window = Ui.Panel("TrackRibbonWindow",
                 Place.At(0f, 0f),
-                UiSize.Fixed(RewardTrackLayout.RibbonWindowWidth(RewardTrackLayout.PaneContentWidth),
+                UiSize.Fixed(RewardTrackLayout.RibbonWindowWidth(RewardTrackLayout.FrameWidth),
                              RewardTrackLayout.RibbonWindowHeight),
                 Ui.Rim("TrackRibbonWindowEdge",
-                    new UiVec(RewardTrackLayout.RibbonWindowWidth(RewardTrackLayout.PaneContentWidth),
+                    new UiVec(RewardTrackLayout.RibbonWindowWidth(RewardTrackLayout.FrameWidth),
                               RewardTrackLayout.RibbonWindowHeight),
                     Lilac));
             screen.RibbonWindow = window;
@@ -1279,9 +1208,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // records.
             var grab = Ui.Button("TrackRibbonGrab", UiString.Runtime,
                     new UiVec(RewardTrackLayout.RibbonWidth, RewardTrackLayout.RibbonHeight),
-                    1, Place.At(0f, 0f))
+                    20, Place.At(0f, 0f))
                 .NoChrome()
                 .Quiet()
+                .Styled(TypographyRole.Body)
                 .AllowOverlap("this covers the whole ribbon on purpose - it is the drag surface for the window box, and everything under it is decoration that draws the ribbon rather than anything that could take a click of its own");
             screen.RibbonGrab = grab;
             parts.Add(grab);
@@ -1309,11 +1239,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // kit -- ThemedPlate rather than Themed() because this button
             // already declares its own caption/pip children (see
             // LayerCaptionWithVisuals below) the same way FightScreen's verb
-            // rows and ResetConfirmYesButton do. TrackCloseButton below is
-            // the same case.
+            // rows and ResetConfirmYesButton do.
             var collectSize = new UiVec(RewardTrackLayout.CollectWidth, RewardTrackLayout.CollectHeight);
             var collect = Ui.Button("TrackCollectButton", UiString.Runtime,
-                    collectSize, 15, Place.At(RewardTrackLayout.CollectCentreX,
+                    collectSize, 24, Place.At(RewardTrackLayout.CollectCentreX,
                                  RewardTrackLayout.SummaryCentreY))
                 .ThemedPlate(ButtonTheme.Gold)
                 .Inactive();
@@ -1341,8 +1270,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // still binds collectLabel off this exact NodeRef.
             var caption = Ui.Label("TrackCollectCaption", UiString.Runtime,
                     new UiVec(collectSize.X - 52f, collectSize.Y - 8f),
-                    11, Gold, Place.At(9f, 0f))
-                .Tracked(22f);
+                    24, Gold, Place.At(9f, 0f))
+                .Styled(TypographyRole.ButtonLabel)
+                .TrackedOverRole(4f);
             collect.Children.Add(caption);
             collect.LayerCaptionWithVisuals(pip, caption);
 
@@ -1352,35 +1282,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ---- WHERE YOU ARE, as five pieces on one line ------------------
             //
-            // The whole assembly is centred on the panel and each piece is
-            // placed by walking from its left edge, so the row cannot drift as
-            // the level ticks from 9 to 10 to 100.
-            //
-            // It still has to clear both buttons -- see
-            // RewardTrackLayout.SummaryWidth, which computes that clearance
-            // from the buttons rather than restating it, because the first
-            // version of this row put a full-width label under CLOSE and
-            // UiAudit refused the build.
+            // Right of the collect button, each piece placed by walking from
+            // the row's left edge, so the row cannot drift as the level ticks
+            // from 9 to 10.
             yield return Ui.Label("TrackSummaryWord", UiStrings.TrackLevelWord,
-                    new UiVec(RewardTrackLayout.LevelWordWidth, 20f),
+                    new UiVec(RewardTrackLayout.LevelWordWidth, 34f),
                     RewardTrackLayout.LevelWordFont, TextFigureLabel,
                     Place.At(RewardTrackLayout.SummaryPartX(0),
                              RewardTrackLayout.SummaryCentreY))
-                .Tracked(30f)
+                .Styled(TypographyRole.FunctionalHeading)
+                .TrackedOverRole(8f)
                 .TextAligned(UiTextAlign.Right)
                 .AsDecor();
 
-            // THE FIGURE, at 34px against everything else's 12 or 13. The one
+            // THE FIGURE, at 34 against everything else's 20 to 24: the one
             // number on this screen that is about the player rather than about
-            // the track, and it was set at the same size as the word in front
-            // of it.
+            // the track.
             var figure = Ui.Label("TrackSummaryLevel", UiString.Runtime,
                     new UiVec(RewardTrackLayout.LevelFigureWidth,
                               RewardTrackLayout.SummaryRowHeight),
                     RewardTrackLayout.LevelFigureFont, Gold,
                     Place.At(RewardTrackLayout.SummaryPartX(1),
                              RewardTrackLayout.SummaryCentreY))
-                .Tracked(4f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(4f)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
             screen.SummaryLevel = figure;
@@ -1393,47 +1318,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
 
             var nextAt = Ui.Label("TrackSummaryNextAt", UiString.Runtime,
-                    new UiVec(RewardTrackLayout.NextAtWidth, 20f),
+                    new UiVec(RewardTrackLayout.NextAtWidth, 28f),
                     RewardTrackLayout.NextAtFont, TextNextAt,
                     Place.At(RewardTrackLayout.SummaryPartX(3),
                              RewardTrackLayout.SummaryCentreY))
-                .Tracked(20f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(4f)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
             screen.SummaryNextAt = nextAt;
             yield return nextAt;
 
-            // AND WHAT IT IS. This was cut from the summary once, at eighty
-            // characters, for colliding with CLOSE; it comes back with a box of
-            // its own that the text-fit audit measures against.
+            // AND WHAT IT IS, in a box of its own.
             var reward = Ui.Label("TrackSummaryReward", UiString.Runtime,
-                    new UiVec(RewardTrackLayout.NextRewardWidth, 20f),
+                    new UiVec(RewardTrackLayout.NextRewardWidth, 28f),
                     RewardTrackLayout.NextAtFont, Gold,
                     Place.At(RewardTrackLayout.SummaryPartX(4),
                              RewardTrackLayout.SummaryCentreY))
-                .Tracked(20f)
+                .Styled(TypographyRole.Body)
+                .TrackedOverRole(4f)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
             screen.SummaryReward = reward;
             yield return reward;
-
-            // SILVER THEMED PLATE, the same reasoning as TrackCollectButton
-            // above.
-            var closeSize = new UiVec(RewardTrackLayout.CloseWidth, RewardTrackLayout.CloseHeight);
-            var close = Ui.Button("TrackCloseButton", UiString.Runtime,
-                    closeSize, 15, Place.At(RewardTrackLayout.CloseCentreX,
-                                 RewardTrackLayout.SummaryCentreY))
-                .ThemedPlate(ButtonTheme.Silver);
-
-            var closeCaption = Ui.Label("TrackCloseCaption", UiStrings.TrackClose,
-                    new UiVec(closeSize.X - 20f, closeSize.Y - 8f),
-                    12, Gold, Place.At(0f, 0f))
-                .Tracked(24f);
-            close.Children.Add(closeCaption);
-            close.LayerCaptionWithVisuals(closeCaption);
-
-            screen.CloseButton = close;
-            yield return close;
         }
     }
 }

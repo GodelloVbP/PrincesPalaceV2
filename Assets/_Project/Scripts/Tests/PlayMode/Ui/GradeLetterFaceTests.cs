@@ -16,9 +16,8 @@ namespace PrincesPalace.PlayModeTests
     // an item tooltip -- because an unresolved <font> tag is not an error in
     // TMP, it is printed as literal text.
     //
-    // The real UI font, loaded by path the way DossierTooltipTextFitTests
-    // does, so the letter is measured against the face it has to stand apart
-    // from.
+    // The real UI font, loaded by path, so the letter is measured against
+    // the face it has to stand apart from.
     public class GradeLetterFaceTests
     {
         private const string UiFontPath = "Assets/_Project/Fonts/ChakraPetch-Regular SDF.asset";

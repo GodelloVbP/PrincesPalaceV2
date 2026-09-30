@@ -5,21 +5,17 @@ using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The comparison/tooltip plate is a reading surface that stands over art
-    // by design -- the dossier tooltip over neighbouring pack cells, the shop
-    // detail panel beside its offers. QA 2026-09-26: at 95% alpha the bright
-    // gear art still showed faintly under the tooltip's text. Checked on the
-    // two REAL screen trees rather than on the builder alone, so a screen that
+    // The comparison plate is a reading surface that stands over art by
+    // design -- the shop's detail panel beside its offers. At 95% alpha the
+    // bright gear art still showed faintly under its text. Checked on the
+    // REAL screen tree rather than on the builder alone, so a screen that
     // re-tints its own copy of the fill cannot slip past.
     public class ItemComparisonPlateOpacityTests
     {
-        [TestCase("DossierTooltipFill")]
         [TestCase("ShopDetailPanelFill")]
         public void ThePlateUnderTheTextIsFullyOpaque(string fillName)
         {
-            var root = fillName.StartsWith("Dossier")
-                ? CharacterDossierScreen.Build().Root
-                : ShopScreen.Build().Root;
+            var root = ShopScreen.Build().Root;
 
             var fill = Find(root, fillName);
 

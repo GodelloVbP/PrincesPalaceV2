@@ -39,8 +39,8 @@ namespace PrincesPalace.PlayModeTests
     //                        separate at a glance this is the picture that
     //                        says so.
     //   dossier_pack       - "a player can't see where they're going in the
-    //                        character sheets screen". Cell focused, its
-    //                        tooltip open, on the busiest screen in the game.
+    //                        character sheets screen". Cell focused, the
+    //                        compare column describing it.
     //   fight_verb         - the verb column at rest with focus on ATTACK:
     //                        the SAME state that used to paint the open-branch
     //                        plate. Read it for "can I tell focus from open".
@@ -156,7 +156,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator DossierPackCellFocusedWithItsTooltip()
+        public IEnumerator DossierPackCellFocusedWithItsCompare()
         {
             RequireAGraphicsDevice();
             yield return LoadScene("Hub");
@@ -169,9 +169,8 @@ namespace PrincesPalace.PlayModeTests
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
             Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
 
-            // Two items so the pack has something in it and the tooltip has
-            // something to describe -- DossierGamepadNavigationTests' own
-            // fixture shape.
+            // Two items so the pack has something in it and the compare
+            // column has something to describe.
             var pair = ContentDatabase.Equippables
                 .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
                 .OrderByDescending(i => i.tier)
@@ -185,7 +184,7 @@ namespace PrincesPalace.PlayModeTests
             InventoryOps.Add(save.stockpiledItems, pair[1].id);
             SaveSlotManager.SaveCurrent();
 
-            dossier.ShowPack(true);
+            dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
             dossier.Refresh();
             yield return null;
 

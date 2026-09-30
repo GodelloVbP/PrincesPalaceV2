@@ -28,16 +28,14 @@ namespace PrincesPalace.Domain.UiKit
         public const int FirstLevel = RewardTrack.StartingLevel + 1;
         public static int NodeCount => RewardTrack.MaxLevel - FirstLevel + 1;
 
-        // "The panel's top edge" is not SystemMenuLayout.ContentHeight * 0.5f
-        // (402, the raw frame) -- ContentTop is the pane's own declared
-        // content half-extent instead (357.78, same as DossierLayout/
-        // OptionsLayout/ExitsLayout's HalfHeight -- see SystemMenuLayout.
-        // PaneContentHalfWidth/HalfHeight's own comment). Every yFromTop
-        // offset below is still docs/handoffs/progression_v2's own number,
-        // unmoved: changing this one constant shifts the whole
-        // rail/card/summary block down together by the inset delta (44.22)
-        // without touching any of the ~20 individual offsets.
-        public static float ContentTop => SystemMenuLayout.PaneContentHalfHeight;
+        // THE FRAME THE TRACK IS LAID INTO: the CHARACTER tab's detail area
+        // (spec 3.4), which is the one place the track is shown. Every width
+        // below that depends on the frame reads FrameWidth, so the track
+        // re-lays around a different frame by changing these two.
+        public const float FrameWidth = DossierLayout.DetailWidth;     // 1196
+        public const float FrameHeight = DossierLayout.DetailHeight;   // 660
+
+        public const float ContentTop = FrameHeight * 0.5f;
 
         // docs/handoffs/progression_v2's coordinate frame, converted: y
         // down from the panel's top edge becomes y up from its centre.
@@ -48,11 +46,11 @@ namespace PrincesPalace.Domain.UiKit
 
         // How far apart two levels sit.
         //
-        // 190 is chosen from the reward NAMES rather than from the dots: the
-        // longest thing the track can say is "YOUR SECOND LIFE RETURNS AT EVERY
-        // BOSS", and a caption narrower than about 170 wraps it to four lines
-        // and starts clipping. The dots would happily sit at 60.
-        public const float NodePitch = 190f;
+        // 170 shows seven nodes across the 1196 frame (spec 3.4). The pitch is
+        // set by the reward NAMES rather than the dots: the longest thing the
+        // track says is "YOUR SECOND LIFE RETURNS AT EVERY BOSS", four lines
+        // of a 150-wide caption at 20. The dots would happily sit at 60.
+        public const float NodePitch = 170f;
 
         public const float NodeDiameter = 26f;
 
@@ -86,9 +84,9 @@ namespace PrincesPalace.Domain.UiKit
         // NOT IN THE DESIGN HANDOFF. Section 6's milestone treatment is the
         // four static differences above; this is an addition on top of it,
         // asked for after seeing the built screen.
-        // TWICE THE DISC, and it cannot usefully be much more: the caption's
-        // lower edge is 50 above the rail and the level number's upper edge 33
-        // below it, so 88 is very nearly all the room a node has.
+        // TWICE THE DISC, and it cannot usefully be much more: the NEXT mark
+        // hangs down to 31 above the rail and the level number's upper edge is
+        // 31 below it, so 88 is very nearly all the room a node has.
         //
         // Which is also why the ALPHA had to carry this rather than the size.
         // The glow is brightest at its centre and the centre is behind an
@@ -116,7 +114,7 @@ namespace PrincesPalace.Domain.UiKit
         // The caption block above each node, and the level number below it.
         //
         // THE CAPTION HANGS FROM ITS BOTTOM EDGE rather than floating at its
-        // centre, which is a two-part statement: the box's lower edge sits 50
+        // centre, which is a two-part statement: the box's lower edge sits 76
         // above the rail and never moves, and the text inside it is
         // UiTextAlign.Bottom.
         //
@@ -129,21 +127,21 @@ namespace PrincesPalace.Domain.UiKit
         // the name happens to be. Hung from the bottom, every caption on the
         // rail ends at the same distance from its node and the long ones grow
         // upward, away, into the space above.
+        // Four lines of Body 20 in the box, for the longest reward name.
         public const float CaptionWidth = NodePitch - 20f;
-        public const float CaptionHeight = 64f;
-        public const float CaptionBottomY = 50f;
+        public const float CaptionHeight = 104f;
+        public const float CaptionBottomY = 76f;
         public const float CaptionY = CaptionBottomY + CaptionHeight * 0.5f;
         public const float LevelNumberY = -44f;
-        public const float LevelNumberHeight = 22f;
+        public const float LevelNumberHeight = 26f;
 
-        // Captions set at 11 filler / 16 milestone; level numbers at 15 / 22.
-        // The numbers grew from 12/16 because they stand as FIGURES rather than
-        // as a label -- a rail whose landmarks are numbers has to be countable
-        // from across the panel.
-        public const int CaptionFont = 11;
-        public const int MilestoneCaptionFont = 16;
-        public const int LevelNumberFont = 15;
-        public const int MilestoneLevelNumberFont = 22;
+        // At the menu's type floor (spec 3.4): captions Body 20; level numbers
+        // Body 20, a milestone's at 24 because a rail whose landmarks are
+        // numbers has to be countable from across the panel.
+        public const int CaptionFont = 20;
+        public const int MilestoneCaptionFont = 20;
+        public const int LevelNumberFont = 20;
+        public const int MilestoneLevelNumberFont = 24;
 
         // The rail itself, in two weights: the unlit line the nodes sit on, and
         // the lit overlay stretched to the player's own node.
@@ -210,17 +208,18 @@ namespace PrincesPalace.Domain.UiKit
         // marker needs: the strip between the caption's lower edge at 50
         // and the disc's own rim. A word plus a line into that gap is
         // unmistakable.
-        public const float NextMarkTopY = 46f;
-        public const float NextLabelHeight = 12f;
-        public const float NextLabelGap = 5f;
-        public const float NextTickHeight = 14f;
+        // Ends 31 above the rail, clear of a milestone's plate ring (29).
+        public const float NextMarkTopY = 74f;
+        public const float NextLabelHeight = 34f;
+        public const float NextLabelGap = 3f;
+        public const float NextTickHeight = 6f;
         public const float NextTickWidth = 1f;
 
-        // Wide enough for the word at 9px tracked .24em, and no wider: this
-        // hangs over whichever column is next, and a box wider than the pitch
-        // would reach into its neighbours.
-        public const float NextMarkWidth = 60f;
-        public const int NextLabelFont = 9;
+        // Wide enough for the word in capitals at the floor (24) tracked
+        // .24em, and no wider: this hangs over whichever column is next, and
+        // a box wider than the pitch would reach into its neighbours.
+        public const float NextMarkWidth = 100f;
+        public const int NextLabelFont = 24;
 
         public static float NextMarkHeight =>
             NextLabelHeight + NextLabelGap + NextTickHeight;
@@ -317,105 +316,55 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the four bands -----------------------------------------------------
         //
-        // Handoff section 1, in its own coordinates. The panel is 1600x804 and
-        // sits at (160, 186) on a 1920x1080 screen; nothing below needs to know
-        // that second fact.
-
-        // THE PANEL'S OWN FRAME: four corner brackets, 18px arms at 26px inset.
+        // Top to bottom in the frame: the summary row, the focus card, the rail
+        // band, the ribbon. Each is written as a y down from the frame's top
+        // edge and converted once, by CentreY.
         //
-        // Not a full border. The panel already has one from the system menu
-        // around it, and a second full rectangle inside the first reads as a
-        // mistake; four corners read as a plate. It is the cheapest thing on
-        // this screen and does more than its price to stop 1600x804 of flat
-        // ground looking like an untextured rect.
-        public const float CornerInset = 26f;
-        public const float CornerArm = 18f;
-        public const float CornerStroke = 1f;
+        //   summary   0..56, the collect plate's own height
+        //   card      58..238
+        //   band      244..522, the rail at 428
+        //   ribbon    label 526..556, ruler 562..648
 
-        // The pane's own declared content half-extents, not SystemMenuLayout.
-        // PanelWidth/ContentHeight * 0.5f -- these corners are children of
-        // the content panel Ui.SystemMenuPane insets (1488x715.56, not the
-        // raw 1600x804 frame), so anchoring them to the raw frame's
-        // half-extent put them 30px past the left/right and 18px past the
-        // top/bottom of the box that actually contains them. These
-        // hairlines are the only thing marking the pane's edge at all.
-        public static float CornerCentreX =>
-            SystemMenuLayout.PaneContentHalfWidth - CornerInset - CornerArm * 0.5f;
-
-        public static float CornerCentreY =>
-            SystemMenuLayout.PaneContentHalfHeight - CornerInset - CornerArm * 0.5f;
-
-        // A soft violet wash at the panel's middle, so the ground has a centre.
-        // The design states it as a radial gradient at 72% of the width and 58%
-        // of the height, which are RADII -- hence the doubling. Still measured
-        // off the raw PanelWidth/ContentHeight (not the pane's own tighter
-        // content box): it is a gradient that fades to nothing well inside its
-        // own rect and is built with AllowOverflow for exactly that reason, so
-        // there is no containment box for this one to clear.
-        public static float WashWidth => SystemMenuLayout.PanelWidth * 1.44f;
-        public static float WashHeight => SystemMenuLayout.ContentHeight * 1.16f;
-
-        // The pane's own content canvas -- narrower than the declared
-        // 1600x804 frame, per SystemMenuLayout.PaneContentHalfWidth/
-        // HalfHeight's own comment. What the band wash and its edge hairlines size
-        // themselves to instead of the raw PanelWidth.
-        public static float PaneContentWidth => SystemMenuLayout.PaneContentHalfWidth * 2f;
-
-        // Summary: the collect button, where you are, and CLOSE.
-        public const float SummaryYFromTop = 43f;         // band 20..66
-        public const float SummaryInsetX = 44f;
+        // Summary: the collect button at the left, then where you are.
+        public const float SummaryYFromTop = 28f;
         public const float SummaryRowHeight = 44f;
-        public const float CollectWidth = 260f;
-        public const float CloseWidth = 180f;
+        public const float CollectWidth = 320f;
 
-        // TrackCollectButton/TrackCloseButton wear a themed kit plate.
-        // static readonly, not const, for the same reason MainMenuScreen.
-        // ResetHoldHeight is: Ui.PlateNominalSizeFor is not a compile-time
-        // constant. The two land on DIFFERENT plate shapes at their own
-        // width (260x44 is nearest Row6x1's 6:1, an 8.5% miss; 180x44 is
-        // nearest FiveByOne's 5:1, an 18.2% miss) -- forcing them to a
-        // shared height would leave one of the two still stretching its
-        // plate, which is the exact thing ThemedButtonAspectLintTests
-        // exists to catch.
+        // TrackCollectButton wears a themed kit plate, so its height is the
+        // plate's own at this width. static readonly, not const:
+        // Ui.PlateNominalSizeFor is not a compile-time constant.
         public static readonly float CollectHeight = Ui.PlateNominalSizeFor(CollectWidth, SummaryRowHeight).Y;
-        public static readonly float CloseHeight = Ui.PlateNominalSizeFor(CloseWidth, SummaryRowHeight).Y;
 
         // ---- the summary line, as five pieces --------------------------------
         //
         // "LEVEL 47 -- NEXT AT 48   A STAT POINT", set as a rule of parts
-        // rather than as one sentence: the word LEVEL small and letterspaced,
-        // the figure itself at 40px, a hairline, then where the next reward is
-        // and what it is.
-        //
-        // The reward's name has its own box, 360px wide, so the audit
-        // measures it against that rather than against whatever is left of
-        // the row -- the longest name the track can say fits that at 12px
-        // with room over.
-        public const float LevelWordWidth = 80f;
-        public const int LevelWordFont = 13;
-        public const float LevelFigureWidth = 80f;
+        // rather than as one sentence: the word LEVEL, the figure itself at
+        // 34, a hairline, then where the next reward is and what it is.
+        public const float LevelWordWidth = 90f;
+        public const int LevelWordFont = 24;
+        public const float LevelFigureWidth = 70f;
         public const int LevelFigureFont = 34;
         public const float SummaryRuleWidth = 34f;
         public const float NextAtWidth = 130f;
-        public const int NextAtFont = 12;
+        public const int NextAtFont = 20;
+        public const float SummaryGap = 12f;
 
-        // 420 for a name that measures about 320 at its longest.
-        //
-        // GENEROUS ON PURPOSE, because nothing measures it: the text fit audit
-        // skips content-derived strings, so this box is checked by arithmetic
-        // and by eye rather than at build time. The longest thing the track can
-        // say is RewardTrackNames' "YOUR SECOND LIFE RETURNS AT EVERY BOSS" at
-        // 38 characters, and the row has 200px spare before it reaches CLOSE.
-        public const float NextRewardWidth = 420f;
-        public const float SummaryGap = 18f;
+        // Where the parts start: right of the collect button, whether or not
+        // it is showing, so the row does not jump when the button comes and
+        // goes.
+        public const float SummaryPartsLeft = CollectWidth + 20f;
 
-        public static float SummaryPartsWidth =>
-            LevelWordWidth + LevelFigureWidth + SummaryRuleWidth
-            + NextAtWidth + NextRewardWidth + SummaryGap * 4f;
+        // The reward's name takes what is left of the row: 484, for a
+        // name that measures about 450 at its longest ("YOUR SECOND LIFE
+        // RETURNS AT EVERY BOSS" at 20). The text fit audit skips
+        // content-derived strings, so this box is checked by arithmetic.
+        public const float NextRewardWidth =
+            FrameWidth - SummaryPartsLeft - LevelWordWidth - LevelFigureWidth - SummaryRuleWidth
+            - NextAtWidth - SummaryGap * 4f;
 
-        // Each piece's centre, walked left to right from the assembly's own
-        // left edge. Written as a walk rather than as five constants so that
-        // widening one piece moves the rest instead of overlapping them.
+        // Each piece's centre, walked left to right from the parts' left edge.
+        // Written as a walk rather than as five constants so that widening one
+        // piece moves the rest instead of overlapping them.
         public static float SummaryPartX(int index)
         {
             float[] widths =
@@ -424,7 +373,7 @@ namespace PrincesPalace.Domain.UiKit
                 NextAtWidth, NextRewardWidth,
             };
 
-            float x = -SummaryPartsWidth * 0.5f;
+            float x = -FrameWidth * 0.5f + SummaryPartsLeft;
             for (int i = 0; i < index && i < widths.Length; i++)
             {
                 x += widths[i] + SummaryGap;
@@ -435,53 +384,16 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float SummaryCentreY => CentreY(SummaryYFromTop);
 
-        // Both buttons keep the same clearance from the panel's own edge,
-        // whatever they are labelled.
-        //
-        // SystemMenuLayout.PaneContentHalfWidth, NOT PanelWidth * 0.5f --
-        // these are children of the pane's own content panel (744
-        // half-width, not the declared 800).
-        public static float CollectCentreX =>
-            -SystemMenuLayout.PaneContentHalfWidth + SummaryInsetX + CollectWidth * 0.5f;
-
-        public static float CloseCentreX =>
-            SystemMenuLayout.PaneContentHalfWidth - SummaryInsetX - CloseWidth * 0.5f;
-
-        // Centred on the panel, and no wider than twice the narrower of the two
-        // gaps it has to clear.
-        //
-        // ARITHMETIC OVER THE TWO BUTTONS rather than a measured constant, so
-        // relabelling either one cannot leave the summary sitting underneath
-        // it. That collision is not hypothetical: the first version of this row
-        // centred a full-width label and UiAudit refused the build, because the
-        // button draws later and would have taken clicks meant for nothing
-        // while hiding the end of the sentence.
-        public static float SummaryWidth
-        {
-            get
-            {
-                // How much room there is between the panel's centre and the
-                // INNER edge of each button. The summary is centred, so its
-                // half-width may not exceed the smaller of the two.
-                float leftGap = -(CollectCentreX + CollectWidth * 0.5f);
-                float rightGap = CloseCentreX - CloseWidth * 0.5f;
-                float gap = leftGap < rightGap ? leftGap : rightGap;
-
-                // Sixteen pixels of air, so a font change nudging a button by a
-                // pixel does not silently make this the widest thing on the row.
-                return (gap - 16f) * 2f;
-            }
-        }
+        public static float CollectCentreX => -FrameWidth * 0.5f + CollectWidth * 0.5f;
 
         // The focus card: what the rail is pointing at, said in words big
         // enough to read without leaning in.
         //
-        // 660 wide at x 470 on a 1600 panel is panel-CENTRED, which is worth
-        // saying out loud because docs/handoffs/progression_v2 states it as
-        // a left edge and the two look like different claims.
-        public const float CardYFromTop = 193f;           // band 118..268
+        // Centred on the frame. 180 tall rather than the handoff's 150: its
+        // four rows at the menu's type floor need the difference.
+        public const float CardYFromTop = 148f;           // band 58..238
         public const float CardWidth = 660f;
-        public const float CardHeight = 150f;
+        public const float CardHeight = 180f;
 
         // Art plate 104x104, holding 86x86 of art inside a 9px mat.
         //
@@ -527,27 +439,19 @@ namespace PrincesPalace.Domain.UiKit
         // and the state along the bottom -- so the card reads as a plate with a
         // head and a foot rather than as four sentences in a column.
         //
-        // The content occupies 106 of the card's 150, matching the art plate
-        // beside it: 22 of padding top and bottom, exactly as the design gives
-        // it, and the plate is what sets the height in the first place. Every
-        // row below is inside +/-53 because of that, which is why none of them
-        // is written as an offset from a shared constant -- they are authored
-        // positions in a band, not a stack.
-        public const float CardHeaderY = 36f;
-        public const float CardHeaderHeight = 34f;
-        public const float CardKickerWidth = 200f;
-        public const float CardKickerHeight = 14f;
-        public const int CardKickerFont = 10;
-        public const float CardLevelWordWidth = 40f;
-        public const int CardLevelWordFont = 13;
-
-        // 18, not the kicker's 14: this sets three points larger, and a 13px
-        // line needs 16.9 of height before its descenders are anywhere. The
-        // text-fit audit refused the build over the 1.9 difference, which is
-        // the whole argument for having one.
-        public const float CardLevelWordHeight = 18f;
+        // The rows are authored positions in a band, not a stack: the header
+        // at the top, the name, a divider, and the state along the bottom, all
+        // at the menu's type floor.
+        public const float CardHeaderY = 62f;
+        public const float CardHeaderHeight = 38f;
+        public const float CardKickerWidth = 220f;
+        public const float CardKickerHeight = 26f;
+        public const int CardKickerFont = 20;
+        public const float CardLevelWordWidth = 56f;
+        public const int CardLevelWordFont = 24;
+        public const float CardLevelWordHeight = 34f;
         public const float CardLevelWidth = 60f;
-        public const float CardLevelHeight = 34f;
+        public const float CardLevelHeight = 38f;
         public const int CardLevelFont = 30;
 
         // Between the kicker and the LVL that follows it, with 14px of air at
@@ -561,9 +465,9 @@ namespace PrincesPalace.Domain.UiKit
         // so it fits on one line by fourteen pixels -- and a box sized for one
         // line would clip it the moment a name, a font or the plate's inset
         // moves by more than that. Two lines of room is the margin.
-        public const float CardCaptionY = -5f;
-        public const float CardCaptionHeight = 48f;
-        public const float CardDividerY = -31f;
+        public const float CardCaptionY = 14f;
+        public const float CardCaptionHeight = 56f;
+        public const float CardDividerY = -24f;
 
         // 22, not docs/handoffs/progression_v2's 32.
         //
@@ -574,9 +478,9 @@ namespace PrincesPalace.Domain.UiKit
         // design was drawn against and wrong for the filler ones. If the card
         // grows, this is the number that goes back up.
         public const int CardCaptionFont = 22;
-        public const float CardStateY = -45f;
-        public const float CardStateHeight = 14f;
-        public const int CardStateFont = 11;
+        public const float CardStateY = -48f;
+        public const float CardStateHeight = 26f;
+        public const int CardStateFont = 20;
 
         // The state's own dot, before its words: 8px, coloured by state. The
         // one thing on the card that says which of the four states this is
@@ -626,7 +530,7 @@ namespace PrincesPalace.Domain.UiKit
         // would have to eat the padding the plate defines. The footer had 455px
         // for a line whose longest string measures under 200, which is where
         // the room actually was.
-        public const float CardStateWordsWidth = 224f;
+        public const float CardStateWordsWidth = 250f;
         public const float CardFightsGap = 12f;
 
         public static float CardStateTextWidth => CardTextRight - CardStateTextLeft;
@@ -644,31 +548,22 @@ namespace PrincesPalace.Domain.UiKit
         public static float CardFightsCentreX =>
             CardTextRight - CardFightsWidth * 0.5f;
 
-        // The rail band. Asymmetric about the rail on purpose: 112px above the
-        // line and 100 below, because the caption stack is taller than the
+        // The rail band. Asymmetric about the rail on purpose: 184 above the
+        // line and 94 below, because the caption stack is taller than the
         // level number and the caret needs the difference.
-        public const float BandTopFromTop = 290f;
-        public const float BandBottomFromTop = 502f;
-        public const float BandHairlineFromTop = 501f;
+        public const float BandTopFromTop = 244f;
+        public const float BandBottomFromTop = 522f;
+        public const float BandHairlineFromTop = 521f;
 
-        // RailYFromTop tracks ContentTop, not a fixed 402: the true
-        // vertical centre of the content panel is exactly ContentTop below
-        // its own content top (357.78, the pane's own declared content
-        // half-extent), whatever that top happens to be, so
-        // CentreY(RailYFromTop) lands on y=0.
-        public static float RailYFromTop => ContentTop;
+        public const float RailYFromTop = 428f;
 
         // The two hairlines stop short of the panel's edge and fade out before
         // they get there -- see the hairline_fade bake. A rule that runs the
-        // full 1600 meets the panel's own border at a hard T, which is the one
+        // full width meets the frame's edge at a hard T, which is the one
         // junction that makes a drawn line look like a table.
         public const float BandEdgeInsetX = 44f;
 
-        // PaneContentWidth, NOT SystemMenuLayout.PanelWidth -- these
-        // hairlines are children of the pane's own content panel, 1488
-        // wide rather than the declared 1600 frame.
-        public static float BandEdgeWidth =>
-            PaneContentWidth - BandEdgeInsetX * 2f;
+        public static float BandEdgeWidth => FrameWidth - BandEdgeInsetX * 2f;
 
         // The bloom under the lit rail. Fifteen pixels of it, against the
         // rail's own three.
@@ -678,7 +573,7 @@ namespace PrincesPalace.Domain.UiKit
         public static float BandCentreY => CentreY((BandTopFromTop + BandBottomFromTop) * 0.5f);
 
         // How much room there is above the rail before the band's top edge.
-        // 112, against 100 below it.
+        // 184, against 94 below it.
         public static float RailToBandTop => RailYFromTop - BandTopFromTop;
 
         // THE SCROLLED CONTENT IS TALLER THAN THE BAND, and it has to be.
@@ -687,26 +582,17 @@ namespace PrincesPalace.Domain.UiKit
         // sits at its centre -- so the rect's half-height is however far the
         // tallest thing reaches from the rail. Sizing it to the band's own 212
         // instead put the tallest thing six pixels outside its parent at all
-        // four aspects, which is what UiAudit refused: the band is 112 above the
-        // line and 100 below, and a rect centred on the rail cannot be both.
+        // four aspects, which is what UiAudit refused: the band is 184 above the
+        // line and 94 below, and a rect centred on the rail cannot be both.
         //
-        // The tallest thing is the caption BOX, whose top edge is at 114 -- two
-        // pixels above the band itself. That is the design's own geometry and
-        // not a mistake in it: the box is four lines tall for the one reward
-        // that needs four lines, the text inside hangs from the bottom, and the
-        // two pixels of empty box that poke above the band on the other
-        // ninety-eight nodes are clipped by the viewport with nothing in them.
-        //
-        // The overhang below is clipped the same way. Nothing is lost there
-        // either: every node's lowest element is its level number at -55.
+        // The tallest thing is the caption BOX, whose top edge is at 180. The
+        // overhang below the band is clipped by the viewport with nothing in
+        // it: every node's lowest element is the stretch label at -93.
         public static float ScrollContentHeight =>
             (CaptionY + CaptionHeight * 0.5f) * 2f;
 
-        // How far the rail sits from the band's centre.
-        //
-        // Six pixels, and the reason it is not zero is the asymmetry above: the
-        // rail has to land on the panel's exact vertical centre (402) while the
-        // band around it does not straddle that line evenly.
+        // How far the rail sits from the band's centre: 45 pixels, the
+        // asymmetry above.
         //
         // Applied ONCE, to the group holding the rail and every node, so every
         // coordinate inside that group is stated relative to the rail itself
@@ -717,26 +603,15 @@ namespace PrincesPalace.Domain.UiKit
         // use. The brief's sharpest open question was that a player at level 47
         // cannot see level 50 without scrolling; this is the answer to it.
         //
-        // SHIFTED UP 60px, UNLIKE every other yFromTop constant on this
-        // screen. The uniform ContentTop delta
-        // (44.22) alone is not enough here: the ribbon's old bottom edge
-        // (768) already used nearly the whole 804-tall raw panel (36px of
-        // clearance), and the pane's own content box is 88.44px shorter than
-        // that (715.56) -- so after the uniform shift the ribbon's bottom
-        // overran the content box's own bottom inset by 52.44px, not merely
-        // moved with everything else. 60 reclaims that (plus ~7.5px of the
-        // same 4px slack margin the rest of this conversion series uses) by
-        // pulling the whole ribbon block closer to the band above it; the
-        // internal geometry (RibbonHeight=86, the 27px label-to-top gap) is
-        // untouched, only its position moved.
-        public const float RibbonLabelYFromTop = 595f;    // was 655
-        public const float RibbonLabelHeight = 14f;
-        public const int RibbonLabelFont = 10;
-        public const float RibbonTopFromTop = 622f;       // was 682
-        public const float RibbonBottomFromTop = 708f;    // was 768
-        public const float RibbonInsetX = 80f;
+        // Labels are capitals, so they take the caps floor (24).
+        public const float RibbonLabelYFromTop = 541f;
+        public const float RibbonLabelHeight = 34f;
+        public const int RibbonLabelFont = 24;
+        public const float RibbonTopFromTop = 562f;
+        public const float RibbonBottomFromTop = 648f;
+        public const float RibbonInsetX = 24f;
 
-        public static float RibbonWidth => SystemMenuLayout.PanelWidth - RibbonInsetX * 2f;
+        public static float RibbonWidth => FrameWidth - RibbonInsetX * 2f;
         public static float RibbonHeight => RibbonBottomFromTop - RibbonTopFromTop;
         public static float RibbonCentreY => CentreY((RibbonTopFromTop + RibbonBottomFromTop) * 0.5f);
         public static float RibbonLabelCentreY => CentreY(RibbonLabelYFromTop);
@@ -744,10 +619,10 @@ namespace PrincesPalace.Domain.UiKit
         // The label row, as a title at one end and an instruction at the other
         // with a rule running between them. A single centred caption was the
         // first build; it names the thing and tells you what to do with it in
-        // one breath, in the middle of 1440px of empty row, and reads as a
+        // one breath, in the middle of a thousand pixels of empty row, and reads as a
         // caption under a picture rather than as the head of a scale.
-        public const float RibbonTitleWidth = 240f;
-        public const float RibbonHintWidth = 380f;
+        public const float RibbonTitleWidth = 300f;
+        public const float RibbonHintWidth = 480f;
         public const float RibbonLabelGap = 14f;
 
         public static float RibbonTitleCentreX =>
@@ -784,19 +659,14 @@ namespace PrincesPalace.Domain.UiKit
         public const float RibbonWaitingTickHeight = 14f;
 
         public const float RibbonDotSize = 9f;
-        public const float RibbonNumberY = 24f;
+        public const float RibbonNumberY = 26f;
 
-        // 26, and the constraint is level 100 rather than the widest numeral.
-        //
-        // The last node sits at 705.6 of the ribbon's own 720 half-width, so
-        // its label has 14.4px of room either side before it leaves the rect.
-        // At 40 wide it escaped by 5.6 and UiAudit refused the build. "100" at
-        // 10px measures about 17, so 26 fits the widest label the track can
-        // carry AND the tightest position it can carry it in -- which are not
-        // the same constraint and only one of them is obvious.
-        public const float RibbonNumberWidth = 26f;
-        public const float RibbonNumberHeight = 14f;
-        public const int RibbonNumberFont = 12;
+        // Room for "40" at the floor. The constraint is the last level rather
+        // than the widest numeral: its label has to stay inside the ribbon,
+        // and level 40 sits 28 in from the ribbon's end.
+        public const float RibbonNumberWidth = 40f;
+        public const float RibbonNumberHeight = 26f;
+        public const int RibbonNumberFont = 20;
         public const float RibbonPlayheadWidth = 2f;
         public const float RibbonPlayheadHeight = 18f;
         public const float RibbonWindowStroke = 1f;
@@ -807,9 +677,9 @@ namespace PrincesPalace.Domain.UiKit
         // different kind of landmark from the ones outside it.
         public const float RibbonWindowHeight = 30f;
 
-        // The gap between two ribbon ticks. 1440 across 99 levels is about
-        // 14.5px, which is why the ticks are 2px hairlines and not dots: at
-        // this pitch anything wider merges into a bar.
+        // The gap between two ribbon ticks, about 29px across 39 levels: the
+        // ticks are 2px hairlines and not dots, because at a tighter track
+        // anything wider merges into a bar.
         public static float RibbonPitch => RibbonWidth / NodeCount;
 
         // Where `level` falls along the ribbon, measured from ITS centre --
@@ -817,6 +687,16 @@ namespace PrincesPalace.Domain.UiKit
         // resolved the same way rather than left to each call site.
         public static float RibbonOffsetX(int level) =>
             NodeX(level) / ContentWidth * RibbonWidth - RibbonWidth * 0.5f;
+
+        // A landmark's number stands over its dot, pulled in at the ribbon's
+        // ends so the label never leaves the ribbon's own rect.
+        public static float RibbonNumberX(int level)
+        {
+            float x = RibbonOffsetX(level);
+            float limit = RibbonWidth * 0.5f - RibbonNumberWidth * 0.5f;
+            if (x > limit) return limit;
+            return x < -limit ? -limit : x;
+        }
 
         // How much of the rail a window `viewportWidth` wide can see, drawn to
         // the ribbon's scale. This is the box the player drags.
@@ -888,7 +768,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // How far `level`'s node is from the middle of the window, in pixels.
         // What the depth-of-field falloff is measured against -- nodes near the
-        // edges of a 1600px window are context rather than content, and drawing
+        // edges of the window are context rather than content, and drawing
         // them at full strength is what made the rail read as a wall.
         public static float DistanceFromWindowCentre(int level, float scrollLeft) =>
             NodeX(level) + scrollLeft;
@@ -1151,22 +1031,22 @@ namespace PrincesPalace.Domain.UiKit
         // of the boundary, a violet wash laid behind the ten levels past it,
         // and a word under each half saying which is which.
         //
-        // IN THE GAP, NOT ON A NODE. A caption box is 170 wide on a 190 pitch,
+        // IN THE GAP, NOT ON A NODE. A caption box is 150 wide on a 170 pitch,
         // so there is exactly 20px of clear air at every midpoint between two
         // nodes -- the divider is 1px of that, which is why it needs no
         // overlap allowance and why widening it past about 18 would.
         public const float PrestigeDividerWidth = 1f;
         public const float PrestigeDividerHeight = 200f;
 
-        // The strip below the level numbers (-55) and above the band's own
-        // floor (-100), which is the only clear band left on a node's column.
-        // 14px of label centred at -74 sits inside both.
-        public const float StretchLabelY = -74f;
-        public const float StretchLabelHeight = 14f;
-        public const int StretchLabelFont = 10;
+        // The strip below the level numbers (-57) and above the band's own
+        // floor (-94), which is the only clear band left on a node's column.
+        // Capitals, so the caps floor (24).
+        public const float StretchLabelY = -76f;
+        public const float StretchLabelHeight = 34f;
+        public const int StretchLabelFont = 24;
 
-        public const float CompletionLabelWidth = CaptionWidth;
-        public const float PrestigeLabelWidth = 420f;
+        public const float CompletionLabelWidth = 200f;
+        public const float PrestigeLabelWidth = 720f;
 
         // The boundary itself, in the content rect's own left-edge
         // coordinates: halfway between the last combat node and the first

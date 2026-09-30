@@ -1,0 +1,489 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using NUnit.Framework;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using PrincesPalace.Content;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.UiKit;
+
+namespace PrincesPalace.PlayModeTests
+{
+    // LOADOUT (plan C16, spec 3.1) on the Map, where every change it offers is
+    // allowed: gear on and off the slots, books into and out of the book row,
+    // the two pending states (SlotArmed, BookPicked), the pack's filters and
+    // the compare column.
+    //
+    // Presses go through each control's own onClick -- the pad's A and the
+    // mouse's click both land there (DossierGamepadNavigationTests drives the
+    // dispatcher). The fixture seats Shawn in the middle, Odette at the rear
+    // and Bjorn in front, and every test selects whom it is about.
+    public class DossierLoadoutTests
+    {
+        private const string Shawn = "sheep";
+        private const string Odette = "owl";
+        private const string Bjorn = "bear";
+
+        private const string BookA = "frost_flare";
+        private const string BookB = "mud_burst";
+        private const string BookC = "lightning_bolt";
+        private const string BookD = "cinderfault";
+
+        private string _root;
+        private SystemMenuController _menu;
+        private CharacterDossierController _dossier;
+
+        [SetUp]
+        public void UseAThrowawaySaveRoot()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "pp-loadout-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_root);
+            SaveSystem.RootOverride = _root;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+            Navigation.LoadOverride = _ => { };
+        }
+
+        [TearDown]
+        public void Restore()
+        {
+            TestGlobals.ResetAll();
+            Navigation.Reset();
+            SaveSystem.RootOverride = null;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+            Time.timeScale = 1f;
+            if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        }
+
+        // A run on the Map, the three seated, an empty pack and no books.
+        private IEnumerator OpenOnTheMap(string who)
+        {
+            RunManager.StartRun(4242UL);
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { Bjorn, Shawn, Odette };
+            save.stockpiledItems.Clear();
+            foreach (var member in save.roster) member.equipment.Clear();
+
+            RunManager.Run.unassignedSpellBooks = new List<string>();
+            RunManager.Run.learnedSpells = new List<LearnedSpellEntry>();
+
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _menu = DossierPane.Menu();
+            _dossier = DossierPane.Dossier();
+
+            _menu.Open(SystemMenuTab.Character);
+            yield return null;
+
+            Assert.IsTrue(_dossier.SelectCharacter(who), $"fixture: {who} is not on the strip");
+            _dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+            yield return null;
+        }
+
+        private static Character Of(string id) => SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == id);
+
+        private void Pack(params string[] itemIds)
+        {
+            foreach (var id in itemIds) InventoryOps.Add(SaveSlotManager.CurrentSave.stockpiledItems, id);
+            _dossier.Refresh();
+        }
+
+        private void Books(params string[] skillIds)
+        {
+            RunManager.Run.unassignedSpellBooks.AddRange(skillIds);
+            _dossier.Refresh();
+        }
+
+        private static void Learned(string characterId, string skillId, int slot) =>
+            RunManager.Run.learnedSpells.Add(new LearnedSpellEntry { characterId = characterId, skillId = skillId, slot = slot });
+
+        private static string BookIn(string characterId, int slot) =>
+            RunManager.Run.learnedSpells.FirstOrDefault(e => e.characterId == characterId && e.slot == slot)?.skillId;
+
+        private static ItemDefinition ItemFor(EquipmentSlot slot) =>
+            ContentDatabase.Equippables.First(i => i.equipSlot == slot);
+
+        private string Notice => DossierPane.TextOf("SystemFooterNotice");
+
+        // ---- gear ------------------------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator APackItemEquipsOntoItsSlot_AndAWornSlotUnequips()
+        {
+            yield return OpenOnTheMap(Shawn);
+            var helm = ItemFor(EquipmentSlot.Head);
+            Pack(helm.id);
+
+            DossierPane.Press(DossierPane.PackItemCell(_dossier, helm.id));
+            Assert.AreEqual(helm.id, Of(Shawn).equipment.Get(EquipmentSlot.Head), "A on pack gear did not equip it");
+            Assert.AreEqual(0, SaveSlotManager.CurrentSave.stockpiledItems.Count, "the equip left a copy in the pack");
+
+            DossierPane.Press(DossierPane.SlotName(EquipmentSlot.Head));
+            Assert.That(Of(Shawn).equipment.Get(EquipmentSlot.Head), Is.Null.Or.Empty, "A on a worn slot did not unequip it");
+            Assert.AreEqual(1, SaveSlotManager.CurrentSave.stockpiledItems.Sum(e => e.count), "the unequip lost the item");
+        }
+
+        // The armed slot is where the item goes, the off hand included: a
+        // Weapon 1 item fits an empty Weapon 2.
+        [UnityTest]
+        public IEnumerator AnArmedSlotTakesTheItemIntoThatSlot_TheOffHandIncluded()
+        {
+            yield return OpenOnTheMap(Shawn);
+            var sword = ItemFor(EquipmentSlot.Weapon1);
+            Pack(sword.id);
+
+            DossierPane.Press(DossierPane.SlotName(EquipmentSlot.Weapon2));
+            Assert.IsTrue(_dossier.Pending.ArmsGear, "A on the empty off hand did not arm it");
+            Assert.IsTrue(_dossier.VisiblePack.All(e => LoadoutPack.FitsGearSlot(e, EquipmentSlot.Weapon2)),
+                "the armed pack shows something the off hand cannot take");
+
+            DossierPane.Press("DossierPackCell0");
+
+            Assert.IsFalse(_dossier.HasPending, "the equip left the slot armed");
+            Assert.AreEqual(sword.id, Of(Shawn).equipment.Get(EquipmentSlot.Weapon2), "the item did not go to the armed slot");
+            Assert.That(Of(Shawn).equipment.Get(EquipmentSlot.Weapon1), Is.Null.Or.Empty);
+            DossierPane.AssertSelected(DossierPane.SlotName(EquipmentSlot.Weapon2), "focus goes back to the slot it filled");
+        }
+
+        [UnityTest]
+        public IEnumerator ArmingNarrowsThePackToTheSlot_AndCancelPutsTheFilterBack()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Pack(ItemFor(EquipmentSlot.Head).id, ItemFor(EquipmentSlot.Legs).id, ItemFor(EquipmentSlot.Weapon1).id);
+
+            DossierPane.Press("DossierFilter2");
+            Assert.AreEqual(PackFilter.Weapons, _dossier.Filter, "fixture: the Weapons chip did not filter");
+
+            DossierPane.Press(DossierPane.SlotName(EquipmentSlot.Legs));
+            Assert.AreEqual(1, _dossier.VisiblePack.Count, "the armed pack shows more than the one item Legs takes");
+            Assert.AreEqual(EquipmentSlot.Legs, _dossier.VisiblePack[0].Item.Slot);
+
+            _dossier.CancelPending();
+
+            Assert.AreEqual(PackFilter.Weapons, _dossier.Filter, "cancelling the armed slot lost the chosen filter");
+            Assert.AreEqual(1, _dossier.VisiblePack.Count);
+            Assert.That(Of(Shawn).equipment.Get(EquipmentSlot.Legs), Is.Null.Or.Empty, "cancelling equipped something");
+        }
+
+        [UnityTest]
+        public IEnumerator AnEmptySlotWithNothingThatFits_SaysSoAndArmsNothing()
+        {
+            yield return OpenOnTheMap(Shawn);
+
+            DossierPane.Press(DossierPane.SlotName(EquipmentSlot.Shoes));
+
+            Assert.IsFalse(_dossier.HasPending, "a slot armed over a pack with nothing for it");
+            Assert.AreEqual("Nothing in the pack fits this slot.", Notice);
+        }
+
+        // ---- books ---------------------------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator APackBookGoesToTheLowestFreeSlot()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Learned(Shawn, BookA, 0);
+            Books(BookB);
+
+            DossierPane.Press(DossierPane.PackBookCell(_dossier, BookB));
+
+            Assert.AreEqual(BookB, BookIn(Shawn, 1), "the book did not go to the lowest free slot");
+            CollectionAssert.DoesNotContain(RunManager.Run.unassignedSpellBooks, BookB);
+            Assert.AreEqual(ContentDatabase.GetSkill(BookB).Data.DisplayName, DossierPane.TextOf("DossierBook1Caption"));
+        }
+
+        // BookPicked: every slot full, so the pack book waits for a slot to
+        // replace; the replaced book goes back to the pack.
+        [UnityTest]
+        public IEnumerator WithEveryBookSlotFull_APackBookIsPicked_AndTheSlotPressedIsReplaced()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Learned(Shawn, BookA, 0);
+            Learned(Shawn, BookB, 1);
+            Learned(Shawn, BookC, 2);
+            Books(BookD);
+
+            DossierPane.Press(DossierPane.PackBookCell(_dossier, BookD));
+
+            Assert.AreEqual(LoadoutPendingKind.BookPicked, _dossier.Pending.Kind, "a full book row did not pick the book");
+            DossierPane.AssertSelected("DossierBook0", "picking a book moves focus to the first book slot");
+
+            DossierPane.Press("DossierBook1");
+
+            Assert.IsFalse(_dossier.HasPending);
+            Assert.AreEqual(BookD, BookIn(Shawn, 1), "the pressed slot was not replaced");
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, BookB, "the replaced book did not return to the pack");
+        }
+
+        [UnityTest]
+        public IEnumerator CancellingAPickedBook_ReturnsFocusToItsPackCell_AndChangesNothing()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Learned(Shawn, BookA, 0);
+            Learned(Shawn, BookB, 1);
+            Learned(Shawn, BookC, 2);
+            Books(BookD);
+
+            string cell = DossierPane.PackBookCell(_dossier, BookD);
+            DossierPane.Press(cell);
+            Assert.IsTrue(_dossier.HasPending, "fixture: the book was not picked");
+
+            _dossier.CancelPending();
+
+            Assert.IsFalse(_dossier.HasPending);
+            DossierPane.AssertSelected(cell, "cancelling a picked book returns focus to its pack cell");
+            Assert.AreEqual(BookA, BookIn(Shawn, 0));
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, BookD);
+        }
+
+        // A on a filled book slot gives the book back to the pack
+        // (RunOrchestrator.UnlearnSpell, wired here).
+        [UnityTest]
+        public IEnumerator AFilledBookSlotGivesItsBookBackToThePack()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Learned(Shawn, BookA, 0);
+            _dossier.Refresh();
+
+            DossierPane.Press("DossierBook0");
+
+            Assert.IsNull(BookIn(Shawn, 0), "the book stayed in its slot");
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, BookA, "the removed book did not reach the pack");
+            Assert.AreEqual("Empty", DossierPane.TextOf("DossierBook0Caption"));
+        }
+
+        [UnityTest]
+        public IEnumerator AnEmptyBookSlotArms_AndThePackBookFillsExactlyThatSlot()
+        {
+            yield return OpenOnTheMap(Odette);
+            Books(BookA);
+
+            DossierPane.Press("DossierBook2");
+            Assert.IsTrue(_dossier.Pending.ArmsBook, "A on an empty book slot did not arm it");
+            Assert.AreEqual(PackEntryKind.Book, _dossier.VisiblePack[0].Kind, "the armed pack is not books");
+
+            DossierPane.Press("DossierPackCell0");
+
+            Assert.AreEqual(BookA, BookIn(Odette, 2), "the book did not go to the armed slot");
+            Assert.IsNull(BookIn(Odette, 0), "the book went to the lowest slot rather than the armed one");
+        }
+
+        // Bjorn fights with Fury: one sentence where the book row would be,
+        // and a pack book pressed for him says why.
+        [UnityTest]
+        public IEnumerator ACharacterWhoCannotCarryBooks_GetsOneSentenceInsteadOfTheBookRow()
+        {
+            yield return OpenOnTheMap(Bjorn);
+            Books(BookA);
+
+            var line = DossierPane.Control("DossierBook0");
+            Assert.IsFalse(line.gameObject.activeInHierarchy, "the book row is drawn for a character who cannot carry books");
+
+            string sentence = DossierPane.TextOf("DossierNoBooksLine");
+            StringAssert.Contains("Bjorn", sentence);
+            StringAssert.Contains("cannot carry spell books", sentence);
+
+            DossierPane.Press(DossierPane.PackBookCell(_dossier, BookA));
+            StringAssert.Contains("cannot carry spell books", Notice, "a pack book pressed for Bjorn said nothing");
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, BookA);
+        }
+
+        [UnityTest]
+        public IEnumerator ABookTheCharacterAlreadyKnows_IsRefusedWithWhy()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Learned(Shawn, BookA, 0);
+            Books(BookA);
+
+            DossierPane.Press(DossierPane.PackBookCell(_dossier, BookA));
+
+            Assert.AreEqual("You already have this spell prepared", Notice);
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, BookA, "the duplicate left the pack");
+        }
+
+        [UnityTest]
+        public IEnumerator ABookShowsItsArtInThePackAndInItsSlot()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Learned(Shawn, BookA, 0);
+            Books(BookB);
+
+            Assert.IsTrue(DossierPane.Control("DossierBook0").transform.Find("DossierBook0Icon").gameObject.activeSelf,
+                "the placed book draws no art");
+
+            string cell = DossierPane.PackBookCell(_dossier, BookB);
+            int index = int.Parse(cell.Substring("DossierPackCell".Length));
+            Assert.IsTrue(DossierPane.Control(cell).transform.Find($"DossierPackIcon{index}").gameObject.activeSelf,
+                "the pack book draws no art");
+        }
+
+        // ---- the pack's filters ----------------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator EachFilterShowsItsKind()
+        {
+            yield return OpenOnTheMap(Shawn);
+            var salve = ContentDatabase.Items.First(i => i != null && !i.IsEquippable);
+            Pack(ItemFor(EquipmentSlot.Head).id, ItemFor(EquipmentSlot.Weapon1).id, salve.id);
+            Books(BookA);
+
+            var expected = new Dictionary<int, int> { { 0, 4 }, { 1, 1 }, { 2, 1 }, { 3, 1 }, { 4, 1 } };
+            foreach (var pair in expected)
+            {
+                DossierPane.Press($"DossierFilter{pair.Key}");
+                Assert.AreEqual(pair.Value, _dossier.VisiblePack.Count, $"filter {LoadoutPack.Filters[pair.Key]}");
+                Assert.IsTrue(DossierPane.Control($"DossierFilter{pair.Key}").transform
+                        .Find($"DossierFilter{pair.Key}Marker").gameObject.activeSelf,
+                    $"filter {LoadoutPack.Filters[pair.Key]}'s marker is not lit");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator AnEmptyPackSaysSo_AndAnEmptyFilterSaysItsOwnSentence()
+        {
+            yield return OpenOnTheMap(Shawn);
+            _dossier.Refresh();
+
+            Assert.AreEqual("Nothing carried. Gear from fights and shops lands here.", DossierPane.TextOf("DossierPackEmptyHint"));
+
+            Pack(ItemFor(EquipmentSlot.Head).id);
+            DossierPane.Press("DossierFilter4");
+            Assert.AreEqual("Nothing of this kind carried.", DossierPane.TextOf("DossierPackEmptyHint"));
+        }
+
+        // ---- compare -------------------------------------------------------------------------
+
+        // "Health 280 → 338 (+58)": what it is, what it would be, the change --
+        // and the equip then does exactly what the preview said.
+        [UnityTest]
+        public IEnumerator APackItemsCompareReadsNowThenNextThenTheChange()
+        {
+            yield return OpenOnTheMap(Shawn);
+            var character = Of(Shawn);
+            var item = ContentDatabase.Equippables.FirstOrDefault(i =>
+                ItemDescription.Compare(character, i, 0).StatDelta.maxHealth > 0);
+            Assert.IsNotNull(item, "fixture: no item in the catalogue raises health");
+            Pack(item.id);
+
+            DossierPane.Select(DossierPane.PackItemCell(_dossier, item.id));
+            yield return null;
+
+            string label = UiStrings.StatMaxHealth.Format();
+            int row = Enumerable.Range(0, SheetStats.Derived.Length)
+                .First(i => DossierPane.TextOf($"DossierCompareStat{i}Name") == label);
+            string shown = DossierPane.TextOf($"DossierCompareStat{row}Value");
+
+            int before = ContentDatabase.EffectiveStats(character).maxHealth;
+            DossierPane.Press(DossierPane.PackItemCell(_dossier, item.id));
+            int after = ContentDatabase.EffectiveStats(character).maxHealth;
+
+            Assert.Greater(after, before, "fixture: the equip did not raise health");
+            Assert.AreEqual($"{before} → {after} (+{after - before})", shown,
+                "the compare column did not read now, then next, then the change");
+        }
+
+        [UnityTest]
+        public IEnumerator TheArrowInTheCompareColumnRenders()
+        {
+            yield return OpenOnTheMap(Shawn);
+
+            var value = Resources.FindObjectsOfTypeAll<TMP_Text>()
+                .First(t => t.name == "DossierCompareStat0Value" && t.gameObject.scene.IsValid());
+            Assert.IsTrue(value.font.HasCharacter('→', searchFallbacks: true, tryAddCharacter: true),
+                "the compare column's font has no arrow, so a change would draw a missing-glyph box");
+        }
+
+        // ---- a pending state is dropped by everything else (plan C6) -------------------------------
+
+        private void ArmTheHead()
+        {
+            Pack(ItemFor(EquipmentSlot.Head).id);
+            DossierPane.Press(DossierPane.SlotName(EquipmentSlot.Head));
+            Assert.IsTrue(_dossier.HasPending, "fixture: the head slot did not arm");
+        }
+
+        private void AssertDroppedWithNothingChanged(string by)
+        {
+            Assert.IsFalse(_dossier.HasPending, $"{by} left the slot armed");
+            Assert.That(Of(Shawn).equipment.Get(EquipmentSlot.Head), Is.Null.Or.Empty, $"{by} committed the armed slot");
+            Assert.AreEqual("", DossierPane.TextOf("SystemFooterNotice"), $"{by} left the armed line on the footer");
+        }
+
+        [UnityTest]
+        public IEnumerator APendingSlotIsDroppedByEveryOtherWayOut()
+        {
+            yield return OpenOnTheMap(Shawn);
+
+            // Paging the character.
+            ArmTheHead();
+            _dossier.StepSection(1);
+            AssertDroppedWithNothingChanged("LB/RB");
+            _dossier.SelectCharacter(Shawn);
+
+            // A rail section change.
+            ArmTheHead();
+            DossierPane.Press(DossierPane.SectionRow(CharacterSection.Attributes));
+            AssertDroppedWithNothingChanged("a rail section change");
+            _dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+
+            // Stepping or clicking the tab.
+            ArmTheHead();
+            _menu.StepTab(1);
+            AssertDroppedWithNothingChanged("LT/RT");
+            _menu.Select(SystemMenuTab.Character);
+            _dossier.SelectCharacter(Shawn);
+            _dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+
+            // A deep link.
+            ArmTheHead();
+            _menu.Open(SystemMenuTab.Character, MenuTarget.Pack);
+            AssertDroppedWithNothingChanged("a deep link");
+
+            // Clicking elsewhere in the tab: a filter chip.
+            ArmTheHead();
+            DossierPane.Press("DossierFilter1");
+            AssertDroppedWithNothingChanged("a filter press");
+
+            // Closing the menu (the lintel's X).
+            ArmTheHead();
+            _menu.Close();
+            AssertDroppedWithNothingChanged("closing the menu");
+            yield return null;
+        }
+
+        // Start with something pending cancels it and the menu stays open
+        // (plan C6); a second Start closes.
+        [UnityTest]
+        public IEnumerator StartWithASlotArmed_DropsItAndKeepsTheMenuOpen()
+        {
+            yield return OpenOnTheMap(Shawn);
+            var input = NavSceneReuse.TakeOverInput();
+
+            ArmTheHead();
+
+            input.SystemMenuDown = true;
+            yield return null;
+            input.ClearOneFrameFlags();
+
+            Assert.IsTrue(_menu.IsOpen, "Start with a slot armed closed the menu");
+            AssertDroppedWithNothingChanged("Start");
+
+            input.SystemMenuDown = true;
+            yield return null;
+            input.ClearOneFrameFlags();
+
+            Assert.IsFalse(_menu.IsOpen, "Start with nothing pending should close the menu");
+        }
+    }
+}

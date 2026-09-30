@@ -26,10 +26,10 @@ namespace PrincesPalace.PlayModeTests
     {
         private string _root;
 
-        // Its own save root, for the reason DossierEquipTests documents on its
-        // own: without it the test reads whatever save the runner happened to
-        // be carrying, which is order-dependent and fails with a message about
-        // the fixture wearing the costume of a product bug.
+        // Its own save root: without it the test reads whatever save the
+        // runner happened to be carrying, which is order-dependent and fails
+        // with a message about the fixture wearing the costume of a product
+        // bug.
         [SetUp]
         public void UseAThrowawaySaveRoot()
         {

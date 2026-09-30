@@ -2,8 +2,8 @@ using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // Which game-group tab the menu last showed in each context, so it
-    // reopens where the player left it (plan C7).
+    // Which game-group tab, and which CHARACTER section, the menu last showed
+    // in each context, so it reopens where the player left it (plan C7).
     //
     // Session-static, survives scene loads, never saved: the hub, the map and
     // the fight each carry their own menu instance, and a memory held on the
@@ -14,6 +14,9 @@ namespace PrincesPalace.Domain.UiKit
     {
         private static readonly Dictionary<MenuContext, SystemMenuTab> Last =
             new Dictionary<MenuContext, SystemMenuTab>();
+
+        private static readonly Dictionary<MenuContext, CharacterSection> LastSection =
+            new Dictionary<MenuContext, CharacterSection>();
 
         // THE ONE SEAM FOR "THE TAB TO OPEN ON": the remembered tab, else the
         // context's default. A caller that names a tab does not come here.
@@ -26,6 +29,18 @@ namespace PrincesPalace.Domain.UiKit
             Last[context] = tab;
         }
 
-        public static void Clear() => Last.Clear();
+        // The CHARACTER section to show, else LOADOUT: the section the plan
+        // names as the default for camp and descent alike.
+        public static CharacterSection SectionFor(MenuContext context) =>
+            LastSection.TryGetValue(context, out var section) ? section : CharacterSection.Loadout;
+
+        public static void RememberSection(MenuContext context, CharacterSection section) =>
+            LastSection[context] = section;
+
+        public static void Clear()
+        {
+            Last.Clear();
+            LastSection.Clear();
+        }
     }
 }

@@ -188,14 +188,15 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator ReachingTheRewardTrack_ThroughTheSystemMenu_ScrollsAndCollectsExactlyOnce_CancelStepsBackOneLevelAtATime()
+        public IEnumerator ReachingTheRewardTrack_ThroughTheSystemMenu_ScrollsAndCollectsExactlyOnce_CancelCloses()
         {
             SaveSlotManager.EnterSlot(0);
+            MenuMemory.Clear();
 
             // OWED > 0: earned level 12, paid through 10 -- the same shape
-            // RewardTrackGamepadNavigationTests.ReachingAndSubmittingTheCollectButton
-            // already proves at the screen level; this segment's own claim
-            // is that the SAME real Hub scene reaches it end to end.
+            // RewardTrackGamepadNavigationTests proves at the screen level;
+            // this segment's own claim is that the SAME real Hub scene reaches
+            // it end to end.
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
                 character.level = 12;
@@ -215,48 +216,23 @@ namespace PrincesPalace.PlayModeTests
 
             yield return PressSystemMenu(); // opens the menu on its default tab, Character outside a run
             Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub");
+            AssertSelectedName("DossierSection0", "opening should land on the rail's selected section, LOADOUT");
 
-            yield return MoveDown(); // the tab's own Down lands on the first equipment slot, Head
-            AssertSelectedName("DossierSlotHead", "the tab bar's Down should land on the first equipment slot");
+            // The rail is a list, and the section follows focus down it.
+            yield return MoveDown();
+            yield return MoveDown();
+            yield return MoveDown();
+            AssertSelectedName("DossierSection3", "three Downs should reach the REWARD TRACK row");
 
-            // A sideways press keeps the player's height, so Left from
-            // anywhere in the top half of the loadout reaches the roster
-            // pager, which is what is actually beside it -- the route to a
-            // nav row is down column A, which is where the nav rows are.
-            //
-            // The pager is NOT in this journey's graph: it is hidden for a
-            // squad that has nobody else to page to, so the whole of column A
-            // here is the three nav rows and Head's nearest neighbour among
-            // them is the topmost. DossierGamepadNavigationTests' own ring
-            // walks the pager case, on a save that has one.
-            yield return MoveLeft(); // Head hands off to column A at the nearest control it has
-            AssertSelectedName("DossierSpellsRow",
-                "Left from the loadout should reach the nearest column-A control, which with no roster " +
-                "pager drawn is the first nav row");
-
-            yield return MoveDown(); // and the rows are a List, top to bottom as drawn
-            AssertSelectedName("DossierTrackRow", "Down should step the nav rows to the reward-track row");
-
-            yield return PressSubmit(); // ShowTrack() -- opens the panel over column A
-            yield return null;
-            yield return null; // Start() runs one frame after activation
-            TakeOverInput();
-
-            // The panel's own fly-in glides toward the current level on open
-            // -- settled here the same way RewardTrackGamepadNavigationTests
-            // does, so the ScrollTo assertion below is not racing it.
+            // The section's own fly-in glides toward the current level as it
+            // shows -- settled, so the ScrollTo assertion below is not racing it.
             yield return new WaitForSecondsRealtime(0.5f);
 
-            // Opening the track focuses the CURRENT level's dot
-            // (RewardTrackController.CurrentLevelDot()), not the track's
-            // first dot -- the fixture set every squad member's level to 12
-            // above, so 12 is that dot, taken as the fixture's own literal
-            // rather than re-derived by calling the controller's private
-            // method from outside it.
+            // Right enters the track on the CURRENT level's disc: 12, the
+            // fixture's own literal.
             const int currentLevel = 12;
-            var entryDot = Node($"TrackDot{currentLevel}");
-            Assert.IsNotNull(entryDot, "the track has no dot for the fixture's current level");
-            AssertSelectedName(entryDot.name, "opening the track should focus the current level's own dot");
+            yield return MoveRight();
+            AssertSelectedName($"TrackDot{currentLevel}", "Right from the rail should enter on the current level's disc");
 
             var content = GameObject.Find("TrackContent")?.GetComponent<RectTransform>();
             var viewport = GameObject.Find("TrackViewport")?.GetComponent<RectTransform>();
@@ -264,53 +240,27 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(viewport, "the reward track has no viewport rect");
 
             yield return MoveRight(); // one Right press on the rail
-
-            var nextDot = Node($"TrackDot{currentLevel + 1}");
-            AssertSelectedName(nextDot.name, "one Right press on the rail should move selection to the next dot");
+            AssertSelectedName($"TrackDot{currentLevel + 1}", "one Right press on the rail should move to the next disc");
 
             float expected = RewardTrackLayout.ScrollFor(currentLevel + 1, viewport.rect.width);
             Assert.AreEqual(expected, content.anchoredPosition.x, 1f,
                 "selecting the next dot should have scrolled the rail to it via ScrollTo, the same call a " +
                 "mouse hover already makes");
 
-            yield return MoveDown(); // Down from any dot reaches the ribbon slider
-            AssertSelectedName("TrackRibbonGrab", "Down from the rail should reach the ribbon slider");
-
-            yield return MoveDown(); // and Down from the ribbon reaches the collect button
-            AssertSelectedName("TrackCollectButton", "Down from the ribbon should reach the collect button");
+            yield return MoveUp(); // Up from a disc reaches COLLECT while something is owed
+            AssertSelectedName("TrackCollectButton", "Up from the rail should reach the collect button");
 
             var character0 = SaveSlotManager.CurrentSave.ActiveSquad().First();
-            int before = character0.claimedTrackLevel;
-
             yield return PressSubmit(); // claims exactly once, through the earned level
 
             Assert.AreEqual(12, character0.claimedTrackLevel,
                 "Submit on the collect button should claim through the earned level, exactly once");
-            Assert.AreNotEqual(before, character0.claimedTrackLevel, "the claim should actually have happened");
 
-            // One Cancel press inside the reward track steps back one screen
-            // level, to the character sheet, rather than closing the whole
-            // menu.
-            //
-            // Node() is GameObject.Find, which sees only active objects, so
-            // the panel is held BEFORE the press that deactivates it.
-            var trackPanel = Node("RewardTrackPanel");
-            Assert.IsNotNull(trackPanel, "the reward track panel is not in this scene");
-
+            // The track is a section, not a level: with nothing pending, B
+            // closes the menu (plan C6).
             yield return PressCancel();
 
-            Assert.IsFalse(trackPanel.activeSelf, "the first Cancel should close the reward track");
-            Assert.IsTrue(menu.IsOpen, "and leave the character sheet standing behind it");
-            AssertSelectedName("DossierTrackRow",
-                "with the row that opened the track selected again, ready to be pressed a second time");
-
-            // And the second press, which is what proves the claim is per
-            // LEVEL rather than a flat "the dossier never closes the menu".
-            yield return PressCancel();
-
-            Assert.IsFalse(menu.IsOpen,
-                "only from the pane's base level does Cancel close the menu -- with nothing left to step " +
-                "back out of, the dossier declines the press and SystemMenu's own Close runs");
+            Assert.IsFalse(menu.IsOpen, "B with nothing pending should close the menu");
             AssertSelectedName("StartRunGate", "closing the menu should restore the hub's own entry, the gate");
         }
     }

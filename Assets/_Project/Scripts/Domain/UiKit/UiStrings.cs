@@ -148,8 +148,6 @@ namespace PrincesPalace.Domain.UiKit
                 "21 stars go dark across every constellation, and 148 Embers come back to you.");
         public static readonly UiString TrackRow =
             UiString.Define("track.row", "Reward Track");
-        public static readonly UiString TrackClose =
-            UiString.Define("track.close", "CLOSE");
 
         // "LEVEL 37 -- NEXT AT 40   A STAT POINT", set as four pieces plus a
         // rule rather than as one sentence.
@@ -840,70 +838,112 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopSellAllButton =
             UiString.Define("shop.sell_all_button", "SELL ALL {0}", "SELL ALL 99");
 
-        // --- the dossier's spell-books panel (docs/PLAN_SHOP.md §1g) --------------
-        public static readonly UiString DossierSpellsRow = UiString.Define("dossier.spells_row", "SPELLS");
-        public static readonly UiString DossierSpellsCount =
-            UiString.Define("dossier.spells_count", "{0}/{1}", "9/9");
-        public static readonly UiString DossierUnassignedHeader =
-            UiString.Define("dossier.unassigned_header", "UNASSIGNED");
-        public static readonly UiString DossierUnassignedEmpty =
-            UiString.Define("dossier.unassigned_empty", "NOTHING TO PLACE");
-        public static readonly UiString DossierSlotEmpty = UiString.Define("dossier.slot_empty", "EMPTY");
+        // --- the LOADOUT book row (docs/PLAN_SHOP.md §1g) ---------------------------
 
-        // WHAT STANDS WHERE THE THREE SLOTS WOULD BE for a character whose
+        // WHAT STANDS WHERE THE SLOTS WOULD BE for a character whose
         // primary pool refuses spell books (plan P6, gate 3). One sentence,
         // not three greyed chips: a disabled control invites a click and then
         // says nothing about why, and the reason here is not "not yet" but
         // "never".
         //
-        // SENTENCE CASE among this panel's small caps, on purpose -- it is a
-        // statement about a character, not a label on a box, and the name in
-        // it is content ("Bjorn", not "BJORN"). The sample is a name longer
-        // than any on the roster.
+        // SENTENCE CASE, on purpose -- it is a statement about a character,
+        // not a label on a box, and the name in it is content ("Bjorn", not
+        // "BJORN"). The sample is a name longer than any on the roster.
         public static readonly UiString DossierNoSpellBooks =
             UiString.Define("dossier.no_spell_books", "{0} cannot carry spell books",
                 "Somebody cannot carry spell books");
-        public static readonly UiString DossierSlotFilled =
-            UiString.Define("dossier.slot_filled", "{0}", "LIGHTNING BOLT");
 
-        // WHAT THE PANEL SAYS WHEN A SLOT PRESS IS REFUSED AS A DUPLICATE.
-        // docs/PLAN_SHOP.md 1d: "Refuse a duplicate ... not a
+        // WHAT THE MENU'S NOTICE LINE SAYS WHEN A BOOK IS REFUSED AS A
+        // DUPLICATE. docs/PLAN_SHOP.md 1d: "Refuse a duplicate ... not a
         // silent success either", and 2d says assignment time is where the
-        // player finds out. The refusal existed; nothing on the screen moved.
-        //
-        // Sentence case and the same 14pt band as
-        // DossierNoSpellBooks above, whose place it borrows -- one line, up
-        // only while the refusal stands, rather than a fourth state on the
-        // slot chips.
+        // player finds out.
         public static readonly UiString DossierSpellAlreadyKnown =
             UiString.Define("dossier.spell_already_known", "You already have this spell prepared");
 
-        // --- the dossier's skills panel -----------
-        // The row already existed (OverlaySkills, above); this is the panel it
-        // opens, same "SMALL CAPS TITLE" register as ShopSectionBooks/
-        // OverlayPackTitle.
-        public static readonly UiString DossierSkillsTitle = UiString.Define("dossier.skills_title", "SKILLS");
+        // --- the CHARACTER tab (plan C15-C21, spec section 3) ------------------------
+        public static readonly UiString CharacterSectionLoadout =
+            UiString.Define("character.section.loadout", "LOADOUT");
+        public static readonly UiString CharacterSectionAttributes =
+            UiString.Define("character.section.attributes", "ATTRIBUTES");
+        public static readonly UiString CharacterSectionSkills =
+            UiString.Define("character.section.skills", "SKILLS");
+        public static readonly UiString CharacterSectionRewardTrack =
+            UiString.Define("character.section.reward_track", "REWARD TRACK");
 
-        // Same register as DossierUnassignedEmpty ("NOTHING TO PLACE") -- a
-        // character with no talent-granted skills yet, not an error state.
-        public static readonly UiString DossierSkillsEmpty =
-            UiString.Define("dossier.skills_empty", "NOTHING LEARNED YET");
+        public static readonly UiString CharacterLevel =
+            UiString.Define("character.level", "Level {0}", "Level 100");
+        public static readonly UiString CharacterXpToNext =
+            UiString.Define("character.xp_to_next", "{0} to the next level", "99999 to the next level");
+        public static readonly UiString CharacterXpMax =
+            UiString.Define("character.xp_max", "The highest level");
 
-        // --- the dossier's attributes panel ---------------------------------------
-        // A separate key from OverlayAttributes (the row that opens this
-        // panel) even though the words match -- same convention
-        // DossierSkillsTitle/OverlaySkills already use, one row and one
-        // panel title, kept as two keys because they are two different
-        // places on the screen.
-        public static readonly UiString DossierAttributesTitle =
-            UiString.Define("dossier.attributes_title", "ATTRIBUTES");
+        public static readonly UiString LoadoutBooksHeading =
+            UiString.Define("character.loadout.books", "SPELL BOOKS");
+        public static readonly UiString LoadoutSlotEmpty =
+            UiString.Define("character.loadout.slot_empty", "Empty");
+        public static readonly UiString LoadoutTwoHanded =
+            UiString.Define("character.loadout.two_handed", "Two-handed");
 
-        // The same lock CharacterDossierController.Refund enforces
-        // (MenuPermissions RefundAttribute) -- named here because the compact
-        // grid's own minus buttons only ever went quiet with no explanation,
-        // and a panel with the room to say why should say why.
-        public static readonly UiString DossierAttributesLocked =
-            UiString.Define("dossier.attributes_locked", "Reallocation is locked until you return to the hub.");
+        public static readonly UiString PackCarried =
+            UiString.Define("character.pack.carried", "Carried {0}", "Carried 999");
+        public static readonly UiString PackEmpty =
+            UiString.Define("character.pack.empty", "Nothing carried. Gear from fights and shops lands here.");
+        public static readonly UiString PackFilterEmpty =
+            UiString.Define("character.pack.filter_empty", "Nothing of this kind carried.");
+        public static readonly UiString PackStackCount =
+            UiString.Define("character.pack.count", "{0}", "99");
+
+        // The compare column: the focused entry, what it is, and what it
+        // changes.
+        public static readonly UiString CompareStats = UiString.Define("character.compare.stats", "Stats");
+        public static readonly UiString CompareKindTier =
+            UiString.Define("character.compare.kind_tier", "{0} · Tier {1}", "Weapon · Tier 10");
+        public static readonly UiString CompareKindWeapon = UiString.Define("character.compare.weapon", "Weapon");
+        public static readonly UiString CompareKindArmour = UiString.Define("character.compare.armour", "Armour");
+        public static readonly UiString CompareKindSalve = UiString.Define("character.compare.salve", "Salve");
+        public static readonly UiString CompareKindBook = UiString.Define("character.compare.book", "Spell book");
+        public static readonly UiString CompareEmptySlot =
+            UiString.Define("character.compare.empty_slot", "Nothing worn here.");
+        public static readonly UiString CompareEmptyBookSlot =
+            UiString.Define("character.compare.empty_book_slot", "No book in this slot.");
+        public static readonly UiString CompareNoChange =
+            UiString.Define("character.compare.no_change", "Changes none of these stats.");
+        public static readonly UiString CompareDelta =
+            UiString.Define("character.compare.delta", "{0} → {1} ({2})", "9999 → 9999 (+9999)");
+
+        // The notice line's words for the loadout's pending states.
+        public static readonly UiString LoadoutArmedLine =
+            UiString.Define("character.loadout.armed", "Choose from the pack for {0}.",
+                "Choose from the pack for Weapon 2.");
+        public static readonly UiString LoadoutArmedBookLine =
+            UiString.Define("character.loadout.armed_book", "Choose a book from the pack.");
+        public static readonly UiString LoadoutPickedLine =
+            UiString.Define("character.loadout.picked", "All book slots are full. Choose one to replace with {0}.",
+                "All book slots are full. Choose one to replace with Lightning Bolt.");
+        public static readonly UiString LoadoutNothingFits =
+            UiString.Define("character.loadout.nothing_fits", "Nothing in the pack fits this slot.");
+
+        public static readonly UiString AttributesUnspent =
+            UiString.Define("character.attributes.unspent", "{0} points to spend", "99 points to spend");
+        public static readonly UiString AttributesUnspentOne =
+            UiString.Define("character.attributes.unspent_one", "1 point to spend");
+        public static readonly UiString AttributesInvested =
+            UiString.Define("character.attributes.invested", "{0} invested", "99 invested");
+        public static readonly UiString AttributesNoPoints =
+            UiString.Define("character.attributes.no_points", "No points to spend.");
+        public static readonly UiString AttributesNothingInvested =
+            UiString.Define("character.attributes.nothing_invested", "Nothing invested to take back.");
+
+        public static readonly UiString SkillsEmpty =
+            UiString.Define("character.skills.empty", "Nothing learned yet.");
+
+        public static readonly UiString PromptChooseFromPack =
+            UiString.Define("menu.prompt.choose_from_pack", "Choose from pack");
+        public static readonly UiString PromptRemove = UiString.Define("menu.prompt.remove", "Remove");
+        public static readonly UiString PromptReplaceThisBook =
+            UiString.Define("menu.prompt.replace_this_book", "Replace this book");
+        public static readonly UiString PromptRefundPoint =
+            UiString.Define("menu.prompt.refund_point", "Refund point");
 
         // --- the glossary --------------------------------------------------------
         public static readonly UiString GlossaryCount =
@@ -1376,27 +1416,15 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("exit.abandon.hold", "HOLD TO ABANDON");
 
         // ---- the character dossier -----------------------------------------
-        public static readonly UiString OverlayLoadout = UiString.Define("dossier.loadout", "LOADOUT");
-        public static readonly UiString OverlayAttributes = UiString.Define("dossier.attributes", "ATTRIBUTES");
-        public static readonly UiString OverlayXp = UiString.Define("dossier.xp", "XP");
-        public static readonly UiString OverlaySkills = UiString.Define("dossier.skills", "Skills");
-        public static readonly UiString OverlayPack = UiString.Define("dossier.pack", "The Pack");
-        public static readonly UiString OverlayPackTitle = UiString.Define("dossier.pack_title", "THE PACK");
-        public static readonly UiString OverlayPackClose = UiString.Define("dossier.pack_close", "CLOSE");
-        public static readonly UiString OverlayCarried = UiString.Define("dossier.carried", "Carried");
         public static readonly UiString OverlayPrev = UiString.Define("dossier.prev", "<");
         public static readonly UiString OverlayNext = UiString.Define("dossier.next", ">");
-        public static readonly UiString OverlayTwoHanded = UiString.Define("dossier.two_handed", "TWO-HANDED");
-        // How the pack is ORDERED. Three keys, not four: rarity is derived
-        // from tier, so a rarity button would draw the tier button's list.
-        public static readonly UiString PackSortTier = UiString.Define("dossier.sort_tier", "TIER");
-        public static readonly UiString PackSortPlus = UiString.Define("dossier.sort_plus", "+");
-        public static readonly UiString PackSortName = UiString.Define("dossier.sort_name", "NAME");
 
+        // The LOADOUT pack's filter chips (LoadoutPack.Filters).
         public static readonly UiString PackFilterAll = UiString.Define("dossier.filter_all", "All");
         public static readonly UiString PackFilterArmour = UiString.Define("dossier.filter_armour", "Armour");
         public static readonly UiString PackFilterWeapons = UiString.Define("dossier.filter_weapons", "Weapons");
         public static readonly UiString PackFilterSalves = UiString.Define("dossier.filter_salves", "Salves");
+        public static readonly UiString PackFilterBooks = UiString.Define("dossier.filter_books", "Books");
 
         // ---- the Party pane --------------------------------------------------
         //
@@ -1508,9 +1536,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PromptEquip = UiString.Define("menu.prompt.equip", "Equip");
         public static readonly UiString PromptUnequip = UiString.Define("menu.prompt.unequip", "Unequip");
         public static readonly UiString PromptSpendPoint = UiString.Define("menu.prompt.spend_point", "Spend point");
-        public static readonly UiString PromptPickBook = UiString.Define("menu.prompt.pick_book", "Pick book");
         public static readonly UiString PromptPlaceBook = UiString.Define("menu.prompt.place_book", "Place book");
-        public static readonly UiString PromptReplaceBook = UiString.Define("menu.prompt.replace_book", "Replace book");
         public static readonly UiString PromptCollect = UiString.Define("menu.prompt.collect", "Collect");
         public static readonly UiString PromptPickUp = UiString.Define("menu.prompt.pick_up", "Pick up");
         public static readonly UiString PromptPlace = UiString.Define("menu.prompt.place", "Place");

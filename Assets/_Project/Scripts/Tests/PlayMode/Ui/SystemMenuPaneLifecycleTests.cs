@@ -60,9 +60,9 @@ namespace PrincesPalace.PlayModeTests
         // ---- B5: the dossier -----------------------------------------------------
 
         // STEPPING IS THE ONE THING ON THIS PANE THAT COUNTS. With three
-        // characters on the roster, a Next wired three times lands back on the
-        // character it started on -- which is exactly the shape that would look
-        // like a button that does nothing.
+        // characters on the strip, a Next (the RB plate) wired three times
+        // lands back on the character it started on -- which is exactly the
+        // shape that would look like a button that does nothing.
         [UnityTest]
         public IEnumerator ThreeOpeningsOfTheDossierStillStepOneCharacterPerPress()
         {
@@ -77,12 +77,12 @@ namespace PrincesPalace.PlayModeTests
             yield return Cycle(dossier.gameObject);
 
             string before = NameOnTheDossier(dossier);
-            Click("DossierNextCharacter");
+            Click("DossierStripNext");
             yield return null;
 
             string after = NameOnTheDossier(dossier);
             Assert.AreNotEqual(before, after,
-                "one press of Next left the dossier on the same character - with a three-strong " +
+                "one press of the RB plate left the dossier on the same character - with a three-strong " +
                 "roster that is what a listener wired once per opening looks like");
         }
 

@@ -17,14 +17,14 @@ namespace PrincesPalace.Domain.Tests
     // stays in its own file -- this covers only the two facts every row
     // shares.
     //
-    // RunStatsPane, OptionsPane, ExitsPane, DossierColumnAFrame,
+    // RunStatsPane, OptionsPane, ExitsPane, CharacterDossier,
     // TalentPanelColumn and DraftFrame are not rows here: those screens
     // use plain Panels or flat Solid-fill-plus-Rim panels instead of a
     // themed Container, so there is no theme/ratio/inset left for this
-    // test to pin (Ui.SystemMenuPane, CharacterDossierScreen.
-    // BuildColumnAFrame, TalentScreen.BuildPanel, RelicDraftScreen.
-    // Build().Frame -- Cases() has each row's own note). PartyPane and
-    // RewardTrackPanel were never rows here to begin with --
+    // test to pin (Ui.SystemMenuPane, CharacterDossierScreen.Build,
+    // TalentScreen.BuildPanel, RelicDraftScreen.Build().Frame -- Cases()
+    // has each row's own note). PartyPane and RewardTrackPanel were never
+    // rows here to begin with --
     // SystemMenuScreenTests.NoSystemMenuNodeUsesAContainerOrFlagBannerSprite
     // is the mechanised form of the rule that replaces all of them.
     public class KitContainerPlacementTests

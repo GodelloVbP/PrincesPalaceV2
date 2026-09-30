@@ -22,8 +22,8 @@ namespace PrincesPalace.PlayModeTests
     // so a test that called their methods would pass with the owner deleted.
     //
     // Transitions are plan C6's; the one place this file departs from its
-    // letter is I with the pack already up, which closes (MenuHotkeyRule's
-    // comment has the reason).
+    // letter is I with focus already in the pack, which closes
+    // (MenuHotkeyRule's comment has the reason).
     public class MenuHotkeyTests
     {
         private string _root;
@@ -94,6 +94,26 @@ namespace PrincesPalace.PlayModeTests
         private static CharacterDossierController Dossier() =>
             Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
 
+        // Arms an empty gear slot of the character on screen, with one item in
+        // the pack that fits it: a SlotArmed pending state (plan C5).
+        private void ArmASlot()
+        {
+            var dossier = Dossier();
+            var save = SaveSlotManager.CurrentSave;
+            var character = save.roster.First(c => c.definitionId == dossier.CharacterId);
+            var item = ContentDatabase.Equippables.First(i => string.IsNullOrEmpty(character.equipment.Get(i.equipSlot)));
+
+            save.stockpiledItems.Clear();
+            InventoryOps.Add(save.stockpiledItems, item.id);
+            dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+            dossier.Refresh();
+
+            string slot = "DossierSlot" + Domain.Equipment.EquipmentSlots.DisplayName(item.equipSlot).Replace(" ", "");
+            _menu.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                .First(b => b.name == slot).onClick.Invoke();
+            Assert.IsTrue(dossier.HasPending, "fixture: the slot did not arm");
+        }
+
         private IEnumerator LoadHub()
         {
             yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
@@ -145,7 +165,7 @@ namespace PrincesPalace.PlayModeTests
         // ---- the hub: every C6 row ---------------------------------------------------
 
         [UnityTest]
-        public IEnumerator C_OpensTheCharacterTabWithoutThePack()
+        public IEnumerator C_OpensTheCharacterTabOnItsRail()
         {
             yield return LoadHub();
             Assert.IsFalse(_menu.IsOpen, "fixture: the menu should start closed");
@@ -154,7 +174,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(_menu.IsOpen, "C did not open the menu");
             Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab);
-            Assert.IsFalse(Dossier().IsPackShown, "C opens the sheet, not the pack");
+            Assert.IsFalse(Dossier().IsPackFocused, "C opens on the rail, not in the pack");
             Assert.AreEqual(0f, Time.timeScale, "the menu did not pause the game");
         }
 
@@ -193,21 +213,21 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator I_GoesToThePackAndDoesNotCloseTheMenuFromCharacterWithoutIt()
+        public IEnumerator I_GoesToThePackAndDoesNotCloseTheMenuFromTheRail()
         {
             yield return LoadHub();
 
             yield return Press(C);
-            Assert.IsFalse(Dossier().IsPackShown, "fixture: C opened with the pack down");
+            Assert.IsFalse(Dossier().IsPackFocused, "fixture: C opened on the rail");
 
             yield return Press(I);
 
             Assert.IsTrue(_menu.IsOpen, "I on the Character tab closed the menu instead of going to the pack");
-            Assert.IsTrue(Dossier().IsPackShown, "I did not bring the pack up");
+            Assert.IsTrue(Dossier().IsPackFocused, "I did not move focus into the pack");
         }
 
         [UnityTest]
-        public IEnumerator I_OpensTheClosedMenuOnTheCharacterTabWithThePack()
+        public IEnumerator I_OpensTheClosedMenuWithFocusInThePack()
         {
             yield return LoadHub();
 
@@ -215,7 +235,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(_menu.IsOpen);
             Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab);
-            Assert.IsTrue(Dossier().IsPackShown);
+            Assert.IsTrue(Dossier().IsPackFocused);
         }
 
         [UnityTest]
@@ -230,34 +250,55 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(_menu.IsOpen, "I from Party closed the menu");
             Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab);
-            Assert.IsTrue(Dossier().IsPackShown);
+            Assert.IsTrue(Dossier().IsPackFocused);
         }
 
         [UnityTest]
-        public IEnumerator I_WithThePackAlreadyUpClosesTheMenu()
+        public IEnumerator I_WithFocusAlreadyInThePackClosesTheMenu()
         {
             yield return LoadHub();
 
             yield return Press(I);
             yield return Press(I);
 
-            Assert.IsFalse(_menu.IsOpen, "the second I, with nowhere further to go, should close the sheet");
+            Assert.IsFalse(_menu.IsOpen, "the second I, with focus already in the pack, should close the sheet");
             Assert.AreEqual(1f, Time.timeScale, 0.0001f);
         }
 
+        // A pending state never commits on close and never survives one
+        // (plan C6): an armed slot, closed by its own tab's hotkey, is gone
+        // when the sheet opens again, and the item it was waiting for is
+        // still in the pack.
         [UnityTest]
-        public IEnumerator C_WithThePackUpClosesTheMenuAndTheNextOpenStartsWithoutIt()
+        public IEnumerator AnArmedSlotNeverSurvivesAClose()
         {
             yield return LoadHub();
 
-            yield return Press(I);
             yield return Press(C);
-
-            Assert.IsFalse(_menu.IsOpen, "C on the Character tab should close the menu, pack up or not");
-            Assert.IsFalse(Dossier().IsPackShown, "a pending state must not survive a close");
+            ArmASlot();
+            int packed = SaveSlotManager.CurrentSave.stockpiledItems.Count;
 
             yield return Press(C);
-            Assert.IsFalse(Dossier().IsPackShown, "the reopened sheet came back with the pack still up");
+            Assert.IsFalse(_menu.IsOpen, "C on the Character tab should close the menu, a slot armed or not");
+            Assert.IsFalse(Dossier().HasPending, "a pending state survived the close");
+            Assert.AreEqual(packed, SaveSlotManager.CurrentSave.stockpiledItems.Count, "the close committed the equip");
+
+            yield return Press(C);
+            Assert.IsFalse(Dossier().HasPending, "the reopened sheet came back with the slot still armed");
+        }
+
+        [UnityTest]
+        public IEnumerator AHotkeyCancelsAnArmedSlotBeforeSwitchingAway()
+        {
+            yield return LoadHub();
+
+            yield return Press(C);
+            ArmASlot();
+
+            yield return Press(P);
+
+            Assert.AreEqual(SystemMenuTab.Party, _menu.SelectedTab);
+            Assert.IsFalse(Dossier().HasPending, "the armed slot survived a hotkey that left the Character tab");
         }
 
         [UnityTest]
@@ -460,7 +501,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Press(I);
             Assert.IsTrue(_menu.IsOpen);
-            Assert.IsTrue(Dossier().IsPackShown, "I did not bring the pack up on the map");
+            Assert.IsTrue(Dossier().IsPackFocused, "I did not move focus into the pack on the map");
 
             yield return Press(P);
             Assert.AreEqual(SystemMenuTab.Party, _menu.SelectedTab);
@@ -480,7 +521,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Press(I);
             Assert.IsTrue(_menu.IsOpen);
-            Assert.IsTrue(Dossier().IsPackShown, "I did not bring the pack up over the fight");
+            Assert.IsTrue(Dossier().IsPackFocused, "I did not move focus into the pack over the fight");
 
             yield return Press(P);
             Assert.AreEqual(SystemMenuTab.Party, _menu.SelectedTab);
@@ -597,6 +638,30 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(_menu.IsOpen);
             Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab,
                 "the hub showed a pane no tab button leads to");
+        }
+
+        // Plan C7: the CHARACTER section is remembered too, and opening lands
+        // on its rail row (spec section 9: the pane's entry).
+        [UnityTest]
+        public IEnumerator TheCharacterTabReopensOnItsLastSection()
+        {
+            yield return LoadHub();
+
+            yield return Press(C);
+            Dossier().ShowSection(CharacterSection.Skills, focusRow: true);
+
+            // A frame on the row, as a player's focus has: the menu's focus
+            // memory records the selection once per frame.
+            yield return null;
+            _menu.Close();
+            yield return null;
+
+            yield return StartPress();
+
+            Assert.AreEqual(SystemMenuTab.Character, _menu.SelectedTab);
+            Assert.AreEqual(CharacterSection.Skills, Dossier().Section, "the section was not remembered");
+            Assert.AreEqual("DossierSection2", EventSystem.current.currentSelectedGameObject?.name,
+                "reopening should land on the remembered section's rail row");
         }
 
         // ---- the entry API's targets ------------------------------------------------

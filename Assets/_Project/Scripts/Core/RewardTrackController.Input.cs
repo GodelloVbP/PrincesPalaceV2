@@ -30,7 +30,6 @@ namespace PrincesPalace
             if (_wired) return;
             _wired = true;
 
-            if (closeButton != null) closeButton.onClick.AddListener(Close);
             if (collectButton != null) collectButton.onClick.AddListener(CollectAll);
 
             WireNodes();
@@ -43,9 +42,9 @@ namespace PrincesPalace
         //
         // ADDED AT RUNTIME rather than baked, the same bargain HoverIndex's own
         // header records: these carry delegates and an integer, and a scene
-        // cannot serialise the first usefully. The scale-on-hover half IS baked
-        // (UiNode.Hovers), so a disc still answers the pointer even if this
-        // never runs.
+        // cannot serialise the first usefully. The hover rim is baked (the
+        // kit's default on every button), so a disc still answers the pointer
+        // even if this never runs.
         private void WireNodes()
         {
             if (dots == null) return;
@@ -76,49 +75,46 @@ namespace PrincesPalace
             }
         }
 
-        // THE WHOLE PAD MAP, in one authoritative pass -- three rows, top to
-        // bottom as they are drawn:
+        // THE WHOLE PAD MAP, in one authoritative pass -- three rows, as they
+        // are drawn:
         //
-        //   the rail     Left/Right disc to disc (a Rail, wrap by default)
+        //   COLLECT      top left, when something is owed
+        //   the rail     Left/Right disc to disc, clamped at both ends
         //   the ribbon   Left/Right scrubs the window (StepRibbon)
-        //   the footer   COLLECT <-> CLOSE, or CLOSE alone when nothing is owed
         //
-        // Down from every disc is the ribbon, Down from the ribbon is the
-        // footer, and Up walks the same edges back. EVERY SELECTABLE THIS
-        // PANEL OWNS IS NAMED HERE, Explicit rather than left to Unity's
-        // Automatic, which navigates by screen position with no idea this
-        // panel is drawn OVER the dossier -- so a Move could otherwise walk
-        // onto a dossier row sitting underneath, and the focus marker and A
-        // would belong to a control the player could not see.
-        // Explicit with nothing further in a direction is a wall, which is
-        // what the panel's edge is.
+        // Down from every disc is the ribbon and Up from the ribbon is the
+        // disc in focus. Up from a disc is COLLECT, or the dossier's rail when
+        // nothing is owed; Left from the first disc and from COLLECT is the
+        // dossier's rail too (ExitTo), and Up from COLLECT is the selected tab
+        // -- the pane's top row. EVERY SELECTABLE THIS PANEL OWNS IS NAMED
+        // HERE, Explicit rather than left to Unity's Automatic.
         //
         // REBUILT EVERY REFRESH, not once: whether COLLECT exists is save
-        // state (PaintCollectButton hides it at owed == 0), and the ribbon's
-        // Down and CLOSE's Left both change with it. Called after
-        // PaintCollectButton for that reason, and after _level is resolved
-        // so the ribbon's Up has a real disc to name.
+        // state (PaintCollectButton hides it at owed == 0). Called after
+        // PaintCollectButton for that reason, and after _level is resolved so
+        // the ribbon's Up has a real disc to name.
         private void WireNavigation()
         {
             if (dots == null || dots.Length == 0) return;
 
-            var footer = collectButton != null && collectButton.gameObject.activeSelf ? collectButton : null;
-            var ribbonDown = footer != null ? footer : closeButton;
+            var collect = collectButton != null && collectButton.gameObject.activeSelf ? collectButton : null;
+            var up = collect != null ? (UnityEngine.UI.Selectable)collect : ExitTo;
 
             var links = new List<UiNavLink<UnityEngine.UI.Selectable>?>();
             links.AddRange(dots.Select(dot => RuntimeNavWiring.Link(dot, UiNavDirection.Down, ribbonGrab)));
+            links.AddRange(dots.Select(dot => RuntimeNavWiring.Link(dot, UiNavDirection.Up, up)));
+            links.Add(RuntimeNavWiring.Link(dots[0], UiNavDirection.Left, ExitTo));
             links.Add(RuntimeNavWiring.Link(ribbonGrab, UiNavDirection.Up, RailFocusDot()));
-            links.Add(RuntimeNavWiring.Link(ribbonGrab, UiNavDirection.Down, ribbonDown));
-            links.Add(RuntimeNavWiring.Link(closeButton, UiNavDirection.Up, ribbonGrab));
 
-            if (footer != null)
+            if (collect != null)
             {
-                links.Add(RuntimeNavWiring.Link(footer, UiNavDirection.Up, ribbonGrab));
-                links.AddRange(RuntimeNavWiring.LinkBoth(footer, UiNavDirection.Right, closeButton));
+                links.Add(RuntimeNavWiring.Link(collect, UiNavDirection.Down, RailFocusDot()));
+                links.Add(RuntimeNavWiring.Link(collect, UiNavDirection.Left, ExitTo));
+                links.Add(RuntimeNavWiring.Link(collect, UiNavDirection.Up, menu != null ? menu.SelectedTabSelectable : null));
             }
 
             RuntimeNavWiring.Apply(
-                RuntimeNavWiring.Group("rewardTrackRibbon", UiNavGroupKind.Rail, dots),
+                RuntimeNavWiring.Group("rewardTrackRibbon", UiNavGroupKind.Rail, dots, wrap: UiNavWrap.Clamp),
                 links);
         }
 
@@ -271,13 +267,13 @@ namespace PrincesPalace
         }
 
         // The footer's prompts (IMenuPromptSource): a waiting node and the
-        // collect button collect, any other node shows its card, and B always
-        // steps back to the dossier the track opened over.
+        // collect button collect, any other node shows its card, and B closes
+        // the menu -- the track is a section, not a level to step back from.
         public IReadOnlyList<MenuPrompt> PromptsFor(Selectable focused)
         {
             if (focused == null) return null;
 
-            var back = new MenuPrompt(PromptButton.Cancel, UiStrings.PromptBack);
+            var back = new MenuPrompt(PromptButton.Cancel, UiStrings.PromptClose);
             var collect = new MenuPrompt(PromptButton.Confirm, UiStrings.PromptCollect, MenuAction.CollectReward);
 
             if (collectButton != null && focused == collectButton) return new[] { collect, back };

@@ -154,7 +154,7 @@ namespace PrincesPalace.PlayModeTests
         //
         // 33d88bcc closed this class for three of them (equip, unequip, the
         // respec) and RewardTrackController.Input.Claim for a fourth. The
-        // dossier's "+" was left: CharacterDossierController.Spend calls
+        // dossier's "+" was left: CharacterDossierController.Spend called
         // character.Invest, saves and repaints, with no photograph of the
         // maximum and no rescale after it. Invested Constitution pays 20 max
         // health a point through AbilityDerivation, so the maximum moves by 20
@@ -207,18 +207,20 @@ namespace PrincesPalace.PlayModeTests
                 hp = 140,
             });
 
+            dossier.SelectCharacter(character.definitionId);
+            dossier.ShowSection(Domain.UiKit.CharacterSection.Attributes, focusRow: false);
             dossier.Refresh();
             yield return null;
 
-            // THE CELL IS NOT THE SCORE -- the six are sorted highest-first per
-            // character, so which cell holds Constitution is a fact about
+            // THE ROW IS NOT THE SCORE -- the six are sorted highest-first per
+            // character, so which row holds Constitution is a fact about
             // Shawn's stat line rather than a constant. Read the labels and
             // press the one that says so.
-            int cell = Enumerable.Range(0, 6).First(i =>
-                TextNamed(menu.gameObject, $"DossierAttrKey{i}").text.Trim().ToUpperInvariant()
+            int row = Enumerable.Range(0, 6).First(i =>
+                TextNamed(menu.gameObject, $"DossierAttrName{i}").text.Trim().ToUpperInvariant()
                     .StartsWith("CON"));
 
-            ButtonNamed(menu.gameObject, $"DossierAttrPlus{cell}").onClick.Invoke();
+            ButtonNamed(menu.gameObject, $"DossierAttrPlus{row}").onClick.Invoke();
             yield return null;
 
             character = SquadFixture.FirstLiveMember();

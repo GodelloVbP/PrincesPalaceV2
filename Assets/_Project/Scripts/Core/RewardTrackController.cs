@@ -10,7 +10,9 @@ using PrincesPalace.Domain.UiKit.Screens;
 namespace PrincesPalace
 {
     // Paints the reward track, scrolls it to where the player is, and hands
-    // over what the track owes.
+    // over what the track owes. The track is the CHARACTER tab's REWARD
+    // TRACK section: the dossier tells it which character to show and shows
+    // it, and the pad enters it from the dossier's rail (Entry).
     //
     // NOTHING HERE PLACES A NODE. Every dot, caption and level number was
     // emitted at its real coordinate, because level 40 sits at the same x
@@ -53,7 +55,6 @@ namespace PrincesPalace
         [SerializeField] internal Button collectButton;
         [SerializeField] internal TMP_Text collectLabel;
         [SerializeField] internal Image collectPip;
-        [SerializeField] internal Button closeButton;
 
         [SerializeField] internal RectTransform cardRect;
         [SerializeField] internal Image cardMat;
@@ -115,10 +116,9 @@ namespace PrincesPalace
         // The guard that keeps the first Refresh from reading as a level-up.
         private bool _painted;
 
-        // WHICH CHARACTER this panel is showing. Set by ShowFor, called by
-        // CharacterDossierController.ShowTrack() before this panel's own
-        // SetActive(true) -- so OnEnable's first Refresh already has it.
-        // Never resolved to a Character and
+        // WHICH CHARACTER this panel is showing. Set by ShowFor, which the
+        // dossier calls before it shows this section -- so OnEnable's first
+        // Refresh already has it. Never resolved to a Character and
         // held: the save can be replaced by a slot load while this panel is
         // open, so every Refresh re-resolves the id fresh rather than trusting
         // a reference that might now point at nothing.
@@ -178,19 +178,21 @@ namespace PrincesPalace
         private static readonly Color RibbonDotToCome = Hex(RewardTrackScreen.RibbonDotToCome);
 
         // Which character this panel shows, next time it opens. Stores only
-        // the id -- CharacterDossierController.ShowTrack() calls this BEFORE
-        // SetActive(true), so OnEnable's first Refresh already has it
-        // -- and Refresh is what resolves it
-        // against the save, every time, rather than this holding a Character
-        // reference that a slot load could leave pointing at nothing.
+        // the id -- the dossier calls this BEFORE showing the section, so
+        // OnEnable's first Refresh already has it -- and Refresh is what
+        // resolves it against the save, every time, rather than this holding
+        // a Character reference that a slot load could leave pointing at
+        // nothing.
         public void ShowFor(string characterId) => _characterId = characterId;
 
-        // Told by whoever opened this panel how to hand selection back --
-        // this controller has no idea a DossierTrackRow exists (the same
-        // reasoning ReckoningController.Dismissed/DefeatController.Dismissed
-        // already use for their own exits). Assigned fresh on every open by
-        // CharacterDossierController.ShowTrack.
-        public System.Action Closed;
+        // Where Left and Up go when they leave the track: the dossier's REWARD
+        // TRACK rail row, set by the dossier. Runtime-only, like the dossier
+        // that sets it; null leaves the track's edge a wall.
+        public Selectable ExitTo { get; set; }
+
+        // WHERE THE PAD LANDS ON ENTERING (the dossier's Right from its rail):
+        // the player's own level's disc, the one the fly-in just centred.
+        public Selectable Entry => CurrentLevelDot();
 
         private void OnEnable()
         {
@@ -198,42 +200,17 @@ namespace PrincesPalace
             Refresh();
             BeginFlyIn();
 
-            // A REAL PAD GAP, found while driving this screen end to end
-            // through the dispatcher (docs/GAMEPAD_NAVIGATION_PLAN.md phase
-            // 4, item 2, segment 8): nothing here ever selected anything, so
-            // opening this panel with a Submit press left the pad standing
-            // on the row that just got covered, with no dispatcher rule to
-            // rescue it (SystemMenuController.RefreshSelectables declares
-            // every Selectable under the whole pane regardless of
-            // visibility, so a hidden row still counts as "declared" and the
-            // reselect-if-outside-the-set rule stays silent -- the identical
-            // mechanism ShowSpells' own fix comment already names).
-            // WireNavigation (called from Refresh(), above) has already
-            // declared the disc Rail by this point, so its own entry exists
-            // to select.
-            //
-            // THE CURRENT LEVEL'S DOT, not dots[0]. dots[0] is level
-            // FirstLevel -- the far LEFT of the rail -- while BeginFlyIn just
-            // above scrolled the ribbon to _level, which can be dozens of
-            // nodes further right on anything but a brand new character.
-            //
-            // dots[i] is level FirstLevel + i (WireNodes' own indexing), so
-            // this is that inverted and clamped into range -- the same dot
-            // the fly-in just centred, which is also always the nearest
-            // collectable one: claiming is sequential and capped at _level
-            // (Press/Claim's own header), so nothing past this dot could be
-            // collected before it anyway. Only a character who has never
-            // left the starting level (_level below FirstLevel, nothing
-            // collectable yet) falls through to dots[0].
-            var target = CurrentLevelDot();
-            if (target != null) EventSystem.current?.SetSelectedGameObject(target.gameObject);
+            // NOTHING IS SELECTED HERE. The section shows as the rail's focus
+            // moves onto its row, and taking focus off the rail on the way
+            // past would make the rail impossible to walk down. The pad
+            // enters with Right, onto Entry.
         }
 
         // dots[i] is level FirstLevel + i (WireNodes' own indexing), inverted
-        // and clamped into range. The one dot BOTH the initial pad focus
-        // above and the ribbon's Up link (WireNavigation, .Input.cs) resolve
-        // to until the player moves along the rail, so the two can never
-        // name a different node than the fly-in just centred.
+        // and clamped into range. The one dot BOTH Entry and the ribbon's Up
+        // link (WireNavigation, .Input.cs) resolve to until the player moves
+        // along the rail, so the two can never name a different node than the
+        // fly-in just centred.
         private Button CurrentLevelDot()
         {
             if (dots == null || dots.Length == 0) return null;
@@ -268,18 +245,7 @@ namespace PrincesPalace
             // character who gained eight levels while this was shut should be
             // flown to, not ignited eight times -- see the guard in Refresh.
             _painted = false;
-
-            // THE OTHER HALF of the open-side fix above: whatever closed this
-            // (the button, or the safety net below covering an external
-            // deactivation) hands selection back to whichever row opened it.
-            // Fired from OnDisable rather than only from Close() itself, the
-            // same "safety net" shape this project's NavContext stack uses
-            // (docs/GAMEPAD_NAVIGATION_PLAN.md section 4) -- a scene unload
-            // or a parent hidden must not strand the callback unset either.
-            Closed?.Invoke();
         }
-
-        private void Close() => gameObject.SetActive(false);
 
         public void Refresh()
         {
@@ -327,10 +293,10 @@ namespace PrincesPalace
         // painting a character who is no longer there.
         //
         // NO ID SET falls back to the first fielded squad member: a
-        // screenshot fixture or a test that calls SetActive directly, with
+        // screenshot fixture or a test that shows the section directly, with
         // no dossier in between to call ShowFor, still gets a character
-        // rather than a blank screen -- graceful degradation, and the reason
-        // SystemMenuCaptureTests needs no fixture change (plan §8).
+        // rather than a blank screen. An id is looked up across the whole
+        // roster, because the dossier shows benched characters too.
         // WHAT DEPTH TO PRICE THE ESTIMATE AT -- not what depth the next real
         // fight literally opens at. A level-15 character sitting in the hub
         // between descents does not fight their next level at room 0 -- they
@@ -351,9 +317,8 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return null;
 
-            var squad = save.ActiveSquad();
-            return squad.FirstOrDefault(c => c != null && c.definitionId == _characterId)
-                ?? squad.FirstOrDefault(c => c != null);
+            return save.roster?.FirstOrDefault(c => c != null && c.definitionId == _characterId)
+                ?? save.ActiveSquad().FirstOrDefault(c => c != null);
         }
 
         // ---- the rail -------------------------------------------------------

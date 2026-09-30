@@ -12,13 +12,10 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // Step C's behavioural gate (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2):
-    // the ribbon as a Rail group, driven through the REAL production
-    // dispatcher on the REAL Hub scene -- a scripted BaseInput via
-    // inputOverride, yield return null, assert resulting state. Same shape
-    // as SystemMenuGamepadNavigationTests, and the same setup
-    // RewardTrackClaimTests/RewardTrackLifecycleTests already use to reach
-    // this panel (a child of the dossier, inside the system menu).
+    // The reward track's pad map, as the CHARACTER tab's REWARD TRACK section
+    // (spec section 9: "as today, entered from the rail"), driven through the
+    // REAL production dispatcher on the REAL Hub scene -- a scripted BaseInput
+    // via inputOverride, yield return null, assert resulting state.
     public class RewardTrackGamepadNavigationTests
     {
         private string _root;
@@ -49,26 +46,25 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        // Same path RewardTrackClaimTests/RewardTrackLifecycleTests take:
-        // the panel is an inactive child of the dossier, inside a pane of
-        // the system menu, inside the hub.
+        // Same path RewardTrackClaimTests/RewardTrackLifecycleTests take: the
+        // track is the dossier's REWARD TRACK section, inside a pane of the
+        // system menu, inside the hub.
         //
-        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The track panel
-        // is shut through its own close button FIRST -- shutting only the
-        // menu around it would leave it activeSelf, and its OnEnable would
-        // then replay against the previous test's character on the next
-        // open -- and then the menu. The squad edits below land on this
-        // test's own fresh save either way, before the panel opens and reads
-        // them.
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The dossier is
+        // put back on LOADOUT first, so the track's OnEnable replays against
+        // this test's character when its row is pressed. The squad edits land
+        // on this test's own fresh save before the section shows.
         private IEnumerator OpenTheTrack(int level, int claimed)
         {
             yield return SharedScene.Ensure("Hub");
 
-            var close = Find("TrackCloseButton");
-            if (close != null && close.gameObject.activeInHierarchy) close.onClick.Invoke();
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(dossier, "the hub has no CharacterDossierController");
+            dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
             NavSceneReuse.CloseHubModals();
             _input = NavSceneReuse.TakeOverInput();
             NavSceneReuse.ForgetFocusMemory();
+            MenuMemory.Clear();
             yield return null;
 
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
@@ -78,16 +74,15 @@ namespace PrincesPalace.PlayModeTests
                 character.unspentStatPoints = 0;
             }
 
-            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(_menu, "the hub has no SystemMenuController");
 
-            menu.Open();
-            menu.Select(0);
+            _menu.Open();
+            _menu.Select(0);
             yield return null;
 
-            var row = menu.GetComponentsInChildren<Button>(true)
-                .FirstOrDefault(b => b.name == "DossierTrackRow");
-            Assert.IsNotNull(row, "the dossier has no reward-track row");
+            var row = Find(TrackRow);
+            Assert.IsNotNull(row, "the dossier's rail has no REWARD TRACK row");
             row.onClick.Invoke();
 
             // TWICE. Start() runs one frame after SetActive(true), not
@@ -95,12 +90,16 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            // The panel's own fly-in glides toward the CURRENT level on
-            // open (RewardTrackController's Motion half) -- settled here,
-            // same technique RewardTrackLifecycleTests uses, so this file's
-            // own dispatcher-driven ScrollTo assertions are not racing it.
+            // The section's own fly-in glides toward the CURRENT level when it
+            // shows -- settled here, so this file's own dispatcher-driven
+            // ScrollTo assertions are not racing it.
             yield return Settle(0.5f);
         }
+
+        // The rail's REWARD TRACK row: the fourth section (CharacterSections).
+        private const string TrackRow = "DossierSection3";
+
+        private SystemMenuController _menu;
 
         private IEnumerator DriveFrame()
         {
@@ -172,66 +171,76 @@ namespace PrincesPalace.PlayModeTests
             Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsInactive.Include)
                 .FirstOrDefault(t => t.name == "TrackCardLevel");
 
+        // Right from the rail's REWARD TRACK row lands on the player's own
+        // level's disc, the one the fly-in centred.
         [UnityTest]
-        public IEnumerator DownFromTheRail_ReachesTheRibbon_ThenTheCollectButton_WhichClaimsExactlyOnce()
+        public IEnumerator RightFromTheTrackRow_EntersOnThePlayersOwnDisc()
+        {
+            yield return OpenTheTrack(level: 10, claimed: 10);
+
+            EventSystem.current.SetSelectedGameObject(Find(TrackRow).gameObject);
+            yield return null;
+
+            yield return Push(1f, 0f);
+
+            Assert.AreSame(Find("TrackDot10").gameObject, Selected, "Right from the rail should enter on the current level's disc");
+        }
+
+        [UnityTest]
+        public IEnumerator UpFromADisc_ReachesTheCollectButton_WhichClaimsExactlyOnce()
         {
             // owed > 0: earned level 12, paid through 10.
             yield return OpenTheTrack(level: 12, claimed: 10);
 
             var entryDot = Find($"TrackDot{RewardTrackLayout.FirstLevel}");
-            var ribbon = Find("TrackRibbonGrab");
             var collectButton = Find("TrackCollectButton");
-            Assert.IsNotNull(entryDot, "the track has no first dot");
-            Assert.IsNotNull(ribbon, "the track has no ribbon");
-            Assert.IsNotNull(collectButton, "the track has no collect button");
             Assert.IsTrue(collectButton.gameObject.activeSelf, "fixture: owed should be > 0 for this test to mean anything");
 
             EventSystem.current.SetSelectedGameObject(entryDot.gameObject);
             yield return null;
 
-            // Down from ANY dot reaches the ribbon -- proven from the very
-            // first dot, not a specially-chosen one -- and Down again the
-            // footer, in the order the three rows are drawn.
-            yield return Push(0f, -1f);
-            Assert.AreSame(ribbon.gameObject, Selected, "Down from the rail should reach the ribbon slider");
+            // Up from ANY disc reaches COLLECT, the summary row's button --
+            // proven from the very first disc, not a specially-chosen one.
+            yield return Push(0f, 1f);
+            Assert.AreSame(collectButton.gameObject, Selected, "Up from the rail should reach the collect button");
 
-            yield return Push(0f, -1f);
-            Assert.AreSame(collectButton.gameObject, Selected, "Down from the ribbon should reach the collect button");
-
-            var character = SaveSlotManager.CurrentSave.ActiveSquad().First();
-            int before = character.claimedTrackLevel;
-
+            var character = DossierPane.Shown();
             _input.SubmitDown = true;
             yield return DriveFrame();
 
             Assert.AreEqual(12, character.claimedTrackLevel,
                 "Submit on the collect button should claim through the earned level, exactly once");
-            Assert.AreNotEqual(before, character.claimedTrackLevel, "the claim should actually have happened");
         }
 
+        // With nothing owed there is no COLLECT: Up from a disc and Left from
+        // the first disc leave the track for the rail row it was entered
+        // from, and the ribbon is the floor.
         [UnityTest]
-        public IEnumerator WithNothingOwed_TheRibbonLeadsToClose_AndCloseLeadsBackUp()
+        public IEnumerator WithNothingOwed_TheTrackLeavesForItsRailRow_AndTheRibbonIsTheFloor()
         {
             yield return OpenTheTrack(level: 10, claimed: 10);
 
             var ribbon = Find("TrackRibbonGrab");
-            var close = Find("TrackCloseButton");
             Assert.IsFalse(Find("TrackCollectButton").gameObject.activeSelf, "fixture: nothing should be owed");
 
-            EventSystem.current.SetSelectedGameObject(ribbon.gameObject);
+            EventSystem.current.SetSelectedGameObject(Find("TrackDot10").gameObject);
             yield return null;
 
             yield return Push(0f, -1f);
-            Assert.AreSame(close.gameObject, Selected, "with no collect button, Down from the ribbon should reach CLOSE");
+            Assert.AreSame(ribbon.gameObject, Selected, "Down from the rail should reach the ribbon");
 
-            // CLOSE is the panel's corner: nothing further left or down.
-            yield return Push(-1f, 0f);
-            Assert.AreSame(close.gameObject, Selected, "Left from a lone CLOSE should go nowhere, not onto the dossier underneath");
             yield return Push(0f, -1f);
-            Assert.AreSame(close.gameObject, Selected, "Down from CLOSE should go nowhere");
+            Assert.AreSame(ribbon.gameObject, Selected, "Down from the ribbon should go nowhere");
 
+            EventSystem.current.SetSelectedGameObject(Find("TrackDot10").gameObject);
+            yield return null;
             yield return Push(0f, 1f);
-            Assert.AreSame(ribbon.gameObject, Selected, "Up from CLOSE should return to the ribbon");
+            Assert.AreSame(Find(TrackRow).gameObject, Selected, "Up from a disc with nothing owed should reach the rail row");
+
+            EventSystem.current.SetSelectedGameObject(Find($"TrackDot{RewardTrackLayout.FirstLevel}").gameObject);
+            yield return null;
+            yield return Push(-1f, 0f);
+            Assert.AreSame(Find(TrackRow).gameObject, Selected, "Left from the first disc should reach the rail row");
         }
 
         [UnityTest]
@@ -279,7 +288,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(CardLevel(), "the track has no card level label");
             Assert.AreEqual(Locked.ToString(), CardLevel().text,
                 "A on a reward not yet reached should show that reward on the card");
-            Assert.AreEqual(10, SaveSlotManager.CurrentSave.ActiveSquad().First().claimedTrackLevel,
+            Assert.AreEqual(10, DossierPane.Shown().claimedTrackLevel,
                 "a locked disc must not claim anything");
         }
 
@@ -296,63 +305,52 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("31", CardLevel().text, "the card should describe the disc the pad is on");
         }
 
+        // The track is a section, not a level: with nothing pending, B closes
+        // the menu (plan C6).
         [UnityTest]
-        public IEnumerator Cancel_ClosesTheTrackOnly_AndHandsFocusBackToItsRow()
+        public IEnumerator Cancel_OnTheTrack_ClosesTheMenu()
         {
             yield return OpenTheTrack(level: 10, claimed: 10);
 
-            var panel = Rect("RewardTrackPanel");
-            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsTrue(panel.gameObject.activeInHierarchy, "fixture: the track should be open");
+            EventSystem.current.SetSelectedGameObject(Find("TrackDot10").gameObject);
+            yield return null;
 
             _input.CancelDown = true;
             yield return DriveFrame();
 
-            Assert.IsFalse(panel.gameObject.activeInHierarchy, "B should close the reward track");
-            Assert.IsTrue(menu.IsOpen, "B on the track should close the track, not the whole menu");
-            Assert.AreEqual("DossierTrackRow", Selected != null ? Selected.name : null,
-                "closing the track should hand focus back to the row that opened it");
+            Assert.IsFalse(_menu.IsOpen, "B on the track should close the menu");
+            Assert.AreEqual(1f, Time.timeScale, 0.0001f);
         }
 
-        // THE CLASS OF THE BUG, not the instance: every control this panel
-        // owns is Explicit, and every link it has stays inside the panel.
-        // Automatic navigation on one of them is how the pad walked onto
-        // dossier rows drawn underneath -- a focus marker and an A press on
-        // something the player could not see.
+        // THE CLASS OF THE BUG, not the instance: every control the track
+        // owns is Explicit, and every link out of it goes to the dossier's
+        // REWARD TRACK row or the selected tab -- never onto a control of a
+        // section that is not showing.
         [UnityTest]
-        public IEnumerator EveryTrackControl_IsExplicit_AndNeverLinksOutsideThePanel()
+        public IEnumerator EveryTrackControl_IsExplicit_AndLeavesOnlyForItsRailRowOrTheTab()
         {
             foreach (var owed in new[] { false, true })
             {
                 yield return OpenTheTrack(level: 12, claimed: owed ? 10 : 12);
 
                 var panel = Rect("RewardTrackPanel");
+                var row = Find(TrackRow).transform;
+                var tab = Find("SystemTab" + _menu.SelectedTab).transform;
+
                 foreach (var selectable in panel.GetComponentsInChildren<Selectable>(includeInactive: false))
                 {
                     var nav = selectable.navigation;
                     Assert.AreEqual(UnityEngine.UI.Navigation.Mode.Explicit, nav.mode,
-                        $"{selectable.name} navigates by screen position and can walk onto the dossier underneath (owed: {owed})");
+                        $"{selectable.name} navigates by screen position (owed: {owed})");
 
                     foreach (var target in new[] { nav.selectOnUp, nav.selectOnDown, nav.selectOnLeft, nav.selectOnRight })
                     {
                         if (target == null) continue;
-                        Assert.IsTrue(target.transform.IsChildOf(panel),
-                            $"{selectable.name} links to {target.name}, which is outside the track panel (owed: {owed})");
+                        Assert.IsTrue(target.transform.IsChildOf(panel) || target.transform == row || target.transform == tab,
+                            $"{selectable.name} links to {target.name}, outside the track, its rail row and the tab (owed: {owed})");
                     }
                 }
             }
-        }
-
-        [UnityTest]
-        public IEnumerator ThePanelGround_TakesThePointer_SoNothingUnderneathCanBeHovered()
-        {
-            yield return OpenTheTrack(level: 10, claimed: 10);
-
-            var fill = Object.FindObjectsByType<Image>(FindObjectsInactive.Include)
-                .FirstOrDefault(i => i.name == "RewardTrackPanelFill");
-            Assert.IsNotNull(fill, "the track has no panel ground");
-            Assert.IsTrue(fill.raycastTarget,
-                "the ground must block raycasts, or hovering and clicking empty track space reaches the dossier behind it");
         }
     }
 }

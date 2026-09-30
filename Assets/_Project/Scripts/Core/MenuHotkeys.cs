@@ -30,11 +30,10 @@ namespace PrincesPalace
                 open, open ? menu.SelectedTab : tab, tab, hotkey.Target,
                 targetShowing: menu.TargetIsShowing(hotkey.Target));
 
+            // Close lets go of any pending state first (SystemMenuController.
+            // CancelPending), so a pending state never commits on close.
             if (outcome == MenuHotkeyOutcome.Close)
             {
-                // A pending state never commits on close, so the pane lets go
-                // of it first.
-                menu.CancelPending();
                 menu.Close();
                 return;
             }

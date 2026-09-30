@@ -1,133 +1,227 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Column A's identity frame. It carried a Blue 3:4 container kit until
-    // the owner called every frame inside the system menu ugly (2026-09-07);
-    // this file used to also cover the kit placement (theme, ratio, content
-    // inset) but that went with the art -- KitContainerPlacementTests no
-    // longer has a row for it either. What is left here is that column A's
-    // identity content still rides inside one named parent rather than
-    // floating beside it, and the rest of the dossier's geometry, covered by
-    // SystemMenuPaneTests.
+    // The CHARACTER tab's tree and geometry (plan C15-C16, spec section 3),
+    // pinned in the spec's own numbers.
     public class CharacterDossierScreenTests
     {
-        [Test]
-        public void TheScreenAuditsCleanAtEveryFrame()
-        {
-            foreach (var frame in UiFrames.All)
-            {
-                var solved = UiSolver.Solve(CharacterDossierScreen.Build().Root, frame);
-                var errors = UiAudit.Run(solved, frame);
-
-                Assert.IsEmpty(errors,
-                    $"at {UiFrames.Describe(frame)}, first 5 of {errors.Count}: " +
-                    string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
-            }
-        }
-
-        // Column A's frame drew Blue 3:4 container art until 2026-09-07; it
-        // is a plain Panel now, so there is no theme/ratio/inset left to pin.
-
-        [Test]
-        public void ColumnAIdentityContentRidesInsideTheFrame()
-        {
-            // If the portrait/name/nav rows were siblings of the frame rather
-            // than descendants, moving or hiding the frame would leave them
-            // stranded over the sky next to it -- the same bug class the
-            // talent panel's own container test guards.
-            var frame = Walk(CharacterDossierScreen.Build().Root)
-                .First(n => n.Name == "DossierColumnAFrame");
-            var names = Walk(frame).Select(n => n.Name).ToList();
-
-            CollectionAssert.Contains(names, "DossierName");
-            CollectionAssert.Contains(names, "DossierSubLine");
-            CollectionAssert.Contains(names, "DossierPackRow");
-        }
-
-        // DossierLayout.LeaderAt used to restate every slot's leader top as
-        // an independent literal (187, 285, 387, 489...) that happened to
-        // equal SlotAt's own top + 37 -- a slot moved in SlotAt without its
-        // leader being edited too left a hairline pointing at the old spot.
-        // LeaderTop/SlotTop now share one table (DossierLayout.SlotGeometry),
-        // and this pins the relationship with a literal 37, not the const
-        // LeaderTop actually adds -- reading the const back would make this
-        // tautological.
-        [Test]
-        public void LeaderTopTracksItsSlotTopByExactly37()
-        {
-            foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot)))
-            {
-                if (slot == EquipmentSlot.Head) continue;  // no leader for the centred slot
-
-                Assert.AreEqual(DossierLayout.SlotTop(slot) + 37f, DossierLayout.LeaderTop(slot),
-                    $"{slot}'s leader top should be its slot top + 37");
-            }
-        }
-
-        // The minus mirrors the plus across the cell's own centre. Solved in
-        // canvas space, so both centres are read relative to the cell's own
-        // solved centre before comparing -- the cell itself sits wherever the
-        // grid places it, and only the offset inside it is what §7 measured.
-        //
-        // Literal expected values, not DossierLayout's own constants: a bug
-        // that broke the constants and this test's use of them the same way
-        // would still pass.
-        //
-        // NOT §7's own literals. ContentCWidth carried a stale "// 340"
-        // comment (DossierLayout.cs:632, now fixed) against a computed 400 --
-        // ColumnCWidth(480) - ColumnCPadX(40)*2. §7's arithmetic was built on
-        // the comment rather than the computation, so its 42.67/63.33 read as
-        // plausible and were wrong; these are recomputed from the real
-        // constants once, by hand, and then pinned as literals so a second
-        // regression here cannot mark its own homework either.
-        [Test]
-        public void TheMinusSitsOppositeThePlusInsideItsCell()
-        {
-            var solved = UiSolver.Solve(CharacterDossierScreen.Build().Root, UiFrames.Reference);
-            var cell = FindSolved(solved, "DossierAttrCell0");
-            var plus = FindSolved(solved, "DossierAttrPlus0");
-            var minus = FindSolved(solved, "DossierAttrMinus0");
-
-            Assert.IsNotNull(cell);
-            Assert.IsNotNull(plus);
-            Assert.IsNotNull(minus);
-
-            Assert.AreEqual(131.33f, cell.Rect.Width, 0.01f);
-            Assert.AreEqual(84f, cell.Rect.Height, 0.01f);
-
-            var plusLocal = plus.Rect.Centre - cell.Rect.Centre;
-            var minusLocal = minus.Rect.Centre - cell.Rect.Centre;
-
-            Assert.AreEqual(52.67f, plusLocal.X, 0.01f);
-            Assert.AreEqual(29f, plusLocal.Y, 0.01f);
-            Assert.AreEqual(22f, plus.Rect.Width, 0.01f);
-            Assert.AreEqual(22f, plus.Rect.Height, 0.01f);
-
-            Assert.AreEqual(-52.67f, minusLocal.X, 0.01f);
-            Assert.AreEqual(29f, minusLocal.Y, 0.01f);
-            Assert.AreEqual(22f, minus.Rect.Width, 0.01f);
-            Assert.AreEqual(22f, minus.Rect.Height, 0.01f);
-
-            float gap = plus.Rect.Left - minus.Rect.Right;
-            Assert.AreEqual(83.33f, gap, 0.01f);
-        }
-
-        private static SolvedNode FindSolved(SolvedNode root, string name) =>
-            root.Name == name ? root : root.Descendants().FirstOrDefault(n => n.Name == name);
-
-        private static System.Collections.Generic.IEnumerable<UiNode> Walk(UiNode node)
+        private static IEnumerable<UiNode> Walk(UiNode node)
         {
             yield return node;
             foreach (var child in node.Children)
             {
                 foreach (var found in Walk(child)) yield return found;
             }
+        }
+
+        [Test]
+        public void TheScreenAuditsCleanAtEveryFrame()
+        {
+            var errors = UiAudit.RunAllFrames(CharacterDossierScreen.Build().Root);
+
+            Assert.IsEmpty(errors, $"first 5 of {errors.Count}: " +
+                string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
+        }
+
+        // ---- the frame ---------------------------------------------------------------
+
+        [Test]
+        public void TheStripRailAndDetailHaveTheSpecsSizes()
+        {
+            Assert.AreEqual(1520f, DossierLayout.AreaWidth, 0.001f);
+            Assert.AreEqual(72f, DossierLayout.StripHeight, 0.001f);
+            Assert.AreEqual(300f, DossierLayout.RailWidth, 0.001f);
+            Assert.AreEqual(1196f, DossierLayout.DetailWidth, 0.001f);
+            Assert.AreEqual(660f, DossierLayout.DetailHeight, 0.001f);
+
+            // Strip, gap and body fill the pane's working height exactly.
+            Assert.AreEqual(756f, DossierLayout.StripHeight + DossierLayout.StripGap + DossierLayout.BodyHeight, 0.001f);
+            Assert.AreEqual(162f, DossierLayout.DetailCentreX, 0.001f);
+            Assert.AreEqual(-48f, DossierLayout.DetailCentreY, 0.001f);
+            Assert.AreEqual(-610f, DossierLayout.RailCentreX, 0.001f);
+        }
+
+        [Test]
+        public void EverySectionIsTheDetailAreaAndOnlyLoadoutStartsShown()
+        {
+            var screen = CharacterDossierScreen.Build();
+            var sections = new[]
+            {
+                screen.LoadoutSection, screen.AttributesSection, screen.SkillsSection, screen.RewardTrackSection,
+            };
+
+            Assert.AreEqual(CharacterSections.All.Length, sections.Length);
+
+            foreach (NodeRef section in sections)
+            {
+                Assert.AreEqual(1196f, section.Node.Size.X, 0.001f, $"{section.Node.Name} is not the detail's width");
+                Assert.AreEqual(660f, section.Node.Size.Y, 0.001f, $"{section.Node.Name} is not the detail's height");
+            }
+
+            Assert.IsFalse(screen.LoadoutSection.Node.StartInactive, "LOADOUT is the default section");
+            Assert.IsTrue(screen.AttributesSection.Node.StartInactive);
+            Assert.IsTrue(screen.SkillsSection.Node.StartInactive);
+            Assert.IsTrue(screen.RewardTrackSection.Node.StartInactive);
+        }
+
+        [Test]
+        public void TheRailListsTheFourSectionsInOrder()
+        {
+            var screen = CharacterDossierScreen.Build();
+
+            Assert.AreEqual(4, screen.SectionRows.Count);
+            CollectionAssert.AreEqual(
+                new[] { "LOADOUT", "ATTRIBUTES", "SKILLS", "REWARD TRACK" },
+                CharacterSections.All.Select(s => CharacterSections.Label(s).Format()).ToArray());
+
+            // 64 apart, under the 260 identity block and a 24 gap.
+            Assert.AreEqual(14f, DossierLayout.SectionRowCentreY(0), 0.001f);
+            Assert.AreEqual(-178f, DossierLayout.SectionRowCentreY(3), 0.001f);
+        }
+
+        // ---- the strip ------------------------------------------------------------------
+
+        [Test]
+        public void FiveChipsFitBetweenThePagersWithTheBenchDivider()
+        {
+            Assert.AreEqual(5, DossierLayout.ChipCapacity);
+            Assert.AreEqual(5, CharacterDossierScreen.Build().Chips.Count);
+
+            // Chip 0 starts after the LB plate and its gap.
+            Assert.AreEqual(-568f, DossierLayout.ChipCentreX(0, -1), 0.001f);
+
+            // A divider before chip 3 moves chips 3 and 4 right by 16.
+            Assert.AreEqual(200f, DossierLayout.ChipCentreX(3, -1), 0.001f);
+            Assert.AreEqual(216f, DossierLayout.ChipCentreX(3, 3), 0.001f);
+            Assert.AreEqual(80f, DossierLayout.DividerCentreX(3), 0.001f);
+
+            float lastRight = DossierLayout.ChipCentreX(4, 1) + DossierLayout.ChipWidth * 0.5f;
+            float pagerLeft = DossierLayout.PagerNextX - DossierLayout.PagerWidth * 0.5f;
+            Assert.LessOrEqual(lastRight, pagerLeft, "the last chip runs under the RB plate");
+        }
+
+        // ---- LOADOUT ------------------------------------------------------------------------
+
+        // Today's arrangement in four rows (spec 3.1): Head top centre with
+        // Necklace beside it, the left file down Torso, Gloves, Legs, the
+        // right file Weapon 1, Weapon 2, Shoes level with them.
+        [TestCase(EquipmentSlot.Head, -378f, 286f)]
+        [TestCase(EquipmentSlot.Necklace, -546f, 286f)]
+        [TestCase(EquipmentSlot.Torso, -546f, 170f)]
+        [TestCase(EquipmentSlot.Gloves, -546f, 54f)]
+        [TestCase(EquipmentSlot.Legs, -546f, -62f)]
+        [TestCase(EquipmentSlot.Weapon1, -210f, 170f)]
+        [TestCase(EquipmentSlot.Weapon2, -210f, 54f)]
+        [TestCase(EquipmentSlot.Shoes, -210f, -62f)]
+        public void EachGearSlotSitsWhereTheSpecPutsIt(EquipmentSlot slot, float x, float y)
+        {
+            var at = DossierLayout.GearCentre(slot);
+            Assert.AreEqual(x, at.X, 0.001f);
+            Assert.AreEqual(y, at.Y, 0.001f);
+        }
+
+        [Test]
+        public void EveryGearSlotHasItsOwnCellAndItsOwnNode()
+        {
+            var seen = new HashSet<(float, float)>();
+            foreach (var slot in EquipmentSlots.All)
+            {
+                var at = DossierLayout.GearCentre(slot);
+                Assert.IsTrue(seen.Add((at.X, at.Y)), $"{slot} shares a cell");
+            }
+
+            Assert.AreEqual(EquipmentSlots.All.Length, CharacterDossierScreen.Build().SlotCells.Count);
+        }
+
+        [Test]
+        public void TheBookRowSitsUnderTheGearWithOneCellPerBookSlot()
+        {
+            var screen = CharacterDossierScreen.Build();
+            Assert.AreEqual(SpellBooks.MaxSpellSlots, screen.BookCells.Count);
+
+            Assert.AreEqual(-226f, DossierLayout.BookCentre(0).Y, 0.001f);
+            Assert.AreEqual(-546f, DossierLayout.BookCentre(0).X, 0.001f);
+            Assert.AreEqual(-378f, DossierLayout.BookCentre(1).X, 0.001f);
+            Assert.AreEqual(-210f, DossierLayout.BookCentre(2).X, 0.001f);
+
+            // The lowest gear caption ends above the heading.
+            Assert.LessOrEqual(3 * DossierLayout.SlotPitch + DossierLayout.SlotSize + DossierLayout.SlotCaptionGap
+                               + DossierLayout.SlotCaptionHeight, DossierLayout.BooksHeadingTop);
+            Assert.LessOrEqual(DossierLayout.BookRowTop + DossierLayout.SlotSize + DossierLayout.SlotCaptionGap
+                               + DossierLayout.SlotCaptionHeight, DossierLayout.DetailHeight);
+        }
+
+        [Test]
+        public void ThePackIsAThreeByFourGridBesideTheSlots()
+        {
+            var screen = CharacterDossierScreen.Build();
+
+            Assert.AreEqual(12, screen.PackCells.Count);
+            Assert.AreEqual(5, screen.FilterChips.Count);
+
+            Assert.AreEqual(-78f, DossierLayout.PackCellCentre(0).X, 0.001f);
+            Assert.AreEqual(216f, DossierLayout.PackCellCentre(0).Y, 0.001f);
+            Assert.AreEqual(174f, DossierLayout.PackCellCentre(11).X, 0.001f);
+            Assert.AreEqual(-162f, DossierLayout.PackCellCentre(11).Y, 0.001f);
+
+            // Grid, gap and scrollbar stay inside the 408 column.
+            float right = DossierLayout.PackLeft + DossierLayout.PackGridWidth + DossierLayout.ScrollbarGap
+                          + DossierLayout.ScrollbarWidth;
+            Assert.LessOrEqual(right, DossierLayout.PackLeft + DossierLayout.PackWidth);
+        }
+
+        [Test]
+        public void TheThumbSaysHowMuchOfThePackIsShowing()
+        {
+            Assert.AreEqual(490f, DossierLayout.ScrollThumbHeight(4), 0.001f, "a pack that fits fills the track");
+            Assert.AreEqual(245f, DossierLayout.ScrollThumbHeight(8), 0.001f);
+            Assert.AreEqual(32f, DossierLayout.ScrollThumbHeight(500), 0.001f, "the thumb keeps a grabbable floor");
+        }
+
+        [Test]
+        public void TheCompareColumnHoldsARowPerDerivedStat()
+        {
+            var screen = CharacterDossierScreen.Build();
+
+            Assert.AreEqual(SheetStats.Derived.Length, screen.CompareStatNames.Count);
+            Assert.AreEqual(SheetStats.Derived.Length, screen.CompareStatValues.Count);
+            Assert.AreEqual(448f, DossierLayout.CompareCentreX, 0.001f);
+
+            float lastBottom = DossierLayout.CompareRowsTop + SheetStats.Derived.Length * DossierLayout.CompareRowHeight;
+            Assert.LessOrEqual(lastBottom, DossierLayout.DetailHeight);
+        }
+
+        // ---- one selection language (plan C13) ------------------------------------------------
+
+        [Test]
+        public void NothingOnThePaneScalesOnHover()
+        {
+            var scaled = Walk(CharacterDossierScreen.Build().Root).Where(n => n.HoverScale != 0f && n.HoverScale != 1f)
+                .Select(n => n.Name).ToList();
+
+            Assert.IsEmpty(scaled, "hover is a plate tint, never a scale: " + string.Join(", ", scaled));
+        }
+
+        // ---- ATTRIBUTES ---------------------------------------------------------------------
+
+        [Test]
+        public void EveryAbilityHasAMinusAndAPlus()
+        {
+            var screen = CharacterDossierScreen.Build();
+
+            Assert.AreEqual(SheetStats.Abilities.Length, screen.AttributePluses.Count);
+            Assert.AreEqual(SheetStats.Abilities.Length, screen.AttributeMinuses.Count);
+            Assert.AreEqual(44f, DossierLayout.StepperSize, 0.001f);
+
+            float rowsBottom = DossierLayout.AttributeRowsTop + SheetStats.Abilities.Length * DossierLayout.AttributeRowHeight;
+            Assert.LessOrEqual(rowsBottom, DossierLayout.DetailHeight);
         }
     }
 }

@@ -27,8 +27,8 @@ prefix: `Tests/{EditMode,PlayMode}/<area>/<Prefix>*Tests.cs`.
 | Reckoning (rewards, in Fight) | `ReckoningScreen.cs` | `Core/ReckoningController.cs` | `OfferRowLayout.cs` | `WireReckoning` | `Reckoning` |
 | Defeat (in Fight) | `DefeatScreen.cs` | `Core/DefeatController.cs` | — | `WireDefeat` | `Defeat` |
 | System Menu (Fight/Map/Hub) | `SystemMenuScreen.cs` | `Core/SystemMenuController.cs` | `SystemMenuLayout.cs`, `SystemMenuTabs.cs` | `WireSystemMenu` | `SystemMenu` |
-| Character Dossier (tab) | `CharacterDossierScreen.cs` | `Core/CharacterDossierController.cs` | `DossierLayout.cs`, `SheetStats.cs` | `WireDossier`, `WireCharacterOverlay` | `Dossier`, `CharacterDossier` |
-| Reward track (tab) | `RewardTrackScreen.cs` | `Core/RewardTrackController.cs` (+`.Input`, `.Motion`) | `RewardTrackLayout.cs` | `WireRewardTrack` | `RewardTrack` |
+| CHARACTER (tab: strip, rail, LOADOUT/ATTRIBUTES/SKILLS/REWARD TRACK) | `CharacterDossierScreen.cs` | `Core/CharacterDossierController.cs` (+`.Loadout`, `.Sections`), `Core/EdgeScroll.cs` | `DossierLayout.cs`, `SheetStats.cs`; models `CharacterSection.cs`, `CharacterStrip.cs`, `LoadoutPack.cs`, `LoadoutPending.cs`, `LoadoutCompare.cs` | `WireDossier`, `WireCharacterOverlay` | `Dossier`, `CharacterDossier`, `CharacterPane`, `JourneyCharacterLoadout` |
+| Reward track (CHARACTER section) | `RewardTrackScreen.cs` | `Core/RewardTrackController.cs` (+`.Input`, `.Motion`) | `RewardTrackLayout.cs` | `WireRewardTrack` | `RewardTrack` |
 | Party (tab) | `PartyScreen.cs` | `Core/PartyController.cs`, `Core/PartyDragSource.cs` | `PartyLayout.cs`; model in `Domain/Party/` | `WireParty` | `Party` |
 | Options (tab) | `OptionsScreen.cs` | `Core/OptionsController.cs`, `Core/OptionRow.cs`; settings `Core/GameSettings.cs` | `OptionsLayout.cs`, `OptionRows.cs` | `WireOptions` | `Options` |
 | Run (tab) | `RunScreen.cs` | `Core/RunController.cs` | `RunLayout.cs`, `RunStatRows.cs`, `RunEffectRows.cs` | `WireRun` | `SystemMenuRun` |
@@ -97,6 +97,7 @@ screenshots all read it.
 - `Core/Bot/RunOrchestrator` → `Core/Bot/RunOrchestrator.{Event,Shelf,Shop}.cs`, `Core/RunOrchestrator.Spells.cs`
 - `Core/Content/ContentDatabase` → `.Effective`, `.Validation`
 - `Domain/Content/EventEntryResolver` → `.Dialogue`, `.Fights`, `.Shelves`
+- `Core/CharacterDossierController` → `.Loadout`, `.Sections`
 - `Core/MapController` → `.Walk`, `.Event`
 - `Core/RewardTrackController` → `.Input`, `.Motion`
 - `Core/TalentController` → `.Motion`
