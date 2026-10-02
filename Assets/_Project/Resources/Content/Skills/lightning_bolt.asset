@@ -62,16 +62,130 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: vfx
-        render: sprite
+      - id: tell_a
+        render: still
         place: target
         follow: 0
         at: release
         offset: 0
         path: Spells/lightning_bolt
-        seconds: 0.52
+        seconds: 0.09
         fps: 0
-        startFrame: 0
+        startFrame: 1
+        until: once
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1.4
+        size: 0
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.8
+        impactX: 0.5
+        impactY: 0.23
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: tell_b
+        render: still
+        place: target
+        follow: 0
+        at: release
+        offset: 0.09
+        path: Spells/lightning_bolt
+        seconds: 0.09
+        fps: 0
+        startFrame: 2
+        until: once
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1.4
+        size: 0
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.8
+        impactX: 0.5
+        impactY: 0.23
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: bolt
+        render: still
+        place: target
+        follow: 0
+        at: release
+        offset: 0.18
+        path: Spells/lightning_bolt
+        seconds: 0.03
+        fps: 0
+        startFrame: 4
         until: once
         fade: 0
         opacity: 1
@@ -119,8 +233,179 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
+      - id: flash
+        render: still
+        place: target
+        follow: 0
+        at: release
+        offset: 0.21
+        path: Spells/lightning_bolt
+        seconds: 0.05
+        fps: 0
+        startFrame: 5
+        until: once
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.15
+        glow: 1.8
+        impactX: 0.5
+        impactY: 0.23
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: flicker
+        render: still
+        place: target
+        follow: 0
+        at: release
+        offset: 0.26
+        path: Spells/lightning_bolt
+        seconds: 0.04
+        fps: 0
+        startFrame: 6
+        until: once
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.2
+        impactX: 0.5
+        impactY: 0.23
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: arc
+        render: still
+        place: target
+        follow: 0
+        at: release
+        offset: 0.3
+        path: Spells/lightning_bolt
+        seconds: 0.04
+        fps: 0
+        startFrame: 7
+        until: once
+        fade: 0.1
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        impactX: 0.5
+        impactY: 0.23
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
       layerFormat: 1
-      hitCueSeconds: 0.28889
+      hitCueSeconds: 0.21
     SortOrder: 6
     Status: 0
     HasStatus: 0

@@ -59,7 +59,6 @@ namespace PrincesPalace.Domain.Tests
 
         // seconds, impactFrame, frames on disk, and the delay in seconds that
         // falls out of them. Every number a literal.
-        [TestCase("lightning_bolt", "Spells/lightning_bolt", 0.52, 5, 9, 0.28888889)]
         [TestCase("frost_flare", "Spells/frost_flare", 0.52, 5, 9, 0.28888889)]
         [TestCase("mud_burst", "Spells/mud_burst", 0.65, 13, 26, 0.325)]
         public void TheImpactDelayOfEveryBaselineSpellIsWhatItWasBeforeTheLayers(
@@ -88,6 +87,25 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(delaySeconds, seconds * CombatBeat.ImpactFraction(impactFrame, frames), 1e-6,
                 $"{skillId}: the impact delay is no longer the baseline this branch started from");
+        }
+
+        // STRIKE, DO NOT RAMP: 0.18 s of sparks, then the bolt at full length in
+        // one frame, one bright frame carrying the hit cue, a short flicker and
+        // a thin arc. Literals, so a retune argues with the numbers.
+        [Test]
+        public void TheLightningBoltStrikesInOneFrameAfterAShortTell()
+        {
+            var skill = JsonBlocks.ObjectsInArray(SkillsJson(), "skills")
+                .FirstOrDefault(s => JsonBlocks.String(s, "id") == "lightning_bolt");
+            var vfx = SpellVfxJson.OwnVfx(skill);
+
+            Assert.AreEqual(0.21f, vfx.hitCueSeconds, 1e-6f, "the cue is the bright frame");
+            var bolt = vfx.layers.Single(l => l.id == "bolt");
+            var flash = vfx.layers.Single(l => l.id == "flash");
+            Assert.AreEqual(0.18f, bolt.offset, 1e-6f, "the tell is 0.18 s of sparks");
+            Assert.AreEqual(0.03f, bolt.seconds, 1e-6f, "the bolt is on screen for two ticks, not grown");
+            Assert.AreEqual(0.21f, flash.offset, 1e-6f, "the bright frame opens on the hit cue");
+            Assert.AreEqual(9, FramesOnDisk("Spells/lightning_bolt"));
         }
 
         // WHAT M6 PUT WHERE CINDERFAULT'S OWN BASELINE ROW WAS, on the same

@@ -71,7 +71,7 @@ MonoBehaviour:
         offset: 0
         path: Spells/winters_rebuke
         seconds: 0.2
-        fps: 10
+        fps: 14
         startFrame: 1
         until: once
         fade: 0.06
@@ -79,13 +79,13 @@ MonoBehaviour:
         dx: 0
         dy: 0
         scale: 1
-        size: 380
+        size: 480
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.2
-        glow: 1.6
+        punch: 0.3
+        glow: 1.8
         impactX: -1
         impactY: -1
         aspect: 0
