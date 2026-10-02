@@ -621,6 +621,54 @@
       "peakDb": -6.1
     },
     {
+      "path": "Sfx/status_regen_1",
+      "gainDb": 1.0,
+      "gain": 1.122,
+      "metric": "rms",
+      "measuredDb": -19.0,
+      "peakDb": -6.2
+    },
+    {
+      "path": "Sfx/status_regen_2",
+      "gainDb": 1.8,
+      "gain": 1.2303,
+      "metric": "rms",
+      "measuredDb": -19.8,
+      "peakDb": -6.2
+    },
+    {
+      "path": "Sfx/status_regen_3",
+      "gainDb": 4.7,
+      "gain": 1.7179,
+      "metric": "rms",
+      "measuredDb": -22.7,
+      "peakDb": -6.2
+    },
+    {
+      "path": "Sfx/status_ward_1",
+      "gainDb": 1.0,
+      "gain": 1.122,
+      "metric": "rms",
+      "measuredDb": -19.0,
+      "peakDb": -5.0
+    },
+    {
+      "path": "Sfx/status_ward_2",
+      "gainDb": 1.9,
+      "gain": 1.2445,
+      "metric": "rms",
+      "measuredDb": -19.9,
+      "peakDb": -4.9
+    },
+    {
+      "path": "Sfx/status_ward_3",
+      "gainDb": 0.7,
+      "gain": 1.0839,
+      "metric": "rms",
+      "measuredDb": -18.7,
+      "peakDb": -4.7
+    },
+    {
       "path": "Sfx/swipe_1",
       "gainDb": 0.3,
       "gain": 1.0351,

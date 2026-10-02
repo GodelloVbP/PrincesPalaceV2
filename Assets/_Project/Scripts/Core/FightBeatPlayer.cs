@@ -1098,6 +1098,7 @@ namespace PrincesPalace
                 // frames-less cast reaches this line on the same frame it
                 // would have from the top of the beat.
                 SoundController.PlayClip(beat.Vfx.sfxPath);
+                StatusCues.Observe(beat.Snapshot?.Keys);
 
                 ShowAmount(beat);
                 FlashTarget?.Invoke(beat);

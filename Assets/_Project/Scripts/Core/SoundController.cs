@@ -23,6 +23,26 @@ namespace PrincesPalace
 
         private AudioSource _source;
 
+        // THE SPACE THE WORLD'S SOUNDS HAPPEN IN. PlayClip (spells, melee,
+        // voices, statuses, events) goes through a second source on a child
+        // object carrying an AudioReverbFilter; Play(Sound) (UI clicks,
+        // stings) stays dry, since a reverberant button is a muddy button.
+        // The filter is inline on that source rather than a mixer send: the
+        // project has no AudioMixer, and one inline filter is the whole of the
+        // need. If a send or a per-group volume is ever wanted, an SFX mixer
+        // group replaces this source.
+        //
+        // THE OWNER TUNES BY EAR, SO ReverbWetMillibels IS THE ONE KNOB: how
+        // loud the reverb is against the dry sound, in millibels (-10000
+        // silent .. 0 as loud as the dry signal). ReverbEnabled switches the
+        // whole thing off.
+        public const bool ReverbEnabled = true;
+        public const int ReverbWetMillibels = -2200;
+        private const float ReverbDecaySeconds = 0.9f;
+        private const int ReverbRoomMillibels = -1000;
+
+        private AudioSource _worldSource;
+
         // Clips are cached on first use rather than all loaded up front:
         // Resources.Load is not free, most sounds are not needed in the first
         // seconds, and a clip that never plays never costs anything.
@@ -46,6 +66,21 @@ namespace PrincesPalace
             // source sitting at the origin would pan and attenuate based on
             // where the camera happens to be.
             _instance._source.spatialBlend = 0f;
+
+            var world = new GameObject("WorldSfx");
+            world.transform.SetParent(go.transform, false);
+            _instance._worldSource = world.AddComponent<AudioSource>();
+            _instance._worldSource.playOnAwake = false;
+            _instance._worldSource.spatialBlend = 0f;
+            if (ReverbEnabled)
+            {
+                var reverb = world.AddComponent<AudioReverbFilter>();
+                reverb.reverbPreset = AudioReverbPreset.User;
+                reverb.dryLevel = 0f;
+                reverb.room = ReverbRoomMillibels;
+                reverb.decayTime = ReverbDecaySeconds;
+                reverb.reverbLevel = ReverbWetMillibels;
+            }
         }
 
         // Told of every enum sound asked for, before the clip is resolved, so a
@@ -107,7 +142,7 @@ namespace PrincesPalace
             // every one of Shawn's voice lines takes (CharacterVoice routes
             // through here), and those were the loudest thing in the game by
             // a wide margin.
-            _instance._source.PlayOneShot(clip, GameSettings.SoundVolume * AudioLevels.GainFor(resourcePath));
+            _instance._worldSource.PlayOneShot(clip, GameSettings.SoundVolume * AudioLevels.GainFor(resourcePath));
         }
 
         // ---- the one looping channel --------------------------------------------

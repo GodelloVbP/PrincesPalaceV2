@@ -305,6 +305,49 @@ namespace PrincesPalace.Domain.Tests
             return Path.Combine(dir.FullName, "Assets", "_Project");
         }
 
+        // The Earth orb's blow cue starts ON its transient. The source clip had a
+        // 0.25 s crackle before the strike, which fired 0.25 s after the contact
+        // beat; its sibling elements all peak inside their first 90 ms.
+        [Test]
+        public void ThePrismaticOrbImpactsStartOnTheirTransient()
+        {
+            foreach (var element in new[] { "earth", "fire", "wind", "water" })
+            {
+                var samples = ReadMono16("prismatic_orb_" + element + "_impact");
+                int limit = 44100 * 15 / 100; // 150 ms; water, the slowest, peaks at 136 ms
+                int peakAt = 0;
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    if (System.Math.Abs((int)samples[i]) > System.Math.Abs((int)samples[peakAt])) peakAt = i;
+                }
+                Assert.Less(peakAt, limit, element + " peaks " + peakAt / 44100f + " s in");
+            }
+        }
+
+        // Status cues: six takes (three per family), one entry each in the gain table.
+        [Test]
+        public void TheStatusCuesExistAndHaveALevelEntry()
+        {
+            string levels = File.ReadAllText(Path.Combine(ResourcesRoot(), "Audio", "audio_levels.json"));
+            foreach (var cue in new[]
+            {
+                "status_ward_1", "status_ward_2", "status_ward_3",
+                "status_regen_1", "status_regen_2", "status_regen_3",
+            })
+            {
+                AssertWavSeconds(cue, 1.2f);
+                StringAssert.Contains("\"path\": \"Sfx/" + cue + "\"", levels);
+            }
+        }
+
+        private static short[] ReadMono16(string cue)
+        {
+            byte[] bytes = File.ReadAllBytes(Path.Combine(ResourcesRoot(), "Audio", "Sfx", cue + ".wav"));
+            var samples = new short[(bytes.Length - 44) / 2];
+            System.Buffer.BlockCopy(bytes, 44, samples, 0, samples.Length * 2);
+            return samples;
+        }
+
         private static string ContentPath(string file) => Path.Combine(ProjectRoot(), "ContentData", file);
 
         private static string ResourcesRoot() => Path.Combine(ProjectRoot(), "Resources");

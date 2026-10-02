@@ -101,7 +101,7 @@ code change. A spell with a wind-up worth hearing names a second path,
 | `crownfall_impact.wav` | 0.80s | Calvo Lightning `zap_blast_sparkle_bright_02`. No Arcane pack; a lightning strike is the closest. |
 | `borrowed_moment_impact.wav` | 0.60s | Calvo Wind `short_spacious_whoosh_04`, a whoosh for an ally moving earlier. |
 | `palace_passage_impact.wav` | 1.00s | Calvo Dark `warp_03`, the only warp in the packs, for the seat swap. |
-| `prismatic_orb_earth_impact.wav`, `_fire_`, `_wind_` | 0.90s each | Per-element `sfxPath`. Calvo Earth `stone_dry_impact_03`, Fire `fireball_burst_bright_03`, Wind `air_impact_splash_02`. |
+| `prismatic_orb_earth_impact.wav`, `_fire_`, `_wind_` | 0.65s, 0.90s, 0.90s | Per-element `sfxPath`. Calvo Earth `stone_dry_impact_03`, Fire `fireball_burst_bright_03`, Wind `air_impact_splash_02`. The Earth clip starts at the source's strike (0.248s in); the 0.25s of crackle before it landed after the contact beat. |
 | `winters_rebuke_cast.wav` | 0.46s | `castSfxPath`. Calvo Ice `charge_impact_09`, window 0.57-1.03s. |
 | `vipers_bite_cast.wav` | 0.30s | `castSfxPath`. Calvo Acid `cast_charge_splash_impact_03`, window 0.09-0.39s. |
 | `spore_cloud_cast.wav` | 0.35s | `castSfxPath`. Calvo Acid `cast_riser_liquid_impact_03`, window 0.07-0.42s. |
@@ -124,6 +124,20 @@ code change. A spell with a wind-up worth hearing names a second path,
 | `boulder_slam_impact.wav` | 0.39s | Boulder Slam's `sfxPath`. rubberduck `item_stone_01`: 64% of its energy sits under 250 Hz (centroid 0.8 kHz) against a 2.7-7 kHz centroid for the other seven stone clips. 0.105s lead-in and the tail below -40 dB cut. |
 | `trunk_slam_impact.wav` | 0.20s | Trunk Slam's `sfxPath`. rubberduck `wood_03`, the highest mean level of the five wood clips (-20.9 dB), no lead-in. |
 | `bellwether_scratch_impact.wav` | 0.25s | Bellwether Scratch's `sfxPath`. rubberduck `blade_02`, fuller than `blade_01` (-21.4 vs -22.6 dB mean) and shorter than `blade_03`. |
+
+**Status cues are keyed by status type, not by spell.** `Core/StatusCues.cs` maps
+`StatusEffectType` to its takes (Shielded and Protect: `status_ward_1..3`; Regen:
+`status_regen_1..3`; every harmful status is silent) and plays one at random when
+`FightBeatPlayer` first sees that status on a combatant at a beat's impact, at most
+once per type per frame. The clips are 1.2s cuts of Leonardo Calvo's Holy Spell Pack
+`Protect Cast 01..03` and `Heal Cast Bright 01..03`, rebuilt by
+`tools/make_status_cues.py`. A new spell, relic or talent that applies one of those
+statuses is audible with no authoring; a new status sound is one row in that table.
+
+**World sounds get reverb, UI sounds do not.** `SoundController.PlayClip` plays through
+a child source carrying an `AudioReverbFilter`; `Play(Sound)` stays dry. There is no
+`AudioMixer`. The one tuning knob is `SoundController.ReverbWetMillibels` (default
+-2200; -10000 silent, 0 as loud as the dry sound), and `ReverbEnabled` turns it off.
 
 **Cast cues are riser tails.** A charge builds toward a peak, so its head is the
 quiet part. Each `*_cast.wav` (and `cinderfault_startup`) is the window that ends
