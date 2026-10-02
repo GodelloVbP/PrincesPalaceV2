@@ -64,31 +64,202 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: vfx
-        render: sprite
-        place: target
+      - id: gather
+        render: still
+        place: target-centre
         follow: 0
         at: release
         offset: 0
         path: Spells/frost_flare
-        seconds: 0.52
+        seconds: 0.1
         fps: 0
-        startFrame: 0
+        startFrame: 1
         until: once
         fade: 0
         opacity: 1
         dx: 0
         dy: 0
         scale: 1
-        size: 0
+        size: 440
         fit: target
         facing: none
         sort: effects
         align: 
         punch: 0
-        glow: 0
+        glow: 1.1
         impactX: 0.5
-        impactY: 0.18
+        impactY: 0.62
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: converge
+        render: still
+        place: target-centre
+        follow: 0
+        at: release
+        offset: 0.1
+        path: Spells/frost_flare
+        seconds: 0.14
+        fps: 0
+        startFrame: 2
+        until: once
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 440
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.1
+        glow: 1.5
+        impactX: 0.47
+        impactY: 0.75
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: collide
+        render: still
+        place: target-centre
+        follow: 0
+        at: release
+        offset: 0.24
+        path: Spells/frost_flare
+        seconds: 0.08
+        fps: 0
+        startFrame: 5
+        until: once
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 520
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.3
+        glow: 2
+        impactX: 0.52
+        impactY: 0.33
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: residue
+        render: still
+        place: target-centre
+        follow: 0
+        at: release
+        offset: 0.32
+        path: Spells/frost_flare
+        seconds: 0.1
+        fps: 0
+        startFrame: 6
+        until: once
+        fade: 0.1
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 440
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1
+        impactX: 0.47
+        impactY: 0.3
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -122,7 +293,7 @@ MonoBehaviour:
           seed: 0
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.28889
+      hitCueSeconds: 0.24
     SortOrder: 4
     Status: 0
     HasStatus: 0

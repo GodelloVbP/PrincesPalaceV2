@@ -334,8 +334,12 @@ namespace PrincesPalace.PlayModeTests
                 }, 0.28888889f),
                 ("frost_flare", new SpellPresentation
                 {
-                    path = "Spells/frost_flare", seconds = 0.52f, impactFrame = 5,
-                }, 0.28888889f),
+                    // Authored in seconds since the owner's sheet replaced the
+                    // nine-frame stand-in: a legacy block would derive the
+                    // cue from the new six-frame folder.
+                    layerFormat = 1, hitCueSeconds = 0.24f,
+                    layers = new[] { new SpellLayer { id = "x", render = "sprite", place = "target", path = "Spells/frost_flare" } },
+                }, 0.24f),
                 ("mud_burst", new SpellPresentation
                 {
                     path = "Spells/mud_burst", seconds = 0.65f, impactFrame = 13, departFrame = 9,

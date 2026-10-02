@@ -277,9 +277,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(_enemies.All(e => e.IsAlive),
                 "an enemy died mid-capture, so the strip would show a corpse rather than three hits");
 
-            // The crack is a per-target effects layer now (the formation ground layer never read),
-            // so no ground renderer turns off.
-            Assert.AreEqual(-1, groundOffFrame, "cinderfault no longer draws in the ground band");
+            Assert.Greater(groundOffFrame, 0,
+                "the ground fault never turned back off inside the window -- it did not cool away");
         }
 
         // ---- the picture ------------------------------------------------------
@@ -356,6 +355,7 @@ namespace PrincesPalace.PlayModeTests
             Debug.Log($"[CinderfaultCapture] wrote {frames.Count} frames to {LabelDir}");
 
             Assert.AreEqual(1, impactFrames.Count, "expected one shared impact frame for all three targets");
+            Assert.Greater(groundOffFrame, 0, "the fault never cooled away inside the window");
         }
 
         // The ground box's own rect, and every living slot's centre x / ground

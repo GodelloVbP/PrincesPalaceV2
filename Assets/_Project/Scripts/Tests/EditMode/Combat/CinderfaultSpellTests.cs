@@ -131,10 +131,11 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"offset\": 0.2167", entry);
             StringAssert.DoesNotContain("\"seconds\": 0.78", entry);
 
-            // THE CRACK IS PLACED UNDER EACH STRUCK BODY: a formation span
-            // collapses to a sliver for a lone enemy, so it never read.
-            StringAssert.DoesNotContain("\"align\": \"span\"", entry);
-            StringAssert.DoesNotContain("\"place\": \"formation\"", entry);
+            // THE FAULT FOLLOWS THE RANK (the enemies stand on a diagonal) and a
+            // second crack is placed under each struck body, so a lone enemy
+            // still shows one.
+            StringAssert.Contains("\"align\": \"span\"", entry);
+            StringAssert.Contains("\"id\": \"crack\"", entry);
         }
 
         // The presentation's own fallbacks, which is the mechanism the test
