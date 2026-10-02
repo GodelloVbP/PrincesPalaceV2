@@ -35,6 +35,20 @@ succeeds only here. Catan, Godot, or "M137" means another project — stop.
 - Be concise in code, comments, docs and reports.
 - Verify with evidence (the command and its output) before claiming done.
 
+## Working with the owner
+
+- If my request is ambiguous in a way that is expensive or irreversible to guess
+  wrong and the code can't settle it, ask one clarifying question before doing
+  anything. Otherwise state the assumption and proceed.
+- When reporting information to me, be extremely concise and sacrifice grammar for sake of concision.
+- Do not apologize, just fix it and tell me what changed.
+- Don't change anything I didn't ask you to change.
+- Name the smallest file/function you plan to touch and why, before editing.
+- Preplan your tool calls, and group in batches where it makes sense.
+- At session start, ask in your first reply whether `-Runtime` screenshots are
+  OK this session (they pop a Unity window). Plain text, not `AskUserQuestion`;
+  until I answer, keep working without them. Pass the answer into every brief.
+
 ## Agent routing
 
 Triage every implementation launch. Trivial and already diagnosed (brief
