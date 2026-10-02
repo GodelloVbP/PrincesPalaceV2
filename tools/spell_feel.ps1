@@ -12,10 +12,14 @@ param(
     # instead of capturing again.
     [switch]$ReportOnly,
     # Two report folders to put side by side (before, after); no capture.
+    # Under -File a comma list arrives as one string, so it is split below.
     [string[]]$Compare = @(),
     [double]$ResidueLimit = 0.5,
     [double]$AccentRatio = 1.5,
-    [int]$DesyncFrames = 2
+    [int]$DesyncFrames = 2,
+    # "-Compare a b" under -File leaves b to bind positionally (to -Spell, or
+    # here); both are folded into -Compare.
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$Rest = @()
 )
 
 # One command for docs/SPELL_FEEL.md step 4: capture a spell at each target,
@@ -37,7 +41,12 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path $PSScriptRoot -Parent
 
 if ($Compare.Count -gt 0) {
-    if ($Compare.Count -ne 2) { Write-Host "-Compare takes exactly two report folders."; exit 1 }
+    $Compare = @(@($Compare) + @($Spell) + @($Rest) | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim().Trim('"').Trim("'") } | Where-Object { $_ })
+    if ($Compare.Count -ne 2) {
+        Write-Host "-Compare takes exactly two report folders (before, after); got $($Compare.Count)."
+        Write-Host "Usage: tools/spell_feel.ps1 -Compare <before_dir>,<after_dir> [-OutDir <dir>]"
+        exit 1
+    }
     $compareArgs = @((Join-Path $PSScriptRoot "spell_feel.py"), "compare", $Compare[0], $Compare[1])
     if ($OutDir) { $compareArgs += @("--out", $OutDir) }
     & python @compareArgs

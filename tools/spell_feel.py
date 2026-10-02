@@ -83,6 +83,7 @@ import json
 import os
 import re
 import sys
+import time
 
 try:
     import numpy as np
@@ -256,6 +257,33 @@ def analyse(activity, hot, fps, hit_frame, authored_hit_cue=None,
     return result
 
 
+def replace_file(path, write, attempts=8, delay=0.25):
+    """Write `path` via a temp file in the same folder, then swap it in.
+
+    Opening an existing file for truncation fails with Errno 22 on Windows while
+    anything (Explorer preview, a thumbnailer, an image viewer) holds it mapped.
+    Replacing instead of truncating succeeds as soon as the mapping lets go, and
+    a short retry covers the transient ones. `write(tmp_path)` must write the
+    whole file; the temp name keeps the real extension so PIL picks the format.
+    """
+    root, ext = os.path.splitext(path)
+    tmp = root + ".tmp" + ext
+    try:
+        write(tmp)
+        for attempt in range(attempts):
+            try:
+                os.replace(tmp, path)
+                return
+            except OSError as err:
+                if attempt == attempts - 1:
+                    raise OSError(err.errno, "cannot overwrite %s (held open by another "
+                                  "program; close any preview or viewer): %s" % (path, err.strerror))
+                time.sleep(delay)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
 # ---- authored values --------------------------------------------------------
 
 def authored_values(spell_id, path=SKILLS_JSON):
@@ -415,20 +443,23 @@ def run_report(frames_dir, spell, versus, out_dir, params):
     name = "%s_vs_%s" % (spell, versus) if versus else spell
     interval = 1000.0 / fps
 
-    capture_strip.write_gif(shown, {"captureIntervalMs": interval},
-                            os.path.join(out_dir, name + ".gif"),
-                            width=GIF_WIDTH, colors=GIF_COLORS,
-                            hold_last_ms=GIF_HOLD_MS, step=GIF_STEP, disposal=0)
+    replace_file(os.path.join(out_dir, name + ".gif"),
+                 lambda tmp: capture_strip.write_gif(
+                     shown, {"captureIntervalMs": interval}, tmp,
+                     width=GIF_WIDTH, colors=GIF_COLORS,
+                     hold_last_ms=GIF_HOLD_MS, step=GIF_STEP, disposal=0))
 
     strip_timing = {"captureIntervalMs": interval, "impactFrame": result["hit_frame"] or -1,
                     "settledFrame": result["clean_frame"]}
     title = "%s | %d frames @ %.1fms | contact f%s | clean f%d" % (
         name, len(shown), interval, result["hit_frame"], result["clean_frame"])
-    capture_strip.build_strip(shown, strip_timing, title).save(os.path.join(out_dir, "strip.png"))
+    strip_image = capture_strip.build_strip(shown, strip_timing, title)
+    replace_file(os.path.join(out_dir, "strip.png"), strip_image.save)
 
     for label, index in stills.items():
         with Image.open(paths[index]) as im:
-            im.convert("RGB").save(os.path.join(out_dir, "stills", "%s_f%02d.png" % (label, index)))
+            still = im.convert("RGB")
+            replace_file(os.path.join(out_dir, "stills", "%s_f%02d.png" % (label, index)), still.save)
 
     report = {
         "spell": spell, "versus": versus, "fps": fps, "speed": speed,
@@ -444,8 +475,10 @@ def run_report(frames_dir, spell, versus, out_dir, params):
         "activity": [round(a, 3) for a in activity],
         "hot": [round(h, 5) for h in hot],
     }
-    with open(os.path.join(out_dir, "report.json"), "w", encoding="utf-8") as handle:
-        json.dump(report, handle, indent=1)
+    def write_report(tmp):
+        with open(tmp, "w", encoding="utf-8") as handle:
+            json.dump(report, handle, indent=1)
+    replace_file(os.path.join(out_dir, "report.json"), write_report)
 
     print(summary(report))
     return report
@@ -519,7 +552,7 @@ def curve_chart(reports, labels, path):
             draw.line([(x, pad), (x, h - pad)], fill=colour, width=1)
         draw.text((pad + 8 + i * 300, 10), "%s  (activity, contact line)" % label,
                   fill=colour, font=font)
-    img.save(path)
+    replace_file(path, img.save)
 
 
 def run_compare(dir_a, dir_b, out_dir):
@@ -546,8 +579,9 @@ def run_compare(dir_a, dir_b, out_dir):
         sheet.paste(b, (0, a.size[1]))
         stacked.append(sheet.quantize(colors=128, method=Image.MEDIANCUT, dither=Image.NONE))
         durations.append(max(da[min(i, len(da) - 1)], db[min(i, len(db) - 1)]))
-    stacked[0].save(os.path.join(out_dir, "before_vs_after.gif"), save_all=True,
-                    append_images=stacked[1:], duration=durations, loop=0)
+    replace_file(os.path.join(out_dir, "before_vs_after.gif"),
+                 lambda tmp: stacked[0].save(tmp, save_all=True, append_images=stacked[1:],
+                                             duration=durations, loop=0))
 
     keys = ("gather_s", "travel_s", "gather_to_travel", "peak", "residue_s", "clean_s")
     print("%-18s %14s %14s" % ("", labels[0][-14:], labels[1][-14:]))

@@ -6,7 +6,11 @@ Run: python tools/spell_feel_test.py
 """
 
 import json
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -221,6 +225,114 @@ class AuthoredTests(unittest.TestCase):
         notes = spell_feel.disagreements(measured, authored, FPS)
         self.assertEqual(len(notes), 1)
         self.assertIn("travel", notes[0])
+
+
+class ReplaceFileTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.dir, True)
+
+    def write_text(self, text):
+        def write(tmp):
+            with open(tmp, "w") as handle:
+                handle.write(text)
+        return write
+
+    def test_overwrites_an_existing_file_and_leaves_no_temp(self):
+        path = os.path.join(self.dir, "strip.png")
+        spell_feel.replace_file(path, self.write_text("one"))
+        spell_feel.replace_file(path, self.write_text("two"))
+        self.assertEqual(Path(path).read_text(), "two")
+        self.assertEqual(os.listdir(self.dir), ["strip.png"])
+
+    def test_a_failed_write_keeps_the_old_file_and_removes_the_temp(self):
+        path = os.path.join(self.dir, "report.json")
+        spell_feel.replace_file(path, self.write_text("keep"))
+
+        def broken(tmp):
+            Path(tmp).write_text("half")
+            raise RuntimeError("boom")
+
+        with self.assertRaises(RuntimeError):
+            spell_feel.replace_file(path, broken)
+        self.assertEqual(Path(path).read_text(), "keep")
+        self.assertEqual(os.listdir(self.dir), ["report.json"])
+
+    @unittest.skipUnless(os.name == "nt", "mapped-file truncation is a Windows failure")
+    def test_overwrites_a_file_another_reader_has_mapped_then_released(self):
+        import mmap
+        path = os.path.join(self.dir, "x.gif")
+        spell_feel.replace_file(path, self.write_text("a" * 4096))
+        with open(path, "rb") as held:
+            view = mmap.mmap(held.fileno(), 0, access=mmap.ACCESS_READ)
+            with self.assertRaises(OSError):
+                spell_feel.replace_file(path, self.write_text("b"), attempts=2, delay=0.01)
+            view.close()
+        spell_feel.replace_file(path, self.write_text("b"))
+        self.assertEqual(Path(path).read_text(), "b")
+        self.assertEqual(os.listdir(self.dir), ["x.gif"])
+
+
+class CompareArgumentsTest(unittest.TestCase):
+    """tools/spell_feel.ps1 -Compare under -File and -Command, each way of
+    passing two folders."""
+
+    PS1 = str(Path(__file__).resolve().parent / "spell_feel.ps1")
+
+    @classmethod
+    def setUpClass(cls):
+        if shutil.which("powershell") is None:
+            raise unittest.SkipTest("powershell not available")
+        from PIL import Image
+        cls.root = tempfile.mkdtemp()
+        cls.dirs = []
+        for name in ("a", "b"):
+            d = os.path.join(cls.root, name)
+            os.makedirs(d)
+            report = {"fps": 60, "activity": [1.0, 2.0, 1.0], "warnings": [],
+                      "measured": {"hit_frame": 1, "peak": 2.0}}
+            with open(os.path.join(d, "report.json"), "w") as handle:
+                json.dump(report, handle)
+            frames = [Image.new("RGB", (32, 18), (i * 40, 0, 0)) for i in range(3)]
+            frames[0].save(os.path.join(d, "x.gif"), save_all=True, append_images=frames[1:])
+            cls.dirs.append(d)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root, True)
+
+    def run_ps(self, *args):
+        out = os.path.join(self.root, "out")
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", *args],
+                              capture_output=True, text=True)
+        return proc, out
+
+    def assertCompared(self, proc, out):
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertTrue(os.path.isfile(os.path.join(out, "curves.png")))
+        shutil.rmtree(out, True)
+
+    def test_file_comma_joined_string(self):
+        a, b = self.dirs
+        out = os.path.join(self.root, "out")
+        self.assertCompared(*self.run_ps("-File", self.PS1, "-Compare", a + "," + b, "-OutDir", out)[:1], out)
+
+    def test_file_two_elements(self):
+        a, b = self.dirs
+        out = os.path.join(self.root, "out")
+        self.assertCompared(*self.run_ps("-File", self.PS1, "-Compare", a, b, "-OutDir", out)[:1], out)
+
+    def test_command_array_and_joined_string(self):
+        a, b = (d.replace("'", "''") for d in self.dirs)
+        out = os.path.join(self.root, "out").replace("'", "''")
+        for expr in ("-Compare '%s','%s'" % (a, b), "-Compare '%s,%s'" % (a, b)):
+            proc, _ = self.run_ps("-Command", "& '%s' %s -OutDir '%s'" % (self.PS1.replace("'", "''"), expr, out))
+            self.assertCompared(proc, out)
+
+    def test_wrong_count_prints_usage(self):
+        proc, _ = self.run_ps("-File", self.PS1, "-Compare", self.dirs[0])
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("Usage: tools/spell_feel.ps1 -Compare", proc.stdout)
 
 
 if __name__ == "__main__":
