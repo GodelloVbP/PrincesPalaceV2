@@ -44,9 +44,11 @@ namespace PrincesPalace
         // "1 STANDING" blends into the dark ring, measuring a muddy midtone
         // whatever face colour the tree asked for. The heavier dilate
         // thickens the stroke until its core is solid face again; the ring
-        // is unchanged.
+        // is unchanged. At 0.8 the 14pt ENEMIES heading still had stems
+        // alternating full and ~90% face columns, which over the pale canopy
+        // read as a double strike; 1.0 closes that.
         internal const float SmallFaceBelowPt = 16f;
-        internal const float SmallEdgeDilate = 0.8f;
+        internal const float SmallEdgeDilate = 1.0f;
 
         private void Awake()
         {
