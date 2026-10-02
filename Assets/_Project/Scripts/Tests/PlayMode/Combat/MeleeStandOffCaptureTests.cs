@@ -397,8 +397,8 @@ namespace PrincesPalace.PlayModeTests
         //
         // Both halves are load-bearing and neither alone is enough.
         //
-        // "The frame it starts wearing its strike" is wrong for a plain
-        // Lunge: it authors no phase poses, so CombatBeat's precedence puts
+        // "The frame it starts wearing its strike" is wrong for a Lunge or
+        // a Charge that authors no phase poses: CombatBeat's precedence puts
         // the strike on from the OPENING frame, before the figure has moved.
         //
         // "The frame of maximum travel" is wrong for a Close: it arrives and
@@ -572,7 +572,7 @@ namespace PrincesPalace.PlayModeTests
 
                 var beat = isBjorn
                     ? Beat(actorState, targetState, StageApproach.Close, "rush", "overhead", "slam")
-                    : Beat(actorState, targetState, StageApproach.Lunge, null, null, FightSession.Stances.Attack);
+                    : Beat(actorState, targetState, StageApproach.Close, null, null, FightSession.Stances.Attack);
 
                 var player = PlayerDriving(stand, target, actorState, targetState);
                 string shot = canCapture && canvas != null
@@ -581,7 +581,7 @@ namespace PrincesPalace.PlayModeTests
 
                 yield return AtFullExtent(player, beat, stand, target, strike, shot, canvas);
 
-                string line = $"{stand.Name} {stand.Combatant} {(isBjorn ? "Slam (Close)" : "Attack (Lunge)")} " +
+                string line = $"{stand.Name} {stand.Combatant} {(isBjorn ? "Slam (Close)" : "Attack (Close)")} " +
                               $"from mark {stand.Animator.Mark.x:F0},{stand.Animator.Mark.y:F0} " +
                               $"-> stood at {_peak.StoodAt.x:F1},{_peak.StoodAt.y:F1} " +
                               $"wearing '{_peak.Wearing}'; BODY GAP {_peak.MassGap:F1}px, DRAWN GAP {_peak.TightGap:F1}px " +
@@ -698,16 +698,16 @@ namespace PrincesPalace.PlayModeTests
             // for Bjorn's Slam above -- none of these three authors an
             // approachStance or windupStance of its own (only Bjorn's Slam
             // does), so every beat here passes null for both, same as the
-            // party's own plain Attack (Lunge) does in the test above.
+            // party's own plain Attack (Close) does in the test above.
             //   rat: no authored ability at all -- the plain-swing path,
-            //     which lunges and wears "attack" (FightSession.Stances.Attack)
+            //     which closes in and wears "attack" (FightSession.Stances.Attack)
             //     exactly like an unarmed party member's own basic Attack.
             //   beetle: Barrel Roll -- approach "charge", stance "turtle_up".
             //   forest_warden (Forest Troll): Overhead Slam -- approach
             //     "close", stance "attack".
             var attacks = new (string Label, StageApproach Approach, string Strike)[]
             {
-                ("Attack (Lunge)", StageApproach.Lunge, FightSession.Stances.Attack),
+                ("Attack (Close)", StageApproach.Close, FightSession.Stances.Attack),
                 ("Barrel Roll (Charge)", StageApproach.Charge, "turtle_up"),
                 ("Overhead Slam (Close)", StageApproach.Close, FightSession.Stances.Attack),
             };
@@ -753,11 +753,11 @@ namespace PrincesPalace.PlayModeTests
             // Shawn reaching PAST the rat and the beetle to hit the Troll
             // standing third -- the one shape nothing above exercises, since
             // every beat in the loop lands on the front rank. Same plain
-            // Attack (Lunge) the party's own basic swing always uses.
+            // Attack (Close) the party's own basic swing always uses.
             var backEnemy = enemies[2];
             var backEnemyState = enemyStates[2];
             {
-                var beat = Beat(frontPartyState, backEnemyState, StageApproach.Lunge, null, null, FightSession.Stances.Attack);
+                var beat = Beat(frontPartyState, backEnemyState, StageApproach.Close, null, null, FightSession.Stances.Attack);
                 var player = PlayerDriving(frontParty, backEnemy, frontPartyState, backEnemyState);
                 string shot = canCapture && canvas != null
                     ? Path.Combine(dir, "impact_Party0_Shawn_backrank.png")
@@ -765,7 +765,7 @@ namespace PrincesPalace.PlayModeTests
 
                 yield return AtFullExtent(player, beat, frontParty, backEnemy, FightSession.Stances.Attack, shot, canvas);
 
-                string line = $"Party0 Shawn Attack (Lunge) at back rank {backEnemy.Name} {backEnemy.Combatant} " +
+                string line = $"Party0 Shawn Attack (Close) at back rank {backEnemy.Name} {backEnemy.Combatant} " +
                               $"from mark {frontParty.Animator.Mark.x:F0},{frontParty.Animator.Mark.y:F0} " +
                               $"-> stood at {_peak.StoodAt.x:F1},{_peak.StoodAt.y:F1} " +
                               $"wearing '{_peak.Wearing}'; BODY GAP {_peak.MassGap:F1}px, DRAWN GAP {_peak.TightGap:F1}px " +

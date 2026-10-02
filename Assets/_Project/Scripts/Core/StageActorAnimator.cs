@@ -1200,31 +1200,39 @@ namespace PrincesPalace
 
             _rect.anchoredPosition = _home + _travel + new Vector2(0f, _hover);
 
-            // THE SHADOW STAYS ON THE GROUND. The foot shadow is the slot's
-            // first child (FightScreen builds it there and PlaceShadow reads it
-            // there), so lifting the slot lifts the shadow with it -- and a
-            // shadow hanging in the air under a flying figure is the one thing
-            // that says "floating sprite" rather than "flying creature". Held
-            // down by the inverse offset, in the slot's own scaled space,
-            // because the hover is applied in the parent's.
-            //
-            // Only ever written while a hover is on, plus the one write back
-            // to zero when it comes off: a grounded figure's shadow is
-            // PlaceShadow's alone. PlaceShadow re-zeroes the y on every stage
-            // repaint; the next hover push (every frame for a flyer, since it
-            // bobs) puts it back, so a repaint costs one frame of shadow.
-            if (_hover != 0f || _shadowHeld)
-            {
-                if (_rect.childCount > 0 && _rect.GetChild(0) is RectTransform shadow)
-                {
-                    float scaleY = Mathf.Abs(_rect.localScale.y) < 0.0001f ? 1f : _rect.localScale.y;
-                    var at = shadow.anchoredPosition;
-                    at.y = -_hover / scaleY;
-                    shadow.anchoredPosition = at;
-                }
+            HoldShadowOnGround();
+        }
 
-                _shadowHeld = _hover != 0f;
+        // THE SHADOW STAYS ON THE GROUND. The foot shadow is the slot's first
+        // child (FightScreen builds it there and PlaceShadow reads it there),
+        // so lifting the slot lifts the shadow with it -- and a shadow hanging
+        // in the air under a flying figure is the one thing that says
+        // "floating sprite" rather than "flying creature". Held down by the
+        // inverse offset, in the slot's own scaled space, because the hover is
+        // applied in the parent's.
+        //
+        // THIS METHOD OWNS THE SHADOW'S Y, and PlaceShadow writes only its X.
+        // Two writers of one axis made the ring flick up to a flyer's body for
+        // the frame after every stage repaint (PlaceShadow zeroed the y, and
+        // SetHover's unchanged-value early return could leave it zeroed for
+        // longer). It is also called from WriteScale: the compensation divides
+        // by the slot's live y scale, which the breath and a swing both move.
+        //
+        // Only ever written while a hover is on, plus the one write back to
+        // zero when it comes off: a grounded figure's shadow is untouched.
+        private void HoldShadowOnGround()
+        {
+            if (_hover == 0f && !_shadowHeld) return;
+
+            if (_rect.childCount > 0 && _rect.GetChild(0) is RectTransform shadow)
+            {
+                float scaleY = Mathf.Abs(_rect.localScale.y) < 0.0001f ? 1f : _rect.localScale.y;
+                var at = shadow.anchoredPosition;
+                at.y = -_hover / scaleY;
+                shadow.anchoredPosition = at;
             }
+
+            _shadowHeld = _hover != 0f;
         }
 
         // THE ONE PLACE localScale IS ASSIGNED.
@@ -1253,6 +1261,7 @@ namespace PrincesPalace
             y *= 1f + _breath;
 
             _rect.localScale = new Vector3(_baseScale.x * x, _baseScale.y * y, _baseScale.z);
+            HoldShadowOnGround();
         }
     }
 }

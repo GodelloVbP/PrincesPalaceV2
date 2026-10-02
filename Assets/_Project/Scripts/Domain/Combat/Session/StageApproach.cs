@@ -13,8 +13,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // byte alias of its "cast" one).
         Hold = 0,
 
-        // Leans in. A fraction of the way to the target and back -- the
-        // ordinary melee swing, and what every plain attack has always done.
+        // Leans in. The swing and the crossing are one motion. Nothing in the
+        // shipped content uses it: the plain attack and every melee skill
+        // Close, because a jump-then-strike reads better than a move-and-
+        // strike in one go.
         Lunge = 1,
 
         // Closes the distance FIRST, then strikes, then walks it back.

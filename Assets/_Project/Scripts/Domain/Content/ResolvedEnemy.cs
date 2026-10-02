@@ -187,9 +187,9 @@ namespace PrincesPalace.Domain.Content
         public bool AttackHoldsPosition;
 
         // See RawEnemyEntry.attackApproach. How the plain attack travels when it
-        // is not holding position. Lunge is the default and the old behaviour.
+        // is not holding position. Close is the default: the figure arrives, then strikes.
         public PrincesPalace.Domain.Combat.Session.StageApproach AttackApproach =
-            PrincesPalace.Domain.Combat.Session.StageApproach.Lunge;
+            PrincesPalace.Domain.Combat.Session.StageApproach.Close;
 
         // See RawEnemyEntry.minFloor.
         public int MinFloor = 1;
@@ -271,7 +271,7 @@ namespace PrincesPalace.Domain.Content
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
             int minFloor = 1, float stageScale = 1f, int slotSpan = 1,
             PrincesPalace.Domain.Combat.Session.StageApproach attackApproach =
-                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge,
+                PrincesPalace.Domain.Combat.Session.StageApproach.Close,
             DamageType attackType = DamageType.Physical)
             : this(id, displayName, baseStats, expReward, currencyReward, isBoss,
                    ElementalAffinity.Of(weakness, resistance), sortOrder, spritePath, facing, active,
@@ -291,7 +291,7 @@ namespace PrincesPalace.Domain.Content
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
             int minFloor = 1, float stageScale = 1f, int slotSpan = 1,
             PrincesPalace.Domain.Combat.Session.StageApproach attackApproach =
-                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge,
+                PrincesPalace.Domain.Combat.Session.StageApproach.Close,
             DamageType attackType = DamageType.Physical)
         {
             // CLAMPED RATHER THAN TRUSTED, both of them. A zero or negative

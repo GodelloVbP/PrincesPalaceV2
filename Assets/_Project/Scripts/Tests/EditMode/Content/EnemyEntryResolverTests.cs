@@ -516,14 +516,14 @@ namespace PrincesPalace.Domain.Tests
 
         // --- How the plain attack travels.
 
-        // Every monster authored before this field existed leaves it blank and
-        // must keep lunging, exactly as it always did.
+        // A blank attackApproach closes in first and then strikes; Lunge is no
+        // longer anyone's default.
         [Test]
-        public void AnUnsetAttackApproach_LungesLikeEveryPlainSwingAlwaysHas()
+        public void AnUnsetAttackApproach_ClosesInThenStrikes()
         {
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal() }, out var resolved, out _);
 
-            Assert.AreEqual(Combat.Session.StageApproach.Lunge, resolved[0].AttackApproach);
+            Assert.AreEqual(Combat.Session.StageApproach.Close, resolved[0].AttackApproach);
         }
 
         // The beetle authors a charge so its plain attack crosses the stage and

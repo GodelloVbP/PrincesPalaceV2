@@ -942,7 +942,10 @@ namespace PrincesPalace
             if (!(slotRect.GetChild(0) is RectTransform shadowRect)) return;
 
             float centre = ContentCentreFractionForActor(folder);
-            shadowRect.anchoredPosition = new Vector2(centre * slotRect.sizeDelta.x * mirror, 0f);
+            // X only. The y belongs to StageActorAnimator.HoldShadowOnGround, which
+            // keeps a flyer's ring on the floor; writing 0 here lifted it to the body
+            // for a frame on every repaint.
+            shadowRect.anchoredPosition = new Vector2(centre * slotRect.sizeDelta.x * mirror, shadowRect.anchoredPosition.y);
         }
 
         // TEST SEAM (C3, PartyFormationCaptureTests/StageFormationTests):

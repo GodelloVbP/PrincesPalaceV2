@@ -279,17 +279,16 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         //   approach | windup | Hold                  | Close                 | Lunge / Charge
         //   ---------+--------+-----------------------+-----------------------+----------------------
-        //   -        | -      | strike from open      | strike from open      | strike from open
-        //            |        | (today, byte for      | (today)               | (today)
+        //   -        | -      | strike from open      | idle walk-in, strike  | strike from open
+        //            |        | (today, byte for      | on arrival            | (today)
         //            |        | byte)                 |                       |
         //   yes      | -      | IGNORED: nothing      | approach during the   | approach during the
         //            |        | travels               | walk-in, strike on    | wind-up, strike on
         //            |        |                       | arrival               | impact
-        //   -        | yes    | windup from open,     | strike during the     | windup during the
-        //            |        | beat BUYS a wind-up   | walk-in, windup on    | wind-up it already
-        //            |        | wait, strike on       | arrival, beat BUYS a  | has, strike on impact
-        //            |        | impact                | wind-up wait, strike  |
-        //            |        |                       | on impact             |
+        //   -        | yes    | windup from open,     | idle walk-in, windup  | windup during the
+        //            |        | beat BUYS a wind-up   | on arrival, beat      | wind-up it already
+        //            |        | wait, strike on       | BUYS a wind-up wait,  | has, strike on impact
+        //            |        | impact                | strike on impact      |
         //   yes      | yes    | as "-|yes"; approach  | approach, windup,     | approach, windup,
         //            |        | IGNORED               | strike                | strike
         //
@@ -329,8 +328,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 // The one approach with a real boundary inside it: it arrives
                 // before the blow opens, so the walk-in gets the approach pose
-                // and the wind-up gets its own moment (ArrivalStanceFor).
-                case StageApproach.Close: return approachStance ?? strikeStance;
+                // and the wind-up (or, with none, the strike) gets its own
+                // moment on arrival (ArrivalStanceFor). With no approach pose
+                // authored the figure crosses in what it already wears: the
+                // attack pose belongs to the target's side of the jump.
+                case StageApproach.Close: return approachStance;
 
                 // A Lunge or a Charge has exactly ONE pre-impact interval, and
                 // that interval IS the travel -- the crouch-and-cross is the
@@ -344,18 +346,21 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // WHAT A Close CHANGES INTO THE MOMENT IT ARRIVES, or null for "keep
-        // wearing what it opened in". Null for every other approach: they have
-        // no arrival distinct from their impact.
+        // wearing what it opened in": the wind-up pose if one is authored,
+        // otherwise the strike itself. Null for every other approach: they
+        // have no arrival distinct from their impact.
         public static string ArrivalStanceFor(StageApproach approach, string strikeStance,
                                               string approachStance, string windupStance)
         {
             if (approach != StageApproach.Close) return null;
 
             Normalise(strikeStance, ref approachStance, ref windupStance);
-            if (windupStance == null) return null;
+
+            string arrival = windupStance ?? (string.IsNullOrWhiteSpace(strikeStance) ? null : strikeStance);
+            if (arrival == null) return null;
 
             string open = OpenStanceFor(approach, strikeStance, approachStance, windupStance);
-            return windupStance == open ? null : windupStance;
+            return arrival == open ? null : arrival;
         }
 
         // EVERY DRAWING THE ACTOR WEARS WHILE IT IS STANDING AT THE STAND-OFF

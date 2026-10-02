@@ -892,9 +892,9 @@ namespace PrincesPalace
             // AND IT CAN NOW BE UP TO THREE DRAWINGS RATHER THAN ONE --
             // approach, wind-up, strike. CombatBeat's own header carries
             // the precedence table; what follows is that table, applied.
-            // Everything about it collapses to today's single SetStance
-            // for a beat that authored neither of the two new poses, which
-            // is every beat in the game bar one.
+            // A beat that authored neither pose takes today's single
+            // SetStance, except a Close: it crosses unposed and puts the
+            // strike on at arrival.
             string strikeStance = null;
             if (beat.Actor != null) beat.Stances.TryGetValue(beat.Actor, out strikeStance);
 

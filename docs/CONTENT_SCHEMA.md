@@ -91,7 +91,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `statusDuration` | int | `-1` | How many of the afflicted combatant's own turns the applied status lasts; required together with appliesStatus. |  |
 | `avoidsFrontSlot` | bool | `false` | Whether this monster is never placed in the front stage slot when the room's other picks give an alternative. |  |
 | `attackHoldsPosition` | bool | `false` | Whether this monster's plain-attack art is a stationary pose rather than a forward strike. |  |
-| `attackApproach` | string | `""` | How this monster's plain attack travels when not holding position: lunge (default), close, or charge. | Hold, Lunge, Close, Charge |
+| `attackApproach` | string | `""` | How this monster's plain attack travels when not holding position: close (default), lunge, or charge. | Hold, Lunge, Close, Charge |
 | `stageScale` | float | `0` | A multiplier on this monster's stage size, on top of its slot's own depth scale; 0 means unset and reads as 1. |  |
 | `slotSpan` | int | `0` | How many of the stage's positions this monster occupies; 0 means unset and reads as 1. |  |
 | `rollable` | bool | `true` | Whether room fights may roll this monster; false keeps it out of the room pool while an event fight can still name it. Distinct from active, which builds no asset at all. |  |

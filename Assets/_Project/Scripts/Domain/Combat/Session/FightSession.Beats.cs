@@ -19,11 +19,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // decides whether the actor crosses the stage or stands still.
         private void BeginBeat(CombatantState actor, CombatantState target, bool isCast = false)
         {
-            // A cast is rooted and a swing leans in. Either can be overruled
+            // A cast is rooted and a swing closes in, then strikes. Either can be overruled
             // afterwards -- by the skill's own authored approach (see
             // ResolveDamageSingle) or by HoldActorPosition below -- which is
             // why this is a starting position rather than a fact.
-            NewBeat(BeatCause.Action, actor, target, isCast ? StageApproach.Hold : StageApproach.Lunge);
+            NewBeat(BeatCause.Action, actor, target, isCast ? StageApproach.Hold : StageApproach.Close);
 
             if (isCast)
             {

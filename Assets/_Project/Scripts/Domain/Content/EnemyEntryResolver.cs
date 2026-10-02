@@ -347,7 +347,7 @@ namespace PrincesPalace.Domain.Content
                 abilities, raw.attackWeight < 0f ? 1f : raw.attackWeight,
                 appliesStatus, statusMagnitude, statusDuration, raw.avoidsFrontSlot, raw.attackHoldsPosition,
                 raw.minFloor, raw.stageScale, raw.slotSpan,
-                Combat.Session.StageApproaches.Parse(raw.attackApproach, Combat.Session.StageApproach.Lunge),
+                Combat.Session.StageApproaches.Parse(raw.attackApproach, Combat.Session.StageApproach.Close),
                 attackType: attackType)
             {
                 Rollable = raw.rollable,

@@ -305,9 +305,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(mark.y, animator.Home.y, 0.01f, "the hover moved the mark itself");
 
             // The foot shadow is the slot's first child and must stay on the
-            // ground under a flyer, in the slot's own scaled space. Read on
-            // the same frame as the push, before any stage repaint re-zeroes
-            // it (WritePosition's own note covers that one-frame cost).
+            // ground under a flyer, in the slot's own scaled space.
             var shadow = (RectTransform)slot.GetChild(0);
             Assert.AreEqual(-40f / slot.localScale.y, shadow.anchoredPosition.y, 1.5f,
                 "the shadow rose with the figure -- it reads as a floating sprite, not a flying creature");
@@ -321,6 +319,32 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(mark.x, slot.anchoredPosition.x, 0.01f, "the lunge did not come back to its mark");
             Assert.AreEqual(mark.y + 40f, slot.anchoredPosition.y, 0.01f,
                 "the lunge dropped the flyer onto the floor when it returned");
+        }
+
+        // THE RING DOES NOT FOLLOW A FLYER'S BODY WHEN THE BODY BREATHES. The
+        // shadow is held down by -hover / the slot's live y scale, so a scale
+        // change that does not re-derive it lifts the ring by hover * breath
+        // for as long as the breath lasts.
+        [UnityTest]
+        public IEnumerator AFlyersShadowStaysOnTheFloorThroughItsBreath()
+        {
+            yield return AFightAgainst("Enemies/rat");
+            SharedScene.MarkDirty("SetHover(70) on a grounded rat: only HoverIdle clears a hover, and it skips non-airborne actors");
+
+            var slot = (RectTransform)Named("Enemy0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            var shadow = (RectTransform)slot.GetChild(0);
+
+            animator.SetHover(70f);
+            animator.SetBreath(0.12f);
+
+            Assert.AreEqual(-70f / slot.localScale.y, shadow.anchoredPosition.y, 0.01f,
+                "the breath changed the slot's y scale and left the ring where the old scale put it");
+
+            animator.SetBreath(0f);
+            animator.SetHover(0f);
+
+            Assert.AreEqual(0f, shadow.anchoredPosition.y, 0.01f, "the ring did not come back down with the hover");
         }
 
         // The reading Rehome() takes the rect as it stands to be the mark.

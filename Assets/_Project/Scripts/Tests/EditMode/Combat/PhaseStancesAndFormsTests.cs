@@ -37,18 +37,30 @@ namespace PrincesPalace.Domain.Tests
         private const string Overhead = "overhead";
 
         [Test]
-        public void NothingAuthored_OpensOnTheStrike_ForEveryApproach()
+        public void NothingAuthored_OpensOnTheStrike_ForEveryApproachButClose()
         {
             // The regression cell. A beat that authored no phase poses has to
             // behave byte for byte as it always did: the strike stance from
             // the beat's open, and no second moment for anything to change at.
             foreach (var approach in Approaches())
             {
+                if (approach == StageApproach.Close) continue;
+
                 Assert.AreEqual(Strike, CombatBeat.OpenStanceFor(approach, Strike, "", ""),
                     $"{approach} stopped opening on its strike stance when nothing else was authored");
                 Assert.IsNull(CombatBeat.ArrivalStanceFor(approach, Strike, "", ""),
                     $"{approach} grew an arrival pose out of nothing");
             }
+        }
+
+        [Test]
+        public void ACloseWithNothingAuthored_JumpsInUnposed_AndStrikesOnArrival()
+        {
+            // The plain attack's case, and the point of Close: the figure
+            // crosses in whatever it already wears, and the attack drawing
+            // appears at the target.
+            Assert.IsNull(CombatBeat.OpenStanceFor(StageApproach.Close, Strike, "", ""));
+            Assert.AreEqual(Strike, CombatBeat.ArrivalStanceFor(StageApproach.Close, Strike, "", ""));
         }
 
         [Test]
@@ -81,18 +93,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ACloseWithOnlyAWindupKeepsItsStrikeThroughTheWalkIn()
+        public void ACloseWithOnlyAWindupCrossesUnposed_ThenRaises()
         {
-            Assert.AreEqual(Strike, CombatBeat.OpenStanceFor(StageApproach.Close, Strike, "", Overhead));
+            Assert.IsNull(CombatBeat.OpenStanceFor(StageApproach.Close, Strike, "", Overhead));
             Assert.AreEqual(Overhead, CombatBeat.ArrivalStanceFor(StageApproach.Close, Strike, "", Overhead));
         }
 
         [Test]
-        public void ACloseWithOnlyAnApproachChangesNothingOnArrival()
+        public void ACloseWithOnlyAnApproachPutsTheStrikeOnAtArrival()
         {
             Assert.AreEqual(Rush, CombatBeat.OpenStanceFor(StageApproach.Close, Strike, Rush, ""));
-            Assert.IsNull(CombatBeat.ArrivalStanceFor(StageApproach.Close, Strike, Rush, ""),
-                "there is nothing to change into on arrival, so the strike waits for the impact");
+            Assert.AreEqual(Strike, CombatBeat.ArrivalStanceFor(StageApproach.Close, Strike, Rush, ""),
+                "with no wind-up to raise, arrival is the strike itself");
         }
 
         [Test]

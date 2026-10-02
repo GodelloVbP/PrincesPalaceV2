@@ -95,6 +95,6 @@ MonoBehaviour:
     StatusDuration: 3
     AvoidsFrontSlot: 1
     AttackHoldsPosition: 0
-    AttackApproach: 1
+    AttackApproach: 2
     MinFloor: 1
     AttackType: 0

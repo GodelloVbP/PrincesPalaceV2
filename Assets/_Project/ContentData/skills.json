@@ -1597,7 +1597,7 @@
       "appliesStatus": "Stun",
       "statusDuration": 1,
       "stance": "attack_charge",
-      "approach": "lunge",
+      "approach": "close",
       "playerSelectable": false
     },
     {
@@ -1630,7 +1630,7 @@
       "playerSelectable": false
     },
     {
-      "_comment": "windupStance: attack -- without it, hasWindup is false and the actor opens the beat ALREADY wearing trunk_slam (OpenStanceFor's Lunge branch falls back straight to strikeStance), so the crouch-and-cross plays in the strike pose itself and there is no visible windup. Authoring an existing pose ('attack') here gets the beat open in it instead, and the strike-pose switch at the impact instant (FightBeatPlayer's 'ONLY IF THE ACTOR IS NOT ALREADY IN IT' guard) then actually fires -- windup, then slam. vfx is the ground contact: impact_burst at the target's ground line, timed to hit.",
+      "_comment": "Close: the figure jumps in unposed, raises its trunk (windupStance attack, which buys a wind-up wait) and slams (trunk_slam) at the impact. vfx is the ground contact: impact_burst at the target's ground line, timed to hit.",
       "id": "trunk_slam",
       "displayName": "Trunk Slam",
       "description": "Deal damage plus 3 to one target.",
@@ -1642,7 +1642,7 @@
       "manaCost": 0,
       "stance": "trunk_slam",
       "windupStance": "attack",
-      "approach": "lunge",
+      "approach": "close",
       "vfx": {
         "sfxPath": "Audio/Sfx/trunk_slam_impact",
         "layerFormat": 1,
@@ -1772,7 +1772,7 @@
       "flatAmount": 0,
       "manaCost": 0,
       "meleeReach": true,
-      "approach": "lunge",
+      "approach": "close",
       "stance": "attack",
       "appliesStatus": "Bleed",
       "statusMagnitude": 5,
