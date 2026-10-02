@@ -270,10 +270,12 @@ namespace PrincesPalace.PlayModeTests
                 // declared path has frames; this checks the path is declared,
                 // which is the other half and the one a merge is likelier to
                 // drop.
-                Assert.AreEqual($"Spells/{id}", skill.Data.Vfx.path, $"'{id}' lost its vfxPath");
-                Assert.GreaterOrEqual(skill.Data.Vfx.impactFrame, 1,
-                    $"'{id}' has no authored impact frame, so its blow lands on the resolver's " +
-                    "default rather than on the peak the sequence was composed around");
+                var vfx = skill.Data.Vfx;
+                Assert.AreEqual(1, vfx.layerFormat, $"'{id}' authors its cue in seconds, which needs layers");
+                Assert.IsTrue(vfx.layers.Any(l => l.path == $"Spells/{id}"), $"'{id}' lost its vfxPath");
+                Assert.Greater(vfx.hitCueSeconds, 0f,
+                    $"'{id}' has no authored hit cue, so its blow lands on a derived frame " +
+                    "rather than on the peak the sequence was composed around");
             }
         }
 

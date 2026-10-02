@@ -46,15 +46,15 @@ MonoBehaviour:
     - type: 6
       amount: 6
     Vfx:
-      path: Spells/mud_burst
-      seconds: 0.65
-      impactFrame: 13
-      anchor: travel-centre
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
       size: 380
-      fit: target
-      departFrame: 9
-      impactX: 0.69
-      impactY: 0.52
+      fit: 
+      departFrame: 0
+      impactX: -1
+      impactY: -1
       sfxPath: Audio/Sfx/mud_burst_impact
       groundPath: 
       groundSeconds: 0
@@ -62,9 +62,66 @@ MonoBehaviour:
       groundAspect: 0
       groundImpactY: -1
       castSfxPath: Audio/Sfx/mud_burst_startup
-      layers: []
-      layerFormat: 0
-      hitCueSeconds: 0
+      layers:
+      - id: vfx
+        render: sprite
+        place: caster-centre
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/mud_burst
+        seconds: 0.65
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        impactX: 0.69
+        impactY: 0.52
+        aspect: 0
+        travelSeconds: 0.1
+        travelDelay: 0.2
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      layerFormat: 1
+      hitCueSeconds: 0.325
     SortOrder: 3
     Status: 3
     HasStatus: 1

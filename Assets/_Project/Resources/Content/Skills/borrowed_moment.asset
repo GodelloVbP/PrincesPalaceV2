@@ -63,7 +63,7 @@ MonoBehaviour:
       layers:
       - id: ritual
         render: sprite
-        place: caster-centre
+        place: target-centre
         follow: 0
         at: release
         offset: 0
@@ -120,7 +120,7 @@ MonoBehaviour:
           weights: []
       - id: settle
         render: emitter
-        place: caster-centre
+        place: target-centre
         follow: 0
         at: hit
         offset: 0

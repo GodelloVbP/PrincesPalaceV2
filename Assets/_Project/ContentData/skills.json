@@ -61,16 +61,29 @@
       "statusMagnitude": 25,
       "statusDuration": 1,
       "vfx": {
-        "path": "Spells/mud_burst",
+        "layerFormat": 1,
         "castSfxPath": "Audio/Sfx/mud_burst_startup",
         "sfxPath": "Audio/Sfx/mud_burst_impact",
-        "seconds": 0.65,
-        "impactFrame": 13,
-        "departFrame": 9,
-        "anchor": "travel-centre",
-        "fit": "target",
-        "impactX": 0.69,
-        "impactY": 0.52
+        "hitCueSeconds": 0.325,
+        "layers": [
+          {
+            "id": "vfx",
+            "render": "sprite",
+            "place": "caster-centre",
+            "at": "release",
+            "path": "Spells/mud_burst",
+            "seconds": 0.65,
+            "fps": 0,
+            "until": "once",
+            "fit": "target",
+            "impactX": 0.69,
+            "impactY": 0.52,
+            "travelDelay": 0.2,
+            "travelSeconds": 0.1,
+            "facing": "auto",
+            "sort": "effects"
+          }
+        ]
       },
       "cooldownTurns": 2,
       "bookTier": 1
@@ -96,13 +109,26 @@
         }
       ],
       "vfx": {
-        "path": "Spells/frost_flare",
-        "fit": "target",
-        "seconds": 0.52,
-        "impactFrame": 5,
-        "impactX": 0.5,
-        "impactY": 0.18,
-        "sfxPath": "Audio/Sfx/frost_flare"
+        "layerFormat": 1,
+        "sfxPath": "Audio/Sfx/frost_flare",
+        "hitCueSeconds": 0.28889,
+        "layers": [
+          {
+            "id": "vfx",
+            "render": "sprite",
+            "place": "target",
+            "at": "release",
+            "path": "Spells/frost_flare",
+            "seconds": 0.52,
+            "fps": 0,
+            "until": "once",
+            "fit": "target",
+            "impactX": 0.5,
+            "impactY": 0.18,
+            "facing": "none",
+            "sort": "effects"
+          }
+        ]
       },
       "bookTier": 2
     },
@@ -184,13 +210,26 @@
         }
       ],
       "vfx": {
-        "path": "Spells/lightning_bolt",
-        "fit": "target",
-        "seconds": 0.52,
-        "impactFrame": 5,
-        "impactX": 0.5,
-        "impactY": 0.23,
-        "sfxPath": "Audio/Sfx/lightning_strike"
+        "layerFormat": 1,
+        "sfxPath": "Audio/Sfx/lightning_strike",
+        "hitCueSeconds": 0.28889,
+        "layers": [
+          {
+            "id": "vfx",
+            "render": "sprite",
+            "place": "target",
+            "at": "release",
+            "path": "Spells/lightning_bolt",
+            "seconds": 0.52,
+            "fps": 0,
+            "until": "once",
+            "fit": "target",
+            "impactX": 0.5,
+            "impactY": 0.23,
+            "facing": "none",
+            "sort": "effects"
+          }
+        ]
       },
       "bookTier": 3
     },
@@ -218,7 +257,7 @@
           {
             "id": "ritual",
             "render": "sprite",
-            "place": "caster-centre",
+            "place": "target-centre",
             "at": "release",
             "path": "Spells/gilded_aegis",
             "seconds": 0.72,
@@ -235,7 +274,7 @@
           {
             "id": "settle",
             "render": "emitter",
-            "place": "caster-centre",
+            "place": "target-centre",
             "at": "hit",
             "sort": "effects",
             "emitter": {
@@ -917,7 +956,7 @@
           {
             "id": "ritual",
             "render": "sprite",
-            "place": "caster-centre",
+            "place": "target-centre",
             "at": "release",
             "path": "Spells/borrowed_moment",
             "seconds": 0.72,
@@ -934,7 +973,7 @@
           {
             "id": "settle",
             "render": "emitter",
-            "place": "caster-centre",
+            "place": "target-centre",
             "at": "hit",
             "sort": "effects",
             "emitter": {

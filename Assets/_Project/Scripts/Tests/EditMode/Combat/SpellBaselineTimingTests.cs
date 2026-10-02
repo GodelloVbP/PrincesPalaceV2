@@ -65,18 +65,26 @@ namespace PrincesPalace.Domain.Tests
         public void TheImpactDelayOfEveryBaselineSpellIsWhatItWasBeforeTheLayers(
             string skillId, string path, double seconds, int impactFrame, int frames, double delaySeconds)
         {
-            string vfx = VfxOf(skillId);
+            var skill = JsonBlocks.ObjectsInArray(SkillsJson(), "skills")
+                .FirstOrDefault(s => JsonBlocks.String(s, "id") == skillId);
+            Assert.IsNotNull(skill, $"skills.json has no skill '{skillId}'");
+            var vfx = SpellVfxJson.OwnVfx(skill);
             Assert.IsNotNull(vfx, $"{skillId} authors no vfx block");
 
-            Assert.AreEqual(path, JsonBlocks.String(vfx, "path"), $"{skillId}: vfx.path moved");
-            Assert.AreEqual(seconds, JsonBlocks.Number(vfx, "seconds").Value, 1e-6,
-                $"{skillId}: vfx.seconds changed, which retimes the whole cast");
-            Assert.AreEqual(impactFrame, (int)JsonBlocks.Number(vfx, "impactFrame").Value,
-                $"{skillId}: vfx.impactFrame changed, which moves the blow inside the sequence");
+            // AUTHORED IN SECONDS, so the hit cue no longer follows the frame
+            // count: the legacy derivation (seconds x impactFrame/frames) is
+            // kept as the record of the instant the blow has always landed on.
+            Assert.AreEqual(1, vfx.layerFormat, $"{skillId} authors its cue in seconds, which needs layerFormat 1");
+            Assert.AreEqual(delaySeconds, vfx.hitCueSeconds, 1e-5,
+                $"{skillId}: the authored hit cue moved off the instant its legacy block landed on");
+
+            var layer = vfx.layers[0];
+            Assert.AreEqual(path, layer.path, $"{skillId}: the layer's path moved");
+            Assert.AreEqual(seconds, layer.seconds, 1e-6,
+                $"{skillId}: the layer's seconds changed, which retimes the whole cast");
             Assert.AreEqual(frames, FramesOnDisk(path),
-                $"{skillId}: '{path}' has a different number of frames on disk, which moves the impact " +
-                "delay even with the authored numbers untouched -- that is the coupling the layered " +
-                "format exists to remove, and changing it is a retiming, not a re-cut");
+                $"{skillId}: '{path}' has a different number of frames on disk, which changes the " +
+                "per-frame rate of a layer fitted into `seconds` -- a retiming, not a re-cut");
 
             Assert.AreEqual(delaySeconds, seconds * CombatBeat.ImpactFraction(impactFrame, frames), 1e-6,
                 $"{skillId}: the impact delay is no longer the baseline this branch started from");
