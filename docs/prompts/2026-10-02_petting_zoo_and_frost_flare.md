@@ -110,12 +110,16 @@ layer in `skills.json` stretches this one frame from launch point to impact,
 along the flight (`align: flight`, docs/ART_PIPELINE.md §5b), so draw it
 horizontal and let the engine turn it.
 
-Painterly spell style matching the Blackglass Spear atlas. 1536x512, solid
+The spear flies through its target and off-screen (`through: true`), so the
+rift spans launch point to screen edge: draw it long and thin.
+
+Painterly spell style matching the Blackglass Spear atlas. 1536x1024, solid
 #00FF00 background, keyed with `tools/key_green_screen.py`, not luminance: the
 rift's dark interior must stay opaque. No green anywhere in the subject.
 
-- One horizontal tear in the air, about 6:1, ends tapering to hairline points
-  that touch the left and right margins; nothing touches the top or bottom edge.
+- One horizontal tear across the full canvas width, centred vertically, about
+  180 px tall at its widest, tapering to hairline points at the left and right
+  edges; nothing touches the top or bottom edge.
 - Inside: a near-black void with a faint deep-violet depth, no stars or scenery.
 - Edges: ragged, torn like cloth or cracked glass, lit by a thin hot violet-white
   rim fading outward into soft purple glow.
