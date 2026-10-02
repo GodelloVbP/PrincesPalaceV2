@@ -359,7 +359,19 @@ namespace PrincesPalace
             foreach (var instance in performance.Instances)
             {
                 instance.Facing = facing;
-                PlaceOne(instance, performance, parent, struck, beat.Actor, casterRect, casterX);
+
+                // A GATED LAYER THE CAST DID NOT EARN draws nothing: the same
+                // "nowhere to put it" answer a layer with no target gets, so
+                // Open() spends no renderer on it. Its schedule entries stay,
+                // which is harmless and keeps the hit cue untouched.
+                if (!SpellGateNames.Passes(instance.Layer.whenConsumed, beat.ConsumedStatuses))
+                {
+                    instance.Placed = false;
+                    continue;
+                }
+
+                PlaceOne(instance, performance, parent, struck, beat.Actor, casterRect, casterX,
+                    beat.Counterpart);
             }
 
             // A LAYER LAID ALONG A FLIGHT READS ITS PROJECTILE'S LINE, so it is
@@ -406,7 +418,8 @@ namespace PrincesPalace
         }
 
         private void PlaceOne(SpellLayerInstance instance, SpellPerformance performance, Transform parent,
-            List<CombatantState> struck, CombatantState caster, RectTransform casterRect, float casterX)
+            List<CombatantState> struck, CombatantState caster, RectTransform casterRect, float casterX,
+            CombatantState counterpart)
         {
             var layer = instance.Layer;
 
@@ -424,9 +437,13 @@ namespace PrincesPalace
             // caster-side its placement is -- `caster` says where the box
             // starts, and a cast reaching three enemies needs three boxes
             // leaving the same point.
-            var targetCombatant = instance.TargetIndex >= 0 && instance.TargetIndex < struck.Count
-                ? struck[instance.TargetIndex]
-                : struck.Count > 0 ? struck[0] : null;
+            // THE COUNTERPART WORDS stand on the other end of the beat's
+            // placement instead of on anybody the cast struck.
+            var targetCombatant = SpellPlaceNames.OnCounterpart(layer.Place)
+                ? counterpart
+                : instance.TargetIndex >= 0 && instance.TargetIndex < struck.Count
+                    ? struck[instance.TargetIndex]
+                    : struck.Count > 0 ? struck[0] : null;
             var targetRect = SlotFor(targetCombatant);
 
             var on = SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels
@@ -442,6 +459,23 @@ namespace PrincesPalace
             {
                 instance.Placed = false;
                 return;
+            }
+
+            // `follow`: the anchor is the slot this layer was just placed on,
+            // and the layer moves with it from here. The slot is the
+            // combatant's own (SlotIndexOf), so a figure dragged to another
+            // seat carries it across the stage rather than leaving it
+            // behind. Delta against where the slot is NOW, so the placement
+            // maths above stays the single source of the opening position.
+            if (layer.follow && SpellPlaceNames.OnABody(layer.Place) && !layer.Travels)
+            {
+                var anchored = on;
+                var from = StageOf(parent, anchored);
+                instance.Displacement = () =>
+                {
+                    var now = StageOf(parent, anchored);
+                    return new UiVec(now.x - from.x, now.y - from.y);
+                };
             }
 
             // THE TARGET'S VISIBLE BODY, once, for everything below that lands
@@ -771,6 +805,14 @@ namespace PrincesPalace
             return new Vector2(stage.X, stage.Y);
         }
 
+        // A slot's origin in the effect pool's frame: what `follow` measures
+        // displacement in.
+        private static Vector2 StageOf(Transform parent, RectTransform slot)
+        {
+            var at = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero));
+            return new Vector2(at.x, at.y);
+        }
+
         // ONE FAULT UNDER THE WHOLE FORMATION, sized to the enemies actually
         // standing in it rather than to a slot or to a constant.
         //
@@ -812,8 +854,14 @@ namespace PrincesPalace
                 // which is the authored ground line.
                 var body = BodyOf(one, slot, parent);
                 float centre = body.Centre.X;
-                float slotLeft = body.Left;
-                float slotRight = body.Right;
+
+                // THE OVERHANG reaches past this body's own edges by a share of
+                // its half-width; the inner edges of a multi-body span are
+                // never read (only the ends are), so applying it to every
+                // body is the same as applying it to the ends.
+                float half = (body.Right - body.Left) * 0.5f * instance.Layer.overhang;
+                float slotLeft = body.Left - half;
+                float slotRight = body.Right + half;
 
                 float ground = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).y;
 

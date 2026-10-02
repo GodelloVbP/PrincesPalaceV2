@@ -65,6 +65,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
         public UiVec From;
         public UiVec To;
 
+        // HOW FAR THE ANCHOR BODY HAS MOVED since the layer was placed, read
+        // every tick -- what `follow` means. Null for a layer that does not
+        // follow, which is nearly all of them. A delegate because only Core can
+        // see where a slot is now; Domain only adds the answer to the position
+        // it already computed, so a bind placed on a figure a pull then drags
+        // stays on it (SpellPerformance.PositionOf stays the one evaluation of
+        // an authored path; the displacement is a property of the stage).
+        public Func<UiVec> Displacement;
+
         // The box the art is fitted into, and which way it points. Written by
         // Core beside From/To and for the same reason: both depend on the
         // stage's depth scaling and on the sheet's own transparent margins,

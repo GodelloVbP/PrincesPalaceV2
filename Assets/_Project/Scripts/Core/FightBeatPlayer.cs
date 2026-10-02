@@ -37,10 +37,6 @@ namespace PrincesPalace
         // flicker between two blows. Scaled by the battle speed like the rest.
         public const float RoundStartHoldSeconds = BeatHoldSeconds + BeatGapSeconds;
 
-        // How long a pull's chains hold their target before he is dragged
-        // (CombatBeat.PreFormation): the bind's own snap, Dark Chains' 0.3s.
-        public const float PullHoldSeconds = 0.3f;
-
         // THE SETTLE AFTER THE BLOW, AND IT IS A FLOOR RATHER THAN A REMAINDER.
         //
         // A pure "what's left of BeatHoldSeconds once the stance is paid for"
@@ -1149,8 +1145,10 @@ namespace PrincesPalace
             float pullHold = 0f;
             if (beat.PreFormation != null)
             {
-                pullHold = PullHoldSeconds;
-                yield return new WaitForSeconds(Scaled(pullHold));
+                // The session says how long: a pull holds, a swap behind a
+                // door moves on the impact itself (CombatBeat.PlacementHoldSeconds).
+                pullHold = beat.PlacementHoldSeconds;
+                if (pullHold > 0f) yield return new WaitForSeconds(Scaled(pullHold));
                 Guard(() => PaintFormation?.Invoke(beat.Formation));
             }
 

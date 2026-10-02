@@ -255,6 +255,31 @@ namespace PrincesPalace.Domain.Combat.Session
         // instant, so the move is seen to be the effect of the blow.
         public BeatFormation PreFormation;
 
+        // HOW LONG AFTER THE IMPACT THE MOVE IS PAINTED, when PreFormation is
+        // set. A pull holds PullHoldSeconds so the bind is seen closing on the
+        // figure where it stood; a swap behind a door moves at the impact
+        // itself (0), because the door is what hides it. A property of the
+        // placement the session made, not of playback, so the two cannot be
+        // authored apart from the thing they describe.
+        public float PlacementHoldSeconds;
+
+        // The hold a drag gets: the bind's own snap, Dark Chains' 0.3 s.
+        public const float PullHoldSeconds = 0.3f;
+
+        // THE OTHER END OF THE PLACEMENT THIS BEAT MADE: whoever the mover
+        // traded seats with (Palace Passage's occupant, the figure a drag
+        // displaces). Null when the destination was empty or nothing moved.
+        // Read by `place: counterpart` layers, which draw on this body so a
+        // swap is shown at both of its seats.
+        public CombatantState Counterpart;
+
+        // EVERY STATUS THIS BEAT'S RESOLUTION SPENT ON ITS TARGET, in the order
+        // it was spent: a detonated Poison, a consumed Mark. What a layer's
+        // `whenConsumed` gate reads, so a spell that sets off what is already
+        // there draws that and only when it happened.
+        public readonly List<PrincesPalace.Domain.Combat.StatusEffectType> ConsumedStatuses =
+            new List<PrincesPalace.Domain.Combat.StatusEffectType>();
+
         public readonly Dictionary<CombatantState, string> Stances = new Dictionary<CombatantState, string>();
 
         // ---- the actor's other two phases ------------------------------------

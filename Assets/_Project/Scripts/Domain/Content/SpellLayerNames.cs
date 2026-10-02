@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using PrincesPalace.Domain.Combat;
 
 namespace PrincesPalace.Domain.Content
 {
@@ -170,6 +172,19 @@ namespace PrincesPalace.Domain.Content
         // leaves its own place and arrives on the target" rule the caster
         // words follow.
         Sky,
+
+        // THE OTHER END OF THE CAST'S PLACEMENT: whoever the beat's own move
+        // traded seats with (CombatBeat.Counterpart) -- the occupant of the
+        // seat Palace Passage's traveller steps into, the figure Dark Chains'
+        // target displaces. Standing on its ground line. CAST-LEVEL, one
+        // instance, and drawn on nobody when the move had no other end (an
+        // empty seat), which is the same "nowhere to put it" answer a cast
+        // that struck nobody gets. Not per target: the struck list is who the
+        // cast hit, and a swap hits nobody.
+        Counterpart,
+
+        // Centred on the counterpart's middle. Cast-level, same as Counterpart.
+        CounterpartCentre,
     }
 
     public static class SpellPlaceNames
@@ -223,10 +238,23 @@ namespace PrincesPalace.Domain.Content
         // drawn centred on its own point because there is no floor up there
         // for a standing rule to measure against.
         public static bool Centred(SpellPlace place) =>
-            place == SpellPlace.CasterCentre || place == SpellPlace.TargetCentre || place == SpellPlace.Sky;
+            place == SpellPlace.CasterCentre || place == SpellPlace.TargetCentre || place == SpellPlace.Sky ||
+            place == SpellPlace.CounterpartCentre;
+
+        // Whether the word is the other end of the beat's placement. Asked for
+        // the same reason OnCaster is: two values, several branch sites.
+        public static bool OnCounterpart(SpellPlace place) =>
+            place == SpellPlace.Counterpart || place == SpellPlace.CounterpartCentre;
+
+        // Whether the word stands on one body the layer can ride through a
+        // move: every placement but the measured span, the air point and a
+        // layer riding another layer.
+        public static bool OnABody(SpellPlace place) =>
+            place != SpellPlace.Formation && place != SpellPlace.Sky && place != SpellPlace.Layer;
 
         public static string[] All =>
-            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "sky", "layer:<id>" };
+            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "sky",
+                    "counterpart", "counterpart-centre", "layer:<id>" };
 
         private static SpellPlace Lookup(string name, SpellPlace fallback)
         {
@@ -246,6 +274,11 @@ namespace PrincesPalace.Domain.Content
             if (SpellWord.Is(name, "formation")) return SpellPlace.Formation;
 
             if (SpellWord.Is(name, "sky")) return SpellPlace.Sky;
+
+            if (SpellWord.Is(name, "counterpart")) return SpellPlace.Counterpart;
+
+            if (SpellWord.Is(name, "counterpart-centre") ||
+                SpellWord.Is(name, "counterpart-center")) return SpellPlace.CounterpartCentre;
 
             return fallback;
         }
@@ -559,5 +592,50 @@ namespace PrincesPalace.Domain.Content
             if (SpellWord.Is(name, "effects")) return SpellSort.Effects;
             return fallback;
         }
+    }
+    // ---- whether it plays: the gate on what the cast consumed -----------------
+
+    // `whenConsumed`: blank (always), `any` (the cast spent some status on its
+    // target) or a StatusEffectType name (it spent that one). The beat's list
+    // is CombatBeat.ConsumedStatuses; this is the one reading of the word.
+    public static class SpellGateNames
+    {
+        public const string Any = "any";
+
+        public static bool IsGated(string name) => !string.IsNullOrWhiteSpace(name);
+
+        public static bool IsKnown(string name) =>
+            !IsGated(name) || SpellWord.Is(name, Any) || TryStatus(name, out _);
+
+        public static string[] All
+        {
+            get
+            {
+                var names = new List<string> { Any };
+                names.AddRange(Enum.GetNames(typeof(StatusEffectType)));
+                return names.ToArray();
+            }
+        }
+
+        // Whether a layer carrying `name` plays, given what the beat consumed.
+        // A blank gate always plays; an unknown word never does, so a typo
+        // that slipped past validation draws nothing instead of everything.
+        public static bool Passes(string name, IReadOnlyList<StatusEffectType> consumed)
+        {
+            if (!IsGated(name)) return true;
+            if (consumed == null || consumed.Count == 0) return false;
+            if (SpellWord.Is(name, Any)) return true;
+            if (!TryStatus(name, out var wanted)) return false;
+
+            for (int i = 0; i < consumed.Count; i++)
+            {
+                if (consumed[i] == wanted) return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryStatus(string name, out StatusEffectType type) =>
+            Enum.TryParse(name.Trim(), ignoreCase: true, out type) && Enum.IsDefined(typeof(StatusEffectType), type);
     }
 }

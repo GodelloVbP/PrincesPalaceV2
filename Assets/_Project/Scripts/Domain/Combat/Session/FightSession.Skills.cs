@@ -1063,7 +1063,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // (1.8).
             if (consumesStatusPresent)
             {
-                StatusEffects.TrySpend(target.Statuses, skill.ConsumesStatus.Value, out _);
+                if (StatusEffects.TrySpend(target.Statuses, skill.ConsumesStatus.Value, out _))
+                {
+                    NoteConsumed(skill.ConsumesStatus.Value);
+                }
             }
 
             // The Drowned Lantern: a damaging spell marks whatever it lands
@@ -1112,13 +1115,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // Where everybody stood before the pull, so playback can move them
             // at the impact rather than at the beat's open (CombatBeat.PreFormation).
-            if (_recordingBeat != null && _recordingBeat.PreFormation == null)
-            {
-                _recordingBeat.PreFormation = BeatFormation.Capture(_encounter);
-            }
+            RecordPlacementStart(CombatBeat.PullHoldSeconds);
 
             var outcome = _encounter.PlaceAt(target, seat, out var occupant);
 
+            RecordCounterpart(outcome, occupant);
             switch (outcome)
             {
                 case PlaceOutcome.Placed:
@@ -1239,6 +1240,8 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             var split = ConsumedTotalSplit.Split(worth, skill.DetonationSplit);
+            NoteConsumed(StatusEffectType.Poison);
+
 
             // EACH PACKET RESOLVES INDEPENDENTLY (1.7), with
             // resolveDetonation LEFT NULL -- the consumption already
@@ -1396,7 +1399,15 @@ namespace PrincesPalace.Domain.Combat.Session
             // THE ONE PLACEMENT RULE (CombatEncounter.PlaceAt): the traveller
             // goes to the destination seat, trading with its occupant -- the
             // two-ally swap, exactly -- or stepping into it when it is empty.
-            if (_encounter.PlaceAt(traveller, seat, out var occupant) != PlaceOutcome.Placed) return;
+            //
+            // THE MOVE IS PAINTED AT THE IMPACT, behind the doors the layers
+            // draw: playback opens on where everybody stood and the seats
+            // change at the cue rather than at the beat's first frame.
+            RecordPlacementStart(0f);
+
+            var placed = _encounter.PlaceAt(traveller, seat, out var occupant);
+            RecordCounterpart(placed, occupant);
+            if (placed != PlaceOutcome.Placed) return;
 
             AppendMessage(occupant != null
                 ? $"{traveller.Name} and {occupant.Name} step through and trade places."
@@ -1413,6 +1424,29 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // WHERE A PASSAGE SENDS ITS TRAVELLER: the named empty seat, or --
+        // WHERE EVERYBODY STOOD BEFORE THE PLACEMENT, and how long after the
+        // impact playback should wait before painting the move. Every placement
+        // goes through here so the two are recorded together or not at all.
+        private void RecordPlacementStart(float holdSeconds)
+        {
+            if (_recordingBeat == null || _recordingBeat.PreFormation != null) return;
+
+            _recordingBeat.PreFormation = BeatFormation.Capture(_encounter);
+            _recordingBeat.PlacementHoldSeconds = holdSeconds;
+        }
+
+        private void RecordCounterpart(PlaceOutcome outcome, CombatantState occupant)
+        {
+            if (_recordingBeat != null && outcome == PlaceOutcome.Placed) _recordingBeat.Counterpart = occupant;
+        }
+
+        // Called wherever a status is spent on a target, so a layer gated on
+        // `whenConsumed` sees what the cast actually did.
+        private void NoteConsumed(StatusEffectType type)
+        {
+            _recordingBeat?.ConsumedStatuses.Add(type);
+        }
+
         // for the two-ally form -- the second ally's seat. -1 when the cast
         // names neither, which the refusal in CanResolveSkill turns into a
         // sentence before anything is paid.

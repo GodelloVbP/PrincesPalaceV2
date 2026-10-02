@@ -48,6 +48,11 @@ namespace PrincesPalace.Domain.Content
         // percentage (20 instead of 0.2), which is the mistake this catches.
         public const float MaxPunch = 1f;
 
+        // A rank span reaching two half-widths past its end bodies is already
+        // three times the body; past that the drawing describes ground nobody
+        // is standing on.
+        public const float MaxOverhang = 2f;
+
         // The version of the layer vocabulary this code reads. A block that
         // authors layers must state it; see SpellPresentation.layerFormat for
         // the migration policy the number exists to make arguable.
@@ -218,6 +223,12 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at}.place '{layer.place}' is not a placement. " +
                              $"Known: {string.Join(", ", SpellPlaceNames.All)}.");
+            }
+
+            if (!SpellGateNames.IsKnown(layer.whenConsumed))
+            {
+                problems.Add($"{at}.whenConsumed '{layer.whenConsumed}' is not a status. " +
+                             $"Known: {string.Join(", ", SpellGateNames.All)}.");
             }
 
             if (!SpellCueNames.IsKnown(layer.at))
@@ -477,6 +488,30 @@ namespace PrincesPalace.Domain.Content
                              "the measured span overrides. Remove it.");
             }
 
+            if (layer.overhang != 0f && !onFormation)
+            {
+                problems.Add($"{at} authors overhang {Num(layer.overhang)} but is placed on {layer.place.Trim()}, " +
+                             "which is one point and has no span to reach past the bodies of. Only 'formation' does.");
+            }
+            else if (layer.overhang < 0f || layer.overhang > MaxOverhang)
+            {
+                problems.Add($"{at} authors overhang {Num(layer.overhang)}; it is a fraction of each end body's " +
+                             $"half-width and must be between 0 and {Num(MaxOverhang)}.");
+            }
+
+            if (layer.follow && layer.Place != SpellPlace.Layer && !SpellPlaceNames.OnABody(layer.Place))
+            {
+                problems.Add($"{at} authors follow but is placed on {layer.place.Trim()}, which is not one body " +
+                             "to ride. Follow rides a body placement (caster, target, counterpart and their " +
+                             "centres); a layer on another layer already follows it.");
+            }
+
+            if (layer.follow && layer.Travels)
+            {
+                problems.Add($"{at} authors follow on a layer that travels; its flight already ends on the " +
+                             "body it was aimed at when it opened, so there is nothing for follow to ride.");
+            }
+
             if (onFormation && layer.dx != 0f)
             {
                 problems.Add($"{at} is placed on the formation and authors dx {Num(layer.dx)}, which the " +
@@ -507,6 +542,7 @@ namespace PrincesPalace.Domain.Content
             // rides, and its particles scale by the same factor.
             if (SpellFitNames.IsKnown(layer.fit) && layer.Fit == SpellFit.Target &&
                 !SpellPlaceNames.PerTarget(layer.Place) && !layer.Travels &&
+                !SpellPlaceNames.OnCounterpart(layer.Place) &&
                 layer.Place != SpellPlace.Layer)
             {
                 problems.Add($"{at} authors fit 'target' but is placed on {layer.place.Trim()}, which " +
@@ -710,6 +746,15 @@ namespace PrincesPalace.Domain.Content
 
                 var source = layers.FirstOrDefault(l => l != null && string.Equals(l.id?.Trim(),
                     layer.FollowsLayerId, StringComparison.Ordinal));
+
+                if (source != null && SpellGateNames.IsGated(source.whenConsumed) &&
+                    !string.Equals(source.whenConsumed?.Trim(), layer.whenConsumed?.Trim(),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    problems.Add($"{label}: vfx.layers[{i}] rides '{layer.FollowsLayerId}', which only plays when the " +
+                                 $"cast consumed {source.whenConsumed.Trim()}, so it would draw with nothing under it. " +
+                                 "Give it the same whenConsumed.");
+                }
 
                 if (layer.Align == SpellAlign.Flight && source != null && !source.Travels)
                 {

@@ -32,7 +32,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("What draws: sprite (an animated folder), still (one frame of a folder) or emitter (ballistic particles). No default -- a blank is refused.")]
         public string render = "";
 
-        [ContentDoc("Where it belongs: caster, caster-centre, target, target-centre, formation, sky (in the air halfway from the caster to one struck target, above both), or 'layer:<id>' to ride another layer. No default -- a blank is refused.")]
+        [ContentDoc("Where it belongs: caster, caster-centre, target, target-centre, formation, sky (in the air halfway from the caster to one struck target, above both), counterpart / counterpart-centre (the other end of the cast's move: the figure a swap or a pull traded seats with; nothing is drawn when the move had no other end), or 'layer:<id>' to ride another layer. No default -- a blank is refused.")]
         public string place = "";
 
         // FOLLOW versus SAMPLE-ONCE, and the difference is visible the moment
@@ -40,8 +40,16 @@ namespace PrincesPalace.Domain.Content
         // when the cast opened, which is right for a target that dies mid-flight
         // -- the blow landed where the body was. A wake riding a projectile has
         // to re-read every tick or it is not a wake.
-        [ContentDoc("Re-read the anchor every tick (true) rather than sampling its position once when the layer opens (false).")]
+        [ContentDoc("Ride the anchor body (true): the layer is placed on its body when the cast opens and then moves with that body for its whole life, so a bind stays on a figure a pull drags across the stage. False samples the position once. Legal on the body placements (caster, caster-centre, target, target-centre, counterpart, counterpart-centre); a layer riding another layer already follows it.")]
         public bool follow;
+
+        // A GATE ON WHAT THE CAST DID, not on which spell it is. The beat
+        // records every status its resolution spent (CombatBeat.ConsumedStatuses)
+        // and a layer that names one plays only when the cast spent it, so a
+        // spell whose defining rule is "set off what is already there" can draw
+        // that rule and only when it happened.
+        [ContentDoc("Play this layer only if the cast consumed this status on its target: a StatusEffectType name (Poison, Burn, ...) or 'any'. Blank means always. A layer riding a gated layer must carry the same gate.")]
+        public string whenConsumed = "";
 
         [ContentDoc("When it starts: release (the beat opens), arrival (the cast's projectile lands) or hit (the authoritative impact cue). Blank means release.")]
         public string at = "";
@@ -155,6 +163,15 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Seconds after this layer starts before its motion begins; the wind-up held at the caster.")]
         public float travelDelay;
 
+        // HOW FAR A RANK'S SPAN REACHES PAST ITS END BODIES. The measured span
+        // runs through the outermost struck bodies' own edges, which for a lone
+        // body is that body's width: a ground drawing that wide sits entirely
+        // behind the figure it is meant to open under and is never seen. The
+        // overhang is a fraction of each end body's half-width added beyond
+        // its outer edge, so the drawing always shows past the feet.
+        [ContentDoc("On place formation: how far the span reaches past the outermost struck bodies, as a fraction of each end body's half-width (0.5 adds half a half-width beyond that body's edge). 0 means flush with the bodies' edges. A lone body's span is only its own width, which hides a ground drawing behind it; an overhang makes it show. Refused on any other placement.")]
+        public float overhang;
+
         // WHICH WAY THE DRAWING POINTS, and whether it is turned onto its
         // flight. Two fields rather than one because the painted direction is
         // a fact about the SHEET (Winter's Rebuke's spear is painted 26
@@ -189,6 +206,8 @@ namespace PrincesPalace.Domain.Content
             render = render,
             place = place,
             follow = follow,
+            whenConsumed = whenConsumed,
+            overhang = overhang,
             at = at,
             offset = offset,
             path = path,

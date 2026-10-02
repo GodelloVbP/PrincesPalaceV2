@@ -1063,6 +1063,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int bonus = StatusCombos.SpendPoisonIfMatched(target, incomingType);
             if (bonus <= 0) return 0;
 
+            NoteConsumed(StatusEffectType.Poison);
             DealDamage(attacker, target, bonus, DamageType.Poison,
                 attacker != null && attacker.IsPlayerSide ? KillCredit.Attacker : KillCredit.Nobody);
 

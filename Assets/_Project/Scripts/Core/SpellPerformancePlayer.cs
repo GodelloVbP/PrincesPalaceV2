@@ -650,6 +650,14 @@ namespace PrincesPalace
             // always said "local offset from the anchor"; the sign was the half
             // that was missing, and the emitter's own sourceDx already did it.
             var at = SpellPerformance.PositionOf(source, seconds);
+
+            // `follow`: wherever the anchor body has been moved to since the
+            // layer was placed. Read off the root source because a follower's
+            // position is its root's; a layer that follows nothing has no
+            // delegate and costs one null test.
+            if (source.Displacement != null) at = at + source.Displacement();
+            if (!ReferenceEquals(source, instance) && instance.Displacement != null) at = at + instance.Displacement();
+
             return at + new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy);
         }
 

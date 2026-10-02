@@ -841,7 +841,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | --- | --- | --- |
 | `id` | — | Name, needed only when another layer rides it through `place: layer:<id>`. |
 | `render` | refused blank | `sprite` (an animated folder), `still` (one frame of a folder, held), `emitter` (ballistic particles). |
-| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, `sky`, or `layer:<id>`. |
+| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, `sky`, `counterpart`, `counterpart-centre` (the other end of the cast's move, below), or `layer:<id>`. |
 | `at` | `release` | `release` (the beat opens), `arrival` (the cast's projectile lands), `hit` (the authoritative cue). |
 | `offset` | `0` | Seconds added to `at`. |
 | `path` | — | `Resources`-relative FOLDER of `f0..fN`, for `sprite` and `still` alike. |
@@ -856,7 +856,8 @@ gameplay; a layered block cannot, which is the point of the format.
 | `artDegrees` | `0` | Which way the drawing points as painted, degrees anticlockwise from +x. Read only by `orient: path`. |
 | `travelDelay` | `0` | The wind-up held at the caster before the motion starts. |
 | `through` | `false` | The projectile flies on through its target instead of stopping: the hit still lands at the arrival, then the layer keeps its arrival speed on the same line until it is fully off the stage, and ends. Travelling layers only. |
-| `follow` | `false` | Re-read the anchor every tick rather than sampling it once when the layer opens. |
+| `follow` | `false` | Ride the anchor body: placed on it when the cast opens, then displaced with it for the layer's whole life (a bind on a figure a pull drags). Body placements only (`caster`, `target`, `counterpart` and their centres), not a projectile; a layer on `layer:<id>` already follows. |
+| `whenConsumed` | blank | Plays only if the cast spent that status on its target: a status name (`Poison`) or `any`. Blank always plays. A layer riding a gated one carries the same gate. |
 | `dx` / `dy` | `0` | Local offset from the anchor, in reference-frame units. `dx` mirrors with the cast. |
 | `size` / `scale` / `aspect` | `380` / `1` / square | The box the art is fitted into. `place: formation` measures its own span and ignores `size`. |
 | `fit` | `none` | `none` (the authored `size`, verbatim) or `target` (multiply by the struck target's visible body over a front-rank Giant Rat's). Legal on `target`, `target-centre`, `sky` and travelling layers -- see below. The single block takes it too. |
@@ -864,9 +865,29 @@ gameplay; a layered block cannot, which is the point of the format.
 | `sort` | `effects` | `ground` (behind the racks) or `effects` (over the HUD, under the damage numbers). |
 | `facing` | `auto` | `auto` takes the cast's facing, `none` never mirrors, `reverse` flips it. |
 | `align` | `level` | `place: formation`: `level` is an axis-aligned box on the rank's mean ground line; `span` runs the box from the leftmost struck body to the rightmost and rotates it to that line. `place: layer:<id>` on a travelling layer: `flight` lays the layer along that layer's flight (see "A wake left along the flight" below). Refused on any other placement. |
+| `overhang` | `0` | `place: formation` only: how far the span reaches past the outermost struck bodies, as a fraction of each end body's half-width. A lone body's span is only its own width, so a ground drawing that wide sits behind the figure and is never seen; `0.5` makes it show. Max `SpellLayerRules.MaxOverhang`. |
 | `punch` | `0` | Extra scale at the opening instant, eased out over the first fifth of the layer's lifetime. `0.22` opens it 22% oversized. Capped at `SpellLayerRules.MaxPunch`. |
 | `glow` | `0` | How far above 1 the layer's brightest pixels are pushed, so the Volume's Bloom can see them. Nothing else on this canvas can exceed 1. |
 | `emitter` | — | The particle block; inert unless `render` is `emitter`. |
+
+**A move has two ends, and the beat names the second.** A swap (Palace Passage)
+or a pull (Dark Chains) records `CombatBeat.PreFormation` (where everybody
+stood), `Counterpart` (the figure that traded seats, null for an empty seat) and
+`PlacementHoldSeconds` (how long after the cue the stage paints the move). A
+pull holds `CombatBeat.PullHoldSeconds` (0.3 s) so the bind is seen closing; a
+swap moves ON the cue (0), so the seats change at `hitCueSeconds` behind the
+doors the layers draw, not at the beat's first frame. `counterpart` /
+`counterpart-centre` are cast-level (one instance, not a fan-out) and draw
+nothing when there is no other end. To tether a layer to a figure through its
+displacement, `follow: true` on a layer long enough to cover the glide
+(`seconds` past the cue + hold + `StageActorAnimator.GlideSeconds`, `until:
+hold`); an accent at the moment the pull starts is `at: hit`, `offset:
+0.3`.
+
+**A gate on what the cast did.** The session records every status a cast
+spent (`CombatBeat.ConsumedStatuses`: a detonated Poison, a consumed
+`ConsumesStatus`), and `whenConsumed` plays a layer only then, so Viper's
+Bite's "set off what is already there" is drawn only when something was.
 
 **Placement decides instancing, and no spell id ever appears in code.**
 `formation` and the `caster` words are cast-level -- one instance however many
