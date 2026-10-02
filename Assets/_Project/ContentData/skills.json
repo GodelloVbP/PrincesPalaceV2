@@ -809,7 +809,7 @@
             "fade": 0.08
           },
           {
-            "_comment": "The rent left where it fired: f9 (shards in void haze) held on the air point and fading slowly, the near end of the tear along the path.",
+            "_comment": "The rent left where it fired: f9 (shards in void haze) held on the air point and gone in 0.3s, the near end of the tear along the path.",
             "id": "tear-air",
             "render": "still",
             "place": "sky",
@@ -817,14 +817,14 @@
             "offset": 0.7,
             "path": "Spells/blackglass_spear",
             "startFrame": 10,
-            "seconds": 1.0,
+            "seconds": 0.15,
             "until": "hold",
             "size": 340,
             "fit": "target",
             "facing": "none",
             "sort": "effects",
             "glow": 0.9,
-            "fade": 0.5
+            "fade": 0.15
           },
           {
             "_comment": "f5's flash on contact, held briefly on the struck body.",

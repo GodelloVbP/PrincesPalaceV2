@@ -355,11 +355,11 @@ MonoBehaviour:
         at: release
         offset: 0.7
         path: Spells/blackglass_spear
-        seconds: 1
+        seconds: 0.15
         fps: 0
         startFrame: 10
         until: hold
-        fade: 0.5
+        fade: 0.15
         opacity: 1
         dx: 0
         dy: 0
