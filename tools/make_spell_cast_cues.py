@@ -46,7 +46,8 @@ PEAK_WITHIN_DB = 3  # "reached the peak" = within this of the loudest 30 ms
 FADE_IN = 0.05
 FADE_OUT = 0.008    # a click guard, not a decay: the source's next sound is cut
 
-# (output name, element pack or None for an absolute source, source file, length)
+# (output name, element pack or None for an absolute source, source file, length[, after])
+# `after` (default 0) is how many seconds past the build peak the window ends.
 CUES = [
     ("winters_rebuke_cast", "Ice", "Ice_Spell_charge_impact_09.wav", 0.34),
     ("vipers_bite_cast", "Acid", "acid_spell_cast_charge_splash_impact_03.wav", 0.30),
@@ -58,8 +59,14 @@ CUES = [
     ("court_of_whispers_cast", "Dark", "dark_spell_cast_energy_ball_01.wav", 0.30),
     ("palace_passage_cast", "Dark", "dark_spell_cast_energy_riser_metallic_02.wav", 0.30),
     ("thorn_tithe_cast", "Earth", "earth_spell_cast_rise_ground_04.wav", 0.30),
-    ("crownfall_cast", "Lightning", "lighting_spell_electric_impact_thunder_dark_dry_02.wav", 0.34),
+    # The only Lightning clip with a rumble, and its crack IS the peak: a window
+    # ending at the build peak keeps the rumble and cuts the crack off at its
+    # first 10 ms. `after` lets the window run on so the crack sits just before
+    # the blow instead of on its last sample.
+    ("crownfall_cast", "Lightning", "lighting_spell_electric_impact_thunder_dark_dry_02.wav", 0.34, 0.03),
     ("borrowed_moment_cast", "Wind", "wind_spell_cast_air_short_rise_whoosh_01.wav", 0.30),
+    ("velvet_shackles_cast", "Dark", "dark_spell_cast_energy_riser_metallic_01.wav", 0.30),
+    ("gilded_aegis_cast", "Holy", "Holy Spell Wave Cast 04 HQ.wav", 0.30),
     ("prismatic_orb_earth_cast", "Earth", "earth_spell_cast_magic_whoosh_02.wav", 0.3467),
     ("prismatic_orb_fire_cast", "Fire", "fire_spell_charge_explosion_wet_03.wav", 0.4167),
     ("prismatic_orb_wind_cast", "Wind", "wind_spell_cast_air_rise_sharp_shoot_04.wav", 0.4167),
@@ -102,7 +109,8 @@ def build_peak(x):
     return (g + int(np.argmax(db[g:] >= -PEAK_WITHIN_DB))) * HOP, db
 
 
-def cut(x, peak, length):
+def cut(x, peak, length, after=0.0):
+    peak += after
     end = int(round(peak * RATE))
     size = int(round(length * RATE))
     start = end - size
@@ -135,18 +143,19 @@ def main():
         sys.exit("run this from the project root (Assets/_Project not found)")
 
     print("%-28s %-58s %6s %-15s %s" % ("cue", "source", "peak", "window", "rise dB"))
-    for out, pack, name, length in CUES:
+    for out, pack, name, length, *rest in CUES:
+        after = rest[0] if rest else 0.0
         path = find_source(pack, name)
         x = load_mono_44k(path)
         peak, db = build_peak(x)
-        a = peak - length
+        a = peak + after - length
         first = db[max(int(round(a / HOP)), 0):][:10].mean()
         last = db[max(int(round(peak / HOP)) - 10, 0):int(round(peak / HOP))].mean()
         pad = " (+%.3fs silence)" % -a if a < 0 else ""
         print("%-28s %-58s %6.2f [%5.3f,%5.3f] %+.1f -> %+.1f%s" % (
             out, os.path.basename(path), peak, max(a, 0), peak, first, last, pad))
         if not dry:
-            write_wav(os.path.join(OUT_ROOT, out + ".wav"), cut(x, peak, length))
+            write_wav(os.path.join(OUT_ROOT, out + ".wav"), cut(x, peak, length, after))
 
 
 if __name__ == "__main__":
