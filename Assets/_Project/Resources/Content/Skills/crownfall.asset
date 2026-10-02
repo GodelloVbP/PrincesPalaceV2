@@ -93,6 +93,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -147,6 +148,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: path
         artDegrees: -90
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -201,6 +203,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -255,6 +258,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: Spells/crownfall_particles
           rate: 0

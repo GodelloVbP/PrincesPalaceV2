@@ -17,6 +17,53 @@ namespace PrincesPalace.Domain.Tests
 
         private static readonly StageBody Rat = new StageBody(132.8304f, 412.1608f, -218f, -25.112f);
 
+        private static readonly UiVec StageMin = new UiVec(-960f, -540f);
+        private static readonly UiVec StageMax = new UiVec(960f, 540f);
+
+        // (-400, 0) -> (0, 0) is a rightward line of 400. The right edge is
+        // 960 from the origin: t = (960 + 400) / 400 = 3.4, and the point
+        // -400 + 400 * 3.4 = 960 is on the edge.
+        [Test]
+        public void ARightwardFlightLeavesThroughTheRightEdge()
+        {
+            Assert.AreEqual(3.4f, SpellFlight.ExitReach(new UiVec(-400f, 0f), new UiVec(0f, 0f),
+                StageMin, StageMax, 0f), Tolerance);
+        }
+
+        // 100 of clearance moves the edge out to 1060: (1060 + 400) / 400 = 3.65.
+        [Test]
+        public void ClearanceMovesTheExitOutByThatMuch()
+        {
+            Assert.AreEqual(3.65f, SpellFlight.ExitReach(new UiVec(-400f, 0f), new UiVec(0f, 0f),
+                StageMin, StageMax, 100f), Tolerance);
+        }
+
+        // (0, 300) -> (100, -100): d = (100, -400). The bottom edge is reached
+        // at t = (-540 - 300) / -400 = 2.1 (point (210, -540)); the right edge
+        // not until t = 9.6.
+        [Test]
+        public void ASteepDownwardFlightLeavesThroughTheBottomEdge()
+        {
+            Assert.AreEqual(2.1f, SpellFlight.ExitReach(new UiVec(0f, 300f), new UiVec(100f, -100f),
+                StageMin, StageMax, 0f), Tolerance);
+        }
+
+        // A leftward climb: (200, -100) -> (100, 0), d = (-100, 100). Left edge
+        // t = (-960 - 200) / -100 = 11.6, top edge t = (540 + 100) / 100 = 6.4.
+        [Test]
+        public void ALeftwardClimbLeavesThroughTheTopEdge()
+        {
+            Assert.AreEqual(6.4f, SpellFlight.ExitReach(new UiVec(200f, -100f), new UiVec(100f, 0f),
+                StageMin, StageMax, 0f), Tolerance);
+        }
+
+        [Test]
+        public void AFlightOfNoLengthReachesOnlyItsAim()
+        {
+            Assert.AreEqual(1f, SpellFlight.ExitReach(new UiVec(5f, 5f), new UiVec(5f, 5f),
+                StageMin, StageMax, 50f), Tolerance);
+        }
+
         [Test]
         public void TheAirPointIsHalfwayAcrossAndAboveTheTallerBody()
         {

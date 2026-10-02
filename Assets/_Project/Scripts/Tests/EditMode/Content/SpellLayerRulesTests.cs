@@ -511,6 +511,27 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void ThroughWithoutTravelIsRefused()
+        {
+            var layer = Sprite();
+            layer.through = true;
+
+            string message = Only(With(layer));
+            StringAssert.Contains("authors through but does not travel", message);
+        }
+
+        [Test]
+        public void ThroughOnATravellingLayerIsAccepted()
+        {
+            var layer = Sprite();
+            layer.place = "sky";
+            layer.travelSeconds = 0.2f;
+            layer.through = true;
+
+            CollectionAssert.IsEmpty(Problems(With(layer)));
+        }
+
+        [Test]
         public void ArtDegreesWithoutOrientPathIsRefused()
         {
             var layer = Sprite();

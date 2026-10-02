@@ -600,7 +600,7 @@ namespace PrincesPalace
                 {
                     var source = cast.Performance.Instances[instance.SourceInstance];
                     var span = FlightSpan.Between(instance.FlightFrom, instance.FlightTo,
-                        SpellPerformance.FractionOf(source, seconds));
+                        SpellPerformance.WakeFractionOf(source, seconds));
 
                     if (span.Length < 1f)
                     {

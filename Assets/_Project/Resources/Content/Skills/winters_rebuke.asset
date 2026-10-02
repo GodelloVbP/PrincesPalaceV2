@@ -93,6 +93,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -147,6 +148,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: path
         artDegrees: 26
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -201,6 +203,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -255,6 +258,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -309,6 +313,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: Spells/winters_rebuke_particles
           rate: 0

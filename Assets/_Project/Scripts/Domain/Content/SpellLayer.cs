@@ -166,6 +166,14 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The direction the drawing points as painted, in degrees counter-clockwise from +x (right); read only by orient 'path'.")]
         public float artDegrees;
 
+        // A PROJECTILE THAT DOES NOT STOP AT WHAT IT HITS. The arrival is
+        // still the hit (cue, travelSeconds and sound are unchanged); past it
+        // the layer keeps its arrival velocity along the same line until it
+        // is clear of the stage, then ends. Core measures where that is,
+        // because only it knows the stage's edges.
+        [ContentDoc("Fly on through the target instead of stopping at it: after the arrival the layer keeps its arrival speed along the same line until it is fully off the stage, then ends. The hit still lands at the arrival. Legal only on a layer that travels.")]
+        public bool through;
+
         [ContentDoc("Ballistic particle settings; inert unless render is 'emitter'.")]
         public SpellEmitter emitter = new SpellEmitter();
 
@@ -207,6 +215,7 @@ namespace PrincesPalace.Domain.Content
             travelDelay = travelDelay,
             orient = orient,
             artDegrees = artDegrees,
+            through = through,
             emitter = emitter == null ? new SpellEmitter() : emitter.Copy(),
         };
 

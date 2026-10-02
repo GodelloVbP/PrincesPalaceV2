@@ -111,6 +111,87 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1f, SpellPerformance.FractionOf(spear, 2f), 1e-5f);
         }
 
+        // ---- a flight that goes on through its target ---------------------------
+
+        private static SpellPresentation RiftingThrough()
+        {
+            var vfx = Rifting();
+            vfx.layers[1].through = true;
+            return vfx;
+        }
+
+        // The hit stays where it was: arrival is 0.6 + 0.18 = 0.78 whatever
+        // the spear does afterwards.
+        [Test]
+        public void ThroughLeavesTheArrivalAndTheHitCueWhereTheyWere()
+        {
+            var performance = Resolve(RiftingThrough());
+            performance.SetFlightReach(Named(performance, "spear"), 3.4f);
+
+            Assert.AreEqual(0.78f, performance.ArrivalSeconds, 1e-5f);
+            Assert.AreEqual(0.78f, performance.HitCueSeconds, 1e-5f);
+        }
+
+        // Reach 3.4 is u = 1 + 2.4 / 2 = 2.2 travel periods: 0.6 + 0.18 * 2.2
+        // = 0.996. The rift's own end (1.9) and the cast's clearing (2.4) are
+        // the rift's, not the spear's.
+        [Test]
+        public void AThroughFlightEndsWhenItReachesItsExit()
+        {
+            var performance = Resolve(RiftingThrough());
+            var spear = Named(performance, "spear");
+            performance.SetFlightReach(spear, 3.4f);
+
+            Assert.AreEqual(0.996f, spear.EndSeconds, 1e-5f);
+            Assert.AreEqual(0.996f, spear.ClearedSeconds, 1e-5f);
+            Assert.AreEqual(1.9f, Named(performance, "rift").EndSeconds, 1e-5f);
+            Assert.AreEqual(2.4f, performance.ClearedSeconds, 1e-5f);
+        }
+
+        // Past the aim the spear keeps the speed it arrived with: the slope of
+        // u*u at 1 is 2, so half a period later (0.78 + 0.09) it is 1 + 2 * 0.5
+        // = 2 lines along, and it stops at 3.4.
+        [Test]
+        public void AThroughFlightKeepsItsArrivalSpeedPastTheAim()
+        {
+            var performance = Resolve(RiftingThrough());
+            var spear = Named(performance, "spear");
+            performance.SetFlightReach(spear, 3.4f);
+            spear.From = new UiVec(0f, 0f);
+            spear.To = new UiVec(100f, 0f);
+
+            Assert.AreEqual(1f, SpellPerformance.FractionOf(spear, 0.78f), 1e-5f);
+            Assert.AreEqual(2f, SpellPerformance.FractionOf(spear, 0.87f), 1e-5f);
+            Assert.AreEqual(200f, SpellPerformance.PositionOf(spear, 0.87f).X, 1e-3f);
+            Assert.AreEqual(3.4f, SpellPerformance.FractionOf(spear, 5f), 1e-5f);
+            Assert.AreEqual(1111.111f, SpellPerformance.VelocityOf(spear, 0.87f).X, 1e-1f);
+            Assert.AreEqual(1111.111f, SpellPerformance.VelocityOf(spear, 0.78f).X, 1e-1f);
+        }
+
+        // The rift is laid along launch -> exit: at the arrival the tip has
+        // crossed 1 of the 3.4 lengths, and the whole of it once the spear is out.
+        [Test]
+        public void AWakeCoversTheWholeLineToTheExit()
+        {
+            var performance = Resolve(RiftingThrough());
+            var spear = Named(performance, "spear");
+            performance.SetFlightReach(spear, 3.4f);
+
+            Assert.AreEqual(0.294118f, SpellPerformance.WakeFractionOf(spear, 0.78f), 1e-4f);
+            Assert.AreEqual(1f, SpellPerformance.WakeFractionOf(spear, 0.996f), 1e-5f);
+            Assert.AreEqual(1f, SpellPerformance.WakeFractionOf(spear, 3f), 1e-5f);
+        }
+
+        [Test]
+        public void AFlightThatDoesNotGoThroughStillStopsAtItsAim()
+        {
+            var spear = Named(Resolve(Rifting()), "spear");
+
+            Assert.AreEqual(1f, spear.FlightReach, 1e-5f);
+            Assert.AreEqual(1f, SpellPerformance.FractionOf(spear, 0.9f), 1e-5f);
+            Assert.AreEqual(1f, SpellPerformance.WakeFractionOf(spear, 0.9f), 1e-5f);
+        }
+
         // ---- the lifetime table, layer by layer ---------------------------------
 
         // THE PILOT'S FIVE LAYERS, EACH WITH A FINITE END, and two of them

@@ -2010,8 +2010,16 @@ namespace PrincesPalace.PlayModeTests
                     foreach (var instance in performance.Instances)
                     {
                         if (!instance.Placed || instance.Layer.Render == SpellRender.Emitter) continue;
-                        float half = Domain.Stage.SpellFlight.RotatedHalfHeight(instance.Box, instance.Degrees);
-                        float top = Mathf.Max(instance.From.Y, instance.To.Y) + half;
+                        // A layer laid along a flight has no From/To of its own: it
+                        // lies on the line, and is as high as the line's higher end
+                        // plus half its thickness (the line may run off the stage).
+                        bool alongFlight = instance.AlignKind == SpellAlign.Flight;
+                        float half = alongFlight
+                            ? instance.Box.Y * 0.5f
+                            : Domain.Stage.SpellFlight.RotatedHalfHeight(instance.Box, instance.Degrees);
+                        float top = alongFlight
+                            ? Mathf.Max(instance.FlightFrom.Y, instance.FlightTo.Y) + half
+                            : Mathf.Max(instance.From.Y, instance.To.Y) + half;
                         Assert.LessOrEqual(top, floor + 0.5f,
                             $"{skillId}.{instance.Layer.id}: reaches {top:0} into the log band above {floor:0}");
                     }
@@ -2079,12 +2087,12 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // THE RIFT LIES ALONG THE SPEAR'S WHOLE FLIGHT: its line is the spear's
-        // own launch (the air point) to the body's middle, its box is that long
+        // own launch (the air point) through the body's middle to where it leaves the stage, its box is that long
         // and its angle is that line's, turned into (-90, 90]. A rift that was
         // placed on its own guess of the flight is the fault this pins, on the
         // long low body and the tall one both.
         [UnityTest]
-        public IEnumerator TheBlackglassRiftLiesFromTheAirPointToTheBodyMiddle(
+        public IEnumerator TheBlackglassRiftLiesFromTheAirPointThroughTheBodyToTheEdge(
             [ValueSource(nameof(BodiesToAimAt))] string sprite)
         {
             yield return LoadFight(1, sprite.EndsWith("treant") ? 1.45f : 1f, sprite);
@@ -2102,8 +2110,17 @@ namespace PrincesPalace.PlayModeTests
             var rift = performance.Instances.Single(i => i.Layer.id == "rift");
             var spear = performance.Instances.Single(i => i.Layer.id == "spear");
 
-            Assert.AreEqual(body.Centre.X, rift.FlightTo.X, 2f, "the line ends at the body's middle");
-            Assert.AreEqual(body.Centre.Y, rift.FlightTo.Y, 2f, "the line ends at the body's middle");
+            // The spear's aim is the body's middle; the spear goes on through it
+            // and the rift with it, to a point off the stage on the same line.
+            Assert.AreEqual(body.Centre.X, spear.FlightTo.X, 2f, "the aim is the body's middle");
+            Assert.AreEqual(body.Centre.Y, spear.FlightTo.Y, 2f, "the aim is the body's middle");
+            Assert.Greater(spear.FlightReach, 1f, "the spear flies on past the body");
+            Assert.Greater(spear.EndSeconds, performance.ArrivalSeconds, "and is removed only once it is off the stage");
+            Assert.IsTrue(Mathf.Abs(rift.FlightTo.X) > 960f || Mathf.Abs(rift.FlightTo.Y) > 540f,
+                "the line ends off the stage");
+            float across = (body.Centre.X - spear.FlightFrom.X) * (rift.FlightTo.Y - spear.FlightFrom.Y)
+                           - (body.Centre.Y - spear.FlightFrom.Y) * (rift.FlightTo.X - spear.FlightFrom.X);
+            Assert.AreEqual(0f, across, 1f, "the line still passes through the body's middle");
             Assert.AreEqual(spear.FlightFrom.X, rift.FlightFrom.X, 0.01f, "the line starts where the spear does");
             Assert.AreEqual(spear.FlightFrom.Y, rift.FlightFrom.Y, 0.01f, "the line starts where the spear does");
 

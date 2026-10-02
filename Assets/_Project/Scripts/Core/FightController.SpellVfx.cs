@@ -394,12 +394,15 @@ namespace PrincesPalace
                               * (layer.scale > 0f ? layer.scale : 1f)
                               * (layer.Fit == SpellFit.Target ? source.Fit : 1f);
 
-            var flight = FlightSpan.Between(source.FlightFrom, source.FlightTo, 1f);
+            // THE WHOLE LINE, which for a flight that goes on through its target
+            // is out to where the projectile leaves the stage.
+            var end = source.FlightFrom + (source.FlightTo - source.FlightFrom) * source.FlightReach;
+            var flight = FlightSpan.Between(source.FlightFrom, end, 1f);
             instance.Fit = source.Fit;
             instance.Box = new UiVec(flight.Length, thickness);
             instance.Degrees = flight.Degrees;
             instance.FlightFrom = source.FlightFrom;
-            instance.FlightTo = source.FlightTo;
+            instance.FlightTo = end;
         }
 
         private void PlaceOne(SpellLayerInstance instance, SpellPerformance performance, Transform parent,
@@ -526,6 +529,7 @@ namespace PrincesPalace
                 instance.FlightFrom = new UiVec(from.x, from.y);
                 instance.FlightTo = new UiVec(aim.x, aim.y);
                 KeepUnderTheLog(instance, from, aim, art, parent);
+                FlyThrough(instance, performance, parent);
                 return;
             }
 
@@ -545,12 +549,34 @@ namespace PrincesPalace
                 instance.FlightFrom = new UiVec(launch.x, launch.y);
                 instance.FlightTo = new UiVec(aim.x, aim.y);
                 KeepUnderTheLog(instance, launch, aim, drawn, parent);
+                FlyThrough(instance, performance, parent);
             }
             else
             {
                 instance.From = instance.To;
                 KeepUnderTheLog(instance, aim, aim, drawn, parent);
             }
+        }
+
+        // `through`: HOW FAR PAST THE AIM THE FLIGHT RUNS, until the whole box
+        // is off the stage (SpellFlight.ExitReach; the box's diagonal is how
+        // far a drawing reaches around the point it is steered by). The stage
+        // is the effect pool's own rectangle, so it is the screen on any aspect.
+        private static void FlyThrough(SpellLayerInstance instance, SpellPerformance performance, Transform parent)
+        {
+            if (!instance.Layer.through) return;
+
+            var min = new UiVec(-UiFrames.Reference.X * 0.5f, -UiFrames.Reference.Y * 0.5f);
+            var max = new UiVec(UiFrames.Reference.X * 0.5f, UiFrames.Reference.Y * 0.5f);
+            if (parent is RectTransform pool && pool.rect.width > 0f && pool.rect.height > 0f)
+            {
+                min = new UiVec(pool.rect.xMin, pool.rect.yMin);
+                max = new UiVec(pool.rect.xMax, pool.rect.yMax);
+            }
+
+            float clearance = Mathf.Sqrt(instance.Box.X * instance.Box.X + instance.Box.Y * instance.Box.Y);
+            performance.SetFlightReach(instance,
+                SpellFlight.ExitReach(instance.FlightFrom, instance.FlightTo, min, max, clearance));
         }
 
         // WHICH LAYERS ARE TAILS: drawn on the struck body, opening at the

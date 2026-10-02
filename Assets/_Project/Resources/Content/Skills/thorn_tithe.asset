@@ -92,6 +92,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: 
           rate: 0
@@ -146,6 +147,7 @@ MonoBehaviour:
         travelDelay: 0
         orient: 
         artDegrees: 0
+        through: 0
         emitter:
           path: Spells/thorn_tithe_particles
           rate: 0

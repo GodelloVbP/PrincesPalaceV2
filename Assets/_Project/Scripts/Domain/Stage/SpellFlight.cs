@@ -137,6 +137,31 @@ namespace PrincesPalace.Domain.Stage
             return new UiVec(lx * c - ly * s, lx * s + ly * c);
         }
 
+        // HOW FAR ALONG THE LINE launch -> aim A THROUGH-FLYER IS WHEN IT HAS
+        // LEFT THE STAGE: the first parameter t >= 1 at which the point
+        // launch + (aim - launch) * t lies `clearance` beyond the edge of
+        // [min, max], the stage's rectangle in the effect pool's frame. 1 is
+        // the aim itself, 2 is as far past it as it is from the launch.
+        // `clearance` is how far the drawing reaches around that point, so the
+        // whole of it, and not just its tip, is off the stage; 0 answers where
+        // the line crosses the edge. 1 for a flight of no length.
+        public static float ExitReach(UiVec launch, UiVec aim, UiVec min, UiVec max, float clearance)
+        {
+            float dx = aim.X - launch.X;
+            float dy = aim.Y - launch.Y;
+            float c = clearance < 0f ? 0f : clearance;
+
+            float tx = dx > 0f ? (max.X + c - launch.X) / dx
+                : dx < 0f ? (min.X - c - launch.X) / dx
+                : float.PositiveInfinity;
+            float ty = dy > 0f ? (max.Y + c - launch.Y) / dy
+                : dy < 0f ? (min.Y - c - launch.Y) / dy
+                : float.PositiveInfinity;
+
+            float t = Math.Min(tx, ty);
+            return float.IsInfinity(t) || t < 1f ? 1f : t;
+        }
+
         private static float Normalise(float degrees)
         {
             float d = degrees % 360f;

@@ -192,6 +192,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -246,6 +247,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -300,6 +302,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -354,6 +357,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_earth_drops
             rate: 10
@@ -416,6 +420,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -470,6 +475,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_earth_drops
             rate: 0
@@ -553,6 +559,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -607,6 +614,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -661,6 +669,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -715,6 +724,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_water_drops
             rate: 40
@@ -769,6 +779,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -823,6 +834,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_water_drops
             rate: 0
@@ -898,6 +910,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -952,6 +965,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -1006,6 +1020,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -1060,6 +1075,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_fire_drops
             rate: 24
@@ -1114,6 +1130,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -1168,6 +1185,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_fire_drops
             rate: 0
@@ -1243,6 +1261,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -1297,6 +1316,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -1351,6 +1371,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -1405,6 +1426,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_wind_drops
             rate: 26
@@ -1459,6 +1481,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: 
             rate: 0
@@ -1513,6 +1536,7 @@ MonoBehaviour:
           travelDelay: 0
           orient: 
           artDegrees: 0
+          through: 0
           emitter:
             path: Spells/prismatic_orb_wind_drops
             rate: 0

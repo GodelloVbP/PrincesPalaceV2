@@ -101,6 +101,13 @@ namespace PrincesPalace.Domain.Combat.Presentation
         public UiVec FlightFrom;
         public UiVec FlightTo;
 
+        // HOW FAR ALONG launch -> aim THE FLIGHT RUNS, in lengths of that line:
+        // 1 stops at the aim, as every projectile did before `through`; a
+        // `through` layer's is where it is off the stage (SpellFlight.
+        // ExitReach). Written by Core through SpellPerformance.SetFlightReach,
+        // which also re-times everything that ends with the flight.
+        public float FlightReach = 1f;
+
         // THE BODY FACTOR THIS INSTANCE WAS SIZED BY -- 1 unless its layer
         // authors `fit: target`, then the struck target's visible extent over
         // Domain.Stage.TargetBody.ReferenceExtent. Written by Core beside Box.
@@ -188,6 +195,9 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // release a handle without polling every renderer.
         public float ClearedSeconds { get; private set; }
 
+        private List<SpellLayerInstance> _built;
+        private Func<string, int> _frameCountOf;
+
         // `frameCountOf` answers how many frames a Resources folder holds. A
         // function rather than a folder read because Domain cannot see one, and
         // rather than a pre-computed number because a cast touches between one
@@ -213,6 +223,8 @@ namespace PrincesPalace.Domain.Combat.Presentation
             AssignTimes(instances, performance, frameCountOf);
 
             performance.Instances = instances;
+            performance._built = instances;
+            performance._frameCountOf = frameCountOf;
             performance.Schedule = BuildSchedule(instances, performance.HitCueSeconds);
             performance.ClearedSeconds = ClearedOf(instances, performance.HitCueSeconds);
             return performance;
@@ -240,10 +252,25 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // behind the projectile ends exactly at its tip.
         public static float FractionOf(SpellLayerInstance instance, float seconds) => Eased(instance, seconds);
 
+        // HOW MUCH OF THE WHOLE LAUNCH -> EXIT LINE a layer laid along this
+        // flight has to show: FractionOf over the flight's reach, so a wake
+        // grows with the tip and is whole when the projectile is off the
+        // stage. Equal to FractionOf for a flight that stops at its aim.
+        public static float WakeFractionOf(SpellLayerInstance instance, float seconds) =>
+            FractionOf(instance, seconds) / (instance.FlightReach < 1f ? 1f : instance.FlightReach);
+
+        // THE EASE, AND WHAT COMES AFTER IT. Up to the aim the projectile
+        // follows u*u; a `through` flight then goes on at the speed it
+        // arrived with (the ease's slope at u = 1 is 2), which is what makes
+        // the two halves one continuous motion rather than a stop and a
+        // restart. It ends at FlightReach.
         private static float Eased(SpellLayerInstance instance, float seconds)
         {
             float u = Progress(instance, seconds);
-            return u * u;
+            if (u <= 1f) return u * u;
+
+            float f = 1f + 2f * (u - 1f);
+            return f < instance.FlightReach ? f : instance.FlightReach;
         }
 
         // The exact derivative of the line above, which is why it is here and
@@ -255,9 +282,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
             if (travel <= 0f) return UiVec.Zero;
 
             float u = Progress(instance, seconds);
-            return (instance.To - instance.From) * (2f * u / travel);
+            return (instance.To - instance.From) * (2f * (u < 1f ? u : 1f) / travel);
         }
 
+        // Past 1 only for a `through` flight, which keeps counting travel
+        // periods after the arrival; every other layer is held at 1.
         private static float Progress(SpellLayerInstance instance, float seconds)
         {
             float travel = instance.Layer == null ? 0f : instance.Layer.travelSeconds;
@@ -265,7 +294,24 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
             float delay = instance.Layer.travelDelay;
             float u = (seconds - instance.StartSeconds - delay) / travel;
-            return u < 0f ? 0f : u > 1f ? 1f : u;
+            if (u < 0f) return 0f;
+            return u > 1f && !instance.Layer.through ? 1f : u;
+        }
+
+        // THE FLIGHT'S EXTENT, once Core has measured the stage, and what
+        // follows from it: a `through` layer ends when it is off the stage
+        // (EndOf), and so does anything that ends with it, so every end, the
+        // schedule and the cast's cleared time are taken again. Nothing before
+        // the arrival moves.
+        public void SetFlightReach(SpellLayerInstance instance, float reach)
+        {
+            if (instance == null || _built == null) return;
+
+            instance.FlightReach = reach < 1f ? 1f : reach;
+            foreach (var one in _built) one.EndSeconds = EndOf(one, _built, _frameCountOf, 0);
+
+            Schedule = BuildSchedule(_built, HitCueSeconds);
+            ClearedSeconds = ClearedOf(_built, HitCueSeconds);
         }
 
         // ---- fan-out -------------------------------------------------------------
@@ -437,7 +483,10 @@ namespace PrincesPalace.Domain.Combat.Presentation
             // until the sequence runs out.
             if (layer.Travels)
             {
-                float arrival = instance.StartSeconds + layer.travelDelay + layer.travelSeconds;
+                // A THROUGH FLIGHT RUNS OUT AT ITS EXIT: the ease reaches reach
+                // f at u = 1 + (f - 1) / 2 (Eased).
+                float periods = layer.through ? 1f + (instance.FlightReach - 1f) * 0.5f : 1f;
+                float arrival = instance.StartSeconds + layer.travelDelay + layer.travelSeconds * periods;
                 return own > 0f ? Math.Max(arrival, instance.StartSeconds + own) : arrival;
             }
 

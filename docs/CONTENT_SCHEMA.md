@@ -660,6 +660,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `travelDelay` | float | `0` | Seconds after this layer starts before its motion begins; the wind-up held at the caster. |  |
 | `orient` | string | `""` | Projectile orientation: none (drawn as painted) or path (turned so artDegrees lies along the flight, with the impact point riding the line from launch to aim). Blank means none. Legal only on a layer that travels. | None, Path |
 | `artDegrees` | float | `0` | The direction the drawing points as painted, in degrees counter-clockwise from +x (right); read only by orient 'path'. |  |
+| `through` | bool | `false` | Fly on through the target instead of stopping at it: after the arrival the layer keeps its arrival speed along the same line until it is fully off the stage, then ends. The hit still lands at the arrival. Legal only on a layer that travels. |  |
 | `emitter` | SpellEmitter (below) | (zero -- see SpellEmitter) | Ballistic particle settings; inert unless render is 'emitter'. |  |
 
 ### `SpellPresentation`

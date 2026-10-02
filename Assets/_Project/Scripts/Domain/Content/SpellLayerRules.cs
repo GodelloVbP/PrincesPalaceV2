@@ -519,6 +519,12 @@ namespace PrincesPalace.Domain.Content
                              "it to point along. Give it travelSeconds or remove orient.");
             }
 
+            if (layer.through && !layer.Travels)
+            {
+                problems.Add($"{at} authors through but does not travel, so there is no flight to carry past " +
+                             "the target. Give it travelSeconds or remove through.");
+            }
+
             if (layer.artDegrees != 0f &&
                 !(SpellOrientNames.IsKnown(layer.orient) && layer.Orient == SpellOrient.Path))
             {

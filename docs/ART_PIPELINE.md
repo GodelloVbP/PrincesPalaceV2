@@ -853,6 +853,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | `orient` | `none` | `path` turns the drawing so `artDegrees` lies along its flight, with the impact point riding the line from launch to aim. Travelling layers only. |
 | `artDegrees` | `0` | Which way the drawing points as painted, degrees anticlockwise from +x. Read only by `orient: path`. |
 | `travelDelay` | `0` | The wind-up held at the caster before the motion starts. |
+| `through` | `false` | The projectile flies on through its target instead of stopping: the hit still lands at the arrival, then the layer keeps its arrival speed on the same line until it is fully off the stage, and ends. Travelling layers only. |
 | `follow` | `false` | Re-read the anchor every tick rather than sampling it once when the layer opens. |
 | `dx` / `dy` | `0` | Local offset from the anchor, in reference-frame units. `dx` mirrors with the cast. |
 | `size` / `scale` / `aspect` | `380` / `1` / square | The box the art is fitted into. `place: formation` measures its own span and ignores `size`. |
@@ -919,6 +920,18 @@ Pair the shot with `orient: path` and the sheet's painted direction as
 `impactX`/`impactY` (the spear's tip, not its middle) rides the line from the
 air point to the aim. Winter's Rebuke, Blackglass Spear and Crownfall are
 authored this way; the geometry is pinned by `SpellFlightTests`.
+
+**A projectile that does not stop at its target: `through: true`.** The arrival
+is still the hit (cue, `travelSeconds` and sound unchanged). Past it the layer
+continues on the same line at the speed it arrived with (the ease is `u*u`, so
+that is its end speed, twice the average; `SpellPerformance.FractionOf` carries
+the continuation) until the whole box is off the stage, then ends. The extent is
+`SpellFlight.ExitReach`, measured by `FightController.FlyThrough` against the
+effect pool's rectangle with the box diagonal as clearance, and handed to
+`SpellPerformance.SetFlightReach`, which re-times the layer's end, its
+followers and the cast's clearing. A wake laid `align: flight` along it spans
+launch to exit and is revealed behind the tip. Per target: each instance flies
+through its own target. Refused on a layer that does not travel.
 
 **A wake left along the flight: `place: layer:<id>` + `align: flight`.** A
 layer that names a travelling layer and says `align: flight` lies along that
