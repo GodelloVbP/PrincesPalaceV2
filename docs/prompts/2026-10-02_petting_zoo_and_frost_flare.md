@@ -101,3 +101,26 @@ the VFX starts.
   `tools/measure_audio_levels.py`, so do not pre-compress it flat.
 
 Owner: what to change from the current sound: ______
+
+## Blackglass Spear rift frame
+
+Replaces the stand-in `blackglass_spear_rift` (a mirror-splinter cell from the
+spear atlas, which reads as a second spear lying in the target). The `rift`
+layer in `skills.json` stretches this one frame from launch point to impact,
+along the flight (`align: flight`, docs/ART_PIPELINE.md §5b), so draw it
+horizontal and let the engine turn it.
+
+Painterly spell style matching the Blackglass Spear atlas. 1536x512, solid
+#00FF00 background, keyed with `tools/key_green_screen.py`, not luminance: the
+rift's dark interior must stay opaque. No green anywhere in the subject.
+
+- One horizontal tear in the air, about 6:1, ends tapering to hairline points
+  that touch the left and right margins; nothing touches the top or bottom edge.
+- Inside: a near-black void with a faint deep-violet depth, no stars or scenery.
+- Edges: ragged, torn like cloth or cracked glass, lit by a thin hot violet-white
+  rim fading outward into soft purple glow.
+- A few small black glass splinters drifting off the edges.
+- Reads as a wound in the air, not as a crystal, blade or solid object.
+
+Then re-slice with the existing `Art/Sheets/recipes/blackglass_spear_rift.json`
+(drop its `turn` step, since this frame is already horizontal).
