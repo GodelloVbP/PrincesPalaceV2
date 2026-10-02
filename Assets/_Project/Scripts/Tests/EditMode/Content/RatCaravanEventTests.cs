@@ -73,11 +73,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(picked.IsLeave);
         }
 
-        private static void AssertWalksOn(EventChoiceResolution picked)
+        // Walk on lands on a farewell page where the merchant's shout is a
+        // spoken line; that page's silent Leave closes the event.
+        private static void AssertWalksOn(EventChoiceResolution picked, string farewellPage)
         {
-            Assert.IsTrue(picked.IsLeave);
+            Assert.IsFalse(picked.IsLeave);
             CollectionAssert.IsEmpty(picked.Effects, "Walk on must not finish the caravan, or it never returns");
-            Assert.AreNotEqual("", picked.Result, "the merchant calls after you");
+            Assert.AreEqual(farewellPage, picked.NextPageId);
+            Assert.AreEqual("", picked.Result, "the parting shout is a line, not result prose");
+
+            var farewell = Page(farewellPage);
+            Assert.AreEqual("merchant", farewell.Lines[farewell.Lines.Length - 1].SpeakerId);
+            var left = Pick(farewellPage, "Leave");
+            Assert.IsTrue(left.IsLeave);
+            CollectionAssert.IsEmpty(left.Effects, "a farewell Leave must not finish the caravan either");
+            Assert.AreEqual("", left.Result, "a silent Leave closes at once");
         }
 
         // ---- the event ----------------------------------------------------------------
@@ -87,7 +97,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var caravan = Caravan();
 
-            CollectionAssert.AreEqual(new[] { "caravan", "after_browse", "after_odette", "robbed" },
+            CollectionAssert.AreEqual(new[] { "caravan", "after_browse", "after_odette", "farewell_walk", "farewell_browse", "farewell_odette", "robbed" },
                 caravan.Pages.Select(p => p.Id).ToArray());
             Assert.AreEqual("caravan", caravan.StartPage.Id);
             Assert.IsTrue(caravan.MayReturn);
@@ -99,7 +109,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EveryPageIsStaged_OnItsSetPiece()
         {
-            foreach (string id in new[] { "caravan", "after_browse", "after_odette" })
+            foreach (string id in new[] { "caravan", "after_browse", "after_odette", "farewell_walk", "farewell_browse", "farewell_odette" })
             {
                 Assert.AreEqual(Art + "caravan.png", Page(id).ArtKey, id);
             }
@@ -133,6 +143,9 @@ namespace PrincesPalace.Domain.Tests
         [TestCase("robbed", new[] { "hostile" })]
         [TestCase("caravan", new[] { "grinning", "neutral" })]
         [TestCase("after_odette", new[] { "grinning", "neutral" })]
+        [TestCase("farewell_walk", new[] { "grinning" })]
+        [TestCase("farewell_browse", new[] { "grinning" })]
+        [TestCase("farewell_odette", new[] { "grinning" })]
         public void TheMerchantsFace_FitsThePage(string pageId, string[] faces)
         {
             var merchant = Page(pageId).Lines.Where(l => l.SpeakerId == "merchant").ToList();
@@ -149,7 +162,7 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEqual(new[] { "owl" }, odette.Select(l => l.SpeakerId).Distinct().ToArray());
             Assert.IsTrue(odette.All(l => l.Side == DialogueSide.Left));
 
-            foreach (string id in new[] { "caravan", "after_browse", "robbed" })
+            foreach (string id in new[] { "caravan", "after_browse", "robbed", "farewell_walk", "farewell_browse", "farewell_odette" })
             {
                 CollectionAssert.IsEmpty(Page(id).Lines.Where(l => !l.IsNarration && !l.IsEventSpeaker).ToList(), id);
             }
@@ -214,21 +227,21 @@ namespace PrincesPalace.Domain.Tests
         public void RobHim_StartsTheRatPack() => AssertRobs(Pick("caravan", "Rob him"));
 
         [Test]
-        public void WalkOn_LeavesWithNoFinish() => AssertWalksOn(Pick("caravan", "Walk on"));
+        public void WalkOn_LeavesWithNoFinish() => AssertWalksOn(Pick("caravan", "Walk on"), "farewell_walk");
 
         // ---- after browsing -----------------------------------------------------------
 
         // Walk on FIRST, so a first-available bot leaves instead of looping
         // Look again (the Petting Zoo rule).
-        [TestCase("after_browse")]
-        [TestCase("after_odette")]
-        public void AfterBrowsing_WalkOnComesFirst_ThenLookAgain_ThenRob(string pageId)
+        [TestCase("after_browse", "farewell_browse")]
+        [TestCase("after_odette", "farewell_odette")]
+        public void AfterBrowsing_WalkOnComesFirst_ThenLookAgain_ThenRob(string pageId, string farewellPage)
         {
             CollectionAssert.AreEqual(new[] { "Walk on", "Look again", "Rob him" },
                 Page(pageId).Choices.Select(c => c.Text).ToArray());
             Assert.IsTrue(Page(pageId).Choices.All(c => c.Requires.Length == 0 && !c.HiddenUntilMet), pageId);
 
-            AssertWalksOn(Pick(pageId, "Walk on"));
+            AssertWalksOn(Pick(pageId, "Walk on"), farewellPage);
             AssertOpensTheShelf(Pick(pageId, "Look again"), reveal: false, thenPage: "after_browse");
             AssertRobs(Pick(pageId, "Rob him"));
         }

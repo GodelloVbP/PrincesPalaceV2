@@ -187,7 +187,7 @@ merchant shelf and the first event speaker in shipped content.
   grins about it. Both after-pages offer Walk on / Look again / Rob him --
   **Walk on first**, so a first-available bot never loops. Look again is a
   plain `shelf` to `after_browse`; the marks stay (they are the stock's).
-  Every Walk on leaves on the merchant's parting shot with no `finish`, so
+  Every Walk on goes to a farewell page (`farewell_walk`, `farewell_browse`, `farewell_odette`) that speaks the merchant's parting shout; its silent Leave has no `finish`, so
   the caravan comes back at a later Event node with the same stock.
 - **One deviation from the plan's graph:** Browse with Odette goes to its
   own `after_odette` page rather than `after_browse`, because Odette's

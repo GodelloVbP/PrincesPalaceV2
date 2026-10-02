@@ -1338,7 +1338,7 @@
               "hiddenUntilMet": false,
               "effects": [],
               "outcomes": [
-                { "requires": [], "effects": [], "result": "\"Come back when you're richer!\" he calls after you. \"Or less observant. I'm not fussy.\"", "goTo": "Leave" }
+                { "requires": [], "effects": [], "result": "", "goTo": "farewell_walk" }
               ]
             }
           ]
@@ -1360,7 +1360,7 @@
               "hiddenUntilMet": false,
               "effects": [],
               "outcomes": [
-                { "requires": [], "effects": [], "result": "\"Tell your friends!\" he calls after you. \"Tell them I was somewhere else.\"", "goTo": "Leave" }
+                { "requires": [], "effects": [], "result": "", "goTo": "farewell_browse" }
               ]
             },
             {
@@ -1405,7 +1405,7 @@
               "hiddenUntilMet": false,
               "effects": [],
               "outcomes": [
-                { "requires": [], "effects": [], "result": "\"Bring the owl back sometime!\" he calls after you. \"Actually, don't.\"", "goTo": "Leave" }
+                { "requires": [], "effects": [], "result": "", "goTo": "farewell_odette" }
               ]
             },
             {
@@ -1424,6 +1424,72 @@
               "effects": [],
               "outcomes": [
                 { "requires": [], "effects": [ { "kind": "fight", "fight": "rat_pack" } ], "result": "", "goTo": "" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "farewell_walk",
+          "artPath": "Assets/_Project/Art/Events/rat_caravan/caravan.png",
+          "title": "The Rat Caravan",
+          "body": "",
+          "cast": [ { "character": "merchant", "side": "right" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "The wagon squeaks off behind you. A voice follows it down the road." },
+            { "speaker": "merchant", "expression": "grinning", "text": "Come back when you're richer! Or less observant. I'm not fussy." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "farewell_browse",
+          "artPath": "Assets/_Project/Art/Events/rat_caravan/caravan.png",
+          "title": "The Rat Caravan",
+          "body": "",
+          "cast": [ { "character": "merchant", "side": "right" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "The wagon squeaks off behind you. A voice follows it down the road." },
+            { "speaker": "merchant", "expression": "grinning", "text": "Tell your friends! Tell them I was somewhere else." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "farewell_odette",
+          "artPath": "Assets/_Project/Art/Events/rat_caravan/caravan.png",
+          "title": "The Rat Caravan",
+          "body": "",
+          "cast": [ { "character": "merchant", "side": "right" } ],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "The wagon squeaks off behind you. A voice follows it down the road." },
+            { "speaker": "merchant", "expression": "grinning", "text": "Bring the owl back sometime! Actually, don't." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
               ]
             }
           ]

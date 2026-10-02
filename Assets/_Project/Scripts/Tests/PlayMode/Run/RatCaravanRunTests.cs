@@ -119,15 +119,16 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(RunOrchestrator.CurrentEvent().Lines.Count > 0, $"{page}: plays no lines");
         }
 
-        private static void WalkOnAndLeave(int row)
+        private static void WalkOnAndLeave(int row, string farewellPage)
         {
             int node = Run.currentNodeId;
             Pick(row);
+            Assert.AreEqual(farewellPage, Run.eventPageId, "Walk on lands on the merchant's farewell page");
             var view = RunOrchestrator.CurrentEvent();
-            Assert.IsTrue(view.Concluded, "Walk on has the merchant's parting line to read");
-            Assert.AreNotEqual("", view.ResultText);
+            Assert.IsFalse(view.Concluded, "the parting shout is a line on the page, not result prose");
+            Assert.IsTrue(view.Lines.Count > 0, $"{farewellPage}: plays no lines");
 
-            RunOrchestrator.LeaveEvent();
+            Assert.IsTrue(Pick(LeaveRow).Closed, "the farewell's Leave is silent and closes at once");
 
             CollectionAssert.Contains(Run.clearedNodeIds, node, "the event's Leave clears the room");
             CollectionAssert.DoesNotContain(Run.eventsSeen, Caravan, "Walk on must leave the caravan to return");
@@ -149,7 +150,7 @@ namespace PrincesPalace.PlayModeTests
             AssertTheShelfIsInFront(revealed: false);
             LeaveTheShelfOnto("after_browse");
 
-            WalkOnAndLeave(WalkOn);
+            WalkOnAndLeave(WalkOn, "farewell_browse");
         }
 
         [Test]
@@ -165,7 +166,7 @@ namespace PrincesPalace.PlayModeTests
             AssertTheShelfIsInFront(revealed: true);
             LeaveTheShelfOnto("after_browse");
 
-            WalkOnAndLeave(WalkOn);
+            WalkOnAndLeave(WalkOn, "farewell_browse");
         }
 
         [Test]
@@ -175,7 +176,8 @@ namespace PrincesPalace.PlayModeTests
             int node = Run.currentNodeId;
 
             Pick(WalkOnFromStart);
-            RunOrchestrator.LeaveEvent();
+            Assert.AreEqual("farewell_walk", Run.eventPageId);
+            Assert.IsTrue(Pick(LeaveRow).Closed, "the farewell's Leave is silent and closes at once");
 
             CollectionAssert.Contains(Run.clearedNodeIds, node);
             CollectionAssert.DoesNotContain(Run.eventsSeen, Caravan);

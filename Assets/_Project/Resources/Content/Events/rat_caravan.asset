@@ -104,10 +104,9 @@ MonoBehaviour:
         Outcomes:
         - Requires: []
           Effects: []
-          Result: '"Come back when you''re richer!" he calls after you. "Or less
-            observant. I''m not fussy."'
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: farewell_walk
+          IsLeave: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: merchant
@@ -166,10 +165,9 @@ MonoBehaviour:
         Outcomes:
         - Requires: []
           Effects: []
-          Result: '"Tell your friends!" he calls after you. "Tell them I was somewhere
-            else."'
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: farewell_browse
+          IsLeave: 0
       - Text: Look again
         Requires: []
         HiddenUntilMet: 0
@@ -244,10 +242,9 @@ MonoBehaviour:
         Outcomes:
         - Requires: []
           Effects: []
-          Result: '"Bring the owl back sometime!" he calls after you. "Actually,
-            don''t."'
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: farewell_odette
+          IsLeave: 0
       - Text: Look again
         Requires: []
         HiddenUntilMet: 0
@@ -328,6 +325,108 @@ MonoBehaviour:
           on it.
         IsEventSpeaker: 1
         ExpressionName: neutral
+    - Id: farewell_walk
+      ArtKey: Assets/_Project/Art/Events/rat_caravan/caravan.png
+      Title: The Rat Caravan
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      Cast:
+      - CharacterId: merchant
+        Side: 1
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The wagon squeaks off behind you. A voice follows it down the road.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Come back when you're richer! Or less observant. I'm not fussy.
+        IsEventSpeaker: 1
+        ExpressionName: grinning
+    - Id: farewell_browse
+      ArtKey: Assets/_Project/Art/Events/rat_caravan/caravan.png
+      Title: The Rat Caravan
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      Cast:
+      - CharacterId: merchant
+        Side: 1
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The wagon squeaks off behind you. A voice follows it down the road.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Tell your friends! Tell them I was somewhere else.
+        IsEventSpeaker: 1
+        ExpressionName: grinning
+    - Id: farewell_odette
+      ArtKey: Assets/_Project/Art/Events/rat_caravan/caravan.png
+      Title: The Rat Caravan
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
+      Cast:
+      - CharacterId: merchant
+        Side: 1
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The wagon squeaks off behind you. A voice follows it down the road.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: merchant
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Bring the owl back sometime! Actually, don't.
+        IsEventSpeaker: 1
+        ExpressionName: grinning
     - Id: robbed
       ArtKey: Assets/_Project/Art/Events/rat_caravan/robbed.png
       Title: A Lighter Wagon
