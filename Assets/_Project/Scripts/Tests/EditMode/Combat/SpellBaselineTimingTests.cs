@@ -161,28 +161,23 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.21666667, 0.43333334 / 2.0, 1e-6,
                 "and today's cue is exactly half of it, because the whole cast was halved");
 
-            Assert.AreEqual(2, vfx.layers.Length, "one shared fault and one plume per struck target");
-            CollectionAssert.AreEqual(new[] { "fault", "erupt" }, vfx.layers.Select(l => l.id).ToList());
+            Assert.AreEqual(3, vfx.layers.Length, "a crack and an eruption per struck target, and the green ash");
+            CollectionAssert.AreEqual(new[] { "fault", "erupt", "ash" }, vfx.layers.Select(l => l.id).ToList());
 
-            Assert.AreEqual("formation", vfx.layers[0].place,
-                "one fault however many enemies stand in it -- the property that needs no spell id");
-            Assert.AreEqual("ground", vfx.layers[0].sort);
+            Assert.AreEqual("target", vfx.layers[0].place,
+                "the crack is under each struck body; a formation span is a sliver for a lone enemy");
             Assert.AreEqual("Spells/cinderfault_ground", vfx.layers[0].path);
+            Assert.AreEqual(18.46f, vfx.layers[0].fps, 1e-4f,
+                "f0-f3 fill the 0.2167 s before the cue and f4 ruptures on it");
 
             Assert.AreEqual("target", vfx.layers[1].place, "the plumes fan out over the struck slots");
             Assert.AreEqual("Spells/cinderfault_eruption", vfx.layers[1].path);
+            Assert.AreEqual(0.2167f, vfx.layers[1].offset, 1e-6f, "the eruption opens on the cue");
 
-            foreach (var layer in vfx.layers)
+            foreach (var layer in vfx.layers.Take(2))
             {
-                Assert.AreEqual("release", layer.at,
-                    "both open with the beat, which is what makes their peaks share an instant");
-                Assert.AreEqual(0.39f, layer.seconds, 1e-6f,
-                    "half of the 0.78s both layers ran for until 2026-09-19");
-                Assert.AreEqual(0f, layer.fps,
-                    "an unauthored rate fits the folder into `seconds`, which is what the pre-layer " +
-                    "block's own frame rate was");
                 Assert.AreEqual("none", layer.facing,
-                    "a fault is symmetrical about the rack it opens under, and so is what erupts out of it");
+                    "a fault is symmetrical about the body it opens under, and so is what erupts out of it");
             }
 
             Assert.AreEqual(9, FramesOnDisk("Spells/cinderfault_ground"));

@@ -67,28 +67,28 @@ MonoBehaviour:
       layers:
       - id: fault
         render: sprite
-        place: formation
+        place: target
         follow: 0
         at: release
         offset: 0
         path: Spells/cinderfault_ground
-        seconds: 0.39
-        fps: 0
+        seconds: 0
+        fps: 18.46
         startFrame: 0
         until: once
-        fade: 0
+        fade: 0.08
         opacity: 1
         dx: 0
         dy: 0
         scale: 1
-        size: 0
-        fit: 
+        size: 560
+        fit: target
         facing: none
-        sort: ground
-        align: span
+        sort: effects
+        align: 
         punch: 0
-        glow: 1
-        impactX: -1
+        glow: 1.2
+        impactX: 0.5
         impactY: 0.063
         aspect: 0
         travelSeconds: 0
@@ -127,24 +127,24 @@ MonoBehaviour:
         place: target
         follow: 0
         at: release
-        offset: 0
+        offset: 0.2167
         path: Spells/cinderfault_eruption
-        seconds: 0.39
-        fps: 0
-        startFrame: 0
+        seconds: 0
+        fps: 16
+        startFrame: 5
         until: once
-        fade: 0
+        fade: 0.08
         opacity: 1
         dx: 0
         dy: 0
-        scale: 1
+        scale: 1.25
         size: 0
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.22
-        glow: 1.3
+        punch: 0.35
+        glow: 1.6
         impactX: 0.5
         impactY: 0.129
         aspect: 0
@@ -179,6 +179,67 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
+      - id: ash
+        render: emitter
+        place: target
+        follow: 0
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/vipers_bite_particles
+          rate: 0
+          burst: 6
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 50
+          aimDegrees: 90
+          speedMin: 50
+          speedMax: 130
+          inherit: 0
+          drag: 1.4
+          gravity: 60
+          lifeMin: 0.3
+          lifeMax: 0.45
+          sizeMin: 0.5
+          sizeMax: 0.9
+          spinMin: -40
+          spinMax: 40
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 0.4
+          endScale: 1.3
+          seed: 2210
+          weights:
+          - 0
+          - 0
+          - 0
+          - 1
       layerFormat: 1
       hitCueSeconds: 0.21666667
     SortOrder: 5

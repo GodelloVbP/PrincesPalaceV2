@@ -121,19 +121,20 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.DoesNotContain("groundPath", entry);
             StringAssert.DoesNotContain("groundSeconds", entry);
 
-            // BOTH LAYERS OPEN AT RELEASE AND RUN 0.39s. That is what makes
-            // their peaks land together -- matching starts and matching
-            // durations over two nine-frame sheets, rather than one field
-            // being read twice. What this test owns is that the two agree,
-            // so a retune that moved one and not the other fails here.
+            // THE QUIET PART IS THE CRACK, the loud part is the eruption: the
+            // fault sequence runs from release at 18.46 fps (f0-f3 fill the
+            // 0.2167 s before the cue, f4 ruptures on it), and the eruption
+            // opens on the cue itself, 0.2167 s after release. A crack that
+            // moved relative to the eruption would lose the silence before it.
             StringAssert.Contains("\"at\": \"release\"", entry);
-            StringAssert.Contains("\"seconds\": 0.39", entry);
+            StringAssert.Contains("\"fps\": 18.46", entry);
+            StringAssert.Contains("\"offset\": 0.2167", entry);
             StringAssert.DoesNotContain("\"seconds\": 0.78", entry);
 
-            // THE FAULT FOLLOWS THE RANK. The enemies stand on a diagonal
-            // (FightStageAnchors: 300,-218 -> 660,-125) and the fault is the
-            // line they stand on, so it spans rather than lying level.
-            StringAssert.Contains("\"align\": \"span\"", entry);
+            // THE CRACK IS PLACED UNDER EACH STRUCK BODY: a formation span
+            // collapses to a sliver for a lone enemy, so it never read.
+            StringAssert.DoesNotContain("\"align\": \"span\"", entry);
+            StringAssert.DoesNotContain("\"place\": \"formation\"", entry);
         }
 
         // The presentation's own fallbacks, which is the mechanism the test
