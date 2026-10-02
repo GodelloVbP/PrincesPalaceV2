@@ -27,10 +27,34 @@ watermark.
 - By the gate: a small cooler, beads of water on it, a few bottle necks showing.
 - Animals side-on or three-quarter, readable silhouettes, no overlap that hides
   a head. Daylight, cheerful, no creature looking at camera.
+- A blank wooden sign hung on the fence, no lettering: the text names it
+  PETTING ZOO, and generated lettering is unreadable and cannot be localised.
 - No characters, crowd or people. The fence crowd lives in the text.
 
 Owner: confirm the flat-cel style. Every other event set piece (bell, caravan)
 is painterly per `output/event_art/PROMPTS.md`; this one follows the lane brief.
+
+## Petting Zoo follow-on pieces
+
+Same style, canvas and keying as the set piece. Each one preserves `zoo.png`'s
+pen, fence, gate, sign and light, and changes only what is listed. Shawn and
+the party never appear: the dialogue stage shows them as portraits.
+
+- Sheep close-up (`step1.png`, both `step1_pair` and `step1_solo`): the same
+  zoo sheep, large and centred, leaning its head over the rail toward camera,
+  curious and calm. Pen reduced to the rail and a post or two behind it; the
+  other animals out of frame.
+- Peacock (`peacock.png`): the peacock front and centre, tail fanned to full
+  width, chest out, smug. A scatter of small gold coins on the ground by the fence.
+- Fawns (`fawns.png`): gate open, both fawns standing just outside it looking
+  off the right edge of the canvas, as if following someone; trough emptied.
+- Cold one (`cold_one.png`): cooler lid thrown open, a few bottles taken out,
+  two empty bottles tipped over on the grass.
+
+Wiring: a result shows on the choosing page, so it keeps `zoo.png`. These three
+need each outcome to `goTo` its own one-line page with that `artPath`, which is
+a content change in `events.json`, plus a scene rebuild. Steps 2-10 and
+`post_arc` get prompts once their text exists.
 
 ## Frost Flare spell sheet
 
