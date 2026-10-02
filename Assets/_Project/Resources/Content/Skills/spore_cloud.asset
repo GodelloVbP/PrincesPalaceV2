@@ -96,34 +96,97 @@ MonoBehaviour:
         through: 0
         emitter:
           path: Spells/thorn_tithe_particles
-          rate: 11
+          rate: 40
           burst: 0
-          window: 0.9
+          window: 0.45
           sourceDx: 0
           sourceDy: 140
           spreadDegrees: 360
           aimDegrees: 270
-          speedMin: 15
-          speedMax: 45
+          speedMin: 70
+          speedMax: 190
           inherit: 0
-          drag: 0.4
+          drag: 1.4
           gravity: -40
-          lifeMin: 0.9
-          lifeMax: 1.4
-          sizeMin: 0.35
-          sizeMax: 0.7
+          lifeMin: 0.55
+          lifeMax: 0.85
+          sizeMin: 1.6
+          sizeMax: 2.6
           spinMin: -60
           spinMax: 60
           alignFlight: 0
           lateral: 0
-          fadeFrom: 0.7
+          fadeFrom: 0.5
           endScale: 0.9
           seed: 4471
           weights:
-          - 0.15
-          - 0.3
-          - 0.15
-          - 0.4
+          - 0
+          - 0
+          - 0
+          - 1
+      - id: puff
+        render: emitter
+        place: formation
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: level
+        punch: 0
+        glow: 0
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/thorn_tithe_particles
+          rate: 0
+          burst: 16
+          window: 0
+          sourceDx: 0
+          sourceDy: 140
+          spreadDegrees: 360
+          aimDegrees: 270
+          speedMin: 110
+          speedMax: 280
+          inherit: 0
+          drag: 1.2
+          gravity: -40
+          lifeMin: 0.4
+          lifeMax: 0.7
+          sizeMin: 2
+          sizeMax: 3
+          spinMin: -60
+          spinMax: 60
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 0.5
+          endScale: 1.2
+          seed: 4472
+          weights:
+          - 0
+          - 0
+          - 0
+          - 1
       layerFormat: 1
       hitCueSeconds: 0.35
     SortOrder: 38
