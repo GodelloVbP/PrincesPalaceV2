@@ -225,6 +225,7 @@
             "render": "sprite",
             "place": "formation",
             "align": "span",
+            "overhang": 0.5,
             "at": "release",
             "path": "Spells/cinderfault_ground",
             "fps": 18.46,
@@ -463,6 +464,8 @@
       "cooldownTurns": 2,
       "bookTier": 1,
       "vfx": {
+        "sfxPath": "Audio/Sfx/gilded_aegis_impact",
+        "castSfxPath": "Audio/Sfx/gilded_aegis_cast",
         "layerFormat": 1,
         "hitCueSeconds": 0.3,
         "layers": [
@@ -724,6 +727,37 @@
               "fadeFrom": 0.55,
               "endScale": 0.72,
               "seed": 1067
+            }
+          },
+          {
+            "id": "detonate",
+            "_comment": "Plays only when the bite spent a Poison the target already carried: a short green burst of the acid wisp (frames 3 and 4) off the body, bigger and faster than the settle shed, on the cue.",
+            "render": "emitter",
+            "place": "target-centre",
+            "fit": "target",
+            "at": "hit",
+            "whenConsumed": "Poison",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/vipers_bite_particles",
+              "weights": [0, 0, 1, 1],
+              "burst": 16,
+              "spreadDegrees": 360,
+              "aimDegrees": 90,
+              "speedMin": 140,
+              "speedMax": 340,
+              "inherit": 0,
+              "drag": 2.2,
+              "gravity": 120,
+              "lifeMin": 0.22,
+              "lifeMax": 0.4,
+              "sizeMin": 0.3,
+              "sizeMax": 0.6,
+              "spinMin": -120,
+              "spinMax": 120,
+              "fadeFrom": 0.4,
+              "endScale": 1.4,
+              "seed": 3301
             }
           }
         ]
@@ -1339,6 +1373,25 @@
             "fade": 0.14
           },
           {
+            "id": "ritual_there",
+            "_comment": "The same doors on the seat the traveller swaps with. The stage paints the swap at the 0.3 s cue (CombatBeat.PlacementHoldSeconds 0), behind both.",
+            "render": "sprite",
+            "place": "counterpart-centre",
+            "at": "release",
+            "path": "Spells/palace_passage",
+            "seconds": 0.66,
+            "until": "once",
+            "size": 390,
+            "fit": "target",
+            "impactX": 0.5,
+            "impactY": 0.48,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.12,
+            "glow": 1.15,
+            "fade": 0.14
+          },
+          {
             "id": "settle",
             "_comment": "aimDegrees 90 -> 270 (downward): the tail frames show the doors closing/shrinking, not an upward burst -- an upward particle spray after they vanish read as a second effect. lifeMin/lifeMax tightened to 0.22/0.42 so the last particle clears before the sprite's fade (ends 0.66 + 0.14 = 0.8) finishes.",
             "render": "emitter",
@@ -1388,6 +1441,7 @@
       "statusDuration": 2,
       "vfx": {
         "sfxPath": "Audio/Sfx/velvet_shackles_impact",
+        "castSfxPath": "Audio/Sfx/velvet_shackles_cast",
         "layerFormat": 1,
         "hitCueSeconds": 0.3,
         "layers": [
@@ -2071,12 +2125,29 @@
         "hitCueSeconds": 0.12,
         "layers": [
           {
+            "id": "strokes",
+            "render": "still",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/bellwether_scratch",
+            "startFrame": 1,
+            "seconds": 0.04,
+            "until": "hold",
+            "size": 330,
+            "fit": "target",
+            "facing": "auto",
+            "sort": "effects",
+            "fade": 0.02
+          },
+          {
             "id": "rake",
             "render": "sprite",
             "place": "target-centre",
             "at": "hit",
+            "offset": 0.03,
             "path": "Spells/bellwether_scratch",
-            "seconds": 0.42,
+            "startFrame": 3,
+            "seconds": 0.3,
             "until": "once",
             "size": 330,
             "fit": "target",
@@ -2194,8 +2265,11 @@
             "place": "target-centre",
             "at": "arrival",
             "path": "Spells/dark_chains_bind",
-            "seconds": 0.3,
-            "until": "once",
+            "follow": true,
+            "fps": 20,
+            "seconds": 0.7,
+            "until": "hold",
+            "_comment": "Plays the six frames in 0.3 s (the snap), then holds the taut frame and rides Shawn for the 0.3 s PullHoldSeconds plus the 0.35 s glide, so the chains are still on him while he is dragged to the front.",
             "size": 320,
             "fit": "target",
             "facing": "none",
@@ -2203,6 +2277,25 @@
             "punch": 0.12,
             "glow": 0.5,
             "fade": 0.1
+          },
+          {
+            "id": "pull",
+            "render": "still",
+            "place": "target-centre",
+            "follow": true,
+            "at": "hit",
+            "offset": 0.3,
+            "path": "Spells/dark_chains_bind",
+            "startFrame": 6,
+            "seconds": 0.12,
+            "_comment": "The accent at the instant the stage starts dragging him (hit cue + CombatBeat.PullHoldSeconds): one punched, bright frame of the taut chains.",
+            "size": 320,
+            "fit": "target",
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.3,
+            "glow": 1.0,
+            "fade": 0.08
           }
         ]
       },
@@ -2256,7 +2349,7 @@
             "at": "release",
             "offset": 0.5,
             "path": "Spells/death_knell_shockwave",
-            "seconds": 0.5,
+            "seconds": 0.78,
             "until": "once",
             "size": 620,
             "fit": "target",
@@ -2265,7 +2358,7 @@
             "facing": "auto",
             "sort": "ground",
             "glow": 0.5,
-            "fade": 0.12
+            "fade": 0.15
           }
         ]
       },

@@ -141,9 +141,11 @@ The clips were trimmed, faded and resampled to 44.1 kHz 16-bit mono wav.
 | `prismatic_orb_fire_impact.wav` | Fire `fireball_burst_bright_03` |
 | `prismatic_orb_wind_impact.wav` | Wind `air_impact_splash_02` |
 | `prismatic_orb_water_cast.wav`, `prismatic_orb_water_impact.wav` | Water `bubble_power_02`, `impact_ball_03` |
+| `velvet_shackles_cast.wav` | Dark `cast_energy_riser_metallic_01` |
+| `gilded_aegis_cast.wav`, `gilded_aegis_impact.wav` | Holy Spell Pack `Wave Cast 04`, `Cast Blast 04` (96 kHz) |
 | `status_ward_1..3.wav` | Holy Spell Pack `Protect Cast 01..03` (96 kHz) |
 | `status_regen_1..3.wav` | Holy Spell Pack `Heal Cast Bright 01..03` (96 kHz) |
 
-The two `status_` rows are from Leonardo Calvo's Holy Spell Pack (<https://www.leonardocalvocomposer.com>).
+The `gilded_aegis_` and `status_` rows are from Leonardo Calvo's Holy Spell Pack (<https://www.leonardocalvocomposer.com>).
 The pack ships no licence text, only `Contact.txt`; it is credited here on the assumption that it
 carries the same CC BY 4.0 terms as the Magic Spell SFX above. Check the pack's download page.

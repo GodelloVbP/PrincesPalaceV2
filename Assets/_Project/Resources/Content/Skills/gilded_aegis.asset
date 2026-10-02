@@ -53,18 +53,19 @@ MonoBehaviour:
       departFrame: 0
       impactX: -1
       impactY: -1
-      sfxPath: 
+      sfxPath: Audio/Sfx/gilded_aegis_impact
       groundPath: 
       groundSeconds: 0
       groundImpactFrame: 0
       groundAspect: 0
       groundImpactY: -1
-      castSfxPath: 
+      castSfxPath: Audio/Sfx/gilded_aegis_cast
       layers:
       - id: ritual
         render: sprite
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/gilded_aegis
@@ -89,6 +90,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -122,6 +124,7 @@ MonoBehaviour:
         render: emitter
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: 
@@ -146,6 +149,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

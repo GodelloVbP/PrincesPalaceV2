@@ -97,9 +97,9 @@ code change. A spell with a wind-up worth hearing names a second path,
 | `court_of_whispers_impact.wav` | 1.20s | Calvo Dark `curse_03`, ominous rather than percussive. |
 | `gale_scythe_cast.wav` | 0.33s | Gale Scythe's `castSfxPath`. Calvo Wind `short_rise_whoosh_02`, cut at the top of its rise so the swell resolves into the blow at `hitCueSeconds` 0.3. |
 | `gale_scythe_impact.wav` | 0.67s | Calvo Wind `air_sharp_shoot_02`, a sharp cut with the transient at sample 0. |
-| `thorn_tithe_impact.wav` | 0.90s | Calvo Earth `morph_rocks_02`, a rock crackle. |
+| `thorn_tithe_impact.wav` | 0.90s | Calvo Earth `cast_morph_rocks_02`, a rock crackle. Starts 10ms before the source's loudest sample (0.181s in), so the strike lands on the payoff frame; `tools/make_impact_cues.py`. |
 | `crownfall_impact.wav` | 0.80s | Calvo Lightning `zap_blast_sparkle_bright_02`. No Arcane pack; a lightning strike is the closest. |
-| `borrowed_moment_impact.wav` | 0.60s | Calvo Wind `short_spacious_whoosh_04`, a whoosh for an ally moving earlier. |
+| `borrowed_moment_impact.wav` | 0.60s | Calvo Wind `cast_air_short_spacious_whoosh_04`, a whoosh for an ally moving earlier. Starts 10ms before the whoosh's loudest sample (0.298s in), so the swell is cut: the peak lands on the payoff frame, not 0.23s after it. `tools/make_impact_cues.py`. |
 | `palace_passage_impact.wav` | 1.00s | Calvo Dark `warp_03`, the only warp in the packs, for the seat swap. |
 | `prismatic_orb_earth_impact.wav`, `_fire_`, `_wind_` | 0.65s, 0.90s, 0.90s | Per-element `sfxPath`. Calvo Earth `stone_dry_impact_03`, Fire `fireball_burst_bright_03`, Wind `air_impact_splash_02`. The Earth clip starts at the source's strike (0.248s in); the 0.25s of crackle before it landed after the contact beat. |
 | `winters_rebuke_cast.wav` | 0.46s | `castSfxPath`. Calvo Ice `charge_impact_09`, window 0.57-1.03s. |
@@ -112,8 +112,11 @@ code change. A spell with a wind-up worth hearing names a second path,
 | `court_of_whispers_cast.wav` | 0.30s | `castSfxPath`. Calvo Dark `cast_energy_ball_01`, window 0.68-0.98s. |
 | `palace_passage_cast.wav` | 0.30s | `castSfxPath`. Calvo Dark `cast_energy_riser_metallic_02`, window 0.85-1.15s. |
 | `thorn_tithe_cast.wav` | 0.30s | `castSfxPath`. Calvo Earth `cast_rise_ground_04`, window 1.94-2.24s. |
-| `crownfall_cast.wav` | 0.50s | `castSfxPath`. Calvo Lightning `impact_thunder_dark_dry_02`: the Lightning pack has no riser or charge, so this is the one clip with a rumble building into its peak at 0.45s. 50ms of silence in front lets that peak land on the blow. Weakest match of the set. |
+| `crownfall_cast.wav` | 0.34s | `castSfxPath`. Calvo Lightning `impact_thunder_dark_dry_02`: the Lightning pack has no riser or charge, so this is the one clip with a rumble building into its crack at 0.45s. Window 0.14-0.48s, run 0.03s past the build peak so the crack peaks at ~0.31s, just before the blow. Weakest match of the set. |
 | `borrowed_moment_cast.wav` | 0.30s | `castSfxPath`. Calvo Wind `cast_air_short_rise_whoosh_01`, window 0.04-0.34s. |
+| `velvet_shackles_cast.wav` | 0.30s | `castSfxPath`. Calvo Dark `cast_energy_riser_metallic_01`, window 2.02-2.32s; peaks 0.28s in. |
+| `gilded_aegis_cast.wav` | 0.30s | `castSfxPath`. Calvo Holy `Wave Cast 04`, window 0.31-0.61s, a swell from -22 to -9 dB; peaks 0.27s in. Quiet source, so its gain-table entry sits at the +12 dB clamp. |
+| `gilded_aegis_impact.wav` | 0.90s | `sfxPath`. Calvo Holy `Cast Blast 04`, started 10ms before its transient. A blast, not the `status_ward_*` chime that plays on the Shielded status after it. |
 | `prismatic_orb_earth_cast.wav` | 0.35s | Earth element's `castSfxPath`. Calvo Earth `cast_magic_whoosh_02`, window 0.88-1.23s. |
 | `prismatic_orb_fire_cast.wav` | 0.42s | Fire element's `castSfxPath`. Calvo Fire `charge_explosion_wet_03`, window 0.90-1.32s. |
 | `prismatic_orb_wind_cast.wav` | 0.42s | Wind element's `castSfxPath`. Calvo Wind `cast_air_rise_sharp_shoot_04`, window 0.39-0.81s. |
@@ -158,8 +161,9 @@ The Calvo clips were cut from the 48 kHz wav (Acid, Fire, Lightning, Water,
 Wind) or the 96 kHz wav (Dark, Earth, Ice, which ship no 48 kHz folder),
 resampled to 44.1 kHz mono 16-bit, started at the first transient, ended where
 they decay below -40 dB or at a cap, with a fade-out. `mud_burst_*` and the rubberduck cues above are untouched. There is no
-Holy or Arcane pack, so `gilded_aegis` is silent and `crownfall` borrows a
-lightning strike.
+Arcane pack, so `crownfall` borrows a lightning strike. Impact cues are cut by
+`tools/make_impact_cues.py` (loudest sample at the clip start); risers by
+`tools/make_spell_cast_cues.py`.
 
 **Credit:** the spell clips marked "Calvo" are from Leonardo Calvo's
 "Magic Spell SFX" (<https://thesoundrack.itch.io/freemagicspellsfx>), CC BY 4.0

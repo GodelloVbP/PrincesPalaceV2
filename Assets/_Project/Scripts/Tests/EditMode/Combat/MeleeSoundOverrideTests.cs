@@ -167,6 +167,7 @@ namespace PrincesPalace.Domain.Tests
                 ["cinderfault"] = "cinderfault_eruption_impact",
                 ["crownfall"] = "crownfall_impact",
                 ["borrowed_moment"] = "borrowed_moment_impact",
+                ["gilded_aegis"] = "gilded_aegis_impact",
                 ["palace_passage"] = "palace_passage_impact",
             };
             var skills = JsonBlocks.ObjectsInArray(json, "skills");
@@ -179,8 +180,6 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/gale_scythe_cast\"",
                 skills.Single(s => JsonBlocks.String(s, "id") == "gale_scythe"));
 
-            // No Holy pack: gilded_aegis is silent by design, not by omission.
-            StringAssert.DoesNotContain("SfxPath", skills.Single(s => JsonBlocks.String(s, "id") == "gilded_aegis"));
         }
 
         // Each cast cue is the tail of a riser, cut to the seconds between the
@@ -207,6 +206,8 @@ namespace PrincesPalace.Domain.Tests
                 ("thorn_tithe", "thorn_tithe_cast", 0.30f),
                 ("crownfall", "crownfall_cast", 0.34f),
                 ("borrowed_moment", "borrowed_moment_cast", 0.30f),
+                ("velvet_shackles", "velvet_shackles_cast", 0.30f),
+                ("gilded_aegis", "gilded_aegis_cast", 0.30f),
                 ("cinderfault", "cinderfault_startup", 0.2167f),
             };
             foreach (var (spell, cue, seconds) in single)
@@ -321,6 +322,51 @@ namespace PrincesPalace.Domain.Tests
                     if (System.Math.Abs((int)samples[i]) > System.Math.Abs((int)samples[peakAt])) peakAt = i;
                 }
                 Assert.Less(peakAt, limit, element + " peaks " + peakAt / 44100f + " s in");
+            }
+        }
+
+        // An impact cue fires on the payoff frame, so its loudest sample belongs at
+        // the clip's start: 50 ms is 3 frames at 60 fps. Thorn Tithe's and Borrowed
+        // Moment's clips peaked 0.15 s and 0.23 s in (9 and 14 frames late).
+        [Test]
+        public void TheRitualImpactsStartOnTheirTransient()
+        {
+            foreach (var cue in new[] { "thorn_tithe_impact", "borrowed_moment_impact", "gilded_aegis_impact" })
+            {
+                var samples = ReadMono16(cue);
+                int peakAt = 0;
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    if (System.Math.Abs((int)samples[i]) > System.Math.Abs((int)samples[peakAt])) peakAt = i;
+                }
+                Assert.Less(peakAt, 44100 * 5 / 100, cue + " peaks " + peakAt / 44100f + " s in");
+            }
+        }
+
+        // A cast riser's loudest sample sits in its last 60 ms, so the swell
+        // resolves on the blow. Crownfall's source crack used to be cut off at 0.45 s.
+        [Test]
+        public void TheRitualRisersPeakJustBeforeTheirBlow()
+        {
+            foreach (var cue in new[] { "velvet_shackles_cast", "gilded_aegis_cast", "crownfall_cast" })
+            {
+                var samples = ReadMono16(cue);
+                int peakAt = 0;
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    if (System.Math.Abs((int)samples[i]) > System.Math.Abs((int)samples[peakAt])) peakAt = i;
+                }
+                Assert.Greater(peakAt, samples.Length - 44100 * 6 / 100, cue + " peaks " + peakAt / 44100f + " s in");
+            }
+        }
+
+        [Test]
+        public void TheNewRitualCuesHaveALevelEntry()
+        {
+            string levels = File.ReadAllText(Path.Combine(ResourcesRoot(), "Audio", "audio_levels.json"));
+            foreach (var cue in new[] { "velvet_shackles_cast", "gilded_aegis_cast", "gilded_aegis_impact" })
+            {
+                StringAssert.Contains("\"path\": \"Sfx/" + cue + "\"", levels);
             }
         }
 

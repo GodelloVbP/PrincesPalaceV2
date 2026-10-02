@@ -270,10 +270,10 @@
     },
     {
       "path": "Sfx/borrowed_moment_impact",
-      "gainDb": -1.3,
-      "gain": 0.861,
+      "gainDb": 2.2,
+      "gain": 1.2882,
       "metric": "rms",
-      "measuredDb": -16.7,
+      "measuredDb": -20.2,
       "peakDb": -3.3
     },
     {
@@ -358,11 +358,11 @@
     },
     {
       "path": "Sfx/crownfall_cast",
-      "gainDb": 7.18,
-      "gain": 2.2856,
+      "gainDb": 0.8,
+      "gain": 1.0965,
       "metric": "rms",
-      "measuredDb": -25.3,
-      "peakDb": -8.2
+      "measuredDb": -18.8,
+      "peakDb": -4.9
     },
     {
       "path": "Sfx/crownfall_impact",
@@ -419,6 +419,22 @@
       "metric": "rms",
       "measuredDb": -19.1,
       "peakDb": 0.1
+    },
+    {
+      "path": "Sfx/gilded_aegis_cast",
+      "gainDb": 12.0,
+      "gain": 3.9811,
+      "metric": "rms",
+      "measuredDb": -33.8,
+      "peakDb": -21.4
+    },
+    {
+      "path": "Sfx/gilded_aegis_impact",
+      "gainDb": 3.6,
+      "gain": 1.5136,
+      "metric": "rms",
+      "measuredDb": -21.6,
+      "peakDb": -4.8
     },
     {
       "path": "Sfx/lightning_strike",
@@ -694,10 +710,10 @@
     },
     {
       "path": "Sfx/thorn_tithe_impact",
-      "gainDb": -3.1,
-      "gain": 0.6998,
+      "gainDb": -0.5,
+      "gain": 0.9441,
       "metric": "rms",
-      "measuredDb": -14.9,
+      "measuredDb": -17.5,
       "peakDb": -2.4
     },
     {
@@ -707,6 +723,14 @@
       "metric": "rms",
       "measuredDb": -19.2,
       "peakDb": 0.0
+    },
+    {
+      "path": "Sfx/velvet_shackles_cast",
+      "gainDb": 0.4,
+      "gain": 1.0471,
+      "metric": "rms",
+      "measuredDb": -18.4,
+      "peakDb": -7.5
     },
     {
       "path": "Sfx/velvet_shackles_impact",
