@@ -269,7 +269,7 @@ public static class UiEmitter
         if (node.DrawsOverArt)
         {
             var edge = go.AddComponent<OverArtEdge>();
-            edge.Backing = EmitOverArtBacking(go);
+            if (node.HasOverArtBacking) edge.Backing = EmitOverArtBacking(go);
         }
     }
 

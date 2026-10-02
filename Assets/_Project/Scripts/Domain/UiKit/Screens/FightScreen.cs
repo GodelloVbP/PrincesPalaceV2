@@ -797,7 +797,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     var callout = Ui.Label($"EnemyIntentCallout{slot}", UiString.Runtime,
                             new UiVec(CalloutPlateW - 16f, CalloutPlateH - 4f), 32, FightHudPalette.IntentNumber,
                             Place.At(0f, 0f))
-                        .OverArt()
+                        .OverArt(backing: false)
                         .AllowOverflow("the text is centred on a plate the runtime narrows to fit it");
                     calloutPlate.Children.Add(callout);
                     intent.Children.Add(value);
@@ -1284,7 +1284,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), new UiVec(0f, counterTop)))
                 .Styled(TypographyRole.FunctionalHeading)
                 // The dark text edge stays too, for the plate's faded rim.
-                .OverArt()
+                .OverArt(backing: false)
                 .Inactive();
             RoundCounter = counter;
             yield return counter;

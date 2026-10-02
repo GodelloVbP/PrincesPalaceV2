@@ -244,6 +244,10 @@ namespace PrincesPalace.Domain.UiKit
         // 2026-09-26 REPORT 1.6). False leaves the label exactly as before.
         public bool DrawsOverArt;
 
+        // With DrawsOverArt: whether the emitter also adds the dark backing
+        // plate. Off for a label whose own plate is already in the tree.
+        public bool HasOverArtBacking = true;
+
         // Escape hatches. Both REQUIRE a reason, so every exemption is greppable
         // and reviewable -- in v1 everything was an escape hatch and none of them
         // were enumerable.
@@ -436,7 +440,9 @@ namespace PrincesPalace.Domain.UiKit
 
         // Drawn straight on the art, with no kit plate behind it -- see
         // DrawsOverArt's own comment.
-        public UiNode OverArt() { DrawsOverArt = true; return this; }
+        // backing: false for a label that already sits on a plate of its own,
+        // where the emitter's dark backing would show as a second pill inside it.
+        public UiNode OverArt(bool backing = true) { DrawsOverArt = true; HasOverArtBacking = backing; return this; }
 
         // Containers default to FromChildren, which is right almost always. A
         // Fixed size is what a container needs before any child can Fill it --
