@@ -128,3 +128,36 @@ rift's dark interior must stay opaque. No green anywhere in the subject.
 
 Then re-slice with the existing `Art/Sheets/recipes/blackglass_spear_rift.json`
 (drop its `turn` step, since this frame is already horizontal).
+
+## Mud Burst lobbed mud
+
+Replaces the sheet behind `mud_burst` (`Spells/mud_burst`), which fires a
+horizontal gold-orange stream and reads as a flamethrower. The spell is "hurl a
+gout of wet earth": a clump gathers on the caster, is lobbed in an arc, and
+splatters on the target, leaving the ground at its feet coated (it applies
+Vulnerable). Heavy and wet; slow to rise, quick to land.
+
+Target: `Assets/_Project/Art/Sheets/Spells/Mud Burst/mud_burst_atlas_v2.png`,
+then a new recipe `Art/Sheets/recipes/mud_burst.json` (the current one is the
+fire stream; keep it until the new frames are timed in `skills.json`). Beat
+order: a gather on the caster, one lobbed clump in flight, the splat on the
+target, a ground splat that settles. 1536x1024, 4x3 grid, solid #00FF00
+background, keyed with `tools/key_green_screen.py`, not luminance: the mud is
+dark and its interior must stay opaque. No green or yellow-green anywhere in
+the subject.
+
+- Cells 1-3: a dark brown clump gathering and swelling above an open palm-height
+  point at the left, drips falling, no glow.
+- Cells 4-5: one large lumpy mud clump in flight, trailing a few thick drops
+  (not a streak), drawn horizontal-ish on a slight arc.
+- Cells 6-8: the clump bursts on the target: a broad radial splatter of wet mud,
+  chunks and thick drops, ending in a dome that slumps.
+- Cells 9-12: mud coating a patch of ground, spread flat and glossy, then
+  drying and darkening; the last cell is a thin stain.
+- Palette: three browns (wet dark, mid, pale highlight rim), a faint cool grey
+  sheen. The accent frame is cell 6 or 7, the widest splatter.
+
+It must NOT read as fire, flame, lava, a flamethrower, or an ember trail: no
+orange, red or gold anywhere, no glow, no sparks, no smoke. It also must not
+read as a poison or acid splash (no green) or as chocolate or a thrown food
+item (matte, gritty, with pebbles and root fibres in it).
