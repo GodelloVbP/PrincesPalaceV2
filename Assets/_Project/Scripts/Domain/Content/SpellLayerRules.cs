@@ -313,6 +313,7 @@ namespace PrincesPalace.Domain.Content
 
             Positive(at, "emitter.rate", emitter.rate, problems);
             Positive(at, "emitter.window", emitter.window, problems);
+            Positive(at, "emitter.lateral", emitter.lateral, problems);
             Positive(at, "emitter.speedMin", emitter.speedMin, problems);
             Positive(at, "emitter.speedMax", emitter.speedMax, problems);
             Positive(at, "emitter.lifeMin", emitter.lifeMin, problems);
@@ -500,13 +501,29 @@ namespace PrincesPalace.Domain.Content
             // A FLIGHT-ALIGNED LAYER RESOLVES THE SAME ONE: the body its
             // projectile is aimed at, which is the factor that projectile was
             // sized by.
+            //
+            // SO DOES ANY LAYER RIDING ANOTHER (an emitter streaking along a
+            // projectile): PlaceOne resolves the target of the instance it
+            // rides, and its particles scale by the same factor.
             if (SpellFitNames.IsKnown(layer.fit) && layer.Fit == SpellFit.Target &&
                 !SpellPlaceNames.PerTarget(layer.Place) && !layer.Travels &&
-                !(layer.Place == SpellPlace.Layer && layer.Align == SpellAlign.Flight))
+                layer.Place != SpellPlace.Layer)
             {
                 problems.Add($"{at} authors fit 'target' but is placed on {layer.place.Trim()}, which " +
                              "resolves no single struck target to read a footprint off. Only target, " +
-                             "target-centre, sky or a travelling layer do.");
+                             "target-centre, sky, a travelling layer or a layer riding another do.");
+            }
+
+            // AN EMITTER'S FLIGHT SHAPING READS THE LINE OF THE LAYER IT RIDES;
+            // anywhere else there is no line, so the words are refused rather
+            // than left inert.
+            if (layer.Render == SpellRender.Emitter && layer.emitter != null &&
+                (layer.emitter.alignFlight || layer.emitter.lateral > 0f) &&
+                layer.Place != SpellPlace.Layer)
+            {
+                problems.Add($"{at} authors emitter.alignFlight or emitter.lateral but is placed on " +
+                             $"{layer.place.Trim()}, which has no flight to lie along. Place it on " +
+                             "'layer:<id>' of a travelling layer.");
             }
 
             // A STILL BOX HAS NO LINE OF FLIGHT to turn onto, and an unturned
@@ -689,14 +706,24 @@ namespace PrincesPalace.Domain.Content
             for (int i = 0; i < layers.Length; i++)
             {
                 var layer = layers[i];
-                if (layer == null || layer.Place != SpellPlace.Layer || layer.Align != SpellAlign.Flight) continue;
+                if (layer == null || layer.Place != SpellPlace.Layer) continue;
 
                 var source = layers.FirstOrDefault(l => l != null && string.Equals(l.id?.Trim(),
                     layer.FollowsLayerId, StringComparison.Ordinal));
-                if (source != null && !source.Travels)
+
+                if (layer.Align == SpellAlign.Flight && source != null && !source.Travels)
                 {
                     problems.Add($"{label}: vfx.layers[{i}] authors align 'flight' on '{layer.FollowsLayerId}', " +
                                  "which does not travel, so there is no flight to lie along.");
+                }
+
+                if (layer.Render == SpellRender.Emitter && layer.emitter != null &&
+                    (layer.emitter.alignFlight || layer.emitter.lateral > 0f) &&
+                    source != null && !source.Travels)
+                {
+                    problems.Add($"{label}: vfx.layers[{i}] authors emitter.alignFlight or emitter.lateral on " +
+                                 $"'{layer.FollowsLayerId}', which does not travel, so there is no flight " +
+                                 "to lie along.");
                 }
             }
 

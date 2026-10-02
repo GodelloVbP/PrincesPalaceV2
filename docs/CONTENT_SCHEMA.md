@@ -621,6 +621,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `sizeMax` | float | `1` | Largest particle scale. |  |
 | `spinMin` | float | `0` | Slowest spin, in degrees per second; may be negative. |  |
 | `spinMax` | float | `0` | Fastest spin, in degrees per second. |  |
+| `alignFlight` | bool | `false` | Turns every particle's art, painted pointing right, onto the line of flight of the travelling layer the emitter rides (launch to aim), on top of its own spin. Legal only on place 'layer:<id>' of a layer that travels. |  |
+| `lateral` | float | `0` | Width across the line of flight that particles are born within, in reference-frame units (scaled by fit); each is offset by a hash of its index, up to half this either side of the source. 0 means born on the line. Legal only on place 'layer:<id>' of a layer that travels. |  |
 | `fadeFrom` | float | `1` | Fraction of life at which alpha starts falling, 0..1. |  |
 | `endScale` | float | `1` | Scale at the end of life, relative to the particle's own. |  |
 | `seed` | int | `0` | Random seed; 0 derives one from the cast so two casts differ, non-zero repeats exactly. |  |
@@ -647,7 +649,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `dy` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
-| `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre or sky, or a layer that travels. | None, Target |
+| `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre or sky, a layer that travels, or a layer riding another (place layer:<id>). | None, Target |
 | `facing` | string | `""` | Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto. | Auto, None, Reverse |
 | `sort` | string | `""` | Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects. | Ground, Effects |
 | `align` | string | `""` | How a layer lies on the line it is placed along. On place formation: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). On place layer:<id> naming a travelling layer: flight (the box runs from that layer's launch to its aim, turned onto the line, as long as the line and `size` thick -- `size` is the thickness, fitted by `fit` -- stretched rather than letterboxed, revealed behind the projectile as it flies, then held and faded on this layer's own seconds, until and fade; dx and dy are refused). Refused on any other placement. | Level, Span, Flight |

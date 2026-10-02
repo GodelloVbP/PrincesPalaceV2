@@ -121,6 +121,7 @@ namespace PrincesPalace
             internal int Member;
             internal UiVec P0;
             internal UiVec V0;
+            internal float Heading;
         }
 
         private sealed class Cast
@@ -690,12 +691,20 @@ namespace PrincesPalace
                 float birth = SpellEmitterSim.BirthOf(spec, particle, instance.StartSeconds);
                 if (birth > seconds) break;
 
+                // LAID ON THE SOURCE'S LINE OF FLIGHT: turned onto it and
+                // scattered across it, both read off the source's own launch
+                // and aim (zero for an emitter that authors neither).
                 var p0 = SpellPerformance.PositionOf(source, birth)
-                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy) * fit;
+                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy) * fit
+                         + SpellEmitterSim.LateralOf(spec, seed, particle, source.FlightFrom, source.FlightTo) * fit;
                 var v0 = SpellEmitterSim.LaunchOf(spec, seed, particle, instance.DrawFacing)
                          + SpellPerformance.VelocityOf(source, birth) * spec.inherit;
+                float heading = SpellEmitterSim.HeadingOf(spec, source.FlightFrom, source.FlightTo);
 
-                drops.Add(new Drop { Member = TakeDrop(slot, index, particle), P0 = p0, V0 = v0 });
+                drops.Add(new Drop
+                {
+                    Member = TakeDrop(slot, index, particle), P0 = p0, V0 = v0, Heading = heading,
+                });
             }
 
             for (int i = 0; i < drops.Count; i++)
@@ -719,7 +728,7 @@ namespace PrincesPalace
                 particleRenderer.Show(member, frames[drop.Frame],
                     new Vector2(at.X, at.Y),
                     ParticleSize * drop.Scale * fit, drop.Alpha * SpellFrameCursor.OpacityOf(instance.Layer),
-                    drop.Rotation);
+                    drop.Rotation + held.Heading);
             }
         }
 

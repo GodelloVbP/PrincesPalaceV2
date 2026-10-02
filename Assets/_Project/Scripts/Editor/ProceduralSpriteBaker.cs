@@ -80,6 +80,7 @@ public static class ProceduralSpriteBaker
         BakeScrim();
         BakeEmber();
         BakeConstellation();
+        BakeSpeedStreak();
 
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
@@ -546,6 +547,52 @@ public static class ProceduralSpriteBaker
 
             return band * arc;
         });
+    }
+
+    // A THIN GLOWING LINE for an emitter's speed streaks (Blackglass Spear's
+    // `streaks` layer), painted pointing right. Lives under Resources/Spells,
+    // not Art/Generated, because an emitter loads its stills from a Resources
+    // folder (SpellEmitter.path).
+    //
+    // BRIGHT AT THE HEAD, TAPERING TO NOTHING AT THE TAIL, which is what makes
+    // a streak read as moving the way it points rather than as a stick. A hot
+    // lilac core over a wider violet halo: the halo is what reads as glow on
+    // a sprite that cannot be pushed past 1 for the Bloom override. Coloured
+    // here because one tint cannot bend white-hot lilac out to violet.
+    private const string SpeedStreakPath = "Assets/_Project/Resources/Spells/speed_streak/f0.png";
+
+    private static void BakeSpeedStreak()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(SpeedStreakPath));
+
+        var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
+        var pixels = new Color32[Size * Size];
+
+        for (int y = 0; y < Size; y++)
+        {
+            for (int x = 0; x < Size; x++)
+            {
+                float nx = (x + 0.5f) / Size * 2f - 1f;
+                float ny = (y + 0.5f) / Size * 2f - 1f;
+
+                float rise = Smoothstep(Mathf.Clamp01((nx + 0.98f) / 1.55f));
+                float tip = 1f - Smoothstep(Mathf.Clamp01((nx - 0.82f) / 0.16f));
+                float along = rise * rise * tip;
+
+                float core = Mathf.Exp(-(ny * ny) / (0.035f * 0.035f));
+                float halo = Mathf.Exp(-(ny * ny) / (0.12f * 0.12f)) * 0.38f;
+                float strength = Mathf.Clamp01((core + halo) * along);
+
+                float hot = Mathf.Clamp01(core * along);
+                byte red = (byte)Mathf.RoundToInt(Mathf.Lerp(0.58f, 0.96f, hot) * 255f);
+                byte green = (byte)Mathf.RoundToInt(Mathf.Lerp(0.26f, 0.88f, hot) * 255f);
+                pixels[y * Size + x] = new Color32(red, green, 255, (byte)Mathf.RoundToInt(strength * 255f));
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(SpeedStreakPath, texture);
     }
 
     // One field of stars, placed deterministically and drawn with a soft edge

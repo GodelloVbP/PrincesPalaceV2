@@ -200,7 +200,7 @@ namespace PrincesPalace.Domain.Tests
                 ("spore_cloud", "spore_cloud_cast", 0.35f),
                 ("ashen_reckoning", "ashen_reckoning_cast", 0.30f),
                 ("censer_of_embers", "censer_of_embers_cast", 0.30f),
-                ("blackglass_spear", "blackglass_spear_cast", 0.78f),
+                ("blackglass_spear", "blackglass_spear_cast", 0.70f),
                 ("death_knell", "death_knell_cast", 0.50f),
                 ("court_of_whispers", "court_of_whispers_cast", 0.30f),
                 ("palace_passage", "palace_passage_cast", 0.30f),

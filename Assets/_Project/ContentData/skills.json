@@ -703,7 +703,7 @@
         "layerFormat": 1,
         "sfxPath": "Audio/Sfx/blackglass_spear_impact",
         "castSfxPath": "Audio/Sfx/blackglass_spear_cast",
-        "hitCueSeconds": 0.78,
+        "hitCueSeconds": 0.7,
         "layers": [
           {
             "_comment": "The shards gather into the spear in the air between caster and target over 0.6 s: f0-f2, held in the sky (SpellFlight.SkyPoint), sized to the target's body.",
@@ -725,7 +725,7 @@
             "fade": 0.06
           },
           {
-            "_comment": "The tear along the path: the splinter still turned flat (blackglass_spear_rift, dark glass with violet edges) laid along the spear's flight from the air point through the target's middle to where the spear leaves the stage, stretched to it, revealed behind the spear as it flies, then held 1.1 s past the hit and faded. Thickness is size 110 on a rat. Authored before the spear so the spear draws over it.",
+            "_comment": "The tear along the path: the splinter still turned flat (blackglass_spear_rift, dark glass with violet edges) laid along the spear's flight from the air point through the target's middle to where the spear leaves the stage, stretched to it, revealed behind the spear as it flies, then held 0.2 s from its opening and faded over 0.15 s, so it is a brief streak that is gone almost as the spear leaves the stage. Thickness is size 110 on a rat. Authored before the spear so the spear draws over it.",
             "id": "rift",
             "render": "still",
             "place": "layer:spear",
@@ -733,17 +733,43 @@
             "at": "release",
             "offset": 0.6,
             "path": "Spells/blackglass_spear_rift",
-            "seconds": 1.3,
+            "seconds": 0.2,
             "until": "hold",
             "size": 110,
             "fit": "target",
             "facing": "none",
             "sort": "effects",
             "glow": 1.4,
-            "fade": 0.5
+            "fade": 0.15
           },
           {
-            "_comment": "f3's spear (the cleanest: alpha axis 20x longer than wide), fired from the air point at the target's middle. Painted pointing 45 degrees down, so orient path turns it by only a few degrees onto the flight. impactX/Y is 80% of the way from the frame centre to the tip. Fired at 0.6 once the build-up has gathered; arrival 0.6 + 0.18 = 0.78 is the hit cue. `through` keeps it flying at its arrival speed along the same line until it is off the stage.",
+            "_comment": "Speed lines: thin violet streaks (speed_streak, baked by ProceduralSpriteBaker) born along the spear's flight, turned onto it and scattered across its width, each living 0.10-0.20 s so the line of them is gone almost as soon as the spear has passed. Authored before the spear so it draws over them. The window covers the approach and the flight on through the target.",
+            "id": "streaks",
+            "render": "emitter",
+            "place": "layer:spear",
+            "fit": "target",
+            "at": "release",
+            "offset": 0.6,
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/speed_streak",
+              "rate": 170,
+              "window": 0.28,
+              "alignFlight": true,
+              "lateral": 130,
+              "inherit": 0.04,
+              "drag": 4,
+              "lifeMin": 0.1,
+              "lifeMax": 0.2,
+              "sizeMin": 2.2,
+              "sizeMax": 6,
+              "fadeFrom": 0.1,
+              "endScale": 0.6,
+              "seed": 2026
+            }
+          },
+          {
+            "_comment": "f3's spear (the cleanest: alpha axis 20x longer than wide), fired from the air point at the target's middle. Painted pointing 45 degrees down, so orient path turns it by only a few degrees onto the flight. impactX/Y is 80% of the way from the frame centre to the tip. Fired at 0.6 once the build-up has gathered; arrival 0.6 + 0.1 = 0.7 is the hit cue. `through` keeps it flying at its arrival speed along the same line until it is off the stage.",
             "id": "spear",
             "render": "still",
             "place": "sky",
@@ -751,7 +777,7 @@
             "offset": 0.6,
             "path": "Spells/blackglass_spear",
             "startFrame": 4,
-            "travelSeconds": 0.18,
+            "travelSeconds": 0.1,
             "orient": "path",
             "artDegrees": -45,
             "size": 300,

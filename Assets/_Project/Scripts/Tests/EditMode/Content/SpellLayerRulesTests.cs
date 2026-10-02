@@ -345,6 +345,59 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(problems.Any(p => p.Contains("align 'flight' on an emitter")), string.Join(" | ", problems));
         }
 
+        private static SpellLayer Streaks() => new SpellLayer
+        {
+            id = "streaks",
+            render = "emitter",
+            place = "layer:spear",
+            fit = "target",
+            emitter = new SpellEmitter
+            {
+                path = "Spells/speed_streak",
+                rate = 110f,
+                window = 0.24f,
+                alignFlight = true,
+                lateral = 90f,
+                lifeMin = 0.1f,
+                lifeMax = 0.2f,
+            },
+        };
+
+        [Test]
+        public void AnEmitterMayStreakAlongATravellingLayersFlightAndFitTheTarget()
+        {
+            CollectionAssert.IsEmpty(Problems(With(Spear(), Streaks())));
+        }
+
+        [Test]
+        public void FlightShapingOnAnEmitterNotRidingALayerIsRefused()
+        {
+            var layer = Streaks();
+            layer.place = "target-centre";
+
+            string message = Problems(With(Spear(), layer)).Single(p => p.Contains("emitter.alignFlight or emitter.lateral"));
+            StringAssert.Contains("is placed on target-centre, which has no flight to lie along", message);
+        }
+
+        [Test]
+        public void FlightShapingOnAnEmitterRidingALayerThatDoesNotTravelIsRefused()
+        {
+            var still = Sprite("spear");
+            still.place = "sky";
+
+            string message = Only(With(still, Streaks()));
+            StringAssert.Contains("emitter.alignFlight or emitter.lateral on 'spear', which does not travel", message);
+        }
+
+        [Test]
+        public void ANegativeLateralWidthIsRefused()
+        {
+            var layer = Streaks();
+            layer.emitter.lateral = -1f;
+
+            StringAssert.Contains("emitter.lateral -1 cannot be negative", Only(With(Spear(), layer)));
+        }
+
         [Test]
         public void AFormationLayerAuthoringASizeIsRefusedBecauseTheSpanOverridesIt()
         {
@@ -441,7 +494,7 @@ namespace PrincesPalace.Domain.Tests
 
             string message = Only(With(layer));
             StringAssert.Contains("authors fit 'target' but is placed on formation", message);
-            StringAssert.Contains("Only target, target-centre, sky or a travelling layer do", message);
+            StringAssert.Contains("Only target, target-centre, sky, a travelling layer or a layer riding another do", message);
         }
 
         [Test]

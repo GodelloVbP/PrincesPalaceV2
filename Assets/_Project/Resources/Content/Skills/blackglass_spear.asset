@@ -114,6 +114,8 @@ MonoBehaviour:
           sizeMax: 1
           spinMin: 0
           spinMax: 0
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 1
           endScale: 1
           seed: 0
@@ -125,11 +127,11 @@ MonoBehaviour:
         at: release
         offset: 0.6
         path: Spells/blackglass_spear_rift
-        seconds: 1.3
+        seconds: 0.2
         fps: 0
         startFrame: 0
         until: hold
-        fade: 0.5
+        fade: 0.15
         opacity: 1
         dx: 0
         dy: 0
@@ -169,9 +171,68 @@ MonoBehaviour:
           sizeMax: 1
           spinMin: 0
           spinMax: 0
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 1
           endScale: 1
           seed: 0
+          weights: []
+      - id: streaks
+        render: emitter
+        place: layer:spear
+        follow: 0
+        at: release
+        offset: 0.6
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/speed_streak
+          rate: 170
+          burst: 0
+          window: 0.28
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0.04
+          drag: 4
+          gravity: 0
+          lifeMin: 0.1
+          lifeMax: 0.2
+          sizeMin: 2.2
+          sizeMax: 6
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 1
+          lateral: 130
+          fadeFrom: 0.1
+          endScale: 0.6
+          seed: 2026
           weights: []
       - id: spear
         render: still
@@ -199,7 +260,7 @@ MonoBehaviour:
         impactX: 0.78
         impactY: 0.13
         aspect: 0
-        travelSeconds: 0.18
+        travelSeconds: 0.1
         travelDelay: 0
         orient: path
         artDegrees: -45
@@ -224,6 +285,8 @@ MonoBehaviour:
           sizeMax: 1
           spinMin: 0
           spinMax: 0
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 1
           endScale: 1
           seed: 0
@@ -279,6 +342,8 @@ MonoBehaviour:
           sizeMax: 1
           spinMin: 0
           spinMax: 0
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 1
           endScale: 1
           seed: 0
@@ -334,6 +399,8 @@ MonoBehaviour:
           sizeMax: 1
           spinMin: 0
           spinMax: 0
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 1
           endScale: 1
           seed: 0
@@ -389,6 +456,8 @@ MonoBehaviour:
           sizeMax: 1
           spinMin: 0
           spinMax: 0
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 1
           endScale: 1
           seed: 0
@@ -444,6 +513,8 @@ MonoBehaviour:
           sizeMax: 1
           spinMin: 0
           spinMax: 0
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 1
           endScale: 1
           seed: 0
@@ -499,12 +570,14 @@ MonoBehaviour:
           sizeMax: 0.26
           spinMin: -180
           spinMax: 180
+          alignFlight: 0
+          lateral: 0
           fadeFrom: 0.55
           endScale: 0.72
           seed: 1552
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.78
+      hitCueSeconds: 0.7
     SortOrder: 12
     Status: 0
     HasStatus: 0

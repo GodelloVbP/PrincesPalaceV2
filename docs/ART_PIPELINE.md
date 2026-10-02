@@ -1026,7 +1026,16 @@ source's velocity a particle is born with), `drag`, `gravity`,
 `endScale`, `seed`. A particle's position is a closed form over its age, so a
 long frame or a 60x test speed-up lands it where a hundred short frames would.
 An emitter placed on a travelling layer sheds ALONG the flight: each particle is
-born at its own instant and sampled where the source was then.
+born at its own instant and sampled where the source was then. Two more fields
+shape a shed laid on a flight, both legal only on `place: layer:<id>` of a
+travelling layer: `alignFlight` turns every particle's art (painted pointing
+right) onto the line from launch to aim, and `lateral` scatters births across
+that line within +-`lateral`/2 (scaled by `fit`). Together with a thin glowing
+sprite they make speed lines: Blackglass Spear's `streaks` layer is 170 a second
+of `speed_streak` (baked by `ProceduralSpriteBaker.BakeSpeedStreak`, no painted
+art), each living 0.1-0.2 s, so the line of them is gone almost as the spear
+has passed. The spear's own wake (`rift`) is held 0.2 s and faded 0.15 s for the
+same reason; `fit: target` is legal on any layer riding another.
 
 **Previewing one.** The Python preview draws sprite layers only and says so; an
 emitter is previewed by running the real code:

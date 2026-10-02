@@ -156,6 +156,8 @@ MonoBehaviour:
               sizeMax: 1
               spinMin: 0
               spinMax: 0
+              alignFlight: 0
+              lateral: 0
               fadeFrom: 1
               endScale: 1
               seed: 0

@@ -246,10 +246,10 @@
     },
     {
       "path": "Sfx/blackglass_spear_cast",
-      "gainDb": 5.1,
-      "gain": 1.7989,
+      "gainDb": 4.9,
+      "gain": 1.7579,
       "metric": "rms",
-      "measuredDb": -23.1,
+      "measuredDb": -22.9,
       "peakDb": -8.6
     },
     {

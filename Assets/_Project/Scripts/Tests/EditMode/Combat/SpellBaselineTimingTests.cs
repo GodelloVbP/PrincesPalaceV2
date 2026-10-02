@@ -221,5 +221,35 @@ namespace PrincesPalace.Domain.Tests
                 water.layers.Select(l => l.id).ToList(),
                 "authored order is draw order, so it is part of the content rather than an accident");
         }
+
+        // THE BLACKGLASS SPEAR'S SHOT: a fast flight, a wake that is gone almost
+        // as it opens, and speed streaks racing along it. Literal seconds, so
+        // a retune says which number moved.
+        [Test]
+        public void TheBlackglassSpearFliesFastLeavesABriefWakeAndStreaksAlongIt()
+        {
+            string skill = JsonBlocks.ObjectsInArray(SkillsJson(), "skills")
+                .Single(s => JsonBlocks.String(s, "id") == "blackglass_spear");
+            var vfx = SpellVfxJson.OwnVfx(skill);
+
+            var spear = vfx.layers.Single(l => l.id == "spear");
+            Assert.AreEqual(0.6f, spear.offset, 1e-6f, "the build-up gathers for 0.6s before the spear fires");
+            Assert.AreEqual(0.1f, spear.travelSeconds, 1e-6f);
+            Assert.AreEqual(0.7f, vfx.hitCueSeconds, 1e-6f, "the cue is arrival: 0.6 + 0.1");
+
+            var rift = vfx.layers.Single(l => l.id == "rift");
+            Assert.AreEqual(0.2f, rift.seconds, 1e-6f);
+            Assert.AreEqual(0.15f, rift.fade, 1e-6f);
+
+            var streaks = vfx.layers.Single(l => l.id == "streaks");
+            Assert.AreEqual("layer:spear", streaks.place);
+            Assert.AreEqual(0.6f, streaks.offset, 1e-6f, "streaks open as the spear fires");
+            Assert.IsTrue(streaks.emitter.alignFlight);
+            Assert.AreEqual(130f, streaks.emitter.lateral, 1e-6f);
+            Assert.AreEqual(0.2f, streaks.emitter.lifeMax, 1e-6f, "each streak is gone within 0.2s");
+            CollectionAssert.AreEqual(new[] { "amass", "rift", "streaks", "spear" },
+                vfx.layers.Take(4).Select(l => l.id).ToList(),
+                "streaks are authored before the spear so it draws over them");
+        }
     }
 }

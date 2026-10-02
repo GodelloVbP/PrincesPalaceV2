@@ -203,8 +203,12 @@ namespace PrincesPalace.Domain.Tests
         // this lint never walks -- only a skill's OWN authored vfx block is
         // scanned. Authoring the house's default as a skill's own choice is
         // new, not the art.
+        //
+        // `speed_streak` is the same kind of provenance: ProceduralSpriteBaker.
+        // BakeSpeedStreak draws it from arithmetic and byte-compares before
+        // writing, so re-running the baker reproduces it exactly.
         private static readonly HashSet<string> HouseVfxIds =
-            new HashSet<string>(StringComparer.Ordinal) { "impact_burst", "slash_arc" };
+            new HashSet<string>(StringComparer.Ordinal) { "impact_burst", "slash_arc", "speed_streak" };
 
         private static HashSet<string> HandAssembledIds()
         {

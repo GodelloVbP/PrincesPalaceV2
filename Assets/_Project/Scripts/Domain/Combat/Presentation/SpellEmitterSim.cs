@@ -116,6 +116,34 @@ namespace PrincesPalace.Domain.Combat.Presentation
             return new UiVec((float)Math.Cos(radians) * speed, (float)Math.Sin(radians) * speed);
         }
 
+        // THE DEGREES A STREAK IS TURNED BY when it is laid on a flight: the
+        // angle of launch -> aim, counter-clockwise from +x. 0 when the emitter
+        // does not align or the flight has no length.
+        public static float HeadingOf(SpellEmitter spec, UiVec from, UiVec to)
+        {
+            if (spec == null || !spec.alignFlight) return 0f;
+
+            var line = to - from;
+            if (line.X == 0f && line.Y == 0f) return 0f;
+
+            return (float)(Math.Atan2(line.Y, line.X) * 180.0 / Math.PI);
+        }
+
+        // WHERE ACROSS THE FLIGHT A PARTICLE IS BORN: a hashed share of
+        // +-lateral/2 along the normal of launch -> aim. Hashed from (seed,
+        // index) like every other draw, so a streak field repeats exactly.
+        public static UiVec LateralOf(SpellEmitter spec, int seed, int index, UiVec from, UiVec to)
+        {
+            if (spec == null || spec.lateral <= 0f) return UiVec.Zero;
+
+            var line = to - from;
+            float length = (float)Math.Sqrt(line.X * line.X + line.Y * line.Y);
+            if (length <= 0f) return UiVec.Zero;
+
+            float across = (Hashed(seed, index, 7) - 0.5f) * spec.lateral;
+            return new UiVec(-line.Y / length, line.X / length) * across;
+        }
+
         public static float LifeOf(SpellEmitter spec, int seed, int index) =>
             spec == null ? 0f : Between(spec.lifeMin, spec.lifeMax, Hashed(seed, index, 3));
 

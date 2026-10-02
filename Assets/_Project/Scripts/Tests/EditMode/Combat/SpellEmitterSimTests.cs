@@ -39,6 +39,54 @@ namespace PrincesPalace.Domain.Tests
             endScale = 0.8f,
         };
 
+        // ---- laid on a flight ----------------------------------------------------
+
+        [Test]
+        public void AFlightAlignedStreakIsTurnedOntoTheLineFromLaunchToAim()
+        {
+            var spec = new SpellEmitter { alignFlight = true };
+
+            Assert.AreEqual(53.1301f, SpellEmitterSim.HeadingOf(spec, new UiVec(0f, 0f), new UiVec(300f, 400f)), 1e-3f);
+            Assert.AreEqual(180f, SpellEmitterSim.HeadingOf(spec, new UiVec(500f, 0f), new UiVec(100f, 0f)), 1e-3f,
+                "a leftward flight points the art left");
+            Assert.AreEqual(-90f, SpellEmitterSim.HeadingOf(spec, new UiVec(0f, 300f), new UiVec(0f, 0f)), 1e-3f);
+        }
+
+        [Test]
+        public void AnEmitterThatDoesNotAlignAnyFlightOrHasNoLengthIsUnturned()
+        {
+            Assert.AreEqual(0f, SpellEmitterSim.HeadingOf(new SpellEmitter(), new UiVec(0f, 0f), new UiVec(300f, 400f)));
+            Assert.AreEqual(0f, SpellEmitterSim.HeadingOf(new SpellEmitter { alignFlight = true }, UiVec.Zero, UiVec.Zero));
+        }
+
+        [Test]
+        public void ALateralOffsetLiesAcrossTheFlightWithinHalfTheAuthoredWidthEitherSide()
+        {
+            var spec = new SpellEmitter { lateral = 100f };
+            var from = new UiVec(0f, 0f);
+            var to = new UiVec(300f, 400f);
+
+            var seen = new HashSet<float>();
+            for (int i = 0; i < 40; i++)
+            {
+                var offset = SpellEmitterSim.LateralOf(spec, 77, i, from, to);
+
+                Assert.AreEqual(0f, offset.X * 300f + offset.Y * 400f, 1e-2f, "across the flight, never along it");
+                Assert.LessOrEqual(System.Math.Sqrt(offset.X * offset.X + offset.Y * offset.Y), 50.0001, "within half the width");
+                Assert.AreEqual(offset.X, SpellEmitterSim.LateralOf(spec, 77, i, from, to).X, 0f, "a field repeats exactly");
+                seen.Add(offset.X);
+            }
+
+            Assert.Greater(seen.Count, 30, "particles spread across the width rather than stacking");
+        }
+
+        [Test]
+        public void NoLateralWidthOrNoFlightLengthLeavesTheBirthOnTheLine()
+        {
+            Assert.AreEqual(UiVec.Zero, SpellEmitterSim.LateralOf(new SpellEmitter(), 1, 0, UiVec.Zero, new UiVec(5f, 0f)));
+            Assert.AreEqual(UiVec.Zero, SpellEmitterSim.LateralOf(new SpellEmitter { lateral = 60f }, 1, 0, UiVec.Zero, UiVec.Zero));
+        }
+
         // ---- birth is a time, not an event ---------------------------------------
 
         // PARTICLE i IS BORN AT windowStart + i / rate. A tick spanning six

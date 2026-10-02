@@ -89,7 +89,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span.")]
         public float size;
 
-        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre or sky, or a layer that travels.")]
+        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre or sky, a layer that travels, or a layer riding another (place layer:<id>).")]
         public string fit = "";
 
         [ContentDoc("Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto.")]
@@ -342,6 +342,15 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Fastest spin, in degrees per second.")]
         public float spinMax;
 
+        // SOURCE-ALONG-A-FLIGHT SHAPING. Both read the line of flight of the
+        // travelling layer this emitter rides, so they are legal only on
+        // place 'layer:<id>' of a layer that travels (SpellLayerRules).
+        [ContentDoc("Turns every particle's art, painted pointing right, onto the line of flight of the travelling layer the emitter rides (launch to aim), on top of its own spin. Legal only on place 'layer:<id>' of a layer that travels.")]
+        public bool alignFlight;
+
+        [ContentDoc("Width across the line of flight that particles are born within, in reference-frame units (scaled by fit); each is offset by a hash of its index, up to half this either side of the source. 0 means born on the line. Legal only on place 'layer:<id>' of a layer that travels.")]
+        public float lateral;
+
         [ContentDoc("Fraction of life at which alpha starts falling, 0..1.")]
         public float fadeFrom = 1f;
 
@@ -395,6 +404,8 @@ namespace PrincesPalace.Domain.Content
             sizeMax = sizeMax,
             spinMin = spinMin,
             spinMax = spinMax,
+            alignFlight = alignFlight,
+            lateral = lateral,
             fadeFrom = fadeFrom,
             endScale = endScale,
             seed = seed,
