@@ -1322,7 +1322,7 @@ namespace PrincesPalace
 
         private void RescueAStrandedTurn()
         {
-            if (!_isBusy || _session == null) return;
+            if (!_isBusy || _session == null || _darknessEnding) return;
             if (beatPlayer == null || beatPlayer.IsPlaying) return;
 
             if (!_reportedStrandedTurn)
@@ -1394,6 +1394,9 @@ namespace PrincesPalace
 
         private void OnPlaybackFinished()
         {
+            // A darkened fight closes its darkness first and re-enters here.
+            if (BeginDarknessEnding()) return;
+
             _isBusy = false;
 
             // The survivors whoop, once, after the last beat has played.

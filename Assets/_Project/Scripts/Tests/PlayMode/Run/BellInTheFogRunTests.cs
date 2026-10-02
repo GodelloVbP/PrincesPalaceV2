@@ -110,10 +110,13 @@ namespace PrincesPalace.PlayModeTests
             Member("sheep").exp = 0;
         }
 
-        private static void AssertShawnGotTheBellsExp()
+        // The event's literal 80, plus the fight's own payout for a kill: a
+        // survived fight pays nothing (no enemy fell), a defeated one pays the
+        // Bellwether's 30 as any won room would.
+        private static void AssertShawnGotTheBellsExp(int fightPayout = 0)
         {
             Assert.AreEqual(10, Member("sheep").level, "fixture: 80 exp bought a level after all");
-            Assert.AreEqual(BellExp, Member("sheep").exp);
+            Assert.AreEqual(BellExp + fightPayout, Member("sheep").exp);
         }
 
         private static EventChoiceResult Pick(int index)
@@ -242,7 +245,7 @@ namespace PrincesPalace.PlayModeTests
 
             var settled = RunOrchestrator.SettleFight(session, session.PlayerWon);
 
-            Assert.IsNull(settled.Reward, "pays: false opens no Reckoning");
+            Assert.IsNotNull(settled.Reward, "pays: the standard Reckoning opens, like a won room");
             Assert.AreEqual("endure", Run.eventPageId);
             CollectionAssert.AreEqual(new[] { "toll_of_the_flock" }, Run.relicIds);
             AssertShawnGotTheBellsExp();
@@ -274,10 +277,10 @@ namespace PrincesPalace.PlayModeTests
 
             var settled = RunOrchestrator.SettleFight(session, session.PlayerWon);
 
-            Assert.IsNull(settled.Reward);
+            Assert.IsNotNull(settled.Reward, "pays: the standard Reckoning opens, like a won room");
             Assert.AreEqual("break", Run.eventPageId);
             CollectionAssert.AreEqual(new[] { "toll_of_the_flock", "bellwethers_bell" }, Run.relicIds);
-            AssertShawnGotTheBellsExp();
+            AssertShawnGotTheBellsExp(fightPayout: 30);
             CollectionAssert.Contains(Run.eventsSeen, Bell);
 
             Assert.IsTrue(Pick(LeaveRow).Closed, "the break page's Leave is silent and closes at once");

@@ -113,6 +113,75 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(player.IsPlaying, "fixture: the round never finished playing");
         }
 
+        // ---- the darkness --------------------------------------------------------------
+
+        private static FightRoundPresentation Dark() =>
+            new FightRoundPresentation(roundLimit: 10, label: "Toll", roundSfxPath: "Audio/Sfx/does_not_exist",
+                darknessStart: 0.9f, darknessStep: 0.0833f, darknessFloor: 0.15f);
+
+        private Image Darkness => Named("RoundDarkness").GetComponent<Image>();
+
+        [UnityTest]
+        public IEnumerator ARoomFightHasNoDarkness()
+        {
+            yield return Bind(FightRoundPresentation.None, 0);
+
+            Assert.IsFalse(Named("RoundDarkness").activeSelf, "a room fight is not darkened");
+        }
+
+        [UnityTest]
+        public IEnumerator ADarkenedFightStartsAtItsStartOpacity_AndLiftsOneStepAtTollTwo()
+        {
+            yield return Bind(Dark(), 10);
+
+            Assert.IsTrue(Named("RoundDarkness").activeSelf);
+            Assert.AreEqual(0.9f, Darkness.color.a, 1e-4f);
+
+            yield return AttackAndPlayOut();
+
+            Assert.AreEqual(0.8167f, Darkness.color.a, 1e-4f, "toll 2 is one step lighter");
+        }
+
+        // The Reckoning waits for the darkness: the fight stays busy while the
+        // darkness closes and the enemy fades into it, and no stranded-turn
+        // rescue ends it early.
+        [UnityTest]
+        public IEnumerator TheLastBlowClosesTheDarknessBeforeTheFightEnds()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            yield return Bind(Dark(), 10);
+            yield return AttackToTheEndWithOneHpFoe();
+
+            Assert.IsTrue(_session.IsOver, "fixture: the foe fell");
+            Assert.IsTrue(_fight.IsBusy, "the ending is still closing the darkness");
+            var player = Object.FindAnyObjectByType<FightBeatPlayer>();
+            Assert.IsFalse(player.IsPlaying);
+
+            float deadline = Time.realtimeSinceStartup + 15f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < deadline) yield return null;
+
+            Assert.IsFalse(_fight.IsBusy, "the ending finished");
+            Assert.AreEqual(0.9f, Darkness.color.a, 1e-4f, "the darkness closed back to its start");
+            Assert.IsFalse(_fight.GetComponentsInChildren<StageDeathFade>(true).Any(f => f.Fading));
+        }
+
+        private IEnumerator AttackToTheEndWithOneHpFoe()
+        {
+            float openDeadline = Time.realtimeSinceStartup + 10f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < openDeadline) yield return null;
+            Assert.IsFalse(_fight.IsBusy, "fixture: Bind's own opening playback never finished");
+
+            _session.Encounter.Enemies.Single().CurrentHealth = 1;
+            Named("Verb0").GetComponent<Button>().onClick.Invoke();
+            Named("EnemyPlate0").GetComponent<Button>().onClick.Invoke();
+
+            var player = Object.FindAnyObjectByType<FightBeatPlayer>();
+            float deadline = Time.realtimeSinceStartup + 20f;
+            yield return null;
+            while (Time.realtimeSinceStartup < deadline && player.IsPlaying) yield return null;
+            yield return null;
+        }
+
         // ---- the counter ---------------------------------------------------------------
 
         [UnityTest]

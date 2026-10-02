@@ -406,6 +406,9 @@ MonoBehaviour:
       RoundOverlayAnchorX: 0.5
       RoundOverlayAnchorY: 0.5
       RoundOverlayTint: 
+      RoundDarknessStart: 0
+      RoundDarknessStep: 0
+      RoundDarknessFloor: 0
       OnDefeated:
         Requires: []
         Effects:

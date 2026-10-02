@@ -127,6 +127,47 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.6f, bell.OverlayScaleFor(10), 1e-5f);
         }
 
+        // ---- the darkness ------------------------------------------------------------
+
+        private static FightRoundPresentation Dark(float start = 0.9f, float step = 0.0833f, float floor = 0.15f) =>
+            new FightRoundPresentation(roundLimit: 10, darknessStart: start, darknessStep: step, darknessFloor: floor);
+
+        [Test]
+        public void TheDarknessLosesOneStepPerRoundDownToItsFloor()
+        {
+            var dark = Dark();
+
+            Assert.AreEqual(0.9f, dark.DarknessAlphaFor(1), 1e-5f);
+            Assert.AreEqual(0.8167f, dark.DarknessAlphaFor(2), 1e-5f);
+            Assert.AreEqual(0.4835f, dark.DarknessAlphaFor(6), 1e-5f);
+            Assert.AreEqual(0.1503f, dark.DarknessAlphaFor(10), 1e-4f);
+        }
+
+        [Test]
+        public void TheDarknessNeverDropsBelowItsFloor()
+        {
+            var dark = Dark(step: 0.2f);
+
+            Assert.AreEqual(0.15f, dark.DarknessAlphaFor(10), 1e-5f);
+            Assert.AreEqual(0.15f, dark.DarknessAlphaFor(11), 1e-5f);
+        }
+
+        [Test]
+        public void ARoomFightAndAFightWithoutAStartHaveNoDarkness()
+        {
+            Assert.IsFalse(FightRoundPresentation.None.HasDarkness);
+            Assert.IsFalse(Bell().HasDarkness);
+            Assert.AreEqual(0f, Bell().DarknessAlphaFor(3));
+            Assert.IsFalse(new FightRoundPresentation(darknessStart: 0.9f).HasDarkness, "no limit, nothing to step across");
+        }
+
+        [Test]
+        public void ADarkenedFightFadesItsEnemiesThreeTimesSlower()
+        {
+            Assert.AreEqual(3f, Dark().DeathFadeSlowness);
+            Assert.AreEqual(1f, Bell().DeathFadeSlowness);
+        }
+
         // ---- where the overlay stands ------------------------------------------------
 
         private static FightRoundPresentation Anchored(float pivotX, float pivotY, float anchorX, float anchorY) =>

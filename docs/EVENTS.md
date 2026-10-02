@@ -86,7 +86,9 @@ returning event and the first event fight.
   `ask_both`, `ask_bjorn`, `ask_odette`, `ask_none`; each has one row, "Listen
   again", back to `bell`. Walk away leaves with a result and no `finish`, so
   the Bell comes back at a later Event node.
-- **Fight `bellwether`.** Shawn alone, 10 tolls, `wake`, `pays: false`.
+- **Fight `bellwether`.** Shawn alone, 10 tolls, `wake`, `pays: true` (the
+  standard Reckoning, no event ending screen), `roundDarkness` 0.9 / 0.0833 /
+  0.15.
   `onSurvived` (Endure) -> `endure`, `onDefeated` (Break) -> `break`,
   `onFell` (Fall) leaves on its result. All three `finish`. Endure grants
   Toll of the Flock, Break both relics, each with **80 exp to Shawn**: a
@@ -392,7 +394,15 @@ fight  { id, enemies[], elite, party[], surviveRounds, roundLabel, onLoss, pays,
   never past the limit; `roundSfx` plays at each round start; the overlay is
   drawn full-frame behind the figures and scales from `fromScale` at round 1
   to `toScale` at the last round in equal steps; `ambience` loops from the
-  fight's start until it is left. A room fight shows none of it. **Where the
+  fight's start until it is left. A room fight shows none of it.
+  **`roundDarkness { start, step, floor }`** (one tuning row, start 0 is none,
+  refused without a round limit): a full-frame near-black layer over the
+  backdrop and the overlay and under the figures and the whole HUD, at `start`
+  opacity at round 1, `step` lighter each round, never below `floor`. When the
+  fight ends it closes back to `start` while the enemies fade into it on a
+  fade three times slower than a body's usual (`FightRoundPresentation`:
+  `DarknessAlphaFor`, `DeathFadeSlowness`); the Reckoning opens after.
+  **Where the
   overlay stands:** it scales about `pivot`, a point of its own image
   (fractions from the image's bottom-left), held on `anchor`, a point of the
   frame (fractions from the frame's bottom-left; the backdrop fills the frame,

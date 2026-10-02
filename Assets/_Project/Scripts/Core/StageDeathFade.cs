@@ -27,6 +27,11 @@ namespace PrincesPalace
         private const float HoldSeconds = 0.35f;
         private const float FadeSeconds = 0.6f;
 
+        // Both durations multiplied by this: 1 is a body's usual death; a
+        // fight dressed with a darkness slows its enemies' fade so they go
+        // into it (FightRoundPresentation.DeathFadeSlowness).
+        internal float Slowness = 1f;
+
         [SerializeField] internal Image sprite;
         [SerializeField] internal Image shadow;
 
@@ -62,6 +67,9 @@ namespace PrincesPalace
         // them. Clear() reports true for the same reason it sets alpha to
         // zero: a fight torn down mid-fade leaves nothing on screen.
         public bool Faded => _played && _running == null;
+
+        // Mid-fade right now.
+        public bool Fading => _running != null;
 
         // Told when that moment arrives, so the survivors can close up on the
         // frame the body finishes fading rather than on the next beat that
@@ -144,13 +152,13 @@ namespace PrincesPalace
 
         private IEnumerator FadeRoutine()
         {
-            yield return new WaitForSeconds(FightBeatPlayer.Scaled(HoldSeconds));
+            yield return new WaitForSeconds(FightBeatPlayer.Scaled(HoldSeconds * Slowness));
 
             // Scaled like the hold above and like every other fight animator:
             // anything driven by a beat runs on the beat's clock, or it
             // desynchronises from the thing it illustrates. The lunge learned
             // this the hard way.
-            float fadeSeconds = FightBeatPlayer.Scaled(FadeSeconds);
+            float fadeSeconds = FightBeatPlayer.Scaled(FadeSeconds * Slowness);
             for (float t = 0f; t < fadeSeconds; t += Time.deltaTime)
             {
                 SetFraction(1f - (t / fadeSeconds));

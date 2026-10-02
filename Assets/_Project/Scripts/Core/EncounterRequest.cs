@@ -111,7 +111,10 @@ namespace PrincesPalace
                     overlayPivotY: EventFight.RoundOverlayPivotY,
                     overlayAnchorX: EventFight.RoundOverlayAnchorX,
                     overlayAnchorY: EventFight.RoundOverlayAnchorY,
-                    overlayTint: EventFight.RoundOverlayTint)
+                    overlayTint: EventFight.RoundOverlayTint,
+                    darknessStart: EventFight.RoundDarknessStart,
+                    darknessStep: EventFight.RoundDarknessStep,
+                    darknessFloor: EventFight.RoundDarknessFloor)
                 : FightRoundPresentation.None;
     }
 }

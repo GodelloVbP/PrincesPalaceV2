@@ -48,6 +48,10 @@ namespace PrincesPalace
         [SerializeField] internal Image roundCounterPlate;
         [SerializeField] internal Image roundOverlay;
 
+        // The darkness behind the figures (FightScreen.BuildRoundDarkness):
+        // steps lighter each round, then closes again as the fight ends.
+        [SerializeField] internal Image roundDarkness;
+
         private FightRoundPresentation _presentation = FightRoundPresentation.None;
 
         // The last round shown, 0 before the first. Presenting is monotonic:
@@ -80,6 +84,24 @@ namespace PrincesPalace
                 roundOverlay.rectTransform.localScale = Vector3.one;
                 roundOverlay.color = OverlayTint(overlay ? _presentation.OverlayTint : "");
                 PlaceRoundOverlay();
+            }
+
+            _darknessEnded = false;
+            _darknessEnding = false;
+            if (roundDarkness != null)
+            {
+                bool dark = _presentation.HasDarkness;
+                roundDarkness.gameObject.SetShown(dark);
+                SetDarknessAlpha(dark ? _presentation.DarknessAlphaFor(1) : 0f);
+            }
+
+            // A slower fade for an enemy only while a darkness is there to fade into.
+            if (enemyDeathFades != null)
+            {
+                foreach (var fade in enemyDeathFades)
+                {
+                    if (fade != null) fade.Slowness = _presentation.DeathFadeSlowness;
+                }
             }
 
             // The bed follows the presentation: a room fight's None stops a bed
@@ -144,8 +166,82 @@ namespace PrincesPalace
                 roundOverlay.rectTransform.localScale = new Vector3(scale, scale, 1f);
             }
 
+            if (roundDarkness != null && _presentation.HasDarkness && !_darknessEnded)
+            {
+                SetDarknessAlpha(_presentation.DarknessAlphaFor(round));
+            }
+
             SoundController.PlayClip(_presentation.RoundSfxPath);
         }
+
+        private void SetDarknessAlpha(float alpha)
+        {
+            var colour = roundDarkness.color;
+            colour.a = alpha;
+            roundDarkness.color = colour;
+        }
+
+        // THE ENDING OF A DARKENED FIGHT: before the Reckoning opens, the
+        // darkness closes back to its start while whoever is left standing
+        // fades into it (a survived fight leaves the Bellwether alive; a
+        // defeated one is already on its slowed death fade). Returns true when
+        // it took over; the caller runs again once it is done, and never sees
+        // a second take-over (_darknessEnded). A fight with no darkness
+        // returns false at once.
+        private bool BeginDarknessEnding()
+        {
+            if (_darknessEnded || _session == null || !_session.IsOver) return false;
+            if (roundDarkness == null || !_presentation.HasDarkness) return false;
+
+            _darknessEnded = true;
+            _darknessEnding = true;
+            StartCoroutine(DarknessEndingRoutine());
+            return true;
+        }
+
+        private System.Collections.IEnumerator DarknessEndingRoutine()
+        {
+            if (_session.EndReason == FightEndReason.Survived)
+            {
+                foreach (var enemy in _session.Encounter.LivingEnemies) DeathFadeFor(enemy)?.PlayIfNotAlready();
+            }
+
+            float from = roundDarkness.color.a;
+            float seconds = FightBeatPlayer.Scaled(FightRoundPresentation.DarknessEndSeconds);
+            for (float t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                SetDarknessAlpha(Mathf.Lerp(from, _presentation.DarknessStart, t / seconds));
+                yield return null;
+            }
+
+            SetDarknessAlpha(_presentation.DarknessStart);
+
+            // The darkness is full; wait out any body still going into it.
+            while (AnyEnemyFading()) yield return null;
+
+            _darknessEnding = false;
+            OnPlaybackFinished();
+        }
+
+        private bool AnyEnemyFading()
+        {
+            if (enemyDeathFades == null) return false;
+            foreach (var fade in enemyDeathFades)
+            {
+                if (fade != null && fade.Fading) return true;
+            }
+
+            return false;
+        }
+
+        // Set once the ending has run, so a second pass through
+        // OnPlaybackFinished carries on to the Reckoning.
+        private bool _darknessEnded;
+
+        // While it runs the fight is busy with nothing playing, which
+        // RescueAStrandedTurn would otherwise "recover" straight into the
+        // Reckoning.
+        private bool _darknessEnding;
 
         // THE OVERLAY'S STANDING POINT: the image's pivot held on the frame's
         // anchor (FightRoundPresentation.PlaceOverlay, the formula, pinned on

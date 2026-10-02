@@ -234,6 +234,8 @@ namespace PrincesPalace.Domain.Content
         public string ambience = "";
         [ContentDoc("An image laid over the stage that steps from fromScale to toScale across the round limit; see EventRoundOverlay. Only read with a round limit, so a path without one is refused.")]
         public EventRoundOverlay roundOverlay = new EventRoundOverlay();
+        [ContentDoc("A darkness laid over the field behind the figures that lifts round by round; see EventRoundDarkness. Only read with a round limit, so authoring it without one is refused. Omitted (start 0) means none.")]
+        public EventRoundDarkness roundDarkness = new EventRoundDarkness();
         [ContentDoc("The outcome when every enemy is down; required. An outcome row without requires (refused here), whose goTo is a page or Leave.")]
         public RawEventOutcome onDefeated = new RawEventOutcome();
         [ContentDoc("The outcome when the round limit is reached with someone standing; required when surviveRounds > 0 and refused otherwise.")]
@@ -277,6 +279,20 @@ namespace PrincesPalace.Domain.Content
         public float anchorY = 0.5f;
         [ContentDoc("A colour token '#RRGGBB' or '#RRGGBBAA' the overlay is multiplied by; its alpha is how much of the backdrop shows through. Empty draws the image as painted. Refused without a path.")]
         public string tint = "";
+    }
+
+    // A fight's darkness: one tuning row. Opacity is `start` at round 1 and
+    // loses `step` each round, never below `floor`. When the fight ends the
+    // darkness closes back to `start` while the enemies fade into it.
+    [Serializable]
+    public class EventRoundDarkness
+    {
+        [ContentDoc("The darkness's opacity at round 1, 0-1. 0 means no darkness.")]
+        public float start;
+        [ContentDoc("Opacity lost at each round after the first; 0 or more.")]
+        public float step;
+        [ContentDoc("The opacity the darkness never drops below; 0 to start.")]
+        public float floor;
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

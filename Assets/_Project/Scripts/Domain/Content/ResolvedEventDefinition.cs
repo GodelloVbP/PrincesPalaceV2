@@ -210,6 +210,10 @@ namespace PrincesPalace.Domain.Content
         public float RoundOverlayAnchorY = 0.5f;
         // A colour token, or empty for the image as painted.
         public string RoundOverlayTint = "";
+        // EventRoundDarkness; a start of 0 is no darkness.
+        public float RoundDarknessStart;
+        public float RoundDarknessStep;
+        public float RoundDarknessFloor;
 
         public ResolvedEventOutcome OnDefeated = new ResolvedEventOutcome();
         public ResolvedEventOutcome OnSurvived = new ResolvedEventOutcome();

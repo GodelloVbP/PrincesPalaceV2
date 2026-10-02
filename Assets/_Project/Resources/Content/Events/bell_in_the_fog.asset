@@ -711,7 +711,7 @@ MonoBehaviour:
       SurviveRounds: 10
       RoundLabel: Toll
       Loss: 1
-      Pays: 0
+      Pays: 1
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       RoundSfxPath: Audio/Sfx/Events/bell_in_the_fog/toll
       AmbiencePath: Audio/Music/Events/bell_in_the_fog/wind
@@ -723,6 +723,9 @@ MonoBehaviour:
       RoundOverlayAnchorX: 0.5
       RoundOverlayAnchorY: 0.5
       RoundOverlayTint: '#C8D0DAB4'
+      RoundDarknessStart: 0.9
+      RoundDarknessStep: 0.0833
+      RoundDarknessFloor: 0.15
       OnDefeated:
         Requires: []
         Effects:

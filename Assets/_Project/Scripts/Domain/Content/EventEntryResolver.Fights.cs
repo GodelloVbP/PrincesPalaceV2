@@ -362,6 +362,23 @@ namespace PrincesPalace.Domain.Content
                 }
             }
 
+            var darkRaw = raw.roundDarkness ?? new EventRoundDarkness();
+            if (darkRaw.start > 0f && !hasLimit)
+            {
+                error = $"{label}: roundDarkness is set on a fight with no round limit (surviveRounds 0), so it " +
+                        "would never step. Set surviveRounds, or drop it.";
+                return false;
+            }
+
+            if (darkRaw.start < 0f || darkRaw.start > 1f || darkRaw.step < 0f
+                || darkRaw.floor < 0f || darkRaw.floor > darkRaw.start
+                || float.IsNaN(darkRaw.start) || float.IsNaN(darkRaw.step) || float.IsNaN(darkRaw.floor))
+            {
+                error = $"{label}: roundDarkness needs start 0-1, step 0 or more, and floor 0 to start " +
+                        $"(start {darkRaw.start}, step {darkRaw.step}, floor {darkRaw.floor}).";
+                return false;
+            }
+
             // Results. Which ones must exist follows from what can happen.
             if (!TryResolveFightResult(raw.onDefeated, EventFightResult.Defeated, label, scope,
                     required: true, refusedWhy: null, out var onDefeated, out _, out error)
@@ -397,6 +414,9 @@ namespace PrincesPalace.Domain.Content
                 RoundOverlayAnchorX = overlayRaw.anchorX,
                 RoundOverlayAnchorY = overlayRaw.anchorY,
                 RoundOverlayTint = tint,
+                RoundDarknessStart = darkRaw.start,
+                RoundDarknessStep = darkRaw.step,
+                RoundDarknessFloor = darkRaw.floor,
                 OnDefeated = onDefeated,
                 OnSurvived = onSurvived ?? new ResolvedEventOutcome(),
                 OnFell = onFell ?? new ResolvedEventOutcome(),

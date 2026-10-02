@@ -213,7 +213,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- the fight ----------------------------------------------------------------
 
         [Test]
-        public void TheBellwetherFight_IsShawnAloneForTenTolls_WakeAndNoPay()
+        public void TheBellwetherFight_IsShawnAloneForTenTolls_WakePaysAndDarkens()
         {
             var fight = Bell().FightById("bellwether");
 
@@ -223,7 +223,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(10, fight.SurviveRounds);
             Assert.AreEqual("Toll", fight.RoundLabel);
             Assert.AreEqual(EventFightLoss.Wake, fight.Loss);
-            Assert.IsFalse(fight.Pays);
+            Assert.IsTrue(fight.Pays, "a standard Reckoning, like a won room");
+            // Dark at the edges and the field at toll 1, lifting a step a
+            // toll to a floor of 15%.
+            Assert.AreEqual(0.9f, fight.RoundDarknessStart);
+            Assert.AreEqual(0.0833f, fight.RoundDarknessStep);
+            Assert.AreEqual(0.15f, fight.RoundDarknessFloor);
 
             Assert.AreEqual(Art + "fog_clearing.png", fight.BackdropKey);
             Assert.AreEqual(Art + "flock.png", fight.RoundOverlayKey);

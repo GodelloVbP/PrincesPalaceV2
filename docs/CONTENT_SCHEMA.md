@@ -361,6 +361,14 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 
 Referenced from a field above (an array element or a nested block, such as `vfx`); documented once here rather than once per use.
 
+### `EventRoundDarkness`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `start` | float | `0` | The darkness's opacity at round 1, 0-1. 0 means no darkness. |  |
+| `step` | float | `0` | Opacity lost at each round after the first; 0 or more. |  |
+| `floor` | float | `0` | The opacity the darkness never drops below; 0 to start. |  |
+
 ### `EventRoundOverlay`
 
 | Field | Type | Default | Description | Values |
@@ -459,6 +467,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `roundSfx` | string | `""` | Resources-relative sound (no extension) played as each round starts. Only read with a round limit, so refused without one. |  |
 | `ambience` | string | `""` | Resources-relative sound (no extension) looped for the whole fight; empty plays none. |  |
 | `roundOverlay` | EventRoundOverlay (below) | (zero -- see EventRoundOverlay) | An image laid over the stage that steps from fromScale to toScale across the round limit; see EventRoundOverlay. Only read with a round limit, so a path without one is refused. |  |
+| `roundDarkness` | EventRoundDarkness (below) | (zero -- see EventRoundDarkness) | A darkness laid over the field behind the figures that lifts round by round; see EventRoundDarkness. Only read with a round limit, so authoring it without one is refused. Omitted (start 0) means none. |  |
 | `onDefeated` | RawEventOutcome (below) | (zero -- see RawEventOutcome) | The outcome when every enemy is down; required. An outcome row without requires (refused here), whose goTo is a page or Leave. |  |
 | `onSurvived` | RawEventOutcome (below) | (zero -- see RawEventOutcome) | The outcome when the round limit is reached with someone standing; required when surviveRounds > 0 and refused otherwise. |  |
 | `onFell` | RawEventOutcome (below) | (zero -- see RawEventOutcome) | The outcome when the fighters fall; required on wake, refused on endRun (the run is over). |  |

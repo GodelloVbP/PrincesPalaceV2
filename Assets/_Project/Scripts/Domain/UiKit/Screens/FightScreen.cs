@@ -62,6 +62,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // hidden; FightController shows them only for a fight with a round
         // limit.
         public NodeRef RoundOverlay;
+        public NodeRef RoundDarkness;
         public NodeRef RoundCounter;
         public NodeRef RoundCounterPlate;
 
@@ -411,6 +412,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // front of the people in it. Root canvas, like the scrim, so the
             // nested HUD canvas draws every figure over it whatever its scale.
             children.Add(s.BuildRoundOverlay());
+
+            // Over the painting and the flock, under every figure and the whole
+            // HUD canvas: the field goes dark, the people standing in it do not.
+            children.Add(s.BuildRoundDarkness());
 
             // BEHIND BOTH RACKS, which is the entire reason it is declared here
             // and not beside the per-target pool three hundred lines down. uGUI
@@ -1299,6 +1304,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             overlay.PreserveAspect = true;
             RoundOverlay = overlay;
             return overlay;
+        }
+
+        // Full-frame near-black, hidden until an event fight authors a
+        // darkness. Its opacity is runtime (FightController.Rounds); the
+        // colour is the scrim's own violet black.
+        private UiNode BuildRoundDarkness()
+        {
+            var darkness = Ui.Solid("RoundDarkness", "#0B0718FF", Place.Stretch(), UiSize.Fill)
+                .AsDecor()
+                .Inactive();
+            RoundDarkness = darkness;
+            return darkness;
         }
 
         // ---- the dialogue bark (the combat log's home) ------------------------

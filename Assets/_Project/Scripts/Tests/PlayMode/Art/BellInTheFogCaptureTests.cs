@@ -198,6 +198,58 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // THE ENDING: the Bellwether's last blow lands at a late toll (the
+        // darkness mostly lifted), the Bellwether fades into the darkness as
+        // it closes back in, and the standard Reckoning opens over it.
+        [UnityTest]
+        public IEnumerator CaptureTheBellwetherEnding()
+        {
+            if (!CanvasCapture.IsSupported)
+                Assert.Ignore("No graphics device. Run: tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.BellInTheFogCaptureTests");
+
+            RunManager.StartRun(29UL);
+            SaveSlotManager.SaveCurrent();
+            Assert.IsTrue(RunOrchestrator.OpenEventForDebug(Bell), "fixture: bell_in_the_fog is not in the built content");
+            var picked = EventPicks.OnCurrentPage(0);
+            Assert.AreEqual(EventChoiceOutcome.Ok, picked.Outcome, $"{picked.Reason}");
+
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            LogAssert.ignoreFailingMessages = true;
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+            LogAssert.ignoreFailingMessages = false;
+
+            var fight = UnityEngine.Object.FindAnyObjectByType<FightController>();
+            Assert.IsTrue(fight.HasSession, "FightBootstrap did not open the Bellwether");
+            yield return WaitWhileBusy(fight);
+
+            _canvas = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude).First(c => c.isRootCanvas);
+
+            Pad(fight.Session.Encounter.PlayerParty.Single(), 1_000_000);
+            fight.Session.Encounter.Enemies.Single().CurrentHealth = 1;
+            var present = typeof(FightController).GetMethod("PresentRound", BindingFlags.Instance | BindingFlags.NonPublic);
+            present.Invoke(fight, new object[] { 8 });
+            yield return WaitReal(0.3f);
+            yield return Shoot("h_ending_toll_8");
+
+            Named(fight, "Verb0").GetComponent<Button>().onClick.Invoke();
+            Named(fight, "EnemyPlate0").GetComponent<Button>().onClick.Invoke();
+
+            var fades = fight.GetComponentsInChildren<StageDeathFade>(includeInactive: true);
+            float deadline = Time.realtimeSinceStartup + 20f;
+            while (!fades.Any(f => f.Fading) && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(fades.Any(f => f.Fading), "the Bellwether never began fading");
+            yield return WaitReal(1.4f);
+            yield return Shoot("i_ending_fading_into_dark");
+            yield return WaitReal(0.4f);
+            yield return Shoot("i2_ending_nearly_gone");
+
+            yield return WaitWhileBusy(fight);
+            yield return WaitReal(1.0f);
+            yield return Shoot("j_ending_reckoning");
+        }
+
         // ---- the relic icon -------------------------------------------------------------
 
         // Bellwether's Bell's icon where a player meets it outside the fight
@@ -293,7 +345,18 @@ namespace PrincesPalace.PlayModeTests
             session.DrainBeats();
             for (int i = 0; i < 400 && !session.IsOver; i++)
             {
-                if (session.IsPlayerTurn) session.ExecuteAttack(session.Encounter.FrontEnemy);
+                if (session.IsPlayerTurn)
+                {
+                    // Out of the seat the Bellwether's sized hit lands on
+                    // (BellInTheFogRunTests.Drive does the same).
+                    if (session.Encounter.LivingEnemies.Any(e => session.IntentDetailFor(e)?.DamageBySeat != null))
+                    {
+                        session.Encounter.PlaceAt(session.Encounter.PlayerParty.Single(), 2, out _);
+                    }
+
+                    session.ExecuteAttack(session.Encounter.FrontEnemy);
+                }
+
                 session.DrainBeats();
             }
 

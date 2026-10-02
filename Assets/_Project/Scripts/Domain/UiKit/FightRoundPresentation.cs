@@ -42,11 +42,17 @@ namespace PrincesPalace.Domain.UiKit
         // A colour token the image is multiplied by; empty is as painted.
         public string OverlayTint { get; }
         public string AmbiencePath { get; }
+        // The darkness behind the figures: DarknessStart at round 1, losing
+        // DarknessStep a round, never below DarknessFloor. A start of 0 is none.
+        public float DarknessStart { get; }
+        public float DarknessStep { get; }
+        public float DarknessFloor { get; }
 
         public FightRoundPresentation(string backdropKey = "", int roundLimit = 0, string label = "",
             string roundSfxPath = "", string overlayKey = "", float overlayFromScale = 1f, float overlayToScale = 1f,
             string ambiencePath = "", float overlayPivotX = 0.5f, float overlayPivotY = 0.5f,
-            float overlayAnchorX = 0.5f, float overlayAnchorY = 0.5f, string overlayTint = "")
+            float overlayAnchorX = 0.5f, float overlayAnchorY = 0.5f, string overlayTint = "",
+            float darknessStart = 0f, float darknessStep = 0f, float darknessFloor = 0f)
         {
             BackdropKey = backdropKey ?? "";
             RoundLimit = Math.Max(0, roundLimit);
@@ -61,7 +67,31 @@ namespace PrincesPalace.Domain.UiKit
             OverlayAnchorY = overlayAnchorY;
             OverlayTint = (overlayTint ?? "").Trim();
             AmbiencePath = ambiencePath ?? "";
+            DarknessStart = darknessStart;
+            DarknessStep = darknessStep;
+            DarknessFloor = darknessFloor;
         }
+
+        // Like the overlay, a round-limit layer: it steps across the limit.
+        public bool HasDarkness => ShowsCounter && DarknessStart > 0f;
+
+        // THE DARKNESS'S OPACITY AT A ROUND: DarknessStart at round 1, one
+        // step lighter each round after, clamped at DarknessFloor and to the
+        // limit's rounds (the counter's own clamp).
+        public float DarknessAlphaFor(int round)
+        {
+            if (!HasDarkness) return 0f;
+            float alpha = DarknessStart - DarknessStep * (CounterRound(round) - 1);
+            return Math.Max(DarknessFloor, alpha);
+        }
+
+        // THE ENDING. The darkness closes back to its starting opacity while
+        // the enemies fade into it, on a fade DeathFadeSlowness times slower
+        // than a body's usual, so the Bellwether goes into the dark rather
+        // than dropping out of the fight. A fight without darkness keeps the
+        // standard death.
+        public const float DarknessEndSeconds = 2.5f;
+        public float DeathFadeSlowness => HasDarkness ? 3f : 1f;
 
         // The counter exists only for a fight that can run out of rounds.
         public bool ShowsCounter => RoundLimit > 0;

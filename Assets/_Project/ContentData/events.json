@@ -1230,11 +1230,12 @@
           "surviveRounds": 10,
           "roundLabel": "Toll",
           "onLoss": "wake",
-          "pays": false,
+          "pays": true,
           "backdrop": "Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png",
           "roundSfx": "Audio/Sfx/Events/bell_in_the_fog/toll",
           "ambience": "Audio/Music/Events/bell_in_the_fog/wind",
           "roundOverlay": { "path": "Assets/_Project/Art/Events/bell_in_the_fog/flock.png", "fromScale": 0.35, "toScale": 0.6, "pivotX": 0.5, "pivotY": 0.15, "anchorX": 0.5, "anchorY": 0.5, "tint": "#C8D0DAB4" },
+          "roundDarkness": { "start": 0.9, "step": 0.0833, "floor": 0.15 },
           "onSurvived": {
             "effects": [
               { "kind": "relic", "relic": "toll_of_the_flock" },

@@ -488,6 +488,43 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void ADarknessResolvesItsRow_AndIsAbsentByDefault()
+        {
+            var fight = BellFight();
+            Assert.AreEqual(0f, Resolved(Event(fight)).Fights.Single().RoundDarknessStart);
+
+            fight.roundDarkness = new EventRoundDarkness { start = 0.9f, step = 0.08f, floor = 0.15f };
+            var resolved = Resolved(Event(fight)).Fights.Single();
+
+            Assert.AreEqual(0.9f, resolved.RoundDarknessStart);
+            Assert.AreEqual(0.08f, resolved.RoundDarknessStep);
+            Assert.AreEqual(0.15f, resolved.RoundDarknessFloor);
+        }
+
+        [Test]
+        public void Refuses_ADarknessFloorAboveItsStart()
+        {
+            var fight = BellFight();
+            fight.roundDarkness = new EventRoundDarkness { start = 0.5f, step = 0.05f, floor = 0.6f };
+
+            StringAssert.Contains("roundDarkness needs start 0-1, step 0 or more, and floor 0 to start", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void Refuses_ADarknessOnAFightWithNoRoundLimit()
+        {
+            var fight = BellFight();
+            fight.surviveRounds = 0;
+            fight.roundLabel = "";
+            fight.roundSfx = "";
+            fight.roundOverlay = new EventRoundOverlay();
+            fight.onSurvived = new RawEventOutcome();
+            fight.roundDarkness = new EventRoundDarkness { start = 0.9f, step = 0.08f, floor = 0.15f };
+
+            StringAssert.Contains("roundDarkness is set on a fight with no round limit", Refusal(Event(fight)));
+        }
+
+        [Test]
         public void Refuses_ARoundOverlayScaleOfZero()
         {
             var fight = BellFight();
