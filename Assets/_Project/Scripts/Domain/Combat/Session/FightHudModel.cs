@@ -107,6 +107,11 @@ namespace PrincesPalace.Domain.Combat.Session
         Reach,
         AreaOfEffect,
         Scaling,
+
+        // What a NON-damaging skill does ("WARD 5", "HEAL 12", "TAUNT"): the
+        // Element row carries a damaging skill's number, and without this a
+        // ward or a support skill's card named only its cost.
+        Effect,
     }
 
     // One icon cell on the detail card: WHICH icon (Kind, further narrowed
@@ -784,6 +789,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
             var types = ResolvedDamageTypesFor(session, actor, skill);
             string power = PowerLabel(session, actor, skill);
+            if (!skill.IsDamaging)
+            {
+                string verb = VerbFor(skill.Effect);
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Effect, verb.ToLowerInvariant(),
+                    string.IsNullOrEmpty(power) ? verb : $"{verb} {power}"));
+            }
+
             if (types.Count > 0 && !string.IsNullOrEmpty(power))
             {
                 // THE FIRST TYPE, not every one -- a multi-packet spell
@@ -822,12 +834,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     panel.Icons.Add(new DetailIcon(DetailIconKind.Reach, reachKey,
                         reachKey == "front" ? "FRONT RANK" : "ANY RANK"));
                 }
-
-                string aoeKey = skill.Targeting == SkillTargeting.SingleEnemy
-                    || skill.Targeting == SkillTargeting.SingleAlly
-                    ? "single" : "aoe";
-                panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, aoeKey, ReachFor(skill.Targeting)));
             }
+
+            // SELF TOO: a ward on the caster has no rank to reach, but "who
+            // gets it" is the fact its card most needs to state.
+            string aoeKey = skill.Targeting == SkillTargeting.SingleEnemy
+                || skill.Targeting == SkillTargeting.SingleAlly
+                || skill.Targeting == SkillTargeting.Self
+                ? "single" : "aoe";
+            panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, aoeKey, ReachFor(skill.Targeting)));
 
             string scaling = ScalingLabelForSkill(session, actor, skill);
             if (scaling != "-")
@@ -1055,8 +1070,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // which this signature has no session to ask, so its power rides
             // the kind line instead of a hero icon that might name the wrong
             // element.
-            panel.Icons.Add(new DetailIcon(DetailIconKind.Defense, "physical", ""));
-            panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, "single", ""));
+            panel.Icons.Add(new DetailIcon(DetailIconKind.Defense, "physical", "PHYSICAL"));
+            panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, "single",
+                ReachFor(SkillTargeting.SingleEnemy)));
             string scaling = actor == null ? "-" : ScalingLabel(actor.WeaponScaling);
             if (scaling != "-")
             {

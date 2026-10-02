@@ -1680,6 +1680,26 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheStatusBoxStepsBelowANeighboursBadgesItWouldCover()
+        {
+            const float Margin = 8f;
+            float halfW = 1920f * 0.5f - Margin;
+            float halfH = 1080f * 0.5f - Margin;
+
+            // The treant stands at the right edge; the beetle's badge row sits
+            // under it, ending at x 430 inside the 600-wide box's span.
+            var strips = new List<(float, float, float, float)> { (200f, 430f, -280f, -244f) };
+
+            var plain = FightScreen.StatusBoxAt(halfW, -150f, 200f,
+                FightScreen.StatusBoxWidth, 90f, -halfW, halfW, -halfH, halfH);
+            var avoided = FightScreen.StatusBoxAt(halfW, -150f, 200f,
+                FightScreen.StatusBoxWidth, 90f, -halfW, halfW, -halfH, halfH, avoid: strips);
+
+            Assert.Greater(plain.Y + 45f, -280f, "without the neighbour the box would overlap its badges");
+            Assert.Less(avoided.Y + 45f, -280f, "with it the box's top clears the strip's bottom");
+        }
+
+        [Test]
         public void EmptyStatusRowsAndBadgesStartInactive()
         {
             var root = Solve();

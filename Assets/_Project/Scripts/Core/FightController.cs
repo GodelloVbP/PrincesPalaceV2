@@ -959,7 +959,16 @@ namespace PrincesPalace
 
                 bool standing = recorded.Health > 0;
                 enemyPlates[i].gameObject.SetShown(standing);
-                if (!standing) continue;
+                if (!standing)
+                {
+                    // A BODY ON ITS DEATH FADE CARRIES NO BADGES, and nothing
+                    // is left for its status box to explain: the row and the
+                    // box were last painted while it stood, and no later
+                    // refresh runs until playback ends.
+                    if (IsOnStage(enemies[i])) PaintEnemyStatusRow(i, null, EmptyStatusRows);
+                    RefreshStatusBox();
+                    continue;
+                }
 
                 int enemyMax = RecordedMax(recorded.MaxHealth, enemies[i].MaxHealth);
                 enemyPlateHps[i].Set(UiStrings.HealthValue, recorded.Health, enemyMax);

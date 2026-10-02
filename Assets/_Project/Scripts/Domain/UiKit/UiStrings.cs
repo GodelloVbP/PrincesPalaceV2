@@ -1165,7 +1165,7 @@ namespace PrincesPalace.Domain.UiKit
         // measure the widest either can ever be.
         public static readonly UiString VerbNestCaret = UiString.Define("verb_nest_caret", ">");
 
-        public static readonly UiString EnemiesHeading = UiString.Define("enemies_heading", "E N E M I E S");
+        public static readonly UiString EnemiesHeading = UiString.Define("enemies_heading", "ENEMIES");
         public static readonly UiString WoolHeading = UiString.Define("wool_heading", "WOOL");
         public static readonly UiString HpTag = UiString.Define("hp_tag", "HP");
 

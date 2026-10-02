@@ -38,9 +38,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // (tools measure_frame.py): top 16.7%, bottom 14.6%, sides 9.8%.
         // ASYMMETRIC VERTICALLY, deliberately -- the crest is deeper than the
         // bottom ornament and pretending otherwise would waste 19px.
+        //
+        // The bottom is the exception to the scan: the kit's gold 3:2 container
+        // that replaced the bespoke frame draws its bottom border ~35px deep,
+        // not 14.6% (131px), so 14.6% left a ~90px dead band under Continue.
+        // 7% keeps ~28px of margin off the painted border.
         public const float ContentHalfWidth = PanelWidth * 0.5f - PanelWidth * 0.098f;
         public const float ContentTop = PanelHeight * 0.5f - PanelHeight * 0.167f;
-        public const float ContentBottom = -(PanelHeight * 0.5f - PanelHeight * 0.146f);
+        public const float ContentBottom = -(PanelHeight * 0.5f - PanelHeight * 0.07f);
 
         // Kept for the containment test, which asks one question of both axes.
         public const float ContentHalfHeight = PanelHeight * 0.5f - PanelHeight * 0.167f;
@@ -198,7 +203,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the Continue plate's top (the plate is 100 tall, see continueSize); the
         // tally page's row y and pitch in BuildTallyPage do the same.
         private const float RowHeight = 64f;
-        private const float RowPitch = 64f;
+        private const float RowPitch = 72f;
         private const float BarWidth = 900f;
 
         // 26 read as a flat black gap rather than a channel: on a 1344-wide
@@ -345,8 +350,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // glow is light thrown past that point rather than a backing plate
             // the arrow sits on.
             //
-            // 88 tall is a ceiling, not a taste. The button's centre is -272 and
-            // ContentBottom is -317, so anything taller than 90 puts glow on the
+            // 88 tall is a ceiling, not a taste. The button's centre sits 51px
+            // above ContentBottom, so anything taller than 102 puts glow on the
             // frame's painted bottom ornament -- which is exactly what
             // NothingSitsOnThePaintedBorder exists to refuse.
             // 720 wide at x 160, so the box spans -200 to 520: it EMBRACES the
@@ -358,8 +363,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // 520 is the right-hand limit worth knowing: ContentHalfWidth is
             // 540, so this is 20px off the painted border.
+            var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
+            var continueY = ContentBottom + continueSize.Y * 0.5f + 1f;
             var continueGlow = Ui.Sprite("ReckoningContinueGlow", EmberKey,
-                    Place.At(160f, -272f), UiSize.Fixed(720f, 88f))
+                    Place.At(160f, continueY), UiSize.Fixed(720f, 88f))
                 .Coloured(EmberTint)
                 .AsDecor();
             screen.ContinueGlow = continueGlow;
@@ -378,11 +385,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // 300x80: nominal aspect for the Legacy plate's true 3:1
             // (ThemedButtonAspectLintTests). The button sits high enough to
-            // clear ContentBottom (-317.184) by 1px; the glow behind it
+            // clear ContentBottom by 1px; the glow behind it
             // (tuned to +-a few px of slop already) does not need to track
             // that exactly.
-            var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
-            var continueY = ContentBottom + continueSize.Y * 0.5f + 1f;
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
                     continueSize, 20, Place.At(0f, continueY))
                 .Themed(ButtonTheme.Gold);
@@ -572,11 +577,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(420f, 54f), 32,
-                    "#F2DB9E", Place.At(0f, 42f)).AsDecor().Styled(TypographyRole.TacticalData),
+                    "#F2DB9E", Place.At(0f, 30f)).AsDecor().Styled(TypographyRole.TacticalData),
                 Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 32f), 20,
-                    "#B8A8D9", Place.At(0f, -6f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
+                    "#B8A8D9", Place.At(0f, -20f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
                 Ui.Label("ReckoningNoticeLabel", UiString.Runtime, new UiVec(300f, 54f), 15,
-                    "#E8A07A", Place.At(380f, 42f)).AsDecor().Styled(TypographyRole.Body).Inactive(),
+                    "#E8A07A", Place.At(380f, 30f)).AsDecor().Styled(TypographyRole.Body).Inactive(),
             };
 
             GoldLabel = children[0];
@@ -681,12 +686,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningTallyHeading", UiStrings.ReckoningTallyHeading, new UiVec(800f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 44f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
+                    "#B8A8D9", Place.At(0f, 40f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
 
             for (int i = 0; i < RowCount; i++)
             {
-                float y = -16f - i * 80f;
+                float y = -30f - i * 88f;
 
                 var name = Ui.Label("ReckoningTally" + i + "Name", UiString.Runtime, new UiVec(380f, 30f), 20,
                         "#EDE6FF", Place.At(-300f, 20f))
@@ -719,7 +724,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // fight was worth against what they had already.
         private UiNode BuildRow(int index)
         {
-            float y = -52f - index * RowPitch;
+            float y = -70f - index * RowPitch;
 
             var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(300f, 28f), 21,
                     "#EDE6FF", Place.At(-330f, 18f))
@@ -895,7 +900,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // contents means a retune of the band cannot make that mistake.
         //
         // IconBottom is -195 and not lower because the painted interior stops
-        // at ContentBottom (-317.2) and these two lines plus their gaps come to
+        // at -317 (the old ContentBottom; the card is still sized to it) and these two lines plus their gaps come to
         // 108px; the 20px left over is the meta line's clearance from the
         // frame's bottom ornament.
         private const float IconTop = 205f;
@@ -951,7 +956,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // about 60% larger than the fixed box would.
             //
             // -195, not lower: name and meta still hang below it, and the
-            // painted interior stops at -317 (ContentBottom, which the
+            // painted interior was measured to stop at -317 (the old ContentBottom, which the
             // border check A5 measures). Those two lines plus their gaps come
             // to 108px, and 20px of clearance keeps the meta line off the
             // bottom ornament.

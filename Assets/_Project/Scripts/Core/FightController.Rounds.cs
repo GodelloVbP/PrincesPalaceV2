@@ -195,6 +195,14 @@ namespace PrincesPalace
 
             _darknessEnded = true;
             _darknessEnding = true;
+
+            // A survivor fading into the dark keeps no badges or status box.
+            for (int slot = 0; slot < (enemyStatusStrips?.Length ?? 0); slot++)
+            {
+                PaintEnemyStatusRow(slot, null, EmptyStatusRows);
+            }
+
+            RefreshStatusBox();
             StartCoroutine(DarknessEndingRoutine());
             return true;
         }

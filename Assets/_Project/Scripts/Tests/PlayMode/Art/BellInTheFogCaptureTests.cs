@@ -237,13 +237,49 @@ namespace PrincesPalace.PlayModeTests
             Named(fight, "EnemyPlate0").GetComponent<Button>().onClick.Invoke();
 
             var fades = fight.GetComponentsInChildren<StageDeathFade>(includeInactive: true);
+            var darkness = Named(fight, "RoundDarkness").GetComponent<Image>();
+            var spriteField = typeof(StageDeathFade).GetField("sprite", BindingFlags.Instance | BindingFlags.NonPublic);
+            var enemyFades = (StageDeathFade[])typeof(FightController).GetField("enemyDeathFades", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(fight);
+            var bellwether = enemyFades.Select(f => (Image)spriteField.GetValue(f)).First(i => i != null && i.gameObject.activeInHierarchy);
             float deadline = Time.realtimeSinceStartup + 20f;
             while (!fades.Any(f => f.Fading) && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.IsTrue(fades.Any(f => f.Fading), "the Bellwether never began fading");
-            yield return WaitReal(1.4f);
-            yield return Shoot("i_ending_fading_into_dark");
-            yield return WaitReal(0.4f);
-            yield return Shoot("i2_ending_nearly_gone");
+
+            // The ending is a clock, so it is sampled rather than eyeballed:
+            // the darkness must have closed and the Bellwether gone by the time
+            // the Reckoning is about to open, and the stills are taken at the
+            // moments the samples name.
+            float fadeBegan = Time.realtimeSinceStartup;
+            float darknessAtFadeStart = darkness.color.a;
+            float lowestDarkness = darkness.color.a;
+            float lowestSpriteAlpha = bellwether.color.a;
+            float nextLog = 0f;
+            bool shotMid = false, shotLate = false;
+            while (fight.IsBusy && Time.realtimeSinceStartup < fadeBegan + 15f)
+            {
+                float since = Time.realtimeSinceStartup - fadeBegan;
+                if (since >= nextLog)
+                {
+                    Debug.Log($"[BellEnding] t={since:0.00} darkness={darkness.color.a:0.000} bellwether={bellwether.color.a:0.000} fading={fades.Any(f => f.Fading)}");
+                    nextLog += 0.25f;
+                }
+
+                if (!shotMid && darkness.color.a > 0.6f)
+                {
+                    shotMid = true;
+                    yield return Shoot("i_ending_fading_into_dark");
+                }
+                else if (!shotLate && darkness.color.a > 0.88f && bellwether.color.a < 0.15f)
+                {
+                    shotLate = true;
+                    yield return Shoot("i2_ending_nearly_gone");
+                }
+
+                yield return null;
+            }
+
+            Debug.Log($"[BellEnding] fadeStartDarkness={darknessAtFadeStart:0.000} shotMid={shotMid} shotLate={shotLate}");
+            Assert.IsTrue(shotMid && shotLate, "the darkness never closed with the Bellwether fading into it");
 
             yield return WaitWhileBusy(fight);
             yield return WaitReal(1.0f);

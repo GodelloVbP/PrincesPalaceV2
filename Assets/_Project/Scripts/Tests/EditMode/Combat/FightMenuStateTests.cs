@@ -917,6 +917,44 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void EveryStrikeIconRowCarriesAValue()
+        {
+            var (_, hero) = Fight();
+
+            var panel = FightHudModel.DetailForStrike(hero);
+
+            Assert.AreEqual("PHYSICAL", IconOf(panel, DetailIconKind.Defense).Value);
+            Assert.AreEqual("ONE ENEMY", IconOf(panel, DetailIconKind.AreaOfEffect).Value);
+            foreach (var icon in panel.Icons)
+            {
+                Assert.IsNotEmpty(icon.Value, $"{icon.Kind} row has no value text");
+            }
+        }
+
+        [Test]
+        public void ANonDamagingSkillsCardStatesWhatItDoesAndWhoGetsIt()
+        {
+            var ward = new ResolvedSkill("tuck_in", "Tuck In", "", "hero", 1, SkillEffect.Ward,
+                SkillTargeting.Self, 0, 1, true, 5, 0, false, null, SpellPresentation.None, 0);
+            var mend = new ResolvedSkill("mend", "Mend", "", "hero", 1, SkillEffect.HealSingle,
+                SkillTargeting.SingleAlly, 5, 0, false, 12, 0, false, null, SpellPresentation.None, 0);
+            var rally = Skill("rally", "Rally", effect: SkillEffect.Provoke);
+            var (session, hero) = Fight(ward, mend, rally);
+
+            var tuck = FightHudModel.DetailForSkill(session, hero, ward);
+            // 0 because the fixture hero has no wool pool to scale the ward by.
+            Assert.AreEqual("WARD 0", IconOf(tuck, DetailIconKind.Effect).Value);
+            Assert.AreEqual("SELF", IconOf(tuck, DetailIconKind.AreaOfEffect).Value);
+
+            var heal = FightHudModel.DetailForSkill(session, hero, mend);
+            StringAssert.StartsWith("HEAL", IconOf(heal, DetailIconKind.Effect).Value);
+            Assert.AreEqual("ONE ALLY", IconOf(heal, DetailIconKind.AreaOfEffect).Value);
+
+            var taunt = FightHudModel.DetailForSkill(session, hero, rally);
+            Assert.AreEqual("TAUNT", IconOf(taunt, DetailIconKind.Effect).Value);
+        }
+
+        [Test]
         public void AnItemsEffectAndItsRefusalAreOnTheKindLine()
         {
             var stack = new SatchelStack("elixir", "Elixir", 2, restoresMana: true);

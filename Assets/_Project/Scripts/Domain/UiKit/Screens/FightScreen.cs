@@ -1488,7 +1488,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // right-aligned hint's box starts at 680 -- a 40px crossing the
             // audit refuses. "E N E M I E S" at 12pt bold is well under 155.
             yield return Ui.Label("EnemiesHeading", UiStrings.EnemiesHeading,
-                new UiVec(155f, EnemiesHeadingHeight), 12,
+                new UiVec(155f, EnemiesHeadingHeight), 14,
                 FightHudPalette.TextSecondary,
                 Place.At(PlateFirstX - PlateW * 0.5f, EnemiesHeadingY, new UiVec(0f, 0.5f)))
                 // Above the plates, so on the canopy, which is pale sky in
@@ -1498,10 +1498,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // not (about 3:1 on the treant canopy's dark greens against
                 // TextSecondary's 6:1 -- FightLogBandTests pins it). Heading
                 // and count share it: one line of stage text, one colour.
+                //
+                // 14pt, not 12: at 12 a ChakraPetch stroke is ~1.5px, so the
+                // dilated face and the dark edge each cover a full pixel
+                // column and the letter reads as two offset strikes over the
+                // pale sky. Tracked rather than typed out with spaces, so the
+                // word stays one run.
+                .Tracked(24f)
                 .OverArt();
 
             var hint = Ui.Label("EnemiesHint", UiStrings.StandingCount,
-                new UiVec(240f, EnemiesHeadingHeight), 12,
+                new UiVec(240f, EnemiesHeadingHeight), 14,
                 FightHudPalette.TextSecondary,
                 Place.At(PlateBlockRight, EnemiesHeadingY, new UiVec(1f, 0.5f)))
                 .OverArt();
@@ -2999,16 +3006,35 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // X FOLLOWS THE ACTOR and is only clamped to keep the box on screen,
         // which is what makes "this box belongs to that monster" readable
         // without a leader line: the box is centred under the figure.
+        //
+        // `avoid` is every OTHER badge strip on screen (xMin, xMax, yMin, yMax):
+        // the box describes one actor, but a neighbour's badges can sit in the
+        // band right under it, and covering those hides the very statuses the
+        // player is comparing. A strip that overlaps the box's x span and sits
+        // below the actor pushes the box under it.
         public static UiVec StatusBoxAt(float actorCentreX, float actorBottom, float actorTop,
                                         float boxWidth, float boxHeight,
                                         float interiorLeft, float interiorRight,
                                         float interiorBottom, float interiorTop,
-                                        float gap = StatusBoxGap)
+                                        float gap = StatusBoxGap,
+                                        IReadOnlyList<(float XMin, float XMax, float YMin, float YMax)> avoid = null)
         {
             float halfW = boxWidth * 0.5f;
             float halfH = boxHeight * 0.5f;
 
             float x = ClampOrCentre(actorCentreX, interiorLeft + halfW, interiorRight - halfW);
+
+            if (avoid != null)
+            {
+                foreach (var strip in avoid)
+                {
+                    bool overlapsX = strip.XMin < x + halfW && strip.XMax > x - halfW;
+                    if (overlapsX && strip.YMax <= actorTop && strip.YMin < actorBottom)
+                    {
+                        actorBottom = strip.YMin;
+                    }
+                }
+            }
 
             float below = actorBottom - gap - halfH;
             if (below - halfH >= interiorBottom) return new UiVec(x, below);

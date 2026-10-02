@@ -582,6 +582,9 @@ namespace PrincesPalace
             DetailIconKind.Reach => "reach_" + icon.IconKey,
             DetailIconKind.AreaOfEffect => "target_" + icon.IconKey,
             DetailIconKind.Scaling => "scale_" + icon.IconKey,
+            // No art of its own yet: a ward borrows the shield, every other
+            // effect misses and the row prints its text alone.
+            DetailIconKind.Effect => icon.IconKey == "ward" ? "defense_physical" : "effect_" + icon.IconKey,
             _ => "",
         };
 
@@ -2530,6 +2533,14 @@ namespace PrincesPalace
         {
             if (statusBox == null) return;
 
+            // THE DARKENED ENDING HAS NOTHING LEFT TO EXPLAIN: whoever stood is
+            // fading into it.
+            if (_darknessEnding)
+            {
+                statusBox.SetShown(false);
+                return;
+            }
+
             // THE POINTER WINS OVER THE PAD, and only because it is the more
             // recent deliberate act: a player holding a mouse over a monster
             // has said which one they mean, while the pad's focus is wherever
@@ -2739,13 +2750,30 @@ namespace PrincesPalace
                 bottom = Mathf.Min(bottom, stripBottom);
             }
 
+            // EVERY OTHER ENEMY'S BADGE ROW too: the box is as wide as 600px
+            // and a neighbour's last badges sit in the same band.
+            _statusBoxAvoid.Clear();
+            if (enemyStatusStrips != null)
+            {
+                foreach (var other in enemyStatusStrips)
+                {
+                    if (other == null || !other.activeInHierarchy || ReferenceEquals(other, strip)) continue;
+                    if (RectInParent(other.transform as RectTransform, parent, camera,
+                        out float xMin, out float xMax, out float yMin, out float yMax))
+                    {
+                        _statusBoxAvoid.Add((xMin, xMax, yMin, yMax));
+                    }
+                }
+            }
+
             const float Margin = 8f;
             var interior = parent.rect;
 
             var at = FightScreen.StatusBoxAt(centreX, bottom, top,
                 boxRect.rect.width, boxHeight,
                 interiorLeft: interior.xMin + Margin, interiorRight: interior.xMax - Margin,
-                interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin);
+                interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin,
+                avoid: _statusBoxAvoid);
 
             boxRect.anchoredPosition = new Vector2(at.X, at.Y);
         }
@@ -2759,6 +2787,32 @@ namespace PrincesPalace
 
             int slot = SlotIndexOf(actor);
             return slot >= 0 && slot < enemyStatusStrips.Length ? enemyStatusStrips[slot] : null;
+        }
+
+        private readonly List<(float XMin, float XMax, float YMin, float YMax)> _statusBoxAvoid =
+            new List<(float, float, float, float)>();
+
+        // One rect's bounds in `parent`'s local space.
+        private static bool RectInParent(RectTransform rect, RectTransform parent, Camera camera,
+                                         out float xMin, out float xMax, out float yMin, out float yMax)
+        {
+            xMin = xMax = yMin = yMax = 0f;
+            if (rect == null || parent == null) return false;
+
+            var box = rect.rect;
+            Vector2 a = RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(new Vector3(box.xMin, box.yMin, 0f)));
+            Vector2 b = RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(new Vector3(box.xMax, box.yMax, 0f)));
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, a, camera, out var la) ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, b, camera, out var lb))
+            {
+                return false;
+            }
+
+            xMin = Mathf.Min(la.x, lb.x);
+            xMax = Mathf.Max(la.x, lb.x);
+            yMin = Mathf.Min(la.y, lb.y);
+            yMax = Mathf.Max(la.y, lb.y);
+            return true;
         }
 
         // One rect's centre-x, bottom and top, in `parent`'s local space.
