@@ -1,0 +1,152 @@
+{
+ "spell": "cinderfault",
+ "versus": "rat",
+ "fps": 60.0,
+ "region": {
+  "hud_rects_1920x1080": [
+   [
+    0,
+    0,
+    1920,
+    100
+   ],
+   [
+    0,
+    100,
+    540,
+    240
+   ],
+   [
+    1300,
+    100,
+    1920,
+    420
+   ],
+   [
+    0,
+    920,
+    520,
+    1080
+   ],
+   [
+    0,
+    1030,
+    1920,
+    1080
+   ]
+  ],
+  "hot_level": 235
+ },
+ "params": {
+  "residue_limit": 0.5,
+  "accent_ratio": 1.5,
+  "desync_frames": 2
+ },
+ "measured": {
+  "frames": 24,
+  "fps": 60.0,
+  "floor": 1.8259759346009001,
+  "peak": 3.5495287958115185,
+  "peak_frame": 15,
+  "peak_s": 0.25,
+  "hot_peak": 0.008917057040507027,
+  "hot_peak_frame": 19,
+  "hit_frame": 14,
+  "release_frame": 11,
+  "visual_contact_frame": 15,
+  "gather_s": 0.18333333333333332,
+  "travel_s": 0.05,
+  "gather_to_travel": 3.666666666666666,
+  "residue_s": 0.08333333333333333,
+  "clean_frame": 22,
+  "clean_s": 0.36666666666666664,
+  "clean_after_contact_s": 0.13333333333333333,
+  "typical": 2.8738936346100856,
+  "authored_hit_frame": 13
+ },
+ "authored": {
+  "hitCueSeconds": 0.21666667,
+  "release_s": null,
+  "travel_s": null,
+  "layers": [
+   {
+    "id": "fault",
+    "render": "sprite",
+    "at": "release",
+    "seconds": 0.39,
+    "until": "once",
+    "glow": 1
+   },
+   {
+    "id": "erupt",
+    "render": "sprite",
+    "at": "release",
+    "seconds": 0.39,
+    "until": "once",
+    "punch": 0.22,
+    "glow": 1.3
+   }
+  ]
+ },
+ "stills": {
+  "gather": 5,
+  "release": 10,
+  "contact": 14,
+  "residue": 23,
+  "clean": 22
+ },
+ "warnings": [],
+ "notes": [],
+ "activity": [
+  2.851,
+  2.817,
+  2.802,
+  2.799,
+  2.792,
+  2.844,
+  2.874,
+  2.87,
+  2.875,
+  2.875,
+  2.82,
+  2.906,
+  2.905,
+  2.943,
+  2.938,
+  3.55,
+  3.071,
+  3.011,
+  3.413,
+  3.008,
+  1.826,
+  2.131,
+  1.143,
+  0.0
+ ],
+ "hot": [
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.00254,
+  0.00542,
+  0.00632,
+  0.00637,
+  0.00892,
+  0.00025,
+  2e-05,
+  1e-05,
+  0.0
+ ]
+}
