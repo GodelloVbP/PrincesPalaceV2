@@ -615,7 +615,7 @@ stage's set piece and at 960 x 540 in the line-less layout's frame
 (`EventScreen.StageArtWidth` / `ArtWidth`, pinned in `EventScreenTests`); the
 image keeps its aspect, so off-ratio art letterboxes rather than stretches. File it in the event's own folder,
 `Assets/_Project/Art/Events/<event_id>/<page_id>.png` (e.g.
-`Art/Events/demo_wishing_well/well.png`; the content build refuses art under
+`Art/Events/petting_zoo/zoo.png`; the content build refuses art under
 `Art/Events/` filed anywhere else), and write that Assets-relative
 path, extension included, into `artPath` -- it is baked into the Map scene
 like an item `iconPath`, so it needs step 3's `-BuildScenes`. Full authoring

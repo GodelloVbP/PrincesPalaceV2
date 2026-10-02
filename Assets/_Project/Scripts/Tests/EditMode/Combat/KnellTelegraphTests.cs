@@ -136,7 +136,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1100, intent.ExpectedDamage);
             Assert.AreEqual(1100, session.IntentDamageFor(bell));
             Assert.IsTrue(intent.IsLethal, "1100 against 1000 health");
-            Assert.AreEqual("Death Knell! Step back", session.TelegraphLine(bell));
+            Assert.AreEqual("Death Knell!", session.TelegraphLine(bell));
             Assert.AreEqual(
                 "Death Knell on Shawn: about 1100 at the front (lethal), 350 in the middle, none at the rear. Step back.",
                 FightHudModel.IntentTooltip("Bell", intent));
@@ -158,7 +158,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, after.TargetSeat);
             Assert.AreEqual(350, after.ExpectedDamage);
             Assert.IsFalse(after.IsLethal);
-            Assert.AreEqual("Death Knell! Step back", session.TelegraphLine(bell));
+            Assert.AreEqual("Death Knell!", session.TelegraphLine(bell));
         }
 
         [Test]

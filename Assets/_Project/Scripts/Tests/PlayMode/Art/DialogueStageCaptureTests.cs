@@ -35,7 +35,7 @@ namespace PrincesPalace.PlayModeTests
     public class DialogueStageCaptureTests
     {
         private const string DemoId = "demo_dialogue";
-        private const string LegacyId = "demo_wishing_well";
+        private const string LegacyId = "demo_mechanics";
 
         // CharacterEntryResolver.MaxEpithetLength characters, the sample
         // DialogueStageTextFitTests measures.
@@ -206,7 +206,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheEvent(LegacyId);
             Assert.IsFalse(Find("DialogueStage").activeInHierarchy, "a line-less event paints the legacy layout");
             yield return WaitReal(0.3f);
-            yield return ShootAt("i_legacy_wishing_well", Aspects[0].Name, Aspects[0].Frame);
+            yield return ShootAt("i_legacy_mechanics", Aspects[0].Name, Aspects[0].Frame);
         }
 
         // ---- driving ------------------------------------------------------------------

@@ -253,12 +253,9 @@ namespace PrincesPalace.PlayModeTests
 
             // Bjorn is standing (17 HP) and Odette full: both speak.
             Pick(LeaveRow);
-            var view = RunOrchestrator.CurrentEvent();
-            Assert.IsTrue(view.Concluded);
-            StringAssert.Contains("Bjorn", view.ResultText);
-            StringAssert.Contains("Odette", view.ResultText);
-
-            RunOrchestrator.LeaveEvent();
+            Assert.AreEqual("endure_both", Run.eventPageId, "both reply, on their own page");
+            Assert.IsFalse(RunOrchestrator.CurrentEvent().Concluded);
+            Assert.IsTrue(Pick(LeaveRow).Closed, "the reply page's Leave is silent and closes at once");
             CollectionAssert.Contains(Run.clearedNodeIds, node, "the event's Leave clears the room");
         }
 

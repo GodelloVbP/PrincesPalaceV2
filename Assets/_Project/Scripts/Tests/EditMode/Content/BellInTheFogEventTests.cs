@@ -57,6 +57,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         private static readonly string[] AskPages = { "ask_both", "ask_bjorn", "ask_odette", "ask_none" };
+        private static readonly string[] EndurePages = { "endure_both", "endure_bjorn", "endure_odette", "endure_alone" };
 
         // ---- the event ----------------------------------------------------------------
 
@@ -66,7 +67,8 @@ namespace PrincesPalace.Domain.Tests
             var bell = Bell();
 
             CollectionAssert.AreEqual(
-                new[] { "bell", "ask_both", "ask_bjorn", "ask_odette", "ask_none", "endure", "break" },
+                new[] { "bell", "ask_both", "ask_bjorn", "ask_odette", "ask_none", "endure",
+                  "endure_both", "endure_bjorn", "endure_odette", "endure_alone", "break" },
                 bell.Pages.Select(p => p.Id).ToArray());
             Assert.AreEqual("bell", bell.StartPage.Id);
             Assert.IsTrue(bell.MayReturn);
@@ -86,6 +88,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(Art + "stump_bell.png", Page("bell").ArtKey);
             foreach (string id in AskPages) Assert.AreEqual(Art + "stump_bell.png", Page(id).ArtKey, id);
             Assert.AreEqual(Art + "endure.png", Page("endure").ArtKey);
+            foreach (string id in EndurePages) Assert.AreEqual(Art + "endure.png", Page(id).ArtKey, id);
             Assert.AreEqual(Art + "bell_broken.png", Page("break").ArtKey);
 
             foreach (var page in Bell().Pages)
@@ -117,12 +120,22 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEquivalent(new[] { "sheep", "owl" },
                 Page("ask_odette").Lines.Where(l => !l.IsNarration).Select(l => l.SpeakerId).Distinct().ToArray());
 
+            // Shawn is off the stage once the others answer him.
+            CollectionAssert.AreEquivalent(new[] { "bear", "owl" }, EndureSpeakers("endure_both"));
+            CollectionAssert.AreEquivalent(new[] { "bear" }, EndureSpeakers("endure_bjorn"));
+            CollectionAssert.AreEquivalent(new[] { "owl" }, EndureSpeakers("endure_odette"));
+            CollectionAssert.IsEmpty(EndureSpeakers("endure_alone"));
+
             foreach (string id in new[] { "bell", "ask_none", "endure", "break" })
             {
                 CollectionAssert.AreEquivalent(new[] { "sheep" },
                     Page(id).Lines.Where(l => !l.IsNarration).Select(l => l.SpeakerId).Distinct().ToArray(), id);
             }
         }
+
+        // Who speaks on a page, Shawn counted only if he has a line there.
+        private static string[] EndureSpeakers(string pageId) =>
+            Page(pageId).Lines.Where(l => !l.IsNarration).Select(l => l.SpeakerId).Distinct().ToArray();
 
         // ---- the bell page ------------------------------------------------------------
 
@@ -273,27 +286,34 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the results' pages -------------------------------------------------------
 
-        [TestCase(new[] { "sheep", "bear", "owl" }, new string[0], "Bjorn", "Odette")]
-        [TestCase(new[] { "sheep", "bear", "owl" }, new[] { "owl" }, "Bjorn", null)]
-        [TestCase(new[] { "sheep", "bear", "owl" }, new[] { "bear" }, "Odette", null)]
-        [TestCase(new[] { "sheep" }, new string[0], null, null)]
-        public void LeavingEndure_TheOthersSayOnlyWhoIsStanding(string[] squad, string[] downed,
-            string names, string alsoNames)
+        [TestCase(new[] { "sheep", "bear", "owl" }, new string[0], "endure_both")]
+        [TestCase(new[] { "sheep", "bear", "owl" }, new[] { "owl" }, "endure_bjorn")]
+        [TestCase(new[] { "sheep", "bear", "owl" }, new[] { "bear" }, "endure_odette")]
+        [TestCase(new[] { "sheep" }, new string[0], "endure_alone")]
+        public void LeavingEndure_GoesToThePageOfWhoIsStanding(string[] squad, string[] downed, string expectedPage)
         {
             var context = Party(squad);
             foreach (string id in downed) context.Downed.Add(id);
 
             var left = Pick("endure", "Leave", context);
 
-            Assert.IsTrue(left.IsLeave);
+            Assert.IsFalse(left.IsLeave, "the reply plays as dialogue first");
+            Assert.AreEqual(expectedPage, left.NextPageId);
             CollectionAssert.IsEmpty(left.Effects, "the endure page pays nothing twice");
-            Assert.AreNotEqual("", left.Result);
+            Assert.AreEqual("", left.Result, "no prose result: the reply is lines");
+        }
 
-            foreach (string name in new[] { "Bjorn", "Odette" })
-            {
-                bool expected = name == names || name == alsoNames;
-                Assert.AreEqual(expected, left.Result.Contains(name), $"'{name}' in: {left.Result}");
-            }
+        [TestCase("endure_both")]
+        [TestCase("endure_bjorn")]
+        [TestCase("endure_odette")]
+        [TestCase("endure_alone")]
+        public void EachEndureReply_ClosesWithASilentLeave(string pageId)
+        {
+            var left = Pick(pageId, "Leave", Party("sheep", "bear", "owl"));
+
+            Assert.IsTrue(left.IsLeave);
+            CollectionAssert.IsEmpty(left.Effects);
+            Assert.AreEqual("", left.Result);
         }
 
         [Test]

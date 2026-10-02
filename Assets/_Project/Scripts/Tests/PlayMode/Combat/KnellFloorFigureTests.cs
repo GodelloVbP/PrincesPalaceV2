@@ -72,7 +72,7 @@ namespace PrincesPalace.PlayModeTests
             yield return Fight((f, s, shawn, bell) => fight = f);
 
             Assert.IsTrue(Wired<GameObject>(fight, "partySeatFigures").All(p => !p.activeInHierarchy));
-            Assert.IsTrue(KnellBadgeFixture.Callout(fight).gameObject.activeInHierarchy, "\"Dark Chains! Death Knell next\"");
+            Assert.IsTrue(KnellBadgeFixture.Callout(fight).gameObject.activeInHierarchy, "\"Dark Chains!\"");
             var plate = KnellBadgeFixture.Callout(fight).transform.parent;
             Assert.IsTrue(plate.gameObject.activeInHierarchy, "on its plate");
             StringAssert.StartsWith("EnemyIntentCalloutPlate", plate.name);

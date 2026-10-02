@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a04c8e410f566d4c95baac0a724b55d, type: 3}
-  m_Name: demo_wishing_well
+  m_Name: demo_mechanics
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
   data:
-    Id: demo_wishing_well
+    Id: demo_mechanics
     SortOrder: 0
-    Floors: 
+    Floors: e7030000
     Requires: []
     Pages:
     - Id: well
@@ -63,7 +63,7 @@ MonoBehaviour:
         - Kind: 5
           Amount: 1
           Item: 
-          CounterId: wishing_well_tosses
+          CounterId: demo_tosses
           CharacterId: 
           CharacterDisplayName: 
           RelicId: 
@@ -81,7 +81,7 @@ MonoBehaviour:
             HasMin: 1
             Max: 10
             HasMax: 1
-            CounterId: wishing_well_tosses
+            CounterId: demo_tosses
             RequireStanding: 0
             AuthoredReason: 
           Effects:

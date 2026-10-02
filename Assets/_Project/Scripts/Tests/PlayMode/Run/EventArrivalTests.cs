@@ -15,15 +15,19 @@ namespace PrincesPalace.PlayModeTests
     // ShopArrivalTests' fixture: a real map, real content and a throwaway
     // save root, so "on disk" means the file and not the cached SaveData.
     //
-    // The event under test is demo_wishing_well (ContentData/events.json),
+    // The event under test is demo_mechanics (ContentData/events.json),
     // the phase-1 fixture built to exercise every feature. Its page and
     // choice ids are named here as literals; the choice INDICES are looked
     // up from the definition by what the choice does, so reordering the
     // demo's buttons does not silently retarget a test.
     public class EventArrivalTests
     {
-        private const string DemoEvent = "demo_wishing_well";
-        private const string DemoCounter = "wishing_well_tosses";
+        private const string DemoEvent = "demo_mechanics";
+        private const string DemoCounter = "demo_tosses";
+
+        // The fixture event is authored for floor 999, so no real run rolls it;
+        // the helper below stands the run on that floor.
+        private const int DemoFloor = 999;
 
         private string _root;
 
@@ -69,6 +73,7 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.StartRun(SeedWithAnEventInTheFirstColumn());
             var node = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Event);
+            RunManager.Run.floor = DemoFloor;
 
             // Every other authored event (petting_zoo, ...) counts as seen
             // this run, so the pool is the demo alone and the roll must pick it.
@@ -78,7 +83,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             Assert.AreEqual(RunOrchestrator.Arrival.Event, RunOrchestrator.ArriveAt(node),
-                "fixture: the demo event is eligible on floor 1 and the run has seen nothing else");
+                "fixture: the demo event is eligible on its floor 999 and the run has seen nothing else");
             Assert.AreEqual(DemoEvent, RunManager.Run.eventId,
                 "fixture: every other event is marked seen, so the pool of one must pick the demo");
             return node;
@@ -328,6 +333,31 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(Save.eventCounters);
             Assert.IsEmpty(Save.eventCounters);
             Assert.AreEqual(0, Save.EventCounter(DemoCounter));
+        }
+
+        // The Wishing Well was removed from content. A save written while it
+        // existed still names its id in eventsSeen and its counter in the
+        // profile; neither may stop the load, close a live run, or leave the
+        // pool empty for the events that remain.
+        [Test]
+        public void ASaveNamingTheRemovedWishingWellStillLoads()
+        {
+            string json = "{\"version\":" + SaveData.CurrentVersion +
+                          ",\"eventCounters\":[{\"id\":\"wishing_well_tosses\",\"value\":7}]" +
+                          ",\"activeRun\":{\"hasRun\":true,\"runSeed\":12345,\"floor\":1,\"currentNodeId\":0," +
+                          "\"eventsSeen\":[\"demo_wishing_well\"]}}";
+            File.WriteAllText(Path.Combine(_root, "save_slot_0.json"), json);
+
+            Assert.IsTrue(RunManager.HasRun, "fixture: the old save carries a live run");
+            Assert.AreEqual(7, Save.EventCounter("wishing_well_tosses"));
+            CollectionAssert.Contains(RunManager.Run.eventsSeen, "demo_wishing_well");
+            Assert.IsFalse(RunOrchestrator.EventIsOpen);
+
+            var pick = EventRoll.Pick(ContentDatabase.Events.Select(e => e.Data).ToList(), 1,
+                RunManager.Run.eventsSeen, new RunEventContext(Save, RunManager.Run),
+                new PrincesPalace.Domain.Rng.SeededRandom(1UL));
+            Assert.IsNotEmpty(pick, "the remaining events are still eligible");
+            Assert.AreNotEqual("demo_wishing_well", pick);
         }
 
         // An event not under the party is closed on load, like a shelf that

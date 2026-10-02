@@ -23,9 +23,13 @@ outcome  { requires[], effects[], result, goTo }       first match wins
   outcomes are tested against the updated state, then the winning outcome's
   effects apply. One save at the end.
 
-## The demo, annotated
+## The mechanics fixture, annotated
 
-`demo_wishing_well` is a placeholder that exercises every feature. Replace it.
+`demo_mechanics` is a fixture that exercises every choice feature; no player
+meets it. Its `floors` is `[999]`, a floor no run
+reaches; the tests stand the run on it. It replaced the shipped Wishing Well; saves that
+still name `demo_wishing_well` or `wishing_well_tosses` load (pinned in
+`EventArrivalTests`). The debug menu opens it anywhere.
 
 | Choice | What it shows |
 |---|---|
@@ -54,8 +58,14 @@ there). Things it does that a new event may want to copy:
   opens on its own first line. Odette speaks only on `step1_pair`, whose
   outcome requires `inParty owl`. Shawn speaks only on the step-1 pages, whose
   outcomes require `inParty sheep`. The fallback page (`petter`) is narration.
-- **Results on a staged event take the 200 cap.** The peacock, fawns, cold one
-  and petter results all play on the stage, because `zoo` and `petter` have lines.
+- **Results on a staged event take the 200 cap.** The petter results play on
+  the stage, because `zoo` and `petter` have lines.
+- **A result worth reading is a page.** The peacock, fawns and cold one route
+  (`goTo`) to `peacock`, `fawns` and `cold_one`: one narration line over their
+  own art, one silent "Say goodbye". The effects stay on the outcome, so they
+  fire exactly once on the way in. Speech in a result string is not allowed to
+  stand in for `lines`: an outcome carries no speaker, so any reply goes to a
+  page (`bell_in_the_fog`'s `endure_*` pages).
 - Pinned by `PettingZooEventTests` (content, fast host) and `PettingZooRunTests`
   (through the run, needs built content).
 
@@ -491,8 +501,8 @@ A worked example, the caravan's shape:
 - **Where:** one folder per event, named by its id:
   `Assets/_Project/Art/Events/<event_id>/<page_id>.png`, written into the page
   as `"artPath": "Assets/_Project/Art/Events/<event_id>/<page_id>.png"`
-  (Assets-relative, with extension). Example: the demo's `well` page is
-  `Assets/_Project/Art/Events/demo_wishing_well/well.png`. The build refuses
+  (Assets-relative, with extension). Example: the petting zoo's `zoo` page is
+  `Assets/_Project/Art/Events/petting_zoo/zoo.png`. The build refuses
   a Resources-style path, and refuses art under `Art/Events/` that is not
   one folder deep in its own event's folder (`EventEntryResolver`). The file
   name is by convention the page id; pages of one event may share a file.

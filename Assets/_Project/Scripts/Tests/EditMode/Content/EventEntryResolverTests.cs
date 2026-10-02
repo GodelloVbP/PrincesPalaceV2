@@ -117,8 +117,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheShippedDemoShape_Resolves()
         {
-            var entry = MinimalEvent("demo_wishing_well");
-            entry.pages[0].artPath = "Assets/_Project/Art/Events/demo_wishing_well/well.png";
+            var entry = MinimalEvent("demo_mechanics");
+            entry.pages[0].artPath = "Assets/_Project/Art/Events/demo_mechanics/well.png";
 
             bool ok = Resolve(entry, out _, out var errors);
 

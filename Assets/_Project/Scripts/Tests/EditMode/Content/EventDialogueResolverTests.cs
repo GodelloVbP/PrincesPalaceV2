@@ -127,17 +127,17 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Assets/_Project/Art/Backgrounds/Dungeon.png", page.BackdropKey);
         }
 
-        // demo_wishing_well is the compatibility fixture (contract 14): read
+        // demo_mechanics is the compatibility fixture (contract 14): read
         // off the real events.json and pinned field by field, so D1 provably
         // changed nothing it shows.
         [Test]
-        public void DemoWishingWell_StillResolvesUnchanged()
+        public void DemoMechanics_StillResolvesUnchanged()
         {
             // Against the real catalogues: the file also holds events that
             // name relics and fight enemies (petting_zoo, bell_in_the_fog).
             var resolved = RealEventCatalogue.Events();
 
-            var well = resolved.Single(e => e.Id == "demo_wishing_well");
+            var well = resolved.Single(e => e.Id == "demo_mechanics");
             Assert.AreEqual("Assets/_Project/Art/Backgrounds/Dungeon.png", well.BackdropKey);
             CollectionAssert.AreEqual(new[] { "well", "wish_granted" }, well.Pages.Select(p => p.Id).ToArray());
 

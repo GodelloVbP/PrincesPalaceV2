@@ -22,7 +22,8 @@ namespace PrincesPalace.Domain.Tests
     public class PettingZooEventTests
     {
         private const string Counter = "zoo_sheep";
-        private const string ZooArt = "Assets/_Project/Art/Events/petting_zoo/zoo.png";
+        private const string ZooArtDir = "Assets/_Project/Art/Events/petting_zoo/";
+        private const string ZooArt = ZooArtDir + "zoo.png";
         private const string Goodbye = "Say goodbye";
         private const string LeaveBe = "Leave the sheep be";
         private const string KinshipLine = "Future visits with Shawn grant Kinship for that run.";
@@ -74,7 +75,12 @@ namespace PrincesPalace.Domain.Tests
             "step10", "post_arc",
         };
 
-        private static readonly string[] AllPages = new[] { "zoo", "petter" }.Concat(StepPages).ToArray();
+        // The three one-shot choices' own result pages: their text, formerly the
+        // zoo page's Leave result, plays here as a narration line over their art.
+        private static readonly string[] ResultPages = { "peacock", "fawns", "cold_one" };
+
+        private static readonly string[] AllPages =
+            new[] { "zoo", "petter" }.Concat(ResultPages).Concat(StepPages).ToArray();
 
         // A scene page plays its lines and then only ends the event: every
         // row is an unconditional, effect-free, silent Leave.
@@ -117,7 +123,13 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(ZooArt, Page("zoo").ArtKey);
             Assert.AreEqual(ZooArt, Page("petter").ArtKey);
-            foreach (string id in StepPages) Assert.AreEqual("", Page(id).ArtKey, id);
+            foreach (string id in StepPages)
+            {
+                string expected = id == "step1_pair" || id == "step1_solo" ? ZooArtDir + "step1.png" : "";
+                Assert.AreEqual(expected, Page(id).ArtKey, id);
+            }
+
+            foreach (string id in ResultPages) Assert.AreEqual(ZooArtDir + id + ".png", Page(id).ArtKey, id);
 
             foreach (string id in AllPages)
             {
@@ -161,7 +173,7 @@ namespace PrincesPalace.Domain.Tests
                 new[] { "Bjorn pets the sheep", "Odette pets the sheep", LeaveBe },
                 Page("petter").Choices.Select(c => c.Text).ToArray());
 
-            foreach (string id in StepPages)
+            foreach (string id in StepPages.Concat(ResultPages))
             {
                 var page = Page(id);
                 Assert.AreEqual(1, page.Choices.Length, id);
@@ -461,11 +473,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(EventChoiceGate.Evaluate(page.Choices[index], context).Enabled);
 
             var resolution = EventFlow.Resolve(page, index, context);
-            Assert.IsTrue(resolution.IsLeave);
-            Assert.AreEqual(
+            Assert.IsFalse(resolution.IsLeave, "the result plays on its own page");
+            Assert.AreEqual("peacock", resolution.NextPageId);
+            Assert.AreEqual("", resolution.Result);
+            AssertLines("peacock", ("narration", N,
                 "The peacock looks your strut up and down, then fans its tail in grudging approval. " +
-                "The crowd along the fence throws coins.",
-                resolution.Result);
+                "The crowd along the fence throws coins."));
             var effect = resolution.Effects.Single();
             Assert.AreEqual(EventEffectKind.Gold, effect.Kind);
             Assert.AreEqual(gold, effect.Amount);
@@ -483,11 +496,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(EventChoiceGate.Evaluate(page.Choices[index], context).Enabled);
             var resolution = EventFlow.Resolve(page, index, context);
 
-            Assert.IsTrue(resolution.IsLeave);
-            Assert.AreEqual(
+            Assert.IsFalse(resolution.IsLeave, "the result plays on its own page");
+            Assert.AreEqual("fawns", resolution.NextPageId);
+            Assert.AreEqual("", resolution.Result);
+            AssertLines("fawns", ("narration", N,
                 "The fawns eat out of your hand and trail you all the way to the gate. " +
-                "Word reaches Prince, who purrs about it for days.",
-                resolution.Result);
+                "Word reaches Prince, who purrs about it for days."));
             var effect = resolution.Effects.Single();
             Assert.AreEqual(EventEffectKind.PrincesFavor, effect.Kind);
             Assert.AreEqual(10, effect.Amount);
@@ -513,11 +527,12 @@ namespace PrincesPalace.Domain.Tests
             }
 
             var resolution = EventFlow.Resolve(page, index, context);
-            Assert.IsTrue(resolution.IsLeave);
-            Assert.AreEqual(
+            Assert.IsFalse(resolution.IsLeave, "the result plays on its own page");
+            Assert.AreEqual("cold_one", resolution.NextPageId);
+            Assert.AreEqual("", resolution.Result);
+            AssertLines("cold_one", ("narration", N,
                 "It's cold, it's crisp, and it goes straight to everyone's head. " +
-                "Whatever waits down the road, the party meets it at full strength.",
-                resolution.Result);
+                "Whatever waits down the road, the party meets it at full strength."));
             Assert.AreEqual(EventEffectKind.FillSpecialPool, resolution.Effects.Single().Kind);
         }
 

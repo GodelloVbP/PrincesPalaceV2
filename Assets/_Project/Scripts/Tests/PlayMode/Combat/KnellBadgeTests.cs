@@ -44,10 +44,10 @@ namespace PrincesPalace.PlayModeTests
             var (session, shawn, bell) = KnellBadgeFixture.Bind(_fight);
             yield return KnellBadgeFixture.Settle(_fight);
 
-            // THE CHAINS: Pull kind, no number, the callout names what follows.
+            // THE CHAINS: Pull kind, no number, the callout names only the move.
             Assert.AreEqual(EnemyIntentKind.Pull, session.IntentDetailFor(bell).Value.Kind);
             Assert.IsFalse(KnellBadgeFixture.Value(_fight).gameObject.activeInHierarchy, "a pull deals nothing");
-            Assert.AreEqual("Dark Chains! Death Knell next", KnellBadgeFixture.Callout(_fight).text);
+            Assert.AreEqual("Dark Chains!", KnellBadgeFixture.Callout(_fight).text);
 
             // THE KNELL, at the front where the chains left him: lethal.
             KnellBadgeFixture.ToTheKnell(_fight, session, bell);
@@ -64,7 +64,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(Hex(FightHudPalette.IntentLethal), value.color);
             Assert.AreEqual(Hex(FightHudPalette.IntentLethal), KnellBadgeFixture.Badge(_fight).color,
                 "the lethal style tints the icon too");
-            Assert.AreEqual("Death Knell! Step back", KnellBadgeFixture.Callout(_fight).text);
+            Assert.AreEqual("Death Knell!", KnellBadgeFixture.Callout(_fight).text);
 
             // A FREE PASSAGE to the middle, through the controller's own
             // post-action path: the same badge, a smaller number, not lethal.
@@ -79,7 +79,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(middle.ExpectedDamage.ToString(), value.text, "the badge re-read the seat");
             Assert.AreEqual(Hex(FightHudPalette.IntentNumber), value.color);
             Assert.AreEqual(Hex(EnemyIntentIcons.TintFor(EnemyIntentKind.Knell)), KnellBadgeFixture.Badge(_fight).color);
-            Assert.AreEqual("Death Knell! Step back", KnellBadgeFixture.Callout(_fight).text);
+            Assert.AreEqual("Death Knell!", KnellBadgeFixture.Callout(_fight).text);
         }
 
         private static Color Hex(string hex)

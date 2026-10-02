@@ -1,10 +1,10 @@
 {
-  "_readme": "Event rooms: a small graph of pages with art, body text and gated choices. Edit this file, then run Prince's Palace > Build Default Content. An event id is persisted in the run's eventsSeen list, so NEVER RENAME ONE after a save exists -- the player would see it again on the very next eligible floor. A counter id (see wishing_well_tosses below) is a profile-save value that survives EndRun; renaming one loses whatever it was tracking. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md. Full walkthrough: docs/EVENTS.md.",
+  "_readme": "Event rooms: a small graph of pages with art, body text and gated choices. Edit this file, then run Prince's Palace > Build Default Content. An event id is persisted in the run's eventsSeen list, so NEVER RENAME ONE after a save exists -- the player would see it again on the very next eligible floor. A counter id (see demo_tosses below) is a profile-save value that survives EndRun; renaming one loses whatever it was tracking. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md. Full walkthrough: docs/EVENTS.md.",
 
   "events": [
     {
-      "id": "demo_wishing_well",
-      "floors": [],
+      "id": "demo_mechanics",
+      "floors": [999],
       "requires": [],
       "pages": [
         {
@@ -28,12 +28,12 @@
               "hiddenUntilMet": false,
               "effects": [
                 { "kind": "gold", "amount": -5 },
-                { "kind": "counter", "counter": "wishing_well_tosses", "amount": 1 }
+                { "kind": "counter", "counter": "demo_tosses", "amount": 1 }
               ],
               "outcomes": [
                 {
                   "requires": [
-                    { "kind": "counter", "counter": "wishing_well_tosses", "min": 10, "max": 10 }
+                    { "kind": "counter", "counter": "demo_tosses", "min": 10, "max": 10 }
                   ],
                   "effects": [
                     { "kind": "exp", "amount": 50 }
@@ -302,8 +302,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 200 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -312,8 +312,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 190 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -322,8 +322,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 180 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -332,8 +332,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 170 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -342,8 +342,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 160 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -352,8 +352,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 150 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -362,8 +362,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 140 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -372,8 +372,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 130 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -382,8 +382,8 @@
                   "effects": [
                     { "kind": "gold", "amount": 120 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [
@@ -392,16 +392,16 @@
                   "effects": [
                     { "kind": "gold", "amount": 110 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 },
                 {
                   "requires": [],
                   "effects": [
                     { "kind": "gold", "amount": 100 }
                   ],
-                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "peacock"
                 }
               ]
             },
@@ -416,8 +416,8 @@
                   "effects": [
                     { "kind": "princesFavor", "amount": 10 }
                   ],
-                  "result": "The fawns eat out of your hand and trail you all the way to the gate. Word reaches Prince, who purrs about it for days.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "fawns"
                 }
               ]
             },
@@ -434,8 +434,8 @@
                   "effects": [
                     { "kind": "fillSpecialPool", "amount": 1 }
                   ],
-                  "result": "It's cold, it's crisp, and it goes straight to everyone's head. Whatever waits down the road, the party meets it at full strength.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "cold_one"
                 }
               ]
             }
@@ -504,8 +504,68 @@
           ]
         },
         {
+          "id": "peacock",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/peacock.png",
+          "title": "The Peacock",
+          "body": "",
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins." }
+          ],
+          "choices": [
+            {
+              "text": "Say goodbye",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fawns",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/fawns.png",
+          "title": "The Fawns",
+          "body": "",
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "The fawns eat out of your hand and trail you all the way to the gate. Word reaches Prince, who purrs about it for days." }
+          ],
+          "choices": [
+            {
+              "text": "Say goodbye",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cold_one",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/cold_one.png",
+          "title": "A Cold One",
+          "body": "",
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "It's cold, it's crisp, and it goes straight to everyone's head. Whatever waits down the road, the party meets it at full strength." }
+          ],
+          "choices": [
+            {
+              "text": "Say goodbye",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
           "id": "step1_pair",
-          "artPath": "",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/step1.png",
           "title": "A Sheep?",
           "body": "",
           "cast": [
@@ -539,7 +599,7 @@
         },
         {
           "id": "step1_solo",
-          "artPath": "",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/step1.png",
           "title": "A Sheep?",
           "body": "",
           "cast": [
@@ -1021,27 +1081,116 @@
                     { "kind": "inParty", "character": "owl", "alive": true }
                   ],
                   "effects": [],
-                  "result": "\"Gone?\" Bjorn frowns. \"You touched it and let go.\" Odette nods: a second, no more. Neither of them hears the flock still walking behind the trees.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "endure_both"
                 },
                 {
                   "requires": [ { "kind": "inParty", "character": "bear", "alive": true } ],
                   "effects": [],
-                  "result": "\"Gone?\" Bjorn frowns. \"You touched it and let go. A second, no more.\" He does not hear the flock still walking behind the trees.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "endure_bjorn"
                 },
                 {
                   "requires": [ { "kind": "inParty", "character": "owl", "alive": true } ],
                   "effects": [],
-                  "result": "Odette tilts her head. \"A second, Shawn. You touched it and let go.\" She does not hear the flock still walking behind the trees.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "endure_odette"
                 },
                 {
                   "requires": [],
                   "effects": [],
-                  "result": "No one is standing to tell him. The fog does not say. Behind the trees, soft as breath, the flock is still walking.",
-                  "goTo": "Leave"
+                  "result": "",
+                  "goTo": "endure_alone"
                 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "endure_both",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/endure.png",
+          "title": "The Flock",
+          "body": "",
+          "cast": [ { "character": "bear", "side": "right" }, { "character": "owl", "side": "right" } ],
+          "lines": [
+            { "speaker": "bear", "expression": "neutral", "text": "Gone? You touched it and let go." },
+            { "speaker": "owl", "expression": "neutral", "text": "A second, Shawn. No more." },
+            { "speaker": "narration", "expression": "", "text": "Neither of them hears the flock still walking behind the trees." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "endure_bjorn",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/endure.png",
+          "title": "The Flock",
+          "body": "",
+          "cast": [ { "character": "bear", "side": "right" } ],
+          "lines": [
+            { "speaker": "bear", "expression": "neutral", "text": "Gone? You touched it and let go. A second, no more." },
+            { "speaker": "narration", "expression": "", "text": "He does not hear the flock still walking behind the trees." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "endure_odette",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/endure.png",
+          "title": "The Flock",
+          "body": "",
+          "cast": [ { "character": "owl", "side": "right" } ],
+          "lines": [
+            { "speaker": "owl", "expression": "neutral", "text": "A second, Shawn. You touched it and let go." },
+            { "speaker": "narration", "expression": "", "text": "She does not hear the flock still walking behind the trees." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "endure_alone",
+          "artPath": "Assets/_Project/Art/Events/bell_in_the_fog/endure.png",
+          "title": "The Flock",
+          "body": "",
+          "cast": [],
+          "lines": [
+            { "speaker": "narration", "expression": "", "text": "No one is standing to tell him. The fog does not say." },
+            { "speaker": "narration", "expression": "", "text": "Behind the trees, soft as breath, the flock is still walking." }
+          ],
+          "choices": [
+            {
+              "text": "Leave",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
               ]
             }
           ]

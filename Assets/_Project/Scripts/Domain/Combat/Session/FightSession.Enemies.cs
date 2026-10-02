@@ -593,9 +593,10 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // The plate line itself, without the break: "" for no threat, else
-        // "Roar!", with what the telegraph owes the player after it --
-        // "Dark Chains! Death Knell next" for a sequence with a step to come,
-        // "Death Knell! Step back" when a seat further back takes less.
+        // "Roar!". It names the move and stops: a sequence's next step and
+        // the safer seat are the player's to work out from the badge and its
+        // number, so neither is spelled out here (Intent.Then and
+        // StepBackIsSafer stay on the intent for the badge and the bot).
         public string TelegraphLine(CombatantState enemy)
         {
             var detail = IntentDetailFor(enemy);
@@ -605,10 +606,7 @@ namespace PrincesPalace.Domain.Combat.Session
             string label = intent.Label;
             if (string.IsNullOrEmpty(label) || label == IntentAttack || label == IntentForfeit) return "";
 
-            string line = label + "!";
-            if (!string.IsNullOrEmpty(intent.Then)) line += " " + intent.Then + " next";
-            if (intent.StepBackIsSafer) line += " Step back";
-            return line;
+            return label + "!";
         }
 
         // Resolves every enemy turn between now and the player's next REAL one,

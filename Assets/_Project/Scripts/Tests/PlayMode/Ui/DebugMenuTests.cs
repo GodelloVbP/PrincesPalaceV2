@@ -384,15 +384,15 @@ namespace PrincesPalace.PlayModeTests
             SharedScene.MarkDirty("opens an event over the hub, which this fixture has no cheap way to close");
             RunManager.StartRun(20260923UL);
             Select(DebugCategory.Tools);
-            Click(RowLabelled("OPEN EVENT: demo_wishing_well"));
+            Click(RowLabelled("OPEN EVENT: demo_mechanics"));
             yield return null;
 
             Assert.IsTrue(RunOrchestrator.EventIsOpen);
-            Assert.AreEqual("demo_wishing_well", RunManager.Run.eventId);
+            Assert.AreEqual("demo_mechanics", RunManager.Run.eventId);
             Assert.AreEqual(RunManager.Run.currentNodeId, RunManager.Run.eventNodeId);
 
             SaveSlotManager.Forget();
-            Assert.AreEqual("demo_wishing_well", Save.activeRun.eventId, "and it reached the disk");
+            Assert.AreEqual("demo_mechanics", Save.activeRun.eventId, "and it reached the disk");
         }
 
         [UnityTest]
@@ -402,13 +402,13 @@ namespace PrincesPalace.PlayModeTests
 
             Select(DebugCategory.Tools);
             Click("DebugQty2"); // x10
-            Click(RowLabelled("wishing_well_tosses: +"));
+            Click(RowLabelled("demo_tosses: +"));
             yield return null;
-            Assert.AreEqual(10, Save.EventCounter("wishing_well_tosses"));
+            Assert.AreEqual(10, Save.EventCounter("demo_tosses"));
 
-            Click(RowLabelled("wishing_well_tosses: RESET"));
+            Click(RowLabelled("demo_tosses: RESET"));
             yield return null;
-            Assert.AreEqual(0, Save.EventCounter("wishing_well_tosses"));
+            Assert.AreEqual(0, Save.EventCounter("demo_tosses"));
         }
 
         // ---- items --------------------------------------------------------------------

@@ -694,10 +694,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -722,10 +721,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -750,10 +748,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -778,10 +775,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -806,10 +802,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -834,10 +829,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -862,10 +856,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -890,10 +883,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -918,10 +910,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires:
           - Kind: 2
             CharacterId: 
@@ -946,10 +937,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
         - Requires: []
           Effects:
           - Kind: 0
@@ -963,10 +953,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: peacock
+          IsLeave: 0
       - Text: Feed the fawns
         Requires: []
         HiddenUntilMet: 0
@@ -985,10 +974,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The fawns eat out of your hand and trail you all the way to the
-            gate. Word reaches Prince, who purrs about it for days.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: fawns
+          IsLeave: 0
       - Text: Crack open a cold one
         Requires:
         - Kind: 1
@@ -1018,10 +1006,9 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: It's cold, it's crisp, and it goes straight to everyone's head.
-            Whatever waits down the road, the party meets it at full strength.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: cold_one
+          IsLeave: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1149,8 +1136,86 @@ MonoBehaviour:
         Text: Still, a scratch is a scratch, if anyone cares to give it one.
         IsEventSpeaker: 0
         ExpressionName: 
+    - Id: peacock
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/peacock.png
+      Title: The Peacock
+      Body: 
+      Choices:
+      - Text: Say goodbye
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The peacock looks your strut up and down, then fans its tail in grudging
+          approval. The crowd along the fence throws coins.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    - Id: fawns
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/fawns.png
+      Title: The Fawns
+      Body: 
+      Choices:
+      - Text: Say goodbye
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The fawns eat out of your hand and trail you all the way to the gate.
+          Word reaches Prince, who purrs about it for days.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    - Id: cold_one
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/cold_one.png
+      Title: A Cold One
+      Body: 
+      Choices:
+      - Text: Say goodbye
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: It's cold, it's crisp, and it goes straight to everyone's head. Whatever
+          waits down the road, the party meets it at full strength.
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: step1_pair
-      ArtKey: 
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/step1.png
       Title: A Sheep?
       Body: 
       Choices:
@@ -1214,7 +1279,7 @@ MonoBehaviour:
         IsEventSpeaker: 0
         ExpressionName: 
     - Id: step1_solo
-      ArtKey: 
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/step1.png
       Title: A Sheep?
       Body: 
       Choices:

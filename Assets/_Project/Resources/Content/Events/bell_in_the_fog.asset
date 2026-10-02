@@ -413,11 +413,9 @@ MonoBehaviour:
             RequireStanding: 1
             AuthoredReason: 
           Effects: []
-          Result: '"Gone?" Bjorn frowns. "You touched it and let go." Odette nods:
-            a second, no more. Neither of them hears the flock still walking behind
-            the trees.'
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: endure_both
+          IsLeave: 0
         - Requires:
           - Kind: 0
             CharacterId: bear
@@ -431,10 +429,9 @@ MonoBehaviour:
             RequireStanding: 1
             AuthoredReason: 
           Effects: []
-          Result: '"Gone?" Bjorn frowns. "You touched it and let go. A second, no
-            more." He does not hear the flock still walking behind the trees.'
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: endure_bjorn
+          IsLeave: 0
         - Requires:
           - Kind: 0
             CharacterId: owl
@@ -448,16 +445,14 @@ MonoBehaviour:
             RequireStanding: 1
             AuthoredReason: 
           Effects: []
-          Result: Odette tilts her head. "A second, Shawn. You touched it and let
-            go." She does not hear the flock still walking behind the trees.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: endure_odette
+          IsLeave: 0
         - Requires: []
           Effects: []
-          Result: No one is standing to tell him. The fog does not say. Behind the
-            trees, soft as breath, the flock is still walking.
-          GoTo: 
-          IsLeave: 1
+          Result: 
+          GoTo: endure_alone
+          IsLeave: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep
@@ -501,6 +496,149 @@ MonoBehaviour:
         Text: How long was I gone?
         IsEventSpeaker: 0
         ExpressionName: nervous
+    - Id: endure_both
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/endure.png
+      Title: The Flock
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: bear
+        Side: 1
+      - CharacterId: owl
+        Side: 1
+      Lines:
+      - SpeakerId: bear
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Gone? You touched it and let go.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: A second, Shawn. No more.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Neither of them hears the flock still walking behind the trees.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    - Id: endure_bjorn
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/endure.png
+      Title: The Flock
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: bear
+        Side: 1
+      Lines:
+      - SpeakerId: bear
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Gone? You touched it and let go. A second, no more.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: He does not hear the flock still walking behind the trees.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    - Id: endure_odette
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/endure.png
+      Title: The Flock
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast:
+      - CharacterId: owl
+        Side: 1
+      Lines:
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: A second, Shawn. You touched it and let go.
+        IsEventSpeaker: 0
+        ExpressionName: neutral
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: She does not hear the flock still walking behind the trees.
+        IsEventSpeaker: 0
+        ExpressionName: 
+    - Id: endure_alone
+      ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/endure.png
+      Title: The Flock
+      Body: 
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
+      Cast: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: No one is standing to tell him. The fog does not say.
+        IsEventSpeaker: 0
+        ExpressionName: 
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Behind the trees, soft as breath, the flock is still walking.
+        IsEventSpeaker: 0
+        ExpressionName: 
     - Id: break
       ArtKey: Assets/_Project/Art/Events/bell_in_the_fog/bell_broken.png
       Title: The Broken Bell

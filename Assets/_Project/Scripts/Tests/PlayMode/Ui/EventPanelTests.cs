@@ -20,13 +20,13 @@ namespace PrincesPalace.PlayModeTests
     // it: a walk into the room, pointer clicks on rows, and pad input through
     // the real NavigationInputModule (ShopGamepadNavigationTests' rig).
     //
-    // The event is demo_wishing_well: LoadTheMap marks every other authored
+    // The event is demo_mechanics: LoadTheMap marks every other authored
     // event seen, so a pool of one always picks it. Its words are pinned as literals here on purpose --
     // this is the file that notices when the panel shows something other than
     // what the author wrote.
     public class EventPanelTests
     {
-        private const string DemoCounter = "wishing_well_tosses";
+        private const string DemoCounter = "demo_tosses";
         private const string TossText = "Toss a coin (5 gold)";
         private const string ShawnText = "Call on Shawn's luck";
         private const string LevelText = "Recite a well-worn prayer";
@@ -86,12 +86,13 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(SeedWithAnEventInTheFirstColumn());
             _eventNode = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Event);
             RunManager.Run.gold = 100;
+            RunManager.Run.floor = 999; // the fixture event is authored for floor 999 only
 
             // Every other authored event (petting_zoo, ...) counts as seen
             // this run, so the walk-in rolls the demo from a pool of one.
             foreach (var definition in ContentDatabase.Events)
             {
-                if (definition.id != "demo_wishing_well") RunManager.Run.eventsSeen.Add(definition.id);
+                if (definition.id != "demo_mechanics") RunManager.Run.eventsSeen.Add(definition.id);
             }
 
             SaveSlotManager.SaveCurrent();

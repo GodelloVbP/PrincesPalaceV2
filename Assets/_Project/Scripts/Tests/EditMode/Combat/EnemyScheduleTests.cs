@@ -172,8 +172,8 @@ namespace PrincesPalace.Domain.Tests
             var intent = session.IntentDetailFor(bell).Value;
             Assert.AreEqual(Chains, intent.Label);
             Assert.AreEqual(Knell, intent.Then);
-            Assert.AreEqual("Dark Chains! Death Knell next", session.TelegraphLine(bell));
-            Assert.AreEqual("\nDark Chains! Death Knell next", session.TelegraphSuffix(bell, isPlayerTurn: true));
+            Assert.AreEqual("Dark Chains!", session.TelegraphLine(bell));
+            Assert.AreEqual("\nDark Chains!", session.TelegraphSuffix(bell, isPlayerTurn: true));
             StringAssert.EndsWith("\nDeath Knell next", FightHudModel.IntentTooltip("Bell", intent));
 
             Play(session, bell, 1);
