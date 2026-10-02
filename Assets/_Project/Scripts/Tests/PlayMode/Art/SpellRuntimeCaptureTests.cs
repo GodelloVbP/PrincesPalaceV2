@@ -331,6 +331,17 @@ namespace PrincesPalace.PlayModeTests
             int frame = 0;
             bool reached;
 
+            // THE FRAME THE AUTHORED HIT CUE FIRST SHOWS ON. The cue is
+            // crossed during Update, after the frame just written, so the
+            // first picture that carries it is the next one. tools/spell_feel.py
+            // reads it from the timing file to mark contact instead of
+            // guessing it off the pixels.
+            int hitFrame = -1;
+            module.HitCueCrossedForTest = h =>
+            {
+                if (hitFrame < 0 && h.Equals(handle)) hitFrame = frame + 1;
+            };
+
             do
             {
                 if (AnythingDrawn(fight)) lit++;
@@ -347,6 +358,15 @@ namespace PrincesPalace.PlayModeTests
             } while (!reached && frame < LoopSafetyFrames);
 
             int frames = frame;
+            module.HitCueCrossedForTest = null;
+
+            // Pacing and contact for tools/spell_feel.py, beside the frames.
+            File.WriteAllText(
+                Path.Combine(OutputDir, string.Format("spell_{0}_timing.json", SpellId)),
+                string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{{\"spell\":\"{0}\",\"fps\":{1},\"frames\":{2},\"firstDrawnWaitFrames\":{3}," +
+                    "\"clearedSeconds\":{4:F3},\"hitFrame\":{5}}}",
+                    SpellId, CaptureFps, frames, waited, clearedSeconds, hitFrame));
 
             Assert.IsTrue(reached,
                 "'" + SpellId + "' had not reached " + targetCursor.ToString("F2") + "s on its own " +

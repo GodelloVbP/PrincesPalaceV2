@@ -28,6 +28,12 @@ and once both "before" and "after" exist:
 
     before_vs_after.png   the two strips stacked, frame-aligned
 
+A spell runtime series (tools/screenshot.ps1 -Runtime -Spell <id>) is a flat
+folder of spell_<id>_fNN.png, not a label tree, and what it needs beyond the
+strip and GIF is analysis (activity curves, beat timings, warnings), so that
+lives in tools/spell_feel.py, which imports build_strip and write_gif from here
+rather than carrying its own copies.
+
 Usage:
     python tools/capture_strip.py
     python tools/capture_strip.py --label before
@@ -142,13 +148,29 @@ def build_strip(frames, timing, title):
     return strip
 
 
-def write_gif(frames, timing, out_path):
-    interval = float(timing.get("captureIntervalMs", 1000.0 / 30.0))
-    scale = GIF_WIDTH / float(frames[0].size[0])
-    size = (GIF_WIDTH, int(round(frames[0].size[1] * scale)))
+def write_gif(frames, timing, out_path, width=GIF_WIDTH, colors=None, hold_last_ms=0,
+              step=1, disposal=2):
+    """Frames at the interval they were sampled at.
 
-    shots = [f.convert("RGB").resize(size, Image.LANCZOS).convert("P", palette=Image.ADAPTIVE)
-             for f in frames]
+    width/colors/hold_last_ms/step exist for tools/spell_feel.py, which wants a
+    wider GIF at a fixed palette size, no dither, every `step`th frame (60 fps
+    sampled down to 30) and a held last frame. The defaults are the original
+    static-pilot behaviour: colors=None keeps PIL's adaptive convert.
+    """
+    interval = float(timing.get("captureIntervalMs", 1000.0 / 30.0)) * step
+    frames = frames[::step]
+    scale = width / float(frames[0].size[0])
+    size = (width, int(round(frames[0].size[1] * scale)))
+
+    def to_palette(f):
+        rgb = f.convert("RGB")
+        if rgb.size != size:
+            rgb = rgb.resize(size, Image.LANCZOS)
+        if colors is None:
+            return rgb.convert("P", palette=Image.ADAPTIVE)
+        return rgb.quantize(colors=colors, method=Image.MEDIANCUT, dither=Image.NONE)
+
+    shots = [to_palette(f) for f in frames]
 
     # imageio is not installed in this project's toolchain, so the GIF is
     # written by PIL directly. loop=0 means forever, which is what a one-beat
@@ -164,12 +186,13 @@ def write_gif(frames, timing, out_path):
     written = 0.0
     for i in range(len(shots)):
         want = (i + 1) * interval
-        step = max(10, int(round((want - written) / 10.0)) * 10)
-        durations.append(step)
-        written += step
+        step_ms = max(10, int(round((want - written) / 10.0)) * 10)
+        durations.append(step_ms)
+        written += step_ms
+    durations[-1] += hold_last_ms
 
     shots[0].save(out_path, save_all=True, append_images=shots[1:],
-                  duration=durations, loop=0, disposal=2)
+                  duration=durations, loop=0, disposal=disposal)
 
 
 def process(label_dir, label):
