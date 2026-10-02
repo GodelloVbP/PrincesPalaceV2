@@ -632,10 +632,18 @@ namespace PrincesPalace
                 return;
             }
 
-            if (RunOrchestrator.CanLearn(character.definitionId) >= 0)
+            int freeSlot = RunOrchestrator.CanLearn(character.definitionId);
+            if (freeSlot >= 0)
             {
                 var result = RunOrchestrator.LearnSpell(Context, character.definitionId, entry.BookId);
-                if (result.Applied) Refresh();
+                if (result.Applied)
+                {
+                    Refresh();
+
+                    // The pack cell that held the focus is gone; land on the
+                    // book slot the spell took, as the armed paths do.
+                    Select(Cell(bookCells, freeSlot));
+                }
                 return;
             }
 

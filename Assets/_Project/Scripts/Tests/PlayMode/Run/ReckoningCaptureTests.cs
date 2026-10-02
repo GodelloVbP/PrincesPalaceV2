@@ -144,5 +144,51 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(File.Exists(hovered));
             Debug.Log($"[ReckoningCapture] wrote {hovered}");
         }
+
+        // The summary phase's Continue plate against the spoils and tally
+        // rows, at 16:9 and 4:3. The canvas renders at 1 unit per pixel, so the
+        // 4:3 shot is the same canvas cropped to 1440x1080.
+        [UnityTest]
+        public IEnumerator CaptureTheSummaryPages()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter ReckoningCaptureTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
+
+            var reward = Reward();
+            reward.Characters.Add(new CharacterReward("odette", "Odette", 1, 0, 1, 40, 100, 40, expToNextBefore: 100));
+            reward.Characters.Add(new CharacterReward("bjorn", "Bjorn", 1, 0, 1, 60, 100, 60, expToNextBefore: 100));
+
+            _reckoning.Show(reward, Offers());
+            yield return new WaitForSecondsRealtime(1f);
+
+            var offer = _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                .First(b => b.name == "ReckoningOffer0");
+            offer.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(3f);
+
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas);
+            Directory.CreateDirectory(OutputDir);
+
+            var tabs = _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true);
+            foreach (var page in new[] { (tab: "ReckoningTab0", label: "spoils"), (tab: "ReckoningTab2", label: "tally") })
+            {
+                tabs.First(b => b.name == page.tab).onClick.Invoke();
+                yield return new WaitForSecondsRealtime(1.5f);
+
+                CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, $"Reckoning_summary_{page.label}_16x9.png"), 1920, 1080);
+                CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, $"Reckoning_summary_{page.label}_4x3.png"), 1440, 1080);
+            }
+        }
     }
 }

@@ -374,6 +374,31 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        [Test]
+        public void TheSpoilsAndTallyRowsStayAboveContinue()
+        {
+            // Continue's AllowOverlap hides it from the audit, so a row drawn
+            // under the plate passed. Rows 2 of both pages sat 10px under it.
+            foreach (var frame in UiFrames.All)
+            {
+                var all = UiSolver.Solve(Tree(), frame).Descendants().ToList();
+                SolvedNode One(string name) => all.Single(n => n.Name == name);
+
+                var continueRect = One("ReckoningContinueButton").Rect;
+                var offenders = new List<string>();
+
+                for (int i = 0; i < ReckoningScreen.RowCount; i++)
+                {
+                    foreach (var name in new[] { "ReckoningRow" + i, "ReckoningTally" + i })
+                    {
+                        if (One(name).Rect.Overlaps(continueRect)) offenders.Add($"{name} {One(name).Rect} vs Continue {continueRect}");
+                    }
+                }
+
+                CollectionAssert.IsEmpty(offenders, $"at {UiFrames.Describe(frame)}");
+            }
+        }
+
         private static IEnumerable<UiNode> Walk(UiNode node)
         {
             yield return node;

@@ -282,6 +282,35 @@ namespace PrincesPalace.PlayModeTests
             menu.GetComponentsInChildren<Transform>(includeInactive: true)
                 .First(t => t.name == "SystemPane" + key);
 
+        // Left/Right on the strip moves focus without selecting, so EVERY
+        // visible tab -- not only the selected one -- must lead Down into the
+        // shown pane.
+        [UnityTest]
+        public IEnumerator EveryVisibleTab_LinksDownIntoTheShownPane()
+        {
+            yield return LoadHub();
+
+            _menu.Open();
+            yield return null;
+
+            string shown = SystemMenuTabs.PaneOwners[SystemMenuTabs.PaneIndexFor(_menu.SelectedIndex)].Key;
+            int checkedTabs = 0;
+
+            foreach (int index in _menu.VisibleTabs)
+            {
+                var tab = _menu.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                    .First(b => b.name == "SystemTab" + SystemMenuTabs.All[index].Key);
+
+                var down = tab.navigation.selectOnDown;
+                Assert.IsNotNull(down, $"{tab.name} has no Down link");
+                Assert.IsTrue(down.transform.IsChildOf(PaneNamed(_menu, shown)),
+                    $"{tab.name} Down should enter the shown pane ({shown}), not {down.name}");
+                checkedTabs++;
+            }
+
+            Assert.GreaterOrEqual(checkedTabs, 4, "the Camp context shows Character, Party, Options and Exit");
+        }
+
         [UnityTest]
         public IEnumerator TabNext_FromTheDefaultTab_SwitchesToPartyAndSelectsItsPaneEntry()
         {

@@ -499,9 +499,26 @@ namespace PrincesPalace
                 }
             }
 
+            // EVERY visible tab links Down, not just the selected one: Left/Right
+            // on the strip moves focus without selecting, so a focused tab that
+            // is not the selected one would otherwise have no way into the pane.
+            var paneEntry = ActivePaneEntry();
+            var downLinks = new List<UiNavLink<Selectable>?>(visibleButtons.Count);
+            foreach (var button in visibleButtons)
+            {
+                downLinks.Add(RuntimeNavWiring.Link(button, UiNavDirection.Down, paneEntry));
+            }
+
             RuntimeNavWiring.Apply(
                 RuntimeNavWiring.Group("systemMenuTabs", UiNavGroupKind.Rail, visibleButtons),
-                new[] { RuntimeNavWiring.Link(SelectedTabButton(), UiNavDirection.Down, ActivePaneEntry()) });
+                downLinks.ToArray());
+
+            // The context's fallback focus is the pane entry too. A pane whose
+            // entry moves under it (the dossier's selected section row) would
+            // otherwise leave the context pointing at the entry from the last
+            // tab change, and a focused control that vanishes (the pack cell of
+            // a book just equipped) would be replaced by that stale row.
+            RefreshSelectables();
         }
 
         // The selected tab's button, for a pane that links Up to it.
@@ -936,7 +953,6 @@ namespace PrincesPalace
 
             PaintTabLabels();
             RefreshNavLinks();
-            RefreshSelectables();
         }
 
         // The system group's labels are quiet until selected; the game group

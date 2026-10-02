@@ -444,6 +444,60 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ContentDatabase.GetSkill(BookB).Data.DisplayName, DossierPane.TextOf("DossierBook1Caption"));
         }
 
+        // Equipping a pack book used to leave focus on the cell that just vanished,
+        // and the dispatcher's fallback was the menu context's entry from the last
+        // tab change -- the REWARD TRACK row when the menu had opened there, whose
+        // focus shows that section. Any book, any character.
+        [UnityTest]
+        public IEnumerator EquippingAPackBook_NeverJumpsSections_WhateverSectionTheMenuOpenedOn()
+        {
+            foreach (var who in new[] { Shawn, Odette })
+            {
+                yield return OpenOnTheMap(who);
+
+                _dossier.ShowSection(CharacterSection.RewardTrack, focusRow: false);
+                _menu.Open(SystemMenuTab.Character);
+                yield return null;
+                _dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+                yield return null;
+
+                Books(BookB);
+                DossierPane.Select(DossierPane.PackBookCell(_dossier, BookB));
+                DossierPane.Press(DossierPane.PackBookCell(_dossier, BookB));
+                yield return null;
+                yield return null;
+
+                Assert.AreEqual(CharacterSection.Loadout, _dossier.Section, $"{who}: equipping a book changed the section");
+                DossierPane.AssertSelected("DossierBook0", $"{who}: focus should land on the slot the book took");
+            }
+        }
+
+        // The context's fallback focus follows the shown section, not the section
+        // the menu opened on.
+        [UnityTest]
+        public IEnumerator AVanishedFocus_FallsBackToTheShownSectionsRow()
+        {
+            yield return OpenOnTheMap(Shawn);
+
+            _dossier.ShowSection(CharacterSection.RewardTrack, focusRow: false);
+            _menu.Open(SystemMenuTab.Character);
+            yield return null;
+            _dossier.ShowSection(CharacterSection.Loadout, focusRow: false);
+            yield return null;
+
+            Books(BookB);
+            string cell = DossierPane.PackBookCell(_dossier, BookB);
+            DossierPane.Select(cell);
+            yield return null;
+            DossierPane.Need(cell).gameObject.SetActive(false);
+            yield return null;
+            yield return null;
+
+            DossierPane.AssertSelected(DossierPane.SectionRow(CharacterSection.Loadout),
+                "a vanished focus fell back to another section's row");
+            Assert.AreEqual(CharacterSection.Loadout, _dossier.Section);
+        }
+
         // BookPicked: every slot full, so the pack book waits for a slot to
         // replace; the replaced book goes back to the pack.
         [UnityTest]

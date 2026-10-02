@@ -193,8 +193,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // for a name line, a bar and a gain line without the last of the three
         // hanging out of the box. The first attempt was 80 on 92 and the gain
         // label escaped by exactly 8px at every frame.
+        //
+        // The first row's y and this pitch keep the third row's bottom edge above
+        // the Continue plate's top (the plate is 100 tall, see continueSize); the
+        // tally page's row y and pitch in BuildTallyPage do the same.
         private const float RowHeight = 64f;
-        private const float RowPitch = 72f;
+        private const float RowPitch = 64f;
         private const float BarWidth = 900f;
 
         // 26 read as a flat black gap rather than a channel: on a 1344-wide
@@ -568,11 +572,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(420f, 54f), 32,
-                    "#F2DB9E", Place.At(0f, 30f)).AsDecor().Styled(TypographyRole.TacticalData),
+                    "#F2DB9E", Place.At(0f, 42f)).AsDecor().Styled(TypographyRole.TacticalData),
                 Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 32f), 20,
-                    "#B8A8D9", Place.At(0f, -20f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
+                    "#B8A8D9", Place.At(0f, -6f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
                 Ui.Label("ReckoningNoticeLabel", UiString.Runtime, new UiVec(300f, 54f), 15,
-                    "#E8A07A", Place.At(380f, 30f)).AsDecor().Styled(TypographyRole.Body).Inactive(),
+                    "#E8A07A", Place.At(380f, 42f)).AsDecor().Styled(TypographyRole.Body).Inactive(),
             };
 
             GoldLabel = children[0];
@@ -677,12 +681,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningTallyHeading", UiStrings.ReckoningTallyHeading, new UiVec(800f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 40f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
+                    "#B8A8D9", Place.At(0f, 44f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
 
             for (int i = 0; i < RowCount; i++)
             {
-                float y = -30f - i * 88f;
+                float y = -16f - i * 80f;
 
                 var name = Ui.Label("ReckoningTally" + i + "Name", UiString.Runtime, new UiVec(380f, 30f), 20,
                         "#EDE6FF", Place.At(-300f, 20f))
@@ -715,7 +719,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // fight was worth against what they had already.
         private UiNode BuildRow(int index)
         {
-            float y = -70f - index * RowPitch;
+            float y = -52f - index * RowPitch;
 
             var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(300f, 28f), 21,
                     "#EDE6FF", Place.At(-330f, 18f))
