@@ -117,6 +117,7 @@ refuses the rest.
 | System map | `docs/ARCHITECTURE.md` |
 | Code rules | `docs/CODE_STANDARDS.md`, plus `.claude/rules/` (load by path) |
 | Art pipeline | `docs/ART_PIPELINE.md` |
+| Spell feel (timing targets, workflow) | `docs/SPELL_FEEL.md` |
 | Content fields | `docs/CONTENT_SCHEMA.md` |
 | Open debt | `AUDIT.md` |
 

@@ -666,6 +666,8 @@ everything about how one LOOKS is one value in the content — see
 `SpellPresentation`. Adding a spell is a manifest entry, a JSON block, and one
 command; it should not require touching C#.
 
+Timing targets and the workflow for a cast that hits hard: `docs/SPELL_FEEL.md`.
+
 ### The whole loop
 
 ```bash
