@@ -2034,6 +2034,50 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(floor, 300f, "the log's lower edge is below the stage's upper air");
         }
 
+        // ONE AIM RULE FOR EVERY PROJECTILE: a travelling layer's tip arrives on
+        // the struck body's middle, whatever the body's size, and the layer is
+        // turned along the line from where it leaves to that point. The rat is
+        // a long low body and the treant a tall one; a rule that only held for
+        // one of them is the fault this pins.
+        private static readonly string[] BodiesToAimAt = { "Enemies/rat", "Enemies/treant" };
+
+        [UnityTest]
+        public IEnumerator EveryTravellingLayerAimsItsTipAtTheBodyMiddle(
+            [ValueSource(nameof(SkySpells))] string skillId,
+            [ValueSource(nameof(BodiesToAimAt))] string sprite)
+        {
+            yield return LoadFight(1, sprite.EndsWith("treant") ? 1.45f : 1f, sprite);
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+            var performance = _fight.PlacedCastForTest(new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = ShippedVfx(skillId),
+            });
+
+            int checkedLayers = 0;
+            foreach (var instance in performance.Instances)
+            {
+                var layer = instance.Layer;
+                if (!layer.Travels || layer.Orient != SpellOrient.Path || !layer.HasImpactPoint) continue;
+                checkedLayers++;
+
+                var tip = Domain.Stage.SpellFlight.ImpactOffset(layer.impactX, layer.impactY,
+                    instance.Box, instance.DrawFacing, instance.Degrees);
+                var centre = body.Centre;
+                Assert.AreEqual(centre.X, instance.To.X + tip.X, 2f, $"{skillId}.{layer.id}: tip misses the middle horizontally");
+                Assert.AreEqual(centre.Y, instance.To.Y + tip.Y, 2f, $"{skillId}.{layer.id}: tip misses the middle vertically");
+
+                float path = Domain.Stage.SpellFlight.DegreesOf(instance.From + tip, instance.To + tip);
+                float turn = Domain.Stage.SpellFlight.Turn(path, layer.artDegrees, instance.DrawFacing);
+                Assert.AreEqual(turn, instance.Degrees, 0.5f, $"{skillId}.{layer.id}: not turned along its flight");
+            }
+            Assert.Greater(checkedLayers, 0, $"{skillId}: no travelling layer was checked");
+        }
+
         // CROWNFALL LANDS ON THE TREANT, not on the air point beside it: the
         // shatter is centred inside the drawn body and the spike's arrival box
         // covers the body's middle.
