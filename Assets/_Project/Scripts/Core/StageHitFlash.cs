@@ -6,7 +6,7 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
-    // A white silhouette of the actor, flashed on the frame a blow lands.
+    // A light silhouette of the actor, flashed on the frame a blow lands.
     //
     // Needs a SHADER rather than just tinting the Image white, because
     // Image.color MULTIPLIES the texture -- white is the identity there, so a
@@ -26,23 +26,26 @@ namespace PrincesPalace
         public const float HoldSeconds = 0.05f;
         public const float FadeSeconds = 0.16f;
 
-        // THE AFTERGLOW, and the reason the typed flash is two pulses rather
-        // than one: tinting a single full-alpha pulse over the whole
-        // silhouette is not a flash at all -- it is the monster repainted a
-        // colour for a fifth of a second, and three enemies doing it at once
-        // looks like a palette swap.
+        // THE HIT'S FLASH IS ONE PULSE IN THE DAMAGE TYPE'S OWN LIGHT. A
+        // full-white silhouette was the loudest frame of every spell and
+        // identical for all of them, which erased the element at the moment
+        // it should read; an afterglow behind it was a second large flash
+        // per cast (SPELL_FEEL.md, Communication and Guards). So the peak is
+        // the type's palette colour lightened toward white, held for a few
+        // frames, then faded fast. Every tunable of it is here.
         //
-        // So the impact stays white, alpha 1, 0.05 hold and 0.16 fade, and
-        // the element arrives AFTER it, at a little over half strength and
-        // fading twice as slowly. Softer and
-        // longer is what makes the eye read it as light left behind by the
-        // blow rather than as the body's own colour: a hard, brief pulse is an
-        // event, a soft, slow one is a residue, and stacking them in that
-        // order is the only arrangement where the element decorates the hit
-        // instead of replacing it.
-        public const float TypedPeakAlpha = 0.6f;
-        public const float TypedHoldSeconds = 0.06f;
-        public const float TypedFadeSeconds = 0.30f;
+        // The peak is a LIGHT version of the palette colour, not the colour
+        // itself: it has to flash on a dark sprite and on a bright one, and
+        // a saturated fill over the whole silhouette is a palette swap.
+        public const float FrameSeconds = 1f / 60f;
+        public const int HitPeakFrames = 3;
+        public const float HitHoldSeconds = HitPeakFrames * FrameSeconds;
+        public const float HitFadeSeconds = 0.10f;
+        public const float HitPeakAlpha = 1f;
+
+        // How far white is pulled toward the type colour: 0 is white, 1 the
+        // palette colour.
+        public const float HitTintAmount = 0.5f;
 
         // A heal is the same mechanism at a different tempo: softer, greener,
         // and slower, because it is good news rather than an impact.
@@ -141,9 +144,8 @@ namespace PrincesPalace
 
         public void Flash() => Flash(WhiteOnly);
 
-        // THE FLASH, WEARING THE ELEMENT THAT CAUSED IT: white first, the
-        // element second -- see TypedPeakAlpha's own header for why that
-        // order and those numbers.
+        // THE FLASH, IN THE LIGHT OF THE ELEMENT THAT CAUSED IT -- see
+        // HitTintAmount.
         public void Flash(DamageType type) => Flash(PulsesFor(type));
 
         public void FlashHeal() => Flash(HealOnly);
@@ -154,10 +156,7 @@ namespace PrincesPalace
 
         // A SHIELD ATE PART OF THE BLOW: the ordinary (or typed) flash
         // still opens it, because the hit landed and mattered, and the
-        // barrier rides in AFTER as a third pulse -- the identical
-        // "residue trails the impact" arrangement Flash(DamageType) already
-        // uses for an element (TypedPeakAlpha's own header), extended by
-        // one more pulse rather than given a second mechanism.
+        // barrier rides in AFTER as a second pulse.
         public void FlashPartiallyWarded(DamageType type)
         {
             var hit = PulsesFor(type);
@@ -168,48 +167,32 @@ namespace PrincesPalace
         }
 
         // WHAT A TYPE FLASHES, AS DATA, and the pure seam the numbers are
-        // pinned through: no scene, no coroutine, no frame, the same posture
-        // AlphaAt below already takes.
+        // pinned through: no scene, no coroutine, no frame.
         //
-        // PHYSICAL IS ONE PULSE, NOT TWO OF THE SAME COLOUR. Its tint is
-        // white (TintFor, below), so a second white pulse would be a second
-        // flash of the identical colour -- the ordinary swing, which is most
-        // of the blows in the game, flashing twice. It gets exactly the
-        // single pulse it has always had.
-        public static Pulse[] PulsesFor(DamageType type)
-        {
-            if (type == DamageType.Physical) return WhiteOnly;
+        // ONE PULSE FOR EVERY TYPE. A beat carries a single DamageType (the
+        // declared one, else the actor's attack type -- CombatBeat.DamageType),
+        // so a multi-element hit has already been resolved to its first
+        // element by the time it reaches here; nothing is alternated.
+        public static Pulse[] PulsesFor(DamageType type) =>
+            new[] { new Pulse(TintFor(type), HitHoldSeconds, HitFadeSeconds, HitPeakAlpha) };
 
-            return new[]
-            {
-                WhiteOnly[0],
-                new Pulse(TintFor(type), TypedHoldSeconds, TypedFadeSeconds, TypedPeakAlpha),
-            };
-        }
-
-        // ONE HOME FOR THE COLOUR, and it is the palette the damage NUMBER
-        // already uses (DamagePopup.ColorForDamageType reads the very same
-        // hex) -- so the flash and the figure floating off it cannot come out
-        // two different greens.
-        //
-        // PHYSICAL IS PURE WHITE, DELIBERATELY NOT ITS TOKEN. FightHudPalette
-        // .DamageTypePhysical is #ED423D, the popup's flat alarm red, which
-        // is right for a number and wrong for a silhouette: every ordinary
-        // swing in the game has flashed white since the effect existed, and
-        // this pass was asked to colour the OTHER elements rather than to
-        // restyle the one the player sees most. The white is therefore an
-        // exception with a reason rather than a missing case.
+        // THE PEAK COLOUR: the palette the damage NUMBER already uses
+        // (DamagePopup.ColorForDamageType reads the same hex), lightened
+        // toward white by HitTintAmount, so the flash and the figure floating
+        // off it cannot come out two different colours. Physical uses its
+        // token like every other type.
         //
         // Degrades to white rather than to ColorUtility's magenta if a token
-        // ever stops parsing -- a hit that flashes white is the old
-        // behaviour, a hit that flashes magenta is a bug report.
+        // ever stops parsing: a hit that flashes white is the old behaviour,
+        // a hit that flashes magenta is a bug report.
         public static Color TintFor(DamageType type)
         {
-            if (type == DamageType.Physical) return Color.white;
+            if (!ColorUtility.TryParseHtmlString(FightHudPalette.ForDamageType(type), out var parsed))
+                return Color.white;
 
-            return ColorUtility.TryParseHtmlString(FightHudPalette.ForDamageType(type), out var parsed)
-                ? parsed
-                : Color.white;
+            var light = Color.Lerp(Color.white, parsed, HitTintAmount);
+            light.a = 1f;
+            return light;
         }
 
         public void Clear()
@@ -255,14 +238,14 @@ namespace PrincesPalace
         // WAS CALLED, which is the property worth protecting here and the
         // reason this is written flat: the impact frame is the one the damage
         // number, the recoil and the shake all land on, and a seam in front of
-        // the white pulse is a seam in front of the only thing in this file
+        // the first pulse is a seam in front of the only thing in this file
         // that has to be simultaneous with them. FightBeatPlayer's own header
         // records what an innocent-looking extra yield cost when it went in
         // front of every beat in the game.
         //
         // Everything after that first assignment is free to cost a frame --
-        // the gap between the white fading out and the element coming up is a
-        // gap in a residue, not in an impact.
+        // the gap before a barrier pulse is a gap in a residue, not in an
+        // impact.
         private IEnumerator Run(Pulse[] pulses)
         {
             image.enabled = true;

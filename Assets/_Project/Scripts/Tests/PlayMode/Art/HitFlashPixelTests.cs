@@ -181,14 +181,13 @@ namespace PrincesPalace.PlayModeTests
         // and wait for it. Sampled one frame in, a poison flash is white and
         // correct.
 
-        // How long the white pulse lasts at the speed FreezeTime pins, plus a
-        // margin into the typed pulse's own flat hold. Derived rather than
-        // guessed: at 0.05x the white pulse alone is 4.2 seconds, and a frame
-        // count would be a bet on the machine.
-        private static float IntoTheTypedPulse()
+        // Past the end of the hit pulse at the speed FreezeTime pins. Derived
+        // rather than guessed: at 0.05x the pulse alone is seconds long, and a
+        // frame count would be a bet on the machine.
+        private static float PastThePulse()
         {
-            return FightBeatPlayer.Scaled(StageHitFlash.HoldSeconds + StageHitFlash.FadeSeconds)
-                   + FightBeatPlayer.Scaled(StageHitFlash.TypedHoldSeconds) * 0.5f;
+            return FightBeatPlayer.Scaled(StageHitFlash.HitHoldSeconds + StageHitFlash.HitFadeSeconds)
+                   + FightBeatPlayer.Scaled(StageHitFlash.HitHoldSeconds) * 0.5f;
         }
 
         [UnityTest]
@@ -205,10 +204,7 @@ namespace PrincesPalace.PlayModeTests
 
             BuildCanvas(material, flash => flash.Flash(DamageType.Poison));
 
-            // PAST THE WHITE, INTO THE GREEN. Sampled two frames in this
-            // photographed the impact pulse, which is white on purpose, and
-            // the assertions below would have failed on a correct flash.
-            yield return new WaitForSeconds(IntoTheTypedPulse());
+            // At the peak, inside the hold.
             yield return null;
 
             string path = Path.Combine(Path.GetTempPath(), "pp-hitflash-poison-" +
@@ -238,67 +234,35 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator APhysicalFlashStaysThePureWhiteItAlwaysWas()
+        public IEnumerator APhysicalFlashPeaksInALightRed()
         {
-            // The one element deliberately NOT painted from its palette token:
-            // DamageTypePhysical is the popup's alarm red, and every ordinary
-            // swing in the game has flashed white since the effect existed.
             // Read off the Image rather than the framebuffer so this holds
-            // headless too.
+            // headless too. #ED423D lerped halfway to white.
             BuildCanvas(LoadFlashMaterial(), f => f.Flash(DamageType.Physical));
             yield return null;
 
-            Assert.AreEqual(1f, _image.color.r, 0.001f);
-            Assert.AreEqual(1f, _image.color.g, 0.001f);
-            Assert.AreEqual(1f, _image.color.b, 0.001f);
+            Assert.AreEqual(0.9647f, _image.color.r, 0.002f);
+            Assert.AreEqual(0.6294f, _image.color.g, 0.002f);
+            Assert.AreEqual(0.6196f, _image.color.b, 0.002f);
             Assert.AreEqual(1f, _image.color.a, 0.001f);
         }
 
         [UnityTest]
-        public IEnumerator APhysicalFlashNeverGetsASecondPulse()
+        public IEnumerator AFireFlashPeaksInALightOrangeAndIsOffAfterOnePulse()
         {
-            // The one-pulse case, asserted where it is visible: a physical
-            // tint IS white, so a second pulse would be the ordinary swing --
-            // most of the blows in the game -- flashing twice. Past the end
-            // of the white pulse the overlay is off and stays off.
-            BuildCanvas(LoadFlashMaterial(), f => f.Flash(DamageType.Physical));
-
-            yield return new WaitForSeconds(IntoTheTypedPulse());
-            yield return null;
-
-            Assert.IsFalse(_image.enabled,
-                "a physical flash pulsed a second time -- the ordinary swing now flashes twice");
-        }
-
-        [UnityTest]
-        public IEnumerator ATypedFlashLandsWhiteFirstAndTheElementAfterIt()
-        {
-            // The seam between "the tint was chosen" and "the tint was drawn",
-            // and the ORDER the owner asked for. The pixel test above covers
-            // the drawing; this covers the choosing and the sequence on a
-            // machine with no graphics device.
-            var expected = StageHitFlash.TintFor(DamageType.Fire);
-
             BuildCanvas(LoadFlashMaterial(), f => f.Flash(DamageType.Fire));
             yield return null;
 
-            Assert.AreEqual(1f, _image.color.r, 0.001f, "the impact pulse was not white");
-            Assert.AreEqual(1f, _image.color.g, 0.001f, "the impact pulse was not white");
-            Assert.AreEqual(1f, _image.color.b, 0.001f, "the impact pulse was not white");
-            Assert.AreEqual(1f, _image.color.a, 0.001f,
-                "the impact pulse is as hard as it always was -- only what follows it is new");
+            // #FF6A2A lerped halfway to white.
+            Assert.AreEqual(1f, _image.color.r, 0.002f);
+            Assert.AreEqual(0.7078f, _image.color.g, 0.002f);
+            Assert.AreEqual(0.5824f, _image.color.b, 0.002f);
+            Assert.AreEqual(1f, _image.color.a, 0.001f);
 
-            yield return new WaitForSeconds(IntoTheTypedPulse());
+            yield return new WaitForSeconds(PastThePulse());
             yield return null;
 
-            Assert.AreEqual(expected.r, _image.color.r, 0.001f);
-            Assert.AreEqual(expected.g, _image.color.g, 0.001f);
-            Assert.AreEqual(expected.b, _image.color.b, 0.001f);
-
-            // SOFTER, WHICH IS THE WHOLE POINT. At alpha 1 this is a repaint
-            // of the monster; at 0.6 it is light left behind by the blow.
-            Assert.AreEqual(StageHitFlash.TypedPeakAlpha, _image.color.a, 0.001f,
-                "the element pulse is at full strength, which reads as recolouring the figure");
+            Assert.IsFalse(_image.enabled, "a hit flashes once: no second pulse after the first");
         }
 
         private static float Luminance(Color c) => 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
@@ -333,91 +297,63 @@ namespace PrincesPalace.PlayModeTests
         // ---- which colour a type flashes in ---------------------------------
 
         [Test]
-        public void PhysicalIsPureWhiteRatherThanItsPaletteToken()
+        public void PhysicalWearsItsPaletteTokenLightened()
         {
-            // Deliberate: FightHudPalette.DamageTypePhysical is the popup's
-            // flat alarm red, and the ordinary swing's flash was never meant
-            // to change in this pass.
-            Assert.AreEqual(Color.white, StageHitFlash.TintFor(DamageType.Physical));
+            var physical = StageHitFlash.TintFor(DamageType.Physical);
+
+            Assert.AreEqual(0.9647f, physical.r, 0.002f);
+            Assert.AreEqual(0.6294f, physical.g, 0.002f);
+            Assert.AreEqual(0.6196f, physical.b, 0.002f);
         }
 
         [Test]
         public void AnElementalFlashWearsTheSameColourAsItsDamageNumber()
         {
-            // The literal, not a second call into ForDamageType: the flash and
-            // the figure floating off it must not come out two different
-            // greens, and a test that re-derived the expectation could not
-            // tell you when they had.
+            // The literal, not a second call into ForDamageType: the flash is
+            // the figure's colour pulled halfway to white (#A8E63C poison).
             var poison = StageHitFlash.TintFor(DamageType.Poison);
 
-            Assert.AreEqual(0xA8 / 255f, poison.r, 0.005f);
-            Assert.AreEqual(0xE6 / 255f, poison.g, 0.005f);
-            Assert.AreEqual(0x3C / 255f, poison.b, 0.005f);
+            Assert.AreEqual((1f + 0xA8 / 255f) / 2f, poison.r, 0.005f);
+            Assert.AreEqual((1f + 0xE6 / 255f) / 2f, poison.g, 0.005f);
+            Assert.AreEqual((1f + 0x3C / 255f) / 2f, poison.b, 0.005f);
             Assert.AreEqual(1f, poison.a, 0.005f);
         }
 
-        // ---- how many pulses, and how hard (owner 2026-09-19) ---------------
-        //
-        // "Flash like the white but THEN for example green poison, red for
-        // fire." The numbers below are what "but THEN" resolved to, pinned as
-        // literals so retuning one of them is a decision rather than a drift.
+        // ---- how many pulses, and how hard --------------------------------
 
         [Test]
-        public void APhysicalHitIsOnePulseOfPureWhite()
+        public void TheHitConstantsArePinned()
         {
-            var pulses = StageHitFlash.PulsesFor(DamageType.Physical);
-
-            Assert.AreEqual(1, pulses.Length,
-                "a physical tint IS white, so a second pulse would be the ordinary swing flashing twice");
-            Assert.AreEqual(Color.white, pulses[0].Tint);
-            Assert.AreEqual(1f, pulses[0].Peak, 0.0001f);
-            Assert.AreEqual(0.05f, pulses[0].Hold, 0.0001f);
-            Assert.AreEqual(0.16f, pulses[0].Fade, 0.0001f);
+            Assert.AreEqual(3, StageHitFlash.HitPeakFrames);
+            Assert.AreEqual(0.05f, StageHitFlash.HitHoldSeconds, 0.0001f);
+            Assert.AreEqual(0.10f, StageHitFlash.HitFadeSeconds, 0.0001f);
+            Assert.AreEqual(0.5f, StageHitFlash.HitTintAmount, 0.0001f);
+            Assert.AreEqual(1f, StageHitFlash.HitPeakAlpha, 0.0001f);
         }
 
         [Test]
-        public void AnElementalHitIsTheSameWhiteImpactAndThenItsOwnColour()
-        {
-            var pulses = StageHitFlash.PulsesFor(DamageType.Poison);
-
-            Assert.AreEqual(2, pulses.Length);
-
-            // THE IMPACT IS BYTE-FOR-BYTE WHAT IT WAS. Nothing about a
-            // poison tick's contact frame may differ from a sword's -- the
-            // element arrives after it, not instead of it.
-            Assert.AreEqual(Color.white, pulses[0].Tint);
-            Assert.AreEqual(1f, pulses[0].Peak, 0.0001f);
-            Assert.AreEqual(0.05f, pulses[0].Hold, 0.0001f);
-            Assert.AreEqual(0.16f, pulses[0].Fade, 0.0001f);
-
-            // AND THE AFTERGLOW IS SOFTER AND SLOWER. At alpha 1 over the
-            // whole silhouette the tint is a repaint; at 0.6, fading over
-            // nearly twice as long, it is light left behind by the blow.
-            Assert.AreEqual(StageHitFlash.TintFor(DamageType.Poison), pulses[1].Tint);
-            Assert.AreEqual(0.6f, pulses[1].Peak, 0.0001f);
-            Assert.AreEqual(0.06f, pulses[1].Hold, 0.0001f);
-            Assert.AreEqual(0.30f, pulses[1].Fade, 0.0001f);
-        }
-
-        [Test]
-        public void TheAfterglowIsNeverAsHardOrAsBriefAsTheImpact()
-        {
-            // The two properties that make the second pulse read as a residue
-            // rather than as a second hit, stated as an ordering so retuning
-            // either number cannot quietly cross them over.
-            Assert.Less(StageHitFlash.TypedPeakAlpha, 1f);
-            Assert.Greater(StageHitFlash.TypedFadeSeconds, StageHitFlash.FadeSeconds);
-        }
-
-        [Test]
-        public void EveryElementalTypeGetsTheTwoStageTreatment()
+        public void EveryTypeIsOnePulseOfItsLightenedColour()
         {
             foreach (var type in System.Enum.GetValues(typeof(DamageType)).Cast<DamageType>())
             {
-                int expected = type == DamageType.Physical ? 1 : 2;
-                Assert.AreEqual(expected, StageHitFlash.PulsesFor(type).Length,
-                    $"{type} flashes in {StageHitFlash.PulsesFor(type).Length} pulses");
+                var pulses = StageHitFlash.PulsesFor(type);
+
+                Assert.AreEqual(1, pulses.Length, $"{type} flashes in {pulses.Length} pulses");
+                Assert.AreEqual(StageHitFlash.TintFor(type), pulses[0].Tint);
+                Assert.AreEqual(0.05f, pulses[0].Hold, 0.0001f);
+                Assert.AreEqual(0.10f, pulses[0].Fade, 0.0001f);
+                Assert.AreEqual(1f, pulses[0].Peak, 0.0001f);
             }
+        }
+
+        [Test]
+        public void AFireHitPeaksInALightOrange()
+        {
+            var tint = StageHitFlash.PulsesFor(DamageType.Fire)[0].Tint;
+
+            Assert.AreEqual(1f, tint.r, 0.002f);
+            Assert.AreEqual(0.7078f, tint.g, 0.002f);
+            Assert.AreEqual(0.5824f, tint.b, 0.002f);
         }
 
         [Test]
