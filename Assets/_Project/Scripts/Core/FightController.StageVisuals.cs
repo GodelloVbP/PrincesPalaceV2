@@ -646,7 +646,7 @@ namespace PrincesPalace
 
         // THE PLATE HUGS ITS TEXT: authored at its widest (FightScreen's
         // CalloutPlateW), narrowed to the line's own width plus a margin so a
-        // short "Dark Chains! Death Knell next" is not a long empty bar.
+        // short "Dark Chains!" is not a long empty bar.
         private static void FitCalloutPlate(GameObject plate, TMPro.TMP_Text callout)
         {
             if (plate == null || callout == null) return;

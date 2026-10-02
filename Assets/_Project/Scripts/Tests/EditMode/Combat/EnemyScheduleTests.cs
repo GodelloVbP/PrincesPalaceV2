@@ -174,7 +174,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(Knell, intent.Then);
             Assert.AreEqual("Dark Chains!", session.TelegraphLine(bell));
             Assert.AreEqual("\nDark Chains!", session.TelegraphSuffix(bell, isPlayerTurn: true));
-            StringAssert.EndsWith("\nDeath Knell next", FightHudModel.IntentTooltip("Bell", intent));
+            StringAssert.DoesNotContain("Death Knell next", FightHudModel.IntentTooltip("Bell", intent));
 
             Play(session, bell, 1);
             Assert.IsNull(session.IntentDetailFor(bell).Value.Then, "the knell is the pair's last step");

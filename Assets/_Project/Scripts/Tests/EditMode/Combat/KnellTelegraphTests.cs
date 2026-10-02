@@ -12,7 +12,7 @@ namespace PrincesPalace.Domain.Tests
     // THE TELEGRAPH (docs/PLAN_BELLWETHER_KIT.md 1.4, 1.5, 3.8; M4): the
     // Pull/Knell/Bleed kinds, the knell's number for the seat the target
     // stands in NOW (re-read after a Move and after a free Palace Passage
-    // without the monster choosing again), the lethal state and "Step back".
+    // without the monster choosing again), the lethal state.
     // Fixture skills; the seat table [110, 35, 0] is a fixture, not M5's
     // content. Every figure is a literal.
     public class KnellTelegraphTests
@@ -138,7 +138,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(intent.IsLethal, "1100 against 1000 health");
             Assert.AreEqual("Death Knell!", session.TelegraphLine(bell));
             Assert.AreEqual(
-                "Death Knell on Shawn: about 1100 at the front (lethal), 350 in the middle, none at the rear. Step back.",
+                "Death Knell on Shawn: about 1100 at the front (lethal), 350 in the middle, none at the rear.",
                 FightHudModel.IntentTooltip("Bell", intent));
         }
 

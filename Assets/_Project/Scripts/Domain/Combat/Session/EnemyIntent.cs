@@ -124,7 +124,7 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly bool Heals;
 
         // THE NEXT STEP OF A SCHEDULED SEQUENCE ("Death Knell"), or null. Set
-        // at commitment; the plate line and tooltip say "<Then> next".
+        // at commitment; read by the bot and the plate badge, never spelled out to the player.
         public readonly string Then;
 
         // AN AUTHORED CRIT (EnemyAbility.Crits): the blow is a guaranteed

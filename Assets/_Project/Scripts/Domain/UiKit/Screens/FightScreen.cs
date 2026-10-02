@@ -768,8 +768,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     // it. The number sits beside the icon, never on it (the
                     // silhouette is the kind); the callout sits above and
                     // carries only what a sequence or a seat-sized hit owes
-                    // the player ("Dark Chains! Death Knell next", "Death
-                    // Knell! Step back") -- every other badge leaves it blank.
+                    // the player ("Dark Chains!", "Death Knell!") -- every
+                    // other badge leaves it blank.
                     var value = Ui.Label($"EnemyIntentValue{slot}", UiString.Runtime,
                             new UiVec(96f, 40f), 28, FightHudPalette.IntentNumber,
                             Place.Pin(new UiVec(1f, 0.5f), new UiVec(0f, 0.5f), new UiVec(2f, 0f)))

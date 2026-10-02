@@ -1686,9 +1686,9 @@ namespace PrincesPalace.Domain.Combat.Session
             return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}{crit}{lethal}" + ThenLine(intent);
         }
 
-        // "\nDeath Knell next" for a scheduled step with one to come.
-        private static string ThenLine(EnemyIntent intent) =>
-            string.IsNullOrEmpty(intent.Then) ? "" : $"\n{intent.Then} next";
+        // The next step of a sequence is not spelled out: the player reads it
+        // off the plate callout and the badge, not the tooltip.
+        private static string ThenLine(EnemyIntent intent) => "";
 
         private static string KnellSentence(EnemyIntent intent)
         {
@@ -1717,7 +1717,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             string who = string.IsNullOrEmpty(intent.TargetName) ? "someone" : intent.TargetName;
             string sentence = $"{intent.Label} on {who}: {string.Join(", ", parts)}.";
-            return intent.StepBackIsSafer ? sentence + " Step back." : sentence;
+            return sentence;
         }
     }
 }
