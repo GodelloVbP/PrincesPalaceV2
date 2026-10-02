@@ -67,6 +67,7 @@ MonoBehaviour:
         render: sprite
         place: sky
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/blackglass_spear
@@ -91,6 +92,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -124,6 +126,7 @@ MonoBehaviour:
         render: still
         place: layer:spear
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.6
         path: Spells/blackglass_spear_rift
@@ -148,6 +151,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -181,6 +185,7 @@ MonoBehaviour:
         render: emitter
         place: layer:spear
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.6
         path: 
@@ -205,6 +210,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -238,6 +244,7 @@ MonoBehaviour:
         render: still
         place: sky
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.6
         path: Spells/blackglass_spear
@@ -262,6 +269,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0.1
         travelDelay: 0
+        overhang: 0
         orient: path
         artDegrees: -45
         through: 1
@@ -295,6 +303,7 @@ MonoBehaviour:
         render: still
         place: sky
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.6
         path: Spells/blackglass_spear
@@ -319,6 +328,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -352,6 +362,7 @@ MonoBehaviour:
         render: still
         place: sky
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.7
         path: Spells/blackglass_spear
@@ -376,6 +387,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -409,6 +421,7 @@ MonoBehaviour:
         render: still
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: Spells/blackglass_spear
@@ -433,6 +446,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -466,6 +480,7 @@ MonoBehaviour:
         render: sprite
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0.16
         path: Spells/blackglass_spear
@@ -490,6 +505,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -523,6 +539,7 @@ MonoBehaviour:
         render: emitter
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: 
@@ -547,6 +564,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

@@ -67,6 +67,7 @@ MonoBehaviour:
         render: sprite
         place: caster-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/mud_burst
@@ -91,6 +92,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0.1
         travelDelay: 0.2
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

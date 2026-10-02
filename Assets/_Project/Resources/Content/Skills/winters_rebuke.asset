@@ -67,6 +67,7 @@ MonoBehaviour:
         render: sprite
         place: sky
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/winters_rebuke
@@ -91,6 +92,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -124,6 +126,7 @@ MonoBehaviour:
         render: still
         place: sky
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.18
         path: Spells/winters_rebuke
@@ -148,6 +151,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0.16
         travelDelay: 0
+        overhang: 0
         orient: path
         artDegrees: 26
         through: 0
@@ -181,6 +185,7 @@ MonoBehaviour:
         render: still
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: Spells/winters_rebuke
@@ -205,6 +210,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -238,6 +244,7 @@ MonoBehaviour:
         render: sprite
         place: target
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0.12
         path: Spells/winters_rebuke
@@ -262,6 +269,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -295,6 +303,7 @@ MonoBehaviour:
         render: emitter
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: 
@@ -319,6 +328,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

@@ -69,6 +69,7 @@ MonoBehaviour:
         render: sprite
         place: formation
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/cinderfault_ground
@@ -93,6 +94,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0.5
         orient: 
         artDegrees: 0
         through: 0
@@ -126,6 +128,7 @@ MonoBehaviour:
         render: sprite
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/cinderfault_ground
@@ -150,6 +153,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -183,6 +187,7 @@ MonoBehaviour:
         render: sprite
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.2167
         path: Spells/cinderfault_eruption
@@ -207,6 +212,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -240,6 +246,7 @@ MonoBehaviour:
         render: emitter
         place: target
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: 
@@ -264,6 +271,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

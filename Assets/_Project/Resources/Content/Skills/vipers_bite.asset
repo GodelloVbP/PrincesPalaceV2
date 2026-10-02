@@ -67,6 +67,7 @@ MonoBehaviour:
         render: sprite
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/vipers_bite
@@ -91,6 +92,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -124,6 +126,7 @@ MonoBehaviour:
         render: emitter
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: 
@@ -148,6 +151,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -177,6 +181,69 @@ MonoBehaviour:
           endScale: 0.72
           seed: 1067
           weights: []
+      - id: detonate
+        render: emitter
+        place: target-centre
+        follow: 0
+        whenConsumed: Poison
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/vipers_bite_particles
+          rate: 0
+          burst: 16
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 360
+          aimDegrees: 90
+          speedMin: 140
+          speedMax: 340
+          inherit: 0
+          drag: 2.2
+          gravity: 120
+          lifeMin: 0.22
+          lifeMax: 0.4
+          sizeMin: 0.3
+          sizeMax: 0.6
+          spinMin: -120
+          spinMax: 120
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 0.4
+          endScale: 1.4
+          seed: 3301
+          weights:
+          - 0
+          - 0
+          - 1
+          - 1
       layerFormat: 1
       hitCueSeconds: 0.3
     SortOrder: 9

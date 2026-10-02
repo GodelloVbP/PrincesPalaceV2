@@ -65,6 +65,7 @@ MonoBehaviour:
         render: emitter
         place: formation
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: 
@@ -89,6 +90,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

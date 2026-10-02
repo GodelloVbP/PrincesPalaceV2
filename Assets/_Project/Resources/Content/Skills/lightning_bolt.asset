@@ -66,6 +66,7 @@ MonoBehaviour:
         render: still
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/lightning_bolt
@@ -90,6 +91,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -123,6 +125,7 @@ MonoBehaviour:
         render: still
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.09
         path: Spells/lightning_bolt
@@ -147,6 +150,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -180,6 +184,7 @@ MonoBehaviour:
         render: still
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.18
         path: Spells/lightning_bolt
@@ -204,6 +209,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -237,6 +243,7 @@ MonoBehaviour:
         render: still
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.21
         path: Spells/lightning_bolt
@@ -261,6 +268,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -294,6 +302,7 @@ MonoBehaviour:
         render: still
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.26
         path: Spells/lightning_bolt
@@ -318,6 +327,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -351,6 +361,7 @@ MonoBehaviour:
         render: still
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.3
         path: Spells/lightning_bolt
@@ -375,6 +386,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

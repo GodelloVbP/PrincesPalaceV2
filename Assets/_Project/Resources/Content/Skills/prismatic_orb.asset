@@ -166,6 +166,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0
           path: Spells/prismatic_orb_earth_charge
@@ -190,6 +191,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -223,6 +225,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_earth_core
@@ -247,6 +250,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.18
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -280,6 +284,7 @@ MonoBehaviour:
           render: still
           place: layer:core
           follow: 1
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_earth_wake
@@ -304,6 +309,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -337,6 +343,7 @@ MonoBehaviour:
           render: emitter
           place: layer:core
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: 
@@ -361,6 +368,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -402,6 +410,7 @@ MonoBehaviour:
           render: sprite
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: arrival
           offset: 0
           path: Spells/prismatic_orb_earth_contact
@@ -426,6 +435,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -459,6 +469,7 @@ MonoBehaviour:
           render: emitter
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: hit
           offset: 0
           path: 
@@ -483,6 +494,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -545,6 +557,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0
           path: Spells/prismatic_orb_water_charge
@@ -569,6 +582,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -602,6 +616,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_water_core
@@ -626,6 +641,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.25
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -659,6 +675,7 @@ MonoBehaviour:
           render: still
           place: layer:core
           follow: 1
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_water_wake
@@ -683,6 +700,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -716,6 +734,7 @@ MonoBehaviour:
           render: emitter
           place: layer:core
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: 
@@ -740,6 +759,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -773,6 +793,7 @@ MonoBehaviour:
           render: sprite
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: arrival
           offset: 0
           path: Spells/prismatic_orb_water_contact
@@ -797,6 +818,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -830,6 +852,7 @@ MonoBehaviour:
           render: emitter
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: hit
           offset: 0
           path: 
@@ -854,6 +877,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -908,6 +932,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0
           path: Spells/prismatic_orb_fire_charge
@@ -932,6 +957,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -965,6 +991,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_fire_core
@@ -989,6 +1016,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.25
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1022,6 +1050,7 @@ MonoBehaviour:
           render: still
           place: layer:core
           follow: 1
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_fire_wake
@@ -1046,6 +1075,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1079,6 +1109,7 @@ MonoBehaviour:
           render: emitter
           place: layer:core
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: 
@@ -1103,6 +1134,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1136,6 +1168,7 @@ MonoBehaviour:
           render: sprite
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: arrival
           offset: 0
           path: Spells/prismatic_orb_fire_contact
@@ -1160,6 +1193,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1193,6 +1227,7 @@ MonoBehaviour:
           render: emitter
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: hit
           offset: 0
           path: 
@@ -1217,6 +1252,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1271,6 +1307,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0
           path: Spells/prismatic_orb_wind_charge
@@ -1295,6 +1332,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1328,6 +1366,7 @@ MonoBehaviour:
           render: sprite
           place: caster-centre
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_wind_core
@@ -1352,6 +1391,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.25
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1385,6 +1425,7 @@ MonoBehaviour:
           render: still
           place: layer:core
           follow: 1
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: Spells/prismatic_orb_wind_wake
@@ -1409,6 +1450,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1442,6 +1484,7 @@ MonoBehaviour:
           render: emitter
           place: layer:core
           follow: 0
+          whenConsumed: 
           at: release
           offset: 0.1667
           path: 
@@ -1466,6 +1509,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1499,6 +1543,7 @@ MonoBehaviour:
           render: sprite
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: arrival
           offset: 0
           path: Spells/prismatic_orb_wind_contact
@@ -1523,6 +1568,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0
@@ -1556,6 +1602,7 @@ MonoBehaviour:
           render: emitter
           place: target-centre
           follow: 0
+          whenConsumed: 
           at: hit
           offset: 0
           path: 
@@ -1580,6 +1627,7 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          overhang: 0
           orient: 
           artDegrees: 0
           through: 0

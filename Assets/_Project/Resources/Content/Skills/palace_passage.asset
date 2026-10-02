@@ -65,6 +65,7 @@ MonoBehaviour:
         render: sprite
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/palace_passage
@@ -89,6 +90,66 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: ritual_there
+        render: sprite
+        place: counterpart-centre
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0
+        path: Spells/palace_passage
+        seconds: 0.66
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0.14
+        opacity: 1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 390
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.12
+        glow: 1.15
+        impactX: 0.5
+        impactY: 0.48
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -122,6 +183,7 @@ MonoBehaviour:
         render: emitter
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: 
@@ -146,6 +208,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

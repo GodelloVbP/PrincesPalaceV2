@@ -65,6 +65,7 @@ MonoBehaviour:
         render: sprite
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/borrowed_moment
@@ -89,6 +90,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -122,6 +124,7 @@ MonoBehaviour:
         render: emitter
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: 
@@ -146,6 +149,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

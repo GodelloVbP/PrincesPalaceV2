@@ -109,6 +109,7 @@ MonoBehaviour:
             render: sprite
             place: target-centre
             follow: 0
+            whenConsumed: 
             at: release
             offset: 0
             path: Spells/black_ram_impact
@@ -133,6 +134,7 @@ MonoBehaviour:
             aspect: 0
             travelSeconds: 0
             travelDelay: 0
+            overhang: 0
             orient: 
             artDegrees: 0
             through: 0

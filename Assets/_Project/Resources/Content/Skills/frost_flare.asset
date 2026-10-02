@@ -68,6 +68,7 @@ MonoBehaviour:
         render: still
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/frost_flare
@@ -92,6 +93,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -125,6 +127,7 @@ MonoBehaviour:
         render: still
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.1
         path: Spells/frost_flare
@@ -149,6 +152,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -182,6 +186,7 @@ MonoBehaviour:
         render: still
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.24
         path: Spells/frost_flare
@@ -206,6 +211,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -239,6 +245,7 @@ MonoBehaviour:
         render: still
         place: target-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.32
         path: Spells/frost_flare
@@ -263,6 +270,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

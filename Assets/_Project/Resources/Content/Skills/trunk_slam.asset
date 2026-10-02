@@ -64,6 +64,7 @@ MonoBehaviour:
         render: sprite
         place: target
         follow: 0
+        whenConsumed: 
         at: hit
         offset: 0
         path: Vfx/impact_burst
@@ -88,6 +89,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
