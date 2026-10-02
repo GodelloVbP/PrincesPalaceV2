@@ -48,6 +48,7 @@ MonoBehaviour:
         render: sprite
         place: caster
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/toll_of_the_flock
@@ -72,6 +73,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0.55
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

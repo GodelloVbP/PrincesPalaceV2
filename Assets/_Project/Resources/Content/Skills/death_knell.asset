@@ -65,6 +65,7 @@ MonoBehaviour:
         render: sprite
         place: sky
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/death_knell_bell
@@ -89,6 +90,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
@@ -122,14 +124,15 @@ MonoBehaviour:
         render: sprite
         place: target
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0.5
         path: Spells/death_knell_shockwave
-        seconds: 0.5
+        seconds: 0.78
         fps: 0
         startFrame: 0
         until: once
-        fade: 0.12
+        fade: 0.15
         opacity: 1
         dx: 0
         dy: 0
@@ -146,6 +149,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0

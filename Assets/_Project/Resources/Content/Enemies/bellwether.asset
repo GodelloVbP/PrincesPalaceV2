@@ -59,6 +59,7 @@ MonoBehaviour:
         render: sprite
         place: caster-centre
         follow: 0
+        whenConsumed: 
         at: release
         offset: 0
         path: Spells/bellwether_toll_ripple
@@ -83,6 +84,7 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        overhang: 0
         orient: 
         artDegrees: 0
         through: 0
