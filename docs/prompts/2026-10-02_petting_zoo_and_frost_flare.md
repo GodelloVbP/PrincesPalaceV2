@@ -161,3 +161,59 @@ It must NOT read as fire, flame, lava, a flamethrower, or an ember trail: no
 orange, red or gold anywhere, no glow, no sparks, no smoke. It also must not
 read as a poison or acid splash (no green) or as chocolate or a thrown food
 item (matte, gritty, with pebbles and root fibres in it).
+
+## Thorn Tithe: thorns from the ground
+
+Replaces `Spells/Thorn Tithe/thorn_tithe_atlas_v1.png` (and the v2 tail splice),
+whose brown thorn ring around the body reads as a generic aura and blends into
+bark. Verb: the ground grabs. Signature beat: thorns burst UP out of the floor
+under the target at the payoff and stay hooked in (Thorned: it bleeds Nature
+damage every turn and whenever it moves). Audit: `docs/audits/spell_feel_2026-10-02/shawn_rituals.md`.
+
+Paste into ChatGPT:
+
+```
+FOR: Prince's Palace, the "Thorn Tithe" spell (a Nature curse: thorns erupt from the ground under one enemy and hook into it).
+FILE: PNG named exactly  thorn_tithe_atlas_v3.png
+SAVE TO: Assets/_Project/Art/Sheets/Spells/Thorn Tithe/thorn_tithe_atlas_v3.png
+
+A 4x3 sprite sheet of a 2D fantasy game spell effect, 12 equal cells read left to right, top to bottom, wide even gutters, nothing crossing a cell edge. Canvas 1536x1024. Background: flat solid pure green #00FF00, no gradient or shadow. No green of that hue in the subject: the thorns are a pale sage and bone colour, the glow a soft leaf-green that is clearly different from the background.
+Every cell shows the same spot: the ground at the bottom-centre of the cell, where an enemy's feet would be. Nothing above mid-height in cells 1-4.
+Cells 1-4: the ground cracks; a few thin pale-green glowing vein lines spread outward across the soil from the centre, growing each cell. Quiet, low, dim.
+Cell 5: the cracks flare brighter, soil bulges up at the centre.
+Cell 6 (the payoff, biggest and brightest): a burst of long, hooked, pale bone-white thorns with sage-green stems explodes UP out of the ground in a tight fan, reaching to the top third of the cell, with a bright leaf-green flash at their base and flung soil.
+Cells 7-9: the thorns stay up but curl inward and hook, as if they caught something; flash fades; a few torn leaves fall.
+Cells 10-12: the thorns retract down into the ground, the cracks dim, the last cell is a faint green-glowing scar in the soil.
+Style: painterly hand-painted game VFX, bold readable shapes, strong value contrast so pale thorns read on dark bark and dark ground. No text, labels, frames or watermark, no creature, no character.
+```
+
+Then a new recipe using `keyed: "green"` over the 4x3 grid; payoff stays on
+cell 6 (0.30 s hit cue).
+
+## Court of Whispers: the whisperers
+
+Replaces `Spells/Court of Whispers/court_of_whispers_atlas_v1.png`, whose purple
+wisps and floor disc read as a generic curse circle. Verb: unnerve with
+whispers (Feared for 1 turn; Shawn pays with Vulnerable). Signature beat:
+hooded courtier silhouettes lean in around the target and whisper, and the
+target recoils at the payoff.
+
+Paste into ChatGPT:
+
+```
+FOR: Prince's Palace, the "Court of Whispers" spell (an Arcane fear spell: a court of hooded shadow courtiers leans in and whispers to an enemy until it is afraid).
+FILE: PNG named exactly  court_of_whispers_atlas_v2.png
+SAVE TO: Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whispers_atlas_v2.png
+
+A 4x3 sprite sheet of a 2D fantasy game spell effect, 12 equal cells read left to right, top to bottom, wide even gutters, nothing crossing a cell edge. Canvas 1536x1024. Background: flat solid pure green #00FF00, no gradient or shadow. No green anywhere in the subject.
+Every cell is framed around an empty space in the middle where an enemy stands; the effect surrounds that space and never fills it.
+Cells 1-3: three tall, thin hooded figures made of violet-black smoke fade in at the edges of the cell, faceless, only a pale lilac glint where eyes would be. Dim and still.
+Cells 4-5: they lean inward toward the centre, long thin hands raised beside their hoods as if cupping a whisper; faint curling lilac script-like wisps (not letters) drift from the hoods toward the centre.
+Cell 6 (the payoff, the brightest): all three lean in at once, their whisper-wisps converge and flare into a sharp lilac-white burst at the centre's head height, like a sudden shout of light.
+Cells 7-9: the figures straighten and recede back to the edges, wisps unravel and drift upward.
+Cells 10-12: the figures dissolve into smoke; the last cell is a few fading lilac motes.
+Palette: violet-black smoke, lilac and pale lilac-white highlights, matching an Arcane purple (#C69AF1). Style: painterly hand-painted game VFX, bold readable silhouettes, eerie and quiet rather than flashy. No circle, ring or rune disc on the floor. No text, labels, frames or watermark.
+```
+
+Then a new recipe using `keyed: "green"` over the 4x3 grid; payoff stays on
+cell 6 (0.30 s hit cue).
