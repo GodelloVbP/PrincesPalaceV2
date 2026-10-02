@@ -1,28 +1,33 @@
-# Spell feel: making a cast hit hard
+# Spell feel: making a cast land
 
-What made Blackglass Spear land, measured, the principles under it, and a
-workflow that applies them without cloning it.
-How to author the layers themselves: `docs/ART_PIPELINE.md` §5b.
+Principles, measurements and a workflow for strikes and projectiles, with a
+short section on the spells that have no single contact frame (buffs, heals,
+wards, multi-hit, damage over time, staggered area spells). Blackglass Spear is
+the worked example. How to author the layers: `docs/ART_PIPELINE.md` §5b.
 
-## The reference: Blackglass Spear (2026-10-02)
+## The reference: Blackglass Spear
 
-Four captured versions of the same spell, measured on the GIFs in
-`docs/captures/playtest-2026-10-02/blackglass/`. "Activity" is the mean pixel
-difference from the clean end frame over the stage (HUD excluded); "hot" is the
-share of near-white pixels.
+Measured by `tools/spell_feel.py` on raw 60 fps runtime frames, against a tall
+target (treant) and a short one (rat). Source:
+`docs/captures/spell_feel/blackglass_spear_vs_treant/report.json` and
+`..._vs_rat/report.json`.
 
-| Version | Gather : travel | Peak activity | Residue after contact | Owner |
-|---|---|---|---|---|
-| v1 lodged (`blackglass_vs_treant.gif`) | 0.6 : 0.18 | 17 | 1.5 s plateau at ~6 | "doesn't strongly accumulate... flash... tear" |
-| v2 fly-through (`_through.gif`) | 0.6 : 0.18 | 16 | 1.5 s plateau | "slash should dissipate way faster" |
-| v3 speed (`_speed.gif`) | 0.6 : 0.10 | 21 | 0.33 s | "looks good" |
-| v4 final art (`_rift_art.gif`) | 0.6 : 0.10 | 21 | 0.33 s, clean by 1.1 s | "looks very good" |
+| Measure | vs treant | vs rat |
+|---|---|---|
+| Gather | 0.60 s | 0.62 s |
+| Travel | 0.10 s | 0.10 s |
+| Contact frame vs authored `hitCueSeconds` (0.7 s) | frame 42 = authored | frame 43, 1 later |
+| Residue after contact (activity above 25% of its peak) | 0.22 s | 0.37 s |
+| Clean (back to idle level) | 1.12 s into the capture | 1.10 s |
+| Peak activity | 15.3 | 8.0 |
 
-The winning curve: a low, steady build (~5) for 0.6 s, one spike (~21) lasting
-three frames, a clean drop to zero within a third of a second. The losing curve
-had a lower spike and then a long tail. **The tail is what killed it**, not the
-peak: a plateau of leftover effect reads as slow and heavy, and it buries the
-hit under its own aftermath.
+Peak depends on the target's size and the crop, so it is a way to find the
+accent frame, not a target. Gather, travel, contact sync and the short residue
+are the comparable numbers.
+
+An earlier version with a slower flight and a plateau of leftover effect
+lasting ~1.5 s read as slow and heavy. Travel time, wake length and streaks
+changed together between the two, so their separate effects are not known.
 
 Authored values (`skills.json` `blackglass_spear`):
 
@@ -34,107 +39,174 @@ Authored values (`skills.json` `blackglass_spear`):
 | Speed | `streaks` emitter on the spear, `alignFlight`, `lateral` 130, life 0.1-0.2 s | while it flies |
 | Wake | `rift`, `align: flight`, painted tear | 0.2 s + 0.15 fade |
 | Contact | `impact`, punch 0.25; hit cue and sound on arrival | 0.7 s |
-| Residue | `tear`, `settle` shards, `tear-air` haze | all gone by ~1.05 s |
+| Residue | `tear`, `settle` shards, `tear-air` haze | gone ~0.4 s after contact |
 
-## Why it works
-
-1. **Anticipation against release.** Gather 0.6 s, travel 0.1 s: a 6:1 ratio.
-   Power reads from the contrast, not from either half; v1-v2 had the same
-   gather, a slower shot and a long tail, so the two causes are not separated.
-2. **One accent frame at release.** The `fire` starburst is the brightest thing
-   on screen for ~3 frames. The eye needs a single "now".
-3. **Speed shown by what is left behind.** A 6-frame flight is barely seen;
-   the streaks and the wake behind the tip carry the motion. Short particle
-   lives (0.1-0.2 s) read as motion blur, long ones as clutter.
-4. **Follow-through, not a stop.** Stopping at the target soaks up energy;
-   continuing off-screen at arrival speed says there was force to spare. The
-   hit still lands on the body centre, so the payoff is where the eye is.
-5. **Residue leaves fast.** Everything after contact is gone in ~0.35 s. Twice
-   the owner asked to cut lingering effects; nothing in v1-v2's tail added power.
-6. **One line through everything.** Spear, wake and streaks all lie on the
-   flight line: one strong diagonal composition, nothing competing with it.
-7. **Art that means the right thing.** The stand-in wake (a crystal splinter)
-   read as a second spear stuck in the target. The painted tear (opaque void,
-   hot violet-white rim) means "rip". Semantics beat rendering quality.
-8. **Value contrast.** Near-black void with a white-hot rim over a mid-dark
-   backdrop survives a 0.1 s glance.
-9. **Sound on contact.** The cast cue is cut so the hit sound lands on arrival;
-   every travel change re-cut it (`tools/make_spell_cast_cues.py`).
+The spear eases in (u²) into contact, an explicit choice: it accelerates into
+the target instead of arriving at a constant speed.
 
 ## Principles, not a template
 
-Blackglass is one answer, not the shape every spell takes. Copy its numbers or
-its layer stack onto another spell and the roster turns into one effect in nine
-colours. What carries over is the principle under each choice; how a spell
-expresses it is that spell's own.
+Copy Blackglass's numbers or its layer stack onto another spell and the roster
+becomes one effect in nine colours. What carries over is the principle under
+each choice; how a spell expresses it is its own.
 
-| Principle (every spell) | Blackglass's expression (this spell only) | Other honest expressions |
+| Principle (every spell) | Blackglass's expression (this spell only) | Other expressions |
 |---|---|---|
-| Contrast in time: a quiet part makes the loud part loud | 0.6 s gather vs 0.1 s shot | a long silent hold then a sudden eruption; a fast flurry then one slow, heavy blow; a gentle swell with no spike at all for a heal |
-| One moment the eye locks onto | white starburst at release | the ground cracking open; the instant a chain snaps tight; a bell's strike; a heal's single bloom |
+| Contrast in time: a quiet part makes the loud part loud | 0.6 s gather, 0.1 s shot | a long silent hold then an eruption; a fast flurry then one slow heavy blow; a gentle swell with no spike for a heal |
+| One moment the eye locks onto | white starburst at release | the ground cracking open; a chain snapping tight; a bell's strike; a heal's single bloom |
 | Motion shown by what it leaves behind | speed lines and a wake on the flight line | dust kicked up, a ripple in the ground, afterimages, falling petals |
 | The payoff lands where the eye already is | hit on the body centre | on the ground under the target; on the caster for a self-buff |
-| Leftovers clear so the payoff stands alone | everything gone 0.35 s after contact | a heavy spell can hold its aftermath longer on purpose (smoke settling, scorched ground), as long as it stops competing with the payoff |
+| Leftovers clear so the payoff stands alone | residue gone ~0.4 s after contact | a heavy spell can hold its aftermath on purpose (smoke settling, scorched ground) if it stops competing with the payoff |
 | One action line | a single diagonal | a vertical drop, a ring outward, a spiral in, a wave across the floor |
-| The art means the right thing | a tear reads as "rip", not a crystal | each spell names what it does to reality and what it must not read as |
-| Value contrast | black void, white-hot rim | bright on dark, dark on bright, a single saturated hue on a muted scene |
-| Sound on the payoff | hit sound cut to arrival | the sound marks whichever moment is the payoff |
+| The art means the right thing | a tear reads as "rip", not as a crystal stuck in the target | each spell names what it does to reality and what it must not read as |
+| Value contrast | black void, white-hot rim | bright on dark, dark on bright, one saturated hue on a muted scene |
+| Follow-through | continues off-screen at arrival speed: force to spare | stops dead for a crushing blow; sinks into the floor |
 
-The only hard rule across spells is the payoff: sound, damage number and the
-accent land on the same frame. Everything else is a principle to express, not a
-number to hit.
+### Reaction
+
+The target's response carries much of the perceived force: anticipation, action,
+reaction. The reaction is a hurt flash, a flinch or knockback, a brief pause of
+the two actors at contact, and stage shake.
+
+- No global `Time.timeScale` hit-stop (`game-feel` override in `CLAUDE.md`).
+- Stage shake exists: `StageShake` (Core), driven from the beat's impact by
+  `FightBeatPlayer.ShakeStrength`. It moves the two stage containers, not the
+  HUD.
+- A beat-level hit-stop exists: `FightBeatPlayer.HitStopFor` waits
+  0.055-0.18 s (`Domain/Combat/Session/HitStop.cs`) scaled by damage against
+  max health, taken out of the beat's own budget. Whether a spell's VFX
+  layers pause with the actors during it is not verified. Follow-up: confirm,
+  and if layers keep playing through the stop, decide whether they should.
+- Judge the reaction in the capture: flinch and flash start on the contact
+  frame, and the stop is 2-4 frames' worth, not a hitch.
+
+### Communication
+
+The effect says who acted, on whom, which element, how much, and what status.
+
+- Element colour language is fixed across spells: `FightHudPalette.ForDamageType`
+  (`Domain/UiKit/FightHudPalette.cs`, one token per `DamageType`, pinned by
+  `FightHudPaletteDamageTypeTests`), the same tokens the damage popup and the
+  typed hit flash read. Identity choices stay inside that language: a fire spell
+  is not blue.
+- The effect does not cover the damage number, the status badges or faces.
+  Counter-example: in
+  `docs/captures/playtest-2026-10-02/blackglass/blackglass_vs_treant_through_exit.png`
+  the -19 sits under the spear at its exit frame. Check the frame at the number's
+  spawn.
+- A cast aimed at the party (enemy casts, below) must show who is targeted
+  before the hit.
+
+### Budget
+
+- Total cast duration scales with how often the spell plays. A spell plays dozens
+  of times a run; the test is the fortieth cast. A long gather is for the
+  expensive, rare cast; cheap, frequent spells stay short.
+  Content tiers (`manaCost`, `bookTier`, `poolTiers`) show where a spell sits;
+  no duration table is set, judge each against its tier-neighbours.
+- Every spell survives the 1.5x battle-speed preset. `FightBeatPlayer.Pace`
+  (`BeatSpeedMultiplier * PlayerSpeedMultiplier`) scales the beat's waits through
+  `Scaled`; audio clips do not scale, so a cast cue outlasts the blow
+  (`Resources/Audio/README.md`). Capture at 1.5x before accepting a timing.
+- Particle budget: Blackglass's streaks emit 170/s for 0.28 s (~48 particles).
+  Judge by frame cost in the capture and by clutter at the target, not by a cap.
+
+### Guards
+
+- At most 3 large flashes in any second (WCAG 2.3.1 general-flash threshold).
+  Blackglass fires two large white flashes about 0.1 s apart: the release
+  starburst and the target's hurt flash. Two is inside the limit, but a second
+  such cast inside the same second is not. Count flashes in the capture.
+- The project has no reduce-flashing or reduce-shake setting (no such option in
+  `Assets/_Project/Scripts`). Follow-up: add one before the flash and shake
+  budget is relied on.
+
+### Audio
+
+- Layered hit: transient (the click that marks the frame), body, tail.
+- A gather riser. The cast cue is cut as the tail of a riser so its peak lands on
+  the blow (`Resources/Audio/README.md`, "Cast cues are riser tails").
+- Variation against repetition: several takes per sound, as `StatusCues` and
+  `CharacterVoice` do.
+- Sound marks the payoff, whichever moment that is.
+
+### The hard rule
+
+Each payoff's sound, damage number and accent share a frame. For a strike that
+is one frame, the contact. A spell with several payoffs has the rule once per
+payoff. Everything else is a principle to express, not a number to hit.
+
+## Spells without a single contact
+
+- **Buff, heal, ward.** No contact frame. The payoff is the moment the status
+  lands on the target, and the cue for it exists: `Core/StatusCues.cs` plays a
+  sound per status type at the beat's impact. Put the accent and the number on
+  that frame; the build-up before it is the anticipation.
+- **Multi-hit, damage over time, staggered area.** The payoff is per hit. Each
+  hit gets its own sound, number and accent on one frame, The flash budget applies to the
+  sum of all hits in a second.
 
 ## Identity: make each spell its own
 
-Before blocking a spell, pick its signature on these axes and write them in the
-beat sheet. Two spells of the same caster should differ on at least two.
+A new spell needs its own **verb** and its own **signature beat**; the other
+axes follow from those.
 
 - **Verb**: what it does to reality. Pierce, crush, bind, bloom, erupt, freeze,
   unravel. The verb decides the shape of the motion.
-- **Rhythm**: where the weight sits. Long wind-up and instant release
-  (Blackglass), instant release and long aftermath, a pulse train, a slow swell.
-- **Path**: from sky, from the ground, from the caster, appearing on the target,
-  across the whole field.
-- **Material**: glass, fire, frost, earth, light, shadow, wool. It decides the
-  residue (shards, embers, frost, dust) and the sound.
 - **Signature beat**: the one thing only this spell does. Blackglass's is the
-  tear it leaves in the air. If a new spell's signature is "flies fast and leaves
-  a trail", it is Blackglass again; pick another.
-- **Scale**: a personal flick, a heavy blow, a field-wide event. Match the
-  spell's cost and power.
+  tear it leaves in the air. If a new spell's signature is "flies fast and
+  leaves a trail", it is Blackglass again.
+
+Axes that follow: rhythm (where the weight sits), path (sky, ground, caster,
+appearing on the target, whole field), material (decides residue and sound),
+scale (matches cost and power). Changing material and scale alone is a recolour
+and a resize, the clone to avoid.
 
 Reusing a layer field (`through`, `align: flight`, emitter streaks) is fine; the
-fields are tools. Reusing the whole stack, the timings and the signature beat is
-the thing to avoid.
+fields are tools. Reusing the whole stack, the timings and the signature is the
+thing to avoid.
 
 ## Workflow
 
-1. **Write the beat sheet.** The identity axes above, then the beats this spell
-   actually has (not every spell has travel; a buff has no contact). For each
-   beat: what the player should feel and which layer carries it. Ask the owner
-   only about meaning ("what does this spell do to reality?"), never about numbers.
-2. **Check the model before authoring.** §5b lists the layer fields (fly-through
-   `through`, flight-aligned wakes `align: flight`, emitter `alignFlight` +
-   `lateral`). Extend a field only when a beat cannot be authored, and make it
-   general.
+1. **Write the beat sheet.** Verb and signature beat first, then the beats this
+   spell has (not every spell has travel; a buff has no contact). For each beat:
+   what the player should feel and which layer carries it. Ask the owner what the
+   spell does to reality.
+2. **Check the model before authoring.** §5b lists the layer fields. Extend a
+   field only when a beat cannot be authored, and make it general.
 3. **Block it with stand-ins.** Author all layers from existing frames. Get the
-   rhythm right before any new art.
-4. **Capture and measure.** Runtime frame series against a tall target (treant)
-   and a short one (rat): `tools/screenshot.ps1 -Runtime -Spell <id>` with
-   `PP_RUNTIME_VERSUS=<enemy>`. Build the GIF (960 px, ~30 fps, 96 colours, no
-   dither, loop, 1 s hold on the last frame) and read the activity curve. It
-   describes the rhythm; it does not grade it. Look at the frames yourself.
-5. **Check the principles, then the identity.** Is there one moment the eye
-   locks onto? Does the aftermath stop competing with the payoff? Do sound and
-   number land on it? Then put the GIF next to the caster's other spells: if it
-   reads like one of them, change the signature beat, not the timing.
+   rhythm right before any new art. Choose the easing on purpose (ease in
+   into contact, linear, ease out) and write it in the beat sheet.
+4. **Capture and measure.**
+   `tools/spell_feel.ps1 -Spell <id> [-Versus treant,rat]` captures runtime
+   frames at 60 fps, builds the GIF, strip and stills, and writes `report.json`.
+   `-Compare <before>,<after>` diffs two reports; `-ReportOnly` re-measures an
+   existing capture. The report is descriptive. It WARNs on three principles
+   only: a residue tail, no accent frame, contact out of sync with the authored
+   `hitCueSeconds`. Semantics and thresholds: header of `tools/spell_feel.py`.
+   Look at the frames yourself.
+5. **Check the principles, then the identity.** One moment the eye locks onto?
+   Aftermath stops competing with the payoff? Sound and number on it? Reaction and
+   communication clear? Flash count within the guard? Then recapture the caster's
+   other spells and put the GIFs next to each other: if the new one reads like
+   one of them, change the verb or the signature beat, and keep the timing that
+   works. Rhythm is an identity axis, so a spell that shares another's rhythm
+   needs a different signature to stay distinct.
 6. **Commission only the frame that carries meaning.** One painted still on
-   `#00FF00` (dark interiors must stay opaque: green key, never luminance).
-   The prompt names the spell, the file name, the save path, the beat it
-   serves, and what it must NOT read as. Precedent:
+   `#00FF00` (dark interiors stay opaque: green key, never luminance). The
+   prompt names the spell, the file name, the save path, the beat it serves and
+   what it must NOT read as. Precedent:
    `docs/prompts/2026-10-02_petting_zoo_and_frost_flare.md`.
-7. **Slice, recapture, compare.** Re-slice via the recipe, recapture both
-   targets, put the before and after GIFs side by side for the owner.
-8. **Pin it.** A timing test with literals for the beats that matter (travel,
-   hit cue, aftermath hold/fade), precedent
-   `SpellBaselineTimingTests.TheBlackglassSpearFliesFastLeavesABriefWakeAndStreaksAlongIt`.
+7. **Slice, recapture, compare.** Re-slice via the recipe, recapture both targets
+   with `-Compare`, and show the owner before and after as side-by-side GIFs.
+   Ask perceptual questions ("which hits harder?", "which is faster?"); the
+   owner's short notes on speed and timing ("way faster", "0.3 sounds good") are
+   usable input.
+8. **Enemy-cast pass.** Monsters cast real skills (§5b "A monster casting it"),
+   aimed at the party. Capture it from the enemy side: the threat has to read
+   before it lands, and the party's numbers and faces stay uncovered.
+9. **Play it in context.** A real fight at 1.5x battle speed, 4:3 as well as
+   16:9, after many casts of the same spell. The fortieth cast is the test.
+10. **Pin it.** A timing test with literals for the beats that matter (travel,
+    hit cue, aftermath hold and fade), precedent
+    `SpellBaselineTimingTests.TheBlackglassSpearFliesFastLeavesABriefWakeAndStreaksAlongIt`.
