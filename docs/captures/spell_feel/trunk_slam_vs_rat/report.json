@@ -1,0 +1,163 @@
+{
+ "spell": "trunk_slam",
+ "versus": "rat",
+ "fps": 60.0,
+ "speed": 1.0,
+ "presentation_only": false,
+ "analysed_frames": 32,
+ "recorded_frames": 32,
+ "region": {
+  "hud_rects_1920x1080": [
+   [
+    0,
+    0,
+    1920,
+    100
+   ],
+   [
+    0,
+    100,
+    540,
+    240
+   ],
+   [
+    1300,
+    100,
+    1920,
+    420
+   ],
+   [
+    0,
+    920,
+    520,
+    1080
+   ],
+   [
+    0,
+    1030,
+    1920,
+    1080
+   ]
+  ],
+  "hot_level": 235
+ },
+ "params": {
+  "residue_limit": 0.5,
+  "accent_ratio": 1.5,
+  "desync_frames": 2
+ },
+ "measured": {
+  "frames": 32,
+  "fps": 60.0,
+  "floor": 3.168149168733352,
+  "peak": 5.254520069808028,
+  "peak_frame": 12,
+  "peak_s": 0.2,
+  "hot_peak": 0.00018737944337282998,
+  "hot_peak_frame": 2,
+  "hit_frame": 0,
+  "release_frame": 0,
+  "visual_contact_frame": null,
+  "gather_s": 0.0,
+  "travel_s": 0.0,
+  "gather_to_travel": null,
+  "ritual": true,
+  "residue_s": 0.45,
+  "clean_frame": 29,
+  "clean_s": 0.48333333333333334,
+  "clean_after_contact_s": 0.48333333333333334,
+  "typical": 3.6229797005603013
+ },
+ "authored": {
+  "hitCueSeconds": 0.14,
+  "release_s": null,
+  "travel_s": null,
+  "layers": [
+   {
+    "id": "slam",
+    "render": "sprite",
+    "at": "hit",
+    "seconds": 0.28,
+    "until": "once",
+    "glow": 0.9
+   }
+  ]
+ },
+ "stills": {
+  "gather": 0,
+  "release": 0,
+  "contact": 0,
+  "residue": 12,
+  "clean": 29
+ },
+ "warnings": [],
+ "notes": [],
+ "activity": [
+  3.613,
+  3.615,
+  3.638,
+  3.618,
+  3.624,
+  3.604,
+  3.604,
+  3.606,
+  3.592,
+  5.119,
+  5.17,
+  5.121,
+  5.255,
+  4.938,
+  4.581,
+  4.242,
+  3.95,
+  3.701,
+  3.581,
+  3.567,
+  3.571,
+  3.562,
+  3.559,
+  3.622,
+  3.719,
+  3.789,
+  3.759,
+  3.696,
+  3.585,
+  3.168,
+  1.534,
+  0.0
+ ],
+ "hot": [
+  0.00018,
+  0.00018,
+  0.00019,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0
+ ]
+}

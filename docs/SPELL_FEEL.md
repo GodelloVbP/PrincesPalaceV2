@@ -181,7 +181,8 @@ thing to avoid.
    `tools/spell_feel.ps1 -Spell <id> [-Versus treant,rat]` captures runtime
    frames at 60 fps, builds the GIF, strip and stills, and writes `report.json`.
    `-Compare <before>,<after>` diffs two reports; `-ReportOnly` re-measures an
-   existing capture. The report is descriptive. It WARNs on three principles
+   existing capture; `-Speed 1.5` records at the 1.5x preset and compares authored
+   seconds divided by it. The report is descriptive. It WARNs on three principles
    only: a residue tail, no accent frame, contact out of sync with the authored
    `hitCueSeconds`. Semantics and thresholds: header of `tools/spell_feel.py`.
    Look at the frames yourself.
