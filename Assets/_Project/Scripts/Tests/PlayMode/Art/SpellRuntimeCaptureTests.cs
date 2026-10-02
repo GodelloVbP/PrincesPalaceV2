@@ -127,6 +127,11 @@ namespace PrincesPalace.PlayModeTests
         // as FightBeatPlayer.BeatSpeedMultiplier. 1 when unset or unparsable.
         private const string SpeedVariable = "PP_RUNTIME_SPEED";
 
+        // A status every fielded enemy already carries when the cast starts
+        // (StatusEffectType name), so a spell that spends one -- Viper's Bite
+        // detonating Poison -- is recorded doing so. Empty means none.
+        private const string PreStatusVariable = "PP_RUNTIME_PRESTATUS";
+
         private static float ResolveSpeed()
         {
             string raw = System.Environment.GetEnvironmentVariable(SpeedVariable);
@@ -286,6 +291,18 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built?.Session, "'" + SpellId + "' could not be built into an encounter");
 
             PreviewFight.Prepare(built, plan);
+
+            string preStatus = System.Environment.GetEnvironmentVariable(PreStatusVariable);
+            if (!string.IsNullOrWhiteSpace(preStatus))
+            {
+                Assert.IsTrue(System.Enum.TryParse(preStatus.Trim(), true, out StatusEffectType pre),
+                    PreStatusVariable + " '" + preStatus + "' is not a StatusEffectType");
+                foreach (var foe in built.Session.Encounter.Enemies.Where(e => e != null))
+                {
+                    foe.Statuses.Add(new ActiveStatus(pre, 3, 3));
+                }
+            }
+
             built.Session.Begin();
             _fight.Bind(built.Session, EncounterClass.Normal);
             _fight.BindPartyArt(built.Party, built.PartyArt);
@@ -321,6 +338,14 @@ namespace PrincesPalace.PlayModeTests
             if (stand.CasterId == null) return stand;
 
             stand.Party = new List<string> { stand.CasterId };
+
+            // A swap has two ends, so the stand-in party has two bodies for
+            // the counterpart layers to draw on.
+            if (plan.Skill.Effect == SkillEffect.SwapAllies)
+            {
+                var other = roster.FirstOrDefault(c => c.Id != stand.CasterId);
+                if (other != null) stand.Party.Add(other.Id);
+            }
             stand.Notes.Add("presentation only: '" + SpellId + "' resolves as " + plan.Skill.Effect +
                             ", which the preview stage refuses, so the vfx is played through the module with " +
                             "no damage number, status or session cue");
@@ -355,6 +380,12 @@ namespace PrincesPalace.PlayModeTests
             {
                 beat.Actor = caster;
                 beat.Target = aimsAtEnemies ? foes[0] : caster;
+
+                // The other end of a swap: the second party member.
+                if (skill.Effect == SkillEffect.SwapAllies)
+                {
+                    beat.Counterpart = enc.PlayerParty.FirstOrDefault(c => c != null && !ReferenceEquals(c, caster));
+                }
                 if (skill.Targeting == SkillTargeting.AllEnemies) beat.SplashTargets = foes.Skip(1).ToList();
             }
 
