@@ -107,24 +107,26 @@ namespace PrincesPalace.Domain.Combat.Session
         // makes stacking a decision instead of an accumulator: wards add up
         // now, so a two-turn window let a free action bank shields faster than
         // anything could spend them. Every one of the five ward skills takes
-        // this default -- none of them authors `wardTurns` -- and the three
-        // relic wards opt out by authoring the whole fight
-        // (MagicalShieldDurationTurns) instead. See StatusEffects' own WARDS
+        // this default -- none of them authors `wardTurns` -- and Magical
+        // Shield takes it too. The two standing relic wards (Sparring Buckler,
+        // Runic's mana conversion) opt out by authoring the whole fight
+        // (RelicWardDurationTurns) instead. See StatusEffects' own WARDS
         // header for the model this belongs to.
         public const int DefaultWardTurns = 1;
 
         // 99 turns is "for the rest of the fight" spelled as a duration --
-        // the promise the two relic wards make, and deliberately NOT the
-        // two-turn clock a skill's ward runs on. A relic ward is small and
-        // free; a skill's is big and costs a turn, and the one that costs
-        // something is the one with a window.
+        // the promise the two standing relic wards make (Sparring Buckler and
+        // Runic's mana conversion), and deliberately NOT the one-turn clock a
+        // skill's ward runs on. Magical Shield is not one of them: its ward
+        // dissipates on DefaultWardTurns, because a free ward that never
+        // lapsed was too strong.
         //
         // Raising it again while it stands DOES compound: StatusEffects
         // .ApplyWard always adds an entry and wards drain soonest-first. That
         // has been true since the shield model landed on 2026-09-16; the line
         // that used to sit here still described the percentage ward it
         // replaced.
-        public const int MagicalShieldDurationTurns = 99;
+        public const int RelicWardDurationTurns = 99;
 
         // MAGICAL SHIELD'S OWN POOL, in shield points. Roughly one leg-two
         // enemy hit (those measured at 19-23 in phase 1's bot run) -- it is a

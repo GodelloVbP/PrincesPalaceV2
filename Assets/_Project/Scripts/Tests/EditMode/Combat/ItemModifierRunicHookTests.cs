@@ -130,7 +130,7 @@ namespace PrincesPalace.Domain.Tests
         // turn-open itself: OpenTurnFor's exemption set must be emptied
         // BEFORE this conversion puts its ward in it, or the Runic ward
         // ages at the end of the very turn it went up on. 99 is
-        // FightTuning.MagicalShieldDurationTurns.
+        // FightTuning.RelicWardDurationTurns.
         [Test]
         public void TheConvertedWard_DoesNotAgeAtTheEndOfTheTurnItWentUpOn()
         {

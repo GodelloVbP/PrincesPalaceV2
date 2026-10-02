@@ -221,7 +221,7 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.DoesNotContain("until it is used", capstone.Tooltip);
 
             var relic = StatusHud.RowFor(
-                new ActiveStatus(StatusEffectType.Shielded, 20, FightTuning.MagicalShieldDurationTurns));
+                new ActiveStatus(StatusEffectType.Shielded, 20, FightTuning.RelicWardDurationTurns));
             StringAssert.Contains("for the rest of the fight", relic.Tooltip);
         }
 
@@ -305,10 +305,10 @@ namespace PrincesPalace.Domain.Tests
         public void EveryAuthoredSentinelDurationClearsTheThreshold()
         {
             Assert.GreaterOrEqual(Marks.MarkDurationTurns, StatusHud.SentinelTurns);
-            Assert.GreaterOrEqual(FightTuning.MagicalShieldDurationTurns, StatusHud.SentinelTurns);
+            Assert.GreaterOrEqual(FightTuning.RelicWardDurationTurns, StatusHud.SentinelTurns);
 
             // NO WARD SENTINEL IS LEFT. Ordinary wards run a real one-turn
-            // clock, and the three relic wards ride MagicalShieldDurationTurns,
+            // clock, and the two standing relic wards ride RelicWardDurationTurns,
             // already asserted above. The Golden Fleece does not author a
             // duration at all -- it is read off the ward's own caster every tick
             // (StatusEffects.NeverExpires), which is what the sibling test
@@ -322,7 +322,7 @@ namespace PrincesPalace.Domain.Tests
         // over every public const int field ending "Turns" rather than
         // named one by one, so a new constant is covered the moment it is
         // added, not the moment someone remembers to extend this test.
-        // MagicalShieldDurationTurns is the one deliberate exception --
+        // RelicWardDurationTurns is the one deliberate exception --
         // it is the sentinel-side constant this test's sibling above already
         // pins.
         [Test]
@@ -331,7 +331,7 @@ namespace PrincesPalace.Domain.Tests
             var fields = typeof(FightTuning)
                 .GetFields(BindingFlags.Public | BindingFlags.Static)
                 .Where(f => f.IsLiteral && f.FieldType == typeof(int) && f.Name.EndsWith("Turns"))
-                .Where(f => f.Name != nameof(FightTuning.MagicalShieldDurationTurns))
+                .Where(f => f.Name != nameof(FightTuning.RelicWardDurationTurns))
                 // DefaultWardTurns is 2 and belongs BELOW the sentinel, which
                 // is exactly what this test asserts of it -- no exemption
                 // needed, listed here only so the next reader does not go
@@ -347,7 +347,7 @@ namespace PrincesPalace.Domain.Tests
                 Assert.Less(value, StatusHud.SentinelTurns,
                     $"FightTuning.{field.Name} is {value}, which would read as \"until it is used\" " +
                     "instead of counting down -- either it is a genuine new sentinel (add it beside " +
-                    "MagicalShieldDurationTurns above) or it needs retuning.");
+                    "RelicWardDurationTurns above) or it needs retuning.");
             }
         }
 

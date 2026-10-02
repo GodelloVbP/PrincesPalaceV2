@@ -520,7 +520,7 @@ namespace PrincesPalace.Domain.Tests
         // A CAST WARD ADDS TO ONE ALREADY STANDING. The relic wards are the
         // case that matters and the only one a single character can reach in
         // one turn: they author the whole fight where a skill's ward stands
-        // one turn, so a Tuck In pressed over a Magical Shield is 20 points on
+        // one turn, so a Tuck In pressed over a standing relic ward is 20 points on
         // top of 20 rather than an argument about which of them wins.
         [Test]
         public void ASkillWardStacksOnTopOfOneAlreadyStanding()
@@ -529,11 +529,10 @@ namespace PrincesPalace.Domain.Tests
             var shawn = Hero(pool: 0);
             shawn.SignaturePool = Wool(12);
 
-            // The Magical Shield relic's own ward, on its own whole-fight
-            // duration and sourced by nobody, exactly as RaiseMagicalShield
-            // puts it up.
+            // A standing relic ward (Sparring Buckler's shape): the whole-fight
+            // duration, sourced by nobody.
             StatusEffects.ApplyWard(shawn.Statuses, FightTuning.MagicalShieldPoints,
-                FightTuning.MagicalShieldDurationTurns);
+                FightTuning.RelicWardDurationTurns);
 
             var (session, _) = Fight(new[] { shawn }, new[] { Foe() }, Kit(tuckIn));
             session.Begin();

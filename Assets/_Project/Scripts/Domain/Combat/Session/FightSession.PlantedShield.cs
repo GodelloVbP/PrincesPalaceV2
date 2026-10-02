@@ -212,8 +212,19 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // A hit the wards ate whole is not heard by the pools (the planted
             // shield's own hearing above has already consumed the figure), so
-            // nothing may read it later.
-            if (remaining <= 0) DropIncomingHit(target);
+            // nothing may read it later. The Sentinel is the exception: a hit
+            // any ward ate whole is still a hit taken, paid here on the raw
+            // figure. The planted shield's own hearing above has already paid
+            // it, so only a hit that shield did not touch is paid now.
+            if (remaining <= 0)
+            {
+                if (damage > 0 && ownAbsorbed <= 0 && target.FuryEngine.Kind == FuryEngineKind.Sentinel)
+                {
+                    GrantPrimary(target, FuryEngine.SentinelFury(incoming, target.MaxHealth));
+                }
+
+                DropIncomingHit(target);
+            }
 
             return remaining;
         }

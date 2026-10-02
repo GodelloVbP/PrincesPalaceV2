@@ -395,7 +395,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey))
             {
                 RaiseWard(actingCharacter, FightTuning.SparringBucklerWardPoints,
-                    FightTuning.MagicalShieldDurationTurns, actingCharacter);
+                    FightTuning.RelicWardDurationTurns, actingCharacter);
                 AppendMessage($"{actingCharacter.Name}'s buckler comes up - a ward from the footwork.");
             }
         }

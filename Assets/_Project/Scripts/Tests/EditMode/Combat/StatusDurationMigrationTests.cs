@@ -133,7 +133,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheSentinelDurationsAreUntouchedByTheMove()
         {
             Assert.AreEqual(99, Marks.MarkDurationTurns, "a mark is spent, not decayed");
-            Assert.AreEqual(99, FightTuning.MagicalShieldDurationTurns, "a relic ward is the whole fight");
+            Assert.AreEqual(99, FightTuning.RelicWardDurationTurns, "a relic ward is the whole fight");
         }
 
         // ---- reading the content file ------------------------------------------

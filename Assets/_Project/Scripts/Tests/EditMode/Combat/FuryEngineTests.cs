@@ -145,7 +145,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void Sentinel_AnOrdinaryWardThatEatsTheWholeHit_PaysNothing()
+        public void Sentinel_AnOrdinaryWardThatEatsTheWholeHit_PaysOnTheRawFigure()
         {
             var r = Fight(FuryEngineKind.Sentinel);
             StatusEffects.ApplyWard(r.Bjorn.Statuses, 100, 2, r.Bjorn);
@@ -153,11 +153,76 @@ namespace PrincesPalace.Domain.Tests
             r.Session.StrikeForTest(r.Foe, r.Bjorn, 28, DamageType.Physical);
 
             Assert.AreEqual(260, r.Bjorn.CurrentHealth);
-            Assert.AreEqual(0, Fury(r), "the pools never hear a fully warded hit (plan 4a)");
+            Assert.AreEqual(16, Fury(r), "a warded hit is still a hit taken: raw 28 pays 16");
+        }
 
-            // And the figure it held is not read by the next, unrelated blow.
+        [Test]
+        public void Sentinel_AWardedHitThatLeavesNothing_DoesNotLeakItsFigureIntoTheNextBlow()
+        {
+            var r = Fight(FuryEngineKind.Sentinel);
+            StatusEffects.ApplyWard(r.Bjorn.Statuses, 20, 2, r.Bjorn);
+
+            r.Session.StrikeForTest(r.Foe, r.Bjorn, 28, DamageType.Physical); // 20 lands, ward eats it all
+            Assert.AreEqual(16, Fury(r));
+
             r.Session.DealForTest(r.Foe, r.Bjorn, 2);
-            Assert.AreEqual(3, Fury(r), "the next blow pays on its own 2 (clamped to 3), not on the held 28");
+            Assert.AreEqual(19, Fury(r), "the next blow pays 3 on its own 2, not on the held 28");
+        }
+
+        [Test]
+        public void Sentinel_AHitAWardPartlyAbsorbs_PaysOnceOnTheRawFigure()
+        {
+            var r = Fight(FuryEngineKind.Sentinel);
+            StatusEffects.ApplyWard(r.Bjorn.Statuses, 5, 2, r.Bjorn);
+
+            r.Session.StrikeForTest(r.Foe, r.Bjorn, 28, DamageType.Physical); // 20: 5 ward, 15 health
+
+            Assert.AreEqual(245, r.Bjorn.CurrentHealth);
+            Assert.AreEqual(16, Fury(r));
+        }
+
+        [Test]
+        public void Sentinel_APoisonTickOnBjorn_CountsAsOneHitTaken()
+        {
+            var r = Fight(FuryEngineKind.Sentinel);
+            StatusEffects.Apply(r.Bjorn.Statuses, StatusEffectType.Poison, 26, 3, r.Foe);
+
+            r.Session.TickStatusesForTest(r.Bjorn);
+
+            Assert.AreEqual(15, Fury(r), "a 26-point tick: 3900 / 260 = 15, one payment, no flat 10");
+        }
+
+        [Test]
+        public void Einherjar_APoisonHeApplied_PaysWhenItTicks()
+        {
+            var r = Fight(FuryEngineKind.Einherjar);
+            StatusEffects.Apply(r.Foe.Statuses, StatusEffectType.Poison, 20, 3, r.Bjorn);
+
+            r.Session.TickStatusesForTest(r.Foe);
+
+            Assert.AreEqual(10, Fury(r), "a 20-point tick at Attack 20 pays 10");
+        }
+
+        [Test]
+        public void Einherjar_APoisonSomeoneElseApplied_PaysHimNothing()
+        {
+            var r = Fight(FuryEngineKind.Einherjar);
+            StatusEffects.Apply(r.Foe.Statuses, StatusEffectType.Poison, 20, 3, null);
+
+            r.Session.TickStatusesForTest(r.Foe);
+
+            Assert.AreEqual(0, Fury(r));
+        }
+
+        [Test]
+        public void Juggernaut_APoisonTickOnBjorn_PaysNothing()
+        {
+            var r = Fight(FuryEngineKind.Juggernaut);
+            StatusEffects.Apply(r.Bjorn.Statuses, StatusEffectType.Poison, 26, 3, r.Foe);
+
+            r.Session.TickStatusesForTest(r.Bjorn);
+
+            Assert.AreEqual(0, Fury(r), "Juggernaut is per turn only");
         }
 
         [Test]

@@ -73,7 +73,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // Called from NoteDamageForPools for every blow the pools hear, with
         // the amount they hear. `isHit` is false for a status tick and a
         // delayed-damage installment.
-        private void PayEnginesForDamage(CombatantState actor, CombatantState target, int amount, bool isHit)
+        private void PayEnginesForDamage(CombatantState actor, CombatantState target, int amount, bool isHit,
+            bool isTick = false)
         {
             // Consumed for every hit, whoever the target: the slot is a fact
             // about this one blow and must not outlive it.
@@ -86,21 +87,41 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (IsHoldersTurn(actor)) actor.Momentum.DealtDamageThisTurn = true;
             }
 
-            if (target == null || !isHit) return;
+            if (target == null || !(isHit || isTick)) return;
 
-            PayHoldTheLine(target);
-
-            // SENTINEL: per hit taken, on the raw incoming figure. Hits only
-            // -- a poison tick keeps his turn from reading idle (the pools
-            // still note the activity) but is not a hit and pays nothing.
+            // SENTINEL: per hit taken, on the raw incoming figure. A DoT row
+            // on the holder counts as one hit taken, on what it threw. A
+            // delayed-damage installment does not: that blow was paid for
+            // when it was deferred.
             if (target.FuryEngine.Kind == FuryEngineKind.Sentinel)
             {
                 GrantPrimary(target, FuryEngine.SentinelFury(raw, target.MaxHealth));
             }
 
+            if (!isHit) return;
+
+            PayHoldTheLine(target);
+
             if (target.Momentum.LoseStackFor(amount, target.MaxHealth))
             {
                 AppendMessage($"{target.Name} loses momentum ({target.Momentum.Stacks}).");
+            }
+        }
+
+        // EINHERJAR, FOR A DoT HE APPLIED: each applier's instances in the row
+        // are one blow worth what they threw, paid straight off the formula.
+        // The action tally is not touched -- a tick lands on the victim's
+        // turn, long after the applier's action settled.
+        private void PayEinherjarForTick(StatusEffects.TickRow row)
+        {
+            if (row.ThrownBySource == null) return;
+
+            foreach (var entry in row.ThrownBySource)
+            {
+                var source = entry.Key;
+                if (source.FuryEngine.Kind != FuryEngineKind.Einherjar || !source.IsAlive) continue;
+
+                GrantPrimary(source, FuryEngine.EinherjarFury(entry.Value, source.Attack));
             }
         }
 

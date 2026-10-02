@@ -2048,10 +2048,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // ANOTHER ENTRY, never a replacement: wards stack, so a relic
             // shield raised over a Bulwark adds to it rather than arguing with
-            // it. MagicalShieldDurationTurns rather than the skills' one-turn
-            // default, because this relic's promise is a shield that stands
-            // until something spends it.
-            RaiseWard(actor, FightTuning.MagicalShieldPoints, FightTuning.MagicalShieldDurationTurns, actor);
+            // it. It dissipates like any skill's ward: the one-turn default,
+            // not the whole-fight duration the standing relic wards carry.
+            RaiseWard(actor, FightTuning.MagicalShieldPoints, FightTuning.DefaultWardTurns, actor);
             AppendMessage($"{actor.Name}'s Magical Shield rises!");
         }
 

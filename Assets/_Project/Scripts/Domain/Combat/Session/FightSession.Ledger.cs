@@ -362,7 +362,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // THE PHASE 2 ENGINES (FightSession.FuryEngines): a combatant with a
         // FuryEngine set is paid by it INSTEAD of the flat gainOnAttack /
         // gainOnDamageTaken below. Engine None is exactly the old behaviour.
-        private void NoteDamageForPools(CombatantState actor, CombatantState target, int amount, bool isHit = true)
+        //
+        // `isTick` marks the one non-hit the Sentinel engine still counts: a
+        // damage-over-time row landing on its holder.
+        private void NoteDamageForPools(CombatantState actor, CombatantState target, int amount, bool isHit = true,
+            bool isTick = false)
         {
             if (amount <= 0) return;
 
@@ -390,7 +394,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // lock where its gainOnAttack twin does.
             if (FlatGainsPay(target)) GrantPrimaryOnDamageTaken(target);
 
-            PayEnginesForDamage(actor, target, amount, isHit);
+            PayEnginesForDamage(actor, target, amount, isHit, isTick);
 
             // AND THE SIGNATURE POOL'S, which was left behind at that same verb
             // when the primary pool's half moved here. It had the identical

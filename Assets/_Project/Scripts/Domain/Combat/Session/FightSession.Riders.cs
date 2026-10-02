@@ -555,7 +555,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // wearer's turns for free, so a hoarded mana pool that is never spent
         // lays another pool on top of the last one every round, for the whole
         // fight. The ward it lays down carries the relic wards' whole-fight
-        // duration (FightTuning.MagicalShieldDurationTurns) rather than the
+        // duration (FightTuning.RelicWardDurationTurns) rather than the
         // skills' one-turn default, because this is a standing property of the
         // armour and not a window somebody spent a cast opening.
         private void ApplyRunicWardConversion(CombatantState actor)
@@ -588,7 +588,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int wardPoints = Rounding.AwayFromZero(actor.CurrentMana * FightTuning.RunicWardConversionRate);
             if (wardPoints <= 0) return;
 
-            RaiseWard(actor, wardPoints, FightTuning.MagicalShieldDurationTurns, actor);
+            RaiseWard(actor, wardPoints, FightTuning.RelicWardDurationTurns, actor);
             AppendMessage($"{actor.Name}'s runes catch the leftover mana as a ward.");
         }
 
@@ -955,7 +955,8 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ReportDamageTick(CombatantState actor, StatusEffects.TickRow row, bool ownsBeat,
             Func<int, string> line = null)
         {
-            NoteDamageForPools(null, actor, row.Thrown, isHit: false);
+            NoteDamageForPools(null, actor, row.Thrown, isHit: false, isTick: true);
+            PayEinherjarForTick(row);
 
             // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
             // already uses ("attacks X for N damage!" followed by "X's Wool

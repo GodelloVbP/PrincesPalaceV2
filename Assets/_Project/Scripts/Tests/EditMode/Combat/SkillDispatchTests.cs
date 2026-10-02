@@ -611,6 +611,25 @@ namespace PrincesPalace.Domain.Tests
             cast.CastSkill(0, castFoes.Enemies[0]);
 
             Assert.IsTrue(caster.Statuses.Any(s => s.Type == StatusEffectType.Shielded));
+            Assert.AreEqual(1, caster.Statuses.First(s => s.Type == StatusEffectType.Shielded).TurnsRemaining,
+                "it dissipates like any ward: one turn, not the whole fight");
+        }
+
+        // The plates paint from a beat's recorded vitals, not live state, so a
+        // ward raised by the cast has to be in the beat's own snapshot or the
+        // bar waits for the end of the round.
+        [Test]
+        public void ACastThatRaisesAWardRecordsItInTheBeatsSnapshotAndNotInItsPreSnapshot()
+        {
+            var relic = new ResolvedRelic("shield", "Magical Shield", "", RelicEffect.MagicalShield, 0);
+            var caster = Hero();
+            var (cast, _, foes) = Fight(Kit(relics: new[] { relic }, skills: new[] { Skill(SkillEffect.DamageSingle) }), caster);
+
+            cast.CastSkill(0, foes.Enemies[0]);
+            var beat = cast.DrainBeats().First(b => b.IsAction && b.Actor == caster);
+
+            Assert.AreEqual(0, beat.PreSnapshot[caster].Ward);
+            Assert.AreEqual(FightTuning.MagicalShieldPoints, beat.Snapshot[caster].Ward);
         }
 
         [Test]

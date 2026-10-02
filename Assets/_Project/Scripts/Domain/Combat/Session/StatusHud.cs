@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // At or above this many of the holder's own turns remaining, a
         // status reads as "until it is used" rather than a countdown -- see
         // section 2. Every sentinel this game actually authors
-        // (Marks.MarkDurationTurns 99, FightTuning.MagicalShieldDurationTurns
+        // (Marks.MarkDurationTurns 99, FightTuning.RelicWardDurationTurns
         // 99, StatusEffects.PermanentWardTurns 999 for The Golden Fleece)
         // clears this with room to
         // spare; every genuine authored duration (content's statusDuration

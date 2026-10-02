@@ -1153,8 +1153,16 @@ namespace PrincesPalace.Domain.Combat
             public readonly int Absorbed;
             public readonly int Thrown;
 
-            public TickRow(StatusEffectType status, DamageType element, int toHealth, int absorbed, int thrown = 0)
+            // What each applier's instances threw this tick, summed per applier
+            // (instances with no Source, and a holder's own, are left out).
+            // Null when none. The Einherjar engine reads it to pay a DoT to
+            // whoever applied it.
+            public readonly List<KeyValuePair<CombatantState, int>> ThrownBySource;
+
+            public TickRow(StatusEffectType status, DamageType element, int toHealth, int absorbed, int thrown = 0,
+                List<KeyValuePair<CombatantState, int>> thrownBySource = null)
             {
+                ThrownBySource = thrownBySource;
                 Status = status;
                 Element = element;
                 ToHealth = toHealth;
@@ -1233,6 +1241,7 @@ namespace PrincesPalace.Domain.Combat
             int toHealth = 0;
             int absorbed = 0;
             int thrown = 0;
+            List<KeyValuePair<CombatantState, int>> bySource = null;
 
             foreach (var status in instances)
             {
@@ -1246,9 +1255,17 @@ namespace PrincesPalace.Domain.Combat
                     : CombatMath.ApplyDamage(combatant, amount);
                 toHealth += before - combatant.CurrentHealth;
                 thrown += amount;
+
+                if (status.Source != null && !ReferenceEquals(status.Source, combatant))
+                {
+                    bySource = bySource ?? new List<KeyValuePair<CombatantState, int>>();
+                    int at = bySource.FindIndex(e => ReferenceEquals(e.Key, status.Source));
+                    if (at < 0) bySource.Add(new KeyValuePair<CombatantState, int>(status.Source, amount));
+                    else bySource[at] = new KeyValuePair<CombatantState, int>(status.Source, bySource[at].Value + amount);
+                }
             }
 
-            return any ? new TickRow(type, element.Value, toHealth, absorbed, thrown) : (TickRow?)null;
+            return any ? new TickRow(type, element.Value, toHealth, absorbed, thrown, bySource) : (TickRow?)null;
         }
 
         // WHEN THIS STATUS'S COUNTER MOVES. The one table, replacing the
