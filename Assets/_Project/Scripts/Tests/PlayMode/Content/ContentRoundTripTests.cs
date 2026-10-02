@@ -71,7 +71,8 @@ namespace PrincesPalace.PlayModeTests
 
             var resolved = FightEncounterAdapter.Resolve(slam);
             Assert.AreEqual(SkillEffect.DamageSingle, resolved.Effect);
-            Assert.AreEqual("Spells/golem_boulder", resolved.Vfx.path,
+            Assert.IsNotNull(resolved.Vfx.layers, "the slam lost its layered presentation");
+            Assert.IsTrue(System.Array.Exists(resolved.Vfx.layers, l => l != null && l.path == "Spells/golem_boulder"),
                 "the slam lost the art it is drawn with");
         }
 
