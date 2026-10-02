@@ -136,7 +136,7 @@ MonoBehaviour:
         dx: 0
         dy: 0
         scale: 1
-        size: 110
+        size: 170
         fit: target
         facing: none
         sort: effects

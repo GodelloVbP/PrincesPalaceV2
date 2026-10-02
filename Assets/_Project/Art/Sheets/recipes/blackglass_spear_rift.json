@@ -1,18 +1,17 @@
 {
   "_notes": [
-    "Blackglass Spear: the rift the spear leaves along its flight. One still, cell 14 of the v1 atlas (the thin mirror splinter, dark glass with violet edges), turned 50 degrees clockwise so its long axis lies along +x and cropped to its own ink. The layer stretches it across the flight line, so its aspect is the shape the art is drawn at.",
-    "The splinter is painted 49.8 degrees up-right (principal axis of its alpha); the step's turn is -50."
+    "Blackglass Spear: the rift the spear leaves along its flight. One painted still (blackglass_spear_rift.png, 1536x1024): a single horizontal tear of dark glass with a violet glow and shards, on a #00FF00 green screen. Keyed on hue (keyed: \"green\") so the void stays opaque, then cropped to its own ink. Already horizontal, so no turn. The layer stretches it across the flight line, so its aspect is the shape the art is drawn at."
   ],
-  "sheet": "Spells/Blackglass Spear/blackglass_spear_atlas_v1.png",
+  "sheet": "Spells/Blackglass Spear/blackglass_spear_rift.png",
   "rects": [
-    [314, 940, 313, 314]
+    [0, 0, 1536, 1024]
   ],
   "names": ["f0"],
-  "keyed": false,
-  "canvas": [314, 314],
+  "keyed": "green",
+  "canvas": [1536, 1024],
   "base_align": false,
   "content_crop": true,
   "sequence": [
-    { "from": "f0", "turn": -50 }
+    { "from": "f0" }
   ]
 }

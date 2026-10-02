@@ -725,7 +725,7 @@
             "fade": 0.06
           },
           {
-            "_comment": "The tear along the path: the splinter still turned flat (blackglass_spear_rift, dark glass with violet edges) laid along the spear's flight from the air point through the target's middle to where the spear leaves the stage, stretched to it, revealed behind the spear as it flies, then held 0.2 s from its opening and faded over 0.15 s, so it is a brief streak that is gone almost as the spear leaves the stage. Thickness is size 110 on a rat. Authored before the spear so the spear draws over it.",
+            "_comment": "The tear along the path: the painted tear still (blackglass_spear_rift, a dark void with violet glow and shards) laid along the spear's flight from the air point through the target's middle to where the spear leaves the stage, stretched to it, revealed behind the spear as it flies, then held 0.2 s from its opening and faded over 0.15 s, so it is a brief streak that is gone almost as the spear leaves the stage. Thickness is size 170 on a rat. Authored before the spear so the spear draws over it.",
             "id": "rift",
             "render": "still",
             "place": "layer:spear",
@@ -735,7 +735,7 @@
             "path": "Spells/blackglass_spear_rift",
             "seconds": 0.2,
             "until": "hold",
-            "size": 110,
+            "size": 170,
             "fit": "target",
             "facing": "none",
             "sort": "effects",

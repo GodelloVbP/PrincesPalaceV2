@@ -76,6 +76,10 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import numpy as np
+from key_green_screen import key_out_green
+
 try:
     from PIL import Image
 except ImportError:
@@ -290,6 +294,18 @@ def erase_frame_borders(frame):
             removed += 1
 
     return removed
+
+
+def despill_to_min(image):
+    """Clamp green to min(red, blue) on every pixel.
+
+    key_out_green stops at g = max(r, b), which on a violet glow leaves g = b:
+    a teal fringe along the soft outer edge. Violet has g below both, so the
+    clamp only touches backdrop spill and leaves grey and white (g ~ r ~ b) alone.
+    """
+    arr = np.asarray(image.convert("RGBA")).copy()
+    arr[..., 1] = np.minimum(arr[..., 1], np.minimum(arr[..., 0], arr[..., 2]))
+    return Image.fromarray(arr, mode="RGBA")
 
 
 def key_to_alpha(image):
@@ -629,6 +645,8 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
 
     True  - RGB on black, alpha synthesised from luminance. Every sheet
             delivered before mud_blast came this way.
+    "green" - RGB on flat #00FF00; alpha from hue dominance
+            (`key_green_screen.key_out_green`), so dark art stays opaque.
     False - the sheet already carries the alpha the artist intended. Cut the
             grid and change nothing else.
 
@@ -671,7 +689,14 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
               f"cells will be truncated by up to a pixel. State `rects` instead if the "
               f"edge pixels matter.")
 
-    if keyed:
+    if keyed == "green":
+        # Hue-dominance key for a painted frame on #00FF00 whose dark interior
+        # has to stay opaque; luminance keying would punch the void out.
+        # Neither line pass runs: they read luminance, and the green field has
+        # none to confuse them.
+        cut = despill_to_min(key_out_green(source.convert("RGB")))
+        print("green screen: keyed on hue dominance, spill suppressed")
+    elif keyed:
         sheet = source.convert("RGB")
 
         lines = erase_drawn_lines(sheet)
