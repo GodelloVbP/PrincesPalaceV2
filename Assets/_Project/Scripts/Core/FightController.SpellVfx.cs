@@ -361,6 +361,45 @@ namespace PrincesPalace
                 instance.Facing = facing;
                 PlaceOne(instance, performance, parent, struck, beat.Actor, casterRect, casterX);
             }
+
+            // A LAYER LAID ALONG A FLIGHT READS ITS PROJECTILE'S LINE, so it is
+            // placed once every projectile has been -- authored order is draw
+            // order and must not also be a placement dependency.
+            foreach (var instance in performance.Instances)
+            {
+                if (instance.AlignKind == SpellAlign.Flight) PlaceAlongFlight(instance, performance);
+            }
+        }
+
+        // THE BOX OF A LAYER LAID ALONG A PROJECTILE'S FLIGHT: as long as the
+        // whole line from launch to aim, `size` thick (fitted by the same
+        // factor the projectile was sized by, so a rift is as thick as the
+        // body it ends in). What of it is drawn at any instant is the player's
+        // reading of FlightSpan; this fixes the extent it grows into.
+        private static void PlaceAlongFlight(SpellLayerInstance instance, SpellPerformance performance)
+        {
+            var layer = instance.Layer;
+            var source = instance.SourceInstance >= 0 && instance.SourceInstance < performance.Instances.Count
+                ? performance.Instances[instance.SourceInstance]
+                : null;
+
+            // NOWHERE TO LIE: the projectile found no target to fly at.
+            if (source == null || !source.Placed)
+            {
+                instance.Placed = false;
+                return;
+            }
+
+            float thickness = (layer.size > 0f ? layer.size : SpellPresentation.DefaultSize)
+                              * (layer.scale > 0f ? layer.scale : 1f)
+                              * (layer.Fit == SpellFit.Target ? source.Fit : 1f);
+
+            var flight = FlightSpan.Between(source.FlightFrom, source.FlightTo, 1f);
+            instance.Fit = source.Fit;
+            instance.Box = new UiVec(flight.Length, thickness);
+            instance.Degrees = flight.Degrees;
+            instance.FlightFrom = source.FlightFrom;
+            instance.FlightTo = source.FlightTo;
         }
 
         private void PlaceOne(SpellLayerInstance instance, SpellPerformance performance, Transform parent,
@@ -373,6 +412,9 @@ namespace PrincesPalace
                 PlaceOnFormation(instance, parent, struck);
                 return;
             }
+
+            // Placed by PlaceAlongFlight, after its projectile.
+            if (instance.AlignKind == SpellAlign.Flight) return;
 
             // WHOSE BODY. A caster-anchored effect moves its origin, not its
             // shape. A travelling one always AIMS at the target however
@@ -481,6 +523,8 @@ namespace PrincesPalace
                 instance.Degrees = degrees;
                 instance.To = new UiVec(aim.x, aim.y) - tip;
                 instance.From = new UiVec(from.x, from.y) - tip;
+                instance.FlightFrom = new UiVec(from.x, from.y);
+                instance.FlightTo = new UiVec(aim.x, aim.y);
                 KeepUnderTheLog(instance, from, aim, art, parent);
                 return;
             }
@@ -498,6 +542,8 @@ namespace PrincesPalace
             {
                 var launch = LaunchPoint(layer, caster, casterRect, parent, body, casterX, to.y);
                 instance.From = new UiVec(launch.x, launch.y);
+                instance.FlightFrom = new UiVec(launch.x, launch.y);
+                instance.FlightTo = new UiVec(aim.x, aim.y);
                 KeepUnderTheLog(instance, launch, aim, drawn, parent);
             }
             else

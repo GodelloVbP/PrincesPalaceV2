@@ -91,6 +91,16 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // is pinned.
         public float Degrees;
 
+        // WHERE A PROJECTILE LEAVES AND WHERE IT IS AIMED, the two points of
+        // its line of flight, in stage space. Written by Core for a layer that
+        // travels, and read by a layer lying `align: flight` along it. They
+        // are NOT From/To: those are the BOX's centres, which for an oriented
+        // projectile are the launch and the aim moved back by the sheet's
+        // impact point, so the line the tip rides cannot be recovered from
+        // them without the very offset Core computed.
+        public UiVec FlightFrom;
+        public UiVec FlightTo;
+
         // THE BODY FACTOR THIS INSTANCE WAS SIZED BY -- 1 unless its layer
         // authors `fit: target`, then the struck target's visible extent over
         // Domain.Stage.TargetBody.ReferenceExtent. Written by Core beside Box.
@@ -222,9 +232,18 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // it is a word on the layer, additive under the same format version.
         public static UiVec PositionOf(SpellLayerInstance instance, float seconds)
         {
+            return instance.From + (instance.To - instance.From) * Eased(instance, seconds);
+        }
+
+        // HOW FAR ALONG ITS LINE A PROJECTILE IS, 0 to 1, through the same
+        // ease PositionOf applies -- the one reading of it, so a layer revealed
+        // behind the projectile ends exactly at its tip.
+        public static float FractionOf(SpellLayerInstance instance, float seconds) => Eased(instance, seconds);
+
+        private static float Eased(SpellLayerInstance instance, float seconds)
+        {
             float u = Progress(instance, seconds);
-            float eased = u * u;
-            return instance.From + (instance.To - instance.From) * eased;
+            return u * u;
         }
 
         // The exact derivative of the line above, which is why it is here and
@@ -395,7 +414,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
             // Its own fade then runs from there, capped like every other, so
             // the wake cannot outlive the core by more than a tenth of a second
             // at its authored fade.
-            if (instance.SourceInstance >= 0 && depth <= all.Count)
+            //
+            // EXCEPT ONE LAID ALONG A FLIGHT, whose whole point is to be left
+            // behind: it names the projectile for its line and its reveal and
+            // keeps its own length.
+            if (instance.SourceInstance >= 0 && instance.AlignKind != SpellAlign.Flight && depth <= all.Count)
             {
                 var source = all[instance.SourceInstance];
                 return EndOf(source, all, frameCountOf, depth + 1);

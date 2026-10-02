@@ -860,7 +860,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | `impactX` / `impactY` | unset | The same correction the single block's take, per layer. `formation` is exempt from `impactX`. |
 | `sort` | `effects` | `ground` (behind the racks) or `effects` (over the HUD, under the damage numbers). |
 | `facing` | `auto` | `auto` takes the cast's facing, `none` never mirrors, `reverse` flips it. |
-| `align` | `level` | `place: formation` only. `level` is an axis-aligned box on the rank's mean ground line; `span` runs the box from the leftmost struck body to the rightmost and rotates it to that line. Refused on any other placement. |
+| `align` | `level` | `place: formation`: `level` is an axis-aligned box on the rank's mean ground line; `span` runs the box from the leftmost struck body to the rightmost and rotates it to that line. `place: layer:<id>` on a travelling layer: `flight` lays the layer along that layer's flight (see "A wake left along the flight" below). Refused on any other placement. |
 | `punch` | `0` | Extra scale at the opening instant, eased out over the first fifth of the layer's lifetime. `0.22` opens it 22% oversized. Capped at `SpellLayerRules.MaxPunch`. |
 | `glow` | `0` | How far above 1 the layer's brightest pixels are pushed, so the Volume's Bloom can see them. Nothing else on this canvas can exceed 1. |
 | `emitter` | — | The particle block; inert unless `render` is `emitter`. |
@@ -919,6 +919,57 @@ Pair the shot with `orient: path` and the sheet's painted direction as
 `impactX`/`impactY` (the spear's tip, not its middle) rides the line from the
 air point to the aim. Winter's Rebuke, Blackglass Spear and Crownfall are
 authored this way; the geometry is pinned by `SpellFlightTests`.
+
+**A wake left along the flight: `place: layer:<id>` + `align: flight`.** A
+layer that names a travelling layer and says `align: flight` lies along that
+layer's line of flight, launch point to aim point: centred on the line, turned
+onto it (into -90..90 degrees, so a sheet is never upside down on a leftward
+cast), stretched rather than letterboxed, `size` thick (times the projectile's
+own `fit: target` factor, so it is as thick as the body the projectile ends
+in). Only the part of the line the projectile has already crossed is drawn, so
+it grows out of the launch point behind the tip on the projectile's own ease;
+after the arrival it is held and faded on its OWN `seconds`, `until` and
+`fade`, which is the point: it is what the projectile leaves behind. A
+follower normally ends with the layer it rides and a flight layer does not.
+Per target, like the projectile it names. Refused: a source that does not
+travel, an emitter, its own `travelSeconds`, `dx`/`dy`. Author it BEFORE the
+projectile so the projectile draws over it. The geometry is
+`Domain.Stage.FlightSpan`, pinned with literals by `FlightSpanTests`; the
+launch and aim are written by `FightController.SpellVfx` as
+`SpellLayerInstance.FlightFrom/FlightTo`.
+
+Authoring one (Blackglass Spear's `rift`) is the same loop as any still:
+
+1. Pick a drawing that already lies along one axis and reads at any length: a
+   lens, a streak, a vapour line. A frame painted on a diagonal is turned flat
+   by a `sequence` step's `turn` (degrees anticlockwise, about the pivot,
+   stacks with `spin`; alpha at or under 2 is cleared afterwards so
+   `content_crop` trims to the ink): `blackglass_spear_rift` is the atlas's
+   mirror-splinter cell turned -50 degrees (its principal axis measures 49.8)
+   and cropped to 271x66.
+2. `python tools/slice_spell_sheet.py <id>_rift`, one recipe per folder.
+3. Add the layer: `render: still`, `place: layer:<projectile>`, `align:
+   flight`, `at`/`offset` equal to the projectile's so the reveal starts as it
+   leaves, `seconds` long enough to outlive the arrival by what the cast should
+   linger, `until: hold`, a `fade`, `size` as thickness, `fit: target`.
+4. `tools/preview.ps1 -Spell <id> -Versus rat` and `-Versus treant`: the
+   `_tail` picture shows what lingers after the blow, and the thickness must
+   hold on both bodies.
+
+**A called strike's pieces, and what is held back from the HUD.** A sky spell
+is authored as layers on one clock: the amass (a `sprite` on `sky`, `fit:
+target`), the projectile fired at the end of it (`offset` = the amass length;
+`hitCueSeconds` = that offset plus `travelSeconds`), a flash on the air point
+at the instant of firing, a rent held on the air point and one on the struck
+body (`at: hit`, long `fade`), and the wake along the flight above. Two rules
+apply to every layer without being authored. A layer opening at the hit on the
+struck body (a tail) is drawn at most `TargetBody.TailMaxOfBody` (0.75) of the
+body's larger extent, so the body shows around it; release-time layers (a ring
+meant to span the body) are exempt. No layer is drawn into the combat log's
+band: a flight whose air point meets the ceiling is shrunk about its own
+anchors until its top clears the log (`SpellFlight.ScaleUnder`, never below
+`MinFitScale`), so against a tall target the drawing is smaller and the air
+point and the aim do not move.
 
 **Bloom is reachable and nothing reaches it without `glow`.** Every
 precondition is already true -- `supportsHDR` on the pipeline asset, `render

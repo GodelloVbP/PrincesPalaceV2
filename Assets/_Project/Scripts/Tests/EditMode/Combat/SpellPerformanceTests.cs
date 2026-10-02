@@ -42,6 +42,75 @@ namespace PrincesPalace.Domain.Tests
         private static SpellLayerInstance Named(SpellPerformance performance, string id) =>
             performance.Instances.First(i => i.Layer.id == id);
 
+        // ---- a layer laid along a flight ---------------------------------------
+
+        private static SpellPresentation Rifting() => new SpellPresentation
+        {
+            layerFormat = 1,
+            hitCueSeconds = 0.78f,
+            layers = new[]
+            {
+                new SpellLayer
+                {
+                    id = "rift", render = "still", place = "layer:spear", align = "flight",
+                    path = "Spells/frost_flare", at = "release", offset = 0.6f, seconds = 1.3f,
+                    until = "hold", size = 80f, fade = 0.5f,
+                },
+                new SpellLayer
+                {
+                    id = "spear", render = "still", place = "sky", path = "Spells/frost_flare",
+                    at = "release", offset = 0.6f, travelSeconds = 0.18f,
+                },
+            },
+        };
+
+        // THE WAKE IS LEFT BEHIND: it names the projectile for its line and
+        // does not take its ending. The spear ends at its arrival, 0.6 + 0.18 =
+        // 0.78; the rift keeps its own 1.3 s from 0.6, ends at 1.9 and clears
+        // 0.5 s later.
+        [Test]
+        public void ALayerLaidAlongAFlightOutlivesTheProjectileItIsLaidAlong()
+        {
+            var performance = Resolve(Rifting());
+
+            Assert.AreEqual(0.78f, Named(performance, "spear").EndSeconds, 1e-5f);
+            Assert.AreEqual(0.6f, Named(performance, "rift").StartSeconds, 1e-5f);
+            Assert.AreEqual(1.9f, Named(performance, "rift").EndSeconds, 1e-5f);
+            Assert.AreEqual(2.4f, Named(performance, "rift").ClearedSeconds, 1e-5f);
+        }
+
+        [Test]
+        public void ALayerLaidAlongAFlightIsOnePerTargetAndLinksItsOwnTargetsProjectile()
+        {
+            var performance = Resolve(Rifting(), targets: 3);
+
+            var rifts = performance.Instances.Where(i => i.Layer.id == "rift").ToList();
+            var spears = performance.Instances.Where(i => i.Layer.id == "spear").ToList();
+            Assert.AreEqual(3, rifts.Count);
+            Assert.AreEqual(3, spears.Count);
+
+            for (int t = 0; t < 3; t++)
+            {
+                Assert.AreEqual(t, rifts[t].TargetIndex);
+                Assert.AreSame(spears[t], performance.Instances[rifts[t].SourceInstance]);
+            }
+        }
+
+        // The tip crosses the line on the projectile's own ease: nothing before
+        // it leaves at 0.6, a quarter at the middle of its 0.18 s (u 0.5,
+        // eased 0.25), the whole of it at the arrival.
+        [Test]
+        public void TheCrossedFractionIsTheProjectilesOwnEasedProgress()
+        {
+            var spear = Named(Resolve(Rifting()), "spear");
+
+            Assert.AreEqual(0f, SpellPerformance.FractionOf(spear, 0.5f), 1e-5f);
+            Assert.AreEqual(0f, SpellPerformance.FractionOf(spear, 0.6f), 1e-5f);
+            Assert.AreEqual(0.25f, SpellPerformance.FractionOf(spear, 0.69f), 1e-5f);
+            Assert.AreEqual(1f, SpellPerformance.FractionOf(spear, 0.78f), 1e-5f);
+            Assert.AreEqual(1f, SpellPerformance.FractionOf(spear, 2f), 1e-5f);
+        }
+
         // ---- the lifetime table, layer by layer ---------------------------------
 
         // THE PILOT'S FIVE LAYERS, EACH WITH A FINITE END, and two of them

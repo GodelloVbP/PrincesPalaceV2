@@ -98,11 +98,12 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects.")]
         public string sort = "";
 
-        // WHICH WAY A FORMATION LAYER LIES ON THE RANK IT SPANS. Only
-        // `place: formation` has two points to draw a line between, so
-        // SpellLayerRules refuses this word anywhere else rather than letting
+        // WHICH WAY A LAYER LIES ON THE LINE IT DRAWS ALONG. Only
+        // `place: formation` (the rank) and `place: layer:<id>` on a projectile
+        // (its flight) have two points to draw a line between, so
+        // SpellLayerRules refuses each word anywhere else rather than letting
         // it sit there doing nothing.
-        [ContentDoc("How a formation-placed layer lies on the rank: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). Refused on any other placement.")]
+        [ContentDoc("How a layer lies on the line it is placed along. On place formation: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). On place layer:<id> naming a travelling layer: flight (the box runs from that layer's launch to its aim, turned onto the line, as long as the line and `size` thick -- `size` is the thickness, fitted by `fit` -- stretched rather than letterboxed, revealed behind the projectile as it flies, then held and faded on this layer's own seconds, until and fade; dx and dy are refused). Refused on any other placement.")]
         public string align = "";
 
         // THE OVERSHOOT, AND WHY IT IS ONE NUMBER RATHER THAN TWO. A punch is

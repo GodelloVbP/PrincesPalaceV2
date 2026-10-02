@@ -725,6 +725,24 @@
             "fade": 0.06
           },
           {
+            "_comment": "The tear along the path: the splinter still turned flat (blackglass_spear_rift, dark glass with violet edges) laid along the spear's flight from the air point to the target's middle, stretched to it, revealed behind the spear as it flies, then held 1.1 s past the hit and faded. Thickness is size 110 on a rat. Authored before the spear so the spear draws over it.",
+            "id": "rift",
+            "render": "still",
+            "place": "layer:spear",
+            "align": "flight",
+            "at": "release",
+            "offset": 0.6,
+            "path": "Spells/blackglass_spear_rift",
+            "seconds": 1.3,
+            "until": "hold",
+            "size": 110,
+            "fit": "target",
+            "facing": "none",
+            "sort": "effects",
+            "glow": 1.4,
+            "fade": 0.5
+          },
+          {
             "_comment": "f3's spear (the cleanest: alpha axis 20x longer than wide), fired from the air point at the target's middle. Painted pointing 45 degrees down, so orient path turns it by only a few degrees onto the flight. impactX/Y is 80% of the way from the frame centre to the tip. Fired at 0.6 once the build-up has gathered; arrival 0.6 + 0.18 = 0.78 is the hit cue.",
             "id": "spear",
             "render": "still",

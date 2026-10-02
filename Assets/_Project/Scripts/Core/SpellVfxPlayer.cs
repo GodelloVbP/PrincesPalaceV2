@@ -62,8 +62,14 @@ namespace PrincesPalace
         // upstream, which is what lets a held clock make "what is on screen at
         // the impact" a question with an answer rather than a race against
         // however long the next frame takes.
+        //
+        // `stretch` FILLS THE BOX rather than fitting the drawing inside it
+        // (preserveAspect off), for a layer whose box is a measured line and not
+        // the drawing's own shape -- the wake along a projectile's flight, long
+        // and thin however the frame was cut. Set on every call, so a member
+        // handed on from a stretched cast needs no restoring.
         public void Show(Sprite frame, Sprite next, float blend, float alpha, Vector2 at, Vector2 size,
-            float degrees = 0f, float glow = 0f)
+            float degrees = 0f, float glow = 0f, bool stretch = false)
         {
             if (image == null || frame == null) return;
 
@@ -90,6 +96,7 @@ namespace PrincesPalace
 
             ApplyGlow(glow);
 
+            image.preserveAspect = !stretch;
             image.sprite = frame;
             image.enabled = true;
 
@@ -103,6 +110,7 @@ namespace PrincesPalace
             fade.enabled = next != null && blend > 0f;
             if (!fade.enabled) return;
 
+            fade.preserveAspect = !stretch;
             fade.sprite = next;
             var fading = fade.color;
             fade.color = new Color(fading.r, fading.g, fading.b, blend * alpha);

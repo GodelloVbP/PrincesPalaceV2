@@ -496,8 +496,13 @@ namespace PrincesPalace.Domain.Content
             // struck body and is fanned out per target for exactly that reason
             // (SpellLayer.IsPerTarget), so a bolt that should land at the size
             // of what it hits may say so.
+            //
+            // A FLIGHT-ALIGNED LAYER RESOLVES THE SAME ONE: the body its
+            // projectile is aimed at, which is the factor that projectile was
+            // sized by.
             if (SpellFitNames.IsKnown(layer.fit) && layer.Fit == SpellFit.Target &&
-                !SpellPlaceNames.PerTarget(layer.Place) && !layer.Travels)
+                !SpellPlaceNames.PerTarget(layer.Place) && !layer.Travels &&
+                !(layer.Place == SpellPlace.Layer && layer.Align == SpellAlign.Flight))
             {
                 problems.Add($"{at} authors fit 'target' but is placed on {layer.place.Trim()}, which " +
                              "resolves no single struck target to read a footprint off. Only target, " +
@@ -527,12 +532,43 @@ namespace PrincesPalace.Domain.Content
             // direction from. Refused rather than ignored, because a word that
             // silently does nothing on five of the six placements is a word an
             // author will keep re-typing and keep not seeing.
-            if (!onFormation && SpellAlignNames.IsKnown(layer.align) &&
-                layer.Align != SpellAlign.Level)
+            //
+            // `flight` HAS ITS OWN PLACEMENT: a layer riding a projectile, whose
+            // launch and aim are the two points. That the named layer actually
+            // travels is checked across layers, where the names are known.
+            bool onLayer = layer.Place == SpellPlace.Layer;
+
+            if (SpellAlignNames.IsKnown(layer.align) && layer.Align == SpellAlign.Span && !onFormation)
             {
-                problems.Add($"{at} authors align '{layer.align.Trim()}' but is placed on " +
-                             $"{layer.place.Trim()}, which is one point and has no line to lie along. " +
-                             "Only 'formation' spans a rank.");
+                problems.Add($"{at} authors align 'span' but is placed on {layer.place.Trim()}, which is " +
+                             "one point and has no line to lie along. Only 'formation' spans a rank.");
+            }
+
+            if (SpellAlignNames.IsKnown(layer.align) && layer.Align == SpellAlign.Flight)
+            {
+                if (!onLayer)
+                {
+                    problems.Add($"{at} authors align 'flight' but is placed on {layer.place.Trim()}, which " +
+                                 "has no flight to lie along. Place it on 'layer:<id>' of a travelling layer.");
+                }
+
+                if (layer.Render == SpellRender.Emitter)
+                {
+                    problems.Add($"{at} authors align 'flight' on an emitter, which has no box to lie along " +
+                                 "the line. Use a sprite or still.");
+                }
+
+                if (layer.Travels)
+                {
+                    problems.Add($"{at} authors align 'flight' and travels itself. A flight-aligned layer " +
+                                 "lies along another layer's flight and is revealed by it; remove travelSeconds.");
+                }
+
+                if (layer.dx != 0f || layer.dy != 0f)
+                {
+                    problems.Add($"{at} authors align 'flight' with a dx or dy, which the measured line's own " +
+                                 "midpoint overrides. Remove them.");
+                }
             }
 
             // BOTH HALVES OF THE POINT OR NEITHER, the rule
@@ -641,6 +677,20 @@ namespace PrincesPalace.Domain.Content
                     string known = declared.Count > 0 ? string.Join(", ", declared) : "none";
                     problems.Add($"{label}: vfx.layers[{i}].place 'layer:{reference}' names no layer. " +
                                  $"Declared: {known}.");
+                }
+            }
+
+            for (int i = 0; i < layers.Length; i++)
+            {
+                var layer = layers[i];
+                if (layer == null || layer.Place != SpellPlace.Layer || layer.Align != SpellAlign.Flight) continue;
+
+                var source = layers.FirstOrDefault(l => l != null && string.Equals(l.id?.Trim(),
+                    layer.FollowsLayerId, StringComparison.Ordinal));
+                if (source != null && !source.Travels)
+                {
+                    problems.Add($"{label}: vfx.layers[{i}] authors align 'flight' on '{layer.FollowsLayerId}', " +
+                                 "which does not travel, so there is no flight to lie along.");
                 }
             }
 

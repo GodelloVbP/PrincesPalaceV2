@@ -271,6 +271,80 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the formation ------------------------------------------------------
 
+        // ---- a layer laid along a projectile's flight ---------------------------
+
+        private static SpellLayer Spear() => new SpellLayer
+        {
+            id = "spear",
+            render = "still",
+            place = "sky",
+            path = "Spells/blackglass_spear",
+            travelSeconds = 0.18f,
+        };
+
+        private static SpellLayer Rift() => new SpellLayer
+        {
+            id = "rift",
+            render = "still",
+            place = "layer:spear",
+            align = "flight",
+            path = "Spells/blackglass_spear_rift",
+            seconds = 1.3f,
+            until = "hold",
+            size = 80f,
+            fit = "target",
+        };
+
+        [Test]
+        public void ALayerMayLieAlongAProjectilesFlight_AndMayFitTheTargetItEndsIn()
+        {
+            CollectionAssert.IsEmpty(Problems(With(Spear(), Rift())));
+        }
+
+        [Test]
+        public void AlignFlightOffALayerPlacementIsRefused()
+        {
+            var layer = Rift();
+            layer.place = "target";
+
+            string message = Problems(With(Spear(), layer)).Single(p => p.Contains("align 'flight'"));
+            StringAssert.Contains("is placed on target, which has no flight to lie along", message);
+        }
+
+        [Test]
+        public void AlignFlightOnALayerThatDoesNotTravelIsRefused()
+        {
+            var still = Sprite("spear");
+            still.place = "sky";
+
+            string message = Only(With(still, Rift()));
+            StringAssert.Contains("authors align 'flight' on 'spear', which does not travel", message);
+        }
+
+        [Test]
+        public void AFlightLayerThatTravelsItselfOrOffsetsItselfIsRefused()
+        {
+            var layer = Rift();
+            layer.travelSeconds = 0.1f;
+            layer.dx = 4f;
+
+            var problems = Problems(With(Spear(), layer));
+            Assert.IsTrue(problems.Any(p => p.Contains("travels itself")), string.Join(" | ", problems));
+            Assert.IsTrue(problems.Any(p => p.Contains("with a dx or dy")), string.Join(" | ", problems));
+        }
+
+        [Test]
+        public void AFlightLayerMayNotBeAnEmitter()
+        {
+            var layer = Rift();
+            layer.render = "emitter";
+            layer.path = "";
+            layer.emitter = new SpellEmitter { path = "Spells/blackglass_spear_particles", burst = 3, speedMin = 1, speedMax = 2, lifeMax = 0.3f };
+
+            var problems = Problems(With(Spear(), layer));
+            Assert.IsTrue(problems.Any(p => p.Contains("align 'flight' on an emitter")), string.Join(" | ", problems));
+        }
+
         [Test]
         public void AFormationLayerAuthoringASizeIsRefusedBecauseTheSpanOverridesIt()
         {

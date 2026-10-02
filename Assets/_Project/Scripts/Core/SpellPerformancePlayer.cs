@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -591,6 +592,29 @@ namespace PrincesPalace
                 renderer.SetFacing(instance.DrawFacing);
 
                 var next = sample.Next >= 0 && sample.Next < frameCount ? frames[sample.Next] : null;
+
+                // LAID ALONG A FLIGHT: the part of the line its projectile has
+                // crossed, stretched to it. Nothing of it exists until the
+                // projectile leaves, and it is whole once the projectile lands.
+                if (instance.AlignKind == SpellAlign.Flight)
+                {
+                    var source = cast.Performance.Instances[instance.SourceInstance];
+                    var span = FlightSpan.Between(instance.FlightFrom, instance.FlightTo,
+                        SpellPerformance.FractionOf(source, seconds));
+
+                    if (span.Length < 1f)
+                    {
+                        renderer.StopImmediately();
+                        continue;
+                    }
+
+                    renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
+                        new Vector2(span.Centre.X, span.Centre.Y),
+                        new Vector2(span.Length * sample.Scale, instance.Box.Y * sample.Scale),
+                        span.Degrees, instance.Layer.glow, stretch: true);
+                    continue;
+                }
+
                 var at = PositionOf(cast, i, instance, seconds);
 
                 // THE PUNCH MULTIPLIES THE BOX HERE, not in the placement.

@@ -371,11 +371,13 @@ namespace PrincesPalace.Domain.Content
 
     // ---- which way it lies on the rank it spans ------------------------------
 
-    // ONLY `place: formation` HAS A LINE TO LIE ALONG, which is why this word
-    // is refused anywhere else (SpellLayerRules.CheckPlacement) rather than
-    // quietly ignored. A target-anchored layer has one point, not two, and a
-    // word that does nothing on five of the six placements is a word an author
-    // will reasonably expect to do something.
+    // ONLY A PLACEMENT WITH TWO POINTS HAS A LINE TO LIE ALONG: `formation`
+    // (the leftmost and rightmost struck body, `span`) and `layer:<id>` on a
+    // projectile (its launch and its aim, `flight`). Each word is refused
+    // anywhere else (SpellLayerRules.CheckPlacement) rather than quietly
+    // ignored. A target-anchored layer has one point, not two, and a word that
+    // does nothing on most placements is a word an author will reasonably
+    // expect to do something.
     public enum SpellAlign
     {
         // Axis-aligned: the box is as wide as the struck rank's horizontal
@@ -395,6 +397,16 @@ namespace PrincesPalace.Domain.Content
         // (FightStageAnchors: the enemy's runs 300,-218 -> 660,-125), so a
         // line drawn level across them describes floor nobody stands on.
         Span,
+
+        // Along a projectile's flight: `place: layer:<id>` naming a travelling
+        // layer. The box runs from where that layer launched to where it
+        // aims, turned onto the line, as long as the line and `size` thick,
+        // and is REVEALED BEHIND THE PROJECTILE -- only the part of the line
+        // the tip has crossed is drawn, so it grows out of the launch point as
+        // the projectile flies and then holds and fades on its own schedule,
+        // outliving the projectile it was left by. Right for a wake that stays
+        // where it was cut: a tear in the air, a scorch, a vapour line.
+        Flight,
     }
 
     public static class SpellAlignNames
@@ -404,7 +416,7 @@ namespace PrincesPalace.Domain.Content
         public static bool IsKnown(string name) =>
             string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellAlign)(-1)) != (SpellAlign)(-1);
 
-        public static string[] All => new[] { "level", "span" };
+        public static string[] All => new[] { "level", "span", "flight" };
 
         private static SpellAlign Lookup(string name, SpellAlign fallback)
         {
@@ -412,6 +424,7 @@ namespace PrincesPalace.Domain.Content
 
             if (SpellWord.Is(name, "level")) return SpellAlign.Level;
             if (SpellWord.Is(name, "span")) return SpellAlign.Span;
+            if (SpellWord.Is(name, "flight")) return SpellAlign.Flight;
             return fallback;
         }
     }

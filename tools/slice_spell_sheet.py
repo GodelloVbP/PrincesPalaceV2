@@ -335,6 +335,15 @@ def compose_sequence(cells, steps):
                landing and expanding; the same cell twice at the same size
                reads as a dropped frame.
 
+      TURN  -- a fixed rotation in degrees (counter-clockwise, as PIL reads
+               it) applied to every frame the step emits, about the pivot. For
+               a still that was painted on a diagonal and has to lie along an
+               axis, like the splinter that becomes the Blackglass Spear's
+               rift. Stacks with SPIN. A turned frame has alpha at or under
+               2 cleared: resampling leaves a faint haze of it that
+               content_crop would otherwise read as ink and keep the whole
+               canvas around a thin shape.
+
     Both are the cheap half of animation, and the reason to do it here rather
     than in the player is that the player would then need to be told the
     recipe -- which is per-sheet, which makes it content, which makes it a
@@ -359,10 +368,21 @@ def compose_sequence(cells, steps):
             cell = discs(cell, pivot, radius)
 
         for i in range(count):
-            angle = -360.0 * i / count if rotates and count > 1 else 0.0
+            angle = (-360.0 * i / count if rotates and count > 1 else 0.0) + step.get("turn", 0.0)
             t = i / (count - 1) if count > 1 else 1.0
-            out.append(turned(cell, angle, pivot, lo + (hi - lo) * t))
+            frame = turned(cell, angle, pivot, lo + (hi - lo) * t)
+            if "turn" in step:
+                frame = clear_resampling_haze(frame)
+            out.append(frame)
 
+    return out
+
+
+def clear_resampling_haze(frame, floor=2):
+    """Zero every alpha value at or under `floor`."""
+    alpha = frame.getchannel("A").point(lambda a: 0 if a <= floor else a)
+    out = frame.copy()
+    out.putalpha(alpha)
     return out
 
 

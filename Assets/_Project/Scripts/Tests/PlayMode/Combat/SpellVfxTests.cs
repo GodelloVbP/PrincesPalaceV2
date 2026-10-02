@@ -2078,6 +2078,43 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(checkedLayers, 0, $"{skillId}: no travelling layer was checked");
         }
 
+        // THE RIFT LIES ALONG THE SPEAR'S WHOLE FLIGHT: its line is the spear's
+        // own launch (the air point) to the body's middle, its box is that long
+        // and its angle is that line's, turned into (-90, 90]. A rift that was
+        // placed on its own guess of the flight is the fault this pins, on the
+        // long low body and the tall one both.
+        [UnityTest]
+        public IEnumerator TheBlackglassRiftLiesFromTheAirPointToTheBodyMiddle(
+            [ValueSource(nameof(BodiesToAimAt))] string sprite)
+        {
+            yield return LoadFight(1, sprite.EndsWith("treant") ? 1.45f : 1f, sprite);
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+            var performance = _fight.PlacedCastForTest(new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = ShippedVfx("blackglass_spear"),
+            });
+
+            var rift = performance.Instances.Single(i => i.Layer.id == "rift");
+            var spear = performance.Instances.Single(i => i.Layer.id == "spear");
+
+            Assert.AreEqual(body.Centre.X, rift.FlightTo.X, 2f, "the line ends at the body's middle");
+            Assert.AreEqual(body.Centre.Y, rift.FlightTo.Y, 2f, "the line ends at the body's middle");
+            Assert.AreEqual(spear.FlightFrom.X, rift.FlightFrom.X, 0.01f, "the line starts where the spear does");
+            Assert.AreEqual(spear.FlightFrom.Y, rift.FlightFrom.Y, 0.01f, "the line starts where the spear does");
+
+            var whole = Domain.Stage.FlightSpan.Between(rift.FlightFrom, rift.FlightTo, 1f);
+            Assert.AreEqual(whole.Length, rift.Box.X, 0.01f, "the box is as long as the flight");
+            Assert.AreEqual(whole.Degrees, rift.Degrees, 0.01f, "the box lies on the flight");
+            Assert.Greater(rift.Box.Y, 0f);
+            Assert.Less(rift.Box.Y, rift.Box.X, "a rift is long and thin");
+            Assert.AreEqual(spear.Fit, rift.Fit, 1e-4f, "thickness is fitted by the body the spear is");
+        }
+
         // CROWNFALL LANDS ON THE TREANT, not on the air point beside it: the
         // shatter is centred inside the drawn body and the spike's arrival box
         // covers the body's middle.
