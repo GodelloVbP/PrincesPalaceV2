@@ -6,33 +6,35 @@ composition and invariants only. Stills only, no rigs or frame animation.
 ## Petting Zoo set piece
 
 Target: `Assets/_Project/Art/Events/petting_zoo/zoo.png`, the `artPath` of the
-`zoo` and `petter` pages of `petting_zoo` (`ContentData/events.json`). It sits
-over the stage default backdrop, so it carries no sky, floor plane or scenery
-edge to edge.
+`zoo` and `petter` pages of `petting_zoo` (`ContentData/events.json`). The
+stage draws it at 1280x720 over the dark `Art/Backgrounds/Dungeon.png`, between
+the speaker portraits and above the dialogue box.
 
-Giant_rat_sheet.png is the rendering reference ONLY: do not copy its subject or
-palette. Uniform bold dark outlines, exactly 2-3 flat tones per colour area,
-small palette, minimal internal texture. No painterly gradients, rim lighting,
-glow or micro-texture.
+Shared event style from `output/event_art/PROMPTS.md`: Hades-inspired painterly
+fantasy, bold sculpted brush planes, warm subdued gold and cool teal shadows,
+clean silhouettes. Not flat clip art, not a mobile-game diorama.
 
-1920x1080, solid #00FF00 background (keyed with `tools/key_green_screen.py`;
-no green anywhere in the subject). No UI, text, frames, signage lettering or
-watermark.
+1920x1080, solid #00FF00 background, keyed with `tools/key_green_screen.py`.
+No green or yellow-green anywhere in the subject, ground and shadows included.
+No UI, text, frames, signage lettering or watermark.
 
-- One small wooden petting-zoo pen, low split-rail fence, gate at front right.
-  Whole pen inside the central 65% of the canvas, broad margins.
-- Inside: one ordinary woolly sheep chewing at the rail (not Shawn: no vest,
-  strap or tan muzzle), one peacock with its tail fanned, two fawns nosing at
-  an empty wooden trough.
-- By the gate: a small cooler, beads of water on it, a few bottle necks showing.
-- Animals side-on or three-quarter, readable silhouettes, no overlap that hides
-  a head. Daylight, cheerful, no creature looking at camera.
-- A blank wooden sign hung on the fence, no lettering: the text names it
-  PETTING ZOO, and generated lettering is unreadable and cannot be localised.
+- Camera at eye level, front-on, looking very slightly down: the fence runs
+  left to right across the frame like a stage. Not isometric, not top-down.
+- The pen stands on its own opaque patch of trampled dirt and loose straw,
+  drawn edge to edge under the fence with soft-edged ends, so the keyed image
+  has a floor. Ground shadows are dark brown on that dirt, never green.
+- Whole group inside x 420..1500, y 220..960. Nothing touches the canvas edge.
+- Front rail: a blank weathered wooden sign hanging from it, no lettering.
+- Behind the rail, left to right: a peacock, tail fanned, body blue, crest and
+  eyespots blue, bronze and gold with no green; two spotted fawns nosing at an
+  empty wooden trough; an ordinary woolly sheep with a dark face chewing at the
+  rail (not Shawn: no vest, strap or tan muzzle).
+- Front right, by a closed gate: a dented red cooler (the text says "a cooler of
+  cold ones"), lid propped open, three brown glass beer bottles with crown caps
+  in ice, beaded with cold. Not water bottles.
+- Light: one warm lantern hung on a fence post, cool shadows falling away, as
+  if the pen were set down inside a dark dungeon. Not daylight.
 - No characters, crowd or people. The fence crowd lives in the text.
-
-Owner: confirm the flat-cel style. Every other event set piece (bell, caravan)
-is painterly per `output/event_art/PROMPTS.md`; this one follows the lane brief.
 
 ## Petting Zoo follow-on pieces
 
@@ -48,8 +50,8 @@ the party never appear: the dialogue stage shows them as portraits.
   width, chest out, smug. A scatter of small gold coins on the ground by the fence.
 - Fawns (`fawns.png`): gate open, both fawns standing just outside it looking
   off the right edge of the canvas, as if following someone; trough emptied.
-- Cold one (`cold_one.png`): cooler lid thrown open, a few bottles taken out,
-  two empty bottles tipped over on the grass.
+- Cold one (`cold_one.png`): the cooler half empty, two empty beer bottles
+  tipped over on the dirt.
 
 Wiring: a result shows on the choosing page, so it keeps `zoo.png`. These three
 need each outcome to `goTo` its own one-line page with that `artPath`, which is
