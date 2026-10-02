@@ -1249,7 +1249,6 @@
             "effects": [
               { "kind": "relic", "relic": "toll_of_the_flock" },
               { "kind": "relic", "relic": "bellwethers_bell" },
-              { "kind": "exp", "amount": 80, "character": "sheep" },
               { "kind": "finish" }
             ],
             "result": "",

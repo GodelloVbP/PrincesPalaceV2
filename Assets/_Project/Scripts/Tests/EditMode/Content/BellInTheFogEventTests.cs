@@ -263,20 +263,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void Break_GrantsBothRelicsAndTheSameExp_Finishes_AndGoesToBreak()
+        public void Break_GrantsBothRelics_NoExpLiteral_Finishes_AndGoesToBreak()
         {
             var broke = Bell().FightById("bellwether").OutcomeFor(EventFightResult.Defeated);
 
             Assert.AreEqual("break", broke.GoTo);
             Assert.AreEqual("", broke.Result);
             CollectionAssert.AreEqual(
-                new[] { EventEffectKind.Relic, EventEffectKind.Relic, EventEffectKind.Exp, EventEffectKind.Finish },
+                new[] { EventEffectKind.Relic, EventEffectKind.Relic, EventEffectKind.Finish },
                 broke.Effects.Select(e => e.Kind).ToArray());
             Assert.AreEqual("toll_of_the_flock", broke.Effects[0].RelicId);
             Assert.AreEqual("bellwethers_bell", broke.Effects[1].RelicId);
             Assert.AreEqual("Bellwether's Bell", broke.Effects[1].RelicDisplayName);
-            Assert.AreEqual("sheep", broke.Effects[2].CharacterId);
-            Assert.AreEqual(80, broke.Effects[2].Amount);
         }
 
         [Test]

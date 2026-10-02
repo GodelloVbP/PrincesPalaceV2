@@ -91,8 +91,10 @@ returning event and the first event fight.
   0.15.
   `onSurvived` (Endure) -> `endure`, `onDefeated` (Break) -> `break`,
   `onFell` (Fall) leaves on its result. All three `finish`. Endure grants
-  Toll of the Flock, Break both relics, each with **80 exp to Shawn**: a
-  literal, since event exp does not scale with depth. 80 is about a
+  Toll of the Flock, Break both relics. Endure pays **80 exp to Shawn**: a
+  literal, since event exp does not scale with depth, and no enemy falls to
+  pay it. Break pays the Bellwether's own `expReward` through the standard
+  Reckoning (`pays`) with no literal on top. 80 is about a
   floor 1-2 elite room's payout per member (two enemies of ~25 raw exp x the
   1.56 elite multiplier); it underpays deeper. A depth-scaled `exp` is an
   engine change, not content.

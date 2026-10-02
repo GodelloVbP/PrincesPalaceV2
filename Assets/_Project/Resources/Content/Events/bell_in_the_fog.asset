@@ -751,17 +751,6 @@ MonoBehaviour:
           FightId: 
           ShelfId: 
           Reveal: 0
-        - Kind: 3
-          Amount: 80
-          Item: 
-          CounterId: 
-          CharacterId: sheep
-          CharacterDisplayName: Shawn
-          RelicId: 
-          RelicDisplayName: 
-          FightId: 
-          ShelfId: 
-          Reveal: 0
         - Kind: 10
           Amount: 0
           Item: 
