@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PrincesPalace
 {
@@ -45,16 +46,113 @@ namespace PrincesPalace
         // whatever face colour the tree asked for. The heavier dilate
         // thickens the stroke until its core is solid face again; the ring
         // is unchanged. At 0.8 the 14pt ENEMIES heading still had stems
-        // alternating full and ~90% face columns, which over the pale canopy
-        // read as a double strike; 1.0 closes that.
+        // alternating full and ~90% face columns; 1.0 closes that, and the
+        // backing below carries the rest of the legibility over pale art.
         internal const float SmallFaceBelowPt = 16f;
         internal const float SmallEdgeDilate = 1.0f;
 
+        // THE BACKING. A feathered, low-alpha dark plate hugging the label's
+        // rendered text, so the label reads over any backdrop at any size;
+        // the edge alone cannot at 14pt, where the ring and the face are each
+        // about one pixel column. A SIBLING drawn just before the label (a
+        // child would draw over its own text), re-fitted every frame because log lines, counts and
+        // intent numbers change under it. Fades with the label's own alpha.
+        internal const float BackingAlpha = 0.62f;
+        internal const float BackingPadX = 12f;
+        internal const float BackingPadY = 4f;
+
+        // Emitted by UiEmitter as the label's previous sibling (a GameObject
+        // may only be created there), without a sprite: a sprite built in the
+        // Editor is not an asset and would not survive the scene save, so the
+        // feathered tile is made here at Awake instead.
+        public Image Backing;
+
+        private TMP_Text _label;
+        private RectTransform _backing;
+        private Image _backingImage;
+
         private void Awake()
         {
-            var label = GetComponent<TMP_Text>();
-            if (label == null) return;
-            Apply(label, EdgeWidth, label.fontSize < SmallFaceBelowPt ? SmallEdgeDilate : EdgeDilate);
+            _label = GetComponent<TMP_Text>();
+            if (_label == null) return;
+            Apply(_label, EdgeWidth, _label.fontSize < SmallFaceBelowPt ? SmallEdgeDilate : EdgeDilate);
+            if (Backing == null) return;
+            _backingImage = Backing;
+            _backing = Backing.rectTransform;
+            _backingImage.sprite = BackingSprite();
+            _backingImage.type = Image.Type.Sliced;
+            _backingImage.raycastTarget = false;
+            _backing.gameObject.SetActive(false);
+        }
+
+        private void OnDisable()
+        {
+            if (_backing != null) _backing.gameObject.SetActive(false);
+        }
+
+        private void LateUpdate()
+        {
+            if (_backing != null) FitBacking();
+        }
+
+        private void FitBacking()
+        {
+            var parent = _backing.parent as RectTransform;
+            bool has = parent != null && _label != null && !string.IsNullOrEmpty(_label.text)
+                && _label.color.a > 0.01f;
+            if (!has) { _backing.gameObject.SetActive(false); return; }
+
+            var b = _label.textBounds;
+            if (b.size.x <= 0.01f || b.size.y <= 0.01f) { _backing.gameObject.SetActive(false); return; }
+
+            var rt = _label.rectTransform;
+            Vector2 lo = parent.InverseTransformPoint(rt.TransformPoint(b.min));
+            Vector2 hi = parent.InverseTransformPoint(rt.TransformPoint(b.max));
+            Vector2 size = hi - lo;
+            // Padding is in the label's own units, so the plate scales with a
+            // badge that rides a depth scale.
+            float scale = size.x / b.size.x;
+            _backing.sizeDelta = size + new Vector2(BackingPadX, BackingPadY) * 2f * scale;
+            _backing.anchoredPosition = (lo + hi) * 0.5f - parent.rect.center;
+            var c = _backingImage.color;
+            c.a = BackingAlpha * _label.color.a;
+            _backingImage.color = c;
+            _backing.gameObject.SetActive(true);
+        }
+
+        private static Sprite _backingSprite;
+
+        // 48px tile, 14px rounded corner fading out over 12px; the border
+        // keeps the feather at a fixed size while the middle stretches.
+        private static Sprite BackingSprite()
+        {
+            if (_backingSprite != null) return _backingSprite;
+            const int n = 48;
+            const float radius = 14f, feather = 12f;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "OverArtBacking", wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[n * n];
+            float half = n * 0.5f;
+            for (int y = 0; y < n; y++)
+            {
+                for (int x = 0; x < n; x++)
+                {
+                    // Signed distance to a rounded box whose edge sits half a
+                    // feather inside the tile; alpha ramps across the edge.
+                    float hb = half - feather * 0.5f;
+                    float qx = Mathf.Abs(x + 0.5f - half) - (hb - radius);
+                    float qy = Mathf.Abs(y + 0.5f - half) - (hb - radius);
+                    float d = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f))
+                        + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
+                    float a = 1f - Mathf.SmoothStep(-feather * 0.5f, feather * 0.5f, d);
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.Clamp01(a) * 255f));
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            _backingSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0,
+                SpriteMeshType.FullRect, new Vector4(18, 18, 18, 18));
+            _backingSprite.name = "OverArtBacking";
+            return _backingSprite;
         }
 
         public static void Apply(TMP_Text label, float width, float dilate)

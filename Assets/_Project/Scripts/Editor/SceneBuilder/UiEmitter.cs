@@ -266,7 +266,30 @@ public static class UiEmitter
         // material written here, because a material built at scene-build time
         // is not an asset and would not survive the scene save; the component
         // makes the label's own instance at Awake.
-        if (node.DrawsOverArt) go.AddComponent<OverArtEdge>();
+        if (node.DrawsOverArt)
+        {
+            var edge = go.AddComponent<OverArtEdge>();
+            edge.Backing = EmitOverArtBacking(go);
+        }
+    }
+
+    // The soft dark plate OverArtEdge fits behind its label's text at runtime.
+    // A previous sibling so it draws under the label; centre-anchored and
+    // inactive, because OverArtEdge sizes and shows it once there is text.
+    private static Image EmitOverArtBacking(GameObject label)
+    {
+        var go = new GameObject(label.name + "Backing", typeof(RectTransform));
+        go.transform.SetParent(label.transform.parent, worldPositionStays: false);
+        go.transform.SetSiblingIndex(label.transform.GetSiblingIndex());
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = Vector2.zero;
+        go.AddComponent<LayoutElement>().ignoreLayout = true;
+        var image = go.AddComponent<Image>();
+        image.color = new Color(0f, 0f, 0f, 0f);
+        image.raycastTarget = false;
+        go.SetActive(false);
+        return image;
     }
 
     // THE single resolution point for a label's typographic dressing: font
