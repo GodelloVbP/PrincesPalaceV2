@@ -39,6 +39,15 @@ public static class ProceduralSpriteBaker
         // pulled to the FRAME closing in, not to a glow at a point inside it.
         Bake("vignette", dist => Smoothstep(Mathf.Clamp01(dist)));
 
+        // The low-HP warning's shape: opaque on the outer 10% of each axis
+        // (0.2 of the -1..1 span), clear everywhere inside. Stretched over the
+        // screen it hugs the frame instead of washing the whole stage.
+        BakeGlow("vignette_band", (nx, ny) =>
+        {
+            float edge = 1f - Mathf.Max(Mathf.Abs(nx), Mathf.Abs(ny));
+            return 1f - Smoothstep(Mathf.Clamp01(edge / 0.2f));
+        });
+
         // A flat disc with a thin antialiased edge - a coin, an orb, anything
         // that must not render as a square.
         Bake("solid_circle", dist => 1f - Mathf.Clamp01((dist - 0.92f) / 0.08f));

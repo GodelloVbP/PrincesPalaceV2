@@ -135,19 +135,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(hasElementRow, "a heal with no element still carries an Element icon row");
         }
 
-        // THE THREE BLANK ROWS the owner's playtest report flagged
-        // ("icons with no values") are BY DESIGN, not missing data: Defense/
-        // Reach/AreaOfEffect carry their fact through the icon glyph alone
-        // (FillDetailIcons' own "ONE ICON, COMPACT" header), so Value is ""
-        // on purpose and the row must stay. What was a real bug is that the
-        // value LABEL used to stay active anyway -- an empty TMP_Text
-        // reserving its slot and reading as a blank gap beside the icon.
-        // Arcane Bolt (SingleEnemy, IgnoresDefense == false, one Arcane
-        // packet) carries all three: Defense ("magical", Arcane is not
-        // physical), Reach and AreaOfEffect (every non-Self skill gets
-        // both).
+        // Defense, Reach and AreaOfEffect used to print the glyph alone; the
+        // owner read that as missing text. Every non-hero row now shows its
+        // value label.
         [UnityTest]
-        public IEnumerator HoveringADamagingSkillHidesTheValueLabelForIconOnlyRows()
+        public IEnumerator HoveringADamagingSkillPaintsAValueBesideEveryNonHeroIcon()
         {
             yield return LoadFightWithAnArcaneSkill();
 
@@ -157,25 +149,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var panel = _fight.CurrentDetailForTest();
-            var valueless = new List<int>();
             for (int i = 0; i < panel.Icons.Count; i++)
             {
-                if (string.IsNullOrEmpty(panel.Icons[i].Value)) valueless.Add(i);
-            }
+                if (panel.Icons[i].Kind == DetailIconKind.Element) continue;
 
-            Assert.IsNotEmpty(valueless,
-                "fixture: Arcane Bolt should carry at least one icon-only row (Defense/Reach/AreaOfEffect)");
-
-            foreach (int index in valueless)
-            {
-                var iconImage = Named($"DetailIcon{index}").GetComponent<Image>();
-                Assert.IsTrue(iconImage.gameObject.activeInHierarchy,
-                    $"row {index} ({panel.Icons[index].Kind}) has no value but IS the fact -- its icon must stay visible");
-
-                var valueLabel = Named($"DetailIconValue{index}");
-                Assert.IsFalse(valueLabel.activeInHierarchy,
-                    $"row {index} ({panel.Icons[index].Kind}) has no value to print -- its label must be hidden, " +
-                    "not an empty active text box");
+                Assert.IsNotEmpty(panel.Icons[i].Value, $"row {i} ({panel.Icons[i].Kind}) has no value text");
+                var valueLabel = Named($"DetailIconValue{i}");
+                Assert.IsTrue(valueLabel.activeInHierarchy, $"row {i} ({panel.Icons[i].Kind}) value label is hidden");
             }
         }
 

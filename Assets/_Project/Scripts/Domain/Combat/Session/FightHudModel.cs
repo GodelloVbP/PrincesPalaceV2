@@ -752,6 +752,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // regression, the coordinator's own call), COOLDOWN (same), Element
         // (carrying POWER's value), Defense, Reach, AreaOfEffect, Scaling.
         //
+        // EVERY ROW PRINTS A VALUE beside its glyph: Defense, Reach and
+        // AreaOfEffect once carried the icon alone, and the owner read three
+        // unlabelled glyphs as a card with missing text.
+        //
         // ONE ICON, COMPACT -- the same "omit rather than pad" rule Stats
         // already followed above: a skill with no scaling axis (a fixed-
         // damage spell) adds no Scaling row at all rather than a "-" icon.
@@ -805,19 +809,24 @@ namespace PrincesPalace.Domain.Combat.Session
                 // else on this card.
                 if (defenseKey != null && defenseKey != "mixed")
                 {
-                    panel.Icons.Add(new DetailIcon(DetailIconKind.Defense, defenseKey, ""));
+                    panel.Icons.Add(new DetailIcon(DetailIconKind.Defense, defenseKey,
+                        DefenseLabel(session, actor, skill)));
                 }
             }
 
             if (skill.Targeting != SkillTargeting.Self)
             {
                 string reachKey = ReachIconKey(skill.Reach);
-                if (reachKey != null) panel.Icons.Add(new DetailIcon(DetailIconKind.Reach, reachKey, ""));
+                if (reachKey != null)
+                {
+                    panel.Icons.Add(new DetailIcon(DetailIconKind.Reach, reachKey,
+                        reachKey == "front" ? "FRONT RANK" : "ANY RANK"));
+                }
 
                 string aoeKey = skill.Targeting == SkillTargeting.SingleEnemy
                     || skill.Targeting == SkillTargeting.SingleAlly
                     ? "single" : "aoe";
-                panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, aoeKey, ""));
+                panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, aoeKey, ReachFor(skill.Targeting)));
             }
 
             string scaling = ScalingLabelForSkill(session, actor, skill);

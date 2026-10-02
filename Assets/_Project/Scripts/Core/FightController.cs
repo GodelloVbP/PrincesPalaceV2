@@ -964,6 +964,10 @@ namespace PrincesPalace
                 int enemyMax = RecordedMax(recorded.MaxHealth, enemies[i].MaxHealth);
                 enemyPlateHps[i].Set(UiStrings.HealthValue, recorded.Health, enemyMax);
                 SetFill(enemyPlateHpFills[i], recorded.Health, enemyMax);
+                if (Has(enemyPlateWardFills, i))
+                {
+                    SetWardFill(enemyPlateWardFills[i], recorded.Health, enemyMax, recorded.Ward);
+                }
             }
 
             // EVERY PARTY MEMBER IN THE SNAPSHOT, not just the acting one:
@@ -1020,6 +1024,18 @@ namespace PrincesPalace
                 }
                 if (Has(pcHpFills, plate)) SetFill(pcHpFills[plate], recordedPc.Health, maxHealth);
                 if (Has(pcMpFills, plate)) SetFill(pcMpFills[plate], recordedPc.Primary, maxPrimary);
+
+                // THE WARD TOO: it is part of the recorded moment, so a cast
+                // that raises one shows the bar and the "+N" on its own beat.
+                if (Has(pcWardFills, plate))
+                {
+                    SetWardFill(pcWardFills[plate], recordedPc.Health, maxHealth, recordedPc.Ward);
+                }
+                if (Has(pcWardValues, plate))
+                {
+                    pcWardValues[plate].gameObject.SetShown(recordedPc.Ward > 0);
+                    if (recordedPc.Ward > 0) pcWardValues[plate].SetContent($"+{recordedPc.Ward}");
+                }
 
                 // What the system menu reports (IFightMenuSource): this beat's
                 // moment, not the round's end.

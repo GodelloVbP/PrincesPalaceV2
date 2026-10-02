@@ -115,6 +115,32 @@ namespace PrincesPalace
             lowHpVignette.SetShown(_lowHpActive);
         }
 
+        // A slow breathing alpha on the edge band, driven per frame from
+        // Update because the refresh only runs on HUD changes. Unscaled time
+        // so a battle-speed preset does not speed up the warning.
+        private Image _lowHpImage;
+        private float _lowHpBaseAlpha;
+        private const float LowHpPulsePeriodSeconds = 3f;
+        private const float LowHpPulseFloor = 0.35f;
+
+        private void PulseLowHpVignette()
+        {
+            if (!_lowHpActive || lowHpVignette == null) return;
+
+            if (_lowHpImage == null)
+            {
+                _lowHpImage = lowHpVignette.GetComponent<Image>();
+                if (_lowHpImage == null) return;
+                _lowHpBaseAlpha = _lowHpImage.color.a;
+            }
+
+            float t = PrincesPalace.Domain.Ambience.AmbienceCurves.BeaconProgressAt(
+                Time.unscaledTime, LowHpPulsePeriodSeconds, 0f);
+            var colour = _lowHpImage.color;
+            colour.a = _lowHpBaseAlpha * Mathf.Lerp(LowHpPulseFloor, 1f, t);
+            _lowHpImage.color = colour;
+        }
+
         // Just the menu-derived panels -- verbs, submenu, detail card, target
         // prompt -- none of which read anything FightBeatPlayer paces. Split
         // out so AfterResolution can hide them the instant the player commits,
@@ -440,14 +466,9 @@ namespace PrincesPalace
                     }
                 }
 
-                // No value label for a row with nothing to say -- Defense/
-                // Reach/AreaOfEffect carry their fact through the icon alone
-                // (FillDetailIcons' own "one icon, compact" header) and are
-                // built with Value == "". The icon is not "genuinely nothing"
-                // (it carries the fact by itself) so the row stays; only the
-                // label that has nothing to print is hidden. The hero icon
-                // never gets a value label either -- its sprite alone
-                // identifies the skill.
+                // Every row carries a value (FillDetailIcons); the label hides only
+                // for the hero, whose sprite identifies the skill, or a row with
+                // nothing to print.
                 if (i < detailIconValues.Length && detailIconValues[i] != null)
                 {
                     bool hasValue = has && !isHero && !string.IsNullOrEmpty(panel.Icons[i].Value);

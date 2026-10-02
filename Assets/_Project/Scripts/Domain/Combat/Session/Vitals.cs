@@ -42,13 +42,22 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly int MaxHealth;
         public readonly int MaxPrimary;
 
+        // THE WARD POOL AT THIS MOMENT (StatusEffects.WardPoints). Recorded
+        // so a ward raised by a cast shows on the beat that raised it rather
+        // than at the end of the round, when the plates repaint from live
+        // state. Zero is both "no ward" and "not recorded": a painter has no
+        // use for telling them apart, and a fixture built without one wants
+        // no bar.
+        public readonly int Ward;
+
         public Vitals(int health, int primary, int signature)
             : this(health, primary, signature, 0, 0)
         {
         }
 
-        public Vitals(int health, int primary, int signature, int maxHealth, int maxPrimary)
+        public Vitals(int health, int primary, int signature, int maxHealth, int maxPrimary, int ward = 0)
         {
+            Ward = ward;
             Health = health;
             Primary = primary;
             Signature = signature;
@@ -58,7 +67,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public bool Equals(Vitals other) =>
             Health == other.Health && Primary == other.Primary && Signature == other.Signature
-            && MaxHealth == other.MaxHealth && MaxPrimary == other.MaxPrimary;
+            && MaxHealth == other.MaxHealth && MaxPrimary == other.MaxPrimary && Ward == other.Ward;
 
         public override bool Equals(object obj) => obj is Vitals other && Equals(other);
 
@@ -71,6 +80,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 hash = (hash * 397) ^ Signature;
                 hash = (hash * 397) ^ MaxHealth;
                 hash = (hash * 397) ^ MaxPrimary;
+                hash = (hash * 397) ^ Ward;
                 return hash;
             }
         }

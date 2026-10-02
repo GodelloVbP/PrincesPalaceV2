@@ -1543,6 +1543,7 @@ namespace PrincesPalace
             // RefreshPoolPulse).
             RefreshPoolPulse();
             KeepRoundOverlayPlaced();
+            PulseLowHpVignette();
 
             // Cancel/Escape is not read here at all -- it belongs to the ONE
             // dispatch point now (NavigationInputModule's Fight branch,

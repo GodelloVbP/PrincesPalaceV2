@@ -1447,7 +1447,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // FightController.Hud's RefreshLowHpVignette.
         private UiNode BuildLowHpVignette()
         {
-            var vignette = Ui.Sprite("LowHpVignette", "proc:vignette", Place.Stretch(), UiSize.Fill)
+            var vignette = Ui.Sprite("LowHpVignette", "proc:vignette_band", Place.Stretch(), UiSize.Fill)
                 .Coloured(FightHudPalette.HpDeep)
                 .AsDecor()
                 .Inactive();
@@ -2923,19 +2923,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // same overflow rule the badge rows use.
         public const int StatusBoxRows = 8;
 
-        public const float StatusBoxWidth = 460f;
-        public const float StatusBoxPad = 12f;
-        public const float StatusBoxIconSize = 24f;
-        public const float StatusBoxIconGap = 8f;
+        // 22pt on the 1920x1080 canvas: the intent tooltip and callout read at
+        // 17-32pt, and 13pt here was the "way too small" the owner flagged.
+        public const float StatusBoxWidth = 600f;
+        public const float StatusBoxPad = 14f;
+        public const float StatusBoxIconSize = 32f;
+        public const float StatusBoxIconGap = 10f;
         public const float StatusBoxRowGap = 4f;
-        public const int StatusBoxFontSize = 13;
+        public const int StatusBoxFontSize = 22;
 
         // A row is one line of text and grows to two when a long entry wraps
         // (Provoked's is the longest authored one). Beyond two it clips
         // rather than pushing the box taller than the min height eight of
         // them were measured against.
-        public const float StatusBoxRowMinHeight = 26f;
-        public const float StatusBoxRowMaxHeight = 40f;
+        public const float StatusBoxRowMinHeight = 34f;
+        public const float StatusBoxRowMaxHeight = 56f;
 
         // Clear air between the actor and the box, matching
         // TooltipPlacement.DefaultGap so every floating panel on this screen
