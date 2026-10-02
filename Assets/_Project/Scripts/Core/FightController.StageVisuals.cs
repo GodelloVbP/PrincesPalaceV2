@@ -630,8 +630,10 @@ namespace PrincesPalace
                     // A trailing "!" marks a guaranteed crit; the figure
                     // already includes the multiplier.
                     value.SetContent(intent.ExpectedDamage + (intent.WillCrit ? "!" : ""));
+                    // The number sits on stage art with no plate, so it keeps the
+                    // reading colour; the icon alone carries the element.
                     value.color = Hex(lethal ? Domain.UiKit.FightHudPalette.IntentLethal
-                        : ElementTintFor(enemy, intent) ?? Domain.UiKit.FightHudPalette.IntentNumber);
+                        : Domain.UiKit.FightHudPalette.IntentNumber);
                 }
             }
 

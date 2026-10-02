@@ -77,9 +77,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(middle.ExpectedDamage, 0);
             Assert.IsFalse(middle.IsLethal);
             Assert.AreEqual(middle.ExpectedDamage.ToString(), value.text, "the badge re-read the seat");
-            // Not lethal any more: the knell is a Void hit, so number and icon
-            // wear the Void element colour instead of red or the kind tint.
-            Assert.AreEqual(Hex("#C22FB0FF"), value.color);
+            // Not lethal any more: the knell is a Void hit, so the icon wears
+            // the Void element colour; the number returns to the plain reading
+            // colour because it has no plate and Void is too dim on dark art.
+            Assert.AreEqual(Hex("#FFF3E0FF"), value.color);
             Assert.AreEqual(Hex("#C22FB0FF"), KnellBadgeFixture.Badge(_fight).color);
             Assert.AreEqual("Death Knell!", KnellBadgeFixture.Callout(_fight).text);
         }
