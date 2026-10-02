@@ -104,6 +104,32 @@ namespace PrincesPalace.PlayModeTests
             AssertGold(label.color);
         }
 
+        // A TWO-PACKET CAST POPS TWO NUMBERS, each in its own element's colour
+        // (Fire #FF6A2A, Ice #9FD8F5), the second held back StaggerFrames.
+        [UnityTest]
+        public IEnumerator ATwoPacketCastPopsOneNumberPerElementInItsOwnColour()
+        {
+            yield return LoadAndBind(1);
+
+            _beats.Play(new List<CombatBeat>
+            {
+                new CombatBeat
+                {
+                    Actor = Hero, Target = Foes[0], Amount = 10, DamageType = DamageType.Fire,
+                    Packets = new[] { new BeatPacket(DamageType.Fire, 6), new BeatPacket(DamageType.Ice, 4) },
+                },
+            }, () => { });
+            yield return WaitForPopups(2);
+
+            var labels = ActiveLabels().OrderBy(l => l.text).ToList();
+            Assert.AreEqual("-4", labels[0].text);
+            Assert.AreEqual("-6", labels[1].text);
+            Assert.AreEqual(0x9F / 255f, labels[0].color.r, 0.01f);
+            Assert.AreEqual(0xD8 / 255f, labels[0].color.g, 0.01f);
+            Assert.AreEqual(0xFF / 255f, labels[1].color.r, 0.01f);
+            Assert.AreEqual(0x6A / 255f, labels[1].color.g, 0.01f);
+        }
+
         [UnityTest]
         public IEnumerator APlainHitStaysUnmarked()
         {

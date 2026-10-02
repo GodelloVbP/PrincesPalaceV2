@@ -956,6 +956,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 }
 
                 if (critInstances) NoteCrit();
+                if (_recordingBeat != null) _recordingBeat.Packets = TakeResolvedPackets();
                 AppendMessage($"{actor.Name} casts {castLabel} on {target.Name} for {damage}! -{detail}");
             }
             else
@@ -1570,7 +1571,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     }
 
                     ApplyFinalDamage(actor, enemy, packetTotal, CombatActions.IsPhysicalMove(skill));
-                    RecordTargetResult(enemy, packetTotal, crit: packetsCrit);
+                    RecordTargetResult(enemy, packetTotal, crit: packetsCrit, packets: TakeResolvedPackets());
                     struckAndLanded.Add(enemy);
 
                     largestLanded = System.Math.Max(packetTotal, largestLanded);
@@ -1742,6 +1743,18 @@ namespace PrincesPalace.Domain.Combat.Session
             return total;
         }
 
+        // THE LAST ResolveDamageInstances' PER-PACKET SPLIT, handed to the beat
+        // by the caller that records it (single target, or each sweep target)
+        // and cleared on the way. Presentation only.
+        private BeatPacket[] _resolvedPackets;
+
+        private BeatPacket[] TakeResolvedPackets()
+        {
+            var taken = _resolvedPackets;
+            _resolvedPackets = null;
+            return taken;
+        }
+
         private void DeclarePacketDamageType(DamageInstance[] packets)
         {
             if (packets == null || packets.Length == 0) return;
@@ -1765,6 +1778,7 @@ namespace PrincesPalace.Domain.Combat.Session
             StringBuilder detail, out bool dodged, out bool crit, DamageInstance[] packets = null)
         {
             crit = false;
+            _resolvedPackets = null;
 
             // THE BEAT WEARS THE ELEMENT THE PACKETS DEAL, not the caster's
             // attack type, so the popup and the hurt flash read the spell's
@@ -1789,7 +1803,10 @@ namespace PrincesPalace.Domain.Combat.Session
             int total = 0;
             float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
 
-            foreach (var instance in packets ?? skill.DamageInstances)
+            var instances = packets ?? skill.DamageInstances;
+            var landedPackets = new List<BeatPacket>(instances.Length);
+
+            foreach (var instance in instances)
             {
                 float elementalMultiplier = 1f + ElementalDamagePercentFor(actor, instance.type) / 100f;
                 int scaled = System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier * elementalMultiplier));
@@ -1815,9 +1832,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 DepleteBreakShield(target, outcome.Effectiveness);
                 total += outcome.Damage;
+                landedPackets.Add(new BeatPacket(instance.type, outcome.Damage));
                 detail.Append($" {outcome.Damage} {instance.type}{EffectivenessSuffix(outcome.Effectiveness)}");
             }
 
+            _resolvedPackets = landedPackets.Count > 1 ? landedPackets.ToArray() : null;
             return total;
         }
 

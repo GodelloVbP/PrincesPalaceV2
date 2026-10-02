@@ -526,6 +526,22 @@ namespace PrincesPalace.Domain.Combat.Session
             return Live(enemy, intent);
         }
 
+        // THE ELEMENT THE COMMITTED MOVE DEALS, read the way its resolution
+        // reads it (CastTypeOf: the skill's own type, else the monster's attack
+        // type, else Physical), so the badge and the hit cannot name two
+        // elements.
+        public DamageType IntentDamageTypeFor(CombatantState enemy)
+        {
+            if (enemy == null || !_intents.TryGetValue(enemy, out var intent)) return DamageType.Physical;
+
+            var pool = SourceFor(enemy)?.Abilities;
+            var skill = pool != null && intent.AbilityIndex >= 0 && intent.AbilityIndex < pool.Count
+                        && pool[intent.AbilityIndex].HasSkill
+                ? pool[intent.AbilityIndex].Skill
+                : null;
+            return CastTypeOf(enemy, skill);
+        }
+
         // The number the badge shows: the live expected damage (0 when none).
         public int IntentDamageFor(CombatantState enemy) => IntentDetailFor(enemy)?.ExpectedDamage ?? 0;
 

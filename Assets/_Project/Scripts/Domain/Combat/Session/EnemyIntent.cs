@@ -267,6 +267,17 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
+        // THE ELEMENT'S COLOUR FOR A DAMAGING MOVE'S BADGE, or null when the kind
+        // tint stands: a heal or a move with no damage figure, and Physical,
+        // whose token is the same red family as the lethal state and would
+        // blur "this kills you" into "this is an ordinary swing". Lethal is
+        // painted over this by the caller.
+        public static string DamageTint(bool heals, int expectedDamage, Stats.DamageType type)
+        {
+            if (heals || expectedDamage <= 0 || type == Stats.DamageType.Physical) return null;
+            return UiKit.FightHudPalette.ForDamageType(type);
+        }
+
         // Colour carries as much of the meaning as the shape does at badge size.
         public static string TintFor(EnemyIntentKind kind)
         {

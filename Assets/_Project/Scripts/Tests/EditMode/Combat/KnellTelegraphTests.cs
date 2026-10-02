@@ -105,6 +105,22 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(EnemyIntentKind.Bleed, EnemyIntentIcons.KindFor(true, StatusEffectType.Bleed, true));
         }
 
+        // THE BADGE WEARS THE ELEMENT OF THE HIT: the knell deals Void, so its
+        // badge takes the Void token instead of the kind's lilac; Physical and
+        // non-damage moves keep their kind tint; lethal red is the caller's.
+        [Test]
+        public void ADamagingBadgeTakesItsElementsColourExceptPhysicalAndHeals()
+        {
+            var (session, _, bell) = ToTheKnell();
+
+            Assert.AreEqual(DamageType.Void, session.IntentDamageTypeFor(bell));
+            Assert.AreEqual("#C22FB0FF", EnemyIntentIcons.DamageTint(false, 1100, DamageType.Void));
+            Assert.AreEqual("#FF6A2AFF", EnemyIntentIcons.DamageTint(false, 50, DamageType.Fire));
+            Assert.IsNull(EnemyIntentIcons.DamageTint(false, 50, DamageType.Physical));
+            Assert.IsNull(EnemyIntentIcons.DamageTint(true, 50, DamageType.Fire));
+            Assert.IsNull(EnemyIntentIcons.DamageTint(false, 0, DamageType.Fire));
+        }
+
         [Test]
         public void TheNewKindsHaveTheirIconsTintsAndFallbacks()
         {

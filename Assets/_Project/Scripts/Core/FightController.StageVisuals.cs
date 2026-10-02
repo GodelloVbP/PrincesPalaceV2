@@ -578,7 +578,8 @@ namespace PrincesPalace
 
                 if (_intentImages != null && _intentImages[i] != null)
                 {
-                    _intentImages[i].color = Hex(Domain.Combat.Session.EnemyIntentIcons.TintFor(kind));
+                    _intentImages[i].color = Hex(ElementTintFor(enemy, intent.Value)
+                        ?? Domain.Combat.Session.EnemyIntentIcons.TintFor(kind));
                     // Nothing to draw is worse than a plain plate: an Image with
                     // no sprite paints a filled RECTANGLE, which is the white
                     // quad this project has hunted eleven times. IconCache<TKind>.
@@ -598,6 +599,14 @@ namespace PrincesPalace
                 PaintIntentReading(i, enemy, intent.Value);
             }
         }
+
+        // A DAMAGING MOVE'S BADGE WEARS ITS ELEMENT (the hit's own colour,
+        // FightHudPalette.ForDamageType), so the telegraph and the blow read as
+        // one colour language. Null for heals, non-damage moves and Physical,
+        // which keep their kind tint; lethal still overrides both.
+        private string ElementTintFor(CombatantState enemy, EnemyIntent intent) =>
+            Domain.Combat.Session.EnemyIntentIcons.DamageTint(
+                intent.Heals, intent.ExpectedDamage, _session.IntentDamageTypeFor(enemy));
 
         // THE NUMBER, THE LETHAL STYLE AND THE CALLOUT (PLAN_BELLWETHER_KIT
         // 3.8), all read off the LIVE intent, so a Move or a free Palace
@@ -621,7 +630,8 @@ namespace PrincesPalace
                     // A trailing "!" marks a guaranteed crit; the figure
                     // already includes the multiplier.
                     value.SetContent(intent.ExpectedDamage + (intent.WillCrit ? "!" : ""));
-                    value.color = Hex(lethal ? Domain.UiKit.FightHudPalette.IntentLethal : Domain.UiKit.FightHudPalette.IntentNumber);
+                    value.color = Hex(lethal ? Domain.UiKit.FightHudPalette.IntentLethal
+                        : ElementTintFor(enemy, intent) ?? Domain.UiKit.FightHudPalette.IntentNumber);
                 }
             }
 
@@ -1636,7 +1646,13 @@ namespace PrincesPalace
             // type -- which is Physical, and still flashes white, for every
             // ordinary swing.
             if (beat.IsHealing) flash.FlashHeal();
-            else flash.Flash(beat.DamageType);
+            else
+            {
+                // A multi-packet cast flashes each element in turn.
+                var packets = beat.StaggeredPacketsFor(target);
+                if (packets != null) flash.FlashPackets(packets);
+                else flash.Flash(beat.DamageType);
+            }
         }
 
         // ---- resolving art from content ----------------------------------------

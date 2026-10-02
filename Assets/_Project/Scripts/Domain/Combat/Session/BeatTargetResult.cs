@@ -1,3 +1,5 @@
+using PrincesPalace.Domain.Stats;
+
 namespace PrincesPalace.Domain.Combat.Session
 {
     // WHAT ONE COMBATANT TOOK from a beat that landed on several.
@@ -39,12 +41,34 @@ namespace PrincesPalace.Domain.Combat.Session
         // -- per target, because every target of a sweep rolls its own.
         public readonly bool Crit;
 
-        public BeatTargetResult(CombatantState target, int amount, bool missed, bool crit = false)
+        // THE PER-ELEMENT SPLIT of Amount for a multi-packet skill, or null for
+        // every other blow. Presentation only: the packets already summed into
+        // Amount, so nothing here is damage a second time.
+        public readonly BeatPacket[] Packets;
+
+        public BeatTargetResult(CombatantState target, int amount, bool missed, bool crit = false,
+                                BeatPacket[] packets = null)
         {
             Target = target;
             Amount = amount;
             Missed = missed;
             Crit = crit && !missed;
+            Packets = missed ? null : packets;
+        }
+    }
+
+    // ONE DAMAGE PACKET OF A MULTI-PACKET CAST, as it landed: its element and
+    // what it did after defences. The view gives each its own number, flash
+    // tint and stagger (CombatBeat.StaggeredPacketsFor).
+    public readonly struct BeatPacket
+    {
+        public readonly DamageType Type;
+        public readonly int Amount;
+
+        public BeatPacket(DamageType type, int amount)
+        {
+            Type = type;
+            Amount = amount;
         }
     }
 }

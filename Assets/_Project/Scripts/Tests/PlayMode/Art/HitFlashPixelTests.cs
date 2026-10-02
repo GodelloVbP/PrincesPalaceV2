@@ -346,6 +346,28 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // A MULTI-PACKET CAST FLASHES ONE PULSE PER PACKET: Fire's light for
+        // 3 frames (the stagger), then Ice's for the ordinary hit hold and fade.
+        [Test]
+        public void ATwoPacketCastFlashesEachElementStaggeredThreeFrames()
+        {
+            var pulses = StageHitFlash.PacketPulses(new[]
+            {
+                new PrincesPalace.Domain.Combat.Session.BeatPacket(DamageType.Fire, 6),
+                new PrincesPalace.Domain.Combat.Session.BeatPacket(DamageType.Ice, 4),
+            });
+
+            Assert.AreEqual(2, pulses.Length);
+            Assert.AreEqual(3, StageHitFlash.StaggerFrames);
+            Assert.AreEqual(0.05f, pulses[0].Hold, 0.0001f);
+            Assert.AreEqual(0f, pulses[0].Fade);
+            Assert.AreEqual(StageHitFlash.TintFor(DamageType.Fire), pulses[0].Tint);
+            Assert.AreEqual(StageHitFlash.TintFor(DamageType.Ice), pulses[1].Tint);
+            Assert.AreNotEqual(pulses[0].Tint, pulses[1].Tint);
+            Assert.AreEqual(0.05f, pulses[1].Hold, 0.0001f);
+            Assert.AreEqual(0.10f, pulses[1].Fade, 0.0001f);
+        }
+
         [Test]
         public void AFireHitPeaksInALightOrange()
         {

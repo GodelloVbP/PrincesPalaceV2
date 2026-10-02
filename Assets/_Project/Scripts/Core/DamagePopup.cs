@@ -117,13 +117,18 @@ namespace PrincesPalace
         //
         // `crit` restyles a damaging number (see CritColor); a heal never
         // crits, so it is ignored there rather than restyling a heal.
+        //
+        // `delaySeconds` holds the number invisible for that long before it
+        // starts to rise: the second packet of a multi-element cast, staggered
+        // behind the first (FightBeatPlayer.PopPackets). The popup is claimed
+        // for the whole delay, so the pool cannot hand it out twice.
         public void Play(Vector2 anchoredStart, int amount, bool isHealing, DamageType damageType, float lifeSeconds,
-                         bool crit = false)
+                         bool crit = false, float delaySeconds = 0f)
         {
             crit &= !isHealing;
             PlayContent(anchoredStart, TextFor(amount, isHealing, crit),
                 isHealing ? HealColor : crit ? CritColor : ColorForDamageType(damageType), lifeSeconds,
-                crit ? CritSizeMultiplier : 1f);
+                crit ? CritSizeMultiplier : 1f, delaySeconds);
         }
 
         // The pure text seam: "-36" for a hit, "-36!" for a crit, "+12" for a heal.
@@ -156,7 +161,7 @@ namespace PrincesPalace
             PlayContent(anchoredStart, "ABSORBED " + Mathf.Abs(absorbed), AbsorbedColor, lifeSeconds);
 
         private void PlayContent(Vector2 anchoredStart, string text, Color color, float lifeSeconds,
-                                 float size = 1f)
+                                 float size = 1f, float delaySeconds = 0f)
         {
             _size = size;
             if (_rect == null) _rect = (RectTransform)transform;
@@ -179,12 +184,13 @@ namespace PrincesPalace
             if (label != null)
             {
                 label.SetContent(text);
+                if (delaySeconds > 0f) color.a = 0f;
                 label.color = color;
                 ApplyOutline();
                 ApplyGlow(GlowAt(0f));
             }
 
-            _running = StartCoroutine(Rise(anchoredStart, lifeSeconds));
+            _running = StartCoroutine(Rise(anchoredStart, lifeSeconds, delaySeconds));
         }
 
         // Hands the popup back to the pool immediately, wherever it was.
@@ -212,8 +218,10 @@ namespace PrincesPalace
         // needing a second clock: a pause (Time.timeScale = 0, the system
         // menu) stops deltaTime along with it, which is exactly "a pause
         // does not count against the window" (T7).
-        private IEnumerator Rise(Vector2 start, float lifeSeconds)
+        private IEnumerator Rise(Vector2 start, float lifeSeconds, float delaySeconds = 0f)
         {
+            for (float waited = 0f; waited < delaySeconds; waited += Time.deltaTime) yield return null;
+
             float elapsed = 0f;
 
             while (elapsed < lifeSeconds)

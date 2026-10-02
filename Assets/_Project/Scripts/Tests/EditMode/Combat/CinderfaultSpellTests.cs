@@ -276,6 +276,61 @@ namespace PrincesPalace.Domain.Tests
                 "the actor paint must not override a packet's declared element");
         }
 
+        // ---- the packets as separate payoffs --------------------------------------
+
+        // EACH PACKET IS ITS OWN PAYOFF ON EACH ENEMY: the beat carries the
+        // per-element split beside the unchanged total, so the view can give
+        // Fire and Nature a number, a flash tint and a stagger apiece. The
+        // totals are the same 10 / 13 / 6 the headline test below pins.
+        //
+        //   neutral          5 Fire + 5 Nature        = 10
+        //   fire-weak        round(5 x 1.5) = 8 + 5   = 13
+        [Test]
+        public void EachEnemyGetsItsOwnFireAndNaturePacketsAndTheTotalsAreUnchanged()
+        {
+            var (session, _, foes) = Fight(Neutral, WeakToFire, Neutral);
+            int before0 = foes[0].CurrentHealth;
+            int before1 = foes[1].CurrentHealth;
+
+            Assert.IsTrue(session.CastSkill(Cinderfault(), foes[0]));
+
+            Assert.AreEqual(10, before0 - foes[0].CurrentHealth, "totals are untouched by the split");
+            Assert.AreEqual(13, before1 - foes[1].CurrentHealth, "totals are untouched by the split");
+
+            var beat = session.DrainBeats().Single(b => b.HasPerTargetResults);
+            var neutral = beat.StaggeredPacketsFor(foes[0]);
+            Assert.AreEqual(2, neutral.Length);
+            Assert.AreEqual((DamageType.Fire, 5), (neutral[0].Type, neutral[0].Amount));
+            Assert.AreEqual((DamageType.Nature, 5), (neutral[1].Type, neutral[1].Amount));
+
+            var weak = beat.StaggeredPacketsFor(foes[1]);
+            Assert.AreEqual((DamageType.Fire, 8), (weak[0].Type, weak[0].Amount));
+            Assert.AreEqual((DamageType.Nature, 5), (weak[1].Type, weak[1].Amount));
+        }
+
+        // A SPLIT THAT DOES NOT ADD UP IS NOT SHOWN: if a rider moved the
+        // beat's figure, two numbers would misreport the damage, so the view
+        // falls back to the one-number path.
+        [Test]
+        public void PacketsThatDoNotSumToTheLandedAmountAreNotSplit()
+        {
+            var foe = new CombatantState("Foe", false, 100, 0, 1, 1);
+            var beat = new CombatBeat
+            {
+                Target = foe,
+                Amount = 11,
+                Packets = new[] { new BeatPacket(DamageType.Fire, 6), new BeatPacket(DamageType.Ice, 4) },
+            };
+
+            Assert.IsNull(beat.StaggeredPacketsFor(foe));
+
+            beat.Amount = 10;
+            Assert.AreEqual(2, beat.StaggeredPacketsFor(foe).Length);
+
+            beat.Absorbed = 3;
+            Assert.IsNull(beat.StaggeredPacketsFor(foe), "a ward ate part of it: the barrier pulse owns the frame");
+        }
+
         // THE HEADLINE: three enemies, three matchups, three different correct
         // numbers -- from one cast, on one beat.
         //

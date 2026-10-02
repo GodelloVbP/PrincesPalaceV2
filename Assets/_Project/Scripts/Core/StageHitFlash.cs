@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -147,6 +148,28 @@ namespace PrincesPalace
         // THE FLASH, IN THE LIGHT OF THE ELEMENT THAT CAUSED IT -- see
         // HitTintAmount.
         public void Flash(DamageType type) => Flash(PulsesFor(type));
+
+        // A MULTI-PACKET CAST: one pulse per packet, each in its own element's
+        // light, the earlier ones cut off after StaggerFrames so the next
+        // packet's colour arrives exactly when its number does
+        // (FightBeatPlayer.PopPackets). The last pulse is the ordinary hit.
+        public void FlashPackets(BeatPacket[] packets) => Flash(PacketPulses(packets));
+
+        public const int StaggerFrames = 3;
+        public const float StaggerSeconds = StaggerFrames * FrameSeconds;
+
+        public static Pulse[] PacketPulses(BeatPacket[] packets)
+        {
+            var pulses = new Pulse[packets.Length];
+            for (int i = 0; i < packets.Length; i++)
+            {
+                bool last = i == packets.Length - 1;
+                pulses[i] = new Pulse(TintFor(packets[i].Type), last ? HitHoldSeconds : StaggerSeconds,
+                    last ? HitFadeSeconds : 0f, HitPeakAlpha);
+            }
+
+            return pulses;
+        }
 
         public void FlashHeal() => Flash(HealOnly);
 

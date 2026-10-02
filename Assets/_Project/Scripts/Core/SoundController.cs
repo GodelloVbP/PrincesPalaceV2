@@ -123,7 +123,7 @@ namespace PrincesPalace
         // The enum still exists and is still the right shape for the game's
         // OWN sounds — button clicks, the startup sting — where a typo should
         // be a compile error rather than silence.
-        public static void PlayClip(string resourcePath)
+        public static void PlayClip(string resourcePath, float volumeScale = 1f)
         {
             if (string.IsNullOrWhiteSpace(resourcePath))
             {
@@ -142,7 +142,8 @@ namespace PrincesPalace
             // every one of Shawn's voice lines takes (CharacterVoice routes
             // through here), and those were the loudest thing in the game by
             // a wide margin.
-            _instance._worldSource.PlayOneShot(clip, GameSettings.SoundVolume * AudioLevels.GainFor(resourcePath));
+            _instance._worldSource.PlayOneShot(clip,
+                GameSettings.SoundVolume * AudioLevels.GainFor(resourcePath) * volumeScale);
         }
 
         // ---- the one looping channel --------------------------------------------

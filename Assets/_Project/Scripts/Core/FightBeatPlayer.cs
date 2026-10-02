@@ -1202,6 +1202,29 @@ namespace PrincesPalace
         // number appears -- only on how many there are.
         private void ShowAmount(CombatBeat beat)
         {
+            bool split = false;
+            ShowAmountCore(beat, ref split);
+
+            // THE SECOND PACKET'S LIGHTER ACCENT, on the frame its number
+            // arrives: the beat's own impact clip already sounded with the
+            // first packet, so the second is the same clip, quieter.
+            if (split && !string.IsNullOrWhiteSpace(beat.Vfx?.sfxPath))
+            {
+                StartCoroutine(PacketAccent(beat.Vfx.sfxPath));
+            }
+        }
+
+        // Volume of the second packet's accent against the first's full hit.
+        internal const float PacketAccentVolume = 0.5f;
+
+        private IEnumerator PacketAccent(string clip)
+        {
+            yield return new WaitForSeconds(Scaled(StageHitFlash.StaggerSeconds));
+            SoundController.PlayClip(clip, PacketAccentVolume);
+        }
+
+        private void ShowAmountCore(CombatBeat beat, ref bool split)
+        {
             if (beat.HasPerTargetResults)
             {
                 foreach (var result in beat.Results)
@@ -1212,13 +1235,48 @@ namespace PrincesPalace
                     if (result.Target == null) continue;
                     if (!result.Missed && result.Amount <= 0) continue;
 
+                    var packets = beat.StaggeredPacketsFor(result.Target);
+                    if (packets != null)
+                    {
+                        PopPackets(result.Target, packets, result.Crit);
+                        split = true;
+                        continue;
+                    }
+
                     PopNumber(beat, result.Target, result.Amount, result.Missed, result.Crit);
                 }
 
                 return;
             }
 
+            var single = beat.StaggeredPacketsFor(beat.Target);
+            if (single != null)
+            {
+                PopPackets(beat.Target, single, beat.Crit);
+                split = true;
+                return;
+            }
+
             ShowSingleAmount(beat);
+        }
+
+        // ONE NUMBER PER PACKET, each in its own element's colour, the n-th
+        // StaggerFrames behind the first and fanned sideways so two figures
+        // do not sit on one another.
+        internal const float PacketPopupSpacing = 56f;
+
+        private void PopPackets(CombatantState target, BeatPacket[] packets, bool crit)
+        {
+            for (int i = 0; i < packets.Length; i++)
+            {
+                var popup = FreePopup();
+                if (popup == null) return;
+
+                var at = PopupAnchor(target, 0f) +
+                         new Vector2((i - (packets.Length - 1) * 0.5f) * PacketPopupSpacing, 0f);
+                popup.Play(at, packets[i].Amount, false, packets[i].Type, Scaled(DamagePopup.LifeSeconds), crit,
+                    delaySeconds: Scaled(i * StageHitFlash.StaggerSeconds));
+            }
         }
 
         private void ShowSingleAmount(CombatBeat beat)

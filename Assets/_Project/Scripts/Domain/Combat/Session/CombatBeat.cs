@@ -579,6 +579,58 @@ namespace PrincesPalace.Domain.Combat.Session
         // so neither side has to repeat the null-and-empty check.
         public bool HasPerTargetResults => Results != null && Results.Count > 0;
 
+        // THE PER-ELEMENT SPLIT of a single-target multi-packet cast, null for
+        // everything else (a sweep keeps it per target, on BeatTargetResult).
+        // DamageType above still names the largest packet for readers that want
+        // one element; the view prefers StaggeredPacketsFor.
+        public BeatPacket[] Packets;
+
+        // THE PACKETS TO PRESENT AS SEPARATE PAYOFFS ON `target`, or null when
+        // the blow is one payoff: not a multi-packet cast, a miss, a heal, a
+        // ward ate part of it (the barrier pulse owns that frame), or the
+        // packets no longer add up to what the beat recorded (a rider changed
+        // the figure, so a split would show numbers that are not the damage).
+        // Zero-damage packets are dropped; fewer than two left is not a split.
+        public BeatPacket[] StaggeredPacketsFor(CombatantState target)
+        {
+            if (IsHealing || Missed || Absorbed > 0) return null;
+
+            BeatPacket[] packets;
+            int landed;
+            if (HasPerTargetResults)
+            {
+                packets = null;
+                landed = 0;
+                foreach (var result in Results)
+                {
+                    if (result.Target != target) continue;
+                    if (result.Missed) return null;
+                    packets = result.Packets;
+                    landed = result.Amount;
+                    break;
+                }
+            }
+            else
+            {
+                if (target != Target) return null;
+                packets = Packets;
+                landed = Amount;
+            }
+
+            if (packets == null) return null;
+
+            var shown = new List<BeatPacket>(packets.Length);
+            int sum = 0;
+            foreach (var packet in packets)
+            {
+                if (packet.Amount <= 0) continue;
+                shown.Add(packet);
+                sum += packet.Amount;
+            }
+
+            return shown.Count >= 2 && sum == landed ? shown.ToArray() : null;
+        }
+
         // WHETHER THE ACTOR CROSSES THE STAGE, AND HOW FAR.
         //
         // Was a bool, ActorHoldsPosition, and a bool could only ever answer one
