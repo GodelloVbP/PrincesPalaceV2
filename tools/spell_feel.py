@@ -162,8 +162,14 @@ def _runs_above(values, threshold, merge_gap=2):
 
 def analyse(activity, hot, fps, hit_frame, authored_hit_cue=None,
             residue_limit=DEFAULT_RESIDUE_LIMIT, accent_ratio=DEFAULT_ACCENT_RATIO,
-            desync_frames=DEFAULT_DESYNC_FRAMES):
-    """Beat timings and the three principle checks, from the two curves alone."""
+            desync_frames=DEFAULT_DESYNC_FRAMES, ritual=False):
+    """Beat timings and the three principle checks, from the two curves alone.
+
+    ritual: the cast has no gather (its first layer plays at release), so frame 0
+    is the start and the recorded hit frame is the contact. The release/contact
+    inference below would pick the cast's own first rise and a later hurt flash
+    as "visual contact", and report a desync that is not there; the visual
+    contact is left unmeasured instead."""
     n = len(activity)
     tail = max(5, n // 10)
     floor = float(np.median(activity[-tail:]))
@@ -181,10 +187,12 @@ def analyse(activity, hot, fps, hit_frame, authored_hit_cue=None,
     result["hot_peak"] = hot_peak
     result["hot_peak_frame"] = hot.index(hot_peak)
 
-    has_hit = hit_frame is not None and 1 < hit_frame < n
+    has_hit = hit_frame is not None and (0 <= hit_frame < n if ritual else 1 < hit_frame < n)
     release = None
     visual = None
-    if has_hit:
+    if has_hit and ritual:
+        release = 0
+    elif has_hit:
         release = max(range(1, hit_frame), key=rise)
         later = range(release + 1, n)
         visual = max(later, key=rise) if len(later) else None
@@ -196,7 +204,8 @@ def analyse(activity, hot, fps, hit_frame, authored_hit_cue=None,
     result["travel_s"] = (hit_frame - release) / fps if release is not None else None
     result["gather_to_travel"] = (
         result["gather_s"] / result["travel_s"]
-        if release is not None and hit_frame > release else None)
+        if release is not None and hit_frame > release and not ritual else None)
+    result["ritual"] = ritual
 
     anchor = hit_frame if has_hit else peak_frame
     residue_threshold = floor + RESIDUE_FRAC * span
@@ -275,6 +284,38 @@ def authored_values(spell_id, path=SKILLS_JSON):
     return None
 
 
+def is_ritual(authored):
+    """No gather: the first layer plays at release or at the hit and nothing is delayed or travels."""
+    layers = (authored or {}).get("layers") or []
+    if not layers or layers[0].get("at") not in ("release", "hit"):
+        return False
+    return not any((l.get("offset") or 0) > 0 or l.get("travelSeconds") for l in layers)
+
+
+# The analysis window ends this long after the cast's own cleared time. The
+# capture records past it so the series has a clean end; a later event (a DoT
+# tick on the next turn) must not be measured as part of the cast.
+CLEARED_MARGIN_S = 0.1
+
+
+def window_end(frame_count, fps, cleared_seconds):
+    """Frames to analyse: up to the cast's cleared time plus CLEARED_MARGIN_S."""
+    if not cleared_seconds or cleared_seconds <= 0:
+        return frame_count
+    return max(2, min(frame_count, int(round((cleared_seconds + CLEARED_MARGIN_S) * fps)) + 1))
+
+
+def scale_authored(authored, speed):
+    """Authored seconds divided by the battle speed they were recorded at."""
+    if not authored or not speed or speed == 1:
+        return authored
+    out = dict(authored)
+    for key in ("hitCueSeconds", "release_s", "travel_s"):
+        if out.get(key) is not None:
+            out[key] = out[key] / speed
+    return out
+
+
 def disagreements(measured, authored, fps, tolerance_frames=2):
     """NOTE lines where a measured beat is more than tolerance from the authored one."""
     notes = []
@@ -347,14 +388,26 @@ def run_report(frames_dir, spell, versus, out_dir, params):
     hit = timing.get("hitFrame", -1)
     hit = hit if hit is not None and hit >= 0 else None
 
+    speed = float(timing.get("speed", 1) or 1)
+
     shown, small = load_series(paths)
+    end = window_end(len(small), fps, timing.get("clearedSeconds"))
+    shown, small = shown[:end], small[:end]
+    if hit is not None and hit >= end:
+        hit = None
     mask = stage_mask(small[0].shape[:2])
     activity = activity_curve(small, mask)
     hot = hot_curve(small, mask)
 
-    authored = authored_values(spell)
+    authored_raw = authored_values(spell)
+    ritual = is_ritual(authored_raw)
+    authored = scale_authored(authored_raw, speed)
     cue = authored.get("hitCueSeconds") if authored else None
-    result = analyse(activity, hot, fps, hit, cue, **params)
+    if ritual and authored["layers"][0].get("at") == "hit":
+        # Frame 0 is the first drawn frame, which for an at-hit cast IS the
+        # hit cue; the authored seconds are on the cast clock, not on frame 0's.
+        cue = None
+    result = analyse(activity, hot, fps, hit, cue, ritual=ritual, **params)
     result["notes"] = disagreements(result, authored, fps)
     stills = key_frames(result, fps, hot)
 
@@ -378,7 +431,9 @@ def run_report(frames_dir, spell, versus, out_dir, params):
             im.convert("RGB").save(os.path.join(out_dir, "stills", "%s_f%02d.png" % (label, index)))
 
     report = {
-        "spell": spell, "versus": versus, "fps": fps,
+        "spell": spell, "versus": versus, "fps": fps, "speed": speed,
+        "presentation_only": bool(timing.get("presentationOnly", False)),
+        "analysed_frames": end, "recorded_frames": len(paths),
         "region": {"hud_rects_1920x1080": [list(r) for r in HUD_RECTS], "hot_level": HOT_LEVEL},
         "params": params,
         "measured": {k: v for k, v in result.items() if k not in ("warnings", "notes")},
@@ -411,6 +466,10 @@ def summary(report):
         "  residue %.2fs after contact   clean at %.2fs (%.2fs after contact)" % (
             m["residue_s"], m["clean_s"], m["clean_after_contact_s"]),
     ]
+    if report.get("speed", 1) != 1:
+        lines.append("  speed %.2fx: authored seconds divided by it" % report["speed"])
+    if report.get("presentation_only"):
+        lines.append("  presentation only: played through the module, no damage number or status")
     for note in report["notes"]:
         lines.append("  NOTE  " + note)
     if report["warnings"]:

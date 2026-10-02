@@ -415,7 +415,7 @@ namespace PrincesPalace
                     else ConfirmTarget(TargetSide.Allies, NextEligibleAlly());
                 }
             }
-            else OnEnemyPressed(FirstLivingEnemyIndex());
+            else OnEnemyPressed(FirstReachableEnemyIndex());
         }
 
         // The first squadmate this cast will accept that it has not already
@@ -432,6 +432,22 @@ namespace PrincesPalace
             }
 
             return null;
+        }
+
+        // The forced press only: the first living enemy the open cast's reach accepts, so
+        // a rear-reach skill is pressed on a seat it can hit. Real input keeps
+        // FirstLivingEnemyIndex (the plate the pointer or pad sits on decides).
+        private int FirstReachableEnemyIndex()
+        {
+            var enemies = Enemies;
+            var reach = TargetingReach();
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                if (enemies[i] != null && enemies[i].IsAlive &&
+                    _session.CanReachEnemy(_session.Current, reach, enemies[i])) return i;
+            }
+
+            return FirstLivingEnemyIndex();
         }
 
         private int FirstLivingEnemyIndex()

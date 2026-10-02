@@ -150,6 +150,61 @@ class WarningTests(unittest.TestCase):
         self.assertFalse(any(w.startswith("contact desync") for w in r["warnings"]))
 
 
+class RitualAndWindowTests(unittest.TestCase):
+    def test_ritual_uses_frame_zero_and_the_recorded_hit_with_no_false_desync(self):
+        # A ritual: starts at frame 0, hit cue at 18, then a later hurt flash
+        # at 28 that is the biggest rise after the cast's own first rise.
+        a = [1.0] * 60
+        for i in range(0, 18):
+            a[i] = 3.0
+        a[18] = 12.0
+        for i in range(28, 33):
+            a[i] = 15.0
+        plain = spell_feel.analyse(a, [0.0] * 60, FPS, 19, 18 / FPS)
+        self.assertTrue(any(w.startswith("contact desync") for w in plain["warnings"]))
+        r = spell_feel.analyse(a, [0.0] * 60, FPS, 19, 18 / FPS, ritual=True)
+        self.assertEqual(r["release_frame"], 0)
+        self.assertEqual(r["hit_frame"], 19)
+        self.assertIsNone(r["visual_contact_frame"])
+        self.assertAlmostEqual(r["gather_s"], 0.0)
+        self.assertFalse(any(w.startswith("contact desync") for w in r["warnings"]))
+
+    def test_ritual_accepts_a_hit_on_frame_zero(self):
+        a = [5.0, 4.0] + [1.0] * 40
+        r = spell_feel.analyse(a, [0.0] * 42, FPS, 0, 0.0, ritual=True)
+        self.assertEqual(r["hit_frame"], 0)
+
+    def test_is_ritual_needs_a_release_layer_with_nothing_delayed(self):
+        self.assertTrue(spell_feel.is_ritual({"layers": [{"at": "release"}, {"at": "hit"}]}))
+        self.assertFalse(spell_feel.is_ritual(
+            {"layers": [{"at": "release"}, {"at": "release", "offset": 0.5}]}))
+        self.assertFalse(spell_feel.is_ritual({"layers": [{"at": "release", "travelSeconds": 0.1}]}))
+        self.assertTrue(spell_feel.is_ritual({"layers": [{"at": "hit"}]}))
+        self.assertFalse(spell_feel.is_ritual({"layers": [{"at": "start"}]}))
+        self.assertFalse(spell_feel.is_ritual(None))
+
+    def test_window_ends_at_cleared_time_so_a_later_tick_is_not_measured(self):
+        self.assertEqual(spell_feel.window_end(138, FPS, 0.9), 61)
+        self.assertEqual(spell_feel.window_end(50, FPS, 2.0), 50)
+        self.assertEqual(spell_feel.window_end(138, FPS, None), 138)
+        a = [1.0] * 138
+        a[30] = 10.0
+        for i in range(97, 102):
+            a[i] = 20.0  # the poison tick on the next turn
+        end = spell_feel.window_end(len(a), FPS, 0.9)
+        r = spell_feel.analyse(a[:end], [0.0] * end, FPS, 30, None)
+        self.assertEqual(r["peak_frame"], 30)
+        self.assertLess(r["residue_s"], 0.5)
+
+    def test_authored_seconds_are_divided_by_speed(self):
+        authored = {"hitCueSeconds": 0.9, "release_s": 0.6, "travel_s": 0.3, "layers": []}
+        scaled = spell_feel.scale_authored(authored, 1.5)
+        self.assertAlmostEqual(scaled["hitCueSeconds"], 0.6)
+        self.assertAlmostEqual(scaled["release_s"], 0.4)
+        self.assertAlmostEqual(scaled["travel_s"], 0.2)
+        self.assertEqual(spell_feel.scale_authored(authored, 1), authored)
+
+
 class AuthoredTests(unittest.TestCase):
     def test_blackglass_authored_values_come_from_skills_json(self):
         authored = spell_feel.authored_values("blackglass_spear")

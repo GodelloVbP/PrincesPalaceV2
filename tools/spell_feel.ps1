@@ -1,7 +1,11 @@
 param(
     [string]$Spell = "",
     # enemies.json ids to cast at; one capture and one report each.
+    # Under -File a comma list arrives as one string, so it is split below.
     [string[]]$Versus = @("treant", "rat"),
+    # Battle speed the spell is recorded at (PP_RUNTIME_SPEED); 1.5 is the 1.5x
+    # preset. Reports compare authored seconds divided by it.
+    [double]$Speed = 1,
     # Where the report folders go. Default: docs/captures/spell_feel.
     [string]$OutDir = "",
     # Reuse the frames already under tools/screenshots/spell_feel/<spell>_vs_<enemy>/
@@ -44,8 +48,11 @@ if (-not $Spell) { Write-Host "Usage: tools/spell_feel.ps1 -Spell <skills.json i
 if (-not $OutDir) { $OutDir = Join-Path $Root "docs\captures\spell_feel" }
 
 $status = 0
+$Versus = @($Versus | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$speedTag = ""
+if ($Speed -ne 1) { $speedTag = "_x" + $Speed.ToString([System.Globalization.CultureInfo]::InvariantCulture) }
 foreach ($enemy in $Versus) {
-    $name = "${Spell}_vs_${enemy}"
+    $name = "${Spell}_vs_${enemy}${speedTag}"
     $frames = Join-Path $Root "tools\screenshots\spell_feel\$name"
 
     if (-not $ReportOnly) {
@@ -54,7 +61,7 @@ foreach ($enemy in $Versus) {
             # The one test that records the frame series; the class's other
             # tests are pilot-only overlap checks that Ignore for any other spell.
             & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "screenshot.ps1") `
-                -Runtime -Spell $Spell -RuntimeFilter "SpellRuntimeCaptureTests.TheWaterPilotRecordsAsAFrameSeries"
+                -Runtime -Spell $Spell -Speed $Speed -RuntimeFilter "SpellRuntimeCaptureTests.TheWaterPilotRecordsAsAFrameSeries"
             if ($LASTEXITCODE -ne 0) { Write-Host "capture failed for $enemy"; $status = 1; continue }
         } finally {
             Remove-Item Env:\PP_RUNTIME_VERSUS -ErrorAction SilentlyContinue
@@ -65,7 +72,7 @@ foreach ($enemy in $Versus) {
         Copy-Item (Join-Path $Root "tools\screenshots\runtime\spell_${Spell}_*") $frames
     }
 
-    & python (Join-Path $PSScriptRoot "spell_feel.py") report --frames $frames --spell $Spell --versus $enemy `
+    & python (Join-Path $PSScriptRoot "spell_feel.py") report --frames $frames --spell $Spell --versus "${enemy}${speedTag}" `
         --out (Join-Path $OutDir $name) --residue-limit $ResidueLimit --accent-ratio $AccentRatio `
         --desync-frames $DesyncFrames
     if ($LASTEXITCODE -ne 0) { $status = 1 }

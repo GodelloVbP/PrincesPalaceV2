@@ -25,7 +25,12 @@ param(
     # id the same way tools/preview.ps1 -Spell does -- an unknown id is
     # refused by PreviewFight.ForSpell inside the test, and its log line is
     # printed by the existing failure/tail-of-log paths below.
-    [string]$Spell = ""
+    [string]$Spell = "",
+
+    # Battle speed for SpellRuntimeCaptureTests, as PP_RUNTIME_SPEED (1 =
+    # normal, 1.5 = the 1.5x preset). Always set, 1 included, for the same
+    # inherited-variable reason as PP_RUNTIME_SPELL below.
+    [double]$Speed = 1
 )
 
 # Headless visual QA: renders screens from the SceneBuilder-generated scenes to
@@ -199,6 +204,7 @@ if ($Runtime) {
     # earlier shell would otherwise point SpellRuntimeCaptureTests at a spell
     # this command line never named.
     $env:PP_RUNTIME_SPELL = $Spell
+    $env:PP_RUNTIME_SPEED = $Speed.ToString([System.Globalization.CultureInfo]::InvariantCulture)
 
     Write-Host "Capturing the RUNNING game to $runtimeOut ..."
     $proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(

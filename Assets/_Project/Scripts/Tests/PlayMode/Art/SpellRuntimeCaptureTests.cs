@@ -12,6 +12,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Preview;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace.PlayModeTests
@@ -122,6 +123,19 @@ namespace PrincesPalace.PlayModeTests
         private const string SpellVariable = "PP_RUNTIME_SPELL";
         private const string VersusVariable = "PP_RUNTIME_VERSUS";
 
+        // Battle speed the cast is recorded at (tools/spell_feel.ps1 -Speed),
+        // as FightBeatPlayer.BeatSpeedMultiplier. 1 when unset or unparsable.
+        private const string SpeedVariable = "PP_RUNTIME_SPEED";
+
+        private static float ResolveSpeed()
+        {
+            string raw = System.Environment.GetEnvironmentVariable(SpeedVariable);
+            return float.TryParse(raw, System.Globalization.NumberStyles.Float,
+                       System.Globalization.CultureInfo.InvariantCulture, out float speed) && speed > 0f
+                ? speed
+                : 1f;
+        }
+
         private static string ResolveSpellId()
         {
             string raw = System.Environment.GetEnvironmentVariable(SpellVariable);
@@ -173,6 +187,7 @@ namespace PrincesPalace.PlayModeTests
             LogAssert.ignoreFailingMessages = false;
             Time.captureFramerate = 0;
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            TestGlobals.ResetAll();
         }
 
         private FightController _fight;
@@ -189,11 +204,11 @@ namespace PrincesPalace.PlayModeTests
         // one. A number overrides it -- see the overlap tests.
         private IEnumerator StandTheFightUp(int? enemies)
         {
-            var plan = PreviewFight.ForSpell(SpellId);
+            var plan = ResolvePlan();
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
             Debug.Log("[SpellRuntime] " + PreviewFight.Describe(plan));
 
-            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            FightBeatPlayer.BeatSpeedMultiplier = ResolveSpeed();
             Time.captureFramerate = CaptureFps;
 
             // A KNOWN TEARDOWN LOG, TOLERATED ACROSS THE SCENE SWAP AND
@@ -212,6 +227,17 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
             LogAssert.ignoreFailingMessages = false;
+
+            // The fight scene's bootstrap installs the settings-backed battle
+            // speed; a recording is at the speed the caller asked for, not the
+            // speed this machine's options menu says, so Pace is
+            // BeatSpeedMultiplier alone.
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
+            FightBeatPlayer.AdoptPlayerSpeed();
+            Assert.AreEqual(1f, FightBeatPlayer.PlayerSpeedMultiplier,
+                "PlayerSpeedMultiplier is not 1 in the fixture");
+            Debug.Log("[SpellRuntime] pace " + FightBeatPlayer.Pace + " (PP_RUNTIME_SPEED " +
+                      ResolveSpeed() + ")");
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the fight scene has no controller");
@@ -235,11 +261,18 @@ namespace PrincesPalace.PlayModeTests
             // PP_RUNTIME_VERSUS names the one body to cast at (enemies.json id),
             // so a spell that sizes to its target is recorded on a small body and
             // on a tall one; empty keeps the plan's own pick.
+            //
+            // A SKILL WHOSE REACH EXCLUDES THE FRONT SEAT (reachSlots [2,3])
+            // needs a formation to stand behind: one enemy stands in slot 1
+            // and the forced press has nobody it may hit. Three, and the press
+            // takes the first one the reach accepts (FirstReachableEnemyIndex).
             string versus = System.Environment.GetEnvironmentVariable(VersusVariable);
+            bool needsDepth = plan.Skill != null && !plan.Skill.Reach.Allows(0);
+            int depth = needsDepth ? 3 : 1;
             var fielded = !string.IsNullOrWhiteSpace(versus) && enemies == null
-                ? new List<string> { versus.Trim() }
-                : PreviewFight.EnemiesWithArt(
-                    enemies ?? PreviewFight.EnemyCountFor(plan.Formation, 3));
+                ? Enumerable.Repeat(versus.Trim(), depth).ToList()
+                : PreviewFight.EnemiesWithArt(Mathf.Max(
+                    enemies ?? PreviewFight.EnemyCountFor(plan.Formation, 3), enemies == null ? depth : 1));
             Assert.IsNotEmpty(fielded, "no enemies in content to cast at");
 
             var built = FightEncounterAdapter.Build(
@@ -264,6 +297,70 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_canvas, "the fight scene has no root canvas");
         }
 
+        // TRUE WHEN PreviewStage REFUSED THE EFFECT (Ward, Reclaim, Hasten,
+        // Reposition: each needs a talent, a status or a turn schedule the
+        // stage will not fake). The cast is then played through the module
+        // directly, the way the overlap tests do, so only the presentation is
+        // recorded: no damage number, no status, no cue from the session.
+        private bool _presentationOnly;
+
+        private PreviewFight.Plan ResolvePlan()
+        {
+            _presentationOnly = false;
+            var plan = PreviewFight.ForSpell(SpellId);
+            if (plan.Ok || plan.Skill == null || PreviewStage.IsSupported(plan.Skill.Effect)) return plan;
+
+            var roster = ContentDatabase.Characters
+                .Where(c => c != null && c.Data != null).Select(c => c.Data).ToList();
+            var stand = new PreviewFight.Plan
+            {
+                Skill = plan.Skill,
+                Formation = PreviewFight.FormationFull,
+            };
+            stand.CasterId = PreviewFight.ChooseCaster(plan.Skill, roster, stand);
+            if (stand.CasterId == null) return stand;
+
+            stand.Party = new List<string> { stand.CasterId };
+            stand.Notes.Add("presentation only: '" + SpellId + "' resolves as " + plan.Skill.Effect +
+                            ", which the preview stage refuses, so the vfx is played through the module with " +
+                            "no damage number, status or session cue");
+            _presentationOnly = true;
+            return stand;
+        }
+
+        // Who the presentation is aimed at. A skill owned by an enemy that is
+        // not in the player roster (the Bellwether's chains) is cast by the
+        // first enemy at the player's caster, the direction it flies in a
+        // real fight; everything else is cast by the player's caster, at an
+        // enemy for enemy-facing skills and at the caster for the rest.
+        private CombatBeat PresentationBeat()
+        {
+            var enc = _fight.SessionForTest.Encounter;
+            var caster = enc.PlayerParty.First(c => c != null);
+            var foes = enc.Enemies.Where(e => e != null && e.IsAlive).ToList();
+            var skill = PreviewFight.ForSpell(SpellId).Skill;
+
+            bool enemyOwned = !string.IsNullOrWhiteSpace(skill.CharacterId) &&
+                              !ContentDatabase.Characters.Any(c => c != null && c.id == skill.CharacterId);
+            bool aimsAtEnemies = skill.Targeting == SkillTargeting.SingleEnemy ||
+                                 skill.Targeting == SkillTargeting.AllEnemies;
+
+            var beat = new CombatBeat { Vfx = ShippedVfx(SpellId) };
+            if (enemyOwned && aimsAtEnemies)
+            {
+                beat.Actor = foes[0];
+                beat.Target = caster;
+            }
+            else
+            {
+                beat.Actor = caster;
+                beat.Target = aimsAtEnemies ? foes[0] : caster;
+                if (skill.Targeting == SkillTargeting.AllEnemies) beat.SplashTargets = foes.Skip(1).ToList();
+            }
+
+            return beat;
+        }
+
         [UnityTest]
         public IEnumerator TheWaterPilotRecordsAsAFrameSeries()
         {
@@ -281,11 +378,20 @@ namespace PrincesPalace.PlayModeTests
             var fight = _fight;
             var canvas = _canvas;
 
-            fight.ForceFirstAction(SpellId);
+            var handle = CastHandle.None;
+            if (_presentationOnly)
+            {
+                handle = fight.PlaySpellVfxForTest(PresentationBeat());
+                Assert.IsTrue(handle.IsLive, "'" + SpellId + "' obtained no cast when played through the module");
+            }
+            else
+            {
+                fight.ForceFirstAction(SpellId);
 
-            float armed = Time.realtimeSinceStartup;
-            while (!fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;
-            Assert.IsTrue(fight.IsBusy, "'" + SpellId + "' was never cast -- the log says what was refused");
+                float armed = Time.realtimeSinceStartup;
+                while (!fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;
+                Assert.IsTrue(fight.IsBusy, "'" + SpellId + "' was never cast -- the log says what was refused");
+            }
 
             // FRAME ZERO IS THE FRAME THE CAST FIRST DRAWS, so the series opens
             // on the ball leaving rather than on however many frames of wind-up
@@ -310,13 +416,16 @@ namespace PrincesPalace.PlayModeTests
             // name it -- and it must already be live, because AnythingDrawn
             // above only turns true once Paint has run for a live cast.
             var module = fight.PerformancePlayerForTest;
-            var handle = module.LastBegunForTest;
+            if (!_presentationOnly) handle = module.LastBegunForTest;
             Assert.IsTrue(module.IsLive(handle),
                 "'" + SpellId + "' drew something on stage but LastBegunForTest names no live cast, so " +
                 "there is no clock to record this series against.");
 
             int targetCount = fight.SessionForTest.Encounter.Enemies.Count(e => e != null && e.IsAlive);
-            float clearedSeconds = ClearedSecondsOf(ShippedVfx(SpellId), targetCount);
+            var shipped = ShippedVfx(SpellId);
+            float clearedSeconds = ClearedSecondsOf(shipped, targetCount);
+            float hitCueSeconds = SpellPerformance.Resolve(shipped, targetCount,
+                path => FrameSequenceLoader.Load(path)?.Length ?? 0).HitCueSeconds;
             float targetCursor = Mathf.Min(clearedSeconds + FrameEndMargin, MaxCaptureSeconds);
 
             Directory.CreateDirectory(OutputDir);
@@ -331,12 +440,23 @@ namespace PrincesPalace.PlayModeTests
             int frame = 0;
             bool reached;
 
+            // A short cast frees its handle before the target cursor, and
+            // HasReached reads a freed handle as reached. The recording keeps
+            // FrameEndMargin more seconds after that so the aftermath (the
+            // target's own hurt reaction) is on film.
+            int freedFrame = -1;
+            int tailFrames = Mathf.CeilToInt(FrameEndMargin * CaptureFps);
+
             // THE FRAME THE AUTHORED HIT CUE FIRST SHOWS ON. The cue is
             // crossed during Update, after the frame just written, so the
             // first picture that carries it is the next one. tools/spell_feel.py
             // reads it from the timing file to mark contact instead of
             // guessing it off the pixels.
-            int hitFrame = -1;
+            //
+            // AN `at: hit` SPELL FIRST DRAWS ON THE CUE FRAME ITSELF, so the
+            // cursor is already past hitCueSeconds when this hook installs and
+            // the hook never fires: that cue is on frame 0.
+            int hitFrame = module.HasReached(handle, hitCueSeconds) ? 0 : -1;
             module.HitCueCrossedForTest = h =>
             {
                 if (hitFrame < 0 && h.Equals(handle)) hitFrame = frame + 1;
@@ -353,11 +473,16 @@ namespace PrincesPalace.PlayModeTests
 
                 yield return null;
 
-                reached = module.HasReached(handle, targetCursor);
+                bool live = module.IsLive(handle);
+                if (!live && freedFrame < 0) freedFrame = frame + 1;
+                reached = live
+                    ? module.HasReached(handle, targetCursor)
+                    : frame + 1 - freedFrame >= tailFrames;
                 frame++;
             } while (!reached && frame < LoopSafetyFrames);
 
             int frames = frame;
+            int activeFrames = freedFrame >= 0 ? freedFrame : frames;
             module.HitCueCrossedForTest = null;
 
             // Pacing and contact for tools/spell_feel.py, beside the frames.
@@ -365,10 +490,12 @@ namespace PrincesPalace.PlayModeTests
                 Path.Combine(OutputDir, string.Format("spell_{0}_timing.json", SpellId)),
                 string.Format(System.Globalization.CultureInfo.InvariantCulture,
                     "{{\"spell\":\"{0}\",\"fps\":{1},\"frames\":{2},\"firstDrawnWaitFrames\":{3}," +
-                    "\"clearedSeconds\":{4:F3},\"hitFrame\":{5}}}",
-                    SpellId, CaptureFps, frames, waited, clearedSeconds, hitFrame));
+                    "\"clearedSeconds\":{4:F3},\"hitFrame\":{5},\"speed\":{6:F2}," +
+                    "\"freedFrame\":{7},\"presentationOnly\":{8}}}",
+                    SpellId, CaptureFps, frames, waited, clearedSeconds, hitFrame, ResolveSpeed(),
+                    freedFrame, _presentationOnly ? "true" : "false"));
 
-            Assert.IsTrue(reached,
+            Assert.IsTrue(reached || freedFrame >= 0,
                 "'" + SpellId + "' had not reached " + targetCursor.ToString("F2") + "s on its own " +
                 "performance clock after " + LoopSafetyFrames + " capture frames -- its cast clock looks " +
                 "stuck rather than merely held by a hit-stop.");
@@ -377,7 +504,11 @@ namespace PrincesPalace.PlayModeTests
             // failure this cannot see by eye -- and the one the pilot actually
             // produced twice before the particle pool's members were being
             // activated at all.
-            Assert.Greater(lit, 20,
+            //
+            // THE FLOOR SCALES WITH THE SERIES: a short cast (trunk_slam, 17
+            // frames) is all lit and still fewer than 20, so the bar is half
+            // the frames the cast was live for, capped at 20.
+            Assert.Greater(lit, Mathf.Min(20, activeFrames / 2),
                 "only " + lit + " of " + frames + " recorded frames had anything drawn on them -- '" + SpellId +
                 "' cast at " + CaptureFps + "fps, so a series this empty is a recording of the stage " +
                 "rather than of the cast.");
