@@ -120,6 +120,7 @@ namespace PrincesPalace.PlayModeTests
         // not tools/preview.ps1, so it gets its own variable rather than
         // reaching into that reserved family.
         private const string SpellVariable = "PP_RUNTIME_SPELL";
+        private const string VersusVariable = "PP_RUNTIME_VERSUS";
 
         private static string ResolveSpellId()
         {
@@ -231,8 +232,14 @@ namespace PrincesPalace.PlayModeTests
             // for -- which is right for a recording of the pilot alone and
             // wrong for the overlap below, where a cinderfault needs a
             // formation to open under.
-            var fielded = PreviewFight.EnemiesWithArt(
-                enemies ?? PreviewFight.EnemyCountFor(plan.Formation, 3));
+            // PP_RUNTIME_VERSUS names the one body to cast at (enemies.json id),
+            // so a spell that sizes to its target is recorded on a small body and
+            // on a tall one; empty keeps the plan's own pick.
+            string versus = System.Environment.GetEnvironmentVariable(VersusVariable);
+            var fielded = !string.IsNullOrWhiteSpace(versus) && enemies == null
+                ? new List<string> { versus.Trim() }
+                : PreviewFight.EnemiesWithArt(
+                    enemies ?? PreviewFight.EnemyCountFor(plan.Formation, 3));
             Assert.IsNotEmpty(fielded, "no enemies in content to cast at");
 
             var built = FightEncounterAdapter.Build(
