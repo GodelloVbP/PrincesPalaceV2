@@ -2335,43 +2335,51 @@ namespace PrincesPalace
                     (_isBusy ? !_confirmedDefeated.Contains(enemies[slot]) : enemies[slot].IsAlive);
                 var enemy = alive && IsOnStage(enemies[slot]) ? enemies[slot] : null;
                 var rows = enemy != null ? FightHudModel.StatusRowsFor(_session, enemy) : EmptyStatusRows;
-
-                // A row with no statuses renders nothing at all, backing
-                // strip included -- the common case on most opening turns.
-                if (Has(enemyStatusStrips, slot)) enemyStatusStrips[slot].SetShown(rows.Count > 0);
-
-                // Re-spread, the same way AnchorOne re-spreads the figure
-                // itself. FightScreen.BuildEnemyStatusRows baked this row's
-                // position against the fixed FightHudSpec.StageSlotsPerSide
-                // slot geometry (it has to: it runs at build time, before any
-                // encounter exists to count), but AnchorOne spreads however
-                // many actors are actually on this side across the whole
-                // depth range, instead of filling the first N of three fixed
-                // slots (its own header). With fewer than three enemies those
-                // two disagree about where slot 1 sits, and a row left at its
-                // baked position draws over whichever other row the spread
-                // moved there.
-                //
-                // Taken from where the figure actually went, not recomputed
-                // from the slot index: a slot's index is not its rank once a
-                // survivor closes up over a faded corpse, so a row painted by
-                // slot index would stay behind on the empty ground the corpse
-                // left.
-                if (enemy != null && slot < _enemyMarks.Length)
-                {
-                    var staticOffset = FightStageAnchors.SlotOffset(slot, FightHudSpec.StageSlotsPerSide, mirrored: false);
-                    var delta = _enemyMarks[slot] - new Vector2(staticOffset.X, staticOffset.Y);
-                    RepositionEnemyStatusRow(slot, delta);
-                }
-
-                // AFTER the re-spread, so it starts from the row's correct
-                // slot-X for this refresh rather than the stale one from
-                // last refresh's enemy count.
-                FitEnemyStatusRow(slot, rows.Count);
-
-                PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
-                    reserveOverflowSlot: true, enemy, rows, showCounter: true);
+                PaintEnemyStatusRow(slot, enemy, rows);
             }
+        }
+
+        // One enemy's stage badge row. Shared by the idle refresh (live rows) and
+        // PaintVitals (the beat's recorded rows), so both lay the row out the same way.
+        private void PaintEnemyStatusRow(int slot, CombatantState enemy, IReadOnlyList<FightHudModel.StatusRow> rows)
+        {
+            if (enemyStatusBadges == null) return;
+
+            // A row with no statuses renders nothing at all, backing
+            // strip included -- the common case on most opening turns.
+            if (Has(enemyStatusStrips, slot)) enemyStatusStrips[slot].SetShown(rows.Count > 0);
+
+            // Re-spread, the same way AnchorOne re-spreads the figure
+            // itself. FightScreen.BuildEnemyStatusRows baked this row's
+            // position against the fixed FightHudSpec.StageSlotsPerSide
+            // slot geometry (it has to: it runs at build time, before any
+            // encounter exists to count), but AnchorOne spreads however
+            // many actors are actually on this side across the whole
+            // depth range, instead of filling the first N of three fixed
+            // slots (its own header). With fewer than three enemies those
+            // two disagree about where slot 1 sits, and a row left at its
+            // baked position draws over whichever other row the spread
+            // moved there.
+            //
+            // Taken from where the figure actually went, not recomputed
+            // from the slot index: a slot's index is not its rank once a
+            // survivor closes up over a faded corpse, so a row painted by
+            // slot index would stay behind on the empty ground the corpse
+            // left.
+            if (enemy != null && slot < _enemyMarks.Length)
+            {
+                var staticOffset = FightStageAnchors.SlotOffset(slot, FightHudSpec.StageSlotsPerSide, mirrored: false);
+                var delta = _enemyMarks[slot] - new Vector2(staticOffset.X, staticOffset.Y);
+                RepositionEnemyStatusRow(slot, delta);
+            }
+
+            // AFTER the re-spread, so it starts from the row's correct
+            // slot-X for this refresh rather than the stale one from
+            // last refresh's enemy count.
+            FitEnemyStatusRow(slot, rows.Count);
+
+            PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
+                reserveOverflowSlot: true, enemy, rows, showCounter: true);
         }
 
         // The build-time strip is always the full 196px (4 badges + the "+N"

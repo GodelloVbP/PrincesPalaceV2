@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
@@ -50,14 +51,27 @@ namespace PrincesPalace.Domain.Combat.Session
         // no bar.
         public readonly int Ward;
 
+        // THE STATUS BADGES AT THIS MOMENT (FightHudModel.StatusRowsFor) and
+        // whether an enemy's break shield is down, for the same reason as the
+        // ward: a status a cast applies shows on the beat that applied it, not
+        // at the round-end repaint from live state. Null means NOT RECORDED
+        // (the short constructors): the painter leaves the badges as they are
+        // rather than blanking them. Display data derived from state already
+        // compared above, so it stays out of Equals and GetHashCode.
+        public readonly IReadOnlyList<FightHudModel.StatusRow> Statuses;
+        public readonly bool Broken;
+
         public Vitals(int health, int primary, int signature)
             : this(health, primary, signature, 0, 0)
         {
         }
 
-        public Vitals(int health, int primary, int signature, int maxHealth, int maxPrimary, int ward = 0)
+        public Vitals(int health, int primary, int signature, int maxHealth, int maxPrimary, int ward = 0,
+                      IReadOnlyList<FightHudModel.StatusRow> statuses = null, bool broken = false)
         {
             Ward = ward;
+            Statuses = statuses;
+            Broken = broken;
             Health = health;
             Primary = primary;
             Signature = signature;

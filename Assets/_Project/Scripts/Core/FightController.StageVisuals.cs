@@ -202,16 +202,11 @@ namespace PrincesPalace
 
             RefreshIntentIcons();
 
-            // NOT WHILE BUSY (C1's review). This method is reached from
-            // PaintVitals on every beat of a round, and CombatBeat carries no
-            // status snapshot -- painting the status row off LIVE state here
-            // would show a status a LATER beat in the same round already
-            // applied, several beats before the one actually landing it has
-            // played. RefreshUi (called once at OnPlaybackFinished, and on
-            // every input event -- both always with _isBusy already false) is
-            // the only path allowed to repaint this row; while busy it simply
-            // keeps showing whatever it last painted, exactly like the
-            // plates/verbs/submenu already do for the same reason.
+            // NOT WHILE BUSY: this method runs on every beat's PaintVitals, and
+            // a live read would show a status a LATER beat of the same round
+            // applied. While busy the row is painted from the beat's recorded
+            // Vitals.Statuses instead, right after this call; RefreshUi repaints
+            // it from live state once the round has finished.
             if (!_isBusy) RefreshEnemyStatusRows();
 
             DrawSide(OrderOf(playerSide: true), partySlots, partySprites, partyActorAnimators,

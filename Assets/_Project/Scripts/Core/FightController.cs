@@ -968,6 +968,17 @@ namespace PrincesPalace
                 {
                     SetWardFill(enemyPlateWardFills[i], recorded.Health, enemyMax, recorded.Ward);
                 }
+
+                // THE TAG LINE AND THE STAGE BADGES TOO, from the same moment:
+                // a status a cast applies shows on its own beat.
+                if (Has(enemyPlateTags, i))
+                {
+                    enemyPlateTags[i].SetContent(FightHudModel.EnemyPlateTagLine(recorded.Broken, recorded.Ward));
+                }
+                if (recorded.Statuses != null && IsOnStage(enemies[i]))
+                {
+                    PaintEnemyStatusRow(i, enemies[i], recorded.Statuses);
+                }
             }
 
             // EVERY PARTY MEMBER IN THE SNAPSHOT, not just the acting one:
@@ -1035,6 +1046,12 @@ namespace PrincesPalace
                 {
                     pcWardValues[plate].gameObject.SetShown(recordedPc.Ward > 0);
                     if (recordedPc.Ward > 0) pcWardValues[plate].SetContent($"+{recordedPc.Ward}");
+                }
+
+                if (recordedPc.Statuses != null)
+                {
+                    PaintStatusRow(PcStatusBase + plate * PcStatusBadgesPerPlate, PcStatusBadgesPerPlate,
+                        reserveOverflowSlot: true, member, recordedPc.Statuses, showCounter: true);
                 }
 
                 // What the system menu reports (IFightMenuSource): this beat's

@@ -1433,8 +1433,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // clears. Graceful degradation on a slot conflict, not silence.
         public static string EnemyPlateTagLine(CombatantState enemy, FightSession session, int wardPoints)
         {
-            string brk = EnemyStatusLine(enemy, session);
-            if (brk.Length > 0) return brk;
+            return EnemyPlateTagLine(enemy != null && enemy.BreakShield != null && enemy.BreakShield.IsBroken,
+                wardPoints);
+        }
+
+        // The same line from a recorded moment (Vitals.Broken / Vitals.Ward).
+        public static string EnemyPlateTagLine(bool broken, int wardPoints)
+        {
+            if (broken) return ItemStatLines.Coloured(BrokenHex, "BRK");
 
             return wardPoints > 0 ? ItemStatLines.Coloured(FightHudPalette.WardText, $"+{wardPoints}") : "";
         }

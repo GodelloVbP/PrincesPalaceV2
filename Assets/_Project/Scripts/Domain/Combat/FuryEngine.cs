@@ -21,8 +21,10 @@ namespace PrincesPalace.Domain.Combat
 
     // THE ENGINE STATE on one combatant, read by FightSession at three seams:
     //
-    //   NoteDamageForPools   -- Sentinel (per hit taken) and Einherjar (per
-    //                           damaging action) replace the flat gains there
+    //   NoteDamageForPools   -- Sentinel (per hit taken, DoT ticks included)
+    //                           and Einherjar (per damaging action, and per
+    //                           tick of a DoT he applied) replace the flat
+    //                           gains there
     //   TickPrimaryPool      -- Juggernaut's per-turn income, and its decay off
     //   OpenTurnFor/Reopen   -- the Einherjar action tally starts over
     //
@@ -50,10 +52,19 @@ namespace PrincesPalace.Domain.Combat
         // so the root's clamp exists in one place. `raw` is the figure before
         // the holder's defences: the session reads it off the ward step
         // (DamagePipeline hands the ward the pre-defence amount).
+        //
+        // A hit a ward absorbs whole still pays, on that raw figure: the
+        // holder took the blow even though no health moved. A DoT row landing
+        // on the holder pays once, on what it threw.
         public static int SentinelFury(int rawIncoming, int holderMaxHealth) =>
             PlantedShield.FuryForAbsorbedHit(rawIncoming, holderMaxHealth);
 
         // ---- Einherjar: per damaging action ---------------------------------------
+        //
+        // Each DoT tick on a victim also pays every Einherjar who applied part
+        // of it, on what his instances threw, straight off this formula. The
+        // action tally is left alone: a tick lands on the victim's turn, after
+        // the applier's own action has settled.
 
         public const int EinherjarScale = 10;
         public const int EinherjarMin = 5;
