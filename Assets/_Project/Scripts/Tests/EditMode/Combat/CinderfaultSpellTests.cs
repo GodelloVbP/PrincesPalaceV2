@@ -259,6 +259,21 @@ namespace PrincesPalace.Domain.Tests
                 "5 Fire + 5 Nature on the final health scale is 10, not 100");
         }
 
+        // The beat wears the packets' element, not the caster's attack type:
+        // equal 5 Fire / 5 Nature packets tie, and the first (Fire) wins.
+        [Test]
+        public void TheBeatDeclaresTheFirstOfTwoEqualPackets()
+        {
+            var (session, _, foes) = Fight(Neutral, Neutral, Neutral);
+
+            Assert.IsTrue(session.CastSkill(Cinderfault(), foes[0]));
+
+            var beat = session.DrainBeats().Single(b => b.HasPerTargetResults);
+            beat.PaintActorDamageType(DamageType.Nature);
+            Assert.AreEqual(DamageType.Fire, beat.DamageType,
+                "the actor paint must not override a packet's declared element");
+        }
+
         // THE HEADLINE: three enemies, three matchups, three different correct
         // numbers -- from one cast, on one beat.
         //

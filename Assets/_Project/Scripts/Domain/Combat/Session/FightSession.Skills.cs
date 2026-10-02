@@ -1708,6 +1708,19 @@ namespace PrincesPalace.Domain.Combat.Session
             return total;
         }
 
+        private void DeclarePacketDamageType(DamageInstance[] packets)
+        {
+            if (packets == null || packets.Length == 0) return;
+
+            var largest = packets[0];
+            foreach (var packet in packets)
+            {
+                if (packet.amount > largest.amount) largest = packet;
+            }
+
+            _recordingBeat?.DeclareDamageType(largest.type);
+        }
+
         // `packets` DEFAULTS TO THE SKILL'S OWN, and is overridable for
         // exactly one reason (plan 2.4): Crownfall reads whether the target
         // is Marked BEFORE this call and hands in the heavier
@@ -1718,6 +1731,15 @@ namespace PrincesPalace.Domain.Combat.Session
             StringBuilder detail, out bool dodged, out bool crit, DamageInstance[] packets = null)
         {
             crit = false;
+
+            // THE BEAT WEARS THE ELEMENT THE PACKETS DEAL, not the caster's
+            // attack type, so the popup and the hurt flash read the spell's
+            // own element. One beat covers every packet, so it takes the
+            // largest authored packet (the first on a tie). Authored amounts,
+            // not outcomes: the choice then cannot differ between the enemies
+            // of one sweep.
+            DeclarePacketDamageType(packets ?? skill.DamageInstances);
+
             dodged = DamagePipeline.RollDodge(target, actor, _rng);
             if (dodged)
             {

@@ -125,19 +125,19 @@ namespace PrincesPalace.Domain.Combat.Session
         // through BeginBeat leaves it at Physical (the enum's own zero) until
         // that loop runs, exactly as it always implicitly did.
         //
-        // THE ONE EXCEPTION IS A BEAT WITH NO ACTOR TO ASK. A status tick
-        // declares its element from the status itself, in Domain, because
-        // there is nobody whose attack type could answer for it -- see
+        // THE EXCEPTIONS DECLARE THEIR OWN ELEMENT in Domain: a skill that
+        // deals authored packets (below), and a status tick, which has no
+        // actor whose attack type could answer for it -- see
         // DeclareDamageType and PaintActorDamageType below for which of the
         // two wins.
         //
-        // A caster's OWN type, not the packet's -- a fixed-damage skill that
-        // authors a type its caster does not carry (frost_flare's Ice half on
-        // a Fire-typed caster) still pops in the caster's colour. CombatBeat
-        // does not carry which ResolvedSkill produced it at all, only who
-        // acted and who was hit, so that finer distinction would need the
-        // beat to carry the skill too -- a bigger seam than a popup justifies
-        // today.
+        // THE PACKET'S TYPE WINS WHEN THE SKILL DEALS ONE. A skill with
+        // authored damageInstances declares the element it deals (the largest
+        // packet when it deals several, since one beat shows one element), so
+        // the popup and the hurt flash carry the spell's own colour rather
+        // than the caster's -- a Nature-typed caster's Lightning Bolt is
+        // yellow. The caster's attack type is the fallback for a beat that
+        // declared nothing, which is every plain attack.
         //
         // WRITTEN THROUGH ONE OF THE TWO METHODS BELOW, never assigned at a
         // call site. Which of them wins is a precedence rule, and a bare
