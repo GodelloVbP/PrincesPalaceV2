@@ -361,7 +361,7 @@
       "gainDb": 7.18,
       "gain": 2.2856,
       "metric": "rms",
-      "measuredDb": -26.9,
+      "measuredDb": -25.3,
       "peakDb": -8.2
     },
     {
@@ -742,10 +742,10 @@
     },
     {
       "path": "Sfx/winters_rebuke_cast",
-      "gainDb": 3.8,
-      "gain": 1.5488,
+      "gainDb": 2.9,
+      "gain": 1.3964,
       "metric": "rms",
-      "measuredDb": -21.8,
+      "measuredDb": -20.9,
       "peakDb": -7.5
     },
     {

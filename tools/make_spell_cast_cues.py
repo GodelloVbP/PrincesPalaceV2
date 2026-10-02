@@ -48,7 +48,7 @@ FADE_OUT = 0.008    # a click guard, not a decay: the source's next sound is cut
 
 # (output name, element pack or None for an absolute source, source file, length)
 CUES = [
-    ("winters_rebuke_cast", "Ice", "Ice_Spell_charge_impact_09.wav", 0.46),
+    ("winters_rebuke_cast", "Ice", "Ice_Spell_charge_impact_09.wav", 0.34),
     ("vipers_bite_cast", "Acid", "acid_spell_cast_charge_splash_impact_03.wav", 0.30),
     ("spore_cloud_cast", "Acid", "acid_spell_cast_riser_liquid_impact_03.wav", 0.35),
     ("ashen_reckoning_cast", "Acid", "acid_spell_cast_charge_splash_impact_02.wav", 0.30),
@@ -58,7 +58,7 @@ CUES = [
     ("court_of_whispers_cast", "Dark", "dark_spell_cast_energy_ball_01.wav", 0.30),
     ("palace_passage_cast", "Dark", "dark_spell_cast_energy_riser_metallic_02.wav", 0.30),
     ("thorn_tithe_cast", "Earth", "earth_spell_cast_rise_ground_04.wav", 0.30),
-    ("crownfall_cast", "Lightning", "lighting_spell_electric_impact_thunder_dark_dry_02.wav", 0.50),
+    ("crownfall_cast", "Lightning", "lighting_spell_electric_impact_thunder_dark_dry_02.wav", 0.34),
     ("borrowed_moment_cast", "Wind", "wind_spell_cast_air_short_rise_whoosh_01.wav", 0.30),
     ("prismatic_orb_earth_cast", "Earth", "earth_spell_cast_magic_whoosh_02.wav", 0.3467),
     ("prismatic_orb_fire_cast", "Fire", "fire_spell_charge_explosion_wet_03.wav", 0.4167),

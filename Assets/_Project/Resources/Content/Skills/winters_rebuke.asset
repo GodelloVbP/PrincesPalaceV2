@@ -70,22 +70,22 @@ MonoBehaviour:
         at: release
         offset: 0
         path: Spells/winters_rebuke
-        seconds: 0.28
-        fps: 7
+        seconds: 0.2
+        fps: 10
         startFrame: 1
         until: once
-        fade: 0.08
+        fade: 0.06
         opacity: 1
         dx: 0
         dy: 0
         scale: 1
-        size: 260
+        size: 380
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.12
-        glow: 1
+        punch: 0.2
+        glow: 1.6
         impactX: -1
         impactY: -1
         aspect: 0
@@ -125,7 +125,7 @@ MonoBehaviour:
         place: sky
         follow: 0
         at: release
-        offset: 0.26
+        offset: 0.18
         path: Spells/winters_rebuke
         seconds: 0
         fps: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
         impactX: 0.88
         impactY: 0.625
         aspect: 0
-        travelSeconds: 0.2
+        travelSeconds: 0.16
         travelDelay: 0
         orient: path
         artDegrees: 26
@@ -184,11 +184,11 @@ MonoBehaviour:
         at: hit
         offset: 0
         path: Spells/winters_rebuke
-        seconds: 0.16
+        seconds: 0.12
         fps: 0
         startFrame: 6
         until: hold
-        fade: 0.1
+        fade: 0.08
         opacity: 1
         dx: 0
         dy: 0
@@ -239,13 +239,13 @@ MonoBehaviour:
         place: target
         follow: 0
         at: hit
-        offset: 0.16
+        offset: 0.12
         path: Spells/winters_rebuke
-        seconds: 0.27
+        seconds: 0.2
         fps: 0
         startFrame: 9
         until: once
-        fade: 0.13
+        fade: 0.09
         opacity: 1
         dx: 0
         dy: 0
@@ -337,7 +337,7 @@ MonoBehaviour:
           drag: 1.8
           gravity: -520
           lifeMin: 0.28
-          lifeMax: 0.5
+          lifeMax: 0.4
           sizeMin: 0.12
           sizeMax: 0.3
           spinMin: -180
@@ -349,7 +349,7 @@ MonoBehaviour:
           seed: 1358
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.46
+      hitCueSeconds: 0.34
     SortOrder: 8
     Status: 8
     HasStatus: 1

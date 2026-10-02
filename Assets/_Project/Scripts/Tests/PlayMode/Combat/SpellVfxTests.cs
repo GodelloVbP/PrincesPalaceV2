@@ -1969,6 +1969,10 @@ namespace PrincesPalace.PlayModeTests
 
         private static readonly string[] SkySpells = { "winters_rebuke", "blackglass_spear", "crownfall" };
 
+        // The sky spells that fly a layer from the air point; Crownfall drops
+        // its spike straight down as an emitter, so it has no tip to aim.
+        private static readonly string[] FlyingSkySpells = { "winters_rebuke", "blackglass_spear" };
+
         // THE TAIL COVERS AT MOST THREE QUARTERS OF THE BODY. Winter's Rebuke
         // and Blackglass Spear author a 320 impact and Crownfall a 340 shatter;
         // fitted to the treant (x1.63) those were 522-555 units over a 457-tall
@@ -2053,7 +2057,7 @@ namespace PrincesPalace.PlayModeTests
 
         [UnityTest]
         public IEnumerator EveryTravellingLayerAimsItsTipAtTheBodyMiddle(
-            [ValueSource(nameof(SkySpells))] string skillId,
+            [ValueSource(nameof(FlyingSkySpells))] string skillId,
             [ValueSource(nameof(BodiesToAimAt))] string sprite)
         {
             yield return LoadFight(1, sprite.EndsWith("treant") ? 1.45f : 1f, sprite);
@@ -2146,16 +2150,12 @@ namespace PrincesPalace.PlayModeTests
                 Assert.That(shatter.To.X, Is.InRange(body.Left, body.Right), "the shatter is beside the treant");
                 Assert.That(shatter.To.Y, Is.InRange(body.Bottom, body.Top), "the shatter is above or below the treant");
 
+                // The spike falls from above the body's middle onto it: its
+                // emitter is anchored on that middle.
                 var spike = performance.Instances.First(i => i.Layer.id == "spike");
-                // The arrival box's axis-aligned bounds, turned onto its flight.
-                float halfW = Domain.Stage.SpellFlight.RotatedHalfHeight(
-                    new Domain.UiKit.UiVec(spike.Box.Y, spike.Box.X), spike.Degrees);
-                float halfH = Domain.Stage.SpellFlight.RotatedHalfHeight(spike.Box, spike.Degrees);
                 var centre = body.Centre;
-                Assert.That(centre.X, Is.InRange(spike.To.X - halfW, spike.To.X + halfW),
-                    "the spike arrives beside the treant");
-                Assert.That(centre.Y, Is.InRange(spike.To.Y - halfH, spike.To.Y + halfH),
-                    "the spike arrives above or below the treant's middle");
+                Assert.AreEqual(centre.X, spike.To.X, 1f, "the spike falls beside the treant's middle");
+                Assert.AreEqual(centre.Y, spike.To.Y, 1f, "the spike lands above or below the treant's middle");
             });
         }
     }

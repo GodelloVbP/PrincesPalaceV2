@@ -65,19 +65,19 @@ MonoBehaviour:
       layers:
       - id: amass
         render: sprite
-        place: sky
+        place: target-centre
         follow: 0
         at: release
         offset: 0
         path: Spells/crownfall
-        seconds: 0.36
-        fps: 14
+        seconds: 0.22
+        fps: 23
         startFrame: 1
         until: once
-        fade: 0.08
+        fade: 0.05
         opacity: 1
         dx: 0
-        dy: 0
+        dy: 190
         scale: 1
         size: 300
         fit: target
@@ -121,61 +121,61 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: spike
-        render: still
-        place: sky
+        render: emitter
+        place: target-centre
         follow: 0
         at: release
-        offset: 0.34
-        path: Spells/crownfall
+        offset: 0.2
+        path: 
         seconds: 0
         fps: 0
-        startFrame: 6
+        startFrame: 0
         until: 
         fade: 0
         opacity: 1
         dx: 0
         dy: 0
         scale: 1
-        size: 300
+        size: 0
         fit: target
-        facing: auto
+        facing: 
         sort: effects
         align: 
         punch: 0
-        glow: 1.2
-        impactX: 0.485
-        impactY: 0.16
+        glow: 0
+        impactX: -1
+        impactY: -1
         aspect: 0
-        travelSeconds: 0.16
+        travelSeconds: 0
         travelDelay: 0
-        orient: path
-        artDegrees: -90
+        orient: 
+        artDegrees: 0
         through: 0
         emitter:
-          path: 
+          path: Spells/crownfall_spike
           rate: 0
-          burst: 0
+          burst: 1
           window: 0
           sourceDx: 0
-          sourceDy: 0
+          sourceDy: 200
           spreadDegrees: 0
-          aimDegrees: 0
+          aimDegrees: 270
           speedMin: 0
           speedMax: 0
           inherit: 0
           drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
+          gravity: -13265
+          lifeMin: 0.14
+          lifeMax: 0.14
+          sizeMin: 4.7
+          sizeMax: 4.7
           spinMin: 0
           spinMax: 0
           alignFlight: 0
           lateral: 0
           fadeFrom: 1
           endScale: 1
-          seed: 0
+          seed: 873
           weights: []
       - id: shatter
         render: sprite
@@ -185,10 +185,10 @@ MonoBehaviour:
         offset: 0
         path: Spells/crownfall
         seconds: 0
-        fps: 14
+        fps: 20
         startFrame: 7
         until: once
-        fade: 0.14
+        fade: 0.08
         opacity: 1
         dx: 0
         dy: 0
@@ -280,7 +280,7 @@ MonoBehaviour:
           drag: 1.8
           gravity: -700
           lifeMin: 0.28
-          lifeMax: 0.52
+          lifeMax: 0.3
           sizeMin: 0.1
           sizeMax: 0.27
           spinMin: -180
@@ -292,7 +292,7 @@ MonoBehaviour:
           seed: 873
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.5
+      hitCueSeconds: 0.34
     SortOrder: 10
     Status: 0
     HasStatus: 0

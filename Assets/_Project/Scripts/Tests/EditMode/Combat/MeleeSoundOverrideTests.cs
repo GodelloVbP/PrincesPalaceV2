@@ -195,7 +195,7 @@ namespace PrincesPalace.Domain.Tests
             var skills = JsonBlocks.ObjectsInArray(json, "skills");
             var single = new (string spell, string cue, float seconds)[]
             {
-                ("winters_rebuke", "winters_rebuke_cast", 0.46f),
+                ("winters_rebuke", "winters_rebuke_cast", 0.34f),
                 ("vipers_bite", "vipers_bite_cast", 0.30f),
                 ("spore_cloud", "spore_cloud_cast", 0.35f),
                 ("ashen_reckoning", "ashen_reckoning_cast", 0.30f),
@@ -205,7 +205,7 @@ namespace PrincesPalace.Domain.Tests
                 ("court_of_whispers", "court_of_whispers_cast", 0.30f),
                 ("palace_passage", "palace_passage_cast", 0.30f),
                 ("thorn_tithe", "thorn_tithe_cast", 0.30f),
-                ("crownfall", "crownfall_cast", 0.50f),
+                ("crownfall", "crownfall_cast", 0.34f),
                 ("borrowed_moment", "borrowed_moment_cast", 0.30f),
                 ("cinderfault", "cinderfault_startup", 0.2167f),
             };
