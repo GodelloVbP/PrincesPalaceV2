@@ -36,8 +36,9 @@ Each is a gap-fill; the owner can overturn any of them by number.
    `AudioReverbFilter` and no mixer (`Core/SoundController.cs:26-42`).
 7. **"Heavy GUI tricks" on Cinderfault means stage VFX plus the stage shake**,
    not HUD effects. The HUD frame stays still (`Core/StageShake.cs` header).
-8. **Harpoons are new, thrown, electrically charged and exploding** (owner,
-   2026-10-03, after Rumble's ult). See C10.
+8. **Rumble's ult is a layering reference, not content** (owner, 2026-10-03).
+   Cinderfault keeps its fire-and-earth identity; only the sequencing is taken
+   (impacts, then rings, then a hidden rift). See C10.
 9. **Toll of the Flock: only the hoofbeat layer goes from the sound.** The bell
    voice and the noise rush stay. The art rework scope is set after the owner
    and I watch its GIF (C11).
@@ -302,11 +303,18 @@ hit flashes per packet stay.
   tail runs under 2-3 later beats. The owner judges it in game at both speeds. If
   it muddies them, the fix is a shorter tail, not ducking (no mixer exists).
 
-### C10. Cinderfault: charged harpoons, fire circles, then the rift
+### C10. Cinderfault: impacts mark the ground, fire circles hide the rift forming
 
-**Owner's reference (2026-10-03):** Rumble's ult in League of Legends. Electrically
-charged harpoons are thrown, land and explode. Circles of fire mark where they
-land and hide the rift forming underneath.
+**Reference (owner, 2026-10-03).** Rumble's ult in League of Legends is a
+reference for **how the layers are sequenced**, not for what is drawn:
+1. Objects land at points.
+2. A burning circle blooms at each landing.
+3. The circles cover the ground effect forming beneath them until it is
+   revealed.
+
+Cinderfault keeps its own identity and materials: fire and earth, obsidian and
+lava, the palette of `cinderfault_eruption`. Nothing electric, nothing copied
+from Rumble.
 
 **Today.** Release at t=0, the row at `skills.json:196-299`:
 - `fault`: the ground crack along the rank.
@@ -315,53 +323,43 @@ land and hide the rift forming underneath.
 - `hitCueSeconds` 0.2167, no `shake`.
 
 The capture (`docs/captures/spell_feel/cinderfault_vs_rat/strip.png`) shows the
-crack visibly forming for f6-f12 before anything happens.
+crack visibly forming for f6-f12 before anything happens. Rumble's sequence
+avoids exactly that: you never see the ground effect "loading".
 
-**Identity** (`docs/SPELL_FEEL.md:149-167`). Verb: *pin, then rupture.*
-Signature beat: charged harpoons nail each enemy's ground, the ground ignites
-around them, and the earth tears open between them. A vertical drop is
-Crownfall's signature, so the harpoons arrive on a steep diagonal from the
-caster's side.
+**Identity** (`docs/SPELL_FEEL.md:149-167`). Verb: *erupt*. Signature beat:
+molten shards strike each enemy's ground, fire rings flare around them, and the
+earth tears open from under the rings.
 
 | Beat | Time (s, from release) | What the eye sees | Notes |
 |---|---|---|---|
-| Throw | 0 to about 0.18 | One harpoon per struck enemy, crackling with electric arcs, flies in on a steep arc from the caster's side, oriented along its path | new art; travelling layer, `orient: path` |
-| Landing | staggered about 0.05 apart, in rank order, front to back | Each harpoon strikes the ground at its enemy's foot line and bursts: an electric flash plus sparks | new burst art; emitter for sparks |
-| Fire circle | from each landing | A ring of fire blooms around the impact point, about 1.2× body width, full in about 0.08 s | new art, ground band |
-| Hidden crack | under the rings | The `fault` crack-widening frames play beneath the rings, so the rift is never seen forming | rings drawn above `fault` |
-| Rupture (hit cue) | last landing + about 0.10 | The rift rips open along the rank, existing spikes erupt from the rings, strong stage shake | `shake` (`CONTENT_SCHEMA.md:263`); hit cue moves later, to about 0.40 for three targets |
-| Burn-down | about 0.35 | Rings, arcs and rift cool; residue under 0.5 s | |
+| Strike | 0 to about 0.18 | One molten obsidian shard per struck enemy arrives on a steep arc from the caster's side and strikes the ground at the enemy's foot line, in rank order, about 0.05 apart | new art in Cinderfault's palette; travelling layer, `orient: path`. Vertical is Crownfall's signature, so it is not used |
+| Fire circle | from each strike | A ring of fire blooms around the strike point, about 1.2× body width, full in about 0.08 s | new art, ground band |
+| Hidden crack | under the rings | `fault`'s crack-widening frames play beneath the rings, so the rift is never seen forming | rings drawn above `fault` |
+| Rupture (hit cue) | last strike + about 0.10 | The rift rips open along the rank, the existing spikes erupt from the rings, strong stage shake | `shake` (`CONTENT_SCHEMA.md:263`); hit cue moves to about 0.40 for three targets |
+| Burn-down | about 0.35 | Rings and rift cool; residue under 0.5 s | |
 
-**Layer-system capabilities** this needs and that are not established:
-- **Landing a travelling layer on the foot line.** `above` lands on the middle
-  (`Domain/Stage/SpellFlight.cs:56-60`).
-- **An arc path.**
-- **A per-struck-index stagger.**
+**Layer-system capabilities this needs that are not established:**
+- landing a travelling layer on the foot line (`above` lands on the middle,
+  `Domain/Stage/SpellFlight.cs:56-60`);
+- an arc path;
+- a per-struck-index stagger.
 
-Each missing one is added as **one field on the layer model** (default = today's
-behaviour, documented in `CONTENT_SCHEMA.md`, with a second plausible user named
-in the commit), never a per-spell offset. The package reports which were needed.
+Each missing one becomes **one field on the layer model** (default = today's
+behaviour, documented in `CONTENT_SCHEMA.md`, with a second plausible user
+named in the commit). Never a per-spell offset. The package reports which were
+needed.
 
 **Sound.**
-- The hit cue moves, so the cast cue `cinderfault_startup` (the owner's recording)
-  is re-cut by `tools/make_spell_cast_cues.py` (`:19-20`).
-- An electric crack layer is added to the impact.
-- Both come from `C:\Games\Sounds` (the Dark and Fire spell packs,
-  `Prince's Palace/Spells/...`).
+- The hit cue moves, so the cast cue `cinderfault_startup` (the owner's
+  recording) is re-cut by `tools/make_spell_cast_cues.py` (`:19-20`).
+- An impact thud per strike comes from the Fire spell pack in `C:\Games\Sounds`.
 - The owner hears both before commit.
 
-**Art.** Harpoon (a still, charged), landing burst, fire ring (bloom, loop,
-burn-down). The owner generates them from prompts in
+**Art.** Shard (one still), fire ring (bloom, loop, burn-down), in the existing
+eruption's style. The owner generates them from prompts in
 `docs/prompts/2026-10-03_cinderfault.md`.
-- The mechanics land first with stand-ins: Blackglass's spear as the harpoon,
-  and the eruption's ember frames as the ring.
-
-**Element mismatch (open call O5).** Cinderfault deals Fire 5 + Nature 5
-(`skills.json:207-216`). `Lightning` exists as a damage type
-(`Domain/Stats/DamageType.cs:26`). Electric arcs will read as Lightning to a
-player who knows the element colours.
-- Keep the damage and treat the charge as flavour, or change the damage?
-- The plan proceeds visually and leaves the numbers untouched.
+- The mechanics land first with stand-ins: the eruption's tallest spike as the
+  shard, and its ember frames as the ring.
 
 ### C11. Toll of the Flock
 
@@ -436,7 +434,7 @@ production formula (CLAUDE.md gotcha 5).
 | T14 | Over-art label: static for 60 frames; text change; label moved and scaled relative to the parent without a text change; disabled and re-enabled | No write while static; a write on the frame of each change; plate correct after re-enable | C7 |
 | T15 | Crownfall on treant and on rat | Spike box at authored fit size on both; fall distance ≥ 0.5 body heights on both (literals) | C8 |
 | T16 | Court of Whispers clip | Head matches the dry source within tolerance; length and decay within the C9 ranges; generator byte-deterministic | C9 |
-| T17 | Cinderfault vs rat, treant, 3-rat formation | Harpoons land on each foot line in rank order; rings bloom at each landing; no crack pixels outside the rings before the hit cue; hit cue after the last landing; residue < 0.5 s | C10 |
+| T17 | Cinderfault vs rat, treant, 3-rat formation | Shards strike each foot line in rank order; rings bloom at each landing; no crack pixels outside the rings before the hit cue; hit cue after the last landing; residue < 0.5 s | C10 |
 
 ## 4. Packages
 
@@ -492,8 +490,7 @@ P1 lands.
   check. Answered in part: sounds come from `C:\Games\Sounds`, which has no
   whispers as such.
 - **O3.** Toll of the Flock art direction, after the owner sees the GIFs.
-- **O5.** Cinderfault's electric look against its Fire + Nature damage (C10).
 
 Answered 2026-10-03: O1 (relic chips wherever a relic is received) is now C2/C3;
-O4 (harpoons are new, thrown, charged; C10); the Super Dialogue pack licence is
+O4 (Rumble is a layering reference only; C10); the Super Dialogue pack licence is
 confirmed for C9.
