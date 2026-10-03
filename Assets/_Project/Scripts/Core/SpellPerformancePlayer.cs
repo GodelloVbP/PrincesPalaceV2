@@ -315,6 +315,28 @@ namespace PrincesPalace
             }
         }
 
+        // THE STAGE DARKNESS THE LIVE CASTS ASK FOR NOW, the larger of them
+        // (casts never stack, same as an event and a spell). Read by the fight
+        // each frame and composed with the event's darkness there. Aged the
+        // way Tick ages a cast: on the cast's own pace, in authored seconds.
+        public float GloomAlpha
+        {
+            get
+            {
+                float now = Now();
+                float alpha = 0f;
+                for (int slot = 0; slot < _casts.Count; slot++)
+                {
+                    var cast = _casts[slot];
+                    if (!cast.Live || cast.Performance == null) continue;
+                    float seconds = (now - cast.StartedAt) * cast.PaceAtStart;
+                    alpha = StageDarkness.Compose(alpha, cast.Performance.GloomAlphaAt(seconds));
+                }
+
+                return alpha;
+            }
+        }
+
         // A VISUAL-ONLY STOP. The cast's gameplay resolved before any of this
         // ran, so there is no combat action here to cancel and no method that
         // could be mistaken for one. Living particles go with it, because a
@@ -460,7 +482,9 @@ namespace PrincesPalace
             }
 
             // Nothing left to draw and nothing left to fire.
-            if (cast.Cursor >= cast.Performance.ClearedSeconds && !HoldsAnything(cast))
+            // A gloom still lifting keeps the cast live past its last layer.
+            if (cast.Cursor >= cast.Performance.ClearedSeconds && !HoldsAnything(cast) &&
+                cast.Cursor >= cast.Performance.GloomEndSeconds)
             {
                 Release(slot);
             }

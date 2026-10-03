@@ -45,6 +45,7 @@ namespace PrincesPalace.Domain.Tests
             castSfxPath = "Audio/Sfx/x_cast",
             layerFormat = 1,
             hitCueSeconds = 0.35f,
+            gloom = new SpellGloom { strength = 0.35f, fadeIn = 0.2f, until = "cleared", fadeOut = 0.25f },
             layers = new[]
             {
                 new SpellLayer
@@ -132,6 +133,15 @@ namespace PrincesPalace.Domain.Tests
                 if (field.FieldType == typeof(SpellLayer[]))
                 {
                     if (((SpellLayer[])mine).Length != ((SpellLayer[])theirs).Length) dropped.Add(field.Name);
+                    continue;
+                }
+
+                if (field.FieldType == typeof(SpellGloom))
+                {
+                    var m = (SpellGloom)mine;
+                    var t = (SpellGloom)theirs;
+                    if (m == t || m.strength != t.strength || m.fadeIn != t.fadeIn || m.until != t.until ||
+                        m.fadeOut != t.fadeOut) dropped.Add(field.Name);
                     continue;
                 }
 

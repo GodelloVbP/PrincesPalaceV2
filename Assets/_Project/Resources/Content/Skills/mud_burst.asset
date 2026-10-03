@@ -124,6 +124,11 @@ MonoBehaviour:
           weights: []
       layerFormat: 1
       hitCueSeconds: 0.325
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0
     SortOrder: 3
     Status: 3
     HasStatus: 1
@@ -167,6 +172,11 @@ MonoBehaviour:
           layers: []
           layerFormat: 0
           hitCueSeconds: 0
+          gloom:
+            strength: 0
+            fadeIn: 0
+            until: 
+            fadeOut: 0
         shake: 0
         hitStopSeconds: 0
       defenseToAttackPercent: 0

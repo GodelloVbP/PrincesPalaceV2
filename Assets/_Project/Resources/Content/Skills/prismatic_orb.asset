@@ -64,6 +64,11 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0
     SortOrder: 57
     Status: 0
     HasStatus: 0
@@ -107,6 +112,11 @@ MonoBehaviour:
           layers: []
           layerFormat: 0
           hitCueSeconds: 0
+          gloom:
+            strength: 0
+            fadeIn: 0
+            until: 
+            fadeOut: 0
         shake: 0
         hitStopSeconds: 0
       defenseToAttackPercent: 0
@@ -539,6 +549,11 @@ MonoBehaviour:
             - 2
         layerFormat: 1
         hitCueSeconds: 0.3467
+        gloom:
+          strength: 0
+          fadeIn: 0
+          until: 
+          fadeOut: 0
     - Type: 7
       Vfx:
         path: 
@@ -920,6 +935,11 @@ MonoBehaviour:
             weights: []
         layerFormat: 1
         hitCueSeconds: 0.4167
+        gloom:
+          strength: 0
+          fadeIn: 0
+          until: 
+          fadeOut: 0
     - Type: 1
       Vfx:
         path: 
@@ -1301,6 +1321,11 @@ MonoBehaviour:
             weights: []
         layerFormat: 1
         hitCueSeconds: 0.4167
+        gloom:
+          strength: 0
+          fadeIn: 0
+          until: 
+          fadeOut: 0
     - Type: 8
       Vfx:
         path: 
@@ -1682,6 +1707,11 @@ MonoBehaviour:
             weights: []
         layerFormat: 1
         hitCueSeconds: 0.4167
+        gloom:
+          strength: 0
+          fadeIn: 0
+          until: 
+          fadeOut: 0
     PoolTiers: []
     Placeholder: 0
     PlaceholderNote: 

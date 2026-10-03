@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -90,9 +91,7 @@ namespace PrincesPalace
             _darknessEnding = false;
             if (roundDarkness != null)
             {
-                bool dark = _presentation.HasDarkness;
-                roundDarkness.gameObject.SetShown(dark);
-                SetDarknessAlpha(dark ? _presentation.DarknessAlphaFor(1) : 0f);
+                SetDarknessAlpha(_presentation.HasDarkness ? _presentation.DarknessAlphaFor(1) : 0f);
             }
 
             // A slower fade for an enemy only while a darkness is there to fade into.
@@ -174,11 +173,36 @@ namespace PrincesPalace
             SoundController.PlayClip(_presentation.RoundSfxPath);
         }
 
+        // THE EVENT'S HALF of the stage's darkness; a spell's gloom is the
+        // other, and the image shows the larger (StageDarkness.Compose).
+        private float _eventDarkness;
+
         private void SetDarknessAlpha(float alpha)
         {
+            _eventDarkness = alpha;
+            ApplyStageDarkness();
+        }
+
+        // THE ONE WRITE TO THE DARKNESS IMAGE. Called when the event's half
+        // changes and every frame, because a cast's gloom moves on its own
+        // clock. The image is hidden whenever the composition is zero, so a
+        // fight with neither input never draws it.
+        private void ApplyStageDarkness()
+        {
+            if (roundDarkness == null) return;
+
+            float gloom = performancePlayer != null ? performancePlayer.GloomAlpha : 0f;
+            float alpha = StageDarkness.Compose(_eventDarkness, gloom);
+
+            bool shown = alpha > 0f;
+            if (roundDarkness.gameObject.activeSelf != shown) roundDarkness.gameObject.SetShown(shown);
+
             var colour = roundDarkness.color;
-            colour.a = alpha;
-            roundDarkness.color = colour;
+            if (!Mathf.Approximately(colour.a, alpha))
+            {
+                colour.a = alpha;
+                roundDarkness.color = colour;
+            }
         }
 
         // THE ENDING OF A DARKENED FIGHT: before the Reckoning opens, the

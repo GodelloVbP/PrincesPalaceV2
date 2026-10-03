@@ -204,6 +204,17 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // release a handle without polling every renderer.
         public float ClearedSeconds { get; private set; }
 
+        // The stage darkening this cast asks for (never null), and the one
+        // reading of it: the player maxes it across live casts and the fight
+        // composes the result with the event's darkness.
+        public SpellGloom Gloom { get; private set; } = new SpellGloom();
+
+        public float GloomAlphaAt(float seconds) =>
+            Gloom.AlphaAt(seconds, HitCueSeconds, ClearedSeconds);
+
+        // When the gloom is fully lifted; a cast stays live until then.
+        public float GloomEndSeconds => Gloom.EndSeconds(HitCueSeconds, ClearedSeconds);
+
         private List<SpellLayerInstance> _built;
         private Func<string, int> _frameCountOf;
 
@@ -236,6 +247,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             performance._frameCountOf = frameCountOf;
             performance.Schedule = BuildSchedule(instances, performance.HitCueSeconds);
             performance.ClearedSeconds = ClearedOf(instances, performance.HitCueSeconds);
+            performance.Gloom = presentation.gloom ?? new SpellGloom();
             return performance;
         }
 

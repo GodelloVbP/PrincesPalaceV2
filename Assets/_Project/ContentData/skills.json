@@ -1635,6 +1635,12 @@
         "sfxPath": "Audio/Sfx/court_of_whispers_impact",
         "castSfxPath": "Audio/Sfx/court_of_whispers_cast",
         "hitCueSeconds": 0.3,
+        "gloom": {
+          "strength": 0.35,
+          "fadeIn": 0.2,
+          "until": "hit",
+          "fadeOut": 0.25
+        },
         "layers": [
           {
             "id": "ritual",

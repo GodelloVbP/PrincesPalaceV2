@@ -45,3 +45,8 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0

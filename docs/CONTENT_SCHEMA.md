@@ -628,6 +628,15 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `seed` | int | `0` | Random seed; 0 derives one from the cast so two casts differ, non-zero repeats exactly. |  |
 | `weights` | float[] | (none -- required) | Per-cell pick weight, one per still in emitter.path's folder in file order; blank means uniform. Each entry must be finite and >= 0, and at least one must be > 0. Length must equal the folder's own frame count. |  |
 
+### `SpellGloom`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `strength` | float | `0` | How dark the spell makes the stage at most, 0-1 (the opacity of the stage's darkness image). 0 means no gloom. Shown as the larger of this and the event's own darkness, never added to it. |  |
+| `fadeIn` | float | `0` | Seconds from the cast opening to full strength. |  |
+| `until` | string | `""` | When the gloom starts to lift: hit (the payoff cue) or cleared (when the cast's last layer is gone). Blank means hit. |  |
+| `fadeOut` | float | `0` | Seconds the gloom takes to lift once released. |  |
+
 ### `SpellLayer`
 
 | Field | Type | Default | Description | Values |
@@ -691,6 +700,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `layers` | SpellLayer[] (below) | `[]` | Ordered layers this spell draws; empty means the single-block fields above are used as-is. |  |
 | `layerFormat` | int | `0` | Which revision of the layer vocabulary this block was authored against; 0 means the pre-layer format. |  |
 | `hitCueSeconds` | float | `0` | Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame. |  |
+| `gloom` | SpellGloom (below) | (zero -- see SpellGloom) | Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom. |  |
 
 ## Description markup
 

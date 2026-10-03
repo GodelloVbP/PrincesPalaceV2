@@ -105,3 +105,8 @@ MonoBehaviour:
           weights: []
       layerFormat: 1
       hitCueSeconds: 0.55
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0

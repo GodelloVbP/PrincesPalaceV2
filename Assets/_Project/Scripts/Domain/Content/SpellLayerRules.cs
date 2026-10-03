@@ -93,6 +93,47 @@ namespace PrincesPalace.Domain.Content
 
         // ---- the block as a whole ------------------------------------------------
 
+        // THE LARGEST A GLOOM'S FADES MAY BE, in authored seconds. A fade is a
+        // tenth-of-a-second thing; the bound only rules out a number typed in
+        // the wrong unit.
+        public const float MaxGloomFadeSeconds = 2f;
+
+        private static void CheckGloom(string label, SpellPresentation vfx, List<string> problems)
+        {
+            var gloom = vfx.gloom;
+            if (gloom == null) return;
+
+            if (gloom.strength < 0f || gloom.strength > 1f)
+            {
+                problems.Add($"{label}: vfx.gloom.strength {Num(gloom.strength)} is outside 0..1 -- it is the " +
+                             "opacity of the stage's darkness image.");
+            }
+
+            if (gloom.fadeIn < 0f || gloom.fadeIn > MaxGloomFadeSeconds)
+            {
+                problems.Add($"{label}: vfx.gloom.fadeIn {Num(gloom.fadeIn)} is outside 0..{Num(MaxGloomFadeSeconds)} seconds.");
+            }
+
+            if (gloom.fadeOut < 0f || gloom.fadeOut > MaxGloomFadeSeconds)
+            {
+                problems.Add($"{label}: vfx.gloom.fadeOut {Num(gloom.fadeOut)} is outside 0..{Num(MaxGloomFadeSeconds)} seconds.");
+            }
+
+            if (!SpellGloomEndNames.IsKnown(gloom.until))
+            {
+                problems.Add($"{label}: vfx.gloom.until '{gloom.until}' is not a release point. " +
+                             $"Known: {string.Join(", ", SpellGloomEndNames.All)}.");
+            }
+
+            // A cast with nothing to play is refused by the player, so the
+            // gloom beside it would silently never show.
+            if (gloom.HasGloom && !vfx.HasArt)
+            {
+                problems.Add($"{label}: vfx.gloom has no art to ride on. A cast with no layers never begins, " +
+                             "so its gloom would never show.");
+            }
+        }
+
         private static void CheckPresentation(string label, SpellPresentation vfx, SpellLayer[] layers,
             List<string> problems)
         {
@@ -148,6 +189,8 @@ namespace PrincesPalace.Domain.Content
                 problems.Add($"{label}: vfx.hitCueSeconds {Num(vfx.hitCueSeconds)} needs layerFormat " +
                              $"{CurrentLayerFormat}; a pre-layer block derives its cue from impactFrame.");
             }
+
+            CheckGloom(label, vfx, problems);
 
             // THE SAME BOUND CheckPlacement enforces on a layer's impactX/
             // impactY (see its own comment on the incident this closes): a

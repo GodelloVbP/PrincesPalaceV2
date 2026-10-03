@@ -252,6 +252,13 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame.")]
         public float hitCueSeconds;
 
+        // THE STAGE DARKENING THIS SPELL ASKS FOR, a second input to the one
+        // roundDarkness image (StageDarkness.Compose). A block rather than loose
+        // fields because strength, fade and release only mean something
+        // together.
+        [ContentDoc("Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom.")]
+        public SpellGloom gloom = new SpellGloom();
+
         // Left unset, a spell runs for this long and lands on this frame. Both
         // were the resolver's private constants and belong beside the fields
         // they default, so a new caller cannot invent a different silence.
@@ -564,6 +571,7 @@ namespace PrincesPalace.Domain.Content
             castSfxPath = castSfxPath,
             layerFormat = layerFormat,
             hitCueSeconds = hitCueSeconds,
+            gloom = gloom == null ? new SpellGloom() : gloom.Copy(),
             layers = CopyOf(layers),
         };
 

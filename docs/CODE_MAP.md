@@ -55,6 +55,7 @@ screenshots all read it.
 | Fight stage | `Domain/Stage/FightStageAnchors.cs`, `StageFormation.cs`, `StageStandOff.cs` → `Core/FightController.StageVisuals.cs`, `Core/StageActorAnimator.cs` | Rank (where it stands) and slot (which figure) are separate. |
 | Stances | `Core/StanceManifestLoader.cs`, `Domain/Stage/StanceManifest.cs`, `Assets/_Project/Resources/StanceManifest.json` | Ground line, breath, hover per actor. |
 | Spell VFX | `Domain/Content/SpellPresentation.cs`, `SpellLayer*.cs` → `Domain/Combat/Presentation/SpellPerformance.cs` → `Core/SpellPerformancePlayer.cs` | Placement only in `Core/FightController.SpellVfx.cs`. |
+| Spell gloom (stage darkening) | `vfx.gloom`: `Domain/Content/SpellGloom.cs` (curve, `StageDarkness.Compose`), rules in `SpellLayerRules.CheckGloom` → `SpellPerformancePlayer.GloomAlpha` | Drawn only by `FightController.ApplyStageDarkness` (`Core/FightController.Rounds.cs`) on the one `roundDarkness` image, max with the event's darkness. |
 | Contact FX | `Core/ContactCues.cs`, `Core/StaticSwing.cs` | Melee arc/burst/thud asset paths and timings. |
 | Run rules | `Core/Bot/RunOrchestrator.cs` (+ parts below) | The one rulebook for a descent; screens and the bot both call it. |
 | Run lifecycle | `Core/RunManager.cs`, `Data/RunSnapshot.cs`, `Domain/Dungeon/DescentMap.cs` | Static accessor over the save; map regenerated from seed. |

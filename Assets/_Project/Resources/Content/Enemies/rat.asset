@@ -57,6 +57,11 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0
     SpritePath: Enemies/rat
     SwingSfxPath: 
     ImpactSfxPath: 
@@ -89,6 +94,11 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0
     Status: 0
     StatusAuthored: 1
     StatusMagnitude: 8

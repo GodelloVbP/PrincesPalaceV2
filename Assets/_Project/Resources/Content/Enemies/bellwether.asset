@@ -117,6 +117,11 @@ MonoBehaviour:
           weights: []
       layerFormat: 1
       hitCueSeconds: 0.2
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0
     SpritePath: Enemies/bellwether
     SwingSfxPath: 
     ImpactSfxPath: 
@@ -162,6 +167,11 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
+      gloom:
+        strength: 0
+        fadeIn: 0
+        until: 
+        fadeOut: 0
     Status: 0
     StatusAuthored: 0
     StatusMagnitude: 0
