@@ -796,6 +796,7 @@ namespace PrincesPalace
             beatPlayer.SlotFor = SlotFor;
             beatPlayer.AnimatorFor = AnimatorFor;
             beatPlayer.PaintVitals = PaintVitals;
+            beatPlayer.OpeningStatuses = combatant => _session?.OpeningStatusesOf(combatant);
             beatPlayer.PaintShields = PaintShields;
             beatPlayer.PaintFormation = PaintFormation;
             beatPlayer.PaintTurnOrder = PaintTurnOrder;
@@ -986,7 +987,7 @@ namespace PrincesPalace
                 }
                 if (recorded.Statuses != null && IsOnStage(enemies[i]))
                 {
-                    PaintEnemyStatusRow(i, enemies[i], recorded.Statuses);
+                    PaintEnemyStatusRow(i, enemies[i], FightHudModel.StatusRowsFrom(recorded.Statuses));
                 }
             }
 
@@ -1060,7 +1061,7 @@ namespace PrincesPalace
                 if (recordedPc.Statuses != null)
                 {
                     PaintStatusRow(PcStatusBase + plate * PcStatusBadgesPerPlate, PcStatusBadgesPerPlate,
-                        reserveOverflowSlot: true, member, recordedPc.Statuses, showCounter: true);
+                        reserveOverflowSlot: true, member, FightHudModel.StatusRowsFrom(recordedPc.Statuses), showCounter: true);
                 }
 
                 // What the system menu reports (IFightMenuSource): this beat's

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
 using UnityEngine;
 
 namespace PrincesPalace
@@ -11,12 +12,14 @@ namespace PrincesPalace
     // audible with no authoring. A status absent from the table is silent,
     // which is every harmful one today.
     //
-    // Fired from FightBeatPlayer at each beat's impact, which hands over every
-    // combatant in the beat's snapshot: a status type that a combatant did not
-    // carry at its last observation and carries now was just applied. State is
-    // already final when a beat plays, so the cue lands on the first beat
-    // after the action that applied it. A heal that lands as a beat has its
-    // own spell sfxPath; this covers the lasting effect.
+    // Fired from FightBeatPlayer at each beat's impact. It diffs the statuses
+    // recorded in that beat's snapshot (never the live combatant, which is
+    // already final for the whole round) against what the previous beat
+    // recorded, so the cue lands on the beat that applied the status. The
+    // first beat diffs against the fight's opening statuses
+    // (FightSession.OpeningStatusesOf), so a relic ward the fight began with
+    // never chimes. A heal that lands as a beat has its own spell sfxPath;
+    // this covers the lasting effect.
     //
     // Takes are alternated at random like CharacterVoice's, and a cue plays at
     // most once per type per frame: a ward on three allies at once is one
@@ -52,21 +55,34 @@ namespace PrincesPalace
         public static IReadOnlyList<string> ClipsFor(StatusEffectType type) =>
             ByType.TryGetValue(type, out var clips) ? clips : Array.Empty<string>();
 
-        public static void Observe(IEnumerable<CombatantState> combatants)
+        // `opening` answers a combatant's statuses at Begin; `play` is called
+        // once per newly applied type that has a cue, and defaults to the
+        // audible one so a test can record the types instead.
+        public static void Observe(IReadOnlyDictionary<CombatantState, Vitals> snapshot,
+                                   Func<CombatantState, StatusSnapshot> opening,
+                                   Action<StatusEffectType> play = null)
         {
-            if (combatants == null) return;
+            if (snapshot == null) return;
 
-            foreach (var combatant in combatants)
+            play = play ?? PlayApplied;
+            foreach (var pair in snapshot)
             {
-                if (combatant == null) continue;
+                var combatant = pair.Key;
+                var recorded = pair.Value.Statuses;
+                if (combatant == null || recorded == null) continue;
 
-                var seen = Seen.GetOrCreateValue(combatant);
-                var now = new HashSet<StatusEffectType>();
-                foreach (var status in combatant.Statuses) now.Add(status.Type);
+                if (!Seen.TryGetValue(combatant, out var seen))
+                {
+                    seen = new HashSet<StatusEffectType>();
+                    var start = opening?.Invoke(combatant);
+                    if (start != null) seen.UnionWith(start.Types());
+                    Seen.Add(combatant, seen);
+                }
 
+                var now = new HashSet<StatusEffectType>(recorded.Types());
                 foreach (var type in now)
                 {
-                    if (!seen.Contains(type)) PlayApplied(type);
+                    if (!seen.Contains(type) && ClipsFor(type).Count > 0) play(type);
                 }
 
                 seen.Clear();

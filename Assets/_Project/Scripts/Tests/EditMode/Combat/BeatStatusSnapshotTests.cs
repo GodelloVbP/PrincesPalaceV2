@@ -7,9 +7,9 @@ using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The beat records the status badge rows with the vitals, so the HUD paints a
-    // status on the beat that applied it. The Core paint is a thin mapping of
-    // Vitals.Statuses onto PaintStatusRow, so the recording is what is pinned here.
+    // The beat records the status data with the vitals, so the HUD paints a
+    // status on the beat that applied it. The Core paint maps Vitals.Statuses
+    // through StatusRowsFrom onto PaintStatusRow, so the recording is what is pinned here.
     public class BeatStatusSnapshotTests
     {
         private static ResolvedSkill Hit(StatusEffectType status) =>
@@ -32,8 +32,8 @@ namespace PrincesPalace.Domain.Tests
             session.ResolveSkillForTest(foe, Hit(StatusEffectType.Vulnerable), shawn);
 
             var beat = session.DrainBeats().Last(b => b.IsAction);
-            Assert.IsTrue(beat.Snapshot[shawn].Statuses.Any(r => r.Code == "VLN"));
-            Assert.IsFalse(beat.PreSnapshot[shawn].Statuses.Any(r => r.Code == "VLN"));
+            Assert.IsTrue(FightHudModel.StatusRowsFrom(beat.Snapshot[shawn].Statuses).Any(r => r.Code == "VLN"));
+            Assert.IsFalse(FightHudModel.StatusRowsFrom(beat.PreSnapshot[shawn].Statuses).Any(r => r.Code == "VLN"));
         }
     }
 }

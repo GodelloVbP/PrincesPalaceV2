@@ -458,6 +458,23 @@ namespace PrincesPalace.Domain.Combat.Session
         // wiring detail.
         private bool _begun;
 
+        // THE STATUSES EACH COMBATANT STARTED THE FIGHT WITH, recorded once at
+        // Begin after the relics' fight-start effects (a relic ward) and before
+        // the first turn opens. A cue that sounds when a status goes on
+        // (StatusCues) diffs against this, so what the fight began with never
+        // chimes while a status the first action applies does.
+        private readonly Dictionary<CombatantState, StatusSnapshot> _openingStatuses =
+            new Dictionary<CombatantState, StatusSnapshot>();
+
+        public StatusSnapshot OpeningStatusesOf(CombatantState combatant) =>
+            combatant != null && _openingStatuses.TryGetValue(combatant, out var opening) ? opening : null;
+
+        private void RecordOpeningStatuses()
+        {
+            foreach (var c in _encounter.PlayerParty.Concat(_encounter.Enemies))
+                _openingStatuses[c] = StatusSnapshot.Capture(this, c);
+        }
+
         public void Begin()
         {
             if (_begun) return;
@@ -466,6 +483,7 @@ namespace PrincesPalace.Domain.Combat.Session
             foreach (var member in _encounter.PlayerParty) ArmEngineSeams(member);
 
             RelicsOnCombatBegin();
+            RecordOpeningStatuses();
             GrantTurnStart();
             AutoResolveEnemyTurns();
             AutoResolveEggTurns();

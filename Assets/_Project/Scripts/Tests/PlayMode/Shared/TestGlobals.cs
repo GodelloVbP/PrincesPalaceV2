@@ -76,6 +76,7 @@ namespace PrincesPalace.PlayModeTests
             EscapeKey.Reset();
             HoldToConfirm.SubmitLevelOverride = null;
             SoundController.Observer = null;
+            SoundController.ClipObserver = null;
 
             // THE SECOND GLOBAL THE LINT CANNOT SEE, same shape as EscapeKey
             // above: NavigationInputModule.LastInputWasPad is written by

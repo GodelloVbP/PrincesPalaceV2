@@ -51,14 +51,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // no bar.
         public readonly int Ward;
 
-        // THE STATUS BADGES AT THIS MOMENT (FightHudModel.StatusRowsFor) and
-        // whether an enemy's break shield is down, for the same reason as the
-        // ward: a status a cast applies shows on the beat that applied it, not
-        // at the round-end repaint from live state. Null means NOT RECORDED
-        // (the short constructors): the painter leaves the badges as they are
-        // rather than blanking them. Display data derived from state already
-        // compared above, so it stays out of Equals and GetHashCode.
-        public readonly IReadOnlyList<FightHudModel.StatusRow> Statuses;
+        // THE STATUS DATA AT THIS MOMENT (StatusSnapshot: raw statuses plus
+        // every session fact a badge row reads) and whether an enemy's break
+        // shield is down, for the same reason as the ward: a status a cast
+        // applies shows on the beat that applied it, not at the round-end
+        // repaint from live state. The HUD formats it into rows when it paints
+        // (FightHudModel.StatusRowsFrom). Null means NOT RECORDED (the short
+        // constructors): the painter leaves the badges as they are rather than
+        // blanking them. Stays out of Equals and GetHashCode.
+        public readonly StatusSnapshot Statuses;
         public readonly bool Broken;
 
         public Vitals(int health, int primary, int signature)
@@ -67,7 +68,7 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         public Vitals(int health, int primary, int signature, int maxHealth, int maxPrimary, int ward = 0,
-                      IReadOnlyList<FightHudModel.StatusRow> statuses = null, bool broken = false)
+                      StatusSnapshot statuses = null, bool broken = false)
         {
             Ward = ward;
             Statuses = statuses;

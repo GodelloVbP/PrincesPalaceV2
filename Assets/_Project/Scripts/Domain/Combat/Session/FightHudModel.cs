@@ -1238,127 +1238,71 @@ namespace PrincesPalace.Domain.Combat.Session
             return source is StatusEffectType status ? StatusHud.NameFor(status) : source.ToString();
         }
 
+        // The live badge row: capture, then format. A beat records the capture
+        // (Vitals.Statuses) and the HUD formats it at paint time.
         public static List<StatusRow> StatusRowsFor(FightSession session, CombatantState actor)
         {
+            return actor == null ? new List<StatusRow>() : StatusRowsFrom(StatusSnapshot.Capture(session, actor));
+        }
+
+        // THE ONE FORMATTER: reads the snapshot and nothing else, so a recorded
+        // beat paints what it recorded however the live session has moved on.
+        public static List<StatusRow> StatusRowsFrom(StatusSnapshot snapshot)
+        {
             var rows = new List<StatusRow>();
-            if (actor == null) return rows;
+            if (snapshot == null) return rows;
 
-            // ONE BADGE PER TYPE, not one per entry. Wards stacked first (the
-            // shield model, StatusEffects' own WARDS header) and were
-            // special-cased below; every other status joined them on
-            // 2026-09-20, so the de-duplication is now the rule rather than the
-            // exception. A combatant carrying three poisons draws one PSN pill
-            // whose tooltip says what all three are doing -- three pills each
-            // telling a third of the story is the failure this closes.
-            var summarised = new HashSet<StatusEffectType>();
-            foreach (var status in actor.Statuses)
+            // ONE BADGE PER TYPE, not one per entry: a combatant carrying three
+            // poisons draws one PSN pill whose tooltip says what all three are
+            // doing. Wards keep their own summary: their badge answers "how much
+            // is left", not "how much longer".
+            foreach (var summary in snapshot.Statuses) rows.Add(StatusHud.RowFor(summary));
+
+            if (snapshot.Wards.Any) rows.Add(StatusHud.WardRow(snapshot.Wards));
+
+            // A transformation is a status badge, so a transformed ally sitting
+            // in the roster shows it too.
+            if (snapshot.Transformed)
             {
-                // Wards keep their own summary: their badge answers "how much
-                // is left", not "how much longer", and NeverExpires has no
-                // analogue for anything else.
-                if (status.Type == StatusEffectType.Shielded) continue;
-                if (!summarised.Add(status.Type)) continue;
-
-                rows.Add(StatusHud.RowFor(StatusEffects.SummariseStatus(actor, status.Type)));
+                rows.Add(StatusHud.TransformRow(snapshot.TransformName, snapshot.TransformTurns,
+                    snapshot.TransformPermanent, snapshot.TransformUpkeepPool));
             }
 
-            var wards = StatusEffects.SummariseWards(actor);
-            if (wards.Any)
-            {
-                rows.Add(StatusHud.WardRow(wards));
-            }
+            // Silence and disarm are engine windows on the combatant
+            // (Suppression.cs), not statuses.
+            if (snapshot.Silenced) rows.Add(StatusHud.SilenceRow(snapshot.SilenceTurns));
+            if (snapshot.Disarmed) rows.Add(StatusHud.DisarmRow(snapshot.DisarmPercent, snapshot.DisarmTurns));
 
-            // A TRANSFORMATION IS A STATUS -- 2026-09-09, the HUD-column pass.
-            // It used to be a 36px panel of its own (TransformStrip) fused
-            // above the party plate, which meant it could only ever be shown
-            // for whoever was acting: a transformed ally sitting in the roster
-            // showed nothing at all. Read off the actor, needing no session,
-            // so it lands in the same half of this method actor.Statuses does
-            // and a no-session caller degrades identically.
-            if (actor.Transformation != null)
-            {
-                rows.Add(StatusHud.TransformRow(actor.Transformation.DisplayName,
-                    actor.Transformation.TurnsRemaining, actor.Transformation.IsPermanent,
-                    actor.Transformation.PrimaryDrainPerTurn > 0 ? actor.PrimaryPool?.DisplayName : null));
-            }
+            // The Rally is a fight-long stack count, so the badge reads "x3"
+            // rather than a turn count.
+            if (snapshot.RallyStacks > 0)
+                rows.Add(StatusHud.RallyRow(snapshot.RallyStacks, snapshot.RallyAttackPercent));
 
-            // SILENCE AND DISARM are engine windows on the combatant, not
-            // statuses (Suppression.cs); they read off the actor like the
-            // transformation above, so a no-session caller shows them too.
-            if (actor.Suppression.IsSilenced)
-                rows.Add(StatusHud.SilenceRow(actor.Suppression.Silence.TurnsRemaining));
-            if (actor.Suppression.IsDisarmed)
-                rows.Add(StatusHud.DisarmRow(actor.Suppression.DisarmPercent, actor.Suppression.Disarm.TurnsRemaining));
-
-            // THE RALLY (PLAN_BELLWETHER_KIT 1.7 / 3.9): a fight-long stack
-            // count, so the badge reads "x3" rather than a turn count.
-            if (session != null)
-            {
-                int rally = session.RallyStacksOf(actor);
-                if (rally > 0) rows.Add(StatusHud.RallyRow(rally, session.RallyAttackPercentOf(actor)));
-            }
-
-            if (actor.PermanentPhysicalDefenseShred > 0)
+            if (snapshot.PermanentPhysicalDefenseShred > 0)
             {
                 rows.Add(new StatusRow(
                     "ARM", "armor_shred",
-                    $"-{actor.PermanentPhysicalDefenseShred} Physical Defense for this fight.",
+                    $"-{snapshot.PermanentPhysicalDefenseShred} Physical Defense for this fight.",
                     isPositive: false, counter: -1, sortKey: 45));
             }
 
-            if (session != null)
+            // Status-driven speed entries (Chilled) are already in Statuses, so
+            // the capture leaves them out of SpeedGrants.
+            foreach (var grant in snapshot.SpeedGrants)
+                rows.Add(StatusHud.SpeedRow(grant.SourceName, grant.Granted, grant.TurnsLeft));
+
+            // The Drowned Lantern's mark is session state, not a status on the
+            // combatant. Skipped when a real StatusEffectType.Marked row exists,
+            // since both read as one "Marked" badge.
+            if (snapshot.LanternMarked && !snapshot.Statuses.Any(s => s.Type == StatusEffectType.Marked))
             {
-                var kit = session.KitFor(actor);
-                foreach (var buff in session.ActiveSpeedBuffs(actor))
-                {
-                    // A STATUS-DRIVEN entry (Chilled, as of Phase D2) is
-                    // already shown by the `foreach (var status in actor.
-                    // Statuses)` loop above -- StatusHud.RowFor prints its
-                    // own Chilled row straight off the ActiveStatus. Showing
-                    // it again here as a second, generic speed row would be
-                    // the same fact twice; this dictionary entry exists so
-                    // the SPEED NUMBER stays correct (TrueBaseSpeed composes
-                    // it with every relic buff), not so it gets its own row
-                    // on top of the status's own.
-                    if (buff.Source is StatusEffectType) continue;
-
-                    string name = SpeedSourceName(kit, buff.Source);
-
-                    rows.Add(StatusHud.SpeedRow(name, buff.Granted, buff.TurnsLeft));
-                }
-
-                // THE DROWNED LANTERN'S OWN MARK (C2's review). This is
-                // FightSession.Relics._marked/IsMarked, a completely separate
-                // mechanic from StatusEffectType.Marked (Marks.cs) that
-                // happens to read as the same word to a player -- see
-                // FightSession.Relics.cs's own header on why it is tracked by
-                // target rather than as a status. Nothing above this line
-                // ever sees it: actor.Statuses has no entry for it at all, so
-                // an enemy carrying only a Lantern mark and no Marked status
-                // would otherwise show nothing here -- which is exactly the
-                // "MK" pill the old EnemyStatusLine used to guarantee, but
-                // the badge row's own de-duplication now has to give it a
-                // home instead. Skipped when a real StatusEffectType.Marked
-                // row already exists (the loop above already added it),
-                // since both read as one "Marked" badge to a player and a
-                // holder carrying both mechanics at once must never show it
-                // twice -- StatusHudCoverageTests pins that exact case.
-                bool alreadyMarked = rows.Any(r => r.Slug == StatusHud.SlugFor(StatusEffectType.Marked));
-                if (!alreadyMarked && session.IsMarked(actor))
-                {
-                    // Built from the same StatusHud code/slug/tooltip/sort
-                    // key as the status-backed row -- a synthetic ActiveStatus
-                    // at the sentinel duration reads as "until it is used",
-                    // which is exactly right: a Lantern mark is spent by the
-                    // wearer's next attack (MarkBonus), never counted down.
-                    rows.Add(StatusHud.RowFor(new ActiveStatus(StatusEffectType.Marked, 0, StatusHud.SentinelTurns)));
-                }
+                // A sentinel-duration synthetic status reads "until it is used":
+                // the wearer's next attack spends it (MarkBonus).
+                rows.Add(StatusHud.RowFor(new ActiveStatus(StatusEffectType.Marked, 0, StatusHud.SentinelTurns)));
             }
 
-            // OrderBy, not List.Sort -- Sort is not stable, and two rows
-            // sharing a SortKey (two different speed sources, say) must keep
-            // the order they were added in rather than swap places on every
-            // repaint.
+            // OrderBy, not List.Sort: Sort is not stable, and two rows sharing a
+            // SortKey (two speed sources) must keep their added order.
             return rows.OrderBy(r => r.SortKey).ToList();
         }
 

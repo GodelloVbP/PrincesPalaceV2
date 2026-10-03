@@ -88,6 +88,9 @@ namespace PrincesPalace
         // TestGlobals.ResetAll puts it back.
         public static System.Action<Sound> Observer;
 
+        // PlayClip's twin of Observer: every content-driven clip path requested.
+        public static System.Action<string> ClipObserver;
+
         // Plays a sound at the player's current effect volume. Silent and
         // harmless if the clip is missing — a game with no audio files should
         // still run, which is the same graceful-degradation posture the rest
@@ -129,6 +132,8 @@ namespace PrincesPalace
             {
                 return;
             }
+
+            ClipObserver?.Invoke(resourcePath);
 
             Bootstrap();
 

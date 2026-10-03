@@ -197,6 +197,10 @@ namespace PrincesPalace
         // before the blow, once with what stood after.
         internal Action<IReadOnlyDictionary<CombatantState, Vitals>> PaintVitals;
 
+        // What a combatant carried when the fight began: the baseline the
+        // status cue diffs a combatant's first beat against.
+        internal Func<CombatantState, StatusSnapshot> OpeningStatuses;
+
         // PaintVitals' twin for the planted shield: what each holder's shield
         // was after the beat, with the beat's vitals so a Shieldwall knows who
         // was still standing. Called at the impact instant only, so a crack
@@ -1094,7 +1098,7 @@ namespace PrincesPalace
                 // frames-less cast reaches this line on the same frame it
                 // would have from the top of the beat.
                 SoundController.PlayClip(beat.Vfx.sfxPath);
-                StatusCues.Observe(beat.Snapshot?.Keys);
+                StatusCues.Observe(beat.Snapshot, OpeningStatuses);
 
                 ShowAmount(beat);
                 FlashTarget?.Invoke(beat);
@@ -1200,30 +1204,10 @@ namespace PrincesPalace
         // else records one Amount against one Target. Both reach the same
         // placement below, so the two paths cannot drift apart on WHERE a
         // number appears -- only on how many there are.
+        //
+        // A split hit plays the beat's impact clip once, with the first packet:
+        // the numbers and flashes stagger per packet, the clip does not repeat.
         private void ShowAmount(CombatBeat beat)
-        {
-            bool split = false;
-            ShowAmountCore(beat, ref split);
-
-            // THE SECOND PACKET'S LIGHTER ACCENT, on the frame its number
-            // arrives: the beat's own impact clip already sounded with the
-            // first packet, so the second is the same clip, quieter.
-            if (split && !string.IsNullOrWhiteSpace(beat.Vfx?.sfxPath))
-            {
-                StartCoroutine(PacketAccent(beat.Vfx.sfxPath));
-            }
-        }
-
-        // Volume of the second packet's accent against the first's full hit.
-        internal const float PacketAccentVolume = 0.5f;
-
-        private IEnumerator PacketAccent(string clip)
-        {
-            yield return new WaitForSeconds(Scaled(StageHitFlash.StaggerSeconds));
-            SoundController.PlayClip(clip, PacketAccentVolume);
-        }
-
-        private void ShowAmountCore(CombatBeat beat, ref bool split)
         {
             if (beat.HasPerTargetResults)
             {
@@ -1239,7 +1223,6 @@ namespace PrincesPalace
                     if (packets != null)
                     {
                         PopPackets(result.Target, packets, result.Crit);
-                        split = true;
                         continue;
                     }
 
@@ -1253,7 +1236,6 @@ namespace PrincesPalace
             if (single != null)
             {
                 PopPackets(beat.Target, single, beat.Crit);
-                split = true;
                 return;
             }
 

@@ -520,7 +520,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 snapshot[c] = new Vitals(c.CurrentHealth, c.CurrentMana, SignatureOf(c),
                                          c.MaxHealth, c.MaxMana, StatusEffects.WardPoints(c),
-                                         FightHudModel.StatusRowsFor(this, c),
+                                         StatusSnapshot.Capture(this, c),
                                          c.BreakShield != null && c.BreakShield.IsBroken);
             }
 
