@@ -1119,8 +1119,8 @@ namespace PrincesPalace.Domain.Combat.Session
             RecordPlacementStart(CombatBeat.PullHoldSeconds);
 
             var outcome = _encounter.PlaceAt(target, seat, out var occupant);
-
             RecordCounterpart(outcome, occupant);
+
             switch (outcome)
             {
                 case PlaceOutcome.Placed:
@@ -1240,9 +1240,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 return;
             }
 
-            var split = ConsumedTotalSplit.Split(worth, skill.DetonationSplit);
             NoteConsumed(StatusEffectType.Poison);
 
+            var split = ConsumedTotalSplit.Split(worth, skill.DetonationSplit);
 
             // EACH PACKET RESOLVES INDEPENDENTLY (1.7), with
             // resolveDetonation LEFT NULL -- the consumption already
@@ -1424,7 +1424,6 @@ namespace PrincesPalace.Domain.Combat.Session
             if (occupant != null) NoteDeliberateMove(occupant, actor);
         }
 
-        // WHERE A PASSAGE SENDS ITS TRAVELLER: the named empty seat, or --
         // WHERE EVERYBODY STOOD BEFORE THE PLACEMENT, and how long after the
         // impact playback should wait before painting the move. Every placement
         // goes through here so the two are recorded together or not at all.
@@ -1448,6 +1447,7 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat?.ConsumedStatuses.Add(type);
         }
 
+        // WHERE A PASSAGE SENDS ITS TRAVELLER: the named empty seat, or --
         // for the two-ally form -- the second ally's seat. -1 when the cast
         // names neither, which the refusal in CanResolveSkill turns into a
         // sentence before anything is paid.
