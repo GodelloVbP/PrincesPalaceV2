@@ -17,6 +17,7 @@ using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Preview;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -37,6 +38,13 @@ namespace PrincesPalace.PlayModeTests
         public string skill = "";
         public string crop = "stage";
         public float seconds = 2f;
+        // Frame size; 0 x 0 is CanvasCapture's default (the 1920x1080 reference).
+        public int width;
+        public int height;
+        // Casts of the spell in one fight (spell kind only).
+        public int repeat = 1;
+        // Round-darkness opacity the fight is dressed with; 0 is none.
+        public float darkness;
     }
 
     [Serializable]
@@ -59,6 +67,8 @@ namespace PrincesPalace.PlayModeTests
         public float ClearedSeconds;
         public bool PresentationOnly;
         public float TargetCursor;
+        // The first frame index a following recording continues at.
+        public int NextFrame;
     }
 
     // The inputs of CaptureScenarioRunner.StandTheFightUp for a spell.
@@ -133,6 +143,25 @@ namespace PrincesPalace.PlayModeTests
         public FightController Fight { get; private set; }
         public FightBeatPlayer Beats { get; private set; }
         public Canvas Canvas { get; private set; }
+
+        // Frame size every capture renders at; 0 x 0 keeps CanvasCapture's default.
+        public int Width;
+        public int Height;
+
+        // Opacity of the round darkness the fight binds with (Bell in the Fog's
+        // dressing, nothing else of it): 0 binds a room fight's None. Set before
+        // StandTheFightUp.
+        public float Darkness;
+
+        // The presentation a darkened capture binds: a round counter (the
+        // darkness is a round-limit layer, HasDarkness) held at one opacity.
+        internal static FightRoundPresentation DarknessPresentation(float darkness) =>
+            darkness <= 0f
+                ? null
+                : new FightRoundPresentation(roundLimit: 10, darknessStart: darkness, darknessFloor: darkness);
+
+        private void Render(Canvas canvas, string path) =>
+            CanvasCapture.RenderToFile(canvas, path, Width, Height, fitReference: true);
 
         // TRUE WHEN PreviewStage REFUSED THE EFFECT (Ward, Reclaim, Hasten,
         // Reposition: each needs a talent, a status or a turn schedule the stage
@@ -299,7 +328,7 @@ namespace PrincesPalace.PlayModeTests
         private IEnumerator BindAndSettle(FightEncounterAdapter.BuiltFight built)
         {
             built.Session.Begin();
-            Fight.Bind(built.Session, EncounterClass.Normal);
+            Fight.Bind(built.Session, EncounterClass.Normal, null, DarknessPresentation(Darkness));
             Fight.BindPartyArt(built.Party, built.PartyArt);
             yield return null;
             yield return null;
@@ -445,7 +474,8 @@ namespace PrincesPalace.PlayModeTests
         // `spellId` is the skills.json id, or the relic id when `relic` is set
         // (a relic is always a presentation-only beat: nothing in the session
         // plays its vfx on demand).
-        public IEnumerator RecordCast(string spellId, bool relic, float speed, CaptureSink sink, CaptureOutcome outcome)
+        public IEnumerator RecordCast(string spellId, bool relic, float speed, CaptureSink sink, CaptureOutcome outcome,
+                                      int frameBase = 0, bool recordLeadIn = false)
         {
             var fight = Fight;
             var canvas = Canvas;
@@ -498,11 +528,16 @@ namespace PrincesPalace.PlayModeTests
             // apart. That is why the recording below polls the cast's own
             // Cursor rather than assuming a frame count derived from it.
             int waited = 0;
+            // A later cast of a repeated series films its lead-in too (the press
+            // to the first drawn frame), so the series has no jump between casts.
             while (!AnythingDrawn(fight) && waited < 240)
             {
+                if (recordLeadIn) Render(canvas, sink.FramePath(frameBase + waited));
                 waited++;
                 yield return null;
             }
+
+            int offset = frameBase + (recordLeadIn ? waited : 0);
 
             Assert.Less(waited, 240, "the cast never drew anything, so there is no recording to make");
 
@@ -570,8 +605,8 @@ namespace PrincesPalace.PlayModeTests
             {
                 if (AnythingDrawn(fight)) lit++;
 
-                string path = sink.FramePath(frame);
-                CanvasCapture.RenderToFile(canvas, path);
+                string path = sink.FramePath(offset + frame);
+                Render(canvas, path);
                 FileAssert.Exists(path);
 
                 yield return null;
@@ -599,6 +634,7 @@ namespace PrincesPalace.PlayModeTests
                     spellId, Fps, frames, waited, clearedSeconds, hitFrame, speed,
                     freedFrame, PresentationOnly ? "true" : "false"));
 
+            outcome.NextFrame = offset + frames;
             outcome.Frames = frames;
             outcome.LitFrames = lit;
             outcome.FirstDrawnWaitFrames = waited;
@@ -630,6 +666,79 @@ namespace PrincesPalace.PlayModeTests
                       " of them with the cast drawing; frame 0 is the first drawn, " + waited +
                       " frames after the press; recorded until the cast's own clock reached " +
                       targetCursor.ToString("F2") + "s of " + clearedSeconds.ToString("F2") + "s cleared).");
+        }
+
+        // The most a pacing wait between two casts of a series may take.
+        private const int MaxPacingFrames = 10 * Fps;
+
+        // THE SAME SPELL `count` TIMES IN ONE FIGHT, one continuous frame series.
+        // Between casts the fight plays on at its own pace (the enemies' turns,
+        // the beats) and every frame of it is filmed; the next cast is pressed
+        // when the player's turn is back. Mana is refilled and the cooldown run
+        // down first, the way PreviewFight.Prepare waives them for the first
+        // cast, so a series of five measures the spell's repeats and not the
+        // caster's purse.
+        public IEnumerator RecordRepeatedCast(string spellId, int count, float speed, CaptureSink sink,
+                                              CaptureOutcome outcome)
+        {
+            int next = 0;
+            int lit = 0;
+            int hitFrame = -1;
+            float cleared = 0f;
+
+            for (int cast = 0; cast < count; cast++)
+            {
+                if (cast > 0)
+                {
+                    var session = Fight.SessionForTest;
+                    var caster = session.Encounter.LivingPlayerParty.First();
+                    caster.PrimaryPool.Gain(caster.PrimaryPool.Max);
+                    int guard = 0;
+                    while (session.CooldownRemaining(caster, spellId) > 0 &&
+                           session.CooldownRemaining(caster, spellId) != FightSession.SpentForFight && guard++ < 50)
+                    {
+                        session.TickCooldownsForTest(caster);
+                    }
+
+                    int paced = 0;
+                    while ((Fight.IsBusy || Beats.IsPlaying || !session.IsPlayerTurn) && paced < MaxPacingFrames)
+                    {
+                        Render(Canvas, sink.FramePath(next++));
+                        paced++;
+                        yield return null;
+                    }
+
+                    Assert.Less(paced, MaxPacingFrames, "the player's turn never came back before cast " + (cast + 1));
+                }
+
+                var one = new CaptureOutcome();
+                var legSink = new CaptureSink { FramePath = sink.FramePath, TimingPath = sink.TimingPath };
+                yield return RecordCast(spellId, relic: false, speed, legSink, one, next, recordLeadIn: cast > 0);
+                next = one.NextFrame;
+                lit += one.LitFrames;
+                if (cast == 0)
+                {
+                    hitFrame = one.HitFrame;
+                    cleared = one.ClearedSeconds;
+                    outcome.FirstDrawnWaitFrames = one.FirstDrawnWaitFrames;
+                }
+            }
+
+            File.WriteAllText(
+                sink.TimingPath,
+                string.Format(CultureInfo.InvariantCulture,
+                    "{{\"spell\":\"{0}\",\"fps\":{1},\"frames\":{2},\"firstDrawnWaitFrames\":{3}," +
+                    "\"clearedSeconds\":{4:F3},\"hitFrame\":{5},\"speed\":{6:F2}," +
+                    "\"freedFrame\":-1,\"presentationOnly\":{7},\"repeat\":{8}}}",
+                    spellId, Fps, next, outcome.FirstDrawnWaitFrames, cleared, hitFrame, speed,
+                    PresentationOnly ? "true" : "false", count));
+
+            outcome.Frames = next;
+            outcome.NextFrame = next;
+            outcome.LitFrames = lit;
+            outcome.HitFrame = hitFrame;
+            outcome.ClearedSeconds = cleared;
+            outcome.PresentationOnly = PresentationOnly;
         }
 
         // ---- attack and status recording ---------------------------------------
@@ -676,7 +785,7 @@ namespace PrincesPalace.PlayModeTests
             {
                 started |= fight.IsBusy || Beats.IsPlaying;
 
-                CanvasCapture.RenderToFile(Canvas, sink.FramePath(frame));
+                Render(Canvas, sink.FramePath(frame));
                 yield return null;
                 frame++;
 
@@ -713,7 +822,7 @@ namespace PrincesPalace.PlayModeTests
             int frames = Mathf.Max(1, Mathf.CeilToInt(seconds * Fps));
             for (int frame = 0; frame < frames; frame++)
             {
-                CanvasCapture.RenderToFile(Canvas, sink.FramePath(frame));
+                Render(Canvas, sink.FramePath(frame));
                 yield return null;
             }
 

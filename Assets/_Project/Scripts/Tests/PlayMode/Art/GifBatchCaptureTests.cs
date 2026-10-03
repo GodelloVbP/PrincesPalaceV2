@@ -185,7 +185,12 @@ namespace PrincesPalace.PlayModeTests
             string frames = Path.Combine(dir, "frames");
             Directory.CreateDirectory(frames);
 
-            var runner = new CaptureScenarioRunner();
+            var runner = new CaptureScenarioRunner
+            {
+                Width = s.width,
+                Height = s.height,
+                Darkness = s.darkness,
+            };
             var sink = new CaptureSink
             {
                 FramePath = frame => Path.Combine(frames, string.Format("f{0:0000}.png", frame)),
@@ -207,7 +212,8 @@ namespace PrincesPalace.PlayModeTests
                         Enemies = full ? CaptureScenarioRunner.FullFormation : (int?)null,
                         VersusFillsFormation = full,
                     });
-                    yield return runner.RecordCast(s.id, relic: false, s.speed, sink, outcome);
+                    if (s.repeat > 1) yield return runner.RecordRepeatedCast(s.id, s.repeat, s.speed, sink, outcome);
+                    else yield return runner.RecordCast(s.id, relic: false, s.speed, sink, outcome);
                     break;
 
                 case "relic":

@@ -52,7 +52,15 @@ namespace PrincesPalace
         // be a compile-time constant and the stage is now read from UiFrames --
         // which is the right trade: one statement of the frame, resolved here,
         // rather than a second literal kept in step by hand.
-        public static void RenderToFile(Canvas canvas, string outputPath, int width = 0, int height = 0)
+        //
+        // `fitReference` scales the canvas the way the game's own scaler does
+        // (SceneBuilder.CreateCanvas: Expand, scale = min(w/1920, h/1080)), so a
+        // 4:3 frame shows the whole 1920x1080 layout shrunk to fit and 1440x1080
+        // is the game at a 4:3 window. Off, 1 canvas unit is 1 pixel and a frame
+        // narrower than 1920 crops the layout (the square hit-flash probes rely
+        // on that).
+        public static void RenderToFile(Canvas canvas, string outputPath, int width = 0, int height = 0,
+                                        bool fitReference = false)
         {
             if (width <= 0) width = DefaultWidth;
             if (height <= 0) height = DefaultHeight;
@@ -79,7 +87,9 @@ namespace PrincesPalace
             if (scaler != null)
             {
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
-                scaler.scaleFactor = 1f;
+                scaler.scaleFactor = fitReference
+                    ? Mathf.Min((float)width / DefaultWidth, (float)height / DefaultHeight)
+                    : 1f;
             }
 
             var cameraGO = new GameObject("ScreenshotCamera");

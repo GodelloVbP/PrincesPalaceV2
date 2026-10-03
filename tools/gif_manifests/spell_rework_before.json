@@ -1,0 +1,136 @@
+{
+  "name": "spell_rework_before",
+  "description": "docs/PLAN_SPELL_REWORK.md section 3: the ten template spells as they play before the rework, one GIF per capture the recorder can stage (S0).",
+  "scenarios": [
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat",
+      "darkness": 0.9
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "thorn_tithe",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "thorn_tithe",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "mud_burst",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "mud_burst",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "gale_scythe",
+      "vs": "rat",
+      "formation": "full"
+    },
+    {
+      "kind": "spell",
+      "id": "gale_scythe",
+      "vs": "rat",
+      "formation": "lone"
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "rat",
+      "darkness": 0.9
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "rat",
+      "preStatus": "Poison"
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "rat",
+      "darkness": 0.9
+    },
+    {
+      "kind": "spell",
+      "id": "ashen_reckoning",
+      "vs": "rat",
+      "preStatus": "Poison"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment"
+    },
+    {
+      "kind": "spell",
+      "id": "censer_of_embers",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "censer_of_embers",
+      "vs": "treant"
+    }
+  ],
+  "notCovered": [
+    {
+      "name": "court_of_whispers",
+      "why": "crowded mixed formation (the recorder fields one enemy id)"
+    },
+    {
+      "name": "mud_burst",
+      "why": "back-rank target (no way to pick the target slot)"
+    },
+    {
+      "name": "gale_scythe",
+      "why": "two-enemy formation (formation is lone or full)"
+    },
+    {
+      "name": "gilded_aegis, borrowed_moment",
+      "why": "on Odette, on Bjorn (the cast is aimed at the caster)"
+    }
+  ]
+}

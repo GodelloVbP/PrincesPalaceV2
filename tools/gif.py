@@ -64,6 +64,7 @@ SELF_SIDE = ("Self", "Party", "SingleAlly")
 # centred in the 1920x1080 reference canvas.
 STAGE_BOX = (110, 240, 1810, 840)
 
+ASPECT_HEIGHT = 1080  # -Aspect keeps the reference height and sets the width
 GIF_WIDTH = 960
 GIF_STEP = 2          # 60 fps captured, 30 fps shown
 GIF_HOLD_MS = 500
@@ -98,6 +99,16 @@ def status_names(path=STATUS_SOURCE):
 
 # ---- scenarios ---------------------------------------------------------------
 
+def aspect_size(aspect, height=ASPECT_HEIGHT):
+    """'4:3' -> (1440, 1080). '' -> (0, 0), the canvas default (1920x1080)."""
+    if not aspect:
+        return 0, 0
+    m = re.fullmatch(r"(\d+):(\d+)", aspect.strip())
+    if not m or int(m.group(1)) <= 0 or int(m.group(2)) <= 0:
+        raise ValueError("aspect '%s' is not <w>:<h>, e.g. 4:3" % aspect)
+    return int(round(height * int(m.group(1)) / int(m.group(2)))), height
+
+
 def normalize(raw, skills=None):
     """Fills every default and sorts the keys, so two requests that differ in
     any field never share a key (2.2)."""
@@ -114,11 +125,21 @@ def normalize(raw, skills=None):
         "skill": raw.get("skill") or "",
         "crop": raw.get("crop") or "",
         "seconds": float(raw.get("seconds") or 0.0),
+        # 0 x 0 is the canvas default; the runner passes both to CanvasCapture.
+        "width": int(raw.get("width") or 0),
+        "height": int(raw.get("height") or 0),
+        "repeat": int(raw.get("repeat") or 1),
+        "darkness": float(raw.get("darkness") or 0.0),
     }
+    if raw.get("aspect"):
+        out["width"], out["height"] = aspect_size(raw["aspect"])
+        if not out["crop"]:
+            out["crop"] = "full"
     if kind not in UNITY_KINDS:
         # Python and still scenarios have no fight: the fight fields are pinned
         # so the key depends only on what the scenario is.
-        out.update({"vs": "", "formation": "", "speed": 1.0, "preStatus": "", "skill": "", "seconds": 0.0})
+        out.update({"vs": "", "formation": "", "speed": 1.0, "preStatus": "", "skill": "", "seconds": 0.0,
+                    "width": 0, "height": 0, "repeat": 1, "darkness": 0.0})
         if not out["crop"]:
             out["crop"] = "subject" if kind == "stance" else "full"
         out["key"] = scenario_key(out)
@@ -137,8 +158,13 @@ def normalize(raw, skills=None):
     return dict(sorted(out.items()))
 
 
+# Fields added after the first baseline; a default value stays out of the key
+# so every scenario recorded before them keeps its key.
+KEY_DEFAULTS = {"width": 0, "height": 0, "repeat": 1, "darkness": 0.0}
+
+
 def scenario_key(scenario):
-    body = {k: v for k, v in scenario.items() if k != "key"}
+    body = {k: v for k, v in scenario.items() if k != "key" and KEY_DEFAULTS.get(k, object()) != v}
     blob = json.dumps(body, sort_keys=True, separators=(",", ":"))
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:10]
 
@@ -228,6 +254,16 @@ def refusals(scenario, ids=None):
             out.append("formation '%s' is not lone or full" % scenario["formation"])
         if scenario["speed"] <= 0:
             out.append("speed must be positive")
+        if (scenario["width"] > 0) != (scenario["height"] > 0):
+            out.append("width and height are set together")
+        if scenario["width"] > 0 and scenario["crop"] != "full":
+            out.append("the stage crop is the 1920x1080 layout's; a custom aspect records crop full")
+        if scenario["repeat"] < 1:
+            out.append("repeat must be at least 1")
+        if scenario["repeat"] > 1 and kind != "spell":
+            out.append("repeat casts a spell; %s has nothing to repeat" % kind)
+        if not 0.0 <= scenario["darkness"] <= 1.0:
+            out.append("darkness is an opacity from 0 to 1")
     if scenario["crop"] not in CROPS:
         out.append("crop '%s' is not one of %s" % (scenario["crop"], ", ".join(CROPS)))
     if kind in ("sheet", "still") and scenario["crop"] != "full":
@@ -429,6 +465,11 @@ def expand_manifest(spec, ids=None, skills=None):
             for combo in kept:
                 raws.append(dict(combo, kind="spell", id=sid))
 
+    # Scenarios written out whole, for a set that is not a matrix (the
+    # spell-rework before/after captures: darkness, repeat, a pre-status).
+    for raw in spec.get("scenarios", []) or []:
+        raws.append(dict(raw))
+
     if spec.get("abilities") == "all":
         for enemy, skill_id in ids["abilityPairs"]:
             raws.append({"kind": "attack", "id": enemy, "skill": skill_id})
@@ -471,8 +512,13 @@ def cmd_prepare(args):
             return 2
         raws = [{"kind": args.kind, "id": args.id, "vs": args.vs, "formation": args.formation,
                  "speed": args.speed, "preStatus": args.prestatus, "skill": args.skill,
-                 "crop": args.crop, "seconds": args.seconds}]
-        scenarios = [normalize(r) for r in raws]
+                 "crop": args.crop, "seconds": args.seconds, "aspect": args.aspect,
+                 "repeat": args.repeat, "darkness": args.darkness}]
+        try:
+            scenarios = [normalize(r) for r in raws]
+        except ValueError as e:
+            print("REFUSED %s" % e, file=sys.stderr)
+            return 2
     problems = [(s["kind"], s["id"], m) for s in scenarios for m in refusals(s, ids)]
     if problems:
         for kind, sid, message in problems[:30]:
@@ -949,6 +995,9 @@ def main(argv=None):
     p.add_argument("--skill", default="")
     p.add_argument("--crop", default="")
     p.add_argument("--seconds", type=float, default=0.0)
+    p.add_argument("--aspect", default="")
+    p.add_argument("--repeat", type=int, default=1)
+    p.add_argument("--darkness", type=float, default=0.0)
     p.add_argument("--request-id", default="")
     p.set_defaults(fn=cmd_prepare)
 

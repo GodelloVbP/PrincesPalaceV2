@@ -71,6 +71,41 @@ class RefusalTests(unittest.TestCase):
         self.assertIn("Poison", gif.status_names())
 
 
+class CaptureOptionTests(unittest.TestCase):
+    IDS = RefusalTests.IDS
+
+    def norm(self, **extra):
+        return gif.normalize(dict({"kind": "spell", "id": "bolt"}, **extra), SKILLS)
+
+    def test_aspect_sets_the_size_and_a_full_frame(self):
+        s = self.norm(aspect="4:3")
+        self.assertEqual((s["width"], s["height"], s["crop"]), (1440, 1080, "full"))
+        self.assertEqual(self.norm()["width"], 0)
+
+    def test_a_bad_aspect_is_an_error(self):
+        with self.assertRaises(ValueError):
+            self.norm(aspect="wide")
+
+    def test_defaults_leave_the_key_of_an_older_scenario_alone(self):
+        key = gif.scenario_key({"kind": "spell", "id": "bolt", "crop": "stage"})
+        self.assertEqual(key, gif.scenario_key({"kind": "spell", "id": "bolt", "crop": "stage",
+                                                "width": 0, "height": 0, "repeat": 1, "darkness": 0.0}))
+        for change in ({"aspect": "4:3"}, {"repeat": 5}, {"darkness": 0.9}):
+            self.assertNotEqual(self.norm()["key"], self.norm(**change)["key"], change)
+
+    def test_repeat_and_darkness_reach_the_request(self):
+        s = self.norm(repeat=5, darkness=0.9)
+        self.assertEqual((s["repeat"], s["darkness"]), (5, 0.9))
+
+    def test_refusals(self):
+        self.assertEqual(gif.refusals(self.norm(aspect="4:3", repeat=3, darkness=0.5), self.IDS), [])
+        self.assertIn("full", gif.refusals(self.norm(aspect="4:3", crop="stage"), self.IDS)[0])
+        self.assertIn("at least 1", gif.refusals(self.norm(repeat=-2), self.IDS)[0])
+        self.assertIn("opacity", gif.refusals(self.norm(darkness=1.5), self.IDS)[0])
+        relic = gif.normalize({"kind": "relic", "id": "bell", "repeat": 2}, SKILLS)
+        self.assertIn("nothing to repeat", gif.refusals(relic, self.IDS)[0])
+
+
 class IdentityTests(unittest.TestCase):
     def test_manifest_diff_honours_globs_and_one_sided_paths(self):
         a = {"x/a.txt": "1", "gen/b.asset": "2", "only_a": "3"}

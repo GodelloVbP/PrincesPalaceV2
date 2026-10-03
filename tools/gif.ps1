@@ -8,6 +8,9 @@ param(
     [string]$Skill = "",
     [string]$Crop = "",
     [double]$Seconds = 0,
+    [string]$Aspect = "",
+    [int]$Repeat = 1,
+    [double]$Darkness = 0,
     [string]$Manifest = "",
     [string[]]$Compare = @(),
     [string]$AllowDiff = "",
@@ -20,6 +23,9 @@ param(
 # One GIF recorder for every art subject -- docs/PLAN_GIF_CAPTURE.md, phases A and B.
 #
 #   tools/gif.ps1 spell crownfall [-Vs treant] [-Formation full] [-Speed 1.5] [-PreStatus Poison]
+#   tools/gif.ps1 spell court_of_whispers -Aspect 4:3     (1440x1080 canvas, whole frame)
+#   tools/gif.ps1 spell court_of_whispers -Repeat 5 -Speed 1.5   (five casts in one fight, battle pacing between, one GIF)
+#   tools/gif.ps1 spell court_of_whispers -Darkness 0.9   (the fight dressed as Bell in the Fog's round darkness at that opacity)
 #   tools/gif.ps1 attack beetle [-Skill barrel_roll]   (default: the plain attack)
 #   tools/gif.ps1 relic toll_of_the_flock
 #   tools/gif.ps1 status Poison [-Seconds 2]
@@ -92,6 +98,7 @@ if ($Prune -ge 0) {
 if (-not $Manifest -and (-not $Kind -or -not $Id)) {
     Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
     Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism]"
+    Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]"
     Write-Host "       tools/gif.ps1 -Manifest <name>   |   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]   |   tools/gif.ps1 -Prune <days>"
     exit 1
 }
@@ -157,6 +164,12 @@ function Invoke-FightBatch {
     $readyPath = Join-Path $RunDir "ready.json"
     $statePath = Join-Path $RunDir "state.json"
     $resultPath = Join-Path $RunDir "result.json"
+    # A -Repeat series is that many casts plus the pacing between them, so its
+    # deadline is that many scenarios' worth.
+    $repeatByKey = @{}
+    foreach ($sc in @((Get-Content -LiteralPath $env:PP_GIF_REQUEST -Raw | ConvertFrom-Json).scenarios)) {
+        $repeatByKey[$sc.key] = [math]::Max(1, [int]$sc.repeat)
+    }
     $readyAt = $null
     $lastIndex = -1
     $scenarioStart = $null
@@ -190,8 +203,8 @@ function Invoke-FightBatch {
             if ($state -and $state.requestId -eq $RequestId -and $state.index -ne $lastIndex) {
                 $lastIndex = $state.index
                 $scenarioStart = [Diagnostics.Stopwatch]::StartNew()
-            } elseif ($scenarioStart -and $scenarioStart.Elapsed.TotalSeconds -gt $ScenarioDeadline) {
-                $failure = "SCENARIO $($lastIndex + 1) (key $($state.key)) timed out after ${ScenarioDeadline}s"
+            } elseif ($scenarioStart -and $state -and $scenarioStart.Elapsed.TotalSeconds -gt ($ScenarioDeadline * $repeatByKey[$state.key])) {
+                $failure = "SCENARIO $($lastIndex + 1) (key $($state.key)) timed out after $($ScenarioDeadline * $repeatByKey[$state.key])s"
                 break
             }
         }
@@ -278,7 +291,8 @@ function Invoke-CaptureRun {
     } else {
         $prepArgs = @("prepare", $Kind, $Id, "--vs=$Vs", "--formation=$Formation",
             "--speed=$($Speed.ToString($inv))", "--prestatus=$PreStatus", "--skill=$Skill",
-            "--crop=$Crop", "--seconds=$($Seconds.ToString($inv))")
+            "--crop=$Crop", "--seconds=$($Seconds.ToString($inv))",
+            "--aspect=$Aspect", "--repeat=$Repeat", "--darkness=$($Darkness.ToString($inv))")
     }
     $py = Get-PythonExe
     $prepOut = & $py $GifPy @prepArgs
