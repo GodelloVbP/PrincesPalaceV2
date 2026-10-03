@@ -1,0 +1,24 @@
+{
+  "name": "baseline",
+  "description": "What the Unity upgrade and any art or content pass is compared against: every player spell across the enemy, formation and speed matrix, one attack per enemy with art plus one per enemy ability with vfx, every relic with vfx, every status, every actor's stance loop, every spell frame folder, and the screens that have a capture class. Spells whose targeting makes a combination meaningless are skipped and named in the coverage table.",
+  "spells": {"ids": "all", "vs": ["rat", "treant"], "formations": ["lone", "full"], "speeds": [1.0, 1.5]},
+  "attacks": "all",
+  "abilities": "all",
+  "relics": "all",
+  "statuses": "all",
+  "stances": "all",
+  "sheets": "all",
+  "stills": [
+    {"class": "MainMenuCaptureTests", "files": ["main_menu_no_save.png", "main_menu_with_save.png", "settings_modal.png"]},
+    {"class": "MapCaptureTests", "files": ["MapWithALeg.png", "MapMidWalk.png"]},
+    {"class": "ShopCaptureTests", "files": ["Shop.png", "Shop_pack.png", "Shop_gear_selected.png"]},
+    {"class": "ReckoningTooltipCaptureTests", "files": ["Reckoning_selected_tooltip.png"]},
+    {"class": "SystemMenuCaptureTests", "files": ["SystemMenu_skeleton.png", "SystemMenu_options.png", "SystemMenu_glossary.png", "SystemMenu_character_loadout.png", "SystemMenu_party_camp_default.png", "SystemMenu_run.png"]},
+    {"class": "EventsM6CaptureTests", "files": ["m6_a_speaker_right_fallback_16x9.png", "m6_d_legacy_frame_960x540_16x9.png", "m6_e_fight_toll_1_16x9.png"]},
+    {"class": "DialogueStageCaptureTests", "files": ["dialogue_a_shawn_left_16x9.png", "dialogue_e_choices_16x9.png", "dialogue_i_legacy_mechanics_16x9.png"]}
+  ],
+  "notCovered": [
+    {"name": "Reckoning outcome form", "why": "the outcome-form Reckoning does not exist yet; its capture case ships with PLAN_BUGS_QA_2026-10-03 P4 and joins this manifest then"},
+    {"name": "Relic receipts", "why": "relic receipt cases do not exist yet; same delivery as above (P4)"}
+  ]
+}

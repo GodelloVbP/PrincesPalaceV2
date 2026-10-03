@@ -46,6 +46,19 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, BreathCurve.At(BreathCurve.PeriodSeconds * 7f, 1f), 0.0001f);
         }
 
+        // ---- the clock's step follows capture time, not wall time --------------
+
+        // A recording at Time.captureFramerate 60 advances the breath 1/60 s per
+        // frame whatever the machine took to render it; outside a capture the
+        // frame's own unscaled time is used.
+        [Test]
+        public void UnderACaptureFramerateTheStepIsTheCaptureStepAndOtherwiseRealTime()
+        {
+            Assert.AreEqual(0.016667f, BreathCurve.StepSeconds(60, 0.5f), 0.00001f);
+            Assert.AreEqual(0.033333f, BreathCurve.StepSeconds(30, 0.002f), 0.00001f);
+            Assert.AreEqual(0.0123f, BreathCurve.StepSeconds(0, 0.0123f), 0f);
+        }
+
         // ---- no corner anywhere, including where the two halves meet ----------
 
         // THE BUG THIS EXISTS FOR, in the shape it would take. The inhale is

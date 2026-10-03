@@ -1,0 +1,16 @@
+{
+  "name": "smoke",
+  "description": "One of each kind, small enough to run in a few minutes: the check that every path of the recorder still works. Not a coverage claim; baseline is.",
+  "spells": {"ids": ["blackglass_spear", "gale_scythe", "gilded_aegis"], "vs": ["rat"], "formations": ["lone", "full"], "speeds": [1.0, 1.5]},
+  "attacks": ["rat"],
+  "relics": "all",
+  "statuses": ["Poison"],
+  "stances": ["Enemies/beetle", "Characters/sheep"],
+  "sheets": ["blackglass_spear", "frost_flare"],
+  "stills": [
+    {"class": "MainMenuCaptureTests", "files": ["main_menu_no_save.png"]},
+    {"class": "ShopCaptureTests", "files": ["Shop.png"]},
+    {"class": "EventsM6CaptureTests", "files": ["m6_a_speaker_right_fallback_16x9.png"]}
+  ],
+  "notCovered": []
+}

@@ -69,6 +69,17 @@ namespace PrincesPalace.Domain.Stage
             return (index < 0 ? 0 : index) * PhaseSecondsPerSlot;
         }
 
+        // HOW FAR THE BREATH CLOCK MOVES THIS FRAME. Real unscaled time in the
+        // game, so the battle-speed preset and a paused fight leave the breath
+        // alone; the capture step while Time.captureFramerate is set, because
+        // Unity's unscaledDeltaTime is the wall time of the frame, not the
+        // capture step, and a recording would otherwise breathe at whatever speed
+        // the machine rendered it. One home for the rule: the hover reads it too.
+        public static float StepSeconds(int captureFramerate, float unscaledDeltaSeconds)
+        {
+            return captureFramerate > 0 ? 1f / captureFramerate : unscaledDeltaSeconds;
+        }
+
         // How much taller than its authored size a figure is at `seconds`.
         //
         // `scale` multiplies the amplitude and is what the manifest authors

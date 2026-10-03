@@ -1403,9 +1403,11 @@ namespace PrincesPalace
             // battle-speed preset leaves them alone (PLAN_BATTLE_SPEED
             // contract 9); and a fight paused behind a modal should not bank
             // up a breath and spend it all at once when the panel closes.
-            // Scaled by BreathSpeedMultiplier instead, which is 1 outside a
+            // Under Time.captureFramerate the step is the capture step
+            // (BreathCurve.StepSeconds), so a recording breathes as the game
+            // does. Scaled by BreathSpeedMultiplier, which is 1 outside a
             // test and therefore changes nothing about that rule in play.
-            clock += Time.unscaledDeltaTime * BreathSpeedMultiplier;
+            clock += BreathCurve.StepSeconds(Time.captureFramerate, Time.unscaledDeltaTime) * BreathSpeedMultiplier;
             _idleClock[combatant] = clock;
 
             BreatheFigure(combatant,
@@ -1432,7 +1434,7 @@ namespace PrincesPalace
 
             // Same clock rules as the breath: unscaled by BeatSpeedMultiplier,
             // collapsed by BreathSpeedMultiplier in a test.
-            clock += Time.unscaledDeltaTime * BreathSpeedMultiplier;
+            clock += BreathCurve.StepSeconds(Time.captureFramerate, Time.unscaledDeltaTime) * BreathSpeedMultiplier;
             _hoverClock[combatant] = clock;
 
             HoverFigure(combatant, HoverCurve.At(clock, spec));

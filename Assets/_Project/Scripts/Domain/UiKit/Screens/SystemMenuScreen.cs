@@ -26,7 +26,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
     {
         // ---- the design pass's tokens ------------------------------------------
 
-        private const string Scrim = "#0A0614ED";            // was D9; the thin one let the hub read through
+        // Opaque: any alpha below FF lets a bright host control (the map's
+        // abandon button, the hub's title) read through where no plate covers it.
+        private const string Scrim = "#0A0614FF";
         private const string PanelFill = "#1A1024F5";        // PanelViolet at 96%
         private const string PanelRim = FightHudPalette.BorderGold;         // BorderGold
         private const string BarPlate = "#12091C";           // opaque, the bar's own ground
@@ -445,13 +447,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 // THE LINTEL'S OWN PLATE, and it is a fix rather than dressing.
                 //
-                // The design resolved "the scrim is too thin" by darkening it
-                // and by giving the BAR a plate. The lintel got neither, and it
-                // sits over the brightest thing on the hub: at #0A0614ED the
-                // hub's own "DIVINE PRINCIPALITY" still read faintly through it
-                // -- and since the lintel prints those same words, the title
-                // appeared twice, a few pixels apart, looking like a render
-                // fault rather than like two labels.
+                // The lintel sits over the brightest thing on the hub, the hub's
+                // own "DIVINE PRINCIPALITY", and prints those same words. Any
+                // see-through layer between them shows the title twice, a few
+                // pixels apart, which reads as a render fault rather than as
+                // two labels -- so the lintel carries its own opaque plate and
+                // does not rely on the scrim's alpha.
                 //
                 // Same colour as the bar's plate, so the two opaque strips
                 // above and below the gold rule read as one piece of chrome.
