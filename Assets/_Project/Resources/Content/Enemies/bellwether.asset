@@ -58,6 +58,7 @@ MonoBehaviour:
       - id: ripple
         render: sprite
         place: caster-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release

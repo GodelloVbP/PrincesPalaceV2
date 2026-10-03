@@ -63,6 +63,7 @@ MonoBehaviour:
       - id: slam
         render: sprite
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -122,6 +123,7 @@ MonoBehaviour:
       - id: splinters
         render: emitter
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -185,6 +187,7 @@ MonoBehaviour:
       - id: dust
         render: emitter
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit

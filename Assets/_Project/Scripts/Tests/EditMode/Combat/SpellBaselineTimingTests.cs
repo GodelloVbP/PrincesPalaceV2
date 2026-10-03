@@ -180,8 +180,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.21666667, 0.43333334 / 2.0, 1e-6,
                 "and today's cue is exactly half of it, because the whole cast was halved");
 
-            Assert.AreEqual(4, vfx.layers.Length, "the fault, a crack and an eruption per struck target, and the ash");
-            CollectionAssert.AreEqual(new[] { "fault", "crack", "erupt", "ash" }, vfx.layers.Select(l => l.id).ToList());
+            Assert.AreEqual(3, vfx.layers.Length, "the fault, an eruption per struck target, and the ash; the per-target crack is gone because the fault's overhang shows under a lone body");
+            CollectionAssert.AreEqual(new[] { "fault", "erupt", "ash" }, vfx.layers.Select(l => l.id).ToList());
 
             Assert.AreEqual("formation", vfx.layers[0].place,
                 "one fault however many enemies stand in it -- the property that needs no spell id");
@@ -190,12 +190,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(18.46f, vfx.layers[0].fps, 1e-4f,
                 "f0-f3 fill the 0.2167 s before the cue and f4 ruptures on it");
 
-            Assert.AreEqual("target", vfx.layers[1].place, "a crack under each struck body");
-            Assert.AreEqual("target", vfx.layers[2].place, "the plumes fan out over the struck slots");
-            Assert.AreEqual("Spells/cinderfault_eruption", vfx.layers[2].path);
-            Assert.AreEqual(0.2167f, vfx.layers[2].offset, 1e-6f, "the eruption opens on the cue");
+            Assert.AreEqual("target", vfx.layers[1].place, "the plumes fan out over the struck slots");
+            Assert.AreEqual("Spells/cinderfault_eruption", vfx.layers[1].path);
+            Assert.AreEqual(0.2167f, vfx.layers[1].offset, 1e-6f, "the eruption opens on the cue");
 
-            foreach (var layer in vfx.layers.Take(3))
+            foreach (var layer in vfx.layers.Take(2))
             {
                 Assert.AreEqual("none", layer.facing,
                     "a fault is symmetrical about the body it opens under, and so is what erupts out of it");

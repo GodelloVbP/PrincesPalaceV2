@@ -47,6 +47,7 @@ MonoBehaviour:
       - id: flock
         render: sprite
         place: caster
+        height: 0
         follow: 0
         whenConsumed: 
         at: release

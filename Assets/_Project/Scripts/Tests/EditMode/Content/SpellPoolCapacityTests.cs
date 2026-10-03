@@ -196,8 +196,8 @@ namespace PrincesPalace.Domain.Tests
             var cinderfault = demands.FirstOrDefault(d => d.Skill == "cinderfault");
             Assert.IsNotNull(cinderfault, "cinderfault is the only spell with a ground layer and it was missed");
             Assert.AreEqual(1, cinderfault.Ground, "a formation layer draws once however many enemies stand in it");
-            Assert.AreEqual(2 * FightHudSpec.StageSlotsPerSide, cinderfault.Effects,
-                "a target-placed layer draws once per struck slot, so a full formation is the worst case");
+            Assert.AreEqual(FightHudSpec.StageSlotsPerSide, cinderfault.Effects,
+                "the eruption is the one target-placed sprite layer and draws once per struck slot, so a full formation is the worst case; the per-target crack that doubled this is gone");
         }
 
         // The two proof spells the design was validated against, counted the

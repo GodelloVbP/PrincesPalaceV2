@@ -87,6 +87,44 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(240f, sky.Y, Tolerance);
         }
 
+        // THE POINT OVER A BODY, in body heights. The rat's middle is
+        // (272.4956, -121.556) and its height 192.888 (-25.112 - -218).
+        // 1 body up: -121.556 + 192.888 = 71.332; 1.2 up: -121.556 + 231.4656 = 109.9096.
+        [Test]
+        public void AbovePointIsTheBodysOwnColumnAtThatManyBodyHeights()
+        {
+            var one = SpellFlight.AbovePoint(Rat, 1f);
+            Assert.AreEqual(272.4956f, one.X, Tolerance);
+            Assert.AreEqual(71.332f, one.Y, Tolerance);
+
+            Assert.AreEqual(109.9096f, SpellFlight.AbovePoint(Rat, 1.2f).Y, Tolerance);
+        }
+
+        // The treant is 456.82308 tall with its middle at x 238.8831, y 11.44742.
+        // 0.3 up: 11.44742 + 137.046924 = 148.4943, under the ceiling, so a tall
+        // body is dropped on from higher in absolute terms than the rat is.
+        // 1 up would be 468.27, capped at 240.
+        [Test]
+        public void AbovePointScalesWithTheBodyAndStopsAtTheCeiling()
+        {
+            var treant = new StageBody(58.64f, 419.1262f, -216.96412f, 239.85896f);
+
+            var low = SpellFlight.AbovePoint(treant, 0.3f);
+            Assert.AreEqual(238.8831f, low.X, Tolerance);
+            Assert.AreEqual(148.4943f, low.Y, Tolerance);
+
+            Assert.AreEqual(240f, SpellFlight.AbovePoint(treant, 1f).Y, Tolerance);
+        }
+
+        // A body whose middle is already over the ceiling is dropped on from
+        // its own middle's height: the fall is never upward.
+        [Test]
+        public void AbovePointNeverSitsBelowTheMiddle()
+        {
+            var high = new StageBody(0f, 100f, 300f, 700f);
+            Assert.AreEqual(500f, SpellFlight.AbovePoint(high, 1f).Y, Tolerance);
+        }
+
         [Test]
         public void TheFlightFromTheAirToTheRatRunsDownAndAcross()
         {

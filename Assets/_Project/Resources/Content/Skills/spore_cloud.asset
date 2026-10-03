@@ -64,6 +64,7 @@ MonoBehaviour:
       - id: spores
         render: emitter
         place: formation
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -127,6 +128,7 @@ MonoBehaviour:
       - id: puff
         render: emitter
         place: formation
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit

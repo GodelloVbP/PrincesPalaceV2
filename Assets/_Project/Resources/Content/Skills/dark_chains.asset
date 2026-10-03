@@ -63,6 +63,7 @@ MonoBehaviour:
       - id: rift
         render: sprite
         place: caster-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -122,6 +123,7 @@ MonoBehaviour:
       - id: chain
         render: sprite
         place: caster-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -181,6 +183,7 @@ MonoBehaviour:
       - id: bind
         render: sprite
         place: target-centre
+        height: 0
         follow: 1
         whenConsumed: 
         at: arrival
@@ -240,6 +243,7 @@ MonoBehaviour:
       - id: pull
         render: still
         place: target-centre
+        height: 0
         follow: 1
         whenConsumed: 
         at: hit

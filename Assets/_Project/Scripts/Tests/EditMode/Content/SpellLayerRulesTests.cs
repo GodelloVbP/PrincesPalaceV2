@@ -494,7 +494,7 @@ namespace PrincesPalace.Domain.Tests
 
             string message = Only(With(layer));
             StringAssert.Contains("authors fit 'target' but is placed on formation", message);
-            StringAssert.Contains("Only target, target-centre, sky, a travelling layer or a layer riding another do", message);
+            StringAssert.Contains("Only target, target-centre, sky, above, a travelling layer or a layer riding another do", message);
         }
 
         [Test]
@@ -550,7 +550,41 @@ namespace PrincesPalace.Domain.Tests
 
             string message = Only(With(layer));
             StringAssert.Contains("travels but is placed on target-centre", message);
-            StringAssert.Contains("leaves the caster or the sky", message);
+            StringAssert.Contains("leaves the caster, the sky or the air above the target", message);
+        }
+
+        [Test]
+        public void ALayerMayFallFromAboveItsTarget()
+        {
+            var drop = Sprite("drop");
+            drop.place = "above";
+            drop.height = 1.2f;
+            drop.travelSeconds = 0.14f;
+            drop.orient = "path";
+            drop.artDegrees = 270f;
+            drop.fit = "target";
+
+            CollectionAssert.IsEmpty(Problems(With(drop)),
+                "above resolves one struck body, so it is a place to stand and a place to launch from");
+        }
+
+        [Test]
+        public void AnAboveLayerWithNoHeightIsRefused()
+        {
+            var layer = Sprite();
+            layer.place = "above";
+
+            StringAssert.Contains("is placed above but authors no height", Only(With(layer)));
+        }
+
+        [Test]
+        public void HeightOnAnyOtherPlacementIsRefused()
+        {
+            var layer = Sprite();
+            layer.place = "sky";
+            layer.height = 1f;
+
+            StringAssert.Contains("authors height 1 but is placed on sky", Only(With(layer)));
         }
 
         [Test]

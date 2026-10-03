@@ -108,6 +108,7 @@ MonoBehaviour:
           - id: ram_burst
             render: sprite
             place: target-centre
+            height: 0
             follow: 0
             whenConsumed: 
             at: release

@@ -67,6 +67,7 @@ MonoBehaviour:
       - id: gather
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -126,6 +127,7 @@ MonoBehaviour:
       - id: converge
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -185,6 +187,7 @@ MonoBehaviour:
       - id: collide
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -244,6 +247,7 @@ MonoBehaviour:
       - id: residue
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release

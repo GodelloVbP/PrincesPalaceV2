@@ -64,6 +64,7 @@ MonoBehaviour:
       - id: bell
         render: sprite
         place: sky
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -123,6 +124,7 @@ MonoBehaviour:
       - id: wave
         render: sprite
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: release

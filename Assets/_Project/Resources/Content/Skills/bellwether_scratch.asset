@@ -64,6 +64,7 @@ MonoBehaviour:
       - id: strokes
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -123,6 +124,7 @@ MonoBehaviour:
       - id: rake
         render: sprite
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -182,6 +184,7 @@ MonoBehaviour:
       - id: flash
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -241,6 +244,7 @@ MonoBehaviour:
       - id: drops
         render: emitter
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit

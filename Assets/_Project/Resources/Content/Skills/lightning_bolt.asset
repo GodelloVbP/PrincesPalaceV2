@@ -65,6 +65,7 @@ MonoBehaviour:
       - id: tell_a
         render: still
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -124,6 +125,7 @@ MonoBehaviour:
       - id: tell_b
         render: still
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -183,6 +185,7 @@ MonoBehaviour:
       - id: bolt
         render: still
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -242,6 +245,7 @@ MonoBehaviour:
       - id: flash
         render: still
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -301,6 +305,7 @@ MonoBehaviour:
       - id: flicker
         render: still
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -360,6 +365,7 @@ MonoBehaviour:
       - id: arc
         render: still
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: release

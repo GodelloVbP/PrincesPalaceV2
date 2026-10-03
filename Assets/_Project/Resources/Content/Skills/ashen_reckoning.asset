@@ -65,6 +65,7 @@ MonoBehaviour:
       - id: ritual
         render: sprite
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -124,6 +125,7 @@ MonoBehaviour:
       - id: settle
         render: emitter
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit

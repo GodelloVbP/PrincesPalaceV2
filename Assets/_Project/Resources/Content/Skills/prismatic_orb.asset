@@ -165,6 +165,7 @@ MonoBehaviour:
         - id: charge
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -224,6 +225,7 @@ MonoBehaviour:
         - id: core
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -283,6 +285,7 @@ MonoBehaviour:
         - id: wake
           render: still
           place: layer:core
+          height: 0
           follow: 1
           whenConsumed: 
           at: release
@@ -342,6 +345,7 @@ MonoBehaviour:
         - id: shed
           render: emitter
           place: layer:core
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -409,6 +413,7 @@ MonoBehaviour:
         - id: splash
           render: sprite
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: arrival
@@ -468,6 +473,7 @@ MonoBehaviour:
         - id: spray
           render: emitter
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: hit
@@ -556,6 +562,7 @@ MonoBehaviour:
         - id: charge
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -615,6 +622,7 @@ MonoBehaviour:
         - id: core
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -674,6 +682,7 @@ MonoBehaviour:
         - id: wake
           render: still
           place: layer:core
+          height: 0
           follow: 1
           whenConsumed: 
           at: release
@@ -733,6 +742,7 @@ MonoBehaviour:
         - id: shed
           render: emitter
           place: layer:core
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -792,6 +802,7 @@ MonoBehaviour:
         - id: splash
           render: sprite
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: arrival
@@ -851,6 +862,7 @@ MonoBehaviour:
         - id: spray
           render: emitter
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: hit
@@ -931,6 +943,7 @@ MonoBehaviour:
         - id: charge
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -990,6 +1003,7 @@ MonoBehaviour:
         - id: core
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -1049,6 +1063,7 @@ MonoBehaviour:
         - id: wake
           render: still
           place: layer:core
+          height: 0
           follow: 1
           whenConsumed: 
           at: release
@@ -1108,6 +1123,7 @@ MonoBehaviour:
         - id: shed
           render: emitter
           place: layer:core
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -1167,6 +1183,7 @@ MonoBehaviour:
         - id: splash
           render: sprite
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: arrival
@@ -1226,6 +1243,7 @@ MonoBehaviour:
         - id: spray
           render: emitter
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: hit
@@ -1306,6 +1324,7 @@ MonoBehaviour:
         - id: charge
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -1365,6 +1384,7 @@ MonoBehaviour:
         - id: core
           render: sprite
           place: caster-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -1424,6 +1444,7 @@ MonoBehaviour:
         - id: wake
           render: still
           place: layer:core
+          height: 0
           follow: 1
           whenConsumed: 
           at: release
@@ -1483,6 +1504,7 @@ MonoBehaviour:
         - id: shed
           render: emitter
           place: layer:core
+          height: 0
           follow: 0
           whenConsumed: 
           at: release
@@ -1542,6 +1564,7 @@ MonoBehaviour:
         - id: splash
           render: sprite
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: arrival
@@ -1601,6 +1624,7 @@ MonoBehaviour:
         - id: spray
           render: emitter
           place: target-centre
+          height: 0
           follow: 0
           whenConsumed: 
           at: hit

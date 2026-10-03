@@ -178,9 +178,9 @@ namespace PrincesPalace.PlayModeTests
         // recorded is the one two casts in a real round already produce.
         private const int SecondCastFrame = 30;
 
-        // 0.20s into the fault, which runs 0.78s -- the water lands while every
-        // plume is still erupting.
-        private const int WaterOverFaultFrame = 12;
+        // 0.33s into the fault, which runs 0.78s -- the plumes open at 0.2167s
+        // (frame 13), so the water lands while every one is still erupting.
+        private const int WaterOverFaultFrame = 20;
 
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(
@@ -452,7 +452,16 @@ namespace PrincesPalace.PlayModeTests
                 "'" + SpellId + "' drew something on stage but LastBegunForTest names no live cast, so " +
                 "there is no clock to record this series against.");
 
-            int targetCount = fight.SessionForTest.Encounter.Enemies.Count(e => e != null && e.IsAlive);
+            // THE STRUCK COUNT, NOT THE LIVING COUNT. The cast's damage resolves
+            // before its picture opens, so a spell that kills its target has no
+            // living enemy left to count here; per-target layers then fan out to
+            // zero instances and the cleared time collapses to the hit cue, which
+            // ended the recording at the cue plus the margin and cut every
+            // aftermath that outlives a kill (death_knell's wave).
+            var plannedSkill = ResolvePlan().Skill;
+            int targetCount = plannedSkill != null && plannedSkill.Targeting == SkillTargeting.AllEnemies
+                ? fight.SessionForTest.Encounter.Enemies.Count(e => e != null)
+                : 1;
             var shipped = ShippedVfx(SpellId);
             float clearedSeconds = ClearedSecondsOf(shipped, targetCount);
             float hitCueSeconds = SpellPerformance.Resolve(shipped, targetCount,

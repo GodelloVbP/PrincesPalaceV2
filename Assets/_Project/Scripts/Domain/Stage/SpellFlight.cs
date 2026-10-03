@@ -47,6 +47,19 @@ namespace PrincesPalace.Domain.Stage
             return new UiVec(x, y);
         }
 
+        // THE POINT STRAIGHT ABOVE A TARGET, `heights` body-heights over its
+        // middle, for place: above. The column is the body's own, so a layer
+        // leaving it falls vertically. Held at SkyCeiling like the air point,
+        // and never below the middle: against a body already at the ceiling
+        // the fall is shorter, never upward. The fall's duration is authored
+        // (travelSeconds), so a shorter drop reads as slower, not later.
+        public static UiVec AbovePoint(StageBody target, float heights)
+        {
+            var aim = target.Centre;
+            float y = Math.Min(aim.Y + heights * target.Height, SkyCeiling);
+            return new UiVec(aim.X, Math.Max(y, aim.Y));
+        }
+
         // ---- nothing a spell draws may cross the combat log ----------------
         //
         // Against a tall target (an Elder Treant, say) the air point meets

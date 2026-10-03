@@ -185,6 +185,15 @@ namespace PrincesPalace.Domain.Content
 
         // Centred on the counterpart's middle. Cast-level, same as Counterpart.
         CounterpartCentre,
+
+        // STRAIGHT ABOVE ONE STRUCK TARGET: the column through the middle of
+        // its visible body, `height` body-heights up (Domain.Stage.SpellFlight.
+        // AbovePoint). Where `sky` is the diagonal air point between the two
+        // casters, this is the vertical one, so a layer that travels from it
+        // FALLS onto the target -- a dropped crown, a plummeting stone.
+        // PER TARGET, like `sky`, and the launch of a travelling layer by the
+        // same rule: it leaves here and arrives on the target's middle.
+        Above,
     }
 
     public static class SpellPlaceNames
@@ -225,13 +234,15 @@ namespace PrincesPalace.Domain.Content
         // absent on purpose: it inherits its source's scope and answering here
         // would be a second, disagreeing home for that rule.
         public static bool PerTarget(SpellPlace place) =>
-            place == SpellPlace.Target || place == SpellPlace.TargetCentre || place == SpellPlace.Sky;
+            place == SpellPlace.Target || place == SpellPlace.TargetCentre || place == SpellPlace.Sky ||
+            place == SpellPlace.Above;
 
         // Whether a travelling layer on this word has somewhere to LEAVE from:
         // the caster's own body, or the air it amassed in. Every other word is
         // already on the target, and a flight from the target to the target is
         // no flight.
-        public static bool CanLaunch(SpellPlace place) => OnCaster(place) || place == SpellPlace.Sky;
+        public static bool CanLaunch(SpellPlace place) =>
+            OnCaster(place) || place == SpellPlace.Sky || place == SpellPlace.Above;
 
         // `sky` IS CENTRED: a strike called down out of the air arrives in the
         // target's middle, not at its feet, and a non-travelling sky layer is
@@ -239,7 +250,7 @@ namespace PrincesPalace.Domain.Content
         // for a standing rule to measure against.
         public static bool Centred(SpellPlace place) =>
             place == SpellPlace.CasterCentre || place == SpellPlace.TargetCentre || place == SpellPlace.Sky ||
-            place == SpellPlace.CounterpartCentre;
+            place == SpellPlace.Above || place == SpellPlace.CounterpartCentre;
 
         // Whether the word is the other end of the beat's placement. Asked for
         // the same reason OnCaster is: two values, several branch sites.
@@ -250,10 +261,11 @@ namespace PrincesPalace.Domain.Content
         // move: every placement but the measured span, the air point and a
         // layer riding another layer.
         public static bool OnABody(SpellPlace place) =>
-            place != SpellPlace.Formation && place != SpellPlace.Sky && place != SpellPlace.Layer;
+            place != SpellPlace.Formation && place != SpellPlace.Sky && place != SpellPlace.Above &&
+            place != SpellPlace.Layer;
 
         public static string[] All =>
-            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "sky",
+            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "sky", "above",
                     "counterpart", "counterpart-centre", "layer:<id>" };
 
         private static SpellPlace Lookup(string name, SpellPlace fallback)
@@ -274,6 +286,8 @@ namespace PrincesPalace.Domain.Content
             if (SpellWord.Is(name, "formation")) return SpellPlace.Formation;
 
             if (SpellWord.Is(name, "sky")) return SpellPlace.Sky;
+
+            if (SpellWord.Is(name, "above")) return SpellPlace.Above;
 
             if (SpellWord.Is(name, "counterpart")) return SpellPlace.Counterpart;
 

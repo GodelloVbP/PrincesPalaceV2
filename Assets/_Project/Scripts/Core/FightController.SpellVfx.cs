@@ -515,6 +515,11 @@ namespace PrincesPalace
             {
                 aim = SkyPointFor(caster, casterRect, parent, body.Value);
             }
+            else if (layer.Place == SpellPlace.Above && !layer.Travels)
+            {
+                var over = SpellFlight.AbovePoint(body.Value, layer.height);
+                aim = new Vector2(over.X, over.Y);
+            }
             else
             {
                 aim = AimAtBody(body.Value, parent, targetRect, centred);
@@ -622,6 +627,7 @@ namespace PrincesPalace
             && !layer.Travels
             && layer.Render != SpellRender.Emitter
             && layer.Place != SpellPlace.Sky
+            && layer.Place != SpellPlace.Above
             && !SpellPlaceNames.OnCaster(layer.Place);
 
         // THE COMBAT LOG'S LOWER EDGE, in the effect pool's frame, less a gap.
@@ -717,6 +723,12 @@ namespace PrincesPalace
             if (layer.Place == SpellPlace.Sky && body.HasValue)
             {
                 return SkyPointFor(caster, casterRect, parent, body.Value);
+            }
+
+            if (layer.Place == SpellPlace.Above && body.HasValue)
+            {
+                var over = SpellFlight.AbovePoint(body.Value, layer.height);
+                return new Vector2(over.X, over.Y);
             }
 
             return casterRect != null

@@ -280,6 +280,7 @@ namespace PrincesPalace.Domain.Content
             Positive(at, "fps", layer.fps, problems);
             Positive(at, "travelSeconds", layer.travelSeconds, problems);
             Positive(at, "travelDelay", layer.travelDelay, problems);
+            Positive(at, "height", layer.height, problems);
             Positive(at, "fade", layer.fade, problems);
             Positive(at, "size", layer.size, problems);
             Positive(at, "aspect", layer.aspect, problems);
@@ -506,6 +507,18 @@ namespace PrincesPalace.Domain.Content
                              "centres); a layer on another layer already follows it.");
             }
 
+            if (layer.Place == SpellPlace.Above && layer.height <= 0f)
+            {
+                problems.Add($"{at} is placed above but authors no height, so there is no point over the " +
+                             "body to put it at. Give it height, in body heights (1 is one body-height up).");
+            }
+
+            if (layer.Place != SpellPlace.Above && layer.height != 0f)
+            {
+                problems.Add($"{at} authors height {Num(layer.height)} but is placed on {layer.place.Trim()}; " +
+                             "only place 'above' reads it. Remove it.");
+            }
+
             if (layer.follow && layer.Travels)
             {
                 problems.Add($"{at} authors follow on a layer that travels; its flight already ends on the " +
@@ -547,7 +560,7 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at} authors fit 'target' but is placed on {layer.place.Trim()}, which " +
                              "resolves no single struck target to read a footprint off. Only target, " +
-                             "target-centre, sky, a travelling layer or a layer riding another do.");
+                             "target-centre, sky, above, a travelling layer or a layer riding another do.");
             }
 
             // AN EMITTER'S FLIGHT SHAPING READS THE LINE OF THE LAYER IT RIDES;
@@ -680,7 +693,7 @@ namespace PrincesPalace.Domain.Content
                 else if (!SpellPlaceNames.CanLaunch(layer.Place))
                 {
                     problems.Add($"{at} travels but is placed on {layer.place.Trim()}, so it has nowhere to " +
-                                 "travel from. A projectile leaves the caster or the sky.");
+                                 "travel from. A projectile leaves the caster, the sky or the air above the target.");
                 }
             }
             else if (layer.travelDelay > 0f)

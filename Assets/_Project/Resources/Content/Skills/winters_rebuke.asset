@@ -66,6 +66,7 @@ MonoBehaviour:
       - id: amass
         render: sprite
         place: sky
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -125,6 +126,7 @@ MonoBehaviour:
       - id: spear
         render: still
         place: sky
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -184,6 +186,7 @@ MonoBehaviour:
       - id: impact
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -243,6 +246,7 @@ MonoBehaviour:
       - id: tear
         render: sprite
         place: target
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -302,6 +306,7 @@ MonoBehaviour:
       - id: settle
         render: emitter
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit

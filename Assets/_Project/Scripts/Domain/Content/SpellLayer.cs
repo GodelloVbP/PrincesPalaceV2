@@ -32,8 +32,11 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("What draws: sprite (an animated folder), still (one frame of a folder) or emitter (ballistic particles). No default -- a blank is refused.")]
         public string render = "";
 
-        [ContentDoc("Where it belongs: caster, caster-centre, target, target-centre, formation, sky (in the air halfway from the caster to one struck target, above both), counterpart / counterpart-centre (the other end of the cast's move: the figure a swap or a pull traded seats with; nothing is drawn when the move had no other end), or 'layer:<id>' to ride another layer. No default -- a blank is refused.")]
+        [ContentDoc("Where it belongs: caster, caster-centre, target, target-centre, formation, sky (in the air halfway from the caster to one struck target, above both), above (straight over one struck target, `height` body-heights up; a travelling layer falls from there onto it), counterpart / counterpart-centre (the other end of the cast's move: the figure a swap or a pull traded seats with; nothing is drawn when the move had no other end), or 'layer:<id>' to ride another layer. No default -- a blank is refused.")]
         public string place = "";
+
+        [ContentDoc("Place 'above' only, and required there: how far above the struck body's middle the layer sits, in body heights (the visible body's height; 1 is one body-height up). A travelling layer leaves from there and falls onto the middle, so the fall takes travelSeconds on any body. Held under the sky ceiling, so a tall body is dropped on from less far. Legal only on place 'above'.")]
+        public float height;
 
         // FOLLOW versus SAMPLE-ONCE, and the difference is visible the moment
         // anything moves. A splash sampled once stays where the target stood
@@ -97,7 +100,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span.")]
         public float size;
 
-        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre or sky, a layer that travels, or a layer riding another (place layer:<id>).")]
+        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre, sky or above, a layer that travels, or a layer riding another (place layer:<id>).")]
         public string fit = "";
 
         [ContentDoc("Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto.")]
@@ -205,6 +208,7 @@ namespace PrincesPalace.Domain.Content
             id = id,
             render = render,
             place = place,
+            height = height,
             follow = follow,
             whenConsumed = whenConsumed,
             overhang = overhang,

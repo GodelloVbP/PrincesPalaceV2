@@ -841,7 +841,8 @@ gameplay; a layered block cannot, which is the point of the format.
 | --- | --- | --- |
 | `id` | — | Name, needed only when another layer rides it through `place: layer:<id>`. |
 | `render` | refused blank | `sprite` (an animated folder), `still` (one frame of a folder, held), `emitter` (ballistic particles). |
-| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, `sky`, `counterpart`, `counterpart-centre` (the other end of the cast's move, below), or `layer:<id>`. |
+| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, `sky`, `above`, `counterpart`, `counterpart-centre` (the other end of the cast's move, below), or `layer:<id>`. |
+| `height` | `0` | `place: above` only, and required there: how far over the struck body's middle the layer sits, in body heights (the visible body's height). A travelling layer leaves from there and falls onto the middle. Refused on any other placement. |
 | `at` | `release` | `release` (the beat opens), `arrival` (the cast's projectile lands), `hit` (the authoritative cue). |
 | `offset` | `0` | Seconds added to `at`. |
 | `path` | — | `Resources`-relative FOLDER of `f0..fN`, for `sprite` and `still` alike. |
@@ -941,8 +942,24 @@ travelling one leaves from it and arrives at the target's middle (the shot).
 Pair the shot with `orient: path` and the sheet's painted direction as
 `artDegrees`: the box is turned after the mirror, and the stated
 `impactX`/`impactY` (the spear's tip, not its middle) rides the line from the
-air point to the aim. Winter's Rebuke, Blackglass Spear and Crownfall are
-authored this way; the geometry is pinned by `SpellFlightTests`.
+air point to the aim. Winter's Rebuke and Blackglass Spear are
+authored this way (Crownfall drops its spike from `above`, below); the geometry is
+pinned by `SpellFlightTests`.
+
+**`above`: a layer that falls onto its target.** `place: above` is the point
+straight over the struck body's middle, `height` body-heights up
+(`SpellFlight.AbovePoint`: the body's own column, held under `SkyCeiling` so a
+treant is dropped on from less far, never below the middle). Per target, and the
+launch of a travelling layer by the same rule as `sky`: it leaves the point and
+arrives on the target's middle. Where `sky` is the diagonal between the two
+casters and reads as a strike called in, this is the vertical one. `travelSeconds`
+is the fall and is fit-independent, so it takes the same time on a rat and a
+treant; the distance scales with the body because the height is in body heights.
+Pair it with `orient: path` and the sheet's painted direction (`artDegrees`
+270 for art painted tip-down) and the stated impact point (the tip) so the tip
+lands on the middle. Non-travelling, it draws centred on that point (an amass
+over the target). Crownfall's spike is authored this way; the geometry is pinned
+by `SpellFlightTests` and the rules by `SpellLayerRulesTests`.
 
 **A projectile that does not stop at its target: `through: true`.** The arrival
 is still the hit (cue, `travelSeconds` and sound unchanged). Past it the layer

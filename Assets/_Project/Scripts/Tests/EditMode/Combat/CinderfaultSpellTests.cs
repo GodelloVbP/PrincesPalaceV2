@@ -131,11 +131,12 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"offset\": 0.2167", entry);
             StringAssert.DoesNotContain("\"seconds\": 0.78", entry);
 
-            // THE FAULT FOLLOWS THE RANK (the enemies stand on a diagonal) and a
-            // second crack is placed under each struck body, so a lone enemy
-            // still shows one.
+            // THE FAULT FOLLOWS THE RANK (the enemies stand on a diagonal) and its
+            // `overhang` makes it show past a lone body, so no second per-target
+            // crack is authored: that layer is gone on purpose.
             StringAssert.Contains("\"align\": \"span\"", entry);
-            StringAssert.Contains("\"id\": \"crack\"", entry);
+            StringAssert.Contains("\"overhang\": 0.5", entry);
+            StringAssert.DoesNotContain("\"id\": \"crack\"", entry);
         }
 
         // The presentation's own fallbacks, which is the mechanism the test

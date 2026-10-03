@@ -66,6 +66,7 @@ MonoBehaviour:
       - id: amass
         render: sprite
         place: sky
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -125,6 +126,7 @@ MonoBehaviour:
       - id: rift
         render: still
         place: layer:spear
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -184,6 +186,7 @@ MonoBehaviour:
       - id: streaks
         render: emitter
         place: layer:spear
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -243,6 +246,7 @@ MonoBehaviour:
       - id: spear
         render: still
         place: sky
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -302,6 +306,7 @@ MonoBehaviour:
       - id: fire
         render: still
         place: sky
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -361,6 +366,7 @@ MonoBehaviour:
       - id: tear-air
         render: still
         place: sky
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -420,6 +426,7 @@ MonoBehaviour:
       - id: impact
         render: still
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -479,6 +486,7 @@ MonoBehaviour:
       - id: tear
         render: sprite
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -538,6 +546,7 @@ MonoBehaviour:
       - id: settle
         render: emitter
         place: target-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit

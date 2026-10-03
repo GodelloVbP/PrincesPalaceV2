@@ -1969,9 +1969,9 @@ namespace PrincesPalace.PlayModeTests
 
         private static readonly string[] SkySpells = { "winters_rebuke", "blackglass_spear", "crownfall" };
 
-        // The sky spells that fly a layer from the air point; Crownfall drops
-        // its spike straight down as an emitter, so it has no tip to aim.
-        private static readonly string[] FlyingSkySpells = { "winters_rebuke", "blackglass_spear" };
+        // The sky spells that fly a layer: two from the air point, Crownfall's
+        // spike straight down from above the body.
+        private static readonly string[] FlyingSkySpells = { "winters_rebuke", "blackglass_spear", "crownfall" };
 
         // THE TAIL COVERS AT MOST THREE QUARTERS OF THE BODY. Winter's Rebuke
         // and Blackglass Spear author a 320 impact and Crownfall a 340 shatter;
@@ -2150,13 +2150,66 @@ namespace PrincesPalace.PlayModeTests
                 Assert.That(shatter.To.X, Is.InRange(body.Left, body.Right), "the shatter is beside the treant");
                 Assert.That(shatter.To.Y, Is.InRange(body.Bottom, body.Top), "the shatter is above or below the treant");
 
-                // The spike falls from above the body's middle onto it: its
-                // emitter is anchored on that middle.
+                // The spike falls from the column over the body's middle onto it.
                 var spike = performance.Instances.First(i => i.Layer.id == "spike");
                 var centre = body.Centre;
-                Assert.AreEqual(centre.X, spike.To.X, 1f, "the spike falls beside the treant's middle");
-                Assert.AreEqual(centre.Y, spike.To.Y, 1f, "the spike lands above or below the treant's middle");
+                Assert.AreEqual(centre.X, spike.FlightFrom.X, 1f, "the spike does not start over the treant's middle");
+                Assert.AreEqual(centre.X, spike.FlightTo.X, 1f, "the spike falls beside the treant's middle");
+                Assert.AreEqual(centre.Y, spike.FlightTo.Y, 1f, "the spike lands above or below the treant's middle");
+                Assert.Greater(spike.FlightFrom.Y, centre.Y + 50f, "the spike does not start above the treant");
             });
         }
+
+        // A LAYER PLACED ABOVE FALLS: launched from the column over the body at
+        // `height` body-heights (held under the sky ceiling 240), arriving on
+        // the body's middle, turned straight down for a sheet painted pointing
+        // down (artDegrees 270), the fall lasting travelSeconds on any body.
+        // The rat: height 192.888, middle (272.4956, -121.556) -> launch y
+        // 71.332 at height 1. A tall body is dropped on from further up.
+        [UnityTest]
+        public IEnumerator AboveLayerFallsStraightOntoTheMiddleOfARat()
+        {
+            yield return LoadFight(1, 1f, "Enemies/rat");
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+
+            var performance = _fight.PlacedCastForTest(OneLayerBeat(FallingLayer(), hitCue: 0.34f));
+            var drop = performance.Instances.Single();
+
+            Assert.AreEqual(body.Centre.X, drop.FlightFrom.X, 0.5f, "the fall is not vertical");
+            Assert.AreEqual(body.Centre.X, drop.FlightTo.X, 0.5f, "the fall is not vertical");
+            Assert.AreEqual(body.Centre.Y + body.Height, drop.FlightFrom.Y, 0.5f, "launch is one body-height over the middle");
+            Assert.AreEqual(body.Centre.Y, drop.FlightTo.Y, 0.5f);
+            Assert.AreEqual(0f, drop.Degrees, 0.5f, "a sheet painted pointing down needs no turn to point down the fall");
+            Assert.AreEqual(0.34f, performance.ArrivalSeconds, 1e-4f, "offset 0.2 + travelSeconds 0.14");
+        }
+
+        [UnityTest]
+        public IEnumerator AboveLayerOnATallBodyStartsHigherInAbsoluteTermsAndStillFallsStraight()
+        {
+            yield return LoadFight(1, 1.45f, "Enemies/treant");
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+            var layer = FallingLayer();
+            layer.height = 0.3f;
+
+            var performance = _fight.PlacedCastForTest(OneLayerBeat(layer, hitCue: 0.34f));
+            var drop = performance.Instances.Single();
+
+            Assert.AreEqual(body.Centre.X, drop.FlightFrom.X, 0.5f);
+            Assert.AreEqual(body.Centre.X, drop.FlightTo.X, 0.5f);
+            Assert.AreEqual(body.Centre.Y + 0.3f * body.Height, drop.FlightFrom.Y, 0.5f,
+                "a treant's body-height is 456.8, so 0.3 of it is 137 up");
+            Assert.AreEqual(0f, drop.Degrees, 0.5f);
+            Assert.AreEqual(0.34f, performance.ArrivalSeconds, 1e-4f, "the fall takes the same time on any body");
+        }
+
+        private static SpellLayer FallingLayer() => new SpellLayer
+        {
+            id = "drop", render = "still", place = "above", height = 1f, at = "release", offset = 0.2f,
+            path = "Vfx/impact_burst", seconds = 0.4f,
+            travelSeconds = 0.14f, orient = "path", artDegrees = 270f,
+            impactX = 0.5f, impactY = 0f,
+        };
     }
 }

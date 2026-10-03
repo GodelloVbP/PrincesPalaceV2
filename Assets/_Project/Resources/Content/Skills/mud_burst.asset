@@ -66,6 +66,7 @@ MonoBehaviour:
       - id: vfx
         render: sprite
         place: caster-centre
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
