@@ -1,6 +1,6 @@
 # Prince's Palace
 
-Unity 6 (6000.5.7f1), URP with a Renderer 2D, C#: a turn-based roguelike
+Unity 6 (6000.6.2f1), URP with a Renderer 2D, C#: a turn-based roguelike
 dungeon crawler. uGUI with TextMeshPro; Hades-style painterly art.
 v1 lives at `C:\Games\Backup Princes palace\Prince's Palace` — read-only.
 Unsure which tree you are in? `test -d Assets/_Project/Scripts/Domain/UiKit`

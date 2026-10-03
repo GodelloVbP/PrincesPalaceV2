@@ -50,7 +50,7 @@ function Get-UnityExe {
 
     if (-not (Test-Path $exe)) {
         # Names the version rather than just failing to find a file, because
-        # "install 6000.5.7f1 via Unity Hub" is the actual fix and a missing-path
+        # "install 6000.6.2f1 via Unity Hub" is the actual fix and a missing-path
         # error does not say that.
         throw "This project is pinned to Unity $version but it is not installed at $exe. Install $version via Unity Hub, or open the project in an installed version to re-pin it."
     }

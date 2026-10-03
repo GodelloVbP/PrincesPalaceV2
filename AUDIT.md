@@ -2827,3 +2827,16 @@ without a content rebuild: `Core/Content/ContentDatabase.cs:972`,
 Fix: rewrite them present-tense (drop the citation or name the live doc
 section) and run `-BuildContent` in the same commit.
 Route: fixer on Windows; gate `-Changed -BuildContent`.
+
+## Unity 6.6 upgrade, 2026-10-03
+
+Main fast-forwarded from M0 `7ea681ae9d913a99afec2a7b3426f2e0c39d4484` to the
+accepted candidate C `c9574bbb287eeba4a0d576774f67f887d4ce47bf` (Unity
+6000.6.2f1, URP 17.6.0, ugui 2.6.0, test-framework 1.8.0). The upgrade delta is
+exactly `git diff M0 C`; rollback reverses that delta, never a commit range
+(docs/PLAN_UNITY_6_6.md section 4). Evidence: full run green on 6.6 twice,
+graphics tests and focus check clean, CS warnings 10 vs 10, pinned GIF baseline
+6.5 vs 6.6 (239 scenarios) equal within 0.013 percent of pixels except the
+unseeded main-menu ambience.
+Open: MainMenuCaptureTests is not seeded, so its stills cannot be compared
+pixel to pixel; seed it like the GIF batch.
