@@ -2850,3 +2850,13 @@ graphics tests and focus check clean, CS warnings 10 vs 10, pinned GIF baseline
 unseeded main-menu ambience.
 Open: MainMenuCaptureTests is not seeded, so its stills cannot be compared
 pixel to pixel; seed it like the GIF batch.
+
+### Crownfall on tall bodies is bounded by stage room, not by the placement rule (R5)
+
+Three `place: above` rules were tried on the treant (keep size; shrink to 0.7
+then lower; on-screen first with a 120 px minimum fall and a 0.4 floor). The
+treant's head reaches the enemy plates, so there is no sky above it: every rule
+either leaves the screen or ends at the same small shard today's shrink-to-fit
+gives. All three were discarded (patch kept outside the repo). A real fix
+changes the stage, not the layer rule: a shorter treant, plates that clear tall
+bodies, or a fall that lands on the head instead of the middle. Owner call.
