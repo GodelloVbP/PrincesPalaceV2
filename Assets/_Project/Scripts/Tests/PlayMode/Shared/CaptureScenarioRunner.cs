@@ -688,11 +688,21 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(started, "'" + enemyId + "' never played a round after the press");
             Assert.Less(frame, cap, "'" + enemyId + "' was still playing after " + MaxAttackSeconds + "s");
 
-            File.WriteAllText(sink.TimingPath, string.Format(CultureInfo.InvariantCulture,
-                "{{\"kind\":\"attack\",\"id\":\"{0}\",\"skill\":\"{1}\",\"fps\":{2},\"frames\":{3},\"speed\":{4:F2}}}",
-                enemyId, forcedSkill, Fps, frame, speed));
+            File.WriteAllText(sink.TimingPath, TimingJson("attack", enemyId, forcedSkill, Fps, frame, speed));
 
             outcome.Frames = frame;
+        }
+
+        // timing.json for the attack and status recorders. The speed is formatted apart from the
+        // format string: "{4:F2}}}" parses the closing braces as part of the F2 specifier and
+        // writes the text "F2" instead of the number.
+        internal static string TimingJson(string kind, string id, string skill, int fps, int frames, float speed)
+        {
+            string skillField = skill == null ? "" : ",\"skill\":\"" + skill + "\"";
+            return "{\"kind\":\"" + kind + "\",\"id\":\"" + id + "\"" + skillField +
+                   ",\"fps\":" + fps.ToString(CultureInfo.InvariantCulture) +
+                   ",\"frames\":" + frames.ToString(CultureInfo.InvariantCulture) +
+                   ",\"speed\":" + speed.ToString("F2", CultureInfo.InvariantCulture) + "}";
         }
 
         // A FIXED SPAN OF AN IDLE STAGE, for a status the enemies already carry.
@@ -707,9 +717,7 @@ namespace PrincesPalace.PlayModeTests
                 yield return null;
             }
 
-            File.WriteAllText(sink.TimingPath, string.Format(CultureInfo.InvariantCulture,
-                "{{\"kind\":\"{0}\",\"id\":\"{1}\",\"fps\":{2},\"frames\":{3},\"speed\":{4:F2}}}",
-                kind, id, Fps, frames, speed));
+            File.WriteAllText(sink.TimingPath, TimingJson(kind, id, null, Fps, frames, speed));
 
             outcome.Frames = frames;
         }
