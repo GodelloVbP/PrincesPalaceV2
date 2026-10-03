@@ -40,6 +40,8 @@ UNITY_KINDS = ("spell", "attack", "relic", "status")   # one GifBatchCaptureTest
 PY_KINDS = ("stance", "sheet")                         # no Unity at all
 KINDS = UNITY_KINDS + PY_KINDS + ("still",)            # still: a PlayMode capture class
 FORMATIONS = ("lone", "full")
+MAX_RACK = 3
+MAX_PARTY = 3
 CROPS = ("subject", "stage", "full")
 
 RESOURCES = os.path.join(ROOT, "Assets", "_Project", "Resources")
@@ -109,16 +111,46 @@ def aspect_size(aspect, height=ASPECT_HEIGHT):
     return int(round(height * int(m.group(1)) / int(m.group(2)))), height
 
 
-def normalize(raw, skills=None):
+def character_ids(content=None):
+    """{lowercase id or displayName: id}, so -Party shawn,odette reads the way the owner says it."""
+    out = {}
+    for c in content if content is not None else load_content("characters.json", "characters"):
+        out[c["id"].lower()] = c["id"]
+        if c.get("displayName"):
+            out[c["displayName"].lower()] = c["id"]
+    return out
+
+
+def csv_list(value):
+    """'a, b' or ['a', 'b'] -> ['a', 'b']; empties dropped."""
+    if isinstance(value, str):
+        # PowerShell joins an unquoted `a,b` argument bound to a [string] with a space.
+        value = re.split(r"[,\s]+", value)
+    return [str(v).strip() for v in (value or []) if str(v).strip()]
+
+
+def normalize(raw, skills=None, characters=None):
     """Fills every default and sorts the keys, so two requests that differ in
     any field never share a key (2.2)."""
     skills = skills if skills is not None else {s["id"]: s for s in load_content("skills.json", "skills")}
     kind = raw["kind"]
     raw_id = stance_actor(raw["id"]) if kind == "stance" else raw["id"]
+    # -Vs rat,treant,beetle is a formation in slot order (front first); one id
+    # keeps its meaning. The party and the target are the owner's words for
+    # characters, resolved to ids here so a key never depends on the spelling.
+    vs_list = csv_list(raw.get("vs")) or ["rat"]
+    party_in = csv_list(raw.get("party"))
+    target_in = str(raw.get("target") or "").strip().lower()
+    if party_in or target_in:
+        names = characters if characters is not None else character_ids()
+        party_in = [names.get(p.lower(), p) for p in party_in]
+        target_in = names.get(target_in, target_in)
     out = {
         "kind": kind,
         "id": raw_id,
-        "vs": raw.get("vs") or "rat",
+        "vs": ",".join(vs_list),
+        "party": ",".join(party_in),
+        "target": target_in,
         "formation": raw.get("formation") or "",
         "speed": float(raw.get("speed") or 1.0),
         "preStatus": raw.get("preStatus") or "",
@@ -138,12 +170,14 @@ def normalize(raw, skills=None):
     if kind not in UNITY_KINDS:
         # Python and still scenarios have no fight: the fight fields are pinned
         # so the key depends only on what the scenario is.
-        out.update({"vs": "", "formation": "", "speed": 1.0, "preStatus": "", "skill": "", "seconds": 0.0,
+        out.update({"vs": "", "party": "", "target": "", "formation": "", "speed": 1.0, "preStatus": "", "skill": "", "seconds": 0.0,
                     "width": 0, "height": 0, "repeat": 1, "darkness": 0.0})
         if not out["crop"]:
             out["crop"] = "subject" if kind == "stance" else "full"
         out["key"] = scenario_key(out)
         return dict(sorted(out.items()))
+    if len(vs_list) > 1 and not out["formation"]:
+        out["formation"] = "full"
     if not out["formation"]:
         # An all-target spell is only visible against a rack.
         aims_all = kind == "spell" and skills.get(out["id"], {}).get("targeting") == "AllEnemies"
@@ -160,7 +194,7 @@ def normalize(raw, skills=None):
 
 # Fields added after the first baseline; a default value stays out of the key
 # so every scenario recorded before them keeps its key.
-KEY_DEFAULTS = {"width": 0, "height": 0, "repeat": 1, "darkness": 0.0}
+KEY_DEFAULTS = {"width": 0, "height": 0, "repeat": 1, "darkness": 0.0, "party": "", "target": ""}
 
 
 def scenario_key(scenario):
@@ -228,6 +262,8 @@ def known_ids():
         "abilityPairs": [[e["id"], a["skillId"]] for e in enemies if e.get("spritePath")
                          for a in e.get("abilities", []) or [] if a["skillId"] in vfx_skills],
         "targeting": {s["id"]: s.get("targeting") or "" for s in skills},
+        "casters": {s["id"]: s.get("characterId") or "" for s in skills},
+        "characters": [c["id"] for c in load_content("characters.json", "characters")],
         "stance": stance_actors(),
         "sheet": sheet_folders(),
         "stillClasses": still_classes(),
@@ -239,6 +275,55 @@ def known_ids():
         "allRelics": [r["id"] for r in relics],
         "status": status_names(),
     }
+
+
+def aim_suffix(s):
+    """' party=... target=...' for a scenario that sets them, so two casts differing only in aim read apart."""
+    return "".join(" %s=%s" % (k, s[k]) for k in ("party", "target") if s.get(k))
+
+
+def formation_refusals(scenario, ids):
+    """The enemy rack, the party and the aimed target of a Unity scenario."""
+    out = []
+    foes = csv_list(scenario["vs"])
+    party = csv_list(scenario["party"])
+    target = scenario["target"]
+    kind = scenario["kind"]
+    if len(foes) > MAX_RACK:
+        out.append("vs lists %d enemies; the rack holds %d" % (len(foes), MAX_RACK))
+    if len(foes) > 1 and scenario["formation"] == "lone":
+        out.append("vs lists %d enemies, which is not a lone formation" % len(foes))
+    if len(foes) > 1 and kind != "spell":
+        out.append("a vs list is a spell's formation; %s fields one enemy (use -Formation full for three)" % kind)
+    if (party or target) and kind != "spell":
+        out.append("party and target aim a spell; %s has neither" % kind)
+        return out
+    if kind != "spell":
+        return out
+    known = ids.get("characters", [])
+    for member in party:
+        if known and member not in known:
+            out.append("party member '%s' is not a character; characters: %s" % (member, ", ".join(known)))
+    if len(set(party)) != len(party):
+        out.append("party names a character twice")
+    if len(party) > MAX_PARTY:
+        out.append("party lists %d characters; a squad is %d" % (len(party), MAX_PARTY))
+    caster = ids.get("casters", {}).get(scenario["id"], "")
+    if party and caster in known and party[0] != caster:
+        out.append("party leads with its caster: '%s' casts %s, so it goes first" % (caster, scenario["id"]))
+    aim = ids.get("targeting", {}).get(scenario["id"], "")
+    if not target:
+        return out
+    if aim == "SingleAlly":
+        if target not in (party or [caster]):
+            out.append("target '%s' is not in the party (%s)" % (target, ",".join(party) or caster))
+    elif aim in ("AllEnemies", "Self", "Party"):
+        out.append("%s aims at %s; it has no target to pick" % (scenario["id"], aim))
+    else:
+        rack = len(foes) if len(foes) > 1 else (3 if scenario["formation"] == "full" else 1)
+        if not target.isdigit() or not 1 <= int(target) <= rack:
+            out.append("target '%s' is not an enemy slot 1..%d (1 is the front)" % (target, rack))
+    return out
 
 
 def refusals(scenario, ids=None):
@@ -264,6 +349,7 @@ def refusals(scenario, ids=None):
             out.append("repeat casts a spell; %s has nothing to repeat" % kind)
         if not 0.0 <= scenario["darkness"] <= 1.0:
             out.append("darkness is an opacity from 0 to 1")
+        out.extend(formation_refusals(scenario, ids))
     if scenario["crop"] not in CROPS:
         out.append("crop '%s' is not one of %s" % (scenario["crop"], ", ".join(CROPS)))
     if kind in ("sheet", "still") and scenario["crop"] != "full":
@@ -303,8 +389,10 @@ def refusals(scenario, ids=None):
     elif kind == "status":
         if sid not in ids["status"]:
             out.append("status '%s' is not a StatusEffectType: %s" % (sid, ", ".join(ids["status"])))
-    if kind in ("spell", "relic", "status") and scenario["vs"] not in ids["enemies"]:
-        out.append("vs '%s' is not in enemies.json" % scenario["vs"])
+    if kind in ("spell", "relic", "status"):
+        for foe in csv_list(scenario["vs"]):
+            if foe not in ids["enemies"]:
+                out.append("vs '%s' is not in enemies.json" % foe)
     if scenario["preStatus"] and scenario["preStatus"] not in ids["status"]:
         out.append("preStatus '%s' is not a StatusEffectType" % scenario["preStatus"])
     return out
@@ -513,7 +601,8 @@ def cmd_prepare(args):
         raws = [{"kind": args.kind, "id": args.id, "vs": args.vs, "formation": args.formation,
                  "speed": args.speed, "preStatus": args.prestatus, "skill": args.skill,
                  "crop": args.crop, "seconds": args.seconds, "aspect": args.aspect,
-                 "repeat": args.repeat, "darkness": args.darkness}]
+                 "repeat": args.repeat, "darkness": args.darkness,
+                 "party": args.party, "target": args.target}]
         try:
             scenarios = [normalize(r) for r in raws]
         except ValueError as e:
@@ -782,11 +871,11 @@ def coverage_table(scenarios, outcomes, ids=None, skipped=(), gaps=(), manifest=
             lines.append("    %-6s %3d scenario(s), %d ok" % (kind, len(of_kind), sum(1 for s in of_kind if outcomes.get(s["key"]))))
     for s in scenarios:
         if not outcomes.get(s["key"]):
-            lines.append("    FAILED %-6s %s vs=%s %s x%g" % (s["kind"], s["id"], s["vs"] or "-", s["formation"] or "-", s["speed"]))
+            lines.append("    FAILED %-6s %s vs=%s %s x%g%s" % (s["kind"], s["id"], s["vs"] or "-", s["formation"] or "-", s["speed"], aim_suffix(s)))
     if len(scenarios) <= 12:
         for s in scenarios:
             if outcomes.get(s["key"]):
-                lines.append("    ok     %-6s %-22s vs=%-6s %-4s x%-4g" % (s["kind"], s["id"], s["vs"] or "-", s["formation"] or "-", s["speed"]))
+                lines.append("    ok     %-6s %-22s vs=%-6s %-4s x%-4g%s" % (s["kind"], s["id"], s["vs"] or "-", s["formation"] or "-", s["speed"], aim_suffix(s)))
 
     lines.append("  known but not covered:")
     pools = {"spell": ids.get("playerSpell", ids["spell"]), "attack": ids["attack"], "relic": ids["relic"],
@@ -998,6 +1087,8 @@ def main(argv=None):
     p.add_argument("--aspect", default="")
     p.add_argument("--repeat", type=int, default=1)
     p.add_argument("--darkness", type=float, default=0.0)
+    p.add_argument("--party", default="")
+    p.add_argument("--target", default="")
     p.add_argument("--request-id", default="")
     p.set_defaults(fn=cmd_prepare)
 

@@ -298,6 +298,16 @@ namespace PrincesPalace
             _forcedElement = string.IsNullOrWhiteSpace(element) ? null : element;
         }
 
+        // WHO THE FORCED PRESS CONFIRMS ON, when the fight's author cares: the
+        // one combatant, enemy or ally, the pick lands on. Null keeps the
+        // first-reachable / first-eligible rule. Consumed with the action. A
+        // target the cast refuses (out of reach, not eligible) falls back to
+        // that rule and says so in the log, so a capture of the wrong body is
+        // never silent.
+        private CombatantState _forcedTarget;
+
+        public void ForceFirstActionTarget(CombatantState target) => _forcedTarget = target;
+
         // The bark lines this fight has shown, newest last. Read by
         // ForcedFirstActionElementTests, which has to prove the forced path
         // pressed the element it was ASKED for rather than merely that it
@@ -317,6 +327,8 @@ namespace PrincesPalace
 
             string skillId = _forcedFirstAction;
             string element = _forcedElement;
+            var aimed = _forcedTarget;
+            _forcedTarget = null;
 
             // CONSUMED BEFORE THE PRESS, not after. A skill the caster cannot
             // afford leaves OnRowPressed refusing every frame otherwise, which
@@ -412,20 +424,26 @@ namespace PrincesPalace
                     // A seat pick presses its first stop, which is what the
                     // pad's Submit would press too.
                     if (_menu.IsPickingSeat) ConfirmSeat(FocusedSeat());
-                    else ConfirmTarget(TargetSide.Allies, NextEligibleAlly());
+                    else ConfirmTarget(TargetSide.Allies, NextEligibleAlly(aimed));
                 }
             }
-            else OnEnemyPressed(FirstReachableEnemyIndex());
+            else OnEnemyPressed(FirstReachableEnemyIndex(aimed));
         }
 
         // The first squadmate this cast will accept that it has not already
         // been given. Only the preview harness picks for the player -- a real
         // cast is refused outright for a null target (AUDIT #147) -- so the
         // "not already picked" half lives here rather than in the session.
-        private CombatantState NextEligibleAlly()
+        private CombatantState NextEligibleAlly(CombatantState aimed)
         {
             var skill = SelectedSkill();
             var eligible = _session.EligibleAllies(_session.Current, skill);
+            if (aimed != null)
+            {
+                if (eligible.Contains(aimed) && !_menu.HasPicked(aimed)) return aimed;
+                Debug.LogWarning($"[FightController] forced target {aimed.Name} is not an eligible ally; taking the first one.");
+            }
+
             foreach (var ally in eligible)
             {
                 if (!_menu.HasPicked(ally)) return ally;
@@ -437,10 +455,18 @@ namespace PrincesPalace
         // The forced press only: the first living enemy the open cast's reach accepts, so
         // a rear-reach skill is pressed on a seat it can hit. Real input keeps
         // FirstLivingEnemyIndex (the plate the pointer or pad sits on decides).
-        private int FirstReachableEnemyIndex()
+        private int FirstReachableEnemyIndex(CombatantState aimed)
         {
             var enemies = Enemies;
             var reach = TargetingReach();
+            if (aimed != null)
+            {
+                int at = -1;
+                for (int i = 0; i < enemies.Count; i++) if (ReferenceEquals(enemies[i], aimed)) at = i;
+                if (at >= 0 && enemies[at].IsAlive && _session.CanReachEnemy(_session.Current, reach, enemies[at])) return at;
+                Debug.LogWarning($"[FightController] forced target {aimed.Name} is not reachable by this cast; taking the first reachable enemy.");
+            }
+
             for (int i = 0; i < enemies.Count; i++)
             {
                 if (enemies[i] != null && enemies[i].IsAlive &&

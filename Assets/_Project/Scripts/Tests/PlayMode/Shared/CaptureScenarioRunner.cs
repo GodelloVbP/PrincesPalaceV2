@@ -45,6 +45,13 @@ namespace PrincesPalace.PlayModeTests
         public int repeat = 1;
         // Round-darkness opacity the fight is dressed with; 0 is none.
         public float darkness;
+        // Comma list of character ids standing in the party, caster first; empty
+        // keeps the plan's own squad. `vs` is likewise a comma list of enemy ids
+        // in slot order.
+        public string party = "";
+        // A spell's pick: a party member's id (ally spells) or an enemy slot
+        // number, 1 the front (single-enemy spells). Empty keeps the first.
+        public string target = "";
     }
 
     [Serializable]
@@ -86,6 +93,10 @@ namespace PrincesPalace.PlayModeTests
         // old rule, where a count given by the caller fields the art
         // roster and Versus applies only to the plan's own count.
         public bool VersusFillsFormation;
+        // Character ids of the party, caster first; null or empty keeps the plan's squad.
+        public IReadOnlyList<string> Party;
+        // A party member's id or a 1-based enemy slot; empty keeps the first.
+        public string Target;
     }
 
     // Where each frame goes, and the one file beside them. The spell test
@@ -153,6 +164,11 @@ namespace PrincesPalace.PlayModeTests
         // StandTheFightUp.
         public float Darkness;
 
+        // The body the cast is aimed at when the scenario names one (ally spell
+        // on a squadmate, single-enemy spell on a back-rank seat); null keeps
+        // the first. Set by StandTheFightUp from the request's Target.
+        public CombatantState AimedTarget { get; private set; }
+
         // The presentation a darkened capture binds: a round counter (the
         // darkness is a round-limit layer, HasDarkness) held at one opacity.
         internal static FightRoundPresentation DarknessPresentation(float darkness) =>
@@ -197,18 +213,26 @@ namespace PrincesPalace.PlayModeTests
             // takes the first one the reach accepts (FirstReachableEnemyIndex).
             string versus = request.Versus;
             bool hasVersus = !string.IsNullOrWhiteSpace(versus);
+            // A list is the formation itself, slot 1 first: mixed bodies, any count.
+            var rack = hasVersus
+                ? versus.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(v => v.Trim()).ToList()
+                : new List<string>();
             bool needsDepth = plan.Skill != null && !plan.Skill.Reach.Allows(0);
             int depth = needsDepth ? 3 : 1;
 
             List<string> fielded;
-            if (hasVersus && request.VersusFillsFormation)
+            if (rack.Count > 1)
+            {
+                fielded = rack;
+            }
+            else if (hasVersus && request.VersusFillsFormation)
             {
                 int count = request.Enemies ?? Mathf.Max(depth, PreviewFight.EnemyCountFor(plan.Formation, 3));
-                fielded = Enumerable.Repeat(versus.Trim(), count).ToList();
+                fielded = Enumerable.Repeat(rack[0], count).ToList();
             }
             else if (hasVersus && request.Enemies == null)
             {
-                fielded = Enumerable.Repeat(versus.Trim(), depth).ToList();
+                fielded = Enumerable.Repeat(rack[0], depth).ToList();
             }
             else
             {
@@ -219,8 +243,18 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsNotEmpty(fielded, "no enemies in content to cast at");
 
+            // THE PARTY IS THE REAL ONE: the adapter seats it in list order (front
+            // rank first) the way a run does. The caster must lead, because the
+            // adapter hands the preview skill to the first member and Prepare
+            // fills that member's pools.
+            var party = request.Party != null && request.Party.Count > 0
+                ? new List<string>(request.Party)
+                : new List<string>(plan.Party);
+            Assert.AreEqual(plan.CasterId, party[0],
+                "the party leads with the caster '" + plan.CasterId + "', got '" + party[0] + "'");
+
             var built = FightEncounterAdapter.Build(
-                new List<string>(plan.Party),
+                party,
                 fielded,
                 new Domain.Rng.SeededRandom(Seed),
                 relicIds: null,
@@ -231,8 +265,29 @@ namespace PrincesPalace.PlayModeTests
 
             PreviewFight.Prepare(built, plan);
             ApplyPreStatus(built, request.PreStatus);
+            AimedTarget = ResolveTarget(built, request.Target);
 
             yield return BindAndSettle(built);
+        }
+
+        // The combatant a scenario's Target names: a party member by character id
+        // (PartyIds runs parallel to Party) or an enemy by 1-based slot.
+        internal static CombatantState ResolveTarget(FightEncounterAdapter.BuiltFight built, string target)
+        {
+            if (string.IsNullOrWhiteSpace(target)) return null;
+            target = target.Trim();
+
+            if (int.TryParse(target, out int slot))
+            {
+                var foes = built.Session.Encounter.Enemies;
+                Assert.IsTrue(slot >= 1 && slot <= foes.Count, "enemy slot " + slot + " of " + foes.Count);
+                return foes[slot - 1];
+            }
+
+            int at = -1;
+            for (int i = 0; i < built.PartyIds.Count; i++) if (built.PartyIds[i] == target) at = i;
+            Assert.GreaterOrEqual(at, 0, "'" + target + "' is not in the party");
+            return built.Party[at];
         }
 
         // THE HERO A NON-SPELL SCENARIO FIGHTS AS: Shawn when content has him,
@@ -421,6 +476,7 @@ namespace PrincesPalace.PlayModeTests
                                  skill.Targeting == SkillTargeting.AllEnemies;
 
             var beat = new CombatBeat { Vfx = ShippedVfx(spellId) };
+            bool aimedAtFoe = AimedTarget != null && foes.Contains(AimedTarget);
             if (enemyOwned && aimsAtEnemies)
             {
                 beat.Actor = foes[0];
@@ -429,7 +485,7 @@ namespace PrincesPalace.PlayModeTests
             else
             {
                 beat.Actor = caster;
-                beat.Target = aimsAtEnemies ? foes[0] : caster;
+                beat.Target = AimedTarget ?? (aimsAtEnemies ? foes[0] : caster);
 
                 // The other end of a swap: the second party member.
                 if (skill.Effect == SkillEffect.SwapAllies)
@@ -509,6 +565,7 @@ namespace PrincesPalace.PlayModeTests
                 else
                 {
                     fight.ForceFirstAction(spellId);
+                    if (AimedTarget != null) fight.ForceFirstActionTarget(AimedTarget);
 
                     float armed = Time.realtimeSinceStartup;
                     while (!fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;

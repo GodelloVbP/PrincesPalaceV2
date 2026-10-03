@@ -106,6 +106,44 @@ class CaptureOptionTests(unittest.TestCase):
         self.assertIn("nothing to repeat", gif.refusals(relic, self.IDS)[0])
 
 
+class FormationAndPartyTests(unittest.TestCase):
+    CHARS = {"sheep": "sheep", "shawn": "sheep", "owl": "owl", "odette": "owl", "bear": "bear", "bjorn": "bear"}
+    IDS = dict(RefusalTests.IDS, characters=["sheep", "owl", "bear"], enemies=["rat", "treant", "beetle"], spell=["bolt", "aegis", "wave"], allSkills=["bolt", "aegis", "wave"],
+               casters={"bolt": "sheep", "aegis": "sheep"},
+               targeting={"bolt": "", "aegis": "SingleAlly", "wave": "AllEnemies"})
+
+    def norm(self, **extra):
+        return gif.normalize(dict({"kind": "spell", "id": "bolt"}, **extra), SKILLS, self.CHARS)
+
+    def test_names_resolve_to_ids_and_a_list_is_a_formation(self):
+        s = self.norm(party="Shawn, odette bjorn", target="Odette", vs="rat,treant beetle")
+        self.assertEqual((s["party"], s["target"], s["vs"], s["formation"]),
+                         ("sheep,owl,bear", "owl", "rat,treant,beetle", "full"))
+
+    def test_defaults_leave_old_keys_alone_and_new_fields_change_them(self):
+        base = self.norm()
+        self.assertEqual((base["party"], base["target"], base["vs"]), ("", "", "rat"))
+        for change in ({"party": "shawn,odette"}, {"target": "2"}, {"vs": "rat,treant"}):
+            self.assertNotEqual(base["key"], self.norm(**change)["key"], change)
+
+    def test_refusals(self):
+        r = lambda **kw: gif.refusals(self.norm(**kw), self.IDS)
+        self.assertEqual(r(vs="rat,treant,beetle", target="3"), [])
+        self.assertIn("slot", r(vs="rat,treant", target="3")[0])
+        self.assertIn("rack holds", r(vs="rat,rat,rat,rat")[0])
+        self.assertIn("not a lone", r(vs="rat,treant", formation="lone")[0])
+        self.assertIn("leads with its caster", r(party="odette,shawn")[0])
+        self.assertIn("not a character", r(party="shawn,nobody")[0])
+        self.assertIn("twice", r(party="shawn,shawn")[0])
+        aegis = lambda **kw: gif.refusals(gif.normalize(dict({"kind": "spell", "id": "aegis"}, **kw), SKILLS, self.CHARS), self.IDS)
+        self.assertEqual(aegis(party="shawn,odette,bear", target="odette"), [])
+        self.assertIn("not in the party", aegis(party="shawn,odette", target="bjorn")[0])
+        wave = gif.normalize({"kind": "spell", "id": "wave", "target": "1"}, SKILLS, self.CHARS)
+        self.assertIn("no target to pick", gif.refusals(wave, self.IDS)[0])
+        relic = gif.normalize({"kind": "relic", "id": "bell", "vs": "rat,treant"}, SKILLS, self.CHARS)
+        self.assertIn("vs list", gif.refusals(relic, self.IDS)[0])
+
+
 class IdentityTests(unittest.TestCase):
     def test_manifest_diff_honours_globs_and_one_sided_paths(self):
         a = {"x/a.txt": "1", "gen/b.asset": "2", "only_a": "3"}

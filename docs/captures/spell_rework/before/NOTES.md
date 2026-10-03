@@ -50,3 +50,15 @@ at the caster, and the party is Shawn alone).
   opacity through `FightController.Bind`; `roundDarkness` itself is untouched.
   It shows the "Round 1" counter (HasDarkness needs a round limit) but not
   Bell's backdrop, fog overlay or toll sound.
+- Mixed formation, ally and back-rank aims (closing the S0 gaps): `-Vs rat,treant,beetle`
+  fields that rack in slot order (any list of up to 3); `-Party shawn,odette,bjorn`
+  seats the real squad (caster first, list order is rank, front first);
+  `-Target odette` / `-Target 3` aim the forced cast at an ally or at enemy slot 3
+  through `FightController.ForceFirstActionTarget`. Recorded:
+  `court_of_whispers_rat-treant-beetle_full_1x` (beetle sits behind the treant),
+  `mud_burst_rat-treant-beetle_target3_1x` (burst lands on the beetle behind the treant),
+  `gale_scythe_rat-treant_1x` (two enemies), `gilded_aegis_party3_on_{odette,bjorn,shawn}_1x`
+  and `borrowed_moment_party3_on_{odette,bjorn,shawn}_1x`. Ward and Hasten are
+  presentation-only (the preview stage refuses them), so the HUD shows Odette's
+  turn menu and no ward/haste status appears; only the vfx on the chosen body is real.
+  The stage crop cuts Bjorn at the left edge on the aegis-on-Bjorn shot.

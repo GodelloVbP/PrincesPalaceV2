@@ -113,24 +113,58 @@
       "kind": "spell",
       "id": "censer_of_embers",
       "vs": "treant"
-    }
-  ],
-  "notCovered": [
-    {
-      "name": "court_of_whispers",
-      "why": "crowded mixed formation (the recorder fields one enemy id)"
     },
     {
-      "name": "mud_burst",
-      "why": "back-rank target (no way to pick the target slot)"
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat,treant,beetle"
     },
     {
-      "name": "gale_scythe",
-      "why": "two-enemy formation (formation is lone or full)"
+      "kind": "spell",
+      "id": "mud_burst",
+      "vs": "rat,treant,beetle",
+      "target": "3"
     },
     {
-      "name": "gilded_aegis, borrowed_moment",
-      "why": "on Odette, on Bjorn (the cast is aimed at the caster)"
+      "kind": "spell",
+      "id": "gale_scythe",
+      "vs": "rat,treant"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "odette"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "bjorn"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "shawn"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "odette"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "bjorn"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "shawn"
     }
   ]
 }

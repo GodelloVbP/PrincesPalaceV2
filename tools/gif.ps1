@@ -11,6 +11,8 @@ param(
     [string]$Aspect = "",
     [int]$Repeat = 1,
     [double]$Darkness = 0,
+    [string]$Party = "",
+    [string]$Target = "",
     [string]$Manifest = "",
     [string[]]$Compare = @(),
     [string]$AllowDiff = "",
@@ -25,6 +27,9 @@ param(
 #   tools/gif.ps1 spell crownfall [-Vs treant] [-Formation full] [-Speed 1.5] [-PreStatus Poison]
 #   tools/gif.ps1 spell court_of_whispers -Aspect 4:3     (1440x1080 canvas, whole frame)
 #   tools/gif.ps1 spell court_of_whispers -Repeat 5 -Speed 1.5   (five casts in one fight, battle pacing between, one GIF)
+#   tools/gif.ps1 spell court_of_whispers -Vs rat,treant,beetle   (a mixed formation, slot 1 first)
+#   tools/gif.ps1 spell gilded_aegis -Party shawn,odette,bjorn -Target odette   (an ally spell on a squadmate)
+#   tools/gif.ps1 spell mud_burst -Vs rat,treant,beetle -Target 3   (a single-target spell on enemy slot 3)
 #   tools/gif.ps1 spell court_of_whispers -Darkness 0.9   (the fight dressed as Bell in the Fog's round darkness at that opacity)
 #   tools/gif.ps1 attack beetle [-Skill barrel_roll]   (default: the plain attack)
 #   tools/gif.ps1 relic toll_of_the_flock
@@ -98,7 +103,8 @@ if ($Prune -ge 0) {
 if (-not $Manifest -and (-not $Kind -or -not $Id)) {
     Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
     Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism]"
-    Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]"
+    Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]
+                     [-Party shawn,odette,bjorn] [-Target <ally|enemy slot>]"
     Write-Host "       tools/gif.ps1 -Manifest <name>   |   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]   |   tools/gif.ps1 -Prune <days>"
     exit 1
 }
@@ -292,7 +298,8 @@ function Invoke-CaptureRun {
         $prepArgs = @("prepare", $Kind, $Id, "--vs=$Vs", "--formation=$Formation",
             "--speed=$($Speed.ToString($inv))", "--prestatus=$PreStatus", "--skill=$Skill",
             "--crop=$Crop", "--seconds=$($Seconds.ToString($inv))",
-            "--aspect=$Aspect", "--repeat=$Repeat", "--darkness=$($Darkness.ToString($inv))")
+            "--aspect=$Aspect", "--repeat=$Repeat", "--darkness=$($Darkness.ToString($inv))",
+            "--party=$Party", "--target=$Target")
     }
     $py = Get-PythonExe
     $prepOut = & $py $GifPy @prepArgs

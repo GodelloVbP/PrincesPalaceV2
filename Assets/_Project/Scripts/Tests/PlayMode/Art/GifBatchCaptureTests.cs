@@ -211,6 +211,8 @@ namespace PrincesPalace.PlayModeTests
                         PreStatus = s.preStatus,
                         Enemies = full ? CaptureScenarioRunner.FullFormation : (int?)null,
                         VersusFillsFormation = full,
+                        Party = s.party.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries),
+                        Target = s.target,
                     });
                     if (s.repeat > 1) yield return runner.RecordRepeatedCast(s.id, s.repeat, s.speed, sink, outcome);
                     else yield return runner.RecordCast(s.id, relic: false, s.speed, sink, outcome);
