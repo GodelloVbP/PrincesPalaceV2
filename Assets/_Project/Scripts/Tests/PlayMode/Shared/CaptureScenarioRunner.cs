@@ -130,8 +130,6 @@ namespace PrincesPalace.PlayModeTests
         // FightBootstrap.FullFormationCount: three bodies, the whole rack.
         public const int FullFormation = 3;
 
-        public bool FreezeBreath { get; set; }
-
         public FightController Fight { get; private set; }
         public FightBeatPlayer Beats { get; private set; }
         public Canvas Canvas { get; private set; }
@@ -260,12 +258,6 @@ namespace PrincesPalace.PlayModeTests
             // scene loads they draw the same phases (docs/PLAN_GIF_CAPTURE.md 2.3).
             UnityEngine.Random.InitState((int)Seed);
 
-            // The idle breath integrates Time.unscaledDeltaTime, which a
-            // captureFramerate does not make a fixed step, so a breathing figure
-            // differs between two runs. A GIF batch freezes it; the spell test
-            // keeps the breath its frames have always shown.
-            if (FreezeBreath) FightController.BreathSpeedMultiplier = 0f;
-
             // A KNOWN TEARDOWN LOG, TOLERATED ACROSS THE SCENE SWAP AND
             // NOWHERE ELSE. Loading Fight over a Fight disables the outgoing
             // one, and FightBeatPlayer.OnDisable -> EndFight -> Flush ->
@@ -321,6 +313,19 @@ namespace PrincesPalace.PlayModeTests
             // shake offsets of the cast about to be recorded draw from the same
             // stream.
             UnityEngine.Random.InitState((int)Seed);
+
+            // THE CAST'S CLOCK COUNTS FROM HERE, not from engine start. A layer
+            // is drawn when Now() passes start + offset, and authored offsets
+            // are whole capture frames (0.6 s is exactly frame 36), so the
+            // comparison sits on a float boundary. Time.time is the absolute
+            // engine clock and how many frames the scene load took varies, which
+            // moved the rounding and showed a layer one frame early or late in
+            // one of two recordings of the same scenario. From here to the cast
+            // the frame count is fixed, so the same instants round the same way.
+            // Time.timeAsDouble keeps timeScale and hit-stop stopping the clock
+            // exactly as Time.time does.
+            double clockBase = Time.timeAsDouble;
+            SpellPerformancePlayer.ClockOverride = () => (float)(Time.timeAsDouble - clockBase);
         }
 
         private static void ApplyPreStatus(FightEncounterAdapter.BuiltFight built, string preStatus)
@@ -736,6 +741,7 @@ namespace PrincesPalace.PlayModeTests
             Time.captureFramerate = 0;
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             FightController.BreathSpeedMultiplier = 1f;
+            SpellPerformancePlayer.ClockOverride = null;
             TestGlobals.ResetAll();
         }
     }

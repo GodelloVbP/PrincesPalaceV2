@@ -185,7 +185,7 @@ namespace PrincesPalace.PlayModeTests
             string frames = Path.Combine(dir, "frames");
             Directory.CreateDirectory(frames);
 
-            var runner = new CaptureScenarioRunner { FreezeBreath = true };
+            var runner = new CaptureScenarioRunner();
             var sink = new CaptureSink
             {
                 FramePath = frame => Path.Combine(frames, string.Format("f{0:0000}.png", frame)),

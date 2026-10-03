@@ -4,11 +4,13 @@
 tools/gif.ps1 owns the Unity launch; everything that needs no Unity lives here
 so it can be tested alone (tools/gif_test.py):
 
-    prepare   normalize a request into scenarios, refuse unknown ids, make the
-              immutable run directory, write request.json, identity.json and
-              manifest.json into it
-    finish    turn the frames Unity wrote into anim.gif / strip.png and write
-              scenario.json, latest.json and the coverage table
+    prepare   normalize a request (or a named manifest, tools/gif_manifests/)
+              into scenarios, refuse unknown ids, make the immutable run
+              directory, write request.json, unity_request.json, identity.json
+              and manifest.json into it
+    finish    turn the frames Unity wrote into anim.gif / strip.png, build the
+              stance and sheet GIFs (no Unity), collect the still PNGs, and
+              write scenario.json, latest.json and the coverage table
     compare   two run directories: content-manifest eligibility (2.6), then
               frame counts and per-frame pixel differences
     framediff two folders of PNGs, for the extraction's preservation gate
@@ -34,9 +36,29 @@ STATUS_SOURCE = os.path.join(ROOT, "Assets", "_Project", "Scripts", "Domain", "C
 RUNS = os.path.join(TOOLS, "screenshots", "gif", "runs")
 LATEST = os.path.join(TOOLS, "screenshots", "gif", "latest.json")
 
-KINDS = ("spell", "attack", "relic", "status")
+UNITY_KINDS = ("spell", "attack", "relic", "status")   # one GifBatchCaptureTests boot
+PY_KINDS = ("stance", "sheet")                         # no Unity at all
+KINDS = UNITY_KINDS + PY_KINDS + ("still",)            # still: a PlayMode capture class
 FORMATIONS = ("lone", "full")
 CROPS = ("subject", "stage", "full")
+
+RESOURCES = os.path.join(ROOT, "Assets", "_Project", "Resources")
+PLAYMODE_TESTS = os.path.join(ROOT, "Assets", "_Project", "Scripts", "Tests", "PlayMode")
+MANIFESTS = os.path.join(TOOLS, "gif_manifests")
+
+# The stance GIF shows each key pose this long, once round (plan 2.2).
+STANCE_MS = 400
+STANCE_ORDER = ("idle", "attack", "cast", "hurt", "defeated", "victory")
+STANCE_PAD = 24
+ALPHA_THRESHOLD = 8
+BACKDROP = (24, 26, 32)
+
+# A sheet GIF plays at the fps of the layer that uses the folder; a folder no
+# sprite layer names has no authored rate, so this is stated and warned about.
+SHEET_DEFAULT_FPS = 12.0
+
+# The baseline manifest's spell matrix (plan 2.9).
+SELF_SIDE = ("Self", "Party", "SingleAlly")
 
 # The stage is StageCaptureRig's crop: FightStageAnchors.StageSize (1700x600)
 # centred in the 1920x1080 reference canvas.
@@ -81,9 +103,10 @@ def normalize(raw, skills=None):
     any field never share a key (2.2)."""
     skills = skills if skills is not None else {s["id"]: s for s in load_content("skills.json", "skills")}
     kind = raw["kind"]
+    raw_id = stance_actor(raw["id"]) if kind == "stance" else raw["id"]
     out = {
         "kind": kind,
-        "id": raw["id"],
+        "id": raw_id,
         "vs": raw.get("vs") or "rat",
         "formation": raw.get("formation") or "",
         "speed": float(raw.get("speed") or 1.0),
@@ -92,6 +115,14 @@ def normalize(raw, skills=None):
         "crop": raw.get("crop") or "",
         "seconds": float(raw.get("seconds") or 0.0),
     }
+    if kind not in UNITY_KINDS:
+        # Python and still scenarios have no fight: the fight fields are pinned
+        # so the key depends only on what the scenario is.
+        out.update({"vs": "", "formation": "", "speed": 1.0, "preStatus": "", "skill": "", "seconds": 0.0})
+        if not out["crop"]:
+            out["crop"] = "subject" if kind == "stance" else "full"
+        out["key"] = scenario_key(out)
+        return dict(sorted(out.items()))
     if not out["formation"]:
         # An all-target spell is only visible against a rack.
         aims_all = kind == "spell" and skills.get(out["id"], {}).get("targeting") == "AllEnemies"
@@ -112,12 +143,68 @@ def scenario_key(scenario):
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:10]
 
 
+def stance_actors(resources=RESOURCES):
+    """'Characters/<id>' and 'Enemies/<id>' for every folder holding an idle still."""
+    out = []
+    for root in ("Characters", "Enemies"):
+        base = os.path.join(resources, root)
+        if not os.path.isdir(base):
+            continue
+        for name in sorted(os.listdir(base)):
+            if os.path.isfile(os.path.join(base, name, "idle.png")):
+                out.append("%s/%s" % (root, name))
+    return out
+
+
+def stance_actor(raw_id, resources=RESOURCES):
+    """'beetle' -> 'Enemies/beetle'; a full 'Characters/sheep' is kept."""
+    raw_id = raw_id.replace("\\", "/").strip("/")
+    if "/" in raw_id:
+        return raw_id
+    for root in ("Enemies", "Characters"):
+        if os.path.isdir(os.path.join(resources, root, raw_id)):
+            return "%s/%s" % (root, raw_id)
+    return raw_id
+
+
+def sheet_folders(resources=RESOURCES):
+    base = os.path.join(resources, "Spells")
+    if not os.path.isdir(base):
+        return []
+    out = []
+    for name in sorted(os.listdir(base)):
+        folder = os.path.join(base, name)
+        if os.path.isdir(folder) and any(f.lower().endswith(".png") for f in os.listdir(folder)):
+            out.append(name)
+    return out
+
+
+def still_classes(tests=PLAYMODE_TESTS):
+    """Every PlayMode capture class, by class name (the file stem)."""
+    out = []
+    for _folder, _dirs, files in os.walk(tests):
+        for name in files:
+            if name.endswith("CaptureTests.cs"):
+                out.append(name[:-3])
+    return sorted(out)
+
+
 def known_ids():
     skills = load_content("skills.json", "skills")
     enemies = load_content("enemies.json", "enemies")
     relics = load_content("relics.json", "relics")
+    enemy_owned = {a["skillId"] for e in enemies for a in e.get("abilities", []) or []}
+    vfx_skills = {s["id"] for s in skills if s.get("vfx")}
     return {
         "spell": [s["id"] for s in skills if s.get("vfx")],
+        "playerSpell": [s["id"] for s in skills if s.get("vfx") and s["id"] not in enemy_owned],
+        "enemyVfxAbility": sorted(s["id"] for s in skills if s.get("vfx") and s["id"] in enemy_owned),
+        "abilityPairs": [[e["id"], a["skillId"]] for e in enemies if e.get("spritePath")
+                         for a in e.get("abilities", []) or [] if a["skillId"] in vfx_skills],
+        "targeting": {s["id"]: s.get("targeting") or "" for s in skills},
+        "stance": stance_actors(),
+        "sheet": sheet_folders(),
+        "stillClasses": still_classes(),
         "allSkills": [s["id"] for s in skills],
         "attack": [e["id"] for e in enemies if e.get("spritePath")],
         "enemies": [e["id"] for e in enemies],
@@ -135,13 +222,30 @@ def refusals(scenario, ids=None):
     kind, sid = scenario["kind"], scenario["id"]
     out = []
     if kind not in KINDS:
-        return ["kind '%s' is not one of %s (stance/sheet/still arrive in phase B)" % (kind, ", ".join(KINDS))]
-    if scenario["formation"] not in FORMATIONS:
-        out.append("formation '%s' is not lone or full" % scenario["formation"])
+        return ["kind '%s' is not one of %s" % (kind, ", ".join(KINDS))]
+    if kind in UNITY_KINDS:
+        if scenario["formation"] not in FORMATIONS:
+            out.append("formation '%s' is not lone or full" % scenario["formation"])
+        if scenario["speed"] <= 0:
+            out.append("speed must be positive")
     if scenario["crop"] not in CROPS:
         out.append("crop '%s' is not one of %s" % (scenario["crop"], ", ".join(CROPS)))
-    if scenario["speed"] <= 0:
-        out.append("speed must be positive")
+    if kind in ("sheet", "still") and scenario["crop"] != "full":
+        out.append("%s has no stage to crop; crop is always full" % kind)
+    if kind == "stance":
+        if scenario["crop"] == "stage":
+            out.append("stance has no stage; crop is subject or full")
+        if sid not in ids.get("stance", []):
+            out.append("stance actor '%s' has no stills; actors: %s" % (sid, ", ".join(ids.get("stance", []))))
+    elif kind == "sheet":
+        if sid not in ids.get("sheet", []):
+            out.append("no frame folder Resources/Spells/%s" % sid)
+    elif kind == "still":
+        cls, _, name = sid.partition("/")
+        if not name.lower().endswith(".png"):
+            out.append("still id is '<CaptureClass>/<file>.png', got '%s'" % sid)
+        if cls not in ids.get("stillClasses", []):
+            out.append("'%s' is not a PlayMode capture class; classes: %s" % (cls, ", ".join(ids.get("stillClasses", []))))
     if kind == "spell":
         if sid not in ids["allSkills"]:
             out.append("spell '%s' is not in skills.json" % sid)
@@ -267,17 +371,111 @@ def read_json(path, default=None):
         return default
 
 
+# ---- manifests (2.2, 2.9) ----------------------------------------------------
+
+def spell_matrix(spell_id, targeting, vs_list, formations, speeds):
+    """(scenarios, skipped) for one spell across the baseline dimensions.
+
+    A combination is skipped, and named in the coverage table, when the spell's
+    targeting makes it show nothing new:
+      AllEnemies  needs a rack, so `lone` is skipped.
+      Self, Party, SingleAlly  hit the caster's own side; the enemy and the
+        formation do not change what is drawn, so only the first enemy, lone.
+    """
+    kept, skipped = [], []
+    for vs in vs_list:
+        for formation in formations:
+            for speed in speeds:
+                combo = {"vs": vs, "formation": formation, "speed": float(speed)}
+                reason = ""
+                if targeting == "AllEnemies" and formation == "lone":
+                    reason = "an all-enemy spell needs a rack"
+                elif targeting in SELF_SIDE and (vs != vs_list[0] or formation != "lone"):
+                    reason = "%s targets its own side; enemy and formation do not change the picture" % targeting
+                if reason:
+                    skipped.append(dict(combo, spell=spell_id, reason=reason))
+                else:
+                    kept.append(combo)
+    return kept, skipped
+
+
+def load_manifest(name):
+    path = name if os.path.isfile(name) else os.path.join(MANIFESTS, name + ".json")
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def expand_manifest(spec, ids=None, skills=None):
+    """A manifest's dimensions into normalized scenarios.
+
+    Returns {"scenarios": [...], "skipped": [...], "gaps": [...]}: the skipped
+    list is spell combinations a targeting rule removed, the gaps are the
+    manifest's own `notCovered` entries (cases that do not exist yet).
+    """
+    ids = ids or known_ids()
+    skills = skills if skills is not None else {s["id"]: s for s in load_content("skills.json", "skills")}
+    raws, skipped = [], []
+
+    block = spec.get("spells")
+    if block:
+        chosen = block.get("ids", "all")
+        spell_ids = ids["playerSpell"] if chosen == "all" else list(chosen)
+        vs_list = block.get("vs", ["rat", "treant"])
+        formations = block.get("formations", ["lone", "full"])
+        speeds = block.get("speeds", [1.0, 1.5])
+        for sid in spell_ids:
+            kept, dropped = spell_matrix(sid, ids["targeting"].get(sid, ""), vs_list, formations, speeds)
+            skipped.extend(dropped)
+            for combo in kept:
+                raws.append(dict(combo, kind="spell", id=sid))
+
+    if spec.get("abilities") == "all":
+        for enemy, skill_id in ids["abilityPairs"]:
+            raws.append({"kind": "attack", "id": enemy, "skill": skill_id})
+
+    for kind, key, pool in (("attack", "attacks", "attack"), ("relic", "relics", "relic"),
+                            ("status", "statuses", "status"), ("stance", "stances", "stance"),
+                            ("sheet", "sheets", "sheet")):
+        chosen = spec.get(key)
+        if not chosen:
+            continue
+        for sid in (ids[pool] if chosen == "all" else list(chosen)):
+            raws.append({"kind": kind, "id": sid})
+
+    for entry in spec.get("stills", []) or []:
+        for name in entry["files"]:
+            raws.append({"kind": "still", "id": "%s/%s" % (entry["class"], name)})
+
+    scenarios, seen = [], set()
+    for raw in raws:
+        scenario = normalize(raw, skills)
+        if scenario["key"] not in seen:
+            seen.add(scenario["key"])
+            scenarios.append(scenario)
+    return {"scenarios": scenarios, "skipped": skipped, "gaps": list(spec.get("notCovered", []) or [])}
+
+
 # ---- prepare -----------------------------------------------------------------
 
 def cmd_prepare(args):
-    raws = [{"kind": args.kind, "id": args.id, "vs": args.vs, "formation": args.formation,
-             "speed": args.speed, "preStatus": args.prestatus, "skill": args.skill,
-             "crop": args.crop, "seconds": args.seconds}]
     ids = known_ids()
-    scenarios = [normalize(r) for r in raws]
+    skipped, gaps, manifest_name = [], [], ""
+    if args.manifest:
+        spec = load_manifest(args.manifest)
+        expanded = expand_manifest(spec, ids)
+        scenarios, skipped, gaps = expanded["scenarios"], expanded["skipped"], expanded["gaps"]
+        manifest_name = spec.get("name") or args.manifest
+    else:
+        if not args.kind or not args.id:
+            print("prepare needs <kind> <id> or --manifest <name>", file=sys.stderr)
+            return 2
+        raws = [{"kind": args.kind, "id": args.id, "vs": args.vs, "formation": args.formation,
+                 "speed": args.speed, "preStatus": args.prestatus, "skill": args.skill,
+                 "crop": args.crop, "seconds": args.seconds}]
+        scenarios = [normalize(r) for r in raws]
     problems = [(s["kind"], s["id"], m) for s in scenarios for m in refusals(s, ids)]
     if problems:
-        for kind, sid, message in problems:
+        for kind, sid, message in problems[:30]:
             print("REFUSED %s %s: %s" % (kind, sid, message), file=sys.stderr)
         return 2
 
@@ -291,8 +489,17 @@ def cmd_prepare(args):
     ident = identity(manifest=manifest)
     write_json_atomic(os.path.join(run_dir, "identity.json"), ident)
     write_json_atomic(os.path.join(run_dir, "request.json"),
-                      {"requestId": request_id, "outDir": run_dir, "scenarios": scenarios})
+                      {"requestId": request_id, "outDir": run_dir, "scenarios": scenarios,
+                       "manifest": manifest_name, "skipped": skipped, "gaps": gaps})
+    # GifBatchCaptureTests runs every scenario of the file it is given as a
+    # fight, so it gets only the fight kinds.
+    unity = [s for s in scenarios if s["kind"] in UNITY_KINDS]
+    if unity:
+        write_json_atomic(os.path.join(run_dir, "unity_request.json"),
+                          {"requestId": request_id, "outDir": run_dir, "scenarios": unity})
+    still_classes_needed = sorted({s["id"].split("/", 1)[0] for s in scenarios if s["kind"] == "still"})
     print(json.dumps({"requestId": request_id, "runDir": run_dir, "scenarios": len(scenarios),
+                      "unity": len(unity), "stillClasses": still_classes_needed,
                       "fingerprint": ident["fingerprint"]}))
     return 0
 
@@ -364,29 +571,240 @@ def encode(scenario_dir, scenario, timing):
     return time.perf_counter() - started
 
 
+# ---- stance, sheet and still: no fight to record -----------------------------
+
+BASELINE_VS = ("rat", "treant")
+BASELINE_FORMATIONS = ("lone", "full")
+BASELINE_SPEEDS = (1.0, 1.5)
+
+
+def natural_key(name):
+    return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", name)]
+
+
+def stance_order(names):
+    """The key poses in the order a fight meets them (idle, attack, cast, hurt,
+    defeated, victory), then any other stance by name."""
+    known = [n for n in STANCE_ORDER if n in names]
+    return known + sorted(n for n in names if n not in STANCE_ORDER)
+
+
+def flatten(path, backdrop=BACKDROP):
+    """(RGB over the backdrop, alpha) of one transparent PNG."""
+    from PIL import Image
+    with Image.open(path) as im:
+        rgba = im.convert("RGBA")
+    flat = Image.new("RGBA", rgba.size, tuple(backdrop) + (255,))
+    flat.alpha_composite(rgba)
+    return flat.convert("RGB"), rgba.getchannel("A")
+
+
+def alpha_box(alpha):
+    return alpha.point(lambda v: 255 if v > ALPHA_THRESHOLD else 0).getbbox()
+
+
+def union_box(boxes):
+    boxes = [b for b in boxes if b]
+    if not boxes:
+        return None
+    return (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
+
+
+def padded(box, size, pad):
+    return (max(0, box[0] - pad), max(0, box[1] - pad), min(size[0], box[2] + pad), min(size[1], box[3] + pad))
+
+
+def write_series(scenario_dir, shown, interval_ms, title):
+    """frames/, anim.gif and strip.png for a list of RGB images: the one writer
+    the stance and sheet kinds share with the Unity kinds' encoder."""
+    import capture_strip
+
+    frames_dir = os.path.join(scenario_dir, "frames")
+    os.makedirs(frames_dir, exist_ok=True)
+    for i, image in enumerate(shown):
+        image.save(os.path.join(frames_dir, "f%04d.png" % i))
+    width = min(GIF_WIDTH, shown[0].size[0])
+    capture_strip.write_gif(shown, {"captureIntervalMs": interval_ms}, os.path.join(scenario_dir, "anim.gif"),
+                            width=width, colors=None, hold_last_ms=0, step=1, disposal=0)
+    capture_strip.build_strip(shown, {"captureIntervalMs": interval_ms, "impactFrame": -1}, title).save(
+        os.path.join(scenario_dir, "strip.png"))
+
+
+def render_stance(scenario, scenario_dir, resources=RESOURCES):
+    """One loop of an actor's key-pose stills, STANCE_MS each, on their shared
+    canvas. `subject` crops to where any stance has ink, so the box is the same
+    for every still and the actor does not jump between poses."""
+    actor_dir = os.path.join(resources, *scenario["id"].split("/"))
+    names = stance_order([n[:-4] for n in os.listdir(actor_dir) if n.lower().endswith(".png")])
+    if not names:
+        raise ValueError("no stance stills in %s" % actor_dir)
+    flats, boxes, sizes = [], [], set()
+    for name in names:
+        flat, alpha = flatten(os.path.join(actor_dir, name + ".png"))
+        flats.append(flat)
+        boxes.append(alpha_box(alpha))
+        sizes.add(flat.size)
+    if len(sizes) != 1:
+        raise ValueError("stances of %s are not on one shared canvas: %s" % (scenario["id"], sorted(sizes)))
+    size = flats[0].size
+    box = (0, 0, size[0], size[1])
+    if scenario["crop"] == "subject":
+        union = union_box(boxes)
+        if union:
+            box = padded(union, size, STANCE_PAD)
+    shown = [f.crop(box) for f in flats]
+    write_series(scenario_dir, shown, STANCE_MS, "stance %s | %d stills @ %dms" % (scenario["id"], len(shown), STANCE_MS))
+    return {"frames": len(shown), "order": names, "cropBox": list(box), "frameMs": STANCE_MS, "canvas": list(size)}
+
+
+def sheet_fps(folder, frame_count, skills, relics):
+    """(fps, source, warning) for a Resources/Spells folder: the rate of the
+    first sprite layer in skills.json or relics.json that plays it, else the
+    default with a warning."""
+    path = "Spells/" + folder
+    for owner in list(skills) + list(relics):
+        vfx = owner.get("vfx") or {}
+        for layer in vfx.get("layers", []) or []:
+            if layer.get("render") != "sprite" or layer.get("path") != path:
+                continue
+            fps = float(layer.get("fps") or 0)
+            if fps > 0:
+                return fps, "%s layer '%s' fps" % (owner["id"], layer.get("id")), ""
+            seconds = float(layer.get("seconds") or 0)
+            if seconds > 0:
+                return frame_count / seconds, "%s layer '%s': %d frames over %gs" % (
+                    owner["id"], layer.get("id"), frame_count, seconds), ""
+    return SHEET_DEFAULT_FPS, "default", "no sprite layer plays Spells/%s; using the default %g fps" % (folder, SHEET_DEFAULT_FPS)
+
+
+def render_sheet(scenario, scenario_dir, resources=RESOURCES, skills=None, relics=None):
+    skills = skills if skills is not None else load_content("skills.json", "skills")
+    relics = relics if relics is not None else load_content("relics.json", "relics")
+    folder = os.path.join(resources, "Spells", scenario["id"])
+    pngs = [n for n in os.listdir(folder) if n.lower().endswith(".png")]
+    numbered = [n for n in pngs if re.fullmatch(r"f\d+\.png", n, re.I)]
+    names = sorted(numbered or pngs, key=natural_key)
+    if not names:
+        raise ValueError("no frames in %s" % folder)
+    fps, source, warning = sheet_fps(scenario["id"], len(names), skills, relics)
+    if warning:
+        print("  WARNING sheet %s: %s" % (scenario["id"], warning))
+    shown = [flatten(os.path.join(folder, n))[0] for n in names]
+    interval = 1000.0 / fps
+    write_series(scenario_dir, shown, interval, "sheet %s | %d frames @ %.1ffps" % (scenario["id"], len(shown), fps))
+    return {"frames": len(shown), "fps": fps, "fpsSource": source, "warning": warning, "order": names}
+
+
+def find_still(run_dir, scenario):
+    """The PNG a capture class wrote for this scenario, in the run's still_raw
+    tree (the launcher moves the Capture copy's output there on exit)."""
+    wanted = scenario["id"].split("/", 1)[1].lower()
+    hits = []
+    for folder, _dirs, files in os.walk(os.path.join(run_dir, "still_raw")):
+        for name in files:
+            if name.lower() == wanted:
+                hits.append(os.path.join(folder, name))
+    return sorted(hits)[0] if hits else None
+
+
+def collect_still(run_dir, scenario, scenario_dir):
+    import shutil
+    source = find_still(run_dir, scenario)
+    if not source:
+        raise ValueError("%s wrote no %s" % (scenario["id"].split("/", 1)[0], scenario["id"].split("/", 1)[1]))
+    os.makedirs(os.path.join(scenario_dir, "frames"), exist_ok=True)
+    shutil.copyfile(source, os.path.join(scenario_dir, "frames", "f0000.png"))
+    shutil.copyfile(source, os.path.join(scenario_dir, "still.png"))
+    return {"frames": 1, "label": "still/" + scenario["id"]}
+
+
 # ---- coverage (2.9) ----------------------------------------------------------
 
-def coverage_table(scenarios, outcomes, ids=None):
+def _names(items, limit=12):
+    items = list(items)
+    return ", ".join(items[:limit]) + (" ... (+%d)" % (len(items) - limit) if len(items) > limit else "")
+
+
+def coverage_table(scenarios, outcomes, ids=None, skipped=(), gaps=(), manifest=""):
     ids = ids or known_ids()
-    lines = ["COVERAGE", "  requested %d scenario(s): %d passed, %d failed" % (
-        len(scenarios), sum(1 for o in outcomes.values() if o), sum(1 for o in outcomes.values() if not o))]
-    for s in scenarios:
-        lines.append("    %-6s %-22s vs=%-6s %-4s x%-4g %s" % (
-            s["kind"], s["id"], s["vs"], s["formation"], s["speed"], "ok" if outcomes.get(s["key"]) else "FAILED"))
-    lines.append("  known but not covered:")
+    passed = sum(1 for s in scenarios if outcomes.get(s["key"]))
+    lines = ["COVERAGE" + (" (manifest %s)" % manifest if manifest else ""),
+             "  requested %d scenario(s): %d passed, %d failed" % (len(scenarios), passed, len(scenarios) - passed)]
     for kind in KINDS:
+        of_kind = [s for s in scenarios if s["kind"] == kind]
+        if of_kind:
+            lines.append("    %-6s %3d scenario(s), %d ok" % (kind, len(of_kind), sum(1 for s in of_kind if outcomes.get(s["key"]))))
+    for s in scenarios:
+        if not outcomes.get(s["key"]):
+            lines.append("    FAILED %-6s %s vs=%s %s x%g" % (s["kind"], s["id"], s["vs"] or "-", s["formation"] or "-", s["speed"]))
+    if len(scenarios) <= 12:
+        for s in scenarios:
+            if outcomes.get(s["key"]):
+                lines.append("    ok     %-6s %-22s vs=%-6s %-4s x%-4g" % (s["kind"], s["id"], s["vs"] or "-", s["formation"] or "-", s["speed"]))
+
+    lines.append("  known but not covered:")
+    pools = {"spell": ids.get("playerSpell", ids["spell"]), "attack": ids["attack"], "relic": ids["relic"],
+             "status": ids["status"], "stance": ids.get("stance", []), "sheet": ids.get("sheet", [])}
+    for kind, pool in pools.items():
         have = {s["id"] for s in scenarios if s["kind"] == kind}
-        missing = [i for i in ids[kind] if i not in have]
-        shown = ", ".join(missing[:12]) + (" ... (+%d)" % (len(missing) - 12) if len(missing) > 12 else "")
-        lines.append("    %-6s %d of %d not requested%s" % (kind, len(missing), len(ids[kind]), ": " + shown if missing else ""))
-    for s in (x for x in scenarios if x["kind"] == "spell"):
-        lines.append("    spell %s: only %s %s at %gx (baseline is rat+treant x lone+full x 1x+1.5x)" % (
-            s["id"], s["vs"], s["formation"], s["speed"]))
-    lines.append("    not covered at all (phase B): stance, sheet, still")
+        missing = [i for i in pool if i not in have]
+        lines.append("    %-6s %d of %d not requested%s" % (kind, len(missing), len(pool), ": " + _names(missing) if missing else ""))
+    if manifest:
+        classes_have = {s["id"].split("/", 1)[0] for s in scenarios if s["kind"] == "still"}
+        missing_classes = [c for c in ids.get("stillClasses", []) if c not in classes_have]
+        lines.append("    still  %d of %d capture classes have no requested still%s" % (
+            len(missing_classes), len(ids.get("stillClasses", [])), ": " + _names(missing_classes, 40) if missing_classes else ""))
+
+    have_attack = {(s["id"], s["skill"]) for s in scenarios if s["kind"] == "attack"}
+    unrecorded = ["%s -Skill %s" % (e, k) for e, k in ids.get("abilityPairs", []) if (e, k) not in have_attack]
+    if unrecorded:
+        lines.append("    enemy abilities with vfx not recorded as attacks: %s" % _names(unrecorded))
+
+    requested_spells = sorted({s["id"] for s in scenarios if s["kind"] == "spell"})
+    for sid in requested_spells:
+        want, _drop = spell_matrix(sid, ids.get("targeting", {}).get(sid, ""), BASELINE_VS, BASELINE_FORMATIONS, BASELINE_SPEEDS)
+        have = {(s["vs"], s["formation"], s["speed"]) for s in scenarios if s["kind"] == "spell" and s["id"] == sid}
+        absent = ["%s/%s/%gx" % (c["vs"], c["formation"], c["speed"]) for c in want if (c["vs"], c["formation"], c["speed"]) not in have]
+        if absent:
+            lines.append("    spell %s: baseline combinations not recorded: %s" % (sid, _names(absent, 8)))
+
+    by_spell = {}
+    for entry in skipped:
+        by_spell.setdefault((entry["spell"], entry["reason"]), []).append("%s/%s/%gx" % (entry["vs"], entry["formation"], entry["speed"]))
+    if by_spell:
+        lines.append("  skipped by targeting (not meaningful, so not recorded):")
+        for (spell, reason), combos in sorted(by_spell.items()):
+            lines.append("    %s (%d): %s -- %s" % (spell, len(combos), _names(combos, 4), reason))
+
+    if gaps:
+        lines.append("  known gaps, not covered:")
+        for gap in gaps:
+            lines.append("    %s: %s" % (gap.get("name", "?"), gap.get("why", "")))
     return "\n".join(lines)
 
 
 # ---- finish ------------------------------------------------------------------
+
+def run_python_scenario(run_dir, scenario, sdir):
+    """Builds a stance, sheet or still scenario's outputs and returns its
+    result record. Never raises: a bad scenario is a failed row, as in the
+    Unity batch."""
+    started = time.perf_counter()
+    try:
+        if scenario["kind"] == "stance":
+            result = render_stance(scenario, sdir)
+        elif scenario["kind"] == "sheet":
+            result = render_sheet(scenario, sdir)
+        else:
+            result = collect_still(run_dir, scenario, sdir)
+        result.update({"ok": True, "key": scenario["key"], "kind": scenario["kind"], "id": scenario["id"]})
+    except Exception as error:  # noqa: BLE001 -- recorded, the run goes on
+        result = {"ok": False, "key": scenario["key"], "kind": scenario["kind"], "id": scenario["id"],
+                  "error": "%s: %s" % (type(error).__name__, error), "frames": 0}
+    result["seconds"] = round(time.perf_counter() - started, 3)
+    write_json_atomic(os.path.join(sdir, "result.json"), result)
+    return result
+
 
 def cmd_finish(args):
     run_dir = os.path.abspath(args.run_dir)
@@ -400,14 +818,20 @@ def cmd_finish(args):
 
     for s in scenarios:
         sdir = os.path.join(run_dir, s["key"])
-        result = read_json(os.path.join(sdir, "result.json"), {})
+        os.makedirs(sdir, exist_ok=True)
+        if s["kind"] in UNITY_KINDS:
+            result = read_json(os.path.join(sdir, "result.json"), {})
+            ok = bool(result.get("ok")) and bool(list_frames_or_empty(os.path.join(sdir, "frames")))
+        else:
+            result = run_python_scenario(run_dir, s, sdir)
+            ok = bool(result.get("ok"))
         timing = read_json(os.path.join(sdir, "timing.json"), {})
-        ok = bool(result.get("ok")) and os.path.isdir(os.path.join(sdir, "frames")) and bool(list_frames(os.path.join(sdir, "frames")))
         outcomes[s["key"]] = ok
         record = {"scenario": s, "identity": ident, "requestId": request["requestId"], "result": result, "timing": timing}
         if ok:
-            encode_seconds[s["key"]] = round(encode(sdir, s, timing), 3)
-            record["encodeSeconds"] = encode_seconds[s["key"]]
+            if s["kind"] in UNITY_KINDS:
+                encode_seconds[s["key"]] = round(encode(sdir, s, timing), 3)
+                record["encodeSeconds"] = encode_seconds[s["key"]]
             latest[s["key"]] = run_dir
         else:
             print("FAILED %s %s: %s" % (s["kind"], s["id"], result.get("error") or "no result/frames written"))
@@ -415,13 +839,27 @@ def cmd_finish(args):
 
     if latest:
         write_json_atomic(LATEST, latest)
-    print(coverage_table(scenarios, outcomes))
+    print(coverage_table(scenarios, outcomes, skipped=request.get("skipped", []), gaps=request.get("gaps", []),
+                         manifest=request.get("manifest", "")))
+
+    totals = {}
     for s in scenarios:
         r = read_json(os.path.join(run_dir, s["key"], "result.json"), {})
-        print("  %-6s %-22s run %.1fs  encode %.2fs  frames %s" % (
-            s["kind"], s["id"], r.get("seconds", 0), encode_seconds.get(s["key"], 0), r.get("frames", "?")))
-    print("  batch ok=%s requestId=%s" % (batch.get("ok"), batch.get("requestId")))
+        spent = r.get("seconds", 0) + encode_seconds.get(s["key"], 0)
+        count, total = totals.get(s["kind"], (0, 0.0))
+        totals[s["kind"]] = (count + 1, total + spent)
+        if len(scenarios) <= 12:
+            print("  %-6s %-22s run %.1fs  encode %.2fs  frames %s" % (
+                s["kind"], s["id"], r.get("seconds", 0), encode_seconds.get(s["key"], 0), r.get("frames", "?")))
+    for kind, (count, total) in totals.items():
+        print("  TIME %-6s %3d scenario(s) %7.1fs total (run + encode), %6.2fs each" % (kind, count, total, total / count))
+    if batch:
+        print("  batch ok=%s requestId=%s" % (batch.get("ok"), batch.get("requestId")))
     return 0 if outcomes and all(outcomes.values()) else 1
+
+
+def list_frames_or_empty(frames_dir):
+    return list_frames(frames_dir) if os.path.isdir(frames_dir) else []
 
 
 # ---- pixel comparison --------------------------------------------------------
@@ -501,8 +939,9 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("prepare")
-    p.add_argument("kind")
-    p.add_argument("id")
+    p.add_argument("kind", nargs="?", default="")
+    p.add_argument("id", nargs="?", default="")
+    p.add_argument("--manifest", default="")
     p.add_argument("--vs", default="")
     p.add_argument("--formation", default="")
     p.add_argument("--speed", type=float, default=1.0)
