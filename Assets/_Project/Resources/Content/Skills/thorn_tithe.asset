@@ -60,6 +60,74 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: Audio/Sfx/thorn_tithe_cast
       layers:
+      - id: back
+        render: sprite
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0
+        path: Spells/thorn_tithe
+        seconds: 0.72
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0.14
+        opacity: 0.5
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: -0.1
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+        scale: 1
+        size: 390
+        fit: target
+        facing: reverse
+        sort: ground
+        align: 
+        punch: 0
+        glow: 0
+        impactX: 0.5
+        impactY: 0.4
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
       - id: ritual
         render: sprite
         place: target-centre
@@ -80,7 +148,7 @@ MonoBehaviour:
         drift:
           fromX: 0
           toX: 0
-          fromY: 0
+          fromY: -0.1
           toY: 0
           viaX: 0
           viaY: 0
@@ -93,6 +161,74 @@ MonoBehaviour:
         align: 
         punch: 0.16
         glow: 1.05
+        impactX: 0.5
+        impactY: 0.4
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: accent
+        render: still
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0
+        path: Spells/thorn_tithe
+        seconds: 0.1
+        fps: 0
+        startFrame: 6
+        until: hold
+        fade: 0.12
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+        scale: 1
+        size: 430
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.3
+        glow: 1.9
         impactX: 0.5
         impactY: 0.4
         aspect: 0

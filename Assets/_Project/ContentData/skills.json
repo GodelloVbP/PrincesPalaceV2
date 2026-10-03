@@ -1562,7 +1562,31 @@
         "hitCueSeconds": 0.3,
         "layers": [
           {
-            "_comment": "fit: target -- 350 is the box on a rat-sized enemy; multiplied by the struck target's own stage footprint (rank depth times its authored stageScale) so the thorns read as covering the body on an Elder Treant (stageScale 1.45) rather than as a patch sized for something a third its size.",
+            "_comment": "The far half of the cage: the same sprout mirrored, a little larger and dimmer, drawn on the ground sort so it sits behind the body while the front copy crosses over it. Two arcs at two depths is what makes the thorns close AROUND the enemy instead of being laid over it.",
+            "id": "back",
+            "render": "sprite",
+            "place": "target-centre",
+            "at": "release",
+            "path": "Spells/thorn_tithe",
+            "seconds": 0.72,
+            "until": "once",
+            "size": 390,
+            "fit": "target",
+            "impactX": 0.5,
+            "impactY": 0.4,
+            "facing": "reverse",
+            "sort": "ground",
+            "punch": 0,
+            "glow": 0,
+            "fade": 0.14,
+            "opacity": 0.5,
+            "drift": {
+              "fromY": -0.1,
+              "toY": 0
+            }
+          },
+          {
+            "_comment": "The near half of the cage, sprouting from the floor: it starts a tenth of its height low and rises while the vines grow (f0-f4, 0.3 s), then closes on the cue (f5). fit: target -- 350 is the box on a rat-sized enemy, scaled by the struck body.",
             "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
@@ -1578,7 +1602,31 @@
             "sort": "effects",
             "punch": 0.16,
             "glow": 1.05,
-            "fade": 0.14
+            "fade": 0.14,
+            "drift": {
+              "fromY": -0.1,
+              "toY": 0
+            }
+          },
+          {
+            "id": "accent",
+            "render": "still",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/thorn_tithe",
+            "startFrame": 6,
+            "seconds": 0.1,
+            "until": "hold",
+            "size": 430,
+            "fit": "target",
+            "impactX": 0.5,
+            "impactY": 0.4,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.3,
+            "glow": 1.9,
+            "fade": 0.12,
+            "_comment": "The payoff's accent: f5's green-white sap burst alone, held on the cue frame with the sound and the Thorned badge. Everything else in this spell is brown; this is the one saturated, hot frame."
           },
           {
             "id": "settle",

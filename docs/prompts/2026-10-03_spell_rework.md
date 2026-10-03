@@ -99,3 +99,47 @@ Must read as: someone whispering into an ear. Must NOT read as: a generic curse
 circle, a wraith attacking, or a reaper.
 
 Owner: what to change from the lean or the hood: ______
+
+## Thorn Tithe: vines rising
+
+Plan 3.2, the one frame run that cannot be faked. `Resources/Spells/thorn_tithe`
+(12 frames: a ring of vines rising, a sap burst, the cage sinking) is the
+stand-in, and its rise is a slide of a nearly finished drawing. The verb is
+*sprout*: green thorned vines thrust out of the ground and thicken as they
+climb.
+
+Target: a 4-frame sheet, one recipe (`Spells/thorn_tithe_growth/f0..f3`), laid
+out 2x2 on one image, each cell 768x768. Raw file
+`Assets/_Project/Art/Sheets/Spells/Thorn Tithe/thorn_tithe_growth.png`, sliced by
+`tools/slice_spell_sheet.py`. The cells are one clump of vines at four moments;
+the cell grid is the only layout.
+
+Style matches the existing thorn frames and the Blackglass Spear stills:
+Hades-inspired painterly fantasy, bold sculpted brush planes, rich material
+rendering, a clean readable silhouette, soft rim light. Vines are saturated
+cool green with dark green shadows and pale yellow-green thorns; the old
+frames are brown on a brown floor, so green is the fix.
+
+Solid #00FF00 sheet background, no gradient or vignette. The keyer removes by
+hue, so keep the figure off the key: the vines are a blue-leaning emerald (hue
+near #1F8F5F) with near-black shadows, never yellow-green or lime, and no glow
+that approaches #00FF00.
+
+- Cell 1: three short pointed shoots breaking the ground, soil crumbs flying,
+  a hand's height.
+- Cell 2: five vines, a third of the cell height, thorns forming along them.
+- Cell 3: the vines at full height, thick, thorns large and sharp, tips curling
+  inward toward the cell's centre; the vines occupy 80% of the cell height.
+- Cell 4: the same clump a beat later, tips touching at the top as a cage;
+  one bead of sap at a thorn tip.
+- The base of every cell sits on the same line, 8% above the bottom edge, a
+  low mound of soil and torn roots (not a floor plane or shadow).
+- No ring, rune, circle, character, animal or body in the cell; the stage
+  supplies the enemy. No leaves falling (the emitter supplies them).
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: thorny vines growing up out of the ground and caging what
+stands there. Must NOT read as: a bramble wreath, a tree, a bear trap, or a
+generic nature sparkle.
+
+Owner: what to change from the vine colour or the thorn size: ______
