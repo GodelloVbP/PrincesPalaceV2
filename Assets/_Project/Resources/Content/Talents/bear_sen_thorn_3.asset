@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_thorn_3
     DisplayName: 'Thornwall: Splinters'
-    Description: A {physical} hit that breaks your shield gives its attacker -30%
-      attack for 2 turns.
+    Description: A {physical} hit that breaks your shield gives its attacker -30% attack for 2 turns.
     CharacterId: bear
     Column: 0
     Row: 19

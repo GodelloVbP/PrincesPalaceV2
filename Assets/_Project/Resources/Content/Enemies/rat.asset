@@ -27,8 +27,8 @@ MonoBehaviour:
     ExpReward: 15
     CurrencyReward: 8
     IsBoss: 0
-    Weaknesses: 02000000
-    Resistances: 04000000
+    Weaknesses: 02000000i
+    Resistances: 04000000i
     SortOrder: 0
     BreakShieldPoints: 8
     StageScale: 1

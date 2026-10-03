@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: frosty
     DisplayName: Frosty
-    Description: 'Every hit carries a bite of frost. Elemental family: Ice, the damage
-      half -- Permafrost is Ice''s resistance affix and Frostbite is Ice''s chill-proc
-      affix, both split off this modifier''s old three-effect bundle.'
+    Description: 'Every hit carries a bite of frost. Elemental family: Ice, the damage half -- Permafrost is Ice''s resistance affix and Frostbite is Ice''s chill-proc affix, both split off this modifier''s old three-effect bundle.'
     SortOrder: 2
     Effects:
     - Type: 1

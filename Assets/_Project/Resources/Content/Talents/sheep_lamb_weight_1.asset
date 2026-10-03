@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_weight_1
     DisplayName: Weight of Wool
-    Description: +25% attack damage for each other ally you have warded. +100% while
-      you are warded yourself.
+    Description: +25% attack damage for each other ally you have warded. +100% while you are warded yourself.
     CharacterId: sheep
     Column: 1
     Row: 3

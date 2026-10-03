@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: tuck_in
     DisplayName: Tuck In
-    Description: Spend up to 4 wool for a 5-point shield per wool, lasting 1 turn.
-      Free action, once per turn.
+    Description: Spend up to 4 wool for a 5-point shield per wool, lasting 1 turn. Free action, once per turn.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 7

@@ -15,10 +15,7 @@ MonoBehaviour:
   data:
     Id: runic
     DisplayName: Runic
-    Description: A deeper well of mana. Manaflow is this family's regen affix, Quickcast
-      its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four
-      used to roll together as one bundled Runic modifier; split so each rolls on
-      its own like every other affix.
+    Description: A deeper well of mana. Manaflow is this family's regen affix, Quickcast its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four used to roll together as one bundled Runic modifier; split so each rolls on its own like every other affix.
     SortOrder: 20
     Effects:
     - Type: 11

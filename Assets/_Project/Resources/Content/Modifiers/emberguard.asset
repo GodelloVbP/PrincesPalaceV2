@@ -15,10 +15,7 @@ MonoBehaviour:
   data:
     Id: emberguard
     DisplayName: Emberguard
-    Description: 'Fire glances off the wearer rather than catching. Elemental family:
-      Fire, the resistance half -- Fiery is Fire''s separate on-hit-burn affix. Split
-      off Fiery''s old bundle so a roll grants one or the other, never both from
-      a single slot.'
+    Description: 'Fire glances off the wearer rather than catching. Elemental family: Fire, the resistance half -- Fiery is Fire''s separate on-hit-burn affix. Split off Fiery''s old bundle so a roll grants one or the other, never both from a single slot.'
     SortOrder: 1
     Effects:
     - Type: 3

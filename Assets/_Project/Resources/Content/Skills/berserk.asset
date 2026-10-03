@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: berserk
     DisplayName: Berserk
-    Description: Turn 50% of your defense into attack. Lose 10 **Fury** at the start
-      of each turn; ends when Fury runs out. No **Bellow** or **Ward** while active.
-      Costs 50 Fury.
+    Description: Turn 50% of your defense into attack. Lose 10 **Fury** at the start of each turn; ends when Fury runs out. No **Bellow** or **Ward** while active. Costs 50 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 6

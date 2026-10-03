@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: plant_the_shield
     DisplayName: Plant the Shield
-    Description: Plant a shield that takes blows meant for you until it breaks or
-      3 turns pass. Cannot be planted again for 3 turns after. Costs 30 Fury.
+    Description: Plant a shield that takes blows meant for you until it breaks or 3 turns pass. Cannot be planted again for 3 turns after. Costs 30 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 23

@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_cap
     DisplayName: Twin Rampage
-    Description: 'At 100 Fury, **Rampage** hits twice: the normal 100-Fury sweep,
-      then a second sweep at 1x damage that stuns every enemy hit for 1 turn. {cooldown}
-      5.'
+    Description: 'At 100 Fury, **Rampage** hits twice: the normal 100-Fury sweep, then a second sweep at 1x damage that stuns every enemy hit for 1 turn. {cooldown} 5.'
     CharacterId: bear
     Column: 1
     Row: 20

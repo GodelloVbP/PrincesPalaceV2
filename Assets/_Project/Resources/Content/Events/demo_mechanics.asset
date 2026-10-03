@@ -15,14 +15,13 @@ MonoBehaviour:
   data:
     Id: demo_mechanics
     SortOrder: 0
-    Floors: e7030000
+    Floors: e7030000i
     Requires: []
     Pages:
     - Id: well
       ArtKey: 
       Title: A Wishing Well
-      Body: A mossy well sits at the crossing, its water black and still. Something
-        glints at the bottom.
+      Body: A mossy well sits at the crossing, its water black and still. Something glints at the bottom.
       Choices:
       - Text: Leave
         Requires: []
@@ -174,8 +173,7 @@ MonoBehaviour:
     - Id: wish_granted
       ArtKey: 
       Title: The Well Answers
-      Body: The water glows gold for a moment, then settles. Whatever you wished
-        for is already on its way.
+      Body: The water glows gold for a moment, then settles. Whatever you wished for is already on its way.
       Choices:
       - Text: Leave
         Requires: []

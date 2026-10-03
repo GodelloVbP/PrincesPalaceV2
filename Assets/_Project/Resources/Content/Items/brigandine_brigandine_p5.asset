@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: brigandine_brigandine_p5
   displayName: Silent Brigandine Jack
-  description: Leather with plates riveted inside it. Quiet enough to move in, hard
-    enough to matter.
+  description: Leather with plates riveted inside it. Quiet enough to move in, hard enough to matter.
   kind: 2
   effect: 0
   amount: 20

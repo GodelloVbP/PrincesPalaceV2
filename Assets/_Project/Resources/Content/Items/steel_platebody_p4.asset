@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: steel_platebody_p4
   displayName: Polished Steel Platebody
-  description: Plate, properly fitted. Heavy enough that you feel every step, and
-    so does anything that hits you.
+  description: Plate, properly fitted. Heavy enough that you feel every step, and so does anything that hits you.
   kind: 2
   effect: 0
   amount: 20

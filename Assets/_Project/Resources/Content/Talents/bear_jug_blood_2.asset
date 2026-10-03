@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_blood_2
     DisplayName: 'Thick Blood: Pulse'
-    Description: At turn start, heal 2% of maximum HP, rising to 6% at 25% HP or
-      below.
+    Description: At turn start, heal 2% of maximum HP, rising to 6% at 25% HP or below.
     CharacterId: bear
     Column: 2
     Row: 4

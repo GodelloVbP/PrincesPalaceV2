@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: bulwark_sabatons_p3
   displayName: Weighted Bulwark Sabatons
-  description: No joints, no give, no hands free. You do not fight in this; you refuse
-    to move.
+  description: No joints, no give, no hands free. You do not fight in this; you refuse to move.
   kind: 2
   effect: 0
   amount: 20

@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_mend_1
     DisplayName: Mending Fleece
-    Description: 'A **Ward** you cast also gives its wearer **Regen**: heals 3% of
-      max HP at turn start for 2 turns.'
+    Description: 'A **Ward** you cast also gives its wearer **Regen**: heals 3% of max HP at turn start for 2 turns.'
     CharacterId: sheep
     Column: 1
     Row: 2

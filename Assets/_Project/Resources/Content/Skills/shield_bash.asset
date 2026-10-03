@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: shield_bash
     DisplayName: Shield Bash
-    Description: Spend the planted shield to deal damage plus 20, plus 30% of the
-      damage it absorbed, and **Stun** the target for 1 turn.
+    Description: Spend the planted shield to deal damage plus 20, plus 30% of the damage it absorbed, and **Stun** the target for 1 turn.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 0

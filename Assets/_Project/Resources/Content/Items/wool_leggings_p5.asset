@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: wool_leggings_p5
   displayName: Fine Wool Leggings
-  description: Undyed, soft, and entirely without edges. It would look wrong holding
-    a weapon, which is the idea.
+  description: Undyed, soft, and entirely without edges. It would look wrong holding a weapon, which is the idea.
   kind: 2
   effect: 0
   amount: 20

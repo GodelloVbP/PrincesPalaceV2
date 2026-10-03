@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: toothed_necklace
     DisplayName: Toothed Necklace
-    Description: Gain up to +30% damage and +20% speed. Maximum bonus reached at
-      25% HP or below.
+    Description: Gain up to +30% damage and +20% speed. Maximum bonus reached at 25% HP or below.
     Effect: 7
     SortOrder: 5
     IconPath: Assets/_Project/Art/Items/Relics/Processed/toothed_necklace.png

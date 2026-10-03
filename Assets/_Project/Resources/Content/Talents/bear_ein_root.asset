@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_root
     DisplayName: The Einherjar
-    Description: 'Each damaging action gains **Fury**: 10 for a plain blow, more
-      for a bigger one (minimum 5, maximum 30). Unlocks **Hack**.'
+    Description: 'Each damaging action gains **Fury**: 10 for a plain blow, more for a bigger one (minimum 5, maximum 30). Unlocks **Hack**.'
     CharacterId: bear
     Column: 1
     Row: 0

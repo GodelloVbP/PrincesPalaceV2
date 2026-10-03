@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: cursed_idol
     DisplayName: Cursed Idol
-    Description: Damaging an enemy lowers its resistances by 3% for 3 turns. Stacks
-      up to 15%.
+    Description: Damaging an enemy lowers its resistances by 3% for 3 turns. Stacks up to 15%.
     Effect: 18
     SortOrder: 21
     IconPath: Assets/_Project/Art/Items/Relics/Processed/cursed_idol.png

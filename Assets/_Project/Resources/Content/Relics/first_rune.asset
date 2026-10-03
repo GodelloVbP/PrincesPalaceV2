@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: first_rune
     DisplayName: The First Rune
-    Description: Each single-target damaging spell you cast repeats once on the same
-      target, free.
+    Description: Each single-target damaging spell you cast repeats once on the same target, free.
     Effect: 12
     SortOrder: 17
     IconPath: Assets/_Project/Art/Items/Relics/Processed/first_rune.png

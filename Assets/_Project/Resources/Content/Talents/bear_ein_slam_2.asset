@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_slam_2
     DisplayName: 'Slam: Fury''s Edge'
-    Description: A Slam that triggers a Fury tier (50 Fury or more) gets +15% crit
-      chance.
+    Description: A Slam that triggers a Fury tier (50 Fury or more) gets +15% crit chance.
     CharacterId: bear
     Column: 1
     Row: 4

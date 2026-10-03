@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bellwether_scratch
     DisplayName: Scratch
-    Description: Deal damage to one target and inflict **Bleed** for 5 per turn for
-      3 turns.
+    Description: Deal damage to one target and inflict **Bleed** for 5 per turn for 3 turns.
     CharacterId: bellwether
     UnlockLevel: 1
     Effect: 0

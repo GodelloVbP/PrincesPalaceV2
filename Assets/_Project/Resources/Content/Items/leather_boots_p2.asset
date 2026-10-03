@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: leather_boots_p2
   displayName: Supple Leather Boots
-  description: Boiled hide, cut close. It does not stop much, but it never gets in
-    the way.
+  description: Boiled hide, cut close. It does not stop much, but it never gets in the way.
   kind: 2
   effect: 0
   amount: 20

@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: gorge
     DisplayName: Gorge
-    Description: Deal damage plus 30 to one target and heal for 30% of the damage
-      dealt. Costs 30 Fury.
+    Description: Deal damage plus 30 to one target and heal for 30% of the damage dealt. Costs 30 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 0

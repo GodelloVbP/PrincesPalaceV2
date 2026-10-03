@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_stand_2
     DisplayName: Unflinching
-    Description: At or below 25% HP, no single hit deals more than 25% of your max
-      HP.
+    Description: At or below 25% HP, no single hit deals more than 25% of your max HP.
     CharacterId: sheep
     Column: 0
     Row: 15

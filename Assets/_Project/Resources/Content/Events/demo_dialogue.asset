@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: demo_dialogue
     SortOrder: 4
-    Floors: e7030000
+    Floors: e7030000i
     Requires:
     - Kind: 0
       CharacterId: sheep
@@ -116,9 +116,7 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The lantern leads you down a stair of old stone. A few coins glint
-            on the steps, and at the bottom someone large is already warming his
-            paws at it.
+          Result: The lantern leads you down a stair of old stone. A few coins glint on the steps, and at the bottom someone large is already warming his paws at it.
           GoTo: bearer
           IsLeave: 0
         - Requires: []
@@ -134,8 +132,7 @@ MonoBehaviour:
             FightId: 
             ShelfId: 
             Reveal: 0
-          Result: The lantern leads you down a stair of old stone. A few coins glint
-            on the steps.
+          Result: The lantern leads you down a stair of old stone. A few coins glint on the steps.
           GoTo: quiet
           IsLeave: 0
       - Text: Leave
@@ -159,33 +156,28 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: A lantern sways at the far end of the landing, though no hand holds
-          it. Its light is warm, and it is waiting for you.
+        Text: A lantern sways at the far end of the landing, though no hand holds it. Its light is warm, and it is waiting for you.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 1
         Side: 0
-        Text: Another reality, another landing. Prince says this one has <i>excellent</i>
-          monsters. I believe him about half the time.
+        Text: Another reality, another landing. Prince says this one has <i>excellent</i> monsters. I believe him about half the time.
         IsEventSpeaker: 0
         ExpressionName: happy
       - SpeakerId: sheep
         IsNarration: 0
         Expression: 2
         Side: 0
-        Text: The other half, he sends me in first. If that lantern starts talking,
-          I am not the one answering it.
+        Text: The other half, he sends me in first. If that lantern starts talking, I am not the one answering it.
         IsEventSpeaker: 0
         ExpressionName: annoyed
       - SpeakerId: owl
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: Hold still, both of you. That lantern burns from the far side of the
-          wall, so somebody in the next reality lit it for us. Whoever they are,
-          they are expecting company, and they are not a patient host.
+        Text: Hold still, both of you. That lantern burns from the far side of the wall, so somebody in the next reality lit it for us. Whoever they are, they are expecting company, and they are not a patient host.
         IsEventSpeaker: 0
         ExpressionName: neutral
     - Id: bearer
@@ -212,8 +204,7 @@ MonoBehaviour:
         IsNarration: 0
         Expression: 1
         Side: 0
-        Text: Ha! I knew I smelled lamp oil. Took you long enough. Stand back, little
-          ones, this light bites.
+        Text: Ha! I knew I smelled lamp oil. Took you long enough. Stand back, little ones, this light bites.
         IsEventSpeaker: 0
         ExpressionName: happy
       - SpeakerId: 
@@ -245,8 +236,7 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: The stair is empty. Whoever lit the lantern has gone on ahead, and
-          left the light for you.
+        Text: The stair is empty. Whoever lit the lantern has gone on ahead, and left the light for you.
         IsEventSpeaker: 0
         ExpressionName: 
     - Id: farewell
@@ -261,8 +251,7 @@ MonoBehaviour:
         Outcomes:
         - Requires: []
           Effects: []
-          Result: You leave with the lantern's warmth still in your paws. Prince
-            will call it a detour. It was not.
+          Result: You leave with the lantern's warmth still in your paws. Prince will call it a detour. It was not.
           GoTo: 
           IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
@@ -272,8 +261,7 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: At the end of the stair the lantern goes out, as if it had done its
-          job.
+        Text: At the end of the stair the lantern goes out, as if it had done its job.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: 

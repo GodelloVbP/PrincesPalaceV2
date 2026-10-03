@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_converge
     DisplayName: Black Ram Mode
-    Description: 'Unlocks **Black Ram Mode**: for 3 turns, +50% attack, +30% speed
-      and temporary HP equal to 25% of max HP. Hits splash 50% of their damage onto
-      adjacent enemies. Costs 7 wool. {cooldown} 5.'
+    Description: 'Unlocks **Black Ram Mode**: for 3 turns, +50% attack, +30% speed and temporary HP equal to 25% of max HP. Hits splash 50% of their damage onto adjacent enemies. Costs 7 wool. {cooldown} 5.'
     CharacterId: sheep
     Column: 0
     Row: 10

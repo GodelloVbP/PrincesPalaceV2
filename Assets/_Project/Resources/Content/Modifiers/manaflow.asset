@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: manaflow
     DisplayName: Manaflow
-    Description: A faster trickle of mana each turn. Runic's old bundle split four
-      ways -- see Runic, Quickcast and Wardrune's own descriptions for the rest of
-      the family.
+    Description: A faster trickle of mana each turn. Runic's old bundle split four ways -- see Runic, Quickcast and Wardrune's own descriptions for the rest of the family.
     SortOrder: 21
     Effects:
     - Type: 12

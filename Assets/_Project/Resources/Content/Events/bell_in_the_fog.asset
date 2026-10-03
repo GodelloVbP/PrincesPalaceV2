@@ -142,8 +142,7 @@ MonoBehaviour:
         Outcomes:
         - Requires: []
           Effects: []
-          Result: Shawn keeps looking back until the fog closes over the clearing.
-            Nothing follows. The bell is patient.
+          Result: Shawn keeps looking back until the fog closes over the clearing. Nothing follows. The bell is patient.
           GoTo: 
           IsLeave: 1
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
@@ -155,16 +154,14 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: The fog thickens until the trees are only shapes. Then a clearing the
-          path never promised, and in it an old stump. On the stump, a bell.
+        Text: The fog thickens until the trees are only shapes. Then a clearing the path never promised, and in it an old stump. On the stump, a bell.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: Polished brass, not a fingerprint on it, hung from a new leather strap.
-          Everything else in this forest is moss and rot. The bell is clean.
+        Text: Polished brass, not a fingerprint on it, hung from a new leather strap. Everything else in this forest is moss and rot. The bell is clean.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: sheep
@@ -178,8 +175,7 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: It makes no sound. The mist around it does not stir. Shawn has taken
-          a step toward the stump, and does not seem to know it.
+        Text: It makes no sound. The mist around it does not stir. Shawn has taken a step toward the stump, and does not seem to know it.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: sheep
@@ -193,8 +189,7 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: Past the trees, soft as breath, something is counting. It has lost
-          its place before, and started again.
+        Text: Past the trees, soft as breath, something is counting. It has lost its place before, and started again.
         IsEventSpeaker: 0
         ExpressionName: 
     - Id: ask_both
@@ -246,8 +241,7 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: Shawn looks from one to the other as if they were speaking to him through
-          water.
+        Text: Shawn looks from one to the other as if they were speaking to him through water.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: sheep
@@ -290,8 +284,7 @@ MonoBehaviour:
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: I hear wind, and you breathing hard. That's all. Say the word and we
-          walk on.
+        Text: I hear wind, and you breathing hard. That's all. Say the word and we walk on.
         IsEventSpeaker: 0
         ExpressionName: neutral
       - SpeakerId: sheep
@@ -334,8 +327,7 @@ MonoBehaviour:
         IsNarration: 0
         Expression: 3
         Side: 1
-        Text: I hear nothing, Shawn. That is what worries me. Even the fog has gone
-          quiet.
+        Text: I hear nothing, Shawn. That is what worries me. Even the fog has gone quiet.
         IsEventSpeaker: 0
         ExpressionName: nervous
       - SpeakerId: sheep
@@ -462,16 +454,14 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: On the tenth toll the Bellwether stops, and the flock stops behind
-          it. Then, all together, they turn to look at him.
+        Text: On the tenth toll the Bellwether stops, and the flock stops behind it. Then, all together, they turn to look at him.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: Every sheep in the flock is wearing his face. Not a face like his.
-          His. Hundreds of him, patient in the fog, waiting to be counted.
+        Text: Every sheep in the flock is wearing his face. Not a face like his. His. Hundreds of him, patient in the fog, waiting to be counted.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: sheep
@@ -485,8 +475,7 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: The bell rings once more, very close, and Shawn opens his eyes. He
-          is standing at the stump. His hoof has only just left the brass.
+        Text: The bell rings once more, very close, and Shawn opens his eyes. He is standing at the stump. His hoof has only just left the brass.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: sheep
@@ -663,16 +652,14 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: The Bellwether folds into the fog without a sound, and the flock behind
-          it goes too, like breath off glass.
+        Text: The Bellwether folds into the fog without a sound, and the flock behind it goes too, like breath off glass.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: Shawn is standing at the stump, hoof on the brass. Under it the bell
-          cracks, one clean line from crown to lip. The tolling stops.
+        Text: Shawn is standing at the stump, hoof on the brass. Under it the bell cracks, one clean line from crown to lip. The tolling stops.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: sheep
@@ -686,16 +673,14 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: The strap is still new. He takes the bell anyway. It is warm, as if
-          someone had been holding it for a very long time.
+        Text: The strap is still new. He takes the bell anyway. It is warm, as if someone had been holding it for a very long time.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: Behind the trees, whatever was counting loses its place, and does not
-          start again.
+        Text: Behind the trees, whatever was counting loses its place, and does not start again.
         IsEventSpeaker: 0
         ExpressionName: 
     BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
@@ -818,8 +803,7 @@ MonoBehaviour:
           FightId: 
           ShelfId: 
           Reveal: 0
-        Result: Shawn wakes on the wet ground with the taste of brass in his mouth.
-          The stump is empty. No bell, no strap, no mark where either hung.
+        Result: Shawn wakes on the wet ground with the taste of brass in his mouth. The stump is empty. No bell, no strap, no mark where either hung.
         GoTo: 
         IsLeave: 1
       HasOnSurvived: 1

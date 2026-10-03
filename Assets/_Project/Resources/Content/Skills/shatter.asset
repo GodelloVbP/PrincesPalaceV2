@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: shatter
     DisplayName: Shatter
-    Description: Break every **ward** you have out. Each one explodes on a random
-      enemy. Costs 3 wool. {cooldown} 3.
+    Description: Break every **ward** you have out. Each one explodes on a random enemy. Costs 3 wool. {cooldown} 3.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 8

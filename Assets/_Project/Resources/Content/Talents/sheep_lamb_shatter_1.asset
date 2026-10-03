@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_shatter_1
     DisplayName: Shatter
-    Description: Unlocks **Shatter**. Every Ward you have out explodes, hitting a
-      random enemy for 100% of your Attack. Costs 3 wool. {cooldown} 3.
+    Description: Unlocks **Shatter**. Every Ward you have out explodes, hitting a random enemy for 100% of your Attack. Costs 3 wool. {cooldown} 3.
     CharacterId: sheep
     Column: 1
     Row: 13

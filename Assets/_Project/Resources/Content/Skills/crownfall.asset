@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: crownfall
     DisplayName: Crownfall
-    Description: Deal 7 {arcane} damage, or 12 if the target is **Marked** (this
-      removes the Mark). Costs 6 {mana}.
+    Description: Deal 7 {arcane} damage, or 12 if the target is **Marked** (this removes the Mark). Costs 6 {mana}.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 0
@@ -362,8 +361,7 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
-    IconPath: Assets/_Project/Art/Items/SpellBooks/Crownfall/Crownfall - Spell Book
-      - 48x48.png
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Crownfall/Crownfall - Spell Book - 48x48.png
     AdvanceSlots: 0
     DamageTypeOverride: 0
     HasDamageType: 0

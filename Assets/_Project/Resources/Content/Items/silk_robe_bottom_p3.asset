@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: silk_robe_bottom_p3
   displayName: Embroidered Silk Robe Bottom
-  description: Woven thin and stitched with something that hums. It turns spellwork
-    aside and almost nothing else.
+  description: Woven thin and stitched with something that hums. It turns spellwork aside and almost nothing else.
   kind: 2
   effect: 0
   amount: 20

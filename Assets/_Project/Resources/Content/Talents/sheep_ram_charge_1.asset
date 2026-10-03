@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_charge_1
     DisplayName: Charge
-    Description: 'Unlocks **Headbutt**: a weapon attack that pushes the target back
-      1 place in the turn order. Costs 2 wool.'
+    Description: 'Unlocks **Headbutt**: a weapon attack that pushes the target back 1 place in the turn order. Costs 2 wool.'
     CharacterId: sheep
     Column: 0
     Row: 13

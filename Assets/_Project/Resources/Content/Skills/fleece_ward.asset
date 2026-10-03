@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: fleece_ward
     DisplayName: Ward
-    Description: Put a 50-point shield on you or an ally for 1 turn. Costs 2 wool.
-      {cooldown} 2.
+    Description: Put a 50-point shield on you or an ally for 1 turn. Costs 2 wool. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 7

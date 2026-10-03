@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: quickcast
     DisplayName: Quickcast
-    Description: A plain swing buys a cheaper follow-up cast. Runic's old bundle
-      split four ways -- see Runic, Manaflow and Wardrune's own descriptions for
-      the rest of the family.
+    Description: A plain swing buys a cheaper follow-up cast. Runic's old bundle split four ways -- see Runic, Manaflow and Wardrune's own descriptions for the rest of the family.
     SortOrder: 22
     Effects:
     - Type: 13

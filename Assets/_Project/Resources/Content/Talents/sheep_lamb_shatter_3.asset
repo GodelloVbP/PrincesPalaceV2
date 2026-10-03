@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_shatter_3
     DisplayName: Sacrifice
-    Description: Detonating your own Ward deals triple the usual damage instead of
-      the normal amount, and applies **Vulnerable** (+30% damage taken for 1 turn)
-      to the target it hits if it survives.
+    Description: Detonating your own Ward deals triple the usual damage instead of the normal amount, and applies **Vulnerable** (+30% damage taken for 1 turn) to the target it hits if it survives.
     CharacterId: sheep
     Column: 1
     Row: 19

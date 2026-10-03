@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_pain_3
     DisplayName: 'Ignore Pain: Salved'
-    Description: Healing first pays off delayed damage. Only the remainder restores
-      HP.
+    Description: Healing first pays off delayed damage. Only the remainder restores HP.
     CharacterId: bear
     Column: 2
     Row: 18

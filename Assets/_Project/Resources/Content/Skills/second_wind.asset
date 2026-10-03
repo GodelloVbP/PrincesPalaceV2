@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: second_wind
     DisplayName: Second Wind
-    Description: Spend all your **Fury** to heal 1% of your max HP per Fury spent.
-      Needs 25 Fury.
+    Description: Spend all your **Fury** to heal 1% of your max HP per Fury spent. Needs 25 Fury.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 2

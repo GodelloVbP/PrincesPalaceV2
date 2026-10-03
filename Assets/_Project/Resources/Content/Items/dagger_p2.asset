@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: dagger_p2
   displayName: Iron Dagger
-  description: Short, light, and quick to the point. A first real weapon, and a last
-    resort.
+  description: Short, light, and quick to the point. A first real weapon, and a last resort.
   kind: 1
   effect: 0
   amount: 20

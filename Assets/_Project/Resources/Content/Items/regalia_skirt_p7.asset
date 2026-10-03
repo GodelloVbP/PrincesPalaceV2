@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: regalia_skirt_p7
   displayName: Hierarch's Regalia Ceremonial Skirt
-  description: Bells to call with and cords to bind with. Nothing here is for hitting
-    anyone yourself.
+  description: Bells to call with and cords to bind with. Nothing here is for hitting anyone yourself.
   kind: 2
   effect: 0
   amount: 20

@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: black_ram_mode
     DisplayName: Black Ram Mode
-    Description: 'For 3 turns: +50% attack, +30% speed, temporary HP equal to 25%
-      of max HP, and hits also deal 50% damage to the enemies either side. Costs
-      7 wool. {cooldown} 5.'
+    Description: 'For 3 turns: +50% attack, +30% speed, temporary HP equal to 25% of max HP, and hits also deal 50% damage to the enemies either side. Costs 7 wool. {cooldown} 5.'
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 6

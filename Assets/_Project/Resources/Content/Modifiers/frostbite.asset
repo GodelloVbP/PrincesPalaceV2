@@ -15,10 +15,7 @@ MonoBehaviour:
   data:
     Id: frostbite
     DisplayName: Frostbite
-    Description: 'A lucky strike leaves the target chilled to the bone. Elemental
-      family: Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost
-      carries the resistance; this used to ride along with both on one bundled Frosty
-      roll, now it is its own affix.'
+    Description: 'A lucky strike leaves the target chilled to the bone. Elemental family: Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost carries the resistance; this used to ride along with both on one bundled Frosty roll, now it is its own affix.'
     SortOrder: 4
     Effects:
     - Type: 17

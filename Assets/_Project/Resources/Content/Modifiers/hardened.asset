@@ -15,12 +15,7 @@ MonoBehaviour:
   data:
     Id: hardened
     DisplayName: Hardened
-    Description: 'A brute, physical edge on every hit. Elemental family: Physical,
-      the damage half -- Ironclad is Physical''s resistance affix and Juggernaut
-      is Physical''s stagger-proc affix, both split off this modifier''s old three-effect
-      bundle (one of three families -- alongside Ice''s Frostbite and Nature''s Entangling
-      -- that carries a third, proc effect beyond its damage and resistance halves;
-      see Ironclad and Juggernaut''s own descriptions).'
+    Description: 'A brute, physical edge on every hit. Elemental family: Physical, the damage half -- Ironclad is Physical''s resistance affix and Juggernaut is Physical''s stagger-proc affix, both split off this modifier''s old three-effect bundle (one of three families -- alongside Ice''s Frostbite and Nature''s Entangling -- that carries a third, proc effect beyond its damage and resistance halves; see Ironclad and Juggernaut''s own descriptions).'
     SortOrder: 12
     Effects:
     - Type: 1

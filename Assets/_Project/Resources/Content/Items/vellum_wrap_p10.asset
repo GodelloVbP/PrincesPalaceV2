@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: vellum_wrap_p10
   displayName: Unwritten Vellum Wrap
-  description: Parchment strips, ink still wet in places, and a great deal of somebody
-    else's certainty.
+  description: Parchment strips, ink still wet in places, and a great deal of somebody else's certainty.
   kind: 2
   effect: 0
   amount: 20

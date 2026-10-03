@@ -15,10 +15,7 @@ MonoBehaviour:
   data:
     Id: moonveil
     DisplayName: Moonveil
-    Description: 'A veil of the same Rift-sliver turns arcane harm aside. Elemental
-      family: Arcane, the resistance half -- Astral is Arcane''s separate on-hit
-      affix. Split off Astral''s old bundle so a roll grants one or the other, never
-      both.'
+    Description: 'A veil of the same Rift-sliver turns arcane harm aside. Elemental family: Arcane, the resistance half -- Astral is Arcane''s separate on-hit affix. Split off Astral''s old bundle so a roll grants one or the other, never both.'
     SortOrder: 11
     Effects:
     - Type: 3

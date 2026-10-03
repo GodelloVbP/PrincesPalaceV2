@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: ashen_reckoning
     DisplayName: Ashen Reckoning
-    Description: Needs a **Poisoned** target. Remove its Poison and deal 150% of
-      the damage it had left as {poison} and {fire} damage, then make it **Vulnerable**
-      (+20% damage taken) for 1 turn. Costs 10 {mana}. {cooldown} 2.
+    Description: Needs a **Poisoned** target. Remove its Poison and deal 150% of the damage it had left as {poison} and {fire} damage, then make it **Vulnerable** (+20% damage taken) for 1 turn. Costs 10 {mana}. {cooldown} 2.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 15
@@ -241,8 +239,7 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
-    IconPath: Assets/_Project/Art/Items/SpellBooks/Ashen Reckoning/Ashen Reckoning
-      - Spell Book - 48x48.png
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Ashen Reckoning/Ashen Reckoning - Spell Book - 48x48.png
     AdvanceSlots: 0
     DamageTypeOverride: 0
     HasDamageType: 0
@@ -255,7 +252,7 @@ MonoBehaviour:
     HasConsumesStatus: 0
     DamageInstancesIfConsumed: []
     DetonationPercent: 150
-    DetonationSplit: 0400000001000000
+    DetonationSplit: 0400000001000000i
     Reach:
       Kind: 0
       RankMask: 0

@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: spore_cloud
     DisplayName: Spore Cloud
-    Description: Deal damage plus 1 to all enemies and **Poison** them for 3 per
-      turn for 3 turns.
+    Description: Deal damage plus 1 to all enemies and **Poison** them for 3 per turn for 3 turns.
     CharacterId: treant
     UnlockLevel: 1
     Effect: 1

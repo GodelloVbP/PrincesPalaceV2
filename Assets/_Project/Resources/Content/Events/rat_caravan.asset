@@ -116,41 +116,35 @@ MonoBehaviour:
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: A wagon squats across the road, painted in six colours of peeling.
-          Its wheels come from three different carts. None of them match, and all
-          of them squeak.
+        Text: A wagon squats across the road, painted in six colours of peeling. Its wheels come from three different carts. None of them match, and all of them squeak.
         IsEventSpeaker: 0
         ExpressionName: 
       - SpeakerId: merchant
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: Customers! Don't be shy. Everything on the wagon is for sale, and a
-          surprising amount of it was for sale before I found it.
+        Text: Customers! Don't be shy. Everything on the wagon is for sale, and a surprising amount of it was for sale before I found it.
         IsEventSpeaker: 1
         ExpressionName: grinning
       - SpeakerId: merchant
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: Blades, boots, tonics. Seventy on the shop's hundred, because I never
-          paid the shop's hundred either. Or anything.
+        Text: Blades, boots, tonics. Seventy on the shop's hundred, because I never paid the shop's hundred either. Or anything.
         IsEventSpeaker: 1
         ExpressionName: grinning
       - SpeakerId: merchant
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: Now, some of it's real and some of it isn't. I know which is which.
-          That, friends, is the one thing on this wagon that's not for sale.
+        Text: Now, some of it's real and some of it isn't. I know which is which. That, friends, is the one thing on this wagon that's not for sale.
         IsEventSpeaker: 1
         ExpressionName: neutral
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: Behind the wagon, something with a great many teeth shifts its weight
-          and goes on pretending to be asleep.
+        Text: Behind the wagon, something with a great many teeth shifts its weight and goes on pretending to be asleep.
         IsEventSpeaker: 0
         ExpressionName: 
     - Id: after_browse
@@ -219,8 +213,7 @@ MonoBehaviour:
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: Pleasure doing business. Mostly mine, but I like to think a little
-          of it rubbed off on you.
+        Text: Pleasure doing business. Mostly mine, but I like to think a little of it rubbed off on you.
         IsEventSpeaker: 1
         ExpressionName: neutral
       - SpeakerId: merchant
@@ -298,8 +291,7 @@ MonoBehaviour:
         IsNarration: 0
         Expression: 2
         Side: 0
-        Text: 'That one is a fake. The rivets are painted on. So is that one: the
-          leather is bread crust, varnished.'
+        Text: 'That one is a fake. The rivets are painted on. So is that one: the leather is bread crust, varnished.'
         IsEventSpeaker: 0
         ExpressionName: annoyed
       - SpeakerId: merchant
@@ -313,16 +305,14 @@ MonoBehaviour:
         IsNarration: 0
         Expression: 0
         Side: 0
-        Text: I have marked every fake for you. Buy the rest if you must, and count
-          your fingers after.
+        Text: I have marked every fake for you. Buy the rest if you must, and count your fingers after.
         IsEventSpeaker: 0
         ExpressionName: neutral
       - SpeakerId: merchant
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: So the unmarked ones are real, then. Probably. I'd stake your life
-          on it.
+        Text: So the unmarked ones are real, then. Probably. I'd stake your life on it.
         IsEventSpeaker: 1
         ExpressionName: neutral
     - Id: farewell_walk
@@ -451,24 +441,21 @@ MonoBehaviour:
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: Fine. Take it. Take the lot. I'll only steal it back off someone worse
-          than you, and they'll have worse taste.
+        Text: Fine. Take it. Take the lot. I'll only steal it back off someone worse than you, and they'll have worse taste.
         IsEventSpeaker: 1
         ExpressionName: hostile
       - SpeakerId: merchant
         IsNarration: 0
         Expression: 0
         Side: 1
-        Text: And the piece that went under the wheel in all that? That was the good
-          one. The real one. Probably.
+        Text: And the piece that went under the wheel in all that? That was the good one. The real one. Probably.
         IsEventSpeaker: 1
         ExpressionName: hostile
       - SpeakerId: 
         IsNarration: 1
         Expression: 0
         Side: 0
-        Text: He hitches the empty wagon and rattles off into the trees, swearing
-          in a language made mostly of squeaks. The road is quieter without him.
+        Text: He hitches the empty wagon and rattles off into the trees, swearing in a language made mostly of squeaks. The road is quieter without him.
         IsEventSpeaker: 0
         ExpressionName: 
     BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
@@ -533,8 +520,7 @@ MonoBehaviour:
           FightId: 
           ShelfId: 
           Reveal: 0
-        Result: His guard rats scatter squeaking into the ditch. You help yourselves
-          to the wagon.
+        Result: His guard rats scatter squeaking into the ditch. You help yourselves to the wagon.
         GoTo: robbed
         IsLeave: 0
       OnSurvived:
@@ -555,7 +541,7 @@ MonoBehaviour:
     - Id: caravan
       PriceFactorPercent: 70
       FakeShare: 3
-      Sections: 00000000
+      Sections: 00000000i
       ConsumableCount: 2
       Title: The Rat Caravan
       KeeperId: merchant

@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_provoke_3
     DisplayName: All of You, Then
-    Description: '**Provoke** hits every enemy. At turn start, gain 1 wool per provoked
-      enemy.'
+    Description: '**Provoke** hits every enemy. At turn start, gain 1 wool per provoked enemy.'
     CharacterId: sheep
     Column: 0
     Row: 8

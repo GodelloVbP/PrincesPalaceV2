@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: venomous
     DisplayName: Venomous
-    Description: 'Every strike leaves a sting behind. Elemental family: Poison, the
-      damage half -- Antivenom is Poison''s separate resistance affix, split off
-      this modifier''s old two-effect bundle.'
+    Description: 'Every strike leaves a sting behind. Elemental family: Poison, the damage half -- Antivenom is Poison''s separate resistance affix, split off this modifier''s old two-effect bundle.'
     SortOrder: 8
     Effects:
     - Type: 1

@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: court_doublet_p6
   displayName: Ducal Court Doublet
-  description: 'Velvet, brocade and gold thread. Impractical on purpose: the point
-    is that someone else fights.'
+  description: 'Velvet, brocade and gold thread. Impractical on purpose: the point is that someone else fights.'
   kind: 2
   effect: 0
   amount: 20

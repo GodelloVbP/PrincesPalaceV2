@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_thorn_1
     DisplayName: Thornwall
-    Description: Melee {physical} hits on you or your shield return 15% of their
-      damage to the attacker.
+    Description: Melee {physical} hits on you or your shield return 15% of their damage to the attacker.
     CharacterId: bear
     Column: 0
     Row: 13

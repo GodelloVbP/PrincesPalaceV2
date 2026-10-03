@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_root
     DisplayName: The Black Ram
-    Description: +1 wool each time you're hit. At turn start, gain 2 wool at or below
-      67% HP, or 3 wool at or below 33% HP.
+    Description: +1 wool each time you're hit. At turn start, gain 2 wool at or below 67% HP, or 3 wool at or below 33% HP.
     CharacterId: sheep
     Column: 0
     Row: 0

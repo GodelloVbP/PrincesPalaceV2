@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_spell_2
     DisplayName: 'Spellbreaker: Gag'
-    Description: A spell that hits you or your shield silences its caster for 1 turn.
-      {cooldown} 3 per enemy.
+    Description: A spell that hits you or your shield silences its caster for 1 turn. {cooldown} 3 per enemy.
     CharacterId: bear
     Column: 0
     Row: 14

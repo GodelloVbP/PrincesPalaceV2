@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: prismatic_orb
     DisplayName: Prismatic Orb
-    Description: 'Deal 8 damage of an element you choose: {earth}, {water}, {fire}
-      or {wind}. Costs 8 {mana}.'
+    Description: 'Deal 8 damage of an element you choose: {earth}, {water}, {fire} or {wind}. Costs 8 {mana}.'
     CharacterId: owl
     UnlockLevel: 1
     Effect: 0

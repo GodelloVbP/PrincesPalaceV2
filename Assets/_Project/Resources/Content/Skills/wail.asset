@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: wail
     DisplayName: Wail
-    Description: All allies take 50% less damage for 1 turn. Costs 10 wool. {cooldown}
-      3.
+    Description: All allies take 50% less damage for 1 turn. Costs 10 wool. {cooldown} 3.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 9

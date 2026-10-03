@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: harness_treads_p2
   displayName: Studded Harness Heavy Treads
-  description: Straps, rings and weighted bracers. It protects nothing and it was
-    never meant to.
+  description: Straps, rings and weighted bracers. It protects nothing and it was never meant to.
   kind: 2
   effect: 0
   amount: 20

@@ -481,8 +481,7 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
-    IconPath: Assets/_Project/Art/Items/SpellBooks/Lightning Bolt/Lightning Bolt
-      - Spell Book - 48x48.png
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Lightning Bolt/Lightning Bolt - Spell Book - 48x48.png
     AdvanceSlots: 0
     DamageTypeOverride: 0
     HasDamageType: 0

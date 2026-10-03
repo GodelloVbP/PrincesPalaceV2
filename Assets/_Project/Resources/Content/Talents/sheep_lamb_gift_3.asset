@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_gift_3
     DisplayName: Gift of Haste
-    Description: 'Unlocks **Gift: Haste**. An ally moves to the front of the turn
-      order. Costs 5 wool.'
+    Description: 'Unlocks **Gift: Haste**. An ally moves to the front of the turn order. Costs 5 wool.'
     CharacterId: sheep
     Column: 1
     Row: 18

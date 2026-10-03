@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: drowned_lantern
     DisplayName: Drowned Lantern
-    Description: A spell that lands **Marks** its target. Your next attack on a Marked
-      target deals 50% more damage.
+    Description: A spell that lands **Marks** its target. Your next attack on a Marked target deals 50% more damage.
     Effect: 11
     SortOrder: 9
     IconPath: Assets/_Project/Art/Items/Relics/Processed/drowned_lantern.png

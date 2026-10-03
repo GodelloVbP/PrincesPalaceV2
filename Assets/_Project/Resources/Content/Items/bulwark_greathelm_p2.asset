@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: bulwark_greathelm_p2
   displayName: Ironbound Bulwark Great Helm
-  description: No joints, no give, no hands free. You do not fight in this; you refuse
-    to move.
+  description: No joints, no give, no hands free. You do not fight in this; you refuse to move.
   kind: 2
   effect: 0
   amount: 20

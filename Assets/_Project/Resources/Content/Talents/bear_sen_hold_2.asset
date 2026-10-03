@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_hold_2
     DisplayName: 'Hold the Line: Rally'
-    Description: Hold the Line lasts 3 turns. Gain 5 Fury each time a buffed ally
-      is hit.
+    Description: Hold the Line lasts 3 turns. Gain 5 Fury each time a buffed ally is hit.
     CharacterId: bear
     Column: 0
     Row: 5

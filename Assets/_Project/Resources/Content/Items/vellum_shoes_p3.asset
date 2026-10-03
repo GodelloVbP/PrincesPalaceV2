@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: vellum_shoes_p3
   displayName: Illuminated Vellum Scholar's Shoes
-  description: Parchment strips, ink still wet in places, and a great deal of somebody
-    else's certainty.
+  description: Parchment strips, ink still wet in places, and a great deal of somebody else's certainty.
   kind: 2
   effect: 0
   amount: 20

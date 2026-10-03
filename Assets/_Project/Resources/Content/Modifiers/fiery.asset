@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: fiery
     DisplayName: Fiery
-    Description: 'Burns on every landed hit. Elemental family: Fire, the damage half
-      -- Emberguard is Fire''s separate resistance affix; a Fiery item does not also
-      resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.'
+    Description: 'Burns on every landed hit. Elemental family: Fire, the damage half -- Emberguard is Fire''s separate resistance affix; a Fiery item does not also resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.'
     SortOrder: 0
     Effects:
     - Type: 1

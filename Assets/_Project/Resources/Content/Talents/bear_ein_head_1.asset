@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_head_1
     DisplayName: Headsplitter
-    Description: 'Unlocks **Headsplitter**: spends all your **Fury** (minimum 30)
-      for one hit that hits harder the more Fury spent and the more HP the target
-      has lost. A kill returns half the Fury spent.'
+    Description: 'Unlocks **Headsplitter**: spends all your **Fury** (minimum 30) for one hit that hits harder the more Fury spent and the more HP the target has lost. A kill returns half the Fury spent.'
     CharacterId: bear
     Column: 1
     Row: 11

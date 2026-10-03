@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_jug_root
     DisplayName: The Juggernaut
-    Description: 'Gain **Fury** at turn start: 15 at full HP, 20 at 75% HP, 35 at
-      50% HP, 60 at 25% HP or below. Attacking and being hit give none. Fury does
-      not drain while idle. Unlocks **Second Wind** (cooldown 4).'
+    Description: 'Gain **Fury** at turn start: 15 at full HP, 20 at 75% HP, 35 at 50% HP, 60 at 25% HP or below. Attacking and being hit give none. Fury does not drain while idle. Unlocks **Second Wind** (cooldown 4).'
     CharacterId: bear
     Column: 2
     Row: 0

@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_ward_1
     DisplayName: Fleece Ward
-    Description: 'Unlocks **Ward**: a 70-point shield you can put on any ally. Wards
-      stack. Costs 2 wool. {cooldown} 2.'
+    Description: 'Unlocks **Ward**: a 70-point shield you can put on any ally. Wards stack. Costs 2 wool. {cooldown} 2.'
     CharacterId: sheep
     Column: 1
     Row: 1

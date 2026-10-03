@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: silk_gloves_p0
   displayName: Frayed Silk Gloves
-  description: Woven thin and stitched with something that hums. It turns spellwork
-    aside and almost nothing else.
+  description: Woven thin and stitched with something that hums. It turns spellwork aside and almost nothing else.
   kind: 2
   effect: 0
   amount: 20

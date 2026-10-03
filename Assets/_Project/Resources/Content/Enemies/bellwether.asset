@@ -131,7 +131,7 @@ MonoBehaviour:
       Weight: 0
       Crits: 0
     Schedule:
-    - OnTurns: 0100000005000000
+    - OnTurns: 0100000005000000i
       Skills:
       - dark_chains
       - death_knell

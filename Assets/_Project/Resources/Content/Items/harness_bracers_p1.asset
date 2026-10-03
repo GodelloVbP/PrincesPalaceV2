@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: harness_bracers_p1
   displayName: Bound Harness Spiked Bracers
-  description: Straps, rings and weighted bracers. It protects nothing and it was
-    never meant to.
+  description: Straps, rings and weighted bracers. It protects nothing and it was never meant to.
   kind: 2
   effect: 0
   amount: 20

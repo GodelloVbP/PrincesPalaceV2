@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_bellow_1
     DisplayName: Bellow
-    Description: Unlocks **Bellow**. Costs no Fury. {cooldown} 3. One enemy must
-      aim its next attack at you.
+    Description: Unlocks **Bellow**. Costs no Fury. {cooldown} 3. One enemy must aim its next attack at you.
     CharacterId: bear
     Column: 0
     Row: 3

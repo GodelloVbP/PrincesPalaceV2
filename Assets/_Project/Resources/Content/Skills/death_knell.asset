@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: death_knell
     DisplayName: Death Knell
-    Description: 'Deal {void} damage, ignoring defense: 130% of the target''s max
-      HP at the front, 20% in the middle, none at the rear.'
+    Description: 'Deal {void} damage, ignoring defense: 130% of the target''s max HP at the front, 20% in the middle, none at the rear.'
     CharacterId: bellwether
     UnlockLevel: 1
     Effect: 0
@@ -244,7 +243,7 @@ MonoBehaviour:
     AdvanceSlots: 0
     DamageTypeOverride: 10
     HasDamageType: 1
-    DamageBySeatMaxHpPercent: 820000001400000000000000
+    DamageBySeatMaxHpPercent: 820000001400000000000000i
     ToSeat: 0
     HealthCostPercent: 0
     RequiresStatusType: 0

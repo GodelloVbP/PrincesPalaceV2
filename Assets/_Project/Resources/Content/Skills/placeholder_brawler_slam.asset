@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_slam
     DisplayName: Slam
-    Description: Deal damage plus 17 to one target. At 50 **Fury** or more, spend
-      half your Fury for double damage. At 100 Fury, spend it all for quadruple damage.
+    Description: Deal damage plus 17 to one target. At 50 **Fury** or more, spend half your Fury for double damage. At 100 Fury, spend it all for quadruple damage.
     CharacterId: bear
     UnlockLevel: 1
     Effect: 0

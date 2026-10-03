@@ -15,9 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_ein_bers_1
     DisplayName: Berserk
-    Description: 'Unlocks **Berserk**: costs 50 Fury. Half your defense and magical
-      defense becomes attack. Fury drains by 10 each turn and Berserk ends at 0 Fury.
-      Bellow and shields are disabled.'
+    Description: 'Unlocks **Berserk**: costs 50 Fury. Half your defense and magical defense becomes attack. Fury drains by 10 each turn and Berserk ends at 0 Fury. Bellow and shields are disabled.'
     CharacterId: bear
     Column: 1
     Row: 12

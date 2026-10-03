@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: cinderfault
     DisplayName: Cinderfault
-    Description: Deal 5 {fire} and 5 {nature} damage to all enemies. Costs 15 {mana}.
-      {cooldown} 3.
+    Description: Deal 5 {fire} and 5 {nature} damage to all enemies. Costs 15 {mana}. {cooldown} 3.
     CharacterId: sheep
     UnlockLevel: 2147483647
     Effect: 1
@@ -308,8 +307,7 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
-    IconPath: Assets/_Project/Art/Items/SpellBooks/Cinderfault/Cinderfault - Spell
-      Book - 48x48.png
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Cinderfault/Cinderfault - Spell Book - 48x48.png
     AdvanceSlots: 0
     DamageTypeOverride: 0
     HasDamageType: 0

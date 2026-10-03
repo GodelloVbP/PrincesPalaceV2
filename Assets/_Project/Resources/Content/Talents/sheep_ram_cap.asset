@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_cap
     DisplayName: What He Is Now
-    Description: At or below 25% HP, **Black Ram Mode** never ends and costs nothing
-      to enter.
+    Description: At or below 25% HP, **Black Ram Mode** never ends and costs nothing to enter.
     CharacterId: sheep
     Column: 0
     Row: 20

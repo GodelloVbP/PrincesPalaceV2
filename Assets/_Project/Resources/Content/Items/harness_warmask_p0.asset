@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
   id: harness_warmask_p0
   displayName: Scavenged Harness Warmask
-  description: Straps, rings and weighted bracers. It protects nothing and it was
-    never meant to.
+  description: Straps, rings and weighted bracers. It protects nothing and it was never meant to.
   kind: 2
   effect: 0
   amount: 20

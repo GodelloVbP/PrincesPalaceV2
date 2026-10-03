@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: bear_sen_bash_2
     DisplayName: 'Shield Bash: Quick Hands'
-    Description: After a Shield Bash, the shield can be planted again after 1 turn
-      instead of 3.
+    Description: After a Shield Bash, the shield can be planted again after 1 turn instead of 3.
     CharacterId: bear
     Column: 0
     Row: 15
