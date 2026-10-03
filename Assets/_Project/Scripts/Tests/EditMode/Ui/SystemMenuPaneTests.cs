@@ -269,5 +269,18 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(pair.Value, $"{pair.Key} is listed but hosts nothing");
             }
         }
+
+        // The scrim hides the host completely. At any alpha below FF a bright
+        // host control still reads through it: the map's AbandonRunButton sits
+        // at x 40..280, y 58..118, partly outside the panel and its plates, and
+        // showed as a faint "ABANDON" beside the top bar on every tab.
+        [Test]
+        public void TheScrimIsOpaqueSoNoHostControlReadsThrough()
+        {
+            var dimmer = SystemMenuScreen.Build().Root.Children
+                .Single(c => c.Name == "SystemMenuPanelDimmer");
+
+            Assert.AreEqual("#0A0614FF", dimmer.ColorHex);
+        }
     }
 }
