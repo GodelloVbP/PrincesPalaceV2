@@ -2947,8 +2947,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // same overflow rule the badge rows use.
         public const int StatusBoxRows = 8;
 
-        // 22pt on the 1920x1080 canvas: the intent tooltip and callout read at
-        // 17-32pt, and 13pt here was the "way too small" the owner flagged.
+        // 22pt on the 1920x1080 canvas, so the status box reads at the same size
+        // as the intent tooltip and callout (17-32pt); smaller is hard to read.
         public const float StatusBoxWidth = 600f;
         public const float StatusBoxPad = 14f;
         public const float StatusBoxIconSize = 32f;

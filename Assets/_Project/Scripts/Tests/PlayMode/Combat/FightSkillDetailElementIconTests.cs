@@ -135,9 +135,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(hasElementRow, "a heal with no element still carries an Element icon row");
         }
 
-        // Defense, Reach and AreaOfEffect used to print the glyph alone; the
-        // owner read that as missing text. Every non-hero row now shows its
-        // value label.
+        // A glyph alone reads as missing text, so every non-hero row (Defense,
+        // Reach, AreaOfEffect included) shows its value label beside the icon.
         [UnityTest]
         public IEnumerator HoveringADamagingSkillPaintsAValueBesideEveryNonHeroIcon()
         {

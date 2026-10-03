@@ -344,7 +344,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // A cast riser's loudest sample sits in its last 60 ms, so the swell
-        // resolves on the blow. Crownfall's source crack used to be cut off at 0.45 s.
+        // resolves on the blow; a riser trimmed short would lose its crack.
         [Test]
         public void TheRitualRisersPeakJustBeforeTheirBlow()
         {

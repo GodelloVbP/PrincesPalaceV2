@@ -444,10 +444,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ContentDatabase.GetSkill(BookB).Data.DisplayName, DossierPane.TextOf("DossierBook1Caption"));
         }
 
-        // Equipping a pack book used to leave focus on the cell that just vanished,
-        // and the dispatcher's fallback was the menu context's entry from the last
-        // tab change -- the REWARD TRACK row when the menu had opened there, whose
-        // focus shows that section. Any book, any character.
+        // Equipping a pack book removes the focused cell, so focus must move to a
+        // live control in the same section. Falling back to the menu context's
+        // entry from the last tab change would jump to another section (the
+        // REWARD TRACK row when the menu opened there). Any book, any character.
         [UnityTest]
         public IEnumerator EquippingAPackBook_NeverJumpsSections_WhateverSectionTheMenuOpenedOn()
         {

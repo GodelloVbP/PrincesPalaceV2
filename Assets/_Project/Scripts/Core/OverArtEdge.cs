@@ -71,6 +71,23 @@ namespace PrincesPalace
         private RectTransform _backing;
         private Image _backingImage;
 
+        // The last values written to the backing. Writing a RectTransform or
+        // an Image colour dirties the HUD canvas even when the value is
+        // unchanged, so a static log line would force a rebuild 60 times a
+        // second. The fit is computed every LateUpdate (it depends on the
+        // text, the alpha, the parent rect and the label's transform relative
+        // to the parent) and written only when it moved. OnEnable forces one
+        // write because OnDisable hides the plate.
+        private const float WriteEpsilon = 0.01f;
+        private const float AlphaEpsilon = 0.001f;
+        private Vector2 _writtenSize;
+        private Vector2 _writtenPos;
+        private float _writtenAlpha;
+        private bool _forceWrite = true;
+
+        // Counts the frames that wrote anything; read by tests.
+        public int WriteCountForTest { get; private set; }
+
         private void Awake()
         {
             _label = GetComponent<TMP_Text>();
@@ -83,6 +100,11 @@ namespace PrincesPalace
             _backingImage.type = Image.Type.Sliced;
             _backingImage.raycastTarget = false;
             _backing.gameObject.SetActive(false);
+        }
+
+        private void OnEnable()
+        {
+            _forceWrite = true;
         }
 
         private void OnDisable()
@@ -100,10 +122,10 @@ namespace PrincesPalace
             var parent = _backing.parent as RectTransform;
             bool has = parent != null && _label != null && !string.IsNullOrEmpty(_label.text)
                 && _label.color.a > 0.01f;
-            if (!has) { _backing.gameObject.SetActive(false); return; }
+            if (!has) { SetBackingActive(false); return; }
 
             var b = _label.textBounds;
-            if (b.size.x <= 0.01f || b.size.y <= 0.01f) { _backing.gameObject.SetActive(false); return; }
+            if (b.size.x <= 0.01f || b.size.y <= 0.01f) { SetBackingActive(false); return; }
 
             var rt = _label.rectTransform;
             Vector2 lo = parent.InverseTransformPoint(rt.TransformPoint(b.min));
@@ -112,12 +134,45 @@ namespace PrincesPalace
             // Padding is in the label's own units, so the plate scales with a
             // badge that rides a depth scale.
             float scale = size.x / b.size.x;
-            _backing.sizeDelta = size + new Vector2(BackingPadX, BackingPadY) * 2f * scale;
-            _backing.anchoredPosition = (lo + hi) * 0.5f - parent.rect.center;
-            var c = _backingImage.color;
-            c.a = BackingAlpha * _label.color.a;
-            _backingImage.color = c;
-            _backing.gameObject.SetActive(true);
+            Vector2 newSize = size + new Vector2(BackingPadX, BackingPadY) * 2f * scale;
+            Vector2 newPos = (lo + hi) * 0.5f - parent.rect.center;
+            float newAlpha = BackingAlpha * _label.color.a;
+
+            bool wrote = false;
+            if (_forceWrite || (newSize - _writtenSize).sqrMagnitude > WriteEpsilon * WriteEpsilon)
+            {
+                _backing.sizeDelta = newSize;
+                _writtenSize = newSize;
+                wrote = true;
+            }
+            if (_forceWrite || (newPos - _writtenPos).sqrMagnitude > WriteEpsilon * WriteEpsilon)
+            {
+                _backing.anchoredPosition = newPos;
+                _writtenPos = newPos;
+                wrote = true;
+            }
+            if (_forceWrite || Mathf.Abs(newAlpha - _writtenAlpha) > AlphaEpsilon)
+            {
+                var c = _backingImage.color;
+                c.a = newAlpha;
+                _backingImage.color = c;
+                _writtenAlpha = newAlpha;
+                wrote = true;
+            }
+            _forceWrite = false;
+            if (!_backing.gameObject.activeSelf)
+            {
+                _backing.gameObject.SetActive(true);
+                wrote = true;
+            }
+            if (wrote) WriteCountForTest++;
+        }
+
+        private void SetBackingActive(bool active)
+        {
+            if (_backing.gameObject.activeSelf == active) return;
+            _backing.gameObject.SetActive(active);
+            WriteCountForTest++;
         }
 
         private static Sprite _backingSprite;
