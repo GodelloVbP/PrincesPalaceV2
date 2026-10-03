@@ -31,6 +31,11 @@ namespace PrincesPalace.Domain.Combat.Session
         private readonly Dictionary<object, int> _cursors = new Dictionary<object, int>();
         private readonly Action<string> _report;
 
+        // Set by Forcing: every turn takes this one ability (a skill id), or the
+        // plain swing when it is empty, instead of walking the kit.
+        private readonly bool _forcing;
+        private readonly string _forcedSkillId;
+
         // Everything the showcase decided, in order, for a caller that wants to
         // name the turns after the fact (the capture fixture names its files
         // from this).
@@ -48,6 +53,22 @@ namespace PrincesPalace.Domain.Combat.Session
             _report = report;
         }
 
+        private EnemyShowcase(string skillId, Action<string> report)
+        {
+            _report = report;
+            _forcing = true;
+            _forcedSkillId = skillId ?? "";
+        }
+
+        // A MOB THAT TAKES ONE NAMED ABILITY EVERY TURN, for a recording of that
+        // one action. The walk above opens on whatever the kit lists first,
+        // which may be a buff, so a capture of "the attack" cannot rely on it.
+        // An empty `skillId` forces the plain swing. A skill the pool does not
+        // carry is reported and falls back to the plain swing, never to some
+        // other ability.
+        public static EnemyShowcase Forcing(string skillId, Action<string> report = null) =>
+            new EnemyShowcase(skillId, report);
+
         // The index into `pool` this enemy should take now, or -1 for the plain
         // attack -- which is what FightSession.BuildIntent already does with an
         // out-of-range index, so "the abilities are done" needs no second path.
@@ -64,6 +85,8 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 return -1;
             }
+
+            if (_forcing) return NextForced(pool);
 
             _cursors.TryGetValue(enemy, out int cursor);
 
@@ -93,6 +116,28 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             _cursors[enemy] = cursor;
+            _played.Add(FightSession.IntentAttack);
+            return -1;
+        }
+
+        private int NextForced(IReadOnlyList<EnemyAbility> pool)
+        {
+            if (_forcedSkillId.Length == 0)
+            {
+                _played.Add(FightSession.IntentAttack);
+                return -1;
+            }
+
+            for (int i = 0; i < pool.Count; i++)
+            {
+                if (pool[i].HasSkill && pool[i].Skill.Id == _forcedSkillId)
+                {
+                    _played.Add(pool[i].Label);
+                    return i;
+                }
+            }
+
+            _report?.Invoke($"[EnemyShowcase] '{_forcedSkillId}' is not in this mob's pool; swinging plainly.");
             _played.Add(FightSession.IntentAttack);
             return -1;
         }

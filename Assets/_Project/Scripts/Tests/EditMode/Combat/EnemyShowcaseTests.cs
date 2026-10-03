@@ -90,6 +90,34 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, showcase.Next(OtherMob, pool));
         }
 
+        // A capture of one action must not depend on what the kit lists first.
+        [Test]
+        public void ForcingAnAbilityTakesItEveryTurnAndForcingNothingSwingsPlainly()
+        {
+            var slam = EnemyAbility.Of(new ResolvedSkill { Id = "slam" }, 1f);
+            var roar = EnemyAbility.Of(new ResolvedSkill { Id = "roar" }, 1f);
+            var pool = new List<EnemyAbility> { Plain(), roar, slam };
+
+            var slamOnly = EnemyShowcase.Forcing("slam");
+            Assert.AreEqual(2, slamOnly.Next(Mob, pool));
+            Assert.AreEqual(2, slamOnly.Next(Mob, pool), "and again next turn");
+
+            var plain = EnemyShowcase.Forcing("");
+            Assert.AreEqual(-1, plain.Next(Mob, pool));
+            CollectionAssert.AreEqual(new[] { FightSession.IntentAttack }, plain.Played);
+        }
+
+        [Test]
+        public void ForcingAnAbilityTheMobLacksIsReportedAndSwingsPlainly()
+        {
+            var reported = new List<string>();
+            var pool = new List<EnemyAbility> { Plain(), EnemyAbility.Of(new ResolvedSkill { Id = "roar" }, 1f) };
+
+            Assert.AreEqual(-1, EnemyShowcase.Forcing("slam", reported.Add).Next(Mob, pool));
+            Assert.AreEqual(1, reported.Count);
+            StringAssert.Contains("slam", reported[0]);
+        }
+
         [Test]
         public void ScriptLengthCountsTheAbilitiesPlusTheClosingSwing()
         {
