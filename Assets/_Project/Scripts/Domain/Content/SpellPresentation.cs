@@ -259,6 +259,15 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom.")]
         public SpellGloom gloom = new SpellGloom();
 
+        // THE CASTER'S PRICE LANDS AFTER THE PAYOFF. A cast that charges its
+        // caster a status (Court of Whispers' Vulnerable) paints that badge at
+        // the cue with everything else, so the price and the payoff are one
+        // frame and the price steals the payoff. This holds the caster's NEW
+        // statuses back for this long after the cue; the pulse that announces
+        // the price is an ordinary caster layer authored at the same offset.
+        [ContentDoc("Seconds after the cue before the caster's own newly applied statuses show on its plate, so a price lands after the payoff instead of on it. 0 (the default) shows them on the cue. Author the caster's pulse layer at `at: hit` with the same `offset`.")]
+        public float casterCostSeconds;
+
         // Left unset, a spell runs for this long and lands on this frame. Both
         // were the resolver's private constants and belong beside the fields
         // they default, so a new caller cannot invent a different silence.
@@ -571,6 +580,7 @@ namespace PrincesPalace.Domain.Content
             castSfxPath = castSfxPath,
             layerFormat = layerFormat,
             hitCueSeconds = hitCueSeconds,
+            casterCostSeconds = casterCostSeconds,
             gloom = gloom == null ? new SpellGloom() : gloom.Copy(),
             layers = CopyOf(layers),
         };

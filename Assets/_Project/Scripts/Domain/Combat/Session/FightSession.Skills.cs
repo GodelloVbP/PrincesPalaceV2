@@ -2043,6 +2043,10 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, enemies.FirstOrDefault(), isCast: true);
             RecordSpellPresentation(skill);
 
+            // Without this the beat's one target is the front enemy and the
+            // court is drawn around it alone while the Fear lands on all.
+            RecordSplashTargets(enemies.Skip(1));
+
             var bosses = new List<CombatantState>();
             foreach (var enemy in enemies)
             {

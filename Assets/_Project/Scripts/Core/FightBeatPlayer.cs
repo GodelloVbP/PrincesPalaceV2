@@ -1086,7 +1086,7 @@ namespace PrincesPalace
                 // worse than no flash.
                 PoseVictims(beat);
 
-                PaintVitals?.Invoke(beat.Snapshot);
+                PaintVitals?.Invoke(CasterCostHeld(beat) ? WithoutCasterStatuses(beat) : beat.Snapshot);
                 PaintShields?.Invoke(beat.Shields, beat.Snapshot);
 
                 // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT --
@@ -1178,10 +1178,20 @@ namespace PrincesPalace
             // is the notional cost of showing a drawing, which the beat
             // still does, and boughtWindup is real seconds this beat
             // actually waited on top of it.
+            // THE CASTER'S PRICE, after the payoff (SpellPresentation.
+            // casterCostSeconds). Charged to the settle like the hold above.
+            float costHold = 0f;
+            if (CasterCostHeld(beat))
+            {
+                costHold = beat.Vfx.casterCostSeconds;
+                yield return new WaitForSeconds(Scaled(costHold));
+                Guard(() => PaintVitals?.Invoke(beat.Snapshot));
+            }
+
             float spent = staticSwing ? StaticSwing.WindupSeconds
                 : staticCharge ? chargeOutSeconds
                 : StillPoseSeconds + boughtWindup;
-            spent += pullHold;
+            spent += pullHold + costHold;
             yield return new WaitForSeconds(Scaled(SettleAfter(spent + stop)));
 
             // Back to idle before the next beat opens, so a pose belongs to
@@ -1196,6 +1206,26 @@ namespace PrincesPalace
             foreach (var pair in beat.Stances) SetStance?.Invoke(pair.Key, FightSession.Stances.Idle);
 
             yield return new WaitForSeconds(Scaled(BeatGapSeconds));
+        }
+
+        // Whether the caster's own new statuses wait for the payoff to land.
+        // Needs the recorded "before" to know which statuses are new.
+        private static bool CasterCostHeld(CombatBeat beat) =>
+            beat.Vfx != null && beat.Vfx.casterCostSeconds > 0f && beat.Actor != null
+            && beat.PreSnapshot != null && beat.PreSnapshot.ContainsKey(beat.Actor)
+            && beat.Snapshot != null && beat.Snapshot.ContainsKey(beat.Actor);
+
+        // The beat's snapshot with the caster still wearing the statuses it
+        // had before the cast; every other body, and the caster's numbers, are
+        // the cue's own.
+        private static Dictionary<CombatantState, Vitals> WithoutCasterStatuses(CombatBeat beat)
+        {
+            var held = new Dictionary<CombatantState, Vitals>(beat.Snapshot);
+            var now = held[beat.Actor];
+            var before = beat.PreSnapshot[beat.Actor];
+            held[beat.Actor] = new Vitals(now.Health, now.Primary, now.Signature, now.MaxHealth,
+                now.MaxPrimary, before.Ward, before.Statuses, now.Broken);
+            return held;
         }
 
         // ONE NUMBER PER THING THE BEAT LANDED ON.

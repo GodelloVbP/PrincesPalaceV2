@@ -868,8 +868,11 @@ gameplay; a layered block cannot, which is the point of the format.
 | `align` | `level` | `place: formation`: `level` is an axis-aligned box on the rank's mean ground line; `span` runs the box from the leftmost struck body to the rightmost and rotates it to that line. `place: layer:<id>` on a travelling layer: `flight` lays the layer along that layer's flight (see "A wake left along the flight" below). Refused on any other placement. |
 | `overhang` | `0` | `place: formation` only: how far the span reaches past the outermost struck bodies, as a fraction of each end body's half-width. A lone body's span is only its own width, so a ground drawing that wide sits behind the figure and is never seen; `0.5` makes it show. Max `SpellLayerRules.MaxOverhang`. |
 | `punch` | `0` | Extra scale at the opening instant, eased out over the first fifth of the layer's lifetime. `0.22` opens it 22% oversized. Capped at `SpellLayerRules.MaxPunch`. |
+| `drift` | unset | `{fromX, toX, fromY, toY}`: a slide across the layer's life, in fractions of its own drawn box (so it scales with `fit`), eased out, X mirroring with the cast; added to `dx`/`dy`. A figure that leans in and a mist that parts. `SpellDrift`, pinned by `CourtOfWhispersTimingTests`. |
 | `glow` | `0` | How far above 1 the layer's brightest pixels are pushed, so the Volume's Bloom can see them. Nothing else on this canvas can exceed 1. |
 | `emitter` | — | The particle block; inert unless `render` is `emitter`. |
+
+**A price paid by the caster lands after the payoff.** The beat paints every plate at the cue, so a status the cast puts on its caster (Court of Whispers' Vulnerable) would share the payoff's frame. The vfx block's `casterCostSeconds` holds the caster's *newly applied* statuses back that long (`FightBeatPlayer.WithoutCasterStatuses`, charged to the beat's settle); author the caster's pulse as `place: caster-centre`, `at: hit` with the same `offset`.
 
 **A move has two ends, and the beat names the second.** A swap (Palace Passage)
 or a pull (Dark Chains) records `CombatBeat.PreFormation` (where everybody

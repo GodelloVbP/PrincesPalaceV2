@@ -67,6 +67,7 @@ MonoBehaviour:
         fadeIn: 0
         until: 
         fadeOut: 0
+      casterCostSeconds: 0
     SortOrder: 22
     Status: 0
     HasStatus: 0
@@ -125,6 +126,14 @@ MonoBehaviour:
             opacity: 1
             dx: 0
             dy: 0
+            drift:
+              fromX: 0
+              toX: 0
+              fromY: 0
+              toY: 0
+              viaX: 0
+              viaY: 0
+              viaAt: 0
             scale: 1
             size: 260
             fit: target
@@ -175,6 +184,7 @@ MonoBehaviour:
             fadeIn: 0
             until: 
             fadeOut: 0
+          casterCostSeconds: 0
         shake: 0.55
         hitStopSeconds: 0.14
       defenseToAttackPercent: 0

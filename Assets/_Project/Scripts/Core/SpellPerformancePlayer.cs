@@ -682,7 +682,10 @@ namespace PrincesPalace
             if (source.Displacement != null) at = at + source.Displacement();
             if (!ReferenceEquals(source, instance) && instance.Displacement != null) at = at + instance.Displacement();
 
-            return at + new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy);
+            var slide = SpellFrameCursor.DriftAt(instance, seconds);
+            return at + new UiVec(
+                instance.Layer.dx * instance.DrawFacing + slide.x * instance.Box.X * instance.DrawFacing,
+                instance.Layer.dy + slide.y * instance.Box.Y);
         }
 
         private void PaintEmitter(Cast cast, int slot, int index, SpellLayerInstance instance, float seconds)

@@ -598,6 +598,18 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `identityKind` | string | `""` | Which TrackIdentityKind an Identity entry carries, matched case-insensitively; only Identity reads this, empty otherwise. | Title, PlateRim, PortraitFrame, PlateEmboss, VictoryPose, Mastery |
 | `value` | string | `""` | The Identity entry's payload -- a title string for Title, or 'silver'/'gold' for PlateRim/PlateEmboss; unused by PortraitFrame/VictoryPose/Mastery and by every non-Identity reward. |  |
 
+### `SpellDrift`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `fromX` | float | `0` | Horizontal offset at the layer's opening instant, in widths of its own drawn box (mirrors with the cast). Added to dx. |  |
+| `toX` | float | `0` | Horizontal offset when the layer's lifetime ends, in widths of its own drawn box. The slide between the two eases out. |  |
+| `fromY` | float | `0` | Vertical offset at the layer's opening instant, in heights of its own drawn box (positive is up). |  |
+| `toY` | float | `0` | Vertical offset when the layer's lifetime ends, in heights of its own drawn box. |  |
+| `viaX` | float | `0` | Optional waypoint, for a layer that goes out and comes back: where the layer is (box widths, X mirrors with the cast) at viaAt. Unused unless viaAt is above 0. |  |
+| `viaY` | float | `0` | The waypoint's height, in heights of the layer's own box. |  |
+| `viaAt` | float | `0` | Fraction of the layer's lifetime, 0-1 exclusive, at which it passes through viaX/viaY; 0 means no waypoint. Each leg eases out. |  |
+
 ### `SpellEmitter`
 
 | Field | Type | Default | Description | Values |
@@ -658,6 +670,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `opacity` | float | `1` | How opaque the layer is drawn, 0-1, for its whole life; multiplies the fade-out. 1 (the default) is the sheet as painted. Refused at or below 0 and above 1. |  |
 | `dx` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `dy` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
+| `drift` | SpellDrift (below) | (zero -- see SpellDrift) | Optional slide across the layer's life, in fractions of its own box; see SpellDrift. Unauthored means the layer stays where dx and dy put it. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
 | `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre, sky or above, a layer that travels, or a layer riding another (place layer:<id>). | None, Target |
@@ -701,6 +714,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `layerFormat` | int | `0` | Which revision of the layer vocabulary this block was authored against; 0 means the pre-layer format. |  |
 | `hitCueSeconds` | float | `0` | Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame. |  |
 | `gloom` | SpellGloom (below) | (zero -- see SpellGloom) | Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom. |  |
+| `casterCostSeconds` | float | `0` | Seconds after the cue before the caster's own newly applied statuses show on its plate, so a price lands after the payoff instead of on it. 0 (the default) shows them on the cue. Author the caster's pulse layer at `at: hit` with the same `offset`. |  |
 
 ## Description markup
 

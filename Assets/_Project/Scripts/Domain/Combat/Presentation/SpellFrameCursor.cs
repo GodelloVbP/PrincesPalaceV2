@@ -156,6 +156,17 @@ namespace PrincesPalace.Domain.Combat.Presentation
             return lifetime > 0f ? lifetime / playable : 0f;
         }
 
+        // THE LAYER'S SLIDE (SpellLayer.drift) at `seconds`, in fractions of its
+        // own box; (0, 0) for a layer that authors none. Over the layer's
+        // lifetime, not including its fade.
+        public static (float x, float y) DriftAt(SpellLayerInstance instance, float seconds)
+        {
+            var drift = instance?.Layer?.drift;
+            if (drift == null || !drift.IsAuthored) return (0f, 0f);
+
+            return drift.At(seconds - instance.StartSeconds, instance.EndSeconds - instance.StartSeconds);
+        }
+
         // THE OVERSHOOT, EASED OUT. The layer opens at 1 + punch and settles
         // to 1 over PunchFraction of its lifetime, on a quadratic ease-out
         // (1-t)^2 -- most of the overshoot is gone in the first third of the

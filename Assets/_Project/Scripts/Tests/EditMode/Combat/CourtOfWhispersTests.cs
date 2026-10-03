@@ -57,6 +57,19 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheBeatDrawsTheCourtOnEveryLivingEnemyNotOnlyTheFirst()
+        {
+            var (session, _, ordinary, boss) = Fight();
+
+            Assert.IsTrue(session.CastSkill(0, null));
+
+            var beat = session.DrainBeats().First(b => b.IsAction);
+            Assert.AreSame(ordinary, beat.Target);
+            CollectionAssert.AreEqual(new[] { boss }, beat.SplashTargets,
+                "the court is drawn on each enemy the cast reaches, boss included");
+        }
+
+        [Test]
         public void TheCasterPaysVulnerableEvenWhenEveryEnemyIsABoss()
         {
             var (session, hero, ordinary, boss) = Fight();

@@ -67,6 +67,7 @@ MonoBehaviour:
         fadeIn: 0
         until: 
         fadeOut: 0
+      casterCostSeconds: 0
     SortOrder: 45
     Status: 0
     HasStatus: 0
@@ -115,6 +116,7 @@ MonoBehaviour:
             fadeIn: 0
             until: 
             fadeOut: 0
+          casterCostSeconds: 0
         shake: 0
         hitStopSeconds: 0
       defenseToAttackPercent: 0

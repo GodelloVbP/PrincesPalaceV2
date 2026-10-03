@@ -77,6 +77,14 @@ MonoBehaviour:
         opacity: 1
         dx: 0
         dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
         scale: 1
         size: 390
         fit: target
@@ -137,6 +145,14 @@ MonoBehaviour:
         opacity: 1
         dx: 0
         dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
         scale: 1
         size: 390
         fit: target
@@ -197,6 +213,14 @@ MonoBehaviour:
         opacity: 1
         dx: 0
         dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
         scale: 1
         size: 0
         fit: target
@@ -247,6 +271,7 @@ MonoBehaviour:
         fadeIn: 0
         until: 
         fadeOut: 0
+      casterCostSeconds: 0
     SortOrder: 15
     Status: 0
     HasStatus: 0
@@ -295,6 +320,7 @@ MonoBehaviour:
             fadeIn: 0
             until: 
             fadeOut: 0
+          casterCostSeconds: 0
         shake: 0
         hitStopSeconds: 0
       defenseToAttackPercent: 0

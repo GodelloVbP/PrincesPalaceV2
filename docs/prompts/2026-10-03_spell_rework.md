@@ -53,3 +53,49 @@ keyer removes by hue).
 - No text, numerals, frame, border, UI, watermark or drop-shadow plate.
 
 Owner: what to change from the object or its glow: ______
+
+## Court of Whispers: the leaning courtier
+
+Plan 3.1, the one frame that carries meaning. `Resources/Spells/court_of_whispers`
+(12 frames, three figures per frame, all rising together) is the stand-in. The
+verb is *haunt*: hooded courtiers lean in around each enemy to whisper, then
+draw back. The current frames cannot lean, because the three figures are fixed
+in one drawing and the layers can only slide and mirror them.
+
+Target: one still, raw file
+`Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whispers_courtier.png`,
+sliced as one recipe (`Spells/court_of_whispers_courtier/f0`) and drawn by two
+`sprite` layers per enemy: one mirrored, both sliding in on `drift` (see
+`SpellLayer.drift`). Layer fields only; no sheet.
+
+Style matches the existing court frames and the Blackglass Spear stills:
+Hades-inspired painterly fantasy, bold sculpted brush planes, rich material
+rendering, a clean readable silhouette, soft rim light. Violet and deep indigo
+cloth, a cold pale-lilac rim, no other hue. Not flat clip art, not a photo.
+
+Square canvas 1536x1536, solid #00FF00 background, no gradient, vignette or
+floor in it. No green or yellow-green anywhere in the subject or its glow (the
+keyer removes by hue; the dark hood interior stays opaque because the key is
+the green, never luminance).
+
+- One figure, centred, filling about 75% of the canvas height, at least 10%
+  margin on every side. Full length, three-quarter view, facing the right.
+- Hooded courtier in long layered robes that dissolve into wisps below the knee,
+  so it can hover without feet or a floor. The hood is an empty dark void with
+  no face and no eyes; this is a presence, not a character.
+- Posed leaning forward from the waist toward the right edge, head bowed and
+  turned a little, one sleeve raised with the hand cupped beside where an ear
+  would be. The lean is the whole point: the spine is a clear diagonal, about 25
+  degrees off vertical, and the silhouette reads as "bending close to speak".
+- The robe's trailing wisps curl back to the left, away from the lean, so the
+  motion reads forward.
+- One soft violet glow near the cupped hand, small, no larger than the hood.
+- No ring, circle, rune, floor shadow or ground plane (the stage supplies them).
+  No second figure. No crown, weapon, skull, bones, tentacles or cult robe
+  detail; it must not read as a necromancer, a ghost costume or a Death figure.
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: someone whispering into an ear. Must NOT read as: a generic curse
+circle, a wraith attacking, or a reaper.
+
+Owner: what to change from the lean or the hood: ______

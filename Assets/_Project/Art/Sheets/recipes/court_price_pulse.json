@@ -1,0 +1,7 @@
+{
+  "_notes": [
+    "Court of Whispers: the pulse on Shawn when he pays Vulnerable. Procedural, not sliced: tools/make_spell_fx.py court_price_pulse writes this folder directly, deterministic and pinned by tools/make_spell_fx_test.py. This file records provenance for SpellVfxRecipeDriftTests; slice_spell_sheet.py has no sheet to cut for it."
+  ],
+  "generator": "tools/make_spell_fx.py court_price_pulse",
+  "names": ["f0"]
+}

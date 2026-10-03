@@ -94,6 +94,9 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Local offset from the anchor, in reference-frame units.")]
         public float dy;
 
+        [ContentDoc("Optional slide across the layer's life, in fractions of its own box; see SpellDrift. Unauthored means the layer stays where dx and dy put it.")]
+        public SpellDrift drift = new SpellDrift();
+
         [ContentDoc("Uniform scale applied on top of the fitted box.")]
         public float scale = 1f;
 
@@ -223,6 +226,7 @@ namespace PrincesPalace.Domain.Content
             opacity = opacity,
             dx = dx,
             dy = dy,
+            drift = drift == null ? new SpellDrift() : drift.Copy(),
             scale = scale,
             size = size,
             fit = fit,

@@ -45,6 +45,7 @@ namespace PrincesPalace.Domain.Tests
             castSfxPath = "Audio/Sfx/x_cast",
             layerFormat = 1,
             hitCueSeconds = 0.35f,
+            casterCostSeconds = 0.18f,
             gloom = new SpellGloom { strength = 0.35f, fadeIn = 0.2f, until = "cleared", fadeOut = 0.25f },
             layers = new[]
             {
@@ -71,6 +72,7 @@ namespace PrincesPalace.Domain.Tests
                     sort = "effects",
                     align = "span",
                     punch = 0.22f,
+                    drift = new SpellDrift { fromX = -0.7f, toX = -0.7f, viaX = -0.25f, viaAt = 0.46f, fromY = 0.1f },
                     glow = 1.3f,
                     impactX = 0.94f,
                     impactY = 0.5f,
@@ -161,7 +163,7 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (var field in FieldsOf(typeof(SpellLayer)))
             {
-                if (field.FieldType == typeof(SpellEmitter)) continue;
+                if (field.FieldType == typeof(SpellEmitter) || field.FieldType == typeof(SpellDrift)) continue;
                 Assert.AreEqual(field.GetValue(original), field.GetValue(copy),
                     $"SpellLayer.Copy() drops {field.Name}");
             }
@@ -170,6 +172,13 @@ namespace PrincesPalace.Domain.Tests
             {
                 Assert.AreEqual(field.GetValue(original.emitter), field.GetValue(copy.emitter),
                     $"SpellEmitter.Copy() drops {field.Name}");
+            }
+
+            Assert.AreNotSame(original.drift, copy.drift, "a copy shares no drift with the catalogue");
+            foreach (var field in FieldsOf(typeof(SpellDrift)))
+            {
+                Assert.AreEqual(field.GetValue(original.drift), field.GetValue(copy.drift),
+                    $"SpellDrift.Copy() drops {field.Name}");
             }
         }
 
