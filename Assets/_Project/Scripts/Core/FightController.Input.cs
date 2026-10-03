@@ -1086,6 +1086,12 @@ namespace PrincesPalace
             return true;
         }
 
+        // The fight is over and no screen took it over, so Continue is up and
+        // is the only way forward.
+        private bool ContinueIsTheWayOut =>
+            _session != null && _session.IsOver && continueButton != null
+            && continueButton.gameObject.activeInHierarchy;
+
         private void OnContinuePressed()
         {
             continueButton.gameObject.SetShown(false);
@@ -1122,32 +1128,55 @@ namespace PrincesPalace
         // experience again.
         private bool _endRaised;
 
-        // What the Reckoning needs, supplied from outside.
-        //
-        // A FUNC rather than the reward itself, because the payout does not
-        // exist until FightEnded has been handled and this is read immediately
-        // after. Left null by anything that has no reward screen -- a headless
-        // fixture, a preview -- in which case the plain Continue button stands
-        // in, which is exactly the pre-Reckoning behaviour.
-        internal System.Func<Domain.Rewards.CombatReward> RewardSource;
+        // Whether the routing below opened a screen of its own.
+        private bool _endTookOver;
 
-        // What the run that just ended cost and paid. Same Func reasoning as
-        // RewardSource: the settlement does not exist until FightEnded has been
-        // handled, and it is read immediately after.
-        internal System.Func<RunSettlement.Result> SettlementSource;
+        // THIS FIGHT'S SETTLEMENT, supplied from outside (FightBootstrap). A
+        // Func because the settlement does not exist until FightEnded has been
+        // handled, and it is read immediately after. Null for anything with no
+        // run behind it: a preview, a headless fixture.
+        internal System.Func<RunOrchestrator.FightSettlement> SettlementSource;
+
+        // Whether this fight belongs to a run, captured when the fight starts
+        // and fixed for its life. Routing reads this and the settlement, never
+        // RunManager.HasRun: settlement can end the run before routing runs
+        // (docs/PLAN_BUGS_QA.md C1).
+        internal bool BelongsToRun;
 
         [SerializeField] internal ReckoningController reckoning;
         [SerializeField] internal DefeatController defeat;
 
-        // True when the defeat screen took over. A run always ends on a loss,
-        // so there is no "keep playing" branch here -- the only choices are
-        // leave, or go and look at the roster that survived.
-        private bool OpenDefeat()
+        // WHERE A FINISHED FIGHT GOES (C1): Defeat, then the Reckoning (its
+        // outcome form when nothing was paid), then the fight's own Continue.
+        // FightEndRouting decides; this only opens what it names. True when a
+        // screen took over; false leaves Continue, which the pad can press.
+        private bool RouteFightEnd()
         {
-            if (defeat == null) return false;
+            var settled = SettlementSource?.Invoke() ?? default;
+            var screen = Domain.Rewards.FightEndRouting.Route(
+                _session.EndReason, settlementEndedRun: settled.RunEnded != null, belongedToRun: BelongsToRun);
 
-            var settlement = SettlementSource?.Invoke();
-            if (settlement == null) return false;
+            switch (screen)
+            {
+                case Domain.Rewards.FightEndScreen.Defeat:
+                    return OpenDefeat(settled.RunEnded);
+                case Domain.Rewards.FightEndScreen.Reckoning:
+                    if (OpenReckoning(settled)) return true;
+                    break;
+            }
+
+            // On the Continue, the settlement's notices go in the end log
+            // above it; the Reckoning shows its own.
+            AppendEndLog(settled.Notices);
+            return false;
+        }
+
+        // A run always ends on a loss, so there is no "keep playing" branch
+        // here -- the only choices are leave, or go and look at the roster that
+        // survived.
+        private bool OpenDefeat(RunSettlement.Result settlement)
+        {
+            if (defeat == null || settlement == null) return false;
 
             defeat.Dismissed = LeaveFight;
 
@@ -1163,18 +1192,23 @@ namespace PrincesPalace
             return true;
         }
 
-        // True when the Reckoning took over. False means the caller should fall
-        // back to the Continue button -- no controller wired, or no reward to
-        // show, both of which are states a test can legitimately be in.
-        private bool OpenReckoning()
+        // A fight inside a run always opens the Reckoning: the full form when
+        // the settlement paid, the outcome form when it paid nothing. Either
+        // shows the run's pending relic receipts as chips. False only for a
+        // scene with no Reckoning wired (a fixture).
+        private bool OpenReckoning(RunOrchestrator.FightSettlement settled)
         {
             if (reckoning == null) return false;
 
-            var reward = RewardSource?.Invoke();
-            if (reward == null) return false;
+            var receipts = RunOrchestrator.PendingRelicReceipts;
+            var request = settled.Reward != null
+                ? Domain.Rewards.ReckoningRequest.Full(settled.Reward, RollOffers(), receipts)
+                : Domain.Rewards.ReckoningRequest.Outcome(
+                    Domain.Rewards.FightEndRouting.RowFor(_session.EndReason).Ending,
+                    receipts, settled.Notices, RunOrchestrator.TallyOf(_session), _session.Ledger);
 
             reckoning.Dismissed = LeaveFight;
-            reckoning.Show(reward, RollOffers());
+            reckoning.Show(request);
             return true;
         }
 
@@ -1438,17 +1472,22 @@ namespace PrincesPalace
             {
                 _endRaised = true;
                 FightEnded?.Invoke(_session.PlayerWon);
+
+                // Routed once, on the pass that settled: the settlement is
+                // this fight's and the screens it opens are opened once.
+                _endTookOver = RouteFightEnd();
             }
 
             // A finished fight opens ITS OWN screen instead of the Continue
-            // button -- the Reckoning on a win, the defeat screen on a loss.
-            // Two dismissals to leave one fight is one more than the moment
-            // deserves, and both expand better against the stage the last blow
-            // landed on than against a screen already acknowledged.
+            // button -- the defeat screen when the run ended, the Reckoning
+            // when it goes on. Two dismissals to leave one fight is one more
+            // than the moment deserves, and both expand better against the
+            // stage the last blow landed on than against a screen already
+            // acknowledged.
             //
-            // The Continue button survives as the fallback for anything with
-            // neither wired: a headless fixture, a preview.
-            bool tookOver = over && (_session.PlayerWon ? OpenReckoning() : OpenDefeat());
+            // The Continue button is for a fight with no run behind it: a
+            // preview, a headless fixture.
+            bool tookOver = over && _endTookOver;
 
             continueButton.gameObject.SetShown(over && !tookOver);
 
@@ -1460,9 +1499,9 @@ namespace PrincesPalace
             RefreshUi();
         }
 
-        // Lines the settlement adds once the fight is over (FightBootstrap), for
-        // a fight that ends on Continue rather than the Reckoning. Called from
-        // inside FightEnded, before this pass's RefreshUi paints the log.
+        // Lines the settlement adds once the fight is over, for a fight that
+        // ends on Continue rather than a screen of its own. Called by the
+        // routing, before this pass's RefreshUi paints the log.
         internal void AppendEndLog(IEnumerable<string> lines)
         {
             if (lines == null) return;
@@ -1693,6 +1732,15 @@ namespace PrincesPalace
             // monster the player was only reading.
             if (IsInspecting || IsTargetIntentInspection) return;
 
+            // WHENEVER A CONTROL IS THE ONLY WAY FORWARD, THE PAD CAN PRESS IT
+            // (C1 rule 3): a finished fight left on Continue has nothing else.
+            if (ContinueIsTheWayOut)
+            {
+                continueButton.onClick.Invoke();
+                ButtonCue.Activate(continueButton.gameObject);
+                return;
+            }
+
             _inspecting = false;
             _characterSelecting = false;
             _inspectingIntent = false;
@@ -1763,6 +1811,10 @@ namespace PrincesPalace
         internal GameObject FocusedElement()
         {
             if (_session == null || _isBusy) return null;
+
+            // The finished fight's one control: the marker stands where Submit
+            // will press.
+            if (ContinueIsTheWayOut) return continueButton.gameObject;
 
             // INSPECT FIRST, because it sits on top of Root: the marker
             // belongs on the actor being read, not on the verb the player

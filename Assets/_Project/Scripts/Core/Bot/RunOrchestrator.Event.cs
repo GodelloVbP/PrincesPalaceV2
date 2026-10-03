@@ -239,7 +239,13 @@ namespace PrincesPalace
         //    documented contract), then the outcome's effects. The next page,
         //    or the concluded state, or a closed room.
         // 3. PERSIST, once.
-        public static EventChoiceResult ChooseEventOption(int index, string pageId)
+        //
+        // `displayedReceipts` are the relic receipts the page the pick was
+        // made on showed (C2): picking is leaving that page, so they are
+        // acknowledged in this pick's one write. A refused pick leaves nothing,
+        // so it acknowledges nothing.
+        public static EventChoiceResult ChooseEventOption(int index, string pageId,
+            IReadOnlyCollection<string> displayedReceipts = null)
         {
             // 1. VALIDATE.
             var run = RunManager.Run;
@@ -311,7 +317,10 @@ namespace PrincesPalace
                 }
             }
 
-            // 2. APPLY.
+            // 2. APPLY. The page's receipts first, so a relic this very pick
+            // grants is a new receipt for the page it leads to.
+            AcknowledgeReceipts(run, displayedReceipts);
+
             var applied = new List<EventEffect>();
             int ownEffects = choice.Effects?.Length ?? 0;
             for (int i = 0; i < ownEffects; i++) ApplyEffect(save, run, choice.Effects[i], applied);
@@ -335,7 +344,11 @@ namespace PrincesPalace
                 return EventChoiceResult.Applied(saved, resolution.Result, effectsLine, closed: false);
             }
 
-            bool nothingToSay = string.IsNullOrEmpty(resolution.Result) && string.IsNullOrEmpty(effectsLine);
+            // A receipt still pending is something to present: a relic-only
+            // Leave has no effects line (relics are chips, not text), and
+            // closing at once would drop the chip unseen.
+            bool nothingToSay = string.IsNullOrEmpty(resolution.Result) && string.IsNullOrEmpty(effectsLine)
+                && PendingReceiptCount(run) == 0;
 
             // A LEAVE WITH NOTHING TO SAY CLOSES AT ONCE -- the plain "Leave"
             // button. A Leave that has a result shows it first and waits for
@@ -361,6 +374,43 @@ namespace PrincesPalace
             return EventChoiceResult.Applied(persisted, resolution.Result, effectsLine, closed: false);
         }
 
+        // ---- relic receipts (docs/PLAN_BUGS_QA.md C2) ------------------------
+
+        // The run's pending receipts, oldest first: what a surface shows as
+        // chips. A copy, so a caller holding it is not changed under by a pick.
+        public static IReadOnlyList<string> PendingRelicReceipts =>
+            RunManager.Run?.pendingRelicReceipts == null
+                ? new List<string>()
+                : new List<string>(RunManager.Run.pendingRelicReceipts);
+
+        // A surface that is not an event page (the Reckoning) acknowledging
+        // what it displayed as it is left. Its own write: leaving it moves
+        // nothing else.
+        public static void AcknowledgeRelicReceipts(IReadOnlyCollection<string> displayed)
+        {
+            var run = RunManager.Run;
+            if (run == null || displayed == null || displayed.Count == 0) return;
+            if (AcknowledgeReceipts(run, displayed)) SaveSlotManager.SaveCurrent();
+        }
+
+        // Exactly the displayed ids, one pending entry each; a receipt the
+        // surface never showed stays pending. Unwritten: the caller's write
+        // carries it. True when anything was removed.
+        private static bool AcknowledgeReceipts(RunSnapshot run, IReadOnlyCollection<string> displayed)
+        {
+            if (run?.pendingRelicReceipts == null || displayed == null) return false;
+
+            bool removed = false;
+            foreach (var id in displayed)
+            {
+                if (run.pendingRelicReceipts.Remove(id)) removed = true;
+            }
+
+            return removed;
+        }
+
+        private static int PendingReceiptCount(RunSnapshot run) => run?.pendingRelicReceipts?.Count ?? 0;
+
         // ---- leaving -------------------------------------------------------------------
 
         // Leaving is what clears the room -- an event is the third room that
@@ -369,17 +419,27 @@ namespace PrincesPalace
         //
         // Callable on any open event, concluded or not: the panel's own Leave
         // on a concluded event, and the bot's way out.
-        public static void LeaveEvent()
+        //
+        // `displayedReceipts`: what the page being left showed, acknowledged in
+        // the same write as the leaving.
+        public static void LeaveEvent(IReadOnlyCollection<string> displayedReceipts = null)
         {
             var run = RunManager.Run;
             if (run == null) return;
+
+            AcknowledgeReceipts(run, displayedReceipts);
 
             if (!EventIsOpenOn(run))
             {
                 // Nothing under the party. Stale fields (an event on another
                 // node) are tidied, but no room is cleared -- this node's
                 // room is not the event's.
-                if (string.IsNullOrEmpty(run.eventId)) return;
+                if (string.IsNullOrEmpty(run.eventId))
+                {
+                    if (displayedReceipts != null && displayedReceipts.Count > 0) SaveSlotManager.SaveCurrent();
+                    return;
+                }
+
                 CloseEventFields(run);
                 SaveSlotManager.SaveCurrent();
                 return;
@@ -590,6 +650,11 @@ namespace PrincesPalace
                     if (run.relicIds.Contains(effect.RelicId)) return;
                     run.relicIds.Add(effect.RelicId);
                     applied.Add(effect);
+
+                    // What was ACTUALLY added, so the duplicate skipped above
+                    // is never shown as received.
+                    run.pendingRelicReceipts ??= new List<string>();
+                    run.pendingRelicReceipts.Add(effect.RelicId);
                     return;
 
                 case EventEffectKind.PrincesFavor:

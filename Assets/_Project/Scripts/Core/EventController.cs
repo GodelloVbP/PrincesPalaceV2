@@ -85,6 +85,19 @@ namespace PrincesPalace
         // The map's own menu instance, shared as the shop shares it.
         [SerializeField] internal SystemMenuController systemMenu;
 
+        // The "Gained" chips (RelicChipStrip): relics this event gave that the
+        // player has not been shown yet, with their tooltip and art.
+        [SerializeField] internal GameObject gainedStrip;
+        [SerializeField] internal RectTransform gainedCaption;
+        [SerializeField] internal Button[] gainedChips;
+        [SerializeField] internal Image[] gainedChipIcons;
+        [SerializeField] internal TMP_Text[] gainedChipNames;
+        [SerializeField] internal GameObject gainedTooltip;
+        [SerializeField] internal TMP_Text gainedTooltipName;
+        [SerializeField] internal TMP_Text gainedTooltipMeta;
+        [SerializeField] internal TMP_Text gainedTooltipBody;
+        [SerializeField] internal IconEntry[] relicArt;
+
         // Raised when the event closes. The map owns navigation.
         public System.Action Finished;
 
@@ -151,6 +164,19 @@ namespace PrincesPalace
         private bool _wired;
         private NavContext _navContext;
 
+        // Pointer or pad focus on a chip opens its tooltip; the router decides
+        // which input owns it (TooltipFocusRouter).
+        private readonly TooltipFocusRouter _tooltips = new TooltipFocusRouter();
+        private RelicChipStrip _gained;
+
+        private RelicChipStrip Gained =>
+            _gained ?? (_gained = new RelicChipStrip(new RelicChipWidgets(
+                gainedStrip, gainedCaption, centred: false, gainedChips, gainedChipIcons, gainedChipNames,
+                gainedTooltip, gainedTooltipName, gainedTooltipMeta, gainedTooltipBody, relicArt)));
+
+        // The receipts this page is showing: what leaving it acknowledges.
+        public IReadOnlyList<string> DisplayedReceipts => Gained.Displayed;
+
         private static readonly Color ChoiceColour = Hex(EventScreen.ChoiceTextHex);
         private static readonly Color LockedColour = Hex(EventScreen.LockedChoiceTextHex);
 
@@ -169,6 +195,7 @@ namespace PrincesPalace
 
         private void OnDisable()
         {
+            _tooltips.Detach();
             PopNavContext();
         }
 
@@ -187,6 +214,11 @@ namespace PrincesPalace
                 int row = i;
                 choiceButtons[i].onClick.AddListener(() => Press(row));
             }
+
+            // Pressing a chip is "done reading": focus goes to the first
+            // choice, the page's primary action.
+            Gained.Pressed = FocusFirstChoice;
+            Gained.Wire(_tooltips);
 
             WireStageClick();
         }
@@ -329,6 +361,12 @@ namespace PrincesPalace
             }
 
             PaintRows(view);
+
+            // Every receipt still pending, on whichever page the player is
+            // reading (C2): a pick's own grant, or one from an event fight the
+            // Reckoning never got to show.
+            Gained.Show(RunOrchestrator.PendingRelicReceipts);
+            PlaceGained();
 
             // A legacy page shows its rows at once; a staged one hides them
             // until the playback reaches Choices.
@@ -508,6 +546,39 @@ namespace PrincesPalace
                 float stageWidth = dialogueStage != null ? dialogueStage.rect.width : panel.x;
                 Pin(choicesPanel, DialogueStageLayout.ChoicesPin(framing, stageWidth, panel.x), 0f,
                     DialogueStageLayout.ChoicesPanelBottom(panel.y, EventScreen.ChoicesHeightFor(_paintedRowCount)));
+                PlaceGained();
+            }
+        }
+
+        // THE CHIPS STAND ON THE FIRST ROW, wherever the rows are: the legacy
+        // spot or pinned above the stage's box. Same anchors and horizontal
+        // pivot as the rows' panel (the two are equally wide), bottom edge
+        // GainedToChoicesGap above the panel's top, which is the first row's
+        // top because the panel fills from its top. Placed even while the rows
+        // are hidden for dialogue, so the chips do not jump when they appear.
+        private void PlaceGained()
+        {
+            var strip = gainedStrip == null ? null : gainedStrip.transform as RectTransform;
+            if (strip == null || choicesPanel == null) return;
+
+            strip.anchorMin = choicesPanel.anchorMin;
+            strip.anchorMax = choicesPanel.anchorMax;
+            strip.pivot = new Vector2(choicesPanel.pivot.x, 0f);
+
+            float panelTop = choicesPanel.anchoredPosition.y + (1f - choicesPanel.pivot.y) * choicesPanel.rect.height;
+            strip.anchoredPosition = new Vector2(choicesPanel.anchoredPosition.x,
+                panelTop + EventScreen.GainedToChoicesGap);
+        }
+
+        private void FocusFirstChoice()
+        {
+            for (int i = 0; i < choiceButtons.Length; i++)
+            {
+                var button = choiceButtons[i];
+                if (button == null || !button.gameObject.activeInHierarchy || !button.interactable) continue;
+
+                UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(button.gameObject);
+                return;
             }
         }
 
@@ -721,15 +792,19 @@ namespace PrincesPalace
             // repaints, so the second carries the page the first just made current.
             if (_lastChooseFrame == Time.frameCount) return;
 
+            // Leaving this page, by a pick or by Leave, acknowledges the
+            // receipts it showed, in the same write (C2).
+            var shown = new List<string>(Gained.Displayed);
+
             if (_rowAction[row] == LeaveRow)
             {
-                RunOrchestrator.LeaveEvent();
+                RunOrchestrator.LeaveEvent(shown);
                 Close();
                 return;
             }
 
             _lastChooseFrame = Time.frameCount;
-            var result = RunOrchestrator.ChooseEventOption(_rowAction[row], _paintedPageId);
+            var result = RunOrchestrator.ChooseEventOption(_rowAction[row], _paintedPageId, shown);
             if (result.Closed)
             {
                 Close();
@@ -796,6 +871,7 @@ namespace PrincesPalace
             }
 
             NavigationInputModule.Contexts?.PushIfAbsent(_navContext);
+            _tooltips.Attach(NavigationInputModule.Contexts);
         }
 
         private void PopNavContext()
@@ -809,6 +885,12 @@ namespace PrincesPalace
         // ONE VERTICAL RAIL of the pickable rows. A locked row is not a member
         // and its own navigation is cleared, so no neighbour can step onto it
         // and no stale link from an earlier page can survive into this one.
+        //
+        // THE CHIPS JOIN WHEN THE ROWS DO (C2), as a Rail above them: never
+        // while dialogue plays, so Submit keeps advancing the lines and the
+        // chips are visible but not focusable. Down from a chip is the first
+        // choice, Up from the first choice the chips; entry stays the first
+        // choice.
         private void RefreshNavigation()
         {
             var members = new List<Selectable>();
@@ -830,8 +912,33 @@ namespace PrincesPalace
                 }
             }
 
-            var group = RuntimeNavWiring.Group("eventChoices", UiNavGroupKind.List, members);
-            if (group != null) RuntimeNavWiring.Apply(group);
+            var groups = new List<UiNavGroup<Selectable>>();
+            var links = new List<UiNavLink<Selectable>?>();
+            groups.Add(RuntimeNavWiring.Group("eventChoices", UiNavGroupKind.List, members));
+
+            var chips = _rowsShown && members.Count > 0 ? Gained.Selectables : new List<Selectable>();
+            for (int i = 0; gainedChips != null && i < gainedChips.Length; i++)
+            {
+                if (gainedChips[i] != null && !chips.Contains(gainedChips[i]))
+                {
+                    gainedChips[i].navigation = new UnityEngine.UI.Navigation { mode = UnityEngine.UI.Navigation.Mode.None };
+                }
+            }
+
+            if (chips.Count > 0)
+            {
+                groups.Add(RuntimeNavWiring.Group("eventGained", UiNavGroupKind.Rail, chips, wrap: UiNavWrap.Clamp));
+                foreach (var chip in chips)
+                {
+                    links.Add(RuntimeNavWiring.Link(chip, UiNavDirection.Down, members[0]));
+                    selectables[chip.name] = chip.gameObject;
+                }
+
+                links.Add(RuntimeNavWiring.Link(members[0], UiNavDirection.Up, chips[0]));
+            }
+
+            groups.RemoveAll(g => g == null);
+            if (groups.Count > 0) RuntimeNavWiring.Apply(groups, links);
 
             // THE GAMEOBJECT, never the Button -- ReckoningController's
             // RefreshNavigation says why.

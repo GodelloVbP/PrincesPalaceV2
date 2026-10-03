@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.Events
     // caravan hands over a whole shelf, one "+1 <name>" per card, which ran
     // to three lines. So a line over budget folds its item grants into one
     // count ("+5 items") where the first grant stood; every other part --
-    // gold, XP, heals, relics, the scuffle's loss -- stays word for word,
+    // gold, XP, heals, the scuffle's loss -- stays word for word,
     // because those are what the player cannot read anywhere else. A line
     // that is over budget with no grants to fold is left as it is: nothing
     // in it is safe to drop.
@@ -109,8 +109,10 @@ namespace PrincesPalace.Domain.Events
                 case EventEffectKind.Counter:
                     return "";
                 case EventEffectKind.Relic:
-                    return UiStrings.EventEffectRelic.Format(
-                        string.IsNullOrEmpty(effect.RelicDisplayName) ? effect.RelicId : effect.RelicDisplayName);
+                    // Shown once, where it is received: as a chip on the
+                    // event page or the Reckoning (RunSnapshot.
+                    // pendingRelicReceipts), never as a second line here.
+                    return "";
                 case EventEffectKind.PrincesFavor:
                     return UiStrings.EventEffectPrincesFavor.Format(effect.Amount);
                 case EventEffectKind.FillSpecialPool:

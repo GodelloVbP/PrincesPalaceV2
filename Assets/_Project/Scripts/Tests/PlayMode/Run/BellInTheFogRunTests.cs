@@ -175,6 +175,13 @@ namespace PrincesPalace.PlayModeTests
 
         private static CombatantState Shawn(FightSession session) => session.Encounter.PlayerParty.Single();
 
+        // What leaving the Reckoning does to the run (ReckoningController's
+        // Dismiss): it showed every pending receipt, so it acknowledges them.
+        // Without it the event's silent Leave would not close at once, since a
+        // receipt still pending is something to present.
+        private static void DismissTheReckoning() =>
+            RunOrchestrator.AcknowledgeRelicReceipts(Run.pendingRelicReceipts.ToList());
+
         private static CombatantState Bellwether(FightSession session) => session.Encounter.Enemies.Single();
 
         // ---- the pages --------------------------------------------------------------
@@ -247,6 +254,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(settled.Reward, "pays: the standard Reckoning opens, like a won room");
             Assert.AreEqual("endure", Run.eventPageId);
             CollectionAssert.AreEqual(new[] { "toll_of_the_flock" }, Run.relicIds);
+            CollectionAssert.AreEqual(new[] { "toll_of_the_flock" }, Run.pendingRelicReceipts,
+                "the Toll is received, so the Reckoning shows it as a chip");
+            DismissTheReckoning();
             AssertShawnGotTheBellsExp();
             Assert.AreEqual(bearExp, Member("bear").exp, "the exp is Shawn's alone");
             Assert.AreEqual(17, HpOf("bear"), "Bjorn sat out untouched");
@@ -279,6 +289,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(settled.Reward, "pays: the standard Reckoning opens, like a won room");
             Assert.AreEqual("break", Run.eventPageId);
             CollectionAssert.AreEqual(new[] { "toll_of_the_flock", "bellwethers_bell" }, Run.relicIds);
+            CollectionAssert.AreEqual(new[] { "toll_of_the_flock", "bellwethers_bell" }, Run.pendingRelicReceipts,
+                "both are received, in grant order");
+            DismissTheReckoning();
             Assert.AreEqual(10, Member("sheep").level, "fixture: 30 exp bought a level after all");
             Assert.AreEqual(30, Member("sheep").exp, "the Bellwether's own payout only; the event adds no literal on Break");
             CollectionAssert.Contains(Run.eventsSeen, Bell);

@@ -882,9 +882,13 @@ namespace PrincesPalace
                 var view = RunOrchestrator.CurrentEvent();
                 if (view == null) break;
 
+                // The bot reads every relic receipt a page would show, so it
+                // acknowledges them on leaving the page as a player does (C2).
+                var receipts = RunOrchestrator.PendingRelicReceipts;
+
                 if (view.Concluded)
                 {
-                    RunOrchestrator.LeaveEvent();
+                    RunOrchestrator.LeaveEvent(new List<string>(receipts));
                     break;
                 }
 
@@ -899,7 +903,7 @@ namespace PrincesPalace
                     break;
                 }
 
-                var outcome = RunOrchestrator.ChooseEventOption(open.Index, view.PageId);
+                var outcome = RunOrchestrator.ChooseEventOption(open.Index, view.PageId, new List<string>(receipts));
                 if (!outcome.WasApplied)
                 {
                     result.Hits.Add(new InvariantHit("EventChoiceRefused",

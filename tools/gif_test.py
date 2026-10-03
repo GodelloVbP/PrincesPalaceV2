@@ -254,7 +254,9 @@ class ManifestTests(unittest.TestCase):
             self.assertEqual([m for s in out["scenarios"] for m in gif.refusals(s, ids)], [], name)
             self.assertEqual({s["kind"] for s in out["scenarios"]}, set(gif.KINDS), name)
         baseline = gif.expand_manifest(gif.load_manifest("baseline"), ids)
-        self.assertEqual([g["name"] for g in baseline["gaps"]], ["Reckoning outcome form", "Relic receipts"])
+        self.assertEqual([g["name"] for g in baseline["gaps"]], [])
+        receipts = [s for s in baseline["scenarios"] if s["kind"] == "still" and "RelicReceiptCaptureTests" in str(s)]
+        self.assertEqual(len(receipts), 7, "the P4 capture cases are stills in the baseline")
 
 
 if __name__ == "__main__":

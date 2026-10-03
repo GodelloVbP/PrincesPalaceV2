@@ -731,6 +731,11 @@ namespace PrincesPalace
                 .ToList();
         }
 
+        // Who an outcome-form Reckoning tallies: the fielded party, named as
+        // the reward rows name them. A paid fight's tally comes off its reward.
+        public static List<TallyMember> TallyOf(FightSession session) =>
+            FieldedIds(session).Select(id => new TallyMember(id, RewardApplier.DisplayNameFor(id))).ToList();
+
         // ---- the loot on offer -------------------------------------------------------
 
         // Rolled against how deep the run is and what class of thing was just

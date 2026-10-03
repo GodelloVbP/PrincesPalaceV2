@@ -102,10 +102,9 @@ never share a key.
   - `ReckoningTooltipCaptureTests` shows a full Reckoning with item offers
     (`Tests/PlayMode/Run/ReckoningTooltipCaptureTests.cs:109`).
   - `EventsM6CaptureTests` shows dialogue and legacy event pages.
-  - Neither builds an outcome-form Reckoning or relic receipts. Those cases are
-    new named capture cases, delivered with the feature by
-    `PLAN_BUGS_QA_2026-10-03.md` P4, and they join the baseline manifest when P4
-    lands. Until then the coverage report lists them as not covered.
+  - `RelicReceiptCaptureTests` (`Tests/PlayMode/Run/`) shows the outcome-form
+    Reckoning and relic receipts: full form with offers, Fell, 0 and 2 chips,
+    a chip tooltip by pad, and an event page with a receipt (legacy, staged).
 
 ### 2.3 Determinism
 
@@ -253,7 +252,7 @@ Every `-Manifest` run ends with a table:
 
 What depends on what:
 - `PLAN_UNITY_6_6.md` depends on **A and B only**.
-- `PLAN_BUGS_QA_2026-10-03.md` C11 (the Toll of the Flock GIF in a fight) needs A.
+- `PLAN_BUGS_QA.md` C11 (the Toll of the Flock GIF in a fight) needs A.
 - C and D are speed work, and nothing else waits on them.
 
 Agents: A, C and D go to an implementer; B and E to an implementer or a fixer,

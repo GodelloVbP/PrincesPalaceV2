@@ -96,7 +96,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float TitleToBodyGap = 16f;
         private const float BodyToEffectsGap = 12f;
         private const float EffectsHeight = 36f;
-        private const float EffectsToChoicesGap = 24f;
+
+        // THE "GAINED" BAND between the effects line and the rows: the relic
+        // chips (RelicChipTree) stand on the first row, here and on the stage
+        // alike (EventController places them above the rows wherever those
+        // are). Reserved even when empty, so the text column never moves.
+        private const float EffectsToGainedGap = 8f;
+        public const float GainedToChoicesGap = 12f;
 
         public const int ChoiceRowCount = 4;
         private const float RowHeight = 80f;
@@ -136,8 +142,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float ChoicesTop = ColumnBottom + ChoicesHeight;
 
         // The choice rows sit in their own panel (EventChoices) under the
-        // text column, so the column now ends where the rows begin.
-        private const float TextColumnBottom = ChoicesTop + EffectsToChoicesGap;
+        // text column, with the chip band between them.
+        private const float GainedCentreY = ChoicesTop + GainedToChoicesGap + RelicChipTree.StripHeight * 0.5f;
+        private const float TextColumnBottom =
+            ChoicesTop + GainedToChoicesGap + RelicChipTree.StripHeight + EffectsToGainedGap;
         private const float ChoicesCentreY = ColumnBottom + ChoicesHeight * 0.5f;
 
         // Read by EventController, which gives the rows' panel back its
@@ -147,7 +155,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private const float TitleCentreY = ColumnTop - TitleHeight * 0.5f;
         private const float BodyTop = ColumnTop - TitleHeight - TitleToBodyGap;
-        private const float EffectsCentreY = ChoicesTop + EffectsToChoicesGap + EffectsHeight * 0.5f;
+        private const float EffectsCentreY = TextColumnBottom + EffectsHeight * 0.5f;
         private const float BodyBottom = EffectsCentreY + EffectsHeight * 0.5f + BodyToEffectsGap;
 
         // Public so the text-fit test measures the box the tree declares
@@ -179,6 +187,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The rows' shared panel, moved by the controller in stage mode.
         public NodeRef ChoicesPanel;
+
+        // THE "GAINED" CHIPS (docs/PLAN_BUGS_QA.md C2): relics this
+        // event gave that the player has not seen yet. Outside the rows' panel
+        // because the rows hide while dialogue plays and the chips do not.
+        public NodeRef GainedStrip;
+        public NodeRef GainedCaption;
+        public List<NodeRef> GainedChips = new List<NodeRef>();
+        public List<NodeRef> GainedChipIcons = new List<NodeRef>();
+        public List<NodeRef> GainedChipNames = new List<NodeRef>();
+        public NodeRef GainedTooltip;
+        public NodeRef GainedTooltipName;
+        public NodeRef GainedTooltipMeta;
+        public NodeRef GainedTooltipBody;
 
         // ---- the dialogue stage (D2) ---------------------------------------------
         public NodeRef DialogueStage;
@@ -214,6 +235,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 screen.BuildStage(),
                 screen.BuildChoices(),
             };
+
+            // After the rows, and the tooltip after everything, so neither is
+            // ever drawn under the stage or the rows.
+            var gained = RelicChipTree.Build("EventGained", Place.At(ChoicesLegacyX, GainedCentreY), ChoiceRowWidth,
+                Place.At(0f, 0f));
+            screen.GainedStrip = gained.Strip;
+            screen.GainedCaption = gained.Caption;
+            screen.GainedChips.AddRange(gained.Chips);
+            screen.GainedChipIcons.AddRange(gained.ChipIcons);
+            screen.GainedChipNames.AddRange(gained.ChipNames);
+            screen.GainedTooltip = gained.Tooltip;
+            screen.GainedTooltipName = gained.TooltipName;
+            screen.GainedTooltipMeta = gained.TooltipMeta;
+            screen.GainedTooltipBody = gained.TooltipBody;
+            children.Add(gained.Strip);
+            children.Add(gained.Tooltip);
 
             screen.Root = Ui.Panel("EventPanel", UiSize.Fill, children).Inactive();
             return screen;

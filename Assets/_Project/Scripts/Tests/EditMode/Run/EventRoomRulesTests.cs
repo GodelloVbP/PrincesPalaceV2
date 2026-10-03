@@ -228,10 +228,10 @@ namespace PrincesPalace.Domain.Tests
                 EventEffect.Gold(9999),
                 EventEffect.Exp(99999),
                 EventEffect.HealPercent(100),
-                EventEffect.RelicGrant("crown", "World-Ender's Crown of Ash"),
+                EventEffect.HealMemberPercent("witch", "Wandering Bog Witch", 99),
             }, null);
 
-            Assert.AreEqual("+9999 gold  ·  +99999 XP  ·  Party healed 100%  ·  Relic: World-Ender's Crown of Ash", line);
+            Assert.AreEqual("+9999 gold  ·  +99999 XP  ·  Party healed 100%  ·  Wandering Bog Witch healed 99%", line);
         }
 
         [Test]

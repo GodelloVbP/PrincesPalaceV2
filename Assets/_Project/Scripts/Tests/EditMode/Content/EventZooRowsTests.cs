@@ -343,7 +343,7 @@ namespace PrincesPalace.Domain.Tests
             }, _ => null);
 
             Assert.AreEqual(
-                "Shawn fully healed  ·  Odette healed 30%  ·  +10 Prince's favor  ·  Relic: Kinship  ·  " +
+                "Shawn fully healed  ·  Odette healed 30%  ·  +10 Prince's favor  ·  " +
                 "Special pools full each turn this leg",
                 line);
         }

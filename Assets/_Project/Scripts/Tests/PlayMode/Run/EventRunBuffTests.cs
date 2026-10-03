@@ -224,8 +224,12 @@ namespace PrincesPalace.PlayModeTests
             var second = EventPicks.OnCurrentPage(TakeRelic);
 
             Assert.AreEqual(1, Run.relicIds.Count(id => id == _relicId));
-            Assert.AreEqual("Relic: Fixture Relic", first.EffectsLine);
-            Assert.AreEqual("", second.EffectsLine, "an already-held relic is not granted again");
+            // A relic is shown as a chip, never as effects text, and only
+            // what was applied becomes a receipt (C2, C3).
+            Assert.AreEqual("", first.EffectsLine);
+            Assert.AreEqual("", second.EffectsLine);
+            CollectionAssert.AreEqual(new[] { _relicId }, Run.pendingRelicReceipts,
+                "an already-held relic is not granted again, so it is not received again");
         }
 
         // ---- Prince's favor (run scope) -------------------------------------------------

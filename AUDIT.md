@@ -2828,6 +2828,16 @@ Fix: rewrite them present-tense (drop the citation or name the live doc
 section) and run `-BuildContent` in the same commit.
 Route: fixer on Windows; gate `-Changed -BuildContent`.
 
+### 270. Relic receipts (PLAN_BUGS_QA P4): owner calls left open
+
+- Receipts come only from event grants (`RunOrchestrator` `Relic` effect, the
+  plan's two grant paths). The start-of-run draft, a shop purchase and the
+  debug menu add relics the player picked on screen and make no receipt.
+- The Reckoning's chip band is 1px off Continue and 1px off the lowest page
+  rows (`RelicChipStripTreeTests` pins both); it reads tight in
+  `Reckoning_chips_2.png`.
+- `kinship` has no `iconPath`, so its chip is name-only.
+
 ## Unity 6.6 upgrade, 2026-10-03
 
 Main fast-forwarded from M0 `7ea681ae9d913a99afec2a7b3426f2e0c39d4484` to the

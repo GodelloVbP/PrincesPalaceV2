@@ -365,12 +365,14 @@ namespace PrincesPalace
             // THIS FIGHT'S settlement, not the statics. The statics keep the
             // last value anything assigned, so a fight that settled with no
             // reward (an event fight with `pays: false`) or with no run ended
-            // (a `wake` loss) read the PREVIOUS fight's: a stale Reckoning, or
-            // a defeat screen for a run still going. Per fight, "nothing"
-            // reads as nothing, and the controller's Continue fallback stands
-            // in (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.2).
-            fight.RewardSource = () => _settled.Reward;
-            fight.SettlementSource = () => _settled.RunEnded;
+            // (a `wake` loss) would read the PREVIOUS fight's: a stale
+            // Reckoning, or a defeat screen for a run still going.
+            fight.SettlementSource = () => _settled;
+
+            // Captured NOW, at the fight's start, and fixed for its life:
+            // settlement may end the run before routing reads it
+            // (docs/PLAN_BUGS_QA.md C1).
+            fight.BelongsToRun = RunManager.HasRun;
         }
 
         // The IN-RUN half moved to RunOrchestrator.BuildFight, which is the
@@ -540,10 +542,9 @@ namespace PrincesPalace
         // (docs/PLAN_BALANCE_BOT.md F2); FightSettlementTests pins the
         // behaviour through this same door.
         //
-        // What is left here is what only a SCREEN needs: the two statics the
-        // Reckoning and the defeat screen read back through RewardSource and
-        // SettlementSource.
-        // This fight's settlement, for RewardSource / SettlementSource.
+        // What is left here is what only a SCREEN needs: this fight's
+        // settlement, which the controller's routing reads back through
+        // SettlementSource, and the two statics.
         private RunOrchestrator.FightSettlement _settled;
 
         private void OnFightEnded(bool won)
@@ -558,12 +559,6 @@ namespace PrincesPalace
             // the next screen is about to read.
             if (settled.Reward != null) LastReward = settled.Reward;
             if (settled.RunEnded != null) LastSettlement = settled.RunEnded;
-
-            // NO REWARD, NO RECKONING: a no-pay fight ends on the plain
-            // Continue, so what the settlement has to say (a fake falling
-            // apart) goes in the end log above it. With a Reward the Reckoning
-            // shows the same lines off Reward.Notices.
-            if (settled.Reward == null && settled.Notices.Count > 0) fight.AppendEndLog(settled.Notices);
         }
 
         // What the fight just paid, per character. Held for the rewards screen

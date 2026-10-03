@@ -166,6 +166,18 @@ namespace PrincesPalace
         // again every time they reload the hub.
         public bool relicDrafted;
 
+        // RELIC RECEIPTS (docs/PLAN_BUGS_QA.md C2): relic ids an
+        // event grant applied that the player has not yet been shown. Appended
+        // by RunOrchestrator's Relic effect with what it actually added (a
+        // duplicate is never a receipt); cleared, id by id, only for what a
+        // surface displayed, when the player leaves that surface. Persisted
+        // because settlement saves before the Reckoning opens: a crash in
+        // between must still show the relic, on the reopened event page.
+        //
+        // Purely additive, so CurrentVersion does not move: an older build
+        // drops the list, which loses a chip and nothing else.
+        public List<string> pendingRelicReceipts = new List<string>();
+
         // How many item-offer rerolls this descent has spent.
         //
         // Dead weight, kept rather than deleted. Nothing sets this above zero

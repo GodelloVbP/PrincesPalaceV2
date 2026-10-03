@@ -125,7 +125,7 @@ namespace PrincesPalace
             return reward;
         }
 
-        private static string DisplayNameFor(string definitionId)
+        internal static string DisplayNameFor(string definitionId)
         {
             var definition = Content.ContentDatabase.Characters.FirstOrDefault(c => c.id == definitionId);
             return definition == null ? definitionId : definition.Data.DisplayName;

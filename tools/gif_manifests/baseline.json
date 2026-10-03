@@ -15,10 +15,8 @@
     {"class": "ReckoningTooltipCaptureTests", "files": ["Reckoning_selected_tooltip.png"]},
     {"class": "SystemMenuCaptureTests", "files": ["SystemMenu_skeleton.png", "SystemMenu_options.png", "SystemMenu_glossary.png", "SystemMenu_character_loadout.png", "SystemMenu_party_camp_default.png", "SystemMenu_run.png"]},
     {"class": "EventsM6CaptureTests", "files": ["m6_a_speaker_right_fallback_16x9.png", "m6_d_legacy_frame_960x540_16x9.png", "m6_e_fight_toll_1_16x9.png"]},
-    {"class": "DialogueStageCaptureTests", "files": ["dialogue_a_shawn_left_16x9.png", "dialogue_e_choices_16x9.png", "dialogue_i_legacy_mechanics_16x9.png"]}
+    {"class": "DialogueStageCaptureTests", "files": ["dialogue_a_shawn_left_16x9.png", "dialogue_e_choices_16x9.png", "dialogue_i_legacy_mechanics_16x9.png"]},
+    {"class": "RelicReceiptCaptureTests", "files": ["Reckoning_full_offers.png", "Reckoning_outcome_fell.png", "Reckoning_chips_0.png", "Reckoning_chips_2.png", "Reckoning_chip_tooltip_pad.png", "Event_legacy_receipt.png", "Event_staged_receipt.png"]}
   ],
-  "notCovered": [
-    {"name": "Reckoning outcome form", "why": "the outcome-form Reckoning does not exist yet; its capture case ships with PLAN_BUGS_QA_2026-10-03 P4 and joins this manifest then"},
-    {"name": "Relic receipts", "why": "relic receipt cases do not exist yet; same delivery as above (P4)"}
-  ]
+  "notCovered": []
 }

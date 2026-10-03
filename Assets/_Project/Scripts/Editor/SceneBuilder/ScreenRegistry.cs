@@ -841,6 +841,10 @@ public static class ScreenRegistry
         panel.choiceTexts = screen.ChoiceRows.Select(r => result.Tmp(r.Text)).ToArray();
         panel.choiceLocks = screen.ChoiceRows.Select(r => result.Tmp(r.Lock)).ToArray();
 
+        // The relic chips' art, the table the Reckoning's chips and relic rows
+        // read too.
+        panel.relicArt = RelicIconTable();
+
         return panel;
     }
 

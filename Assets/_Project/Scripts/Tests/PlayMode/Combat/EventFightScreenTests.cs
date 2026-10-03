@@ -14,11 +14,12 @@ using PrincesPalace.Domain.Events;
 namespace PrincesPalace.PlayModeTests
 {
     // AN EVENT FIGHT'S END ON THE FIGHT SCREEN (docs/PLAN_EVENTS_BELL_AND_
-    // CARAVAN.md 1.2, M2). The screen routes a finished fight to the
-    // Reckoning on a win and the defeat screen on a loss, with Continue as
-    // the fallback; for an event fight that routing has to follow the
-    // SETTLEMENT, not the win flag: a `pays: false` win has no reward to show,
-    // and a `wake` loss ended no run, so both fall back to Continue.
+    // CARAVAN.md 1.2, M2; docs/PLAN_BUGS_QA.md C1/C3). The routing
+    // follows the SETTLEMENT, not the win flag: a `wake` loss ended no run, so
+    // it is no defeat screen, and inside a run there is no Continue fallback.
+    // Both a `wake` loss and a `pays: false` win open the Reckoning in its
+    // outcome form: the ending named, nothing paid, and the pad's Submit on
+    // its Continue reaches the Map (T5).
     //
     // Played through the real door, FightSettlementTests' way: the Fight
     // scene is loaded, FightBootstrap builds through
@@ -31,6 +32,8 @@ namespace PrincesPalace.PlayModeTests
         private const int QuietWin = 1;  // pays false, normal party vs one rat
 
         private string _root;
+        private FightController _fight;
+        private readonly System.Collections.Generic.List<string> _loaded = new System.Collections.Generic.List<string>();
 
         [SetUp]
         public void UseAThrowawaySaveRoot()
@@ -41,8 +44,10 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
             RunManager.ResetForTests();
-            Navigation.LoadOverride = _ => { };
+            _loaded.Clear();
+            Navigation.LoadOverride = scene => _loaded.Add(scene);
             FightBeatPlayer.BeatSpeedMultiplier = 60f;
+            ReckoningController.SpeedMultiplier = 40f;
             SaveData.TestSquadOfThreeEnabled = false;
         }
 
@@ -51,6 +56,7 @@ namespace PrincesPalace.PlayModeTests
         {
             SaveData.TestSquadOfThreeEnabled = null;
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            ReckoningController.SpeedMultiplier = 1f;
             LogAssert.ignoreFailingMessages = false;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
@@ -116,7 +122,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator AWakeLoss_ShowsContinue_NotTheDefeatScreen_AndTheRunGoesOn()
+        public IEnumerator AWakeLoss_OpensTheOutcomeFormTitledFell_AndThePadLeavesToTheMap()
         {
             StartTheFight(Doom);
 
@@ -136,14 +142,27 @@ namespace PrincesPalace.PlayModeTests
             var defeat = UnityEngine.Object.FindAnyObjectByType<DefeatController>(FindObjectsInactive.Include);
             Assert.IsNotNull(defeat, "fixture: the Fight scene has no defeat screen to keep closed");
             Assert.IsFalse(defeat.gameObject.activeSelf, "the defeat screen opened for a run that did not end");
-            Assert.IsTrue(ContinueShown(fight), "no Continue to leave the fight by");
+
+            var reckoning = AssertOutcomeForm("FELL");
+            Assert.IsEmpty(reckoning.DisplayedReceipts, "Fell grants nothing, so there is nothing to show");
 
             Assert.AreEqual(1, run.currentHealth.First(e => e.characterId == "sheep").hp);
-            Assert.AreEqual("Fell.", run.eventResult);
+            Assert.AreEqual("Fell.", run.eventResult, "the event plays the Fell text when the Map reopens it");
+
+            // The pad, through the production dispatcher: Submit on the
+            // outcome form's entry, which is its Continue.
+            var input = NavSceneReuse.TakeOverInput();
+            yield return null;
+            Assert.AreEqual("ReckoningContinueButton", UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject?.name);
+            input.SubmitDown = true;
+            yield return null;
+            input.ClearOneFrameFlags();
+
+            CollectionAssert.Contains(_loaded, Navigation.Map, "Continue on the outcome form leaves to the Map");
         }
 
         [UnityTest]
-        public IEnumerator ANonPayingWin_ShowsContinue_NotTheReckoning()
+        public IEnumerator ANonPayingWin_OpensTheOutcomeFormTitledVictory()
         {
             StartTheFight(QuietWin);
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad()) character.level = 40;
@@ -160,11 +179,25 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(fight.Session.PlayerWon, "fixture: the rat won");
 
-            var reckoning = UnityEngine.Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(reckoning, "fixture: the Fight scene has no Reckoning to keep closed");
-            Assert.IsFalse(reckoning.gameObject.activeSelf, "a pays: false fight opened the Reckoning");
-            Assert.IsTrue(ContinueShown(fight), "no Continue to leave the fight by");
+            AssertOutcomeForm("VICTORY");
             Assert.AreEqual("Won quietly.", RunManager.Run.eventResult);
+        }
+
+        // The Reckoning took the fight over in its outcome form: titled for
+        // the ending, no gold, and the fight's own Continue left down.
+        private ReckoningController AssertOutcomeForm(string title)
+        {
+            var reckoning = UnityEngine.Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(reckoning, "fixture: the Fight scene has no Reckoning");
+            Assert.IsTrue(reckoning.gameObject.activeSelf, "a fight inside a run opens the Reckoning");
+            Assert.IsTrue(reckoning.IsOutcomeForm, "nothing was paid, so the outcome form");
+
+            var texts = reckoning.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true);
+            Assert.AreEqual(title, texts.First(t => t.name == "ReckoningTitle").text);
+            Assert.IsFalse(texts.First(t => t.name == "ReckoningGoldLabel").gameObject.activeSelf, "no gold on the outcome form");
+
+            Assert.IsFalse(ContinueShown(_fight), "inside a run there is no Continue fallback");
+            return reckoning;
         }
 
         private static bool ContinueShown(FightController fight) =>
@@ -180,6 +213,7 @@ namespace PrincesPalace.PlayModeTests
             var fight = UnityEngine.Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(fight, "the Fight scene has no FightController");
             Assert.IsTrue(fight.HasSession, "the event fight built no session");
+            _fight = fight;
             found(fight);
         }
 

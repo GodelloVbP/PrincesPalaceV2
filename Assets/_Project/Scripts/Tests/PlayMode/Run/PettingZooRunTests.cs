@@ -156,7 +156,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(page, Run.eventPageId);
             Assert.AreEqual(before + 1, Save.EventCounter(Counter));
             Assert.AreEqual(kinship ? 1 : 0, Run.relicIds.Count(id => id == "kinship"));
-            Assert.AreEqual(kinship ? "Shawn fully healed  ·  Relic: Kinship" : "Shawn fully healed", result.EffectsLine);
+            Assert.AreEqual("Shawn fully healed", result.EffectsLine, "a relic is a chip, never effects text");
+            CollectionAssert.AreEqual(kinship ? new[] { "kinship" } : new string[0], Run.pendingRelicReceipts);
         }
 
         // ---- Shawn absent or down --------------------------------------------------------

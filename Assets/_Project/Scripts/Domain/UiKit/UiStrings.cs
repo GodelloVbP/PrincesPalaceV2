@@ -379,8 +379,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("event.effect_heal_member", "{0} healed {1}%", "Wandering Bog Witch healed 99%");
         public static readonly UiString EventEffectHealMemberFull =
             UiString.Define("event.effect_heal_member_full", "{0} fully healed", "Wandering Bog Witch fully healed");
-        public static readonly UiString EventEffectRelic =
-            UiString.Define("event.effect_relic", "Relic: {0}", "Relic: World-Ender's Crown of Ash");
         public static readonly UiString EventEffectPrincesFavor =
             UiString.Define("event.effect_princes_favor", "+{0} Prince's favor", "+999 Prince's favor");
         public static readonly UiString EventEffectFillSpecialPool =
@@ -537,6 +535,13 @@ namespace PrincesPalace.Domain.UiKit
 
         // --- the Reckoning ------------------------------------------------------
         public static readonly UiString ReckoningTitle = UiString.Define("reckoning.title", "THE RECKONING");
+
+        // The outcome form's title (ReckoningRequest.Outcome), naming how the
+        // fight ended. THE RECKONING is the widest, so the title box the
+        // audit measures holds all four.
+        public static readonly UiString ReckoningEndingVictory = UiString.Define("reckoning.ending_victory", "VICTORY");
+        public static readonly UiString ReckoningEndingEndured = UiString.Define("reckoning.ending_endured", "ENDURED");
+        public static readonly UiString ReckoningEndingFell = UiString.Define("reckoning.ending_fell", "FELL");
         public static readonly UiString ReckoningExperience =
             UiString.Define("reckoning.experience", "EXPERIENCE");
         public static readonly UiString ReckoningGold =
@@ -1507,6 +1512,11 @@ namespace PrincesPalace.Domain.UiKit
         // with no cap and rerolls its shelf.
         public static readonly UiString RelicUnknown = UiString.Define("relic.unknown", "Unknown relic");
         public static readonly UiString RelicPage = UiString.Define("relic.page", "{0} / {1}", "99 / 99");
+
+        // The relic chip strip (RelicChipTree): where a relic is received, the
+        // strip's caption. The relic's own name, rarity and description come
+        // from RelicRows, never from a string here.
+        public static readonly UiString RelicGained = UiString.Define("relic.gained", "Gained");
 
         // ---- the Main menu pane --------------------------------------------
         //

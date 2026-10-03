@@ -165,6 +165,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef ContinueGlow;
         public NodeRef LootHeading;
 
+        // The plaque's title: THE RECKONING on a paid fight, the ending's name
+        // (VICTORY, ENDURED, FELL) on the outcome form.
+        public NodeRef TitleLabel;
+
+        // Hidden with the gold and the rows on the outcome form, which pays
+        // nothing to head.
+        public NodeRef ExpHeading;
+
+        // THE "GAINED" CHIPS (RelicChipTree), on the summary phase directly
+        // above Continue so they show on every tab, with their tooltip.
+        public NodeRef GainedStrip;
+        public NodeRef GainedCaption;
+        public List<NodeRef> GainedChips = new List<NodeRef>();
+        public List<NodeRef> GainedChipIcons = new List<NodeRef>();
+        public List<NodeRef> GainedChipNames = new List<NodeRef>();
+        public NodeRef GainedTooltip;
+        public NodeRef GainedTooltipName;
+        public NodeRef GainedTooltipMeta;
+        public NodeRef GainedTooltipBody;
+
+        // The strip is as wide as a relic row, centred like everything else on
+        // the summary.
+        public const float GainedStripWidth = 1040f;
+
         public List<NodeRef> RowGroups = new List<NodeRef>();
         public List<NodeRef> RowNames = new List<NodeRef>();
         public List<NodeRef> RowLevels = new List<NodeRef>();
@@ -322,9 +346,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // points at both ends and stretching it bends them.
                 Ui.Sprite("ReckoningTitlePlaque", PlaqueKey, Place.At(0f, 218f),
                     UiSize.Fixed(480f, 157f)).AsDecor(),
-                Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(400f, 46f), 26, "#F2DB9E",
-                    Place.At(0f, 218f)).AsDecor().Styled(TypographyRole.CeremonialTitle),
             };
+
+            var title = Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(400f, 46f), 26, "#F2DB9E",
+                Place.At(0f, 218f)).AsDecor().Styled(TypographyRole.CeremonialTitle);
+            screen.TitleLabel = title;
+            summaryChildren.Add(title);
 
             for (int i = 0; i < TabStrings.Length; i++)
             {
@@ -365,6 +392,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // 540, so this is 20px off the painted border.
             var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
             var continueY = ContentBottom + continueSize.Y * 0.5f + 1f;
+
+            // The chips in the band between the pages' lowest rows and
+            // Continue's top, 1px off Continue. The band is tight;
+            // ReckoningScreenGainedTests pins the clearance on every page.
+            float gainedY = continueY + continueSize.Y * 0.5f + 1f + RelicChipTree.StripHeight * 0.5f;
+            var gained = RelicChipTree.Build("ReckoningGained", Place.At(0f, gainedY), GainedStripWidth,
+                Place.At(0f, 0f));
+            screen.TakeGained(gained);
+            summaryChildren.Add(gained.Strip);
             var continueGlow = Ui.Sprite("ReckoningContinueGlow", EmberKey,
                     Place.At(160f, continueY), UiSize.Fixed(720f, 88f))
                 .Coloured(EmberTint)
@@ -417,6 +453,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 "beneath it, which leave its band clear");
             screen.ContinueButton = continueButton;
             summaryChildren.Add(continueButton);
+
+            // Last, so the box draws over the pages, the chips and Continue.
+            summaryChildren.Add(gained.Tooltip);
 
             var summaryPhase = Ui.Panel("ReckoningSummaryPhase", Place.Stretch(), UiSize.Fill, summaryChildren)
                 .Inactive();
@@ -513,6 +552,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
+        private void TakeGained(RelicChipTree gained)
+        {
+            GainedStrip = gained.Strip;
+            GainedCaption = gained.Caption;
+            GainedChips.AddRange(gained.Chips);
+            GainedChipIcons.AddRange(gained.ChipIcons);
+            GainedChipNames.AddRange(gained.ChipNames);
+            GainedTooltip = gained.Tooltip;
+            GainedTooltipName = gained.TooltipName;
+            GainedTooltipMeta = gained.TooltipMeta;
+            GainedTooltipBody = gained.TooltipBody;
+        }
+
         private static readonly UiString[] TabStrings =
         {
             UiStrings.ReckoningTabSpoils,
@@ -585,6 +637,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             };
 
             GoldLabel = children[0];
+            ExpHeading = children[1];
             NoticeLabel = children[2];
 
             for (int i = 0; i < RowCount; i++)

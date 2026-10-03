@@ -95,6 +95,20 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] tallyStats;
         [SerializeField] internal TMP_Text[] tallyKills;
 
+        [SerializeField] internal TMP_Text titleLabel;
+        [SerializeField] internal GameObject expHeading;
+
+        // The "Gained" chips (RelicChipStrip) and their tooltip.
+        [SerializeField] internal GameObject gainedStrip;
+        [SerializeField] internal RectTransform gainedCaption;
+        [SerializeField] internal Button[] gainedChips;
+        [SerializeField] internal Image[] gainedChipIcons;
+        [SerializeField] internal TMP_Text[] gainedChipNames;
+        [SerializeField] internal GameObject gainedTooltip;
+        [SerializeField] internal TMP_Text gainedTooltipName;
+        [SerializeField] internal TMP_Text gainedTooltipMeta;
+        [SerializeField] internal TMP_Text gainedTooltipBody;
+
         private const float ExpandSeconds = 0.28f;
         private const float BarSeconds = 0.55f;
         private const float BarStagger = 0.12f;
@@ -177,6 +191,8 @@ namespace PrincesPalace
         private const float BurstDegreesPerSecond = 9f;
 
         private CombatReward _reward;
+        private ReckoningRequest _request = ReckoningRequest.Full(null, null);
+        private RelicChipStrip _gained;
         private List<ItemOffer> _offers = new List<ItemOffer>();
         private bool _taken;
         private bool _wired;
@@ -226,9 +242,14 @@ namespace PrincesPalace
                 tabButtons[i].onClick.AddListener(() => SelectTab(index));
             }
 
-            continueButton.onClick.AddListener(() => Dismissed?.Invoke());
+            continueButton.onClick.AddListener(Dismiss);
 
             Relics.WirePager();
+
+            // Pressing a chip is "done reading": focus goes to Continue.
+            Gained.Pressed = () =>
+                UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(continueButton.gameObject);
+            Gained.Wire(_tooltips);
 
             for (int i = 0; i < offerButtons.Length; i++)
             {
@@ -308,7 +329,7 @@ namespace PrincesPalace
                 var tabs = new List<Selectable>();
                 for (int i = 0; tabButtons != null && i < tabButtons.Length; i++)
                 {
-                    if (tabButtons[i] != null) tabs.Add(tabButtons[i]);
+                    if (tabButtons[i] != null && TabShown(i)) tabs.Add(tabButtons[i]);
                 }
 
                 groups.Add(RuntimeNavWiring.Group("reckoningTabs", UiNavGroupKind.Rail, tabs));
@@ -323,10 +344,20 @@ namespace PrincesPalace
                 // on screen on the relics tab with more than one page, and a
                 // pad player has to be able to reach it or the later pages are
                 // mouse-only.
+                //
+                // THE CHIP RAIL sits between the pager and Continue, matching
+                // where it is drawn (docs/PLAN_BUGS_QA.md C2, the
+                // Reckoning navigation graph): each element's Down is the next
+                // one present, Continue's Up the nearest one present.
                 var pager = RelicPagerShown()
                     ? new List<Selectable> { relicPrevPageButton, relicNextPageButton }
                     : new List<Selectable>();
-                var belowTabs = pager.Count > 0 ? pager[0] : (Selectable)continueButton;
+                var chips = Gained.Selectables;
+                var currentTab = tabButtons != null && _tab < tabButtons.Length && TabShown(_tab)
+                    ? tabButtons[_tab]
+                    : First(tabs);
+                var belowPager = First(chips) ?? continueButton;
+                var belowTabs = First(pager) ?? belowPager;
 
                 foreach (var tab in tabs)
                 {
@@ -336,17 +367,31 @@ namespace PrincesPalace
                 if (pager.Count > 0)
                 {
                     groups.Add(RuntimeNavWiring.Group("reckoningRelicPager", UiNavGroupKind.Rail, pager));
-                    var relicTab = _tab < tabs.Count ? tabs[_tab] : First(tabs);
                     foreach (var arrow in pager)
                     {
-                        links.Add(RuntimeNavWiring.Link(arrow, UiNavDirection.Up, relicTab));
-                        links.Add(RuntimeNavWiring.Link(arrow, UiNavDirection.Down, continueButton));
+                        links.Add(RuntimeNavWiring.Link(arrow, UiNavDirection.Up, currentTab));
+                        links.Add(RuntimeNavWiring.Link(arrow, UiNavDirection.Down, belowPager));
                     }
 
                     Declare(selectables, pager);
                 }
 
-                links.Add(RuntimeNavWiring.Link(continueButton, UiNavDirection.Up, pager.Count > 0 ? pager[0] : First(tabs)));
+                if (chips.Count > 0)
+                {
+                    groups.Add(RuntimeNavWiring.Group("reckoningGained", UiNavGroupKind.Rail, chips,
+                        wrap: UiNavWrap.Clamp));
+                    var aboveChips = First(pager) ?? currentTab;
+                    foreach (var chip in chips)
+                    {
+                        links.Add(RuntimeNavWiring.Link(chip, UiNavDirection.Up, aboveChips));
+                        links.Add(RuntimeNavWiring.Link(chip, UiNavDirection.Down, continueButton));
+                    }
+
+                    Declare(selectables, chips);
+                }
+
+                links.Add(RuntimeNavWiring.Link(continueButton, UiNavDirection.Up,
+                    First(chips) ?? First(pager) ?? currentTab));
 
                 entry = continueButton == null ? null : continueButton.gameObject;
                 Declare(selectables, tabs);
@@ -377,6 +422,15 @@ namespace PrincesPalace
         {
             if (_choosing) return;
 
+            Dismiss();
+        }
+
+        // THE ONE WAY OUT, for Continue and Cancel alike. Leaving acknowledges
+        // exactly the relic receipts the chips showed (C2), in their own write,
+        // since nothing else moves on dismissal.
+        private void Dismiss()
+        {
+            RunOrchestrator.AcknowledgeRelicReceipts(Gained.Displayed.ToList());
             Dismissed?.Invoke();
         }
 
@@ -505,10 +559,14 @@ namespace PrincesPalace
             self.anchoredPosition = new Vector2(at.X, at.Y);
         }
 
-        public void Show(CombatReward reward, List<ItemOffer> offers)
+        // A paid fight with no relic receipts to show: the full form.
+        public void Show(CombatReward reward, List<ItemOffer> offers) => Show(ReckoningRequest.Full(reward, offers));
+
+        public void Show(ReckoningRequest request)
         {
-            _reward = reward;
-            _offers = offers ?? new List<ItemOffer>();
+            _request = request ?? ReckoningRequest.Full(null, null);
+            _reward = _request.Reward;
+            _offers = new List<ItemOffer>(_request.Offers);
             _taken = false;
 
             gameObject.SetActive(true);
@@ -534,11 +592,16 @@ namespace PrincesPalace
             summaryPhase.anchoredPosition = Vector2.zero;
             _choosing = choosing;
 
-            _tab = 0;
+            // THE OUTCOME FORM HAS NO SPOILS TAB: nothing was paid, so the
+            // page would be empty. It is hidden, the shown tabs close up, and
+            // the screen opens on the tally, which is what the fight left.
+            LayOutTabs();
+            _tab = _request.IsOutcomeForm ? TallyTab : SpoilsTab;
             Relics.Model.SetPage(0);
             PaintTabs();
             PaintRelics();
             PaintTally();
+            Gained.Show(_request.Receipts);
 
             // AFTER Paint/PaintOffers, never on OnEnable: which cards exist
             // is decided by what was just handed in, and a context pushed
@@ -572,14 +635,20 @@ namespace PrincesPalace
 
         private void Paint()
         {
+            // THE OUTCOME FORM pays nothing, so nothing that reports a payout
+            // shows, and the title names the ending instead (C3).
+            bool outcome = _request.IsOutcomeForm;
+            if (titleLabel != null) titleLabel.Set(TitleFor(_request));
+            goldLabel.gameObject.SetShown(!outcome);
+            if (expHeading != null) expHeading.SetShown(!outcome);
             goldLabel.Set(UiStrings.ReckoningGold, _reward?.GoldGained ?? 0);
 
             // A caravan fake that fell apart in this fight, and the merchant's
-            // "No refunds." (CombatReward.Notices). Hidden on every fight that
-            // has nothing to say, which is nearly all of them.
+            // "No refunds." (the settlement's notices). Hidden on every fight
+            // that has nothing to say, which is nearly all of them.
             if (noticeLabel != null)
             {
-                var notices = _reward?.Notices;
+                var notices = _request.Notices;
                 bool any = notices != null && notices.Count > 0;
                 noticeLabel.gameObject.SetShown(any);
                 if (any) noticeLabel.SetContent(string.Join("\n", notices));
@@ -898,9 +967,53 @@ namespace PrincesPalace
 
         // ---- tabs ---------------------------------------------------------------------
 
+        // The tabs' order on the tree (ReckoningScreen.TabStrings).
+        private const int SpoilsTab = 0;
+        private const int TallyTab = 2;
+
+        private bool TabShown(int index) => !(_request.IsOutcomeForm && index == SpoilsTab);
+
+        // Where the tree put each tab, read once, so a full form after an
+        // outcome form gets the strip back exactly as built.
+        private float[] _tabHomeX;
+
+        // The shown tabs, spread over the same centre and pitch the tree uses
+        // for all of them, so hiding one never leaves a gap in the strip.
+        private void LayOutTabs()
+        {
+            if (tabButtons == null) return;
+
+            if (_tabHomeX == null)
+            {
+                _tabHomeX = new float[tabButtons.Length];
+                for (int i = 0; i < tabButtons.Length; i++)
+                {
+                    var rect = tabButtons[i] == null ? null : tabButtons[i].transform as RectTransform;
+                    if (rect != null) _tabHomeX[i] = rect.anchoredPosition.x;
+                }
+            }
+
+            var shown = new List<int>();
+            for (int i = 0; i < tabButtons.Length; i++)
+            {
+                if (tabButtons[i] == null) continue;
+                tabButtons[i].gameObject.SetActive(TabShown(i));
+                if (TabShown(i)) shown.Add(i);
+            }
+
+            float pitch = tabButtons.Length > 1 ? _tabHomeX[1] - _tabHomeX[0] : 0f;
+            for (int k = 0; k < shown.Count; k++)
+            {
+                var rect = (RectTransform)tabButtons[shown[k]].transform;
+                float x = (k - (shown.Count - 1) * 0.5f) * pitch;
+                if (shown.Count == tabButtons.Length) x = _tabHomeX[shown[k]];
+                rect.anchoredPosition = new Vector2(x, rect.anchoredPosition.y);
+            }
+        }
+
         private void SelectTab(int index)
         {
-            if (pages == null || index < 0 || index >= pages.Length) return;
+            if (pages == null || index < 0 || index >= pages.Length || !TabShown(index)) return;
 
             if (index != _tab) SoundController.Play(TabSwipe.Next());
             _tab = index;
@@ -951,10 +1064,33 @@ namespace PrincesPalace
 
         // ---- what everyone did ----------------------------------------------------------
 
+        private static UiString TitleFor(ReckoningRequest request)
+        {
+            if (!request.IsOutcomeForm) return UiStrings.ReckoningTitle;
+
+            switch (request.Ending)
+            {
+                case FightEnding.Endured: return UiStrings.ReckoningEndingEndured;
+                case FightEnding.Fell: return UiStrings.ReckoningEndingFell;
+                default: return UiStrings.ReckoningEndingVictory;
+            }
+        }
+
+        // The one chip presenter, over this screen's own widgets.
+        private RelicChipStrip Gained =>
+            _gained ?? (_gained = new RelicChipStrip(new RelicChipWidgets(
+                gainedStrip, gainedCaption, centred: true, gainedChips, gainedChipIcons, gainedChipNames,
+                gainedTooltip, gainedTooltipName, gainedTooltipMeta, gainedTooltipBody, relicArt)));
+
+        // The ids the chips are showing: what leaving the screen acknowledges.
+        public IReadOnlyList<string> DisplayedReceipts => Gained.Displayed;
+
+        public bool IsOutcomeForm => _request.IsOutcomeForm;
+
         private void PaintTally()
         {
-            var characters = _reward?.Characters ?? new List<CharacterReward>();
-            var ledger = _reward?.Ledger;
+            var characters = _request.Tally;
+            var ledger = _request.Ledger;
 
             for (int i = 0; i < tallyRows.Length; i++)
             {
