@@ -22,20 +22,30 @@
 
 $UnityPathProjectRoot = Split-Path $PSScriptRoot -Parent
 
-function Get-UnityExe {
+# The provenance guard below takes runner claims before it wipes a Library.
+if (-not (Get-Command Enter-RunnerClaim -ErrorAction SilentlyContinue)) { . (Join-Path $PSScriptRoot "unity_lock.ps1") }
+
+# The m_EditorVersion a project declares; throws when it cannot be read.
+function Get-ProjectEditorVersion {
     param([string]$ProjectRoot = $UnityPathProjectRoot)
 
     $versionFile = Join-Path $ProjectRoot "ProjectSettings\ProjectVersion.txt"
-    if (-not (Test-Path $versionFile)) {
+    if (-not (Test-Path -LiteralPath $versionFile)) {
         throw "No ProjectVersion.txt at $versionFile - cannot tell which Unity editor this project wants."
     }
 
-    $line = Get-Content $versionFile | Where-Object { $_ -match '^m_EditorVersion:' } | Select-Object -First 1
+    $line = Get-Content -LiteralPath $versionFile | Where-Object { $_ -match '^m_EditorVersion:' } | Select-Object -First 1
     if (-not $line) {
         throw "ProjectVersion.txt at $versionFile has no m_EditorVersion line."
     }
 
-    $version = ($line -replace '^m_EditorVersion:\s*', '').Trim()
+    return ($line -replace '^m_EditorVersion:\s*', '').Trim()
+}
+
+function Get-UnityExe {
+    param([string]$ProjectRoot = $UnityPathProjectRoot)
+
+    $version = Get-ProjectEditorVersion -ProjectRoot $ProjectRoot
     $exe = "C:\Program Files\Unity\Hub\Editor\$version\Editor\Unity.exe"
 
     if (-not (Test-Path $exe)) {
@@ -48,7 +58,167 @@ function Get-UnityExe {
     return $exe
 }
 
-# --- Start-UnityQuiet: launch shape only, no watchdog of its own -------
+# --- Library provenance guard (docs/PLAN_UNITY_6_6.md, U1) ------------------
+#
+# A Library imported by one editor and then opened by another is re-imported
+# in place and can silently downgrade assets, so the editor that built a
+# Library is recorded beside it (Library/pp_editor.json) and every launch
+# through Start-UnityQuiet checks it first. The guarantee covers launches this
+# tooling makes; the Hub and a hand-opened Editor are outside it.
+#
+# Two kinds of project path, told apart by Get-UnityProjectClass alone:
+#   Disposable -- a runner, bot or capture copy, or anything in the -u66 family.
+#                 Its Library is a cache of a tree that can be re-mirrored, so
+#                 a Library of the wrong or an unknown editor is deleted and
+#                 re-imported.
+#   Project    -- everything else, which the Hub may open. The tooling never
+#                 deletes its Library: a mismatch refuses the launch, and a
+#                 missing stamp (unknown history) proceeds with a warning.
+
+function Get-UnityProjectClass {
+    param([Parameter(Mandatory = $true)][string]$ProjectPath)
+
+    $leaf = Split-Path -Leaf ($ProjectPath.TrimEnd('\', '/'))
+    if ($leaf -match '-(TestRunner\d*|Bot\d*|Capture)$' -or $leaf -match '-u66(-|$)') { return "Disposable" }
+    return "Project"
+}
+
+function Get-LibraryStampPath {
+    param([Parameter(Mandatory = $true)][string]$ProjectPath)
+    return (Join-Path $ProjectPath "Library\pp_editor.json")
+}
+
+# The recorded editor version, or $null for no stamp or an unreadable one
+# (unreadable is unknown provenance, the same as missing).
+function Get-LibraryStamp {
+    param([Parameter(Mandatory = $true)][string]$ProjectPath)
+
+    $stampPath = Get-LibraryStampPath -ProjectPath $ProjectPath
+    if (-not (Test-Path -LiteralPath $stampPath)) { return $null }
+    try {
+        $v = (Get-Content -LiteralPath $stampPath -Raw | ConvertFrom-Json).editorVersion
+        if ($v) { return [string]$v }
+    } catch { }
+    return $null
+}
+
+# Creates Library when absent: Unity builds it on the first import, and the
+# stamp has to exist before that launch to say which editor did.
+function Set-LibraryStamp {
+    param(
+        [Parameter(Mandatory = $true)][string]$ProjectPath,
+        [Parameter(Mandatory = $true)][string]$EditorVersion,
+        [Parameter(Mandatory = $true)][string]$Tool
+    )
+
+    New-Item -ItemType Directory -Force -Path (Join-Path $ProjectPath "Library") | Out-Null
+    $body = [ordered]@{
+        editorVersion = $EditorVersion
+        tool          = $Tool
+        stamped       = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    } | ConvertTo-Json
+    [System.IO.File]::WriteAllText((Get-LibraryStampPath -ProjectPath $ProjectPath), $body, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# Judges one launch against one project path and, when it may proceed, stamps
+# the Library with the editor about to touch it -- before the launch, because a
+# failed or crashed launch has still converted what it reached. Returns what it
+# did ("match", "stamped", "deleted") or throws, writing nothing, to refuse.
+function Assert-LibraryProvenance {
+    param(
+        [Parameter(Mandatory = $true)][string]$ProjectPath,
+        [Parameter(Mandatory = $true)][string]$Tool
+    )
+
+    $want = Get-ProjectEditorVersion -ProjectRoot $ProjectPath
+    $library = Join-Path $ProjectPath "Library"
+    $have = Get-LibraryStamp -ProjectPath $ProjectPath
+
+    if ($have -eq $want) { return "match" }
+
+    if ((Get-UnityProjectClass -ProjectPath $ProjectPath) -eq "Project") {
+        if ($have) {
+            throw "Library provenance: $ProjectPath has a Library imported by Unity $have but ProjectVersion.txt pins Unity $want. The tooling never deletes a project tree's Library. Open the project in $want from the Hub and, once it opens cleanly, run: powershell -File tools\accept_library.ps1 -AcceptLibrary `"$ProjectPath`""
+        }
+        if (Test-Path -LiteralPath $library) {
+            Write-Host "Library provenance: $ProjectPath has no editor stamp, so its history is unknown. Proceeding and stamping it with Unity $want."
+        }
+        Set-LibraryStamp -ProjectPath $ProjectPath -EditorVersion $want -Tool $Tool
+        return "stamped"
+    }
+
+    if (-not (Test-Path -LiteralPath $library)) {
+        Set-LibraryStamp -ProjectPath $ProjectPath -EditorVersion $want -Tool $Tool
+        return "stamped"
+    }
+
+    # The copy's own runner claim, taken before the wipe so another run's
+    # Unity is never pulled out from under it. A caller that already holds it
+    # passes straight through (Owned = $false); see "NESTED TOOLS" in
+    # tools/unity_lock.ps1.
+    $claims = Enter-RunnerClaim -RunnerPaths @($ProjectPath) -Tool $Tool
+    if ($null -eq $claims) {
+        throw "Library provenance: $ProjectPath needs its Library wiped (stamp: $(if ($have) { $have } else { 'none' }), pinned: $want) but another run holds the copy. Nothing was deleted."
+    }
+    try {
+        $why = if ($have) { "imported by Unity $have, project pins $want" } else { "no editor stamp, provenance unknown" }
+        Write-Host "Library provenance: deleting $library ($why). The next launch re-imports everything."
+        Remove-Item -LiteralPath $library -Recurse -Force
+        Set-LibraryStamp -ProjectPath $ProjectPath -EditorVersion $want -Tool $Tool
+    } finally {
+        Exit-RunnerClaim -Claims $claims
+    }
+    return "deleted"
+}
+
+# The path after -projectPath, unquoted, or $null when the launch names none.
+function Get-UnityProjectArg {
+    param([string[]]$ArgumentList)
+
+    for ($i = 0; $i -lt $ArgumentList.Count - 1; $i++) {
+        if ($ArgumentList[$i] -eq "-projectPath") { return $ArgumentList[$i + 1].Trim().Trim('"') }
+    }
+    return $null
+}
+
+# Migration: after the Hub has opened a project tree cleanly in the editor its
+# ProjectVersion.txt names, rewrite the stamp to that version.
+# tools\accept_library.ps1 is the command-line entry.
+function Confirm-LibraryAccepted {
+    param([Parameter(Mandatory = $true)][string]$ProjectPath)
+
+    if ((Get-UnityProjectClass -ProjectPath $ProjectPath) -eq "Disposable") {
+        throw "$ProjectPath is a disposable copy: the guard wipes and re-imports its Library, it is never accepted."
+    }
+    $version = Get-ProjectEditorVersion -ProjectRoot $ProjectPath
+    if (-not (Test-Path -LiteralPath (Join-Path $ProjectPath "Library"))) {
+        throw "$ProjectPath has no Library to stamp."
+    }
+    Set-LibraryStamp -ProjectPath $ProjectPath -EditorVersion $version -Tool "accept_library.ps1"
+    return $version
+}
+
+# The script that called into this file, for the stamp's tool field.
+function Get-LaunchingTool {
+    foreach ($f in @(Get-PSCallStack)) {
+        if ($f.ScriptName -and (Split-Path -Leaf $f.ScriptName) -ne "unity_path.ps1") { return (Split-Path -Leaf $f.ScriptName) }
+    }
+    return "unknown"
+}
+
+function Start-UnityQuiet {
+    param(
+        [Parameter(Mandatory = $true)][string]$FilePath,
+        [Parameter(Mandatory = $true)][string[]]$ArgumentList
+    )
+
+    $project = Get-UnityProjectArg -ArgumentList $ArgumentList
+    if ($project) { [void](Assert-LibraryProvenance -ProjectPath $project -Tool (Get-LaunchingTool)) }
+
+    return (Start-UnityQuietProcess -FilePath $FilePath -ArgumentList $ArgumentList)
+}
+
+# --- Start-UnityQuietProcess: launch shape only, no watchdog of its own -------
 #
 # Owner complaint, verbatim: "during test suites it alt-tabs my laptop out of
 # whatever I was doing ... and I would like for that to never happen ever
@@ -82,7 +252,7 @@ function Get-UnityExe {
 # and putting the window somewhere the owner is not looking removes the
 # flicker rather than shortening it. See Get-HeadlessDesktop below for the
 # mechanism and its fallback.
-function Start-UnityQuiet {
+function Start-UnityQuietProcess {
     param(
         [Parameter(Mandatory = $true)][string]$FilePath,
         [Parameter(Mandatory = $true)][string[]]$ArgumentList
