@@ -227,7 +227,17 @@ public static class PipelineBuilder
     // asks for.
     public const string HitFlashMaterialPath = "Assets/_Project/Resources/Materials/UIHitFlash.mat";
 
+    // The burning body's glow: the same silhouette idea on its own additive,
+    // bottom-weighted shader (StageBurnGlow).
+    public const string BurnGlowMaterialPath = "Assets/_Project/Resources/Materials/UIBurnGlow.mat";
+
     private static void BuildHitFlashMaterial()
+    {
+        BuildSilhouetteMaterial("Assets/_Project/Resources/Shaders/UIHitFlash.shader", HitFlashMaterialPath);
+        BuildSilhouetteMaterial("Assets/_Project/Resources/Shaders/UIBurnGlow.shader", BurnGlowMaterialPath);
+    }
+
+    private static void BuildSilhouetteMaterial(string shaderPath, string materialPath)
     {
         // LOADED BY PATH, not Shader.Find.
         //
@@ -241,17 +251,16 @@ public static class PipelineBuilder
         // The shader file's own header says this ("Shader.Find would need it in
         // Always Included Shaders, which is a project-settings dependency this
         // avoids"). I ported that comment and then used Shader.Find anyway.
-        const string shaderPath = "Assets/_Project/Resources/Shaders/UIHitFlash.shader";
         var shader = AssetDatabase.LoadAssetAtPath<Shader>(shaderPath);
         if (shader == null)
         {
-            Debug.LogWarning($"[PipelineBuilder] No shader at {shaderPath}; the hit flash will degrade to nothing.");
+            Debug.LogWarning($"[PipelineBuilder] No shader at {shaderPath}; the overlay will degrade to nothing.");
             return;
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(HitFlashMaterialPath));
+        Directory.CreateDirectory(Path.GetDirectoryName(materialPath));
 
-        var existing = AssetDatabase.LoadAssetAtPath<Material>(HitFlashMaterialPath);
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
         if (existing != null)
         {
             // Re-pointed rather than recreated: replacing the asset would mint a
@@ -261,7 +270,7 @@ public static class PipelineBuilder
             return;
         }
 
-        AssetDatabase.CreateAsset(new Material(shader), HitFlashMaterialPath);
+        AssetDatabase.CreateAsset(new Material(shader), materialPath);
         AssetDatabase.SaveAssets();
     }
 

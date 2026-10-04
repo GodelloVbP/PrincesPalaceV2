@@ -37,6 +37,7 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform[] enemySlots;
         [SerializeField] internal Image[] enemySprites;
         [SerializeField] internal StageHitFlash[] enemyHitFlashes;
+        [SerializeField] internal StageBurnGlow[] enemyBurnGlows;
         [SerializeField] internal TMP_Text[] enemyNameplates;
         [SerializeField] internal Image[] enemyFootShadows;
 
@@ -61,6 +62,7 @@ namespace PrincesPalace
         // slot (FightController.ShieldProps.cs).
         [SerializeField] internal Image[] partyShieldProps;
         [SerializeField] internal StageHitFlash[] partyHitFlashes;
+        [SerializeField] internal StageBurnGlow[] partyBurnGlows;
         [SerializeField] internal TMP_Text[] partyNameplates;
         [SerializeField] internal StageActorAnimator[] partyActorAnimators;
         [SerializeField] internal StageDeathFade[] partyDeathFades;
@@ -1061,8 +1063,10 @@ namespace PrincesPalace
 
                 if (recordedPc.Statuses != null)
                 {
+                    var pcRows = FightHudModel.StatusRowsFrom(recordedPc.Statuses);
                     PaintStatusRow(PcStatusBase + plate * PcStatusBadgesPerPlate, PcStatusBadgesPerPlate,
-                        reserveOverflowSlot: true, member, FightHudModel.StatusRowsFrom(recordedPc.Statuses), showCounter: true);
+                        reserveOverflowSlot: true, member, pcRows, showCounter: true);
+                    PaintPartyBodyGlow(member, recordedPc.Health > 0, pcRows);
                 }
 
                 // What the system menu reports (IFightMenuSource): this beat's

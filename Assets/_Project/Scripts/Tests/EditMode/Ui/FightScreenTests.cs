@@ -98,9 +98,9 @@ namespace PrincesPalace.Domain.Tests
             AssertSameLength("submenu", s.SubmenuRows, s.SubmenuMarks, s.SubmenuNames);
             AssertSameLength("detail icons", s.DetailIconImages, s.DetailIconValues);
             AssertSameLength("popups", s.DamagePopups, s.DamagePopupLabels);
-            AssertSameLength("enemy stage", s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
+            AssertSameLength("enemy stage", s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes, s.EnemyBurnGlows,
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows);
-            AssertSameLength("party stage", s.PartySlots, s.PartySprites, s.PartyHitFlashes,
+            AssertSameLength("party stage", s.PartySlots, s.PartySprites, s.PartyHitFlashes, s.PartyBurnGlows,
                 s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows, s.PartyHitAreas);
 
             // TEN PARALLEL LISTS OVER ONE COLUMN, and RefreshPcPlate indexes
@@ -158,10 +158,10 @@ namespace PrincesPalace.Domain.Tests
                 { "InitiativeIcons", s.InitiativeIcons }, { "InitiativeRings", s.InitiativeRings },
                 { "InitiativeLabels", s.InitiativeLabels },
                 { "EnemySlots", s.EnemySlots }, { "EnemySprites", s.EnemySprites },
-                { "EnemyHitFlashes", s.EnemyHitFlashes }, { "EnemyNameplates", s.EnemyNameplates },
+                { "EnemyHitFlashes", s.EnemyHitFlashes }, { "EnemyBurnGlows", s.EnemyBurnGlows }, { "EnemyNameplates", s.EnemyNameplates },
                 { "EnemyFootShadows", s.EnemyFootShadows }, { "EnemyFootGlows", s.EnemyFootGlows },
                 { "PartySlots", s.PartySlots }, { "PartySprites", s.PartySprites },
-                { "PartyHitFlashes", s.PartyHitFlashes }, { "PartyNameplates", s.PartyNameplates },
+                { "PartyHitFlashes", s.PartyHitFlashes }, { "PartyBurnGlows", s.PartyBurnGlows }, { "PartyNameplates", s.PartyNameplates },
                 { "PartyFootShadows", s.PartyFootShadows }, { "PartyFootGlows", s.PartyFootGlows },
                 { "EnemyPlates", s.EnemyPlates }, { "VerbButtons", s.VerbButtons },
                 { "SubmenuRows", s.SubmenuRows }, { "SubmenuMarks", s.SubmenuMarks },
@@ -1149,6 +1149,7 @@ namespace PrincesPalace.Domain.Tests
 
                 bool onStage = node.Name.EndsWith("Sprite")
                                || node.Name.EndsWith("HitFlash")
+                               || node.Name.EndsWith("BurnGlow")
                                || node.Name.EndsWith("FootShadow")
                                || node.Name.EndsWith("FootGlow");
 

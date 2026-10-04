@@ -104,6 +104,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PartySeatMarkers = new List<NodeRef>();
         public List<NodeRef> EnemySprites = new List<NodeRef>();
         public List<NodeRef> EnemyHitFlashes = new List<NodeRef>();
+        public List<NodeRef> EnemyBurnGlows = new List<NodeRef>();
         public List<NodeRef> EnemyNameplates = new List<NodeRef>();
 
         // One per enemy STAGE slot (not per plate): the icon that says what this
@@ -156,6 +157,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // slot so it takes the seat's depth scale.
         public List<NodeRef> PartyShieldProps = new List<NodeRef>();
         public List<NodeRef> PartyHitFlashes = new List<NodeRef>();
+        public List<NodeRef> PartyBurnGlows = new List<NodeRef>();
         public List<NodeRef> PartyNameplates = new List<NodeRef>();
         public List<NodeRef> PartyFootShadows = new List<NodeRef>();
         public List<NodeRef> PartyFootGlows = new List<NodeRef>();
@@ -429,11 +431,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // siblings, paint over it where the two halves meet near the shared
             // vanishing point at centre.
             var partyStage = s.BuildStage("Party", mirrored: true,
-                FightStageAnchors.AllyShadowColor, s.PartySlots, s.PartySprites, s.PartyHitFlashes,
+                FightStageAnchors.AllyShadowColor, s.PartySlots, s.PartySprites, s.PartyHitFlashes, s.PartyBurnGlows,
                 s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows,
                 intentIcons: null, hitAreas: s.PartyHitAreas, shieldProps: s.PartyShieldProps);
             var enemyStage = s.BuildStage("Enemy", mirrored: false,
-                FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
+                FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes, s.EnemyBurnGlows,
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows, s.EnemyIntentIcons, s.EnemyHitAreas);
             s.PartyStage = partyStage;
             s.EnemyStage = enemyStage;
@@ -601,7 +603,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // fixups afterwards. The REF LISTS stay indexed by slot, because that is
         // what the controller and every test index by.
         private UiNode BuildStage(string prefix, bool mirrored, string shadowHex,
-                                  List<NodeRef> slots, List<NodeRef> sprites, List<NodeRef> flashes,
+                                  List<NodeRef> slots, List<NodeRef> sprites, List<NodeRef> flashes, List<NodeRef> burnGlows,
                                   List<NodeRef> nameplates, List<NodeRef> shadows, List<NodeRef> glows,
                                   List<NodeRef> intentIcons = null,
                                   List<NodeRef> hitAreas = null,
@@ -613,6 +615,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slots.Add(default);
                 sprites.Add(default);
                 flashes.Add(default);
+                burnGlows.Add(default);
                 nameplates.Add(default);
                 shadows.Add(default);
                 glows.Add(default);
@@ -688,6 +691,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // the hit flash IS the sprite's silhouette redrawn white -
                 // sharing its box is the whole mechanism
                 var flash = Ui.Sprite($"{prefix}{slot}HitFlash", null, Place.Stretch(), UiSize.Fill)
+                    .Inactive()
+                    .AsDecor();
+
+                // THE COAL GLOW OF A BURNING BODY: the same silhouette trick,
+                // declared BEFORE the hit flash so a blow still flashes over
+                // the embers. Off until a status paints it on
+                // (StageBurnGlow, FightController.PaintBodyGlow).
+                var burnGlow = Ui.Sprite($"{prefix}{slot}BurnGlow", null, Place.Stretch(), UiSize.Fill)
                     .Inactive()
                     .AsDecor();
 
@@ -821,7 +832,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     intentIcons[slot] = intent;
                 }
 
-                var kids = new List<UiNode> { shadow, sprite, flash, nameplate };
+                var kids = new List<UiNode> { shadow, sprite, burnGlow, flash, nameplate };
 
                 // A PROP STANDING AT THE SLOT'S GROUND LINE, in front of the
                 // figure. Anchored to the slot's bottom-left with a bottom-centre
@@ -852,6 +863,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slots[slot] = slotNode;
                 sprites[slot] = sprite;
                 flashes[slot] = flash;
+                burnGlows[slot] = burnGlow;
                 nameplates[slot] = nameplate;
                 shadows[slot] = shadow;
                 children.Add(slotNode);

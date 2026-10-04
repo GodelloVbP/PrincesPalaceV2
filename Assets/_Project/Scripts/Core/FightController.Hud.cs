@@ -1127,6 +1127,7 @@ namespace PrincesPalace
             var rows = member != null ? FightHudModel.StatusRowsFor(_session, member) : EmptyStatusRows;
             PaintStatusRow(PcStatusBase + i * PcStatusBadgesPerPlate, PcStatusBadgesPerPlate,
                 reserveOverflowSlot: true, member, rows, showCounter: true);
+            PaintPartyBodyGlow(member, member != null && member.IsAlive, rows);
 
             if (member == null) return;
 
@@ -2383,7 +2384,40 @@ namespace PrincesPalace
 
             PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
                 reserveOverflowSlot: true, enemy, rows, showCounter: true);
+
+            // A null `enemy` is a body that fell or never stood, so its glow
+            // goes out with its badges.
+            PaintBodyGlow(enemyBurnGlows, slot, enemy != null, rows);
         }
+
+        // THE STATUSES THAT SHOW ON THE BODY, painted from the rows the badge
+        // row is painted from, so the two cannot disagree about whether the
+        // body is burning. Only Burn has a body visual today; a second status
+        // joins here by reading its own code off `rows`.
+        //
+        // `standing` is false for a body that is dead or off the stage: its
+        // glow is put out at once rather than faded, since a corpse on its
+        // death fade carries nothing.
+        private static void PaintBodyGlow(StageBurnGlow[] glows, int slot, bool standing,
+                                          IReadOnlyList<FightHudModel.StatusRow> rows)
+        {
+            if (glows == null || slot < 0 || slot >= glows.Length || glows[slot] == null) return;
+
+            string burn = StatusHud.CodeFor(StatusEffectType.Burn);
+            bool burning = false;
+            for (int i = 0; standing && i < rows.Count; i++)
+            {
+                if (rows[i].Code == burn) burning = true;
+            }
+
+            glows[slot].SetBurning(burning, instant: !standing);
+        }
+
+        // The party side: a PC's glow is addressed by its SLOT, which never
+        // moves, not by the plate it happens to be drawn on.
+        private void PaintPartyBodyGlow(CombatantState member, bool standing,
+                                        IReadOnlyList<FightHudModel.StatusRow> rows) =>
+            PaintBodyGlow(partyBurnGlows, SlotIndexOf(member), standing && member != null, rows);
 
         // The build-time strip is always the full 196px (4 badges + the "+N"
         // chip, all five physical slots) because UiAudit solves the screen

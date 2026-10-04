@@ -277,6 +277,12 @@ public static class ScreenRegistry
                 fight.partyHitFlashes = screen.PartyHitFlashes
                     .Select(flashRef => AttachHitFlash(result, flashMaterial, flashRef)).ToArray();
 
+                // The coal glows have their own additive material and each shadows
+                // its slot's figure (StageBurnGlow).
+                var burnMaterial = AssetDatabase.LoadAssetAtPath<Material>(PipelineBuilder.BurnGlowMaterialPath);
+                fight.enemyBurnGlows = AttachBurnGlows(result, burnMaterial, screen.EnemyBurnGlows, screen.EnemySprites);
+                fight.partyBurnGlows = AttachBurnGlows(result, burnMaterial, screen.PartyBurnGlows, screen.PartySprites);
+
                 // The plate a combatant with no battle art falls back to. Loaded
                 // through the same LoadSprite the tree uses, so the importer
                 // flip to Sprite happens here too rather than being a thing
@@ -388,6 +394,24 @@ public static class ScreenRegistry
         flash.image.material = material;
         flash.image.raycastTarget = false;
         return flash;
+    }
+
+    private static StageBurnGlow[] AttachBurnGlows(UiEmitResult result, Material material,
+                                                   System.Collections.Generic.List<NodeRef> glowRefs,
+                                                   System.Collections.Generic.List<NodeRef> spriteRefs)
+    {
+        var glows = new StageBurnGlow[glowRefs.Count];
+        for (int i = 0; i < glows.Length; i++)
+        {
+            var glow = result.Attach<StageBurnGlow>(glowRefs[i]);
+            var overlay = result.Image(glowRefs[i]);
+            overlay.material = material;
+            overlay.raycastTarget = false;
+            glow.Attach(overlay, result.Image(spriteRefs[i]));
+            glows[i] = glow;
+        }
+
+        return glows;
     }
 
     private static ScreenDef Hub()
