@@ -1,32 +1,27 @@
 # Mud Burst, "after" (plan S3, spell 3.3)
 
-Captured and re-captured (arc) 2026-10-04 with `tools/gif.ps1 spell mud_burst` and `tools/spell_feel.ps1`.
-No painted art. New: the layer field `tint` (decision 10: "reads as fire" proved
-it needed) and three procedural pieces in `tools/make_spell_fx.py`. GIFs are
-untracked next to this file. Owner gates skipped; the calls below are mine.
+Pass 1 (2026-10-04) used a procedural glob, a derived splat and the layer field `tint`. Pass 2
+(2026-10-04) wires the owner's painted stills: `mud_glob.png` and `mud_splat.png` (recipes
+`mud_glob`, `mud_splat`, both keyed `green-soft`; the plain green key clamps green to min(r,b)
+and drags browns toward red). Captured with `tools/gif.ps1 spell mud_burst`; GIFs are untracked
+next to this file. Owner gates skipped; the calls below are mine.
 
-## What changed and why
+## What changed
 
-- **`tint`**, a `#RRGGBB` multiplied into a sprite or still layer. The sheet's
-  gold glints are what read as fire; the same frames under `#7A5A40` are dark
-  mud. Multiply only, so it cannot brighten; refused on an emitter.
-  `SpellTint` + rules + `SpellTintTests`, copy pin extended.
-- **`mud_glob`**: a lumpy matte glob with drips trailing behind, one frame.
-- **`mud_splat_drops`**: four clot shapes for a falling spray (brown in the pixels).
-- **`mud_burst_splat`**: the old sheet's burst frames (f12-f25) with the streak
-  back to the caster feathered out. The old single layer drew that streak as a
-  rope of mud from Shawn to the target for 0.3 s after the hit, which read as a
-  flamethrower jet. The `mud_burst` folder itself is untouched: the Bog Witch's
-  enemy cast (`bog_mud_burst`) and the gather still use it.
+- **Glob and splat are painted and untinted.** `tint` stays only on the `gather` layer (the old
+  gold vortex would read as fire without it). The procedural `mud_glob`, the derived
+  `mud_burst_splat` (folder, recipe, generator, tests) are deleted; `mud_splat_drops` stays.
+- Splat: one still, held 0.3 s then faded 0.22 s, punch 0.15, size 480 (`at: hit` sprites are
+  tails, shrunk to a fraction of the body, so it lands rat-sized on a rat).
 
 ## Beats, authored seconds
 
 | t | Beat |
 |---|---|
-| 0.00-0.20 | **Gather.** The sheet's first eight frames, a dark vortex of mud in Shawn's hand, tinted; the glob is held beside it. |
-| 0.17-0.325 | **Lob.** The glob leaves the hand at 0.17 s and reaches the body in 0.155 s along an arc (`drift.arcY` 0.6 box heights, peak where the glob is a quarter of the way across because the flight eases in), drips trailing. |
-| 0.325 | **Payoff cue.** Sound, damage number, Vulnerable badge, the splat (28 fps, 0.5 s, punch 0.15, size 900 on a rat) and 14 clots thrown up that fall back (0.3-0.55 s). No glow anywhere. |
-| 0.325-0.80 | Splat thins and fades; clots land. |
+| 0.00-0.20 | **Gather.** The old sheet's vortex in Shawn's hand, tinted brown. |
+| 0.17-0.325 | **Lob.** The painted glob leaves the hand and reaches the body in 0.155 s along an arc (`arcY` 0.6), its three drips trailing. |
+| 0.325 | **Payoff cue.** Sound, damage number, Vulnerable badge, the painted splat and 14 clots. Matte, no glow anywhere. |
+| 0.325-0.85 | Splat held then fading; clots land. |
 
 ## Measured (spell_feel, 60 fps)
 
@@ -41,7 +36,7 @@ frame, and by eye that frame is the clear peak. The treant's 1.5x "clean at
 0.75 s" is the treant's own idle movement after the cast, not the effect: the
 splat is gone by f27.
 
-## Frame notes
+## Frame notes (pass 1 figures, the flash and readability counts not re-measured)
 
 - **Flash guard.** Five casts at 1.5x on the treant (259 GIF frames): per cast
   one brightening of 7.5% of the frame (the hurt flash on the cue) and one of
@@ -61,15 +56,10 @@ splat is gone by f27.
 
 ## Identity test: "mud", not "fire"
 
-My verdict: **passes.** The tint alone moved it from fire to mud, and the
-splat with falling clots reads as wet earth landing. What stays weak: the glob
-is a soft lump (drawn at about 80 px, it reads as a clod, not as glistening
-mud), and the burst frames are spiky, an explosion shape more than a splatter.
-There is no sheen, no stringy drip from the body afterwards.
-
-## What a painted still would fix
-
-One painted glob (wet highlight, stringy tail) and one splat still with a
-splatter silhouette (round core, radial tendrils, flat droplets) would replace
-the procedural lump and the spiky burst. Prompt in
-`docs/prompts/2026-10-03_spell_rework.md`.
+My verdict: **passes, clearly.** The glob has a wet highlight and a stringy tail and lands as a
+round core with radial tendrils and flat spatter: a thrown handful of wet mud, no gold, no glow.
+The weakness the procedural version had (a soft clod, a spiky burst) is gone. What stays weak:
+the splat is rat-sized on a treant (the tail cap), so a treant reads as "splashed" more than
+"hit"; and on a back-rank cast (rat, treant, beetle, slot 3) the glob still flies in front of
+the uninvolved rat/treant and the splat is small on the beetle behind the treant.
+Spell_feel was not re-run: the cue (0.325 s) and the splat window are unchanged in kind.

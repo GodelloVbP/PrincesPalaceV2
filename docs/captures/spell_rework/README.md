@@ -43,9 +43,9 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| rat | `mud_burst_rat_1x.gif` | `mud_burst_rat_1x.gif` | recorded |
-| treant | `mud_burst_treant_1x.gif` | `mud_burst_treant_1x.gif` | recorded |
-| back-rank target (beetle, slot 3) | `mud_burst_rat-treant-beetle_target3_1x.gif` | `mud_burst_rat-treant-beetle_target3_1x.gif` | recorded |
+| rat | `mud_burst_rat_1x.gif` | `mud_burst_rat_1x.gif` | re-recorded 2026-10-04 with the painted glob and splat |
+| treant | `mud_burst_treant_1x.gif` | `mud_burst_treant_1x.gif` | re-recorded 2026-10-04 with the painted glob and splat |
+| back-rank target (beetle, slot 3) | `mud_burst_rat-treant-beetle_target3_1x.gif` | `mud_burst_rat-treant-beetle_target3_1x.gif` | re-recorded 2026-10-04 with the painted glob and splat |
 | five casts at 1.5x | none | `mud_burst_treant_x5_1.5x.gif` | recorded; no before |
 
 ### 4. Gale Scythe

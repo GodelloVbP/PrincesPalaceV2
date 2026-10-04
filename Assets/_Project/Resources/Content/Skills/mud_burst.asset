@@ -159,7 +159,7 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0.6
         scale: 1
-        size: 190
+        size: 170
         fit: target
         facing: auto
         sort: effects
@@ -167,7 +167,7 @@ MonoBehaviour:
         punch: 0
         glow: 0
         tint: 
-        impactX: 0.59
+        impactX: 0.62
         impactY: 0.5
         aspect: 0
         travelSeconds: 0.155
@@ -210,12 +210,12 @@ MonoBehaviour:
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/mud_burst_splat
-        seconds: 0.5
-        fps: 28
+        path: Spells/mud_splat
+        seconds: 0.3
+        fps: 0
         startFrame: 0
-        until: once
-        fade: 0.12
+        until: hold
+        fade: 0.22
         opacity: 1
         dx: 0
         dy: 0
@@ -229,16 +229,16 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 900
+        size: 480
         fit: target
         facing: auto
         sort: effects
         align: 
         punch: 0.15
         glow: 0
-        tint: '#7A5A40'
-        impactX: 0.69
-        impactY: 0.52
+        tint: 
+        impactX: 0.5
+        impactY: 0.5
         aspect: 0
         travelSeconds: 0
         travelDelay: 0

@@ -87,7 +87,7 @@
             "dy": 0
           },
           {
-            "_comment": "The glob, thrown: held in the hand for 0.2 s, then 0.125 s straight to the body, so it arrives on the 0.325 s cue. Procedural (tools/make_spell_fx.py mud_glob): matte, no glow.",
+            "_comment": "The glob, thrown: held in the hand for 0.17 s, then 0.155 s along an arc to the body, so it arrives on the 0.325 s cue. The painted glob (mud_glob recipe): matte brown as drawn, no tint, no glow.",
             "id": "glob",
             "render": "still",
             "place": "caster-centre",
@@ -95,9 +95,9 @@
             "path": "Spells/mud_glob",
             "travelDelay": 0.17,
             "travelSeconds": 0.155,
-            "size": 190,
+            "size": 170,
             "fit": "target",
-            "impactX": 0.59,
+            "impactX": 0.62,
             "impactY": 0.5,
             "facing": "auto",
             "sort": "effects",
@@ -106,24 +106,22 @@
             "drift": { "arcY": 0.6 }
           },
           {
-            "_comment": "The payoff: the splat, on the body with the sound, the number and the Vulnerable badge. mud_burst_splat is the old sheet's burst frames with the streak back to the caster cut away, tinted brown, no glow.",
+            "_comment": "The payoff: the painted splat, on the body with the sound, the number and the Vulnerable badge. One still, held and then faded, matte brown as drawn.",
             "id": "splat",
             "render": "sprite",
             "place": "target-centre",
             "at": "hit",
-            "path": "Spells/mud_burst_splat",
-            "fps": 28,
-            "seconds": 0.5,
-            "until": "once",
-            "size": 900,
+            "path": "Spells/mud_splat",
+            "seconds": 0.3,
+            "until": "hold",
+            "size": 480,
             "fit": "target",
-            "impactX": 0.69,
-            "impactY": 0.52,
+            "impactX": 0.5,
+            "impactY": 0.5,
             "facing": "auto",
             "sort": "effects",
-            "tint": "#7A5A40",
             "punch": 0.15,
-            "fade": 0.12
+            "fade": 0.22
           },
           {
             "_comment": "Clots thrown up and falling back: heavy, short-lived, brown in the pixels (an emitter takes no tint).",

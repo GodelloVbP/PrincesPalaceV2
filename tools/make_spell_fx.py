@@ -14,16 +14,9 @@ court_price_pulse: a soft violet ring around a glowing core, one 256x256 frame.
     Court of Whispers' price on Shawn. Violet like the court, a ring rather than
     figures so it reads as "something was taken" and not as a second court.
 
-mud_glob: one 256x256 frame, a lumpy matte-brown glob travelling right with a
-    few drips trailing left. Mud Burst's lobbed projectile; matte on purpose
-    (the old sheet's gold glints read as fire).
 mud_splat_drops: four 128x128 particle frames (round, long, teardrop, crumb) in
     the same brown, for the splat's falling drops. Emitters cannot take a tint,
     so the colour is in the pixels.
-mud_burst_splat: the existing mud_burst sheet's burst frames (f12-f25) with the
-    long streak to the left of the burst feathered away, so the burst can land
-    on the target without a rope of mud back to the caster. Derived from the
-    shipped frames, nothing painted.
 
 shackle_cinch_ring: one 256x256 frame, a thin gold-white ring with a crimson halo
     outside it. Velvet Shackles' cinch: drawn oversized for two frames and snapped
@@ -151,14 +144,6 @@ def _mud_rgba(cover, depth, size, light=(-0.5, -0.6)):
     return _rgba(rgb, cover)
 
 
-def mud_glob():
-    """RGBA uint8, 256x256: the glob right of centre, drips trailing left."""
-    circles = [(150, 128, 44), (128, 120, 30), (172, 140, 30), (140, 150, 26), (165, 108, 24),
-               (92, 134, 10), (66, 126, 7), (110, 156, 8)]
-    cover, depth = _blob_mask((SIZE, SIZE), circles, 0.12, 11)
-    return _mud_rgba(cover, depth, 44)
-
-
 def _drop_frame(circles, seed, wobble=0.1, size=128):
     cover, depth = _blob_mask((size, size), circles, wobble, seed)
     return _mud_rgba(cover, depth, 18)
@@ -180,27 +165,11 @@ def mud_drop_crumb():
     return _drop_frame([(50, 60, 9), (72, 70, 10), (62, 48, 6), (80, 52, 5)], 24)
 
 
-SPLAT_FRAMES = range(12, 26)
-
-
-def _splat_frame(n):
-    def make():
-        src = np.asarray(Image.open(os.path.join(SPELLS, "mud_burst", f"f{n}.png")).convert("RGBA")).astype(np.float64)
-        h, w = src.shape[:2]
-        x = (np.arange(w) + 0.5) / w
-        keep = np.clip((x - 0.40) / 0.08, 0.0, 1.0)  # feather the streak out over 0.40-0.48
-        src[..., 3] *= keep[None, :]
-        return np.round(src).astype(np.uint8)
-    return make
-
-
 PIECES = {
     "court_price_pulse": [court_price_pulse],
     "shackle_cinch_ring": [shackle_cinch_ring],
     "aegis_mote": [aegis_mote],
-    "mud_glob": [mud_glob],
     "mud_splat_drops": [mud_drop_round, mud_drop_long, mud_drop_tear, mud_drop_crumb],
-    "mud_burst_splat": [_splat_frame(n) for n in SPLAT_FRAMES],
 }
 
 

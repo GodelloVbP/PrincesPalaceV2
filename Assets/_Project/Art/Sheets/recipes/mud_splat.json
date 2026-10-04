@@ -1,0 +1,17 @@
+{
+  "_notes": [
+    "Mud Burst: the splat. One painted still (mud_splat.png, 1254x1254), a round dense core with thick radial tendrils ending in round drops and thin spatter, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\", cropped to its own ink. Matte on purpose: no tint, no glow. Replaces mud_burst_splat, the old burst frames with the streak cut away."
+  ],
+  "sheet": "Spells/Mud Burst/mud_splat.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

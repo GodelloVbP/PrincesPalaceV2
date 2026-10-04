@@ -1,7 +1,17 @@
 {
   "_notes": [
-    "Mud Burst: the lobbed glob. Procedural, not sliced. tools/make_spell_fx.py mud_glob writes this folder directly, deterministic and pinned by tools/make_spell_fx_test.py. This file records provenance for SpellVfxRecipeDriftTests; slice_spell_sheet.py has no sheet to cut for it."
+    "Mud Burst: the thrown glob. One painted still (mud_glob.png, 1254x1254), a heavy wet glob of earth-brown mud thrown to the right with a stringy tail and three drips trailing left, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\" (a plain green key clamps green to min(r,b), which pulls browns toward red), then cropped to its own ink. Matte on purpose: no tint, no glow."
   ],
-  "generator": "tools/make_spell_fx.py mud_glob",
-  "names": ["f0"]
+  "sheet": "Spells/Mud Burst/mud_glob.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
 }

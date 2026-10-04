@@ -47,9 +47,10 @@ namespace PrincesPalace.Domain.Tests
             var splat = vfx.layers.Single(l => l.id == "splat");
             Assert.AreEqual("hit", splat.at);
             Assert.AreEqual(0f, splat.offset, 1e-6f);
-            Assert.AreEqual("Spells/mud_burst_splat", splat.path);
-            Assert.AreEqual(28f, splat.fps, 1e-6f);
-            Assert.AreEqual(0.5f, splat.seconds, 1e-6f, "14 frames at 28 fps");
+            Assert.AreEqual("Spells/mud_splat", splat.path, "the painted splat, one still");
+            Assert.AreEqual("hold", splat.until);
+            Assert.AreEqual(0.3f, splat.seconds, 1e-6f);
+            Assert.AreEqual(0.22f, splat.fade, 1e-6f);
 
             var drops = vfx.layers.Single(l => l.id == "drops");
             Assert.AreEqual("hit", drops.at);
@@ -57,13 +58,14 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void NothingGlowsAndTheSheetsAreTintedBrown()
+        public void NothingGlowsAndOnlyTheGatherIsTinted()
         {
             var vfx = Mud();
             Assert.IsTrue(vfx.layers.All(l => l.glow == 0f), "matte: a hot core is what read as fire");
-            foreach (string id in new[] { "gather", "splat" })
+            Assert.AreEqual("#7A5A40", vfx.layers.Single(l => l.id == "gather").tint, "the old gold sheet reads as fire untinted");
+            foreach (string id in new[] { "glob", "splat" })
             {
-                Assert.AreEqual("#7A5A40", vfx.layers.Single(l => l.id == id).tint, id);
+                Assert.IsTrue(string.IsNullOrEmpty(vfx.layers.Single(l => l.id == id).tint), id + ": painted brown already");
             }
 
             Assert.AreEqual(4, vfx.layers.Length);
