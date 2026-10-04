@@ -2860,3 +2860,21 @@ either leaves the screen or ends at the same small shard today's shrink-to-fit
 gives. All three were discarded (patch kept outside the repo). A real fix
 changes the stage, not the layer rule: a shorter treant, plates that clear tall
 bodies, or a fall that lands on the head instead of the middle. Owner call.
+
+## Spell rework, 2026-10-04 (PLAN_SPELL_REWORK S0-S5)
+
+### 271. A beat's later payoffs are four ad hoc mechanisms
+`casterCostSeconds` (a hand-rebuilt Vitals repaint), `detonationSeconds` +
+`secondSfxPath`, the staggered second packet, and `PreTurnOrder` each schedule
+"something more, N seconds after the cue" their own way in `FightBeatPlayer`.
+One model would be a timed list of (offset, effect) entries on the beat, with
+effect = clip, number, vitals repaint or tracker repaint, played by one loop.
+Touches CombatBeat (Domain), the content schema and the beat tests: an
+architecture change, deferred from the /simplify pass. Owner call.
+
+### 272. Identity tests that fail without painted art
+Court of Whispers (six mirrored figures read as "curse swarm", not whispering)
+and Gale Scythe (whirls, not one cut) partly fail; Thorn, Viper and Borrowed
+pass narrowly. Each spell's NOTES.md under `docs/captures/spell_rework/after/`
+names the still that fixes it; prompts are in
+`docs/prompts/2026-10-03_spell_rework.md`. ChatGPT art was skipped this pass.
