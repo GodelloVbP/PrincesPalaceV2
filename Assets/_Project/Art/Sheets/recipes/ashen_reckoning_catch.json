@@ -1,0 +1,17 @@
+{
+  "_notes": [
+    "Ashen Reckoning: the catch. One painted still (ashen_reckoning_catch-v2.png, 1254x1254), a radial burst of flame, deep teal-emerald with a white-yellow core turning to orange at the tips, black ash flecks and three drops of teal fire, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\" (the teal would shift under the min(r,b) clamp), cropped to its own ink. The v1 file is superseded and unused."
+  ],
+  "sheet": "Spells/Ashen Reckoning/ashen_reckoning_catch-v2.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

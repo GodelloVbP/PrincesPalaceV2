@@ -130,7 +130,7 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: venom
+      - id: catch
         render: still
         place: target-centre
         height: 0
@@ -138,12 +138,12 @@ MonoBehaviour:
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/ashen_reckoning
-        seconds: 0.07
+        path: Spells/ashen_reckoning_catch
+        seconds: 0.12
         fps: 0
-        startFrame: 4
+        startFrame: 0
         until: hold
-        fade: 0.1
+        fade: 0.2
         opacity: 1
         dx: 0
         dy: 0
@@ -157,14 +157,14 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 360
+        size: 340
         fit: target
         facing: none
         sort: effects
         align: 
         punch: 0.3
-        glow: 1.6
-        tint: 
+        glow: 1
+        tint: '#D8FF98'
         impactX: 0.5
         impactY: 0.5
         aspect: 0
@@ -200,21 +200,21 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: ignite
-        render: sprite
+      - id: flare
+        render: still
         place: target-centre
         height: 0
         follow: 0
         whenConsumed: 
         at: hit
         offset: 0.05
-        path: Spells/ashen_reckoning
-        seconds: 0.43
-        fps: 14
-        startFrame: 6
-        until: once
-        fade: 0.14
-        opacity: 1
+        path: Spells/ashen_reckoning_catch
+        seconds: 0.08
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.2
+        opacity: 0.8
         dx: 0
         dy: 0
         drift:
@@ -232,9 +232,9 @@ MonoBehaviour:
         facing: none
         sort: effects
         align: 
-        punch: 0.35
-        glow: 1.9
-        tint: 
+        punch: 0.4
+        glow: 1.8
+        tint: '#D8FF98'
         impactX: 0.5
         impactY: 0.5
         aspect: 0

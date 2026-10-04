@@ -91,9 +91,9 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| with Poison present | `ashen_reckoning_rat_poison_1x.gif` | `ashen_reckoning_rat_poison_1x.gif` | recorded |
-| with Poison, treant | none | `ashen_reckoning_treant_poison_1x.gif` | recorded; no before |
-| with Poison, 1.5x | none | `ashen_reckoning_rat_poison_1.5x.gif` | recorded; one cast, no series (the Poison it consumes is gone after the first) |
+| with Poison present | `ashen_reckoning_rat_poison_1x.gif` | `ashen_reckoning_rat_poison_1x.gif` | re-recorded 2026-10-04 with the painted catch |
+| with Poison, treant | none | `ashen_reckoning_treant_poison_1x.gif` | re-recorded with the painted catch; no before |
+| with Poison, 1.5x | none | `ashen_reckoning_rat_poison_1.5x.gif` | re-recorded with the painted catch; one cast, no series (the Poison it consumes is gone after the first) |
 | refusal without Poison | none | none | not a capture: the refusal is unchanged by the plan |
 
 ### 8. Gilded Aegis

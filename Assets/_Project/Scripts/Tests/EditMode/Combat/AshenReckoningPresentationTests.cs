@@ -31,16 +31,20 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.3f, wind.seconds, 1e-6f, "f0-f4 at 0.06 s");
             Assert.AreEqual(0f, wind.fade, 1e-6f);
 
-            var venom = vfx.layers.Single(l => l.id == "venom");
-            Assert.AreEqual("hit", venom.at);
-            Assert.AreEqual(0f, venom.offset, 1e-6f, "the Poison packet's number is on the cue");
-            Assert.AreEqual(1.6f, venom.glow, 1e-6f);
+            var catchLayer = vfx.layers.Single(l => l.id == "catch");
+            Assert.AreEqual("hit", catchLayer.at);
+            Assert.AreEqual("still", catchLayer.render);
+            Assert.AreEqual("Spells/ashen_reckoning_catch", catchLayer.path);
+            Assert.AreEqual(0f, catchLayer.offset, 1e-6f, "the Poison packet's number is on the cue");
+            Assert.AreEqual(1.0f, catchLayer.glow, 1e-6f);
+            Assert.AreEqual("#D8FF98", catchLayer.tint, "teal pulled toward the game's Poison green");
 
-            var ignite = vfx.layers.Single(l => l.id == "ignite");
-            Assert.AreEqual("hit", ignite.at);
-            Assert.AreEqual(0.05f, ignite.offset, 1e-6f, "3 frames at 60 fps, StageHitFlash.StaggerSeconds");
-            Assert.AreEqual(6, ignite.startFrame, "f5, the coal bursting into flame");
-            Assert.AreEqual(1.9f, ignite.glow, 1e-6f);
+            var flare = vfx.layers.Single(l => l.id == "flare");
+            Assert.AreEqual("hit", flare.at);
+            Assert.AreEqual("Spells/ashen_reckoning_catch", flare.path, "the same drawing flares; no second drawing");
+            Assert.AreEqual(0.05f, flare.offset, 1e-6f, "3 frames at 60 fps, StageHitFlash.StaggerSeconds");
+            Assert.AreEqual(1.8f, flare.glow, 1e-6f);
+            Assert.Greater(flare.size, catchLayer.size);
         }
 
         [Test]
