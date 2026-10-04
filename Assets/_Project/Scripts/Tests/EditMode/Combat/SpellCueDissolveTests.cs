@@ -13,13 +13,24 @@ namespace PrincesPalace.Domain.Tests
     // sap burst showed 1-2 frames ahead of the Thorned badge.
     public class SpellCueDissolveTests
     {
+        // A 12-frame sheet playing across a 0.3 s cue, authored inline: the
+        // rule is about any animated sprite, and no shipped spell is one now.
         private static SpellPerformance Thorn()
         {
-            string skills = File.ReadAllText(Path.Combine(RepoTree.Root(), "Assets", "_Project",
-                "ContentData", "skills.json"));
-            string skill = JsonBlocks.ObjectsInArray(skills, "skills")
-                .Single(s => JsonBlocks.String(s, "id") == "thorn_tithe");
-            return SpellPerformance.Resolve(SpellVfxJson.OwnVfx(skill), 1, path => 12);
+            var vfx = new SpellPresentation
+            {
+                layerFormat = SpellLayerRules.CurrentLayerFormat,
+                hitCueSeconds = 0.3f,
+                layers = new[]
+                {
+                    new SpellLayer
+                    {
+                        id = "ritual", render = "sprite", place = "target-centre", at = "release",
+                        path = "Spells/test_sheet", seconds = 0.72f, until = "once",
+                    },
+                },
+            };
+            return SpellPerformance.Resolve(vfx, 1, path => 12);
         }
 
         [Test]

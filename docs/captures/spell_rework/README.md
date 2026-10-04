@@ -33,8 +33,8 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| rat | `thorn_tithe_rat_1x.gif` | `thorn_tithe_rat_1x.gif` | recorded |
-| treant | `thorn_tithe_treant_1x.gif` | `thorn_tithe_treant_1x.gif` | recorded |
+| rat | `thorn_tithe_rat_1x.gif` | `thorn_tithe_rat_1x.gif` | re-recorded 2026-10-04 with the painted growth sheet |
+| treant | `thorn_tithe_treant_1x.gif` | `thorn_tithe_treant_1x.gif` | re-recorded 2026-10-04 with the painted growth sheet |
 | five casts at 1.5x | none | `thorn_tithe_treant_x5_1.5x.gif` | recorded; no before |
 
 ### 3. Mud Burst

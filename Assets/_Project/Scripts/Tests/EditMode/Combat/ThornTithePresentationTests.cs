@@ -8,8 +8,8 @@ using PrincesPalace.Domain.Combat.Session;
 namespace PrincesPalace.Domain.Tests
 {
     // THORN TITHE'S BEATS as literal seconds (docs/PLAN_SPELL_REWORK.md 3.2):
-    // the vines sprout over 0.3 s, the Thorned status lands on the cue with a
-    // green accent, and the cage has sunk back into the floor 0.72 s in.
+    // the vines grow over 0.3 s, the Thorned status lands on the cue as the
+    // closed cage, and the cage has sunk back into the floor 0.72 s in.
     public class ThornTithePresentationTests
     {
         private static SpellPresentation Thorn()
@@ -22,34 +22,30 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheVinesSproutFromTheFloorAndCloseOnTheCue()
+        public void TheVinesGrowForTheWindUpAndTheCageClosesOnTheCue()
         {
             var vfx = Thorn();
-            Assert.AreEqual(0.3f, vfx.hitCueSeconds, 1e-6f, "sound, number and Thorned badge on one frame; the cast riser is 0.3 s");
+            Assert.AreEqual(0.3f, vfx.hitCueSeconds, 1e-6f, "sound, Thorned badge and the closed cage on one frame; the cast riser is 0.3 s");
+            Assert.IsNull(vfx.layers.FirstOrDefault(l => l.id == "accent" || l.id == "cage"),
+                "an at: hit sprite is a tail, shrunk to a fraction of the body; the cage is f3 of the growth layer");
 
-            var front = vfx.layers.Single(l => l.id == "ritual");
-            Assert.AreEqual(0.72f, front.seconds, 1e-6f, "12 frames at 0.06 s: f5, the sap burst, opens at 0.30 s");
-            Assert.AreEqual(-0.1f, front.drift.fromY, 1e-6f, "rises out of the soil a tenth of its height");
-            Assert.AreEqual(0f, front.drift.toY, 1e-6f);
-            Assert.AreEqual("effects", front.sort);
+            var grow = vfx.layers.Single(l => l.id == "grow");
+            Assert.AreEqual("Spells/thorn_tithe_growth", grow.path, "the painted four-frame growth sheet");
+            Assert.AreEqual("release", grow.at);
+            Assert.AreEqual(10f, grow.fps, 1e-6f, "f3 opens at 0.3 s, the cue");
+            Assert.AreEqual("hold", grow.until);
+            Assert.AreEqual(0.72f, grow.seconds, 1e-6f);
+            Assert.AreEqual(340f, grow.size, 1e-6f);
+            Assert.AreEqual(0.36f, grow.impactY, 1e-6f, "the soil sits above the Thorned badge under the body");
+            Assert.AreEqual("effects", grow.sort);
+            Assert.AreEqual(-0.15f, grow.drift.toY, 1e-6f, "sinks back into the soil");
+            Assert.AreEqual(0.7f, grow.drift.viaAt, 1e-6f);
 
             var back = vfx.layers.Single(l => l.id == "back");
             Assert.AreEqual("ground", back.sort, "behind the body, so the cage wraps instead of lying over it");
             Assert.AreEqual("reverse", back.facing);
             Assert.AreEqual(0.5f, back.opacity, 1e-6f);
-            Assert.AreEqual(front.seconds, back.seconds, 1e-6f, "the two arcs close together");
-        }
-
-        [Test]
-        public void TheSapBurstIsTheOneHotFrameOnTheCue()
-        {
-            var accent = Thorn().layers.Single(l => l.id == "accent");
-            Assert.AreEqual("hit", accent.at);
-            Assert.AreEqual(0f, accent.offset, 1e-6f);
-            Assert.AreEqual(6, accent.startFrame, "f5, the green-white burst");
-            Assert.AreEqual(1.9f, accent.glow, 1e-6f);
-            Assert.AreEqual(0.1f, accent.seconds, 1e-6f);
-            Assert.AreEqual(0.12f, accent.fade, 1e-6f);
+            Assert.AreEqual(grow.seconds, back.seconds, 1e-6f, "the two arcs close together");
         }
 
         [Test]

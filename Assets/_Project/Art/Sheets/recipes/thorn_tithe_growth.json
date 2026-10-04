@@ -1,0 +1,23 @@
+{
+  "_notes": [
+    "Thorn Tithe: the vines growing. One painted 2x2 sheet (thorn_tithe_growth.png, 1254x1254, cells 627x627) of one clump at four moments: three shoots, five vines, full height, the closed cage with a bead of sap. Emerald-teal vines with pale thorns on a #00FF00 green screen, keyed on hue with keyed: \"green-soft\" (the teal would shift under the min(r,b) clamp). Every cell shares one ground line, so content_crop takes one crop for all four and the base stays put as the clump grows."
+  ],
+  "sheet": "Spells/Thorn Tithe/thorn_tithe_growth.png",
+  "rects": [
+    [0, 0, 627, 627],
+    [627, 0, 627, 627],
+    [0, 627, 627, 627],
+    [627, 627, 627, 627]
+  ],
+  "names": ["f0", "f1", "f2", "f3"],
+  "keyed": "green-soft",
+  "canvas": [627, 627],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" },
+    { "from": "f1" },
+    { "from": "f2" },
+    { "from": "f3" }
+  ]
+}
