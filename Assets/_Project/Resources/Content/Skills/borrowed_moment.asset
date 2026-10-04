@@ -148,8 +148,8 @@ MonoBehaviour:
         dx: 0
         dy: 0
         drift:
-          fromX: -0.1
-          toX: 0.45
+          fromX: -0.05
+          toX: 0.22
           fromY: 0
           toY: 0
           viaX: 0

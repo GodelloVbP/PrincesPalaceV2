@@ -42,7 +42,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, quicken.offset, 1e-6f);
             Assert.AreEqual("Spells/borrowed_moment_quicken", quicken.path);
             Assert.AreEqual("none", quicken.facing, "the chevrons point toward the enemy whichever side the ally stands");
-            Assert.AreEqual(0.45f, quicken.drift.toX, 1e-6f, "slid forward");
+            Assert.AreEqual(0.22f, quicken.drift.toX, 1e-6f, "slid forward, but short of the neighbour behind: 0.45 landed on Odette's wing from Bjorn");
+            Assert.AreEqual(-0.05f, quicken.drift.fromX, 1e-6f);
             Assert.AreEqual(1.0f, quicken.glow, 1e-6f);
         }
 

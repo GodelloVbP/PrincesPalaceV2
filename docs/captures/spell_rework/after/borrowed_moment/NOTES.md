@@ -24,7 +24,7 @@ skipped; the calls below are mine.
 | t | Beat |
 |---|---|
 | 0.00-0.30 | **Turning.** The hourglass in its ring (f0-f4) spins up on the ally, cyan swirl around it. Dim (opacity 0.85, glow 0.3), no fade. |
-| 0.30 | **Payoff.** The painted chevrons (`quicken`, three nested cyan arcs pointing right, sand streams, a gold clock hand) on the ally with the sound (`borrowed_moment_impact`), the log line and the tracker moving the ally up. 460 box, punch 0.2, glow 1.0, `facing: none` so they point toward the enemy whichever side the ally stands, `drift` 0.45 box forward over 0.3 s, then a 0.15 s fade. |
+| 0.30 | **Payoff.** The painted chevrons (`quicken`, three nested cyan arcs pointing right, sand streams, a gold clock hand) on the ally with the sound (`borrowed_moment_impact`), the log line and the tracker moving the ally up. 460 box, punch 0.2, glow 1.0, `facing: none` so they point toward the enemy whichever side the ally stands, `drift` from -0.05 to 0.22 box forward over 0.3 s (0.45 landed the chevrons on Odette's wing when cast on Bjorn; rechecked per frame on Bjorn at 4:3 and on Odette, the tip stays on the ally's own body), then a 0.15 s fade. |
 | 0.30-0.45 | **Grains.** 12 grains and glints thrown up with gravity pulling up. The breaking hourglass (f6-f11) and the starburst are gone. |
 
 ## Measured (spell_feel vs rat, presentation-only; 60 fps)
@@ -57,7 +57,7 @@ log line more than by brightness.
   second.
 - **Flash guard.** The chevrons are thin and drift; there is no starburst any more. Well inside the limit.
 - **Hand-off.** The chevrons open on the frame after the last hourglass drawing (the one empty frame between them was a cursor-compare bug, fixed 2026-10-04; see `../../README.md`).
-- **Drift.** On Bjorn (front of the line, leftmost) the chevrons slide right across the gap and onto the edge of Odette's wing. They read as forward; the overlap is brief.
+- **Drift.** On Bjorn (leftmost) the chevrons now slide 0.27 box and stop on his own body; the earlier 0.55 box reached Odette's wing.
 - **Readability.** The chevrons cross the ally's chest and sit over the face edge for about 0.3 s, the face stays visible; no number is under it (a
   Hasten has no damage number); the log line and plates are clear.
 
