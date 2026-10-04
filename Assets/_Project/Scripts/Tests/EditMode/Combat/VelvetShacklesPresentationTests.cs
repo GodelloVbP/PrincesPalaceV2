@@ -33,32 +33,25 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheCuffSnapsTightOnTheCueWithAHotRing()
+        public void TheCuffIsPulledTightOverTheTenthBeforeTheCueAndHeldAfterIt()
         {
             var vfx = Shackles();
             var cinch = vfx.layers.Single(l => l.id == "cinch");
-            Assert.AreEqual("hit", cinch.at);
-            Assert.AreEqual(6, cinch.startFrame, "f5, the cuff");
-            Assert.AreEqual(0.5f, cinch.punch, 1e-6f, "opened half oversized, snapped in");
-
-            var accent = vfx.layers.Single(l => l.id == "accent");
-            Assert.AreEqual("hit", accent.at);
-            Assert.AreEqual(0f, accent.offset, 1e-6f);
-            Assert.AreEqual("Spells/shackle_cinch_ring", accent.path);
-            Assert.AreEqual(1f, accent.punch, 1e-6f, "twice as wide for two frames, then on the body");
-            Assert.AreEqual(1.5f, accent.glow, 1e-6f);
-            Assert.AreEqual(0.08f, accent.seconds, 1e-6f);
+            Assert.AreEqual("Spells/velvet_shackles_cinch", cinch.path, "the painted four-frame cinch");
+            Assert.AreEqual("release", cinch.at);
+            Assert.AreEqual(0.2f, cinch.offset, 1e-6f);
+            Assert.AreEqual(20f, cinch.fps, 1e-6f);
+            Assert.AreEqual(vfx.hitCueSeconds, cinch.offset + 2 / cinch.fps, 1e-6f, "f2, closed and creased, opens on the cue");
+            Assert.AreEqual("hold", cinch.until);
+            Assert.AreEqual(0.52f, cinch.seconds, 1e-6f);
+            Assert.AreEqual(0.22f, cinch.fade, 1e-6f);
+            Assert.IsNull(vfx.layers.FirstOrDefault(l => l.id == "accent" || l.id == "held"), "the ring and the held copy are the cuff's own frames now");
         }
 
         [Test]
-        public void TheCuffStaysHeldAfterTheSnapAndTheStageIsDimmedByTwoTenths()
+        public void TheStageIsDimmedByTwoTenths()
         {
             var vfx = Shackles();
-            var held = vfx.layers.Single(l => l.id == "held");
-            Assert.AreEqual(0.12f, held.offset, 1e-6f, "takes over as the snap finishes");
-            Assert.AreEqual(0.3f, held.seconds, 1e-6f);
-            Assert.AreEqual(0.22f, held.fade, 1e-6f);
-
             Assert.AreEqual(0.2f, vfx.gloom.strength, 1e-6f, "owner O1");
             Assert.AreEqual(SpellGloomEnd.Hit, vfx.gloom.Until);
             Assert.AreEqual(0.5f, vfx.layers.Single(l => l.id == "settle").emitter.lifeMax, 1e-6f);

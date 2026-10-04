@@ -1,0 +1,23 @@
+{
+  "_notes": [
+    "Velvet Shackles: the cinch. One painted 2x2 sheet (velvet_shackles_cinch.png, 1254x1254, cells 627x627) of one crimson velvet cuff with gold-thread edge and gold chain clasp at four moments: slack with the chain hanging, pulled half closed, closed and creased at the clasp, closed with a faint rebound shimmer. Keyed on hue with keyed: \"green-soft\" (the gold must keep its hue), one shared content crop so the cuff does not jump between frames."
+  ],
+  "sheet": "Spells/Velvet Shackles/velvet_shackles_cinch.png",
+  "rects": [
+    [0, 0, 627, 627],
+    [627, 0, 627, 627],
+    [0, 627, 627, 627],
+    [627, 627, 627, 627]
+  ],
+  "names": ["f0", "f1", "f2", "f3"],
+  "keyed": "green-soft",
+  "canvas": [627, 627],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" },
+    { "from": "f1" },
+    { "from": "f2" },
+    { "from": "f3" }
+  ]
+}

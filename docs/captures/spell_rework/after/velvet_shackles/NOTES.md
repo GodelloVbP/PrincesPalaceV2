@@ -1,30 +1,27 @@
 # Velvet Shackles, "after" (plan S3, spell 3.5)
 
-Captured 2026-10-04 with `tools/gif.ps1 spell velvet_shackles` and
-`tools/spell_feel.ps1`. No painted art: the existing nine velvet frames, a
-procedural ring (`tools/make_spell_fx.py shackle_cinch_ring`) and the stage gloom
-(0.20, owner O1). GIFs are untracked next to this file. Owner gates skipped; the
-calls below are mine.
+Pass 1 (2026-10-04) used the old nine velvet frames and a procedural ring. Pass 2 (2026-10-04)
+wires the owner's painted cinch sheet (`velvet_shackles_cinch.png`, recipe `velvet_shackles_cinch`,
+keyed `green-soft`, 4 frames sharing one crop). Captured with `tools/gif.ps1 spell velvet_shackles`;
+GIFs are untracked next to this file. Owner gates skipped; the calls below are mine.
+
+## What changed
+
+- One `cinch` layer plays the sheet at 20 fps from 0.2 s: f0 slack with the chain hanging
+  (0.20 s), f1 half closed (0.25 s), **f2 closed and creased on the cue (0.30 s)**, f3 the rebound
+  shimmer (0.35 s), held to 0.72 s and faded over 0.22 s. Size 290, opacity 0.9, glow 0.4.
+- The ring accent, the oversized snap (`punch`) and the separate held copy are gone, and so are
+  `shackle_cinch_ring` (folder, recipe, generator, test). The `wind` ribbons (old sheet f0-f4) stay
+  as the wind-up, opacity 0.8 to 0.6, ending on the cue.
+- Gloom 0.20 unchanged.
 
 ## Beats, authored seconds
 
 | t | Beat |
 |---|---|
-| 0.00-0.30 | **Wind-up.** Stage gloom rises to 0.20 over 0.15 s. The ribbons (f0-f4) rise and spiral round the body, drawn larger than the final cuff (470 box). Opacity 0.8, no glow. The layer ends on the cue with no fade. |
-| 0.30 | **Payoff cue.** Sound, Rooted badge (the count under the body), the cuff (f5-f6) opened 50% oversized and snapped in, and the accent: a gold-white ring drawn twice as wide that is pulled onto the body in two frames, glow 1.5. 10 petals settle. Gloom starts lifting (0.25 s). |
-| 0.42-0.84 | **Held cuff.** The cuff frame stays on the body (opacity 0.85, 0.3 s) and fades over 0.22 s. The one leftover on purpose: the bind the badge is counting down. |
-
-## Measured (spell_feel, 60 fps)
-
-| | 1x rat | 1x treant | 1.5x rat | 1.5x treant |
-|---|---|---|---|---|
-| cast start to payoff | 0.30 s (f18) | 0.30 s | 0.20 s (f12) | 0.20 s |
-| payoff to clean | 0.38 s | 0.38 s | 0.47 s | 0.32 s |
-
-No report WARNs. "Clean" is activity-based, so the held cuff (static) does not
-count against it; the cuff is visible for about 0.64 s after the cue by
-construction. Payoff to clean is therefore longer than Blackglass's 0.4 s on
-purpose (plan: end on the held cuff). The 1.5x rat 0.47 s is the rat's own idle.
+| 0.00-0.30 | Gloom rises to 0.20 over 0.15 s. Ribbons spiral round the body. From 0.20 s the painted cuff appears slack over the body and is pulled shut over the next 0.1 s. |
+| 0.30 | **Payoff cue.** Closed, creased cuff (f2) with the sound and the Rooted badge. Ribbons gone. 10 petals settle. Gloom lifts (0.25 s). |
+| 0.35-0.84 | Rebound shimmer, then the cuff is held while the badge counts, and fades from 0.72 s. |
 
 ## Frame notes
 
@@ -47,16 +44,18 @@ purpose (plan: end on the held cuff). The 1.5x rat 0.47 s is the rat's own idle.
 
 ## Identity test: "tied down"
 
-My verdict: **passes.** Ribbons wind round it, the cuff snaps shut with a bright
-ring, and the cuff stays on it while the badge counts: a viewer says "it got
-bound". What is weak: the ring is a perfect geometric circle, a UI ring more than
-a restraint, and it is the loudest thing in the cast; the cuff itself is a still
-pair of rings that sits on the body rather than cinching it (the contraction is
-the ring's, not the cuff's). The ribbon wind-up is the old sheet's drawing,
-unchanged.
+My verdict: **passes, with a cost.** The contraction the stand-in faked is in the drawing now:
+slack velvet with a hanging chain, drawn tight, pinched at a gold clasp. A viewer says "it got
+bound". Costs: (1) the cuff is a big opaque velvet collar in front of the body and hides a rat
+and a treant's whole trunk, face included, for about 0.5 s (1x treant clip), (2) it is
+drawn in front, round the middle, so it reads as a velvet sash or scrunchie being cinched more
+than as shackles on limbs, (3) the old ribbon spiral underneath is still the old drawing and
+muddies f12-f17. Under `-Darkness 0.9` the cuff is the brightest thing on the stage and the
+Round counter reads.
 
-## What a painted still would fix
+## Open (owner)
 
-A 4-frame cinch sheet (slack loops, pulled half closed, closed, rebound; prompt in
-`docs/prompts/2026-10-03_spell_rework.md`) would put the contraction in the
-ribbon and chain themselves, so the procedural ring can go or shrink to a spark.
+- Size or opacity of the cuff on large bodies (treant face); the ribbon wind-up could go now that
+  the cuff arrives by itself.
+- spell_feel was not re-run (cue and `seconds` unchanged); the flash and readability figures
+  above are from pass 1.

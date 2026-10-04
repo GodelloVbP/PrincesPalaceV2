@@ -67,11 +67,11 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| rat | `velvet_shackles_rat_1x.gif` | `velvet_shackles_rat_1x.gif` | recorded |
-| treant | `velvet_shackles_treant_1x.gif` | `velvet_shackles_treant_1x.gif` | recorded |
-| inside Bell (darkness 0.9) | `velvet_shackles_rat_dark0.9_1x.gif` | `velvet_shackles_rat_dark0.9_1x.gif` | recorded as `-Darkness 0.9` (same limits as Court) |
-| 4:3 layout | none | `velvet_shackles_rat_4x3_1x.gif` | recorded; no before |
-| five casts at 1.5x | none | `velvet_shackles_treant_x5_1.5x.gif` | recorded; no before |
+| rat | `velvet_shackles_rat_1x.gif` | `velvet_shackles_rat_1x.gif` | re-recorded 2026-10-04 with the painted cinch |
+| treant | `velvet_shackles_treant_1x.gif` | `velvet_shackles_treant_1x.gif` | re-recorded with the painted cinch |
+| inside Bell (darkness 0.9) | `velvet_shackles_rat_dark0.9_1x.gif` | `velvet_shackles_rat_dark0.9_1x.gif` | re-recorded as `-Darkness 0.9` with the painted cinch (same limits as Court) |
+| 4:3 layout | none | `velvet_shackles_rat_4x3_1x.gif` | recorded in pass 1, predates the painted cinch; no before |
+| five casts at 1.5x | none | `velvet_shackles_treant_x5_1.5x.gif` | re-recorded with the painted cinch; no before |
 
 ### 6. Viper's Bite
 

@@ -18,10 +18,6 @@ mud_splat_drops: four 128x128 particle frames (round, long, teardrop, crumb) in
     the same brown, for the splat's falling drops. Emitters cannot take a tint,
     so the colour is in the pixels.
 
-shackle_cinch_ring: one 256x256 frame, a thin gold-white ring with a crimson halo
-    outside it. Velvet Shackles' cinch: drawn oversized for two frames and snapped
-    onto the body (layer punch), so the bind reads as pulled tight.
-
 aegis_mote: one 256x256 frame, a white-gold orb right of centre with a short comet
     tail trailing left. Gilded Aegis' delivery: the ward flies from Shawn to the
     ally as a mote before the shards close around them. Warm gold, so it reads as
@@ -67,22 +63,6 @@ def court_price_pulse():
         150 + 105 * heat,
         90 + 140 * heat,
         230 + 25 * heat,
-    ], axis=-1)
-    return _rgba(rgb, alpha)
-
-
-def shackle_cinch_ring():
-    """RGBA uint8, SIZE x SIZE: ring at 0.78 of the radius, crimson halo outside."""
-    r = _radius_grid()
-    ring = np.exp(-((r - 0.78) / 0.035) ** 2)
-    halo = 0.55 * np.exp(-((r - 0.84) / 0.10) ** 2)
-    edge = np.clip((1.0 - r) / 0.06, 0.0, 1.0)
-    alpha = np.clip(ring + halo, 0.0, 1.0) * edge
-    heat = np.clip(ring, 0.0, 1.0)
-    rgb = np.stack([
-        205 + 50 * heat,
-        40 + 196 * heat,
-        62 + 108 * heat,
     ], axis=-1)
     return _rgba(rgb, alpha)
 
@@ -167,7 +147,6 @@ def mud_drop_crumb():
 
 PIECES = {
     "court_price_pulse": [court_price_pulse],
-    "shackle_cinch_ring": [shackle_cinch_ring],
     "aegis_mote": [aegis_mote],
     "mud_splat_drops": [mud_drop_round, mud_drop_long, mud_drop_tear, mud_drop_crumb],
 }
