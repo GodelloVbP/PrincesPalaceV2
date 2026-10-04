@@ -143,3 +143,39 @@ stands there. Must NOT read as: a bramble wreath, a tree, a bear trap, or a
 generic nature sparkle.
 
 Owner: what to change from the vine colour or the thorn size: ______
+
+## Mud Burst: the glob and the splat
+
+Plan 3.3. Stand-ins: `Resources/Spells/mud_glob` (procedural, a flat lump) and
+`Resources/Spells/mud_burst_splat` (the old gold burst frames under a brown
+`tint`). The verb is *splatter*. Matte and wet, never glowing: a first-time
+viewer must say "mud", not "fire".
+
+Target: two stills, each a square 1536x1536 canvas on solid #00FF00, raw files
+`Assets/_Project/Art/Sheets/Spells/Mud Burst/mud_glob.png` and
+`.../mud_splat.png`, one recipe each (`Spells/mud_glob/f0`,
+`Spells/mud_splat/f0`). Layers keep the timing; the splat is held and faded by
+layer fields, so no sheet.
+
+Style matches the existing frames and the Blackglass Spear stills:
+Hades-inspired painterly fantasy, bold sculpted brush planes, rich material
+rendering, a clean readable silhouette. Saturated-but-dark earth brown (hue
+near #5A3F2A), a wet rim highlight in a lighter brown, never gold, orange or
+yellow, and no green anywhere (the keyer removes by hue).
+
+- `mud_glob`: one heavy, wet glob of mud thrown to the right, about 45% of the
+  canvas width, tapering into a short stringy tail and three separate drips
+  trailing to the left. Slightly lumpy, one bulge forward. Depth read by two
+  tones of brown and a thin dark rim. No dirt specks flying off it.
+- `mud_splat`: the glob caught the instant it lands on something flat to its
+  left: a round dense core about 35% of the canvas, with thick radial
+  tendrils ending in round drops, thin flat spatter around them, and two
+  drops mid-fall. Wet and heavy, not an explosion: no spikes, no shards, no
+  rock chunks, no debris cloud.
+- No character, animal, floor, shadow, ring or ground plane. No text,
+  numerals, frame, border, UI or watermark.
+
+Must read as: a thrown handful of wet mud hitting something. Must NOT read
+as: fire, lava, an explosion, blood, or a boulder.
+
+Owner: what to change from the splat shape or the brown: ______

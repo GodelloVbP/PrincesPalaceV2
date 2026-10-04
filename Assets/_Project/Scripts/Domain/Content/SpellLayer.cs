@@ -143,6 +143,13 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("How far above 1 this layer's brightest pixels are pushed so the Bloom override can see them; 0 means draw it flat, as every layer did before. 1.2 roughly doubles the hot core.")]
         public float glow;
 
+        // A COLOUR MULTIPLIED INTO THE SHEET, so one painted piece can serve a
+        // material it was not painted in (the mud sheet is gold; matte brown is
+        // the same drawing under a tint). Multiplies only: it darkens and cools,
+        // never brightens, which is why glow stays a separate field.
+        [ContentDoc("A #RRGGBB colour multiplied into the layer's frames (sprite and still only); blank draws the sheet as painted. It can only darken or shift a drawing, never brighten it: that is `glow`.")]
+        public string tint = "";
+
         [ContentDoc("Where the blow lands inside this layer's frames, as a fraction from the left edge; -1 means unauthored.")]
         public float impactX = SpellPresentation.Unauthored;
         [ContentDoc("Where the blow lands inside this layer's frames, as a fraction from the bottom edge; -1 means unauthored.")]
@@ -235,6 +242,7 @@ namespace PrincesPalace.Domain.Content
             align = align,
             punch = punch,
             glow = glow,
+            tint = tint,
             impactX = impactX,
             impactY = impactY,
             aspect = aspect,

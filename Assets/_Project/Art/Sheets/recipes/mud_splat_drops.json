@@ -1,0 +1,7 @@
+{
+  "_notes": [
+    "Mud Burst: four falling drops (round, long, teardrop, crumb). Procedural, not sliced. tools/make_spell_fx.py mud_splat_drops writes this folder directly, deterministic and pinned by tools/make_spell_fx_test.py. This file records provenance for SpellVfxRecipeDriftTests; slice_spell_sheet.py has no sheet to cut for it."
+  ],
+  "generator": "tools/make_spell_fx.py mud_splat_drops",
+  "names": ["f0", "f1", "f2", "f3"]
+}

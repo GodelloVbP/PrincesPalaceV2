@@ -6,6 +6,8 @@ import sys
 import tempfile
 import unittest
 
+import numpy as np
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import make_spell_fx as fx  # noqa: E402
 
@@ -35,6 +37,42 @@ class PricePulse(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             fx.write("court_price_pulse", d)
             self.assertTrue(os.path.isfile(os.path.join(d, "court_price_pulse", "f0.png")))
+
+
+class MudPieces(unittest.TestCase):
+    def test_deterministic(self):
+        for name in ("mud_glob", "mud_splat_drops", "mud_burst_splat"):
+            a = [hashlib.sha256(f().tobytes()).hexdigest() for f in fx.PIECES[name]]
+            b = [hashlib.sha256(f().tobytes()).hexdigest() for f in fx.PIECES[name]]
+            self.assertEqual(a, b, name)
+
+    def test_glob_is_matte_brown_with_drips_behind_it(self):
+        a = fx.mud_glob()
+        self.assertEqual(a.shape, (256, 256, 4))
+        solid = a[..., 3] > 200
+        rgb = a[solid][:, :3].astype(int)
+        self.assertGreater(len(rgb), 5000)
+        self.assertLess(int(rgb.max()), 120, "matte: nothing bright enough to bloom or read as a highlight")
+        self.assertTrue(((rgb[:, 0] > rgb[:, 1]) & (rgb[:, 1] > rgb[:, 2])).all(), "brown, never grey or green")
+        xs = np.nonzero(solid)[1]
+        self.assertLess(int(xs.min()), 90, "drips trail to the left")
+        self.assertGreater(int(xs.max()), 170)
+        self.assertEqual(int(a[2, 2, 3]), 0)
+
+    def test_drop_frames(self):
+        frames = [f() for f in fx.PIECES["mud_splat_drops"]]
+        self.assertEqual([f.shape for f in frames], [(128, 128, 4)] * 4)
+        for f in frames:
+            self.assertGreater(int((f[..., 3] > 200).sum()), 150)
+            self.assertEqual(int(f[1, 1, 3]), 0)
+
+    def test_splat_keeps_the_burst_and_drops_the_streak(self):
+        frames = [f() for f in fx.PIECES["mud_burst_splat"]]
+        self.assertEqual(len(frames), 14)
+        first = frames[0]
+        w = first.shape[1]
+        self.assertEqual(int(first[:, : int(w * 0.38), 3].max()), 0, "the streak back to the caster is gone")
+        self.assertGreater(int(first[:, int(w * 0.55):, 3].max()), 200, "the burst is whole")
 
 
 if __name__ == "__main__":

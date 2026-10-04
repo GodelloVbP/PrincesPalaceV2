@@ -69,7 +69,7 @@ namespace PrincesPalace
         // and thin however the frame was cut. Set on every call, so a member
         // handed on from a stretched cast needs no restoring.
         public void Show(Sprite frame, Sprite next, float blend, float alpha, Vector2 at, Vector2 size,
-            float degrees = 0f, float glow = 0f, bool stretch = false)
+            float degrees = 0f, float glow = 0f, bool stretch = false, string tint = null)
         {
             if (image == null || frame == null) return;
 
@@ -100,8 +100,11 @@ namespace PrincesPalace
             image.sprite = frame;
             image.enabled = true;
 
-            var colour = image.color;
-            image.color = new Color(colour.r, colour.g, colour.b, alpha);
+            // THE TINT IS WRITTEN EVERY CALL, white when there is none, so a
+            // member handed on from a tinted layer carries nothing of it.
+            Domain.Content.SpellTint.TryParse(tint, out float tr, out float tg, out float tb);
+
+            image.color = new Color(tr, tg, tb, alpha);
 
             IsPlaying = true;
 
@@ -112,8 +115,7 @@ namespace PrincesPalace
 
             fade.preserveAspect = !stretch;
             fade.sprite = next;
-            var fading = fade.color;
-            fade.color = new Color(fading.r, fading.g, fading.b, blend * alpha);
+            fade.color = new Color(tr, tg, tb, blend * alpha);
         }
 
         // EVERYTHING THIS MEMBER CARRIES, PUT BACK. A pool member handed on
@@ -130,8 +132,7 @@ namespace PrincesPalace
                 image.enabled = false;
                 image.sprite = null;
 
-                var colour = image.color;
-                image.color = new Color(colour.r, colour.g, colour.b, 1f);
+                image.color = Color.white;
 
                 var rect = image.rectTransform;
                 rect.localScale = new Vector3(1f, rect.localScale.y, rect.localScale.z);
@@ -142,8 +143,7 @@ namespace PrincesPalace
 
             fade.enabled = false;
             fade.sprite = null;
-            var fading = fade.color;
-            fade.color = new Color(fading.r, fading.g, fading.b, 1f);
+            fade.color = Color.white;
         }
 
         private void OnDisable()

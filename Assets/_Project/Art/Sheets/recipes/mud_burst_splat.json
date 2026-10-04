@@ -1,0 +1,7 @@
+{
+  "_notes": [
+    "Mud Burst: frames f12-f25 of Spells/mud_burst with the streak to the burst's left feathered away. Derived, not sliced. tools/make_spell_fx.py mud_burst_splat writes this folder directly, deterministic and pinned by tools/make_spell_fx_test.py. This file records provenance for SpellVfxRecipeDriftTests; slice_spell_sheet.py has no sheet to cut for it."
+  ],
+  "generator": "tools/make_spell_fx.py mud_burst_splat",
+  "names": ["f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13"]
+}

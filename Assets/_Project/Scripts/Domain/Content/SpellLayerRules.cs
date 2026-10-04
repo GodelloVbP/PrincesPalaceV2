@@ -330,6 +330,18 @@ namespace PrincesPalace.Domain.Content
             Positive(at, "punch", layer.punch, problems);
             Positive(at, "glow", layer.glow, problems);
 
+            if (!string.IsNullOrEmpty(layer.tint))
+            {
+                if (!SpellTint.TryParse(layer.tint, out _, out _, out _))
+                {
+                    problems.Add($"{at}.tint \"{layer.tint}\" is not a #RRGGBB colour.");
+                }
+                else if (layer.Render == SpellRender.Emitter)
+                {
+                    problems.Add($"{at}.tint is not drawn on an emitter's particles; tint a sprite or still layer.");
+                }
+            }
+
             // A PUNCH IS AN ACCENT, NOT A ZOOM. Past MaxPunch the layer opens
             // at more than double size and the settle reads as the effect
             // rushing the camera rather than as the ground taking a hit --

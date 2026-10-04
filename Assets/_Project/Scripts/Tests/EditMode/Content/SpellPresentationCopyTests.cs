@@ -74,6 +74,7 @@ namespace PrincesPalace.Domain.Tests
                     punch = 0.22f,
                     drift = new SpellDrift { fromX = -0.7f, toX = -0.7f, viaX = -0.25f, viaAt = 0.46f, fromY = 0.1f },
                     glow = 1.3f,
+                    tint = "#6B4A30",
                     impactX = 0.94f,
                     impactY = 0.5f,
                     aspect = 1.5f,

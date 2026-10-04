@@ -1,0 +1,7 @@
+{
+  "_notes": [
+    "Mud Burst: the lobbed glob. Procedural, not sliced. tools/make_spell_fx.py mud_glob writes this folder directly, deterministic and pinned by tools/make_spell_fx_test.py. This file records provenance for SpellVfxRecipeDriftTests; slice_spell_sheet.py has no sheet to cut for it."
+  ],
+  "generator": "tools/make_spell_fx.py mud_glob",
+  "names": ["f0"]
+}

@@ -636,7 +636,7 @@ namespace PrincesPalace
                     renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
                         new Vector2(span.Centre.X, span.Centre.Y),
                         new Vector2(span.Length * sample.Scale, instance.Box.Y * sample.Scale),
-                        span.Degrees, instance.Layer.glow, stretch: true);
+                        span.Degrees, instance.Layer.glow, stretch: true, tint: instance.Layer.tint);
                     continue;
                 }
 
@@ -650,7 +650,7 @@ namespace PrincesPalace
                 renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
                     new Vector2(at.X, at.Y),
                     new Vector2(instance.Box.X * sample.Scale, instance.Box.Y * sample.Scale),
-                    instance.Degrees, instance.Layer.glow);
+                    instance.Degrees, instance.Layer.glow, tint: instance.Layer.tint);
             }
         }
 
