@@ -11,8 +11,8 @@ using PrincesPalace.Domain.Stats;
 namespace PrincesPalace.Domain.Tests
 {
     // BORROWED MOMENT'S BEATS as literal seconds (docs/PLAN_SPELL_REWORK.md 3.9):
-    // the hourglass turns for 0.3 s, the cue frame is the cyan starburst, and the
-    // sand rises off the ally. Its payoff is a position, so the turn queue the
+    // the hourglass turns for 0.3 s, the cue frame is the cyan chevrons, and the
+    // grains rise off the ally. Its payoff is a position, so the turn queue the
     // beat opens on is the one BEFORE the move and the tracker changes on the cue.
     public class BorrowedMomentPresentationTests
     {
@@ -26,7 +26,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheHourglassTurnsForTheCueAndTheStarburstLandsOnIt()
+        public void TheHourglassTurnsForTheCueAndTheChevronsLandOnIt()
         {
             var vfx = Borrowed();
             Assert.AreEqual(0.3f, vfx.hitCueSeconds, 1e-6f);
@@ -37,28 +37,22 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.3f, turn.seconds, 1e-6f, "f0-f4");
             Assert.AreEqual(0f, turn.fade, 1e-6f, "the starburst replaces it on the cue");
 
-            var burst = vfx.layers.Single(l => l.id == "burst");
-            Assert.AreEqual("hit", burst.at);
-            Assert.AreEqual(0f, burst.offset, 1e-6f);
-            Assert.AreEqual(6, burst.startFrame, "f5, the clock-hand starburst");
-            Assert.AreEqual(1.7f, burst.glow, 1e-6f);
-            Assert.AreEqual(0.1f, burst.seconds, 1e-6f);
+            var quicken = vfx.layers.Single(l => l.id == "quicken");
+            Assert.AreEqual("hit", quicken.at);
+            Assert.AreEqual(0f, quicken.offset, 1e-6f);
+            Assert.AreEqual("Spells/borrowed_moment_quicken", quicken.path);
+            Assert.AreEqual("none", quicken.facing, "the chevrons point toward the enemy whichever side the ally stands");
+            Assert.AreEqual(0.45f, quicken.drift.toX, 1e-6f, "slid forward");
+            Assert.AreEqual(1.0f, quicken.glow, 1e-6f);
         }
 
         [Test]
-        public void TheSandRisesAndEverythingIsCleanThirtyNineHundredthsAfterTheCue()
+        public void TheGrainsRiseAndEverythingIsCleanHalfASecondAfterTheCue()
         {
             var vfx = Borrowed();
-            var sand = vfx.layers.Single(l => l.id == "sand");
-            Assert.AreEqual(0.08f, sand.offset, 1e-6f);
-            Assert.AreEqual(7, sand.startFrame, "f6, the hourglass breaking");
-            Assert.AreEqual(24f, sand.fps, 1e-6f);
-            Assert.AreEqual(0.25f, sand.seconds, 1e-6f, "6 frames at 24 fps");
-            Assert.AreEqual(0.25f, sand.drift.toY, 1e-6f, "rising, a quarter of its box");
-            Assert.AreEqual(0.39f, sand.offset + sand.seconds + sand.fade, 1e-6f);
-
-            var burst = vfx.layers.Single(l => l.id == "burst");
-            Assert.LessOrEqual(burst.offset + burst.seconds + burst.fade, sand.offset + sand.seconds + sand.fade);
+            Assert.IsFalse(vfx.layers.Any(l => l.id == "sand" || l.id == "burst"), "the breaking hourglass and the starburst are gone");
+            var quicken = vfx.layers.Single(l => l.id == "quicken");
+            Assert.AreEqual(0.45f, quicken.seconds + quicken.fade, 1e-6f, "payoff to clean");
 
             var grains = vfx.layers.Single(l => l.id == "grains").emitter;
             Assert.AreEqual(300f, grains.gravity, 1e-6f, "pulls up: the grains quicken");

@@ -119,12 +119,12 @@ Hasten is a real cast on a non-caster ally that is not already next: the 4:3 Ode
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| on Odette | `borrowed_moment_party3_on_odette_1x.gif` | `borrowed_moment_on_odette_1x.gif` | recorded |
+| on Odette | `borrowed_moment_party3_on_odette_1x.gif` | `borrowed_moment_on_odette_1x.gif` | re-recorded 2026-10-04 with the painted chevrons |
 | on Bjorn | `borrowed_moment_party3_on_bjorn_1x.gif` | `borrowed_moment_on_bjorn_1x.gif` | recorded; Bjorn is cut at the left edge of the stage crop (the 4:3 clip shows him whole) |
-| on Shawn | `borrowed_moment_party3_on_shawn_1x.gif` | `borrowed_moment_on_shawn_1x.gif` | recorded |
-| 4:3 layout, on Bjorn | none | `borrowed_moment_on_bjorn_4x3_1x.gif` | recorded; no before |
+| on Shawn | `borrowed_moment_party3_on_shawn_1x.gif` | `borrowed_moment_on_shawn_1x.gif` | re-recorded with the painted chevrons (presentation only) |
+| 4:3 layout, on Bjorn | none | `borrowed_moment_on_bjorn_4x3_presentation-only_1x.gif` | re-recorded with the painted chevrons; presentation only; no before |
 | 4:3 layout, on Odette (HUD visible) | none | `borrowed_moment_on_odette_4x3_1x.gif` | recorded; no before; real cast, see note below |
-| three casts at 1.5x, on Odette vs forest_warden | none | `borrowed_moment_on_odette_vs_forest_warden_full_x3_1.5x.gif` | recorded; no before; three, not five: the squad kills the warden by cast 4 |
+| three casts at 1.5x, on Odette vs forest_warden | none | `borrowed_moment_on_odette_vs_forest_warden_full_x3_1.5x.gif` | re-recorded with the painted chevrons; no before; three, not five: the squad kills the warden by cast 4 |
 
 ### 10. Censer of Embers
 

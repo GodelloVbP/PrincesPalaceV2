@@ -1,0 +1,17 @@
+{
+  "_notes": [
+    "Borrowed Moment: the forward chevrons. One painted still (borrowed_moment_quicken-v2.png, 1254x1254), three nested cyan chevrons pointing right with sand streams and a small gold clock hand, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\" (cyan sits next to the key hue), cropped to its own ink. The v1 file is superseded and unused."
+  ],
+  "sheet": "Spells/Borrowed Moment/borrowed_moment_quicken-v2.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

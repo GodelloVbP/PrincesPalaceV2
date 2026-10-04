@@ -1,8 +1,8 @@
 # Borrowed Moment, "after" (plan S3, spell 3.9)
 
 Captured 2026-10-04 with `tools/gif.ps1 spell borrowed_moment -Party shawn,odette,bjorn -Target <ally>`
-(1x; Bjorn at `-Aspect 4:3`) and one three-cast series at 1.5x. No painted art: the existing
-twelve hourglass frames and four particles. GIFs are untracked next to this file. Owner gates
+(1x; Bjorn at `-Aspect 4:3`) and one three-cast series at 1.5x. The payoff is the painted
+`borrowed_moment_quicken-v2.png` (v1 unused); the turning hourglass (f0-f4) and the four particles are the old sheet's. GIFs are untracked next to this file. Owner gates
 skipped; the calls below are mine.
 
 ## What the runtime and the tools had wrong, fixed here
@@ -24,18 +24,19 @@ skipped; the calls below are mine.
 | t | Beat |
 |---|---|
 | 0.00-0.30 | **Turning.** The hourglass in its ring (f0-f4) spins up on the ally, cyan swirl around it. Dim (opacity 0.85, glow 0.3), no fade. |
-| 0.30 | **Payoff.** f5, the cyan clock-hand starburst (glow 1.7, punch 0.3), held 0.1 s with the sound (`borrowed_moment_impact`), the log line, and the tracker moving the ally up. |
-| 0.38-0.63 | **Sand.** The hourglass breaks (f6-f11, 24 fps) and the sand rises a quarter of its box off the ally; 12 grains and glints are thrown up with gravity pulling up, so they quicken. Clean at 0.69 s. |
+| 0.30 | **Payoff.** The painted chevrons (`quicken`, three nested cyan arcs pointing right, sand streams, a gold clock hand) on the ally with the sound (`borrowed_moment_impact`), the log line and the tracker moving the ally up. 460 box, punch 0.2, glow 1.0, `facing: none` so they point toward the enemy whichever side the ally stands, `drift` 0.45 box forward over 0.3 s, then a 0.15 s fade. |
+| 0.30-0.45 | **Grains.** 12 grains and glints thrown up with gravity pulling up. The breaking hourglass (f6-f11) and the starburst are gone. |
 
-## Measured (timing.json, 60 fps)
+## Measured (spell_feel vs rat, presentation-only; 60 fps)
 
 | | 1x | 1.5x |
 |---|---|---|
 | cast start to payoff | 0.30 s (f18) | 0.20 s (f12) |
-| payoff to clean | 0.39 s authored (freed f42 = 0.70 s total) | 0.26 s |
+| payoff to clean | 0.43 s | 0.30 s |
 
-Before this pass the sheet ran 0.72 s plus a 0.14 s fade from the cast's start, so payoff to
-clean was about 0.56 s.
+No warnings, but the peak is 1.9 (1.8 at 1.5x) and the tool finds no visual contact frame: the
+chevrons are thin cyan light on a busy body, so the cue is carried by the tracker and the
+log line more than by brightness.
 
 ## Frame notes
 
@@ -54,19 +55,17 @@ clean was about 0.56 s.
   GIF names who. Largest single-step brightening in the series is 6.2% of the frame, from the
   squad's and enemies' own attacks; Borrowed's own cue peaks at 0.9%. At most 2 events of 3% or more fall in any
   second.
-- **Flash guard.** One bright event per cast (the starburst), small in area: inside the limit.
-- **Readability.** The starburst covers the ally's body for 0.1 s; no number is under it (a
+- **Flash guard.** The chevrons are thin and drift; there is no starburst any more. Well inside the limit.
+- **One empty frame** (about 16 ms) between the last hourglass drawing and the chevrons (the cue clock lags the release clock by a frame).
+- **Drift.** On Bjorn (front of the line, leftmost) the chevrons slide right across the gap and onto the edge of Odette's wing. They read as forward; the overlap is brief.
+- **Readability.** The chevrons cross the ally's chest and sit over the face edge for about 0.3 s, the face stays visible; no number is under it (a
   Hasten has no damage number); the log line and plates are clear.
 
 ## Identity test: "time sped up for my ally"
 
-My verdict: **partly passes.** An hourglass spins up, bursts into cyan clock hands and sand
-that rises, and the ally's chip jumps ahead on the same frame. Read alone, the vfx says "time
-magic on this ally", not "faster": the hourglass and the sand are the sheet's old drawing, and
-nothing on the body itself quickens (no afterimage, no speed lines). The tracker move on the cue
-is what finishes the sentence.
-
-## What a painted still would fix
-
-An afterimage still of an ally mid-stride, doubled and cyan-edged, would put the "quicker"
-on the body itself instead of in a 40 px chip.
+Verdict: **passes, narrowly.** The hourglass spins up, and on the cue three after-image
+chevrons point forward on the ally and slide ahead of it while its chip jumps up. That puts
+"faster" on the body, which the old sheet could not. What is weak: the chevrons are legible
+as "dash" more than "time" (the clock hand is a few pixels at game size, and the sand streams
+vanish), so the hourglass beat before it carries the time half; the art is not an afterimage of
+the ally's own sprite (the engine feature the prompt prefers is still unbuilt).
