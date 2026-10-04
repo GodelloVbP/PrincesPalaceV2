@@ -1,0 +1,18 @@
+{
+  "_notes": [
+    "Viper's Bite: the lunge. One painted still (vipers_bite_lunge-v2.png, 1254x1254, the owner's second pass; v1 stays beside it, unused): a teal snake's head mid-strike facing right, mouth wide, two ivory fangs dripping, the neck leaving the canvas at the left edge. Keyed on hue with keyed: \"green-soft\" (the scales are teal, which the min(r,b) clamp would shift). The neck is cut flat by that edge across 818 px of the left column, so feather fades the left 32% of the frame to nothing and the cut becomes a tail that dissolves; the crop then trims to the ink that is left."
+  ],
+  "sheet": "Spells/Viper's Bite/vipers_bite_lunge-v2.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "feather": { "left": 0.32 },
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

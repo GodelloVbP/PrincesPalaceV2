@@ -79,11 +79,11 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| no Poison | `vipers_bite_rat_1x.gif` | `vipers_bite_rat_1x.gif` | recorded |
-| existing Poison (detonation) | `vipers_bite_rat_poison_1x.gif` | `vipers_bite_rat_poison_1x.gif` | recorded; the second number (-9) and the green pop show here and not in the plain clip. The before clip showed no detonation |
-| existing Poison, treant | none | `vipers_bite_treant_poison_1x.gif` | recorded; no before |
-| inside Bell (darkness 0.9) | `vipers_bite_rat_dark0.9_1x.gif` | `vipers_bite_rat_dark0.9_1x.gif` | recorded as `-Darkness 0.9` |
-| five casts at 1.5x | none | `vipers_bite_treant_x5_1.5x.gif` | recorded; no before |
+| no Poison | `vipers_bite_rat_1x.gif` | `vipers_bite_rat_1x.gif` | re-recorded 2026-10-04 with the painted lunge |
+| existing Poison (detonation) | `vipers_bite_rat_poison_1x.gif` | `vipers_bite_rat_poison_1x.gif` | re-recorded with the painted lunge and burst; the second number (-9) and the green pop show here and not in the plain clip. The before clip showed no detonation |
+| existing Poison, treant | none | `vipers_bite_treant_poison_1x.gif` | re-recorded with the painted lunge and burst; no before |
+| inside Bell (darkness 0.9) | `vipers_bite_rat_dark0.9_1x.gif` | `vipers_bite_rat_dark0.9_1x.gif` | re-recorded as `-Darkness 0.9` with the painted lunge |
+| five casts at 1.5x | none | `vipers_bite_treant_x5_1.5x.gif` | re-recorded with the painted lunge and burst; no before |
 
 ### 7. Ashen Reckoning
 

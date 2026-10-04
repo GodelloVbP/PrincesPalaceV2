@@ -1,0 +1,17 @@
+{
+  "_notes": [
+    "Viper's Bite: the venom burst, the second payoff on a Poison detonation. One painted still (vipers_bite_burst.png, 1254x1254): a thick emerald plume with a crown of droplets round it, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\" (the venom is deep emerald-teal and keeps its hue), then cropped to its own ink."
+  ],
+  "sheet": "Spells/Viper's Bite/vipers_bite_burst.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

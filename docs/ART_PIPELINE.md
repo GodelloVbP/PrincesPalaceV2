@@ -813,6 +813,8 @@ six-drawing sheet can become a twenty-six-frame animation without new art:
 
 Left out entirely, the cells **are** the frames one for one.
 
+`"feather": {"left": 0.32}` on a recipe fades the alpha to nothing over that fraction of the frame at the named edges (`left`, `right`, `top`, `bottom`; width or height fractions), before the content crop. It is for painted art delivered cut off by its canvas: Viper's Bite's snake neck leaves the left edge, and the feather turns that straight cut into a tail that dissolves.
+
 ### Layers: a cast that is more than one drawing
 
 `layerFormat: 1` replaces the single `path`/`seconds`/`impactFrame` block above

@@ -62,43 +62,43 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: Audio/Sfx/vipers_bite_cast
       layers:
-      - id: ritual
+      - id: lunge
         render: sprite
         place: target-centre
         height: 0
         follow: 0
         whenConsumed: 
         at: release
-        offset: 0
-        path: Spells/vipers_bite
-        seconds: 0.3
-        fps: 16.667
-        startFrame: 1
-        until: once
-        fade: 0
-        opacity: 0.85
+        offset: 0.12
+        path: Spells/vipers_bite_lunge
+        seconds: 0.4
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.15
+        opacity: 0.95
         dx: 0
         dy: 0
         drift:
-          fromX: 0
-          toX: 0
-          fromY: 0.5
+          fromX: -1.5
+          toX: -0.6
+          fromY: 0
           toY: 0
           viaX: 0
           viaY: 0
-          viaAt: 0
+          viaAt: 0.45
           arcY: 0
         scale: 1
-        size: 350
+        size: 290
         fit: target
-        facing: none
+        facing: auto
         sort: effects
         align: 
         punch: 0
-        glow: 0.2
+        glow: 0
         tint: 
-        impactX: 0.5
-        impactY: 0.49
+        impactX: 0.78
+        impactY: 0.5
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -133,7 +133,7 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: bite
-        render: sprite
+        render: still
         place: target-centre
         height: 0
         follow: 0
@@ -141,10 +141,10 @@ MonoBehaviour:
         at: hit
         offset: 0
         path: Spells/vipers_bite
-        seconds: 0.42
-        fps: 16.667
+        seconds: 0.1
+        fps: 0
         startFrame: 6
-        until: once
+        until: hold
         fade: 0.14
         opacity: 1
         dx: 0
@@ -159,7 +159,7 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 350
+        size: 300
         fit: target
         facing: none
         sort: effects
@@ -280,12 +280,12 @@ MonoBehaviour:
         whenConsumed: Poison
         at: hit
         offset: 0.18
-        path: Spells/vipers_bite_particles
-        seconds: 0.12
+        path: Spells/vipers_bite_burst
+        seconds: 0.22
         fps: 0
-        startFrame: 3
+        startFrame: 0
         until: hold
-        fade: 0.14
+        fade: 0.2
         opacity: 1
         dx: 0
         dy: 0
@@ -299,16 +299,16 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 380
+        size: 420
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.4
-        glow: 1.6
+        punch: 0.25
+        glow: 0.9
         tint: 
         impactX: 0.5
-        impactY: 0.3
+        impactY: 0.2
         aspect: 0
         travelSeconds: 0
         travelDelay: 0

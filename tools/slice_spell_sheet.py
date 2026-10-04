@@ -153,7 +153,7 @@ def write_recipe(vfx_id, spec):
     os.makedirs(RECIPE_DIR, exist_ok=True)
     ordered = collections.OrderedDict()
     for key in ("_notes", "sheet", "grid", "rects", "names", "sources", "keyed", "canvas",
-                "base_align", "content_crop", "sequence"):
+                "base_align", "content_crop", "feather", "sequence"):
         if key in spec:
             value = spec[key]
             ordered[key] = list(value) if isinstance(value, tuple) else value
@@ -620,6 +620,33 @@ def crop_to_shared_content(frames, pad=8):
     return [f.crop((left, top, right, bottom)) for f in frames]
 
 
+def feather_edges(frame, widths):
+    """Fade the alpha to nothing at the named edges.
+
+    `widths` maps "left"/"right"/"top"/"bottom" to a fraction of the frame's
+    width (left, right) or height (top, bottom): alpha is multiplied by a
+    smoothstep that is 0 on the edge and 1 that far in. For a painted subject
+    the artist delivered cut off by the canvas -- a snake's neck leaving the
+    left edge -- so the cut becomes a tail that dissolves instead of a straight
+    line on stage.
+    """
+    arr = np.asarray(frame.convert("RGBA")).astype(np.float64)
+    h, w = arr.shape[:2]
+    mask = np.ones((h, w))
+    for edge, fraction in widths.items():
+        if edge not in ("left", "right", "top", "bottom"):
+            sys.exit(f"feather: unknown edge '{edge}'")
+        horizontal = edge in ("left", "right")
+        length = w if horizontal else h
+        span = max(1.0, fraction * length)
+        distance = (np.arange(length) + 0.5) if edge in ("left", "top") else (length - np.arange(length) - 0.5)
+        t = np.clip(distance / span, 0.0, 1.0)
+        ramp = t * t * (3.0 - 2.0 * t)
+        mask *= ramp[None, :] if horizontal else ramp[:, None]
+    arr[..., 3] *= mask
+    return Image.fromarray(np.round(arr).astype(np.uint8), "RGBA")
+
+
 def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
     """Cut one sheet into its named cells: {name: RGBA frame}.
 
@@ -816,7 +843,7 @@ def pad_to_common_canvas(cells, canvas=None):
 
 def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
                 base_align=False, content_crop=False, preview=False, vfx_id=None,
-                sources=None, rects=None, canvas=None):
+                sources=None, rects=None, canvas=None, feather=None):
     """Cut a sheet -- or several -- into frames.
 
     `sources`, when given, replaces `sheet_path`/`rows`/`cols`/`names`
@@ -883,6 +910,11 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
     # about how they were composed, only how much dead canvas ships around
     # them -- see crop_to_shared_content's own header for why a sheet would
     # ask for this at all.
+    # BEFORE the crop: a feathered edge is transparent, so the crop trims to
+    # the ink that is left and the shipped frame has no cut edge in it.
+    if feather:
+        frames = [feather_edges(f, feather) for f in frames]
+
     if content_crop:
         frames = crop_to_shared_content(frames)
 
@@ -1282,7 +1314,7 @@ def main():
                         base_align=spec.get("base_align", False),
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, sources=spec["sources"],
-                        canvas=spec.get("canvas"))
+                        canvas=spec.get("canvas"), feather=spec.get("feather"))
         else:
             rows, cols = spec["grid"] if "grid" in spec else (None, None)
             print(f"[{vfx_id}] {_shape_of(spec)}")
@@ -1292,7 +1324,7 @@ def main():
                         base_align=spec.get("base_align", False),
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, rects=spec.get("rects"),
-                        canvas=spec.get("canvas"))
+                        canvas=spec.get("canvas"), feather=spec.get("feather"))
 
 
 if __name__ == "__main__":
