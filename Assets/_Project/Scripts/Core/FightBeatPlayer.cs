@@ -1340,7 +1340,7 @@ namespace PrincesPalace
             for (int i = 0; i < packets.Length; i++)
             {
                 var popup = FreePopup();
-                if (popup == null) return;
+                if (popup == null) return;   // no pool at all (an unwired fixture)
 
                 var at = PopupAnchor(target, 0f) +
                          new Vector2((i - (packets.Length - 1) * 0.5f) * PacketPopupSpacing, 0f);
@@ -1445,7 +1445,7 @@ namespace PrincesPalace
         private void PopNumber(CombatBeat beat, CombatantState target, int amount, bool missed, bool crit = false)
         {
             var popup = FreePopup();
-            if (popup == null) return;   // every one still in flight; the number is dropped, not queued
+            if (popup == null) return;   // no pool at all (an unwired fixture)
 
             var at = PopupAnchor(target, 0f);
             float lifeSeconds = Scaled(DamagePopup.LifeSeconds);
@@ -1485,18 +1485,40 @@ namespace PrincesPalace
                    new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom + extraHeadroom);
         }
 
+        // A NUMBER IS NEVER DROPPED: damage popups are the only place the
+        // player can check a hit against the log, and a claim is held for the
+        // stagger plus a full life, so a sweep of packets can outrun any fixed
+        // pool. When every one is claimed the pool grows by a clone of the
+        // first, which keeps the generated scene's pool a floor, not a cap.
         private DamagePopup FreePopup()
         {
-            if (popups == null) return null;
+            if (popups == null || popups.Length == 0) return null;
 
             foreach (var popup in popups)
             {
                 if (popup != null && popup.IsFree) return popup;
             }
 
-            return null;
+            DamagePopup template = null;
+            foreach (var popup in popups)
+            {
+                if (popup != null) { template = popup; break; }
+            }
+
+            if (template == null) return null;
+
+            var clone = Instantiate(template.gameObject, template.transform.parent, false);
+            clone.name = template.name + "Extra" + popups.Length;
+            clone.SetActive(false);
+            var grown = clone.GetComponent<DamagePopup>();
+
+            System.Array.Resize(ref popups, popups.Length + 1);
+            popups[popups.Length - 1] = grown;
+            return grown;
         }
-    
+
+        public DamagePopup FreePopupForTest() => FreePopup();
+
         // The actor steps toward its target and back.
         //
         // Skipped entirely when the beat says the actor HOLDS POSITION -- a cast

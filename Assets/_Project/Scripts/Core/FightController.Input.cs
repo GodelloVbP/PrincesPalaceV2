@@ -1131,8 +1131,17 @@ namespace PrincesPalace
         // Back to the descent if one is still live, and to the hub if it is not
         // -- which is what a defeat leaves behind, since losing ends the run
         // rather than the room.
+        //
+        // IDEMPOTENT: Continue then Cancel in one frame reach here twice, and
+        // the second Navigation.Go would queue a second scene load.
+        private bool _left;
+
+        public void LeaveFightForTest() => LeaveFight();
+
         internal void LeaveFight()
         {
+            if (_left) return;
+            _left = true;
             EndPresentation();
             Navigation.Go(RunManager.HasRun ? Navigation.Map : Navigation.Hub);
         }

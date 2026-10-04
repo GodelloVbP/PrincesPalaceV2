@@ -114,9 +114,11 @@ def cut(x, peak, length, after=0.0):
     end = int(round(peak * RATE))
     size = int(round(length * RATE))
     start = end - size
-    piece = x[max(start, 0):end]
-    if start < 0:
-        piece = np.concatenate([np.zeros(-start), piece])
+    # Silence pads either side the source cannot fill: the head when the peak is
+    # earlier than `length`, the tail when `after` runs past the source's end.
+    # The result is always exactly `size` samples.
+    piece = x[max(start, 0):min(end, len(x))]
+    piece = np.concatenate([np.zeros(max(-start, 0)), piece, np.zeros(max(end - len(x), 0))])
     piece = piece.copy()
     fi = int(FADE_IN * RATE)
     fo = int(FADE_OUT * RATE)
@@ -148,12 +150,17 @@ def main():
         path = find_source(pack, name)
         x = load_mono_44k(path)
         peak, db = build_peak(x)
-        a = peak + after - length
-        first = db[max(int(round(a / HOP)), 0):][:10].mean()
-        last = db[max(int(round(peak / HOP)) - 10, 0):int(round(peak / HOP))].mean()
+        stop = peak + after
+        a = stop - length
+        first = db[min(max(int(round(a / HOP)), 0), len(db) - 1):][:10].mean()
+        k = min(int(round(stop / HOP)), len(db))
+        last = db[max(k - 10, 0):k].mean() if k > 0 else float("-inf")
         pad = " (+%.3fs silence)" % -a if a < 0 else ""
+        tail = len(x) / RATE
+        if stop > tail:
+            pad += " (+%.3fs tail silence)" % (stop - tail)
         print("%-28s %-58s %6.2f [%5.3f,%5.3f] %+.1f -> %+.1f%s" % (
-            out, os.path.basename(path), peak, max(a, 0), peak, first, last, pad))
+            out, os.path.basename(path), peak, max(a, 0), stop, first, last, pad))
         if not dry:
             write_wav(os.path.join(OUT_ROOT, out + ".wav"), cut(x, peak, length, after))
 
