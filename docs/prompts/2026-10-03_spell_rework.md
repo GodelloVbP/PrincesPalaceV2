@@ -179,3 +179,43 @@ Must read as: a thrown handful of wet mud hitting something. Must NOT read
 as: fire, lava, an explosion, blood, or a boulder.
 
 Owner: what to change from the splat shape or the brown: ______
+
+## Gale Scythe: the blade that crosses the line
+
+Plan 3.4, the one frame that carries meaning. Stand-in: `Resources/Spells/gale_scythe`
+f5 (a whorl, rat-sized), stretched over the span by `place: formation`,
+`align: span`. The verb is *reap*: one blade of wind crosses the whole line, then
+every enemy is cut at once.
+
+Target: one still, raw file
+`Assets/_Project/Art/Sheets/Spells/Gale Scythe/gale_scythe_blade.png`, sliced as
+`Spells/gale_scythe_blade/f0`. It is laid on the line between the front and
+the last enemy by the span layer (box 3:1, wide) and carried across it by
+`drift`; the render fits the drawing into that box, so the drawing's own
+proportion matters.
+
+Style matches the existing wind frames and the Blackglass Spear stills:
+Hades-inspired painterly fantasy, bold sculpted brush planes, rich material
+rendering, a clean readable silhouette. Pale sea-green and white wind, a few
+dark-gold leaf flecks caught in it; no other hue.
+
+Canvas 3072x1024 (3:1), solid #00FF00 background, no gradient or vignette. No
+green or yellow-green in the blade, its wisps or its glow beyond a pale
+sea-green that stays well away from #00FF00 (the keyer removes by hue); the
+white core stays opaque.
+
+- One long crescent blade, lying almost flat, spanning 90% of the canvas width
+  and about 25% of its height, thick at its centre and tapering to needle tips,
+  its bright edge on the leading (right) side and a soft feathered trailing
+  edge, curved slightly like a sickle moon on its side.
+- Wind streaks trailing behind it to the left, parallel to the blade, in three
+  or four thin wisps of decreasing length. A handful of small leaf flecks in the
+  wisps.
+- No whorl, no tornado, no spiral, no ring and no ground plane.
+- No character, enemy or weapon, no scythe handle, no hand, no skull.
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: a single cutting stroke of wind passing sideways through a line
+of enemies. Must NOT read as: a tornado, a fan or a slash mark made by a claw.
+
+Owner: what to change from the blade curve or the wisps: ______

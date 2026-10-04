@@ -62,21 +62,159 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: Audio/Sfx/gale_scythe_cast
       layers:
-      - id: ritual
+      - id: gather
         render: sprite
-        place: target-centre
+        place: caster-centre
         height: 0
         follow: 0
         whenConsumed: 
         at: release
         offset: 0
         path: Spells/gale_scythe
-        seconds: 0.72
-        fps: 0
-        startFrame: 0
+        seconds: 0.2
+        fps: 20
+        startFrame: 1
         until: once
-        fade: 0.14
+        fade: 0.05
+        opacity: 0.85
+        dx: 70
+        dy: 30
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+        scale: 1
+        size: 200
+        fit: 
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: sweep
+        render: still
+        place: formation
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.13
+        path: Spells/gale_scythe
+        seconds: 0.13
+        fps: 0
+        startFrame: 6
+        until: hold
+        fade: 0.05
         opacity: 1
+        dx: 0
+        dy: 45
+        drift:
+          fromX: -0.45
+          toX: 0.22
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+        scale: 1
+        size: 0
+        fit: 
+        facing: auto
+        sort: effects
+        align: span
+        punch: 0
+        glow: 1.2
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 3
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0.5
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: cut
+        render: sprite
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0
+        path: Spells/gale_scythe
+        seconds: 0.43
+        fps: 14
+        startFrame: 6
+        until: once
+        fade: 0.1
+        opacity: 0.9
         dx: 0
         dy: 0
         drift:
@@ -88,13 +226,14 @@ MonoBehaviour:
           viaY: 0
           viaAt: 0
         scale: 1
-        size: 380
+        size: 300
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.24
+        punch: 0.2
         glow: 1.2
+        tint: 
         impactX: 0.51
         impactY: 0.48
         aspect: 0
@@ -163,6 +302,7 @@ MonoBehaviour:
         align: 
         punch: 0
         glow: 0
+        tint: 
         impactX: -1
         impactY: -1
         aspect: 0
