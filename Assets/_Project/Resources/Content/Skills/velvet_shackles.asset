@@ -418,6 +418,8 @@ MonoBehaviour:
         until: hit
         fadeOut: 0.25
       casterCostSeconds: 0
+      secondSfxPath: 
+      detonationSeconds: 0
     SortOrder: 16
     Status: 9
     HasStatus: 1
@@ -467,6 +469,8 @@ MonoBehaviour:
             until: 
             fadeOut: 0
           casterCostSeconds: 0
+          secondSfxPath: 
+          detonationSeconds: 0
         shake: 0
         hitStopSeconds: 0
       defenseToAttackPercent: 0

@@ -85,6 +85,7 @@ MonoBehaviour:
           viaX: 0
           viaY: 0
           viaAt: 0
+          arcY: 0
         scale: 1
         size: 0
         fit: target
@@ -93,6 +94,7 @@ MonoBehaviour:
         align: 
         punch: 0
         glow: 0
+        tint: 
         impactX: -1
         impactY: -1
         aspect: 0
@@ -161,6 +163,7 @@ MonoBehaviour:
           viaX: 0
           viaY: 0
           viaAt: 0
+          arcY: 0
         scale: 1
         size: 460
         fit: target
@@ -169,6 +172,7 @@ MonoBehaviour:
         align: 
         punch: 0.15
         glow: 0
+        tint: 
         impactX: -1
         impactY: -1
         aspect: 0
@@ -212,6 +216,8 @@ MonoBehaviour:
         until: 
         fadeOut: 0
       casterCostSeconds: 0
+      secondSfxPath: 
+      detonationSeconds: 0
     SortOrder: 31
     Status: 0
     HasStatus: 0
@@ -261,6 +267,8 @@ MonoBehaviour:
             until: 
             fadeOut: 0
           casterCostSeconds: 0
+          secondSfxPath: 
+          detonationSeconds: 0
         shake: 0
         hitStopSeconds: 0
       defenseToAttackPercent: 0

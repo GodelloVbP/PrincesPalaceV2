@@ -55,3 +55,6 @@ MonoBehaviour:
         fadeIn: 0
         until: 
         fadeOut: 0
+      casterCostSeconds: 0
+      secondSfxPath: 
+      detonationSeconds: 0
