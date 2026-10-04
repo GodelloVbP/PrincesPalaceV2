@@ -166,8 +166,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // `instance.Facing` raw, which is how `facing: none` came to mirror an
         // emitter's cone while un-mirroring the sheet it was thrown from. One
         // property, four readers, and a fifth reader cannot get it wrong.
-        public float DrawFacing =>
-            Layer != null && Layer.Facing == SpellFacing.None ? 1f : (Facing < 0f ? -1f : 1f);
+        public float DrawFacing
+        {
+            get
+            {
+                if (Layer != null && Layer.Facing == SpellFacing.None) return 1f;
+                float cast = Facing < 0f ? -1f : 1f;
+                return Layer != null && Layer.Facing == SpellFacing.Reverse ? -cast : cast;
+            }
+        }
     }
 
     // A PRESENTATION, RESOLVED: every layer fanned out, every time absolute,

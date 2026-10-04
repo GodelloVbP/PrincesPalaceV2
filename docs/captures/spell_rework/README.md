@@ -20,12 +20,12 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| full 3-enemy rack, rats | `court_of_whispers_rat_full_1x.gif` | `court_of_whispers_rat_1x.gif` | recorded; Shawn's cost pulse is in this clip (verdict in NOTES) |
-| full rack, treants | `court_of_whispers_treant_full_1x.gif` | `court_of_whispers_treant_1x.gif` | recorded |
-| crowded mixed rack (rat, treant, beetle) | `court_of_whispers_rat-treant-beetle_full_1x.gif` | `court_of_whispers_rat-treant-beetle_1x.gif` | recorded |
-| inside Bell in the Fog, round 1 (darkness 0.9) | `court_of_whispers_rat_full_dark0.9_1x.gif` | `court_of_whispers_rat_dark0.9_1x.gif` | recorded as `-Darkness 0.9`: near-black stage and the Round 1 counter only, not Bell's fog overlay or toll (see below) |
-| five casts at 1.5x | `court_of_whispers_rat_full_x5_1.5x.gif` | `court_of_whispers_rat_x5_1.5x.gif` | recorded |
-| 4:3 layout | none | `court_of_whispers_rat_4x3_1x.gif` | recorded; no before (the option postdates it) |
+| full 3-enemy rack, rats | `court_of_whispers_rat_full_1x.gif` | `court_of_whispers_rat_full_1x.gif` | re-recorded 2026-10-04 with the painted courtier; Shawn's cost pulse is in this clip (verdict in NOTES) |
+| full rack, treants | `court_of_whispers_treant_full_1x.gif` | `court_of_whispers_treant_full_1x.gif` | re-recorded with the painted courtier |
+| crowded mixed rack (rat, treant, beetle) | `court_of_whispers_rat-treant-beetle_full_1x.gif` | `court_of_whispers_rat-treant-beetle_full_1x.gif` | re-recorded; the beetle hides behind the treant, as before |
+| inside Bell in the Fog, round 1 (darkness 0.9) | `court_of_whispers_rat_full_dark0.9_1x.gif` | `court_of_whispers_rat_full_dark0.9_1x.gif` | re-recorded as `-Darkness 0.9`: near-black stage and the Round 1 counter only, not Bell's fog overlay or toll (see below) |
+| five casts at 1.5x | `court_of_whispers_rat_full_x5_1.5x.gif` | `court_of_whispers_rat_full_x5_1.5x.gif` | re-recorded with the painted courtier |
+| 4:3 layout | none | `court_of_whispers_rat_full_4x3_1x.gif` | re-recorded; no before (the option postdates it) |
 
 ### 2. Thorn Tithe
 

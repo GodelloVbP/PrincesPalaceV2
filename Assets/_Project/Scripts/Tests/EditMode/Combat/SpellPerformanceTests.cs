@@ -676,6 +676,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1f, instance.DrawFacing, 0.0001f);
         }
 
+        [Test]
+        public void AReverseLayerDrawsAgainstTheCast()
+        {
+            var instance = new SpellLayerInstance
+            {
+                Layer = new SpellLayer { render = "sprite", place = "target", facing = "reverse" },
+                Facing = 1f,
+            };
+            instance.Layer.facing = "reverse";
+            Assert.AreEqual(-1f, instance.DrawFacing, 0.0001f, "an unmirrored cast's reverse layer draws mirrored");
+
+            instance.Facing = -1f;
+            Assert.AreEqual(1f, instance.DrawFacing, 0.0001f, "and a mirrored cast's draws as authored");
+        }
+
         // A follower rides the BODY, and a body that arcs (Mud Burst's glob)
         // has moved off its undrifted line: 0.2 s into a 0.4 s flight the ease
         // is 0.25, the line sits at x 25, and an arcY of 0.6 lifts the body

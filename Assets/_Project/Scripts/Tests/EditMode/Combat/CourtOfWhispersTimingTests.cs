@@ -32,14 +32,20 @@ namespace PrincesPalace.Domain.Tests
             {
                 var lean = vfx.layers.Single(l => l.id == id);
                 Assert.AreEqual(0.65f, lean.seconds, 1e-6f);
-                Assert.AreEqual(16f, lean.fps, 1e-6f, "f5, where the ring opens, is frame 6 of 16 fps: 0.31 s");
+                Assert.AreEqual("Spells/court_of_whispers_courtier", lean.path, "the painted leaning courtier, one still");
+                Assert.AreEqual("hold", lean.until);
                 Assert.AreEqual(-0.7f, lean.drift.fromX, 1e-6f);
                 Assert.AreEqual(-0.25f, lean.drift.viaX, 1e-6f, "closest to the body at the waypoint");
                 Assert.AreEqual(0.46f, lean.drift.viaAt, 1e-6f, "0.46 of 0.65 s is the 0.3 s cue");
                 Assert.AreEqual(-0.7f, lean.drift.toX, 1e-6f, "and back out again");
             }
 
-            Assert.AreEqual("reverse", vfx.layers.Single(l => l.id == "lean-b").facing, "the second courtier is the mirror");
+            var far = vfx.layers.Single(l => l.id == "lean-b");
+            Assert.AreEqual("reverse", far.facing, "the second courtier is the mirror");
+            Assert.AreEqual("effects", far.sort, "the ground band holds two renderers, not the three a rack needs");
+            Assert.Less(System.Array.FindIndex(vfx.layers, l => l.id == "lean-b"), System.Array.FindIndex(vfx.layers, l => l.id == "lean-a"),
+                "authored first, so the near courtier draws over it");
+            Assert.AreEqual("effects", vfx.layers.Single(l => l.id == "lean-a").sort);
             var core = vfx.layers.Single(l => l.id == "core");
             Assert.AreEqual("hit", core.at);
             Assert.AreEqual(0f, core.offset, 1e-6f);

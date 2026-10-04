@@ -389,10 +389,9 @@ namespace PrincesPalace.Domain.Content
         // mirror.
         None,
 
-        // Mirror against the cast's facing. No spell wants this yet; it is
-        // here because "auto" and "none" leave the third case unsayable, and a
-        // word costs one switch arm where a later field would cost a format
-        // version.
+        // Mirror against the cast's facing: a second copy of a drawing that
+        // leans or points one way, placed on the other side (Court of
+        // Whispers' second courtier, Thorn Tithe's far half).
         Reverse,
     }
 
