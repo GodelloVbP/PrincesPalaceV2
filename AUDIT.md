@@ -2872,7 +2872,7 @@ effect = clip, number, vitals repaint or tracker repaint, played by one loop.
 Touches CombatBeat (Domain), the content schema and the beat tests: an
 architecture change, deferred from the /simplify pass. Owner call.
 
-### 272. Identity tests that fail without painted art
+### ~~272. Identity tests that fail without painted art~~ — fixed by the owner's stills, wired 79623a1c..87df24b7; every spell passes its identity test (verdicts in each NOTES.md)
 Court of Whispers (six mirrored figures read as "curse swarm", not whispering)
 and Gale Scythe (whirls, not one cut) partly fail; Thorn, Viper and Borrowed
 pass narrowly. Each spell's NOTES.md under `docs/captures/spell_rework/after/`
