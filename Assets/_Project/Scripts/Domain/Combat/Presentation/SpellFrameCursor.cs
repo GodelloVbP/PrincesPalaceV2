@@ -1,3 +1,4 @@
+using System;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Combat.Presentation
@@ -84,8 +85,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
             if (instance == null || frameCount <= 0) return SpellFrameSample.Hidden;
 
             var layer = instance.Layer;
-            float age = seconds - instance.StartSeconds;
-            if (age < 0f) return SpellFrameSample.Hidden;
+
+            // OPENED WHEN THE SCHEDULE SAYS SO, NOT WHEN THE RAW SUBTRACTION
+            // DOES. SpellSchedule.Crossed opens a layer at the first tick that
+            // Passed its start; a cursor a float hair under the start (18 ticks
+            // of 1/60 s read 0.29998 against an authored 0.3) opens the layer
+            // there and would then find age < 0 here, so the layer that
+            // replaces a closing one drew nothing for one frame.
+            if (!SpellSchedule.Passed(instance.StartSeconds, seconds)) return SpellFrameSample.Hidden;
+            float age = Math.Max(0f, seconds - instance.StartSeconds);
 
             float lifetime = instance.EndSeconds - instance.StartSeconds;
             float alpha = AlphaAt(instance, age, lifetime);

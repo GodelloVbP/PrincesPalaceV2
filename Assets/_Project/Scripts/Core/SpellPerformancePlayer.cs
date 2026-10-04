@@ -696,7 +696,7 @@ namespace PrincesPalace
             {
                 int particle = drops.Count;
                 float birth = SpellEmitterSim.BirthOf(spec, particle, instance.StartSeconds);
-                if (birth > seconds) break;
+                if (!SpellSchedule.Passed(birth, seconds)) break;
 
                 // LAID ON THE SOURCE'S LINE OF FLIGHT: turned onto it and
                 // scattered across it, both read off the source's own launch
@@ -718,7 +718,7 @@ namespace PrincesPalace
             {
                 var held = drops[i];
                 float birth = SpellEmitterSim.BirthOf(spec, i, instance.StartSeconds);
-                var drop = SpellEmitterSim.At(spec, seed, i, held.P0, held.V0, seconds - birth, frameCount);
+                var drop = SpellEmitterSim.At(spec, seed, i, held.P0, held.V0, Mathf.Max(0f, seconds - birth), frameCount);
 
                 int member = held.Member;
                 if (member < 0) continue;

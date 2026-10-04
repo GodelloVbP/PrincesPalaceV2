@@ -52,8 +52,9 @@ borderline here.
   treant's face is clear on every frame (the old column hid it for about 0.2 s). On the rat the
   crescent is about as wide as the rat and its tongues reach the rat's chest. The badge sits below
   it and the plates and log are clear.
-- **One empty frame** (about 16 ms) between the last swing drawing and the crescent (the cue
-  clock lags the release clock by a frame).
+- **Hand-off.** The crescent opens on the frame after the last swing drawing, checked per
+  frame (the one empty frame between them was a cursor-compare bug, fixed 2026-10-04; see
+  `../../README.md`).
 - **Size.** The crescent is low by design (40% of its canvas at most); at 420 it reads as a
   ring of fire at the feet, closer to "campfire ring" than to "set alight" on the treant, whose
   trunk only starts to glow from the coal glow after it.

@@ -40,9 +40,9 @@ one bright frame). Reports: `spell_feel_1x/`, `spell_feel_1.5x/`.
   read as a cyan fire (frames judged, then tinted). `#D8FF98` pulls the core to green
   while the orange tips stay orange; stronger tints turned the tips olive. Tint is on
   both layers so the flare does not re-add teal.
-- **Cue frame.** One empty frame (about 16 ms) sits between the last coal frame and
-  the catch: the cue clock lags the release clock by a frame. The same on every
-  still payoff; not widened here.
+- **Cue frame.** The catch opens on the frame after the last coal frame, with the number
+  (checked per frame, no empty frame). Before 2026-10-04 one empty frame sat between them:
+  see "Wind-up to payoff handoff" in `../../README.md`.
 - **Numbers.** "-5" and "-7" sit inside the upper flame of the burst on the treant and
   the rat. Readable (bright against the dark teal) but not clear of the art; the old
   fireball covered them the same way. Not moved.

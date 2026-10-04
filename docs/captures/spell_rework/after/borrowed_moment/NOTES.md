@@ -56,7 +56,7 @@ log line more than by brightness.
   squad's and enemies' own attacks; Borrowed's own cue peaks at 0.9%. At most 2 events of 3% or more fall in any
   second.
 - **Flash guard.** The chevrons are thin and drift; there is no starburst any more. Well inside the limit.
-- **One empty frame** (about 16 ms) between the last hourglass drawing and the chevrons (the cue clock lags the release clock by a frame).
+- **Hand-off.** The chevrons open on the frame after the last hourglass drawing (the one empty frame between them was a cursor-compare bug, fixed 2026-10-04; see `../../README.md`).
 - **Drift.** On Bjorn (front of the line, leftmost) the chevrons slide right across the gap and onto the edge of Odette's wing. They read as forward; the overlap is brief.
 - **Readability.** The chevrons cross the ally's chest and sit over the face edge for about 0.3 s, the face stays visible; no number is under it (a
   Hasten has no damage number); the log line and plates are clear.

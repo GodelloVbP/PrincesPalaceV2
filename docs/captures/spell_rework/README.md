@@ -170,3 +170,13 @@ Hasten is a real cast on a non-caster ally that is not already next: the 4:3 Ode
 takes the plain attack (a repeat cast would refresh the status being filmed).
 `gif.ps1` deletes `frames/` of every run but the newest two after each request
 (`-KeepFrames` skips that; `-TrimFrames` runs it alone).
+
+## Wind-up to payoff handoff (2026-10-04)
+
+A layer ending at t and one starting at t share no gap and no overlap. The schedule
+opened and closed layers through `SpellSchedule.Passed` (1e-4 slack), but
+`SpellFrameCursor.SampleOf` still compared the raw age with 0, so on the tick a cursor
+read a float hair under the cue (18 ticks of 1/60 s = 0.29998 against 0.3) the wind-up
+was closed, the cue fired, and the payoff, already open, drew nothing for one frame.
+`SampleOf` and the emitter's birth check now ask `Passed` too. Pinned in
+`SpellLayerHandoffTests`; Ashen, Borrowed and Censer rechecked per frame.

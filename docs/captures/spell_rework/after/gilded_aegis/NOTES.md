@@ -49,9 +49,8 @@ cut from 0.32 s (the old sheet) to 0.22 s so payoff to clean is 0.4 s as before.
   the owl it sits over the head and chest and the wings stay outside it.
 - **Halo colour.** The painted halo glow came back lime-yellow where it was painted over the green
   screen. `cap_green` on the recipe (ART_PIPELINE 5b) pulls those pixels to gold.
-- **One empty frame** (about 16 ms) separates the last shard drawing and the lock: the cue clock
-  lags the release clock by a frame. Holding the shards a frame longer plays f5, the old starburst,
-  so it was not done.
+- **Hand-off.** The lock opens on the frame after the last shard drawing (the one empty frame
+  between them was a cursor-compare bug, fixed 2026-10-04; see `../../README.md`).
 - **Five-cast series.** `-Repeat 5` fails at cast 4 ("Odette's forced action was refused for 180
   frames", the squad stunned) with either the treant or the forest warden; three casts record.
   Cause is the capture pacing, not the art.
