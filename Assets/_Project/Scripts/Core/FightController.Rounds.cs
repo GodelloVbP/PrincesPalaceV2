@@ -177,6 +177,9 @@ namespace PrincesPalace
         // other, and the image shows the larger (StageDarkness.Compose).
         private float _eventDarkness;
 
+        // The composition last written to the image; NaN until the first write.
+        private float _appliedDarkness = float.NaN;
+
         private void SetDarknessAlpha(float alpha)
         {
             _eventDarkness = alpha;
@@ -191,8 +194,12 @@ namespace PrincesPalace
         {
             if (roundDarkness == null) return;
 
+            // GloomAlpha is one compare while no cast holds a gloom; an unchanged
+            // composition touches neither the object nor its colour.
             float gloom = performancePlayer != null ? performancePlayer.GloomAlpha : 0f;
             float alpha = StageDarkness.Compose(_eventDarkness, gloom);
+            if (alpha == _appliedDarkness) return;
+            _appliedDarkness = alpha;
 
             bool shown = alpha > 0f;
             if (roundDarkness.gameObject.activeSelf != shown) roundDarkness.gameObject.SetShown(shown);

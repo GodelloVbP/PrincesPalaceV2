@@ -97,7 +97,7 @@ namespace PrincesPalace.Domain.Content
         // DETONATION'S DELAY MAY BE, in authored seconds. Each is a
         // tenth-of-a-second thing; the bound only rules out a number typed in
         // the wrong unit.
-        public const float MaxGloomFadeSeconds = 2f;
+        public const float MaxBeatSeconds = 2f;
 
         // THE LARGEST A DRIFT'S OFFSET MAY BE, in widths or heights of the
         // layer's own box. A slide of several boxes is a typo for pixels.
@@ -105,16 +105,15 @@ namespace PrincesPalace.Domain.Content
 
         private static void CheckBeatSeconds(string label, SpellPresentation vfx, List<string> problems)
         {
-            if (vfx.casterCostSeconds < 0f || vfx.casterCostSeconds > MaxGloomFadeSeconds)
-            {
-                problems.Add($"{label}: vfx.casterCostSeconds {Num(vfx.casterCostSeconds)} is outside " +
-                             $"0..{Num(MaxGloomFadeSeconds)} seconds.");
-            }
+            CheckSeconds(label, "casterCostSeconds", vfx.casterCostSeconds, problems);
+            CheckSeconds(label, "detonationSeconds", vfx.detonationSeconds, problems);
+        }
 
-            if (vfx.detonationSeconds < 0f || vfx.detonationSeconds > MaxGloomFadeSeconds)
+        private static void CheckSeconds(string label, string field, float value, List<string> problems)
+        {
+            if (value < 0f || value > MaxBeatSeconds)
             {
-                problems.Add($"{label}: vfx.detonationSeconds {Num(vfx.detonationSeconds)} is outside " +
-                             $"0..{Num(MaxGloomFadeSeconds)} seconds.");
+                problems.Add($"{label}: vfx.{field} {Num(value)} is outside 0..{Num(MaxBeatSeconds)} seconds.");
             }
         }
 
@@ -129,15 +128,8 @@ namespace PrincesPalace.Domain.Content
                              "opacity of the stage's darkness image.");
             }
 
-            if (gloom.fadeIn < 0f || gloom.fadeIn > MaxGloomFadeSeconds)
-            {
-                problems.Add($"{label}: vfx.gloom.fadeIn {Num(gloom.fadeIn)} is outside 0..{Num(MaxGloomFadeSeconds)} seconds.");
-            }
-
-            if (gloom.fadeOut < 0f || gloom.fadeOut > MaxGloomFadeSeconds)
-            {
-                problems.Add($"{label}: vfx.gloom.fadeOut {Num(gloom.fadeOut)} is outside 0..{Num(MaxGloomFadeSeconds)} seconds.");
-            }
+            CheckSeconds(label, "gloom.fadeIn", gloom.fadeIn, problems);
+            CheckSeconds(label, "gloom.fadeOut", gloom.fadeOut, problems);
 
             if (!SpellGloomEndNames.IsKnown(gloom.until))
             {

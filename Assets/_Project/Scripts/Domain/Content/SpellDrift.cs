@@ -49,7 +49,7 @@ namespace PrincesPalace.Domain.Content
         // early and settles, the lean-in of someone arriving.
         private static (float x, float y) Leg(float ax, float ay, float bx, float by, float t)
         {
-            float eased = 1f - (1f - t) * (1f - t);
+            float eased = SpellEase.OutQuad(t);
             return (ax + (bx - ax) * eased, ay + (by - ay) * eased);
         }
 
@@ -70,5 +70,15 @@ namespace PrincesPalace.Domain.Content
 
             return Leg(fromX, fromY, toX, toY, t);
         }
+    }
+
+    // The quadratic ease-out a drift's legs and a frame's punch share. Settle
+    // is what is still left to travel (1-t)^2, kept apart from OutQuad because
+    // a punch scales it directly and 1-(1-x) would cost it float precision.
+    public static class SpellEase
+    {
+        public static float Settle(float t) => (1f - t) * (1f - t);
+
+        public static float OutQuad(float t) => 1f - Settle(t);
     }
 }

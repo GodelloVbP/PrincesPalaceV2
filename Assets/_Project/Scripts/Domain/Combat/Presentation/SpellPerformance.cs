@@ -39,6 +39,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // with no z-order for content to author and nothing to keep in sync.
         public int LayerIndex;
 
+        // The layer's tint as RGB 0-1, parsed once at Resolve (white when the
+        // layer has none or it is malformed) because the renderer reads it on
+        // every frame of the layer's life.
+        public float TintR = 1f, TintG = 1f, TintB = 1f;
+
         // Which struck target this instance belongs to, or -1 for a cast-level
         // layer. Not a combatant: Domain has no idea what one is, and the
         // caller walks its own struck list by this index.
@@ -48,6 +53,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // source's, so this is read by the resolution below and by the renderer
         // that has to place it every tick.
         public int SourceInstance;
+
+        // The end of the SourceInstance chain: what a follower's position is
+        // read off. Null means this instance follows nothing, so it is its own
+        // root; set once at Resolve so the per-frame position read is not a walk.
+        public SpellLayerInstance Root;
 
         // Seconds from the beat opening. Start is when it opens; End is when
         // its own lifetime is over and its fade begins; Cleared is when the
@@ -64,7 +74,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
         public float ClearedSeconds => EndSeconds + FadeSeconds;
 
         // Stage-space, written by Core at Begin. Equal for a layer that does
-        // not travel, which is what lets PositionOf be one function rather than
+        // not travel, which is what lets FlightOf be one function rather than
         // two: a non-travelling source's position is its anchor and its
         // velocity is zero, through the identical arithmetic.
         public UiVec From;
@@ -75,7 +85,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // follow, which is nearly all of them. A delegate because only Core can
         // see where a slot is now; Domain only adds the answer to the position
         // it already computed, so a bind placed on a figure a pull then drags
-        // stays on it (SpellPerformance.PositionOf stays the one evaluation of
+        // stays on it (SpellPerformance.FlightOf stays the one evaluation of
         // an authored path; the displacement is a property of the stage).
         public Func<UiVec> Displacement;
 
@@ -214,11 +224,14 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // composes the result with the event's darkness.
         public SpellGloom Gloom { get; private set; } = new SpellGloom();
 
-        public float GloomAlphaAt(float seconds) =>
-            Gloom.AlphaAt(seconds, HitCueSeconds, ClearedSeconds);
+        // Read every frame of a live cast, so the release instant is resolved
+        // once at Resolve rather than parsed from the `until` word each time.
+        public float GloomAlphaAt(float seconds) => Gloom.AlphaAtRelease(seconds, _gloomReleaseSeconds);
 
         // When the gloom is fully lifted; a cast stays live until then.
-        public float GloomEndSeconds => Gloom.EndSeconds(HitCueSeconds, ClearedSeconds);
+        public float GloomEndSeconds { get; private set; }
+
+        private float _gloomReleaseSeconds;
 
         private List<SpellLayerInstance> _built;
         private Func<string, int> _frameCountOf;
@@ -254,13 +267,34 @@ namespace PrincesPalace.Domain.Combat.Presentation
             performance.Schedule = BuildSchedule(instances, performance.HitCueSeconds);
             performance.ClearedSeconds = ClearedOf(instances, performance.HitCueSeconds);
             performance.Gloom = presentation.gloom ?? new SpellGloom();
+            performance._gloomReleaseSeconds =
+                performance.Gloom.ReleaseSeconds(performance.HitCueSeconds, performance.ClearedSeconds);
+            performance.GloomEndSeconds = performance.Gloom.EndSecondsAt(performance._gloomReleaseSeconds);
             return performance;
         }
 
-        // WHERE A LAYER INSTANCE IS AT TIME t, and the ONE evaluation of an
-        // eased flight path in the program. The sprite renderer places its box
-        // with this and the emitter simulation samples its source with it, so
-        // the ease cannot have two homes -- which is what a time-driven
+        // WHERE A LAYER INSTANCE IS AT TIME t: its root's flight, drift and
+        // follow displacement, plus its own drift and displacement when it is
+        // a follower. The sprite renderer places its box with this and the
+        // emitter simulation samples its source with it, so a root that arcs
+        // (Mud Burst's glob) carries its wake and its drops with it instead of
+        // leaving them on the undrifted line.
+        public static UiVec PositionOf(SpellLayerInstance instance, float seconds)
+        {
+            var root = instance.Root ?? instance;
+            var at = FlightOf(root, seconds) + DriftOffsetOf(root, seconds);
+            if (root.Displacement != null) at = at + root.Displacement();
+            if (!ReferenceEquals(root, instance))
+            {
+                if (instance.Displacement != null) at = at + instance.Displacement();
+                at = at + DriftOffsetOf(instance, seconds);
+            }
+
+            return at;
+        }
+
+        // THE ONE EVALUATION OF AN EASED FLIGHT PATH in the program, with no
+        // drift: the ease cannot have two homes -- which is what a time-driven
         // scheduler lerping linearly beside a renderer easing quadratically
         // would have produced: a silent reshaping of every travelling spell.
         //
@@ -269,7 +303,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // projectile leaves fast and hard rather than being dragged the whole
         // way. One house rule until a second spell wants a different one; then
         // it is a word on the layer, additive under the same format version.
-        public static UiVec PositionOf(SpellLayerInstance instance, float seconds)
+        public static UiVec FlightOf(SpellLayerInstance instance, float seconds)
         {
             return instance.From + (instance.To - instance.From) * Eased(instance, seconds);
         }
@@ -283,16 +317,8 @@ namespace PrincesPalace.Domain.Combat.Presentation
             return new UiVec(slide.x * instance.Box.X * instance.DrawFacing, slide.y * instance.Box.Y);
         }
 
-        // WHERE A BODY IS, which is what a follower rides and an emitter is
-        // born off: the flight position plus the body's own drift. The one
-        // function both read, so a root that arcs (Mud Burst's glob) carries
-        // its wake and its drops with it instead of leaving them on the
-        // undrifted line.
-        public static UiVec BodyPositionOf(SpellLayerInstance instance, float seconds) =>
-            PositionOf(instance, seconds) + DriftOffsetOf(instance, seconds);
-
         // HOW FAR ALONG ITS LINE A PROJECTILE IS, 0 to 1, through the same
-        // ease PositionOf applies -- the one reading of it, so a layer revealed
+        // ease FlightOf applies -- the one reading of it, so a layer revealed
         // behind the projectile ends exactly at its tip.
         public static float FractionOf(SpellLayerInstance instance, float seconds) => Eased(instance, seconds);
 
@@ -400,7 +426,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
                 int count = perTarget[i] ? targets : 1;
                 for (int t = 0; t < count; t++)
                 {
-                    built.Add(new SpellLayerInstance
+                    var instance = new SpellLayerInstance
                     {
                         Layer = layer,
                         RenderKind = layer.Render,
@@ -413,11 +439,14 @@ namespace PrincesPalace.Domain.Combat.Presentation
                         LayerIndex = i,
                         TargetIndex = perTarget[i] ? t : -1,
                         SourceInstance = -1,
-                    });
+                    };
+                    SpellTint.TryParse(layer.tint, out instance.TintR, out instance.TintG, out instance.TintB);
+                    built.Add(instance);
                 }
             }
 
             LinkFollowers(built, byId);
+            LinkRoots(built);
             return built;
         }
 
@@ -441,6 +470,19 @@ namespace PrincesPalace.Domain.Combat.Presentation
                     instance.SourceInstance = i;
                     break;
                 }
+            }
+        }
+
+        // Bounded by the instance count, so content the build-time validator
+        // never saw cannot hang the resolver on a cycle.
+        private static void LinkRoots(List<SpellLayerInstance> built)
+        {
+            foreach (var instance in built)
+            {
+                var root = instance;
+                int guard = 0;
+                while (root.SourceInstance >= 0 && guard++ <= built.Count) root = built[root.SourceInstance];
+                if (!ReferenceEquals(root, instance)) instance.Root = root;
             }
         }
 

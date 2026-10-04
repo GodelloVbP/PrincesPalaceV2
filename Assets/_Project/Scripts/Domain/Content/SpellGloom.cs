@@ -43,11 +43,14 @@ namespace PrincesPalace.Domain.Content
         // The gloom's displayed opacity at `seconds` into the cast. A payoff
         // that arrives before full strength lifts from wherever the rise had
         // got to, and the rise stops there instead of carrying on upward.
-        public float AlphaAt(float seconds, float hitCueSeconds, float clearedSeconds)
+        public float AlphaAt(float seconds, float hitCueSeconds, float clearedSeconds) =>
+            AlphaAtRelease(seconds, ReleaseSeconds(hitCueSeconds, clearedSeconds));
+
+        // The same, for a caller that resolved the release instant once.
+        public float AlphaAtRelease(float seconds, float release)
         {
             if (!HasGloom || seconds < 0f) return 0f;
 
-            float release = ReleaseSeconds(hitCueSeconds, clearedSeconds);
             float level = Rise(Math.Min(seconds, release));
             if (seconds < release) return strength * level;
 
@@ -62,7 +65,9 @@ namespace PrincesPalace.Domain.Content
 
         // When the cast has nothing left of this on the stage.
         public float EndSeconds(float hitCueSeconds, float clearedSeconds) =>
-            HasGloom ? ReleaseSeconds(hitCueSeconds, clearedSeconds) + Math.Max(0f, fadeOut) : 0f;
+            EndSecondsAt(ReleaseSeconds(hitCueSeconds, clearedSeconds));
+
+        public float EndSecondsAt(float release) => HasGloom ? release + Math.Max(0f, fadeOut) : 0f;
     }
 
     public enum SpellGloomEnd

@@ -64,6 +64,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // Below every time a schedule can hold, since a cue is never negative.
         public const float BeforeAnything = -1f;
 
+        // A whole number of 1/60 s frames lands a float hair under its authored
+        // second (18 frames read 0.29999998), which moved a cue authored on a
+        // frame multiple one frame late. Every comparison of a cursor with an
+        // authored time goes through Passed, so cursors stay true ages.
+        private const float ClockSlack = 1e-4f;
+
+        // Whether a cursor has reached the authored time `at`.
+        public static bool Passed(float at, float cursor) => at <= cursor + ClockSlack;
+
         private readonly SpellEvent[] _events;
 
         public SpellSchedule(IEnumerable<SpellEvent> events)
@@ -128,14 +137,12 @@ namespace PrincesPalace.Domain.Combat.Presentation
             if (to <= from) return;
 
             if (cursor < 0) cursor = 0;
-            while (cursor < _events.Length && _events[cursor].Seconds <= from) cursor++;
+            while (cursor < _events.Length && Passed(_events[cursor].Seconds, from)) cursor++;
 
             for (int i = cursor; i < _events.Length; i++)
             {
-                float at = _events[i].Seconds;
-
                 // Sorted, so the first event past the window ends the walk.
-                if (at > to) break;
+                if (!Passed(_events[i].Seconds, to)) break;
 
                 into.Add(_events[i]);
             }

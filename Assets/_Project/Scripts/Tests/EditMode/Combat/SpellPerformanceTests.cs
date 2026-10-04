@@ -692,10 +692,10 @@ namespace PrincesPalace.Domain.Tests
                 Box = new UiVec(80f, 100f),
             };
 
-            var at = SpellPerformance.BodyPositionOf(root, 0.2f);
+            var at = SpellPerformance.PositionOf(root, 0.2f);
             Assert.AreEqual(25f, at.X, 1e-3f);
             Assert.AreEqual(45f, at.Y, 1e-3f);
-            Assert.AreEqual(0f, SpellPerformance.PositionOf(root, 0.2f).Y, 1e-3f, "the bare line is what a follower used to read");
+            Assert.AreEqual(0f, SpellPerformance.FlightOf(root, 0.2f).Y, 1e-3f, "the bare line is what a follower used to read");
         }
     }
 }

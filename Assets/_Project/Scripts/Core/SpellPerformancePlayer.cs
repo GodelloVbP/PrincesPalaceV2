@@ -146,6 +146,9 @@ namespace PrincesPalace
             // zero -- which every melee beat has -- lands in the first window.
             internal float Cursor;
 
+            // Whether the schedule has delivered this cast's HitCue.
+            internal bool CueFired;
+
             // Where SpellSchedule.Crossed left off scanning its own events
             // array, so the NEXT call resumes there instead of rescanning
             // from 0 -- safe because Cursor above only ever grows across a
@@ -156,12 +159,6 @@ namespace PrincesPalace
             // -1. An array rather than a dictionary because a cast's instance
             // count is known the moment it begins and never changes.
             internal int[] Members;
-
-            // Per instance: the ultimate root of its SourceInstance chain --
-            // itself, for an instance that follows nothing. Resolved once
-            // here rather than walked per frame per call; see the local
-            // PositionOf below.
-            internal int[] RootSource;
 
             // Per instance: the emitter's own seed, and the particle members it
             // holds. Null for every instance that is not an emitter, which is
@@ -239,37 +236,23 @@ namespace PrincesPalace
             cast.Generation++;
             if (cast.Generation <= 0) cast.Generation = 1;
             cast.Live = true;
+            if (performance.Gloom.HasGloom) _liveGloom++;
             cast.Performance = performance;
             cast.StartedAt = Now();
             _tickedAt = cast.StartedAt;
             cast.PaceAtStart = pace;
             cast.Cursor = SpellSchedule.BeforeAnything;
+            cast.CueFired = false;
             cast.ScheduleCursor = 0;
 
             int count = performance.Instances.Count;
             cast.Members = new int[count];
-            cast.RootSource = new int[count];
             cast.Seeds = new int[count];
             cast.Drops = new List<Drop>[count];
 
             for (int i = 0; i < count; i++)
             {
                 cast.Members[i] = -1;
-
-                // THE SAME WALK THE LOCAL PositionOf USED TO MAKE PER FRAME,
-                // paid once per instance here instead: an instance's ultimate
-                // SourceInstance root, itself when it follows nothing. Bounded
-                // by `count` the same way that walk was, so a resolver run on
-                // content the build-time validator never saw cannot hang on a
-                // cycle either.
-                int root = i;
-                int guard = 0;
-                while (performance.Instances[root].SourceInstance >= 0 && guard++ <= count)
-                {
-                    root = performance.Instances[root].SourceInstance;
-                }
-
-                cast.RootSource[i] = root;
 
                 var emitter = performance.Instances[i].Layer.emitter;
                 cast.Seeds[i] = emitter != null && emitter.seed != 0
@@ -296,10 +279,14 @@ namespace PrincesPalace
             return handle;
         }
 
+        // A cast's age in authored seconds. Engine time is converted through the
+        // CAST'S OWN PaceAtStart, not FightBeatPlayer's live Pace product
+        // (contract 3): a cast keeps ageing on the pace it was born at even if
+        // the player steps the preset while it is still drawing.
+        private static float AgeOf(Cast cast, float now) => (now - cast.StartedAt) * cast.PaceAtStart;
+
         // Ticked from Update with the module's own clock, and from a test with
         // whatever clock it wants to hold.
-        private const float ClockSlack = 1e-4f;
-
         public void Tick(float now)
         {
             _tickedAt = now;
@@ -309,14 +296,8 @@ namespace PrincesPalace
 
                 // The schedule is in AUTHORED seconds and the clock is in
                 // engine ones, so the window is converted rather than the
-                // deadlines -- but through the CAST'S OWN PaceAtStart, not
-                // FightBeatPlayer's live Pace product (contract 3): this
-                // cast must keep ageing on the pace it was born at even if
-                // the player steps the preset while it is still drawing.
-                // ClockSlack: a whole number of 1/60 s frames lands a float hair
-                // under its authored second (18 frames read 0.29999998), which
-                // moved a cue authored on a frame multiple one frame late.
-                float seconds = (now - _casts[slot].StartedAt) * _casts[slot].PaceAtStart + ClockSlack;
+                // deadlines.
+                float seconds = AgeOf(_casts[slot], now);
                 Advance(slot, seconds);
                 if (_casts[slot].Live) Paint(slot, seconds);
             }
@@ -328,6 +309,11 @@ namespace PrincesPalace
         // way Tick ages a cast: on the cast's own pace, in authored seconds.
         public float GloomAlpha => GloomAlphaAt(_tickedAt);
 
+        // Whether any live cast asks for gloom, so a fight without one pays an
+        // integer compare per frame instead of a walk of the casts.
+        public bool HasLiveGloom => _liveGloom > 0;
+        private int _liveGloom;
+
         // The clock of the last Tick (or of a cast's birth, if that is later),
         // not Now(): a test holds the clock through Tick(now), and the stage
         // must read the instant the layers were painted at.
@@ -335,13 +321,14 @@ namespace PrincesPalace
 
         internal float GloomAlphaAt(float now)
         {
+            if (_liveGloom == 0) return 0f;
+
             float alpha = 0f;
             for (int slot = 0; slot < _casts.Count; slot++)
             {
                 var cast = _casts[slot];
                 if (!cast.Live || cast.Performance == null) continue;
-                float seconds = (now - cast.StartedAt) * cast.PaceAtStart + ClockSlack;
-                alpha = StageDarkness.Compose(alpha, cast.Performance.GloomAlphaAt(seconds));
+                alpha = StageDarkness.Compose(alpha, cast.Performance.GloomAlphaAt(AgeOf(cast, now)));
             }
 
             return alpha;
@@ -393,7 +380,12 @@ namespace PrincesPalace
         // moment a beat holds; this is the clock a PlayMode capture polls
         // instead (see SpellRuntimeCaptureTests).
         public bool HasReached(CastHandle handle, float seconds) =>
-            !IsLive(handle) || _casts[handle.Slot].Cursor >= seconds;
+            !IsLive(handle) || SpellSchedule.Passed(seconds, _casts[handle.Slot].Cursor);
+
+        // Whether the cast has delivered its hit cue. A cast that already
+        // released delivered it (or never will), so "not live" reads as fired.
+        public bool HasCueFired(CastHandle handle) =>
+            !IsLive(handle) || _casts[handle.Slot].CueFired;
 
         // Which member of which band an instance of a live cast holds, or -1.
         // The seam the overlap tests read: "these two casts hold different
@@ -474,15 +466,12 @@ namespace PrincesPalace
                         Close(cast, crossed.Instance);
                         break;
 
-                    // THE CUE IS DISPATCHED AND NOTHING HERE ACTS ON IT
-                    // PRODUCTION-WISE. The beat player owns the impact block
-                    // and always has; what the module owes is that the
-                    // instant exists in ONE place, so a layer scheduled
-                    // `at: hit` and the blow itself cannot drift apart. A
-                    // renderer that could not be obtained removes a picture
-                    // and never the cue. HitCueCrossedForTest is the one
-                    // exception, and it is test-only.
+                    // THE CUE IS THE ONE INSTANT the blow follows: the beat player
+                    // waits on HasCueFired, so a layer scheduled `at: hit` and the
+                    // blow itself cannot drift apart. A renderer that could not
+                    // be obtained removes a picture and never the cue.
                     case SpellEventKind.HitCue:
+                        cast.CueFired = true;
                         HitCueCrossedForTest?.Invoke(new CastHandle(slot, cast.Generation));
                         break;
 
@@ -493,8 +482,8 @@ namespace PrincesPalace
 
             // Nothing left to draw and nothing left to fire.
             // A gloom still lifting keeps the cast live past its last layer.
-            if (cast.Cursor >= cast.Performance.ClearedSeconds && !HoldsAnything(cast) &&
-                cast.Cursor >= cast.Performance.GloomEndSeconds)
+            if (SpellSchedule.Passed(cast.Performance.ClearedSeconds, cast.Cursor) && !HoldsAnything(cast) &&
+                SpellSchedule.Passed(cast.Performance.GloomEndSeconds, cast.Cursor))
             {
                 Release(slot);
             }
@@ -646,11 +635,15 @@ namespace PrincesPalace
                     renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
                         new Vector2(span.Centre.X, span.Centre.Y),
                         new Vector2(span.Length * sample.Scale, instance.Box.Y * sample.Scale),
-                        span.Degrees, instance.Layer.glow, stretch: true, tint: instance.Layer.tint);
+                        span.Degrees, instance.Layer.glow, stretch: true, tint: TintOf(instance));
                     continue;
                 }
 
-                var at = PositionOf(cast, i, instance, seconds);
+                // dx IS LOCAL, so it mirrors with the cast -- a wake authored 118
+                // units behind a rightward core has to sit 118 units behind a
+                // leftward one, not 118 units in front of it.
+                var at = SpellPerformance.PositionOf(instance, seconds) +
+                         new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy);
 
                 // THE PUNCH MULTIPLIES THE BOX HERE, not in the placement.
                 // Core measures the box once at Begin and a scale that varies
@@ -660,47 +653,12 @@ namespace PrincesPalace
                 renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
                     new Vector2(at.X, at.Y),
                     new Vector2(instance.Box.X * sample.Scale, instance.Box.Y * sample.Scale),
-                    instance.Degrees, instance.Layer.glow, tint: instance.Layer.tint);
+                    instance.Degrees, instance.Layer.glow, tint: TintOf(instance));
             }
         }
 
-        // WHERE A LAYER IS NOW, which for a follower is wherever its source is.
-        // The one evaluation of an eased flight in the program is
-        // SpellPerformance.PositionOf, and a follower reading it for its source
-        // rather than keeping a path of its own is what keeps the wake glued to
-        // the core through a retune of either.
-        //
-        // `index` READS Cast.RootSource RATHER THAN WALKING THE CHAIN HERE --
-        // Begin resolved every instance's ultimate follower-chain root once,
-        // so this is one array read per call instead of the same walk paid
-        // again on every frame of the layer's life.
-        private static UiVec PositionOf(Cast cast, int index, SpellLayerInstance instance, float seconds)
-        {
-            var source = cast.Performance.Instances[cast.RootSource[index]];
-
-            // dx IS LOCAL, so it mirrors with the cast -- a wake authored 118
-            // units behind a rightward core has to sit 118 units behind a
-            // leftward one, not 118 units in front of it. Its ContentDoc has
-            // always said "local offset from the anchor"; the sign was the half
-            // that was missing, and the emitter's own sourceDx already did it.
-            var at = SpellPerformance.BodyPositionOf(source, seconds);
-
-            // `follow`: wherever the anchor body has been moved to since the
-            // layer was placed. Read off the root source because a follower's
-            // position is its root's; a layer that follows nothing has no
-            // delegate and costs one null test.
-            if (source.Displacement != null) at = at + source.Displacement();
-
-            // A FOLLOWER ADDS ITS OWN DRIFT on top of the root's (already in
-            // BodyPositionOf); a root's is not counted twice.
-            if (!ReferenceEquals(source, instance))
-            {
-                if (instance.Displacement != null) at = at + instance.Displacement();
-                at = at + SpellPerformance.DriftOffsetOf(instance, seconds);
-            }
-
-            return at + new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy);
-        }
+        private static Color TintOf(SpellLayerInstance instance) =>
+            new Color(instance.TintR, instance.TintG, instance.TintB, 1f);
 
         private void PaintEmitter(Cast cast, int slot, int index, SpellLayerInstance instance, float seconds)
         {
@@ -743,7 +701,7 @@ namespace PrincesPalace
                 // LAID ON THE SOURCE'S LINE OF FLIGHT: turned onto it and
                 // scattered across it, both read off the source's own launch
                 // and aim (zero for an emitter that authors neither).
-                var p0 = SpellPerformance.BodyPositionOf(source, birth)
+                var p0 = SpellPerformance.PositionOf(source, birth)
                          + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy) * fit
                          + SpellEmitterSim.LateralOf(spec, seed, particle, source.FlightFrom, source.FlightTo) * fit;
                 var v0 = SpellEmitterSim.LaunchOf(spec, seed, particle, instance.DrawFacing)
@@ -852,6 +810,7 @@ namespace PrincesPalace
             }
 
             cast.Live = false;
+            if (cast.Performance.Gloom.HasGloom) _liveGloom--;
             cast.Performance = null;
             cast.Drops = null;
         }
@@ -883,7 +842,6 @@ namespace PrincesPalace
             _casts.Add(new Cast
             {
                 Members = Array.Empty<int>(),
-                RootSource = Array.Empty<int>(),
                 Seeds = Array.Empty<int>(),
                 Drops = Array.Empty<List<Drop>>(),
             });

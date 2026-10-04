@@ -69,7 +69,7 @@ namespace PrincesPalace
         // and thin however the frame was cut. Set on every call, so a member
         // handed on from a stretched cast needs no restoring.
         public void Show(Sprite frame, Sprite next, float blend, float alpha, Vector2 at, Vector2 size,
-            float degrees = 0f, float glow = 0f, bool stretch = false, string tint = null)
+            float degrees = 0f, float glow = 0f, bool stretch = false, Color? tint = null)
         {
             if (image == null || frame == null) return;
 
@@ -102,9 +102,8 @@ namespace PrincesPalace
 
             // THE TINT IS WRITTEN EVERY CALL, white when there is none, so a
             // member handed on from a tinted layer carries nothing of it.
-            Domain.Content.SpellTint.TryParse(tint, out float tr, out float tg, out float tb);
-
-            image.color = new Color(tr, tg, tb, alpha);
+            var rgb = tint ?? Color.white;
+            SetColour(image, rgb, alpha);
 
             IsPlaying = true;
 
@@ -115,8 +114,11 @@ namespace PrincesPalace
 
             fade.preserveAspect = !stretch;
             fade.sprite = next;
-            fade.color = new Color(tr, tg, tb, blend * alpha);
+            SetColour(fade, rgb, blend * alpha);
         }
+
+        private static void SetColour(Graphic target, Color rgb, float alpha) =>
+            target.color = new Color(rgb.r, rgb.g, rgb.b, alpha);
 
         // EVERYTHING THIS MEMBER CARRIES, PUT BACK. A pool member handed on
         // with a mirror, a tint or a size left on it is how the next cast
@@ -132,7 +134,7 @@ namespace PrincesPalace
                 image.enabled = false;
                 image.sprite = null;
 
-                image.color = Color.white;
+                SetColour(image, Color.white, 1f);
 
                 var rect = image.rectTransform;
                 rect.localScale = new Vector3(1f, rect.localScale.y, rect.localScale.z);
@@ -143,7 +145,7 @@ namespace PrincesPalace
 
             fade.enabled = false;
             fade.sprite = null;
-            fade.color = Color.white;
+            SetColour(fade, Color.white, 1f);
         }
 
         private void OnDisable()

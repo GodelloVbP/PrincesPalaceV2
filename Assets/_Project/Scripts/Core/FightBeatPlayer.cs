@@ -163,12 +163,9 @@ namespace PrincesPalace
         public static float Scaled(float seconds) =>
             Pace <= 0f ? 0f : seconds / Pace;
 
-        // How early (authored seconds) the impact wait hands over to the cast's
-        // clock: longer than the frame or two the two clocks differ by.
-        private const float HitCueLeadSeconds = 0.05f;
-
-        // Engine seconds past the lead a cast may take to reach its cue.
-        private const float HitCueGuardSeconds = 0.25f;
+        // Engine seconds past the authored impact a cast may take to fire its
+        // cue before the beat stops waiting on it.
+        private const float CueStallSeconds = 0.25f;
 
         public bool IsPlaying { get; private set; }
 
@@ -243,20 +240,18 @@ namespace PrincesPalace
         internal Func<bool> FormationIsMoving;
         internal Action<string> PushLine;
 
-        // Starts a beat's spell effect, and says how long after the beat opens
-        // its blow actually lands. Both live on the controller because both need
-        // the loaded frames.
-        internal Action<CombatBeat> PlayVfx;
+        // Starts a beat's spell effect and returns the predicate "the cast has
+        // fired its hit cue", or null when there is no cast whose cue the blow
+        // can follow. The blow's sound, number and badge are painted on the
+        // frame the cast's accent layers open, and a second wait of the same
+        // length drifts a frame or two behind the cast's clock. The cast handle
+        // stays on the controller; the beat only sees the predicate. Both this
+        // and ImpactDelayFor live on the controller because both need the
+        // loaded frames.
+        internal Func<CombatBeat, Func<bool>> PlayVfx;
         internal Action<CombatBeat> FadeTheFallen;
         internal Func<CombatBeat, float> ImpactDelayFor;
         internal Action StopVfx;
-
-        // Whether the cast this beat began has crossed its hit cue on the
-        // presentation's own clock; null when no cast is tracked. The blow's
-        // sound, number and badge are painted on the frame the cast's accent
-        // layers open, and a second wait of the same length drifts a frame or
-        // two behind that clock.
-        internal Func<bool?> HitCueCrossed;
 
         // Poses an actor and repaints the stage. The controller owns the sprite
         // lookup; playback only says WHO holds WHAT and WHEN.
@@ -393,8 +388,8 @@ namespace PrincesPalace
             ImpactDelayFor = impactDelayFor;
         }
 
-        // The cast's cue clock, for a PlayMode test that pins the blow to it.
-        public void WireHitCueForTest(Func<bool?> crossed) => HitCueCrossed = crossed;
+        // The cast's cue, for a PlayMode test that pins the blow to it.
+        public void WireHitCueForTest(Func<bool> fired) => PlayVfx = _ => fired;
 
         // The tracker's paint calls, for a PlayMode test that pins WHEN the order changes.
         public void WireTurnOrderForTest(Action<IReadOnlyList<CombatantState>> paint) => PaintTurnOrder = paint;
@@ -1003,7 +998,7 @@ namespace PrincesPalace
             // flinch from drifting apart again.
             float chargeOutSeconds = Charge(beat);
 
-            PlayVfx?.Invoke(beat);
+            var cueFired = PlayVfx?.Invoke(beat);
 
             // THE CAST CUE, at the moment the beat opens. The pressure
             // building through a spell's wind-up, as against the transient
@@ -1065,23 +1060,18 @@ namespace PrincesPalace
             if (impact > 0f && !staticCharge)
             {
                 impact = Mathf.Max(0f, impact - boughtWindup);
-                if (HitCueCrossed?.Invoke() == null)
+                if (cueFired == null)
                 {
                     if (impact > 0f) yield return new WaitForSeconds(Scaled(impact));
                 }
                 else
                 {
-                    // WAIT SHORT, THEN FOLLOW THE CAST'S OWN CLOCK to its cue,
-                    // so the impact block lands on the frame the accent layers
-                    // open. The guard keeps a stalled cast from holding the beat.
-                    float lead = Mathf.Min(impact, HitCueLeadSeconds);
-                    if (impact > lead) yield return new WaitForSeconds(Scaled(impact - lead));
-                    float guard = Scaled(lead) + HitCueGuardSeconds;
-                    while (HitCueCrossed() == false && guard > 0f)
-                    {
-                        guard -= Time.deltaTime;
-                        yield return null;
-                    }
+                    // FOLLOW THE CAST'S OWN CUE, so the impact block lands on
+                    // the frame the accent layers open. The stall guard keeps
+                    // a cast that dies without firing from holding the beat.
+                    float stall = Scaled(impact) + CueStallSeconds;
+                    if (!cueFired())
+                        yield return new WaitUntil(() => cueFired() || (stall -= Time.deltaTime) <= 0f);
                 }
             }
 
@@ -1291,9 +1281,9 @@ namespace PrincesPalace
         // the numbers and flashes stagger per packet, the clip does not repeat.
         private void ShowAmount(CombatBeat beat)
         {
+            bool secondPacket = false;
             if (beat.HasPerTargetResults)
             {
-                bool secondPacket = false;
                 foreach (var result in beat.Results)
                 {
                     // Each result carries its own hit/miss, so the rule the
@@ -1305,29 +1295,28 @@ namespace PrincesPalace
                     var packets = beat.StaggeredPacketsFor(result.Target);
                     if (packets != null)
                     {
-                        PopPackets(beat, result.Target, packets, result.Crit);
-                        secondPacket |= packets.Length > 1;
+                        secondPacket |= PopPackets(beat, result.Target, packets, result.Crit);
                         continue;
                     }
 
                     PopNumber(beat, result.Target, result.Amount, result.Missed, result.Crit);
                 }
-
-                // THE FIRST PACKET'S SOUND IS THE CUE'S OWN; a later packet on
-                // any target is the beat's second payoff.
-                if (secondPacket) PlaySecondPayoff(beat, StageHitFlash.StaggerSeconds);
-                return;
             }
-
-            var single = beat.StaggeredPacketsFor(beat.Target);
-            if (single != null)
+            else
             {
-                PopPackets(beat, beat.Target, single, beat.Crit);
-                if (single.Length > 1) PlaySecondPayoff(beat, StageHitFlash.StaggerSeconds);
-                return;
+                var single = beat.StaggeredPacketsFor(beat.Target);
+                if (single == null)
+                {
+                    ShowSingleAmount(beat);
+                    return;
+                }
+
+                secondPacket = PopPackets(beat, beat.Target, single, beat.Crit);
             }
 
-            ShowSingleAmount(beat);
+            // THE FIRST PACKET'S SOUND IS THE CUE'S OWN; a later packet on any
+            // target is the beat's second payoff.
+            if (secondPacket) PlaySecondPayoff(beat, StageHitFlash.StaggerSeconds);
         }
 
         // ONE NUMBER PER PACKET, each in its own element's colour, the n-th
@@ -1335,18 +1324,21 @@ namespace PrincesPalace
         // do not sit on one another.
         internal const float PacketPopupSpacing = 56f;
 
-        private void PopPackets(CombatBeat beat, CombatantState target, BeatPacket[] packets, bool crit)
+        // Whether there was more than one packet, i.e. a second payoff is due.
+        private bool PopPackets(CombatBeat beat, CombatantState target, BeatPacket[] packets, bool crit)
         {
             for (int i = 0; i < packets.Length; i++)
             {
                 var popup = FreePopup();
-                if (popup == null) return;   // no pool at all (an unwired fixture)
+                if (popup == null) break;   // no pool at all (an unwired fixture)
 
                 var at = PopupAnchor(target, 0f) +
                          new Vector2((i - (packets.Length - 1) * 0.5f) * PacketPopupSpacing, 0f);
                 popup.Play(at, packets[i].Amount, false, packets[i].Type, Scaled(DamagePopup.LifeSeconds), crit,
                     delaySeconds: Scaled(i * StageHitFlash.StaggerSeconds));
             }
+
+            return packets.Length > 1;
         }
 
         // THE SECOND PAYOFF OF A BITE THAT SET OFF POISON: its own number, in
@@ -1377,15 +1369,12 @@ namespace PrincesPalace
         // Authored seconds; scaled here.
         private void PlaySecondPayoff(CombatBeat beat, float seconds)
         {
-            if (beat.Vfx == null) return;
-            PlayClipAfter(beat.Vfx.secondSfxPath, Scaled(seconds));
-        }
-
-        private void PlayClipAfter(string path, float seconds)
-        {
+            string path = beat.Vfx?.secondSfxPath;
             if (string.IsNullOrEmpty(path)) return;
-            if (seconds <= 0f) { SoundController.PlayClip(path); return; }
-            StartCoroutine(ClipAfter(path, seconds));
+
+            float wait = Scaled(seconds);
+            if (wait <= 0f) { SoundController.PlayClip(path); return; }
+            StartCoroutine(ClipAfter(path, wait));
         }
 
         private static IEnumerator ClipAfter(string path, float seconds)

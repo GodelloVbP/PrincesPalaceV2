@@ -306,29 +306,29 @@ namespace PrincesPalace
         // of an effect is, which is the question every bug in it came from --
         // while SpellPerformancePlayer owns when things start, when they stop
         // and which renderer they hold.
-        private CastHandle PlaySpellVfx(CombatBeat beat)
+        private CastHandle PlaySpellVfx(CombatBeat beat) => BeginSpellVfx(beat, out _);
+
+        // The beat player's PlayVfx: starts the cast and hands back what the
+        // blow waits on, or null when no cast with a cue after zero is playing.
+        private System.Func<bool> PlayBeatVfx(CombatBeat beat)
         {
+            var handle = BeginSpellVfx(beat, out float cueSeconds);
+            if (!handle.IsLive || cueSeconds <= 0f) return null;
+            var player = performancePlayer;
+            return () => player.HasCueFired(handle);
+        }
+
+        private CastHandle BeginSpellVfx(CombatBeat beat, out float cueSeconds)
+        {
+            cueSeconds = 0f;
             if (performancePlayer == null) return CastHandle.None;
 
             // An empty (or absent) performance is Begin's to refuse, and
             // PlaceCast has nothing to place for one.
             var performance = ResolveCast(beat);
             PlaceCast(beat, performance);
-            var handle = performancePlayer.Begin(performance);
-            _beatCast = handle;
-            _beatCueSeconds = performance?.HitCueSeconds ?? 0f;
-            return handle;
-        }
-
-        // The cast the beat now playing began, so the beat can follow its cue
-        // (FightBeatPlayer.HitCueCrossed). Beats play one at a time.
-        private CastHandle _beatCast;
-        private float _beatCueSeconds;
-
-        private bool? HitCueCrossed()
-        {
-            if (performancePlayer == null || !_beatCast.IsLive || _beatCueSeconds <= 0f) return null;
-            return performancePlayer.HasReached(_beatCast, _beatCueSeconds);
+            cueSeconds = performance?.HitCueSeconds ?? 0f;
+            return performancePlayer.Begin(performance);
         }
 
         // WHERE EACH INSTANCE'S BOX GOES, written onto the instance once.

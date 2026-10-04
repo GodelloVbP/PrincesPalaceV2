@@ -221,8 +221,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             float window = lifetime * PunchFraction;
             if (window <= 0f || age >= window) return 1f;
 
-            float remaining = 1f - age / window;
-            return 1f + layer.punch * remaining * remaining;
+            return 1f + layer.punch * SpellEase.Settle(age / window);
         }
 
         // THE FADE-OUT, TIMES THE LAYER'S AUTHORED OPACITY. Opacity scales the

@@ -1273,8 +1273,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // THE SPLIT IS TWO PAYOFFS ON THE STAGE, one number per element
             // staggered behind the first (CombatBeat.StaggeredPacketsFor),
-            // like every other multi-packet cast; without this the view showed
-            // one summed number in the colour of the beat's element.
+            // like every other multi-packet cast. Recording the packets keeps the
+            // view from showing one summed number in the beat's element colour.
             if (_recordingBeat != null && landedPackets.Count > 1) _recordingBeat.Packets = landedPackets.ToArray();
 
             AppendMessage($"{actor.Name}'s {skill.DisplayName} tears {worth} out of {target.Name} and returns it for {total}! -{detail}");
@@ -2053,8 +2053,8 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, enemies.FirstOrDefault(), isCast: true);
             RecordSpellPresentation(skill);
 
-            // Without this the beat's one target is the front enemy and the
-            // court is drawn around it alone while the Fear lands on all.
+            // The beat's own target is the front enemy; the splash targets make
+            // the court draw around every enemy the Fear lands on.
             RecordSplashTargets(enemies.Skip(1));
 
             var bosses = new List<CombatantState>();

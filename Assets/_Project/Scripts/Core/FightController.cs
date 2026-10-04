@@ -808,16 +808,12 @@ namespace PrincesPalace
             beatPlayer.WearForm = WearForm;
             beatPlayer.ResyncForms = ResyncForms;
             beatPlayer.FlashTarget = FlashCombatant;
-            // A lambda rather than the method group, because the cast handle
-            // PlaySpellVfx returns is for the tests that ask about ownership --
-            // the beat player has nothing to do with it and is deliberately not
-            // given a way to hold one.
-            beatPlayer.PlayVfx = beat => PlaySpellVfx(beat);
+            // The beat player gets the cue predicate, never the cast handle.
+            beatPlayer.PlayVfx = PlayBeatVfx;
             beatPlayer.PlayContactFx = PlayContactFx;
             beatPlayer.PlayFormHitFx = PlayFormHitFx;
             beatPlayer.FadeTheFallen = FadeTheFallen;
             beatPlayer.ImpactDelayFor = ImpactDelayFor;
-            beatPlayer.HitCueCrossed = HitCueCrossed;
             beatPlayer.StopVfx = StopSpellVfx;
             beatPlayer.ShakeStage = ShakeStage;
             beatPlayer.PresentRound = PresentRound;
