@@ -47,10 +47,23 @@ SPELLS = os.path.join(ROOT, "Assets", "_Project", "Resources", "Spells")
 SIZE = 256
 
 
+def _rgba(rgb, alpha):
+    """Pack an (h, w, 3) 0..255 colour and an (h, w) 0..1 alpha into RGBA uint8."""
+    out = np.zeros(alpha.shape + (4,), dtype=np.uint8)
+    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+    out[..., 3] = np.round(alpha * 255).astype(np.uint8)
+    return out
+
+
+def _radius_grid():
+    """Distance from the frame centre, 1.0 at the edge midpoints."""
+    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(np.float64)
+    return np.hypot(xs - (SIZE - 1) / 2, ys - (SIZE - 1) / 2) / (SIZE / 2)
+
+
 def court_price_pulse():
     """RGBA uint8, SIZE x SIZE: ring at 0.62 of the radius, faint core."""
-    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(np.float64)
-    r = np.hypot(xs - (SIZE - 1) / 2, ys - (SIZE - 1) / 2) / (SIZE / 2)
+    r = _radius_grid()
     ring = np.exp(-((r - 0.62) / 0.09) ** 2)
     core = 0.35 * np.exp(-(r / 0.3) ** 2)
     edge = np.clip((1.0 - r) / 0.08, 0.0, 1.0)
@@ -62,16 +75,12 @@ def court_price_pulse():
         90 + 140 * heat,
         230 + 25 * heat,
     ], axis=-1)
-    out = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
-    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
-    out[..., 3] = np.round(alpha * 255).astype(np.uint8)
-    return out
+    return _rgba(rgb, alpha)
 
 
 def shackle_cinch_ring():
     """RGBA uint8, SIZE x SIZE: ring at 0.78 of the radius, crimson halo outside."""
-    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(np.float64)
-    r = np.hypot(xs - (SIZE - 1) / 2, ys - (SIZE - 1) / 2) / (SIZE / 2)
+    r = _radius_grid()
     ring = np.exp(-((r - 0.78) / 0.035) ** 2)
     halo = 0.55 * np.exp(-((r - 0.84) / 0.10) ** 2)
     edge = np.clip((1.0 - r) / 0.06, 0.0, 1.0)
@@ -82,10 +91,7 @@ def shackle_cinch_ring():
         40 + 196 * heat,
         62 + 108 * heat,
     ], axis=-1)
-    out = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
-    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
-    out[..., 3] = np.round(alpha * 255).astype(np.uint8)
-    return out
+    return _rgba(rgb, alpha)
 
 
 def aegis_mote():
@@ -109,10 +115,7 @@ def aegis_mote():
         168 + 80 * heat,
         64 + 130 * heat,
     ], axis=-1)
-    out = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
-    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
-    out[..., 3] = np.round(alpha * 255).astype(np.uint8)
-    return out
+    return _rgba(rgb, alpha)
 
 
 def _blob_mask(shape, circles, wobble, seed):
@@ -145,10 +148,7 @@ def _mud_rgba(cover, depth, size, light=(-0.5, -0.6)):
     tone = 1.0 + 0.22 * np.clip(-lit, -1, 1) - 0.25 * (1.0 - shade) ** 2
     tone = tone * np.where(depth < 3.0, 0.55, 1.0)  # a dark rim so the silhouette holds on a brown floor
     rgb = MUD[None, None, :] * tone[..., None]
-    out = np.zeros((h, w, 4), dtype=np.uint8)
-    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
-    out[..., 3] = np.round(cover * 255).astype(np.uint8)
-    return out
+    return _rgba(rgb, cover)
 
 
 def mud_glob():
