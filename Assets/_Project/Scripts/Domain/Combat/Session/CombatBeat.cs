@@ -215,6 +215,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // so "NOW" never appeared to move off them.
         public IReadOnlyList<CombatantState> TurnOrder;
 
+        // THE QUEUE BEFORE THE CAST MOVED ANYBODY IN IT, only for a beat whose
+        // whole effect is a position (Borrowed Moment, SkillEffect.Hasten).
+        // TurnOrder is taken when the beat closes, so it already shows the ally
+        // moved up; the beat opens on this one and swaps to TurnOrder at the
+        // impact, so the order changes on the frame the cast lands rather than
+        // before it is cast (the PreFormation precedent). Null for every other
+        // beat: the tracker paints TurnOrder from the start.
+        public IReadOnlyList<CombatantState> PreTurnOrder;
+
         // WHICH OF THE TWO THE TRACKER ACTUALLY PAINTS, given the queue the
         // beat being played recorded and the queue live state holds right now.
         //

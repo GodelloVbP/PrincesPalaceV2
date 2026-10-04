@@ -1346,6 +1346,8 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, target, isCast: true);
             RecordSpellPresentation(skill);
 
+            if (_recordingBeat != null) _recordingBeat.PreTurnOrder = _encounter.UpcomingTurns(_initiativeSlots);
+
             int before = _encounter.ForecastPositionOf(target);
             if (!_encounter.PullForward(target, skill.AdvanceSlots))
             {

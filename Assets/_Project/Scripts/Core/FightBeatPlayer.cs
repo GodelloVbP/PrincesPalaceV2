@@ -396,6 +396,9 @@ namespace PrincesPalace
         // The cast's cue clock, for a PlayMode test that pins the blow to it.
         public void WireHitCueForTest(Func<bool?> crossed) => HitCueCrossed = crossed;
 
+        // The tracker's paint calls, for a PlayMode test that pins WHEN the order changes.
+        public void WireTurnOrderForTest(Action<IReadOnlyList<CombatantState>> paint) => PaintTurnOrder = paint;
+
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
         {
             // CLEARED BEFORE THE FLUSH, so the flush below has nobody to notify.
@@ -843,7 +846,7 @@ namespace PrincesPalace
             // because the queue describes the beat as a whole rather than
             // any instant inside it: whoever held the turn when it resolved
             // holds slot 0 for as long as the beat is drawn.
-            PaintTurnOrder?.Invoke(beat.TurnOrder);
+            PaintTurnOrder?.Invoke(beat.PreTurnOrder ?? beat.TurnOrder);
 
             // AND THE FIGURES HAVE TO ARRIVE BEFORE THE BEAT GOES ON.
             //
@@ -1125,6 +1128,10 @@ namespace PrincesPalace
 
                 PaintVitals?.Invoke(CasterCostHeld(beat) ? WithoutCasterStatuses(beat) : beat.Snapshot);
                 PaintShields?.Invoke(beat.Shields, beat.Snapshot);
+
+                // A POSITION CAST MOVES THE TRACKER HERE, on the impact frame
+                // with the sound and the log line (CombatBeat.PreTurnOrder).
+                if (beat.PreTurnOrder != null) PaintTurnOrder?.Invoke(beat.TurnOrder);
 
                 // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT --
                 // firing it beside PlayVfx would put a spell's own sound a

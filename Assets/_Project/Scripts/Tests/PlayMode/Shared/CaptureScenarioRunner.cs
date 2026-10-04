@@ -268,6 +268,17 @@ namespace PrincesPalace.PlayModeTests
             if (AllyCastIsReal(plan.Skill, request)) LetTheCasterActFirst(built);
             ApplyPreStatus(built, request.PreStatus);
             AimedTarget = ResolveTarget(built, request.Target);
+            if (AllyCastIsReal(plan.Skill, request) && AimedTarget != null)
+            {
+                // A refused ally is recorded as the presentation alone, and says so:
+                // the forced press would otherwise quietly take somebody else.
+                string refusal = AimedAllyRefusal(built.Session, plan.Skill, AimedTarget);
+                if (refusal != null)
+                {
+                    PresentationOnly = true;
+                    Debug.Log("[SpellRuntime] presentation only: " + refusal);
+                }
+            }
 
             yield return BindAndSettle(built);
         }
@@ -277,7 +288,7 @@ namespace PrincesPalace.PlayModeTests
         // press (Odette opens a fight beside Shawn). The opening turns of
         // squadmates ahead of the caster are stepped past before the fight binds,
         // so the cast is the first thing the fight shows.
-        private static void LetTheCasterActFirst(FightEncounterAdapter.BuiltFight built)
+        internal static void LetTheCasterActFirst(FightEncounterAdapter.BuiltFight built)
         {
             var caster = built.Party[0];
             var encounter = built.Session.Encounter;
@@ -286,6 +297,19 @@ namespace PrincesPalace.PlayModeTests
             {
                 encounter.AdvanceTurn();
             }
+        }
+
+        // THE FORCED PRESS QUIETLY TAKES THE FIRST ELIGIBLE ALLY when the aimed one
+        // is refused (Borrowed Moment refuses whoever is already next), which
+        // would record, and name, a GIF of somebody else. Null when the cast
+        // accepts the aimed ally, else the sentence that says why not.
+        internal static string AimedAllyRefusal(FightSession session, ResolvedSkill skill, CombatantState aimed)
+        {
+            var eligible = session.EligibleAllies(session.Current, skill);
+            if (eligible.Contains(aimed)) return null;
+            return "'" + skill.Id + "' refuses " + aimed.Name + " as the opening cast (" +
+                   string.Join(", ", eligible.Select(e => e.Name)) + " accepted); a Hasten refuses whoever is already " +
+                   "next in the order";
         }
 
         // The combatant a scenario's Target names: a party member by character id
@@ -837,6 +861,18 @@ namespace PrincesPalace.PlayModeTests
                             var own = session.KitFor(session.Current)?.Skills?.FirstOrDefault(
                                 k => k.Targeting == SkillTargeting.SingleEnemy || k.Targeting == SkillTargeting.AllEnemies);
                             Assert.IsNotNull(own, session.Current.Name + " has no spell to cast at the enemy between the series' casts");
+                            // Paid for like the caster's: a squadmate who cast last
+                            // round is out of mana or on cooldown and the press would
+                            // be refused every frame.
+                            var mate = session.Current;
+                            mate.PrimaryPool.Gain(mate.PrimaryPool.Max);
+                            int mateGuard = 0;
+                            while (session.CooldownRemaining(mate, own.Id) > 0 &&
+                                   session.CooldownRemaining(mate, own.Id) != FightSession.SpentForFight && mateGuard++ < 50)
+                            {
+                                session.TickCooldownsForTest(mate);
+                            }
+
                             Fight.ForceFirstAction(own.Id);
                         }
 
@@ -846,7 +882,8 @@ namespace PrincesPalace.PlayModeTests
                     }
 
                     Assert.Less(paced, MaxPacingFrames, "the player's turn never came back before cast " + (cast + 1) +
-                                " (acting: " + session.Current?.Name + "; log: " +
+                                " (acting: " + session.Current?.Name + "; busy " + Fight.IsBusy + ", beats " + Beats.IsPlaying +
+                                ", player turn " + session.IsPlayerTurn + "; log: " +
                                 string.Join(" | ", Fight.RecentLogForTest.Reverse().Take(4)) + ")");
                 }
 

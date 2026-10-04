@@ -63,5 +63,27 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(CaptureScenarioRunner.AllyCastIsReal(skill, Ask("sheep", "sheep", "owl", "bear")));
             Assert.IsFalse(CaptureScenarioRunner.AllyCastIsReal(skill, Ask(null, "sheep", "owl", "bear")));
         }
+
+        [Test]
+        public void ABorrowedMomentOnTheAllyWhoIsAlreadyNextIsNamedAsRefusedNotRecordedOnSomebodyElse()
+        {
+            var built = FightEncounterAdapter.Build(
+                new List<string> { "sheep", "owl", "bear" },
+                new List<string> { "rat" },
+                new SeededRandom(CaptureScenarioRunner.Seed),
+                relicIds: null,
+                depthStep: 0,
+                previewExtraSkillIds: new List<string> { "borrowed_moment" });
+            CaptureScenarioRunner.LetTheCasterActFirst(built);
+            var skill = PreviewFight.ForSpell("borrowed_moment").Skill;
+
+            Assert.AreSame(built.Party[0], built.Session.Current, "the caster opens");
+            Assert.IsNull(CaptureScenarioRunner.AimedAllyRefusal(built.Session, skill, built.Party[1]),
+                "Odette, a rat's turn behind, is a legal target");
+
+            string refusal = CaptureScenarioRunner.AimedAllyRefusal(built.Session, skill, built.Party[2]);
+            StringAssert.Contains("refuses Bjorn", refusal);
+            StringAssert.Contains("already next", refusal);
+        }
     }
 }

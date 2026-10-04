@@ -69,12 +69,12 @@ MonoBehaviour:
         at: release
         offset: 0
         path: Spells/borrowed_moment
-        seconds: 0.72
-        fps: 0
-        startFrame: 0
+        seconds: 0.3
+        fps: 16.667
+        startFrame: 1
         until: once
-        fade: 0.14
-        opacity: 1
+        fade: 0
+        opacity: 0.85
         dx: 0
         dy: 0
         drift:
@@ -85,14 +85,16 @@ MonoBehaviour:
           viaX: 0
           viaY: 0
           viaAt: 0
+          arcY: 0
         scale: 1
         size: 330
-        fit: 
+        fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.12
-        glow: 1.2
+        punch: 0
+        glow: 0.3
+        tint: 
         impactX: 0.5
         impactY: 0.5
         aspect: 0
@@ -128,7 +130,147 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: settle
+      - id: burst
+        render: still
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0
+        path: Spells/borrowed_moment
+        seconds: 0.1
+        fps: 0
+        startFrame: 6
+        until: hold
+        fade: 0.05
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        scale: 1
+        size: 330
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.3
+        glow: 1.7
+        tint: 
+        impactX: 0.5
+        impactY: 0.5
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: sand
+        render: sprite
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0.08
+        path: Spells/borrowed_moment
+        seconds: 0.25
+        fps: 24
+        startFrame: 7
+        until: once
+        fade: 0.06
+        opacity: 0.9
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0.25
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        scale: 1
+        size: 330
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0.6
+        tint: 
+        impactX: 0.5
+        impactY: 0.5
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: grains
         render: emitter
         place: target-centre
         height: 0
@@ -153,14 +295,16 @@ MonoBehaviour:
           viaX: 0
           viaY: 0
           viaAt: 0
+          arcY: 0
         scale: 1
         size: 0
-        fit: 
+        fit: target
         facing: 
         sort: effects
         align: 
         punch: 0
         glow: 0
+        tint: 
         impactX: -1
         impactY: -1
         aspect: 0
@@ -173,29 +317,33 @@ MonoBehaviour:
         emitter:
           path: Spells/borrowed_moment_particles
           rate: 0
-          burst: 11
+          burst: 12
           window: 0
           sourceDx: 0
           sourceDy: 0
-          spreadDegrees: 170
+          spreadDegrees: 120
           aimDegrees: 90
-          speedMin: 45
-          speedMax: 145
+          speedMin: 40
+          speedMax: 120
           inherit: 0
-          drag: 1.8
-          gravity: 180
-          lifeMin: 0.35
-          lifeMax: 0.7
+          drag: 1.4
+          gravity: 300
+          lifeMin: 0.25
+          lifeMax: 0.4
           sizeMin: 0.1
           sizeMax: 0.25
           spinMin: -180
           spinMax: 180
           alignFlight: 0
           lateral: 0
-          fadeFrom: 0.55
-          endScale: 0.72
+          fadeFrom: 0.5
+          endScale: 0.7
           seed: 1455
-          weights: []
+          weights:
+          - 1
+          - 0
+          - 0
+          - 1
       layerFormat: 1
       hitCueSeconds: 0.3
       gloom:
@@ -204,6 +352,8 @@ MonoBehaviour:
         until: 
         fadeOut: 0
       casterCostSeconds: 0
+      secondSfxPath: 
+      detonationSeconds: 0
     SortOrder: 13
     Status: 0
     HasStatus: 0
@@ -253,6 +403,8 @@ MonoBehaviour:
             until: 
             fadeOut: 0
           casterCostSeconds: 0
+          secondSfxPath: 
+          detonationSeconds: 0
         shake: 0
         hitStopSeconds: 0
       defenseToAttackPercent: 0

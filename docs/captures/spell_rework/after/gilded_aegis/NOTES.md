@@ -43,7 +43,7 @@ clean was about 0.56 s and there was no delivery.
 - **Flash guard.** The lock frame is a bright gold ring but small: the area of the frame that
   brightens by 10% luminance in one 60 fps step peaks at 0.9% on the cue. Over five casts at 1.5x
   (about 22 s), the largest single-step brightening anywhere is 4.9% of the frame and comes from
-  the treants' own hits; at most 2 such events fall in any one second. Counted as at most one
+  the squad's and the treants' own attacks; at most 2 such events fall in any one second. Counted as at most one
   large flash per cast, well inside 3 per second.
 - **Readability.** The ward icon and bar are on the cue frame, on the ally's plate. The lock frame
   covers the ally's upper body for about 0.1 s; no number is under it (a ward has no damage
