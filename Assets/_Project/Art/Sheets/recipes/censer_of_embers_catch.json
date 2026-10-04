@@ -1,0 +1,17 @@
+{
+  "_notes": [
+    "Censer of Embers: the catch. One painted still (censer_of_embers_catch.png, 1774x887), a low crescent of flame tongues on glowing coals with an open centre, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\", cropped to its own ink so the crescent spans the target's width."
+  ],
+  "sheet": "Spells/Censer of Embers/censer_of_embers_catch.png",
+  "rects": [
+    [0, 0, 1774, 887]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1774, 887],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

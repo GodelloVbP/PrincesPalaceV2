@@ -8,8 +8,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // CENSER OF EMBERS' BEATS as literal seconds (docs/PLAN_SPELL_REWORK.md 3.10):
     // the censer swings for 0.3 s, the embers catch on the cue with the Burn badge,
-    // and the sheet's smoke is gone, so the spell is clean 0.37 s after its payoff
-    // (it kept the stage for about 0.7 s).
+    // and the sheet's smoke is gone, so the crescent is gone 0.45 s after its payoff.
     public class CenserOfEmbersPresentationTests
     {
         private static SpellPresentation Censer()
@@ -36,20 +35,24 @@ namespace PrincesPalace.Domain.Tests
             var flame = vfx.layers.Single(l => l.id == "catch");
             Assert.AreEqual("hit", flame.at);
             Assert.AreEqual(0f, flame.offset, 1e-6f);
-            Assert.AreEqual(6, flame.startFrame, "f5, the embers catching");
-            Assert.AreEqual(1.6f, flame.glow, 1e-6f);
-            Assert.AreEqual(0.14f, flame.seconds, 1e-6f);
-            Assert.AreEqual(0.08f, flame.fade, 1e-6f);
+            Assert.AreEqual("still", flame.render);
+            Assert.AreEqual("Spells/censer_of_embers_catch", flame.path, "the crescent of embers, centre open");
+            Assert.AreEqual("target", flame.place, "at the target's feet, not a column in front of the face");
+            Assert.AreEqual(1.0f, flame.glow, 1e-6f);
+            Assert.AreEqual(0.25f, flame.seconds, 1e-6f);
+            Assert.AreEqual(0.2f, flame.fade, 1e-6f);
         }
 
         [Test]
-        public void NoSmokeIsDrawnAndEverythingIsCleanThirtySevenHundredthsAfterTheCue()
+        public void NoSmokeIsDrawnAndTheLastFlameIsGoneHalfASecondAfterTheCue()
         {
             var vfx = Censer();
 
             // The sheet's f6-f9 are smoke and the particle sheet's f2 is a wisp of it.
             Assert.IsFalse(vfx.layers.Any(l => l.render == "sprite" && l.startFrame >= 6),
                 "no sprite layer plays the smoke frames");
+            var flame = vfx.layers.Single(l => l.id == "catch");
+            Assert.AreEqual(0.45f, flame.seconds + flame.fade, 1e-6f, "payoff to clean, the crescent is the last thing on screen");
             CollectionAssert.AreEqual(new[] { 1f, 1f, 0f, 1f }, vfx.layers.Single(l => l.id == "embers").emitter.weights);
             CollectionAssert.AreEqual(new[] { 0f, 0f, 0f, 1f }, vfx.layers.Single(l => l.id == "lick").emitter.weights);
 
@@ -59,7 +62,7 @@ namespace PrincesPalace.Domain.Tests
             var lick = vfx.layers.Single(l => l.id == "lick");
             Assert.AreEqual(0.05f, lick.offset, 1e-6f, "the flames take hold just after the catch");
             Assert.AreEqual(0.32f, lick.emitter.lifeMax, 1e-6f);
-            Assert.AreEqual(0.37f, lick.offset + lick.emitter.lifeMax, 1e-6f, "the last thing on screen");
+            Assert.AreEqual(0.37f, lick.offset + lick.emitter.lifeMax, 1e-6f, "clears before the crescent does");
         }
     }
 }

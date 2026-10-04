@@ -1897,24 +1897,23 @@
             "glow": 0.5
           },
           {
-            "_comment": "The payoff: f5, the embers catching in a column of flame, held 0.14 s on the cue with the sound and the Burn badge. The sheet's smoke frames (f6-f9) are dropped: smoke was what kept the spell on screen after its payoff.",
+            "_comment": "The payoff: the painted crescent of embers at the target's feet, centre open so the face stays clear, on the cue with the sound and the Burn badge. Held, then faded.",
             "id": "catch",
             "render": "still",
-            "place": "target-centre",
+            "place": "target",
             "at": "hit",
-            "path": "Spells/censer_of_embers",
-            "startFrame": 6,
-            "seconds": 0.14,
+            "path": "Spells/censer_of_embers_catch",
+            "seconds": 0.25,
             "until": "hold",
-            "size": 350,
+            "size": 420,
             "fit": "target",
-            "impactX": 0.53,
-            "impactY": 0.46,
+            "impactX": 0.5,
+            "impactY": 0.1,
             "facing": "none",
             "sort": "effects",
             "punch": 0.2,
-            "glow": 1.6,
-            "fade": 0.08
+            "glow": 1.0,
+            "fade": 0.2
           },
           {
             "id": "embers",

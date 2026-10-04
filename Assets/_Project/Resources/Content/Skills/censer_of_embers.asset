@@ -132,18 +132,18 @@ MonoBehaviour:
           weights: []
       - id: catch
         render: still
-        place: target-centre
+        place: target
         height: 0
         follow: 0
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/censer_of_embers
-        seconds: 0.14
+        path: Spells/censer_of_embers_catch
+        seconds: 0.25
         fps: 0
-        startFrame: 6
+        startFrame: 0
         until: hold
-        fade: 0.08
+        fade: 0.2
         opacity: 1
         dx: 0
         dy: 0
@@ -157,16 +157,16 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 350
+        size: 420
         fit: target
         facing: none
         sort: effects
         align: 
         punch: 0.2
-        glow: 1.6
+        glow: 1
         tint: 
-        impactX: 0.53
-        impactY: 0.46
+        impactX: 0.5
+        impactY: 0.1
         aspect: 0
         travelSeconds: 0
         travelDelay: 0

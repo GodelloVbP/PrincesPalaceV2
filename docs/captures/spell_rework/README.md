@@ -132,10 +132,10 @@ Hasten is a real cast on a non-caster ally that is not already next: the 4:3 Ode
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| rat | `censer_of_embers_rat_1x.gif` | `censer_of_embers_rat_1x.gif` | recorded |
-| treant | `censer_of_embers_treant_1x.gif` | `censer_of_embers_treant_1x.gif` | recorded |
-| series at 1.5x, rat | none | `censer_of_embers_rat_x4_1.5x.gif` | recorded; no before; four casts: Burn kills the rat on cast 5 |
-| five casts at 1.5x, treant | none | `censer_of_embers_treant_x5_1.5x.gif` | recorded; no before |
+| rat | `censer_of_embers_rat_1x.gif` | `censer_of_embers_rat_1x.gif` | re-recorded 2026-10-04 with the painted crescent |
+| treant | `censer_of_embers_treant_1x.gif` | `censer_of_embers_treant_1x.gif` | re-recorded with the painted crescent |
+| series at 1.5x, rat | none | `censer_of_embers_rat_x4_1.5x.gif` | re-recorded with the painted crescent; no before; four casts: Burn kills the rat on cast 5 |
+| five casts at 1.5x, treant | none | `censer_of_embers_treant_x5_1.5x.gif` | re-recorded with the painted crescent; no before |
 
 ### 11. Burn coal glow
 
@@ -144,7 +144,7 @@ Hasten is a real cast on a non-caster ally that is not already next: the 4:3 Ode
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
 | glow starts (grey rat, Burn applied) | none | `status_burn_rat_1x.gif` | recorded; `status Burn`, 2 s |
-| glow ends (Burn runs out) | none | `censer_of_embers_treant_held30s_1x.gif` | recorded; `-Seconds 30` plays the fight on, Shawn attacking each turn. Glow and Burn badge (2, then 1) stay to about frame 490 of 892, then the treant is back to bark brown |
+| glow ends (Burn runs out) | none | `censer_of_embers_treant_held30s_1x.gif` | recorded with the old column (not re-run; the glow part is unchanged); `-Seconds 30` plays the fight on, Shawn attacking each turn. Glow and Burn badge (2, then 1) stay to about frame 490 of 892, then the treant is back to bark brown |
 
 ## Not recordable, or recorded as a proxy
 
