@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: The first hit Shawn takes each fight is negated.
     Effect: 32
     SortOrder: 38
-    IconPath: 
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/kinship.png
     Rarity: 2
     UnlockedBy: 
     Modifiers: []

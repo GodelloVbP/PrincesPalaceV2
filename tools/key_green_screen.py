@@ -93,7 +93,9 @@ KITS = [
         "source": "Assets/_Project/Art/Items/Relics",
         "output": "Assets/_Project/Art/Items/Relics/Processed",
         "grouped": False,
-        "delivery_size": {},
+        # Relic icons are shown at 64 px; a raw master arrives larger than the
+        # 256 every Processed/ icon ships at.
+        "delivery_size": {"kinship": 256},
         "default_delivery_size": None,
     },
     {

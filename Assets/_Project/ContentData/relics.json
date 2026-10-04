@@ -357,7 +357,7 @@
       "description": "The first hit Shawn takes each fight is negated.",
       "effect": "Kinship",
       "rarity": "rare",
-      "iconPath": "",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/kinship.png",
       "bearer": "sheep",
       "draftable": false
     },
