@@ -1252,6 +1252,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // TheReckoningsPoisonHalf_TriggersNoSecondDetonation).
             var detail = new StringBuilder();
             int total = 0;
+            var landedPackets = new List<BeatPacket>(split.Count);
             foreach (var packet in split)
             {
                 var outcome = DamagePipeline.AfterDefences(
@@ -1266,8 +1267,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 DepleteBreakShield(target, outcome.Effectiveness);
                 total += outcome.Damage;
+                landedPackets.Add(new BeatPacket(packet.type, outcome.Damage));
                 detail.Append($" {outcome.Damage} {packet.type}{EffectivenessSuffix(outcome.Effectiveness)}");
             }
+
+            // THE SPLIT IS TWO PAYOFFS ON THE STAGE, one number per element
+            // staggered behind the first (CombatBeat.StaggeredPacketsFor),
+            // like every other multi-packet cast; without this the view showed
+            // one summed number in the colour of the beat's element.
+            if (_recordingBeat != null && landedPackets.Count > 1) _recordingBeat.Packets = landedPackets.ToArray();
 
             AppendMessage($"{actor.Name}'s {skill.DisplayName} tears {worth} out of {target.Name} and returns it for {total}! -{detail}");
 

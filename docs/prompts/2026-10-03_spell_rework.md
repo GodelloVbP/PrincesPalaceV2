@@ -284,3 +284,33 @@ Must read as: a snake strike, then venom erupting. Must NOT read as: a dragon, a
 mouth, a skull, an explosion or a splash of water.
 
 Owner: what to change from the snake's species or the venom colour: ______
+
+## Ashen Reckoning: the poison catches fire
+
+Plan 3.7. Stand-ins today: `Resources/Spells/ashen_reckoning` f3 (the green swirl) held on
+the Poison packet and f5-f11 (a fireball around a rock, then ash) on the Fire packet, 0.05 s
+apart. The verb is *ignite*; what a painted piece fixes is the catch itself, which is two
+unrelated drawings back to back.
+
+Target: one still, raw file
+`Assets/_Project/Art/Sheets/Spells/Ashen Reckoning/ashen_reckoning_catch.png`, sliced as
+`Spells/ashen_reckoning_catch/f0`. It replaces the two accents with one drawing on the cue.
+
+Style matches the existing ashen frames: Hades-inspired painterly fantasy, bold sculpted
+flame planes, rich material rendering. Toxic green flame at the core turning to orange at the
+tips, black ash flecks; no other hue.
+
+Canvas 2048x2048, solid #00FF00 background, no gradient or vignette. The keyer removes by
+hue, so the green flame must be a deep teal-emerald well away from #00FF00 with a bright
+white-yellow core that stays opaque.
+
+- One radial burst of flame, the inner half toxic green, the outer half orange, tongues
+  spiralling outward as if turning, a handful of ash flecks and three small drops of green
+  fire.
+- No rock, no coal, no skull, no creature, no ring, no floor or ground plane.
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: poison vapour igniting. Must NOT read as: a fireball, a nuke, a magic circle
+or a lava burst.
+
+Owner: what to change from the green or the flame shape: ______

@@ -194,6 +194,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator StandTheFightUp(CaptureStandRequest request)
         {
             string spellId = request.SpellId;
+            _preStatus = request.PreStatus;
             var plan = ResolvePlan(spellId);
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
             Debug.Log("[SpellRuntime] " + PreviewFight.Describe(plan));
@@ -424,11 +425,33 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // The pre-status of the scenario being stood up, read by ResolvePlan.
+        private string _preStatus;
+
+        // A spell the preview refuses only for want of a status on the target
+        // (Ashen Reckoning needs Poison) is a real cast when the scenario puts
+        // that status there, so it is recorded with its numbers and badges.
+        private bool PreStatusSatisfies(ResolvedSkill skill) =>
+            skill != null && skill.HasRequiresStatus && !string.IsNullOrWhiteSpace(_preStatus)
+            && Enum.TryParse(_preStatus.Trim(), true, out StatusEffectType pre) && pre == skill.RequiresStatusType;
+
         private PreviewFight.Plan ResolvePlan(string spellId)
         {
             PresentationOnly = false;
             var plan = PreviewFight.ForSpell(spellId);
             if (plan.Ok || plan.Skill == null || PreviewStage.IsSupported(plan.Skill.Effect)) return plan;
+
+            if (plan.Skill.Effect == SkillEffect.Reclaim && PreStatusSatisfies(plan.Skill))
+            {
+                var roster0 = ContentDatabase.Characters
+                    .Where(c => c != null && c.Data != null).Select(c => c.Data).ToList();
+                var real = new PreviewFight.Plan { Skill = plan.Skill, Formation = PreviewFight.FormationLone };
+                real.CasterId = PreviewFight.ChooseCaster(plan.Skill, roster0, real);
+                if (real.CasterId == null) return real;
+                real.Party = new List<string> { real.CasterId };
+                real.Notes.Add("'" + spellId + "' resolves as Reclaim; the scenario's pre-status satisfies it, so it is a real cast");
+                return real;
+            }
 
             var roster = ContentDatabase.Characters
                 .Where(c => c != null && c.Data != null).Select(c => c.Data).ToList();

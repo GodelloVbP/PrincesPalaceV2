@@ -55,6 +55,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(8, split[1].amount);
         }
 
+        // The stage shows one number per element, staggered, when the beat
+        // carries the split; a Reckoning used to carry none, so the view drew
+        // a single summed figure.
+        [Test]
+        public void TheBeatCarriesThePoisonAndFirePacketsForTheStage()
+        {
+            var (session, _, foe) = Fight();
+            // worth 20, premium 150% = 30: 15 Poison, 15 Fire.
+            foe.Statuses.Add(new ActiveStatus(StatusEffectType.Poison, 10, 2));
+
+            session.CastSkill(0, foe);
+
+            var beat = session.DrainBeats().Single(b => b.IsAction);
+            var packets = beat.StaggeredPacketsFor(foe);
+            Assert.IsNotNull(packets, "two packets that add up to the beat's amount are two payoffs");
+            Assert.AreEqual(new[] { DamageType.Poison, DamageType.Fire }, packets.Select(p => p.Type).ToArray());
+            Assert.AreEqual(new[] { 15, 15 }, packets.Select(p => p.Amount).ToArray());
+        }
+
         [Test]
         public void NoPoisonOnTheTarget_IsRefused_BeforeAnythingIsPaid()
         {
