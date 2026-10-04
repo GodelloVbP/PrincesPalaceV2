@@ -238,8 +238,11 @@ $SyncRunnerScript = {
     $codes["docs"] = $LASTEXITCODE
 
     $settingsPath = Join-Path $Runner.Path "ProjectSettings\ProjectSettings.asset"
-    (Get-Content $settingsPath -Raw) -replace "productName: .*", "productName: $($Runner.Product)" |
-        Set-Content $settingsPath -Encoding utf8
+    # Inline, not Set-ProjectProductName: a runspace sees no functions. Same
+    # BOM-less write as that helper.
+    [IO.File]::WriteAllText($settingsPath,
+        ([IO.File]::ReadAllText($settingsPath) -replace "productName: .*", "productName: $($Runner.Product)"),
+        (New-Object System.Text.UTF8Encoding($false)))
 
     # robocopy: 0-7 is success of some kind, 8+ means something failed to copy.
     $failed = @($codes.Keys | Where-Object { $codes[$_] -ge 8 } | ForEach-Object { "$_ (robocopy exit $($codes[$_]))" })

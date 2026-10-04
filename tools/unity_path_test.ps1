@@ -108,7 +108,9 @@ try {
 
     $p = New-Fixture -Leaf "Proj3"
     $r = Try-Assert $p
-    Assert-That "no stamp proceeds, Library kept, stamped before launch" ($r.Result -eq "stamped" -and $null -eq $r.Error -and (Has-Library $p) -and (Get-LibraryStamp -ProjectPath $p) -eq "6000.5.7f1")
+    Assert-That "no stamp proceeds with the Library kept and marks it unknown, not the pinned version" ($r.Result -eq "unknown" -and $null -eq $r.Error -and (Has-Library $p) -and (Get-LibraryStamp -ProjectPath $p) -eq "unknown")
+    $r = Try-Assert $p
+    Assert-That "an unknown stamp keeps proceeding and stays unknown" ($r.Result -eq "unknown" -and $null -eq $r.Error -and (Has-Library $p) -and (Get-LibraryStamp -ProjectPath $p) -eq "unknown")
 
     Write-Host "stamp"
     $p = New-Fixture -Leaf "Proj4"
@@ -120,6 +122,32 @@ try {
     Assert-That "Set-LibraryStamp creates the Library a first import will fill" ((Get-LibraryStamp -ProjectPath $noLib) -eq "1")
     Assert-That "-projectPath argument is read unquoted" ((Get-UnityProjectArg -ArgumentList @("-batchmode", "-projectPath", "`"C:\a b\c`"", "-quit")) -eq "C:\a b\c")
     Assert-That "no -projectPath argument gives null" ($null -eq (Get-UnityProjectArg -ArgumentList @("-batchmode")))
+
+    Write-Host "Set-ProjectProductName"
+    $asset = Join-Path $root "Proj[x]\ProjectSettings.asset"
+    [void][System.IO.Directory]::CreateDirectory((Split-Path $asset -Parent))
+    [System.IO.File]::WriteAllText($asset, "a: 1`nproductName: Old`nb: 2`n", (New-Object System.Text.UTF8Encoding($false)))
+    Set-ProjectProductName -SettingsPath $asset -Product "New"
+    $bytes = [System.IO.File]::ReadAllBytes($asset)
+    Assert-That "productName is rewritten in a path with brackets" ([System.IO.File]::ReadAllText($asset) -match "productName: New")
+    Assert-That "the rewritten settings file has no BOM" (-not ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB))
+
+    Write-Host "Stop-UnityTree"
+    $parent = Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", "ping -n 60 127.0.0.1 > nul") -PassThru -WindowStyle Hidden
+    Start-Sleep -Milliseconds 800
+    $kids = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$($parent.Id)")
+    Stop-UnityTree -Proc $parent
+    Start-Sleep -Milliseconds 500
+    Assert-That "the launcher is gone" ($parent.HasExited)
+    Assert-That "its child went with it" (@($kids | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }).Count -eq 0)
+
+    Write-Host "gif.ps1 -Compare binding"
+    $out = (& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot "gif.ps1") -Compare "nope_a" "nope_b" 2>&1 | Out-String)
+    Assert-That "-Compare a b reaches the comparison" ($out -notmatch "takes two run directories")
+    $out = (& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot "gif.ps1") -Compare "nope_a,nope_b" 2>&1 | Out-String)
+    Assert-That "-Compare a,b still reaches the comparison" ($out -notmatch "takes two run directories")
+    $out = (& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot "gif.ps1") -Compare "nope_a" 2>&1 | Out-String)
+    Assert-That "-Compare with one run still refuses" ($out -match "takes two run directories")
 
     Write-Host "-AcceptLibrary"
     # A refusal writes to stderr, which Stop would turn into a terminating error here.

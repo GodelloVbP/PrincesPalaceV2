@@ -649,8 +649,7 @@ if (-not $SkipSync) {
         robocopy "$SourceProject\docs" "$($runner.Path)\docs" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 
         $settingsPath = Join-Path $runner.Path "ProjectSettings\ProjectSettings.asset"
-        (Get-Content $settingsPath -Raw) -replace "productName: .*", "productName: $($runner.Product)" |
-            Set-Content $settingsPath -Encoding utf8
+        Set-ProjectProductName -SettingsPath $settingsPath -Product $runner.Product
     }
 }
 

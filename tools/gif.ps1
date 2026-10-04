@@ -21,7 +21,10 @@ param(
     [switch]$KeepFrames,
     [switch]$Stop,
     [switch]$Determinism,
-    [switch]$SkipSync
+    [switch]$SkipSync,
+    # "-Compare a b" leaves b to bind to -Kind (and a further word to -Id); both
+    # are folded into -Compare below, as in tools/spell_feel.ps1.
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$Rest = @()
 )
 
 # One GIF recorder for every art subject -- docs/PLAN_GIF_CAPTURE.md, phases A and B.
@@ -97,6 +100,7 @@ if ($Stop) {
     exit 2
 }
 if ($Compare.Count -gt 0) {
+    $Compare = @(@($Compare) + @($Kind) + @($Id) + @($Rest) | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim().Trim('"').Trim("'") } | Where-Object { $_ })
     if ($Compare.Count -ne 2) { Write-Host "-Compare takes two run directories."; exit 2 }
     $cmpArgs = @("compare", $Compare[0], $Compare[1])
     if ($AllowDiff) { $cmpArgs += @("--allow-diff", $AllowDiff) }
@@ -152,8 +156,7 @@ function Sync-CaptureCopy {
     [void][PP.RunnerSync.MetaSync]::Repair("$SourceProject\Assets", "$CaptureProject\Assets")
     $settings = Join-Path $CaptureProject "ProjectSettings\ProjectSettings.asset"
     $product = ($ProjectLeaf -replace "[^A-Za-z0-9]", "") + "Capture"
-    (Get-Content $settings -Raw) -replace "productName: .*", "productName: $product" |
-        Set-Content $settings -Encoding utf8
+    Set-ProjectProductName -SettingsPath $settings -Product $product
 }
 
 # The fight scenarios of one request, in ONE Unity boot of GifBatchCaptureTests.
@@ -178,71 +181,75 @@ function Invoke-FightBatch {
         "-logFile", "`"$logPath`"",
         "-buildTarget", "StandaloneWindows64")
 
-    $startupLimit = if ($HadLibrary) { $StartupDeadlineWithLibrary } else { $StartupDeadlineFirstImport }
-    $readyPath = Join-Path $RunDir "ready.json"
-    $statePath = Join-Path $RunDir "state.json"
-    $resultPath = Join-Path $RunDir "result.json"
-    # A -Repeat series is that many casts plus the pacing between them, so its
-    # deadline is that many scenarios' worth.
-    $repeatByKey = @{}
-    foreach ($sc in @((Get-Content -LiteralPath $env:PP_GIF_REQUEST -Raw | ConvertFrom-Json).scenarios)) {
-        # A spell held on for -Seconds is filmed at a few seconds of battle per
-        # real second at worst, so it earns one more scenario's worth per 5 s on top of the casts.
-        $repeatByKey[$sc.key] = [math]::Max(1, [int]$sc.repeat) + [int][math]::Ceiling([double]$sc.seconds / 5)
-    }
-    $readyAt = $null
-    $lastIndex = -1
-    $scenarioStart = $null
-    $failure = $null
-
-    while ($true) {
-        $done = $false
-        if (Test-Path -LiteralPath $resultPath) {
-            $r = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
-            if ($r.requestId -eq $RequestId) { $done = $true }
+    try {
+        $startupLimit = if ($HadLibrary) { $StartupDeadlineWithLibrary } else { $StartupDeadlineFirstImport }
+        $readyPath = Join-Path $RunDir "ready.json"
+        $statePath = Join-Path $RunDir "state.json"
+        $resultPath = Join-Path $RunDir "result.json"
+        # A -Repeat series is that many casts plus the pacing between them, so its
+        # deadline is that many scenarios' worth.
+        $repeatByKey = @{}
+        foreach ($sc in @((Get-Content -LiteralPath $env:PP_GIF_REQUEST -Raw | ConvertFrom-Json).scenarios)) {
+            # A spell held on for -Seconds is filmed at a few seconds of battle per
+            # real second at worst, so it earns one more scenario's worth per 5 s on top of the casts.
+            $repeatByKey[$sc.key] = [math]::Max(1, [int]$sc.repeat) + [int][math]::Ceiling([double]$sc.seconds / 5)
         }
-        if ($done) { break }
-        if ($proc.HasExited) { $failure = "Unity exited (code $($proc.ExitCode)) without writing this request's result"; break }
+        $readyAt = $null
+        $lastIndex = -1
+        $scenarioStart = $null
+        $failure = $null
 
-        if ($null -eq $readyAt) {
-            if (Test-Path -LiteralPath $readyPath) {
-                $ready = Get-Content -LiteralPath $readyPath -Raw | ConvertFrom-Json
-                if ($ready.requestId -eq $RequestId) {
-                    $readyAt = $launched.Elapsed.TotalSeconds
-                    $Timing.startupSeconds = [math]::Round($readyAt, 1)
+        while ($true) {
+            $done = $false
+            if (Test-Path -LiteralPath $resultPath) {
+                $r = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+                if ($r.requestId -eq $RequestId) { $done = $true }
+            }
+            if ($done) { break }
+            if ($proc.HasExited) { $failure = "Unity exited (code $($proc.ExitCode)) without writing this request's result"; break }
+
+            if ($null -eq $readyAt) {
+                if (Test-Path -LiteralPath $readyPath) {
+                    $ready = Get-Content -LiteralPath $readyPath -Raw | ConvertFrom-Json
+                    if ($ready.requestId -eq $RequestId) {
+                        $readyAt = $launched.Elapsed.TotalSeconds
+                        $Timing.startupSeconds = [math]::Round($readyAt, 1)
+                    }
+                } elseif ($launched.Elapsed.TotalSeconds -gt $startupLimit) {
+                    $failure = "STARTUP timed out after $([int]$startupLimit)s at stage: $(Get-LaunchStage -LogPath $logPath)"
+                    break
                 }
-            } elseif ($launched.Elapsed.TotalSeconds -gt $startupLimit) {
-                $failure = "STARTUP timed out after $([int]$startupLimit)s at stage: $(Get-LaunchStage -LogPath $logPath)"
-                break
+            } else {
+                $state = $null
+                if (Test-Path -LiteralPath $statePath) {
+                    try { $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json } catch { $state = $null }
+                }
+                if ($state -and $state.requestId -eq $RequestId -and $state.index -ne $lastIndex) {
+                    $lastIndex = $state.index
+                    $scenarioStart = [Diagnostics.Stopwatch]::StartNew()
+                } elseif ($scenarioStart -and $state -and $scenarioStart.Elapsed.TotalSeconds -gt ($ScenarioDeadline * $repeatByKey[$state.key])) {
+                    $failure = "SCENARIO $($lastIndex + 1) (key $($state.key)) timed out after $($ScenarioDeadline * $repeatByKey[$state.key])s"
+                    break
+                }
             }
-        } else {
-            $state = $null
-            if (Test-Path -LiteralPath $statePath) {
-                try { $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json } catch { $state = $null }
-            }
-            if ($state -and $state.requestId -eq $RequestId -and $state.index -ne $lastIndex) {
-                $lastIndex = $state.index
-                $scenarioStart = [Diagnostics.Stopwatch]::StartNew()
-            } elseif ($scenarioStart -and $state -and $scenarioStart.Elapsed.TotalSeconds -gt ($ScenarioDeadline * $repeatByKey[$state.key])) {
-                $failure = "SCENARIO $($lastIndex + 1) (key $($state.key)) timed out after $($ScenarioDeadline * $repeatByKey[$state.key])s"
-                break
-            }
+            Start-Sleep -Milliseconds 500
         }
-        Start-Sleep -Milliseconds 500
-    }
 
-    if ($failure) {
-        Write-Host $failure
-        $finished = @(Get-ChildItem $RunDir -Directory -ErrorAction SilentlyContinue |
-            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "result.json") } | ForEach-Object { $_.Name })
-        Write-Host "scenarios already finished: $(if ($finished.Count) { $finished -join ', ' } else { 'none' })"
-        if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
-        Write-Host "log tail ($logPath):"
-        if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Tail 40 | ForEach-Object { Write-Host "  $_" } }
-    } else {
-        # The result is written before the test ends; give Unity a moment to
-        # exit by itself, then take it down rather than leave it holding the copy.
-        if (-not $proc.WaitForExit(60000)) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+        if ($failure) {
+            Write-Host $failure
+            $finished = @(Get-ChildItem $RunDir -Directory -ErrorAction SilentlyContinue |
+                Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "result.json") } | ForEach-Object { $_.Name })
+            Write-Host "scenarios already finished: $(if ($finished.Count) { $finished -join ', ' } else { 'none' })"
+            Stop-UnityTree -Proc $proc
+            Write-Host "log tail ($logPath):"
+            if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Tail 40 | ForEach-Object { Write-Host "  $_" } }
+        } else {
+            # The result is written before the test ends; give Unity a moment to
+            # exit by itself, then take it down rather than leave it holding the copy.
+            [void]$proc.WaitForExit(60000)
+        }
+    } finally {
+        Stop-UnityTree -Proc $proc
     }
     $Timing.unityTotalSeconds = [math]::Round($launched.Elapsed.TotalSeconds, 1)
     $env:PP_GIF_REQUEST = ""
@@ -257,7 +264,7 @@ function Invoke-FightBatch {
 # screenshot.ps1 run is a different copy) can clear it. Returns a failure
 # message, or "" when Unity exited by itself.
 function Invoke-StillBoot {
-    param([string]$RunDir, [string[]]$Classes, $Timing)
+    param([string]$RunDir, [string[]]$Classes, [bool]$HadLibrary, $Timing)
 
     $runtimeOut = Join-Path $CaptureProject "tools\screenshots\runtime"
     if (Test-Path -LiteralPath $runtimeOut) { Remove-Item -LiteralPath $runtimeOut -Recurse -Force }
@@ -279,13 +286,17 @@ function Invoke-StillBoot {
         "-logFile", "`"$logPath`"",
         "-buildTarget", "StandaloneWindows64")
 
-    $limit = $StartupDeadlineWithLibrary + $StillClassDeadline * $Classes.Count
-    $failure = $null
-    if (-not $proc.WaitForExit($limit * 1000)) {
-        $failure = "STILL boot timed out after ${limit}s at stage: $(Get-LaunchStage -LogPath $logPath)"
-        Write-Host $failure
-        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-        if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Tail 40 | ForEach-Object { Write-Host "  $_" } }
+    try {
+        $limit = $(if ($HadLibrary) { $StartupDeadlineWithLibrary } else { $StartupDeadlineFirstImport }) + $StillClassDeadline * $Classes.Count
+        $failure = $null
+        if (-not $proc.WaitForExit($limit * 1000)) {
+            $failure = "STILL boot timed out after ${limit}s at stage: $(Get-LaunchStage -LogPath $logPath)"
+            Write-Host $failure
+            Stop-UnityTree -Proc $proc
+            if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Tail 40 | ForEach-Object { Write-Host "  $_" } }
+        }
+    } finally {
+        Stop-UnityTree -Proc $proc
     }
     $Timing.stillSeconds = [math]::Round($launched.Elapsed.TotalSeconds, 1)
 
@@ -330,17 +341,24 @@ function Invoke-CaptureRun {
         $claims = Enter-RunnerClaim -RunnerPaths @($CaptureProject) -Tool "gif.ps1"
         if ($null -eq $claims) { return @{ Ok = $false; RunDir = $runDir } }
         try {
+            # The launch guard may wipe a Library of another editor; decide the
+            # startup limit only after it has, or a full re-import gets the
+            # with-Library limit and is killed mid-import.
+            [void](Assert-LibraryProvenance -ProjectPath $CaptureProject -Tool (Get-LaunchingTool))
             $hadLibrary = Test-Path -LiteralPath (Join-Path $CaptureProject "Library\ArtifactDB")
             $sw = [Diagnostics.Stopwatch]::StartNew()
             if (-not $SkipSync) { Sync-CaptureCopy }
             $timing.syncSeconds = [math]::Round($sw.Elapsed.TotalSeconds, 1)
+            # Fingerprint the tree Unity renders, not the source it was meant to mirror.
+            & $py $GifPy stamp $runDir --root $CaptureProject | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "gif.py stamp failed (exit $LASTEXITCODE)" }
             $timing.hadLibrary = $hadLibrary
 
             if ($prep.unity -gt 0) {
                 $failure = Invoke-FightBatch -RunDir $runDir -RequestId $requestId -HadLibrary $hadLibrary -Timing $timing
             }
             if (-not $failure -and @($prep.stillClasses).Count -gt 0) {
-                $failure = Invoke-StillBoot -RunDir $runDir -Classes @($prep.stillClasses) -Timing $timing
+                $failure = Invoke-StillBoot -RunDir $runDir -Classes @($prep.stillClasses) -HadLibrary $hadLibrary -Timing $timing
             }
         } finally {
             Exit-RunnerClaim -Claims $claims

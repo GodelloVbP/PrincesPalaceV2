@@ -277,8 +277,7 @@ if (-not $SkipSync) {
         # save in RAM now, so nothing should reach that path at all -- this is
         # the belt to that braces.
         $settingsPath = Join-Path $shard.Path "ProjectSettings\ProjectSettings.asset"
-        (Get-Content $settingsPath -Raw) -replace "productName: .*", "productName: $($shard.Product)" |
-            Set-Content $settingsPath -Encoding utf8
+        Set-ProjectProductName -SettingsPath $settingsPath -Product $shard.Product
     }
 }
 

@@ -73,7 +73,8 @@ function Get-UnityExe {
 #                 re-imported.
 #   Project    -- everything else, which the Hub may open. The tooling never
 #                 deletes its Library: a mismatch refuses the launch, and a
-#                 missing stamp (unknown history) proceeds with a warning.
+#                 missing stamp (unknown history) proceeds with a warning and
+#                 is marked "unknown", never as the wanted version.
 
 function Get-UnityProjectClass {
     param([Parameter(Mandatory = $true)][string]$ProjectPath)
@@ -137,11 +138,16 @@ function Assert-LibraryProvenance {
     if ($have -eq $want) { return "match" }
 
     if ((Get-UnityProjectClass -ProjectPath $ProjectPath) -eq "Project") {
-        if ($have) {
+        # "unknown" is the stamp of a Library whose history nobody recorded. It
+        # never claims the pinned version, so a Library an older editor built
+        # is not relabelled as this one's; it warns on every launch instead.
+        if ($have -and $have -ne "unknown") {
             throw "Library provenance: $ProjectPath has a Library imported by Unity $have but ProjectVersion.txt pins Unity $want. The tooling never deletes a project tree's Library. Open the project in $want from the Hub and, once it opens cleanly, run: powershell -File tools\accept_library.ps1 -AcceptLibrary `"$ProjectPath`""
         }
         if (Test-Path -LiteralPath $library) {
-            Write-Host "Library provenance: $ProjectPath has no editor stamp, so its history is unknown. Proceeding and stamping it with Unity $want."
+            Write-Host "Library provenance: $ProjectPath has an unknown editor history. Proceeding; it stays marked unknown until tools\accept_library.ps1 -AcceptLibrary vouches for it."
+            if (-not $have) { Set-LibraryStamp -ProjectPath $ProjectPath -EditorVersion "unknown" -Tool $Tool }
+            return "unknown"
         }
         Set-LibraryStamp -ProjectPath $ProjectPath -EditorVersion $want -Tool $Tool
         return "stamped"
@@ -172,6 +178,29 @@ function Assert-LibraryProvenance {
 }
 
 # The path after -projectPath, unquoted, or $null when the launch names none.
+# Writes productName into a ProjectSettings.asset so each copy has its own
+# persistentDataPath. BOM-less UTF-8: PS 5.1's Set-Content -Encoding utf8
+# writes a BOM, and -LiteralPath keeps brackets in a path literal.
+function Set-ProjectProductName {
+    param(
+        [Parameter(Mandatory = $true)][string]$SettingsPath,
+        [Parameter(Mandatory = $true)][string]$Product
+    )
+
+    $text = [System.IO.File]::ReadAllText($SettingsPath) -replace "productName: .*", "productName: $Product"
+    [System.IO.File]::WriteAllText($SettingsPath, $text, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# Takes Unity down with everything it spawned. Stop-Process on the launcher pid
+# alone leaves the editor's children holding the project's Library lock.
+function Stop-UnityTree {
+    param($Proc)
+
+    if ($null -eq $Proc -or $Proc.HasExited) { return }
+    & taskkill.exe /PID $Proc.Id /T /F 2>&1 | Out-Null
+    if (-not $Proc.HasExited) { Stop-Process -Id $Proc.Id -Force -ErrorAction SilentlyContinue }
+}
+
 function Get-UnityProjectArg {
     param([string[]]$ArgumentList)
 

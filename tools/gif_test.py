@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Pure checks for tools/gif.py (no Unity): python3 tools/gif_test.py"""
 
+import contextlib
+import io
 import os
 import sys
 import tempfile
+import threading
 import types
 import unittest
 import unittest.mock
@@ -314,6 +317,65 @@ class IdentityTests(unittest.TestCase):
     def test_fingerprint_depends_on_every_hash(self):
         self.assertNotEqual(gif.fingerprint({"a": "1"}), gif.fingerprint({"a": "2"}))
         self.assertEqual(gif.fingerprint({"a": "1", "b": "2"}), gif.fingerprint({"b": "2", "a": "1"}))
+
+
+class StampAndLatestTests(unittest.TestCase):
+    def make_project(self, root, body):
+        os.makedirs(os.path.join(root, "Assets"))
+        os.makedirs(os.path.join(root, "ProjectSettings"))
+        with open(os.path.join(root, "ProjectSettings", "ProjectVersion.txt"), "w") as handle:
+            handle.write("m_EditorVersion: 6000.6.2f1" + chr(10))
+        with open(os.path.join(root, "Assets", "a.txt"), "w") as handle:
+            handle.write(body)
+
+    def test_stamp_fingerprints_the_tree_that_was_rendered_not_the_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            one, two, run = (os.path.join(tmp, n) for n in ("one", "two", "run"))
+            self.make_project(one, "same")
+            self.make_project(two, "different")
+            os.makedirs(run)
+            gif.cmd_stamp(types.SimpleNamespace(run_dir=run, root=one))
+            first = gif.read_json(os.path.join(run, "identity.json"))
+            gif.cmd_stamp(types.SimpleNamespace(run_dir=run, root=two))
+            second = gif.read_json(os.path.join(run, "identity.json"))
+            self.assertNotEqual(first["fingerprint"], second["fingerprint"])
+            self.assertEqual(second["files"], 2)
+            self.assertIn("Assets/a.txt", gif.read_json(os.path.join(run, "manifest.json")))
+
+    def test_a_run_with_no_capture_copy_cannot_be_compared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_a, run_b = os.path.join(tmp, "a"), os.path.join(tmp, "b")
+            for run in (run_a, run_b):
+                os.makedirs(run)
+            gif.write_json_atomic(os.path.join(run_a, "identity.json"), {"fingerprint": "abc", "files": 1})
+            gif.write_json_atomic(os.path.join(run_b, "identity.json"), {"fingerprint": "", "files": 0})
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = gif.cmd_compare(types.SimpleNamespace(a=run_a, b=run_b, allow_diff=""))
+            self.assertEqual(code, 2)
+            self.assertIn("no content fingerprint", out.getvalue())
+
+    def test_concurrent_latest_updates_keep_every_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "latest.json")
+            gif.write_json_atomic(path, {"old": "x"})
+            threads = [threading.Thread(target=gif.update_json_locked, args=(path, {"k%d" % i: "run%d" % i}))
+                       for i in range(24)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            data = gif.read_json(path)
+            self.assertEqual(len(data), 25)
+            self.assertFalse(os.path.exists(path + ".lock"))
+
+    def test_a_stale_lock_from_a_crashed_session_is_taken_over(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "latest.json")
+            open(path + ".lock", "w").close()
+            os.utime(path + ".lock", (0, 0))
+            gif.update_json_locked(path, {"a": "1"})
+            self.assertEqual(gif.read_json(path), {"a": "1"})
 
 
 class CropTests(unittest.TestCase):

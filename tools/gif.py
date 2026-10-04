@@ -13,6 +13,7 @@ so it can be tested alone (tools/gif_test.py):
               write scenario.json, latest.json and the coverage table, then
               delete frames/ of every run but the newest two (--keep-frames
               keeps them)
+    stamp     re-fingerprint a prepared run from the Capture copy it renders from
     trim      the same deletion on its own (--keep <runs>)
     compare   two run directories: content-manifest eligibility (2.6), then
               frame counts and per-frame pixel differences
@@ -454,18 +455,20 @@ def blob_hash(path):
     return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
 
 
-def content_manifest(root=ROOT):
+def content_manifest(root=ROOT, use_git=True):
     """{relative path: git blob hash} for every file under Assets, Packages and
     ProjectSettings. Clean tracked files take the index's hash; modified and
     untracked files are hashed from their contents. Sizes and mtimes are never
-    used."""
-    tracked = {}
-    for line in git("ls-files", "-s", "-z", "--", *WATCHED_ROOTS, root=root).split(b"\0"):
-        if not line:
-            continue
-        meta, path = line.split(b"\t", 1)
-        tracked[path.decode("utf-8")] = meta.split()[1].decode("ascii")
-    modified = set(p.decode("utf-8") for p in git("ls-files", "-m", "-z", "--", *WATCHED_ROOTS, root=root).split(b"\0") if p)
+    used. use_git=False hashes every file, for a tree that is not a checkout
+    (the Capture copy)."""
+    tracked, modified = {}, set()
+    if use_git:
+        for line in git("ls-files", "-s", "-z", "--", *WATCHED_ROOTS, root=root).split(b"\0"):
+            if not line:
+                continue
+            meta, path = line.split(b"\t", 1)
+            tracked[path.decode("utf-8")] = meta.split()[1].decode("ascii")
+        modified = set(p.decode("utf-8") for p in git("ls-files", "-m", "-z", "--", *WATCHED_ROOTS, root=root).split(b"\0") if p)
 
     manifest = {}
     for top in WATCHED_ROOTS:
@@ -494,12 +497,14 @@ def editor_version(root=ROOT):
     return ""
 
 
-def identity(root=ROOT, manifest=None):
+def identity(root=ROOT, manifest=None, head_root=None):
+    """head_root names the checkout whose HEAD describes root when root is a
+    mirror of it rather than a checkout itself."""
     manifest = manifest if manifest is not None else content_manifest(root)
     return {
         "path": os.path.normcase(os.path.realpath(root)),
         "editorVersion": editor_version(root),
-        "headSha": git("rev-parse", "HEAD", root=root).decode("ascii").strip(),
+        "headSha": git("rev-parse", "HEAD", root=head_root or root).decode("ascii").strip(),
         "fingerprint": fingerprint(manifest),
         "files": len(manifest),
     }
@@ -523,10 +528,43 @@ def read_allow_list(path):
 
 def write_json_atomic(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    temp = path + ".tmp"
+    temp = "%s.%d.tmp" % (path, os.getpid())
     with open(temp, "w", encoding="utf-8") as handle:
         json.dump(data, handle, indent=2, sort_keys=True)
     os.replace(temp, path)
+
+
+def update_json_locked(path, updates, wait=30.0, stale=60.0):
+    """Merges `updates` into the JSON object at `path` under a lock file, so
+    concurrent sessions each keep their entries. The lock is a file created
+    exclusively; one older than `stale` seconds is a crashed holder's and is
+    taken over."""
+    lock = path + ".lock"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    deadline = time.time() + wait
+    while True:
+        try:
+            os.close(os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            break
+        except FileExistsError:
+            try:
+                if time.time() - os.path.getmtime(lock) > stale:
+                    os.remove(lock)
+                    continue
+            except OSError:
+                continue
+            if time.time() > deadline:
+                raise TimeoutError("could not lock %s within %ds" % (path, wait))
+            time.sleep(0.05)
+    try:
+        merged = read_json(path, {})
+        merged.update(updates)
+        write_json_atomic(path, merged)
+    finally:
+        try:
+            os.remove(lock)
+        except OSError:
+            pass
 
 
 def read_json(path, default=None):
@@ -682,6 +720,24 @@ def cmd_prepare(args):
     print(json.dumps({"requestId": request_id, "runDir": run_dir, "scenarios": len(scenarios),
                       "unity": len(unity), "stillClasses": still_classes_needed,
                       "fingerprint": ident["fingerprint"]}))
+    return 0
+
+
+def cmd_stamp(args):
+    """Re-fingerprints a prepared run from the tree Unity will actually render,
+    the Capture copy after its sync (or as it stands under -SkipSync). prepare
+    fingerprints the source tree, which can change during a claim wait and is
+    not what -SkipSync renders. A missing tree leaves a fingerprint-less
+    identity, which compare refuses."""
+    run_dir = os.path.abspath(args.run_dir)
+    root = os.path.abspath(args.root)
+    if not os.path.isfile(os.path.join(root, "ProjectSettings", "ProjectVersion.txt")):
+        write_json_atomic(os.path.join(run_dir, "identity.json"), {"path": root, "fingerprint": "", "files": 0})
+        print("stamp: %s holds no project; the run cannot be compared" % root, file=sys.stderr)
+        return 0
+    manifest = content_manifest(root, use_git=False)
+    write_json_atomic(os.path.join(run_dir, "manifest.json"), manifest)
+    write_json_atomic(os.path.join(run_dir, "identity.json"), identity(root, manifest, head_root=ROOT))
     return 0
 
 
@@ -1076,7 +1132,7 @@ def cmd_finish(args):
     scenarios = request["scenarios"]
     outcomes = {}
     encode_seconds = {}
-    latest = read_json(LATEST, {})
+    latest = {}
 
     for s in scenarios:
         sdir = os.path.join(run_dir, s["key"])
@@ -1100,7 +1156,7 @@ def cmd_finish(args):
         write_json_atomic(os.path.join(sdir, "scenario.json"), record)
 
     if latest:
-        write_json_atomic(LATEST, latest)
+        update_json_locked(LATEST, latest)
     print(coverage_table(scenarios, outcomes, skipped=request.get("skipped", []), gaps=request.get("gaps", []),
                          manifest=request.get("manifest", "")))
     if args.keep_frames:
@@ -1178,6 +1234,9 @@ def cmd_compare(args):
             label, ident.get("path"), ident.get("editorVersion"), (ident.get("headSha") or "")[:10],
             (ident.get("fingerprint") or "")[:12], ident.get("files")))
 
+    if not ident_a.get("fingerprint") or not ident_b.get("fingerprint"):
+        print("REFUSED: a run has no content fingerprint (no Capture copy was rendered from), so it cannot be compared.")
+        return 2
     offenders = manifest_diff(man_a, man_b, read_allow_list(args.allow_diff))
     if offenders:
         print("REFUSED: the two runs were made from different content. Differences outside the allow-list (%d):" % len(offenders))
@@ -1228,6 +1287,11 @@ def main(argv=None):
     p.add_argument("--target", default="")
     p.add_argument("--request-id", default="")
     p.set_defaults(fn=cmd_prepare)
+
+    p = sub.add_parser("stamp")
+    p.add_argument("run_dir")
+    p.add_argument("--root", required=True)
+    p.set_defaults(fn=cmd_stamp)
 
     p = sub.add_parser("finish")
     p.add_argument("run_dir")
