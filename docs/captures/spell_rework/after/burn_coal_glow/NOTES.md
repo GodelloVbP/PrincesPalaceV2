@@ -14,6 +14,6 @@ Frame verdict (mine, owner gate skipped):
 - Treant (already orange-brown): treant body red channel 76 before, 130-155 burning, breathing visible in
   the numbers; to the eye it is "brighter, hotter", low contrast. Does not fight the spell's own flames.
 - It is a smooth wash, not coal texture or embers; no under-glow on the ground.
-- Burn ending is NOT in any GIF: the scenario never outlasts Burn (still on at the last frame of the
-  3-cast clip), and the tool cannot extend a spell run. Ending is pinned by PlayMode
-  `BurnCoalGlowTests` (beat snapshot, idle refresh, death), not seen in frames.
+- Burn ending: filmed in `baseline/censer_of_embers_treant_held30s_1x.gif` (`-Seconds 30` plays the
+  fight on): glow and badge (2, then 1) hold to about frame 490 of 892, then the treant is bark brown.
+  Also pinned by PlayMode `BurnCoalGlowTests` (beat snapshot, idle refresh, death).

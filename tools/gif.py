@@ -10,7 +10,10 @@ so it can be tested alone (tools/gif_test.py):
               and manifest.json into it
     finish    turn the frames Unity wrote into anim.gif / strip.png, build the
               stance and sheet GIFs (no Unity), collect the still PNGs, and
-              write scenario.json, latest.json and the coverage table
+              write scenario.json, latest.json and the coverage table, then
+              delete frames/ of every run but the newest two (--keep-frames
+              keeps them)
+    trim      the same deletion on its own (--keep <runs>)
     compare   two run directories: content-manifest eligibility (2.6), then
               frame counts and per-frame pixel differences
     framediff two folders of PNGs, for the extraction's preservation gate
@@ -22,6 +25,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -186,7 +190,9 @@ def normalize(raw, skills=None, characters=None):
         out["crop"] = "subject" if kind == "status" else "stage"
     if kind == "status" and out["seconds"] <= 0:
         out["seconds"] = 2.0
-    if kind != "status":
+    if kind not in ("status", "spell"):
+        # A spell's seconds is a floor on the film's length: the fight plays on
+        # after the cast so a status can be filmed running out.
         out["seconds"] = 0.0
     out["key"] = scenario_key(out)
     return dict(sorted(out.items()))
@@ -843,7 +849,6 @@ def find_still(run_dir, scenario):
 
 
 def collect_still(run_dir, scenario, scenario_dir):
-    import shutil
     source = find_still(run_dir, scenario)
     if not source:
         raise ValueError("%s wrote no %s" % (scenario["id"].split("/", 1)[0], scenario["id"].split("/", 1)[1]))
@@ -941,6 +946,40 @@ def run_python_scenario(run_dir, scenario, sdir):
     return result
 
 
+# Frames are the bulk of a run (a 1920x1080 PNG each, thousands per run) and
+# regenerable; anim.gif, strip.png and the JSON are what a reader keeps. Only
+# the newest runs keep theirs, which is all -Compare and -Determinism need.
+FRAME_RUNS_KEPT = 2
+
+
+def trim_frames(runs_root=None, keep=FRAME_RUNS_KEPT):
+    """Deletes frames/ under every run but the newest `keep`. Returns (runs
+    trimmed, bytes freed). Run directories sort by their UTC timestamp prefix."""
+    runs_root = runs_root or RUNS
+    if not os.path.isdir(runs_root):
+        return 0, 0
+    runs = sorted((d for d in os.listdir(runs_root) if os.path.isdir(os.path.join(runs_root, d))), reverse=True)
+    trimmed, freed = 0, 0
+    for name in runs[max(0, keep):]:
+        run = os.path.join(runs_root, name)
+        hit = False
+        for scenario in os.listdir(run):
+            frames = os.path.join(run, scenario, "frames")
+            if os.path.isdir(frames):
+                for root, _dirs, files in os.walk(frames):
+                    freed += sum(os.path.getsize(os.path.join(root, f)) for f in files)
+                shutil.rmtree(frames)
+                hit = True
+        trimmed += hit
+    return trimmed, freed
+
+
+def cmd_trim(args):
+    trimmed, freed = trim_frames(keep=args.keep)
+    print("trimmed frames of %d run(s), freed %.1f GB (kept the newest %d)" % (trimmed, freed / 1e9, args.keep))
+    return 0
+
+
 def cmd_finish(args):
     run_dir = os.path.abspath(args.run_dir)
     request = read_json(os.path.join(run_dir, "request.json"))
@@ -974,6 +1013,10 @@ def cmd_finish(args):
 
     if latest:
         write_json_atomic(LATEST, latest)
+    if not args.keep_frames:
+        trimmed, freed = trim_frames()
+        if trimmed:
+            print("trimmed frames of %d older run(s), freed %.1f GB (-KeepFrames keeps them)" % (trimmed, freed / 1e9))
     print(coverage_table(scenarios, outcomes, skipped=request.get("skipped", []), gaps=request.get("gaps", []),
                          manifest=request.get("manifest", "")))
 
@@ -1060,7 +1103,11 @@ def cmd_compare(args):
         if s["key"] not in keys_b:
             print("  %s %s: not in B" % (s["kind"], s["id"]))
             continue
-        fa, fb = list_frames(os.path.join(run_a, s["key"], "frames")), list_frames(os.path.join(run_b, s["key"], "frames"))
+        fa, fb = list_frames_or_empty(os.path.join(run_a, s["key"], "frames")), list_frames_or_empty(os.path.join(run_b, s["key"], "frames"))
+        if not fa or not fb:
+            print("  %-6s %-22s no frames to compare (trimmed; re-record, or record with -KeepFrames)" % (s["kind"], s["id"]))
+            failed = True
+            continue
         na, nb, worst, tol = compare_series(fa, fb)
         verdict = "ok" if na == nb and worst < PIXEL_LIMIT_PERCENT else "DIFFERS"
         failed |= verdict != "ok"
@@ -1094,7 +1141,12 @@ def main(argv=None):
 
     p = sub.add_parser("finish")
     p.add_argument("run_dir")
+    p.add_argument("--keep-frames", action="store_true")
     p.set_defaults(fn=cmd_finish)
+
+    p = sub.add_parser("trim")
+    p.add_argument("--keep", type=int, default=FRAME_RUNS_KEPT)
+    p.set_defaults(fn=cmd_trim)
 
     p = sub.add_parser("compare")
     p.add_argument("a")

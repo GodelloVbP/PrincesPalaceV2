@@ -1007,6 +1007,47 @@ namespace PrincesPalace.PlayModeTests
             outcome.Frames = frames;
         }
 
+        // THE FIGHT PLAYED ON AFTER A RECORDED CAST until the whole film is at
+        // least `seconds` long, so a status the cast left (Burn, Poison) can be
+        // filmed running out. Whenever the player's turn is back the caster takes
+        // the plain attack (Verb0 and the front plate, the way RecordAttackRound
+        // presses it); the cast would refresh the status it is being filmed
+        // losing. `outcome.NextFrame` is where the film continues, and the
+        // timing file's frame count is rewritten to the new total.
+        public IEnumerator PlayOn(CaptureSink sink, float seconds, CaptureOutcome outcome)
+        {
+            var fight = Fight;
+            int total = Mathf.CeilToInt(seconds * Fps);
+            int frame = outcome.NextFrame;
+            while (frame < total)
+            {
+                if (!fight.IsBusy && !Beats.IsPlaying && fight.SessionForTest.IsPlayerTurn)
+                {
+                    var verb = fight.GetComponentsInChildren<Button>(includeInactive: true)
+                        .FirstOrDefault(b => b.name == "Verb0" && b.gameObject.activeInHierarchy);
+                    if (verb != null)
+                    {
+                        verb.onClick.Invoke();
+                        yield return null;
+                        var plate = fight.GetComponentsInChildren<Button>(includeInactive: true)
+                            .FirstOrDefault(b => b.name == "EnemyPlate0" && b.gameObject.activeInHierarchy);
+                        if (plate != null) plate.onClick.Invoke();
+                    }
+                }
+
+                Render(Canvas, sink.FramePath(frame));
+                frame++;
+                yield return null;
+            }
+
+            string timing = File.ReadAllText(sink.TimingPath);
+            File.WriteAllText(sink.TimingPath,
+                System.Text.RegularExpressions.Regex.Replace(timing, @"""frames"":\d+",
+                    "\"frames\":" + frame.ToString(CultureInfo.InvariantCulture)));
+            outcome.Frames = frame;
+            outcome.NextFrame = frame;
+        }
+
         // ---- drawing probes ----------------------------------------------------
 
         public static bool AnythingDrawn(FightController fight) =>

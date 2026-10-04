@@ -17,6 +17,8 @@ param(
     [string[]]$Compare = @(),
     [string]$AllowDiff = "",
     [int]$Prune = -1,
+    [switch]$TrimFrames,
+    [switch]$KeepFrames,
     [switch]$Stop,
     [switch]$Determinism,
     [switch]$SkipSync
@@ -40,7 +42,14 @@ param(
 #   tools/gif.ps1 -Manifest baseline        (tools/gif_manifests/<name>.json; fight kinds in one boot, still classes in a second)
 #   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]
 #   tools/gif.ps1 spell crownfall -Determinism      (two boots, then -Compare)
-#   tools/gif.ps1 -Prune <days>
+#   tools/gif.ps1 spell censer_of_embers -Vs treant -Seconds 25   (the fight plays on after the cast until the film is 25 s: a status filmed running out)
+#   tools/gif.ps1 -Prune <days>                (deletes whole runs older than that)
+#   tools/gif.ps1 -TrimFrames                  (deletes frames/ of every run but the newest two)
+#
+# FRAMES. A run's frames/ are thousands of 1080p PNGs (tens of GB over a day).
+# Every finished request deletes frames/ of all but the newest two runs, which
+# is what -Compare and -Determinism need; the GIFs, strips and JSON stay.
+# -KeepFrames skips that for one request. Frames are regenerable.
 #
 # The normalizing, id checks, identity and encoding are tools/gif.py; this file
 # owns the Unity launch. It runs in its own project copy, <project>-Capture, with
@@ -93,6 +102,9 @@ if ($Compare.Count -gt 0) {
     if ($AllowDiff) { $cmpArgs += @("--allow-diff", $AllowDiff) }
     exit (Invoke-Gif -GifArgs $cmpArgs)
 }
+if ($TrimFrames) {
+    exit (Invoke-Gif -GifArgs @("trim"))
+}
 if ($Prune -ge 0) {
     $cut = (Get-Date).AddDays(-$Prune)
     $old = @(Get-ChildItem $RunsRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt $cut })
@@ -102,10 +114,10 @@ if ($Prune -ge 0) {
 }
 if (-not $Manifest -and (-not $Kind -or -not $Id)) {
     Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
-    Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism]"
+    Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism] [-KeepFrames]"
     Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]
                      [-Party shawn,odette,bjorn] [-Target <ally|enemy slot>]"
-    Write-Host "       tools/gif.ps1 -Manifest <name>   |   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]   |   tools/gif.ps1 -Prune <days>"
+    Write-Host "       tools/gif.ps1 -Manifest <name>   |   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]   |   tools/gif.ps1 -Prune <days>   |   tools/gif.ps1 -TrimFrames"
     exit 1
 }
 
@@ -174,7 +186,9 @@ function Invoke-FightBatch {
     # deadline is that many scenarios' worth.
     $repeatByKey = @{}
     foreach ($sc in @((Get-Content -LiteralPath $env:PP_GIF_REQUEST -Raw | ConvertFrom-Json).scenarios)) {
-        $repeatByKey[$sc.key] = [math]::Max(1, [int]$sc.repeat)
+        # A spell held on for -Seconds is filmed at a few seconds of battle per
+        # real second at worst, so it earns one more scenario's worth per 5 s.
+        $repeatByKey[$sc.key] = [math]::Max([math]::Max(1, [int]$sc.repeat), 1 + [int][math]::Ceiling([double]$sc.seconds / 5))
     }
     $readyAt = $null
     $lastIndex = -1
@@ -335,7 +349,9 @@ function Invoke-CaptureRun {
 
     if ($failure) { return @{ Ok = $false; RunDir = $runDir; Timing = $timing } }
 
-    $code = Invoke-Gif -GifArgs @("finish", $runDir)
+    $finishArgs = @("finish", $runDir)
+    if ($KeepFrames) { $finishArgs += "--keep-frames" }
+    $code = Invoke-Gif -GifArgs $finishArgs
     $timing.totalSeconds = [math]::Round($swAll.Elapsed.TotalSeconds, 1)
     Write-Host ("TIMING " + (($timing.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " "))
     return @{ Ok = ($code -eq 0); RunDir = $runDir; Timing = $timing }

@@ -35,6 +35,48 @@ class NormalizeTests(unittest.TestCase):
             self.assertNotEqual(base["key"], other["key"], change)
 
 
+class SpellSecondsTests(unittest.TestCase):
+    def test_a_spell_keeps_its_seconds_and_a_cast_without_them_stays_zero(self):
+        held = gif.normalize({"kind": "spell", "id": "bolt", "seconds": 25}, SKILLS)
+        plain = gif.normalize({"kind": "spell", "id": "bolt"}, SKILLS)
+        self.assertEqual((held["seconds"], plain["seconds"]), (25.0, 0.0))
+        self.assertNotEqual(held["key"], plain["key"])
+
+    def test_an_attack_still_drops_seconds(self):
+        self.assertEqual(gif.normalize({"kind": "attack", "id": "rat", "seconds": 9}, SKILLS)["seconds"], 0.0)
+
+
+class TrimFramesTests(unittest.TestCase):
+    def make_run(self, root, name, scenario="abc", frames=3):
+        sdir = os.path.join(root, name, scenario)
+        os.makedirs(os.path.join(sdir, "frames"))
+        for i in range(frames):
+            with open(os.path.join(sdir, "frames", "f%04d.png" % i), "wb") as f:
+                f.write(b"x" * 10)
+        for keep in ("anim.gif", "strip.png", "scenario.json"):
+            with open(os.path.join(sdir, keep), "wb") as f:
+                f.write(b"k")
+
+    def test_only_the_newest_runs_keep_frames_and_everything_else_stays(self):
+        with tempfile.TemporaryDirectory() as root:
+            for name in ("20261001T000000Z_a", "20261002T000000Z_b", "20261003T000000Z_c"):
+                self.make_run(root, name)
+            trimmed, freed = gif.trim_frames(root, keep=2)
+            self.assertEqual((trimmed, freed), (1, 30))
+            self.assertFalse(os.path.isdir(os.path.join(root, "20261001T000000Z_a", "abc", "frames")))
+            self.assertTrue(os.path.isdir(os.path.join(root, "20261002T000000Z_b", "abc", "frames")))
+            self.assertTrue(os.path.isdir(os.path.join(root, "20261003T000000Z_c", "abc", "frames")))
+            self.assertTrue(os.path.isfile(os.path.join(root, "20261001T000000Z_a", "abc", "anim.gif")))
+
+    def test_a_second_trim_and_a_missing_root_are_no_ops(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001T000000Z_a")
+            self.make_run(root, "20261002T000000Z_b")
+            self.assertEqual(gif.trim_frames(root, keep=1)[0], 1)
+            self.assertEqual(gif.trim_frames(root, keep=1), (0, 0))
+            self.assertEqual(gif.trim_frames(os.path.join(root, "nope")), (0, 0))
+
+
 class RefusalTests(unittest.TestCase):
     IDS = {
         "spell": ["bolt"], "allSkills": ["bolt", "plain"], "attack": ["rat"], "enemies": ["rat", "wolf"],

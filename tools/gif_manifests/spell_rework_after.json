@@ -1,0 +1,288 @@
+{
+  "name": "spell_rework_after",
+  "description": "docs/PLAN_SPELL_REWORK.md section 3 (S5): every section-3 capture scenario of the ten spells plus the Burn coal glow, as they play after the rework. Counterpart of spell_rework_before.",
+  "scenarios": [
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat,treant,beetle"
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat",
+      "darkness": 0.9
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat",
+      "aspect": "4:3"
+    },
+    {
+      "kind": "spell",
+      "id": "court_of_whispers",
+      "vs": "rat",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "thorn_tithe",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "thorn_tithe",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "thorn_tithe",
+      "vs": "treant",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "mud_burst",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "mud_burst",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "mud_burst",
+      "vs": "rat,treant,beetle",
+      "target": "3"
+    },
+    {
+      "kind": "spell",
+      "id": "mud_burst",
+      "vs": "treant",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "gale_scythe",
+      "vs": "rat",
+      "formation": "full"
+    },
+    {
+      "kind": "spell",
+      "id": "gale_scythe",
+      "vs": "rat,treant"
+    },
+    {
+      "kind": "spell",
+      "id": "gale_scythe",
+      "vs": "rat",
+      "formation": "lone"
+    },
+    {
+      "kind": "spell",
+      "id": "gale_scythe",
+      "vs": "rat",
+      "formation": "full",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "rat",
+      "darkness": 0.9
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "rat",
+      "aspect": "4:3"
+    },
+    {
+      "kind": "spell",
+      "id": "velvet_shackles",
+      "vs": "treant",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "rat",
+      "preStatus": "Poison"
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "treant",
+      "preStatus": "Poison"
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "rat",
+      "darkness": 0.9
+    },
+    {
+      "kind": "spell",
+      "id": "vipers_bite",
+      "vs": "treant",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "ashen_reckoning",
+      "vs": "rat",
+      "preStatus": "Poison"
+    },
+    {
+      "kind": "spell",
+      "id": "ashen_reckoning",
+      "vs": "treant",
+      "preStatus": "Poison"
+    },
+    {
+      "kind": "spell",
+      "id": "ashen_reckoning",
+      "vs": "rat",
+      "preStatus": "Poison",
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "odette"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "bjorn"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "shawn"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "bjorn",
+      "aspect": "4:3"
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "odette",
+      "vs": "forest_warden",
+      "formation": "full",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "odette"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "bjorn"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "shawn"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "bjorn",
+      "aspect": "4:3"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "odette",
+      "vs": "forest_warden",
+      "formation": "full",
+      "repeat": 3,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "censer_of_embers",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "censer_of_embers",
+      "vs": "treant"
+    },
+    {
+      "kind": "spell",
+      "id": "censer_of_embers",
+      "vs": "rat",
+      "repeat": 4,
+      "speed": 1.5
+    },
+    {
+      "kind": "spell",
+      "id": "censer_of_embers",
+      "vs": "treant",
+      "repeat": 5,
+      "speed": 1.5
+    },
+    {
+      "kind": "status",
+      "id": "Burn",
+      "vs": "rat"
+    },
+    {
+      "kind": "spell",
+      "id": "censer_of_embers",
+      "vs": "treant",
+      "seconds": 30
+    }
+  ]
+}

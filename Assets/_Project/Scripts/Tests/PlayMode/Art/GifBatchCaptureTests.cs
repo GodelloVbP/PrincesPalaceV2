@@ -216,6 +216,7 @@ namespace PrincesPalace.PlayModeTests
                     });
                     if (s.repeat > 1) yield return runner.RecordRepeatedCast(s.id, s.repeat, s.speed, sink, outcome);
                     else yield return runner.RecordCast(s.id, relic: false, s.speed, sink, outcome);
+                    if (s.seconds > 0f) yield return runner.PlayOn(sink, s.seconds, outcome);
                     break;
 
                 case "relic":
