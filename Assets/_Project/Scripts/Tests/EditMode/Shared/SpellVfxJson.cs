@@ -120,7 +120,12 @@ namespace PrincesPalace.Domain.Tests
                 // every fixture built on emitter.weights would check nothing.
                 else if (kind == typeof(float[]))
                 {
-                    var numbers = JsonBlocks.Numbers(scalars, field.Name);
+                    // THE KEY IS FOUND AT THIS BLOCK'S OWN DEPTH (the blanked copy keeps it),
+                    // BUT THE NUMBERS ARE READ FROM THE REAL BLOCK: TopLevelOnly blanks
+                    // everything inside an array, so reading them from `scalars` returned
+                    // null for every weights array and each pin on one checked nothing.
+                    if (!scalars.Contains("\"" + field.Name + "\"")) continue;
+                    var numbers = JsonBlocks.Numbers(block, field.Name);
                     if (numbers == null) continue;
 
                     var floats = new float[numbers.Count];

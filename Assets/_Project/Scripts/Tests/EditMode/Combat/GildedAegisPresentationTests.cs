@@ -64,6 +64,7 @@ namespace PrincesPalace.Domain.Tests
             var trail = vfx.layers.Single(l => l.id == "trail");
             Assert.AreEqual("layer:mote", trail.place);
             Assert.AreEqual(0.2f, trail.emitter.window, 1e-6f, "the length of the flight");
+            CollectionAssert.AreEqual(new[] { 1f, 0f, 0f, 1f }, trail.emitter.weights, "leaves and glints, not the gem or the crescent");
             Assert.AreEqual(5, vfx.layers.Length);
         }
     }

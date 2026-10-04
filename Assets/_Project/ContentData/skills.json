@@ -546,12 +546,7 @@
             "sort": "effects",
             "emitter": {
               "path": "Spells/gilded_aegis_particles",
-              "weights": [
-                1,
-                0,
-                0,
-                1
-              ],
+              "weights": [1, 0, 0, 1],
               "rate": 80,
               "window": 0.2,
               "lateral": 40,
@@ -1554,12 +1549,7 @@
             "sort": "effects",
             "emitter": {
               "path": "Spells/borrowed_moment_particles",
-              "weights": [
-                1,
-                0,
-                0,
-                1
-              ],
+              "weights": [1, 0, 0, 1],
               "burst": 12,
               "spreadDegrees": 120,
               "aimDegrees": 90,
@@ -1957,12 +1947,15 @@
         "hitCueSeconds": 0.3,
         "layers": [
           {
+            "_comment": "The swing: the censer (f0-f4) swings across the target on its chain for 0.3 s, shedding sparks. No fade, so the flame frame replaces it on the cue.",
             "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
             "at": "release",
             "path": "Spells/censer_of_embers",
-            "seconds": 0.6,
+            "startFrame": 1,
+            "fps": 16.667,
+            "seconds": 0.3,
             "until": "once",
             "size": 350,
             "fit": "target",
@@ -1970,12 +1963,32 @@
             "impactY": 0.46,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.16,
-            "glow": 1.18,
-            "fade": 0.14
+            "opacity": 0.9,
+            "glow": 0.5
           },
           {
-            "id": "settle",
+            "_comment": "The payoff: f5, the embers catching in a column of flame, held 0.14 s on the cue with the sound and the Burn badge. The sheet's smoke frames (f6-f9) are dropped: smoke was what kept the spell on screen after its payoff.",
+            "id": "catch",
+            "render": "still",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/censer_of_embers",
+            "startFrame": 6,
+            "seconds": 0.14,
+            "until": "hold",
+            "size": 350,
+            "fit": "target",
+            "impactX": 0.53,
+            "impactY": 0.46,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.2,
+            "glow": 1.6,
+            "fade": 0.08
+          },
+          {
+            "id": "embers",
+            "_comment": "Coals and tongues of flame thrown off the body (particle frames f0, f1, f3; the smoke wisp f2 is excluded). Lifetimes cut to 0.22-0.36 s so the last one clears with the flame.",
             "render": "emitter",
             "place": "target-centre",
             "fit": "target",
@@ -1983,7 +1996,8 @@
             "sort": "effects",
             "emitter": {
               "path": "Spells/censer_of_embers_particles",
-              "burst": 18,
+              "weights": [1, 1, 0, 1],
+              "burst": 16,
               "spreadDegrees": 110,
               "aimDegrees": 80,
               "speedMin": 70,
@@ -1991,8 +2005,8 @@
               "inherit": 0,
               "drag": 1.8,
               "gravity": -480,
-              "lifeMin": 0.35,
-              "lifeMax": 0.7,
+              "lifeMin": 0.22,
+              "lifeMax": 0.36,
               "sizeMin": 0.1,
               "sizeMax": 0.27,
               "spinMin": -180,
@@ -2000,6 +2014,37 @@
               "fadeFrom": 0.55,
               "endScale": 0.72,
               "seed": 1552
+            }
+          },
+          {
+            "id": "lick",
+            "_comment": "Small flames licking up the body just after the catch: the embers have taken hold.",
+            "render": "emitter",
+            "place": "target-centre",
+            "fit": "target",
+            "at": "hit",
+            "offset": 0.05,
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/censer_of_embers_particles",
+              "weights": [0, 0, 0, 1],
+              "burst": 6,
+              "spreadDegrees": 70,
+              "aimDegrees": 90,
+              "speedMin": 20,
+              "speedMax": 60,
+              "inherit": 0,
+              "drag": 1.5,
+              "gravity": 220,
+              "lifeMin": 0.2,
+              "lifeMax": 0.32,
+              "sizeMin": 0.2,
+              "sizeMax": 0.35,
+              "spinMin": -40,
+              "spinMax": 40,
+              "fadeFrom": 0.5,
+              "endScale": 0.6,
+              "seed": 1553
             }
           }
         ]

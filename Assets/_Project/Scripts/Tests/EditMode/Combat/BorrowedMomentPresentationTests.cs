@@ -62,6 +62,7 @@ namespace PrincesPalace.Domain.Tests
 
             var grains = vfx.layers.Single(l => l.id == "grains").emitter;
             Assert.AreEqual(300f, grains.gravity, 1e-6f, "pulls up: the grains quicken");
+            CollectionAssert.AreEqual(new[] { 1f, 0f, 0f, 1f }, grains.weights, "sand and glints, not the swirl or the gear");
             Assert.AreEqual(0.4f, grains.lifeMax, 1e-6f);
         }
 
