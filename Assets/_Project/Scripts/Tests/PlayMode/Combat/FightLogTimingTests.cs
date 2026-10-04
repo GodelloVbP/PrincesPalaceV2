@@ -112,6 +112,35 @@ namespace PrincesPalace.PlayModeTests
                 "the blow landed on a different frame from the cast's cue");
         }
 
+        // A BOUGHT WIND-UP IS PART OF THE CAST'S OWN CLOCK: the cast starts
+        // with the beat, so a pose authored on a Hold (which buys 0.125 s of
+        // hold) must not push the blow 0.125 s past the 0.5 s impact.
+        [UnityTest]
+        public IEnumerator ABoughtWindupDoesNotDelayTheBlowPastTheCastsImpact()
+        {
+            var player = NewPlayer();
+
+            double lineAt = -1.0;
+            player.WireLogForTest(line => lineAt = Time.timeAsDouble,
+                                  b => b.Approach == StageApproach.Hold ? SpellImpactSeconds : 0f);
+
+            var beat = Beat(StageApproach.Hold, 10, CastLine);
+            beat.ActorWindupStance = "overhead";
+
+            Time.captureDeltaTime = SampleSeconds;
+            double start = Time.timeAsDouble;
+            bool finished = false;
+            player.Play(new List<CombatBeat> { beat }, () => finished = true);
+
+            int frames = 0;
+            while (!finished && frames++ < FrameBudget) yield return null;
+            Assert.IsTrue(finished, "the beat never finished");
+
+            Assert.GreaterOrEqual(lineAt - start, SpellImpactSeconds - TimingSlop);
+            Assert.Less(lineAt - start, SpellImpactSeconds + 0.05,
+                "the blow landed after the cast's impact: the wind-up was waited on top of it");
+        }
+
         // EVERY ATTACK, NOT JUST SPELLS: a lunge's line lands on the very
         // frame its contact effect fires, which is the impact frame.
         [UnityTest]

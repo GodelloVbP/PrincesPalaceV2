@@ -93,10 +93,30 @@ namespace PrincesPalace.Domain.Content
 
         // ---- the block as a whole ------------------------------------------------
 
-        // THE LARGEST A GLOOM'S FADES MAY BE, in authored seconds. A fade is a
+        // THE LARGEST A GLOOM'S FADES, THE CASTER'S PRICE HOLD AND THE
+        // DETONATION'S DELAY MAY BE, in authored seconds. Each is a
         // tenth-of-a-second thing; the bound only rules out a number typed in
         // the wrong unit.
         public const float MaxGloomFadeSeconds = 2f;
+
+        // THE LARGEST A DRIFT'S OFFSET MAY BE, in widths or heights of the
+        // layer's own box. A slide of several boxes is a typo for pixels.
+        public const float MaxDriftBoxes = 5f;
+
+        private static void CheckBeatSeconds(string label, SpellPresentation vfx, List<string> problems)
+        {
+            if (vfx.casterCostSeconds < 0f || vfx.casterCostSeconds > MaxGloomFadeSeconds)
+            {
+                problems.Add($"{label}: vfx.casterCostSeconds {Num(vfx.casterCostSeconds)} is outside " +
+                             $"0..{Num(MaxGloomFadeSeconds)} seconds.");
+            }
+
+            if (vfx.detonationSeconds < 0f || vfx.detonationSeconds > MaxGloomFadeSeconds)
+            {
+                problems.Add($"{label}: vfx.detonationSeconds {Num(vfx.detonationSeconds)} is outside " +
+                             $"0..{Num(MaxGloomFadeSeconds)} seconds.");
+            }
+        }
 
         private static void CheckGloom(string label, SpellPresentation vfx, List<string> problems)
         {
@@ -191,6 +211,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             CheckGloom(label, vfx, problems);
+            CheckBeatSeconds(label, vfx, problems);
 
             // THE SAME BOUND CheckPlacement enforces on a layer's impactX/
             // impactY (see its own comment on the incident this closes): a
@@ -236,6 +257,7 @@ namespace PrincesPalace.Domain.Content
 
             CheckWords(at, layer, problems);
             CheckNumbers(at, layer, problems);
+            CheckDrift(at, layer, problems);
             CheckWhatItNeeds(at, layer, problems);
             CheckPlacement(at, layer, problems);
         }
@@ -314,6 +336,50 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at}.orient '{layer.orient}' is not an orientation. " +
                              $"Known: {string.Join(", ", SpellOrientNames.All)}.");
+            }
+        }
+
+        private static void CheckDrift(string at, SpellLayer layer, List<string> problems)
+        {
+            var drift = layer.drift;
+            if (drift == null || !drift.IsAuthored) return;
+
+            // A VALUE THAT IS NOT A NUMBER fails every comparison below, so it
+            // is refused by its own test rather than slipping through them.
+            CheckDriftNumber(at, "fromX", drift.fromX, problems);
+            CheckDriftNumber(at, "toX", drift.toX, problems);
+            CheckDriftNumber(at, "fromY", drift.fromY, problems);
+            CheckDriftNumber(at, "toY", drift.toY, problems);
+            CheckDriftNumber(at, "arcY", drift.arcY, problems);
+
+            if (drift.viaAt < 0f || drift.viaAt >= 1f || float.IsNaN(drift.viaAt))
+            {
+                problems.Add($"{at}.drift.viaAt {Num(drift.viaAt)} is outside 0..1 exclusive; 0 means no waypoint.");
+            }
+            else if (drift.viaAt > 0f)
+            {
+                CheckDriftNumber(at, "viaX", drift.viaX, problems);
+                CheckDriftNumber(at, "viaY", drift.viaY, problems);
+            }
+
+            if (layer.Render == SpellRender.Emitter)
+            {
+                problems.Add($"{at} is an emitter and authors drift, which is inert there: particles are born off " +
+                             "the source and fly their own paths.");
+            }
+            else if (layer.Align == SpellAlign.Flight)
+            {
+                problems.Add($"{at} is laid along a flight and authors drift, which is inert there: the layer is " +
+                             "stretched between the launch and the projectile's tip.");
+            }
+        }
+
+        private static void CheckDriftNumber(string at, string field, float value, List<string> problems)
+        {
+            if (float.IsNaN(value) || value < -MaxDriftBoxes || value > MaxDriftBoxes)
+            {
+                problems.Add($"{at}.drift.{field} {Num(value)} is outside -{Num(MaxDriftBoxes)}..{Num(MaxDriftBoxes)} " +
+                             "box sizes -- drift is in fractions of the layer's own box, not pixels.");
             }
         }
 

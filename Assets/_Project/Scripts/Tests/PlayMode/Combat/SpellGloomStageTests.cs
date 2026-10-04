@@ -113,6 +113,21 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0f, Darkness.color.a, 1e-6f);
         }
 
+        // The stage reads the instant the layers were painted at: a Tick on a
+        // held clock moves GloomAlpha even when the module's own clock has not.
+        [UnityTest]
+        public IEnumerator GloomAlphaFollowsTheClockTickWasGiven()
+        {
+            yield return Load(FightRoundPresentation.None);
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            CastCourt(out float t0);
+            _fight.PerformancePlayerForTest.Tick(t0 + 0.3f);
+
+            Assert.AreEqual(0.35f, _fight.PerformancePlayerForTest.GloomAlpha, 1e-3f,
+                "GloomAlpha read the module's clock (still at the cast's birth) instead of Tick's");
+        }
+
         [UnityTest]
         public IEnumerator AtOnePointFiveXTheGloomRunsOnTheFasterClock()
         {

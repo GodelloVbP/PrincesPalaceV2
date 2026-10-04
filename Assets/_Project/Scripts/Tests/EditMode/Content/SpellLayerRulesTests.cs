@@ -1182,5 +1182,63 @@ namespace PrincesPalace.Domain.Tests
         {
             CollectionAssert.IsEmpty(Problems(SpellLayerFixtures.TwoBurst()));
         }
+
+        // ---- drift ---------------------------------------------------------------
+
+        private static SpellLayer Drifting(SpellDrift drift)
+        {
+            var layer = Sprite();
+            layer.drift = drift;
+            return layer;
+        }
+
+        [Test]
+        public void TheShippedArcIsLegal() =>
+            CollectionAssert.IsEmpty(Problems(With(Drifting(new SpellDrift { arcY = 0.6f }))));
+
+        [Test]
+        public void ADriftWaypointOutsideZeroToOneExclusiveIsRefused()
+        {
+            StringAssert.Contains("drift.viaAt 1 is outside 0..1",
+                Only(With(Drifting(new SpellDrift { toX = 1f, viaAt = 1f }))));
+            StringAssert.Contains("drift.viaAt -0.5 is outside 0..1",
+                Only(With(Drifting(new SpellDrift { toX = 1f, viaAt = -0.5f }))));
+        }
+
+        [Test]
+        public void ADriftOfPixelsWhereBoxFractionsBelongIsRefused()
+        {
+            StringAssert.Contains("drift.toX 80 is outside -5..5",
+                Only(With(Drifting(new SpellDrift { toX = 80f }))));
+            StringAssert.Contains("drift.arcY -9 is outside -5..5",
+                Only(With(Drifting(new SpellDrift { arcY = -9f }))));
+        }
+
+        [Test]
+        public void ADriftOnAnEmitterOrAFlightLayerIsRefusedBecauseItDoesNothingThere()
+        {
+            var emitter = Sprite();
+            emitter.render = "emitter";
+            emitter.emitter = new SpellEmitter { path = "Spells/x", rate = 10f, window = 0.2f };
+            emitter.drift = new SpellDrift { toY = 1f };
+            StringAssert.Contains("is an emitter and authors drift", string.Join(" | ", Problems(With(emitter))));
+
+            var flight = Sprite();
+            flight.align = "flight";
+            flight.drift = new SpellDrift { toY = 1f };
+            StringAssert.Contains("laid along a flight and authors drift", string.Join(" | ", Problems(With(flight))));
+        }
+
+        [Test]
+        public void ACasterCostOrDetonationOutsideZeroToTwoSecondsIsRefused()
+        {
+            var vfx = With(Sprite());
+            vfx.casterCostSeconds = 2.5f;
+            StringAssert.Contains("vfx.casterCostSeconds 2.5 is outside 0..2 seconds", Only(vfx));
+
+            vfx.casterCostSeconds = 0.4f;
+            vfx.detonationSeconds = -1f;
+            StringAssert.Contains("vfx.detonationSeconds -1 is outside 0..2 seconds", Only(vfx));
+        }
     }
 }

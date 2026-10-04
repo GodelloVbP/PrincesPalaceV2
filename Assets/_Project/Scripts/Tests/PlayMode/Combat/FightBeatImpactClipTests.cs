@@ -99,6 +99,33 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, requested.FindAll(c => c == SecondClip).Count);
         }
 
+        // A sweep pops two packets on each of two bodies: the clip is the
+        // beat's, so it plays once, not once per body.
+        [UnityTest]
+        public IEnumerator ASweepOfSplitHitsPlaysTheSecondClipOnceForTheBeat()
+        {
+            var actor = new CombatantState("Actor", true, 300, 30, 40, 10);
+            var first = new CombatantState("First", false, 100, 10, 8, 4);
+            var second = new CombatantState("Second", false, 100, 10, 8, 4);
+            var packets = new[] { new BeatPacket(DamageType.Fire, 6), new BeatPacket(DamageType.Ice, 4) };
+            var beat = new CombatBeat
+            {
+                Actor = actor, Target = first, Amount = 10, Approach = StageApproach.Hold,
+                Results = new List<BeatTargetResult>
+                {
+                    new BeatTargetResult(first, 10, missed: false, packets: packets),
+                    new BeatTargetResult(second, 10, missed: false, packets: packets),
+                },
+            };
+            beat.Vfx.sfxPath = ImpactClip;
+            beat.Vfx.secondSfxPath = SecondClip;
+
+            var requested = new List<string>();
+            yield return Play(beat, actor, first, requested);
+
+            Assert.AreEqual(1, requested.FindAll(c => c == SecondClip).Count);
+        }
+
         [UnityTest]
         public IEnumerator ADetonationPlaysTheSecondClipAfterTheImpactClip()
         {

@@ -1055,12 +1055,19 @@ namespace PrincesPalace
             // so the wind-up just waited out at least this much. Waiting
             // it again here would either do nothing (the common case, no
             // spell) or double an authored spell's own impact delay.
+            //
+            // THE IMPACT DELAY IS MEASURED FROM THE CAST'S START, and PlayVfx
+            // started the cast before the bought wind-up was waited, so the
+            // wind-up is already part of it: only the remainder is still to
+            // wait. Waiting both landed the blow boughtWindup after the
+            // cast's own cue.
             float impact = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
             if (impact > 0f && !staticCharge)
             {
+                impact = Mathf.Max(0f, impact - boughtWindup);
                 if (HitCueCrossed?.Invoke() == null)
                 {
-                    yield return new WaitForSeconds(Scaled(impact));
+                    if (impact > 0f) yield return new WaitForSeconds(Scaled(impact));
                 }
                 else
                 {
@@ -1286,6 +1293,7 @@ namespace PrincesPalace
         {
             if (beat.HasPerTargetResults)
             {
+                bool secondPacket = false;
                 foreach (var result in beat.Results)
                 {
                     // Each result carries its own hit/miss, so the rule the
@@ -1298,12 +1306,16 @@ namespace PrincesPalace
                     if (packets != null)
                     {
                         PopPackets(beat, result.Target, packets, result.Crit);
+                        secondPacket |= packets.Length > 1;
                         continue;
                     }
 
                     PopNumber(beat, result.Target, result.Amount, result.Missed, result.Crit);
                 }
 
+                // THE FIRST PACKET'S SOUND IS THE CUE'S OWN; a later packet on
+                // any target is the beat's second payoff.
+                if (secondPacket) PlaySecondPayoff(beat, StageHitFlash.StaggerSeconds);
                 return;
             }
 
@@ -1311,6 +1323,7 @@ namespace PrincesPalace
             if (single != null)
             {
                 PopPackets(beat, beat.Target, single, beat.Crit);
+                if (single.Length > 1) PlaySecondPayoff(beat, StageHitFlash.StaggerSeconds);
                 return;
             }
 
@@ -1324,16 +1337,6 @@ namespace PrincesPalace
 
         private void PopPackets(CombatBeat beat, CombatantState target, BeatPacket[] packets, bool crit)
         {
-            // THE FIRST PACKET'S SOUND IS THE CUE'S OWN; each later packet is a
-            // payoff of its own and plays the second clip on its own number.
-            if (beat.Vfx != null && !string.IsNullOrEmpty(beat.Vfx.secondSfxPath))
-            {
-                for (int i = 1; i < packets.Length; i++)
-                {
-                    PlayClipAfter(beat.Vfx.secondSfxPath, Scaled(i * StageHitFlash.StaggerSeconds));
-                }
-            }
-
             for (int i = 0; i < packets.Length; i++)
             {
                 var popup = FreePopup();
@@ -1365,7 +1368,17 @@ namespace PrincesPalace
                     delaySeconds: Scaled(delay));
             }
 
-            if (beat.Vfx != null) PlayClipAfter(beat.Vfx.secondSfxPath, Scaled(delay));
+            PlaySecondPayoff(beat, delay);
+        }
+
+        // THE SECOND PAYOFF'S CLIP, ONCE PER BEAT. A sweep pops its packets on
+        // every target and a multi-packet cast pops several per target; the
+        // clip belongs to the beat, so it is scheduled by neither count.
+        // Authored seconds; scaled here.
+        private void PlaySecondPayoff(CombatBeat beat, float seconds)
+        {
+            if (beat.Vfx == null) return;
+            PlayClipAfter(beat.Vfx.secondSfxPath, Scaled(seconds));
         }
 
         private void PlayClipAfter(string path, float seconds)

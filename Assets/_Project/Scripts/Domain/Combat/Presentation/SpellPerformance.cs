@@ -274,6 +274,23 @@ namespace PrincesPalace.Domain.Combat.Presentation
             return instance.From + (instance.To - instance.From) * Eased(instance, seconds);
         }
 
+        // THE LAYER'S SLIDE (SpellLayer.drift) IN PIXELS: the box fractions
+        // DriftAt returns, scaled by the instance's own drawn box and mirrored
+        // with the cast like dx.
+        public static UiVec DriftOffsetOf(SpellLayerInstance instance, float seconds)
+        {
+            var slide = SpellFrameCursor.DriftAt(instance, seconds);
+            return new UiVec(slide.x * instance.Box.X * instance.DrawFacing, slide.y * instance.Box.Y);
+        }
+
+        // WHERE A BODY IS, which is what a follower rides and an emitter is
+        // born off: the flight position plus the body's own drift. The one
+        // function both read, so a root that arcs (Mud Burst's glob) carries
+        // its wake and its drops with it instead of leaving them on the
+        // undrifted line.
+        public static UiVec BodyPositionOf(SpellLayerInstance instance, float seconds) =>
+            PositionOf(instance, seconds) + DriftOffsetOf(instance, seconds);
+
         // HOW FAR ALONG ITS LINE A PROJECTILE IS, 0 to 1, through the same
         // ease PositionOf applies -- the one reading of it, so a layer revealed
         // behind the projectile ends exactly at its tip.

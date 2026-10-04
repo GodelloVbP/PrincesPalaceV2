@@ -241,6 +241,7 @@ namespace PrincesPalace
             cast.Live = true;
             cast.Performance = performance;
             cast.StartedAt = Now();
+            _tickedAt = cast.StartedAt;
             cast.PaceAtStart = pace;
             cast.Cursor = SpellSchedule.BeforeAnything;
             cast.ScheduleCursor = 0;
@@ -301,6 +302,7 @@ namespace PrincesPalace
 
         public void Tick(float now)
         {
+            _tickedAt = now;
             for (int slot = 0; slot < _casts.Count; slot++)
             {
                 if (!_casts[slot].Live) continue;
@@ -324,22 +326,25 @@ namespace PrincesPalace
         // (casts never stack, same as an event and a spell). Read by the fight
         // each frame and composed with the event's darkness there. Aged the
         // way Tick ages a cast: on the cast's own pace, in authored seconds.
-        public float GloomAlpha
-        {
-            get
-            {
-                float now = Now();
-                float alpha = 0f;
-                for (int slot = 0; slot < _casts.Count; slot++)
-                {
-                    var cast = _casts[slot];
-                    if (!cast.Live || cast.Performance == null) continue;
-                    float seconds = (now - cast.StartedAt) * cast.PaceAtStart;
-                    alpha = StageDarkness.Compose(alpha, cast.Performance.GloomAlphaAt(seconds));
-                }
+        public float GloomAlpha => GloomAlphaAt(_tickedAt);
 
-                return alpha;
+        // The clock of the last Tick (or of a cast's birth, if that is later),
+        // not Now(): a test holds the clock through Tick(now), and the stage
+        // must read the instant the layers were painted at.
+        private float _tickedAt;
+
+        internal float GloomAlphaAt(float now)
+        {
+            float alpha = 0f;
+            for (int slot = 0; slot < _casts.Count; slot++)
+            {
+                var cast = _casts[slot];
+                if (!cast.Live || cast.Performance == null) continue;
+                float seconds = (now - cast.StartedAt) * cast.PaceAtStart + ClockSlack;
+                alpha = StageDarkness.Compose(alpha, cast.Performance.GloomAlphaAt(seconds));
             }
+
+            return alpha;
         }
 
         // A VISUAL-ONLY STOP. The cast's gameplay resolved before any of this
@@ -678,19 +683,23 @@ namespace PrincesPalace
             // leftward one, not 118 units in front of it. Its ContentDoc has
             // always said "local offset from the anchor"; the sign was the half
             // that was missing, and the emitter's own sourceDx already did it.
-            var at = SpellPerformance.PositionOf(source, seconds);
+            var at = SpellPerformance.BodyPositionOf(source, seconds);
 
             // `follow`: wherever the anchor body has been moved to since the
             // layer was placed. Read off the root source because a follower's
             // position is its root's; a layer that follows nothing has no
             // delegate and costs one null test.
             if (source.Displacement != null) at = at + source.Displacement();
-            if (!ReferenceEquals(source, instance) && instance.Displacement != null) at = at + instance.Displacement();
 
-            var slide = SpellFrameCursor.DriftAt(instance, seconds);
-            return at + new UiVec(
-                instance.Layer.dx * instance.DrawFacing + slide.x * instance.Box.X * instance.DrawFacing,
-                instance.Layer.dy + slide.y * instance.Box.Y);
+            // A FOLLOWER ADDS ITS OWN DRIFT on top of the root's (already in
+            // BodyPositionOf); a root's is not counted twice.
+            if (!ReferenceEquals(source, instance))
+            {
+                if (instance.Displacement != null) at = at + instance.Displacement();
+                at = at + SpellPerformance.DriftOffsetOf(instance, seconds);
+            }
+
+            return at + new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy);
         }
 
         private void PaintEmitter(Cast cast, int slot, int index, SpellLayerInstance instance, float seconds)
@@ -734,7 +743,7 @@ namespace PrincesPalace
                 // LAID ON THE SOURCE'S LINE OF FLIGHT: turned onto it and
                 // scattered across it, both read off the source's own launch
                 // and aim (zero for an emitter that authors neither).
-                var p0 = SpellPerformance.PositionOf(source, birth)
+                var p0 = SpellPerformance.BodyPositionOf(source, birth)
                          + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy) * fit
                          + SpellEmitterSim.LateralOf(spec, seed, particle, source.FlightFrom, source.FlightTo) * fit;
                 var v0 = SpellEmitterSim.LaunchOf(spec, seed, particle, instance.DrawFacing)
