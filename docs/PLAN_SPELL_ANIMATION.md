@@ -1,6 +1,7 @@
 # Plan: spell animation, from one drawing to layered beats
 
-Rev 1, 2026-10-04. Follows `docs/PLAN_SPELL_REWORK.md` (S0-S5 shipped, owner
+Rev 2, 2026-10-04: answers my own attack on rev 1 and the owner's calls
+(section 6). Follows `docs/PLAN_SPELL_REWORK.md` (S0-S5 shipped, owner
 art wired 79623a1c..87df24b7). Standard: `docs/SPELL_FEEL.md`.
 
 ## 0. Diagnosis
@@ -63,7 +64,14 @@ Every spell, every cast. Each contract has a check (section 4).
 7. **A finish.** Payoff to clean has at least two decaying steps and ends on the
    smallest element (a last ember, a last curl of smoke), like a song's last
    chord, not a cut.
-8. **Payoff on one frame** (unchanged from `SPELL_FEEL.md`): sound, number,
+8. **One art style.** Spell art is the fight's style: the Giant Rat sheet
+   (`Art/Enemies/Giant_rat_sheet.png`): bold outlines, flat cel tones. Art is
+   drawn flat; glow, flicker and darkness are added by the engine.
+9. **Principles, not a template.** Contract 1's four beats are the default;
+   a buff or a point-blank spell may fold anticipation and delivery into one.
+10. **Wind-up by tier.** No spell winds up longer than Blackglass (0.7 s) unless
+   it is above Blackglass's tier.
+11. **Payoff on one frame** (unchanged from `SPELL_FEEL.md`): sound, number,
    badge and accent share a frame.
 
 ## 2. What the engine needs (smallest forms)
@@ -82,6 +90,18 @@ Each is a layer field or a small mechanism, built when the pilot needs it.
 | E8 | Body echo: an afterimage of the struck body's own sprite, offset and tinted, fading (the silhouette mechanism `StageHitFlash` and `StageBurnGlow` already share) | Borrowed's "faster" on the body; Gale's cut | layer kind |
 | E9 | Status visuals on the body: a second user of the Burn coal-glow seam (ward shimmer, haste trail, root cuff, fear shiver). With two users, it becomes a small table | Buffs' presence; the "signature that stays" | Core + scene tree |
 | E10 | Hit-flash coverage cap: the typed hit flash is a rim or partial pulse, never a full flat silhouette | Gale's cyan silhouettes | runtime |
+
+Renderer budget: a formation allows 12 spell layer renderers and the ground
+band 2 (`FightHudSpec`). Every spell's beats are budgeted against that before
+blocking; a spell over budget either shares layers across bodies or the limit is
+raised in its own change.
+
+E5 is prototyped first without engine work: an orbit as two hand-off layers
+(behind = the ground band, dim and small; in front = the effects band). E5 is
+built only if that prototype fails on a full rack.
+
+E10 is scoped to spells: a spell opts its hit flash down to a rim. Melee and
+enemy hit flashes are untouched.
 
 E5 is the one cross-layer change (Domain tree, Core runtime, scene generation).
 It goes to `senior` with `Escalation: cross-layer`.
@@ -114,16 +134,13 @@ Prompts are written after the spell is blocked with stand-ins, as before.
 - Art: the courtier v2 still (in hand); optionally a back-view courtier for the
   far arc; a smoke-wisp particle.
 
-**Viper's Bite.** Fast: about 0.4 s.
+**Viper's Bite.** Fast: about 0.4 s. No snake head (owner: it looks bad).
 - Anticipation: two eye-glints open in the dark beside the target.
-- Delivery: the head rises from behind the target (E5 back band), coils back
-  (E1) and strikes down.
-- Payoff: the jaws snap shut on the body, with the fangs, number and Poison
-  badge on the cue.
+- Delivery and payoff: jaws form on the body and snap shut (the old jaws sheet),
+  with the fangs, number and Poison badge on the cue.
 - Resolution: venom drips down the body; green mist fades.
 - Detonation (if Poison was there): the painted burst, kept.
-- Art: a head striking downward with the mouth closing (new still); the jaws
-  closing on the target, reusing the old sheet if it still fits.
+- Art: none new; the old jaws sheet, redrawn in the rat style later.
 
 **Thorn Tithe.**
 - Anticipation: the soil cracks at the feet, with a dust puff.
@@ -191,20 +208,24 @@ the feet fades.
 
 | Phase | Lands | Gate |
 |---|---|---|
-| A0 | E2 fade-in, E3 scale over life, E4 breathe, E10 hit-flash cap, the three `spell_feel` WARNs | tests; I watch the GIFs |
-| A1 | E1 rotate and pendulum; E7 frame registration | tests; I watch the GIFs |
-| A2 | Pilot Censer: blocked from existing pieces, then the art prompts | owner reviews the GIFs |
-| A3 | E5 depth bands (senior, cross-layer), then E6 orbit | tests; scene build; I watch the GIFs |
+| A0 | E1 rotate and pendulum, E2 fade-in, E4 breathe: only what the Censer needs | tests; I watch the GIFs |
+| A1 | Pilot Censer blocked with stand-ins, shown to the owner within a day; then the owner's art (`docs/prompts/2026-10-04_spell_animation.md`) | owner reviews the GIFs |
+| A2 | E3 scale over life, E7 frame registration, E10 spell hit-flash cap, the `spell_feel` WARNs (coverage = effect pixels over the body's silhouette on the hit frame) | tests; I watch the GIFs |
+| A3 | E6 orbit on the two-layer prototype; E5 only if that fails (senior, cross-layer) | tests; I watch the GIFs |
 | A4 | Pilot Court on E5/E6; Ashen's finish | owner reviews |
 | A5 | Viper, Thorn, Shackles, Gale, Mud, one at a time, in that order (worst first) | owner, per spell |
-| A6 | E8 body echo and E9 status visuals; Aegis and Borrowed | owner |
+| A6 | E8 body echo; Aegis and Borrowed | owner |
+| Later | E9 lasting status visuals (ward glint, haste trail, root cuff); the cel-style redraw of today's painted stills | owner |
 
 The owner reviews after each pilot. A6 waits for A2 and A4 to be accepted.
 
-## 6. Open owner calls
+## 6. Owner calls
 
-1. The Censer's fire: a painted 4-6 frame flame loop (better), or generated
-   flames first?
-2. Viper: a new painted "strike from above" head still, or reuse the old jaws
-   closing on the target and keep the painted burst only?
-3. Wind-up lengths of 0.4-0.9 s mean recut cast sounds. OK to recut them?
+Answered 2026-10-04:
+1. Style: the fight's style, the Giant Rat sheet (contract 8).
+2. The Censer fire: the owner tries a painted flame loop; it gets a glow,
+   flicker and gloom pass in the engine.
+3. Viper: no head.
+
+Open: recutting cast sounds for wind-ups longer than 0.3 s (capped by tier,
+contract 10).
