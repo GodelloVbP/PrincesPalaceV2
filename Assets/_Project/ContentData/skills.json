@@ -1208,7 +1208,7 @@
           },
           {
             "id": "settle",
-            "_comment": "Embers, rock and ash thrown by the fire, with the second packet.",
+            "_comment": "Embers, flame tongues and ash thrown by the fire, with the second packet (the censer's particle frames f0, f2, f3: coal, ash wisp, flame; no rock).",
             "render": "emitter",
             "place": "target-centre",
             "fit": "target",
@@ -1216,10 +1216,10 @@
             "offset": 0.05,
             "sort": "effects",
             "emitter": {
-              "path": "Spells/ashen_reckoning_particles",
+              "path": "Spells/censer_of_embers_particles",
               "weights": [
-                0,
                 1,
+                0,
                 1,
                 1
               ],

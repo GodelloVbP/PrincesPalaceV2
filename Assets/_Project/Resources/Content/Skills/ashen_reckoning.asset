@@ -389,7 +389,7 @@ MonoBehaviour:
         artDegrees: 0
         through: 0
         emitter:
-          path: Spells/ashen_reckoning_particles
+          path: Spells/censer_of_embers_particles
           rate: 0
           burst: 14
           window: 0
@@ -414,8 +414,8 @@ MonoBehaviour:
           endScale: 0.72
           seed: 1455
           weights:
-          - 0
           - 1
+          - 0
           - 1
           - 1
       layerFormat: 1

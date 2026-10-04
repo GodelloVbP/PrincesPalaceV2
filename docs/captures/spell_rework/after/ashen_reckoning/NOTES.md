@@ -22,7 +22,7 @@ file. Owner gates skipped; the calls below are mine.
 |---|---|
 | 0.00-0.30 | **Converge.** The target's own venom (f0-f4) streams in and spirals onto a forming coal. Opacity 0.85, glow 0.3, gone on the cue (no fade). |
 | 0.30 | **First packet (Poison).** Sound (`ashen_reckoning_impact`), "-5", the Vulnerable badge, and the accent: the painted catch (`catch`, one still, `ashen_reckoning_catch` recipe, `green-soft`), tinted `#D8FF98`, 340 box, punch 0.3, glow 1.0, 0.12 s then a 0.2 s fade; 8 venom drops. |
-| 0.35 | **Second packet (Fire), one stagger step later.** "-7", the second sound (`censer_of_embers_impact`), and `flare`: the same still, 400 box, opacity 0.8, punch 0.4, glow 1.8, 0.08 s then a 0.2 s fade over the catch; 14 embers, rock and ash. The poison catching fire is one drawing flaring, not a second drawing. |
+| 0.35 | **Second packet (Fire), one stagger step later.** "-7", the second sound (`censer_of_embers_impact`), and `flare`: the same still, 400 box, opacity 0.8, punch 0.4, glow 1.8, 0.08 s then a 0.2 s fade over the catch; 14 embers, ash wisps and flame tongues (the censer's particle frames f0, f2, f3; the ashen sheet's rocks are no longer thrown). The poison catching fire is one drawing flaring, not a second drawing. |
 
 ## Measured (spell_feel, 60 fps, with Poison)
 
@@ -58,6 +58,4 @@ Verdict: **passes**, better than the stand-ins. Green venom winds onto a coal, a
 burst of green flame with orange tips opens with the green number, and 50 ms later the
 same burst flares with the orange number. Weak spots: with the tint the green is a
 flat emerald, not the toxic yellow-green of the venom frames before it; the burst is
-large for a rat and reads as an explosion more than as vapour igniting; the rock in the
-`settle` emitter (cells 13-16 of the old atlas) still flies out and is the one leftover
-of the old fireball.
+large for a rat and reads as an explosion more than as vapour igniting.

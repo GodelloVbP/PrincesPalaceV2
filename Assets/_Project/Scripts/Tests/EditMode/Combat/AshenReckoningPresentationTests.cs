@@ -58,5 +58,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.05f, vfx.layers.Single(l => l.id == "settle").offset, 1e-6f);
             Assert.AreEqual(0.62f, vfx.layers.Single(l => l.id == "settle").emitter.lifeMax, 1e-6f);
         }
+
+        [Test]
+        public void TheFireThrowsEmbersFlameAndAshAndNoRock()
+        {
+            var settle = Ashen().layers.Single(l => l.id == "settle").emitter;
+            Assert.AreEqual("Spells/censer_of_embers_particles", settle.path,
+                "the ashen sheet's f1 and f2 are rocks");
+            CollectionAssert.AreEqual(new[] { 1f, 0f, 1f, 1f }, settle.weights, "coal, ash wisp, flame tongue; not the lava rock f1");
+
+            var drops = Ashen().layers.Single(l => l.id == "drops").emitter;
+            Assert.AreEqual("Spells/ashen_reckoning_particles", drops.path, "the venom drop stays on the first packet");
+            CollectionAssert.AreEqual(new[] { 1f, 0f, 0f, 0f }, drops.weights);
+        }
     }
 }
