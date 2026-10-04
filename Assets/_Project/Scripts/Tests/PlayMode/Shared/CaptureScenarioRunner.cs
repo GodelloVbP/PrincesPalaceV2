@@ -653,8 +653,7 @@ namespace PrincesPalace.PlayModeTests
                 }
                 else
                 {
-                    fight.ForceFirstAction(spellId);
-                    if (AimedTarget != null) fight.ForceFirstActionTarget(AimedTarget);
+                    fight.ForceFirstAction(spellId, target: AimedTarget);
 
                     float armed = Time.realtimeSinceStartup;
                     while (!fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;

@@ -13,9 +13,10 @@ namespace PrincesPalace
     // the beat Burn lands, whoever applied it, and goes on the beat Burn ends
     // or the body dies. Nothing here knows about a spell.
     //
-    // Shares StageHitFlash's silhouette mechanism and material (UIHitFlash keeps
-    // the sprite's alpha and replaces its RGB), and sits UNDER the hit flash in
-    // the slot so a blow still lights the figure white over the embers.
+    // Shares StageHitFlash's silhouette mechanism (SilhouetteLayout) but draws
+    // with its own additive, bottom-weighted material (UIBurnGlow, built by
+    // PipelineBuilder), and sits UNDER the hit flash in the slot so a blow
+    // still lights the figure white over the embers.
     //
     // Follows the figure's pose itself, in LateUpdate, from the sprite Image it
     // shadows: the flash is re-synced by the stage repaint, but a status glow
@@ -82,12 +83,7 @@ namespace PrincesPalace
                 {
                     gameObject.SetActive(true);
                     _level = 0f;
-                    if (image != null)
-                    {
-                        var dark = Ember;
-                        dark.a = 0f;
-                        image.color = dark;
-                    }
+                    if (image != null) image.color = EmberAt(0f);
                 }
 
                 if (image != null) image.enabled = true;
@@ -104,10 +100,15 @@ namespace PrincesPalace
             _level = 0f;
             if (image == null) return;
 
-            var colour = Ember;
-            colour.a = 0f;
-            image.color = colour;
+            image.color = EmberAt(0f);
             image.enabled = false;
+        }
+
+        public static Color EmberAt(float alpha)
+        {
+            var colour = Ember;
+            colour.a = alpha;
+            return colour;
         }
 
         // The alpha for a rise level and a clock reading, pure so it can be
@@ -133,27 +134,32 @@ namespace PrincesPalace
                 return;
             }
 
-            var colour = Ember;
-            colour.a = AlphaAt(_level, clock + _phase);
-            image.color = colour;
+            image.color = EmberAt(AlphaAt(_level, clock + _phase));
         }
 
-        // Copies the figure's current drawing, flip and ground offset: the same
-        // four things SyncHitFlash carries onto the flash, and for the same
-        // reason (a silhouette in another pose, or standing elsewhere, is worse
-        // than none).
+        // Copies the figure's current drawing, flip and ground offset (see
+        // SilhouetteLayout), and only when the figure moved on from the last
+        // copy: most frames it has not.
+        private Sprite _syncedSprite;
+        private Vector3 _syncedScale;
+        private Vector2 _syncedMin, _syncedMax;
+        private bool _synced;
+
         internal void Sync()
         {
             if (image == null || source == null) return;
 
-            image.sprite = source.sprite;
-            image.preserveAspect = source.preserveAspect;
-
-            var rect = image.rectTransform;
             var from = source.rectTransform;
-            rect.localScale = from.localScale;
-            rect.offsetMin = from.offsetMin;
-            rect.offsetMax = from.offsetMax;
+            if (_synced && _syncedSprite == source.sprite && _syncedScale == from.localScale
+                && _syncedMin == from.offsetMin && _syncedMax == from.offsetMax) return;
+
+            image.sprite = source.sprite;
+            SilhouetteLayout.Copy(source, image, from.localScale);
+            _syncedSprite = source.sprite;
+            _syncedScale = from.localScale;
+            _syncedMin = from.offsetMin;
+            _syncedMax = from.offsetMax;
+            _synced = true;
         }
 
         private void LateUpdate()

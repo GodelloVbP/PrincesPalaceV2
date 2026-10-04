@@ -47,7 +47,7 @@ public static class PipelineBuilder
             AssignToGraphicsAndQuality(existingPipeline);
 
             BuildVolumeProfile();
-            BuildHitFlashMaterial();
+            BuildSilhouetteMaterials();
 
             // Repaired on the EXISTING asset too, not only on a fresh build.
             // The defect below shipped into the committed Renderer2D, so a
@@ -231,13 +231,13 @@ public static class PipelineBuilder
     // bottom-weighted shader (StageBurnGlow).
     public const string BurnGlowMaterialPath = "Assets/_Project/Resources/Materials/UIBurnGlow.mat";
 
-    private static void BuildHitFlashMaterial()
+    private static void BuildSilhouetteMaterials()
     {
-        BuildSilhouetteMaterial("Assets/_Project/Resources/Shaders/UIHitFlash.shader", HitFlashMaterialPath);
-        BuildSilhouetteMaterial("Assets/_Project/Resources/Shaders/UIBurnGlow.shader", BurnGlowMaterialPath);
+        BuildSilhouetteMaterial("hit flash", "Assets/_Project/Resources/Shaders/UIHitFlash.shader", HitFlashMaterialPath);
+        BuildSilhouetteMaterial("burn glow", "Assets/_Project/Resources/Shaders/UIBurnGlow.shader", BurnGlowMaterialPath);
     }
 
-    private static void BuildSilhouetteMaterial(string shaderPath, string materialPath)
+    private static void BuildSilhouetteMaterial(string label, string shaderPath, string materialPath)
     {
         // LOADED BY PATH, not Shader.Find.
         //
@@ -254,7 +254,7 @@ public static class PipelineBuilder
         var shader = AssetDatabase.LoadAssetAtPath<Shader>(shaderPath);
         if (shader == null)
         {
-            Debug.LogWarning($"[PipelineBuilder] No shader at {shaderPath}; the overlay will degrade to nothing.");
+            Debug.LogWarning($"[PipelineBuilder] No shader at {shaderPath}; the {label} overlay will degrade to nothing.");
             return;
         }
 

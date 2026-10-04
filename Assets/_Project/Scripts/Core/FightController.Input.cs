@@ -280,8 +280,14 @@ namespace PrincesPalace
         // for SKILL, OnRowPressed for the row, OnEnemyPressed to confirm a
         // target when the skill needs one. If any of them refuses, the refusal
         // is the session's own message and the author reads it in the log.
-        private string _forcedFirstAction;
-        private string _forcedElement;
+        private ForcedAction _forced;
+
+        private sealed class ForcedAction
+        {
+            public string Skill;
+            public string Element;
+            public CombatantState Target;
+        }
 
         // Set by FightBootstrap from DevForcedFirstAction. Public because the
         // headless capture fixture is in the PlayMode assembly, which reaches
@@ -290,23 +296,25 @@ namespace PrincesPalace
         // `element` is tools/preview.ps1 -Element, already validated against
         // the skill's own elements[] by PreviewFight.ForSpell. Null keeps the
         // first-that-draws rule.
-        public void ForceFirstAction(string skillId) => ForceFirstAction(skillId, null);
-
-        public void ForceFirstAction(string skillId, string element)
+        //
+        // `target` is WHO THE PRESS CONFIRMS ON, when the fight's author cares:
+        // the one combatant, enemy or ally, the pick lands on. Null keeps the
+        // first-reachable / first-eligible rule. A target the cast refuses (out
+        // of reach, not eligible) falls back to that rule and says so in the
+        // log, so a capture of the wrong body is never silent.
+        //
+        // The three are one request, consumed together.
+        public void ForceFirstAction(string skillId, string element = null, CombatantState target = null)
         {
-            _forcedFirstAction = string.IsNullOrWhiteSpace(skillId) ? null : skillId;
-            _forcedElement = string.IsNullOrWhiteSpace(element) ? null : element;
+            _forced = string.IsNullOrWhiteSpace(skillId)
+                ? null
+                : new ForcedAction
+                {
+                    Skill = skillId,
+                    Element = string.IsNullOrWhiteSpace(element) ? null : element,
+                    Target = target,
+                };
         }
-
-        // WHO THE FORCED PRESS CONFIRMS ON, when the fight's author cares: the
-        // one combatant, enemy or ally, the pick lands on. Null keeps the
-        // first-reachable / first-eligible rule. Consumed with the action. A
-        // target the cast refuses (out of reach, not eligible) falls back to
-        // that rule and says so in the log, so a capture of the wrong body is
-        // never silent.
-        private CombatantState _forcedTarget;
-
-        public void ForceFirstActionTarget(CombatantState target) => _forcedTarget = target;
 
         // The bark lines this fight has shown, newest last. Read by
         // ForcedFirstActionElementTests, which has to prove the forced path
@@ -323,20 +331,18 @@ namespace PrincesPalace
         // where this waits too.
         private void TryForcedFirstAction()
         {
-            if (_forcedFirstAction == null || !CanAct) return;
+            if (_forced == null || !CanAct) return;
 
-            string skillId = _forcedFirstAction;
-            string element = _forcedElement;
-            var aimed = _forcedTarget;
-            _forcedTarget = null;
+            string skillId = _forced.Skill;
+            string element = _forced.Element;
+            var aimed = _forced.Target;
 
             // CONSUMED BEFORE THE PRESS, not after. A skill the caster cannot
             // afford leaves OnRowPressed refusing every frame otherwise, which
-            // is a hang rather than a report. The element goes with it: a
+            // is a hang rather than a report. Element and target go with it: a
             // request half-consumed would press the asked-for element on
             // whatever cast the next refusal let through.
-            _forcedFirstAction = null;
-            _forcedElement = null;
+            _forced = null;
 
             var options = SkillOptions(_session.Current);
             int row = -1;
@@ -1124,6 +1130,10 @@ namespace PrincesPalace
             LeaveFight();
         }
 
+        private bool _left;
+
+        public void LeaveFightForTest() => LeaveFight();
+
         // Leaving the fight for good. Called by the fight's own Continue on a
         // defeat, and by the Reckoning's on a victory -- ONE exit, so the two
         // paths cannot drift into disagreeing about where a fight goes next.
@@ -1134,10 +1144,6 @@ namespace PrincesPalace
         //
         // IDEMPOTENT: Continue then Cancel in one frame reach here twice, and
         // the second Navigation.Go would queue a second scene load.
-        private bool _left;
-
-        public void LeaveFightForTest() => LeaveFight();
-
         internal void LeaveFight()
         {
             if (_left) return;
