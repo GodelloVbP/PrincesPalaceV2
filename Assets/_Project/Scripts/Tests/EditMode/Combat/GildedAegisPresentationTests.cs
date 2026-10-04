@@ -58,6 +58,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.4f, vfx.layers.Single(l => l.id == "settle").emitter.lifeMax, 1e-6f);
         }
 
+        // spell_feel's contact check: the biggest rise after release must be the lock's frame
+        // (docs/SPELL_FEEL.md). The shards and the mote are dim so the close is a build, and
+        // the bloom ring flares for 0.08 s on the cue around the lock, clear of the ally's face.
+        [Test]
+        public void TheCloseIsDimAndTheLocksBloomIsTheCastsPeak()
+        {
+            var vfx = Aegis();
+            var shards = vfx.layers.Single(l => l.id == "ritual");
+            Assert.AreEqual(0.5f, shards.opacity, 1e-6f);
+            Assert.AreEqual(0f, shards.glow, 1e-6f);
+            Assert.AreEqual(0.8f, vfx.layers.Single(l => l.id == "mote").glow, 1e-6f);
+
+            var flash = vfx.layers.Single(l => l.id == "flash");
+            Assert.AreEqual("hit", flash.at);
+            Assert.AreEqual(0f, flash.offset, 1e-6f, "on the lock's frame");
+            Assert.AreEqual("Spells/aegis_bloom", flash.path);
+            Assert.AreEqual(3.0f, flash.glow, 1e-6f);
+            Assert.AreEqual(0.08f, flash.seconds, 1e-6f);
+            Assert.AreEqual(0.12f, flash.fade, 1e-6f);
+            Assert.Less(flash.seconds + flash.fade, vfx.layers.Single(l => l.id == "lock").seconds,
+                "the flash is gone before the lock's hold ends");
+        }
+
         [Test]
         public void TheTrailRidesTheMoteAndNoLayerIsNeedlesslyLong()
         {
@@ -66,7 +89,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("layer:mote", trail.place);
             Assert.AreEqual(0.2f, trail.emitter.window, 1e-6f, "the length of the flight");
             CollectionAssert.AreEqual(new[] { 1f, 0f, 0f, 1f }, trail.emitter.weights, "leaves and glints, not the gem or the crescent");
-            Assert.AreEqual(5, vfx.layers.Length);
+            Assert.AreEqual(6, vfx.layers.Length);
         }
     }
 }

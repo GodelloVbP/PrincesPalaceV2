@@ -56,6 +56,20 @@ class AegisMote(unittest.TestCase):
         self.assertGreater(int(tail[1]), int(tail[2]))
 
 
+class AegisBloom(unittest.TestCase):
+    def test_deterministic_gold_ring_with_a_clear_centre(self):
+        a, b = fx.aegis_bloom(), fx.aegis_bloom()
+        self.assertEqual(hashlib.sha256(a.tobytes()).hexdigest(),
+                         hashlib.sha256(b.tobytes()).hexdigest())
+        self.assertEqual(a.shape, (256, 256, 4))
+        self.assertLess(int(a[128, 128, 3]), 8, "the ally's face stays clear")
+        self.assertGreater(int(a[128, 128 + 92, 3]), 200, "the ring")
+        self.assertEqual(int(a[2, 2, 3]), 0)
+        ring = a[128, 128 + 92]
+        self.assertGreater(int(ring[0]), int(ring[1]), "gold, never blue or green")
+        self.assertGreater(int(ring[1]), int(ring[2]))
+
+
 class MudPieces(unittest.TestCase):
     def test_deterministic(self):
         for name in ("mud_splat_drops",):

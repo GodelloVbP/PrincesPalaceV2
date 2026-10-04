@@ -22,8 +22,8 @@ skipped; the calls below are mine.
 | t | Beat |
 |---|---|
 | 0.00-0.20 | **Delivery.** A white-gold mote (procedural, soft comet tail) flies from Shawn's middle to the ally's middle, shedding gilt leaves and glints. |
-| 0.10-0.30 | **Encasing.** The four shards (f0-f4) close around the ally at 25 fps, dim (opacity 0.85, glow 0.3); the last drawing ends on the cue, no fade. |
-| 0.30 | **Payoff.** The painted lock (a closed ring of gold plates with a crown and a halo, centre open) on the cue with the sound (`gilded_aegis_impact`), the ward bar and the ward icon on the ally's plate, and the log line "Shawn wraps <ally> in the fleece." 440 box, punch 0.3, glow 1.7. The leaf burst opens. |
+| 0.10-0.30 | **Encasing.** The four shards (f0-f4) close around the ally at 25 fps, dim (opacity 0.5, glow 0; the mote's glow is 0.8); the last drawing ends on the cue, no fade. |
+| 0.30 | **Payoff.** The painted lock (a closed ring of gold plates with a crown and a halo, centre open) on the cue with the sound (`gilded_aegis_impact`), the ward bar and the ward icon on the ally's plate, and the log line "Shawn wraps <ally> in the fleece." 440 box, punch 0.3, glow 1.7, with `flash`: a soft gold ring (`aegis_bloom`, `tools/make_spell_fx.py`, clear centre) around the lock, 560 box, glow 3.0, 0.08 s then a 0.12 s fade. The leaf burst opens. |
 | 0.30-0.70 | **Settle.** The lock is held 0.22 s and fades over 0.18 s; the last leaf clears at 0.4 s. |
 
 ## Measured (spell_feel vs rat, presentation-only; 60 fps)
@@ -33,11 +33,13 @@ skipped; the calls below are mine.
 | cast start to payoff | 0.30 s (f18) | 0.20 s (f12) |
 | payoff to clean | 0.38 s | 0.25 s |
 
-At 1x `spell_feel` WARNs "contact desync": its biggest brightening is f13 (the mote
-arriving as the shards close, peak 3.0), five frames before the lock on f18. The lock is an
-outline with an open centre, so it adds less light than the shards it replaces. 1.5x has no
-warnings. Not tuned further: raising the lock's glow past 1.7 haloed the ally. The hold was
-cut from 0.32 s (the old sheet) to 0.22 s so payoff to clean is 0.4 s as before.
+`spell_feel` at 1x and 1.5x: no warnings, contact f18 / f12 and the visual contact on the same
+frame. The lock frame is the cast's peak (3.07 over a typical 2.02 at 1x; 4.45 over 3.40 at
+1.5x). Before 2026-10-04 the mote arriving as the shards closed (f13, peak 3.0) outshone the
+lock (f18), which is an outline with an open centre. The shards and mote are now dim, so the
+close is a build, and the bloom ring is the one big rise on the cue. The face stays visible
+(the ring is narrow inside). The hold was cut from 0.32 s (the old sheet) to 0.22 s so payoff
+to clean is 0.4 s as before.
 
 ## Frame notes
 

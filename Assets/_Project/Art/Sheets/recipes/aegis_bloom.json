@@ -1,0 +1,7 @@
+{
+  "_notes": [
+    "Gilded Aegis: the soft gold ring that flashes around the ally as the lock closes. Procedural, not sliced: tools/make_spell_fx.py aegis_bloom writes this folder directly, deterministic and pinned by tools/make_spell_fx_test.py. This file records provenance for SpellVfxRecipeDriftTests; slice_spell_sheet.py has no sheet to cut for it."
+  ],
+  "generator": "tools/make_spell_fx.py aegis_bloom",
+  "names": ["f0"]
+}

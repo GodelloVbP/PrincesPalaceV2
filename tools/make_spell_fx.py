@@ -22,6 +22,11 @@ aegis_mote: one 256x256 frame, a white-gold orb right of centre with a short com
     tail trailing left. Gilded Aegis' delivery: the ward flies from Shawn to the
     ally as a mote before the shards close around them. Warm gold, so it reads as
     the shield's own light and not as a spark of fire.
+
+aegis_bloom: one 256x256 frame, a soft gold ring (clear centre) that sits just outside
+    the painted lock. Gilded Aegis' closing flash: it lights a wide band around the
+    ally for a few frames so the lock reads as the cast's peak, while the ally's
+    face stays clear.
 """
 
 import argparse
@@ -91,6 +96,23 @@ def aegis_mote():
     return _rgba(rgb, alpha)
 
 
+def aegis_bloom():
+    """RGBA uint8, SIZE x SIZE: gold ring peaking at r = 0.36 * SIZE, clear centre."""
+    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(np.float64)
+    r = np.hypot(xs - (SIZE - 1) / 2.0, ys - (SIZE - 1) / 2.0)
+    # Narrow inside the ring (the face stays clear), wide outside (the flash).
+    width = np.where(r < 0.36 * SIZE, 0.06, 0.15) * SIZE
+    ring = np.exp(-((r - 0.36 * SIZE) / width) ** 2)
+    alpha = np.clip(1.0 * ring, 0.0, 1.0) * np.clip((SIZE / 2.0 - r) / 10.0, 0.0, 1.0)
+    heat = np.clip(ring, 0.0, 1.0) ** 2
+    rgb = np.stack([
+        236 + 19 * heat,
+        168 + 80 * heat,
+        64 + 130 * heat,
+    ], axis=-1)
+    return _rgba(rgb, alpha)
+
+
 def _blob_mask(shape, circles, wobble, seed):
     """Soft 0..1 coverage of a union of (x, y, r) circles with a sinusoidal
     boundary wobble; the phases come from `seed` so a rerun is identical."""
@@ -148,6 +170,7 @@ def mud_drop_crumb():
 PIECES = {
     "court_price_pulse": [court_price_pulse],
     "aegis_mote": [aegis_mote],
+    "aegis_bloom": [aegis_bloom],
     "mud_splat_drops": [mud_drop_round, mud_drop_long, mud_drop_tear, mud_drop_crumb],
 }
 
