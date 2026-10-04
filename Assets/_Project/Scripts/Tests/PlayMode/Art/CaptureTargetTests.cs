@@ -40,5 +40,28 @@ namespace PrincesPalace.PlayModeTests
         {
             Assert.IsNull(CaptureScenarioRunner.ResolveTarget(Build(), ""));
         }
+
+        private static CaptureStandRequest Ask(string target, params string[] party) =>
+            new CaptureStandRequest { Party = party, Target = target };
+
+        [Test]
+        public void AWardIsARealCastOnWhoeverIsChosen()
+        {
+            var skill = PreviewFight.ForSpell("gilded_aegis").Skill;
+
+            Assert.IsTrue(CaptureScenarioRunner.AllyCastIsReal(skill, Ask("owl", "sheep", "owl", "bear")));
+            Assert.IsTrue(CaptureScenarioRunner.AllyCastIsReal(skill, Ask("sheep", "sheep")));
+            Assert.IsTrue(CaptureScenarioRunner.AllyCastIsReal(skill, Ask(null)));
+        }
+
+        [Test]
+        public void AHastenIsRealOnlyOnAnAllyBecauseTheCasterIsAlreadyNext()
+        {
+            var skill = PreviewFight.ForSpell("borrowed_moment").Skill;
+
+            Assert.IsTrue(CaptureScenarioRunner.AllyCastIsReal(skill, Ask("bear", "sheep", "owl", "bear")));
+            Assert.IsFalse(CaptureScenarioRunner.AllyCastIsReal(skill, Ask("sheep", "sheep", "owl", "bear")));
+            Assert.IsFalse(CaptureScenarioRunner.AllyCastIsReal(skill, Ask(null, "sheep", "owl", "bear")));
+        }
     }
 }

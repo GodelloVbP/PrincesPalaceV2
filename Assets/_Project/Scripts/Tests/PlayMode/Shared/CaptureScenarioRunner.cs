@@ -179,9 +179,9 @@ namespace PrincesPalace.PlayModeTests
         private void Render(Canvas canvas, string path) =>
             CanvasCapture.RenderToFile(canvas, path, Width, Height, fitReference: true);
 
-        // TRUE WHEN PreviewStage REFUSED THE EFFECT (Ward, Reclaim, Hasten,
-        // Reposition: each needs a talent, a status or a turn schedule the stage
-        // will not fake). The cast is then played through the module directly,
+        // TRUE WHEN PreviewStage REFUSED THE EFFECT and the scenario does not
+        // supply what it needs (Reposition; Hasten on the caster; Reclaim with
+        // no pre-status). The cast is then played through the module directly,
         // so only the presentation is recorded: no damage number, no status, no
         // cue from the session.
         public bool PresentationOnly { get; private set; }
@@ -195,7 +195,7 @@ namespace PrincesPalace.PlayModeTests
         {
             string spellId = request.SpellId;
             _preStatus = request.PreStatus;
-            var plan = ResolvePlan(spellId);
+            var plan = ResolvePlan(spellId, request);
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
             Debug.Log("[SpellRuntime] " + PreviewFight.Describe(plan));
 
@@ -265,10 +265,27 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built?.Session, "'" + spellId + "' could not be built into an encounter");
 
             PreviewFight.Prepare(built, plan);
+            if (AllyCastIsReal(plan.Skill, request)) LetTheCasterActFirst(built);
             ApplyPreStatus(built, request.PreStatus);
             AimedTarget = ResolveTarget(built, request.Target);
 
             yield return BindAndSettle(built);
+        }
+
+        // THE FORCED PRESS FIRES ON THE FIRST TURN, and a squadmate who outpaces
+        // the caster takes it with a kit that lacks the spell, which consumes the
+        // press (Odette opens a fight beside Shawn). The opening turns of
+        // squadmates ahead of the caster are stepped past before the fight binds,
+        // so the cast is the first thing the fight shows.
+        private static void LetTheCasterActFirst(FightEncounterAdapter.BuiltFight built)
+        {
+            var caster = built.Party[0];
+            var encounter = built.Session.Encounter;
+            for (int guard = 0; guard < 8 && !ReferenceEquals(encounter.Current, caster)
+                                && encounter.Current != null && encounter.Current.IsPlayerSide; guard++)
+            {
+                encounter.AdvanceTurn();
+            }
         }
 
         // The combatant a scenario's Target names: a party member by character id
@@ -435,13 +452,31 @@ namespace PrincesPalace.PlayModeTests
             skill != null && skill.HasRequiresStatus && !string.IsNullOrWhiteSpace(_preStatus)
             && Enum.TryParse(_preStatus.Trim(), true, out StatusEffectType pre) && pre == skill.RequiresStatusType;
 
-        private PreviewFight.Plan ResolvePlan(string spellId)
+        // A Ward is a real cast on whoever is chosen, itself included: it needs
+        // no prerequisite, only mana the preview fills. A Hasten is real when an
+        // ally other than the caster is chosen, because the session refuses to
+        // advance whoever is already next, and the caster acts first. Aimed at
+        // the caster (or at nobody) it stays presentation-only.
+        internal static bool AllyCastIsReal(ResolvedSkill skill, CaptureStandRequest request)
+        {
+            if (skill == null) return false;
+            if (skill.Effect == SkillEffect.Ward) return true;
+            if (skill.Effect != SkillEffect.Hasten || request == null) return false;
+
+            string target = request.Target?.Trim();
+            string caster = request.Party != null && request.Party.Count > 0 ? request.Party[0] : null;
+            return !string.IsNullOrEmpty(target) && caster != null && target != caster
+                   && request.Party.Contains(target);
+        }
+
+        private PreviewFight.Plan ResolvePlan(string spellId, CaptureStandRequest request)
         {
             PresentationOnly = false;
             var plan = PreviewFight.ForSpell(spellId);
             if (plan.Ok || plan.Skill == null || PreviewStage.IsSupported(plan.Skill.Effect)) return plan;
 
-            if (plan.Skill.Effect == SkillEffect.Reclaim && PreStatusSatisfies(plan.Skill))
+            bool reclaim = plan.Skill.Effect == SkillEffect.Reclaim && PreStatusSatisfies(plan.Skill);
+            if (reclaim || AllyCastIsReal(plan.Skill, request))
             {
                 var roster0 = ContentDatabase.Characters
                     .Where(c => c != null && c.Data != null).Select(c => c.Data).ToList();
@@ -449,7 +484,9 @@ namespace PrincesPalace.PlayModeTests
                 real.CasterId = PreviewFight.ChooseCaster(plan.Skill, roster0, real);
                 if (real.CasterId == null) return real;
                 real.Party = new List<string> { real.CasterId };
-                real.Notes.Add("'" + spellId + "' resolves as Reclaim; the scenario's pre-status satisfies it, so it is a real cast");
+                real.Notes.Add("'" + spellId + "' resolves as " + plan.Skill.Effect + "; " +
+                               (reclaim ? "the scenario's pre-status satisfies it" : "the scenario names an ally for it") +
+                               ", so it is a real cast");
                 return real;
             }
 
@@ -640,7 +677,7 @@ namespace PrincesPalace.PlayModeTests
             // aftermath that outlives a kill (death_knell's wave).
             if (!relic)
             {
-                var plannedSkill = ResolvePlan(spellId).Skill;
+                var plannedSkill = PreviewFight.ForSpell(spellId).Skill;
                 targetCount = plannedSkill != null && plannedSkill.Targeting == SkillTargeting.AllEnemies
                     ? fight.SessionForTest.Encounter.Enemies.Count(e => e != null)
                     : 1;
