@@ -609,6 +609,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `viaX` | float | `0` | Optional waypoint, for a layer that goes out and comes back: where the layer is (box widths, X mirrors with the cast) at viaAt. Unused unless viaAt is above 0. |  |
 | `viaY` | float | `0` | The waypoint's height, in heights of the layer's own box. |  |
 | `viaAt` | float | `0` | Fraction of the layer's lifetime, 0-1 exclusive, at which it passes through viaX/viaY; 0 means no waypoint. Each leg eases out. |  |
+| `arcY` | float | `0` | Extra height at the middle of the span, in heights of the layer's own box: a parabola 4t(1-t) added on top of the legs, so a thrown layer lifts and comes down. 0 is no arc. |  |
 
 ### `SpellEmitter`
 

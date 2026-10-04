@@ -179,10 +179,23 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // THE LAYER'S SLIDE (SpellLayer.drift) at `seconds`, in fractions of its
         // own box; (0, 0) for a layer that authors none. Over the layer's
         // lifetime, not including its fade.
+        //
+        // A LAYER THAT TRAVELS SLIDES OVER ITS FLIGHT, not over its life: its
+        // life includes the wind-up it is held at the caster for, and a slide
+        // that ran through the hold lifted Mud Burst's glob in Shawn's hand.
+        // The slide's clock is the flight's own fraction (the same ease the
+        // position uses), held at its start before departure and at its end
+        // after arrival, so an arc peaks where the body is, not at mid-time.
         public static (float x, float y) DriftAt(SpellLayerInstance instance, float seconds)
         {
             var drift = instance?.Layer?.drift;
             if (drift == null || !drift.IsAuthored) return (0f, 0f);
+
+            if (instance.Layer.travelSeconds > 0f)
+            {
+                float flown = SpellPerformance.FractionOf(instance, seconds);
+                return drift.At(flown < 1f ? flown : 1f, 1f);
+            }
 
             return drift.At(seconds - instance.StartSeconds, instance.EndSeconds - instance.StartSeconds);
         }

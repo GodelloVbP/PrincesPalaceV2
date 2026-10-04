@@ -34,11 +34,14 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Fraction of the layer's lifetime, 0-1 exclusive, at which it passes through viaX/viaY; 0 means no waypoint. Each leg eases out.")]
         public float viaAt;
 
-        public bool IsAuthored => fromX != 0f || toX != 0f || fromY != 0f || toY != 0f || viaAt > 0f;
+        [ContentDoc("Extra height at the middle of the span, in heights of the layer's own box: a parabola 4t(1-t) added on top of the legs, so a thrown layer lifts and comes down. 0 is no arc.")]
+        public float arcY;
+
+        public bool IsAuthored => fromX != 0f || toX != 0f || fromY != 0f || toY != 0f || viaAt > 0f || arcY != 0f;
 
         public SpellDrift Copy() => new SpellDrift
         {
-            fromX = fromX, toX = toX, fromY = fromY, toY = toY, viaX = viaX, viaY = viaY, viaAt = viaAt,
+            fromX = fromX, toX = toX, fromY = fromY, toY = toY, viaX = viaX, viaY = viaY, viaAt = viaAt, arcY = arcY,
         };
 
         // The offset `age` seconds into a `lifetime`-long layer, in box
@@ -53,6 +56,12 @@ namespace PrincesPalace.Domain.Content
         public (float x, float y) At(float age, float lifetime)
         {
             float t = lifetime <= 0f ? 1f : Math.Min(1f, Math.Max(0f, age / lifetime));
+            var legs = Legs(t);
+            return (legs.x, legs.y + arcY * 4f * t * (1f - t));
+        }
+
+        private (float x, float y) Legs(float t)
+        {
             if (viaAt > 0f && viaAt < 1f)
             {
                 if (t < viaAt) return Leg(fromX, fromY, viaX, viaY, t / viaAt);

@@ -1,6 +1,6 @@
 # Mud Burst, "after" (plan S3, spell 3.3)
 
-Captured 2026-10-04 with `tools/gif.ps1 spell mud_burst` and `tools/spell_feel.ps1`.
+Captured and re-captured (arc) 2026-10-04 with `tools/gif.ps1 spell mud_burst` and `tools/spell_feel.ps1`.
 No painted art. New: the layer field `tint` (decision 10: "reads as fire" proved
 it needed) and three procedural pieces in `tools/make_spell_fx.py`. GIFs are
 untracked next to this file. Owner gates skipped; the calls below are mine.
@@ -24,7 +24,7 @@ untracked next to this file. Owner gates skipped; the calls below are mine.
 | t | Beat |
 |---|---|
 | 0.00-0.20 | **Gather.** The sheet's first eight frames, a dark vortex of mud in Shawn's hand, tinted; the glob is held beside it. |
-| 0.20-0.325 | **Throw.** The glob crosses straight to the body in 0.125 s, drips trailing. |
+| 0.17-0.325 | **Lob.** The glob leaves the hand at 0.17 s and reaches the body in 0.155 s along an arc (`drift.arcY` 0.6 box heights, peak where the glob is a quarter of the way across because the flight eases in), drips trailing. |
 | 0.325 | **Payoff cue.** Sound, damage number, Vulnerable badge, the splat (28 fps, 0.5 s, punch 0.15, size 900 on a rat) and 14 clots thrown up that fall back (0.3-0.55 s). No glow anywhere. |
 | 0.325-0.80 | Splat thins and fades; clots land. |
 
@@ -33,7 +33,7 @@ untracked next to this file. Owner gates skipped; the calls below are mine.
 | | 1x rat | 1x treant | 1.5x rat | 1.5x treant |
 |---|---|---|---|---|
 | cast start to payoff | 0.33 s (f20) | 0.33 s | 0.22 s (f13) | 0.22 s |
-| payoff to clean | 0.40 s | 0.40 s | 0.27 s | 0.53 s (measurement, see below) |
+| payoff to clean | 0.38 s | 0.38 s | 0.25 s | 0.25 s |
 
 The report WARNs "no accent" on the rat (1x and 1.5x). The effect is matte by
 design; its accent is the splat opening with the target's hurt flash on the cue
@@ -56,9 +56,7 @@ splat is gone by f27.
   behind the treant; the number (-7) and splat are on the beetle. The glob
   passing in front of an uninvolved body is a mild ambiguity: nothing shows
   that the rat is not the target until the splat.
-- **Arc:** none. A lob needs a path arc; `drift` runs over the layer's whole
-  life, held phase included, so a waypoint lifted the glob in the hand before
-  the throw. Dropped; the 0.125 s flight is too short to read an arc anyway.
+- **Arc:** present. `drift` used to run over the layer's whole life, held phase included, so a waypoint lifted the glob in Shawn's hand. `SpellFrameCursor.DriftAt` now runs a travelling layer's drift over its flight (held at its start while it waits at the caster, at its end after arrival), and `SpellDrift.arcY` adds a parabola. On the rat 1x frames the glob sits level in the hand at f12, is clearly above the line at f14-f16, and comes down onto the body by f19-f20. The flight is 0.155 s (was 0.125) so the arc has about 9 frames to read.
 - **Bug-shaped, not fixed:** none found.
 
 ## Identity test: "mud", not "fire"

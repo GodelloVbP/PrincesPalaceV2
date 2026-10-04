@@ -35,8 +35,7 @@ On the treant it passes.
   10% luminance), at least 45 GIF frames (1.5 s) apart, and nothing near the
   25%-of-view size of a large flash. At most one flash per 1.5 s.
 - **Readability.** Plates, the HUD and the log are never covered. The Thorned
-  badge (3) shows 1-2 frames (under 35 ms) after the sap burst, not on the
-  same frame. Thorn Tithe deals no damage on cast, so there is no number.
+  badge (3) showed 2 frames after the sap burst when captured; fixed in dbea77ae (beat follows the cast's cue, burst no longer dissolves in early), now on the same frame (18). Thorn Tithe deals no damage on cast, so there is no number.
 - **The body.** On the rat the cage hides the body between f17 and f26 (0.17 s);
   the same on the treant, whose face stays visible above the crossing vines.
 - **Rat repeat is not recordable**: `-Repeat 5` on a lone rat fails ("the

@@ -33,8 +33,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("caster-centre", gather.place);
 
             var glob = vfx.layers.Single(l => l.id == "glob");
-            Assert.AreEqual(0.2f, glob.travelDelay, 1e-6f, "held while the gather plays");
-            Assert.AreEqual(0.125f, glob.travelSeconds, 1e-6f);
+            Assert.AreEqual(0.17f, glob.travelDelay, 1e-6f, "held while the gather plays");
+            Assert.AreEqual(0.155f, glob.travelSeconds, 1e-6f, "long enough for the arc to read");
+            Assert.AreEqual(0.6f, glob.drift.arcY, 1e-6f, "lobbed, not shot");
             Assert.AreEqual(vfx.hitCueSeconds, glob.travelDelay + glob.travelSeconds, 1e-6f, "arrives on the cue");
             Assert.AreEqual("Spells/mud_glob", glob.path);
         }
@@ -66,6 +67,33 @@ namespace PrincesPalace.Domain.Tests
             }
 
             Assert.AreEqual(4, vfx.layers.Length);
+        }
+
+        // THE SLIDE RUNS OVER THE FLIGHT: still in the hand while held, an
+        // apex of arcY * 4 * u * (1 - u) with u the eased flight fraction (the
+        // quarter of the way across at mid-time), and level again on arrival.
+        [Test]
+        public void TheGlobStaysLevelInTheHandAndArcsOnlyInFlight()
+        {
+            var performance = SpellPerformance.Resolve(Mud(), 1, path => 8);
+            var glob = performance.Instances.Single(i => i.Layer.id == "glob");
+
+            Assert.AreEqual(0f, SpellFrameCursor.DriftAt(glob, 0.05f).y, 1e-6f, "held in the hand");
+            Assert.AreEqual(0f, SpellFrameCursor.DriftAt(glob, 0.17f).y, 1e-6f, "just leaving");
+            Assert.AreEqual(0.45f, SpellFrameCursor.DriftAt(glob, 0.2475f).y, 1e-4f,
+                "mid-time is a quarter of the way across: 0.6 * 4 * 0.25 * 0.75");
+            Assert.AreEqual(0f, SpellFrameCursor.DriftAt(glob, 0.325f).y, 1e-6f, "down on the body");
+            Assert.AreEqual(0f, SpellFrameCursor.DriftAt(glob, 0.6f).y, 1e-6f, "held at the end after arrival");
+        }
+
+        [Test]
+        public void AnArcIsAParabolaOnTopOfTheLegs()
+        {
+            var drift = new SpellDrift { arcY = 0.4f, toY = 0.2f };
+            Assert.IsTrue(drift.IsAuthored);
+            Assert.AreEqual(0.4f, drift.At(0.5f, 1f).y - (0.2f * 0.75f), 1e-6f, "apex is arcY above the eased line");
+            Assert.AreEqual(0.2f, drift.At(1f, 1f).y, 1e-6f);
+            Assert.AreEqual(0.4f, drift.Copy().arcY, 1e-6f);
         }
     }
 }
