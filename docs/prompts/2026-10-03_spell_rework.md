@@ -314,3 +314,107 @@ Must read as: poison vapour igniting. Must NOT read as: a fireball, a nuke, a ma
 or a lava burst.
 
 Owner: what to change from the green or the flame shape: ______
+
+## Gilded Aegis: the shield locks shut
+
+Plan 3.8. Stand-in today: `Resources/Spells/gilded_aegis` f0-f4 (four shards closing) and f5
+(the lock) held on the cue, with the procedural `aegis_mote` as the delivery. The verb is
+*encase*; what a painted piece fixes is the lock itself, which today is one frame of an animated
+sheet with loose shards still in it and the ally's face hidden behind it.
+
+Target: one still, raw file
+`Assets/_Project/Art/Sheets/Spells/Gilded Aegis/gilded_aegis_lock.png`, sliced as
+`Spells/gilded_aegis_lock/f0`, drawn on the cue in place of f5 at `fit: target`. Layer fields
+only; no sheet.
+
+Style matches the existing aegis frames: Hades-inspired painterly fantasy, bold sculpted brush
+planes, rich material rendering. Burnished gold and warm white light, a faint cream fleece
+texture in the shield's rim; no other hue.
+
+Square canvas 1536x1536, solid #00FF00 background, no gradient or vignette. No green or
+yellow-green anywhere in the subject or its glow; the gold must lean orange, never lime.
+
+- One closed ward, centred, filling about 80% of the canvas, at least 8% margin on every side:
+  a tall rounded shield outline built of interlocking gold plates, with a small crown at its
+  top and a thin halo ring around it.
+- The centre is open and clear: the outline and its glow occupy the outer quarter only, so the
+  ally's body and face stay visible through it.
+- The plates sit flush, seams closed: it reads as finished and locked, not assembling.
+- A soft gold glow on the outer edge only, a few gilt leaves caught in the rim.
+- No loose shards, no figure, no hand, no floor or ground plane, no runes or circle on the
+  ground.
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: a golden shield closed around my ally. Must NOT read as: a mirror, a portal, a
+cage, or a solid gold plate hiding the body.
+
+Owner: what to change from the shield shape or the open centre: ______
+
+## Borrowed Moment: the step taken early
+
+Plan 3.9. Stand-in today: `Resources/Spells/borrowed_moment` (the hourglass turning, f5 the cyan
+clock-hand starburst on the cue, f6-f11 the glass breaking into rising sand). The verb is
+*quicken*. The weak point is that "faster" lives only in the 40 px turn-order chip and the log
+line; nothing on the ally's body says speed.
+
+The best fix is a runtime afterimage (the ally's own sprite, doubled and offset forward, cyan
+tinted, fading): it needs no art and fits every body. That is an engine feature, not a prompt.
+Until it exists, this still is the body-independent piece that carries the same idea.
+
+Target: one still, raw file
+`Assets/_Project/Art/Sheets/Spells/Borrowed Moment/borrowed_moment_quicken.png`, sliced as
+`Spells/borrowed_moment_quicken/f0`, drawn on the ally on the cue at `fit: target` and slid
+forward with `drift`.
+
+Style matches the existing borrowed_moment frames: Hades-inspired painterly fantasy, bold
+sculpted brush planes. Cold cyan and white light, pale gold sand grains; no other hue.
+
+Square canvas 1536x1536, solid #00FF00 background, no gradient or vignette. No green or
+yellow-green anywhere; the cyan must lean blue, never teal-green.
+
+- Three nested chevron-shaped arcs of cyan light, stacked left to right and pointing right, the
+  front one brightest and sharp, the two behind fainter and softer, like after-images of a
+  forward step.
+- Fine streams of glowing sand trailing back to the left from each arc, thinning to nothing.
+- One small clock hand, pale gold, laid along the front arc and pointing right.
+- The middle third of the canvas stays mostly clear so the body shows through.
+- No figure, no hourglass (the sheet already has it), no clock face, no numerals, no floor.
+- No text, frame, border, UI or watermark.
+
+Must read as: time sped up, a step taken early. Must NOT read as: an arrow attack, a dash
+strike, or a wind spell.
+
+Owner: what to change from the chevrons or the sand: ______
+
+## Censer of Embers: the embers catch
+
+Plan 3.10. Stand-in today: `Resources/Spells/censer_of_embers` f0-f4 (the censer swinging on its
+chain) and f5 (a column of flame) held on the cue, plus six procedural flame licks. The verb is
+*smolder*. The weak point: the payoff is a column drawn in front of the body, hiding the
+treant's face for about 0.2 s, and f5 still carries a smoke wisp. The NOTES' "body burning at
+the edges" cannot be one still (bodies differ); the lingering burn on the body itself is the
+coal glow's job (plan 3.11, built). This piece is the catch at the body's base.
+
+Target: one still, raw file
+`Assets/_Project/Art/Sheets/Spells/Censer of Embers/censer_of_embers_catch.png`, sliced as
+`Spells/censer_of_embers_catch/f0`, drawn on the cue at the target's feet (`fit: target`) in
+place of f5.
+
+Style matches the existing censer frames: Hades-inspired painterly fantasy, bold sculpted flame
+planes, rich material rendering. Deep red, orange and gold flame, dark coal shapes; no other hue.
+
+Wide canvas 2048x1024, solid #00FF00 background, no gradient or vignette. No green or
+yellow-green anywhere in the flame, the coals or the glow.
+
+- A low crescent of flame tongues rising from a scatter of glowing coals, spread across the
+  full width like a ring seen from the front at ground level, the tongues tallest at the two
+  ends and lowest in the middle, so the centre stays open for the body.
+- Flame height at most 40% of the canvas; the top half is empty except a few rising sparks.
+- Bright gold where flame meets coal, darkening to red at the tips.
+- No smoke, no column, no censer, no chain, no floor plane or ground texture, no figure.
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: the embers caught and the target is set alight. Must NOT read as: a wall of fire,
+an explosion, or a campfire.
+
+Owner: what to change from the crescent or the flame height: ______
