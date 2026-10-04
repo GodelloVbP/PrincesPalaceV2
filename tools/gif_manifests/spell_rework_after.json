@@ -283,6 +283,20 @@
       "id": "censer_of_embers",
       "vs": "treant",
       "seconds": 30
+    },
+    {
+      "kind": "spell",
+      "id": "gilded_aegis",
+      "party": "shawn,odette,bjorn",
+      "target": "odette",
+      "aspect": "4:3"
+    },
+    {
+      "kind": "spell",
+      "id": "borrowed_moment",
+      "party": "shawn,odette,bjorn",
+      "target": "odette",
+      "aspect": "4:3"
     }
   ]
 }

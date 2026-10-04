@@ -98,7 +98,7 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 [NOTES](after/gilded_aegis/NOTES.md)
 
-Ward and haste are presentation-only on the preview stage: no ward or haste status appears, only the effect on the chosen body.
+Ward is a real cast on any ally (e4adbb39): the ward icon and `+25` bar on the target's plate and the log line "Shawn wraps <ally> in the fleece" show in the 4:3 clips (Odette, Bjorn checked at the cue). The 1x clips are stage-cropped and cannot show the HUD. On Shawn himself the ward is checked only by the stage picture.
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
@@ -106,13 +106,14 @@ Ward and haste are presentation-only on the preview stage: no ward or haste stat
 | on Bjorn | `gilded_aegis_party3_on_bjorn_1x.gif` | `gilded_aegis_on_bjorn_1x.gif` | recorded; Bjorn is cut at the left edge of the stage crop (the 4:3 clip shows him whole) |
 | on Shawn | `gilded_aegis_party3_on_shawn_1x.gif` | `gilded_aegis_on_shawn_1x.gif` | recorded |
 | 4:3 layout, on Bjorn | none | `gilded_aegis_on_bjorn_4x3_1x.gif` | recorded; no before |
+| 4:3 layout, on Odette (HUD visible) | none | `gilded_aegis_on_odette_4x3_1x.gif` | recorded; no before; real cast, see note below |
 | five casts at 1.5x, on Odette vs forest_warden | none | `gilded_aegis_on_odette_vs_forest_warden_full_x5_1.5x.gif` | recorded; no before |
 
 ### 9. Borrowed Moment
 
 [NOTES](after/borrowed_moment/NOTES.md)
 
-Ward and haste are presentation-only on the preview stage: no ward or haste status appears, only the effect on the chosen body.
+Hasten is a real cast on a non-caster ally that is not already next: the 4:3 Odette clip shows the log line "Odette moves 2 places earlier in the order" and the tracker reordering. On Bjorn (already next) and on Shawn (the caster is never legal) it stays presentation-only: effect on the body, no order change, no log line.
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
@@ -120,6 +121,7 @@ Ward and haste are presentation-only on the preview stage: no ward or haste stat
 | on Bjorn | `borrowed_moment_party3_on_bjorn_1x.gif` | `borrowed_moment_on_bjorn_1x.gif` | recorded; Bjorn is cut at the left edge of the stage crop (the 4:3 clip shows him whole) |
 | on Shawn | `borrowed_moment_party3_on_shawn_1x.gif` | `borrowed_moment_on_shawn_1x.gif` | recorded |
 | 4:3 layout, on Bjorn | none | `borrowed_moment_on_bjorn_4x3_1x.gif` | recorded; no before |
+| 4:3 layout, on Odette (HUD visible) | none | `borrowed_moment_on_odette_4x3_1x.gif` | recorded; no before; real cast, see note below |
 | three casts at 1.5x, on Odette vs forest_warden | none | `borrowed_moment_on_odette_vs_forest_warden_full_x3_1.5x.gif` | recorded; no before; three, not five: the squad kills the warden by cast 4 |
 
 ### 10. Censer of Embers
@@ -148,12 +150,7 @@ Ward and haste are presentation-only on the preview stage: no ward or haste stat
   fight with the Round 1 counter and a near-black stage. Bell's fog overlay, its
   backdrop and the toll sound are not part of it. The spell is readable in all three
   clips; the darkness composition (`max(event, spell)`) is pinned by tests, not by GIF.
-- **Ward and haste statuses** (Aegis, Borrowed): the preview stage refuses them, so
-  the GIFs show the delivery and the effect on the body, not a status badge.
-- **Ashen Reckoning's refusal without Poison**: unchanged by the plan, not filmed.
-- **Kinship relic icon** (3.12): a prompt and an icon, not a capture.
-- **Owner judgments** (identity test, side-by-side with tier neighbours, listening)
-  need the owner; the GIFs are the material, not the verdict.
+- **Hasten on Bjorn and on Shawn**: presentation-only by design (Bjorn is already next, Shawn is the caster). Ward on Shawn: not checked on the HUD.
 
 ## Flags from the frame check
 
