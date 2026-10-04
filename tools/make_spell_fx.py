@@ -24,6 +24,10 @@ mud_burst_splat: the existing mud_burst sheet's burst frames (f12-f25) with the
     long streak to the left of the burst feathered away, so the burst can land
     on the target without a rope of mud back to the caster. Derived from the
     shipped frames, nothing painted.
+
+shackle_cinch_ring: one 256x256 frame, a thin gold-white ring with a crimson halo
+    outside it. Velvet Shackles' cinch: drawn oversized for two frames and snapped
+    onto the body (layer punch), so the bind reads as pulled tight.
 """
 
 import argparse
@@ -52,6 +56,26 @@ def court_price_pulse():
         150 + 105 * heat,
         90 + 140 * heat,
         230 + 25 * heat,
+    ], axis=-1)
+    out = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
+    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+    out[..., 3] = np.round(alpha * 255).astype(np.uint8)
+    return out
+
+
+def shackle_cinch_ring():
+    """RGBA uint8, SIZE x SIZE: ring at 0.78 of the radius, crimson halo outside."""
+    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(np.float64)
+    r = np.hypot(xs - (SIZE - 1) / 2, ys - (SIZE - 1) / 2) / (SIZE / 2)
+    ring = np.exp(-((r - 0.78) / 0.035) ** 2)
+    halo = 0.55 * np.exp(-((r - 0.84) / 0.10) ** 2)
+    edge = np.clip((1.0 - r) / 0.06, 0.0, 1.0)
+    alpha = np.clip(ring + halo, 0.0, 1.0) * edge
+    heat = np.clip(ring, 0.0, 1.0)
+    rgb = np.stack([
+        205 + 50 * heat,
+        40 + 196 * heat,
+        62 + 108 * heat,
     ], axis=-1)
     out = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
     out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
@@ -140,6 +164,7 @@ def _splat_frame(n):
 
 PIECES = {
     "court_price_pulse": [court_price_pulse],
+    "shackle_cinch_ring": [shackle_cinch_ring],
     "mud_glob": [mud_glob],
     "mud_splat_drops": [mud_drop_round, mud_drop_long, mud_drop_tear, mud_drop_crumb],
     "mud_burst_splat": [_splat_frame(n) for n in SPLAT_FRAMES],

@@ -39,6 +39,21 @@ class PricePulse(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(d, "court_price_pulse", "f0.png")))
 
 
+class CinchRing(unittest.TestCase):
+    def test_deterministic_thin_gold_ring_with_crimson_halo(self):
+        a, b = fx.shackle_cinch_ring(), fx.shackle_cinch_ring()
+        self.assertEqual(hashlib.sha256(a.tobytes()).hexdigest(),
+                         hashlib.sha256(b.tobytes()).hexdigest())
+        self.assertEqual(a.shape, (256, 256, 4))
+        self.assertEqual(int(a[2, 2, 3]), 0)
+        self.assertEqual(int(a[128, 128, 3]), 0, "a ring, not a disc")
+        peak = a[128, 128 + 100]
+        self.assertGreater(int(peak[3]), 240)
+        self.assertGreater(int(peak[1]), 200, "gold-white where it is densest")
+        halo = a[128, 128 + 108]
+        self.assertGreater(int(halo[0]), int(halo[1]) + 80, "crimson in the halo")
+
+
 class MudPieces(unittest.TestCase):
     def test_deterministic(self):
         for name in ("mud_glob", "mud_splat_drops", "mud_burst_splat"):

@@ -219,3 +219,34 @@ Must read as: a single cutting stroke of wind passing sideways through a line
 of enemies. Must NOT read as: a tornado, a fan or a slash mark made by a claw.
 
 Owner: what to change from the blade curve or the wisps: ______
+
+## Velvet Shackles: the cuff pulled tight
+
+Plan 3.5. Stand-ins today: `Resources/Spells/velvet_shackles` (f0-f4 ribbons, f5-f6 the
+held cuff) and a procedural gold ring (`tools/make_spell_fx.py shackle_cinch_ring`). The
+verb is *bind*; what a painted piece fixes is the cinch itself, which the stand-ins fake
+with an oversized ring snapped inward.
+
+Target: one short sheet of 4 frames in a 2x2 grid, raw file
+`Assets/_Project/Art/Sheets/Spells/Velvet Shackles/velvet_shackles_cinch.png`, sliced as
+`Spells/velvet_shackles_cinch/f0..f3`, played at 25 fps on the cue. Frame 0: the ribbon
+loops hanging slack round an empty space, frame 1: the loops pulled half closed with the
+chain links taut, frame 2: fully closed, ribbon creased and pinched at the clasp, frame 3:
+the same, a faint rebound shimmer. All four frames share one centre, one scale and one
+silhouette outline so the crop does not jump.
+
+Style matches the existing velvet frames: Hades-inspired painterly fantasy, deep crimson
+velvet with a gold-thread edge and gold chain links; no other hue.
+
+Canvas 2048x2048 (each cell 1024x1024), solid #00FF00 background, no gradient or vignette.
+No green in the velvet or the gold (keyer removes by hue); dark interiors stay opaque.
+
+- One ring of ribbon with a gold chain clasp, seen from slightly above, empty in the
+  middle so the enemy shows through.
+- No hand, no body, no animal, no floor, shadow or ground plane, no spikes.
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: a restraint being pulled tight round something. Must NOT read as: a halo,
+a ring portal, a wedding ring or a bracelet.
+
+Owner: what to change from the tightness or the ribbon material: ______
