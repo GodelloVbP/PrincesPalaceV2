@@ -180,3 +180,12 @@ read a float hair under the cue (18 ticks of 1/60 s = 0.29998 against 0.3) the w
 was closed, the cue fired, and the payoff, already open, drew nothing for one frame.
 `SampleOf` and the emitter's birth check now ask `Passed` too. Pinned in
 `SpellLayerHandoffTests`; Ashen, Borrowed and Censer rechecked per frame.
+
+## Follow-ups (2026-10-04)
+
+- Gilded Aegis: shards and mote dimmed and a bloom ring on the cue make the lock the cast's
+  peak; `spell_feel` is clean at 1x and 1.5x (NOTES).
+- Ashen Reckoning: the second packet throws embers, ash and flame tongues; no rock.
+- Borrowed Moment: the chevrons' drift is 0.22 box (was 0.45), so on Bjorn they stay on him.
+- Capture runner: `-Repeat 5` no longer dies at cast 4 when a teammate's turn is skipped by a stun
+  (a press is per turn); the five-cast Aegis series now records.

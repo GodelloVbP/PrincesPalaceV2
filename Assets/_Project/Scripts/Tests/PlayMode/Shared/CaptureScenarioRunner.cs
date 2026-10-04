@@ -107,6 +107,32 @@ namespace PrincesPalace.PlayModeTests
         public string TimingPath;
     }
 
+    // ONE PRESS PER TURN, NOT PER ACTOR. A press is remembered for the turn
+    // it was made on and dropped the moment the fight leaves that turn
+    // (a beat plays, the turn passes): the same actor's NEXT turn needs a
+    // press of its own. Keyed on the actor alone, a squadmate whose turn
+    // came round again after a stunned teammate's skipped turn was
+    // treated as already armed and left standing until the stall assert.
+    internal sealed class TurnPress
+    {
+        private object _who;
+        private int _at;
+
+        public bool Holds(object who) => who != null && ReferenceEquals(_who, who);
+
+        public int Age(int frame) => frame - _at;
+
+        public void Take(object who, int frame)
+        {
+            _who = who;
+            _at = frame;
+        }
+
+        // The fight is not at an idle turn (busy, a beat, someone else's
+        // turn): whatever was pressed has been consumed or lost.
+        public void Release() => _who = null;
+    }
+
     // THE FIGHT-SETUP AND STOP RULE THAT SpellRuntimeCaptureTests USED TO OWN,
     // lifted out so the cold batch (GifBatchCaptureTests) and that test stand a
     // fight up and decide when to stop recording with ONE copy of both. A second
@@ -878,8 +904,7 @@ namespace PrincesPalace.PlayModeTests
                     PayFor(session, caster, spellId);
 
                     int paced = 0;
-                    CombatantState armedFor = null;
-                    int armedAt = 0;
+                    var armed = new TurnPress();
                     while ((Fight.IsBusy || Beats.IsPlaying || !session.IsPlayerTurn
                             || !ReferenceEquals(session.Current, caster)) && paced < MaxPacingFrames)
                     {
@@ -889,11 +914,14 @@ namespace PrincesPalace.PlayModeTests
                         // press would be refused on a kit without the spell, so the
                         // squadmate casts the first spell of theirs that aims at
                         // enemies (the weapon swing is out of reach from the rear).
-                        if (!Fight.IsBusy && !Beats.IsPlaying && session.IsPlayerTurn
-                            && !ReferenceEquals(session.Current, caster))
+                        if (Fight.IsBusy || Beats.IsPlaying || !session.IsPlayerTurn)
+                        {
+                            armed.Release();
+                        }
+                        else if (!ReferenceEquals(session.Current, caster))
                         {
                             var mate = session.Current;
-                            if (!ReferenceEquals(armedFor, mate))
+                            if (!armed.Holds(mate))
                             {
                                 var own = OffensiveSkillOf(session, mate);
                                 Assert.IsNotNull(own, mate.Name + " has no spell to cast at the enemy between the series' casts");
@@ -902,14 +930,13 @@ namespace PrincesPalace.PlayModeTests
                                 // be refused.
                                 PayFor(session, mate, own.Id);
                                 Fight.ForceFirstAction(own.Id);
-                                armedFor = mate;
-                                armedAt = paced;
+                                armed.Take(mate, paced);
                             }
                             else
                             {
                                 // Armed once per turn: a force the controller keeps
                                 // refusing is a stall, not a reason to press again.
-                                Assert.Less(paced - armedAt, StallFrames, mate.Name + "'s forced action was refused for " +
+                                Assert.Less(armed.Age(paced), StallFrames, mate.Name + "'s forced action was refused for " +
                                     StallFrames + " frames while pacing to cast " + (cast + 1) + " (log: " +
                                     string.Join(" | ", Fight.RecentLogForTest.Reverse().Take(4)) + ")");
                             }
@@ -1059,18 +1086,17 @@ namespace PrincesPalace.PlayModeTests
             var session = fight.SessionForTest;
             int total = Mathf.CeilToInt(seconds * Fps);
             int frame = outcome.NextFrame;
-            CombatantState pressedFor = null;
-            int pressedAt = 0;
+            var pressed = new TurnPress();
             while (frame < total)
             {
                 bool idle = !fight.IsBusy && !Beats.IsPlaying && session.IsPlayerTurn && !session.Encounter.IsOver;
                 if (!idle)
                 {
-                    pressedFor = null;
+                    pressed.Release();
                 }
-                else if (ReferenceEquals(pressedFor, session.Current))
+                else if (pressed.Holds(session.Current))
                 {
-                    Assert.Less(frame - pressedAt, StallFrames, pressedFor.Name + "'s action left the turn where it was for " +
+                    Assert.Less(pressed.Age(frame), StallFrames, session.Current.Name + "'s action left the turn where it was for " +
                         StallFrames + " frames while the film played on (log: " +
                         string.Join(" | ", fight.RecentLogForTest.Reverse().Take(4)) + ")");
                 }
@@ -1101,8 +1127,7 @@ namespace PrincesPalace.PlayModeTests
                         fight.ForceFirstAction(own.Id);
                     }
 
-                    pressedFor = actor;
-                    pressedAt = frame;
+                    pressed.Take(actor, frame);
                 }
 
                 Render(Canvas, sink.FramePath(frame));

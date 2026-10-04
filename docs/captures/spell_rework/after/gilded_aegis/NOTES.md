@@ -53,14 +53,17 @@ to clean is 0.4 s as before.
   screen. `cap_green` on the recipe (ART_PIPELINE 5b) pulls those pixels to gold.
 - **Hand-off.** The lock opens on the frame after the last shard drawing (the one empty frame
   between them was a cursor-compare bug, fixed 2026-10-04; see `../../README.md`).
-- **Five-cast series.** `-Repeat 5` fails at cast 4 ("Odette's forced action was refused for 180
-  frames", the squad stunned) with either the treant or the forest warden; three casts record.
-  Cause is the capture pacing, not the art.
-- **Flash guard.** The lock frame is a bright gold ring but small: the area of the frame that
-  brightens by 10% luminance in one 60 fps step peaks at 0.9% on the cue. Over five casts at 1.5x
-  (about 22 s), the largest single-step brightening anywhere is 4.9% of the frame and comes from
-  the squad's and the treants' own attacks; at most 2 such events fall in any one second. Counted as at most one
-  large flash per cast, well inside 3 per second.
+- **Five-cast series.** Recorded (`gilded_aegis_on_odette_vs_forest_warden_full_x5_1.5x.gif`, 1099
+  frames, `-Party shawn,odette,bjorn -Target odette -Vs forest_warden -Formation full -Repeat 5
+  -Speed 1.5`). It used to die at cast 4: the capture pacing treated Odette as already armed from
+  her previous turn (a stunned teammate's skipped turn sat between) and waited out the stall assert.
+  A press is now per turn (`TurnPress` in `CaptureScenarioRunner`).
+- **Flash guard.** Five casts at 1.5x (1099 frames, 18 s), steps where more than 10% of the frame
+  brightens by 10% luminance (480x270 grey): the lock frame is 1.2% of the frame (the bloom ring is
+  small); the largest steps anywhere are 9.3%, 8.8%, 7.3% (frames 62, 487, 809), all the warden's and
+  the squad's own attacks across the whole stage, never the cast. Steps over 2% of the frame:
+  at most 20 in any one second, mostly sprites moving; none comes from the lock, which adds one
+  1.2% step per cast, five in 18 s. Counted as one small flash per cast, well inside 3 per second.
 - **Readability.** The ward icon and bar are on the cue frame, on the ally's plate. The lock frame
   covers the ally's upper body for about 0.1 s; no number is under it (a ward has no damage
   number). Bjorn was recorded at 4:3 only (the 16:9 crop cuts him at the left edge, per the S0 notes); there he is whole.
