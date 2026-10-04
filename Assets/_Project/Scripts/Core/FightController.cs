@@ -815,6 +815,7 @@ namespace PrincesPalace
             beatPlayer.PlayFormHitFx = PlayFormHitFx;
             beatPlayer.FadeTheFallen = FadeTheFallen;
             beatPlayer.ImpactDelayFor = ImpactDelayFor;
+            beatPlayer.HitCueCrossed = HitCueCrossed;
             beatPlayer.StopVfx = StopSpellVfx;
             beatPlayer.ShakeStage = ShakeStage;
             beatPlayer.PresentRound = PresentRound;

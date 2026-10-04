@@ -163,6 +163,13 @@ namespace PrincesPalace
         public static float Scaled(float seconds) =>
             Pace <= 0f ? 0f : seconds / Pace;
 
+        // How early (authored seconds) the impact wait hands over to the cast's
+        // clock: longer than the frame or two the two clocks differ by.
+        private const float HitCueLeadSeconds = 0.05f;
+
+        // Engine seconds past the lead a cast may take to reach its cue.
+        private const float HitCueGuardSeconds = 0.25f;
+
         public bool IsPlaying { get; private set; }
 
         // A read-only view of the pool, for the tests that assert it comes back
@@ -243,6 +250,13 @@ namespace PrincesPalace
         internal Action<CombatBeat> FadeTheFallen;
         internal Func<CombatBeat, float> ImpactDelayFor;
         internal Action StopVfx;
+
+        // Whether the cast this beat began has crossed its hit cue on the
+        // presentation's own clock; null when no cast is tracked. The blow's
+        // sound, number and badge are painted on the frame the cast's accent
+        // layers open, and a second wait of the same length drifts a frame or
+        // two behind that clock.
+        internal Func<bool?> HitCueCrossed;
 
         // Poses an actor and repaints the stage. The controller owns the sprite
         // lookup; playback only says WHO holds WHAT and WHEN.
@@ -378,6 +392,9 @@ namespace PrincesPalace
             PushLine = pushLine;
             ImpactDelayFor = impactDelayFor;
         }
+
+        // The cast's cue clock, for a PlayMode test that pins the blow to it.
+        public void WireHitCueForTest(Func<bool?> crossed) => HitCueCrossed = crossed;
 
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
         {
@@ -1036,7 +1053,27 @@ namespace PrincesPalace
             // it again here would either do nothing (the common case, no
             // spell) or double an authored spell's own impact delay.
             float impact = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
-            if (impact > 0f && !staticCharge) yield return new WaitForSeconds(Scaled(impact));
+            if (impact > 0f && !staticCharge)
+            {
+                if (HitCueCrossed?.Invoke() == null)
+                {
+                    yield return new WaitForSeconds(Scaled(impact));
+                }
+                else
+                {
+                    // WAIT SHORT, THEN FOLLOW THE CAST'S OWN CLOCK to its cue,
+                    // so the impact block lands on the frame the accent layers
+                    // open. The guard keeps a stalled cast from holding the beat.
+                    float lead = Mathf.Min(impact, HitCueLeadSeconds);
+                    if (impact > lead) yield return new WaitForSeconds(Scaled(impact - lead));
+                    float guard = Scaled(lead) + HitCueGuardSeconds;
+                    while (HitCueCrossed() == false && guard > 0f)
+                    {
+                        guard -= Time.deltaTime;
+                        yield return null;
+                    }
+                }
+            }
 
             // THE LOG SAYS IT WHEN THE STAGE SHOWS IT: on the impact frame,
             // beside the damage number, for every approach -- a spell's

@@ -56,6 +56,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
         public float EndSeconds;
         public float FadeSeconds;
 
+        // The cast's hit cue on the same clock as StartSeconds, or -1 for an
+        // instance built outside Resolve. SpellFrameCursor uses it so no frame
+        // that opens on or after the cue is seen before it.
+        public float CueSeconds = -1f;
+
         public float ClearedSeconds => EndSeconds + FadeSeconds;
 
         // Stage-space, written by Core at Begin. Equal for a layer that does
@@ -241,6 +246,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             performance.ArrivalSeconds = ArrivalOf(layers, performance.HitCueSeconds);
 
             AssignTimes(instances, performance, frameCountOf);
+            foreach (var one in instances) one.CueSeconds = performance.HitCueSeconds;
 
             performance.Instances = instances;
             performance._built = instances;

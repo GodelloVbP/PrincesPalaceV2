@@ -75,6 +75,43 @@ namespace PrincesPalace.PlayModeTests
                 "the line reached the log well after the impact instant -- it should land with the number");
         }
 
+        // THE BLOW FOLLOWS THE CAST'S OWN CUE, not a second wait of the same
+        // length. The cast crosses its cue 30 ms after the beat's own 0.5 s wait
+        // would have ended (a clock that reads a frame or two apart is what
+        // made Thorn Tithe's badge land after its burst); the line, which
+        // shares the impact block with the number and the badge, must land on
+        // the frame the cue crosses.
+        [UnityTest]
+        public IEnumerator TheBlowLandsOnTheFrameTheCastCrossesItsCue()
+        {
+            var player = NewPlayer();
+
+            int lineFrame = -1;
+            player.WireLogForTest(line => lineFrame = Time.frameCount,
+                                  b => b.Approach == StageApproach.Hold ? SpellImpactSeconds : 0f);
+
+            Time.captureDeltaTime = SampleSeconds;
+            double start = Time.timeAsDouble;
+            int crossedFrame = -1;
+            player.WireHitCueForTest(() =>
+            {
+                if (Time.timeAsDouble - start < SpellImpactSeconds + 0.03) return false;
+                if (crossedFrame < 0) crossedFrame = Time.frameCount;
+                return true;
+            });
+
+            bool finished = false;
+            player.Play(new List<CombatBeat> { Beat(StageApproach.Hold, 10, CastLine) }, () => finished = true);
+
+            int frames = 0;
+            while (!finished && frames++ < FrameBudget) yield return null;
+            Assert.IsTrue(finished, "the beat never finished");
+
+            Assert.Greater(crossedFrame, 0, "the beat never asked whether the cue had crossed");
+            Assert.AreEqual(crossedFrame, lineFrame,
+                "the blow landed on a different frame from the cast's cue");
+        }
+
         // EVERY ATTACK, NOT JUST SPELLS: a lunge's line lands on the very
         // frame its contact effect fires, which is the impact frame.
         [UnityTest]

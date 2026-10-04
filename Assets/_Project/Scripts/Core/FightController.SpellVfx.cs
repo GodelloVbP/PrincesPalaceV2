@@ -314,7 +314,21 @@ namespace PrincesPalace
             // PlaceCast has nothing to place for one.
             var performance = ResolveCast(beat);
             PlaceCast(beat, performance);
-            return performancePlayer.Begin(performance);
+            var handle = performancePlayer.Begin(performance);
+            _beatCast = handle;
+            _beatCueSeconds = performance?.HitCueSeconds ?? 0f;
+            return handle;
+        }
+
+        // The cast the beat now playing began, so the beat can follow its cue
+        // (FightBeatPlayer.HitCueCrossed). Beats play one at a time.
+        private CastHandle _beatCast;
+        private float _beatCueSeconds;
+
+        private bool? HitCueCrossed()
+        {
+            if (performancePlayer == null || !_beatCast.IsLive || _beatCueSeconds <= 0f) return null;
+            return performancePlayer.HasReached(_beatCast, _beatCueSeconds);
         }
 
         // WHERE EACH INSTANCE'S BOX GOES, written onto the instance once.

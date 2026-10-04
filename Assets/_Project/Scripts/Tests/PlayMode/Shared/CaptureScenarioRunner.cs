@@ -662,6 +662,12 @@ namespace PrincesPalace.PlayModeTests
             {
                 if (AnythingDrawn(fight)) lit++;
 
+                // AT THE END OF THE FRAME, after every coroutine has run: a
+                // picture taken from this coroutine showed the beat's own
+                // coroutine work (badges, log, numbers) one frame after the
+                // cast's Update-driven layers, a lag the player never sees.
+                yield return new WaitForEndOfFrame();
+
                 string path = sink.FramePath(offset + frame);
                 Render(canvas, path);
                 FileAssert.Exists(path);

@@ -73,6 +73,12 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // `seconds` lands at 5/9 of the way through, comfortably past a fifth.
         public const float PunchFraction = 0.2f;
 
+        // Float slack, in frames, added to a layer's age quotient (see SampleOf).
+        private const float BoundarySnap = 1e-3f;
+
+        // Seconds. A frame opening this close before the cue counts as opening on it.
+        private const float CueTolerance = 1e-3f;
+
         public static SpellFrameSample SampleOf(SpellLayerInstance instance, int frameCount, float seconds)
         {
             if (instance == null || frameCount <= 0) return SpellFrameSample.Hidden;
@@ -104,7 +110,10 @@ namespace PrincesPalace.Domain.Combat.Presentation
             float perFrame = PerFrame(layer, lifetime, playable);
             if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha, scale);
 
-            float at = age / perFrame;
+            // A hair past the exact quotient, so a frame boundary authored on the
+            // cue (0.30 s over 0.06 s frames is 4.9999995 in floats) opens on
+            // the cue tick and not one tick after it.
+            float at = age / perFrame + BoundarySnap;
 
             // WRAPPED FOR A LOOP, CLAMPED OTHERWISE. `once` and `hold` select
             // the same frame -- the last one -- and differ only in intent,
@@ -134,6 +143,17 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
             int next = NextIndex(index, first, frameCount, loops);
             float blend = next < 0 ? 0f : BlendAt(within);
+
+            // NOTHING OF A POST-CUE FRAME SHOWS BEFORE THE CUE. The dissolve
+            // into a frame starts DissolveFraction of a frame early, so a sheet
+            // whose payoff frame opens on the cue (Thorn Tithe's sap burst)
+            // was already half-drawn 1-2 frames ahead of the number, sound and
+            // badge. A frame that opens at or after the cue cuts in on it.
+            if (blend > 0f && instance.CueSeconds >= 0f && seconds < instance.CueSeconds)
+            {
+                float nextOpens = instance.StartSeconds + (index + 1 - first) * perFrame;
+                if (nextOpens >= instance.CueSeconds - CueTolerance) blend = 0f;
+            }
 
             return new SpellFrameSample(true, index, next, blend, alpha, scale);
         }

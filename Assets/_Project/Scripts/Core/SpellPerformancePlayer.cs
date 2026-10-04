@@ -297,6 +297,8 @@ namespace PrincesPalace
 
         // Ticked from Update with the module's own clock, and from a test with
         // whatever clock it wants to hold.
+        private const float ClockSlack = 1e-4f;
+
         public void Tick(float now)
         {
             for (int slot = 0; slot < _casts.Count; slot++)
@@ -309,7 +311,10 @@ namespace PrincesPalace
                 // FightBeatPlayer's live Pace product (contract 3): this
                 // cast must keep ageing on the pace it was born at even if
                 // the player steps the preset while it is still drawing.
-                float seconds = (now - _casts[slot].StartedAt) * _casts[slot].PaceAtStart;
+                // ClockSlack: a whole number of 1/60 s frames lands a float hair
+                // under its authored second (18 frames read 0.29999998), which
+                // moved a cue authored on a frame multiple one frame late.
+                float seconds = (now - _casts[slot].StartedAt) * _casts[slot].PaceAtStart + ClockSlack;
                 Advance(slot, seconds);
                 if (_casts[slot].Live) Paint(slot, seconds);
             }

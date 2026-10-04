@@ -136,6 +136,11 @@ Each payoff's sound, damage number and accent share a frame. For a strike that
 is one frame, the contact. A spell with several payoffs has the rule once per
 payoff. Everything else is a principle to express, not a number to hit.
 
+The runtime holds it two ways: the beat's impact block (sound, number, badge) follows the
+cast's own cue clock (`FightBeatPlayer.HitCueCrossed`), and a sprite frame that opens on the
+cue cuts in instead of dissolving in early (`SpellFrameCursor`). A payoff drawn by a
+release-clock sheet is therefore safe on a frame boundary at `hitCueSeconds`.
+
 ## Spells without a single contact
 
 - **Buff, heal, ward.** No contact frame. The payoff is the moment the status
