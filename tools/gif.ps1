@@ -115,8 +115,8 @@ if ($Prune -ge 0) {
 if (-not $Manifest -and (-not $Kind -or -not $Id)) {
     Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
     Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism] [-KeepFrames]"
-    Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]
-                     [-Party shawn,odette,bjorn] [-Target <ally|enemy slot>]"
+    Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]"
+    Write-Host "                     [-Party shawn,odette,bjorn] [-Target <ally|enemy slot>]"
     Write-Host "       tools/gif.ps1 -Manifest <name>   |   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]   |   tools/gif.ps1 -Prune <days>   |   tools/gif.ps1 -TrimFrames"
     exit 1
 }
@@ -187,8 +187,8 @@ function Invoke-FightBatch {
     $repeatByKey = @{}
     foreach ($sc in @((Get-Content -LiteralPath $env:PP_GIF_REQUEST -Raw | ConvertFrom-Json).scenarios)) {
         # A spell held on for -Seconds is filmed at a few seconds of battle per
-        # real second at worst, so it earns one more scenario's worth per 5 s.
-        $repeatByKey[$sc.key] = [math]::Max([math]::Max(1, [int]$sc.repeat), 1 + [int][math]::Ceiling([double]$sc.seconds / 5))
+        # real second at worst, so it earns one more scenario's worth per 5 s on top of the casts.
+        $repeatByKey[$sc.key] = [math]::Max(1, [int]$sc.repeat) + [int][math]::Ceiling([double]$sc.seconds / 5)
     }
     $readyAt = $null
     $lastIndex = -1

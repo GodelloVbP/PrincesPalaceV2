@@ -265,8 +265,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built?.Session, "'" + spellId + "' could not be built into an encounter");
 
             PreviewFight.Prepare(built, plan);
-            if (AllyCastIsReal(plan.Skill, request)) LetTheCasterActFirst(built);
             ApplyPreStatus(built, request.PreStatus);
+            // Begin() auto-resolves the opening enemy turns and hands the fight
+            // to the first player turn, so the caster-first step and the refusal
+            // check read the state the cast will meet. Idempotent: the bind
+            // below calls it again.
+            built.Session.Begin();
+            if (AllyCastIsReal(plan.Skill, request)) LetTheCasterActFirst(built);
             AimedTarget = ResolveTarget(built, request.Target);
             if (AllyCastIsReal(plan.Skill, request) && AimedTarget != null)
             {
@@ -818,6 +823,35 @@ namespace PrincesPalace.PlayModeTests
         // The most a pacing wait between two casts of a series may take.
         private const int MaxPacingFrames = 10 * Fps;
 
+        // Frames an armed or pressed action may leave the turn where it was
+        // before the film is called stalled.
+        private const int StallFrames = 3 * Fps;
+
+        // Mana refilled and the spell's cooldown run down, so a press is not
+        // refused for the purse.
+        private static void PayFor(FightSession session, CombatantState who, string skillId)
+        {
+            who.PrimaryPool.Gain(who.PrimaryPool.Max);
+            int guard = 0;
+            while (session.CooldownRemaining(who, skillId) > 0 &&
+                   session.CooldownRemaining(who, skillId) != FightSession.SpentForFight && guard++ < 50)
+            {
+                session.TickCooldownsForTest(who);
+            }
+        }
+
+        // The first skill of the actor's kit that aims at enemies; the weapon
+        // swing is out of reach from the rear rank.
+        private static ResolvedSkill OffensiveSkillOf(FightSession session, CombatantState who) =>
+            session.KitFor(who)?.Skills?.FirstOrDefault(
+                k => k.Targeting == SkillTargeting.SingleEnemy || k.Targeting == SkillTargeting.AllEnemies);
+
+        private static int IndexOf(IReadOnlyList<CombatantState> list, CombatantState item)
+        {
+            for (int i = 0; i < list.Count; i++) if (ReferenceEquals(list[i], item)) return i;
+            return -1;
+        }
+
         // THE SAME SPELL `count` TIMES IN ONE FIGHT, one continuous frame series.
         // Between casts the fight plays on at its own pace (the enemies' turns,
         // the beats) and every frame of it is filmed; the next cast is pressed
@@ -838,19 +872,20 @@ namespace PrincesPalace.PlayModeTests
                 if (cast > 0)
                 {
                     var session = Fight.SessionForTest;
-                    var caster = session.Encounter.LivingPlayerParty.First();
-                    caster.PrimaryPool.Gain(caster.PrimaryPool.Max);
-                    int guard = 0;
-                    while (session.CooldownRemaining(caster, spellId) > 0 &&
-                           session.CooldownRemaining(caster, spellId) != FightSession.SpentForFight && guard++ < 50)
-                    {
-                        session.TickCooldownsForTest(caster);
-                    }
+                    Assert.IsFalse(session.Encounter.IsOver, "the fight ended before cast " + (cast + 1) + " of " + count +
+                        " (log: " + string.Join(" | ", Fight.RecentLogForTest.Reverse().Take(4)) + ")");
+                    var caster = session.Encounter.LivingPlayerParty.FirstOrDefault();
+                    Assert.IsNotNull(caster, "no player combatant is alive for cast " + (cast + 1) + " of " + count);
+                    PayFor(session, caster, spellId);
 
                     int paced = 0;
+                    CombatantState armedFor = null;
+                    int armedAt = 0;
                     while ((Fight.IsBusy || Beats.IsPlaying || !session.IsPlayerTurn
                             || !ReferenceEquals(session.Current, caster)) && paced < MaxPacingFrames)
                     {
+                        Assert.IsFalse(session.Encounter.IsOver, "the fight ended while pacing to cast " + (cast + 1) + " of " + count +
+                            " (log: " + string.Join(" | ", Fight.RecentLogForTest.Reverse().Take(4)) + ")");
                         // A squadmate's turn would wait for a hand, and the forced
                         // press would be refused on a kit without the spell, so the
                         // squadmate casts the first spell of theirs that aims at
@@ -858,22 +893,27 @@ namespace PrincesPalace.PlayModeTests
                         if (!Fight.IsBusy && !Beats.IsPlaying && session.IsPlayerTurn
                             && !ReferenceEquals(session.Current, caster))
                         {
-                            var own = session.KitFor(session.Current)?.Skills?.FirstOrDefault(
-                                k => k.Targeting == SkillTargeting.SingleEnemy || k.Targeting == SkillTargeting.AllEnemies);
-                            Assert.IsNotNull(own, session.Current.Name + " has no spell to cast at the enemy between the series' casts");
-                            // Paid for like the caster's: a squadmate who cast last
-                            // round is out of mana or on cooldown and the press would
-                            // be refused every frame.
                             var mate = session.Current;
-                            mate.PrimaryPool.Gain(mate.PrimaryPool.Max);
-                            int mateGuard = 0;
-                            while (session.CooldownRemaining(mate, own.Id) > 0 &&
-                                   session.CooldownRemaining(mate, own.Id) != FightSession.SpentForFight && mateGuard++ < 50)
+                            if (!ReferenceEquals(armedFor, mate))
                             {
-                                session.TickCooldownsForTest(mate);
+                                var own = OffensiveSkillOf(session, mate);
+                                Assert.IsNotNull(own, mate.Name + " has no spell to cast at the enemy between the series' casts");
+                                // Paid for like the caster's: a squadmate who cast last
+                                // round is out of mana or on cooldown and the press would
+                                // be refused.
+                                PayFor(session, mate, own.Id);
+                                Fight.ForceFirstAction(own.Id);
+                                armedFor = mate;
+                                armedAt = paced;
                             }
-
-                            Fight.ForceFirstAction(own.Id);
+                            else
+                            {
+                                // Armed once per turn: a force the controller keeps
+                                // refusing is a stall, not a reason to press again.
+                                Assert.Less(paced - armedAt, StallFrames, mate.Name + "'s forced action was refused for " +
+                                    StallFrames + " frames while pacing to cast " + (cast + 1) + " (log: " +
+                                    string.Join(" | ", Fight.RecentLogForTest.Reverse().Take(4)) + ")");
+                            }
                         }
 
                         Render(Canvas, sink.FramePath(next++));
@@ -1017,22 +1057,53 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator PlayOn(CaptureSink sink, float seconds, CaptureOutcome outcome)
         {
             var fight = Fight;
+            var session = fight.SessionForTest;
             int total = Mathf.CeilToInt(seconds * Fps);
             int frame = outcome.NextFrame;
+            CombatantState pressedFor = null;
+            int pressedAt = 0;
             while (frame < total)
             {
-                if (!fight.IsBusy && !Beats.IsPlaying && fight.SessionForTest.IsPlayerTurn)
+                bool idle = !fight.IsBusy && !Beats.IsPlaying && session.IsPlayerTurn && !session.Encounter.IsOver;
+                if (!idle)
                 {
+                    pressedFor = null;
+                }
+                else if (ReferenceEquals(pressedFor, session.Current))
+                {
+                    Assert.Less(frame - pressedAt, StallFrames, pressedFor.Name + "'s action left the turn where it was for " +
+                        StallFrames + " frames while the film played on (log: " +
+                        string.Join(" | ", fight.RecentLogForTest.Reverse().Take(4)) + ")");
+                }
+                else
+                {
+                    var actor = session.Current;
+                    // The plain swing at the first enemy this actor reaches (a
+                    // rear-rank caster reaches none, and a dead front enemy has
+                    // no plate); else the actor's own spell at an enemy.
+                    var targets = session.EligibleTargets(actor, Reach.Melee);
                     var verb = fight.GetComponentsInChildren<Button>(includeInactive: true)
                         .FirstOrDefault(b => b.name == "Verb0" && b.gameObject.activeInHierarchy);
-                    if (verb != null)
+                    if (verb != null && targets.Count > 0)
                     {
+                        int at = IndexOf(session.Encounter.Enemies, targets[0]);
                         verb.onClick.Invoke();
                         yield return null;
                         var plate = fight.GetComponentsInChildren<Button>(includeInactive: true)
-                            .FirstOrDefault(b => b.name == "EnemyPlate0" && b.gameObject.activeInHierarchy);
-                        if (plate != null) plate.onClick.Invoke();
+                            .FirstOrDefault(b => b.name == "EnemyPlate" + at && b.gameObject.activeInHierarchy);
+                        Assert.IsNotNull(plate, "no EnemyPlate" + at + " to swing at for " + actor.Name);
+                        plate.onClick.Invoke();
                     }
+                    else
+                    {
+                        var own = OffensiveSkillOf(session, actor);
+                        Assert.IsNotNull(own, actor.Name + " can neither swing at an enemy it reaches nor cast at one while the film plays on");
+                        PayFor(session, actor, own.Id);
+                        fight.ForceFirstAction(own.Id);
+                    }
+
+                    pressedFor = actor;
+                    pressedAt = frame;
                 }
 
                 Render(Canvas, sink.FramePath(frame));

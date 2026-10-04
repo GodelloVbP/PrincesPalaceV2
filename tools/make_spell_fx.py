@@ -208,7 +208,7 @@ def write(name, root):
     folder = os.path.join(root, name)
     os.makedirs(folder, exist_ok=True)
     for index, make in enumerate(PIECES[name]):
-        Image.fromarray(make(), "RGBA").save(os.path.join(folder, f"f{index}.png"))
+        Image.fromarray(make()).save(os.path.join(folder, f"f{index}.png"))
         print(f"wrote {os.path.join(folder, f'f{index}.png')}")
 
 

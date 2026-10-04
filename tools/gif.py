@@ -167,7 +167,8 @@ def normalize(raw, skills=None, characters=None):
         "repeat": int(raw.get("repeat") or 1),
         "darkness": float(raw.get("darkness") or 0.0),
     }
-    if raw.get("aspect"):
+    if raw.get("aspect") and kind in UNITY_KINDS:
+        # Stance, sheet and still have no canvas to resize; their size is the art's.
         out["width"], out["height"] = aspect_size(raw["aspect"])
         if not out["crop"]:
             out["crop"] = "full"
@@ -255,12 +256,37 @@ def still_classes(tests=PLAYMODE_TESTS):
     return sorted(out)
 
 
+def caster_of(skill, characters):
+    """Who the preview fight casts a skill as, mirroring PreviewFight.ChooseCaster:
+    the authored owner when the roster has them, else (for a skill that spends a
+    resource) the first character carrying the owner's signature resource, else
+    the roster lead with battle art. '' when no character can cast it."""
+    owner = skill.get("characterId") or ""
+    if owner and any(c["id"] == owner for c in characters):
+        return owner
+    if (skill.get("resourceCost") or 0) > 0:
+        owned = next((c for c in characters if c["id"] == owner), None)
+        wanted = (owned or {}).get("signatureId") or None
+        payer = next((c for c in characters if c.get("signatureId") and (wanted is None or c["signatureId"] == wanted)), None)
+        return payer["id"] if payer else ""
+    lead = next((c for c in characters if c.get("battleSpritePath")), None) or (characters[0] if characters else None)
+    return lead["id"] if lead else ""
+
+
+def needs_depth(skill):
+    """True when the skill's reach excludes the front seat (reachSlots without 1),
+    so the runner fields a rack of three behind which it can land."""
+    slots = skill.get("reachSlots") or []
+    return bool(slots) and 1 not in slots
+
+
 def known_ids():
     skills = load_content("skills.json", "skills")
     enemies = load_content("enemies.json", "enemies")
     relics = load_content("relics.json", "relics")
     enemy_owned = {a["skillId"] for e in enemies for a in e.get("abilities", []) or []}
     vfx_skills = {s["id"] for s in skills if s.get("vfx")}
+    characters = load_content("characters.json", "characters")
     return {
         "spell": [s["id"] for s in skills if s.get("vfx")],
         "playerSpell": [s["id"] for s in skills if s.get("vfx") and s["id"] not in enemy_owned],
@@ -268,8 +294,9 @@ def known_ids():
         "abilityPairs": [[e["id"], a["skillId"]] for e in enemies if e.get("spritePath")
                          for a in e.get("abilities", []) or [] if a["skillId"] in vfx_skills],
         "targeting": {s["id"]: s.get("targeting") or "" for s in skills},
-        "casters": {s["id"]: s.get("characterId") or "" for s in skills},
-        "characters": [c["id"] for c in load_content("characters.json", "characters")],
+        "casters": {s["id"]: caster_of(s, characters) for s in skills},
+        "needsDepth": {s["id"]: needs_depth(s) for s in skills},
+        "characters": [c["id"] for c in characters],
         "stance": stance_actors(),
         "sheet": sheet_folders(),
         "stillClasses": still_classes(),
@@ -315,18 +342,27 @@ def formation_refusals(scenario, ids):
     if len(party) > MAX_PARTY:
         out.append("party lists %d characters; a squad is %d" % (len(party), MAX_PARTY))
     caster = ids.get("casters", {}).get(scenario["id"], "")
-    if party and caster in known and party[0] != caster:
+    # The runner asserts CasterId == party[0] after a Unity boot; the caster is
+    # resolved here the way PreviewFight does, so a wrong lead costs no boot.
+    if party and caster and party[0] != caster:
         out.append("party leads with its caster: '%s' casts %s, so it goes first" % (caster, scenario["id"]))
     aim = ids.get("targeting", {}).get(scenario["id"], "")
     if not target:
         return out
     if aim == "SingleAlly":
-        if target not in (party or [caster]):
-            out.append("target '%s' is not in the party (%s)" % (target, ",".join(party) or caster))
+        # With no -Party the squad is the preview stage's, which only the
+        # runner knows; the named ally must at least be a character.
+        if party and target not in party:
+            out.append("target '%s' is not in the party (%s)" % (target, ",".join(party)))
+        elif not party and known and target not in known:
+            out.append("target '%s' is not a character; characters: %s" % (target, ", ".join(known)))
     elif aim in ("AllEnemies", "Self", "Party"):
         out.append("%s aims at %s; it has no target to pick" % (scenario["id"], aim))
     else:
-        rack = len(foes) if len(foes) > 1 else (3 if scenario["formation"] == "full" else 1)
+        # The runner fields three when the rack is full or the skill's reach
+        # excludes the front seat; a lone body otherwise.
+        deep = scenario["formation"] == "full" or ids.get("needsDepth", {}).get(scenario["id"], False)
+        rack = len(foes) if len(foes) > 1 else (3 if deep else 1)
         if not target.isdigit() or not 1 <= int(target) <= rack:
             out.append("target '%s' is not an enemy slot 1..%d (1 is the front)" % (target, rack))
     return out
@@ -597,7 +633,11 @@ def cmd_prepare(args):
     skipped, gaps, manifest_name = [], [], ""
     if args.manifest:
         spec = load_manifest(args.manifest)
-        expanded = expand_manifest(spec, ids)
+        try:
+            expanded = expand_manifest(spec, ids)
+        except ValueError as e:  # a bad aspect or number in a manifest row
+            print("REFUSED manifest %s: %s" % (args.manifest, e), file=sys.stderr)
+            return 2
         scenarios, skipped, gaps = expanded["scenarios"], expanded["skipped"], expanded["gaps"]
         manifest_name = spec.get("name") or args.manifest
     else:
@@ -950,26 +990,74 @@ def run_python_scenario(run_dir, scenario, sdir):
 # regenerable; anim.gif, strip.png and the JSON are what a reader keeps. Only
 # the newest runs keep theirs, which is all -Compare and -Determinism need.
 FRAME_RUNS_KEPT = 2
+# A run whose scenarios have not all written scenario.json is still recording
+# (python-only requests finish in seconds, a Unity run in minutes), so its
+# frames stay until it is a day stale. A finished run is also left alone for a
+# few minutes: -Determinism's second boot and the -Compare right after a
+# record read the run that finished just before.
+FRAME_GRACE_SECONDS = 600
+UNFINISHED_STALE_SECONDS = 86400
+KEEP_FRAMES_MARKER = "keep_frames"  # written by `finish --keep-frames`; trim never touches that run
 
 
-def trim_frames(runs_root=None, keep=FRAME_RUNS_KEPT):
-    """Deletes frames/ under every run but the newest `keep`. Returns (runs
-    trimmed, bytes freed). Run directories sort by their UTC timestamp prefix."""
+def run_state(run):
+    """(finished, newest mtime) of a run directory. Finished means every
+    scenario of its request has a scenario.json; no readable request is unfinished."""
+    request = read_json(os.path.join(run, "request.json"), None)
+    newest = 0.0
+    try:
+        newest = os.path.getmtime(os.path.join(run, "request.json"))
+    except OSError:
+        pass
+    if not request or not request.get("scenarios"):
+        return False, newest
+    finished = True
+    for s in request["scenarios"]:
+        record = os.path.join(run, s["key"], "scenario.json")
+        try:
+            newest = max(newest, os.path.getmtime(record))
+        except OSError:
+            finished = False
+    return finished, newest
+
+
+def run_has_frames(run):
+    return any(os.path.isdir(os.path.join(run, d, "frames")) for d in os.listdir(run) if os.path.isdir(os.path.join(run, d)))
+
+
+def trim_frames(runs_root=None, keep=FRAME_RUNS_KEPT, now=None):
+    """Deletes frames/ under every run but the newest `keep` that still have
+    frames, skipping runs still recording, runs younger than the grace period
+    and runs marked keep_frames. Returns (runs trimmed, bytes freed). Run
+    directories sort by their UTC timestamp prefix. A frame folder that cannot
+    be removed (an open Explorer preview) is reported and left."""
     runs_root = runs_root or RUNS
     if not os.path.isdir(runs_root):
         return 0, 0
-    runs = sorted((d for d in os.listdir(runs_root) if os.path.isdir(os.path.join(runs_root, d))), reverse=True)
+    now = time.time() if now is None else now
+    runs = sorted((d for d in os.listdir(runs_root)
+                   if os.path.isdir(os.path.join(runs_root, d)) and run_has_frames(os.path.join(runs_root, d))), reverse=True)
     trimmed, freed = 0, 0
     for name in runs[max(0, keep):]:
         run = os.path.join(runs_root, name)
+        if os.path.exists(os.path.join(run, KEEP_FRAMES_MARKER)):
+            continue
+        finished, newest = run_state(run)
+        if now - newest < (FRAME_GRACE_SECONDS if finished else UNFINISHED_STALE_SECONDS):
+            continue
         hit = False
         for scenario in os.listdir(run):
             frames = os.path.join(run, scenario, "frames")
-            if os.path.isdir(frames):
-                for root, _dirs, files in os.walk(frames):
-                    freed += sum(os.path.getsize(os.path.join(root, f)) for f in files)
+            if not os.path.isdir(frames):
+                continue
+            try:
+                size = sum(os.path.getsize(os.path.join(root, f)) for root, _dirs, files in os.walk(frames) for f in files)
                 shutil.rmtree(frames)
-                hit = True
+            except OSError as error:
+                print("could not trim %s: %s" % (frames, error))
+                continue
+            freed += size
+            hit = True
         trimmed += hit
     return trimmed, freed
 
@@ -1013,12 +1101,14 @@ def cmd_finish(args):
 
     if latest:
         write_json_atomic(LATEST, latest)
-    if not args.keep_frames:
+    print(coverage_table(scenarios, outcomes, skipped=request.get("skipped", []), gaps=request.get("gaps", []),
+                         manifest=request.get("manifest", "")))
+    if args.keep_frames:
+        open(os.path.join(run_dir, KEEP_FRAMES_MARKER), "w").close()
+    else:
         trimmed, freed = trim_frames()
         if trimmed:
             print("trimmed frames of %d older run(s), freed %.1f GB (-KeepFrames keeps them)" % (trimmed, freed / 1e9))
-    print(coverage_table(scenarios, outcomes, skipped=request.get("skipped", []), gaps=request.get("gaps", []),
-                         manifest=request.get("manifest", "")))
 
     totals = {}
     for s in scenarios:

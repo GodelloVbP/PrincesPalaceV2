@@ -4,7 +4,9 @@
 import os
 import sys
 import tempfile
+import types
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gif  # noqa: E402
@@ -47,34 +49,99 @@ class SpellSecondsTests(unittest.TestCase):
 
 
 class TrimFramesTests(unittest.TestCase):
-    def make_run(self, root, name, scenario="abc", frames=3):
-        sdir = os.path.join(root, name, scenario)
+    NOW = 2_000_000_000.0
+    OLD = NOW - 3600
+
+    def make_run(self, root, name, scenario="abc", frames=3, finished=True, at=None):
+        """A run directory; `finished` writes the scenario.json finish leaves
+        behind, `at` is the mtime every file of it carries."""
+        at = self.OLD if at is None else at
+        run = os.path.join(root, name)
+        sdir = os.path.join(run, scenario)
         os.makedirs(os.path.join(sdir, "frames"))
         for i in range(frames):
             with open(os.path.join(sdir, "frames", "f%04d.png" % i), "wb") as f:
                 f.write(b"x" * 10)
-        for keep in ("anim.gif", "strip.png", "scenario.json"):
+        keeps = ["anim.gif", "strip.png"] + (["scenario.json"] if finished else [])
+        for keep in keeps:
             with open(os.path.join(sdir, keep), "wb") as f:
                 f.write(b"k")
+        with open(os.path.join(run, "request.json"), "w") as f:
+            f.write('{"scenarios": [{"key": "%s"}]}' % scenario)
+        for path in (os.path.join(run, "request.json"), os.path.join(sdir, "scenario.json")):
+            if os.path.exists(path):
+                os.utime(path, (at, at))
+
+    def has_frames(self, root, name):
+        return os.path.isdir(os.path.join(root, name, "abc", "frames"))
 
     def test_only_the_newest_runs_keep_frames_and_everything_else_stays(self):
         with tempfile.TemporaryDirectory() as root:
             for name in ("20261001T000000Z_a", "20261002T000000Z_b", "20261003T000000Z_c"):
                 self.make_run(root, name)
-            trimmed, freed = gif.trim_frames(root, keep=2)
+            trimmed, freed = gif.trim_frames(root, keep=2, now=self.NOW)
             self.assertEqual((trimmed, freed), (1, 30))
-            self.assertFalse(os.path.isdir(os.path.join(root, "20261001T000000Z_a", "abc", "frames")))
-            self.assertTrue(os.path.isdir(os.path.join(root, "20261002T000000Z_b", "abc", "frames")))
-            self.assertTrue(os.path.isdir(os.path.join(root, "20261003T000000Z_c", "abc", "frames")))
+            self.assertFalse(self.has_frames(root, "20261001T000000Z_a"))
+            self.assertTrue(self.has_frames(root, "20261002T000000Z_b"))
+            self.assertTrue(self.has_frames(root, "20261003T000000Z_c"))
             self.assertTrue(os.path.isfile(os.path.join(root, "20261001T000000Z_a", "abc", "anim.gif")))
 
     def test_a_second_trim_and_a_missing_root_are_no_ops(self):
         with tempfile.TemporaryDirectory() as root:
             self.make_run(root, "20261001T000000Z_a")
             self.make_run(root, "20261002T000000Z_b")
-            self.assertEqual(gif.trim_frames(root, keep=1)[0], 1)
-            self.assertEqual(gif.trim_frames(root, keep=1), (0, 0))
+            self.assertEqual(gif.trim_frames(root, keep=1, now=self.NOW)[0], 1)
+            self.assertEqual(gif.trim_frames(root, keep=1, now=self.NOW), (0, 0))
             self.assertEqual(gif.trim_frames(os.path.join(root, "nope")), (0, 0))
+
+    def test_a_run_still_recording_is_never_trimmed(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001T000000Z_a", finished=False)
+            self.make_run(root, "20261002T000000Z_b")
+            self.make_run(root, "20261003T000000Z_c")
+            self.assertEqual(gif.trim_frames(root, keep=1, now=self.NOW)[0], 1)
+            self.assertTrue(self.has_frames(root, "20261001T000000Z_a"))
+            self.assertFalse(self.has_frames(root, "20261002T000000Z_b"))
+
+    def test_an_unfinished_run_is_trimmed_once_it_is_a_day_stale(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001T000000Z_a", finished=False, at=self.NOW - 2 * 86400)
+            self.make_run(root, "20261002T000000Z_b")
+            self.assertEqual(gif.trim_frames(root, keep=1, now=self.NOW)[0], 1)
+            self.assertFalse(self.has_frames(root, "20261001T000000Z_a"))
+
+    def test_a_run_younger_than_the_grace_period_keeps_its_frames(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001T000000Z_a", at=self.NOW - 60)
+            self.make_run(root, "20261002T000000Z_b")
+            self.assertEqual(gif.trim_frames(root, keep=1, now=self.NOW), (0, 0))
+            self.assertTrue(self.has_frames(root, "20261001T000000Z_a"))
+
+    def test_runs_without_frames_do_not_use_up_the_kept_slots(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001T000000Z_a")
+            self.make_run(root, "20261002T000000Z_b")
+            os.makedirs(os.path.join(root, "20261003T000000Z_c", "abc"))
+            os.makedirs(os.path.join(root, "20261004T000000Z_d", "abc"))
+            self.assertEqual(gif.trim_frames(root, keep=2, now=self.NOW), (0, 0))
+            self.assertTrue(self.has_frames(root, "20261001T000000Z_a"))
+
+    def test_a_run_marked_keep_frames_is_left_for_a_later_compare(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001T000000Z_a")
+            open(os.path.join(root, "20261001T000000Z_a", gif.KEEP_FRAMES_MARKER), "w").close()
+            self.make_run(root, "20261002T000000Z_b")
+            self.assertEqual(gif.trim_frames(root, keep=1, now=self.NOW), (0, 0))
+            self.assertTrue(self.has_frames(root, "20261001T000000Z_a"))
+
+    def test_a_folder_that_cannot_be_removed_is_reported_and_skipped(self):
+        import unittest.mock as mock
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001T000000Z_a")
+            self.make_run(root, "20261002T000000Z_b")
+            with mock.patch.object(gif.shutil, "rmtree", side_effect=PermissionError("locked")):
+                self.assertEqual(gif.trim_frames(root, keep=1, now=self.NOW), (0, 0))
+            self.assertTrue(self.has_frames(root, "20261001T000000Z_a"))
 
 
 class RefusalTests(unittest.TestCase):
@@ -123,6 +190,22 @@ class CaptureOptionTests(unittest.TestCase):
         s = self.norm(aspect="4:3")
         self.assertEqual((s["width"], s["height"], s["crop"]), (1440, 1080, "full"))
         self.assertEqual(self.norm()["width"], 0)
+
+    def test_aspect_leaves_a_stance_and_a_sheet_alone(self):
+        for kind, crop in (("stance", "subject"), ("sheet", "full")):
+            s = gif.normalize({"kind": kind, "id": "x", "aspect": "4:3"}, SKILLS)
+            self.assertEqual((s["width"], s["height"], s["crop"]), (0, 0, crop), kind)
+
+    def test_a_bad_aspect_in_a_manifest_is_a_refusal_not_a_traceback(self):
+        import io
+        import contextlib
+        spec = {"name": "m", "scenarios": [{"kind": "spell", "id": "bolt", "aspect": "wide"}]}
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            with unittest.mock.patch.object(gif, "load_manifest", return_value=spec), \
+                    unittest.mock.patch.object(gif, "known_ids", return_value=RefusalTests.IDS):
+                code = gif.cmd_prepare(types.SimpleNamespace(manifest="m"))
+        self.assertEqual(code, 2)
+        self.assertIn("REFUSED manifest", err.getvalue())
 
     def test_a_bad_aspect_is_an_error(self):
         with self.assertRaises(ValueError):
@@ -184,6 +267,41 @@ class FormationAndPartyTests(unittest.TestCase):
         self.assertIn("no target to pick", gif.refusals(wave, self.IDS)[0])
         relic = gif.normalize({"kind": "relic", "id": "bell", "vs": "rat,treant"}, SKILLS, self.CHARS)
         self.assertIn("vs list", gif.refusals(relic, self.IDS)[0])
+
+
+class RunnerAlignmentTests(unittest.TestCase):
+    CHARS = {"sheep": "sheep", "owl": "owl"}
+    IDS = dict(FormationAndPartyTests.IDS, casters={"bolt": "sheep", "free": "owl", "aegis": ""},
+               targeting={"bolt": "SingleEnemy", "free": "SingleEnemy", "aegis": "SingleAlly"},
+               needsDepth={"bolt": True}, spell=["bolt", "free", "aegis"], allSkills=["bolt", "free", "aegis"])
+
+    def r(self, sid, **kw):
+        return gif.refusals(gif.normalize(dict({"kind": "spell", "id": sid}, **kw), SKILLS, self.CHARS), self.IDS)
+
+    def test_a_skill_with_no_authored_owner_still_has_a_lead_caster(self):
+        self.assertIn("leads with its caster", self.r("free", party="sheep,owl")[0])
+        self.assertEqual(self.r("free", party="owl,sheep"), [])
+
+    def test_a_skill_that_needs_depth_has_a_rack_of_three_in_a_lone_formation(self):
+        self.assertEqual(self.r("bolt", target="3"), [])
+        self.assertIn("slot 1..1", self.r("free", target="3")[0])
+
+    def test_an_ally_target_with_no_party_is_not_refused_for_an_unresolved_caster(self):
+        self.assertEqual(self.r("aegis", target="owl"), [])
+        self.assertIn("not a character", self.r("aegis", target="nobody")[0])
+
+    def test_caster_of_walks_the_preview_ladder(self):
+        chars = [{"id": "a", "battleSpritePath": ""}, {"id": "b", "battleSpritePath": "x", "signatureId": "wool"},
+                 {"id": "c", "signatureId": "ember"}]
+        self.assertEqual(gif.caster_of({"characterId": "c"}, chars), "c")
+        self.assertEqual(gif.caster_of({"characterId": "zz"}, chars), "b")
+        self.assertEqual(gif.caster_of({"resourceCost": 2, "characterId": "c"}, chars), "c")
+        self.assertEqual(gif.caster_of({"resourceCost": 2}, chars), "b")
+        self.assertEqual(gif.caster_of({}, chars), "b")
+        self.assertEqual(gif.caster_of({"resourceCost": 1}, [{"id": "a"}]), "")
+        self.assertTrue(gif.needs_depth({"reachSlots": [2, 3]}))
+        self.assertFalse(gif.needs_depth({"reachSlots": [1, 2]}))
+        self.assertFalse(gif.needs_depth({}))
 
 
 class IdentityTests(unittest.TestCase):
