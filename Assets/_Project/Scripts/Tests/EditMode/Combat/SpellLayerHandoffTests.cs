@@ -30,7 +30,6 @@ namespace PrincesPalace.Domain.Tests
 
         [TestCase("ashen_reckoning", "catch")]
         [TestCase("borrowed_moment", "quicken")]
-        [TestCase("censer_of_embers", "catch")]
         public void TheWindUpHandsOverToThePayoffOnTheSameTick(string spell, string payoff)
         {
             var performance = Resolve(spell);

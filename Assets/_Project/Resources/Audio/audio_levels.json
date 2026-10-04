@@ -294,10 +294,10 @@
     },
     {
       "path": "Sfx/censer_of_embers_cast",
-      "gainDb": 2.0,
-      "gain": 1.2589,
+      "gainDb": 4.1,
+      "gain": 1.6032,
       "metric": "rms",
-      "measuredDb": -20.0,
+      "measuredDb": -22.1,
       "peakDb": -7.5
     },
     {

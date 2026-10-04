@@ -1,73 +1,62 @@
-# Censer of Embers, "after" (plan S3, spell 3.10)
+# Censer of Embers, pilot (plan `docs/PLAN_SPELL_ANIMATION.md` A1)
 
-Captured 2026-10-04 with `tools/gif.ps1 spell censer_of_embers -Vs <enemy>` (1x) and series at
-1.5x. The payoff is the painted `censer_of_embers_catch.png`; the swing frames (f0-f4) and the
-ember and flame particles are the old sheet's; the smoke is not drawn. GIFs are untracked next to this file. Owner
-gates skipped; the calls below are mine. The lingering coal glow is not part of this spell.
+Captured 2026-10-04 with `tools/gif.ps1 spell censer_of_embers -Vs treant|rat` (1x) and
+`-Vs treant -Repeat 3 -Speed 1.5`. GIFs are untracked next to this file; the treant 1x is also
+`../../showcase/censer_of_embers_pilot_treant.gif`. Every frame described below was looked at
+at 1920x1080 around the target. No verdict: the owner judges.
 
-## What the tools had wrong, fixed here
+Everything drawn is a STAND-IN until the owner's `censer_hanging.png` and `censer_flame_loop.png`
+land (`docs/prompts/2026-10-04_spell_animation.md`): the censer is the swing sheet's f0, the smoke is
+its f6, the flash is its f5, the fire is the painted crescent `censer_of_embers_catch`.
 
-- **A pin on an emitter's weights read nothing.** `SpellVfxJson` blanked everything inside an
-  array before reading it, so `emitter.weights` was null for every spell and every test built on
-  it passed without checking. It reads the numbers from the real block now; the Aegis, Borrowed
-  and Censer pins use it, and `SpellVfxRecipeDriftTests` still passes with real weights in hand.
+## Beats, authored seconds (hit cue 0.7 s)
 
-## Beats, authored seconds
+| t | Beat | Layer |
+|---|---|---|
+| 0.00-0.70 | **Wind-up.** The censer fades in over 0.2 s above the target and swings about its chain top: a pendulum, amplitude 18 deg, period 0.93 s, so left extreme 0.23, home 0.47, right extreme 0.70. | `censer` (still, `above`, `rotate`, `fadeIn`) |
+| 0.00-0.70 | Smoke column behind it, breathing (alpha 0.4, scale 0.06, rate 3), fades out over 0.3 s after the cue. | `smoke` (still, `breathe`) |
+| 0.70 | **Payoff.** Censer cuts out. A 0.1 s flash of the sheet's ember column punches in (0.35), 28 coals and tongues thrown in all directions, skill shake 0.25, impact sound, Burn badge, all on the cue frame. | `flash`, `burst` |
+| 0.70-1.60 | **Resolution.** The crescent of fire at the feet fades in over 0.08 s, breathes (alpha 0.35, scale 0.07, rate 4), holds 0.4 s, fades over 0.5 s into the Burn coal glow. Flame tongues lick up 0.4 s; coals float up from 0.75 s, life 0.5-0.9 s. | `fire`, `tongues`, `rise` |
 
-| t | Beat |
-|---|---|
-| 0.00-0.30 | **Swing.** The censer (f0-f4) swings across the target on its chain, sparks trailing. Opacity 0.9, glow 0.5, no fade. |
-| 0.30 | **Payoff.** The painted crescent of embers (`catch`, keyed still, 1701x619 after the crop) laid at the target's feet (`place: target`, 420 box scaled to the body, punch 0.2, glow 1.0), held 0.25 s and faded over 0.2 s, with the sound (`censer_of_embers_impact`) and the Burn badge on the target. Tongues are tallest at the two ends; the centre is open. 16 coals and flame tongues are thrown off (lifetimes 0.22-0.36 s). |
-| 0.35-0.67 | **Take hold.** Six small flames lick up the body (0.05 s after the cue, up to 0.32 s long). |
+The cast sound is recut to 0.70 s (`tools/make_spell_cast_cues.py`, window 0.93-1.63 s of the source).
+By the 50 ms RMS envelope of the written wav it rises to its peak in the last 0.1 s: the riser peaks on the blow.
 
-The sheet's f5 column and smoke frames (f6-f9) and the smoke wisp particle are no longer drawn.
+## What the frames show
 
-## Measured (spell_feel, 60 fps)
+**Swing (treant).** The lantern fades in over the treant's crown, chain going up behind the HUD plate.
+It hangs left of the trunk, swings to the right across the canopy, through vertical at about 0.47 s,
+and is at its right extreme (about 18 deg) on the last frame before the burst. Smoke rises behind it,
+thin, brown-orange, drifting right; small sparks fall off the lantern. The censer covers the top of
+the canopy (not the face).
 
-| | 1x rat | 1x treant | 1.5x rat | 1.5x treant |
-|---|---|---|---|---|
-| contact | f18 | f18 (visual f19) | f12 | f12 |
-| payoff to clean | 0.38 s | 0.38 s | 0.48 s | 0.50 s |
+**Swing (rat).** Same, but the censer hangs about a rat-height clear of the rat's head: nothing of the
+rat is covered, and the swing reads more clearly than on the treant because it has air around it.
 
-WARNs: "no accent" on all four (peak 2.8-7.7 against a typical level of 2.2-6.9) and, on the
-1.5x rat, "contact desync" (visual f40). The peaks sit before the cue (0.18-0.25 s, the swing's
-sparks), because the crescent is low, wide and dim next to the swinging censer. A run with punch
-0.5 and glow 1.5 raised the treant 1.5x peak only from 7.7 to 8.1 and lowered the rat's, so it
-was reverted: the flat crescent does not make a flash, the Burn badge and the coal glow after it
-carry the cue. The 1.5x residue of 0.48 s is the target's coal glow (the plan's 3.11 piece, not
-this spell) and the 0.45 s crescent; at 1x the same glow is under the 0.38 s.
-An earlier run on the rat at 1x with the same numbers had no warnings, so the accent check is
-borderline here.
+**Burst.** The frame after the last swing frame the lantern is gone and the sheet's ember column
+stands where it hung, 3-4 times the lantern's size, with coals at its base and sparks to either side.
+The Burn badge ("3") is on the same frame. On the treant it sits on the crown; the column is tall enough to
+run behind the HUD plate. On the rat it is a standing column above the head, base embers touching
+the ears on the first frame. The column lasts about 0.25 s, then thins to smoke and is gone by about 0.4 s.
+The 28 particles are small next to the column; I do not see a "shower", mostly a halo of sparks at the edge.
 
-## Frame notes
+**Fire at the feet.** Two clumps of flame, one each side, joined by a low bed of coals, fade in
+within two frames of the cue. They hold at about the same size and brightness for roughly 0.6 s,
+the clump shapes shifting from frame to frame (the breathe), and do not dim until the last 0.3 s or so,
+by about 1.1 s after the cue only coals remain. The orange coal glow on the body sits over the same
+time and carries on after. Sparks drift up from the fire. On the rat, one small flame sits over the
+head for about 0.3 s and looks parked.
 
-- **Burn badge on the cue.** On the treant and the rat the badge ("3") is absent on frame 17
-  and present on frame 18, the cue, under the body's feet, with the flame frame opening on the
-  same frame. Burn has no damage number on the cast.
-- **Flash guard.** The cue frame brightens 0.4% of the frame on the rat and 1.1% on the treant
-  (area gaining 10% luminance in one step). Over the 1.5x treant series (about 9 s, five casts)
-  the largest step anywhere is 4.4% and at most one such event falls in a second; none is the
-  cast. One small flash per cast.
-- **Readability.** The crescent sits on the ground line and spans the treant's width; the
-  treant's face is clear on every frame (the old column hid it for about 0.2 s). On the rat the
-  crescent is about as wide as the rat and its tongues reach the rat's chest. The badge sits below
-  it and the plates and log are clear.
-- **Hand-off.** The crescent opens on the frame after the last swing drawing, checked per
-  frame (the one empty frame between them was a cursor-compare bug, fixed 2026-10-04; see
-  `../../README.md`).
-- **Size.** The crescent is low by design (40% of its canvas at most); at 420 it reads as a
-  ring of fire at the feet, closer to "campfire ring" than to "set alight" on the treant, whose
-  trunk only starts to glow from the coal glow after it.
-- **Series.** Five casts on the treant at 1.5x. The rat dies of its own burn on the fifth, so
-  that series is four casts (a stack reads "12 damage each turn start across 2 stacks").
-- **Not looked at:** `-Darkness`; a back-rank target (single-target, same layers).
+## What is weak
 
-## Identity test: "set alight"
-
-Verdict: **passes, weaker on tall targets.** A lantern swings, a crescent of flame and coals
-stands up at the target's feet on the frame the badge appears, the coals fly off, and the coal
-glow takes the body after. The face stays clear, which was the defect. What is weak: the
-crescent is a ground effect, so the target is "standing in fire" for about 0.3 s before the coal
-glow makes it "burning"; on the treant the flames reach only the roots. It does not read as a
-wall of fire or an explosion, as asked. Nothing painted shows the body itself catching; that is
-the coal glow's job.
+- The height clamp: raising the censer from 0.9 to 1.3 body-heights moved it not at all on the treant
+  (the sky ceiling holds it at the crown), so the censer swings over the canopy and hides its top.
+- The burst is one big drawing (the sheet's f5) on a 0.1 s hold plus 0.15 s fade; it is the
+  one element of the payoff that is not made of parts, and its size dwarfs the censer it replaces.
+  Shower of embers is mostly hidden inside it.
+- Swing is a rigid lantern turning about a point, because the art is one still. The chain stays
+  straight; no chain curve, no lantern tilt of its own, no stop at the extremes.
+- The fire is two clumps and a bed at ground level: "standing in fire", not "burning". The flames
+  do not climb the body; that is left to the coal glow.
+- The smoke is faint against the dark forest and reads at the edge of notice.
+- The stray parked flame on the rat (above).
+- Not measured: `spell_feel` WARN/accent numbers were not re-run for this pass; no `-Darkness` capture.
