@@ -10,9 +10,9 @@ skipped; the calls below are mine and not reviewed by the owner.
 
 | t | Beat |
 |---|---|
-| 0.00 | Cast opens. Stage gloom rises to 0.35 over 0.2 s. Two copies of the one courtier still (`Spells/court_of_whispers_courtier/f0`: `lean-a` near, `lean-b` the mirror, far, authored first so the near one draws over it) slide in from both sides of every enemy to 0.25 box-widths off the body. The hood and cupped hand land at the enemy's head. |
-| 0.30 | **Payoff cue** (`hitCueSeconds`, equal to the 0.3 s cast riser). Impact sound, Fear badges on all enemies, the old ring-and-core frames (f5-f6), now 340 box instead of 460 and glow 1.3 instead of 1.9, with a punch, a 12-spark settle. Gloom starts lifting (0.25 s). |
-| 0.30-0.65 | The courtiers slide back out to 0.7 box-widths and fade (0.1 s). |
+| 0.00 | Cast opens. Stage gloom rises to 0.35 over 0.2 s. One courtier still (`Spells/court_of_whispers_courtier/f0`, layer `lean-a`) slides in at every enemy to 0.25 box-widths off the body. The hood and cupped hand land at the enemy's head. |
+| 0.30 | **Payoff cue** (`hitCueSeconds`, equal to the 0.3 s cast riser). Impact sound, Fear badges on all enemies, the old ring-and-core frames (f5-f6), now a 260 box (was 460) at glow 0.7 (was 1.9) and punch 0.12, so the courtier carries the payoff, with a punch, a 12-spark settle. Gloom starts lifting (0.25 s). |
+| 0.30-0.65 | The courtier slides back out to 0.7 box-widths and fade (0.1 s). |
 | 0.48 | **Price**: a faint violet ring on Shawn, and his Vulnerable badge appears (`casterCostSeconds` 0.18, held by `FightBeatPlayer`). |
 | about 0.72 | Clean (measured). |
 
@@ -40,9 +40,8 @@ payoff, so the WARN is expected. 1.5x is clean on both targets.
   mirrored copy drew un-mirrored on the same side as the first: three figures stacked on
   three, not "both sides". Fixed in `SpellLayerInstance.DrawFacing` (pinned by
   `AReverseLayerDrawsAgainstTheCast`); Thorn Tithe's `back` layer is now actually mirrored as
-  authored. And the ground band holds only 2 renderers (`FightHudSpec.SpellGroundRenderers`),
-  so the far courtier could not go behind the bodies: it is an effects layer at opacity 0.45,
-  drawn under the near one.
+  authored. The ground band holds only 2 renderers (`FightHudSpec.SpellGroundRenderers`), so
+  nothing per enemy can go behind the bodies.
 - **Shawn's price is after the payoff.** The ring peaks about f29-34 and his Vulnerable badge
   is on his plate from f29, 0.18 s after the cue.
 - **Flash guard.** On the 5-cast 1.5x series (851 frames) the largest single-step brightening
@@ -55,8 +54,7 @@ payoff, so the WARN is expected. 1.5x is clean on both targets.
   Round counter reads. No damage number to cover.
 - **Bodies hidden by the court.** The near courtier covers the front half of its rat for about
   0.4 s (the rat shows through at 0.7 opacity); on the three-treant rack the courtiers overlap
-  the neighbouring treant's left flank. The far courtier of the rightmost enemy leaves the
-  stage crop at the right edge in the 1x clips (the 4:3 clip shows it).
+  the neighbouring treant's left flank.
 - **Mixed rack (rat, treant, beetle):** the beetle sits behind the treant and its courtier is
   barely seen, as before; the cause is the formation.
 - **Cost pulse** still faint (opacity 0.6, thin ring), reads as a halo.
@@ -64,20 +62,19 @@ payoff, so the WARN is expected. 1.5x is clean on both targets.
 
 ## Identity test: "they are whispering to them"
 
-My verdict: **passes, with two caveats.** A viewer sees hooded figures bending to each
-enemy's head, a violet hush, and the figures drawing back: someone whispering into an ear,
-which the stand-in never gave. The caveats:
+Follow-up (2026-10-04): `lean-b` (the mirrored far courtier) is dropped and the ring-and-core
+payoff is demoted (260 box, glow 0.7). It stays on effects: the ground band holds two renderers
+and a rack needs three. Rat and mixed-rack frames (cue f18): one courtier per enemy, hood at the
+head, no neighbour's courtier. The pair of courtiers that read as the neighbour's is gone.
 
-1. The ring-and-core frames (f6-f7 of the old sheet, a violet vortex with lightning) are still
-   the loudest frame of the cast and read as a curse circle rather than a hush. Smaller and
-   dimmer now, they are still the brightest thing. The prompt's "ground shadow" would be a new
-   still (a painted shadow or a faint breath of mist); I did not make one.
-2. The far courtier is the mirror of the near one, so it whispers at the enemy's back (the rats
-   face Shawn), and on a tight rack it reads as the neighbour's courtier. Dropping `lean-b` is
-   the cleaner read if the owner prefers one courtier per enemy; the pair is what the prompt
-   asked for.
+My verdict: **passes.** Hooded figures bend to each head, a violet hush, the figure draws back.
+Remaining weakness: the demoted core is still the brightest frame of the cast (f20-24 on rats
+and the mixed rack, a violet bowl at each body's feet) and still covers the lower half of the
+rat; it is smaller and dimmer but reads as a circle until it fades. Removing it outright
+would drop the only accent that lands exactly on the cue frame beside the sound; I kept it. A
+painted ground mist would replace it (new still).
 
 ## Open (owner)
 
 - A 0.3 s wind-up is short for a 14-mana, tier-3 spell on cooldown 4; the lean has little time to read. Lengthening it needs a recut cast riser. Judged on GIFs only, not in a fight; sound not listened to.
-- Keep or drop the far courtier (`lean-b`); replace the vortex with a ground shadow (needs a new still).
+- Replace the vortex with a ground shadow or mist (needs a new still), or drop it.

@@ -60,76 +60,6 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: Audio/Sfx/court_of_whispers_cast
       layers:
-      - id: lean-b
-        render: sprite
-        place: target-centre
-        height: 0
-        follow: 0
-        whenConsumed: 
-        at: release
-        offset: 0
-        path: Spells/court_of_whispers_courtier
-        seconds: 0.65
-        fps: 0
-        startFrame: 1
-        until: hold
-        fade: 0.1
-        opacity: 0.45
-        dx: 0
-        dy: 0
-        drift:
-          fromX: -0.7
-          toX: -0.7
-          fromY: 0
-          toY: 0
-          viaX: -0.25
-          viaY: 0
-          viaAt: 0.46
-          arcY: 0
-        scale: 1
-        size: 230
-        fit: target
-        facing: reverse
-        sort: effects
-        align: 
-        punch: 0
-        glow: 0.3
-        tint: 
-        impactX: 0.84
-        impactY: 0.72
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        overhang: 0
-        orient: 
-        artDegrees: 0
-        through: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          alignFlight: 0
-          lateral: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
       - id: lean-a
         render: sprite
         place: target-centre
@@ -227,13 +157,13 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 340
+        size: 260
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.25
-        glow: 1.3
+        punch: 0.12
+        glow: 0.7
         tint: 
         impactX: 0.5
         impactY: 0.43
