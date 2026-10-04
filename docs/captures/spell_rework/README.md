@@ -54,10 +54,12 @@ The before-set notes: [before/NOTES.md](before/NOTES.md).
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| full formation | `gale_scythe_rat_full_1x.gif` | `gale_scythe_rat_full_1x.gif` | recorded |
-| two enemies (rat, treant) | `gale_scythe_rat-treant_1x.gif` | `gale_scythe_rat-treant_1x.gif` | recorded; the treant sits at the right edge of the stage crop, its cut is half out of frame |
-| lone enemy | `gale_scythe_rat_1x.gif` | `gale_scythe_rat_lone_1x.gif` | recorded |
-| five casts at 1.5x | none | `gale_scythe_rat_full_x5_1.5x.gif` | recorded; no before |
+| full formation | `gale_scythe_rat_full_1x.gif` | `gale_scythe_rat_full_1x.gif` | re-recorded 2026-10-04 with the painted blade |
+| full formation, treants | none | `gale_scythe_treant_full_1x.gif` | recorded with the painted blade; no before |
+| crowded mixed rack (rat, treant, beetle) | none | `gale_scythe_rat-treant-beetle_full_1x.gif` | recorded with the painted blade; no before |
+| two enemies (rat, treant) | `gale_scythe_rat-treant_1x.gif` | `gale_scythe_rat-treant_1x.gif` | re-recorded |
+| lone enemy | `gale_scythe_rat_1x.gif` | `gale_scythe_rat_lone_1x.gif` | re-recorded |
+| five casts at 1.5x | none | `gale_scythe_rat_full_x5_1.5x.gif` | re-recorded; no before |
 
 ### 5. Velvet Shackles
 

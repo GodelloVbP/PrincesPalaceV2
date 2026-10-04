@@ -1619,7 +1619,7 @@
             "fade": 0.05
           },
           {
-            "_comment": "The sweep: one crescent laid along the line of struck bodies (align span, past the end bodies by overhang) and carried across it from the caster's side outward in the 0.1 s before the cue. Decorative; the damage is the shared payoff on the cue.",
+            "_comment": "The sweep: the painted blade laid along the line of struck bodies (align span, past the end bodies by overhang) and carried across it from the caster's side outward in the 0.1 s before the cue. One long cut, drawn at the proportion it was painted at. Decorative; the damage is the shared payoff on the cue.",
             "id": "sweep",
             "render": "still",
             "place": "formation",
@@ -1627,8 +1627,7 @@
             "overhang": 0.5,
             "at": "release",
             "offset": 0.13,
-            "path": "Spells/gale_scythe",
-            "startFrame": 6,
+            "path": "Spells/gale_scythe_blade",
             "seconds": 0.13,
             "until": "hold",
             "facing": "auto",
@@ -1639,30 +1638,33 @@
               "fromX": -0.45,
               "toX": 0.22
             },
-            "aspect": 3.0,
+            "aspect": 6.3,
             "dy": 45
           },
           {
-            "_comment": "The payoff on every body at once: f5's crescent and the frames after it, from the cue, so every number lands under the same frame. Smaller than the old ritual (380) so three of them are not a wall over the numbers.",
+            "_comment": "The payoff on every body at once: the same blade drawn across each enemy on the cue, so every number lands under the same frame. It replaces the old sheet's three tornado whorls; a shorter blade than the sweep so three of them are not a wall over the numbers.",
             "id": "cut",
-            "render": "sprite",
+            "render": "still",
             "place": "target-centre",
             "at": "hit",
-            "path": "Spells/gale_scythe",
-            "startFrame": 6,
-            "fps": 14,
-            "seconds": 0.43,
-            "until": "once",
-            "size": 300,
+            "path": "Spells/gale_scythe_blade",
+            "seconds": 0.12,
+            "until": "hold",
+            "size": 380,
+            "aspect": 6.3,
             "fit": "target",
-            "impactX": 0.51,
-            "impactY": 0.48,
-            "facing": "none",
+            "impactX": 0.5,
+            "impactY": 0.5,
+            "facing": "auto",
             "sort": "effects",
-            "opacity": 0.9,
+            "opacity": 0.95,
             "punch": 0.2,
             "glow": 1.2,
-            "fade": 0.1
+            "fade": 0.2,
+            "drift": {
+              "fromX": -0.25,
+              "toX": 0.25
+            }
           },
           {
             "id": "settle",

@@ -392,6 +392,8 @@ grid truncated tighter than another's — are centred, transparent-padded onto
 a shared canvas sized to the largest cell before anything downstream runs, so
 one sequence never changes box size frame to frame.
 
+**A painted still on #00FF00 is a recipe with `keyed`, not a new kit.** `"keyed": "green"` keys on hue and then pulls every pixel's green down to min(red, blue), right for violet and grey art (the Blackglass rift, the Court's courtier). `"keyed": "green-soft"` keeps only the keyer's own spill suppression, for a subject with green or gold in it: the Gale Scythe's sea-green blade and its gold flecks went lilac and red under the clamp. The recipe usually also states `rects` for the whole image, `content_crop`, and one `sequence` step; see `court_of_whispers_courtier.json`.
+
 > **The recipe describes how frames are PRODUCED. The skill's `vfx` block
 > describes how they PLAY.** A skill may override a recipe's intent
 > deliberately, and two skills may share one frame folder with different

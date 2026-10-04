@@ -140,10 +140,10 @@ MonoBehaviour:
         whenConsumed: 
         at: release
         offset: 0.13
-        path: Spells/gale_scythe
+        path: Spells/gale_scythe_blade
         seconds: 0.13
         fps: 0
-        startFrame: 6
+        startFrame: 0
         until: hold
         fade: 0.05
         opacity: 1
@@ -169,7 +169,7 @@ MonoBehaviour:
         tint: 
         impactX: -1
         impactY: -1
-        aspect: 3
+        aspect: 6.3
         travelSeconds: 0
         travelDelay: 0
         overhang: 0.5
@@ -203,25 +203,25 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: cut
-        render: sprite
+        render: still
         place: target-centre
         height: 0
         follow: 0
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/gale_scythe
-        seconds: 0.43
-        fps: 14
-        startFrame: 6
-        until: once
-        fade: 0.1
-        opacity: 0.9
+        path: Spells/gale_scythe_blade
+        seconds: 0.12
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.2
+        opacity: 0.95
         dx: 0
         dy: 0
         drift:
-          fromX: 0
-          toX: 0
+          fromX: -0.25
+          toX: 0.25
           fromY: 0
           toY: 0
           viaX: 0
@@ -229,17 +229,17 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 300
+        size: 380
         fit: target
-        facing: none
+        facing: auto
         sort: effects
         align: 
         punch: 0.2
         glow: 1.2
         tint: 
-        impactX: 0.51
-        impactY: 0.48
-        aspect: 0
+        impactX: 0.5
+        impactY: 0.5
+        aspect: 6.3
         travelSeconds: 0
         travelDelay: 0
         overhang: 0

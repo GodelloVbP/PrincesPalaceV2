@@ -1,0 +1,17 @@
+{
+  "_notes": [
+    "Gale Scythe: the blade that crosses the line. One painted still (gale_scythe_blade.png, 2172x724, 3:1), a long pale sea-green and white crescent with trailing wind streaks and a few dark-gold leaf flecks, on a #00FF00 green screen. Keyed on hue (keyed: \"green-soft\", so the sea-green and the gold flecks keep their hue) so the white core stays opaque, then cropped to its own ink. The sweep layer lays it along the span of struck bodies and the cut layer draws it across each body on the cue, so its aspect is the shape the art is drawn at."
+  ],
+  "sheet": "Spells/Gale Scythe/gale_scythe_blade.png",
+  "rects": [
+    [0, 0, 2172, 724]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [2172, 724],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

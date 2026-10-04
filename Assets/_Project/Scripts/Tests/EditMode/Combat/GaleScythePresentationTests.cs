@@ -38,6 +38,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.13f, sweep.seconds, 1e-6f);
             Assert.AreEqual(0.26f, sweep.offset + sweep.seconds, 1e-6f, "done before the 0.3 s cue; its fade ends on it");
             Assert.AreEqual(0.05f, sweep.fade, 1e-6f);
+            Assert.AreEqual("Spells/gale_scythe_blade", sweep.path, "the painted blade, one still");
+            Assert.AreEqual(6.3f, sweep.aspect, 1e-6f, "the blade's own proportion (1953x309)");
             Assert.AreEqual(-0.45f, sweep.drift.fromX, 1e-6f, "starts on the caster's side of the front body");
             Assert.AreEqual(0.22f, sweep.drift.toX, 1e-6f);
         }
@@ -50,11 +52,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("target-centre", cut.place);
             Assert.AreEqual("hit", cut.at);
             Assert.AreEqual(0f, cut.offset, 1e-6f, "one payoff frame for the whole line: numbers, sound and crescents together");
-            Assert.AreEqual(6, cut.startFrame, "f5, the big crescent");
-            Assert.AreEqual(0.43f, cut.seconds, 1e-6f);
-            Assert.AreEqual(300f, cut.size, 1e-6f, "three of them must not wall over the numbers (the old ritual was 380)");
-            Assert.AreEqual(1, vfx.layers.Count(l => l.render == "sprite" && l.place == "target-centre"),
-                "one sprite a body: with the gather and the sweep, five of the 12 renderers a formation of three may use");
+            Assert.AreEqual("still", cut.render, "the blade across each body, not the sheet's three tornado whorls");
+            Assert.AreEqual("Spells/gale_scythe_blade", cut.path);
+            Assert.AreEqual(0.12f, cut.seconds, 1e-6f);
+            Assert.AreEqual(380f, cut.size, 1e-6f, "a thin stroke at this width does not wall over the numbers");
+            Assert.AreEqual(6.3f, cut.aspect, 1e-6f);
+            Assert.AreEqual(0, vfx.layers.Count(l => l.render == "sprite" && l.place == "target-centre"),
+                "no sprite sheet on the bodies any more");
             Assert.AreEqual("hit", vfx.layers.Single(l => l.id == "settle").at);
         }
     }

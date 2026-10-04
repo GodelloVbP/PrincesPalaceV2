@@ -647,6 +647,11 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
             delivered before mud_blast came this way.
     "green" - RGB on flat #00FF00; alpha from hue dominance
             (`key_green_screen.key_out_green`), so dark art stays opaque.
+    "green-soft" - as "green" without the extra clamp. "green" pulls every
+            pixel's green down to min(r, b), right for violet and grey art
+            and wrong for a subject with green or gold in it (a sea-green
+            wind goes lilac, gold flecks go red); the keyer's own spill
+            suppression still runs.
     False - the sheet already carries the alpha the artist intended. Cut the
             grid and change nothing else.
 
@@ -689,12 +694,14 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
               f"cells will be truncated by up to a pixel. State `rects` instead if the "
               f"edge pixels matter.")
 
-    if keyed == "green":
+    if keyed in ("green", "green-soft"):
         # Hue-dominance key for a painted frame on #00FF00 whose dark interior
         # has to stay opaque; luminance keying would punch the void out.
         # Neither line pass runs: they read luminance, and the green field has
         # none to confuse them.
-        cut = despill_to_min(key_out_green(source.convert("RGB")))
+        cut = key_out_green(source.convert("RGB"))
+        if keyed == "green":
+            cut = despill_to_min(cut)
         print("green screen: keyed on hue dominance, spill suppressed")
     elif keyed:
         sheet = source.convert("RGB")
