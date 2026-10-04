@@ -104,12 +104,12 @@ Ward is a real cast on any ally (e4adbb39): the ward icon and `+25` bar on the t
 
 | Section-3 scenario | Before | After | Status |
 |---|---|---|---|
-| on Odette | `gilded_aegis_party3_on_odette_1x.gif` | `gilded_aegis_on_odette_1x.gif` | recorded |
-| on Bjorn | `gilded_aegis_party3_on_bjorn_1x.gif` | `gilded_aegis_on_bjorn_1x.gif` | recorded; Bjorn is cut at the left edge of the stage crop (the 4:3 clip shows him whole) |
-| on Shawn | `gilded_aegis_party3_on_shawn_1x.gif` | `gilded_aegis_on_shawn_1x.gif` | recorded |
-| 4:3 layout, on Bjorn | none | `gilded_aegis_on_bjorn_4x3_1x.gif` | recorded; no before |
+| on Odette | `gilded_aegis_party3_on_odette_1x.gif` | `gilded_aegis_on_odette_1x.gif` | re-recorded 2026-10-04 with the painted lock |
+| on Bjorn | `gilded_aegis_party3_on_bjorn_1x.gif` | `gilded_aegis_on_bjorn_1x.gif` | recorded with the old lock (not re-run); Bjorn is cut at the left edge of the stage crop (the 4:3 clip shows him whole) |
+| on Shawn | `gilded_aegis_party3_on_shawn_1x.gif` | `gilded_aegis_on_shawn_1x.gif` | re-recorded with the painted lock |
+| 4:3 layout, on Bjorn | none | `gilded_aegis_on_bjorn_4x3_1x.gif` | re-recorded with the painted lock; no before |
 | 4:3 layout, on Odette (HUD visible) | none | `gilded_aegis_on_odette_4x3_1x.gif` | recorded; no before; real cast, see note below |
-| five casts at 1.5x, on Odette vs forest_warden | none | `gilded_aegis_on_odette_vs_forest_warden_full_x5_1.5x.gif` | recorded; no before |
+| five casts at 1.5x, on Odette vs forest_warden | none | `gilded_aegis_on_odette_vs_treant_full_x3_1.5x.gif` | re-recorded with the painted lock as three casts vs treants: five fails at cast 4 in the capture's pacing; no before |
 
 ### 9. Borrowed Moment
 

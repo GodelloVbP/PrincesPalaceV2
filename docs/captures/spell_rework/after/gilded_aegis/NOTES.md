@@ -1,9 +1,10 @@
 # Gilded Aegis, "after" (plan S3, spell 3.8)
 
 Captured 2026-10-04 with `tools/gif.ps1 spell gilded_aegis -Party shawn,odette,bjorn -Target <ally>`
-(1x; Bjorn with `-Aspect 4:3`) and one five-cast series at 1.5x. No painted art: the existing
-twelve shield frames and four leaf/glint particles, plus one procedural piece
-(`tools/make_spell_fx.py aegis_mote`). GIFs are untracked next to this file. Owner gates
+(1x; Bjorn with `-Aspect 4:3`) and one three-cast series at 1.5x (the five-cast series
+fails in the squad's pacing, see below). The lock is the painted `gilded_aegis_lock.png`; the shards
+(f0-f4 of the old sheet), the leaf/glint particles and the procedural mote
+(`tools/make_spell_fx.py aegis_mote`) are unchanged. GIFs are untracked next to this file. Owner gates
 skipped; the calls below are mine.
 
 ## What the runtime and the tools had wrong, fixed here
@@ -22,24 +23,38 @@ skipped; the calls below are mine.
 |---|---|
 | 0.00-0.20 | **Delivery.** A white-gold mote (procedural, soft comet tail) flies from Shawn's middle to the ally's middle, shedding gilt leaves and glints. |
 | 0.10-0.30 | **Encasing.** The four shards (f0-f4) close around the ally at 25 fps, dim (opacity 0.85, glow 0.3); the last drawing ends on the cue, no fade. |
-| 0.30 | **Payoff.** The shield locks shut (f5, glow 1.6, punch 0.12) with the sound (`gilded_aegis_impact`), the ward bar and the ward icon on the ally's plate, and the log line "Shawn wraps <ally> in the fleece." The leaf burst opens. |
-| 0.30-0.70 | **Settle.** f6-f11 at 22 fps (0.32 s) and an 0.08 s fade; the last leaf clears at 0.4 s. |
+| 0.30 | **Payoff.** The painted lock (a closed ring of gold plates with a crown and a halo, centre open) on the cue with the sound (`gilded_aegis_impact`), the ward bar and the ward icon on the ally's plate, and the log line "Shawn wraps <ally> in the fleece." 440 box, punch 0.3, glow 1.7. The leaf burst opens. |
+| 0.30-0.70 | **Settle.** The lock is held 0.22 s and fades over 0.18 s; the last leaf clears at 0.4 s. |
 
-## Measured (timing.json, 60 fps)
+## Measured (spell_feel vs rat, presentation-only; 60 fps)
 
 | | 1x | 1.5x |
 |---|---|---|
 | cast start to payoff | 0.30 s (f18) | 0.20 s (f12) |
-| payoff to clean | 0.40 s (freed f42) | 0.27 s |
+| payoff to clean | 0.38 s | 0.25 s |
 
-Before this pass one 0.72 s sheet plus a 0.14 s fade ran from the cast's start, so payoff to
-clean was about 0.56 s and there was no delivery.
+At 1x `spell_feel` WARNs "contact desync": its biggest brightening is f13 (the mote
+arriving as the shards close, peak 3.0), five frames before the lock on f18. The lock is an
+outline with an open centre, so it adds less light than the shards it replaces. 1.5x has no
+warnings. Not tuned further: raising the lock's glow past 1.7 haloed the ally. The hold was
+cut from 0.32 s (the old sheet) to 0.22 s so payoff to clean is 0.4 s as before.
 
 ## Frame notes
 
 - **Ally anchoring: confirmed.** The shards, the lock and the leaves are centred on the ally on
-  Odette, on Bjorn and on Shawn himself; the mote crosses to them. The shard ring is sized by the
-  struck body (`fit: target`), so it hugs the owl, fills the bear and wraps Shawn.
+  Odette, on Bjorn and on Shawn himself; the mote crosses to them. Both are sized by the struck
+  body (`fit: target`).
+- **The open centre works.** The owl's and the bear's faces are visible through the lock on every
+  held frame (checked on Odette 16:9 and Bjorn 4:3). The shield is a ring sized to the body, so on
+  the owl it sits over the head and chest and the wings stay outside it.
+- **Halo colour.** The painted halo glow came back lime-yellow where it was painted over the green
+  screen. `cap_green` on the recipe (ART_PIPELINE 5b) pulls those pixels to gold.
+- **One empty frame** (about 16 ms) separates the last shard drawing and the lock: the cue clock
+  lags the release clock by a frame. Holding the shards a frame longer plays f5, the old starburst,
+  so it was not done.
+- **Five-cast series.** `-Repeat 5` fails at cast 4 ("Odette's forced action was refused for 180
+  frames", the squad stunned) with either the treant or the forest warden; three casts record.
+  Cause is the capture pacing, not the art.
 - **Flash guard.** The lock frame is a bright gold ring but small: the area of the frame that
   brightens by 10% luminance in one 60 fps step peaks at 0.9% on the cue. Over five casts at 1.5x
   (about 22 s), the largest single-step brightening anywhere is 4.9% of the frame and comes from
@@ -54,15 +69,10 @@ clean was about 0.56 s and there was no delivery.
 
 ## Identity test: "a golden shield on my ally"
 
-My verdict: **passes.** A gold mote goes from Shawn to the ally, four shards close into a
-crowned shield on the body, and the ally's plate gains the ward. The mote is what makes it
-"on my ally" and not "around me", which the old sheet could not say on its own.
+Verdict: **passes.** A gold mote goes from Shawn to the ally, four shards close, and a finished
+gold shield with a crown locks around the ally while their face stays visible; the plate gains
+the ward. It reads as "closed ward", not as a mirror, portal or plate hiding the body.
 
-What is weak: the shield frame is the sheet's old drawing, so the lock is the same picture as
-before, only now timed and delivered. The mote is a glow and a tail, not a drawn object.
-
-## What a painted still would fix
-
-A single painted shield-lock still (the crowned shield whole, a halo ring, no loose shards)
-would let the lock be one drawing instead of an animated sheet's frame, and would keep the
-ally's face visible through the lock. Not worth commissioning ahead of the other spells.
+What is weak: the painted shield is a different drawing from the shards that close into it (the
+shards are the old sheet's, the lock is the new art), so the hand-off is a swap, not a close.
+The lock is quieter than the shards at 1x (the WARN above). The mote is still a glow and a tail.

@@ -153,7 +153,7 @@ def write_recipe(vfx_id, spec):
     os.makedirs(RECIPE_DIR, exist_ok=True)
     ordered = collections.OrderedDict()
     for key in ("_notes", "sheet", "grid", "rects", "names", "sources", "keyed", "canvas",
-                "base_align", "content_crop", "feather", "sequence"):
+                "base_align", "content_crop", "feather", "cap_green", "sequence"):
         if key in spec:
             value = spec[key]
             ordered[key] = list(value) if isinstance(value, tuple) else value
@@ -620,6 +620,20 @@ def crop_to_shared_content(frames, pad=8):
     return [f.crop((left, top, right, bottom)) for f in frames]
 
 
+def cap_green_to_red(frame, ratio):
+    """Pull green down to `ratio` * red on lime pixels (green near or above red, almost no blue).
+
+    For warm art (gold, flame) painted on #00FF00 whose soft glow keeps a lime
+    cast: the keyer cannot tell glow from spill there. Gold and orange never
+    have green above red, and gold's highlights keep a blue share that lime lacks.
+    """
+    a = np.array(frame.convert("RGBA"), dtype=np.float32)
+    limit = a[..., 0] * ratio
+    lime = (a[..., 1] > a[..., 0] * 0.9) & (a[..., 2] < a[..., 0] * 0.2)
+    a[..., 1] = np.where(lime, np.minimum(a[..., 1], limit), a[..., 1])
+    return Image.fromarray(a.astype(np.uint8), "RGBA")
+
+
 def feather_edges(frame, widths):
     """Fade the alpha to nothing at the named edges.
 
@@ -843,7 +857,7 @@ def pad_to_common_canvas(cells, canvas=None):
 
 def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
                 base_align=False, content_crop=False, preview=False, vfx_id=None,
-                sources=None, rects=None, canvas=None, feather=None):
+                sources=None, rects=None, canvas=None, feather=None, cap_green=None):
     """Cut a sheet -- or several -- into frames.
 
     `sources`, when given, replaces `sheet_path`/`rows`/`cols`/`names`
@@ -914,6 +928,9 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
     # the ink that is left and the shipped frame has no cut edge in it.
     if feather:
         frames = [feather_edges(f, feather) for f in frames]
+
+    if cap_green:
+        frames = [cap_green_to_red(f, cap_green) for f in frames]
 
     if content_crop:
         frames = crop_to_shared_content(frames)
@@ -1314,7 +1331,8 @@ def main():
                         base_align=spec.get("base_align", False),
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, sources=spec["sources"],
-                        canvas=spec.get("canvas"), feather=spec.get("feather"))
+                        canvas=spec.get("canvas"), feather=spec.get("feather"),
+                        cap_green=spec.get("cap_green"))
         else:
             rows, cols = spec["grid"] if "grid" in spec else (None, None)
             print(f"[{vfx_id}] {_shape_of(spec)}")
@@ -1324,7 +1342,8 @@ def main():
                         base_align=spec.get("base_align", False),
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, rects=spec.get("rects"),
-                        canvas=spec.get("canvas"), feather=spec.get("feather"))
+                        canvas=spec.get("canvas"), feather=spec.get("feather"),
+                        cap_green=spec.get("cap_green"))
 
 
 if __name__ == "__main__":

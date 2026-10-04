@@ -48,10 +48,11 @@ namespace PrincesPalace.Domain.Tests
             var lock_ = vfx.layers.Single(l => l.id == "lock");
             Assert.AreEqual("hit", lock_.at);
             Assert.AreEqual(0f, lock_.offset, 1e-6f);
-            Assert.AreEqual(6, lock_.startFrame, "f5, the shield locking in its halo");
-            Assert.AreEqual(1.6f, lock_.glow, 1e-6f);
-            Assert.AreEqual(0.32f, lock_.seconds, 1e-6f, "7 frames at 22 fps");
-            Assert.AreEqual(0.08f, lock_.fade, 1e-6f);
+            Assert.AreEqual("still", lock_.render);
+            Assert.AreEqual("Spells/gilded_aegis_lock", lock_.path, "the painted closed shield, centre open");;
+            Assert.AreEqual(1.7f, lock_.glow, 1e-6f);
+            Assert.AreEqual(0.22f, lock_.seconds, 1e-6f);
+            Assert.AreEqual(0.18f, lock_.fade, 1e-6f);
             Assert.AreEqual(0.4f, lock_.seconds + lock_.fade, 1e-6f, "payoff to clean");
 
             Assert.AreEqual(0.4f, vfx.layers.Single(l => l.id == "settle").emitter.lifeMax, 1e-6f);

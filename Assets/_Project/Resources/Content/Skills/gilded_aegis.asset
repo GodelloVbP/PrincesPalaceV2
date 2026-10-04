@@ -275,19 +275,19 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: lock
-        render: sprite
+        render: still
         place: target-centre
         height: 0
         follow: 0
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/gilded_aegis
-        seconds: 0.32
-        fps: 22
-        startFrame: 6
-        until: once
-        fade: 0.08
+        path: Spells/gilded_aegis_lock
+        seconds: 0.22
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.18
         opacity: 1
         dx: 0
         dy: 0
@@ -301,13 +301,13 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         scale: 1
-        size: 330
+        size: 440
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.12
-        glow: 1.6
+        punch: 0.3
+        glow: 1.7
         tint: 
         impactX: 0.5
         impactY: 0.5

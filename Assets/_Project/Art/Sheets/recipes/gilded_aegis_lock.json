@@ -1,0 +1,18 @@
+{
+  "_notes": [
+    "Gilded Aegis: the lock. One painted still (gilded_aegis_lock.png, 1254x1254), a closed shield outline of interlocking gold plates with a small crown and a thin halo ring, centre open, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\" (the gold must keep its hue), cropped to its own ink so fit: target scales the shield, not the margin. The halo glow came back lime-yellow, so cap_green pulls lime pixels to gold."
+  ],
+  "sheet": "Spells/Gilded Aegis/gilded_aegis_lock.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "content_crop": true,
+  "cap_green": 0.75,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}
