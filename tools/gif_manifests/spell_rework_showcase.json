@@ -1,0 +1,16 @@
+{
+  "name": "spell_rework_showcase",
+  "description": "One 1x clip per reworked spell with its painted still, for the owner: the scenario that best shows each spell's payoff.",
+  "scenarios": [
+    {"kind": "spell", "id": "court_of_whispers", "vs": "rat,treant,beetle"},
+    {"kind": "spell", "id": "gale_scythe", "vs": "rat,treant,beetle"},
+    {"kind": "spell", "id": "thorn_tithe", "vs": "treant"},
+    {"kind": "spell", "id": "mud_burst", "vs": "rat"},
+    {"kind": "spell", "id": "velvet_shackles", "vs": "rat"},
+    {"kind": "spell", "id": "vipers_bite", "vs": "rat", "preStatus": "Poison"},
+    {"kind": "spell", "id": "ashen_reckoning", "vs": "treant", "preStatus": "Poison"},
+    {"kind": "spell", "id": "gilded_aegis", "party": "shawn,odette,bjorn", "target": "odette", "aspect": "4:3"},
+    {"kind": "spell", "id": "borrowed_moment", "party": "shawn,odette,bjorn", "target": "odette", "aspect": "4:3"},
+    {"kind": "spell", "id": "censer_of_embers", "vs": "treant"}
+  ]
+}
