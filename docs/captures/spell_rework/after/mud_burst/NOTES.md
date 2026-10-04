@@ -44,8 +44,8 @@ splat is gone by f27.
   25%-area large flash. At most 2 small flashes per cast. A 5.7%/4.9%/4.7%
   cluster at frames 154-172 is the treant's own turn between casts.
 - **Readability.** The damage number sits above and left of the splat and stays
-  legible on rat and treant (the splat draws under it). The Vulnerable badge
-  appears one frame after the cue. The splat covers the struck body's torso on
+  legible on rat and treant (the splat draws under it). The Vulnerable badge, the damage number and the splat
+  all first appear on the cue frame (f20 at 1x). The splat covers the struck body's torso on
   a rat for about 0.2 s.
 - **Back-rank:** the glob flies in front of the rat and lands on the beetle
   behind the treant; the number (-7) and splat are on the beetle. The glob
