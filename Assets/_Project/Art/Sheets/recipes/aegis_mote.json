@@ -1,0 +1,7 @@
+{
+  "_notes": [
+    "Gilded Aegis: the mote that carries the ward from Shawn to the ally. Procedural, not sliced: tools/make_spell_fx.py aegis_mote writes this folder directly, deterministic and pinned by tools/make_spell_fx_test.py. This file records provenance for SpellVfxRecipeDriftTests; slice_spell_sheet.py has no sheet to cut for it."
+  ],
+  "generator": "tools/make_spell_fx.py aegis_mote",
+  "names": ["f0"]
+}

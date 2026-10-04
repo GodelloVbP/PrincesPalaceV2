@@ -824,14 +824,30 @@ namespace PrincesPalace.PlayModeTests
                     }
 
                     int paced = 0;
-                    while ((Fight.IsBusy || Beats.IsPlaying || !session.IsPlayerTurn) && paced < MaxPacingFrames)
+                    while ((Fight.IsBusy || Beats.IsPlaying || !session.IsPlayerTurn
+                            || !ReferenceEquals(session.Current, caster)) && paced < MaxPacingFrames)
                     {
+                        // A squadmate's turn would wait for a hand, and the forced
+                        // press would be refused on a kit without the spell, so the
+                        // squadmate casts the first spell of theirs that aims at
+                        // enemies (the weapon swing is out of reach from the rear).
+                        if (!Fight.IsBusy && !Beats.IsPlaying && session.IsPlayerTurn
+                            && !ReferenceEquals(session.Current, caster))
+                        {
+                            var own = session.KitFor(session.Current)?.Skills?.FirstOrDefault(
+                                k => k.Targeting == SkillTargeting.SingleEnemy || k.Targeting == SkillTargeting.AllEnemies);
+                            Assert.IsNotNull(own, session.Current.Name + " has no spell to cast at the enemy between the series' casts");
+                            Fight.ForceFirstAction(own.Id);
+                        }
+
                         Render(Canvas, sink.FramePath(next++));
                         paced++;
                         yield return null;
                     }
 
-                    Assert.Less(paced, MaxPacingFrames, "the player's turn never came back before cast " + (cast + 1));
+                    Assert.Less(paced, MaxPacingFrames, "the player's turn never came back before cast " + (cast + 1) +
+                                " (acting: " + session.Current?.Name + "; log: " +
+                                string.Join(" | ", Fight.RecentLogForTest.Reverse().Take(4)) + ")");
                 }
 
                 var one = new CaptureOutcome();

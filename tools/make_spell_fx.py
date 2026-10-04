@@ -28,6 +28,11 @@ mud_burst_splat: the existing mud_burst sheet's burst frames (f12-f25) with the
 shackle_cinch_ring: one 256x256 frame, a thin gold-white ring with a crimson halo
     outside it. Velvet Shackles' cinch: drawn oversized for two frames and snapped
     onto the body (layer punch), so the bind reads as pulled tight.
+
+aegis_mote: one 256x256 frame, a white-gold orb right of centre with a short comet
+    tail trailing left. Gilded Aegis' delivery: the ward flies from Shawn to the
+    ally as a mote before the shards close around them. Warm gold, so it reads as
+    the shield's own light and not as a spark of fire.
 """
 
 import argparse
@@ -76,6 +81,33 @@ def shackle_cinch_ring():
         205 + 50 * heat,
         40 + 196 * heat,
         62 + 108 * heat,
+    ], axis=-1)
+    out = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
+    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+    out[..., 3] = np.round(alpha * 255).astype(np.uint8)
+    return out
+
+
+def aegis_mote():
+    """RGBA uint8, SIZE x SIZE: orb at (170, 128), tail running left to x=40."""
+    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(np.float64)
+    dx, dy = xs - 170.0, ys - 128.0
+    r = np.hypot(dx, dy)
+    core = np.exp(-(r / 13.0) ** 2)
+    halo = 0.55 * np.exp(-(r / 34.0) ** 2)
+    # The tail: a gaussian across, tapering and fading along its length.
+    along = np.clip((170.0 - xs) / 130.0, 0.0, 1.0)
+    width = 4.0 + 11.0 * (1.0 - along)
+    tail = np.where(xs < 170.0, np.exp(-(dy / width) ** 2) * (1.0 - along) ** 1.6 * 0.8
+                    * np.clip((170.0 - xs) / 14.0, 0.0, 1.0), 0.0)
+    alpha = np.clip(core + halo + tail, 0.0, 1.0)
+    edge = np.clip(np.minimum(xs, SIZE - 1 - xs) / 6.0, 0.0, 1.0) * np.clip(np.minimum(ys, SIZE - 1 - ys) / 6.0, 0.0, 1.0)
+    alpha = alpha * edge
+    heat = np.clip(core + 0.5 * tail, 0.0, 1.0)
+    rgb = np.stack([
+        236 + 19 * heat,
+        168 + 80 * heat,
+        64 + 130 * heat,
     ], axis=-1)
     out = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
     out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
@@ -165,6 +197,7 @@ def _splat_frame(n):
 PIECES = {
     "court_price_pulse": [court_price_pulse],
     "shackle_cinch_ring": [shackle_cinch_ring],
+    "aegis_mote": [aegis_mote],
     "mud_glob": [mud_glob],
     "mud_splat_drops": [mud_drop_round, mud_drop_long, mud_drop_tear, mud_drop_crumb],
     "mud_burst_splat": [_splat_frame(n) for n in SPLAT_FRAMES],

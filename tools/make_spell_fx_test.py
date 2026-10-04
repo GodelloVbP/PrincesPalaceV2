@@ -54,6 +54,23 @@ class CinchRing(unittest.TestCase):
         self.assertGreater(int(halo[0]), int(halo[1]) + 80, "crimson in the halo")
 
 
+class AegisMote(unittest.TestCase):
+    def test_deterministic_gold_orb_with_a_tail_behind_it(self):
+        a, b = fx.aegis_mote(), fx.aegis_mote()
+        self.assertEqual(hashlib.sha256(a.tobytes()).hexdigest(),
+                         hashlib.sha256(b.tobytes()).hexdigest())
+        self.assertEqual(a.shape, (256, 256, 4))
+        self.assertEqual(int(a[2, 2, 3]), 0)
+        self.assertGreater(int(a[128, 170, 3]), 250, "the orb")
+        core = [int(v) for v in a[128, 170, :3]]
+        self.assertGreater(min(core), 190, "white-gold at the core")
+        tail = a[128, 100]
+        self.assertGreater(int(tail[3]), 40, "a tail trails to the left")
+        self.assertLess(int(a[128, 240, 3]), 8, "only the faint halo ahead of the orb")
+        self.assertGreater(int(tail[0]), int(tail[1]), "gold, never blue or green")
+        self.assertGreater(int(tail[1]), int(tail[2]))
+
+
 class MudPieces(unittest.TestCase):
     def test_deterministic(self):
         for name in ("mud_glob", "mud_splat_drops", "mud_burst_splat"):
