@@ -1138,6 +1138,7 @@ namespace PrincesPalace
                 StatusCues.Observe(beat.Snapshot, OpeningStatuses);
 
                 ShowAmount(beat);
+                ShowDetonation(beat);
                 FlashTarget?.Invoke(beat);
                 if ((staticSwing || staticCharge) && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
 
@@ -1289,7 +1290,7 @@ namespace PrincesPalace
                     var packets = beat.StaggeredPacketsFor(result.Target);
                     if (packets != null)
                     {
-                        PopPackets(result.Target, packets, result.Crit);
+                        PopPackets(beat, result.Target, packets, result.Crit);
                         continue;
                     }
 
@@ -1302,7 +1303,7 @@ namespace PrincesPalace
             var single = beat.StaggeredPacketsFor(beat.Target);
             if (single != null)
             {
-                PopPackets(beat.Target, single, beat.Crit);
+                PopPackets(beat, beat.Target, single, beat.Crit);
                 return;
             }
 
@@ -1314,8 +1315,18 @@ namespace PrincesPalace
         // do not sit on one another.
         internal const float PacketPopupSpacing = 56f;
 
-        private void PopPackets(CombatantState target, BeatPacket[] packets, bool crit)
+        private void PopPackets(CombatBeat beat, CombatantState target, BeatPacket[] packets, bool crit)
         {
+            // THE FIRST PACKET'S SOUND IS THE CUE'S OWN; each later packet is a
+            // payoff of its own and plays the second clip on its own number.
+            if (beat.Vfx != null && !string.IsNullOrEmpty(beat.Vfx.secondSfxPath))
+            {
+                for (int i = 1; i < packets.Length; i++)
+                {
+                    PlayClipAfter(beat.Vfx.secondSfxPath, Scaled(i * StageHitFlash.StaggerSeconds));
+                }
+            }
+
             for (int i = 0; i < packets.Length; i++)
             {
                 var popup = FreePopup();
@@ -1326,6 +1337,41 @@ namespace PrincesPalace
                 popup.Play(at, packets[i].Amount, false, packets[i].Type, Scaled(DamagePopup.LifeSeconds), crit,
                     delaySeconds: Scaled(i * StageHitFlash.StaggerSeconds));
             }
+        }
+
+        // THE SECOND PAYOFF OF A BITE THAT SET OFF POISON: its own number, in
+        // Poison's colour, a beat after the bite's, with its own clip. Single
+        // target only; a sweep would put every enemy's detonation on one body.
+        private void ShowDetonation(CombatBeat beat)
+        {
+            if (beat.DetonatedAmount <= 0 || beat.Target == null || beat.HasPerTargetResults) return;
+
+            float delay = beat.Vfx != null && beat.Vfx.detonationSeconds > 0f
+                ? beat.Vfx.detonationSeconds
+                : StageHitFlash.StaggerSeconds;
+
+            var popup = FreePopup();
+            if (popup != null)
+            {
+                var at = PopupAnchor(beat.Target, AbsorbedPopupExtraHeadroom) + new Vector2(PacketPopupSpacing, 0f);
+                popup.Play(at, beat.DetonatedAmount, false, PrincesPalace.Domain.Stats.DamageType.Poison, Scaled(DamagePopup.LifeSeconds),
+                    delaySeconds: Scaled(delay));
+            }
+
+            if (beat.Vfx != null) PlayClipAfter(beat.Vfx.secondSfxPath, Scaled(delay));
+        }
+
+        private void PlayClipAfter(string path, float seconds)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            if (seconds <= 0f) { SoundController.PlayClip(path); return; }
+            StartCoroutine(ClipAfter(path, seconds));
+        }
+
+        private static IEnumerator ClipAfter(string path, float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            SoundController.PlayClip(path);
         }
 
         private void ShowSingleAmount(CombatBeat beat)

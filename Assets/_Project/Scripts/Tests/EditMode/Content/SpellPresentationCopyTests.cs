@@ -46,6 +46,8 @@ namespace PrincesPalace.Domain.Tests
             layerFormat = 1,
             hitCueSeconds = 0.35f,
             casterCostSeconds = 0.18f,
+            secondSfxPath = "Audio/Sfx/x_second",
+            detonationSeconds = 0.18f,
             gloom = new SpellGloom { strength = 0.35f, fadeIn = 0.2f, until = "cleared", fadeOut = 0.25f },
             layers = new[]
             {

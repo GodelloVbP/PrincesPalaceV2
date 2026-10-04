@@ -108,6 +108,31 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEqual(new[] { StatusEffectType.Poison }, beat.ConsumedStatuses);
         }
 
+        // The detonation is dealt through the ledger but is not part of Amount,
+        // so the stage showed "-3" over a bar that fell by 23. The beat now
+        // carries it for the view's second number.
+        [Test]
+        public void ABiteRecordsHowMuchTheDetonationDealtApartFromItsOwnDamage()
+        {
+            var (session, foe) = BiteFight();
+            foe.Statuses.Add(new ActiveStatus(StatusEffectType.Poison, 4, 5));
+            int before = foe.CurrentHealth;
+
+            session.CastSkill(0, foe);
+
+            var beat = session.DrainBeats().Single(b => b.IsAction);
+            Assert.AreEqual(20, beat.DetonatedAmount, "4 x 5 remaining ticks");
+            Assert.AreEqual(before - beat.Amount - 20, foe.CurrentHealth, "the two numbers are the whole loss");
+        }
+
+        [Test]
+        public void ABiteOnACleanTargetRecordsNoDetonation()
+        {
+            var (session, foe) = BiteFight();
+            session.CastSkill(0, foe);
+            Assert.AreEqual(0, session.DrainBeats().Single(b => b.IsAction).DetonatedAmount);
+        }
+
         [Test]
         public void ABiteOnACleanTargetRecordsNothingSpent()
         {

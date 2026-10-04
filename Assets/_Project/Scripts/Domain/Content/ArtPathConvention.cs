@@ -129,6 +129,7 @@ namespace PrincesPalace.Domain.Content
                 // showed nothing. See SpellPresentation.groundPath.
                 { "vfx.groundPath", ArtPathKind.RuntimeLoaded },
                 { "vfx.castSfxPath", ArtPathKind.RuntimeLoaded },
+                { "vfx.secondSfxPath", ArtPathKind.RuntimeLoaded },
 
                 // A LAYER'S OWN FRAMES AND ITS EMITTER'S, two levels further
                 // in. The `[]` is in the key because that is what the sweep in

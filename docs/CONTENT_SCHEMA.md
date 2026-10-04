@@ -717,6 +717,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `hitCueSeconds` | float | `0` | Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame. |  |
 | `gloom` | SpellGloom (below) | (zero -- see SpellGloom) | Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom. |  |
 | `casterCostSeconds` | float | `0` | Seconds after the cue before the caster's own newly applied statuses show on its plate, so a price lands after the payoff instead of on it. 0 (the default) shows them on the cue. Author the caster's pulse layer at `at: hit` with the same `offset`. |  |
+| `secondSfxPath` | string | `""` | Resources-relative path to the sound of the cast's second payoff: each staggered packet after the first (at its stagger offset) and a detonation of existing Poison (detonationSeconds after the cue). Empty is silent. |  |
+| `detonationSeconds` | float | `0` | Seconds after the cue that a detonation of Poison the target already carried shows its own number and plays secondSfxPath. 0 means one stagger step (0.05 s). Author the detonation's layers at `at: hit` with the same `offset`. |  |
 
 ## Description markup
 

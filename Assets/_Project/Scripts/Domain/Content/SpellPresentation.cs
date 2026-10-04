@@ -268,6 +268,15 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Seconds after the cue before the caster's own newly applied statuses show on its plate, so a price lands after the payoff instead of on it. 0 (the default) shows them on the cue. Author the caster's pulse layer at `at: hit` with the same `offset`.")]
         public float casterCostSeconds;
 
+        // A SECOND PAYOFF HAS ITS OWN SOUND. The beat plays sfxPath once with
+        // the cue; a second payoff (a staggered packet after the first, or a
+        // spent Poison going off) is its own moment and plays this clip then.
+        [ContentDoc("Resources-relative path to the sound of the cast's second payoff: each staggered packet after the first (at its stagger offset) and a detonation of existing Poison (detonationSeconds after the cue). Empty is silent.")]
+        public string secondSfxPath = "";
+
+        [ContentDoc("Seconds after the cue that a detonation of Poison the target already carried shows its own number and plays secondSfxPath. 0 means one stagger step (0.05 s). Author the detonation's layers at `at: hit` with the same `offset`.")]
+        public float detonationSeconds;
+
         // Left unset, a spell runs for this long and lands on this frame. Both
         // were the resolver's private constants and belong beside the fields
         // they default, so a new caller cannot invent a different silence.
@@ -581,6 +590,8 @@ namespace PrincesPalace.Domain.Content
             layerFormat = layerFormat,
             hitCueSeconds = hitCueSeconds,
             casterCostSeconds = casterCostSeconds,
+            secondSfxPath = secondSfxPath,
+            detonationSeconds = detonationSeconds,
             gloom = gloom == null ? new SpellGloom() : gloom.Copy(),
             layers = CopyOf(layers),
         };

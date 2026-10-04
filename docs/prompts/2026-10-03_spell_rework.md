@@ -250,3 +250,37 @@ Must read as: a restraint being pulled tight round something. Must NOT read as: 
 a ring portal, a wedding ring or a bracelet.
 
 Owner: what to change from the tightness or the ribbon material: ______
+
+## Viper's Bite: the strike
+
+Plan 3.6. Stand-ins today: `Resources/Spells/vipers_bite` (jaws f0-f4, the snap f5, drip
+f6-f11) and the venom particles (f2 splash crown). The verb is *strike*; what a painted
+piece fixes is the lunge and the second payoff's shape, which are the old drawings
+repositioned.
+
+Target: two stills, raw files in `Assets/_Project/Art/Sheets/Spells/Viper's Bite/`:
+`vipers_bite_lunge.png` (the snake's head mid-strike, side view, mouth wide, fangs
+forward, body curling out of frame at the left) and `vipers_bite_burst.png` (venom
+bursting upward out of a bitten body: a crown of green droplets and a thick vertical
+plume). Sliced as `Spells/vipers_bite_lunge/f0` and `Spells/vipers_bite_burst/f0`. The
+lunge replaces the descending jaws (f0-f4); the burst is the `pop` layer on the
+detonation.
+
+Style matches the existing viper frames: Hades-inspired painterly fantasy, bold sculpted
+planes, glossy venom, ivory fangs. Acid green and near-black green shadow, ivory; no other
+hue.
+
+Canvas 2048x2048 each, solid #00FF00 background, no gradient or vignette. The keyer removes
+by hue, so the venom must be a deep emerald-teal that stays well away from #00FF00, with an
+opaque dark interior.
+
+- Lunge: one snake head, three-quarter side view, open mouth, two curved fangs dripping, a
+  single trailing curve of neck. Nothing else.
+- Burst: symmetrical crown of droplets around a central plume, no body, no skin.
+- No character, no rat or other prey, no floor, shadow or ground plane, no skull.
+- No text, numerals, frame, border, UI or watermark.
+
+Must read as: a snake strike, then venom erupting. Must NOT read as: a dragon, a monster
+mouth, a skull, an explosion or a splash of water.
+
+Owner: what to change from the snake's species or the venom colour: ______

@@ -280,6 +280,13 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly List<PrincesPalace.Domain.Combat.StatusEffectType> ConsumedStatuses =
             new List<PrincesPalace.Domain.Combat.StatusEffectType>();
 
+        // HOW MUCH DAMAGE THE POISON ALREADY ON THE TARGET DID WHEN THIS BLOW
+        // SET IT OFF (FightSession.ResolveDetonation). It is dealt through the
+        // ledger like any hit but is not part of Amount, so without this the
+        // stage showed a 3 over a bar that fell by 12. The view shows it as a
+        // second number, a beat after the first.
+        public int DetonatedAmount;
+
         public readonly Dictionary<CombatantState, string> Stances = new Dictionary<CombatantState, string>();
 
         // ---- the actor's other two phases ------------------------------------

@@ -1082,6 +1082,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (bonus <= 0) return 0;
 
             NoteConsumed(StatusEffectType.Poison);
+            if (_recordingBeat != null) _recordingBeat.DetonatedAmount += bonus;
             DealDamage(attacker, target, bonus, DamageType.Poison,
                 attacker != null && attacker.IsPlayerSide ? KillCredit.Attacker : KillCredit.Nobody);
 

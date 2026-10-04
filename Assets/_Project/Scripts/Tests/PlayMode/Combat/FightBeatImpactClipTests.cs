@@ -75,6 +75,96 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, requested.FindAll(c => c == ImpactClip).Count);
         }
 
+        private const string SecondClip = "Audio/Sfx/fixture_second";
+
+        // A SECOND PAYOFF PLAYS ITS OWN CLIP: the second packet of a split hit,
+        // and the detonation of Poison the target already carried.
+        [UnityTest]
+        public IEnumerator ASplitHitsSecondPacketPlaysTheSecondClipOnce()
+        {
+            var actor = new CombatantState("Actor", true, 300, 30, 40, 10);
+            var victim = new CombatantState("Victim", false, 100, 10, 8, 4);
+            var beat = new CombatBeat
+            {
+                Actor = actor, Target = victim, Amount = 10, Approach = StageApproach.Hold,
+                Packets = new[] { new BeatPacket(DamageType.Fire, 6), new BeatPacket(DamageType.Ice, 4) },
+            };
+            beat.Vfx.sfxPath = ImpactClip;
+            beat.Vfx.secondSfxPath = SecondClip;
+
+            var requested = new List<string>();
+            yield return Play(beat, actor, victim, requested);
+
+            Assert.AreEqual(1, requested.FindAll(c => c == ImpactClip).Count);
+            Assert.AreEqual(1, requested.FindAll(c => c == SecondClip).Count);
+        }
+
+        [UnityTest]
+        public IEnumerator ADetonationPlaysTheSecondClipAfterTheImpactClip()
+        {
+            var actor = new CombatantState("Actor", true, 300, 30, 40, 10);
+            var victim = new CombatantState("Victim", false, 100, 10, 8, 4);
+            var beat = new CombatBeat
+            {
+                Actor = actor, Target = victim, Amount = 3, Approach = StageApproach.Hold, DetonatedAmount = 9,
+            };
+            beat.Vfx.sfxPath = ImpactClip;
+            beat.Vfx.secondSfxPath = SecondClip;
+            beat.Vfx.detonationSeconds = 0.1f;
+
+            var requested = new List<string>();
+            yield return Play(beat, actor, victim, requested);
+
+            CollectionAssert.AreEqual(new[] { ImpactClip, SecondClip }, Fixture(requested));
+        }
+
+        [UnityTest]
+        public IEnumerator ABeatWithNoDetonationPlaysNoSecondClip()
+        {
+            var actor = new CombatantState("Actor", true, 300, 30, 40, 10);
+            var victim = new CombatantState("Victim", false, 100, 10, 8, 4);
+            var beat = new CombatBeat { Actor = actor, Target = victim, Amount = 3, Approach = StageApproach.Hold };
+            beat.Vfx.sfxPath = ImpactClip;
+            beat.Vfx.secondSfxPath = SecondClip;
+
+            var requested = new List<string>();
+            yield return Play(beat, actor, victim, requested);
+
+            CollectionAssert.AreEqual(new[] { ImpactClip }, Fixture(requested));
+        }
+
+        // The actor's own voice line is requested too; only this fixture's clips matter.
+        private static List<string> Fixture(List<string> requested) =>
+            requested.FindAll(c => c == ImpactClip || c == SecondClip);
+
+        private IEnumerator Play(CombatBeat beat, CombatantState actor, CombatantState victim, List<string> requested)
+        {
+            var go = new GameObject("BeatPlayerUnderTest");
+            _spawned.Add(go);
+            var player = go.AddComponent<FightBeatPlayer>();
+            FightBeatPlayer.BeatSpeedMultiplier = 60f;
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
+
+            var stage = new GameObject("Stage", typeof(RectTransform)).GetComponent<RectTransform>();
+            _spawned.Add(stage.gameObject);
+            var actorSlot = Slot(stage, "ActorSlot");
+            var victimSlot = Slot(stage, "VictimSlot");
+            player.WireStageForTest(
+                c => ReferenceEquals(c, actor) ? actorSlot.rect : ReferenceEquals(c, victim) ? victimSlot.rect : null,
+                c => ReferenceEquals(c, actor) ? actorSlot.animator
+                    : ReferenceEquals(c, victim) ? victimSlot.animator : null);
+            SoundController.ClipObserver = requested.Add;
+
+            bool finished = false;
+            player.Play(new[] { beat }, () => finished = true);
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (!finished && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(finished, "the beat never finished playing");
+
+            float settle = Time.realtimeSinceStartup + 0.5f;
+            while (Time.realtimeSinceStartup < settle) yield return null;
+        }
+
         private static (RectTransform rect, StageActorAnimator animator) Slot(RectTransform stage, string name)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(StageActorAnimator));

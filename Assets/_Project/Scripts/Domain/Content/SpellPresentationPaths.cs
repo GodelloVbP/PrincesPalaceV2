@@ -27,7 +27,8 @@ namespace PrincesPalace.Domain.Content
             if (!ArtPathConvention.Check(label, "vfx.path", vfx.path, out error)
                 || !ArtPathConvention.Check(label, "vfx.sfxPath", vfx.sfxPath, out error)
                 || !ArtPathConvention.Check(label, "vfx.groundPath", vfx.groundPath, out error)
-                || !ArtPathConvention.Check(label, "vfx.castSfxPath", vfx.castSfxPath, out error))
+                || !ArtPathConvention.Check(label, "vfx.castSfxPath", vfx.castSfxPath, out error)
+                || !ArtPathConvention.Check(label, "vfx.secondSfxPath", vfx.secondSfxPath, out error))
             {
                 return false;
             }
