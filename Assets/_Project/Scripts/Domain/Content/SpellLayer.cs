@@ -86,6 +86,9 @@ namespace PrincesPalace.Domain.Content
         // than baked into the frames because it is a fact about the CAST,
         // not the drawing: the same sheet may be a solid burst in one spell
         // and a ghost in another. Multiplies the fade, never replaces it.
+        [ContentDoc("Seconds of alpha ramp-in from the layer's opening instant; 0 means it cuts in. Pairs with `fade`. Capped at SpellLayerRules.MaxFadeSeconds. Not drawn on an emitter.")]
+        public float fadeIn;
+
         [ContentDoc("How opaque the layer is drawn, 0-1, for its whole life; multiplies the fade-out. 1 (the default) is the sheet as painted. Refused at or below 0 and above 1.")]
         public float opacity = 1f;
 
@@ -96,6 +99,12 @@ namespace PrincesPalace.Domain.Content
 
         [ContentDoc("Optional slide across the layer's life, in fractions of its own box; see SpellDrift. Unauthored means the layer stays where dx and dy put it.")]
         public SpellDrift drift = new SpellDrift();
+
+        [ContentDoc("How the layer turns: a static tilt, a spin and a damped pendulum about a pivot inside its frame; see SpellRotate. Unauthored means it is drawn upright. Not drawn on an emitter or a flight-aligned layer.")]
+        public SpellRotate rotate = new SpellRotate();
+
+        [ContentDoc("Alpha and scale flutter on the Ember flicker curve, for a layer that must never hold still; see SpellBreathe. Unauthored means steady. Not drawn on an emitter.")]
+        public SpellBreathe breathe = new SpellBreathe();
 
         [ContentDoc("Uniform scale applied on top of the fitted box.")]
         public float scale = 1f;
@@ -230,10 +239,13 @@ namespace PrincesPalace.Domain.Content
             startFrame = startFrame,
             until = until,
             fade = fade,
+            fadeIn = fadeIn,
             opacity = opacity,
             dx = dx,
             dy = dy,
             drift = drift == null ? new SpellDrift() : drift.Copy(),
+            rotate = rotate == null ? new SpellRotate() : rotate.Copy(),
+            breathe = breathe == null ? new SpellBreathe() : breathe.Copy(),
             scale = scale,
             size = size,
             fit = fit,

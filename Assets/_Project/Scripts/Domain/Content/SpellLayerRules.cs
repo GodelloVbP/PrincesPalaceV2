@@ -48,6 +48,21 @@ namespace PrincesPalace.Domain.Content
         // percentage (20 instead of 0.2), which is the mistake this catches.
         public const float MaxPunch = 1f;
 
+        // THE LARGEST TURNS A LAYER MAY AUTHOR. A tilt or a pendulum past half a
+        // turn is a typo for a smaller one (degrees typed as radians in reverse),
+        // and a spin past four turns a second is a blur the frame rate aliases.
+        public const float MaxRotateDegrees = 180f;
+        public const float MaxSpinDegreesPerSecond = 1440f;
+        public const float MaxPendulumPeriod = 10f;
+        public const float MinPendulumPeriod = 0.1f;
+        public const float MaxDamping = 20f;
+        public const float MaxSwings = 20f;
+
+        // BREATHING IS A FLUTTER, NOT A PULSE: past half the size it is a
+        // different drawing, and a rate past 20 is a buzz the eye cannot follow.
+        public const float MaxBreatheScale = 0.5f;
+        public const float MaxBreatheRate = 20f;
+
         // A rank span reaching two half-widths past its end bodies is already
         // three times the body; past that the drawing describes ground nobody
         // is standing on.
@@ -250,6 +265,8 @@ namespace PrincesPalace.Domain.Content
             CheckWords(at, layer, problems);
             CheckNumbers(at, layer, problems);
             CheckDrift(at, layer, problems);
+            CheckRotate(at, layer, problems);
+            CheckBreathe(at, layer, problems);
             CheckWhatItNeeds(at, layer, problems);
             CheckPlacement(at, layer, problems);
         }
@@ -366,6 +383,95 @@ namespace PrincesPalace.Domain.Content
             }
         }
 
+        private static void CheckRotate(string at, SpellLayer layer, List<string> problems)
+        {
+            var rotate = layer.rotate;
+            if (rotate == null) return;
+
+            // THE PIVOT IS CHECKED EVEN WHEN NOTHING TURNS: a pivot typed as
+            // pixels (64) would otherwise sit unread until the day a turn is
+            // added to the layer.
+            CheckFraction(at, "rotate.pivotX", rotate.pivotX, problems);
+            CheckFraction(at, "rotate.pivotY", rotate.pivotY, problems);
+
+            if (!rotate.IsAuthored) return;
+
+            CheckBounded(at, "rotate.degrees", rotate.degrees, MaxRotateDegrees, "degrees", problems);
+            CheckBounded(at, "rotate.amplitude", rotate.amplitude, MaxRotateDegrees, "degrees", problems);
+            CheckBounded(at, "rotate.spin", rotate.spin, MaxSpinDegreesPerSecond, "degrees a second", problems);
+
+            if (rotate.amplitude != 0f
+                && (float.IsNaN(rotate.period) || rotate.period < MinPendulumPeriod || rotate.period > MaxPendulumPeriod))
+            {
+                problems.Add($"{at}.rotate.period {Num(rotate.period)} must be {Num(MinPendulumPeriod)}.." +
+                             $"{Num(MaxPendulumPeriod)} seconds when a pendulum amplitude is authored.");
+            }
+
+            if (float.IsNaN(rotate.damping) || rotate.damping < 0f || rotate.damping > MaxDamping)
+            {
+                problems.Add($"{at}.rotate.damping {Num(rotate.damping)} is outside 0..{Num(MaxDamping)} per second.");
+            }
+
+            if (float.IsNaN(rotate.swings) || rotate.swings < 0f || rotate.swings > MaxSwings)
+            {
+                problems.Add($"{at}.rotate.swings {Num(rotate.swings)} is outside 0..{Num(MaxSwings)}; " +
+                             "0 means until the layer ends.");
+            }
+
+            if (layer.Render == SpellRender.Emitter)
+            {
+                problems.Add($"{at} is an emitter and authors rotate, which is inert there: particles spin " +
+                             "through emitter.spinMin and spinMax.");
+            }
+            else if (layer.Align == SpellAlign.Flight)
+            {
+                problems.Add($"{at} is laid along a flight and authors rotate, which is inert there: the layer is " +
+                             "stretched between the launch and the projectile's tip.");
+            }
+        }
+
+        private static void CheckBreathe(string at, SpellLayer layer, List<string> problems)
+        {
+            var breathe = layer.breathe;
+            if (breathe == null || !breathe.IsAuthored) return;
+
+            CheckFraction(at, "breathe.alpha", breathe.alpha, problems);
+
+            if (float.IsNaN(breathe.scale) || breathe.scale < 0f || breathe.scale > MaxBreatheScale)
+            {
+                problems.Add($"{at}.breathe.scale {Num(breathe.scale)} is outside 0..{Num(MaxBreatheScale)}; " +
+                             "it is a fraction of the size, not a percentage.");
+            }
+
+            if (!(breathe.rate > 0f) || breathe.rate > MaxBreatheRate)
+            {
+                problems.Add($"{at}.breathe.rate {Num(breathe.rate)} must be above 0 and at most {Num(MaxBreatheRate)}.");
+            }
+
+            if (layer.Render == SpellRender.Emitter)
+            {
+                problems.Add($"{at} is an emitter and authors breathe, which is inert there: particles fade and " +
+                             "shrink through emitter.fadeFrom and endScale.");
+            }
+        }
+
+        private static void CheckFraction(string at, string field, float value, List<string> problems)
+        {
+            if (float.IsNaN(value) || value < 0f || value > 1f)
+            {
+                problems.Add($"{at}.{field} {Num(value)} is outside 0..1.");
+            }
+        }
+
+        private static void CheckBounded(string at, string field, float value, float limit, string unit,
+            List<string> problems)
+        {
+            if (float.IsNaN(value) || value < -limit || value > limit)
+            {
+                problems.Add($"{at}.{field} {Num(value)} is outside -{Num(limit)}..{Num(limit)} {unit}.");
+            }
+        }
+
         private static void CheckDriftNumber(string at, string field, float value, List<string> problems)
         {
             if (float.IsNaN(value) || value < -MaxDriftBoxes || value > MaxDriftBoxes)
@@ -383,6 +489,7 @@ namespace PrincesPalace.Domain.Content
             Positive(at, "travelDelay", layer.travelDelay, problems);
             Positive(at, "height", layer.height, problems);
             Positive(at, "fade", layer.fade, problems);
+            Positive(at, "fadeIn", layer.fadeIn, problems);
             Positive(at, "size", layer.size, problems);
             Positive(at, "aspect", layer.aspect, problems);
             Positive(at, "punch", layer.punch, problems);
@@ -431,6 +538,18 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at}.fade {Num(layer.fade)} is longer than the {Num(MaxFadeSeconds)}s a " +
                              "layer's ending may take.");
+            }
+
+            if (layer.fadeIn > MaxFadeSeconds)
+            {
+                problems.Add($"{at}.fadeIn {Num(layer.fadeIn)} is longer than the {Num(MaxFadeSeconds)}s a " +
+                             "layer's opening may take.");
+            }
+
+            if (layer.fadeIn > 0f && layer.Render == SpellRender.Emitter)
+            {
+                problems.Add($"{at} is an emitter and authors fadeIn, which is inert there: particles are born " +
+                             "at full strength and fade through emitter.fadeFrom.");
             }
 
             var emitter = layer.emitter;

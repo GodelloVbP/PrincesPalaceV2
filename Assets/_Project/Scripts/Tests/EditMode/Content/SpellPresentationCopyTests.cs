@@ -74,6 +74,9 @@ namespace PrincesPalace.Domain.Tests
                     sort = "effects",
                     align = "span",
                     punch = 0.22f,
+                    fadeIn = 0.15f,
+                    rotate = new SpellRotate { degrees = 4f, spin = 30f, amplitude = -14f, period = 0.93f, damping = 0.5f, swings = 1.5f, pivotX = 0.37f, pivotY = 0.88f },
+                    breathe = new SpellBreathe { alpha = 0.35f, scale = 0.07f, rate = 4f },
                     drift = new SpellDrift { fromX = -0.7f, toX = -0.7f, viaX = -0.25f, viaAt = 0.46f, fromY = 0.1f },
                     glow = 1.3f,
                     tint = "#6B4A30",
@@ -166,7 +169,8 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (var field in FieldsOf(typeof(SpellLayer)))
             {
-                if (field.FieldType == typeof(SpellEmitter) || field.FieldType == typeof(SpellDrift)) continue;
+                if (field.FieldType == typeof(SpellEmitter) || field.FieldType == typeof(SpellDrift)
+                    || field.FieldType == typeof(SpellRotate) || field.FieldType == typeof(SpellBreathe)) continue;
                 Assert.AreEqual(field.GetValue(original), field.GetValue(copy),
                     $"SpellLayer.Copy() drops {field.Name}");
             }
@@ -182,6 +186,20 @@ namespace PrincesPalace.Domain.Tests
             {
                 Assert.AreEqual(field.GetValue(original.drift), field.GetValue(copy.drift),
                     $"SpellDrift.Copy() drops {field.Name}");
+            }
+
+            Assert.AreNotSame(original.rotate, copy.rotate);
+            foreach (var field in FieldsOf(typeof(SpellRotate)))
+            {
+                Assert.AreEqual(field.GetValue(original.rotate), field.GetValue(copy.rotate),
+                    $"SpellRotate.Copy() drops {field.Name}");
+            }
+
+            Assert.AreNotSame(original.breathe, copy.breathe);
+            foreach (var field in FieldsOf(typeof(SpellBreathe)))
+            {
+                Assert.AreEqual(field.GetValue(original.breathe), field.GetValue(copy.breathe),
+                    $"SpellBreathe.Copy() drops {field.Name}");
             }
         }
 

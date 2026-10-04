@@ -598,6 +598,14 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `identityKind` | string | `""` | Which TrackIdentityKind an Identity entry carries, matched case-insensitively; only Identity reads this, empty otherwise. | Title, PlateRim, PortraitFrame, PlateEmboss, VictoryPose, Mastery |
 | `value` | string | `""` | The Identity entry's payload -- a title string for Title, or 'silver'/'gold' for PlateRim/PlateEmboss; unused by PortraitFrame/VictoryPose/Mastery and by every non-Identity reward. |  |
 
+### `SpellBreathe`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `alpha` | float | `0` | Alpha flutter: the fraction of the layer's alpha lost at the curve's low point (0.35 dips to 65%). It never brightens past the authored opacity. 0 means none. |  |
+| `scale` | float | `0` | Scale flutter: the layer swells and shrinks by up to this fraction either side of its size (0.08 is plus or minus 8%). 0 means none. |  |
+| `rate` | float | `1` | Curve speed multiplier: 1 is the Ember curve's own pace (a slow swell of several seconds); 3-5 reads as a flame. |  |
+
 ### `SpellDrift`
 
 | Field | Type | Default | Description | Values |
@@ -668,10 +676,13 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `startFrame` | int | `0` | Which frame the layer starts on, counting from 1; 0 means frame 1. |  |
 | `until` | string | `""` | End policy: once, loop or hold. Blank means once. A travelling layer ends at its arrival whatever this says. | Once, Loop, Hold |
 | `fade` | float | `0` | Seconds of alpha ramp-out after the layer's end; 0 means cut. Capped at SpellLayerRules.MaxFadeSeconds. |  |
+| `fadeIn` | float | `0` | Seconds of alpha ramp-in from the layer's opening instant; 0 means it cuts in. Pairs with `fade`. Capped at SpellLayerRules.MaxFadeSeconds. Not drawn on an emitter. |  |
 | `opacity` | float | `1` | How opaque the layer is drawn, 0-1, for its whole life; multiplies the fade-out. 1 (the default) is the sheet as painted. Refused at or below 0 and above 1. |  |
 | `dx` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `dy` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `drift` | SpellDrift (below) | (zero -- see SpellDrift) | Optional slide across the layer's life, in fractions of its own box; see SpellDrift. Unauthored means the layer stays where dx and dy put it. |  |
+| `rotate` | SpellRotate (below) | (zero -- see SpellRotate) | How the layer turns: a static tilt, a spin and a damped pendulum about a pivot inside its frame; see SpellRotate. Unauthored means it is drawn upright. Not drawn on an emitter or a flight-aligned layer. |  |
+| `breathe` | SpellBreathe (below) | (zero -- see SpellBreathe) | Alpha and scale flutter on the Ember flicker curve, for a layer that must never hold still; see SpellBreathe. Unauthored means steady. Not drawn on an emitter. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
 | `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre, sky or above, a layer that travels, or a layer riding another (place layer:<id>). | None, Target |
@@ -719,6 +730,19 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `casterCostSeconds` | float | `0` | Seconds after the cue before the caster's own newly applied statuses show on its plate, so a price lands after the payoff instead of on it. 0 (the default) shows them on the cue. Author the caster's pulse layer at `at: hit` with the same `offset`. |  |
 | `secondSfxPath` | string | `""` | Resources-relative path to the sound of the cast's second payoff: each staggered packet after the first (at its stagger offset) and a detonation of existing Poison (detonationSeconds after the cue). Empty is silent. |  |
 | `detonationSeconds` | float | `0` | Seconds after the cue that a detonation of Poison the target already carried shows its own number and plays secondSfxPath. 0 means one stagger step (0.05 s). Author the detonation's layers at `at: hit` with the same `offset`. |  |
+
+### `SpellRotate`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `degrees` | float | `0` | Static tilt, in degrees counter-clockwise (mirrors with the cast). Added to the spin and the pendulum. |  |
+| `spin` | float | `0` | Steady spin, in degrees per second counter-clockwise (mirrors with the cast), from the layer's opening instant. |  |
+| `amplitude` | float | `0` | Pendulum amplitude, in degrees: the angle at the first extreme, counter-clockwise when positive (mirrors with the cast). The swing starts at rest on the vertical and moves sine-wise, so a negative amplitude swings clockwise first. 0 means no pendulum. |  |
+| `period` | float | `0` | Seconds for one full swing (out, back through the middle, the other way, and home). Required when amplitude is set. |  |
+| `damping` | float | `0` | Pendulum damping per second: the amplitude is multiplied by e^(-damping * seconds). 0 swings undiminished. |  |
+| `swings` | float | `0` | How many full periods the pendulum swings; fractions count (0.75 ends at the far extreme of the second swing). 0 means until the layer ends. After them the pendulum rests at the vertical. |  |
+| `pivotX` | float | `0.5` | Pivot, as a fraction of the frame from its left edge; 0.5 is the middle. |  |
+| `pivotY` | float | `0.5` | Pivot, as a fraction of the frame from its bottom edge; 1 is the top, where a hanging thing is hooked. |  |
 
 ## Description markup
 

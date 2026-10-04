@@ -30,9 +30,21 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // over the layer's life has to arrive with the frame.
         public readonly float Scale;
 
+        // HOW FAR THE BOX IS TURNED NOW, counter-clockwise in WORLD degrees (the
+        // layer's `rotate`, mirrored with the cast), and the pixel displacement of
+        // the box's centre that turning it about the authored pivot costs. Both
+        // zero for every layer that authors no rotate. Core adds Degrees to the
+        // instance's own and the shift to the placement.
+        public readonly float Degrees;
+        public readonly float ShiftX;
+        public readonly float ShiftY;
+
         public SpellFrameSample(bool visible, int index, int next, float blend, float alpha,
-            float scale = 1f)
+            float scale = 1f, float degrees = 0f, float shiftX = 0f, float shiftY = 0f)
         {
+            Degrees = degrees;
+            ShiftX = shiftX;
+            ShiftY = shiftY;
             Visible = visible;
             Index = index;
             Next = next;
@@ -99,7 +111,17 @@ namespace PrincesPalace.Domain.Combat.Presentation
             float alpha = AlphaAt(instance, age, lifetime);
             if (alpha <= 0f) return SpellFrameSample.Hidden;
 
-            float scale = PunchAt(layer, age, lifetime);
+            float phase = BreathePhaseOf(instance);
+            float breathe = layer.breathe != null && layer.breathe.IsAuthored
+                ? layer.breathe.ScaleMultiplierAt(age, phase)
+                : 1f;
+            if (layer.breathe != null && layer.breathe.IsAuthored)
+            {
+                alpha *= layer.breathe.AlphaMultiplierAt(age, phase);
+            }
+
+            float scale = PunchAt(layer, age, lifetime) * breathe;
+            var pose = PoseOf(instance, age, scale);
 
             // A STILL IS ONE FRAME OF A FOLDER, held. Its path names the folder
             // and not the file, which is mechanical rather than tidy: the drift
@@ -109,14 +131,14 @@ namespace PrincesPalace.Domain.Combat.Presentation
             int first = FirstIndex(layer, frameCount);
             if (instance.RenderKind == SpellRender.Still)
             {
-                return new SpellFrameSample(true, first, -1, 0f, alpha, scale);
+                return new SpellFrameSample(true, first, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y);
             }
 
             int playable = frameCount - first;
-            if (playable <= 0) return new SpellFrameSample(true, frameCount - 1, -1, 0f, alpha, scale);
+            if (playable <= 0) return new SpellFrameSample(true, frameCount - 1, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y);
 
             float perFrame = PerFrame(layer, lifetime, playable);
-            if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha, scale);
+            if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y);
 
             // A hair past the exact quotient, so a frame boundary authored on the
             // cue (0.30 s over 0.06 s frames is 4.9999995 in floats) opens on
@@ -163,7 +185,40 @@ namespace PrincesPalace.Domain.Combat.Presentation
                 if (nextOpens >= instance.CueSeconds - CueTolerance) blend = 0f;
             }
 
-            return new SpellFrameSample(true, index, next, blend, alpha, scale);
+            return new SpellFrameSample(true, index, next, blend, alpha, scale, pose.degrees, pose.x, pose.y);
+        }
+
+        // Seconds on the Ember curve that this layer's breathing starts at: a
+        // fixed spread per layer index, so two breathing layers of one spell
+        // are not on the same beat, and the same cast repeats exactly.
+        private const float BreathePhaseSpread = 1.7f;
+
+        private static float BreathePhaseOf(SpellLayerInstance instance) =>
+            instance.LayerIndex * BreathePhaseSpread;
+
+        // THE LAYER'S TURN AT `age`, in world degrees, and where turning it about
+        // its pivot moves its centre. The box rotates about its own centre in
+        // the renderer, so a pivot elsewhere is the same turn plus a shift of
+        // p - R(theta) p, p being the pivot's offset from the centre in the
+        // drawn (scaled, mirrored) box.
+        private static (float degrees, float x, float y) PoseOf(SpellLayerInstance instance, float age, float scale)
+        {
+            var rotate = instance.Layer.rotate;
+            if (rotate == null || !rotate.IsAuthored) return (0f, 0f, 0f);
+
+            float facing = instance.DrawFacing;
+            float degrees = rotate.AngleAt(age) * facing;
+
+            double radians = degrees * Math.PI / 180.0;
+            double cos = Math.Cos(radians);
+            double sin = Math.Sin(radians);
+
+            double px = (rotate.pivotX - 0.5) * instance.Box.X * scale * facing;
+            double py = (rotate.pivotY - 0.5) * instance.Box.Y * scale;
+
+            float x = (float)(px - (cos * px - sin * py));
+            float y = (float)(py - (sin * px + cos * py));
+            return (degrees, x, y);
         }
 
         // The 1-based startFrame as an index; 0 means the first frame.
@@ -238,6 +293,8 @@ namespace PrincesPalace.Domain.Combat.Presentation
         private static float AlphaAt(SpellLayerInstance instance, float age, float lifetime)
         {
             float opacity = OpacityOf(instance.Layer);
+            float fadeIn = instance.Layer.fadeIn;
+            if (fadeIn > 0f && age < fadeIn) opacity *= age / fadeIn;
             if (age <= lifetime) return opacity;
             if (instance.FadeSeconds <= 0f) return 0f;
 

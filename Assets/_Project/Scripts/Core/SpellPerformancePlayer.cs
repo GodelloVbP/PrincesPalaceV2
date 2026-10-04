@@ -643,7 +643,8 @@ namespace PrincesPalace
                 // units behind a rightward core has to sit 118 units behind a
                 // leftward one, not 118 units in front of it.
                 var at = SpellPerformance.PositionOf(instance, seconds) +
-                         new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy);
+                         new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy) +
+                         new UiVec(sample.ShiftX, sample.ShiftY);
 
                 // THE PUNCH MULTIPLIES THE BOX HERE, not in the placement.
                 // Core measures the box once at Begin and a scale that varies
@@ -653,7 +654,7 @@ namespace PrincesPalace
                 renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
                     new Vector2(at.X, at.Y),
                     new Vector2(instance.Box.X * sample.Scale, instance.Box.Y * sample.Scale),
-                    instance.Degrees, instance.Layer.glow, tint: TintOf(instance));
+                    instance.Degrees + sample.Degrees, instance.Layer.glow, tint: TintOf(instance));
             }
         }
 
