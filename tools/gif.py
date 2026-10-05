@@ -1145,6 +1145,61 @@ def trim_frames(runs_root=None, keep=FRAME_RUNS_KEPT, now=None):
     return trimmed, freed
 
 
+RUNS_CAP_ENV = "GIF_RUNS_CAP_GB"
+RUNS_CAP_DEFAULT_GB = 5.0
+
+
+def runs_cap_bytes(override_gb=None):
+    """The size cap for the runs folder: an explicit value, else the
+    GIF_RUNS_CAP_GB environment variable, else 5 GB."""
+    if override_gb is None:
+        try:
+            override_gb = float(os.environ.get(RUNS_CAP_ENV, RUNS_CAP_DEFAULT_GB))
+        except ValueError:
+            override_gb = RUNS_CAP_DEFAULT_GB
+    return int(override_gb * 1e9)
+
+
+def dir_size(path):
+    return sum(os.path.getsize(os.path.join(root, f)) for root, _dirs, files in os.walk(path) for f in files)
+
+
+def enforce_runs_cap(runs_root=None, cap_bytes=None, protect=(), now=None):
+    """Deletes whole run directories, oldest first, until the folder is under
+    the cap. Never deletes a run named in `protect` (the one just finished), one
+    still recording, one younger than the grace period, or one carrying the
+    keep_frames marker. Run names sort by their UTC timestamp prefix. Returns
+    (names removed, bytes freed); a run that cannot be removed is reported and
+    skipped."""
+    runs_root = runs_root or RUNS
+    cap_bytes = runs_cap_bytes() if cap_bytes is None else cap_bytes
+    if not os.path.isdir(runs_root):
+        return [], 0
+    now = time.time() if now is None else now
+    sizes = {d: dir_size(os.path.join(runs_root, d)) for d in os.listdir(runs_root)
+             if os.path.isdir(os.path.join(runs_root, d))}
+    total = sum(sizes.values())
+    removed, freed = [], 0
+    for name in sorted(sizes):
+        if total <= cap_bytes:
+            break
+        run = os.path.join(runs_root, name)
+        if name in protect or os.path.exists(os.path.join(run, KEEP_FRAMES_MARKER)):
+            continue
+        finished, newest = run_state(run)
+        if not finished or now - newest < FRAME_GRACE_SECONDS:
+            continue
+        try:
+            shutil.rmtree(run)
+        except OSError as error:
+            print("could not remove %s: %s" % (run, error))
+            continue
+        removed.append(name)
+        freed += sizes[name]
+        total -= sizes[name]
+    return removed, freed
+
+
 def cmd_trim(args):
     trimmed, freed = trim_frames(keep=args.keep)
     print("trimmed frames of %d run(s), freed %.1f GB (kept the newest %d)" % (trimmed, freed / 1e9, args.keep))
@@ -1192,6 +1247,11 @@ def cmd_finish(args):
         trimmed, freed = trim_frames()
         if trimmed:
             print("trimmed frames of %d older run(s), freed %.1f GB (-KeepFrames keeps them)" % (trimmed, freed / 1e9))
+    cap = runs_cap_bytes(args.cap_gb)
+    removed, freed = enforce_runs_cap(cap_bytes=cap, protect=(os.path.basename(run_dir),))
+    if removed:
+        print("runs over the %.1f GB cap: removed %d oldest run(s) (%s), freed %.1f GB"
+              % (cap / 1e9, len(removed), ", ".join(removed), freed / 1e9))
 
     totals = {}
     for s in scenarios:
@@ -1324,6 +1384,8 @@ def main(argv=None):
     p.add_argument("run_dir")
     p.add_argument("--keep-frames", action="store_true")
     p.add_argument("--no-preview", action="store_true", help="skip anim_preview.gif")
+    p.add_argument("--cap-gb", type=float, default=None,
+                   help="size cap for the runs folder in GB (default $GIF_RUNS_CAP_GB, else 5)")
     p.set_defaults(fn=cmd_finish)
 
     p = sub.add_parser("trim")

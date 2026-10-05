@@ -147,6 +147,65 @@ class TrimFramesTests(unittest.TestCase):
             self.assertTrue(self.has_frames(root, "20261001T000000Z_a"))
 
 
+class RunsCapTests(unittest.TestCase):
+    NOW = 2_000_000_000.0
+
+    def make_run(self, root, name, size=100, finished=True, at=None, marker=False):
+        at = self.NOW - 3600 if at is None else at
+        run = os.path.join(root, name)
+        os.makedirs(os.path.join(run, "abc"))
+        with open(os.path.join(run, "abc", "anim.gif"), "wb") as f:
+            f.write(b"x" * size)
+        with open(os.path.join(run, "request.json"), "w") as f:
+            f.write('{"scenarios": [{"key": "abc"}]}')
+        os.utime(os.path.join(run, "request.json"), (at, at))
+        if finished:
+            record = os.path.join(run, "abc", "scenario.json")
+            open(record, "w").close()
+            os.utime(record, (at, at))
+        if marker:
+            open(os.path.join(run, gif.KEEP_FRAMES_MARKER), "w").close()
+
+    def names(self, root):
+        return sorted(os.listdir(root))
+
+    def test_oldest_runs_go_first_until_under_the_cap(self):
+        with tempfile.TemporaryDirectory() as root:
+            for n in ("20261001_a", "20261002_b", "20261003_c", "20261004_d"):
+                self.make_run(root, n)
+            removed, freed = gif.enforce_runs_cap(root, cap_bytes=300, now=self.NOW)
+            self.assertEqual(removed, ["20261001_a", "20261002_b"])
+            self.assertGreater(freed, 250)
+            self.assertEqual(self.names(root), ["20261003_c", "20261004_d"])
+
+    def test_nothing_is_removed_under_the_cap_or_without_a_folder(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001_a")
+            self.assertEqual(gif.enforce_runs_cap(root, cap_bytes=10**9, now=self.NOW), ([], 0))
+            self.assertEqual(gif.enforce_runs_cap(os.path.join(root, "nope"), cap_bytes=1), ([], 0))
+
+    def test_protected_unfinished_young_and_kept_runs_stay(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.make_run(root, "20261001_just", size=1000)
+            self.make_run(root, "20261002_open", size=1000, finished=False)
+            self.make_run(root, "20261003_young", size=1000, at=self.NOW - 60)
+            self.make_run(root, "20261004_kept", size=1000, marker=True)
+            self.make_run(root, "20261005_old", size=1000)
+            removed, _ = gif.enforce_runs_cap(root, cap_bytes=1, protect=("20261001_just",), now=self.NOW)
+            self.assertEqual(removed, ["20261005_old"])
+            self.assertEqual(len(self.names(root)), 4)
+
+    def test_cap_comes_from_the_flag_then_the_environment_then_five_gb(self):
+        with unittest.mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(gif.RUNS_CAP_ENV, None)
+            self.assertEqual(gif.runs_cap_bytes(), 5_000_000_000)
+            os.environ[gif.RUNS_CAP_ENV] = "2"
+            self.assertEqual(gif.runs_cap_bytes(), 2_000_000_000)
+            self.assertEqual(gif.runs_cap_bytes(1.5), 1_500_000_000)
+            os.environ[gif.RUNS_CAP_ENV] = "junk"
+            self.assertEqual(gif.runs_cap_bytes(), 5_000_000_000)
+
+
 class RefusalTests(unittest.TestCase):
     IDS = {
         "spell": ["bolt"], "allSkills": ["bolt", "plain"], "attack": ["rat"], "enemies": ["rat", "wolf"],
