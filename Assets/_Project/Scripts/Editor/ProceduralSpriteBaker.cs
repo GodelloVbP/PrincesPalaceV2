@@ -81,6 +81,7 @@ public static class ProceduralSpriteBaker
         BakeEmber();
         BakeConstellation();
         BakeSpeedStreak();
+        BakeGlowDisc();
 
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
@@ -593,6 +594,36 @@ public static class ProceduralSpriteBaker
         texture.SetPixels32(pixels);
         texture.Apply();
         WritePng(SpeedStreakPath, texture);
+    }
+
+    // A SOFT WHITE DISC OF LIGHT for a spell layer to tint: the censer's warm
+    // pool under the swinging lantern. radial_glow's own falloff, under
+    // Resources/Spells because a layer plays a Resources folder (an Art/Generated
+    // sprite is not reachable by path). White, so `tint` colours it.
+    private const string GlowDiscPath = "Assets/_Project/Resources/Spells/glow_disc/f0.png";
+
+    private static void BakeGlowDisc()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(GlowDiscPath));
+
+        var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
+        var pixels = new Color32[Size * Size];
+
+        for (int y = 0; y < Size; y++)
+        {
+            for (int x = 0; x < Size; x++)
+            {
+                float nx = (x + 0.5f) / Size * 2f - 1f;
+                float ny = (y + 0.5f) / Size * 2f - 1f;
+                float dist = Mathf.Clamp01(Mathf.Sqrt(nx * nx + ny * ny));
+                pixels[y * Size + x] = new Color32(255, 255, 255,
+                    (byte)Mathf.RoundToInt((1f - Smoothstep(dist)) * 255f));
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(GlowDiscPath, texture);
     }
 
     // One field of stars, placed deterministically and drawn with a soft edge

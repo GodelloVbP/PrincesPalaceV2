@@ -259,6 +259,13 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom.")]
         public SpellGloom gloom = new SpellGloom();
 
+        // THE STAGE'S PUSH ON THE BLOW, toward the target: one nudge on the hit
+        // cue that eases back, presentation only (see SpellKick). A block for
+        // the same reason gloom is: strength, rise and fall only mean something
+        // together.
+        [ContentDoc("Optional nudge of the stage (the figures and this spell's own layers, never the HUD) toward the target on the hit cue, eased back; see SpellKick. Presentation only.")]
+        public SpellKick kick = new SpellKick();
+
         // THE CASTER'S PRICE LANDS AFTER THE PAYOFF. A cast that charges its
         // caster a status (Court of Whispers' Vulnerable) paints that badge at
         // the cue with everything else, so the price and the payoff are one
@@ -593,6 +600,7 @@ namespace PrincesPalace.Domain.Content
             secondSfxPath = secondSfxPath,
             detonationSeconds = detonationSeconds,
             gloom = gloom == null ? new SpellGloom() : gloom.Copy(),
+            kick = kick == null ? new SpellKick() : kick.Copy(),
             layers = CopyOf(layers),
         };
 

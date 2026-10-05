@@ -186,6 +186,44 @@ namespace PrincesPalace
             ApplyStageDarkness();
         }
 
+        // WHAT A LIVE CAST ASKS OF THE STAGE ITSELF, each frame: its push on the
+        // blow (SpellKick) laid on both racks, and its fire's lift of the Burn
+        // glow on the body it burns (SpellLayer.stoke). Both are read off the
+        // cast's own clock, so they follow the battle-speed preset with the
+        // spell, and neither touches simulation state or input.
+        private Vector2 _appliedKick;
+
+        private void ApplySpellStage()
+        {
+            if (performancePlayer == null) return;
+
+            var kick = performancePlayer.StageKick;
+            if (kick != _appliedKick)
+            {
+                _appliedKick = kick;
+                if (stageShakes != null)
+                {
+                    foreach (var shake in stageShakes) shake?.SetNudge(kick);
+                }
+            }
+
+            StokeGlows(enemyBurnGlows, party: false);
+            StokeGlows(partyBurnGlows, party: true);
+        }
+
+        private void StokeGlows(StageBurnGlow[] glows, bool party)
+        {
+            if (glows == null) return;
+
+            for (int slot = 0; slot < glows.Length; slot++)
+            {
+                if (glows[slot] == null) continue;
+
+                float stoke = performancePlayer.StokeAt(party, slot);
+                if (stoke != glows[slot].Stoke) glows[slot].Stoke = stoke;
+            }
+        }
+
         // THE ONE WRITE TO THE DARKNESS IMAGE. Called when the event's half
         // changes and every frame, because a cast's gloom moves on its own
         // clock. The image is hidden whenever the composition is zero, so a

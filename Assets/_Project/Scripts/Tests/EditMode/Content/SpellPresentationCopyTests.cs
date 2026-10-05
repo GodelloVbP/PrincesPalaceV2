@@ -49,6 +49,7 @@ namespace PrincesPalace.Domain.Tests
             secondSfxPath = "Audio/Sfx/x_second",
             detonationSeconds = 0.18f,
             gloom = new SpellGloom { strength = 0.35f, fadeIn = 0.2f, until = "cleared", fadeOut = 0.25f },
+            kick = new SpellKick { strength = 0.027f, rise = 0.04f, fall = 0.21f },
             layers = new[]
             {
                 new SpellLayer
@@ -79,6 +80,9 @@ namespace PrincesPalace.Domain.Tests
                     breathe = new SpellBreathe { alpha = 0.35f, scale = 0.07f, rate = 4f },
                     drift = new SpellDrift { fromX = -0.7f, toX = -0.7f, viaX = -0.25f, viaAt = 0.46f, fromY = 0.1f },
                     glow = 1.3f,
+                    glowCurve = new SpellGlowCurve { to = 1.6f, pulse = 0.45f, period = 0.4f, crest = 0.35f, knee = 0.41f },
+                    echo = new SpellEcho { count = 3, lagSeconds = 0.05f, alpha = 0.4f, spread = 90f },
+                    stoke = 0.7f,
                     tint = "#6B4A30",
                     impactX = 0.94f,
                     impactY = 0.5f,
@@ -92,6 +96,8 @@ namespace PrincesPalace.Domain.Tests
                         path = "Spells/x_drops",
                         rate = 40f,
                         burst = 18,
+                        burstTimes = new[] { 0.2f, 0.6f },
+                        burstEach = 5,
                         window = 0.25f,
                         sourceDx = -40f,
                         sourceDy = 6f,
@@ -144,6 +150,14 @@ namespace PrincesPalace.Domain.Tests
                     continue;
                 }
 
+                if (field.FieldType == typeof(SpellKick))
+                {
+                    var m = (SpellKick)mine;
+                    var t = (SpellKick)theirs;
+                    if (m == t || m.strength != t.strength || m.rise != t.rise || m.fall != t.fall) dropped.Add(field.Name);
+                    continue;
+                }
+
                 if (field.FieldType == typeof(SpellGloom))
                 {
                     var m = (SpellGloom)mine;
@@ -170,7 +184,8 @@ namespace PrincesPalace.Domain.Tests
             foreach (var field in FieldsOf(typeof(SpellLayer)))
             {
                 if (field.FieldType == typeof(SpellEmitter) || field.FieldType == typeof(SpellDrift)
-                    || field.FieldType == typeof(SpellRotate) || field.FieldType == typeof(SpellBreathe)) continue;
+                    || field.FieldType == typeof(SpellRotate) || field.FieldType == typeof(SpellBreathe)
+                    || field.FieldType == typeof(SpellEcho) || field.FieldType == typeof(SpellGlowCurve)) continue;
                 Assert.AreEqual(field.GetValue(original), field.GetValue(copy),
                     $"SpellLayer.Copy() drops {field.Name}");
             }
@@ -194,6 +209,22 @@ namespace PrincesPalace.Domain.Tests
                 Assert.AreEqual(field.GetValue(original.rotate), field.GetValue(copy.rotate),
                     $"SpellRotate.Copy() drops {field.Name}");
             }
+
+            Assert.AreNotSame(original.echo, copy.echo);
+            foreach (var field in FieldsOf(typeof(SpellEcho)))
+            {
+                Assert.AreEqual(field.GetValue(original.echo), field.GetValue(copy.echo),
+                    $"SpellEcho.Copy() drops {field.Name}");
+            }
+
+            Assert.AreNotSame(original.glowCurve, copy.glowCurve);
+            foreach (var field in FieldsOf(typeof(SpellGlowCurve)))
+            {
+                Assert.AreEqual(field.GetValue(original.glowCurve), field.GetValue(copy.glowCurve),
+                    $"SpellGlowCurve.Copy() drops {field.Name}");
+            }
+
+            Assert.AreNotSame(original.emitter.burstTimes, copy.emitter.burstTimes, "the burst times array is shared");
 
             Assert.AreNotSame(original.breathe, copy.breathe);
             foreach (var field in FieldsOf(typeof(SpellBreathe)))

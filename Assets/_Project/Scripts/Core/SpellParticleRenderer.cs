@@ -37,7 +37,52 @@ namespace PrincesPalace
             member >= 0 && member < Capacity && particles[member] != null &&
             particles[member].isActiveAndEnabled;
 
-        public void Show(int member, Sprite sprite, Vector2 at, float size, float alpha, float rotation)
+        // THE GLOW BOOST (UISpellGlow, the same shader a sprite layer's `glow`
+        // uses) is a material property, so a particle that glows wears a material
+        // carrying its boost. One material per distinct boost, shared by every
+        // drop that asks for it: an emitter authors one boost for all its drops,
+        // so a cast makes at most a few. Never shared across boosts, or the last
+        // writer would win.
+        private const string GlowShaderPath = "Shaders/UISpellGlow";
+        private static readonly int BoostId = Shader.PropertyToID("_Boost");
+        private readonly System.Collections.Generic.Dictionary<int, Material> _glowMaterials =
+            new System.Collections.Generic.Dictionary<int, Material>();
+        private bool _glowUnavailable;
+
+        private Material GlowMaterial(float boost)
+        {
+            if (_glowUnavailable) return null;
+
+            int key = Mathf.RoundToInt(boost * 100f);
+            if (_glowMaterials.TryGetValue(key, out var held)) return held;
+
+            var shader = Resources.Load<Shader>(GlowShaderPath);
+            if (shader == null)
+            {
+                _glowUnavailable = true;
+                Debug.LogWarning($"SpellParticleRenderer: no shader at Resources/{GlowShaderPath}; " +
+                                 "glowing particles draw flat.");
+                return null;
+            }
+
+            var material = new Material(shader);
+            material.SetFloat(BoostId, key / 100f);
+            _glowMaterials[key] = material;
+            return material;
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var material in _glowMaterials.Values)
+            {
+                if (material != null) Destroy(material);
+            }
+
+            _glowMaterials.Clear();
+        }
+
+        public void Show(int member, Sprite sprite, Vector2 at, float size, float alpha, float rotation,
+            float glow = 0f, Color? tint = null)
         {
             if (member < 0 || member >= Capacity) return;
 
@@ -62,8 +107,16 @@ namespace PrincesPalace
             if (!image.gameObject.activeSelf) image.gameObject.SetActive(true);
             image.enabled = true;
 
-            var colour = image.color;
-            image.color = new Color(colour.r, colour.g, colour.b, alpha);
+            // WRITTEN EVERY CALL, white when there is none, so a member handed on
+            // from a tinted emitter carries nothing of it.
+            var rgb = tint ?? Color.white;
+            image.color = new Color(rgb.r, rgb.g, rgb.b, alpha);
+
+            var wanted = glow > 0f ? GlowMaterial(glow) : null;
+            if (image.material != (wanted != null ? wanted : image.defaultMaterial))
+            {
+                image.material = wanted;
+            }
         }
 
         // The same restore list the sprite renderer applies, for the same
@@ -80,8 +133,8 @@ namespace PrincesPalace
             image.gameObject.SetActive(false);
             image.sprite = null;
 
-            var colour = image.color;
-            image.color = new Color(colour.r, colour.g, colour.b, 1f);
+            image.color = Color.white;
+            image.material = null;
 
             var rect = image.rectTransform;
             rect.localRotation = Quaternion.identity;

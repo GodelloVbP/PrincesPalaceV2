@@ -73,9 +73,29 @@ namespace PrincesPalace.Domain.Combat.Presentation
         {
             if (spec == null) return windowStart;
             if (index < spec.burst) return windowStart;
+
+            // THE EXTRA BURSTS, in time order, between the opening burst and the
+            // stream: `burstEach` particles at each authored time.
+            int pulsed = PulsedOf(spec);
+            int afterBurst = index - spec.burst;
+            if (afterBurst < pulsed) return windowStart + spec.burstTimes[afterBurst / spec.burstEach];
+
             if (spec.rate <= 0f) return windowStart;
 
-            return windowStart + (index - spec.burst) / spec.rate;
+            return windowStart + (afterBurst - pulsed) / spec.rate;
+        }
+
+        // How many particles the extra bursts throw in all.
+        public static int PulsedOf(SpellEmitter spec) => spec == null ? 0 : spec.PulsedCount;
+
+        // Seconds after the layer opens that the last particle is born.
+        public static float LastBirthOffsetOf(SpellEmitter spec)
+        {
+            if (spec == null) return 0f;
+
+            float last = spec.window;
+            if (PulsedOf(spec) > 0) last = Math.Max(last, spec.burstTimes[spec.burstTimes.Length - 1]);
+            return last;
         }
 
         // How many particles this emitter will ever throw. Finite by
@@ -90,7 +110,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
                 ? (int)Math.Ceiling(spec.rate * spec.window)
                 : 0;
 
-            return spec.burst + streamed;
+            return spec.burst + PulsedOf(spec) + streamed;
         }
 
         // THE DIRECTION AND SPEED A PARTICLE LEAVES WITH, before whatever it

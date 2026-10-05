@@ -877,7 +877,7 @@ namespace PrincesPalace.Domain.Tests
             };
 
             string message = Only(With(layer));
-            StringAssert.Contains("vfx.layers[0] is an emitter and authors neither rate nor burst, so it " +
+            StringAssert.Contains("vfx.layers[0] is an emitter and authors none of rate, burst or burstTimes, so it " +
                                   "emits nothing", message);
         }
 

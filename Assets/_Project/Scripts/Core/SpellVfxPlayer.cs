@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace
 {
@@ -69,7 +70,8 @@ namespace PrincesPalace
         // and thin however the frame was cut. Set on every call, so a member
         // handed on from a stretched cast needs no restoring.
         public void Show(Sprite frame, Sprite next, float blend, float alpha, Vector2 at, Vector2 size,
-            float degrees = 0f, float glow = 0f, bool stretch = false, Color? tint = null)
+            float degrees = 0f, float glow = 0f, bool stretch = false, Color? tint = null,
+            float glowKnee = SpellGlowCurve.DefaultKnee)
         {
             if (image == null || frame == null) return;
 
@@ -94,7 +96,7 @@ namespace PrincesPalace
                 ? Quaternion.identity
                 : Quaternion.Euler(0f, 0f, degrees);
 
-            ApplyGlow(glow);
+            ApplyGlow(glow, glowKnee);
 
             image.preserveAspect = !stretch;
             image.sprite = frame;
@@ -185,11 +187,12 @@ namespace PrincesPalace
         // existed -- the same posture LoadSprite and StageHitFlash take.
         private const string GlowShaderPath = "Shaders/UISpellGlow";
         private static readonly int BoostId = Shader.PropertyToID("_Boost");
+        private static readonly int KneeId = Shader.PropertyToID("_Knee");
 
         private Material _glowMaterial;
         private bool _glowUnavailable;
 
-        private void ApplyGlow(float boost)
+        private void ApplyGlow(float boost, float knee = SpellGlowCurve.DefaultKnee)
         {
             if (image == null) return;
 
@@ -225,6 +228,7 @@ namespace PrincesPalace
             }
 
             _glowMaterial.SetFloat(BoostId, boost);
+            _glowMaterial.SetFloat(KneeId, knee);
 
             // ASSIGNED ONLY WHEN IT CHANGES. Graphic.material's SETTER calls
             // SetMaterialDirty() unconditionally, so re-assigning the same

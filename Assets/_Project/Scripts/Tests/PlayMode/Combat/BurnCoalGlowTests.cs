@@ -177,5 +177,20 @@ namespace PrincesPalace.PlayModeTests
                 Assert.AreEqual(0f, StageBurnGlow.AlphaAt(0f, t), 0f);
             }
         }
+
+        // A fire layer lifts the glow by StokeBoost (0.3) x its own strength x the rise, and
+        // never past 1; no fire adds nothing.
+        [Test]
+        public void AStokingFireLiftsTheGlowByItsOwnShareAndNeverPastOne()
+        {
+            for (float t = 0f; t < 20f; t += 0.37f)
+            {
+                float own = StageBurnGlow.AlphaAt(1f, t);
+                Assert.AreEqual(own, StageBurnGlow.AlphaAt(1f, t, 0f), 0f, "no fire, no lift");
+                Assert.AreEqual(Mathf.Min(1f, own + 0.3f), StageBurnGlow.AlphaAt(1f, t, 1f), 1e-5f);
+                Assert.AreEqual(Mathf.Min(1f, own + 0.15f), StageBurnGlow.AlphaAt(1f, t, 0.5f), 1e-5f);
+                Assert.AreEqual(0f, StageBurnGlow.AlphaAt(0f, t, 1f), 0f, "no glow, nothing to lift");
+            }
+        }
     }
 }

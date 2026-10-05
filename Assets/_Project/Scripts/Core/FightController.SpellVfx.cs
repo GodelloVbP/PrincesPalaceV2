@@ -460,6 +460,13 @@ namespace PrincesPalace
                     : struck.Count > 0 ? struck[0] : null;
             var targetRect = SlotFor(targetCombatant);
 
+            // THE BODY THIS LAYER STOKES: the glow of whoever it is placed on.
+            if (layer.stoke > 0f && targetCombatant != null)
+            {
+                instance.StokeSlot = SlotIndexOf(targetCombatant);
+                instance.StokeParty = targetCombatant.IsPlayerSide;
+            }
+
             var on = SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels
                 ? casterRect ?? targetRect
                 : targetRect;

@@ -43,7 +43,7 @@ namespace PrincesPalace.Domain.Tests
             new SpellPresentation { layerFormat = 1, layers = new[] { layer } };
 
         [Test]
-        public void TheRulesRefuseABadTintAndATintOnAnEmitter()
+        public void TheRulesRefuseABadTintAndAcceptATintOnAnEmitter()
         {
             var bad = new SpellLayer { id = "core", render = "sprite", place = "target", path = "Spells/x", seconds = 0.5f, tint = "brown" };
             var problems = SpellLayerRules.Check("skill 't'", With(bad));
@@ -58,8 +58,7 @@ namespace PrincesPalace.Domain.Tests
                 id = "drops", render = "emitter", place = "target", tint = "#6B4A30",
                 emitter = new SpellEmitter { path = "Spells/x", burst = 4, lifeMin = 0.2f, lifeMax = 0.3f, speedMin = 10f, speedMax = 20f },
             };
-            var refused = SpellLayerRules.Check("skill 't'", With(emitter));
-            Assert.IsTrue(refused.Any(p => p.Contains("tint is not drawn on an emitter")), string.Join(" | ", refused));
+            Assert.IsEmpty(SpellLayerRules.Check("skill 't'", With(emitter)), "an emitter's particles are tinted too");
         }
     }
 }

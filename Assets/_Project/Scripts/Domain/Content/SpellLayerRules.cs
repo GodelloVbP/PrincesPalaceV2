@@ -66,6 +66,12 @@ namespace PrincesPalace.Domain.Content
         public const float MaxBreatheScale = 0.5f;
         public const float MaxBreatheRate = 20f;
 
+        // An afterimage count past this is a smear, and each copy is a pooled renderer.
+        public const int MaxEchoCount = 4;
+        public const float MaxEchoLagSeconds = 0.5f;
+        public const float MaxGlow = 10f;
+        public const float MaxBurstTimeSeconds = 10f;
+
         // A rank span reaching two half-widths past its end bodies is already
         // three times the body; past that the drawing describes ground nobody
         // is standing on.
@@ -164,6 +170,27 @@ namespace PrincesPalace.Domain.Content
             }
         }
 
+        private static void CheckKick(string label, SpellPresentation vfx, List<string> problems)
+        {
+            var kick = vfx.kick;
+            if (kick == null) return;
+
+            if (float.IsNaN(kick.strength) || kick.strength < 0f || kick.strength > SpellKick.MaxStrength)
+            {
+                problems.Add($"{label}: vfx.kick.strength {Num(kick.strength)} is outside 0..{Num(SpellKick.MaxStrength)} " +
+                             "-- it is a fraction of the stage's width, not pixels.");
+            }
+
+            CheckSeconds(label, "kick.rise", kick.rise, problems);
+            CheckSeconds(label, "kick.fall", kick.fall, problems);
+
+            if (kick.HasKick && !vfx.HasArt)
+            {
+                problems.Add($"{label}: vfx.kick has no art to ride on. A cast with no layers never begins, " +
+                             "so its kick would never show.");
+            }
+        }
+
         private static void CheckPresentation(string label, SpellPresentation vfx, SpellLayer[] layers,
             List<string> problems)
         {
@@ -221,6 +248,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             CheckGloom(label, vfx, problems);
+            CheckKick(label, vfx, problems);
             CheckBeatSeconds(label, vfx, problems);
 
             // THE SAME BOUND CheckPlacement enforces on a layer's impactX/
@@ -270,6 +298,8 @@ namespace PrincesPalace.Domain.Content
             CheckDrift(at, layer, problems);
             CheckRotate(at, layer, problems);
             CheckBreathe(at, layer, problems);
+            CheckEcho(at, layer, problems);
+            CheckGlowCurve(at, layer, problems);
             CheckWhatItNeeds(at, layer, problems);
             CheckPlacement(at, layer, problems);
         }
@@ -464,6 +494,87 @@ namespace PrincesPalace.Domain.Content
             }
         }
 
+        private static void CheckEcho(string at, SpellLayer layer, List<string> problems)
+        {
+            var echo = layer.echo;
+            if (echo == null) return;
+
+            if (echo.count < 0 || echo.count > MaxEchoCount)
+            {
+                problems.Add($"{at}.echo.count {echo.count} is outside 0..{MaxEchoCount}; each copy is a pooled renderer.");
+            }
+
+            if (!echo.IsAuthored)
+            {
+                if (echo.lagSeconds != 0f || echo.alpha != 0f || echo.spread != 0f)
+                {
+                    problems.Add($"{at}.echo authors lagSeconds, alpha or spread with no count, so it draws nothing.");
+                }
+
+                return;
+            }
+
+            if (!(echo.lagSeconds > 0f) || echo.lagSeconds > MaxEchoLagSeconds)
+            {
+                problems.Add($"{at}.echo.lagSeconds {Num(echo.lagSeconds)} must be above 0 and at most {Num(MaxEchoLagSeconds)}.");
+            }
+
+            if (!(echo.alpha > 0f) || echo.alpha > 1f)
+            {
+                problems.Add($"{at}.echo.alpha {Num(echo.alpha)} must be above 0 and at most 1.");
+            }
+
+            Positive(at, "echo.spread", echo.spread, problems);
+
+            if (layer.Render == SpellRender.Emitter)
+            {
+                problems.Add($"{at} is an emitter and authors echo, which is inert there: particles have no motion " +
+                             "of their own to trail.");
+            }
+            else if (layer.Align == SpellAlign.Flight)
+            {
+                problems.Add($"{at} is laid along a flight and authors echo, which is inert there.");
+            }
+        }
+
+        private static void CheckGlowCurve(string at, SpellLayer layer, List<string> problems)
+        {
+            var curve = layer.glowCurve;
+            if (curve != null && curve.IsAuthored)
+            {
+                Positive(at, "glowCurve.to", curve.to, problems);
+                Positive(at, "glowCurve.pulse", curve.pulse, problems);
+                Positive(at, "glowCurve.crest", curve.crest, problems);
+                CheckFraction(at, "glowCurve.knee", curve.knee, problems);
+
+                if (curve.to > MaxGlow || curve.pulse > MaxGlow)
+                {
+                    problems.Add($"{at}.glowCurve.to and pulse must be at most {Num(MaxGlow)}.");
+                }
+
+                if (curve.pulse > 0f && !(curve.period > 0f))
+                {
+                    problems.Add($"{at}.glowCurve.pulse {Num(curve.pulse)} needs a period above 0.");
+                }
+
+                if (layer.Render == SpellRender.Emitter)
+                {
+                    problems.Add($"{at} is an emitter and authors glowCurve, which is inert there: its particles " +
+                                 "take the layer's glow as it is.");
+                }
+            }
+
+            if (float.IsNaN(layer.stoke) || layer.stoke < 0f || layer.stoke > 1f)
+            {
+                problems.Add($"{at}.stoke {Num(layer.stoke)} is outside 0..1.");
+            }
+            else if (layer.stoke > 0f && layer.Render == SpellRender.Emitter)
+            {
+                problems.Add($"{at} is an emitter and authors stoke, which is inert there: the body's glow follows " +
+                             "a layer's own alpha, and particles have none of their own.");
+            }
+        }
+
         // A PIVOT MAY LIE OUTSIDE THE FRAME: a censer on a chain longer than its
         // drawing hangs from a point well above the art. Typed as pixels (64) it is
         // still refused.
@@ -520,10 +631,6 @@ namespace PrincesPalace.Domain.Content
                 if (!SpellTint.TryParse(layer.tint, out _, out _, out _))
                 {
                     problems.Add($"{at}.tint \"{layer.tint}\" is not a #RRGGBB colour.");
-                }
-                else if (layer.Render == SpellRender.Emitter)
-                {
-                    problems.Add($"{at}.tint is not drawn on an emitter's particles; tint a sprite or still layer.");
                 }
             }
 
@@ -626,6 +733,46 @@ namespace PrincesPalace.Domain.Content
             }
 
             CheckWeights(at, emitter, problems);
+            CheckBurstTimes(at, emitter, problems);
+        }
+
+        // EXTRA BURSTS: the times and the count belong together, and the times
+        // are ascending because particles are born in index order, so a later
+        // time handed out before an earlier one would hold the earlier burst
+        // back until the later one's turn.
+        private static void CheckBurstTimes(string at, SpellEmitter emitter, List<string> problems)
+        {
+            int times = emitter.burstTimes == null ? 0 : emitter.burstTimes.Length;
+
+            if (emitter.burstEach < 0)
+            {
+                problems.Add($"{at}.emitter.burstEach {emitter.burstEach} cannot be negative.");
+            }
+
+            if (times > 0 && emitter.burstEach <= 0)
+            {
+                problems.Add($"{at}.emitter.burstTimes has {times} entries but burstEach is {emitter.burstEach}, " +
+                             "so nothing is thrown at them.");
+            }
+
+            if (times == 0 && emitter.burstEach > 0)
+            {
+                problems.Add($"{at}.emitter.burstEach {emitter.burstEach} has no burstTimes to throw at.");
+            }
+
+            float previous = 0f;
+            for (int i = 0; i < times; i++)
+            {
+                float time = emitter.burstTimes[i];
+                if (float.IsNaN(time) || time < previous || time > MaxBurstTimeSeconds)
+                {
+                    problems.Add($"{at}.emitter.burstTimes[{i}] {Num(time)} must be ascending, from 0 to " +
+                                 $"{Num(MaxBurstTimeSeconds)} seconds.");
+                    break;
+                }
+
+                previous = time;
+            }
         }
 
         // WHAT THIS RULE CAN CHECK WITHOUT THE DISK, and no more. Whether
@@ -687,9 +834,9 @@ namespace PrincesPalace.Domain.Content
                                  "throw.");
                 }
 
-                if (emitter.rate <= 0f && emitter.burst <= 0)
+                if (emitter.rate <= 0f && emitter.burst <= 0 && emitter.PulsedCount <= 0)
                 {
-                    problems.Add($"{at} is an emitter and authors neither rate nor burst, so it emits " +
+                    problems.Add($"{at} is an emitter and authors none of rate, burst or burstTimes, so it emits " +
                                  "nothing.");
                 }
 

@@ -40,9 +40,19 @@ namespace PrincesPalace.Domain.Combat.Presentation
         public readonly float ShiftX;
         public readonly float ShiftY;
 
+        // The glow boost now: the layer's `glow` moved by its glowCurve. Equal to
+        // `glow` for every layer that authors no curve.
+        public readonly float Glow;
+
+        // The brightness above which that boost applies (SpellGlowCurve.knee).
+        public readonly float Knee;
+
         public SpellFrameSample(bool visible, int index, int next, float blend, float alpha,
-            float scale = 1f, float degrees = 0f, float shiftX = 0f, float shiftY = 0f)
+            float scale = 1f, float degrees = 0f, float shiftX = 0f, float shiftY = 0f, float glow = 0f,
+            float knee = SpellGlowCurve.DefaultKnee)
         {
+            Knee = knee;
+            Glow = glow;
             Degrees = degrees;
             ShiftX = shiftX;
             ShiftY = shiftY;
@@ -123,6 +133,8 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
             float scale = PunchAt(layer, age, lifetime) * breathe;
             var pose = PoseOf(instance, age, scale);
+            float glow = GlowOf(layer, age, lifetime);
+            float knee = layer.glowCurve != null ? layer.glowCurve.KneeOrDefault : SpellGlowCurve.DefaultKnee;
 
             // A STILL IS ONE FRAME OF A FOLDER, held. Its path names the folder
             // and not the file, which is mechanical rather than tidy: the drift
@@ -132,14 +144,14 @@ namespace PrincesPalace.Domain.Combat.Presentation
             int first = FirstIndex(layer, frameCount);
             if (instance.RenderKind == SpellRender.Still)
             {
-                return new SpellFrameSample(true, first, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y);
+                return new SpellFrameSample(true, first, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y, glow, knee);
             }
 
             int playable = frameCount - first;
-            if (playable <= 0) return new SpellFrameSample(true, frameCount - 1, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y);
+            if (playable <= 0) return new SpellFrameSample(true, frameCount - 1, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y, glow, knee);
 
             float perFrame = PerFrame(layer, lifetime, playable);
-            if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y);
+            if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y, glow, knee);
 
             // A hair past the exact quotient, so a frame boundary authored on the
             // cue (0.30 s over 0.06 s frames is 4.9999995 in floats) opens on
@@ -186,7 +198,73 @@ namespace PrincesPalace.Domain.Combat.Presentation
                 if (nextOpens >= instance.CueSeconds - CueTolerance) blend = 0f;
             }
 
-            return new SpellFrameSample(true, index, next, blend, alpha, scale, pose.degrees, pose.x, pose.y);
+            return new SpellFrameSample(true, index, next, blend, alpha, scale, pose.degrees, pose.x, pose.y, glow, knee);
+        }
+
+        // THE LAYER'S GLOW BOOST at `age`: its `glow`, moved by its glowCurve.
+        private static float GlowOf(SpellLayer layer, float age, float lifetime) =>
+            layer.glowCurve != null && layer.glowCurve.IsAuthored
+                ? layer.glowCurve.At(layer.glow, age, lifetime)
+                : layer.glow;
+
+        // WHERE THE LAYER'S BOX CENTRE IS DRAWN for a sample taken at `seconds`:
+        // its placement and slide, its authored offset (mirrored with the cast)
+        // and the shift its turn costs. The one place the position is summed, so
+        // the layer and its afterimages cannot disagree about it.
+        public static UiVec CentreOf(SpellLayerInstance instance, in SpellFrameSample sample, float seconds) =>
+            SpellPerformance.PositionOf(instance, seconds) +
+            new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy) +
+            new UiVec(sample.ShiftX, sample.ShiftY);
+
+        // AFTERIMAGE `k` (1-based) of a layer, at `seconds`: the layer as it was
+        // k * lagSeconds ago, as faint as the layer has moved since (SpellEcho).
+        // Hidden when the layer has not moved, was not yet open then, or the layer
+        // authors no echo. `at` is where that copy's centre is drawn.
+        public static SpellFrameSample EchoOf(SpellLayerInstance instance, int frameCount, float seconds, int k,
+            out UiVec at)
+        {
+            at = UiVec.Zero;
+            var echo = instance?.Layer?.echo;
+            if (echo == null || !echo.IsAuthored || k < 1 || k > echo.count) return SpellFrameSample.Hidden;
+
+            float then = seconds - k * echo.lagSeconds;
+            var now = SampleOf(instance, frameCount, seconds);
+            var past = SampleOf(instance, frameCount, then);
+            if (!now.Visible || !past.Visible) return SpellFrameSample.Hidden;
+
+            var here = CentreOf(instance, now, seconds);
+            at = CentreOf(instance, past, then);
+            float distance = (float)Math.Sqrt((at.X - here.X) * (at.X - here.X) + (at.Y - here.Y) * (at.Y - here.Y));
+
+            float strength = echo.StrengthOf(k, distance);
+            if (strength <= 0f) return SpellFrameSample.Hidden;
+
+            return new SpellFrameSample(true, past.Index, past.Next, past.Blend, past.Alpha * strength,
+                past.Scale, past.Degrees, past.ShiftX, past.ShiftY, past.Glow, past.Knee);
+        }
+
+        // HOW MUCH THIS LAYER LIFTS THE COAL GLOW OF THE BODY IT IS ON at
+        // `seconds`: its `stoke`, times its own alpha as a share of the authored
+        // opacity (so its fade-in, fade-out and breathing all show), and zero
+        // before it opens or after it clears.
+        public static float StokeOf(SpellLayerInstance instance, float seconds)
+        {
+            var layer = instance?.Layer;
+            if (layer == null || !(layer.stoke > 0f)) return 0f;
+            if (!SpellSchedule.Passed(instance.StartSeconds, seconds)) return 0f;
+
+            float age = Math.Max(0f, seconds - instance.StartSeconds);
+            float lifetime = instance.EndSeconds - instance.StartSeconds;
+            float alpha = AlphaAt(instance, age, lifetime);
+            if (alpha <= 0f) return 0f;
+
+            if (layer.breathe != null && layer.breathe.IsAuthored)
+            {
+                alpha *= layer.breathe.AlphaMultiplierAt(age, BreathePhaseOf(instance));
+            }
+
+            float opacity = OpacityOf(layer);
+            return opacity <= 0f ? 0f : layer.stoke * Math.Min(1f, alpha / opacity);
         }
 
         // Seconds on the Ember curve that this layer's breathing starts at: a

@@ -37,6 +37,10 @@ namespace PrincesPalace.Domain.Tests
             internal int Effects;
             internal int Ground;
             internal int Particles;
+
+            // The most particles alive at once. The pool hands a member back as its
+            // drop dies, so this and not the total is what can overflow it.
+            internal int PeakParticles;
         }
 
         private static string SkillsJson() =>
@@ -114,7 +118,7 @@ namespace PrincesPalace.Domain.Tests
             // one is honest here.
             var performance = SpellPerformance.Resolve(vfx, targets, _ => 9);
 
-            var demand = new Demand { Skill = label };
+            var demand = new Demand { Skill = label, PeakParticles = SpellPoolPeak.ParticlesOf(performance) };
             foreach (var instance in performance.Instances)
             {
                 if (instance.Layer.Render == SpellRender.Emitter)
@@ -123,8 +127,11 @@ namespace PrincesPalace.Domain.Tests
                     continue;
                 }
 
-                if (instance.Layer.Sort == SpellSort.Ground) demand.Ground++;
-                else demand.Effects++;
+                // An afterimage (SpellEcho) holds a renderer of its own for as long as its layer.
+                int copies = instance.Layer.echo != null && instance.Layer.echo.IsAuthored ? instance.Layer.echo.count : 0;
+
+                if (instance.Layer.Sort == SpellSort.Ground) demand.Ground += 1 + copies;
+                else demand.Effects += 1 + copies;
             }
 
             return demand;
@@ -160,8 +167,8 @@ namespace PrincesPalace.Domain.Tests
         public void NoSpellAsksForMoreParticlesThanThePoolReserves()
         {
             var over = Demands()
-                .Where(d => d.Particles > FightHudSpec.SpellParticles)
-                .Select(d => $"{d.Skill} wants {d.Particles}")
+                .Where(d => d.PeakParticles > FightHudSpec.SpellParticles)
+                .Select(d => $"{d.Skill} wants {d.PeakParticles} alive at once")
                 .ToList();
 
             CollectionAssert.IsEmpty(over,

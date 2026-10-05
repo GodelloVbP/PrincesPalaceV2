@@ -50,6 +50,21 @@ namespace PrincesPalace
         private Vector2 _home;
         private Coroutine _running;
 
+        // A STANDING OFFSET LAID OVER THE MARK AND OVER THE NOISE, for the stage's
+        // push on a spell's blow (SpellKick): a steady displacement some other
+        // system writes every frame, and which the noise of a kick rides on top
+        // of rather than overwriting.
+        private Vector2 _nudge;
+
+        // The nudge, in canvas units. Zero puts the rack back on its mark.
+        public void SetNudge(Vector2 offset)
+        {
+            if (_rect == null || offset == _nudge) return;
+
+            _nudge = offset;
+            if (_running == null) _rect.anchoredPosition = _home + _nudge;
+        }
+
         private void Awake() => Rehome();
 
         // Re-reads the mark. The racks themselves do NOT move at runtime --
@@ -73,7 +88,7 @@ namespace PrincesPalace
             if (_running != null)
             {
                 StopCoroutine(_running);
-                _rect.anchoredPosition = _home;
+                _rect.anchoredPosition = _home + _nudge;
             }
 
             _running = StartCoroutine(Kicking(Mathf.Clamp01(strength)));
@@ -91,6 +106,7 @@ namespace PrincesPalace
                 _running = null;
             }
 
+            _nudge = Vector2.zero;
             if (_rect != null) _rect.anchoredPosition = _home;
         }
 
@@ -136,14 +152,14 @@ namespace PrincesPalace
                 float left = 1f - Mathf.Clamp01(elapsed / seconds);
                 float amplitude = MaxPixels * strength * left * left;
 
-                _rect.anchoredPosition = _home + new Vector2(
+                _rect.anchoredPosition = _home + _nudge + new Vector2(
                     Random.Range(-amplitude, amplitude),
                     Random.Range(-amplitude, amplitude) * VerticalRatio);
 
                 yield return null;
             }
 
-            _rect.anchoredPosition = _home;
+            _rect.anchoredPosition = _home + _nudge;
             _running = null;
         }
     }

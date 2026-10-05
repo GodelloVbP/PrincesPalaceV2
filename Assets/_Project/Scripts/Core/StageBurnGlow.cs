@@ -33,6 +33,13 @@ namespace PrincesPalace
         // out while Burn lasts.
         public const float TroughShare = 0.45f;
 
+        // THE MOST A LIVE FIRE LAYER (SpellLayer.stoke) ADDS to the rim's alpha
+        // while it burns on this body, so the glow flickers with the fire at its
+        // feet. It may go past PeakAlpha (up to 1): the breath already sits near
+        // the peak for stretches of its cycle, and a lift that clamped there
+        // would show nothing at exactly those moments.
+        public const float StokeBoost = 0.3f;
+
         public const float RiseSeconds = 0.30f;
         public const float FallSeconds = 0.45f;
 
@@ -53,6 +60,14 @@ namespace PrincesPalace
 
         private float _level;
         private float _phase;
+        private float _stoke;
+
+        // 0..1, set each frame from the spell layers stoking this body.
+        public float Stoke
+        {
+            get => _stoke;
+            set => _stoke = Mathf.Clamp01(value);
+        }
 
         // Whether Burn is on the body right now, as last painted.
         public bool Burning { get; private set; }
@@ -115,10 +130,11 @@ namespace PrincesPalace
 
         // The alpha for a rise level and a clock reading, pure so it can be
         // pinned without a frame.
-        public static float AlphaAt(float level, float seconds)
+        public static float AlphaAt(float level, float seconds, float stoke = 0f)
         {
             float breath = Mathf.Lerp(TroughShare, 1f, Mathf.Clamp01(FlickerCurve.Ember.At(seconds)));
-            return PeakAlpha * Mathf.Clamp01(level) * breath;
+            float alpha = PeakAlpha * Mathf.Clamp01(level) * breath;
+            return Mathf.Min(1f, alpha + StokeBoost * Mathf.Clamp01(stoke) * Mathf.Clamp01(level));
         }
 
         // One tick, with the clock handed in so a test can step it.
@@ -136,7 +152,7 @@ namespace PrincesPalace
                 return;
             }
 
-            image.color = EmberAt(AlphaAt(_level, clock + _phase));
+            image.color = EmberAt(AlphaAt(_level, clock + _phase, _stoke));
         }
 
         // Copies the figure's current drawing, flip and ground offset (see

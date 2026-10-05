@@ -619,6 +619,15 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `viaAt` | float | `0` | Fraction of the layer's lifetime, 0-1 exclusive, at which it passes through viaX/viaY; 0 means no waypoint. Each leg eases out. |  |
 | `arcY` | float | `0` | Extra height at the middle of the span, in heights of the layer's own box: a parabola 4t(1-t) added on top of the legs, so a thrown layer lifts and comes down. 0 is no arc. |  |
 
+### `SpellEcho`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `count` | int | `0` | How many lagged copies trail the layer; 0 means none. Each takes a pooled renderer. |  |
+| `lagSeconds` | float | `0` | Seconds each copy trails the one before it: copy k draws the layer as it was k * lagSeconds ago. |  |
+| `alpha` | float | `0` | Opacity of the nearest copy at full strength, 0-1; each further copy is weaker by an even step. Multiplied by the layer's own alpha. |  |
+| `spread` | float | `0` | How far, in reference-frame units, a copy has to lie from the layer's current drawing to show at full strength; nearer is fainter, none at all when the layer has not moved. 0 means 120. |  |
+
 ### `SpellEmitter`
 
 | Field | Type | Default | Description | Values |
@@ -644,6 +653,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `spinMax` | float | `0` | Fastest spin, in degrees per second. |  |
 | `alignFlight` | bool | `false` | Turns every particle's art, painted pointing right, onto the line of flight of the travelling layer the emitter rides (launch to aim), on top of its own spin. Legal only on place 'layer:<id>' of a layer that travels. |  |
 | `lateral` | float | `0` | Width across the line of flight that particles are born within, in reference-frame units (scaled by fit); each is offset by a hash of its index, up to half this either side of the source. 0 means born on the line. Legal only on place 'layer:<id>' of a layer that travels. |  |
+| `burstTimes` | float[] | (none -- required) | Seconds after the layer opens at which an extra burst is born, in ascending order (a spark at each turn of a swing); each throws `burstEach` particles. Both must be set together. |  |
+| `burstEach` | int | `0` | Particles thrown at each of the burstTimes. |  |
 | `fadeFrom` | float | `1` | Fraction of life at which alpha starts falling, 0..1. |  |
 | `endScale` | float | `1` | Scale at the end of life, relative to the particle's own. |  |
 | `seed` | int | `0` | Random seed; 0 derives one from the cast so two casts differ, non-zero repeats exactly. |  |
@@ -657,6 +668,24 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `fadeIn` | float | `0` | Seconds from the cast opening to full strength. |  |
 | `until` | string | `""` | When the gloom starts to lift: hit (the payoff cue) or cleared (when the cast's last layer is gone). Blank means hit. |  |
 | `fadeOut` | float | `0` | Seconds the gloom takes to lift once released. |  |
+
+### `SpellGlowCurve`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `to` | float | `0` | Glow the layer reaches when its lifetime ends, rising or falling in a straight line from `glow`; 0 means no ramp, glow holds at `glow`. |  |
+| `pulse` | float | `0` | Glow added at the crest of each pulse, on top of the ramp; 0 means no pulse. |  |
+| `period` | float | `0` | Seconds between pulse crests. Required when pulse is set. |  |
+| `crest` | float | `0` | Seconds after the layer opens that the first pulse crests; later crests follow every period. Nothing pulses earlier than half a period before it. |  |
+| `knee` | float | `0` | Brightness (0-1) above which the glow lifts a pixel; lower lifts more of the drawing. 0 means the shader's own 0.72, which reaches only the hottest highlights. |  |
+
+### `SpellKick`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `strength` | float | `0` | How far the stage is pushed toward the target at the peak, as a fraction of the stage's width (0.025 is 2.5%). 0 means no kick. |  |
+| `rise` | float | `0` | Seconds from the hit cue to the peak. |  |
+| `fall` | float | `0` | Seconds the stage takes to ease back from the peak. |  |
 
 ### `SpellLayer`
 
@@ -683,6 +712,9 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `drift` | SpellDrift (below) | (zero -- see SpellDrift) | Optional slide across the layer's life, in fractions of its own box; see SpellDrift. Unauthored means the layer stays where dx and dy put it. |  |
 | `rotate` | SpellRotate (below) | (zero -- see SpellRotate) | How the layer turns: a static tilt, a spin and a damped pendulum about a pivot inside its frame; see SpellRotate. Unauthored means it is drawn upright. Not drawn on an emitter or a flight-aligned layer. |  |
 | `breathe` | SpellBreathe (below) | (zero -- see SpellBreathe) | Alpha and scale flutter on the Ember flicker curve, for a layer that must never hold still; see SpellBreathe. Unauthored means steady. Not drawn on an emitter. |  |
+| `echo` | SpellEcho (below) | (zero -- see SpellEcho) | Afterimages: lagged faint copies of this layer's own drawing that trail its motion, strongest where it moves fastest; see SpellEcho. Unauthored means none. Not drawn on an emitter. |  |
+| `glowCurve` | SpellGlowCurve (below) | (zero -- see SpellGlowCurve) | How the layer's glow changes over its life: a ramp to a final value and a pulse on top; see SpellGlowCurve. Unauthored means `glow` holds. Not drawn on an emitter. |  |
+| `stoke` | float | `0` | How strongly this layer lifts the Burn coal glow of the body it is placed on while it lives, 0-1, following the layer's own fades and breathing; 0 means it does not touch the glow. Not drawn on an emitter. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
 | `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre, sky or above, a layer that travels, or a layer riding another (place layer:<id>). | None, Target |
@@ -690,8 +722,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `sort` | string | `""` | Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects. | Ground, Effects |
 | `align` | string | `""` | How a layer lies on the line it is placed along. On place formation: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). On place layer:<id> naming a travelling layer: flight (the box runs from that layer's launch to its aim, turned onto the line, as long as the line and `size` thick -- `size` is the thickness, fitted by `fit` -- stretched rather than letterboxed, revealed behind the projectile as it flies, then held and faded on this layer's own seconds, until and fade; dx and dy are refused). Refused on any other placement. | Level, Span, Flight |
 | `punch` | float | `0` | Extra scale at the layer's opening instant, eased out to nothing over the first fifth of its lifetime; 0 means no punch. 0.2 opens it 20% oversized. |  |
-| `glow` | float | `0` | How far above 1 this layer's brightest pixels are pushed so the Bloom override can see them; 0 means draw it flat, as every layer did before. 1.2 roughly doubles the hot core. |  |
-| `tint` | string | `""` | A #RRGGBB colour multiplied into the layer's frames (sprite and still only); blank draws the sheet as painted. It can only darken or shift a drawing, never brighten it: that is `glow`. |  |
+| `glow` | float | `0` | How far above 1 this layer's brightest pixels (an emitter's particles, each) are pushed so the Bloom override can see them; 0 means draw it flat, as every layer did before. 1.2 roughly doubles the hot core. See glowCurve to change it over the layer's life. |  |
+| `tint` | string | `""` | A #RRGGBB colour multiplied into the layer's frames or an emitter's particles; blank draws the sheet as painted. It can only darken or shift a drawing, never brighten it: that is `glow`. |  |
 | `impactX` | float | `-1` | Where the blow lands inside this layer's frames, as a fraction from the left edge; -1 means unauthored. |  |
 | `impactY` | float | `-1` | Where the blow lands inside this layer's frames, as a fraction from the bottom edge; -1 means unauthored. |  |
 | `aspect` | float | `0` | Width-over-height of the box; 0 means take the sheet's own frame aspect. |  |
@@ -727,6 +759,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `layerFormat` | int | `0` | Which revision of the layer vocabulary this block was authored against; 0 means the pre-layer format. |  |
 | `hitCueSeconds` | float | `0` | Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame. |  |
 | `gloom` | SpellGloom (below) | (zero -- see SpellGloom) | Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom. |  |
+| `kick` | SpellKick (below) | (zero -- see SpellKick) | Optional nudge of the stage (the figures and this spell's own layers, never the HUD) toward the target on the hit cue, eased back; see SpellKick. Presentation only. |  |
 | `casterCostSeconds` | float | `0` | Seconds after the cue before the caster's own newly applied statuses show on its plate, so a price lands after the payoff instead of on it. 0 (the default) shows them on the cue. Author the caster's pulse layer at `at: hit` with the same `offset`. |  |
 | `secondSfxPath` | string | `""` | Resources-relative path to the sound of the cast's second payoff: each staggered packet after the first (at its stagger offset) and a detonation of existing Poison (detonationSeconds after the cue). Empty is silent. |  |
 | `detonationSeconds` | float | `0` | Seconds after the cue that a detonation of Poison the target already carried shows its own number and plays secondSfxPath. 0 means one stagger step (0.05 s). Author the detonation's layers at `at: hit` with the same `offset`. |  |

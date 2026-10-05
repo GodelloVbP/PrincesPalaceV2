@@ -165,6 +165,11 @@ namespace PrincesPalace
             // most of them.
             internal int[] Seeds;
             internal List<Drop>[] Drops;
+
+            // Per instance: the renderers its afterimages hold (SpellEcho), one
+            // per copy, -1 for a copy that found none. Null for every instance
+            // that authors no echo.
+            internal int[][] Echoes;
         }
 
         private readonly List<Cast> _casts = new List<Cast>();
@@ -249,6 +254,7 @@ namespace PrincesPalace
             cast.Members = new int[count];
             cast.Seeds = new int[count];
             cast.Drops = new List<Drop>[count];
+            cast.Echoes = new int[count][];
 
             for (int i = 0; i < count; i++)
             {
@@ -277,6 +283,69 @@ namespace PrincesPalace
             var handle = new CastHandle(slot, cast.Generation);
             LastBegunForTest = handle;
             return handle;
+        }
+
+        // THE STAGE'S PUSH ON THE BLOW (SpellKick) the live casts ask for now, in
+        // canvas units, toward the target; the largest of them, since two pushes
+        // do not add. Read by the fight each frame and laid on the stage racks,
+        // and applied by Paint to the cast's own layers, so the figures and the
+        // spell move as one. Zero while no live cast asks for one.
+        // Read at the clock NOW, not at the last tick: the fight's own Update may run
+        // before this module's, and a push read off the previous tick would put the
+        // figures a frame behind the spell layers drawn on the same cue.
+        public Vector2 StageKick => StageKickAt(Now());
+
+        internal Vector2 StageKickAt(float now)
+        {
+            var best = Vector2.zero;
+            for (int slot = 0; slot < _casts.Count; slot++)
+            {
+                var cast = _casts[slot];
+                if (!cast.Live || cast.Performance == null) continue;
+
+                var kick = KickOf(cast, AgeOf(cast, now));
+                if (Mathf.Abs(kick.x) > Mathf.Abs(best.x)) best = kick;
+            }
+
+            return best;
+        }
+
+        private static Vector2 KickOf(Cast cast, float seconds)
+        {
+            var performance = cast.Performance;
+            if (performance == null || !performance.Kick.HasKick) return Vector2.zero;
+
+            float fraction = performance.KickAt(seconds);
+            if (fraction <= 0f) return Vector2.zero;
+
+            float facing = performance.Instances[0].Facing < 0f ? -1f : 1f;
+            return new Vector2(fraction * SpellKick.StageWidth * facing, 0f);
+        }
+
+        // HOW MUCH THE LIVE CASTS' FIRE LAYERS LIFT THE COAL GLOW of one body
+        // now (SpellLayer.stoke), 0..1; the largest, not a sum.
+        public float StokeAt(bool party, int slot) => StokeAtTime(party, slot, _tickedAt);
+
+        internal float StokeAtTime(bool party, int slot, float now)
+        {
+            float best = 0f;
+            for (int c = 0; c < _casts.Count; c++)
+            {
+                var cast = _casts[c];
+                if (!cast.Live || cast.Performance == null || !cast.Performance.HasStoke) continue;
+
+                float seconds = AgeOf(cast, now);
+                var instances = cast.Performance.Instances;
+                for (int i = 0; i < instances.Count; i++)
+                {
+                    var instance = instances[i];
+                    if (instance.StokeSlot != slot || instance.StokeParty != party) continue;
+
+                    best = Mathf.Max(best, SpellFrameCursor.StokeOf(instance, seconds));
+                }
+            }
+
+            return best;
         }
 
         // A cast's age in authored seconds. Engine time is converted through the
@@ -483,7 +552,8 @@ namespace PrincesPalace
             // Nothing left to draw and nothing left to fire.
             // A gloom still lifting keeps the cast live past its last layer.
             if (SpellSchedule.Passed(cast.Performance.ClearedSeconds, cast.Cursor) && !HoldsAnything(cast) &&
-                SpellSchedule.Passed(cast.Performance.GloomEndSeconds, cast.Cursor))
+                SpellSchedule.Passed(cast.Performance.GloomEndSeconds, cast.Cursor) &&
+                SpellSchedule.Passed(cast.Performance.KickEndSeconds, cast.Cursor))
             {
                 Release(slot);
             }
@@ -533,13 +603,21 @@ namespace PrincesPalace
             var pool = ground ? groundRenderers : effectRenderers;
             if (pool == null || owners == null) return;
 
-            int member = -1;
-            for (int i = 0; i < owners.Length; i++)
+            // THE AFTERIMAGES FIRST, so they hold earlier pool members and draw
+            // beneath the layer they trail. A copy that finds no renderer is
+            // simply not drawn, the overflow policy for every picture here.
+            int[] echoes = null;
+            if (layer.echo != null && layer.echo.IsAuthored)
             {
-                if (owners[i] != -1 || pool[i] == null) continue;
-                member = i;
-                break;
+                echoes = new int[layer.echo.count];
+                for (int k = 0; k < echoes.Length; k++)
+                {
+                    echoes[k] = TakeMember(owners, pool, slot);
+                    if (echoes[k] < 0) DroppedLayers++;
+                }
             }
+
+            int member = TakeMember(owners, pool, slot, claim: false);
 
             // DROPPED, NOT QUEUED, and never allocated for. The house's own
             // precedent is the damage popup pool's fallback, and the priority
@@ -551,11 +629,41 @@ namespace PrincesPalace
                 Debug.LogWarning($"SpellPerformancePlayer: no free {(ground ? "ground" : "effects")} " +
                                  $"renderer for layer '{layer.id}'; it draws nothing. The hit cue is " +
                                  "unaffected.");
+                GiveBackEchoes(owners, pool, echoes);
                 return;
             }
 
             owners[member] = slot;
             cast.Members[index] = member;
+            cast.Echoes[index] = echoes;
+        }
+
+        // The first free pool member, claimed for `slot` unless the caller only
+        // wants to look; -1 when the band is full.
+        private static int TakeMember(int[] owners, SpellVfxPlayer[] pool, int slot, bool claim = true)
+        {
+            for (int i = 0; i < owners.Length; i++)
+            {
+                if (owners[i] != -1 || pool[i] == null) continue;
+                if (claim) owners[i] = slot;
+                return i;
+            }
+
+            return -1;
+        }
+
+        private static void GiveBackEchoes(int[] owners, SpellVfxPlayer[] pool, int[] echoes)
+        {
+            if (echoes == null) return;
+
+            for (int k = 0; k < echoes.Length; k++)
+            {
+                int held = echoes[k];
+                if (held < 0 || held >= owners.Length) continue;
+
+                owners[held] = -1;
+                if (pool[held] != null) pool[held].StopImmediately();
+            }
         }
 
         private void Close(Cast cast, int index)
@@ -577,6 +685,9 @@ namespace PrincesPalace
 
             owners[member] = -1;
             if (pool[member] != null) pool[member].StopImmediately();
+
+            GiveBackEchoes(owners, pool, cast.Echoes[index]);
+            cast.Echoes[index] = null;
         }
 
         // ---- drawing -------------------------------------------------------------
@@ -585,6 +696,7 @@ namespace PrincesPalace
         {
             var cast = _casts[slot];
             var instances = cast.Performance.Instances;
+            var kick = KickOf(cast, seconds);
 
             for (int i = 0; i < instances.Count; i++)
             {
@@ -592,7 +704,7 @@ namespace PrincesPalace
 
                 if (instance.RenderKind == SpellRender.Emitter)
                 {
-                    PaintEmitter(cast, slot, i, instance, seconds);
+                    PaintEmitter(cast, slot, i, instance, seconds, kick);
                     continue;
                 }
 
@@ -633,18 +745,16 @@ namespace PrincesPalace
                     }
 
                     renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
-                        new Vector2(span.Centre.X, span.Centre.Y),
+                        new Vector2(span.Centre.X + kick.x, span.Centre.Y + kick.y),
                         new Vector2(span.Length * sample.Scale, instance.Box.Y * sample.Scale),
-                        span.Degrees, instance.Layer.glow, stretch: true, tint: TintOf(instance));
+                        span.Degrees, sample.Glow, stretch: true, tint: TintOf(instance), glowKnee: sample.Knee);
                     continue;
                 }
 
                 // dx IS LOCAL, so it mirrors with the cast -- a wake authored 118
                 // units behind a rightward core has to sit 118 units behind a
                 // leftward one, not 118 units in front of it.
-                var at = SpellPerformance.PositionOf(instance, seconds) +
-                         new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy) +
-                         new UiVec(sample.ShiftX, sample.ShiftY);
+                var at = SpellFrameCursor.CentreOf(instance, sample, seconds);
 
                 // THE PUNCH MULTIPLIES THE BOX HERE, not in the placement.
                 // Core measures the box once at Begin and a scale that varies
@@ -652,16 +762,49 @@ namespace PrincesPalace
                 // arrives with the frame (SpellFrameSample.Scale) and is
                 // applied at the one place the box reaches a renderer.
                 renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
-                    new Vector2(at.X, at.Y),
+                    new Vector2(at.X + kick.x, at.Y + kick.y),
                     new Vector2(instance.Box.X * sample.Scale, instance.Box.Y * sample.Scale),
-                    instance.Degrees + sample.Degrees, instance.Layer.glow, tint: TintOf(instance));
+                    instance.Degrees + sample.Degrees, sample.Glow, tint: TintOf(instance), glowKnee: sample.Knee);
+
+                PaintEchoes(cast, i, instance, pool, frames, frameCount, seconds, kick);
+            }
+        }
+
+        // THE LAYER'S AFTERIMAGES: each draws the layer as it was k lags ago, as
+        // faintly as the layer has moved since (SpellFrameCursor.EchoOf).
+        private void PaintEchoes(Cast cast, int index, SpellLayerInstance instance, SpellVfxPlayer[] pool,
+            Sprite[] frames, int frameCount, float seconds, Vector2 kick)
+        {
+            var echoes = cast.Echoes[index];
+            if (echoes == null) return;
+
+            for (int k = 1; k <= echoes.Length; k++)
+            {
+                int member = echoes[k - 1];
+                if (member < 0 || member >= pool.Length || pool[member] == null) continue;
+
+                var renderer = pool[member];
+                var echo = SpellFrameCursor.EchoOf(instance, frameCount, seconds, k, out var at);
+                if (!echo.Visible)
+                {
+                    renderer.StopImmediately();
+                    continue;
+                }
+
+                renderer.SetFacing(instance.DrawFacing);
+                var next = echo.Next >= 0 && echo.Next < frameCount ? frames[echo.Next] : null;
+                renderer.Show(frames[echo.Index], next, echo.Blend, echo.Alpha,
+                    new Vector2(at.X + kick.x, at.Y + kick.y),
+                    new Vector2(instance.Box.X * echo.Scale, instance.Box.Y * echo.Scale),
+                    instance.Degrees + echo.Degrees, echo.Glow, tint: TintOf(instance), glowKnee: echo.Knee);
             }
         }
 
         private static Color TintOf(SpellLayerInstance instance) =>
             new Color(instance.TintR, instance.TintG, instance.TintB, 1f);
 
-        private void PaintEmitter(Cast cast, int slot, int index, SpellLayerInstance instance, float seconds)
+        private void PaintEmitter(Cast cast, int slot, int index, SpellLayerInstance instance, float seconds,
+            Vector2 kick)
         {
             var drops = cast.Drops[index];
             if (drops == null || particleRenderer == null) return;
@@ -736,9 +879,9 @@ namespace PrincesPalace
 
                 var at = held.P0 + (drop.Position - held.P0) * fit;
                 particleRenderer.Show(member, frames[drop.Frame],
-                    new Vector2(at.X, at.Y),
+                    new Vector2(at.X + kick.x, at.Y + kick.y),
                     ParticleSize * drop.Scale * fit, drop.Alpha * SpellFrameCursor.OpacityOf(instance.Layer),
-                    drop.Rotation + held.Heading);
+                    drop.Rotation + held.Heading, instance.Layer.glow, TintOf(instance));
             }
         }
 

@@ -106,6 +106,19 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Alpha and scale flutter on the Ember flicker curve, for a layer that must never hold still; see SpellBreathe. Unauthored means steady. Not drawn on an emitter.")]
         public SpellBreathe breathe = new SpellBreathe();
 
+        [ContentDoc("Afterimages: lagged faint copies of this layer's own drawing that trail its motion, strongest where it moves fastest; see SpellEcho. Unauthored means none. Not drawn on an emitter.")]
+        public SpellEcho echo = new SpellEcho();
+
+        [ContentDoc("How the layer's glow changes over its life: a ramp to a final value and a pulse on top; see SpellGlowCurve. Unauthored means `glow` holds. Not drawn on an emitter.")]
+        public SpellGlowCurve glowCurve = new SpellGlowCurve();
+
+        // THE BODY'S COAL GLOW FOLLOWS THIS LAYER while it lives: the Burn glow
+        // of the figure the layer is placed on is lifted by this much, riding
+        // the layer's own alpha (its fades and its breathing), so a fire at the
+        // feet and the glow on the body flicker as one.
+        [ContentDoc("How strongly this layer lifts the Burn coal glow of the body it is placed on while it lives, 0-1, following the layer's own fades and breathing; 0 means it does not touch the glow. Not drawn on an emitter.")]
+        public float stoke;
+
         [ContentDoc("Uniform scale applied on top of the fitted box.")]
         public float scale = 1f;
 
@@ -149,14 +162,14 @@ namespace PrincesPalace.Domain.Content
         // Resources/Shaders/UISpellGlow.shader. A flat multiply would push the
         // midtones past 1 as well, and with no tonemapper in the profile
         // everything above 1 clips to white: the "pop" would be a white blob.
-        [ContentDoc("How far above 1 this layer's brightest pixels are pushed so the Bloom override can see them; 0 means draw it flat, as every layer did before. 1.2 roughly doubles the hot core.")]
+        [ContentDoc("How far above 1 this layer's brightest pixels (an emitter's particles, each) are pushed so the Bloom override can see them; 0 means draw it flat, as every layer did before. 1.2 roughly doubles the hot core. See glowCurve to change it over the layer's life.")]
         public float glow;
 
         // A COLOUR MULTIPLIED INTO THE SHEET, so one painted piece can serve a
         // material it was not painted in (the mud sheet is gold; matte brown is
         // the same drawing under a tint). Multiplies only: it darkens and cools,
         // never brightens, which is why glow stays a separate field.
-        [ContentDoc("A #RRGGBB colour multiplied into the layer's frames (sprite and still only); blank draws the sheet as painted. It can only darken or shift a drawing, never brighten it: that is `glow`.")]
+        [ContentDoc("A #RRGGBB colour multiplied into the layer's frames or an emitter's particles; blank draws the sheet as painted. It can only darken or shift a drawing, never brighten it: that is `glow`.")]
         public string tint = "";
 
         [ContentDoc("Where the blow lands inside this layer's frames, as a fraction from the left edge; -1 means unauthored.")]
@@ -246,6 +259,9 @@ namespace PrincesPalace.Domain.Content
             drift = drift == null ? new SpellDrift() : drift.Copy(),
             rotate = rotate == null ? new SpellRotate() : rotate.Copy(),
             breathe = breathe == null ? new SpellBreathe() : breathe.Copy(),
+            echo = echo == null ? new SpellEcho() : echo.Copy(),
+            glowCurve = glowCurve == null ? new SpellGlowCurve() : glowCurve.Copy(),
+            stoke = stoke,
             scale = scale,
             size = size,
             fit = fit,
@@ -398,6 +414,12 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Width across the line of flight that particles are born within, in reference-frame units (scaled by fit); each is offset by a hash of its index, up to half this either side of the source. 0 means born on the line. Legal only on place 'layer:<id>' of a layer that travels.")]
         public float lateral;
 
+        [ContentDoc("Seconds after the layer opens at which an extra burst is born, in ascending order (a spark at each turn of a swing); each throws `burstEach` particles. Both must be set together.")]
+        public float[] burstTimes;
+
+        [ContentDoc("Particles thrown at each of the burstTimes.")]
+        public int burstEach;
+
         [ContentDoc("Fraction of life at which alpha starts falling, 0..1.")]
         public float fadeFrom = 1f;
 
@@ -430,11 +452,16 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Per-cell pick weight, one per still in emitter.path's folder in file order; blank means uniform. Each entry must be finite and >= 0, and at least one must be > 0. Length must equal the folder's own frame count.")]
         public float[] weights;
 
+        // How many particles the extra bursts throw in all.
+        public int PulsedCount => burstTimes == null || burstEach <= 0 ? 0 : burstTimes.Length * burstEach;
+
         public SpellEmitter Copy() => new SpellEmitter
         {
             path = path,
             rate = rate,
             burst = burst,
+            burstTimes = burstTimes == null ? null : (float[])burstTimes.Clone(),
+            burstEach = burstEach,
             window = window,
             sourceDx = sourceDx,
             sourceDy = sourceDy,

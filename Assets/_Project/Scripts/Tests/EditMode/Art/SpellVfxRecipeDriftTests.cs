@@ -206,9 +206,10 @@ namespace PrincesPalace.Domain.Tests
         //
         // `speed_streak` is the same kind of provenance: ProceduralSpriteBaker.
         // BakeSpeedStreak draws it from arithmetic and byte-compares before
-        // writing, so re-running the baker reproduces it exactly.
+        // writing, so re-running the baker reproduces it exactly. So is
+        // `glow_disc` (BakeGlowDisc), a white radial falloff a layer tints.
         private static readonly HashSet<string> HouseVfxIds =
-            new HashSet<string>(StringComparer.Ordinal) { "impact_burst", "slash_arc", "speed_streak" };
+            new HashSet<string>(StringComparer.Ordinal) { "impact_burst", "slash_arc", "speed_streak", "glow_disc" };
 
         private static HashSet<string> HandAssembledIds()
         {

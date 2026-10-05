@@ -44,6 +44,12 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // every frame of the layer's life.
         public float TintR = 1f, TintG = 1f, TintB = 1f;
 
+        // The slot of the body this layer was placed on, for a layer that stokes
+        // (SpellLayer.stoke): -1 when it stokes nothing. StokeParty says which
+        // side's slot it is, because the two sides number theirs from 0.
+        public int StokeSlot = -1;
+        public bool StokeParty;
+
         // Which struck target this instance belongs to, or -1 for a cast-level
         // layer. Not a combatant: Domain has no idea what one is, and the
         // caller walks its own struck list by this index.
@@ -231,6 +237,18 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // composes the result with the event's darkness.
         public SpellGloom Gloom { get; private set; } = new SpellGloom();
 
+        // THE STAGE'S NUDGE ON THE BLOW (SpellKick), and when it is over.
+        public SpellKick Kick { get; private set; } = new SpellKick();
+
+        // Whether any layer lifts a body's coal glow (SpellLayer.stoke), so a
+        // fight without one pays a flag test per frame.
+        public bool HasStoke { get; private set; }
+        public float KickEndSeconds { get; private set; }
+
+        // The push `seconds` into the cast, as a fraction of the stage's width,
+        // toward the target; 0 before the cue and after it has eased back.
+        public float KickAt(float seconds) => Kick.At(seconds - HitCueSeconds);
+
         // Read every frame of a live cast, so the release instant is resolved
         // once at Resolve rather than parsed from the `until` word each time.
         public float GloomAlphaAt(float seconds) => Gloom.AlphaAtRelease(seconds, _gloomReleaseSeconds);
@@ -277,6 +295,13 @@ namespace PrincesPalace.Domain.Combat.Presentation
             performance._gloomReleaseSeconds =
                 performance.Gloom.ReleaseSeconds(performance.HitCueSeconds, performance.ClearedSeconds);
             performance.GloomEndSeconds = performance.Gloom.EndSecondsAt(performance._gloomReleaseSeconds);
+            foreach (var one in instances)
+            {
+                if (one.Layer.stoke > 0f) performance.HasStoke = true;
+            }
+
+            performance.Kick = presentation.kick ?? new SpellKick();
+            performance.KickEndSeconds = performance.Kick.EndSeconds(performance.HitCueSeconds);
             return performance;
         }
 
@@ -546,7 +571,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             if (layer.Render == SpellRender.Emitter)
             {
                 var emitter = layer.emitter ?? new SpellEmitter();
-                return instance.StartSeconds + emitter.window + emitter.lifeMax;
+                return instance.StartSeconds + SpellEmitterSim.LastBirthOffsetOf(emitter) + emitter.lifeMax;
             }
 
             // A FOLLOWER ENDS WITH THE LAYER IT FOLLOWS, AND NEVER AFTER IT.
