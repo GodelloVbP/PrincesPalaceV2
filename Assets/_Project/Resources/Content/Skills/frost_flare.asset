@@ -78,6 +78,7 @@ MonoBehaviour:
         startFrame: 1
         until: once
         fade: 0
+        fadeIn: 0
         opacity: 1
         dx: 0
         dy: 0
@@ -90,6 +91,20 @@ MonoBehaviour:
           viaY: 0
           viaAt: 0
           arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          dwell: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
         scale: 1
         size: 440
         fit: target
@@ -148,6 +163,7 @@ MonoBehaviour:
         startFrame: 2
         until: once
         fade: 0
+        fadeIn: 0
         opacity: 1
         dx: 0
         dy: 0
@@ -160,6 +176,20 @@ MonoBehaviour:
           viaY: 0
           viaAt: 0
           arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          dwell: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
         scale: 1
         size: 440
         fit: target
@@ -218,6 +248,7 @@ MonoBehaviour:
         startFrame: 5
         until: once
         fade: 0
+        fadeIn: 0
         opacity: 1
         dx: 0
         dy: 0
@@ -230,6 +261,20 @@ MonoBehaviour:
           viaY: 0
           viaAt: 0
           arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          dwell: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
         scale: 1
         size: 520
         fit: target
@@ -288,6 +333,7 @@ MonoBehaviour:
         startFrame: 6
         until: once
         fade: 0.1
+        fadeIn: 0
         opacity: 1
         dx: 0
         dy: 0
@@ -300,6 +346,20 @@ MonoBehaviour:
           viaY: 0
           viaAt: 0
           arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          dwell: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
         scale: 1
         size: 440
         fit: target

@@ -74,6 +74,7 @@ MonoBehaviour:
         startFrame: 0
         until: once
         fade: 0.2
+        fadeIn: 0
         opacity: 1
         dx: 0
         dy: 0
@@ -86,6 +87,20 @@ MonoBehaviour:
           viaY: 0
           viaAt: 0
           arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          dwell: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
         scale: 1
         size: 300
         fit: target
@@ -144,6 +159,7 @@ MonoBehaviour:
         startFrame: 0
         until: once
         fade: 0.15
+        fadeIn: 0
         opacity: 1
         dx: 0
         dy: 0
@@ -156,6 +172,20 @@ MonoBehaviour:
           viaY: 0
           viaAt: 0
           arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          dwell: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
         scale: 1
         size: 620
         fit: target
