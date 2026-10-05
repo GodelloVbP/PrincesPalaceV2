@@ -1896,12 +1896,46 @@
         "layerFormat": 1,
         "hitCueSeconds": 1,
         "gloom": {
-          "strength": 0.25,
+          "strength": 0.2,
           "fadeIn": 0.4,
           "until": "hit",
           "fadeOut": 0.3
         },
+        "kick": {
+          "strength": 0.025,
+          "rise": 0.03,
+          "fall": 0.18
+        },
         "layers": [
+          {
+            "id": "pool",
+            "_comment": "Wind-up: a warm pool of light on the body below the lantern, sliding with it. The censer's own turn (same angle, same 1250 px from pivot to centre: pivotY 5.5 over a 250 px box) laid on a soft disc, so the pool is under the lantern's x all through the swing; low alpha, gone just after the break.",
+            "render": "still",
+            "place": "target",
+            "at": "release",
+            "path": "Spells/glow_disc",
+            "seconds": 1.0,
+            "until": "hold",
+            "fadeIn": 0.2,
+            "fade": 0.15,
+            "size": 500,
+            "aspect": 2,
+            "impactX": 0.5,
+            "impactY": 0.3,
+            "facing": "none",
+            "sort": "effects",
+            "tint": "#FF9A3C",
+            "opacity": 0.3,
+            "rotate": {
+              "amplitude": -9.5,
+              "period": 0.8,
+              "damping": -0.4,
+              "phase": 90,
+              "delay": 0.2,
+              "pivotX": 0.5,
+              "pivotY": 5.5
+            }
+          },
           {
             "id": "censer",
             "_comment": "Wind-up, 1.0 s by the owner's call: the painted censer (censer_hanging) is pulled back to the left and released: held at its left extreme while it fades in (0.2 s), then left to right to left, each swing a little larger (damping -0.4), a plain cosine so it is fastest at the bottom and slows toward the ends, breaking at the far left on the cue. It hangs from a pivot 4.5 box heights up (1250 px to the lantern), so it travels a wide arc: 9.5 degrees at the start, 13.1 at the break. Unfitted: one size on every body, over the crown of a tall one.",
@@ -1916,7 +1950,20 @@
             "size": 300,
             "facing": "none",
             "sort": "effects",
-            "glow": 0.3,
+            "glow": 0.2,
+            "glowCurve": {
+              "to": 0.8,
+              "pulse": 0.7,
+              "period": 0.4,
+              "crest": 0.4,
+              "knee": 0.4
+            },
+            "echo": {
+              "count": 3,
+              "lagSeconds": 0.04,
+              "alpha": 0.35,
+              "spread": 140
+            },
             "rotate": {
               "amplitude": -9.5,
               "period": 0.8,
@@ -1966,6 +2013,47 @@
             }
           },
           {
+            "id": "sparks",
+            "_comment": "Wind-up: a few sparks shaken loose as the censer lets go (0.2 s) and at its right extreme (0.6 s), born on the lantern and falling.",
+            "render": "emitter",
+            "place": "layer:censer",
+            "at": "release",
+            "sort": "effects",
+            "glow": 1.2,
+            "emitter": {
+              "path": "Spells/censer_of_embers_particles",
+              "weights": [
+                1,
+                0,
+                0,
+                1
+              ],
+              "burstTimes": [
+                0.2,
+                0.6
+              ],
+              "burstEach": 8,
+              "spreadDegrees": 160,
+              "aimDegrees": 270,
+              "speedMin": 60,
+              "speedMax": 190,
+              "inherit": 0,
+              "drag": 0.6,
+              "gravity": -520,
+              "lifeMin": 0.4,
+              "lifeMax": 0.7,
+              "sizeMin": 0.4,
+              "sizeMax": 0.75,
+              "spinMin": -200,
+              "spinMax": 200,
+              "fadeFrom": 0.4,
+              "endScale": 0.4,
+              "sourceDx": 0,
+              "sourceDy": -50,
+              "seed": 1558
+            }
+          },
+          {
             "id": "crack",
             "_comment": "Payoff: the censer breaks. Its own still, drawn exactly where the swinging layer is on the cue (same pivot, the same angle at 1.0 s), brighter for 0.04 s and gone in 0.05 s; no scale punch, because a scale about a pivot this far away moves the lantern.",
             "render": "still",
@@ -1988,11 +2076,12 @@
           },
           {
             "id": "burst",
-            "_comment": "Payoff: the censer explodes into a shower of embers thrown out in every direction and falling under gravity, born at the lantern's centre (sourceDy -50 on the censer's art, carried to wherever the swing has put it).",
+            "_comment": "Payoff: the censer explodes into a shower of embers thrown out in every direction and falling under gravity, born at the lantern's centre (sourceDy -50 on the censer's art, carried to wherever the swing has put it). They glow, so they bloom as they fall.",
             "render": "emitter",
             "place": "layer:censer",
             "at": "hit",
             "sort": "effects",
+            "glow": 0.8,
             "emitter": {
               "path": "Spells/censer_of_embers_particles",
               "weights": [
@@ -2001,7 +2090,7 @@
                 0,
                 1
               ],
-              "burst": 42,
+              "burst": 38,
               "spreadDegrees": 360,
               "aimDegrees": 90,
               "speedMin": 180,
@@ -2029,6 +2118,7 @@
             "place": "layer:censer",
             "at": "hit",
             "sort": "effects",
+            "glow": 0.6,
             "emitter": {
               "path": "Spells/censer_of_embers_particles",
               "weights": [
@@ -2076,6 +2166,7 @@
             "facing": "none",
             "sort": "effects",
             "glow": 0.5,
+            "stoke": 1,
             "breathe": {
               "alpha": 0.35,
               "scale": 0.07,
@@ -2119,6 +2210,79 @@
               "fadeFrom": 0.3,
               "endScale": 0.4,
               "seed": 1554
+            }
+          },
+          {
+            "id": "smoke",
+            "_comment": "Finish: smoke rises from the fire at the feet, swells and thins out. Born while the fire lives and outlasting it, so it is the last thing on screen.",
+            "render": "emitter",
+            "place": "target",
+            "fit": "target",
+            "at": "hit",
+            "offset": 0.45,
+            "sort": "effects",
+            "tint": "#B4ADA6",
+            "opacity": 0.9,
+            "emitter": {
+              "path": "Spells/censer_of_embers_particles",
+              "weights": [
+                0,
+                0,
+                1,
+                0
+              ],
+              "rate": 5,
+              "window": 0.9,
+              "spreadDegrees": 40,
+              "aimDegrees": 90,
+              "speedMin": 12,
+              "speedMax": 30,
+              "inherit": 0,
+              "drag": 0.9,
+              "gravity": 35,
+              "lifeMin": 1.1,
+              "lifeMax": 1.6,
+              "sizeMin": 0.8,
+              "sizeMax": 1.2,
+              "spinMin": -15,
+              "spinMax": 15,
+              "fadeFrom": 0.15,
+              "endScale": 1.8,
+              "seed": 1560
+            }
+          },
+          {
+            "id": "ash",
+            "_comment": "Aftermath: a few grey ash flakes (soft discs, tinted grey) drift down over the body once the embers have gone.",
+            "render": "emitter",
+            "place": "target-centre",
+            "fit": "target",
+            "at": "hit",
+            "offset": 0.6,
+            "sort": "effects",
+            "tint": "#9A958F",
+            "opacity": 0.85,
+            "emitter": {
+              "path": "Spells/glow_disc",
+              "rate": 7,
+              "window": 0.8,
+              "spreadDegrees": 360,
+              "aimDegrees": 90,
+              "speedMin": 15,
+              "speedMax": 45,
+              "inherit": 0,
+              "drag": 1.4,
+              "gravity": -120,
+              "lifeMin": 1.0,
+              "lifeMax": 1.5,
+              "sizeMin": 0.22,
+              "sizeMax": 0.36,
+              "spinMin": -140,
+              "spinMax": 140,
+              "fadeFrom": 0.5,
+              "endScale": 0.7,
+              "sourceDy": 40,
+              "seed": 1561
             }
           }
         ]

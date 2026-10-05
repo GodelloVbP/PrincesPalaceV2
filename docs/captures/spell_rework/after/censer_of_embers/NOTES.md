@@ -18,7 +18,7 @@ break are still the painterly `censer_of_embers_particles` stand-ins.
 | 0.00-1.00 | **Wind-up.** The censer is pulled back to the left and released: it fades in over 0.2 s held at its left extreme (`rotate.delay`), then swings left to right (0.6 s) and right to left (1.0 s), a cosine (`phase` 90), fastest at the bottom and slowing toward the ends. It hangs from a pivot 4.5 box heights above the art (1250 px to the lantern); angle -9.5, +11.1, -13.1 degrees (`damping` -0.4, each swing a little larger). Stage gloom 0.25 over 0.4 s. | `censer` (still, `above`, `rotate`, `fadeIn` 0.2) |
 | 0.00-0.95 | Smoke is born at the lantern body 10 times a second and hangs almost still where it was born, so the swing's path is drawn behind it. | `trail` (emitter on `layer:censer`) |
 | 1.00 | **Break.** The censer's own still, held at the third extreme, drawn exactly where the swinging layer is, white-hot for 0.04 s and gone in 0.05 s. | `crack` |
-| 1.00-2.2 | **Shower.** 42 embers (coals and flecks, 0.35-0.9 of a 64 px particle) in every direction at 180-560 px/s, gravity 760, life 0.6-1.2 s; 5 big coals (1.4-2.2) tumbling at up to 540 deg/s, gravity 900. Born at the lantern's position at the third extreme. | `burst`, `coals` |
+| 1.00-2.2 | **Shower.** 38 embers (coals and flecks, 0.35-0.9 of a 64 px particle) in every direction at 180-560 px/s, gravity 760, life 0.6-1.2 s; 5 big coals (1.4-2.2) tumbling at up to 540 deg/s, gravity 900. Born at the lantern's position at the third extreme. | `burst`, `coals` |
 | 1.00 | Burn badge, impact sound, skill shake 0.25, all on the cue frame. | |
 | 1.45-2.5 | **Fire.** The painted fire loops at the feet (4 frames, 8 fps), catches 0.45 s after the cue as the embers land (fades in 0.25 s), holds 0.5 s, dies over 0.5 s into the Burn coal glow. Coals float up from 1.45 s. | `fire`, `rise` |
 
@@ -57,6 +57,49 @@ green and yellow eyes. At the roots the rim is thick enough to read as an orange
 treant's outline pale orange with a light peach interior, 2 frames then 0.08 s. The Gale Scythe on rat, treant and beetle
 flashes a pale cyan edge with the body's own colours showing. The sheep's own staff swing (Nature) still flashes the whole
 body flat green, as before.
+
+## Polish pass, engine-made (no new art)
+
+Captures 2026-10-05 (`gif.ps1 spell censer_of_embers`, treant 1x, rat 1x, treant `-Repeat 3 -Speed 1.5`); frames are 60 fps, the cue
+is f60 at 1x and f40 at 1.5x. Frames looked at at 1920x1080 around the target. No verdict: the owner judges.
+New layers `pool`, `sparks`, `smoke`, `ash`; new fields `glowCurve` (with `knee`), `echo`, `stoke`, `emitter.burstTimes/burstEach`,
+`vfx.kick`, plus `glow` and `tint` now drawn on an emitter's particles (`docs/ART_PIPELINE.md` rows, `SpellPolishFieldsTests`).
+
+Swing
+1. **Gloom 0.20** (was 0.25): background patch mean 25.2 at f0, 22.5 by f30 (held to f58), 26.3 by f80 once lifted. Barely perceptible:
+   the stage is already dark, so 0.20 costs about 2.7 levels of 25.
+2. **Coal light breathing**: `glow` alone moved nothing (the shader's knee 0.72 lifts only the hottest pixels; the lantern's gold sits
+   under it: hot-pixel count flat at ~2000 over f10-f62). `glowCurve.knee` 0.4 fixed it: hot pixels 2273 at f12, crest 3892 at f20, trough
+   2152 at f38, crest 3519 at f46, 3845 at f58. The visible result is the gold flaring yellow-white at the bottom of each swing (f20, f46)
+   and settling in between (f38). It brightens the lantern's body, not its red windows.
+3. **Afterimages**: three ghost lanterns trail the swing, strongest at the bottom (f20, f30, f48, f54). Clear on the rat (f24, f34, f54).
+   Over the treant's green canopy a ghost reads as a murky green-gold smear (f30, f36, f52). Dark and translucent, not light.
+4. **Sparks**: 8 at the release (f12-f20, small orange flecks on the lantern's lower left) and 8 at the right extreme (f36-f44). Small,
+   about 8 px, and few; they read as flecks, not a shower.
+5. **Light pool**: a soft warm disc on the body/floor under the lantern, sliding with it (f6 and f58 left, f24 under the trunk, f34 right,
+   f46 centre). On the treant it tints the lower trunk orange when it passes (f22, f28, f46); on the rat it is a clear glow on the floor.
+   Low contrast; the lantern is about 400 px above it.
+
+Break
+6. **Stage kick**: ground ring x 1322 -> 1370.7 (+48 px) on f62, back to 1322 by f75. Same frame as the cue's embers (f60-62). At 1.5x:
+   +44 at f41, home by f48. The lantern's crack moves with it: lantern centroid on the rat dx -5.4 (f59), +5.9, +11.7, +2.2 (f62), then gone,
+   so the lantern drifts left and is shoved right 20 px for the three crack frames before it breaks.
+7. **Glowing embers**: the 38 embers and 5 coals bloom a little (f66-f96); the coals read hotter than before. Not a bright flare.
+
+Aftermath
+8. **Smoke**: grey wisps rise from the body around f96-f166 and one S wisp above the crown at f182. Thin and low contrast; it starts at
+   the feet under the flames and is mostly seen over the face and crown, not as a plume from the fire.
+9. **Ash**: 6 pale grey soft discs over the face and chest, f118-f166. They read as dust specks on the face, not as drifting flakes
+   (the particle sheet has no grey flake; the soft disc is `glow_disc`, baked by `ProceduralSpriteBaker.BakeGlowDisc`).
+10. **Burn glow with the fire**: the body's mean red rises 73 -> 80 over f88-f101 as the fire fades in and falls back as it dies; no frame
+    to frame flicker is visible. The fire's `breathe` runs on the slow Ember curve, so the lift follows its fade, not a flicker.
+
+Guards and checks
+- Flashes (largest single-step brightening area, luminance rise of 10% or more): treant 1x 49,036 px (2.4% of the screen) at f102 (the
+  treant's own hit flash), 21,716 px at the crack (f61); `-Repeat 3 -Speed 1.5` 51,728 px at f68, none at 57,000 px (a quarter of a
+  10 degree field) or more, so no large flash in any second.
+- Burn badge: first appears in the status strip at f60, the cue frame; hitCueSeconds is unchanged and the cue tests are green.
+- Particle pool: the spell throws 86 particles in all and 64 are alive at most (`SpellPoolPeak`); effects renderers 7 of 12.
 
 ## What is weak
 
