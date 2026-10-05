@@ -106,9 +106,6 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Alpha and scale flutter on the Ember flicker curve, for a layer that must never hold still; see SpellBreathe. Unauthored means steady. Not drawn on an emitter.")]
         public SpellBreathe breathe = new SpellBreathe();
 
-        [ContentDoc("Afterimages: lagged faint copies of this layer's own drawing that trail its motion, strongest where it moves fastest; see SpellEcho. Unauthored means none. Not drawn on an emitter.")]
-        public SpellEcho echo = new SpellEcho();
-
         [ContentDoc("How the layer's glow changes over its life: a ramp to a final value and a pulse on top; see SpellGlowCurve. Unauthored means `glow` holds. Not drawn on an emitter.")]
         public SpellGlowCurve glowCurve = new SpellGlowCurve();
 
@@ -262,7 +259,6 @@ namespace PrincesPalace.Domain.Content
             drift = drift == null ? new SpellDrift() : drift.Copy(),
             rotate = rotate == null ? new SpellRotate() : rotate.Copy(),
             breathe = breathe == null ? new SpellBreathe() : breathe.Copy(),
-            echo = echo == null ? new SpellEcho() : echo.Copy(),
             glowCurve = glowCurve == null ? new SpellGlowCurve() : glowCurve.Copy(),
             stoke = stoke,
             unkicked = unkicked,

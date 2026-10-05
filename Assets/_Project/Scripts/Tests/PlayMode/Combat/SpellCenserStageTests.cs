@@ -88,7 +88,7 @@ namespace PrincesPalace.PlayModeTests
         private float MostStoked() => _fight.GetComponentsInChildren<StageBurnGlow>(true).Max(g => g.Stoke);
 
         [UnityTest]
-        public IEnumerator EachAfterimageHoldsARendererOfItsOwnForAsLongAsTheLantern()
+        public IEnumerator TheLanternHoldsARendererForAsLongAsItLives()
         {
             yield return Load();
             var player = _fight.PerformancePlayerForTest;
@@ -96,8 +96,8 @@ namespace PrincesPalace.PlayModeTests
             CastCenser(out float t0);
             yield return At(t0, 0.5f);
 
-            Assert.AreEqual(4, FightHudSpec.SpellLayerRenderers - player.FreeEffectRenderers,
-                "the lantern and its three afterimages");
+            Assert.AreEqual(1, FightHudSpec.SpellLayerRenderers - player.FreeEffectRenderers,
+                "the lantern");
 
             yield return At(t0, 10f);
             Assert.AreEqual(FightHudSpec.SpellLayerRenderers, player.FreeEffectRenderers,

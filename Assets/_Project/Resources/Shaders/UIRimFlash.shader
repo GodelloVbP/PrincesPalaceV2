@@ -1,13 +1,12 @@
-// A figure's silhouette lit along its EDGE, for the flash of a spell or status
-// hit (StageHitFlash, rim pulses).
+// A figure's silhouette lit along its EDGE, for the flash of every hit
+// (StageHitFlash).
 //
-// The hit flash's shape without the flat white body: the outline carries the
-// pulse at full strength and the interior only a light tint (_Interior), so a
-// spell hit reads as light catching the creature rather than a cut-out. The
-// per-pixel arithmetic is BodyLight.FlashWeight (pinned by BodyLightTests, which
-// also reads the property defaults below). Melee and enemy attacks keep UIHitFlash.
+// The outline carries the pulse at full strength and the interior only a light
+// tint (_Interior), so a hit reads as light catching the creature rather than a
+// cut-out. The per-pixel arithmetic is BodyLight.FlashWeight (pinned by
+// BodyLightTests, which also reads the property defaults below).
 //
-// Under Resources for the same reason as UIHitFlash: no Shader.Find.
+// Under Resources so the material is found by path: no Shader.Find.
 Shader "PrincesPalace/UIRimFlash"
 {
     Properties

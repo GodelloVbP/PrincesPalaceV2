@@ -165,17 +165,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheLanternLeavesThreeFaintAfterimagesBehindIt()
-        {
-            var echo = Censer().layers.Single(l => l.id == "censer").echo;
-            Assert.AreEqual(3, echo.count);
-            Assert.AreEqual(0.04f, echo.lagSeconds, 1e-6f);
-            Assert.AreEqual(0.55f, echo.alpha, 1e-6f);
-            Assert.AreEqual(220f, echo.spread, 1e-6f, "only near the fastest part of the swing");
-            Assert.IsTrue(echo.additive, "light, never a dark smear");
-        }
-
-        [Test]
         public void SparksAreFlungAlongTheSwingFromTheRimAtTheReleaseAndAtTheRightExtreme()
         {
             var vfx = Censer();
@@ -257,7 +246,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(102, total, "everything it ever throws: 10 trail, 32 sparks, 38 embers, 5 coals, 6 rise, 5 smoke, 6 ash");
             Assert.Greater(total, 64);
             Assert.AreEqual(62, SpellPoolPeak.ParticlesOf(performance), "alive together: 2 under the pool's 64");
-            Assert.AreEqual(5, SpellPoolPeak.EffectsRenderersOf(performance), "of 12: the lantern with its three afterimages and the crack as it breaks");
+            Assert.AreEqual(2, SpellPoolPeak.EffectsRenderersOf(performance), "of 12: the lantern and the crack as it breaks");
         }
 
         [Test]

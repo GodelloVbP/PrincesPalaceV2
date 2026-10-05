@@ -1,10 +1,8 @@
-using PrincesPalace.Domain.Combat.Session;
-
 namespace PrincesPalace.Domain.Combat.Presentation
 {
     // HOW LIGHT SITS ON A BODY'S SILHOUETTE, as the numbers behind two shaders:
-    // UIBurnGlow (the coal glow of a burning body) and UIRimFlash (the flash of a
-    // spell or status hit). Both light the same three places in the same order of
+    // UIBurnGlow (the coal glow of a burning body) and UIRimFlash (the flash of every
+    // hit). Both light the same three places in the same order of
     // strength -- the silhouette's EDGE, a faint tint over the INTERIOR so the
     // creature keeps its own colours, and for the glow the FEET -- and neither
     // paints a flat shape over the figure.
@@ -54,25 +52,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
         // ---- the rim flash -------------------------------------------------
 
-        // A spell or status hit lights the outline and only tints the inside.
+        // A hit lights the outline and only tints the inside.
         public const float FlashInteriorShare = 0.22f;
 
-        // Two frames of full strength and a short fade: shorter than the white
-        // silhouette it replaces (StageHitFlash.HitPeakFrames 3, fade 0.10 s).
+        // Two frames of full strength and a short fade.
         public const int FlashHoldFrames = 2;
         public const float FlashFadeSeconds = 0.08f;
 
         public static float FlashWeight(float opaque, float edge) =>
             Clamp01(opaque) * (FlashInteriorShare + (1f - FlashInteriorShare) * Clamp01(edge));
-
-        // ---- which hits flash as a rim -----------------------------------
-
-        // SPELL HITS AND STATUS TICKS flash as a rim; a melee blow and an enemy's
-        // own attack keep the whole-body flash that sells their impact.
-        // `holdsPosition` is the beat's Approach: a spell is cast from where the
-        // caster stands, a melee skill crosses the stage.
-        public static bool FlashesAsRim(BeatCause cause, bool hasArt, bool holdsPosition) =>
-            cause == BeatCause.StatusTick || (cause == BeatCause.Action && hasArt && holdsPosition);
 
         // ---- helpers -------------------------------------------------------
 

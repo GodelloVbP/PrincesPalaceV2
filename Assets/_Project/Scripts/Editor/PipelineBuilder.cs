@@ -217,7 +217,7 @@ public static class PipelineBuilder
         return added;
     }
 
-    // The on-hit flash material, as a COMMITTED asset.
+    // The on-hit flash material (the outline-lit UIRimFlash), as a COMMITTED asset.
     //
     // v1 created this with `new Material(Resources.Load<Shader>(...))` inside
     // SceneBuilder, which meant a fresh material object got serialised into the
@@ -225,20 +225,15 @@ public static class PipelineBuilder
     // diff that changed for no reason. One asset with one GUID, referenced by
     // both stages, is what the "generated, never hand-authored" rule actually
     // asks for.
-    public const string HitFlashMaterialPath = "Assets/_Project/Resources/Materials/UIHitFlash.mat";
+    public const string HitFlashMaterialPath = "Assets/_Project/Resources/Materials/UIRimFlash.mat";
 
     // The burning body's glow: the same silhouette idea on its own additive,
     // bottom-weighted shader (StageBurnGlow).
     public const string BurnGlowMaterialPath = "Assets/_Project/Resources/Materials/UIBurnGlow.mat";
 
-    // The outline-lit flash of a spell or status hit (StageHitFlash rim pulses),
-    // loaded at runtime by Resources path, not wired into the scenes.
-    public const string RimFlashMaterialPath = "Assets/_Project/Resources/Materials/UIRimFlash.mat";
-
     private static void BuildSilhouetteMaterials()
     {
-        BuildSilhouetteMaterial("rim flash", "Assets/_Project/Resources/Shaders/UIRimFlash.shader", RimFlashMaterialPath);
-        BuildSilhouetteMaterial("hit flash", "Assets/_Project/Resources/Shaders/UIHitFlash.shader", HitFlashMaterialPath);
+        BuildSilhouetteMaterial("hit flash", "Assets/_Project/Resources/Shaders/UIRimFlash.shader", HitFlashMaterialPath);
         BuildSilhouetteMaterial("burn glow", "Assets/_Project/Resources/Shaders/UIBurnGlow.shader", BurnGlowMaterialPath);
     }
 

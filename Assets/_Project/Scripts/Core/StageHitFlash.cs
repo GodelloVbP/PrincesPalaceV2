@@ -8,41 +8,33 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
-    // A light silhouette of the actor, flashed on the frame a blow lands.
+    // The actor's outline lit for a moment, flashed on the frame a blow lands.
     //
-    // Needs a SHADER rather than just tinting the Image white, because
-    // Image.color MULTIPLIES the texture -- white is the identity there, so a
-    // white tint changes nothing at all. UIHitFlash keeps the sprite's alpha (so
-    // the flash is the figure's exact shape) and throws away its RGB.
+    // Needs a SHADER rather than just tinting the Image, because Image.color
+    // MULTIPLIES the texture -- white is the identity there, so a white tint
+    // changes nothing at all. The scene wires UIRimFlash onto the Image: it keeps
+    // the sprite's alpha, so the light is the figure's exact shape, and throws
+    // away its RGB. The outline carries the pulse at full strength and the
+    // inside only a tint (BodyLight), so the creature keeps its own colours;
+    // there is no flat silhouette flash anywhere.
     //
     // Degrades gracefully to nothing if the material is missing: a fight with no
     // flash still plays, which is better than a fight that throws.
     public class StageHitFlash : MonoBehaviour
     {
-        // Short and hard. A flash long enough to read as a colour rather than as
-        // an impact stops selling the hit.
-        //
-        // Public so the numbers can be pinned without a scene, and so a pixel
-        // test can work out when the white pulse is over and the typed one has
-        // begun rather than guessing at a frame count.
-        public const float HoldSeconds = 0.05f;
-        public const float FadeSeconds = 0.16f;
-
-        // THE HIT'S FLASH IS ONE PULSE IN THE DAMAGE TYPE'S OWN LIGHT. A
-        // full-white silhouette was the loudest frame of every spell and
-        // identical for all of them, which erased the element at the moment
-        // it should read; an afterglow behind it was a second large flash
-        // per cast (SPELL_FEEL.md, Communication and Guards). So the peak is
-        // the type's palette colour lightened toward white, held for a few
-        // frames, then faded fast. Every tunable of it is here.
+        // THE HIT'S FLASH IS ONE PULSE IN THE DAMAGE TYPE'S OWN LIGHT, on the
+        // outline. A full-white silhouette was the loudest frame of every spell
+        // and identical for all of them, which erased the element at the moment
+        // it should read; an afterglow behind it was a second large flash per
+        // cast (SPELL_FEEL.md, Communication and Guards). So the peak is the
+        // type's palette colour lightened toward white, held for a couple of
+        // frames, then faded fast. Every tunable of it is here or in BodyLight.
         //
         // The peak is a LIGHT version of the palette colour, not the colour
-        // itself: it has to flash on a dark sprite and on a bright one, and
-        // a saturated fill over the whole silhouette is a palette swap.
+        // itself: it has to flash on a dark sprite and on a bright one.
         public const float FrameSeconds = 1f / 60f;
-        public const int HitPeakFrames = 3;
-        public const float HitHoldSeconds = HitPeakFrames * FrameSeconds;
-        public const float HitFadeSeconds = 0.10f;
+        public const float HitHoldSeconds = BodyLight.FlashHoldFrames * FrameSeconds;
+        public const float HitFadeSeconds = BodyLight.FlashFadeSeconds;
         public const float HitPeakAlpha = 1f;
 
         // How far white is pulled toward the type colour: 0 is white, 1 the
@@ -85,13 +77,6 @@ namespace PrincesPalace
             image = target;
         }
 
-        // The rim material is loaded, not serialised, so the scenes need no
-        // rebuild for it; null (a headless fixture) draws a rim pulse as the
-        // whole-body flash.
-        private const string RimMaterialPath = "Materials/UIRimFlash";
-        private static Material _rimMaterial;
-        private Material _bodyMaterial;
-
         private Coroutine _running;
 
         // What the flash is currently shaped like. Exposed so a test can assert
@@ -115,13 +100,12 @@ namespace PrincesPalace
         }
 
         // ONE PULSE OF THE FLASH: a colour held at an alpha, then faded out of
-        // it. A flash is one of these or two, and nothing else about it varies.
+        // it. A flash is one of these or a few, and nothing else about it varies.
         //
-        // A struct rather than four parallel arrays or four parameters
-        // repeated twice, because the only thing that changes between the
-        // white impact and the element behind it is which set of these four
-        // numbers is being run -- so the run loop reads one of these and has
-        // no idea how many there are.
+        // A struct rather than four parallel arrays, because the only thing that
+        // changes between a hit, a heal and a ward is which set of these numbers
+        // is being run -- so the run loop reads one of these and has no idea how
+        // many there are.
         public readonly struct Pulse
         {
             public readonly Color Tint;
@@ -129,24 +113,18 @@ namespace PrincesPalace
             public readonly float Fade;
             public readonly float Peak;
 
-            // True for a pulse lit along the outline (UIRimFlash) instead of
-            // over the whole silhouette.
-            public readonly bool Rim;
-
-            public Pulse(Color tint, float hold, float fade, float peak, bool rim = false)
+            public Pulse(Color tint, float hold, float fade, float peak)
             {
                 Tint = tint;
                 Hold = hold;
                 Fade = fade;
                 Peak = peak;
-                Rim = rim;
             }
         }
 
-        // The two that never vary, built once. The typed pair is built per
-        // call because its second pulse carries the element's own colour.
+        // The ones that never vary, built once.
         private static readonly Pulse[] WhiteOnly =
-            { new Pulse(Color.white, HoldSeconds, FadeSeconds, 1f) };
+            { new Pulse(Color.white, HitHoldSeconds, HitFadeSeconds, HitPeakAlpha) };
 
         private static readonly Pulse[] HealOnly =
             { new Pulse(HealTint, HealHoldSeconds, HealFadeSeconds, HealPeakAlpha) };
@@ -166,32 +144,23 @@ namespace PrincesPalace
         // light, the earlier ones cut off after StaggerFrames so the next
         // packet's colour arrives exactly when its number does
         // (FightBeatPlayer.PopPackets). The last pulse is the ordinary hit.
-        public void FlashPackets(BeatPacket[] packets, bool rim = false) => Flash(PacketPulses(packets, rim));
+        public void FlashPackets(BeatPacket[] packets) => Flash(PacketPulses(packets));
 
         public const int StaggerFrames = 3;
         public const float StaggerSeconds = StaggerFrames * FrameSeconds;
 
-        public static Pulse[] PacketPulses(BeatPacket[] packets, bool rim = false)
+        public static Pulse[] PacketPulses(BeatPacket[] packets)
         {
             var pulses = new Pulse[packets.Length];
             for (int i = 0; i < packets.Length; i++)
             {
                 bool last = i == packets.Length - 1;
                 pulses[i] = new Pulse(TintFor(packets[i].Type), last ? HitHoldSeconds : StaggerSeconds,
-                    last ? (rim ? BodyLight.FlashFadeSeconds : HitFadeSeconds) : 0f, HitPeakAlpha, rim);
+                    last ? HitFadeSeconds : 0f, HitPeakAlpha);
             }
 
             return pulses;
         }
-
-        // A SPELL HIT OR A STATUS TICK: the element's light on the outline and a
-        // faint tint inside (BodyLight), short. The whole-body silhouette stays for
-        // the melee blow and the enemy's own attack.
-        public void FlashRim(DamageType type) => Flash(RimPulsesFor(type));
-
-        public static Pulse[] RimPulsesFor(DamageType type) =>
-            new[] { new Pulse(TintFor(type), BodyLight.FlashHoldFrames * FrameSeconds, BodyLight.FlashFadeSeconds,
-                HitPeakAlpha, rim: true) };
 
         public void FlashHeal() => Flash(HealOnly);
 
@@ -294,12 +263,9 @@ namespace PrincesPalace
         private IEnumerator Run(Pulse[] pulses)
         {
             image.enabled = true;
-            if (_bodyMaterial == null) _bodyMaterial = image.material;
-            if (_rimMaterial == null) _rimMaterial = Resources.Load<Material>(RimMaterialPath);
 
             foreach (var pulse in pulses)
             {
-                image.material = pulse.Rim && _rimMaterial != null ? _rimMaterial : _bodyMaterial;
                 image.color = new Color(pulse.Tint.r, pulse.Tint.g, pulse.Tint.b, pulse.Peak);
 
                 yield return new WaitForSeconds(FightBeatPlayer.Scaled(pulse.Hold));

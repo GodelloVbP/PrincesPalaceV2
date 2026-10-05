@@ -102,12 +102,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 3
-          lagSeconds: 0.04
-          alpha: 0.55
-          spread: 220
-          additive: 1
         glowCurve:
           to: 0.8
           pulse: 0.7
@@ -204,12 +198,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -310,12 +298,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -417,12 +399,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -524,12 +500,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -626,12 +596,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -732,12 +696,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -838,12 +796,6 @@ MonoBehaviour:
           alpha: 0.35
           scale: 0.07
           rate: 4
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -940,12 +892,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -1046,12 +992,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -1152,12 +1092,6 @@ MonoBehaviour:
           alpha: 0
           scale: 0
           rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-          additive: 0
         glowCurve:
           to: 0
           pulse: 0

@@ -81,7 +81,6 @@ namespace PrincesPalace.Domain.Tests
                     drift = new SpellDrift { fromX = -0.7f, toX = -0.7f, viaX = -0.25f, viaAt = 0.46f, fromY = 0.1f },
                     glow = 1.3f,
                     glowCurve = new SpellGlowCurve { to = 1.6f, pulse = 0.45f, period = 0.4f, crest = 0.35f, knee = 0.41f },
-                    echo = new SpellEcho { count = 3, lagSeconds = 0.05f, alpha = 0.4f, spread = 90f, additive = true },
                     stoke = 0.7f,
                     unkicked = true,
                     tint = "#6B4A30",
@@ -186,7 +185,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 if (field.FieldType == typeof(SpellEmitter) || field.FieldType == typeof(SpellDrift)
                     || field.FieldType == typeof(SpellRotate) || field.FieldType == typeof(SpellBreathe)
-                    || field.FieldType == typeof(SpellEcho) || field.FieldType == typeof(SpellGlowCurve)) continue;
+                    || field.FieldType == typeof(SpellGlowCurve)) continue;
                 Assert.AreEqual(field.GetValue(original), field.GetValue(copy),
                     $"SpellLayer.Copy() drops {field.Name}");
             }
@@ -209,13 +208,6 @@ namespace PrincesPalace.Domain.Tests
             {
                 Assert.AreEqual(field.GetValue(original.rotate), field.GetValue(copy.rotate),
                     $"SpellRotate.Copy() drops {field.Name}");
-            }
-
-            Assert.AreNotSame(original.echo, copy.echo);
-            foreach (var field in FieldsOf(typeof(SpellEcho)))
-            {
-                Assert.AreEqual(field.GetValue(original.echo), field.GetValue(copy.echo),
-                    $"SpellEcho.Copy() drops {field.Name}");
             }
 
             Assert.AreNotSame(original.glowCurve, copy.glowCurve);

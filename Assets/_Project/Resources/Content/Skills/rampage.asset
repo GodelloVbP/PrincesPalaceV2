@@ -67,6 +67,10 @@ MonoBehaviour:
         fadeIn: 0
         until: 
         fadeOut: 0
+      kick:
+        strength: 0
+        rise: 0
+        fall: 0
       casterCostSeconds: 0
       secondSfxPath: 
       detonationSeconds: 0
@@ -118,6 +122,10 @@ MonoBehaviour:
             fadeIn: 0
             until: 
             fadeOut: 0
+          kick:
+            strength: 0
+            rise: 0
+            fall: 0
           casterCostSeconds: 0
           secondSfxPath: 
           detonationSeconds: 0
@@ -185,6 +193,10 @@ MonoBehaviour:
             fadeIn: 0
             until: 
             fadeOut: 0
+          kick:
+            strength: 0
+            rise: 0
+            fall: 0
           casterCostSeconds: 0
           secondSfxPath: 
           detonationSeconds: 0
@@ -218,6 +230,10 @@ MonoBehaviour:
             fadeIn: 0
             until: 
             fadeOut: 0
+          kick:
+            strength: 0
+            rise: 0
+            fall: 0
           casterCostSeconds: 0
           secondSfxPath: 
           detonationSeconds: 0

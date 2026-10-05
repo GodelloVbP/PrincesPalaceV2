@@ -994,7 +994,7 @@ $PathAreas = @(
     # is in Tests/EditMode/Ui.
     @{ Pattern = '^Assets/_Project/Resources/Cursors/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Resources/StanceManifest\.json'; Areas = @('art', 'combat') }
-    # Runtime-loaded shaders/materials. Today that is UIHitFlash, the
+    # Runtime-loaded shaders/materials. Today that is UIRimFlash, the
     # stage's hit reaction, so 'combat'+'art' rather than a bespoke
     # 'shader' area of its own for one file.
     @{ Pattern = '^Assets/_Project/Resources/(Shaders|Materials)/'; Areas = @('art', 'combat') }

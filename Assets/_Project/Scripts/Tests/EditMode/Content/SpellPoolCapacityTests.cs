@@ -127,11 +127,8 @@ namespace PrincesPalace.Domain.Tests
                     continue;
                 }
 
-                // An afterimage (SpellEcho) holds a renderer of its own for as long as its layer.
-                int copies = instance.Layer.echo != null && instance.Layer.echo.IsAuthored ? instance.Layer.echo.count : 0;
-
-                if (instance.Layer.Sort == SpellSort.Ground) demand.Ground += 1 + copies;
-                else demand.Effects += 1 + copies;
+                if (instance.Layer.Sort == SpellSort.Ground) demand.Ground += 1;
+                else demand.Effects += 1;
             }
 
             return demand;

@@ -35,16 +35,14 @@ namespace PrincesPalace.Domain.Tests
             return Peak(spans);
         }
 
-        // The most effects-band renderers open together: each sprite or still layer,
-        // and one more per afterimage it authors.
+        // The most effects-band renderers open together: one per sprite or still layer.
         public static int EffectsRenderersOf(SpellPerformance performance)
         {
             var spans = new List<(float birth, float death)>();
             foreach (var instance in performance.Instances.Where(i =>
                          i.Layer.Render != SpellRender.Emitter && i.Layer.Sort != SpellSort.Ground))
             {
-                int copies = 1 + (instance.Layer.echo != null && instance.Layer.echo.IsAuthored ? instance.Layer.echo.count : 0);
-                for (int c = 0; c < copies; c++) spans.Add((instance.StartSeconds, instance.ClearedSeconds));
+                spans.Add((instance.StartSeconds, instance.ClearedSeconds));
             }
 
             return Peak(spans);

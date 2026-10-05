@@ -166,10 +166,6 @@ namespace PrincesPalace
             internal int[] Seeds;
             internal List<Drop>[] Drops;
 
-            // Per instance: the renderers its afterimages hold (SpellEcho), one
-            // per copy, -1 for a copy that found none. Null for every instance
-            // that authors no echo.
-            internal int[][] Echoes;
         }
 
         private readonly List<Cast> _casts = new List<Cast>();
@@ -254,7 +250,6 @@ namespace PrincesPalace
             cast.Members = new int[count];
             cast.Seeds = new int[count];
             cast.Drops = new List<Drop>[count];
-            cast.Echoes = new int[count][];
 
             for (int i = 0; i < count; i++)
             {
@@ -603,21 +598,7 @@ namespace PrincesPalace
             var pool = ground ? groundRenderers : effectRenderers;
             if (pool == null || owners == null) return;
 
-            // THE AFTERIMAGES FIRST, so they hold earlier pool members and draw
-            // beneath the layer they trail. A copy that finds no renderer is
-            // simply not drawn, the overflow policy for every picture here.
-            int[] echoes = null;
-            if (layer.echo != null && layer.echo.IsAuthored)
-            {
-                echoes = new int[layer.echo.count];
-                for (int k = 0; k < echoes.Length; k++)
-                {
-                    echoes[k] = TakeMember(owners, pool, slot);
-                    if (echoes[k] < 0) DroppedLayers++;
-                }
-            }
-
-            int member = TakeMember(owners, pool, slot, claim: false);
+            int member = FirstFreeMember(owners, pool);
 
             // DROPPED, NOT QUEUED, and never allocated for. The house's own
             // precedent is the damage popup pool's fallback, and the priority
@@ -629,41 +610,23 @@ namespace PrincesPalace
                 Debug.LogWarning($"SpellPerformancePlayer: no free {(ground ? "ground" : "effects")} " +
                                  $"renderer for layer '{layer.id}'; it draws nothing. The hit cue is " +
                                  "unaffected.");
-                GiveBackEchoes(owners, pool, echoes);
                 return;
             }
 
             owners[member] = slot;
             cast.Members[index] = member;
-            cast.Echoes[index] = echoes;
         }
 
-        // The first free pool member, claimed for `slot` unless the caller only
-        // wants to look; -1 when the band is full.
-        private static int TakeMember(int[] owners, SpellVfxPlayer[] pool, int slot, bool claim = true)
+        // The first free pool member; -1 when the band is full.
+        private static int FirstFreeMember(int[] owners, SpellVfxPlayer[] pool)
         {
             for (int i = 0; i < owners.Length; i++)
             {
                 if (owners[i] != -1 || pool[i] == null) continue;
-                if (claim) owners[i] = slot;
                 return i;
             }
 
             return -1;
-        }
-
-        private static void GiveBackEchoes(int[] owners, SpellVfxPlayer[] pool, int[] echoes)
-        {
-            if (echoes == null) return;
-
-            for (int k = 0; k < echoes.Length; k++)
-            {
-                int held = echoes[k];
-                if (held < 0 || held >= owners.Length) continue;
-
-                owners[held] = -1;
-                if (pool[held] != null) pool[held].StopImmediately();
-            }
         }
 
         private void Close(Cast cast, int index)
@@ -685,9 +648,6 @@ namespace PrincesPalace
 
             owners[member] = -1;
             if (pool[member] != null) pool[member].StopImmediately();
-
-            GiveBackEchoes(owners, pool, cast.Echoes[index]);
-            cast.Echoes[index] = null;
         }
 
         // ---- drawing -------------------------------------------------------------
@@ -766,39 +726,6 @@ namespace PrincesPalace
                     new Vector2(at.X + kick.x, at.Y + kick.y),
                     new Vector2(instance.Box.X * sample.Scale, instance.Box.Y * sample.Scale),
                     instance.Degrees + sample.Degrees, sample.Glow, tint: TintOf(instance), glowKnee: sample.Knee);
-
-                PaintEchoes(cast, i, instance, pool, frames, frameCount, seconds, kick);
-            }
-        }
-
-        // THE LAYER'S AFTERIMAGES: each draws the layer as it was k lags ago, as
-        // faintly as the layer has moved since (SpellFrameCursor.EchoOf).
-        private void PaintEchoes(Cast cast, int index, SpellLayerInstance instance, SpellVfxPlayer[] pool,
-            Sprite[] frames, int frameCount, float seconds, Vector2 kick)
-        {
-            var echoes = cast.Echoes[index];
-            if (echoes == null) return;
-
-            for (int k = 1; k <= echoes.Length; k++)
-            {
-                int member = echoes[k - 1];
-                if (member < 0 || member >= pool.Length || pool[member] == null) continue;
-
-                var renderer = pool[member];
-                var echo = SpellFrameCursor.EchoOf(instance, frameCount, seconds, k, out var at);
-                if (!echo.Visible)
-                {
-                    renderer.StopImmediately();
-                    continue;
-                }
-
-                renderer.SetFacing(instance.DrawFacing);
-                var next = echo.Next >= 0 && echo.Next < frameCount ? frames[echo.Next] : null;
-                renderer.Show(frames[echo.Index], next, echo.Blend, echo.Alpha,
-                    new Vector2(at.X + kick.x, at.Y + kick.y),
-                    new Vector2(instance.Box.X * echo.Scale, instance.Box.Y * echo.Scale),
-                    instance.Degrees + echo.Degrees, echo.Glow, tint: TintOf(instance), glowKnee: echo.Knee,
-                    additive: instance.Layer.echo.additive);
             }
         }
 

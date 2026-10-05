@@ -69,6 +69,10 @@ MonoBehaviour:
         fadeIn: 0
         until: 
         fadeOut: 0
+      kick:
+        strength: 0
+        rise: 0
+        fall: 0
       casterCostSeconds: 0
       secondSfxPath: 
       detonationSeconds: 0
@@ -120,6 +124,10 @@ MonoBehaviour:
             fadeIn: 0
             until: 
             fadeOut: 0
+          kick:
+            strength: 0
+            rise: 0
+            fall: 0
           casterCostSeconds: 0
           secondSfxPath: 
           detonationSeconds: 0
@@ -210,7 +218,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -218,6 +227,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 195
           fit: 
@@ -258,6 +275,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -295,7 +314,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -303,6 +323,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 210
           fit: 
@@ -343,6 +371,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -380,7 +410,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -388,6 +419,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 0.65
           size: 0
           fit: 
@@ -428,6 +467,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -465,7 +506,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -473,6 +515,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: 
@@ -513,6 +563,8 @@ MonoBehaviour:
             spinMax: 120
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.6
             endScale: 0.75
             seed: 0
@@ -558,7 +610,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -566,6 +619,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 260
           fit: target
@@ -606,6 +667,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -643,7 +706,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -651,6 +715,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: target
@@ -691,6 +763,8 @@ MonoBehaviour:
             spinMax: 260
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.55
             endScale: 0.7
             seed: 0
@@ -710,6 +784,10 @@ MonoBehaviour:
           fadeIn: 0
           until: 
           fadeOut: 0
+        kick:
+          strength: 0
+          rise: 0
+          fall: 0
         casterCostSeconds: 0
         secondSfxPath: 
         detonationSeconds: 0
@@ -765,7 +843,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -773,6 +852,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 170
           fit: 
@@ -813,6 +900,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -850,7 +939,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -858,6 +948,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 190
           fit: 
@@ -898,6 +996,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -935,7 +1035,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -943,6 +1044,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 0.7
           size: 0
           fit: 
@@ -983,6 +1092,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -1020,7 +1131,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1028,6 +1140,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: 
@@ -1068,6 +1188,8 @@ MonoBehaviour:
             spinMax: 180
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.6
             endScale: 0.8
             seed: 0
@@ -1105,7 +1227,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1113,6 +1236,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 260
           fit: target
@@ -1153,6 +1284,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -1190,7 +1323,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1198,6 +1332,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: target
@@ -1238,6 +1380,8 @@ MonoBehaviour:
             spinMax: 360
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.55
             endScale: 0.7
             seed: 0
@@ -1249,6 +1393,10 @@ MonoBehaviour:
           fadeIn: 0
           until: 
           fadeOut: 0
+        kick:
+          strength: 0
+          rise: 0
+          fall: 0
         casterCostSeconds: 0
         secondSfxPath: 
         detonationSeconds: 0
@@ -1304,7 +1452,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1312,6 +1461,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 170
           fit: 
@@ -1352,6 +1509,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -1389,7 +1548,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1397,6 +1557,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 175
           fit: 
@@ -1437,6 +1605,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -1474,7 +1644,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1482,6 +1653,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 0.55
           size: 0
           fit: 
@@ -1522,6 +1701,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -1559,7 +1740,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1567,6 +1749,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: 
@@ -1607,6 +1797,8 @@ MonoBehaviour:
             spinMax: 150
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.55
             endScale: 0.6
             seed: 0
@@ -1644,7 +1836,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1652,6 +1845,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 230
           fit: target
@@ -1692,6 +1893,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -1729,7 +1932,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1737,6 +1941,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: target
@@ -1777,6 +1989,8 @@ MonoBehaviour:
             spinMax: 300
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.5
             endScale: 0.65
             seed: 0
@@ -1788,6 +2002,10 @@ MonoBehaviour:
           fadeIn: 0
           until: 
           fadeOut: 0
+        kick:
+          strength: 0
+          rise: 0
+          fall: 0
         casterCostSeconds: 0
         secondSfxPath: 
         detonationSeconds: 0
@@ -1843,7 +2061,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1851,6 +2070,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 135
           fit: 
@@ -1891,6 +2118,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -1928,7 +2157,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -1936,6 +2166,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 195
           fit: 
@@ -1976,6 +2214,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -2013,7 +2253,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -2021,6 +2262,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 0.6
           size: 0
           fit: 
@@ -2061,6 +2310,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -2098,7 +2349,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -2106,6 +2358,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: 
@@ -2146,6 +2406,8 @@ MonoBehaviour:
             spinMax: 200
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.45
             endScale: 0.7
             seed: 0
@@ -2183,7 +2445,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -2191,6 +2454,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 300
           fit: target
@@ -2231,6 +2502,8 @@ MonoBehaviour:
             spinMax: 0
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 1
             endScale: 1
             seed: 0
@@ -2268,7 +2541,8 @@ MonoBehaviour:
             amplitude: 0
             period: 0
             damping: 0
-            dwell: 0
+            phase: 0
+            delay: 0
             swings: 0
             pivotX: 0.5
             pivotY: 0.5
@@ -2276,6 +2550,14 @@ MonoBehaviour:
             alpha: 0
             scale: 0
             rate: 1
+          glowCurve:
+            to: 0
+            pulse: 0
+            period: 0
+            crest: 0
+            knee: 0
+          stoke: 0
+          unkicked: 0
           scale: 1
           size: 0
           fit: target
@@ -2316,6 +2598,8 @@ MonoBehaviour:
             spinMax: 360
             alignFlight: 0
             lateral: 0
+            burstTimes: []
+            burstEach: 0
             fadeFrom: 0.4
             endScale: 0.75
             seed: 0
@@ -2327,6 +2611,10 @@ MonoBehaviour:
           fadeIn: 0
           until: 
           fadeOut: 0
+        kick:
+          strength: 0
+          rise: 0
+          fall: 0
         casterCostSeconds: 0
         secondSfxPath: 
         detonationSeconds: 0

@@ -619,16 +619,6 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `viaAt` | float | `0` | Fraction of the layer's lifetime, 0-1 exclusive, at which it passes through viaX/viaY; 0 means no waypoint. Each leg eases out. |  |
 | `arcY` | float | `0` | Extra height at the middle of the span, in heights of the layer's own box: a parabola 4t(1-t) added on top of the legs, so a thrown layer lifts and comes down. 0 is no arc. |  |
 
-### `SpellEcho`
-
-| Field | Type | Default | Description | Values |
-|---|---|---|---|---|
-| `count` | int | `0` | How many lagged copies trail the layer; 0 means none. Each takes a pooled renderer. |  |
-| `lagSeconds` | float | `0` | Seconds each copy trails the one before it: copy k draws the layer as it was k * lagSeconds ago. |  |
-| `alpha` | float | `0` | Opacity of the nearest copy at full strength, 0-1; each further copy is weaker by an even step. Multiplied by the layer's own alpha. |  |
-| `spread` | float | `0` | How far, in reference-frame units, a copy has to lie from the layer's current drawing to show at full strength; nearer is fainter, none at all when the layer has not moved. 0 means 120. |  |
-| `additive` | bool | `false` | Draw the copies added to what is behind them (light) instead of over it, so they can only brighten the scene and never read as a dark smear on a bright background. |  |
-
 ### `SpellEmitter`
 
 | Field | Type | Default | Description | Values |
@@ -713,7 +703,6 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `drift` | SpellDrift (below) | (zero -- see SpellDrift) | Optional slide across the layer's life, in fractions of its own box; see SpellDrift. Unauthored means the layer stays where dx and dy put it. |  |
 | `rotate` | SpellRotate (below) | (zero -- see SpellRotate) | How the layer turns: a static tilt, a spin and a damped pendulum about a pivot inside its frame; see SpellRotate. Unauthored means it is drawn upright. Not drawn on an emitter or a flight-aligned layer. |  |
 | `breathe` | SpellBreathe (below) | (zero -- see SpellBreathe) | Alpha and scale flutter on the Ember flicker curve, for a layer that must never hold still; see SpellBreathe. Unauthored means steady. Not drawn on an emitter. |  |
-| `echo` | SpellEcho (below) | (zero -- see SpellEcho) | Afterimages: lagged faint copies of this layer's own drawing that trail its motion, strongest where it moves fastest; see SpellEcho. Unauthored means none. Not drawn on an emitter. |  |
 | `glowCurve` | SpellGlowCurve (below) | (zero -- see SpellGlowCurve) | How the layer's glow changes over its life: a ramp to a final value and a pulse on top; see SpellGlowCurve. Unauthored means `glow` holds. Not drawn on an emitter. |  |
 | `stoke` | float | `0` | How strongly this layer lifts the Burn coal glow of the body it is placed on while it lives, 0-1, following the layer's own fades and breathing; 0 means it does not touch the glow. Not drawn on an emitter. |  |
 | `unkicked` | bool | `false` | Stays where it is when the stage is kicked (vfx.kick): a layer or emitter hung in the air, such as a swinging censer and the embers born on it, is not part of the stage the figures stand on. The figures, the ground and layers placed on them still move. |  |

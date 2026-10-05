@@ -11,12 +11,11 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // Does the hit flash actually render white where the sprite is opaque?
+    // Does the hit flash actually light the outline where the sprite is opaque?
     //
-    // A PIXEL TEST, not an eyeball. The whole question the plan raised about
-    // this shader is whether a hand-written unlit CG pass survives the move to
-    // URP, and the honest answer to "does it still draw" is to draw it and read
-    // the pixels back -- which CanvasCapture already does deterministically.
+    // A PIXEL TEST, not an eyeball: whether a hand-written unlit CG pass survives
+    // the move to URP is answered by drawing it and reading the pixels back,
+    // which CanvasCapture already does deterministically.
     //
     // GRAPHICS-GATED. The commit gate runs headless (-nographics), where
     // camera.Render() is a silent no-op and ReadPixels returns garbage, so this
@@ -110,12 +109,12 @@ namespace PrincesPalace.PlayModeTests
         {
             // Resources, not AssetDatabase: this is a PlayMode test and has no
             // Editor assembly to reach through.
-            var shader = Shader.Find("PrincesPalace/UIHitFlash");
+            var shader = Shader.Find("PrincesPalace/UIRimFlash");
             return shader == null ? null : new Material(shader);
         }
 
         [UnityTest]
-        public IEnumerator TheFlashIsWhiteWhereTheSpriteIsOpaque()
+        public IEnumerator TheFlashLightsTheOutlineWhereTheSpriteIsOpaqueAndNothingBeyondIt()
         {
             if (!CanvasCapture.IsSupported)
             {
@@ -124,7 +123,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             var material = LoadFlashMaterial();
-            Assert.IsNotNull(material, "PrincesPalace/UIHitFlash did not survive the URP move - it is not findable at all.");
+            Assert.IsNotNull(material, "PrincesPalace/UIRimFlash did not survive the URP move - it is not findable at all.");
 
             BuildCanvas(material);
             yield return null;
@@ -139,20 +138,17 @@ namespace PrincesPalace.PlayModeTests
             var captured = new Texture2D(2, 2);
             Assert.IsTrue(captured.LoadImage(bytes), "the capture produced no readable PNG");
 
-            // Sample well inside each half, away from the sprite's own edge
-            // filtering.
-            var opaqueSide = captured.GetPixel(Size / 4, Size / 2);
-            var clearSide = captured.GetPixel(Size * 3 / 4, Size / 2);
+            // The light sits on the outline, so the brightest pixel of the opaque
+            // half is the one to read; the clear half is sampled well away from
+            // the edge's own filtering.
+            var opaqueSide = BrightestAlongTheMiddleRow(captured, 0, Size / 2);
+            var clearSide = BrightestAlongTheMiddleRow(captured, Size * 3 / 4, Size);
 
-            float opaqueLuminance = Luminance(opaqueSide);
-            float clearLuminance = Luminance(clearSide);
+            Assert.Greater(Luminance(opaqueSide), 0.6f,
+                $"the outline should be lit white, not left as the sprite's own dark colour " +
+                $"(got {opaqueSide}). If this fails, the shader did not survive URP.");
 
-            Assert.Greater(opaqueLuminance, 0.6f,
-                $"the opaque half should read as a WHITE silhouette, not the sprite's own dark colour " +
-                $"(got {opaqueSide}). If this fails, the shader did not survive URP and the fallback is " +
-                $"UIEffect's fill mode.");
-
-            Assert.Less(clearLuminance, opaqueLuminance - 0.3f,
+            Assert.Less(Luminance(clearSide), 0.15f,
                 $"the transparent half must stay clear - the flash is the figure's SHAPE, not its bounding box " +
                 $"(got {clearSide})");
         }
@@ -168,18 +164,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.Pass("a flash with no material still runs its coroutine and draws nothing");
         }
 
-        // ---- the typed flash (owner 2026-09-19) ------------------------------
-        //
-        // "Flash like the white but THEN for example green poison, red for
-        // fire." Two pulses, not one tinted one: the white impact exactly as
-        // it always was, and then the element behind it at a little over half
-        // strength. The first attempt tinted the single pulse and the tail
-        // frame showed three monsters repainted green, which is the thing
-        // "but THEN" rules out.
-        //
-        // SO EVERY TEST DOWN HERE HAS TO SAY WHICH PULSE IT IS LOOKING AT,
-        // and wait for it. Sampled one frame in, a poison flash is white and
-        // correct.
+        // ---- the typed flash ---------------------------------------------------
+
+        private static Color BrightestAlongTheMiddleRow(Texture2D captured, int fromX, int toX)
+        {
+            var best = Color.black;
+            for (int x = fromX; x < toX; x++)
+            {
+                var pixel = captured.GetPixel(x, Size / 2);
+                if (Luminance(pixel) > Luminance(best)) best = pixel;
+            }
+
+            return best;
+        }
 
         // Past the end of the hit pulse at the speed FreezeTime pins. Derived
         // rather than guessed: at 0.05x the pulse alone is seconds long, and a
@@ -200,7 +197,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             var material = LoadFlashMaterial();
-            Assert.IsNotNull(material, "PrincesPalace/UIHitFlash did not survive the URP move.");
+            Assert.IsNotNull(material, "PrincesPalace/UIRimFlash did not survive the URP move.");
 
             BuildCanvas(material, flash => flash.Flash(DamageType.Poison));
 
@@ -217,8 +214,8 @@ namespace PrincesPalace.PlayModeTests
             var captured = new Texture2D(2, 2);
             Assert.IsTrue(captured.LoadImage(bytes), "the capture produced no readable PNG");
 
-            var opaqueSide = captured.GetPixel(Size / 4, Size / 2);
-            var clearSide = captured.GetPixel(Size * 3 / 4, Size / 2);
+            var opaqueSide = BrightestAlongTheMiddleRow(captured, 0, Size / 2);
+            var clearSide = BrightestAlongTheMiddleRow(captured, Size * 3 / 4, Size);
 
             // FightHudPalette.DamageTypePoison is #A8E63C: green over red over
             // blue, with real daylight between green and blue. Asserted as an
@@ -229,7 +226,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(opaqueSide.g, opaqueSide.b + 0.2f,
                 $"a poison flash must read green, not white or red (got {opaqueSide})");
 
-            Assert.Less(Luminance(clearSide), Luminance(opaqueSide) - 0.3f,
+            Assert.Less(Luminance(clearSide), 0.15f,
                 $"the transparent half must stay clear whatever the tint (got {clearSide})");
         }
 
@@ -324,9 +321,8 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void TheHitConstantsArePinned()
         {
-            Assert.AreEqual(3, StageHitFlash.HitPeakFrames);
-            Assert.AreEqual(0.05f, StageHitFlash.HitHoldSeconds, 0.0001f);
-            Assert.AreEqual(0.10f, StageHitFlash.HitFadeSeconds, 0.0001f);
+            Assert.AreEqual(0.0333f, StageHitFlash.HitHoldSeconds, 0.0001f, "two frames");
+            Assert.AreEqual(0.08f, StageHitFlash.HitFadeSeconds, 0.0001f);
             Assert.AreEqual(0.5f, StageHitFlash.HitTintAmount, 0.0001f);
             Assert.AreEqual(1f, StageHitFlash.HitPeakAlpha, 0.0001f);
         }
@@ -340,8 +336,8 @@ namespace PrincesPalace.PlayModeTests
 
                 Assert.AreEqual(1, pulses.Length, $"{type} flashes in {pulses.Length} pulses");
                 Assert.AreEqual(StageHitFlash.TintFor(type), pulses[0].Tint);
-                Assert.AreEqual(0.05f, pulses[0].Hold, 0.0001f);
-                Assert.AreEqual(0.10f, pulses[0].Fade, 0.0001f);
+                Assert.AreEqual(0.0333f, pulses[0].Hold, 0.0001f);
+                Assert.AreEqual(0.08f, pulses[0].Fade, 0.0001f);
                 Assert.AreEqual(1f, pulses[0].Peak, 0.0001f);
             }
         }
@@ -364,8 +360,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(StageHitFlash.TintFor(DamageType.Fire), pulses[0].Tint);
             Assert.AreEqual(StageHitFlash.TintFor(DamageType.Ice), pulses[1].Tint);
             Assert.AreNotEqual(pulses[0].Tint, pulses[1].Tint);
-            Assert.AreEqual(0.05f, pulses[1].Hold, 0.0001f);
-            Assert.AreEqual(0.10f, pulses[1].Fade, 0.0001f);
+            Assert.AreEqual(0.0333f, pulses[1].Hold, 0.0001f);
+            Assert.AreEqual(0.08f, pulses[1].Fade, 0.0001f);
         }
 
         [Test]

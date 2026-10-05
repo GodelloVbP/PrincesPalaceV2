@@ -7,7 +7,7 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.Domain.Tests
 {
     // THE FIELDS THE CENSER'S POLISH PASS ADDED, as models: a glow that moves over
-    // a layer's life (glowCurve), afterimages of a moving layer (echo), the body's
+    // a layer's life (glowCurve), the body's
     // coal glow following a fire (stoke), extra emitter bursts (burstTimes) and the
     // stage's push on the cue (kick). Literals throughout; nothing here recomputes
     // the cosine or the smoothstep it pins.
@@ -83,65 +83,6 @@ namespace PrincesPalace.Domain.Tests
             var layer = new SpellLayer { glow = 0.3f, glowCurve = new SpellGlowCurve { to = 1f, pulse = 0.5f, period = 0.4f, crest = 0.4f } };
             var sample = SpellFrameCursor.SampleOf(Instance(layer), 1, 0.4f);
             Assert.AreEqual(0.3f + 0.7f * 0.4f + 0.5f, sample.Glow, Tol);
-        }
-
-        // ---- echo ----------------------------------------------------------
-
-        [Test]
-        public void AnEchoCopyIsFaintNearTheLayerAndFullStrengthAtTheSpread()
-        {
-            var echo = new SpellEcho { count = 3, lagSeconds = 0.05f, alpha = 0.4f, spread = 100f };
-            Assert.AreEqual(0.2f, echo.StrengthOf(1, 50f), Tol, "nearest copy, half the spread");
-            Assert.AreEqual(0.4f * 2f / 3f, echo.StrengthOf(2, 100f), Tol, "the next one is a third weaker");
-            Assert.AreEqual(0.4f / 3f, echo.StrengthOf(3, 300f), Tol, "capped at the spread");
-            Assert.AreEqual(0f, echo.StrengthOf(1, 0f), 0f, "a layer that has not moved leaves nothing");
-            Assert.AreEqual(0f, echo.StrengthOf(4, 100f), 0f, "there is no fourth copy");
-            Assert.AreEqual(SpellEcho.DefaultSpread, new SpellEcho().SpreadOrDefault, 0f);
-        }
-
-        // A 100 x 200 box hooked at its top centre swinging 10 degrees a second-period
-        // sine: at 0.5 s it is on the vertical and fastest; 0.1 s earlier it was at 5.878
-        // degrees, which moved its centre 10.2408 across and 0.5258 up.
-        [Test]
-        public void AnEchoSamplesTheLayersOwnMotionAtTheLaggedInstant()
-        {
-            var layer = new SpellLayer
-            {
-                rotate = new SpellRotate { amplitude = 10f, period = 1f, pivotX = 0.5f, pivotY = 1f },
-                echo = new SpellEcho { count = 2, lagSeconds = 0.1f, alpha = 0.5f, spread = 20f },
-            };
-            var instance = Instance(layer);
-
-            var first = SpellFrameCursor.EchoOf(instance, 1, 0.5f, 1, out var at);
-            Assert.IsTrue(first.Visible);
-            Assert.AreEqual(5.8779f, first.Degrees, Tol, "the angle then, not now");
-            Assert.AreEqual(10.2408f, at.X, Tol);
-            Assert.AreEqual(0.5258f, at.Y, Tol);
-            Assert.AreEqual(0.5f * 1f * (10.2538f / 20f), first.Alpha, 2e-3f, "alpha x step x distance over spread");
-
-            var second = SpellFrameCursor.EchoOf(instance, 1, 0.5f, 2, out var farther);
-            Assert.AreEqual(9.5106f, second.Degrees, Tol);
-            Assert.AreEqual(16.5229f, farther.X, Tol);
-            Assert.AreEqual(0.5f * 0.5f * (16.5784f / 20f), second.Alpha, 2e-3f, "further from the layer but a step weaker");
-        }
-
-        [Test]
-        public void AHeldLayerLeavesNoAfterimageAndNoneShowsBeforeTheLayerOpened()
-        {
-            var held = Instance(new SpellLayer
-            {
-                rotate = new SpellRotate { degrees = 5f },
-                echo = new SpellEcho { count = 1, lagSeconds = 0.1f, alpha = 0.5f },
-            });
-            Assert.IsFalse(SpellFrameCursor.EchoOf(held, 1, 0.5f, 1, out _).Visible, "a still layer has no echo");
-
-            var moving = Instance(new SpellLayer
-            {
-                rotate = new SpellRotate { amplitude = 10f, period = 1f, pivotY = 1f },
-                echo = new SpellEcho { count = 1, lagSeconds = 0.1f, alpha = 0.5f },
-            });
-            Assert.IsFalse(SpellFrameCursor.EchoOf(moving, 1, 0.05f, 1, out _).Visible, "0.05 s in, 0.1 s ago it was not open");
-            Assert.IsFalse(SpellFrameCursor.EchoOf(moving, 1, 0.5f, 2, out _).Visible, "no second copy was authored");
         }
 
         // ---- stoke ---------------------------------------------------------
@@ -274,7 +215,6 @@ namespace PrincesPalace.Domain.Tests
         {
             var layer = Still();
             layer.glowCurve = new SpellGlowCurve { to = 1f, pulse = 0.4f, period = 0.4f, crest = 0.4f };
-            layer.echo = new SpellEcho { count = 3, lagSeconds = 0.04f, alpha = 0.35f, spread = 140f };
             layer.stoke = 1f;
             Assert.IsEmpty(Check(layer, new SpellKick { strength = 0.025f, rise = 0.03f, fall = 0.18f }));
 
@@ -282,26 +222,6 @@ namespace PrincesPalace.Domain.Tests
             spec.burstTimes = new[] { 0.2f, 0.6f };
             spec.burstEach = 5;
             Assert.IsEmpty(Check(Emitter(spec)));
-        }
-
-        [Test]
-        public void TheRulesRefuseAnEchoThatCannotWork()
-        {
-            var tooMany = Still();
-            tooMany.echo = new SpellEcho { count = 5, lagSeconds = 0.04f, alpha = 0.3f };
-            StringAssert.Contains("echo.count 5 is outside 0..4", Check(tooMany).Single());
-
-            var noLag = Still();
-            noLag.echo = new SpellEcho { count = 2, alpha = 0.3f };
-            StringAssert.Contains("echo.lagSeconds 0 must be above 0", Check(noLag).Single());
-
-            var orphan = Still();
-            orphan.echo = new SpellEcho { alpha = 0.3f };
-            StringAssert.Contains("authors lagSeconds, alpha or spread with no count", Check(orphan).Single());
-
-            var onEmitter = Emitter(Spec());
-            onEmitter.echo = new SpellEcho { count = 1, lagSeconds = 0.04f, alpha = 0.3f };
-            StringAssert.Contains("emitter and authors echo", Check(onEmitter).Single());
         }
 
         [Test]

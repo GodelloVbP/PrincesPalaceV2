@@ -66,9 +66,6 @@ namespace PrincesPalace.Domain.Content
         public const float MaxBreatheScale = 0.5f;
         public const float MaxBreatheRate = 20f;
 
-        // An afterimage count past this is a smear, and each copy is a pooled renderer.
-        public const int MaxEchoCount = 4;
-        public const float MaxEchoLagSeconds = 0.5f;
         public const float MaxGlow = 10f;
         public const float MaxBurstTimeSeconds = 10f;
 
@@ -298,7 +295,6 @@ namespace PrincesPalace.Domain.Content
             CheckDrift(at, layer, problems);
             CheckRotate(at, layer, problems);
             CheckBreathe(at, layer, problems);
-            CheckEcho(at, layer, problems);
             CheckGlowCurve(at, layer, problems);
             CheckWhatItNeeds(at, layer, problems);
             CheckPlacement(at, layer, problems);
@@ -491,49 +487,6 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at} is an emitter and authors breathe, which is inert there: particles fade and " +
                              "shrink through emitter.fadeFrom and endScale.");
-            }
-        }
-
-        private static void CheckEcho(string at, SpellLayer layer, List<string> problems)
-        {
-            var echo = layer.echo;
-            if (echo == null) return;
-
-            if (echo.count < 0 || echo.count > MaxEchoCount)
-            {
-                problems.Add($"{at}.echo.count {echo.count} is outside 0..{MaxEchoCount}; each copy is a pooled renderer.");
-            }
-
-            if (!echo.IsAuthored)
-            {
-                if (echo.lagSeconds != 0f || echo.alpha != 0f || echo.spread != 0f)
-                {
-                    problems.Add($"{at}.echo authors lagSeconds, alpha or spread with no count, so it draws nothing.");
-                }
-
-                return;
-            }
-
-            if (!(echo.lagSeconds > 0f) || echo.lagSeconds > MaxEchoLagSeconds)
-            {
-                problems.Add($"{at}.echo.lagSeconds {Num(echo.lagSeconds)} must be above 0 and at most {Num(MaxEchoLagSeconds)}.");
-            }
-
-            if (!(echo.alpha > 0f) || echo.alpha > 1f)
-            {
-                problems.Add($"{at}.echo.alpha {Num(echo.alpha)} must be above 0 and at most 1.");
-            }
-
-            Positive(at, "echo.spread", echo.spread, problems);
-
-            if (layer.Render == SpellRender.Emitter)
-            {
-                problems.Add($"{at} is an emitter and authors echo, which is inert there: particles have no motion " +
-                             "of their own to trail.");
-            }
-            else if (layer.Align == SpellAlign.Flight)
-            {
-                problems.Add($"{at} is laid along a flight and authors echo, which is inert there.");
             }
         }
 

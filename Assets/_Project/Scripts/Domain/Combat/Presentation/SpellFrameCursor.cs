@@ -209,39 +209,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
         // WHERE THE LAYER'S BOX CENTRE IS DRAWN for a sample taken at `seconds`:
         // its placement and slide, its authored offset (mirrored with the cast)
-        // and the shift its turn costs. The one place the position is summed, so
-        // the layer and its afterimages cannot disagree about it.
+        // and the shift its turn costs.
         public static UiVec CentreOf(SpellLayerInstance instance, in SpellFrameSample sample, float seconds) =>
             SpellPerformance.PositionOf(instance, seconds) +
             new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy) +
             new UiVec(sample.ShiftX, sample.ShiftY);
-
-        // AFTERIMAGE `k` (1-based) of a layer, at `seconds`: the layer as it was
-        // k * lagSeconds ago, as faint as the layer has moved since (SpellEcho).
-        // Hidden when the layer has not moved, was not yet open then, or the layer
-        // authors no echo. `at` is where that copy's centre is drawn.
-        public static SpellFrameSample EchoOf(SpellLayerInstance instance, int frameCount, float seconds, int k,
-            out UiVec at)
-        {
-            at = UiVec.Zero;
-            var echo = instance?.Layer?.echo;
-            if (echo == null || !echo.IsAuthored || k < 1 || k > echo.count) return SpellFrameSample.Hidden;
-
-            float then = seconds - k * echo.lagSeconds;
-            var now = SampleOf(instance, frameCount, seconds);
-            var past = SampleOf(instance, frameCount, then);
-            if (!now.Visible || !past.Visible) return SpellFrameSample.Hidden;
-
-            var here = CentreOf(instance, now, seconds);
-            at = CentreOf(instance, past, then);
-            float distance = (float)Math.Sqrt((at.X - here.X) * (at.X - here.X) + (at.Y - here.Y) * (at.Y - here.Y));
-
-            float strength = echo.StrengthOf(k, distance);
-            if (strength <= 0f) return SpellFrameSample.Hidden;
-
-            return new SpellFrameSample(true, past.Index, past.Next, past.Blend, past.Alpha * strength,
-                past.Scale, past.Degrees, past.ShiftX, past.ShiftY, past.Glow, past.Knee);
-        }
 
         // HOW MUCH THIS LAYER LIFTS THE COAL GLOW OF THE BODY IT IS ON at
         // `seconds`: its `stoke`, times its own alpha as a share of the authored

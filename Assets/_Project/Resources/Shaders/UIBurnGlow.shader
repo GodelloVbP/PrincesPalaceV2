@@ -1,6 +1,6 @@
 // A burning figure's silhouette smouldering like a bed of coals (StageBurnGlow).
 //
-// UIHitFlash's silhouette (the sprite's alpha, the vertex colour's RGB) drawn
+// The sprite's silhouette (its alpha, the vertex colour's RGB) drawn
 // ADDITIVELY, but not flat: the light gathers on the silhouette's EDGE and at the
 // FEET, with only a faint tint over the interior, so the creature keeps its own
 // colours and the heat reads as coming off the outline and up from the ground.
@@ -11,7 +11,7 @@
 // per actor with the ground at the bottom, so texcoord.y is "how high on the
 // body" for every figure.
 //
-// Under Resources for the same reason as UIHitFlash: no Shader.Find.
+// Under Resources so the material is found by path: no Shader.Find.
 Shader "PrincesPalace/UIBurnGlow"
 {
     Properties

@@ -87,7 +87,7 @@ The effect says who acted, on whom, which element, how much, and what status.
 - Element colour language is fixed across spells: `FightHudPalette.ForDamageType`
   (`Domain/UiKit/FightHudPalette.cs`, one token per `DamageType`, pinned by
   `FightHudPaletteDamageTypeTests`), the same tokens the damage popup and the
-  typed hit flash read. Identity choices stay inside that language: a fire spell
+  typed hit flash (the outline light, `BodyLight`) read. Identity choices stay inside that language: a fire spell
   is not blue.
 - The effect does not cover the damage number, the status badges or faces.
   Counter-example: in

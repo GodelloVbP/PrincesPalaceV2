@@ -16,8 +16,8 @@
 // luminance: below the knee the drawing is untouched, above it the hot core
 // climbs past the bloom threshold and nothing else moves.
 //
-// float4 RATHER THAN fixed4, which UIHitFlash beside this can use because it
-// never exceeds 1. fixed is a [-2, 2] low-precision type on the platforms that
+// float4 RATHER THAN fixed4, which a shader that never exceeds 1 can use.
+// fixed is a [-2, 2] low-precision type on the platforms that
 // still have one and is aliased to half elsewhere; the whole point here is to
 // leave [0, 1] deliberately, so the precision is stated rather than inherited.
 //
@@ -38,11 +38,6 @@ Shader "PrincesPalace/UISpellGlow"
         // Where the ramp starts, in sprite luminance. 0.72 keeps the painted
         // body of an effect untouched and lifts only the molten core.
         _Knee ("Glow knee", Range(0, 1)) = 0.72
-
-        // The destination blend factor: 10 (one minus source alpha) draws the layer
-        // over what is behind it, 1 adds it to what is behind it, so it can only
-        // brighten (an afterimage that reads as light).
-        _DstBlend ("Destination blend", Float) = 10
     }
 
     SubShader
@@ -60,7 +55,7 @@ Shader "PrincesPalace/UISpellGlow"
         Lighting Off
         ZWrite Off
         ZTest [unity_GUIZTestMode]
-        Blend SrcAlpha [_DstBlend]
+        Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
         {

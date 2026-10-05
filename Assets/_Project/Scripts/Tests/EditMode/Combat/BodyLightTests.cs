@@ -8,7 +8,7 @@ using PrincesPalace.Domain.Content;
 namespace PrincesPalace.Domain.Tests
 {
     // WHERE LIGHT SITS ON A BODY (BodyLight): the burn glow gathers on the outline
-    // and the feet with a faint tint inside, and a spell or status hit flashes the
+    // and the feet with a faint tint inside, and every hit flashes the
     // outline. Literals; the shader files must state the same constants.
     public class BodyLightTests
     {
@@ -46,34 +46,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.5f, BodyLight.FlashWeight(0.5f, 1f), 1e-6f);
             Assert.AreEqual(2, BodyLight.FlashHoldFrames);
             Assert.AreEqual(0.08f, BodyLight.FlashFadeSeconds, 1e-6f);
-        }
-
-        [Test]
-        public void SpellHitsAndStatusTicksFlashAsARimAndMeleeAndEnemyBlowsDoNot()
-        {
-            Assert.IsTrue(BodyLight.FlashesAsRim(BeatCause.StatusTick, false, true));
-            Assert.IsTrue(BodyLight.FlashesAsRim(BeatCause.Action, true, true), "a cast with art, from where the caster stands");
-            Assert.IsFalse(BodyLight.FlashesAsRim(BeatCause.Action, true, false), "a melee skill crosses the stage");
-            Assert.IsFalse(BodyLight.FlashesAsRim(BeatCause.Action, false, true), "a plain attack or an artless skill");
-            Assert.IsFalse(BodyLight.FlashesAsRim(BeatCause.RelicTrigger, true, true));
-        }
-
-        [Test]
-        public void TheBeatAsksTheSameQuestion()
-        {
-            var spell = new CombatBeat
-            {
-                Cause = BeatCause.Action,
-                Approach = StageApproach.Hold,
-                Vfx = new SpellPresentation { layerFormat = 1, layers = new[] { new SpellLayer { id = "a" } } },
-            };
-            Assert.IsTrue(spell.FlashesAsRim);
-
-            var melee = new CombatBeat { Cause = BeatCause.Action, Approach = StageApproach.Close, Vfx = spell.Vfx };
-            Assert.IsFalse(melee.FlashesAsRim);
-
-            Assert.IsTrue(new CombatBeat { Cause = BeatCause.StatusTick }.FlashesAsRim);
-            Assert.IsFalse(new CombatBeat { Cause = BeatCause.Action }.FlashesAsRim);
         }
 
         // The shaders restate the constants as property defaults.
