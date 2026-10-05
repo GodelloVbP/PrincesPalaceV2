@@ -53,23 +53,29 @@ namespace PrincesPalace.Domain.Stage
         // and never below the middle: against a body already at the ceiling
         // the fall is shorter, never upward. The fall's duration is authored
         // (travelSeconds), so a shorter drop reads as slower, not later.
-        public static UiVec AbovePoint(StageBody target, float heights, float hangHalfBox = -1f)
+        public static UiVec AbovePoint(StageBody target, float heights, float hangBoxHeight = -1f)
         {
             var aim = target.Centre;
-            float ceiling = hangHalfBox >= 0f ? StageTop - hangHalfBox : SkyCeiling;
+            float ceiling = hangBoxHeight >= 0f ? StageTop - (0.5f - HangOverhang) * hangBoxHeight : SkyCeiling;
             float y = Math.Min(aim.Y + heights * target.Height, ceiling);
             return new UiVec(aim.X, Math.Max(y, aim.Y));
         }
 
-        // THE STAGE'S TOP EDGE, in the effect pool's frame. A layer that HANGS (a
-        // non-travelling `above` layer, hooked to something off-screen by a chain)
-        // is held where its BOX TOP meets it -- `hangHalfBox` is half the drawn
-        // box -- so the chain runs off the top of the stage and the body of the
-        // thing clears even a treant's head (240) instead of sitting on the
-        // canopy. Nothing falls from there, so the bark and plate crowding that
-        // holds a falling strike under SkyCeiling does not apply. A short height
-        // still puts it lower: the body-height number is a cap on how far up it goes.
-        public const float StageTop = 540f;
+        // THE VISIBLE STAGE'S TOP EDGE, in the effect pool's frame: the 1700x600
+        // stage centred on the canvas (FightStageAnchors.StageSize) runs from y
+        // -300 to 300; the plates and the log hang above it. A layer that HANGS (a
+        // non-travelling `above` layer, hooked to something off-stage by a chain)
+        // must show whole on the stage, so it is held where only its top
+        // HangOverhang of the box -- the chain -- sits above this edge. On a tall
+        // body that puts the drawing over the crown: overlapping the canopy is the
+        // stage-room limit AUDIT records for Crownfall, and off-screen is worse.
+        // `height` is a cap on how far up it goes, not a target.
+        public const float StageTop = 300f;
+
+        // THE SHARE OF A HANGING BOX THAT MAY RISE ABOVE StageTop: the chain, with
+        // the lid and the swing's rise (about 0.22 of the box over the centre)
+        // left on the stage.
+        public const float HangOverhang = 0.28f;
 
         // ---- nothing a spell draws may cross the combat log ----------------
         //

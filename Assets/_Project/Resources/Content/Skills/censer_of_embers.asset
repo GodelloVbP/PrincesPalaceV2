@@ -102,7 +102,7 @@ MonoBehaviour:
           scale: 0
           rate: 1
         scale: 1
-        size: 270
+        size: 300
         fit: 
         facing: none
         sort: effects
@@ -187,7 +187,7 @@ MonoBehaviour:
           scale: 0
           rate: 1
         scale: 1
-        size: 270
+        size: 300
         fit: 
         facing: none
         sort: effects
@@ -294,8 +294,8 @@ MonoBehaviour:
           rate: 0
           burst: 48
           window: 0
-          sourceDx: -111
-          sourceDy: -24
+          sourceDx: -124
+          sourceDy: -27
           spreadDegrees: 360
           aimDegrees: 90
           speedMin: 180
@@ -383,8 +383,8 @@ MonoBehaviour:
           rate: 0
           burst: 6
           window: 0
-          sourceDx: -111
-          sourceDy: -24
+          sourceDx: -124
+          sourceDy: -27
           spreadDegrees: 360
           aimDegrees: 90
           speedMin: 90
@@ -415,14 +415,14 @@ MonoBehaviour:
         follow: 0
         whenConsumed: 
         at: hit
-        offset: 0
+        offset: 0.45
         path: Spells/censer_flame_loop
         seconds: 0.5
         fps: 8
         startFrame: 0
         until: loop
         fade: 0.5
-        fadeIn: 0.08
+        fadeIn: 0.25
         opacity: 1
         dx: 0
         dy: 0
@@ -500,7 +500,7 @@ MonoBehaviour:
         follow: 0
         whenConsumed: 
         at: hit
-        offset: 0.05
+        offset: 0.45
         path: 
         seconds: 0
         fps: 0

@@ -32,7 +32,7 @@ namespace PrincesPalace.Domain.Tests
             var censer = vfx.layers.Single(l => l.id == "censer");
             Assert.AreEqual("above", censer.place);
             Assert.AreEqual(3f, censer.height, 1e-6f, "a cap only: the hanging box is held at the stage top");
-            Assert.AreEqual(270f, censer.size, 1e-6f);
+            Assert.AreEqual(300f, censer.size, 1e-6f);
             Assert.AreEqual("", censer.fit, "one size on every body: the lantern must clear a treant and stay on screen");
             Assert.AreEqual("release", censer.at);
             Assert.AreEqual(1.0f, censer.seconds, 1e-6f, "it lasts to the cue and no longer");
@@ -83,15 +83,15 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEqual(new[] { 2f, 1f, 0f, 1f }, burst.emitter.weights, "coals and flecks, never the smoke wisp");
             Assert.AreEqual(1.2f, burst.emitter.lifeMax, 1e-6f);
             Assert.AreEqual(0.9f, burst.emitter.sizeMax, 1e-6f);
-            Assert.AreEqual(-111f, burst.emitter.sourceDx, 1e-6f, "where the lantern hangs at the third extreme");
-            Assert.AreEqual(-24f, burst.emitter.sourceDy, 1e-6f);
+            Assert.AreEqual(-124f, burst.emitter.sourceDx, 1e-6f, "where the lantern hangs at the third extreme");
+            Assert.AreEqual(-27f, burst.emitter.sourceDy, 1e-6f);
 
             var coals = vfx.layers.Single(l => l.id == "coals");
             Assert.AreEqual("hit", coals.at);
             Assert.AreEqual(6, coals.emitter.burst);
             Assert.AreEqual(2.2f, coals.emitter.sizeMax, 1e-6f, "big next to the embers");
             Assert.AreEqual(540f, coals.emitter.spinMax, 1e-6f, "they tumble");
-            Assert.AreEqual(-111f, coals.emitter.sourceDx, 1e-6f);
+            Assert.AreEqual(-124f, coals.emitter.sourceDx, 1e-6f);
         }
 
         [Test]
@@ -100,14 +100,14 @@ namespace PrincesPalace.Domain.Tests
             // censer_hanging.png: the lantern body centres at (0.498, 0.72 of the height from
             // the top), the chain top is the pivot (0.5, 1). Turned -35 degrees about it, the
             // lantern centre lands at (-0.413, -0.090) box sizes from the box centre; at the
-            // 270 box that is (-111.5, -24.3), the burst's source offset.
+            // 300 box that is (-123.9, -27.0), the burst's source offset.
             var r = Censer().layers.Single(l => l.id == "censer").rotate;
             double rad = r.AngleAt(1.0f) * System.Math.PI / 180.0;
             double vx = 0.498 - r.pivotX, vy = 0.28 - r.pivotY;
             double x = (r.pivotX - 0.5) + System.Math.Cos(rad) * vx - System.Math.Sin(rad) * vy;
             double y = (r.pivotY - 0.5) + System.Math.Sin(rad) * vx + System.Math.Cos(rad) * vy;
-            Assert.AreEqual(-111.5, x * 270, 1.0);
-            Assert.AreEqual(-24.3, y * 270, 1.0);
+            Assert.AreEqual(-123.9, x * 300, 1.0);
+            Assert.AreEqual(-27.0, y * 300, 1.0);
         }
 
         [Test]
@@ -137,7 +137,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Spells/censer_flame_loop", fire.path);
             Assert.AreEqual("loop", fire.until, "four painted frames, the fourth leading back to the first");
             Assert.AreEqual(8f, fire.fps, 1e-6f);
-            Assert.AreEqual(0.08f, fire.fadeIn, 1e-6f);
+            Assert.AreEqual(0.45f, fire.offset, 1e-6f, "it catches as the embers land, not on the cue");
+            Assert.AreEqual(0.25f, fire.fadeIn, 1e-6f);
             Assert.AreEqual(0.5f, fire.seconds, 1e-6f);
             Assert.AreEqual(0.5f, fire.fade, 1e-6f);
             Assert.AreEqual(0.125f, fire.impactY, 1e-6f, "the coal line, row 390 of 444");
@@ -146,7 +147,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(4f, fire.breathe.rate, 1e-6f);
 
             var rise = vfx.layers.Single(l => l.id == "rise");
-            Assert.AreEqual(0.05f, rise.offset, 1e-6f);
+            Assert.AreEqual(0.45f, rise.offset, 1e-6f);
             Assert.AreEqual(140f, rise.emitter.gravity, 1e-6f, "positive: they float up");
             Assert.AreEqual(0.06f, rise.emitter.sizeMin, 1e-6f, "the last thing on screen is small");
             Assert.AreEqual(0.9f, rise.emitter.lifeMax, 1e-6f);

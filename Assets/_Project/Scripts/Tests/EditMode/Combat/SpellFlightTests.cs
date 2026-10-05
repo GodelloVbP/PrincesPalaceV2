@@ -116,22 +116,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(240f, SpellFlight.AbovePoint(treant, 1f).Y, Tolerance);
         }
 
-        // A HANGING layer (non-travelling above) keeps its box top at the stage top:
-        // for a 230 box (half 115) the anchor is held at 540 - 115 = 425, not at the
+        // A HANGING layer (non-travelling above) shows whole on the visible stage
+        // (top edge 300): only the top 0.28 of its box, the chain, may rise above it,
+        // so for a 300 box the centre is held at 300 - 0.22 * 300 = 234, not at the
         // sky ceiling 240. A big height number reaches it on the treant (11.44742 +
         // 3 * 456.82308 = 1381.9) and on the rat (-121.556 + 3 * 192.888 = 457.1);
         // a short one stays body-relative (rat 1.6 up: 187.0648).
         [Test]
-        public void AHangingAbovePointKeepsItsBoxTopAtTheStageTopWhereAFallingOneStopsAtTheCeiling()
+        public void AHangingAbovePointShowsWholeOnTheStageWhereAFallingOneStopsAtTheCeiling()
         {
             var treant = new StageBody(58.64f, 419.1262f, -216.96412f, 239.85896f);
 
-            Assert.AreEqual(425f, SpellFlight.AbovePoint(treant, 3f, 115f).Y, Tolerance);
-            Assert.AreEqual(425f, SpellFlight.AbovePoint(Rat, 3f, 115f).Y, Tolerance);
+            Assert.AreEqual(234f, SpellFlight.AbovePoint(treant, 3f, 300f).Y, Tolerance);
+            Assert.AreEqual(234f, SpellFlight.AbovePoint(Rat, 3f, 300f).Y, Tolerance);
+            Assert.AreEqual(168f, SpellFlight.AbovePoint(Rat, 3f, 600f).Y, Tolerance, "a box twice the size hangs lower: 300 - 0.22 * 600");
             Assert.AreEqual(240f, SpellFlight.AbovePoint(treant, 3f).Y, Tolerance);
-            Assert.AreEqual(187.0648f, SpellFlight.AbovePoint(Rat, 1.6f, 115f).Y, Tolerance);
+            Assert.AreEqual(187.0648f, SpellFlight.AbovePoint(Rat, 1.6f, 300f).Y, Tolerance);
             Assert.AreEqual(187.0648f, SpellFlight.AbovePoint(Rat, 1.6f).Y, Tolerance);
-            Assert.AreEqual(540f, SpellFlight.StageTop, 0f);
+            Assert.AreEqual(300f, SpellFlight.StageTop, 0f);
+            Assert.AreEqual(0.28f, SpellFlight.HangOverhang, 0f);
         }
 
         // A body whose middle is already over the ceiling is dropped on from
