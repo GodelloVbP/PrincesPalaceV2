@@ -4,9 +4,10 @@ using PrincesPalace.Domain.Ambience;
 
 namespace PrincesPalace
 {
-    // The coal glow on a body that is burning: its own silhouette, redrawn in
-    // ember orange over the figure, breathing on FlickerCurve.Ember, for as long
-    // as the status lasts.
+    // The coal glow on a body that is burning: ember light gathered on the figure's
+    // own outline and at its feet, a faint tint over the rest, breathing on
+    // FlickerCurve.Ember, for as long as the status lasts. The creature keeps its
+    // own colours; where the light sits is BodyLight.BurnWeight, in UIBurnGlow.
     //
     // A STATUS VISUAL, NOT A SPELL LAYER. FightController paints it from the
     // same per-beat snapshot as the badge row (PaintBodyGlow), so it comes on
@@ -23,9 +24,10 @@ namespace PrincesPalace
     // that waited for a repaint would lag a stance behind every beat.
     public class StageBurnGlow : MonoBehaviour
     {
-        // Low on purpose: it has to read as heat on the body without hiding the
-        // art underneath, the damage numbers or the badges.
-        public const float PeakAlpha = 0.6f;
+        // The strength of the rim at the feet; the shader scales it down to the
+        // interior's faint share (BodyLight.BurnInteriorShare) and the crown's
+        // half, so the body itself is never washed over.
+        public const float PeakAlpha = 0.85f;
 
         // The valley of the breath as a share of the peak, so it never goes
         // out while Burn lasts.

@@ -723,6 +723,12 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public bool HasSpellAnimation => Vfx != null && Vfx.HasAnimation;
 
+        // WHETHER THE STRUCK BODY FLASHES AS A RIM rather than a whole silhouette:
+        // a spell that draws something, cast from where the caster stands, and any
+        // status tick (BodyLight.FlashesAsRim).
+        public bool FlashesAsRim =>
+            Presentation.BodyLight.FlashesAsRim(Cause, Vfx != null && Vfx.HasArt, ActorHoldsPosition);
+
         // THE POOL TIER THIS CAST FIRED, if any -- 0 for every beat that is
         // not a poolTiers skill's cast, which is nearly all of them (multiplier
         // is validated >= 1 by SkillEntryResolver, so 0 cannot be a real fired

@@ -1636,7 +1636,8 @@ namespace PrincesPalace
             {
                 // A multi-packet cast flashes each element in turn.
                 var packets = beat.StaggeredPacketsFor(target);
-                if (packets != null) flash.FlashPackets(packets);
+                if (packets != null) flash.FlashPackets(packets, beat.FlashesAsRim);
+                else if (beat.FlashesAsRim) flash.FlashRim(beat.DamageType);
                 else flash.Flash(beat.DamageType);
             }
         }

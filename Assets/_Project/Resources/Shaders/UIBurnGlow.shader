@@ -1,14 +1,15 @@
-// A figure's silhouette lit from below like a bed of coals, for the burning
-// body's glow (StageBurnGlow).
+// A burning figure's silhouette smouldering like a bed of coals (StageBurnGlow).
 //
-// UIHitFlash's silhouette (the sprite's alpha, the vertex colour's RGB), with
-// two differences. It blends ADDITIVELY, because a flat orange laid over a
-// brown treant at any alpha it can afford simply vanishes, while added light
-// brightens the body and still reads on a dark one. And its strength follows
-// the texture's own height: full at the feet, a fraction at the crown, so the
-// heat rises off the ground instead of washing the whole figure the same.
-// Actor textures are one canvas per actor with the ground at the bottom, so
-// texcoord.y is "how high on the body" for every figure.
+// UIHitFlash's silhouette (the sprite's alpha, the vertex colour's RGB) drawn
+// ADDITIVELY, but not flat: the light gathers on the silhouette's EDGE and at the
+// FEET, with only a faint tint over the interior, so the creature keeps its own
+// colours and the heat reads as coming off the outline and up from the ground.
+// A slow shimmer runs along the edge so it is never a steady line.
+//
+// The per-pixel arithmetic is BodyLight.BurnWeight (pinned by BodyLightTests,
+// which also reads the property defaults below). Actor textures are one canvas
+// per actor with the ground at the bottom, so texcoord.y is "how high on the
+// body" for every figure.
 //
 // Under Resources for the same reason as UIHitFlash: no Shader.Find.
 Shader "PrincesPalace/UIBurnGlow"
@@ -17,6 +18,9 @@ Shader "PrincesPalace/UIBurnGlow"
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
+        _Interior ("Interior share", Range(0,1)) = 0.16
+        _RimWidth ("Rim width (fraction of canvas height)", Range(0,0.1)) = 0.02
+        _FeetReach ("Feet reach (texcoord y)", Range(0.05,1)) = 0.4
     }
 
     SubShader
@@ -62,6 +66,10 @@ Shader "PrincesPalace/UIBurnGlow"
             sampler2D _MainTex;
             float4 _MainTex_ST;
             fixed4 _Color;
+            float4 _MainTex_TexelSize;
+            float _Interior;
+            float _RimWidth;
+            float _FeetReach;
 
             v2f vert(appdata_t v)
             {
@@ -74,12 +82,33 @@ Shader "PrincesPalace/UIBurnGlow"
                 return o;
             }
 
+            // Mean alpha of two rings of eight neighbours, at _RimWidth and twice it.
+            float NeighbourAlpha(float2 uv)
+            {
+                float2 step = float2(_RimWidth * _MainTex_TexelSize.w * _MainTex_TexelSize.x, _RimWidth);
+                float sum = 0.0;
+                for (int ring = 1; ring <= 2; ring++)
+                {
+                    for (int k = 0; k < 8; k++)
+                    {
+                        float a = k * 0.785398;
+                        float2 d = float2(cos(a), sin(a)) * step * ring;
+                        sum += tex2D(_MainTex, uv + d).a;
+                    }
+                }
+                return sum / 16.0;
+            }
+
             fixed4 frag(v2f i) : SV_Target
             {
-                // The shape is the character; the heat is strongest at the
-                // feet and falls to a quarter at the top of the canvas.
-                float heat = lerp(1.0, 0.25, saturate(i.texcoord.y));
-                fixed alpha = tex2D(_MainTex, i.texcoord).a * i.color.a * heat;
+                float opaque = tex2D(_MainTex, i.texcoord).a;
+                float edge = saturate((1.0 - NeighbourAlpha(i.texcoord)) * 2.0);
+                float feet = 1.0 - smoothstep(0.0, _FeetReach, i.texcoord.y);
+                // Embers wandering along the outline.
+                float shimmer = 0.8 + 0.2 * sin(_Time.y * 5.0 + i.texcoord.x * 31.0 + i.texcoord.y * 17.0);
+                float interior = _Interior * (0.35 + 0.65 * feet);
+                float rim = edge * (0.5 + 0.5 * feet) * shimmer;
+                fixed alpha = opaque * saturate(interior + rim) * i.color.a;
                 return fixed4(i.color.rgb, alpha);
             }
             ENDCG

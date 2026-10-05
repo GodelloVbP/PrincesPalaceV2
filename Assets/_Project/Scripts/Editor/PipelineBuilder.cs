@@ -231,8 +231,13 @@ public static class PipelineBuilder
     // bottom-weighted shader (StageBurnGlow).
     public const string BurnGlowMaterialPath = "Assets/_Project/Resources/Materials/UIBurnGlow.mat";
 
+    // The outline-lit flash of a spell or status hit (StageHitFlash rim pulses),
+    // loaded at runtime by Resources path, not wired into the scenes.
+    public const string RimFlashMaterialPath = "Assets/_Project/Resources/Materials/UIRimFlash.mat";
+
     private static void BuildSilhouetteMaterials()
     {
+        BuildSilhouetteMaterial("rim flash", "Assets/_Project/Resources/Shaders/UIRimFlash.shader", RimFlashMaterialPath);
         BuildSilhouetteMaterial("hit flash", "Assets/_Project/Resources/Shaders/UIHitFlash.shader", HitFlashMaterialPath);
         BuildSilhouetteMaterial("burn glow", "Assets/_Project/Resources/Shaders/UIBurnGlow.shader", BurnGlowMaterialPath);
     }

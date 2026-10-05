@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
@@ -84,6 +85,13 @@ namespace PrincesPalace
             image = target;
         }
 
+        // The rim material is loaded, not serialised, so the scenes need no
+        // rebuild for it; null (a headless fixture) draws a rim pulse as the
+        // whole-body flash.
+        private const string RimMaterialPath = "Materials/UIRimFlash";
+        private static Material _rimMaterial;
+        private Material _bodyMaterial;
+
         private Coroutine _running;
 
         // What the flash is currently shaped like. Exposed so a test can assert
@@ -121,12 +129,17 @@ namespace PrincesPalace
             public readonly float Fade;
             public readonly float Peak;
 
-            public Pulse(Color tint, float hold, float fade, float peak)
+            // True for a pulse lit along the outline (UIRimFlash) instead of
+            // over the whole silhouette.
+            public readonly bool Rim;
+
+            public Pulse(Color tint, float hold, float fade, float peak, bool rim = false)
             {
                 Tint = tint;
                 Hold = hold;
                 Fade = fade;
                 Peak = peak;
+                Rim = rim;
             }
         }
 
@@ -153,23 +166,32 @@ namespace PrincesPalace
         // light, the earlier ones cut off after StaggerFrames so the next
         // packet's colour arrives exactly when its number does
         // (FightBeatPlayer.PopPackets). The last pulse is the ordinary hit.
-        public void FlashPackets(BeatPacket[] packets) => Flash(PacketPulses(packets));
+        public void FlashPackets(BeatPacket[] packets, bool rim = false) => Flash(PacketPulses(packets, rim));
 
         public const int StaggerFrames = 3;
         public const float StaggerSeconds = StaggerFrames * FrameSeconds;
 
-        public static Pulse[] PacketPulses(BeatPacket[] packets)
+        public static Pulse[] PacketPulses(BeatPacket[] packets, bool rim = false)
         {
             var pulses = new Pulse[packets.Length];
             for (int i = 0; i < packets.Length; i++)
             {
                 bool last = i == packets.Length - 1;
                 pulses[i] = new Pulse(TintFor(packets[i].Type), last ? HitHoldSeconds : StaggerSeconds,
-                    last ? HitFadeSeconds : 0f, HitPeakAlpha);
+                    last ? (rim ? BodyLight.FlashFadeSeconds : HitFadeSeconds) : 0f, HitPeakAlpha, rim);
             }
 
             return pulses;
         }
+
+        // A SPELL HIT OR A STATUS TICK: the element's light on the outline and a
+        // faint tint inside (BodyLight), short. The whole-body silhouette stays for
+        // the melee blow and the enemy's own attack.
+        public void FlashRim(DamageType type) => Flash(RimPulsesFor(type));
+
+        public static Pulse[] RimPulsesFor(DamageType type) =>
+            new[] { new Pulse(TintFor(type), BodyLight.FlashHoldFrames * FrameSeconds, BodyLight.FlashFadeSeconds,
+                HitPeakAlpha, rim: true) };
 
         public void FlashHeal() => Flash(HealOnly);
 
@@ -272,9 +294,12 @@ namespace PrincesPalace
         private IEnumerator Run(Pulse[] pulses)
         {
             image.enabled = true;
+            if (_bodyMaterial == null) _bodyMaterial = image.material;
+            if (_rimMaterial == null) _rimMaterial = Resources.Load<Material>(RimMaterialPath);
 
             foreach (var pulse in pulses)
             {
+                image.material = pulse.Rim && _rimMaterial != null ? _rimMaterial : _bodyMaterial;
                 image.color = new Color(pulse.Tint.r, pulse.Tint.g, pulse.Tint.b, pulse.Peak);
 
                 yield return new WaitForSeconds(FightBeatPlayer.Scaled(pulse.Hold));
