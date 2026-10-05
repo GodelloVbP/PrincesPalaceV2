@@ -394,6 +394,8 @@ one sequence never changes box size frame to frame.
 
 **A painted still on #00FF00 is a recipe with `keyed`, not a new kit.** `"keyed": "green"` keys on hue and then pulls every pixel's green down to min(red, blue), right for violet and grey art (the Blackglass rift, the Court's courtier). `"keyed": "green-soft"` keeps only the keyer's own spill suppression, for a subject with green or gold in it: the Gale Scythe's sea-green blade and its gold flecks went lilac and red under the clamp. The recipe usually also states `rects` for the whole image, `content_crop`, and one `sequence` step; see `court_of_whispers_courtier.json`.
 
+**A subject that contains green or teal is generated on solid #FF00FF and keyed `"magenta"`.** Same keyer as green with the backdrop swapped: alpha from magenta dominance (min(red, blue) over green), spill pulled toward neutral by lowering red and blue together, greens never touched. There is no clamp variant, because the clamp exists to remove backdrop colour from the subject and a green subject has none of the backdrop's. Use it for venom and anything teal; use green or green-soft otherwise. Pinned by `tools/key_green_screen_test.py`; prompt wording in `docs/prompts/TEMPLATE_spell_art.md`.
+
 **A sprite layer authored `at: hit` is a tail**: the renderer shrinks it to a fraction of the struck body (`TargetBody.TailScale`), whatever its `size`. Art that must be full size on the cue (Thorn Tithe's closed cage) is a frame of a `release` layer on its own clock, not a second layer opening at the hit.
 
 > **The recipe describes how frames are PRODUCED. The skill's `vfx` block

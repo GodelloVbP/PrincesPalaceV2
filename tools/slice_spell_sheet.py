@@ -78,7 +78,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
-from key_green_screen import key_out_green
+from key_green_screen import key_out
 
 try:
     from PIL import Image
@@ -299,7 +299,7 @@ def erase_frame_borders(frame):
 def despill_to_min(image):
     """Clamp green to min(red, blue) on every pixel.
 
-    key_out_green stops at g = max(r, b), which on a violet glow leaves g = b:
+    key_out stops at g = max(r, b), which on a violet glow leaves g = b:
     a teal fringe along the soft outer edge. Violet has g below both, so the
     clamp only touches backdrop spill and leaves grey and white (g ~ r ~ b) alone.
     """
@@ -687,12 +687,16 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
     True  - RGB on black, alpha synthesised from luminance. Every sheet
             delivered before mud_blast came this way.
     "green" - RGB on flat #00FF00; alpha from hue dominance
-            (`key_green_screen.key_out_green`), so dark art stays opaque.
+            (`key_green_screen.key_out`), so dark art stays opaque.
     "green-soft" - as "green" without the extra clamp. "green" pulls every
             pixel's green down to min(r, b), right for violet and grey art
             and wrong for a subject with green or gold in it (a sea-green
             wind goes lilac, gold flecks go red); the keyer's own spill
             suppression still runs.
+    "magenta" - RGB on flat #FF00FF, the same keyer with magenta as the
+            backdrop, for a subject that contains green or teal (venom). Spill
+            is pulled toward neutral; greens are never touched, so there is
+            no clamp variant.
     False - the sheet already carries the alpha the artist intended. Cut the
             grid and change nothing else.
 
@@ -735,15 +739,15 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
               f"cells will be truncated by up to a pixel. State `rects` instead if the "
               f"edge pixels matter.")
 
-    if keyed in ("green", "green-soft"):
+    if keyed in ("green", "green-soft", "magenta"):
         # Hue-dominance key for a painted frame on #00FF00 whose dark interior
         # has to stay opaque; luminance keying would punch the void out.
         # Neither line pass runs: they read luminance, and the green field has
         # none to confuse them.
-        cut = key_out_green(source.convert("RGB"))
+        cut = key_out(source.convert("RGB"), "magenta" if keyed == "magenta" else "green")
         if keyed == "green":
             cut = despill_to_min(cut)
-        print("green screen: keyed on hue dominance, spill suppressed")
+        print("%s screen: keyed on hue dominance, spill suppressed" % ("magenta" if keyed == "magenta" else "green"))
     elif keyed:
         sheet = source.convert("RGB")
 

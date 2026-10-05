@@ -22,7 +22,10 @@ micro-texture. The game adds glow, flicker and darkness at runtime, so the art
 stays flat.
 
 Solid #00FF00 background, no gradient, vignette, floor or shadow plate. No green
-or yellow-green anywhere in the subject (the keyer removes by hue). No text,
+or yellow-green anywhere in the subject (the keyer removes by hue). **If the
+subject contains green or teal (venom), swap the backdrop to solid #FF00FF, drop
+the "no green" line, say "no pink or magenta in the subject" instead, and key
+the recipe `"keyed": "magenta"`.** No text,
 numerals, frame, border, UI or watermark.
 
 **Sheets:** a grid of equal cells. Every cell has the **same pivot at the same

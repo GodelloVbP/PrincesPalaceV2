@@ -214,8 +214,31 @@ def greenness(r, g, b):
     return g - np.maximum(r, b)
 
 
+def magentaness(r, g, b):
+    return np.minimum(r, b) - g
+
+
+# Backdrop colours the keyer knows. Each is a dominance measure (how far the
+# backdrop's channels sit above the rest) and the channels spill suppression
+# lowers. One model, two backdrops: magenta exists for subjects that are green.
+KEY_COLOURS = {
+    "green": (greenness, (1,)),
+    "magenta": (magentaness, (0, 2)),
+}
+
+
 def key_out_green(image):
-    """RGB on flat green -> RGBA, with a soft edge and the spill suppressed.
+    """RGB on flat green -> RGBA; see `key_out`."""
+    return key_out(image, "green")
+
+
+def key_out(image, key="green"):
+    """RGB on a flat backdrop (`key`: "green" or "magenta") -> RGBA, with a soft
+    edge and the spill suppressed.
+
+    Magenta spill is pulled toward neutral by lowering both red and blue by the
+    dominance, which leaves the red/blue balance of the pixel alone; a green
+    pixel has negative magenta dominance and is never touched.
 
     Output alpha is min(input alpha, computed key alpha). A source delivered
     on flat green with no real alpha channel comes in fully opaque (255)
@@ -248,7 +271,8 @@ def key_out_green(image):
     r, g, b, input_alpha = arr[..., 0], arr[..., 1], arr[..., 2], arr[..., 3]
 
     span = FULLY_TRANSPARENT_ABOVE - FULLY_OPAQUE_BELOW
-    dominance = greenness(r, g, b)
+    measure, spill_channels = KEY_COLOURS[key]
+    dominance = measure(r, g, b)
 
     # Linear ramp across the band, so antialiased edges keep a soft falloff
     # instead of turning into a hard jagged cut. Computed for every pixel
@@ -263,12 +287,17 @@ def key_out_green(image):
     # backdrop bounced onto the subject's edge -- pulling it down to its own
     # red/blue removes the lime fringe that would otherwise glow against a
     # near-black nebula.
-    suppressed_g = np.where(dominance > 0, np.maximum(r, b), g)
+    # Subtracting the dominance from the backdrop's channels lands them on the
+    # strongest of the other channels (green: g -> max(r, b)).
+    lowered = np.where(dominance > 0, dominance, 0)
+    channels = [r, g, b]
+    for c in spill_channels:
+        channels[c] = channels[c] - lowered
 
     transparent = dominance >= FULLY_TRANSPARENT_ABOVE
-    out_r = np.where(transparent, 0, r)
-    out_g = np.where(transparent, 0, suppressed_g)
-    out_b = np.where(transparent, 0, b)
+    out_r = np.where(transparent, 0, channels[0])
+    out_g = np.where(transparent, 0, channels[1])
+    out_b = np.where(transparent, 0, channels[2])
     out_a = np.where(transparent, 0, alpha)
 
     out = np.stack([out_r, out_g, out_b, out_a], axis=-1).astype(np.uint8)
