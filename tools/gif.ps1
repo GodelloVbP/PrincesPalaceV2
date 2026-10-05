@@ -19,6 +19,7 @@ param(
     [int]$Prune = -1,
     [switch]$TrimFrames,
     [switch]$KeepFrames,
+    [switch]$NoPreview,
     [switch]$Stop,
     [switch]$Determinism,
     [switch]$SkipSync,
@@ -118,7 +119,7 @@ if ($Prune -ge 0) {
 }
 if (-not $Manifest -and (-not $Kind -or -not $Id)) {
     Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
-    Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism] [-KeepFrames]"
+    Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism] [-KeepFrames] [-NoPreview]"
     Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]"
     Write-Host "                     [-Party shawn,odette,bjorn] [-Target <ally|enemy slot>]"
     Write-Host "       tools/gif.ps1 -Manifest <name>   |   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]   |   tools/gif.ps1 -Prune <days>   |   tools/gif.ps1 -TrimFrames"
@@ -369,6 +370,7 @@ function Invoke-CaptureRun {
 
     $finishArgs = @("finish", $runDir)
     if ($KeepFrames) { $finishArgs += "--keep-frames" }
+    if ($NoPreview) { $finishArgs += "--no-preview" }
     $code = Invoke-Gif -GifArgs $finishArgs
     $timing.totalSeconds = [math]::Round($swAll.Elapsed.TotalSeconds, 1)
     Write-Host ("TIMING " + (($timing.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " "))

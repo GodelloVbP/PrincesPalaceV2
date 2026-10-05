@@ -75,6 +75,11 @@ ASPECT_HEIGHT = 1080  # -Aspect keeps the reference height and sets the width
 GIF_WIDTH = 960
 GIF_STEP = 2          # 60 fps captured, 30 fps shown
 GIF_HOLD_MS = 500
+# anim_preview.gif: for a phone. Narrow, fewer frames, a small palette; a
+# capture that is still over the byte limit steps down the ladder below.
+PREVIEW_WIDTH = 480
+PREVIEW_MAX_BYTES = 5 * 1000 * 1000
+PREVIEW_LADDER = ((2, 64), (2, 32), (3, 32), (4, 16), (6, 16))  # (frame step, palette colours)
 CAPTURE_FPS = 60
 
 # A pixel differs when any channel differs at all; the gate is on how many do.
@@ -780,8 +785,26 @@ def motion_bbox(paths):
     return (x0 + int(xs.min()), y0 + int(ys.min()), x0 + int(xs.max()) + 1, y0 + int(ys.max()) + 1)
 
 
-def encode(scenario_dir, scenario, timing):
-    """anim.gif and strip.png from frames/. Returns encode seconds."""
+def write_preview(shown, interval_ms, out_path, max_bytes=PREVIEW_MAX_BYTES, width=PREVIEW_WIDTH, hold_last_ms=0, drop_frames=True):
+    """The phone copy of a capture: at most `width` px wide, under `max_bytes`.
+    Drops frames (unless `drop_frames` is off: stance poses must all show) and
+    palette colours until it fits; timing stays true because write_gif
+    accumulates the longer interval. Returns the bytes written."""
+    import capture_strip
+
+    width = min(width, shown[0].size[0])
+    size = 0
+    for step, colors in PREVIEW_LADDER:
+        capture_strip.write_gif(shown, {"captureIntervalMs": interval_ms}, out_path, width=width, colors=colors,
+                                hold_last_ms=hold_last_ms, step=step if drop_frames else 1, disposal=0)
+        size = os.path.getsize(out_path)
+        if size < max_bytes:
+            break
+    return size
+
+
+def encode(scenario_dir, scenario, timing, preview=True):
+    """anim.gif, anim_preview.gif and strip.png from frames/. Returns encode seconds."""
     from PIL import Image
     import capture_strip
 
@@ -800,6 +823,8 @@ def encode(scenario_dir, scenario, timing):
     interval = 1000.0 / CAPTURE_FPS * GIF_STEP
     capture_strip.write_gif(shown, {"captureIntervalMs": interval}, os.path.join(scenario_dir, "anim.gif"),
                             width=GIF_WIDTH, colors=None, hold_last_ms=GIF_HOLD_MS, step=1, disposal=0)
+    if preview:
+        write_preview(shown, interval, os.path.join(scenario_dir, "anim_preview.gif"), hold_last_ms=GIF_HOLD_MS)
 
     hit = timing.get("hitFrame", -1)
     strip_timing = {"captureIntervalMs": interval, "impactFrame": hit // GIF_STEP if hit >= 0 else -1}
@@ -851,7 +876,7 @@ def padded(box, size, pad):
     return (max(0, box[0] - pad), max(0, box[1] - pad), min(size[0], box[2] + pad), min(size[1], box[3] + pad))
 
 
-def write_series(scenario_dir, shown, interval_ms, title):
+def write_series(scenario_dir, shown, interval_ms, title, preview=True):
     """frames/, anim.gif and strip.png for a list of RGB images: the one writer
     the stance and sheet kinds share with the Unity kinds' encoder."""
     import capture_strip
@@ -863,6 +888,8 @@ def write_series(scenario_dir, shown, interval_ms, title):
     width = min(GIF_WIDTH, shown[0].size[0])
     capture_strip.write_gif(shown, {"captureIntervalMs": interval_ms}, os.path.join(scenario_dir, "anim.gif"),
                             width=width, colors=None, hold_last_ms=0, step=1, disposal=0)
+    if preview:
+        write_preview(shown, interval_ms, os.path.join(scenario_dir, "anim_preview.gif"), drop_frames=False)
     capture_strip.build_strip(shown, {"captureIntervalMs": interval_ms, "impactFrame": -1}, title).save(
         os.path.join(scenario_dir, "strip.png"))
 
@@ -1148,7 +1175,7 @@ def cmd_finish(args):
         record = {"scenario": s, "identity": ident, "requestId": request["requestId"], "result": result, "timing": timing}
         if ok:
             if s["kind"] in UNITY_KINDS:
-                encode_seconds[s["key"]] = round(encode(sdir, s, timing), 3)
+                encode_seconds[s["key"]] = round(encode(sdir, s, timing, preview=not args.no_preview), 3)
                 record["encodeSeconds"] = encode_seconds[s["key"]]
             latest[s["key"]] = run_dir
         else:
@@ -1296,6 +1323,7 @@ def main(argv=None):
     p = sub.add_parser("finish")
     p.add_argument("run_dir")
     p.add_argument("--keep-frames", action="store_true")
+    p.add_argument("--no-preview", action="store_true", help="skip anim_preview.gif")
     p.set_defaults(fn=cmd_finish)
 
     p = sub.add_parser("trim")

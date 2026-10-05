@@ -415,6 +415,53 @@ def gif_durations(path):
         return [frame.info.get("duration") for frame in ImageSequence.Iterator(image)]
 
 
+class PreviewTests(unittest.TestCase):
+    def noisy_frames(self, count, size=(960, 540)):
+        import random
+        from PIL import Image
+        rng = random.Random(7)
+        frames = []
+        for i in range(count):
+            image = Image.new("RGB", size, (20, 20, 30))
+            for _ in range(400):
+                x, y = rng.randrange(size[0] - 40), rng.randrange(size[1] - 40)
+                image.paste((rng.randrange(256), rng.randrange(256), rng.randrange(256)), (x, y, x + 40, y + 40))
+            frames.append(image)
+        return frames
+
+    def test_the_preview_is_at_most_480_wide_under_the_byte_limit_and_keeps_the_runtime(self):
+        from PIL import Image
+        frames = self.noisy_frames(30)
+        with tempfile.TemporaryDirectory() as root:
+            out = os.path.join(root, "anim_preview.gif")
+            size = gif.write_preview(frames, 1000.0 / 30.0, out, max_bytes=gif.PREVIEW_MAX_BYTES)
+            self.assertTrue(os.path.isfile(out))
+            self.assertEqual(size, os.path.getsize(out))
+            self.assertLess(size, gif.PREVIEW_MAX_BYTES)
+            with Image.open(out) as image:
+                self.assertLessEqual(image.size[0], 480)
+            self.assertAlmostEqual(sum(gif_durations(out)), 1000.0, delta=60)
+
+    def test_a_tight_limit_steps_down_the_ladder_to_a_smaller_file(self):
+        frames = self.noisy_frames(30)
+        with tempfile.TemporaryDirectory() as root:
+            first = gif.write_preview(frames, 33.3, os.path.join(root, "a.gif"), max_bytes=10 ** 9)
+            tight = gif.write_preview(frames, 33.3, os.path.join(root, "b.gif"), max_bytes=1)
+            self.assertLess(tight, first)
+
+    def test_stance_and_sheet_series_write_a_preview_with_every_frame(self):
+        with tempfile.TemporaryDirectory() as root:
+            shown = [image.copy() for image in self.noisy_frames(4, (640, 360))]
+            gif.write_series(root, shown, 400, "t")
+            self.assertEqual(len(gif_durations(os.path.join(root, "anim_preview.gif"))), 4)
+
+    def test_preview_can_be_skipped(self):
+        with tempfile.TemporaryDirectory() as root:
+            shown = [image.copy() for image in self.noisy_frames(2, (640, 360))]
+            gif.write_series(root, shown, 400, "t", preview=False)
+            self.assertFalse(os.path.exists(os.path.join(root, "anim_preview.gif")))
+
+
 class StanceTests(unittest.TestCase):
     def test_order_is_the_fight_order_then_the_rest_by_name(self):
         self.assertEqual(gif.stance_order(["victory", "zeta", "attack", "idle", "hurt", "alpha"]),
