@@ -1,0 +1,23 @@
+{
+  "_notes": [
+    "Censer of Embers: the living fire at the feet. One painted 1774x887 sheet, a 2x2 grid read left to right, top to bottom (cell 4 loops back to cell 1), two flame clumps on a bed of coals, the coal line on the same row ~85% down each cell, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\". No crop and no per-frame centring: every frame keeps its cell's canvas so the base does not jump between frames. Rows are 443 and 444 px; the 443 row is padded by one transparent row at the bottom onto the shared 887x444 canvas."
+  ],
+  "sheet": "Spells/Censer of Embers/censer_flame_loop.png",
+  "rects": [
+    [0, 0, 887, 443],
+    [887, 0, 887, 443],
+    [0, 443, 887, 444],
+    [887, 443, 887, 444]
+  ],
+  "names": ["f0", "f1", "f2", "f3"],
+  "keyed": "green-soft",
+  "canvas": [887, 444],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    { "from": "f0" },
+    { "from": "f1" },
+    { "from": "f2" },
+    { "from": "f3" }
+  ]
+}

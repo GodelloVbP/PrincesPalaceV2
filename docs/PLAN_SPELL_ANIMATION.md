@@ -70,7 +70,8 @@ Every spell, every cast. Each contract has a check (section 4).
 9. **Principles, not a template.** Contract 1's four beats are the default;
    a buff or a point-blank spell may fold anticipation and delivery into one.
 10. **Wind-up by tier.** No spell winds up longer than Blackglass (0.7 s) unless
-   it is above Blackglass's tier.
+   it is above Blackglass's tier. Exception: Censer 1.0 s by owner's call
+   (three half-swings, then the break).
 11. **Payoff on one frame** (unchanged from `SPELL_FEEL.md`): sound, number,
    badge and accent share a frame.
 

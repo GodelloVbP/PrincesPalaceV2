@@ -1,62 +1,63 @@
-# Censer of Embers, pilot (plan `docs/PLAN_SPELL_ANIMATION.md` A1)
+# Censer of Embers, owner's fixes (plan `docs/PLAN_SPELL_ANIMATION.md` A1, second pass)
 
-Captured 2026-10-04 with `tools/gif.ps1 spell censer_of_embers -Vs treant|rat` (1x) and
-`-Vs treant -Repeat 3 -Speed 1.5`. GIFs are untracked next to this file; the treant 1x is also
-`../../showcase/censer_of_embers_pilot_treant.gif`. Every frame described below was looked at
-at 1920x1080 around the target. No verdict: the owner judges.
+Captured 2026-10-05 with `tools/gif.ps1 spell censer_of_embers -Vs treant|rat` (1x), `-Vs treant -Seconds 12`,
+`-Vs treant -Repeat 3 -Speed 1.5`, and `spell gale_scythe -Vs rat,treant,beetle` for the flash change. GIFs are
+untracked next to this file (the 12 s one is 77 MB); the treant 1x is also `../../showcase/censer_of_embers_pilot_treant.gif`.
+Frames below were looked at at 1920x1080 around the target. No verdict: the owner judges.
 
-Everything drawn is a STAND-IN until the owner's `censer_hanging.png` and `censer_flame_loop.png`
-land (`docs/prompts/2026-10-04_spell_animation.md`): the censer is the swing sheet's f0, the smoke is
-its f6, the flash is its f5, the fire is the painted crescent `censer_of_embers_catch`.
+Art is now the owner's: `censer_hanging.png` (the censer layer and its break) and `censer_flame_loop.png` (the fire),
+sliced by `Art/Sheets/recipes/censer_hanging.json` and `censer_flame_loop.json` (`green-soft` key, no crop, one canvas
+per sheet so the chain top and the coal line do not move). The smoke column and the flame-tongue emitter of the pilot are
+gone: the hanging art carries its own smoke wisps and the fire carries its own tongues. The embers and coals thrown by the
+break are still the painterly `censer_of_embers_particles` stand-ins.
 
-## Beats, authored seconds (hit cue 0.7 s)
+## Beats, authored seconds (hit cue 1.0 s)
 
 | t | Beat | Layer |
 |---|---|---|
-| 0.00-0.70 | **Wind-up.** The censer fades in over 0.2 s above the target and swings about its chain top: a pendulum, amplitude 18 deg, period 0.93 s, so left extreme 0.23, home 0.47, right extreme 0.70. | `censer` (still, `above`, `rotate`, `fadeIn`) |
-| 0.00-0.70 | Smoke column behind it, breathing (alpha 0.4, scale 0.06, rate 3), fades out over 0.3 s after the cue. | `smoke` (still, `breathe`) |
-| 0.70 | **Payoff.** Censer cuts out. A 0.1 s flash of the sheet's ember column punches in (0.35), 28 coals and tongues thrown in all directions, skill shake 0.25, impact sound, Burn badge, all on the cue frame. | `flash`, `burst` |
-| 0.70-1.60 | **Resolution.** The crescent of fire at the feet fades in over 0.08 s, breathes (alpha 0.35, scale 0.07, rate 4), holds 0.4 s, fades over 0.5 s into the Burn coal glow. Flame tongues lick up 0.4 s; coals float up from 0.75 s, life 0.5-0.9 s. | `fire`, `tongues`, `rise` |
+| 0.00-1.00 | **Wind-up.** The censer hangs from the top of the stage and swings about the top of its chain: left extreme 0.2, right 0.6, left 1.0; 35 degrees, period 0.8, `dwell` 1.5 so it hangs at each end and quickens through the middle. Stage gloom 0.25 over 0.4 s. | `censer` (still, `above`, `rotate`, `fadeIn` 0.2) |
+| 1.00 | **Break.** The censer's own still, held at the third extreme, punches +40% white-hot for 0.04 s and fades in 0.05 s. | `crack` |
+| 1.00-2.2 | **Shower.** 48 embers (coals and flecks, 0.35-0.9 of a 64 px particle) in every direction at 180-560 px/s, gravity 760, life 0.6-1.2 s; 6 big coals (1.4-2.2) tumbling at up to 540 deg/s, gravity 900. Born at the lantern's position at the third extreme. | `burst`, `coals` |
+| 1.00 | Burn badge, impact sound, skill shake 0.25, all on the cue frame. | |
+| 1.00-2.0 | **Fire.** The painted fire loops at the feet (4 frames, 8 fps), breathes, fades in 0.08 s, holds 0.5 s, dies over 0.5 s into the Burn coal glow. Coals float up from 1.05 s. | `fire`, `rise` |
 
-The cast sound is recut to 0.70 s (`tools/make_spell_cast_cues.py`, window 0.93-1.63 s of the source).
-By the 50 ms RMS envelope of the written wav it rises to its peak in the last 0.1 s: the riser peaks on the blow.
+Cast sound recut to 1.0 s (`tools/make_spell_cast_cues.py`, window 0.63-1.63 s of the source, rise -16.5 to -7.1 dB);
+loudest 50 ms of the wav ends in its last 0.15 s (`MeleeSoundOverrideTests`). Gain +5.2 dB for that clip only.
 
-## What the frames show
+## Fixes, as seen
 
-**Swing (treant).** The lantern fades in over the treant's crown, chain going up behind the HUD plate.
-It hangs left of the trunk, swings to the right across the canopy, through vertical at about 0.47 s,
-and is at its right extreme (about 18 deg) on the last frame before the burst. Smoke rises behind it,
-thin, brown-orange, drifting right; small sparks fall off the lantern. The censer covers the top of
-the canopy (not the face).
+**1. Swing.** Three half-swings read: lantern at the far left (frame ~12), through vertical, far right (~36),
+back left (~58) where it breaks. The ends hold visibly (frames 12-18 are nearly the same pose, then it sweeps). The
+lantern is 270 px wide-box, about 130 px of brass, small against the 1920 frame. The chain leaves the top of the screen.
+It passes over the enemy plate on the treant (drawn above it).
 
-**Swing (rat).** Same, but the censer hangs about a rat-height clear of the rat's head: nothing of the
-rat is covered, and the swing reads more clearly than on the treant because it has air around it.
+**2. Height.** Rule: a layer that hangs (`place: above`, not travelling) keeps its box top at the stage top
+(`SpellFlight.StageTop`), `height` is only a cap, and it is not shrunk to clear the log. Crownfall (travelling) still uses
+the 240 sky ceiling, unchanged (`SpellFlightTests`). Treant: lantern bottom at rest about 40 px over the crown, all of it on
+screen at every extreme. Rat: the same position, so the lantern hangs about 250 px above the rat's head.
 
-**Burst.** The frame after the last swing frame the lantern is gone and the sheet's ember column
-stands where it hung, 3-4 times the lantern's size, with coals at its base and sparks to either side.
-The Burn badge ("3") is on the same frame. On the treant it sits on the crown; the column is tall enough to
-run behind the HUD plate. On the rat it is a standing column above the head, base embers touching
-the ears on the first frame. The column lasts about 0.25 s, then thins to smoke and is gone by about 0.4 s.
-The 28 particles are small next to the column; I do not see a "shower", mostly a halo of sparks at the edge.
+**3. Break.** On the cue frame the lantern vanishes into its own punched, glowing still (3 frames), then a shower of
+embers and a few coals fly out from where it hung and fall. On the treant they rain over the canopy and onto the head;
+the larger coals tumble past the face. It reads "the censer breaks into embers" rather than a flame column. On the rat they
+fall 250 px and mostly die before reaching it.
 
-**Fire at the feet.** Two clumps of flame, one each side, joined by a low bed of coals, fade in
-within two frames of the cue. They hold at about the same size and brightness for roughly 0.6 s,
-the clump shapes shifting from frame to frame (the breathe), and do not dim until the last 0.3 s or so,
-by about 1.1 s after the cue only coals remain. The orange coal glow on the body sits over the same
-time and carries on after. Sparks drift up from the fire. On the rat, one small flame sits over the
-head for about 0.3 s and looks parked.
+**4. Burn coal glow** (`UIBurnGlow`, `BodyLight.BurnWeight`). An orange rim along the silhouette, strongest at the roots and
+half strength at the crown, 16% tint over the interior, with a shimmer running along the edge. The treant keeps its brown,
+green and yellow eyes. At the roots the rim is thick enough to read as an orange outline rather than embers.
+
+**5. Spell and status flash** (`UIRimFlash`, `BodyLight.FlashWeight`). A Burn tick (frames 529-534 of the 12 s run) lights the
+treant's outline pale orange with a light peach interior, 2 frames then 0.08 s. The Gale Scythe on rat, treant and beetle
+flashes a pale cyan edge with the body's own colours showing. The sheep's own staff swing (Nature) still flashes the whole
+body flat green, as before.
 
 ## What is weak
 
-- The height clamp: raising the censer from 0.9 to 1.3 body-heights moved it not at all on the treant
-  (the sky ceiling holds it at the crown), so the censer swings over the canopy and hides its top.
-- The burst is one big drawing (the sheet's f5) on a 0.1 s hold plus 0.15 s fade; it is the
-  one element of the payoff that is not made of parts, and its size dwarfs the censer it replaces.
-  Shower of embers is mostly hidden inside it.
-- Swing is a rigid lantern turning about a point, because the art is one still. The chain stays
-  straight; no chain curve, no lantern tilt of its own, no stop at the extremes.
-- The fire is two clumps and a bed at ground level: "standing in fire", not "burning". The flames
-  do not climb the body; that is left to the coal glow.
-- The smoke is faint against the dark forest and reads at the edge of notice.
-- The stray parked flame on the rat (above).
-- Not measured: `spell_feel` WARN/accent numbers were not re-run for this pass; no `-Darkness` capture.
+- The rat: the censer is far above it, the shower and its light are a long way from the target, and a short body gets
+  no hanging height of its own. A chain that ends in mid-air (the alternative) was worse, so the box top is on the stage top.
+- The lantern is small; a larger one touches the treant's crown at its resting low point.
+- The break is flat-art lantern into painterly particles. The embers and coals do not match the cel style yet.
+- The crack is 3 frames of the same drawing, brightened; there is no art of the lantern in pieces.
+- The Burn rim at the roots is heavy next to the thin rim elsewhere. The interior tint of the rim flash is visible on pale bodies.
+- The fire is about the width of the treant and a little over the rat's; on the rat it reads as embers at the feet.
+- Not measured: `spell_feel` WARN/accent numbers; no `-Darkness` capture; no pixel test of the shaders (the rule is pinned in
+  `BodyLight`, the shader files' property defaults are checked against it).

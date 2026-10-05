@@ -60,102 +60,18 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: Audio/Sfx/censer_of_embers_cast
       layers:
-      - id: smoke
-        render: still
-        place: above
-        height: 1.3
-        follow: 0
-        whenConsumed: 
-        at: release
-        offset: 0
-        path: Spells/censer_of_embers
-        seconds: 0.7
-        fps: 0
-        startFrame: 7
-        until: hold
-        fade: 0.3
-        fadeIn: 0.25
-        opacity: 0.5
-        dx: 0
-        dy: -14
-        drift:
-          fromX: 0
-          toX: 0
-          fromY: 0
-          toY: 0
-          viaX: 0
-          viaY: 0
-          viaAt: 0
-          arcY: 0
-        rotate:
-          degrees: 0
-          spin: 0
-          amplitude: 0
-          period: 0
-          damping: 0
-          swings: 0
-          pivotX: 0.5
-          pivotY: 0.5
-        breathe:
-          alpha: 0.4
-          scale: 0.06
-          rate: 3
-        scale: 1
-        size: 300
-        fit: target
-        facing: none
-        sort: effects
-        align: 
-        punch: 0
-        glow: 0
-        tint: 
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        overhang: 0
-        orient: 
-        artDegrees: 0
-        through: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          alignFlight: 0
-          lateral: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
       - id: censer
         render: still
         place: above
-        height: 1.3
+        height: 3
         follow: 0
         whenConsumed: 
         at: release
         offset: 0
-        path: Spells/censer_of_embers
-        seconds: 0.7
+        path: Spells/censer_hanging
+        seconds: 1
         fps: 0
-        startFrame: 1
+        startFrame: 0
         until: hold
         fade: 0
         fadeIn: 0.2
@@ -174,24 +90,25 @@ MonoBehaviour:
         rotate:
           degrees: 0
           spin: 0
-          amplitude: -18
-          period: 0.93
+          amplitude: -35
+          period: 0.8
           damping: 0
+          dwell: 1.5
           swings: 0
-          pivotX: 0.37
-          pivotY: 0.88
+          pivotX: 0.5
+          pivotY: 1
         breathe:
           alpha: 0
           scale: 0
           rate: 1
         scale: 1
-        size: 300
-        fit: target
+        size: 270
+        fit: 
         facing: none
         sort: effects
         align: 
         punch: 0
-        glow: 0.4
+        glow: 0.3
         tint: 
         impactX: -1
         impactY: -1
@@ -228,20 +145,20 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: flash
+      - id: crack
         render: still
         place: above
-        height: 1.3
+        height: 3
         follow: 0
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/censer_of_embers
-        seconds: 0.1
+        path: Spells/censer_hanging
+        seconds: 0.04
         fps: 0
-        startFrame: 6
+        startFrame: 0
         until: hold
-        fade: 0.15
+        fade: 0.05
         fadeIn: 0
         opacity: 1
         dx: 0
@@ -256,26 +173,27 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         rotate:
-          degrees: 0
+          degrees: -35
           spin: 0
           amplitude: 0
           period: 0
           damping: 0
+          dwell: 0
           swings: 0
           pivotX: 0.5
-          pivotY: 0.5
+          pivotY: 1
         breathe:
           alpha: 0
           scale: 0
           rate: 1
         scale: 1
-        size: 320
-        fit: target
+        size: 270
+        fit: 
         facing: none
         sort: effects
         align: 
-        punch: 0.35
-        glow: 1.4
+        punch: 0.4
+        glow: 2
         tint: 
         impactX: -1
         impactY: -1
@@ -314,8 +232,8 @@ MonoBehaviour:
           weights: []
       - id: burst
         render: emitter
-        place: above
-        height: 1.3
+        place: layer:censer
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -345,6 +263,7 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          dwell: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -354,7 +273,7 @@ MonoBehaviour:
           rate: 1
         scale: 1
         size: 0
-        fit: target
+        fit: 
         facing: 
         sort: effects
         align: 
@@ -373,33 +292,122 @@ MonoBehaviour:
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 0
-          burst: 28
+          burst: 48
           window: 0
-          sourceDx: 0
-          sourceDy: 0
+          sourceDx: -111
+          sourceDy: -24
           spreadDegrees: 360
           aimDegrees: 90
-          speedMin: 120
-          speedMax: 340
+          speedMin: 180
+          speedMax: 560
           inherit: 0
-          drag: 1.8
-          gravity: -420
-          lifeMin: 0.35
-          lifeMax: 0.7
-          sizeMin: 0.1
-          sizeMax: 0.27
-          spinMin: -180
-          spinMax: 180
+          drag: 1.1
+          gravity: -760
+          lifeMin: 0.6
+          lifeMax: 1.2
+          sizeMin: 0.35
+          sizeMax: 0.9
+          spinMin: -360
+          spinMax: 360
           alignFlight: 0
           lateral: 0
-          fadeFrom: 0.5
-          endScale: 0.7
+          fadeFrom: 0.6
+          endScale: 0.5
           seed: 1552
+          weights:
+          - 2
+          - 1
+          - 0
+          - 1
+      - id: coals
+        render: emitter
+        place: layer:censer
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          dwell: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/censer_of_embers_particles
+          rate: 0
+          burst: 6
+          window: 0
+          sourceDx: -111
+          sourceDy: -24
+          spreadDegrees: 360
+          aimDegrees: 90
+          speedMin: 90
+          speedMax: 280
+          inherit: 0
+          drag: 0.6
+          gravity: -900
+          lifeMin: 0.8
+          lifeMax: 1.3
+          sizeMin: 1.4
+          sizeMax: 2.2
+          spinMin: -540
+          spinMax: 540
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 0.7
+          endScale: 0.8
+          seed: 1556
           weights:
           - 1
           - 1
           - 0
-          - 1
+          - 0
       - id: fire
         render: still
         place: target
@@ -408,11 +416,11 @@ MonoBehaviour:
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/censer_of_embers_catch
-        seconds: 0.4
-        fps: 0
+        path: Spells/censer_flame_loop
+        seconds: 0.5
+        fps: 8
         startFrame: 0
-        until: hold
+        until: loop
         fade: 0.5
         fadeIn: 0.08
         opacity: 1
@@ -433,6 +441,7 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          dwell: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -447,10 +456,10 @@ MonoBehaviour:
         sort: effects
         align: 
         punch: 0
-        glow: 1.1
+        glow: 0.5
         tint: 
         impactX: 0.5
-        impactY: 0.1
+        impactY: 0.125
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -484,94 +493,6 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: tongues
-        render: emitter
-        place: target
-        height: 0
-        follow: 0
-        whenConsumed: 
-        at: hit
-        offset: 0
-        path: 
-        seconds: 0
-        fps: 0
-        startFrame: 0
-        until: 
-        fade: 0
-        fadeIn: 0
-        opacity: 1
-        dx: 0
-        dy: 0
-        drift:
-          fromX: 0
-          toX: 0
-          fromY: 0
-          toY: 0
-          viaX: 0
-          viaY: 0
-          viaAt: 0
-          arcY: 0
-        rotate:
-          degrees: 0
-          spin: 0
-          amplitude: 0
-          period: 0
-          damping: 0
-          swings: 0
-          pivotX: 0.5
-          pivotY: 0.5
-        breathe:
-          alpha: 0
-          scale: 0
-          rate: 1
-        scale: 1
-        size: 0
-        fit: target
-        facing: 
-        sort: effects
-        align: 
-        punch: 0
-        glow: 0
-        tint: 
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        overhang: 0
-        orient: 
-        artDegrees: 0
-        through: 0
-        emitter:
-          path: Spells/censer_of_embers_particles
-          rate: 30
-          burst: 0
-          window: 0.4
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 60
-          aimDegrees: 90
-          speedMin: 30
-          speedMax: 90
-          inherit: 0
-          drag: 1.5
-          gravity: 100
-          lifeMin: 0.25
-          lifeMax: 0.45
-          sizeMin: 0.25
-          sizeMax: 0.4
-          spinMin: -40
-          spinMax: 40
-          alignFlight: 0
-          lateral: 0
-          fadeFrom: 0.4
-          endScale: 0.6
-          seed: 1553
-          weights:
-          - 0
-          - 0
-          - 0
-          - 1
       - id: rise
         render: emitter
         place: target
@@ -605,6 +526,7 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          dwell: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -661,12 +583,12 @@ MonoBehaviour:
           - 0
           - 0
       layerFormat: 1
-      hitCueSeconds: 0.7
+      hitCueSeconds: 1
       gloom:
-        strength: 0
-        fadeIn: 0
-        until: 
-        fadeOut: 0
+        strength: 0.25
+        fadeIn: 0.4
+        until: hit
+        fadeOut: 0.3
       casterCostSeconds: 0
       secondSfxPath: 
       detonationSeconds: 0

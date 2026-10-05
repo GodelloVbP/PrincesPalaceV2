@@ -1,0 +1,17 @@
+{
+  "_notes": [
+    "Censer of Embers: the hanging censer. One painted still (censer_hanging.png, 1254x1254, flat cel), a bronze censer on its chain hanging straight down, the chain leaving the top edge at the centre (the pendulum pivot), grey smoke curling from the lid, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\" (gold and orange in the subject). NOT cropped: the whole frame is kept so the layer's rotate pivot (0.5, 1.0) stays where the chain is."
+  ],
+  "sheet": "Spells/Censer of Embers/censer_hanging.png",
+  "rects": [
+    [0, 0, 1254, 1254]
+  ],
+  "names": ["f0"],
+  "keyed": "green-soft",
+  "canvas": [1254, 1254],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    { "from": "f0" }
+  ]
+}

@@ -53,7 +53,7 @@ CUES = [
     ("vipers_bite_cast", "Acid", "acid_spell_cast_charge_splash_impact_03.wav", 0.30),
     ("spore_cloud_cast", "Acid", "acid_spell_cast_riser_liquid_impact_03.wav", 0.35),
     ("ashen_reckoning_cast", "Acid", "acid_spell_cast_charge_splash_impact_02.wav", 0.30),
-    ("censer_of_embers_cast", "Fire", "fire_spell_charge_explosion_wet_06.wav", 0.70),
+    ("censer_of_embers_cast", "Fire", "fire_spell_charge_explosion_wet_06.wav", 1.00),
     ("blackglass_spear_cast", "Dark", "dark_spell_cast_energy_riser_03.wav", 0.70),
     ("death_knell_cast", "Dark", "dark_spell_cast_energy_riser_01.wav", 0.50),
     ("court_of_whispers_cast", "Dark", "dark_spell_cast_energy_ball_01.wav", 0.30),

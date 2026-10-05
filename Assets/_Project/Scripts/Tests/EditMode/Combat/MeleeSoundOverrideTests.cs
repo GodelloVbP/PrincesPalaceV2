@@ -198,7 +198,7 @@ namespace PrincesPalace.Domain.Tests
                 ("vipers_bite", "vipers_bite_cast", 0.30f),
                 ("spore_cloud", "spore_cloud_cast", 0.35f),
                 ("ashen_reckoning", "ashen_reckoning_cast", 0.30f),
-                ("censer_of_embers", "censer_of_embers_cast", 0.70f),
+                ("censer_of_embers", "censer_of_embers_cast", 1.00f),
                 ("blackglass_spear", "blackglass_spear_cast", 0.70f),
                 ("death_knell", "death_knell_cast", 0.50f),
                 ("court_of_whispers", "court_of_whispers_cast", 0.30f),
@@ -242,6 +242,36 @@ namespace PrincesPalace.Domain.Tests
             // 44-byte header, 16-bit mono at 44.1 kHz: what the cutting tool writes.
             float seconds = (new FileInfo(path).Length - 44) / 2f / 44100f;
             Assert.AreEqual(expected, seconds, 0.002f, cue + " length");
+        }
+
+        // The censer's 1.0 s riser peaks on the blow: the loudest 50 ms window of the
+        // recut clip ends inside its last 0.15 s, and the first half is quieter than the last.
+        [Test]
+        public void TheCenserCastRiserPeaksOnTheBlow()
+        {
+            string path = Path.Combine(ResourcesRoot(), "Audio", "Sfx", "censer_of_embers_cast.wav");
+            var bytes = File.ReadAllBytes(path);
+            int count = (bytes.Length - 44) / 2;
+            var x = new double[count];
+            for (int i = 0; i < count; i++) x[i] = System.BitConverter.ToInt16(bytes, 44 + 2 * i) / 32768.0;
+
+            int win = 2205; // 50 ms
+            int best = 0;
+            double bestRms = -1;
+            for (int start = 0; start + win <= count; start += 441)
+            {
+                double sum = 0;
+                for (int i = start; i < start + win; i++) sum += x[i] * x[i];
+                double rms = System.Math.Sqrt(sum / win);
+                if (rms > bestRms) { bestRms = rms; best = start + win; }
+            }
+
+            Assert.GreaterOrEqual(best, count - (int)(0.15 * 44100), "the loudest 50 ms ends in the last 0.15 s");
+
+            double first = 0, last = 0;
+            for (int i = 0; i < count / 2; i++) first += x[i] * x[i];
+            for (int i = count / 2; i < count; i++) last += x[i] * x[i];
+            Assert.Greater(last, first * 2.0, "it builds");
         }
 
         [Test]
