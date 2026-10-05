@@ -1,228 +1,278 @@
 # Proposal: a standard workflow for making spell animations
 
-Status: draft for independent review, 2026-10-05. Nothing in it is built yet.
+Status: rev 2, 2026-10-05, for independent review. Nothing in it is built yet.
+Rev 2 answers the first review (section 11). In short:
+- art quality comes first;
+- the eye comes before the instruments;
+- tooling comes in only when a trial proves the need;
+- concurrency and closing follow the repository's own rules.
 
 ## 1. Context for a reader new to the project
 
 - **The game.** Prince's Palace is a turn-based roguelike in Unity 6 (2D, URP).
-  A fight is resolved by the simulation first. Then a presentation layer plays
-  each action back as a short animated "beat".
-- **A spell's look.** It is data, not code: a list of **layers** in
+  The simulation resolves each fight first. Then a presentation layer plays
+  every action back as a short animated "beat".
+- **A spell's look.** It is data: a list of **layers** in
   `ContentData/skills.json`. Each layer is a drawing, a frame sheet or a
-  particle emitter, with timing and motion fields. Examples: rotate around a
-  pivot, fade in, flicker, drift, glow over its life, shake the stage.
-- **The engine.** A runtime player draws those layers. A generator turns the
-  JSON into game assets.
-- **Art.** The owner makes it with an image generator (ChatGPT) from written
-  prompts: flat cel style, green screen. Tools key out the green and cut the
-  sheets into frames.
+  particle emitter, with timing and motion fields: rotate around a pivot, fade
+  in, flicker, drift, glow over its life, stage gloom, a stage kick.
+- **The engine.** A runtime player draws the layers. A generator turns the JSON
+  into game assets.
+- **Art.** The owner makes it with ChatGPT from written prompts, in the fight's
+  flat cel style (the Giant Rat enemy sheet is the reference), on a green
+  screen. Recipes key out the green and cut sheets into frames.
 - **Who works.**
-  - The owner: a solo developer, who judges every result by eye.
-  - An orchestrating AI session: writes briefs, reviews results, talks to the
-    owner.
-  - AI implementer agents: edit data and code, run tests, record GIFs.
-  - One shared working tree.
-- **Evidence.** A GIF recorder plays a scripted fight in a headless Unity
-  instance and writes a GIF plus `timing.json`. The commit gate is a Unity
-  test suite: about 6,200 EditMode and 2,000 PlayMode tests. A full run takes
-  4-6 minutes.
+  - The owner: a solo developer, the final judge of how things look and sound.
+  - An orchestrating AI session: briefs, reviews, talks to the owner.
+  - AI implementer agents: edit, test, capture.
+  - The repository allows **at most three active agents** and never two owners
+    on one file (`docs/WORKFLOW.md`).
+- **Evidence tools.** A GIF recorder plays a scripted fight headless and writes
+  a GIF plus `timing.json`. Commit gates follow `docs/TESTING.md`: the changed
+  gate, which promotes itself to a full run when the change reaches far
+  enough or the last green full run is more than 5 commits or 24 h old.
+- **The standard a spell must meet.** `docs/SPELL_FEEL.md`. Every spell has a
+  **verb** (what it does to reality), a **signature beat** (the one thing only
+  it does), and a **"must not read as"** line.
 
 ## 2. The problem, measured
 
-Nine of Shawn's ten spells still need the treatment that one spell has just
-been through.
+**First attempt, ten spells (2026-10-03/04).**
+- Agents graded their own GIFs and the orchestrator relayed the grades without
+  watching.
+- Owner: "everything is just one art sheet, or at least looks like it".
+- Six of ten were plainly off. One verb changed by accident: a *bite* became a
+  snake head thrown across the stage.
 
-**First attempt (2026-10-03/04).** All ten spells were reworked in batches.
-- Agents graded their own GIFs as passing, and the orchestrator relayed those
-  grades without watching.
-- The owner rejected the result: "everything is just one art sheet, or at
-  least looks like it".
-- On review, six of ten were plainly off. One spell's verb changed by
-  accident: a *bite* became *a snake head thrown across the stage*.
+**Pilot, Censer of Embers: 7 rounds, about 14 h wall clock** (`7d2841a7` to
+`3ae5344e`). Approved by the owner.
 
-**Second attempt (Censer of Embers, the pilot).** It took **7 rounds** over
-about 14 hours of wall time (commits `7d2841a7` to `3ae5344e`). The owner
-approved the final version. What each round fixed:
-
-| Round | Defect the owner or orchestrator caught | Root cause |
+| Round | Defect caught | Root cause |
 |---|---|---|
-| 1 | swing too fast, burst is one big drawing, fire static | first blocking |
-| 2 | censer hung off-screen | orchestrator's brief ("hang clearly above the head") |
-| 3 | swing "static, not like a real swing" | orchestrator's brief: pivot at the art's top, plus an invented "pause at the ends" |
-| 4 | twitch at the start, jump at the break | growing amplitude from near zero; a scale punch about a far pivot |
-| 5 | polish: light pool reads as a stain, afterimages murky, green specks, a jump returns | polish pass checked by the agent only |
-| 6 | afterimages still weak | — |
-| 7 | owner: remove afterimages; no full-body hit flash | owner taste |
+| 1 | swing too fast, burst is one drawing, fire static | first blocking |
+| 2 | censer hung off-screen | orchestrator's brief |
+| 3 | swing "static, not like a real swing" | orchestrator's brief: pivot at the art's top, an invented "pause at the ends" |
+| 4 | twitch at the start, jump at the break | amplitude grown from near zero; a scale punch about a far pivot |
+| 5 | light pool reads as a stain, afterimages murky, green specks, a jump returns | polish checked by the agent only |
+| 6-7 | afterimages still weak; owner wants no full-body hit flash | owner taste |
 
-Three of the seven rounds trace to the orchestrator's own briefs, not to the
-implementing agent. Defects of rounds 4 and 5 were found by ad-hoc scripts the
-orchestrator wrote on the spot: a colour-centroid position track per GIF frame,
-contact sheets. That track gave false readings on a brown enemy, whose own
-pixels matched the lantern's colour.
+Other friction:
+- GIFs of 17-26 MB failed to reach the owner's phone.
+- One owner question was asked four times.
+- The first art batch came back in a painterly style that clashed with the
+  fight's cel art. A style rule now exists, but nothing enforces it.
+- Shared-tree noise: line-ending phantom changes, stale git locks, generated
+  files left uncommitted.
 
-Other measured friction:
-- **GIF size.** GIFs are 17-26 MB, and two of the last three uploads to the
-  owner's phone failed.
-- **Shared-tree noise.**
-  - Phantom changes: about 900 tracked files show as modified with only
-    line-ending differences.
-  - Stale git locks: an empty `.git/index.lock` was left behind three times,
-    after killed processes and a power cut.
-  - Uncommitted generated files: twice, regenerated assets were left out of
-    the commit that changed their inputs.
-  - Gate drift: once, a commit was gated on a test slice after edits made
-    later than the last full run.
-- **Repeated questions.** One owner question (should melee hits use the new
-  edge flash?) was asked four times before it was answered.
-- **One file.** All 29 spell presentation blocks live in one 4,136-line
-  `skills.json`, parsed in one place. Only one agent can edit spells at a
-  time.
+**What actually cost the rounds:** briefs that specified motion wrongly; and
+reviewing frames instead of the motion, so weight and rhythm were judged
+late. Edit contention did not cost rounds: one spell was in flight at a time.
 
 ## 3. Goals and non-goals
 
 **Goals:**
-1. The owner sees nothing that the orchestrator has not checked against
-   explicit criteria.
-2. Rounds per spell: 7 for the pilot → **at most 3** (block, art + polish,
-   close).
-3. Owner time per spell: one look per round, under 2 minutes each, answerable
-   from a phone.
-4. The remaining nine spells are done in days, not weeks, without lowering the
-   bar the owner set on the Censer.
+1. Strong, consistent spell art and motion, judged against a reference pack,
+   in the fight's style.
+2. Fewer owner corrections. Target: 3 owner reviews per spell (motion, art in
+   context, close). This is a target, not a limit (section 9).
+3. Fast: owner time under 2 minutes per review, answerable from a phone.
 
 **Non-goals:**
-- A new art style.
 - New animation technology: no rigs, no 3D.
-- Changing how fights are simulated.
-- Automating the owner's taste.
+- Changing the simulation.
+- Automating taste.
 
 ## 4. Behavioural contracts
 
-These are the rules the workflow must hold, whatever tools implement them. Each
-names how it is checked.
+1. **Identity is locked before anything is made.** Each spell's sheet fixes
+   these before blocking:
+   - the verb;
+   - the signature beat;
+   - "must read as" and "must not read as";
+   - one motion reference per moving element, described as physics or a
+     real-world thing ("a censer on a long chain, released from the left"),
+     never as invented parameters;
+   - intentional exceptions (an instant appearance, a deliberate hold, a sharp
+     snap), so later checks don't flag them.
+2. **Watching means playback.** The orchestrator plays the capture at normal
+   speed and at 1.5x, then checks selected stills: edges of the frame,
+   composition at the hit, the last frame of the ending. It scores the result
+   on the review rubric (section 6), never on "I would defend it". The new
+   spell is also played beside the approved spells, for consistency and to
+   check it is distinct from them.
+3. **Nothing reaches the owner unwatched.** Every owner message names:
+   - the rubric result;
+   - what is still weak;
+   - the reviewed source snapshot: the commit plus the capture run id.
+4. **Instruments support the eye; they never replace it.**
+   - **Binding checks** (block a review):
+     - transform discontinuities (jumps) in the spell's own layers;
+     - cue timing: sound, number, badge and accent on one frame (from
+       `timing.json` and the cue tests);
+     - off-screen: every layer the beat sheet marks as "must be visible" stays
+       inside the stage crop.
+   - **Advisory checks** (reported, never blocking until validated on trial
+     spells): pop-in, frozen holds, body coverage at the hit, flash guard. The
+     flash guard is measured from rendered frames, because transforms can't
+     show it.
+5. **Art is reviewed for quality, not only usability.**
+   - On arrival: key leak and pivot registration (usability).
+   - Then an art contact sheet, beside the reference pack, at actual gameplay
+     size, checked against the art rubric: silhouette, materials, proportions
+     between cells, readability at size, style match.
+   - A rejected piece gets a targeted revision prompt, not a regenerated batch.
+6. **Decisions are durable.** Each spell keeps one state record (its NOTES
+   file):
+   - the identity sheet;
+   - the accepted prompt, source image, processing recipe and outputs;
+   - the open owner questions, each asked once;
+   - the round log.
 
-1. **Nothing reaches the owner unwatched.** Every GIF the owner receives has
-   first been inspected by the orchestrator, on a contact sheet and on the
-   automated checks (contract 4).
-   - *Check:* the message to the owner states what was checked and what is
-     still weak.
-2. **Motion is specified as physics or reference, never as invented
-   parameters.**
-   - *Example:* "a censer on a long chain, released from the left, swinging
-     freely", not "amplitude 35, dwell 1.5".
-   - *Check:* the brief template has a "reference" line per moving element.
-3. **Pictures before words.** The owner's first review of a spell is a rough
-   GIF with its beat table attached, never a text plan on its own.
-4. **Every capture is measured, not eyeballed alone.** These checks run on
-   every capture:
-   - per-frame jumps in any layer's position or angle;
-   - pop-in (a layer at full opacity on its first frame);
-   - frozen holds over 0.15 s;
-   - how much of the struck body is covered at the hit;
-   - the flash-safety guard (at most 3 large flashes per second);
-   - sound, number and badge on one frame.
-
-   They use exact layer data from the engine, not pixel guesses.
-5. **One agent per spell, kept for the spell's whole life.** Its context
-   carries between rounds; a fresh agent is the exception.
-6. **Iteration is cheap; closing is strict.**
-   - Between rounds: focused tests only.
-   - To close a spell, all of these must hold: the full suite is green on the
-     exact commit; the repository matches its generators; the owner approved
-     the GIF at 1x and 1.5x, on a short and a tall enemy; the owner listened
-     once.
-7. **An owner question is asked once.** Each spell keeps one open-questions
-   list. A question stays on it until answered and is never re-asked in
-   passing.
-8. **The engine grows only when a spell proves it must.** A new layer field
-   needs the blocking GIF that shows why. When a batch closes, fields used by
-   only one spell are reviewed for merging or removal.
-9. **Art is checked on arrival.**
-   - Green key leak and frame registration (every cell's pivot on the same
-     line) are tested when a file lands, before it is wired.
-   - Prompts for several spells go out in one batch.
+   Ownership across rounds rests on that record, not on one agent's context.
+   An agent may be kept alive for speed, and is replaced from the record
+   without loss.
+7. **Concurrency follows the repository.**
+   - At most three active agents, the orchestrator included, so **at most two
+     workers at once**.
+   - Up to three spells may be *in flight* (some waiting on the owner or on
+     art).
+   - Shared writes are serialized: one writer at a time for `skills.json`, the
+     content build and the capture runner.
+8. **Closing follows `docs/TESTING.md`, on one frozen snapshot.** The capture
+   the owner approved, the generated assets and the gate run all describe one
+   identified commit. Close with:
+   - the changed gate, as TESTING.md defines it;
+   - the generated assets committed;
+   - the NOTES record updated.
+9. **The engine grows only when a blocking proves it must.** Fields used by
+   one spell are reviewed at batch close.
 
 ## 5. The loop for one spell
 
-| Step | Owner of the step | Time box | Output | Exit criterion |
+| # | Step | Who | Output | Exit |
 |---|---|---|---|---|
-| 1. Block | implementer (kept alive) | 45 min | stand-in motion; beat table (beat, element, timing, motion reference); list of art needed; review sheet | the checks of contract 4 pass, or each failure is explained |
-| 2. Check | orchestrator | 5 min | yes/no and a short note | the orchestrator would defend every beat to the owner |
-| 3. Owner verdict | owner | 2 min | per beat: ✔, or ✘ plus a frame number plus what they see | — |
-| 4. Art | owner | one paste covering up to 3 spells | image files | art check passes |
-| 5. Wire and polish | same implementer | 30-min rounds | art wired; polish chosen from the polish menu (section 7) | checks pass; orchestrator check; owner verdict |
-| 6. Close | same implementer | 15 min | full gate; generator check; NOTES; commit; menu updated with what worked and what failed | contract 6 |
+| 1 | Lock identity and references | orchestrator, from SPELL_FEEL | identity sheet (contract 1) | the owner confirms or edits it in the same message as step 3's GIF |
+| 2 | Block with existing assets | worker | stand-in motion; beat table; list of art needed | binding checks pass, or each failure is explained |
+| 3 | Watch and approve the motion | orchestrator, then owner | rubric result; phone preview + beat table | owner: ✔ per beat, or ✘ + frame + what they see |
+| 4 | Generate art | owner | images from the prompt template (section 7) | — |
+| 5 | Inspect the art before wiring | orchestrator | usability report; art contact sheet against the art rubric | accepted, or a targeted revision prompt |
+| 6 | Integrate and compare in context | worker, then orchestrator | wired art; polish from the menu (section 8); side-by-side with approved spells | motion rubric and art rubric pass; owner review |
+| 7 | Verify and close | worker | contract 8 | snapshot id recorded |
 
-**Pipelining.** Up to three spells are in flight at once. While the owner
-reviews spell A, the implementers of B and C are blocking or wiring. This
-depends on enabler E4.
+Art requests are batched only for spells whose motion is approved (step 3):
+independent, settled designs, never unresolved ones.
 
-## 6. One-time enablers
+## 6. The review rubric (orchestrator, before the owner sees anything)
 
-Each one is justified by a measured problem in section 2.
+**Motion** (scored at 1x and 1.5x playback):
+1. Each beat reads, in order.
+2. Weight and easing feel physical.
+3. One focal point at a time.
+4. The body stays readable at the hit.
+5. The ending decays, not cuts.
+6. Distinct from the approved spells, consistent with them.
 
-| # | Enabler | Problem it removes | Estimate | Risk | Cheaper alternative |
-|---|---|---|---|---|---|
-| E1 | **Layer telemetry**: the capture run writes every live layer's position, angle, scale and opacity per frame. A `spell_review` command turns that into a contact sheet plus the contract-4 checks. | ad-hoc, sometimes false pixel measurements | 2-3 h | the telemetry must match what is drawn; pinned by a test that compares one layer's logged position with its rendered pixels | pixel-only checks (proved unreliable on the pilot) |
-| E2 | **Phone-size preview**: each capture also writes a GIF of 480 px or less, under 5 MB | failed uploads; slow review | 30 min | none notable | sending stills only (loses the motion) |
-| E3 | **Art check**: on arrival, a tool reports key leak and per-cell pivot alignment for every new sheet | a bad sheet found only in motion, hours later | 1 h | false alarms on intentionally loose sheets; mitigated by tolerance per recipe | eyeballing the contact sheet |
-| E4 | **One presentation file per spell**, referenced from `skills.json` by skill id; the generator merges them | one agent at a time on spells | 2-3 h | content hash and ordering changes; schema docs; ensuring no two sources define one spell (the generator refuses duplicates) | a short-lived edit lock on `skills.json` with agents rebasing their block (cheaper, but serial for writes and error-prone) |
-| E5 | **Tree hygiene**: a `.gitattributes` line-ending rule (one normalising commit); stale-lock clearing in the tools when no git process is alive; a gate step that fails if regenerated assets differ from the committed ones | phantom changes, locks, uncommitted generated files | 1 h | the normalising commit touches about 900 files once; it must not mix with any other change | keep living with it |
+**Art** (on the art contact sheet, at gameplay size, beside the reference pack):
+1. Silhouette reads at size.
+2. Style matches the reference pack: outline, tone count, palette.
+3. Proportions stay consistent across cells.
+4. Materials read as named.
+5. Nothing in the "must not read as" list.
 
-**Total:** about 7-9 hours of agent time, with no owner involvement.
+Each item is ✔, ✘ (blocks) or ~ (named as weak to the owner).
 
-E4 changes the content pipeline across editor tooling and runtime loading. It
-must land atomically and needs its own focused review.
+## 7. The art loop
 
-## 7. The polish menu
+- **The reference pack** (built once, from what exists):
+  - the Giant Rat sheet;
+  - the owner-approved Censer pieces;
+  - palette and material notes;
+  - frames at actual gameplay size;
+  - three rejected examples with why: painterly glow; a body-sized snake head;
+    a slide instead of a closing cage.
+- **The prompt template:**
+  - the shared style block;
+  - the reference images to attach;
+  - per piece: filename, canvas, grid, pivot, the identity lines;
+  - a delivery specification: folder, name, green.
+- **Targeted revision:** a short prompt naming the one change ("same image, the
+  vines' base on one line in every cell"), never a regeneration of the batch.
+- **One record per piece:** accepted prompt, source image, recipe, output,
+  stored in the spell's NOTES.
 
-A written list of engine-made effects, each with when to use it, what it costs
-(renderers, particles, flashes) and what failed. It is seeded from the Censer
-pilot:
+## 8. The polish menu
+
+Engine-made effects, each with when to use it, its cost, and what failed. It is
+seeded from the pilot:
 
 | Worked | Failed |
 |---|---|
 | lantern glow over its life | light pool (read as a stain) |
-| turn sparks | afterimages (murky over dark or green bodies) |
-| stage kick (cast layers exempt) | |
+| turn sparks | afterimages (murky) |
+| stage kick with cast layers exempt | |
 | glowing embers | |
-| smoke from the fire, ash | |
-| body glow that follows the fire | |
-| light stage gloom | |
+| smoke and ash | |
+| body glow following the fire | |
+| light gloom | |
 
-Each spell's close step updates the menu, so knowledge accumulates instead of
-being rediscovered.
+Each close updates the menu.
 
-## 8. Risks
+## 9. Measures
 
-| Risk | Mitigation |
+Record for each trial spell:
+
+| Measure | Why it is recorded |
 |---|---|
-| Parallel spells overload the owner with reviews | at most three in flight; one combined message per round |
-| Telemetry says "clean" while the GIF looks wrong | the orchestrator still watches the sheet (contract 1); telemetry adds to the eye, never replaces it |
-| Time boxes are optimistic (agent warm-up, Unity boot about 3 min per capture batch) | measure actual round times on the first batch and adjust; manifests record all of a spell's scenarios in one Unity boot |
-| Engine fields pile up | contract 8's review at batch close |
-| E4 breaks content loading | atomic change, full gate, generator check, and a test that every spell resolves to exactly one presentation source |
+| owner reviews | target 3 |
+| internal retries | not hidden by the owner-review count |
+| generation attempts per art piece | — |
+| active work time and waiting time | where the hours actually go |
+| owner handling time, including generating, downloading and uploading art | — |
+| owner-found defects the binding checks should have caught | target 0 |
+| final quality against the reference pack | the owner's verdict on the rubric |
 
-## 9. How we know it works
+A spell that hits 3 reviews with a bland result is a failure of goal 1, not a
+success of goal 2.
 
-Record for each spell in the first batch of three:
-- the number of rounds;
-- owner minutes;
-- wall-clock hours;
-- defects the owner found that the checks should have caught.
+## 10. Rollout
 
-The success bar is goal 2 (at most 3 rounds) with zero owner-found defects of
-the kinds the checks cover (jumps, pop-ins, off-screen elements, flat-colour
-flashes). If the first batch misses it, revisit before the next batch.
+1. **Before the first trial** (about 1-2 h):
+   - phone previews: the capture writes a GIF of 480 px or less, under 5 MB;
+   - the reference pack and the prompt template;
+   - the NOTES state-record template;
+   - the rubric.
+2. **Trial 1, one spell.** Ashen Reckoning: the owner rates it best, and it
+   needs an ending. It tests the loop with the least art risk.
+3. **Trial 2, two spells with different needs.** Court of Whispers (motion
+   around a body) and Viper's Bite (contact on the body), worked at most two at
+   a time.
+4. **Then decide, on what the trials expose.** Each item is built only if a
+   trial shows the need:
+   - layer telemetry for the binding checks, extending the existing capture
+     run and `timing.json`, not a new command;
+   - the arrival art check;
+   - promoting advisory checks to binding.
+5. **Deferred, built only on evidence:**
+   - **One presentation file per spell:** only if measured edit contention on
+     `skills.json` delays work.
+   - **Tree hygiene:** line-ending normalization, stale-lock clearing and a
+     generated-asset check. Three separate small changes, each on its own
+     schedule, none a prerequisite for art.
 
-## 10. Questions for the reviewer
+## 11. Changes from rev 1, by review finding
 
-1. Is E4 (one file per spell) worth its cost, or does the edit-lock
-   alternative suffice for three spells in flight?
-2. Are the contract-4 checks the right ones? Is anything the owner rejected on
-   the pilot still uncovered?
-3. Is "one agent per spell, kept alive" sound, given that agent context grows
-   with every round? Should there be a reset point?
-4. Is three spells in flight the right number for a solo owner reviewing on a
-   phone?
-5. What in this proposal would you cut to get the first batch started sooner?
+| Finding | Rev 2 |
+|---|---|
+| 1 No art quality standard | contract 1 (identity), contract 5 and section 6 (art rubric), section 7 (reference pack) |
+| 2 "Watched" missed rhythm and weight | contract 2: playback at 1x and 1.5x, stills, side-by-side, a rubric |
+| 3 Checks would reject good effects and miss bad ones | contract 4: three narrow binding checks with exceptions in the identity sheet; the rest advisory; off-screen added |
+| 4 Infrastructure ahead of evidence | section 10: previews and templates first; telemetry after trials; file split and hygiene deferred |
+| 5 Art loop underspecified | section 7: template, references, delivery spec, targeted revisions, a record per piece |
+| 6 Concurrency and closing | contract 7 (two workers), contract 6 (durable record), contract 8 (TESTING.md gate, frozen snapshot) |
+| 7 The metric rewards weak output | section 9: retries, attempts, time split and quality measured; review count is a target |
+
+## 12. Questions for the reviewer
+
+1. Are the three binding checks the right minimum?
+2. Is Ashen alone enough for trial 1, given that it needs little new art?
+3. Is the art rubric specific enough to fail a clean but bland sheet?
