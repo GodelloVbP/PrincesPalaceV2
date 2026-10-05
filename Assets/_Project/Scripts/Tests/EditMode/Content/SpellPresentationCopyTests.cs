@@ -75,7 +75,7 @@ namespace PrincesPalace.Domain.Tests
                     align = "span",
                     punch = 0.22f,
                     fadeIn = 0.15f,
-                    rotate = new SpellRotate { degrees = 4f, spin = 30f, amplitude = -14f, period = 0.93f, damping = 0.5f, swings = 1.5f, pivotX = 0.37f, pivotY = 0.88f },
+                    rotate = new SpellRotate { degrees = 4f, spin = 30f, amplitude = -14f, period = 0.93f, damping = 0.5f, phase = 90f, delay = 0.2f, swings = 1.5f, pivotX = 0.37f, pivotY = 0.88f },
                     breathe = new SpellBreathe { alpha = 0.35f, scale = 0.07f, rate = 4f },
                     drift = new SpellDrift { fromX = -0.7f, toX = -0.7f, viaX = -0.25f, viaAt = 0.46f, fromY = 0.1f },
                     glow = 1.3f,

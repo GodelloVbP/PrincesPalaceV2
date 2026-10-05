@@ -58,6 +58,8 @@ namespace PrincesPalace.Domain.Content
         public const float MinPendulumPeriod = 0.1f;
         public const float MaxDamping = 20f;
         public const float MaxSwings = 20f;
+        public const float MaxPhaseDegrees = 360f;
+        public const float MaxDelaySeconds = 10f;
 
         // BREATHING IS A FLUTTER, NOT A PULSE: past half the size it is a
         // different drawing, and a rate past 20 is a buzz the eye cannot follow.
@@ -411,6 +413,12 @@ namespace PrincesPalace.Domain.Content
             if (float.IsNaN(rotate.damping) || rotate.damping < -MaxDamping || rotate.damping > MaxDamping)
             {
                 problems.Add($"{at}.rotate.damping {Num(rotate.damping)} is outside -{Num(MaxDamping)}..{Num(MaxDamping)} per second.");
+            }
+
+            CheckBounded(at, "rotate.phase", rotate.phase, MaxPhaseDegrees, "degrees", problems);
+            if (float.IsNaN(rotate.delay) || rotate.delay < 0f || rotate.delay > MaxDelaySeconds)
+            {
+                problems.Add($"{at}.rotate.delay {Num(rotate.delay)} is outside 0..{Num(MaxDelaySeconds)} seconds.");
             }
 
             if (float.IsNaN(rotate.swings) || rotate.swings < 0f || rotate.swings > MaxSwings)

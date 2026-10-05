@@ -1904,7 +1904,7 @@
         "layers": [
           {
             "id": "censer",
-            "_comment": "Wind-up, 1.0 s by the owner's call: the painted censer (censer_hanging) hangs on a long chain from a pivot 2.5 box heights up (well above the stage), so it travels a wide arc instead of tilting in place: left, right, left, each swing larger than the last (damping -0.8 builds momentum: 6.7 degrees growing to 14.9 on the last), a plain sine so it is fastest at the bottom and slows toward the ends. It breaks on the third extreme, at the cue. Unfitted: one size on every body, over the crown of a tall one.",
+            "_comment": "Wind-up, 1.0 s by the owner's call: the painted censer (censer_hanging) is pulled back to the left and released: held at its left extreme while it fades in (0.2 s), then left to right to left, each swing a little larger (damping -0.4), a plain cosine so it is fastest at the bottom and slows toward the ends, breaking at the far left on the cue. It hangs from a pivot 4.5 box heights up (1250 px to the lantern), so it travels a wide arc: 9.5 degrees at the start, 13.1 at the break. Unfitted: one size on every body, over the crown of a tall one.",
             "render": "still",
             "place": "above",
             "height": 3.0,
@@ -1918,11 +1918,13 @@
             "sort": "effects",
             "glow": 0.3,
             "rotate": {
-              "amplitude": -6.7,
+              "amplitude": -9.5,
               "period": 0.8,
-              "damping": -0.8,
+              "damping": -0.4,
+              "phase": 90,
+              "delay": 0.2,
               "pivotX": 0.5,
-              "pivotY": 2.5
+              "pivotY": 4.5
             }
           },
           {
@@ -1965,7 +1967,7 @@
           },
           {
             "id": "crack",
-            "_comment": "Payoff: the censer breaks. Its own still, held at the third extreme, punches and vanishes white-hot within 0.09 s.",
+            "_comment": "Payoff: the censer breaks. Its own still, drawn exactly where the swinging layer is on the cue (same pivot, the same angle at 1.0 s), brighter for 0.04 s and gone in 0.05 s; no scale punch, because a scale about a pivot this far away moves the lantern.",
             "render": "still",
             "place": "above",
             "height": 3.0,
@@ -1977,12 +1979,11 @@
             "size": 300,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.4,
             "glow": 2.0,
             "rotate": {
-              "degrees": -14.91,
+              "degrees": -13.0827,
               "pivotX": 0.5,
-              "pivotY": 2.5
+              "pivotY": 4.5
             }
           },
           {

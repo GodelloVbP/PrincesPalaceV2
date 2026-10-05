@@ -24,7 +24,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheCenserHangsOnALongChainAndSwingsLeftRightLeftEachSwingLargerThenBreaks()
+        public void TheCenserIsPulledBackLeftAndReleasedThenSwingsRightAndLeftAndBreaks()
         {
             var vfx = Censer();
             Assert.AreEqual(1.0f, vfx.hitCueSeconds, 1e-6f);
@@ -37,34 +37,39 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("release", censer.at);
             Assert.AreEqual(1.0f, censer.seconds, 1e-6f, "it lasts to the cue and no longer");
             Assert.AreEqual(0f, censer.fade, 1e-6f, "the break replaces it");
+            Assert.AreEqual(0.2f, censer.fadeIn, 1e-6f);
             Assert.AreEqual("Spells/censer_hanging", censer.path);
             var r = censer.rotate;
-            Assert.AreEqual(-6.7f, r.amplitude, 1e-6f, "clockwise first: left");
+            Assert.AreEqual(-9.5f, r.amplitude, 1e-6f, "clockwise: the lantern is on the left");
             Assert.AreEqual(0.8f, r.period, 1e-6f);
-            Assert.AreEqual(-0.8f, r.damping, 1e-6f, "negative: the swing builds");
+            Assert.AreEqual(-0.4f, r.damping, 1e-6f, "negative: each swing a little larger");
+            Assert.AreEqual(90f, r.phase, 1e-6f, "released from the extreme, a cosine");
+            Assert.AreEqual(0.2f, r.delay, 1e-6f, "held still for the fade-in");
+            Assert.AreEqual(r.delay, censer.fadeIn, 1e-6f, "it does not move while it appears");
             Assert.AreEqual(0.5f, r.pivotX, 1e-6f, "the chain leaves the top edge at the centre (opaque columns 596-657 of 1254)");
-            Assert.AreEqual(2.5f, r.pivotY, 1e-6f, "2.5 box heights up: a 650 px chain, so a wide arc and a small tilt");
+            Assert.AreEqual(4.5f, r.pivotY, 1e-6f, "4.5 box heights up: a 1250 px chain, so a wide arc and a small tilt");
 
-            // Left extreme 0.2, right 0.6, left 1.0; the last ends on the cue. A plain
-            // sine: still through the vertical at 0.4 and 0.8, fastest there.
-            Assert.AreEqual(-7.8625f, r.AngleAt(0.2f), 1e-3f);
+            // Held at the left extreme for the fade-in, then right at 0.6 and left again
+            // at 1.0, the cue. Through the vertical at 0.4 and 0.8, where it is fastest.
+            Assert.AreEqual(-9.5f, r.AngleAt(0f), 1e-3f);
+            Assert.AreEqual(-9.5f, r.AngleAt(0.2f), 1e-3f);
             Assert.AreEqual(0f, r.AngleAt(0.4f), 1e-3f);
-            Assert.AreEqual(10.8277f, r.AngleAt(0.6f), 1e-3f);
+            Assert.AreEqual(11.1484f, r.AngleAt(0.6f), 1e-3f);
             Assert.AreEqual(0f, r.AngleAt(0.8f), 1e-3f);
-            Assert.AreEqual(-14.9111f, r.AngleAt(1.0f), 1e-3f);
+            Assert.AreEqual(-13.0827f, r.AngleAt(1.0f), 1e-3f);
         }
 
         // THE LANTERN'S PATH (lantern centre 50 below the box centre, 300 box, pivot
-        // 600 over the centre): (-88.9, -43.9) at the first extreme, (0, -50) at the
-        // bottom, (122.1, -38.4) at the second, (-167.3, -28.1) at the third. It
-        // rises 22 px over the bottom at the last extreme and sweeps 290 px across.
+        // 1200 over the centre): (-206.3, -32.9) held at the start, (0, -50) at the
+        // bottom, (241.7, -26.4) at the right extreme, (-282.9, -17.6) at the break.
         [Test]
-        public void TheLanternTravelsAWideArcRatherThanTiltingInPlace()
+        public void TheLanternTravelsAWideArcFromAHeldLeftExtreme()
         {
             var r = Censer().layers.Single(l => l.id == "censer").rotate;
             var expected = new[]
             {
-                (0.2f, -88.9, -43.9), (0.4f, 0.0, -50.0), (0.6f, 122.1, -38.4), (0.8f, 0.0, -50.0), (1.0f, -167.3, -28.1),
+                (0.0f, -206.3, -32.9), (0.2f, -206.3, -32.9), (0.4f, 0.0, -50.0), (0.6f, 241.7, -26.4),
+                (0.8f, 0.0, -50.0), (1.0f, -282.9, -17.6),
             };
             foreach (var (t, ex, ey) in expected)
             {
@@ -102,10 +107,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Spells/censer_hanging", crack.path, "the censer's own still");
             Assert.AreEqual(0.04f, crack.seconds, 1e-6f);
             Assert.AreEqual(0.05f, crack.fade, 1e-6f);
-            Assert.AreEqual(0.4f, crack.punch, 1e-6f);
-            Assert.AreEqual(censer.rotate.AngleAt(1.0f), crack.rotate.degrees, 0.01f, "held at the third extreme");
+            Assert.AreEqual(0f, crack.punch, 1e-6f, "no scale punch: a scale about a pivot 1250 px away moves the lantern");
+            Assert.AreEqual(censer.rotate.AngleAt(1.0f), crack.rotate.degrees, 1e-3f, "exactly the angle the swinging layer has on the cue");
             Assert.AreEqual(0f, crack.rotate.amplitude, 1e-6f);
-            Assert.AreEqual(2.5f, crack.rotate.pivotY, 1e-6f);
+            Assert.AreEqual(censer.rotate.pivotY, crack.rotate.pivotY, 0f, "the same pivot as the layer it replaces");
+            Assert.AreEqual(censer.rotate.pivotX, crack.rotate.pivotX, 0f);
+            Assert.AreEqual(censer.size, crack.size, 0f);
+            Assert.AreEqual(censer.height, crack.height, 0f);
 
             var burst = vfx.layers.Single(l => l.id == "burst");
             Assert.AreEqual("hit", burst.at);

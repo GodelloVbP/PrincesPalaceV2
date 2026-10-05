@@ -23,7 +23,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Steady spin, in degrees per second counter-clockwise (mirrors with the cast), from the layer's opening instant.")]
         public float spin;
 
-        [ContentDoc("Pendulum amplitude, in degrees: the sine's height at the start, counter-clockwise when positive (mirrors with the cast); damping scales it over time, so with no damping it is the angle at every extreme. The swing starts at rest on the vertical and moves sine-wise, so a negative amplitude swings clockwise first. 0 means no pendulum.")]
+        [ContentDoc("Pendulum amplitude, in degrees: the sine's height at the start, counter-clockwise when positive (mirrors with the cast); damping scales it over time, so with no damping it is the angle at every extreme. With no phase the swing starts at rest on the vertical and moves sine-wise, so a negative amplitude swings clockwise first. 0 means no pendulum.")]
         public float amplitude;
 
         [ContentDoc("Seconds for one full swing (out, back through the middle, the other way, and home). Required when amplitude is set.")]
@@ -31,6 +31,12 @@ namespace PrincesPalace.Domain.Content
 
         [ContentDoc("Pendulum damping per second: the amplitude is multiplied by e^(-damping * seconds). 0 swings undiminished; a negative number grows the swing (a priest building momentum).")]
         public float damping;
+
+        [ContentDoc("Where in its cycle the pendulum starts, in degrees: the angle is amplitude * sin(2*pi*t/period + phase). 0 starts at rest on the vertical; 90 starts released from the far extreme (amplitude itself), the way a thing is pulled back and let go.")]
+        public float phase;
+
+        [ContentDoc("Seconds the pendulum is held at its starting angle before it moves, so a layer fading in does not move while it appears. Spin and static tilt are not delayed.")]
+        public float delay;
 
         [ContentDoc("How many full periods the pendulum swings; fractions count (0.75 ends at the far extreme of the second swing). 0 means until the layer ends. After them the pendulum rests at the vertical.")]
         public float swings;
@@ -45,7 +51,7 @@ namespace PrincesPalace.Domain.Content
 
         public SpellRotate Copy() => new SpellRotate
         {
-            degrees = degrees, spin = spin, amplitude = amplitude, period = period, damping = damping,
+            degrees = degrees, spin = spin, amplitude = amplitude, period = period, damping = damping, phase = phase, delay = delay,
             swings = swings, pivotX = pivotX, pivotY = pivotY,
         };
 
@@ -59,10 +65,11 @@ namespace PrincesPalace.Domain.Content
         private float PendulumAt(float age)
         {
             if (amplitude == 0f || period <= 0f) return 0f;
+            age = Math.Max(0f, age - delay);
             if (swings > 0f && age > swings * period) return 0f;
 
-            double phase = 2.0 * Math.PI * age / period;
-            return (float)(amplitude * Math.Sin(phase) * Math.Exp(-damping * age));
+            double turn = 2.0 * Math.PI * age / period + phase * Math.PI / 180.0;
+            return (float)(amplitude * Math.Sin(turn) * Math.Exp(-damping * age));
         }
     }
 }

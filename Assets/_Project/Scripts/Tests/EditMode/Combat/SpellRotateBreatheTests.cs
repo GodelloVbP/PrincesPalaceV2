@@ -253,6 +253,33 @@ namespace PrincesPalace.Domain.Tests
         // A pivot two box heights above the top of a 100x200 box (pivotY 2.5, 400
         // over the centre), turned 10 degrees clockwise: the centre moves
         // p - R p, a wide arc, not a tilt in place.
+        // phase 90 starts at the far extreme: amplitude * sin(90) = 10, through the
+        // vertical at a quarter period (0.2 s of 0.8), the other extreme at a half
+        // (-10), and delay holds the start angle still.
+        [Test]
+        public void APhaseOf90StartsReleasedFromTheExtremeAndDelayHoldsIt()
+        {
+            var r = new SpellRotate { amplitude = 10f, period = 0.8f, phase = 90f, delay = 0.3f };
+            Assert.AreEqual(10f, r.AngleAt(0f), 1e-3f);
+            Assert.AreEqual(10f, r.AngleAt(0.3f), 1e-3f, "held until the delay is over");
+            Assert.AreEqual(0f, r.AngleAt(0.5f), 1e-3f);
+            Assert.AreEqual(-10f, r.AngleAt(0.7f), 1e-3f);
+            Assert.AreEqual(10f, r.AngleAt(1.1f), 1e-3f);
+
+            var growing = new SpellRotate { amplitude = 10f, period = 0.8f, phase = 90f, damping = -0.4f, delay = 0.2f };
+            Assert.AreEqual(-11.7351f, growing.AngleAt(0.6f), 1e-3f, "10 x e^(0.4 x 0.4) with the cosine's sign");
+        }
+
+        [Test]
+        public void APhaseOrDelayOutOfRangeIsRefused()
+        {
+            CollectionAssert.IsEmpty(Problems(new SpellLayer { rotate = new SpellRotate { amplitude = 5f, period = 0.8f, phase = 90f, delay = 0.2f } }));
+            var problems = Problems(new SpellLayer { rotate = new SpellRotate { amplitude = 5f, period = 0.8f, phase = 400f, delay = -1f } });
+            Assert.AreEqual(2, problems.Count, string.Join(" | ", problems));
+            Assert.IsTrue(problems.Any(p => p.Contains("rotate.phase 400 is outside -360..360")));
+            Assert.IsTrue(problems.Any(p => p.Contains("rotate.delay -1 is outside 0..10")));
+        }
+
         [Test]
         public void APivotAboveTheFrameCarriesTheBoxAlongALongArc()
         {

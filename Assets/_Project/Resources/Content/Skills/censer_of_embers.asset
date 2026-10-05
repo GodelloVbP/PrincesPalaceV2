@@ -90,12 +90,14 @@ MonoBehaviour:
         rotate:
           degrees: 0
           spin: 0
-          amplitude: -6.7
+          amplitude: -9.5
           period: 0.8
-          damping: -0.8
+          damping: -0.4
+          phase: 90
+          delay: 0.2
           swings: 0
           pivotX: 0.5
-          pivotY: 2.5
+          pivotY: 4.5
         breathe:
           alpha: 0
           scale: 0
@@ -177,6 +179,8 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          phase: 0
+          delay: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -260,14 +264,16 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         rotate:
-          degrees: -14.91
+          degrees: -13.0827
           spin: 0
           amplitude: 0
           period: 0
           damping: 0
+          phase: 0
+          delay: 0
           swings: 0
           pivotX: 0.5
-          pivotY: 2.5
+          pivotY: 4.5
         breathe:
           alpha: 0
           scale: 0
@@ -278,7 +284,7 @@ MonoBehaviour:
         facing: none
         sort: effects
         align: 
-        punch: 0.4
+        punch: 0
         glow: 2
         tint: 
         impactX: -1
@@ -349,6 +355,8 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          phase: 0
+          delay: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -437,6 +445,8 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          phase: 0
+          delay: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -525,6 +535,8 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          phase: 0
+          delay: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -609,6 +621,8 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
+          phase: 0
+          delay: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
