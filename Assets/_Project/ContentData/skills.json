@@ -1904,7 +1904,7 @@
         "layers": [
           {
             "id": "censer",
-            "_comment": "Wind-up, 1.0 s by the owner's call: the painted censer (censer_hanging, chain leaving the top edge at the centre) hangs from above the visible stage (a hanging layer keeps its lantern on the stage and only its chain above it, SpellFlight.StageTop) and swings left, right, left about the top of its chain (35 degrees, dwelling at each end like a bell), breaking on the third extreme, at the cue. Unfitted: one size on every body, over the crown of a tall one. The art is flat; glow is the engine's.",
+            "_comment": "Wind-up, 1.0 s by the owner's call: the painted censer (censer_hanging) hangs on a long chain from a pivot 2.5 box heights up (well above the stage), so it travels a wide arc instead of tilting in place: left, right, left, each swing larger than the last (damping -0.8 builds momentum: 6.7 degrees growing to 14.9 on the last), a plain sine so it is fastest at the bottom and slows toward the ends. It breaks on the third extreme, at the cue. Unfitted: one size on every body, over the crown of a tall one.",
             "render": "still",
             "place": "above",
             "height": 3.0,
@@ -1918,11 +1918,49 @@
             "sort": "effects",
             "glow": 0.3,
             "rotate": {
-              "amplitude": -35,
+              "amplitude": -6.7,
               "period": 0.8,
-              "dwell": 1.5,
+              "damping": -0.8,
               "pivotX": 0.5,
-              "pivotY": 1.0
+              "pivotY": 2.5
+            }
+          },
+          {
+            "id": "trail",
+            "_comment": "Wind-up: smoke leaves the lantern's body as the censer swings and hangs where it was born (almost still), so the path of the swing is drawn in the air behind the lantern.",
+            "render": "emitter",
+            "place": "layer:censer",
+            "at": "release",
+            "sort": "effects",
+            "opacity": 0.6,
+            "emitter": {
+              "path": "Spells/censer_of_embers_particles",
+              "weights": [
+                0,
+                0,
+                1,
+                0
+              ],
+              "rate": 10,
+              "window": 0.95,
+              "spreadDegrees": 40,
+              "aimDegrees": 90,
+              "speedMin": 4,
+              "speedMax": 12,
+              "inherit": 0,
+              "drag": 0.8,
+              "gravity": 20,
+              "lifeMin": 0.7,
+              "lifeMax": 1.1,
+              "sizeMin": 0.7,
+              "sizeMax": 1.2,
+              "spinMin": -20,
+              "spinMax": 20,
+              "fadeFrom": 0.2,
+              "endScale": 1.6,
+              "sourceDx": 0,
+              "sourceDy": -10,
+              "seed": 1557
             }
           },
           {
@@ -1942,14 +1980,14 @@
             "punch": 0.4,
             "glow": 2.0,
             "rotate": {
-              "degrees": -35,
+              "degrees": -14.91,
               "pivotX": 0.5,
-              "pivotY": 1.0
+              "pivotY": 2.5
             }
           },
           {
             "id": "burst",
-            "_comment": "Payoff: the censer explodes into a shower of embers thrown out in every direction and falling under gravity, born where the lantern hangs at the third extreme (offset from the censer layer's box centre).",
+            "_comment": "Payoff: the censer explodes into a shower of embers thrown out in every direction and falling under gravity, born at the lantern's centre (sourceDy -50 on the censer's art, carried to wherever the swing has put it).",
             "render": "emitter",
             "place": "layer:censer",
             "at": "hit",
@@ -1962,7 +2000,7 @@
                 0,
                 1
               ],
-              "burst": 48,
+              "burst": 42,
               "spreadDegrees": 360,
               "aimDegrees": 90,
               "speedMin": 180,
@@ -1979,8 +2017,8 @@
               "fadeFrom": 0.6,
               "endScale": 0.5,
               "seed": 1552,
-              "sourceDx": -124,
-              "sourceDy": -27
+              "sourceDx": 0,
+              "sourceDy": -50
             }
           },
           {
@@ -1998,7 +2036,7 @@
                 0,
                 0
               ],
-              "burst": 6,
+              "burst": 5,
               "spreadDegrees": 360,
               "aimDegrees": 90,
               "speedMin": 90,
@@ -2015,8 +2053,8 @@
               "fadeFrom": 0.7,
               "endScale": 0.8,
               "seed": 1556,
-              "sourceDx": -124,
-              "sourceDy": -27
+              "sourceDx": 0,
+              "sourceDy": -50
             }
           },
           {
@@ -2062,7 +2100,7 @@
                 0,
                 0
               ],
-              "rate": 14,
+              "rate": 10,
               "window": 0.55,
               "spreadDegrees": 80,
               "aimDegrees": 90,

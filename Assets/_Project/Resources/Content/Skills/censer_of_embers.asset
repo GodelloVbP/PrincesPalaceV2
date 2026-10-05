@@ -90,13 +90,12 @@ MonoBehaviour:
         rotate:
           degrees: 0
           spin: 0
-          amplitude: -35
+          amplitude: -6.7
           period: 0.8
-          damping: 0
-          dwell: 1.5
+          damping: -0.8
           swings: 0
           pivotX: 0.5
-          pivotY: 1
+          pivotY: 2.5
         breathe:
           alpha: 0
           scale: 0
@@ -145,6 +144,94 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
+      - id: trail
+        render: emitter
+        place: layer:censer
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 0.6
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/censer_of_embers_particles
+          rate: 10
+          burst: 0
+          window: 0.95
+          sourceDx: 0
+          sourceDy: -10
+          spreadDegrees: 40
+          aimDegrees: 90
+          speedMin: 4
+          speedMax: 12
+          inherit: 0
+          drag: 0.8
+          gravity: 20
+          lifeMin: 0.7
+          lifeMax: 1.1
+          sizeMin: 0.7
+          sizeMax: 1.2
+          spinMin: -20
+          spinMax: 20
+          alignFlight: 0
+          lateral: 0
+          fadeFrom: 0.2
+          endScale: 1.6
+          seed: 1557
+          weights:
+          - 0
+          - 0
+          - 1
+          - 0
       - id: crack
         render: still
         place: above
@@ -173,15 +260,14 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         rotate:
-          degrees: -35
+          degrees: -14.91
           spin: 0
           amplitude: 0
           period: 0
           damping: 0
-          dwell: 0
           swings: 0
           pivotX: 0.5
-          pivotY: 1
+          pivotY: 2.5
         breathe:
           alpha: 0
           scale: 0
@@ -263,7 +349,6 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
-          dwell: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -292,10 +377,10 @@ MonoBehaviour:
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 0
-          burst: 48
+          burst: 42
           window: 0
-          sourceDx: -124
-          sourceDy: -27
+          sourceDx: 0
+          sourceDy: -50
           spreadDegrees: 360
           aimDegrees: 90
           speedMin: 180
@@ -352,7 +437,6 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
-          dwell: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -381,10 +465,10 @@ MonoBehaviour:
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 0
-          burst: 6
+          burst: 5
           window: 0
-          sourceDx: -124
-          sourceDy: -27
+          sourceDx: 0
+          sourceDy: -50
           spreadDegrees: 360
           aimDegrees: 90
           speedMin: 90
@@ -441,7 +525,6 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
-          dwell: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -526,7 +609,6 @@ MonoBehaviour:
           amplitude: 0
           period: 0
           damping: 0
-          dwell: 0
           swings: 0
           pivotX: 0.5
           pivotY: 0.5
@@ -554,7 +636,7 @@ MonoBehaviour:
         through: 0
         emitter:
           path: Spells/censer_of_embers_particles
-          rate: 14
+          rate: 10
           burst: 0
           window: 0.55
           sourceDx: 0

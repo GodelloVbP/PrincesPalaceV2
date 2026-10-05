@@ -1,4 +1,5 @@
 using System;
+using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Combat.Presentation
@@ -219,6 +220,27 @@ namespace PrincesPalace.Domain.Combat.Presentation
             float x = (float)(px - (cos * px - sin * py));
             float y = (float)(py - (sin * px + cos * py));
             return (degrees, x, y);
+        }
+
+        // WHERE A POINT FIXED ON A TURNING LAYER'S ART IS, as a displacement from
+        // where the same point sits on the unturned box, `age` seconds into the
+        // layer. `offset` is from the box centre in the cast's frame, already
+        // fitted and mirrored; the layer's own turn is applied about its pivot.
+        // An emitter riding a swinging layer is born here, so smoke leaves the
+        // censer's lid wherever the swing has carried it. Zero when the layer
+        // authors no rotate.
+        public static UiVec PointOn(SpellLayerInstance instance, float age, UiVec offset)
+        {
+            var rotate = instance?.Layer?.rotate;
+            if (rotate == null || !rotate.IsAuthored) return UiVec.Zero;
+
+            var pose = PoseOf(instance, Math.Max(0f, age), 1f);
+            double radians = pose.degrees * Math.PI / 180.0;
+            double cos = Math.Cos(radians);
+            double sin = Math.Sin(radians);
+            float x = pose.x + (float)(cos * offset.X - sin * offset.Y) - offset.X;
+            float y = pose.y + (float)(sin * offset.X + cos * offset.Y) - offset.Y;
+            return new UiVec(x, y);
         }
 
         // The 1-based startFrame as an index; 0 means the first frame.

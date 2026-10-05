@@ -23,32 +23,29 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Steady spin, in degrees per second counter-clockwise (mirrors with the cast), from the layer's opening instant.")]
         public float spin;
 
-        [ContentDoc("Pendulum amplitude, in degrees: the angle at the first extreme, counter-clockwise when positive (mirrors with the cast). The swing starts at rest on the vertical and moves sine-wise, so a negative amplitude swings clockwise first. 0 means no pendulum.")]
+        [ContentDoc("Pendulum amplitude, in degrees: the sine's height at the start, counter-clockwise when positive (mirrors with the cast); damping scales it over time, so with no damping it is the angle at every extreme. The swing starts at rest on the vertical and moves sine-wise, so a negative amplitude swings clockwise first. 0 means no pendulum.")]
         public float amplitude;
 
         [ContentDoc("Seconds for one full swing (out, back through the middle, the other way, and home). Required when amplitude is set.")]
         public float period;
 
-        [ContentDoc("Pendulum damping per second: the amplitude is multiplied by e^(-damping * seconds). 0 swings undiminished.")]
+        [ContentDoc("Pendulum damping per second: the amplitude is multiplied by e^(-damping * seconds). 0 swings undiminished; a negative number grows the swing (a priest building momentum).")]
         public float damping;
-
-        [ContentDoc("How long the pendulum lingers at its extremes, 0 or more: the swing's shape is sign(s) * (1 - (1 - |s|)^(1 + dwell)) of the sine s, so 0 is a plain sine and 1 makes it slow to a near stop at each end and quicken through the middle, like a heavy bell. Applies to the pendulum only.")]
-        public float dwell;
 
         [ContentDoc("How many full periods the pendulum swings; fractions count (0.75 ends at the far extreme of the second swing). 0 means until the layer ends. After them the pendulum rests at the vertical.")]
         public float swings;
 
-        [ContentDoc("Pivot, as a fraction of the frame from its left edge; 0.5 is the middle.")]
+        [ContentDoc("Pivot, as a fraction of the frame from its left edge; 0.5 is the middle. May lie outside the frame (up to 6 frame sizes either way).")]
         public float pivotX = 0.5f;
 
-        [ContentDoc("Pivot, as a fraction of the frame from its bottom edge; 1 is the top, where a hanging thing is hooked.")]
+        [ContentDoc("Pivot, as a fraction of the frame from its bottom edge; 1 is the top, where a hanging thing is hooked. Above 1 the pivot is outside the frame, on a longer chain than the art draws: the layer then travels along a wide arc and tilts only as much as that arc needs (angle = asin(sweep / length)).")]
         public float pivotY = 0.5f;
 
         public bool IsAuthored => degrees != 0f || spin != 0f || amplitude != 0f;
 
         public SpellRotate Copy() => new SpellRotate
         {
-            degrees = degrees, spin = spin, amplitude = amplitude, period = period, damping = damping, dwell = dwell,
+            degrees = degrees, spin = spin, amplitude = amplitude, period = period, damping = damping,
             swings = swings, pivotX = pivotX, pivotY = pivotY,
         };
 
@@ -59,22 +56,13 @@ namespace PrincesPalace.Domain.Content
             return degrees + spin * age + PendulumAt(age);
         }
 
-        // The sine reshaped to hang at its ends: same extremes, same zero
-        // crossings, flatter near +-1.
-        private double Dwelt(double s)
-        {
-            if (dwell <= 0f) return s;
-            double eased = 1.0 - Math.Pow(1.0 - Math.Abs(s), 1.0 + dwell);
-            return s < 0 ? -eased : eased;
-        }
-
         private float PendulumAt(float age)
         {
             if (amplitude == 0f || period <= 0f) return 0f;
             if (swings > 0f && age > swings * period) return 0f;
 
             double phase = 2.0 * Math.PI * age / period;
-            return (float)(amplitude * Dwelt(Math.Sin(phase)) * Math.Exp(-damping * age));
+            return (float)(amplitude * Math.Sin(phase) * Math.Exp(-damping * age));
         }
     }
 }

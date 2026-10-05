@@ -206,7 +206,7 @@ namespace PrincesPalace.Domain.Tests
             var problems = Problems(new SpellLayer
             { rotate = new SpellRotate { degrees = 400f, pivotY = 64f } });
             Assert.AreEqual(2, problems.Count, string.Join(" | ", problems));
-            Assert.IsTrue(problems.Any(p => p.Contains("rotate.pivotY 64 is outside 0..1")));
+            Assert.IsTrue(problems.Any(p => p.Contains("rotate.pivotY 64 is outside -6..6 frame sizes")));
             Assert.IsTrue(problems.Any(p => p.Contains("rotate.degrees 400 is outside -180..180")));
         }
 
@@ -238,28 +238,62 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(problems.Any(p => p.Contains("authors fadeIn, which is inert")));
         }
 
-        // dwell 1: s -> 1 - (1 - |s|)^2. At sin = 0.5 (period/12) that is 0.75;
-        // at the extreme and the crossings it is unchanged.
+        // A NEGATIVE DAMPING GROWS THE SWING: 10 x e^(0.8 t) at the extremes of a
+        // 0.8 s period, t = 0.2, 0.6, 1.0 (sin = 1, -1, 1).
         [Test]
-        public void DwellFlattensThePendulumAtItsEndsAndKeepsItsExtremesAndCrossings()
+        public void ANegativeDampingBuildsTheSwingLargestOnTheLastExtreme()
         {
-            var plain = new SpellRotate { amplitude = 10f, period = 1.2f };
-            var heavy = new SpellRotate { amplitude = 10f, period = 1.2f, dwell = 1f };
+            var r = new SpellRotate { amplitude = 10f, period = 0.8f, damping = -0.8f };
+            Assert.AreEqual(11.7351f, r.AngleAt(0.2f), 1e-3f);
+            Assert.AreEqual(-16.1607f, r.AngleAt(0.6f), 1e-3f);
+            Assert.AreEqual(22.2554f, r.AngleAt(1.0f), 1e-3f);
+            Assert.AreEqual(0f, r.AngleAt(0.4f), 1e-3f, "still through the vertical at the half period");
+        }
 
-            Assert.AreEqual(5f, plain.AngleAt(0.1f), 1e-3f);
-            Assert.AreEqual(7.5f, heavy.AngleAt(0.1f), 1e-3f);
-            Assert.AreEqual(-7.5f, heavy.AngleAt(0.7f), 1e-3f, "mirrors below zero");
-            Assert.AreEqual(10f, heavy.AngleAt(0.3f), 1e-4f);
-            Assert.AreEqual(0f, heavy.AngleAt(0.6f), 1e-3f);
-            Assert.AreEqual(0f, heavy.AngleAt(0f), 1e-6f);
+        // A pivot two box heights above the top of a 100x200 box (pivotY 2.5, 400
+        // over the centre), turned 10 degrees clockwise: the centre moves
+        // p - R p, a wide arc, not a tilt in place.
+        [Test]
+        public void APivotAboveTheFrameCarriesTheBoxAlongALongArc()
+        {
+            var sample = SpellFrameCursor.SampleOf(Instance(new SpellLayer
+            { rotate = new SpellRotate { degrees = -10f, pivotX = 0.5f, pivotY = 2.5f } }), 1, 0.5f);
+            Assert.AreEqual(-10f, sample.Degrees, Tol);
+            Assert.AreEqual(-69.4593f, sample.ShiftX, Tol);
+            Assert.AreEqual(6.0769f, sample.ShiftY, Tol);
+        }
+
+        // A point 50 below the centre of that box (a lantern in a tall frame) ends up
+        // the box's own shift plus its own turn.
+        [Test]
+        public void APointOnTheTurningLayerFollowsItsArc()
+        {
+            var instance = Instance(new SpellLayer
+            { rotate = new SpellRotate { degrees = -10f, pivotX = 0.5f, pivotY = 2.5f } });
+            var moved = SpellFrameCursor.PointOn(instance, 0.5f, new UiVec(0f, -50f));
+            Assert.AreEqual(-78.1417f, moved.X, Tol);
+            Assert.AreEqual(6.8365f, moved.Y, Tol);
+
+            var still = SpellFrameCursor.PointOn(Instance(new SpellLayer()), 0.5f, new UiVec(0f, -50f));
+            Assert.AreEqual(0f, still.X, 0f);
+            Assert.AreEqual(0f, still.Y, 0f);
         }
 
         [Test]
-        public void ANegativeDwellIsRefused()
+        public void APivotTypedAsPixelsIsStillRefusedButOneAboveTheFrameIsLegal()
         {
-            var problems = Problems(new SpellLayer { rotate = new SpellRotate { amplitude = 10f, period = 1f, dwell = -0.5f } });
+            CollectionAssert.IsEmpty(Problems(new SpellLayer { rotate = new SpellRotate { degrees = 3f, pivotY = 2.5f } }));
+            var problems = Problems(new SpellLayer { rotate = new SpellRotate { degrees = 3f, pivotY = 300f } });
             Assert.AreEqual(1, problems.Count, string.Join(" | ", problems));
-            StringAssert.Contains("rotate.dwell -0.5 is outside 0..4", problems[0]);
+            StringAssert.Contains("rotate.pivotY 300 is outside -6..6 frame sizes", problems[0]);
+        }
+
+        [Test]
+        public void AGrowingSwingIsLegalAndATooFastOneIsRefused()
+        {
+            CollectionAssert.IsEmpty(Problems(new SpellLayer { rotate = new SpellRotate { amplitude = 5f, period = 0.8f, damping = -0.8f } }));
+            var problems = Problems(new SpellLayer { rotate = new SpellRotate { amplitude = 5f, period = 0.8f, damping = -30f } });
+            StringAssert.Contains("rotate.damping -30 is outside -20..20", problems[0]);
         }
     }
 }

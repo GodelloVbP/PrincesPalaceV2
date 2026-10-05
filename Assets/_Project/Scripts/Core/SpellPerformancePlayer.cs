@@ -702,8 +702,10 @@ namespace PrincesPalace
                 // LAID ON THE SOURCE'S LINE OF FLIGHT: turned onto it and
                 // scattered across it, both read off the source's own launch
                 // and aim (zero for an emitter that authors neither).
+                var offset = new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy) * fit;
                 var p0 = SpellPerformance.PositionOf(source, birth)
-                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy) * fit
+                         + offset
+                         + SpellFrameCursor.PointOn(source, birth - source.StartSeconds, offset)
                          + SpellEmitterSim.LateralOf(spec, seed, particle, source.FlightFrom, source.FlightTo) * fit;
                 var v0 = SpellEmitterSim.LaunchOf(spec, seed, particle, instance.DrawFacing)
                          + SpellPerformance.VelocityOf(source, birth) * spec.inherit;

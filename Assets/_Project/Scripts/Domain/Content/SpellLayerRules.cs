@@ -52,7 +52,7 @@ namespace PrincesPalace.Domain.Content
         // turn is a typo for a smaller one (degrees typed as radians in reverse),
         // and a spin past four turns a second is a blur the frame rate aliases.
         public const float MaxRotateDegrees = 180f;
-        public const float MaxDwell = 4f;
+        public const float MaxPivotReach = 6f;
         public const float MaxSpinDegreesPerSecond = 1440f;
         public const float MaxPendulumPeriod = 10f;
         public const float MinPendulumPeriod = 0.1f;
@@ -392,8 +392,8 @@ namespace PrincesPalace.Domain.Content
             // THE PIVOT IS CHECKED EVEN WHEN NOTHING TURNS: a pivot typed as
             // pixels (64) would otherwise sit unread until the day a turn is
             // added to the layer.
-            CheckFraction(at, "rotate.pivotX", rotate.pivotX, problems);
-            CheckFraction(at, "rotate.pivotY", rotate.pivotY, problems);
+            CheckPivot(at, "rotate.pivotX", rotate.pivotX, problems);
+            CheckPivot(at, "rotate.pivotY", rotate.pivotY, problems);
 
             if (!rotate.IsAuthored) return;
 
@@ -408,14 +408,9 @@ namespace PrincesPalace.Domain.Content
                              $"{Num(MaxPendulumPeriod)} seconds when a pendulum amplitude is authored.");
             }
 
-            if (float.IsNaN(rotate.damping) || rotate.damping < 0f || rotate.damping > MaxDamping)
+            if (float.IsNaN(rotate.damping) || rotate.damping < -MaxDamping || rotate.damping > MaxDamping)
             {
-                problems.Add($"{at}.rotate.damping {Num(rotate.damping)} is outside 0..{Num(MaxDamping)} per second.");
-            }
-
-            if (float.IsNaN(rotate.dwell) || rotate.dwell < 0f || rotate.dwell > MaxDwell)
-            {
-                problems.Add($"{at}.rotate.dwell {Num(rotate.dwell)} is outside 0..{Num(MaxDwell)}.");
+                problems.Add($"{at}.rotate.damping {Num(rotate.damping)} is outside -{Num(MaxDamping)}..{Num(MaxDamping)} per second.");
             }
 
             if (float.IsNaN(rotate.swings) || rotate.swings < 0f || rotate.swings > MaxSwings)
@@ -458,6 +453,17 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at} is an emitter and authors breathe, which is inert there: particles fade and " +
                              "shrink through emitter.fadeFrom and endScale.");
+            }
+        }
+
+        // A PIVOT MAY LIE OUTSIDE THE FRAME: a censer on a chain longer than its
+        // drawing hangs from a point well above the art. Typed as pixels (64) it is
+        // still refused.
+        private static void CheckPivot(string at, string field, float value, List<string> problems)
+        {
+            if (float.IsNaN(value) || value < -MaxPivotReach || value > MaxPivotReach)
+            {
+                problems.Add($"{at}.{field} {Num(value)} is outside -{Num(MaxPivotReach)}..{Num(MaxPivotReach)} frame sizes.");
             }
         }
 
