@@ -104,7 +104,8 @@ late. Edit contention did not cost rounds: one spell was in flight at a time.
    - the rubric result;
    - what is still weak;
    - the reviewed source snapshot: the commit plus the capture run id.
-4. **Instruments support the eye; they never replace it.**
+4. **Instruments support the eye; they never replace it.** The check lists
+   live in `docs/SPELL_FEEL.md`, "Checks: binding and advisory"; in short:
    - **Binding checks** (block a review):
      - transform discontinuities (jumps) in the spell's own layers;
      - cue timing: sound, number, badge and accent on one frame (from
@@ -164,33 +165,24 @@ independent, settled designs, never unresolved ones.
 
 ## 6. The review rubric (orchestrator, before the owner sees anything)
 
-**Motion** (scored at 1x and 1.5x playback):
-1. Each beat reads, in order.
-2. Weight and easing feel physical.
-3. One focal point at a time.
-4. The body stays readable at the hit.
-5. The ending decays, not cuts.
-6. Distinct from the approved spells, consistent with them.
-
-**Art** (on the art contact sheet, at gameplay size, beside the reference pack):
-1. Silhouette reads at size.
-2. Style matches the reference pack: outline, tone count, palette.
-3. Proportions stay consistent across cells.
-4. Materials read as named.
-5. Nothing in the "must not read as" list.
-
-Each item is ✔, ✘ (blocks) or ~ (named as weak to the owner).
+Built: `docs/SPELL_FEEL.md`, "Review rubric". In short: six motion items scored
+at 1x and 1.5x (beats in order, physical weight, one focal point, body readable
+at the hit, an ending that decays, distinct from and consistent with approved
+spells) and five art items on a contact sheet at gameplay size (silhouette,
+style match, proportions across cells, materials, nothing in "must not read
+as"). Each item is ✔, ✘ (blocks) or ~ (named to the owner).
 
 ## 7. The art loop
 
-- **The reference pack** (built once, from what exists):
+- **The reference pack** (built: `docs/spell_art/REFERENCE.md`; built once,
+  from what exists):
   - the Giant Rat sheet;
   - the owner-approved Censer pieces;
   - palette and material notes;
   - frames at actual gameplay size;
   - three rejected examples with why: painterly glow; a body-sized snake head;
     a slide instead of a closing cage.
-- **The prompt template:**
+- **The prompt template** (built: `docs/prompts/TEMPLATE_spell_art.md`):
   - the shared style block;
   - the reference images to attach;
   - per piece: filename, canvas, grid, pivot, the identity lines;
@@ -202,20 +194,11 @@ Each item is ✔, ✘ (blocks) or ~ (named as weak to the owner).
 
 ## 8. The polish menu
 
-Engine-made effects, each with when to use it, its cost, and what failed. It is
-seeded from the pilot:
-
-| Worked | Failed |
-|---|---|
-| lantern glow over its life | light pool (read as a stain) |
-| turn sparks | afterimages (murky) |
-| stage kick with cast layers exempt | |
-| glowing embers | |
-| smoke and ash | |
-| body glow following the fire | |
-| light gloom | |
-
-Each close updates the menu.
+Built: `docs/SPELL_FEEL.md`, "Polish menu". In short: engine-made effects, each
+with its layer fields and its cost, seeded from the pilot. Worked: lantern glow
+over life, turn sparks, stage kick with cast layers exempt, glowing embers,
+smoke, ash, body glow following the fire, light gloom. Failed: light pool (a
+stain), afterimages (murky). Each close updates the menu.
 
 ## 9. Measures
 
@@ -239,8 +222,11 @@ success of goal 2.
 1. **Before the first trial** (about 1-2 h):
    - phone previews: the capture writes a GIF of 480 px or less, under 5 MB;
    - the reference pack and the prompt template;
-   - the NOTES state-record template;
+   - the NOTES state-record template (`docs/captures/spell_rework/NOTES_TEMPLATE.md`);
    - the rubric.
+
+   Built 2026-10-05, as `anim_preview.gif` beside `anim.gif` (`tools/gif.py`,
+   skipped with `gif.ps1 -NoPreview`).
 2. **Trial 1, one spell.** Ashen Reckoning: the owner rates it best, and it
    needs an ending. It tests the loop with the least art risk.
 3. **Trial 2, two spells with different needs.** Court of Whispers (motion

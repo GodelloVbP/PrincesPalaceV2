@@ -216,3 +216,64 @@ thing to avoid.
 10. **Pin it.** A timing test with literals for the beats that matter (travel,
     hit cue, aftermath hold and fade), precedent
     `SpellBaselineTimingTests.TheBlackglassSpearFliesFastLeavesABriefWakeAndStreaksAlongIt`.
+
+## Review rubric
+
+Scored by the orchestrator before the owner sees a spell. Each item is ✔, ✘
+(blocks the owner message) or ~ (named to the owner as weak). The score goes in
+the spell's NOTES (`docs/captures/spell_rework/NOTES_TEMPLATE.md`).
+
+**Motion**, played at 1x and 1.5x, then stills at the frame edges, the hit and
+the last frame:
+
+1. Each beat reads, in order.
+2. Weight and easing feel physical (against the motion reference in the identity sheet).
+3. One focal point at a time.
+4. The body stays readable at the hit.
+5. The ending decays, not cuts.
+6. Distinct from the approved spells and consistent with them: played beside them.
+
+**Art**, on a contact sheet at gameplay size beside the reference pack
+(`docs/spell_art/REFERENCE.md`):
+
+1. Silhouette reads at size.
+2. Style matches the reference pack: outline, tone count, palette.
+3. Proportions stay consistent across cells.
+4. Materials read as named.
+5. Nothing in the "must not read as" list.
+
+## Checks: binding and advisory
+
+Instruments support the eye; they never replace it.
+
+- **Binding** (a failure blocks the owner message unless the identity sheet
+  lists it as an intentional exception):
+  - no transform jump in the spell's own layers;
+  - sound, number, badge and accent on one frame (`timing.json`, the cue tests);
+  - every layer the beat table marks "must be visible" stays inside the stage crop.
+- **Advisory** (reported, never blocking until validated on trial spells):
+  pop-in, frozen holds, body coverage at the hit, flash guard. The flash guard
+  is measured on rendered frames (largest single-step brightening area), not on
+  transforms.
+
+## Polish menu
+
+Engine-made effects, no new art. Each is a layer or field in `skills.json`
+(fields: `docs/ART_PIPELINE.md` §5b). Cost is what the Censer pilot spent; it
+was not measured per effect, only in total (102 particles thrown, 62 alive at
+most of a pool of 64, effects renderers 5 of 12). Each close updates the menu.
+
+| Effect | Verdict | Layer fields | Cost (pilot) |
+|---|---|---|---|
+| Lantern glow over its life | worked | `glowCurve` (`to`, `pulse`, `period`, `crest`, `knee` 0.4 for a gold body) on the still | 0 |
+| Turn sparks | worked | emitter with `burstTimes` + `burstEach`, `glow`, `tint`, flung from a rim; one layer per side | 16 particles in 2 layers |
+| Stage kick, cast layers exempt | worked | `vfx.kick` `{strength, rise, fall}` on the cue; `unkicked` on hanging layers, their emitters and the crack | 0 |
+| Glowing embers | worked | `glow` on the emitter's particles | 0 extra (38 embers + 5 coals) |
+| Smoke from the fire | worked | emitter born below the body's middle, slow rise | not recorded; faint |
+| Ash | worked | emitter with the `glow_disc` sprite, warm grey | 6 particles |
+| Body glow following the fire | worked | `stoke` on the fire layer, with its own `breathe` | 0 |
+| Light gloom | worked | stage `gloom` 0.2 over 0.4 s | 0 |
+| Light pool under the swing | failed: reads as an orange stain on the floor | a `pool` layer | 1 layer |
+| Afterimages of the swing | failed: murky over a green body; additive was still weak | `echo`, `echo.additive` | 3 ghosts |
+
+Whole-body hit flash on a spell is not on the menu: the owner removed it.
