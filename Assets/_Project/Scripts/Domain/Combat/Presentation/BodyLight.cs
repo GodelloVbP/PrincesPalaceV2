@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // this distance and at twice it). Actor canvases differ in size; a
         // fraction keeps a rat's band and a treant's proportionate to the body.
         public const float BurnRimWidth = 0.02f;
-        public const float FlashRimWidth = 0.022f;
+        public const float FlashRimWidth = 0.012f;
 
         // THE EDGE OF A PIXEL from the mean alpha of its sampled neighbours:
         // 0 deep inside the body (every neighbour opaque), 1 on the outline
@@ -52,8 +52,9 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
         // ---- the rim flash -------------------------------------------------
 
-        // A hit lights the outline and only tints the inside.
-        public const float FlashInteriorShare = 0.22f;
+        // A hit lights the outline and only tints the inside: 0.08, so a pale flash on a
+        // large body (the treant, Poison green) never reads as a filled silhouette.
+        public const float FlashInteriorShare = 0.08f;
 
         // Two frames of full strength and a short fade.
         public const int FlashHoldFrames = 2;

@@ -13,8 +13,8 @@ Shader "PrincesPalace/UIRimFlash"
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
-        _Interior ("Interior share", Range(0,1)) = 0.22
-        _RimWidth ("Rim width (fraction of canvas height)", Range(0,0.1)) = 0.022
+        _Interior ("Interior share", Range(0,1)) = 0.08
+        _RimWidth ("Rim width (fraction of canvas height)", Range(0,0.1)) = 0.012
     }
 
     SubShader

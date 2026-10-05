@@ -7,7 +7,7 @@ using PrincesPalace.Domain.Combat.Session;
 namespace PrincesPalace.Domain.Tests
 {
     // ASHEN RECKONING'S BEATS as literal seconds (docs/PLAN_SPELL_REWORK.md 3.7):
-    // the venom converges for 0.3 s, the Poison packet lands on the cue, and the
+    // the venom builds for 0.6 s, the Poison packet lands on the cue, and the
     // Fire packet, one stagger step (3 frames, 0.05 s) behind it, is the ignition.
     // Each packet's number has its own accent and its own sound.
     public class AshenReckoningPresentationTests
@@ -25,10 +25,11 @@ namespace PrincesPalace.Domain.Tests
         public void TheVenomConvergesForTheCueAndEachPacketHasItsOwnAccent()
         {
             var vfx = Ashen();
-            Assert.AreEqual(0.3f, vfx.hitCueSeconds, 1e-6f);
+            Assert.AreEqual(0.6f, vfx.hitCueSeconds, 1e-6f);
 
             var wind = vfx.layers.Single(l => l.id == "ritual");
-            Assert.AreEqual(0.3f, wind.seconds, 1e-6f, "f0-f4 at 0.06 s");
+            Assert.AreEqual(0.6f, wind.seconds, 1e-6f, "f0-f4 at 0.12 s");
+            Assert.AreEqual(0.4f, wind.fadeIn, 1e-6f, "it builds from faint wisps, no pop-in");
             Assert.AreEqual(0f, wind.fade, 1e-6f);
 
             var catchLayer = vfx.layers.Single(l => l.id == "catch");
@@ -36,17 +37,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("still", catchLayer.render);
             Assert.AreEqual("Spells/ashen_reckoning", catchLayer.path, "f6, the swirl on fire, until the owner's cel catch arrives");
             Assert.AreEqual(7, catchLayer.startFrame);
-            Assert.AreEqual(0.3f, catchLayer.offset, 1e-6f, "the Poison packet's number is on the cue");
-            Assert.AreEqual(1.2f, catchLayer.glow, 1e-6f);
+            Assert.AreEqual(0.6f, catchLayer.offset, 1e-6f, "the Poison packet's number is on the cue");
+            Assert.AreEqual(1.4f, catchLayer.glow, 1e-6f);
             Assert.IsTrue(string.IsNullOrEmpty(catchLayer.tint), "no green tint: it pushed the flame salmon");
             Assert.AreEqual(0.35f, catchLayer.punch, 1e-6f, "the whoomph: opens oversized and settles");
 
             var flare = vfx.layers.Single(l => l.id == "flare");
             Assert.AreEqual("release", flare.at);
             Assert.AreEqual(catchLayer.path, flare.path, "the same drawing flares; no second drawing");
-            Assert.AreEqual(0.35f, flare.offset, 1e-6f, "the cue plus 3 frames at 60 fps, StageHitFlash.StaggerSeconds");
+            Assert.AreEqual(0.65f, flare.offset, 1e-6f, "the cue plus 3 frames at 60 fps, StageHitFlash.StaggerSeconds");
             Assert.AreEqual(1.8f, flare.glow, 1e-6f);
             Assert.Greater(flare.size, catchLayer.size);
+            Assert.LessOrEqual(vfx.layers.Where(l => l.id.StartsWith("catch") || l.id == "flare").Max(l => l.size), 200f, "no burst larger than the body");
         }
 
         [Test]
@@ -67,17 +69,21 @@ namespace PrincesPalace.Domain.Tests
             var vfx = Ashen();
             var turn = vfx.layers.Single(l => l.id == "ritual").rotate;
             Assert.AreEqual(270f, turn.phase, 1e-6f, "starts at rest, fastest on the cue");
-            Assert.AreEqual(1.2f, turn.period, 1e-6f, "a quarter period is the 0.3 s wind-up");
+            Assert.AreEqual(2.4f, turn.period, 1e-6f, "a quarter period is the 0.6 s wind-up");
 
             // Flames step down in size and glow, then the last smoke curl is the final thing.
-            var fires = new[] { "fire_a", "fire_mid", "fire_low" }.Select(id => vfx.layers.Single(l => l.id == id)).ToArray();
-            Assert.Greater(fires[0].size, fires[1].size);
-            Assert.Greater(fires[1].size, fires[2].size);
-            Assert.Greater(fires[0].glow, fires[1].glow);
-            Assert.Greater(fires[1].glow, fires[2].glow);
-            Assert.Greater(vfx.layers.Single(l => l.id == "embers").glow, vfx.layers.Single(l => l.id == "embers_late").glow);
+            var fires = new[] { "fire_a", "fire_b", "fire_c", "fire_d" }.Select(id => vfx.layers.Single(l => l.id == id)).ToArray();
+            for (int i = 1; i < fires.Length; i++)
+            {
+                Assert.Greater(fires[i - 1].size, fires[i].size, fires[i].id + " is smaller");
+                Assert.Greater(fires[i - 1].glow, fires[i].glow, fires[i].id + " is dimmer");
+                Assert.Greater(fires[i].offset, fires[i - 1].offset);
+            }
+            var embers = new[] { "embers_a", "embers_b", "embers_c" }.Select(id => vfx.layers.Single(l => l.id == id)).ToArray();
+            Assert.Greater(embers[0].glow, embers[1].glow);
+            Assert.Greater(embers[1].glow, embers[2].glow);
 
-            float End(SpellLayer l) => (l.at == "hit" ? 0.3f : 0f) + l.offset + (l.emitter != null
+            float End(SpellLayer l) => (l.at == "hit" ? vfx.hitCueSeconds : 0f) + l.offset + (l.emitter != null
                 ? (l.emitter.window > 0f ? l.emitter.window : 0f) + l.emitter.lifeMax
                 : l.seconds + l.fade);
             var curl = vfx.layers.Single(l => l.id == "curl");

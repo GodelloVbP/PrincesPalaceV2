@@ -28,24 +28,24 @@ namespace PrincesPalace.Domain.Tests
         private static bool Shown(SpellLayerInstance layer, int frames, float seconds) =>
             SpellFrameCursor.SampleOf(layer, frames, seconds).Visible;
 
-        [TestCase("ashen_reckoning", "catch")]
-        [TestCase("borrowed_moment", "quicken")]
-        public void TheWindUpHandsOverToThePayoffOnTheSameTick(string spell, string payoff)
+        [TestCase("ashen_reckoning", "catch", 0.6f)]
+        [TestCase("borrowed_moment", "quicken", 0.3f)]
+        public void TheWindUpHandsOverToThePayoffOnTheSameTick(string spell, string payoff, float cue)
         {
             var performance = Resolve(spell);
             var windUp = performance.Instances.Single(i => i.Layer.id == "ritual");
             var accent = performance.Instances.Single(i => i.Layer.id == payoff);
 
-            // The cursor values a 60 fps clock produces around the 0.3 s cue.
-            foreach (float cursor in new[] { 0.29998f, 0.3f, 0.30002f })
+            // The cursor values a 60 fps clock produces around the cue.
+            foreach (float cursor in new[] { cue - 0.00002f, cue, cue + 0.00002f })
             {
                 bool windUpGone = SpellSchedule.Passed(windUp.ClearedSeconds, cursor);
                 Assert.IsTrue(windUpGone, $"{spell}: the schedule closes the wind-up at {cursor}");
                 Assert.IsTrue(Shown(accent, 1, cursor), $"{spell}: the payoff draws at {cursor}, the tick the wind-up closes");
             }
 
-            Assert.IsTrue(Shown(windUp, 5, 0.28f), "the wind-up still draws one frame before");
-            Assert.IsFalse(Shown(accent, 1, 0.28f), "and the payoff has not opened");
+            Assert.IsTrue(Shown(windUp, 5, cue - 0.02f), "the wind-up still draws one frame before");
+            Assert.IsFalse(Shown(accent, 1, cue - 0.02f), "and the payoff has not opened");
         }
 
         [Test]
@@ -56,12 +56,13 @@ namespace PrincesPalace.Domain.Tests
             var accent = performance.Instances.Single(i => i.Layer.id == "catch");
 
             float now = 0f;
-            for (int tick = 0; tick < 30; tick++, now += 1f / 60f)
+            for (int tick = 0; tick < 40; tick++, now += 1f / 60f)
             {
                 bool closed = SpellSchedule.Passed(windUp.ClearedSeconds, now);
                 bool opened = SpellSchedule.Passed(accent.StartSeconds, now);
                 Assert.AreEqual(closed, opened, $"tick {tick}: close and open are one instant");
-                if (!closed) Assert.IsTrue(Shown(windUp, 5, now), $"tick {tick} wind-up");
+                // Tick 0 of a wind-up that fades in from nothing is alpha 0 and not drawn.
+                if (!closed && (tick > 0 || windUp.Layer.fadeIn <= 0f)) Assert.IsTrue(Shown(windUp, 5, now), $"tick {tick} wind-up");
                 Assert.AreEqual(opened, Shown(accent, 1, now), $"tick {tick} payoff");
             }
         }

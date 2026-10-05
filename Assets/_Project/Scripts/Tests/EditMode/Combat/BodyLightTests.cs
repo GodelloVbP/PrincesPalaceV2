@@ -40,9 +40,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRimFlashLightsTheOutlineFullyAndTheInsideLightly()
         {
-            Assert.AreEqual(0.22f, BodyLight.FlashWeight(1f, 0f), 1e-6f);
+            Assert.AreEqual(0.08f, BodyLight.FlashWeight(1f, 0f), 1e-6f);
             Assert.AreEqual(1f, BodyLight.FlashWeight(1f, 1f), 1e-6f);
-            Assert.AreEqual(0.61f, BodyLight.FlashWeight(1f, 0.5f), 1e-6f);
+            Assert.AreEqual(0.54f, BodyLight.FlashWeight(1f, 0.5f), 1e-6f);
             Assert.AreEqual(0.5f, BodyLight.FlashWeight(0.5f, 1f), 1e-6f);
             Assert.AreEqual(2, BodyLight.FlashHoldFrames);
             Assert.AreEqual(0.08f, BodyLight.FlashFadeSeconds, 1e-6f);
@@ -52,8 +52,8 @@ namespace PrincesPalace.Domain.Tests
         [TestCase("UIBurnGlow", "_Interior", 0.16f)]
         [TestCase("UIBurnGlow", "_RimWidth", 0.02f)]
         [TestCase("UIBurnGlow", "_FeetReach", 0.4f)]
-        [TestCase("UIRimFlash", "_Interior", 0.22f)]
-        [TestCase("UIRimFlash", "_RimWidth", 0.022f)]
+        [TestCase("UIRimFlash", "_Interior", 0.08f)]
+        [TestCase("UIRimFlash", "_RimWidth", 0.012f)]
         public void TheShaderDefaultsMatchTheCsharpConstants(string shader, string property, float expected)
         {
             string text = File.ReadAllText(Path.Combine(RepoTree.Root(), "Assets", "_Project", "Resources",
@@ -69,8 +69,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.16f, BodyLight.BurnInteriorShare, 0f);
             Assert.AreEqual(0.02f, BodyLight.BurnRimWidth, 0f);
             Assert.AreEqual(0.4f, BodyLight.BurnFeetReach, 0f);
-            Assert.AreEqual(0.22f, BodyLight.FlashInteriorShare, 0f);
-            Assert.AreEqual(0.022f, BodyLight.FlashRimWidth, 0f);
+            Assert.AreEqual(0.08f, BodyLight.FlashInteriorShare, 0f);
+            Assert.AreEqual(0.012f, BodyLight.FlashRimWidth, 0f);
         }
     }
 }
