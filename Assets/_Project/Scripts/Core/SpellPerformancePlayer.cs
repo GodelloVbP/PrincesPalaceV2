@@ -696,11 +696,12 @@ namespace PrincesPalace
         {
             var cast = _casts[slot];
             var instances = cast.Performance.Instances;
-            var kick = KickOf(cast, seconds);
+            var stageKick = KickOf(cast, seconds);
 
             for (int i = 0; i < instances.Count; i++)
             {
                 var instance = instances[i];
+                var kick = instance.Layer.unkicked ? Vector2.zero : stageKick;
 
                 if (instance.RenderKind == SpellRender.Emitter)
                 {
@@ -796,7 +797,8 @@ namespace PrincesPalace
                 renderer.Show(frames[echo.Index], next, echo.Blend, echo.Alpha,
                     new Vector2(at.X + kick.x, at.Y + kick.y),
                     new Vector2(instance.Box.X * echo.Scale, instance.Box.Y * echo.Scale),
-                    instance.Degrees + echo.Degrees, echo.Glow, tint: TintOf(instance), glowKnee: echo.Knee);
+                    instance.Degrees + echo.Degrees, echo.Glow, tint: TintOf(instance), glowKnee: echo.Knee,
+                    additive: instance.Layer.echo.additive);
             }
         }
 

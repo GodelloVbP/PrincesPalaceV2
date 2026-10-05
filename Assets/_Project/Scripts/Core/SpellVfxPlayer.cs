@@ -71,7 +71,7 @@ namespace PrincesPalace
         // handed on from a stretched cast needs no restoring.
         public void Show(Sprite frame, Sprite next, float blend, float alpha, Vector2 at, Vector2 size,
             float degrees = 0f, float glow = 0f, bool stretch = false, Color? tint = null,
-            float glowKnee = SpellGlowCurve.DefaultKnee)
+            float glowKnee = SpellGlowCurve.DefaultKnee, bool additive = false)
         {
             if (image == null || frame == null) return;
 
@@ -96,7 +96,7 @@ namespace PrincesPalace
                 ? Quaternion.identity
                 : Quaternion.Euler(0f, 0f, degrees);
 
-            ApplyGlow(glow, glowKnee);
+            ApplyGlow(glow, glowKnee, additive);
 
             image.preserveAspect = !stretch;
             image.sprite = frame;
@@ -188,15 +188,16 @@ namespace PrincesPalace
         private const string GlowShaderPath = "Shaders/UISpellGlow";
         private static readonly int BoostId = Shader.PropertyToID("_Boost");
         private static readonly int KneeId = Shader.PropertyToID("_Knee");
+        private static readonly int DstBlendId = Shader.PropertyToID("_DstBlend");
 
         private Material _glowMaterial;
         private bool _glowUnavailable;
 
-        private void ApplyGlow(float boost, float knee = SpellGlowCurve.DefaultKnee)
+        private void ApplyGlow(float boost, float knee = SpellGlowCurve.DefaultKnee, bool additive = false)
         {
             if (image == null) return;
 
-            if (boost <= 0f)
+            if (boost <= 0f && !additive)
             {
                 // BACK TO THE DEFAULT MATERIAL, not merely to _Boost 0. A
                 // member handed on with a custom material still costs the
@@ -229,6 +230,7 @@ namespace PrincesPalace
 
             _glowMaterial.SetFloat(BoostId, boost);
             _glowMaterial.SetFloat(KneeId, knee);
+            _glowMaterial.SetFloat(DstBlendId, additive ? 1f : 10f);
 
             // ASSIGNED ONLY WHEN IT CHANGES. Graphic.material's SETTER calls
             // SetMaterialDirty() unconditionally, so re-assigning the same

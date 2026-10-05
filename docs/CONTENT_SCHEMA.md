@@ -627,6 +627,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `lagSeconds` | float | `0` | Seconds each copy trails the one before it: copy k draws the layer as it was k * lagSeconds ago. |  |
 | `alpha` | float | `0` | Opacity of the nearest copy at full strength, 0-1; each further copy is weaker by an even step. Multiplied by the layer's own alpha. |  |
 | `spread` | float | `0` | How far, in reference-frame units, a copy has to lie from the layer's current drawing to show at full strength; nearer is fainter, none at all when the layer has not moved. 0 means 120. |  |
+| `additive` | bool | `false` | Draw the copies added to what is behind them (light) instead of over it, so they can only brighten the scene and never read as a dark smear on a bright background. |  |
 
 ### `SpellEmitter`
 
@@ -715,6 +716,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `echo` | SpellEcho (below) | (zero -- see SpellEcho) | Afterimages: lagged faint copies of this layer's own drawing that trail its motion, strongest where it moves fastest; see SpellEcho. Unauthored means none. Not drawn on an emitter. |  |
 | `glowCurve` | SpellGlowCurve (below) | (zero -- see SpellGlowCurve) | How the layer's glow changes over its life: a ramp to a final value and a pulse on top; see SpellGlowCurve. Unauthored means `glow` holds. Not drawn on an emitter. |  |
 | `stoke` | float | `0` | How strongly this layer lifts the Burn coal glow of the body it is placed on while it lives, 0-1, following the layer's own fades and breathing; 0 means it does not touch the glow. Not drawn on an emitter. |  |
+| `unkicked` | bool | `false` | Stays where it is when the stage is kicked (vfx.kick): a layer or emitter hung in the air, such as a swinging censer and the embers born on it, is not part of the stage the figures stand on. The figures, the ground and layers placed on them still move. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
 | `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre, sky or above, a layer that travels, or a layer riding another (place layer:<id>). | None, Target |

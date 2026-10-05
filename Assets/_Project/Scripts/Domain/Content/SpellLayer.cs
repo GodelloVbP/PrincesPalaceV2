@@ -119,6 +119,9 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("How strongly this layer lifts the Burn coal glow of the body it is placed on while it lives, 0-1, following the layer's own fades and breathing; 0 means it does not touch the glow. Not drawn on an emitter.")]
         public float stoke;
 
+        [ContentDoc("Stays where it is when the stage is kicked (vfx.kick): a layer or emitter hung in the air, such as a swinging censer and the embers born on it, is not part of the stage the figures stand on. The figures, the ground and layers placed on them still move.")]
+        public bool unkicked;
+
         [ContentDoc("Uniform scale applied on top of the fitted box.")]
         public float scale = 1f;
 
@@ -262,6 +265,7 @@ namespace PrincesPalace.Domain.Content
             echo = echo == null ? new SpellEcho() : echo.Copy(),
             glowCurve = glowCurve == null ? new SpellGlowCurve() : glowCurve.Copy(),
             stoke = stoke,
+            unkicked = unkicked,
             scale = scale,
             size = size,
             fit = fit,

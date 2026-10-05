@@ -28,11 +28,14 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("How far, in reference-frame units, a copy has to lie from the layer's current drawing to show at full strength; nearer is fainter, none at all when the layer has not moved. 0 means 120.")]
         public float spread;
 
+        [ContentDoc("Draw the copies added to what is behind them (light) instead of over it, so they can only brighten the scene and never read as a dark smear on a bright background.")]
+        public bool additive;
+
         public bool IsAuthored => count > 0;
 
         public float SpreadOrDefault => spread > 0f ? spread : DefaultSpread;
 
-        public SpellEcho Copy() => new SpellEcho { count = count, lagSeconds = lagSeconds, alpha = alpha, spread = spread };
+        public SpellEcho Copy() => new SpellEcho { count = count, lagSeconds = lagSeconds, alpha = alpha, spread = spread, additive = additive };
 
         // The strength of copy `k` (1-based) when it lies `distance` from the layer.
         public float StrengthOf(int k, float distance)

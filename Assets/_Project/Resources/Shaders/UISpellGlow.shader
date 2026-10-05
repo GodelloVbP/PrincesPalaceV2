@@ -38,6 +38,11 @@ Shader "PrincesPalace/UISpellGlow"
         // Where the ramp starts, in sprite luminance. 0.72 keeps the painted
         // body of an effect untouched and lifts only the molten core.
         _Knee ("Glow knee", Range(0, 1)) = 0.72
+
+        // The destination blend factor: 10 (one minus source alpha) draws the layer
+        // over what is behind it, 1 adds it to what is behind it, so it can only
+        // brighten (an afterimage that reads as light).
+        _DstBlend ("Destination blend", Float) = 10
     }
 
     SubShader
@@ -55,7 +60,7 @@ Shader "PrincesPalace/UISpellGlow"
         Lighting Off
         ZWrite Off
         ZTest [unity_GUIZTestMode]
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend SrcAlpha [_DstBlend]
 
         Pass
         {
