@@ -60,106 +60,6 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: Audio/Sfx/censer_of_embers_cast
       layers:
-      - id: pool
-        render: still
-        place: target
-        height: 0
-        follow: 0
-        whenConsumed: 
-        at: release
-        offset: 0
-        path: Spells/glow_disc
-        seconds: 1
-        fps: 0
-        startFrame: 0
-        until: hold
-        fade: 0.15
-        fadeIn: 0.2
-        opacity: 0.3
-        dx: 0
-        dy: 0
-        drift:
-          fromX: 0
-          toX: 0
-          fromY: 0
-          toY: 0
-          viaX: 0
-          viaY: 0
-          viaAt: 0
-          arcY: 0
-        rotate:
-          degrees: 0
-          spin: 0
-          amplitude: -9.5
-          period: 0.8
-          damping: -0.4
-          phase: 90
-          delay: 0.2
-          swings: 0
-          pivotX: 0.5
-          pivotY: 5.5
-        breathe:
-          alpha: 0
-          scale: 0
-          rate: 1
-        echo:
-          count: 0
-          lagSeconds: 0
-          alpha: 0
-          spread: 0
-        glowCurve:
-          to: 0
-          pulse: 0
-          period: 0
-          crest: 0
-          knee: 0
-        stoke: 0
-        scale: 1
-        size: 500
-        fit: 
-        facing: none
-        sort: effects
-        align: 
-        punch: 0
-        glow: 0
-        tint: '#FF9A3C'
-        impactX: 0.5
-        impactY: 0.3
-        aspect: 2
-        travelSeconds: 0
-        travelDelay: 0
-        overhang: 0
-        orient: 
-        artDegrees: 0
-        through: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          alignFlight: 0
-          lateral: 0
-          burstTimes: []
-          burstEach: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
       - id: censer
         render: still
         place: above
@@ -205,8 +105,9 @@ MonoBehaviour:
         echo:
           count: 3
           lagSeconds: 0.04
-          alpha: 0.35
-          spread: 140
+          alpha: 0.55
+          spread: 220
+          additive: 1
         glowCurve:
           to: 0.8
           pulse: 0.7
@@ -214,6 +115,7 @@ MonoBehaviour:
           crest: 0.4
           knee: 0.4
         stoke: 0
+        unkicked: 1
         scale: 1
         size: 300
         fit: 
@@ -307,6 +209,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -314,6 +217,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 1
         scale: 1
         size: 0
         fit: 
@@ -411,6 +315,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -418,6 +323,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 1
         scale: 1
         size: 0
         fit: 
@@ -425,7 +331,7 @@ MonoBehaviour:
         sort: effects
         align: 
         punch: 0
-        glow: 1.2
+        glow: 1.5
         tint: 
         impactX: -1
         impactY: -1
@@ -441,30 +347,136 @@ MonoBehaviour:
           rate: 0
           burst: 0
           window: 0
-          sourceDx: 0
+          sourceDx: 60
           sourceDy: -50
-          spreadDegrees: 160
-          aimDegrees: 270
-          speedMin: 60
-          speedMax: 190
+          spreadDegrees: 70
+          aimDegrees: 0
+          speedMin: 150
+          speedMax: 380
           inherit: 0
-          drag: 0.6
-          gravity: -520
-          lifeMin: 0.4
-          lifeMax: 0.7
-          sizeMin: 0.4
-          sizeMax: 0.75
-          spinMin: -200
-          spinMax: 200
+          drag: 1.4
+          gravity: -420
+          lifeMin: 0.3
+          lifeMax: 0.5
+          sizeMin: 0.7
+          sizeMax: 1.2
+          spinMin: -240
+          spinMax: 240
           alignFlight: 0
           lateral: 0
           burstTimes:
           - 0.2
-          - 0.6
-          burstEach: 8
+          burstEach: 16
           fadeFrom: 0.4
           endScale: 0.4
           seed: 1558
+          weights:
+          - 1
+          - 0
+          - 0
+          - 1
+      - id: sparks_back
+        render: emitter
+        place: layer:censer
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        echo:
+          count: 0
+          lagSeconds: 0
+          alpha: 0
+          spread: 0
+          additive: 0
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 1
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.5
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/censer_of_embers_particles
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: -60
+          sourceDy: -50
+          spreadDegrees: 70
+          aimDegrees: 180
+          speedMin: 150
+          speedMax: 380
+          inherit: 0
+          drag: 1.4
+          gravity: -420
+          lifeMin: 0.3
+          lifeMax: 0.5
+          sizeMin: 0.7
+          sizeMax: 1.2
+          spinMin: -240
+          spinMax: 240
+          alignFlight: 0
+          lateral: 0
+          burstTimes:
+          - 0.6
+          burstEach: 16
+          fadeFrom: 0.4
+          endScale: 0.4
+          seed: 1559
           weights:
           - 1
           - 0
@@ -517,6 +529,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -524,6 +537,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 1
         scale: 1
         size: 300
         fit: 
@@ -617,6 +631,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -624,6 +639,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 1
         scale: 1
         size: 0
         fit: 
@@ -721,6 +737,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -728,6 +745,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 1
         scale: 1
         size: 0
         fit: 
@@ -791,7 +809,7 @@ MonoBehaviour:
         fps: 8
         startFrame: 0
         until: loop
-        fade: 0.5
+        fade: 0.12
         fadeIn: 0.25
         opacity: 1
         dx: 0
@@ -825,6 +843,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -832,6 +851,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 1
+        unkicked: 0
         scale: 1
         size: 420
         fit: target
@@ -925,6 +945,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -932,6 +953,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 0
         scale: 1
         size: 0
         fit: target
@@ -1029,6 +1051,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -1036,6 +1059,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 0
         scale: 1
         size: 0
         fit: target
@@ -1060,14 +1084,14 @@ MonoBehaviour:
           burst: 0
           window: 0.9
           sourceDx: 0
-          sourceDy: 0
+          sourceDy: -120
           spreadDegrees: 40
           aimDegrees: 90
-          speedMin: 12
-          speedMax: 30
+          speedMin: 6
+          speedMax: 14
           inherit: 0
           drag: 0.9
-          gravity: 35
+          gravity: 18
           lifeMin: 1.1
           lifeMax: 1.6
           sizeMin: 0.8
@@ -1133,6 +1157,7 @@ MonoBehaviour:
           lagSeconds: 0
           alpha: 0
           spread: 0
+          additive: 0
         glowCurve:
           to: 0
           pulse: 0
@@ -1140,6 +1165,7 @@ MonoBehaviour:
           crest: 0
           knee: 0
         stoke: 0
+        unkicked: 0
         scale: 1
         size: 0
         fit: target
@@ -1148,7 +1174,7 @@ MonoBehaviour:
         align: 
         punch: 0
         glow: 0
-        tint: '#9A958F'
+        tint: '#7A6E64'
         impactX: -1
         impactY: -1
         aspect: 0

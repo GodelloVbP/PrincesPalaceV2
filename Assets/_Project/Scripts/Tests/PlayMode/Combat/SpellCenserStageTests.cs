@@ -96,8 +96,8 @@ namespace PrincesPalace.PlayModeTests
             CastCenser(out float t0);
             yield return At(t0, 0.5f);
 
-            Assert.AreEqual(5, FightHudSpec.SpellLayerRenderers - player.FreeEffectRenderers,
-                "the light pool, the lantern and its three afterimages");
+            Assert.AreEqual(4, FightHudSpec.SpellLayerRenderers - player.FreeEffectRenderers,
+                "the lantern and its three afterimages");
 
             yield return At(t0, 10f);
             Assert.AreEqual(FightHudSpec.SpellLayerRenderers, player.FreeEffectRenderers,

@@ -170,44 +170,45 @@ namespace PrincesPalace.Domain.Tests
             var echo = Censer().layers.Single(l => l.id == "censer").echo;
             Assert.AreEqual(3, echo.count);
             Assert.AreEqual(0.04f, echo.lagSeconds, 1e-6f);
-            Assert.AreEqual(0.35f, echo.alpha, 1e-6f);
-            Assert.AreEqual(140f, echo.spread, 1e-6f);
+            Assert.AreEqual(0.55f, echo.alpha, 1e-6f);
+            Assert.AreEqual(220f, echo.spread, 1e-6f, "only near the fastest part of the swing");
+            Assert.IsTrue(echo.additive, "light, never a dark smear");
         }
 
         [Test]
-        public void SparksAreShakenLooseAtTheReleaseAndAtTheRightExtreme()
-        {
-            var sparks = Censer().layers.Single(l => l.id == "sparks");
-            Assert.AreEqual("layer:censer", sparks.place, "born on the lantern");
-            CollectionAssert.AreEqual(new[] { 0.2f, 0.6f }, sparks.emitter.burstTimes);
-            Assert.AreEqual(8, sparks.emitter.burstEach);
-            Assert.AreEqual(0f, sparks.emitter.burst, "nothing at the opening instant");
-            Assert.AreEqual(1.2f, sparks.glow, 1e-6f);
-            Assert.AreEqual(-520f, sparks.emitter.gravity, 1e-6f, "they fall");
-        }
-
-        [Test]
-        public void ALightPoolSlidesWithTheLanternUnderIt()
+        public void SparksAreFlungAlongTheSwingFromTheRimAtTheReleaseAndAtTheRightExtreme()
         {
             var vfx = Censer();
-            var censer = vfx.layers.Single(l => l.id == "censer");
-            var pool = vfx.layers.Single(l => l.id == "pool");
-            Assert.AreEqual("Spells/glow_disc", pool.path);
-            Assert.AreEqual("target", pool.place);
-            Assert.AreEqual(0.3f, pool.opacity, 1e-6f, "low alpha");
-            Assert.AreEqual("#FF9A3C", pool.tint);
-            Assert.AreEqual(censer.rotate.amplitude, pool.rotate.amplitude, 0f, "the censer's own turn");
-            Assert.AreEqual(censer.rotate.period, pool.rotate.period, 0f);
-            Assert.AreEqual(censer.rotate.damping, pool.rotate.damping, 0f);
-            Assert.AreEqual(censer.rotate.phase, pool.rotate.phase, 0f);
-            Assert.AreEqual(censer.rotate.delay, pool.rotate.delay, 0f);
+            var out_ = vfx.layers.Single(l => l.id == "sparks");
+            var back = vfx.layers.Single(l => l.id == "sparks_back");
+            Assert.AreEqual("layer:censer", out_.place, "born on the lantern");
+            CollectionAssert.AreEqual(new[] { 0.2f }, out_.emitter.burstTimes);
+            CollectionAssert.AreEqual(new[] { 0.6f }, back.emitter.burstTimes);
+            Assert.AreEqual(16, out_.emitter.burstEach);
+            Assert.AreEqual(16, back.emitter.burstEach);
+            Assert.AreEqual(0f, out_.emitter.aimDegrees, "to the right, the way it is about to swing");
+            Assert.AreEqual(180f, back.emitter.aimDegrees, "then back to the left");
+            Assert.AreEqual(60f, out_.emitter.sourceDx, "the right rim");
+            Assert.AreEqual(-60f, back.emitter.sourceDx, "the left rim");
+            Assert.AreEqual(0f, out_.emitter.burst, "nothing at the opening instant");
+            Assert.AreEqual(1.5f, out_.glow, 1e-6f);
+            Assert.IsTrue(out_.unkicked && back.unkicked);
+            Assert.AreEqual(-420f, out_.emitter.gravity, 1e-6f, "they fall");
+        }
 
-            // The pivot is as far from the pool's centre as it is from the lantern's:
-            // (4.5 - 0.5) x 300 + 50 = 1250 for the lantern, (5.5 - 0.5) x 250 = 1250 here.
-            float poolHeight = pool.size / pool.aspect;
-            Assert.AreEqual(250f, poolHeight, 1e-6f);
-            Assert.AreEqual(1250f, (pool.rotate.pivotY - 0.5f) * poolHeight, 1e-3f);
-            Assert.AreEqual(1250f, (censer.rotate.pivotY - 0.5f) * censer.size + 50f, 1e-3f);
+        [Test]
+        public void TheSwingingCenserAndItsCrackAndEmbersStayPutWhenTheStageIsKicked()
+        {
+            var vfx = Censer();
+            foreach (var id in new[] { "censer", "trail", "crack", "burst", "coals", "sparks", "sparks_back" })
+            {
+                Assert.IsTrue(vfx.layers.Single(l => l.id == id).unkicked, id + " hangs in the air");
+            }
+
+            foreach (var id in new[] { "fire", "rise", "smoke", "ash" })
+            {
+                Assert.IsFalse(vfx.layers.Single(l => l.id == id).unkicked, id + " is on the body and kicks with it");
+            }
         }
 
         [Test]
@@ -228,9 +229,10 @@ namespace PrincesPalace.Domain.Tests
             var ash = vfx.layers.Single(l => l.id == "ash");
             var fire = vfx.layers.Single(l => l.id == "fire");
             Assert.AreEqual(fire.offset, smoke.offset, 1e-6f, "born while the fire lives");
-            Assert.AreEqual(35f, smoke.emitter.gravity, 1e-6f, "positive: it rises");
+            Assert.AreEqual(18f, smoke.emitter.gravity, 1e-6f, "positive: it rises");
+            Assert.AreEqual(-120f, smoke.emitter.sourceDy, 1e-6f, "born at the feet, under the flames");
             Assert.AreEqual(-120f, ash.emitter.gravity, 1e-6f, "negative: it drifts down");
-            Assert.AreEqual("#9A958F", ash.tint, "grey");
+            Assert.AreEqual("#7A6E64", ash.tint, "warm ash grey, no green");
             Assert.AreEqual("Spells/glow_disc", ash.emitter.path, "soft discs: the particle sheet has no grey flake");
             Assert.AreEqual(0.6f, ash.offset, 1e-6f);
 
@@ -252,10 +254,10 @@ namespace PrincesPalace.Domain.Tests
                 .Where(i => i.Layer.Render == SpellRender.Emitter)
                 .Sum(i => PrincesPalace.Domain.Combat.Presentation.SpellEmitterSim.CountOf(i.Layer.emitter));
 
-            Assert.AreEqual(86, total, "everything it ever throws: 10 trail, 16 sparks, 38 embers, 5 coals, 6 rise, 5 smoke, 6 ash");
+            Assert.AreEqual(102, total, "everything it ever throws: 10 trail, 32 sparks, 38 embers, 5 coals, 6 rise, 5 smoke, 6 ash");
             Assert.Greater(total, 64);
-            Assert.AreEqual(61, SpellPoolPeak.ParticlesOf(performance), "alive together: 3 under the pool's 64");
-            Assert.AreEqual(6, SpellPoolPeak.EffectsRenderersOf(performance), "of 12: the pool, the lantern with its three afterimages and the crack as it breaks");
+            Assert.AreEqual(62, SpellPoolPeak.ParticlesOf(performance), "alive together: 2 under the pool's 64");
+            Assert.AreEqual(5, SpellPoolPeak.EffectsRenderersOf(performance), "of 12: the lantern with its three afterimages and the crack as it breaks");
         }
 
         [Test]
@@ -264,7 +266,7 @@ namespace PrincesPalace.Domain.Tests
             var ids = Censer().layers.Select(l => l.id).ToArray();
             CollectionAssert.AreEqual(new[]
             {
-                "pool", "censer", "trail", "sparks", "crack", "burst", "coals", "fire", "rise", "smoke", "ash",
+                "censer", "trail", "sparks", "sparks_back", "crack", "burst", "coals", "fire", "rise", "smoke", "ash",
             }, ids);
         }
 
@@ -281,7 +283,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.45f, fire.offset, 1e-6f, "it catches as the embers land, not on the cue");
             Assert.AreEqual(0.25f, fire.fadeIn, 1e-6f);
             Assert.AreEqual(0.5f, fire.seconds, 1e-6f);
-            Assert.AreEqual(0.5f, fire.fade, 1e-6f);
+            Assert.AreEqual(0.12f, fire.fade, 1e-6f, "a longer fade turns the flame's yellow core olive over the dark ground");
             Assert.AreEqual(0.125f, fire.impactY, 1e-6f, "the coal line, row 390 of 444");
             Assert.AreEqual(0.35f, fire.breathe.alpha, 1e-6f);
             Assert.AreEqual(0.07f, fire.breathe.scale, 1e-6f);

@@ -62,7 +62,7 @@ body flat green, as before.
 
 Captures 2026-10-05 (`gif.ps1 spell censer_of_embers`, treant 1x, rat 1x, treant `-Repeat 3 -Speed 1.5`); frames are 60 fps, the cue
 is f60 at 1x and f40 at 1.5x. Frames looked at at 1920x1080 around the target. No verdict: the owner judges.
-New layers `pool`, `sparks`, `smoke`, `ash`; new fields `glowCurve` (with `knee`), `echo`, `stoke`, `emitter.burstTimes/burstEach`,
+New layers `sparks`, `sparks_back`, `smoke`, `ash` (a light `pool` was tried and removed, see Revision); new fields `glowCurve` (with `knee`), `echo`, `stoke`, `emitter.burstTimes/burstEach`,
 `vfx.kick`, plus `glow` and `tint` now drawn on an emitter's particles (`docs/ART_PIPELINE.md` rows, `SpellPolishFieldsTests`).
 
 Swing
@@ -100,6 +100,24 @@ Guards and checks
   10 degree field) or more, so no large flash in any second.
 - Burn badge: first appears in the status strip at f60, the cue frame; hitCueSeconds is unchanged and the cue tests are green.
 - Particle pool: the spell throws 86 particles in all and 64 are alive at most (`SpellPoolPeak`); effects renderers 7 of 12.
+
+## Revision after the coordinator's watch (same day, recaptured)
+
+- **Light pool removed.** It read as an orange stain on the floor far below the lantern; `glow_disc` stays only for the ash.
+- **Afterimages are now additive** (`echo.additive`, `_DstBlend` 1 in `UISpellGlow`), alpha 0.55, full strength only 220 px from the
+  lantern. On the rat (f20, f26, f34, f50) they read as gold ghosts of the lantern, brighter than the background, never darker. Over the
+  treant's canopy they add to the green and read as a lime glow (f24, f30, f44, f48): light, but green-tinged.
+- **Kick no longer moves hanging layers** (`unkicked` on the censer, trail, crack, burst, coals and sparks); figures, ground, fire,
+  smoke and ash still kick. Rat lantern centroid dx at the break: -9.1 (f58), -5.3 (f59), +6.3 (f60, the crack's brighter drawing
+  replacing the lantern), -5.3 (f61), -7.8 (f62), gone at f63: no push, same as before the kick existed.
+- **Sparks**: 16 per turn in two layers, 0.7-1.2 of a particle, glow 1.5, from the right rim at the release flung right (f14-f26) and from
+  the left rim at the right extreme flung left (f42-f50). Bright orange, readable.
+- **Green**: the yellow-green was the painted flame's yellow core over the dark floor while it faded (rat f130-f142, treant f138): the
+  fire's fade is now 0.12 s (was 0.5), and the grey ash is a warm dark grey (#7A6E64). Yellow-green pixels over the feet, f120-f200:
+  rat 797 -> 402 -> none visible, treant 216 -> 35. The fire now ends about 0.4 s sooner.
+- **Smoke** is born 120 px below the body's middle and rises slowly (f96-f152): brown wisps climbing the trunk from the flames. Faint.
+- Flash guard, `-Repeat 3 -Speed 1.5`: largest step 52,120 px (2.5%) at f68, none at 57,000 px or more.
+- Particles: 102 thrown, 62 alive at most (of 64); effects renderers 5 of 12.
 
 ## What is weak
 
