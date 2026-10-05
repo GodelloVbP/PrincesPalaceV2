@@ -536,7 +536,20 @@ def write_json_atomic(path, data):
     temp = "%s.%d.tmp" % (path, os.getpid())
     with open(temp, "w", encoding="utf-8") as handle:
         json.dump(data, handle, indent=2, sort_keys=True)
-    os.replace(temp, path)
+    replace_retrying(temp, path)
+
+
+def replace_retrying(temp, path, attempts=50):
+    """os.replace that rides out Windows' transient PermissionError, raised
+    while another handle (a scanner, a reader) briefly holds the target."""
+    for attempt in range(attempts):
+        try:
+            os.replace(temp, path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.02)
 
 
 def update_json_locked(path, updates, wait=30.0, stale=60.0):
@@ -551,7 +564,9 @@ def update_json_locked(path, updates, wait=30.0, stale=60.0):
         try:
             os.close(os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
             break
-        except FileExistsError:
+        except (FileExistsError, PermissionError):
+            # Windows reports a lock whose delete is still pending as
+            # PermissionError, not FileExistsError: both mean "held, retry".
             try:
                 if time.time() - os.path.getmtime(lock) > stale:
                     os.remove(lock)
