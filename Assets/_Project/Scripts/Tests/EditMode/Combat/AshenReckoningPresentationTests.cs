@@ -32,17 +32,19 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, wind.fade, 1e-6f);
 
             var catchLayer = vfx.layers.Single(l => l.id == "catch");
-            Assert.AreEqual("hit", catchLayer.at);
+            Assert.AreEqual("release", catchLayer.at, "release clock, because an at: hit still is capped at 0.75 of the body");
             Assert.AreEqual("still", catchLayer.render);
-            Assert.AreEqual("Spells/ashen_reckoning_catch", catchLayer.path);
-            Assert.AreEqual(0f, catchLayer.offset, 1e-6f, "the Poison packet's number is on the cue");
-            Assert.AreEqual(1.0f, catchLayer.glow, 1e-6f);
-            Assert.AreEqual("#D8FF98", catchLayer.tint, "teal pulled toward the game's Poison green");
+            Assert.AreEqual("Spells/ashen_reckoning", catchLayer.path, "f6, the swirl on fire, until the owner's cel catch arrives");
+            Assert.AreEqual(7, catchLayer.startFrame);
+            Assert.AreEqual(0.3f, catchLayer.offset, 1e-6f, "the Poison packet's number is on the cue");
+            Assert.AreEqual(1.2f, catchLayer.glow, 1e-6f);
+            Assert.IsTrue(string.IsNullOrEmpty(catchLayer.tint), "no green tint: it pushed the flame salmon");
+            Assert.AreEqual(0.35f, catchLayer.punch, 1e-6f, "the whoomph: opens oversized and settles");
 
             var flare = vfx.layers.Single(l => l.id == "flare");
-            Assert.AreEqual("hit", flare.at);
-            Assert.AreEqual("Spells/ashen_reckoning_catch", flare.path, "the same drawing flares; no second drawing");
-            Assert.AreEqual(0.05f, flare.offset, 1e-6f, "3 frames at 60 fps, StageHitFlash.StaggerSeconds");
+            Assert.AreEqual("release", flare.at);
+            Assert.AreEqual(catchLayer.path, flare.path, "the same drawing flares; no second drawing");
+            Assert.AreEqual(0.35f, flare.offset, 1e-6f, "the cue plus 3 frames at 60 fps, StageHitFlash.StaggerSeconds");
             Assert.AreEqual(1.8f, flare.glow, 1e-6f);
             Assert.Greater(flare.size, catchLayer.size);
         }
@@ -57,6 +59,30 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, vfx.layers.Single(l => l.id == "drops").offset, 1e-6f);
             Assert.AreEqual(0.05f, vfx.layers.Single(l => l.id == "settle").offset, 1e-6f);
             Assert.AreEqual(0.62f, vfx.layers.Single(l => l.id == "settle").emitter.lifeMax, 1e-6f);
+        }
+
+        [Test]
+        public void TheWindUpTurnsFasterToTheCueAndTheEndingDiesInOrder()
+        {
+            var vfx = Ashen();
+            var turn = vfx.layers.Single(l => l.id == "ritual").rotate;
+            Assert.AreEqual(270f, turn.phase, 1e-6f, "starts at rest, fastest on the cue");
+            Assert.AreEqual(1.2f, turn.period, 1e-6f, "a quarter period is the 0.3 s wind-up");
+
+            // Flames step down in size and glow, then the last smoke curl is the final thing.
+            var fires = new[] { "fire_a", "fire_mid", "fire_low" }.Select(id => vfx.layers.Single(l => l.id == id)).ToArray();
+            Assert.Greater(fires[0].size, fires[1].size);
+            Assert.Greater(fires[1].size, fires[2].size);
+            Assert.Greater(fires[0].glow, fires[1].glow);
+            Assert.Greater(fires[1].glow, fires[2].glow);
+            Assert.Greater(vfx.layers.Single(l => l.id == "embers").glow, vfx.layers.Single(l => l.id == "embers_late").glow);
+
+            float End(SpellLayer l) => (l.at == "hit" ? 0.3f : 0f) + l.offset + (l.emitter != null
+                ? (l.emitter.window > 0f ? l.emitter.window : 0f) + l.emitter.lifeMax
+                : l.seconds + l.fade);
+            var curl = vfx.layers.Single(l => l.id == "curl");
+            foreach (var l in vfx.layers.Where(l => l.id != "curl" && l.id != "ritual"))
+                Assert.Less(End(l), End(curl), $"{l.id} ends before the last curl of smoke");
         }
 
         [Test]
