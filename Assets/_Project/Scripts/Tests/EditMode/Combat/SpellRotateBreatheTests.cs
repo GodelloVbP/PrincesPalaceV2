@@ -237,5 +237,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(problems.Any(p => p.Contains("authors breathe, which is inert")));
             Assert.IsTrue(problems.Any(p => p.Contains("authors fadeIn, which is inert")));
         }
+
+        // dwell 1: s -> 1 - (1 - |s|)^2. At sin = 0.5 (period/12) that is 0.75;
+        // at the extreme and the crossings it is unchanged.
+        [Test]
+        public void DwellFlattensThePendulumAtItsEndsAndKeepsItsExtremesAndCrossings()
+        {
+            var plain = new SpellRotate { amplitude = 10f, period = 1.2f };
+            var heavy = new SpellRotate { amplitude = 10f, period = 1.2f, dwell = 1f };
+
+            Assert.AreEqual(5f, plain.AngleAt(0.1f), 1e-3f);
+            Assert.AreEqual(7.5f, heavy.AngleAt(0.1f), 1e-3f);
+            Assert.AreEqual(-7.5f, heavy.AngleAt(0.7f), 1e-3f, "mirrors below zero");
+            Assert.AreEqual(10f, heavy.AngleAt(0.3f), 1e-4f);
+            Assert.AreEqual(0f, heavy.AngleAt(0.6f), 1e-3f);
+            Assert.AreEqual(0f, heavy.AngleAt(0f), 1e-6f);
+        }
+
+        [Test]
+        public void ANegativeDwellIsRefused()
+        {
+            var problems = Problems(new SpellLayer { rotate = new SpellRotate { amplitude = 10f, period = 1f, dwell = -0.5f } });
+            Assert.AreEqual(1, problems.Count, string.Join(" | ", problems));
+            StringAssert.Contains("rotate.dwell -0.5 is outside 0..4", problems[0]);
+        }
     }
 }

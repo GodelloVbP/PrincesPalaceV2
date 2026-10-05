@@ -52,6 +52,7 @@ namespace PrincesPalace.Domain.Content
         // turn is a typo for a smaller one (degrees typed as radians in reverse),
         // and a spin past four turns a second is a blur the frame rate aliases.
         public const float MaxRotateDegrees = 180f;
+        public const float MaxDwell = 4f;
         public const float MaxSpinDegreesPerSecond = 1440f;
         public const float MaxPendulumPeriod = 10f;
         public const float MinPendulumPeriod = 0.1f;
@@ -410,6 +411,11 @@ namespace PrincesPalace.Domain.Content
             if (float.IsNaN(rotate.damping) || rotate.damping < 0f || rotate.damping > MaxDamping)
             {
                 problems.Add($"{at}.rotate.damping {Num(rotate.damping)} is outside 0..{Num(MaxDamping)} per second.");
+            }
+
+            if (float.IsNaN(rotate.dwell) || rotate.dwell < 0f || rotate.dwell > MaxDwell)
+            {
+                problems.Add($"{at}.rotate.dwell {Num(rotate.dwell)} is outside 0..{Num(MaxDwell)}.");
             }
 
             if (float.IsNaN(rotate.swings) || rotate.swings < 0f || rotate.swings > MaxSwings)

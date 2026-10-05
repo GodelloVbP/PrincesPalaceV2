@@ -35,7 +35,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Where it belongs: caster, caster-centre, target, target-centre, formation, sky (in the air halfway from the caster to one struck target, above both), above (straight over one struck target, `height` body-heights up; a travelling layer falls from there onto it), counterpart / counterpart-centre (the other end of the cast's move: the figure a swap or a pull traded seats with; nothing is drawn when the move had no other end), or 'layer:<id>' to ride another layer. No default -- a blank is refused.")]
         public string place = "";
 
-        [ContentDoc("Place 'above' only, and required there: how far above the struck body's middle the layer sits, in body heights (the visible body's height; 1 is one body-height up). A travelling layer leaves from there and falls onto the middle, so the fall takes travelSeconds on any body. Held under the sky ceiling, so a tall body is dropped on from less far. Legal only on place 'above'.")]
+        [ContentDoc("Place 'above' only, and required there: how far above the struck body's middle the layer sits, in body heights (the visible body's height; 1 is one body-height up). A travelling layer leaves from there and falls onto the middle, so the fall takes travelSeconds on any body. A travelling layer is held under the sky ceiling, so a tall body is dropped on from less far; a layer that does not travel hangs, held only at the stage's top edge, and is not shrunk to clear the combat log. Legal only on place 'above'.")]
         public float height;
 
         // FOLLOW versus SAMPLE-ONCE, and the difference is visible the moment

@@ -531,7 +531,7 @@ namespace PrincesPalace
             }
             else if (layer.Place == SpellPlace.Above && !layer.Travels)
             {
-                var over = SpellFlight.AbovePoint(body.Value, layer.height);
+                var over = SpellFlight.AbovePoint(body.Value, layer.height, layer.Travels ? -1f : box.y * 0.5f);
                 aim = new Vector2(over.X, over.Y);
             }
             else
@@ -697,6 +697,9 @@ namespace PrincesPalace
         private void KeepUnderTheLog(SpellLayerInstance instance, Vector2 fromAnchor, Vector2 toAnchor,
             Vector2 art, Transform parent)
         {
+            // A HANGING LAYER (non-travelling `above`) is exempt: its chain
+            // runs up behind the log by design (SpellFlight.StageTop).
+            if (instance.Layer.Place == SpellPlace.Above && !instance.Layer.Travels) return;
             if (!LogFloor(parent, out float floor)) return;
 
             float half = SpellFlight.RotatedHalfHeight(new UiVec(art.x, art.y), instance.Degrees);

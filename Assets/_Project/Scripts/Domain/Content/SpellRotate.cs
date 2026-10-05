@@ -32,6 +32,9 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Pendulum damping per second: the amplitude is multiplied by e^(-damping * seconds). 0 swings undiminished.")]
         public float damping;
 
+        [ContentDoc("How long the pendulum lingers at its extremes, 0 or more: the swing's shape is sign(s) * (1 - (1 - |s|)^(1 + dwell)) of the sine s, so 0 is a plain sine and 1 makes it slow to a near stop at each end and quicken through the middle, like a heavy bell. Applies to the pendulum only.")]
+        public float dwell;
+
         [ContentDoc("How many full periods the pendulum swings; fractions count (0.75 ends at the far extreme of the second swing). 0 means until the layer ends. After them the pendulum rests at the vertical.")]
         public float swings;
 
@@ -45,7 +48,7 @@ namespace PrincesPalace.Domain.Content
 
         public SpellRotate Copy() => new SpellRotate
         {
-            degrees = degrees, spin = spin, amplitude = amplitude, period = period, damping = damping,
+            degrees = degrees, spin = spin, amplitude = amplitude, period = period, damping = damping, dwell = dwell,
             swings = swings, pivotX = pivotX, pivotY = pivotY,
         };
 
@@ -56,13 +59,22 @@ namespace PrincesPalace.Domain.Content
             return degrees + spin * age + PendulumAt(age);
         }
 
+        // The sine reshaped to hang at its ends: same extremes, same zero
+        // crossings, flatter near +-1.
+        private double Dwelt(double s)
+        {
+            if (dwell <= 0f) return s;
+            double eased = 1.0 - Math.Pow(1.0 - Math.Abs(s), 1.0 + dwell);
+            return s < 0 ? -eased : eased;
+        }
+
         private float PendulumAt(float age)
         {
             if (amplitude == 0f || period <= 0f) return 0f;
             if (swings > 0f && age > swings * period) return 0f;
 
             double phase = 2.0 * Math.PI * age / period;
-            return (float)(amplitude * Math.Sin(phase) * Math.Exp(-damping * age));
+            return (float)(amplitude * Dwelt(Math.Sin(phase)) * Math.Exp(-damping * age));
         }
     }
 }
