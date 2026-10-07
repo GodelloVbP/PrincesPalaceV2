@@ -1,7 +1,10 @@
 # Ashen Reckoning: state record
 
 Trial 1 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), step 2 "block with existing assets", round 2.
-Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. No verdict: the owner judges.
+Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`.
+**Step 3 passed (owner, 2026-10-07): the round 2 motion is accepted. Next: step 4, the owner generates the pieces
+under "Art needed for step 4".** The untracked `ashen_reckoning_catch.png` (2026-10-04, painted, green key) is the
+pre-workflow still, not step 4 art.
 Captures 2026-10-05 with `tools/gif.ps1 spell ashen_reckoning -Vs rat|treant [-Speed 1.5] -PreStatus Poison`.
 Full GIFs sit next to this file, untracked (`ashen_reckoning_trial_*.gif`, 13-23 MB); the phone previews are
 `*_preview.gif` beside them, and the treant 1x preview is committed as
