@@ -233,6 +233,22 @@ Not in the picture: flame, glow, the ground, colour other than grey.
 
 5. **Venom drops** (optional, low priority): the drop sprite, outlined, two greens, on the magenta key, 2x2 of 256.
 
+### Step 5: art inspection (orchestrator, 2026-10-07)
+
+Delivered 2026-10-07 already keyed (RGBA, transparent), exact canvases and grids: `ashen_reckoning_venom_vortex.png`
+2560x512 5x1, `ashen_reckoning_catch_cel.png` 2048x512 4x1, `ashen_reckoning_smoke_ash.png` 2048x512 4x1. Pieces 3 and
+5 (campfire, drops) not made; both optional. Recipes take the alpha as is (no key) with an alpha floor of 40: each
+cell has 750-8000 pixels at alpha 1-40, which are dark outline fringe plus sparse specks up to ~100 px outside the
+drawing, not key spill (no magenta or green fringe).
+
+| Piece | Style (flat cel, bold outline) | Reads as | Usable | For step 6 |
+|---|---|---|---|---|
+| Venom vortex | ✔ two greens and a pale hit, outlined drops | venom winding into a knot ✔ | yes | All five cells have the same radius (~100 px), so "drawn inward" is carried only by density. The engine supplies the pull: spin plus a scale-down over the wind-up. |
+| Catch | ✔ red, orange, yellow core | core, then a ring of flame ✔ | yes, with two watch items | (a) Cell 1 sits off-centre: solid box x 151-262, y 260-360 against centred cells 2-4. Register it in the recipe. (b) Cells 2-3 are an upright, camera-facing hoop and cell 4 is a flat ellipse on the ground. Playing 3 then 4 in sequence may read as a perspective pop. If it does, end on cell 3 and hand off to the flame loop at the feet. Tongues lean outward, not in (asked for in); acceptable. |
+| Smoke and ash | ✔ | S-curl, broken curl, three flakes, two flakes and a chip ✔ | yes | The grey is cool, not warm. Tint it in the engine if it clashes with the fire. |
+
+Verdict: accepted for wiring; no revision prompt. The catch's hoop-to-ground change (b) is judged in motion at step 6.
+
 ## Open owner questions
 
 Each asked once.
