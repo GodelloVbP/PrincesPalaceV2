@@ -3175,7 +3175,7 @@
             "facing": "none",
             "sort": "effects",
             "opacity": 0.4,
-            "tint": "#9A90C0",
+            "tint": "#B9A0FF",
             "fadeIn": 0.18,
             "fade": 0.1,
             "drift": { "fromX": -1.1, "toX": 1.1, "fromY": 0.15, "toY": 0.15 }
@@ -3198,7 +3198,7 @@
             "impactY": 0.9,
             "facing": "reverse",
             "sort": "effects",
-            "opacity": 0.7,
+            "opacity": 1,
             "fadeIn": 0.1,
             "fade": 0.06,
             "drift": { "fromX": -1.5, "toX": -0.8 }
@@ -3221,7 +3221,7 @@
             "impactY": 0.77,
             "facing": "reverse",
             "sort": "effects",
-            "opacity": 0.7,
+            "opacity": 1,
             "glow": 0.1,
             "glowCurve": {
               "to": 0.2,
@@ -3294,6 +3294,7 @@
               "sizeMax": 0.48,
               "spinMin": -40,
               "spinMax": 40,
+              "tint": "#B58CFF",
               "fadeFrom": 0.25,
               "endScale": 1.4,
               "seed": 2711
@@ -3329,6 +3330,7 @@
               "sizeMax": 0.22,
               "spinMin": -30,
               "spinMax": 30,
+              "tint": "#B58CFF",
               "fadeFrom": 0.2,
               "endScale": 1.5,
               "seed": 3319
@@ -3361,6 +3363,7 @@
               "lifeMax": 1.1,
               "sizeMin": 0.32,
               "sizeMax": 0.32,
+              "tint": "#B58CFF",
               "fadeFrom": 0.1,
               "endScale": 1.6,
               "seed": 4421

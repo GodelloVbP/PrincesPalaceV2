@@ -397,6 +397,17 @@ For the owner's review. It improves on round 3, but three things are open:
 
 The rim (peak 0.7) no longer dominates on rats. On the treant it is still a wide violet halo at f42 and f64.
 
+### Tuning after step 6 (2026-10-07; `court_of_whispers_tune_{rat,treant}_1x.gif`, strips beside it; values only, `skills.json`)
+
+Changed: `orbit_front` and `lean` opacity 0.7 to 1; `orbit_back` tint `#9A90C0` (grey) to `#B9A0FF` (lilac), opacity kept 0.4; `tint #B58CFF` on
+`smoke_a`, `smoke_b` and `curl`. The wisp sheet averages grey-lilac (148,123,182) and the green-key fringe pulled it yellow-green, so a violet tint
+multiplies the green down; glow was not the cause.
+
+1. Washed out: **fixed**. Treant f6-f33: the courtiers are solid violet through the whole orbit and lean, no grey-white ghost at f20-f36 or f52.
+2. Smoke: **fixed**. Treant f36-f48 curls are violet, no yellow-green.
+3. Rat patch: **not fixed**. Rat f20-f30: the courtier is now a saturated violet patch on the back, but still a patch, not a figure, at 80 px.
+   Sizes untouched (owner-approved); the treant reads as a hooded figure.
+
 ## Open owner questions
 
 Each asked once.
@@ -418,6 +429,7 @@ Each asked once.
 | 2 | Far arc to the effects band (gate), crossfaded hand-off (0.1 s), lean crossfaded to full on the cue (the treant's visual contact moved from f47 to f59, a later rim pulse, and still WARNs), smaller figures, bigger smoke | worker (frames, `spell_feel`) | worker score above |
 | 3 | Courtiers at the head (`place: above` 0.3, dx, sizes 52/70/80), one per enemy, lean reversed, smoke from the lean spot | worker (own frames), `spell_feel` rat WARN | worker score in Round 3 |
 | 4 (step 6) | Step 4 art wired; rim peak 0.7; lean `glowCurve` | worker (own frames) | worker score in Step 6 |
+| Tuning after step 6 (2026-10-07) | Orbit front/lean opacity 1, far arc lilac tint, violet tint on the smoke and curl emitters | orchestrator's step 6 check | colour and smoke fixed; rat figure still a patch |
 
 ## Measures
 
