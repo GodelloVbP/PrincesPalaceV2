@@ -188,6 +188,32 @@ namespace PrincesPalace.Domain.Content
             }
         }
 
+        private static void CheckBodyRim(string label, SpellPresentation vfx, List<string> problems)
+        {
+            var rim = vfx.bodyRim;
+            if (rim == null || (rim.pulses == 0 && string.IsNullOrWhiteSpace(rim.tint))) return;
+
+            if (rim.pulses < 1 || rim.pulses > SpellBodyRim.MaxPulses)
+            {
+                problems.Add($"{label}: vfx.bodyRim.pulses {rim.pulses} is outside 1..{SpellBodyRim.MaxPulses}.");
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(rim.tint ?? "", "^#[0-9A-Fa-f]{6}$"))
+            {
+                problems.Add($"{label}: vfx.bodyRim.tint '{rim.tint}' is not a #RRGGBB colour.");
+            }
+
+            if (float.IsNaN(rim.spacing) || rim.spacing < 0f || rim.spacing > 0.5f)
+            {
+                problems.Add($"{label}: vfx.bodyRim.spacing {Num(rim.spacing)} is outside 0..0.5 seconds.");
+            }
+
+            if (float.IsNaN(rim.peak) || rim.peak < 0f || rim.peak > 1f)
+            {
+                problems.Add($"{label}: vfx.bodyRim.peak {Num(rim.peak)} is outside 0..1.");
+            }
+        }
+
         private static void CheckPresentation(string label, SpellPresentation vfx, SpellLayer[] layers,
             List<string> problems)
         {
@@ -246,6 +272,7 @@ namespace PrincesPalace.Domain.Content
 
             CheckGloom(label, vfx, problems);
             CheckKick(label, vfx, problems);
+            CheckBodyRim(label, vfx, problems);
             CheckBeatSeconds(label, vfx, problems);
 
             // THE SAME BOUND CheckPlacement enforces on a layer's impactX/

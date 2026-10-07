@@ -266,6 +266,11 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Optional nudge of the stage (the figures and this spell's own layers, never the HUD) toward the target on the hit cue, eased back; see SpellKick. Presentation only.")]
         public SpellKick kick = new SpellKick();
 
+        // THE RIM LIGHT A CAST WITH NO DAMAGE GIVES ITS TARGETS: the hit flash
+        // needs a number to arm it, so a Fear or a curse has to ask for its own.
+        [ContentDoc("Optional rim light in the spell's own colour on every body the cast lands on, as a train of pulses at the hit cue; for a cast that deals no damage and so arms no hit flash. See SpellBodyRim.")]
+        public SpellBodyRim bodyRim = new SpellBodyRim();
+
         // THE CASTER'S PRICE LANDS AFTER THE PAYOFF. A cast that charges its
         // caster a status (Court of Whispers' Vulnerable) paints that badge at
         // the cue with everything else, so the price and the payoff are one
@@ -601,6 +606,7 @@ namespace PrincesPalace.Domain.Content
             detonationSeconds = detonationSeconds,
             gloom = gloom == null ? new SpellGloom() : gloom.Copy(),
             kick = kick == null ? new SpellKick() : kick.Copy(),
+            bodyRim = bodyRim == null ? new SpellBodyRim() : bodyRim.Copy(),
             layers = CopyOf(layers),
         };
 

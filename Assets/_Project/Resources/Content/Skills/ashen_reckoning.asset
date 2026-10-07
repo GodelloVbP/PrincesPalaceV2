@@ -1500,8 +1500,8 @@ MonoBehaviour:
           gravity: 130
           lifeMin: 0.6
           lifeMax: 1
-          sizeMin: 0.12
-          sizeMax: 0.22
+          sizeMin: 0.2
+          sizeMax: 0.32
           spinMin: -90
           spinMax: 90
           alignFlight: 0
@@ -1927,6 +1927,11 @@ MonoBehaviour:
         strength: 0
         rise: 0
         fall: 0
+      bodyRim:
+        tint: 
+        pulses: 0
+        spacing: 0
+        peak: 0
       casterCostSeconds: 0
       secondSfxPath: Audio/Sfx/censer_of_embers_impact
       detonationSeconds: 0
@@ -1982,6 +1987,11 @@ MonoBehaviour:
             strength: 0
             rise: 0
             fall: 0
+          bodyRim:
+            tint: 
+            pulses: 0
+            spacing: 0
+            peak: 0
           casterCostSeconds: 0
           secondSfxPath: 
           detonationSeconds: 0

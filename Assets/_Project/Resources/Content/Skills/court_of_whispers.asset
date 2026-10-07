@@ -60,7 +60,7 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: Audio/Sfx/court_of_whispers_cast
       layers:
-      - id: lean-a
+      - id: orbit_back
         render: sprite
         place: target-centre
         height: 0
@@ -68,24 +68,24 @@ MonoBehaviour:
         whenConsumed: 
         at: release
         offset: 0
-        path: Spells/court_of_whispers_courtier
-        seconds: 0.65
+        path: Spells/court_of_whispers_courtier_back
+        seconds: 0.4
         fps: 0
-        startFrame: 1
+        startFrame: 0
         until: hold
         fade: 0.1
-        fadeIn: 0
-        opacity: 0.7
+        fadeIn: 0.18
+        opacity: 0.4
         dx: 0
         dy: 0
         drift:
-          fromX: -0.7
-          toX: -0.7
-          fromY: 0
-          toY: 0
-          viaX: -0.25
+          fromX: -0.6
+          toX: 0.6
+          fromY: 0.1
+          toY: 0.1
+          viaX: 0
           viaY: 0
-          viaAt: 0.46
+          viaAt: 0
           arcY: 0
         rotate:
           degrees: 0
@@ -111,16 +111,16 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 230
+        size: 130
         fit: target
         facing: none
         sort: effects
         align: 
         punch: 0
-        glow: 0.3
-        tint: 
-        impactX: 0.84
-        impactY: 0.72
+        glow: 0
+        tint: '#9A90C0'
+        impactX: 0.83
+        impactY: 0.88
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -156,27 +156,27 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: core
+      - id: orbit_front
         render: sprite
         place: target-centre
         height: 0
         follow: 0
         whenConsumed: 
-        at: hit
-        offset: 0
-        path: Spells/court_of_whispers
-        seconds: 0.16
-        fps: 12
-        startFrame: 6
-        until: once
-        fade: 0.1
-        fadeIn: 0
-        opacity: 1
+        at: release
+        offset: 0.3
+        path: Spells/court_of_whispers_courtier_back
+        seconds: 0.42
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.06
+        fadeIn: 0.1
+        opacity: 0.7
         dx: 0
         dy: 0
         drift:
-          fromX: 0
-          toX: 0
+          fromX: -0.6
+          toX: 0.35
           fromY: 0
           toY: 0
           viaX: 0
@@ -207,16 +207,112 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 260
+        size: 190
+        fit: target
+        facing: reverse
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: 0.83
+        impactY: 0.88
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: lean
+        render: sprite
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.58
+        path: Spells/court_of_whispers_courtier
+        seconds: 0.56
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.25
+        fadeIn: 0.12
+        opacity: 0.7
+        dx: 0
+        dy: 0
+        drift:
+          fromX: -0.35
+          toX: -0.8
+          fromY: 0
+          toY: 0
+          viaX: -0.3
+          viaY: 0
+          viaAt: 0.36
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0.12
+          scale: 0.02
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 190
         fit: target
         facing: none
         sort: effects
         align: 
-        punch: 0.12
-        glow: 0.7
+        punch: 0
+        glow: 0.3
         tint: 
-        impactX: 0.5
-        impactY: 0.43
+        impactX: 0.84
+        impactY: 0.72
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -323,21 +419,21 @@ MonoBehaviour:
         emitter:
           path: Spells/court_of_whispers_particles
           rate: 0
-          burst: 12
+          burst: 8
           window: 0
           sourceDx: 0
           sourceDy: 0
           spreadDegrees: 180
           aimDegrees: 90
-          speedMin: 35
-          speedMax: 125
+          speedMin: 25
+          speedMax: 90
           inherit: 0
           drag: 1.8
           gravity: 40
           lifeMin: 0.3
           lifeMax: 0.5
           sizeMin: 0.12
-          sizeMax: 0.3
+          sizeMax: 0.26
           spinMin: -180
           spinMax: 180
           alignFlight: 0
@@ -347,25 +443,29 @@ MonoBehaviour:
           fadeFrom: 0.55
           endScale: 0.72
           seed: 1649
-          weights: []
-      - id: price
-        render: still
-        place: caster-centre
+          weights:
+          - 0
+          - 0
+          - 1
+          - 0
+      - id: smoke_a
+        render: emitter
+        place: target-centre
         height: 0
         follow: 0
         whenConsumed: 
         at: hit
-        offset: 0.18
-        path: Spells/court_price_pulse
-        seconds: 0.08
+        offset: 0.25
+        path: 
+        seconds: 0
         fps: 0
         startFrame: 0
-        until: hold
-        fade: 0.22
+        until: 
+        fade: 0
         fadeIn: 0
-        opacity: 0.6
-        dx: -30
-        dy: -35
+        opacity: 1
+        dx: 0
+        dy: 0
         drift:
           fromX: 0
           toX: 0
@@ -399,12 +499,312 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 380
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/court_of_whispers_particles
+          rate: 18
+          burst: 0
+          window: 0.35
+          sourceDx: -95
+          sourceDy: 30
+          spreadDegrees: 60
+          aimDegrees: 90
+          speedMin: 20
+          speedMax: 50
+          inherit: 0
+          drag: 1.2
+          gravity: 45
+          lifeMin: 0.6
+          lifeMax: 1
+          sizeMin: 0.28
+          sizeMax: 0.48
+          spinMin: -40
+          spinMax: 40
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.25
+          endScale: 1.4
+          seed: 2711
+          weights:
+          - 0.4
+          - 0
+          - 0
+          - 1
+      - id: smoke_b
+        render: emitter
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0.55
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/court_of_whispers_particles
+          rate: 7
+          burst: 0
+          window: 0.3
+          sourceDx: -120
+          sourceDy: 50
+          spreadDegrees: 50
+          aimDegrees: 90
+          speedMin: 15
+          speedMax: 35
+          inherit: 0
+          drag: 1
+          gravity: 40
+          lifeMin: 0.7
+          lifeMax: 1.1
+          sizeMin: 0.12
+          sizeMax: 0.22
+          spinMin: -30
+          spinMax: 30
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.2
+          endScale: 1.5
+          seed: 3319
+          weights:
+          - 0.4
+          - 0
+          - 0
+          - 1
+      - id: curl
+        render: emitter
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0.85
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/court_of_whispers_particles
+          rate: 0
+          burst: 1
+          window: 0
+          sourceDx: -125
+          sourceDy: 70
+          spreadDegrees: 0
+          aimDegrees: 90
+          speedMin: 18
+          speedMax: 18
+          inherit: 0
+          drag: 0.8
+          gravity: 25
+          lifeMin: 1.1
+          lifeMax: 1.1
+          sizeMin: 0.32
+          sizeMax: 0.32
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.1
+          endScale: 1.6
+          seed: 4421
+          weights:
+          - 0
+          - 0
+          - 0
+          - 1
+      - id: price
+        render: still
+        place: caster-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0.18
+        path: Spells/court_of_whispers_particles
+        seconds: 0.35
+        fps: 0
+        startFrame: 1
+        until: hold
+        fade: 0.18
+        fadeIn: 0.04
+        opacity: 0.8
+        dx: -30
+        dy: -20
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0.6
+          scale: 0.08
+          rate: 2.5
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 150
         fit: 
         facing: none
         sort: effects
         align: 
-        punch: 0.3
+        punch: 0
         glow: 0.3
         tint: 
         impactX: -1
@@ -445,16 +845,21 @@ MonoBehaviour:
           seed: 0
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.3
+      hitCueSeconds: 0.7
       gloom:
         strength: 0.35
-        fadeIn: 0.2
+        fadeIn: 0.4
         until: hit
-        fadeOut: 0.25
+        fadeOut: 0.4
       kick:
         strength: 0
         rise: 0
         fall: 0
+      bodyRim:
+        tint: '#B58CFF'
+        pulses: 4
+        spacing: 0.07
+        peak: 0.9
       casterCostSeconds: 0.18
       secondSfxPath: 
       detonationSeconds: 0
@@ -510,6 +915,11 @@ MonoBehaviour:
             strength: 0
             rise: 0
             fall: 0
+          bodyRim:
+            tint: 
+            pulses: 0
+            spacing: 0
+            peak: 0
           casterCostSeconds: 0
           secondSfxPath: 
           detonationSeconds: 0

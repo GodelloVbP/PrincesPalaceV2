@@ -97,14 +97,14 @@ namespace PrincesPalace.PlayModeTests
 
             var handle = CastCourt(out float t0);
 
-            yield return At(t0, 0.1f);
+            yield return At(t0, 0.2f);
             Assert.IsTrue(Darkness.gameObject.activeSelf);
             Assert.AreEqual(0.175f, Darkness.color.a, 1e-3f, "halfway up the fade-in");
 
-            yield return At(t0, 0.3f);
+            yield return At(t0, 0.5f);
             Assert.AreEqual(0.35f, Darkness.color.a, 1e-3f, "held through the wind-up, to the payoff");
 
-            yield return At(t0, 0.425f);
+            yield return At(t0, 0.9f);
             Assert.AreEqual(0.175f, Darkness.color.a, 1e-3f, "lifting after the payoff");
 
             yield return At(t0, 10f);
@@ -122,7 +122,7 @@ namespace PrincesPalace.PlayModeTests
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
 
             CastCourt(out float t0);
-            _fight.PerformancePlayerForTest.Tick(t0 + 0.3f);
+            _fight.PerformancePlayerForTest.Tick(t0 + 0.5f);
 
             Assert.AreEqual(0.35f, _fight.PerformancePlayerForTest.GloomAlpha, 1e-3f,
                 "GloomAlpha read the module's clock (still at the cast's birth) instead of Tick's");
@@ -137,10 +137,10 @@ namespace PrincesPalace.PlayModeTests
             CastCourt(out float t0);
 
             yield return At(t0, 0.1f);
-            Assert.AreEqual(0.2625f, Darkness.color.a, 1e-3f, "0.1s real is 0.15s authored");
+            Assert.AreEqual(0.13125f, Darkness.color.a, 1e-3f, "0.1s real is 0.15s authored");
 
-            yield return At(t0, 0.3f);
-            Assert.AreEqual(0.14f, Darkness.color.a, 1e-3f, "0.3s real is 0.45s authored, lifting");
+            yield return At(t0, 0.6f);
+            Assert.AreEqual(0.175f, Darkness.color.a, 1e-3f, "0.6s real is 0.9s authored, halfway through the lift");
         }
 
         [UnityTest]
@@ -168,7 +168,7 @@ namespace PrincesPalace.PlayModeTests
 
             CastCourt(out float t0);
 
-            yield return At(t0, 0.3f);
+            yield return At(t0, 0.5f);
             Assert.AreEqual(0.35f, Darkness.color.a, 1e-3f, "gloom is the larger");
 
             yield return At(t0, 10f);

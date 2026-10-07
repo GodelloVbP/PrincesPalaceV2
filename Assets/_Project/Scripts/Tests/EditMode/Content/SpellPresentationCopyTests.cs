@@ -50,6 +50,7 @@ namespace PrincesPalace.Domain.Tests
             detonationSeconds = 0.18f,
             gloom = new SpellGloom { strength = 0.35f, fadeIn = 0.2f, until = "cleared", fadeOut = 0.25f },
             kick = new SpellKick { strength = 0.027f, rise = 0.04f, fall = 0.21f },
+            bodyRim = new SpellBodyRim { tint = "#B58CFF", pulses = 4, spacing = 0.07f, peak = 0.9f },
             layers = new[]
             {
                 new SpellLayer
@@ -155,6 +156,15 @@ namespace PrincesPalace.Domain.Tests
                     var m = (SpellKick)mine;
                     var t = (SpellKick)theirs;
                     if (m == t || m.strength != t.strength || m.rise != t.rise || m.fall != t.fall) dropped.Add(field.Name);
+                    continue;
+                }
+
+                if (field.FieldType == typeof(SpellBodyRim))
+                {
+                    var m = (SpellBodyRim)mine;
+                    var t = (SpellBodyRim)theirs;
+                    if (m == t || m.tint != t.tint || m.pulses != t.pulses || m.spacing != t.spacing ||
+                        m.peak != t.peak) dropped.Add(field.Name);
                     continue;
                 }
 

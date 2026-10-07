@@ -56,7 +56,7 @@ CUES = [
     ("censer_of_embers_cast", "Fire", "fire_spell_charge_explosion_wet_06.wav", 1.00),
     ("blackglass_spear_cast", "Dark", "dark_spell_cast_energy_riser_03.wav", 0.70),
     ("death_knell_cast", "Dark", "dark_spell_cast_energy_riser_01.wav", 0.50),
-    ("court_of_whispers_cast", "Dark", "dark_spell_cast_energy_ball_01.wav", 0.30),
+    ("court_of_whispers_cast", "Dark", "dark_spell_cast_energy_ball_01.wav", 0.70),
     ("palace_passage_cast", "Dark", "dark_spell_cast_energy_riser_metallic_02.wav", 0.30),
     ("thorn_tithe_cast", "Earth", "earth_spell_cast_rise_ground_04.wav", 0.30),
     # The only Lightning clip with a rumble, and its crack IS the peak: a window

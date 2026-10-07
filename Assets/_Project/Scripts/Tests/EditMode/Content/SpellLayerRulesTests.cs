@@ -1240,5 +1240,22 @@ namespace PrincesPalace.Domain.Tests
             vfx.detonationSeconds = -1f;
             StringAssert.Contains("vfx.detonationSeconds -1 is outside 0..2 seconds", Only(vfx));
         }
+
+        [Test]
+        public void ABodyRimNeedsAColourAndAPulseCountInRange()
+        {
+            var vfx = With(Sprite());
+            vfx.bodyRim = new SpellBodyRim { tint = "#B58CFF", pulses = 4, spacing = 0.07f };
+            CollectionAssert.IsEmpty(Problems(vfx), "a legal rim is accepted");
+
+            vfx.bodyRim = new SpellBodyRim { tint = "violet", pulses = 4, spacing = 0.07f };
+            StringAssert.Contains("vfx.bodyRim.tint 'violet' is not a #RRGGBB colour", Only(vfx));
+
+            vfx.bodyRim = new SpellBodyRim { tint = "#B58CFF", pulses = 9, spacing = 0.07f };
+            StringAssert.Contains("vfx.bodyRim.pulses 9 is outside 1..8", Only(vfx));
+
+            vfx.bodyRim = new SpellBodyRim { tint = "#B58CFF", pulses = 3, spacing = 2f };
+            StringAssert.Contains("vfx.bodyRim.spacing 2 is outside 0..0.5 seconds", Only(vfx));
+        }
     }
 }

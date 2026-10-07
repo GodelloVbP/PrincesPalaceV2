@@ -1,80 +1,273 @@
-# Court of Whispers, "after" (plan S1, spell 3.1)
+# Court of Whispers: state record
 
-Pass 1 (2026-10-03/04) used existing assets only. Pass 2 (2026-10-04) wires the owner's
-painted leaning courtier (`court_of_whispers_courtier-v2.png`; v1 stays beside it, unused).
-Captured with `tools/gif.ps1 spell court_of_whispers` and `tools/spell_feel.ps1`. The GIFs
-are untracked next to this file (regenerate with the same commands). Owner gates were
-skipped; the calls below are mine and not reviewed by the owner.
+Trial 2, spell 1 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), step 2 "block with existing assets", round 1.
+Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Target design: `docs/PLAN_SPELL_ANIMATION.md` section 3.
+**Status: step 2 done by the worker (2026-10-07); step 3 (orchestrator's watch and rubric) is next. Nothing here is owner-reviewed.**
+The 2026-10-03/04 pilot passes (one painted courtier, ring-and-core payoff) are superseded; their GIFs and reports are in
+`previous_pass/`, untracked.
 
-## What the cast does, authored seconds
+Captures 2026-10-07 with `tools/gif.ps1 spell court_of_whispers -Vs rat|treant [-Speed 1.5]` (full rack of three).
+Phone previews are committed beside this file (`court_of_whispers_r4_*_preview.gif`); the full GIFs
+(`court_of_whispers_r4_*.gif`, 12-18 MB) are untracked. Each capture's `timing.json` is `r4_*_timing.json`.
+`tools/spell_feel.ps1` was not run as written: its capture step is `screenshot.ps1 -Runtime` (pops a Unity window), which
+the brief rules out. `tools/spell_feel.py report` was run on the same 60 fps frames of the four `gif.ps1` captures
+instead (same input format, whole 1080p frame); reports are in `spell_feel/`.
 
-| t | Beat |
-|---|---|
-| 0.00 | Cast opens. Stage gloom rises to 0.35 over 0.2 s. One courtier still (`Spells/court_of_whispers_courtier/f0`, layer `lean-a`) slides in at every enemy to 0.25 box-widths off the body. The hood and cupped hand land at the enemy's head. |
-| 0.30 | **Payoff cue** (`hitCueSeconds`, equal to the 0.3 s cast riser). Impact sound, Fear badges on all enemies, the old ring-and-core frames (f5-f6), now a 260 box (was 460) at glow 0.7 (was 1.9) and punch 0.12, so the courtier carries the payoff, with a punch, a 12-spark settle. Gloom starts lifting (0.25 s). |
-| 0.30-0.65 | The courtier slides back out to 0.7 box-widths and fade (0.1 s). |
-| 0.48 | **Price**: a faint violet ring on Shawn, and his Vulnerable badge appears (`casterCostSeconds` 0.18, held by `FightBeatPlayer`). |
-| about 0.72 | Clean (measured). |
+## Identity sheet
 
-## Measured (spell_feel, 60 fps)
+Locked by the orchestrator's plan; the owner confirms or edits it with the first GIF.
 
-| | 1x rat | 1x treant | 1.5x rat | 1.5x treant |
+- **Verb:** whisper.
+- **Signature beat:** the courtiers all bend in to the head at once and the Fear lands as a violet shiver on the
+  body's outline.
+- **Must read as:** "they are whispering to them" (the identity test of the pilot).
+- **Must NOT read as:** a magic circle, ring or targeting reticle; a drain or ghost attack; a wall of purple hiding the
+  enemy; a full-silhouette flash.
+- **Motion reference per moving element:**
+  - orbit (`orbit_back`, `orbit_front`): courtiers walking a slow circle round a throne, seen from a slant: the far
+    side is higher, smaller and dimmer, the near side lower and full size; it slows into the lean rather than stopping;
+  - `lean`: a person bending from the waist to speak into an ear, held a beat, then straightening;
+  - smoke (`smoke_a`, `smoke_b`, `curl`): a snuffed candle's smoke, thick first, then thinner, then one last curl;
+  - `price`: a candle flame guttering on Shawn.
+- **Intentional exceptions:** the rim pulses cut in and out (a shiver is a flicker); the far arc hands over to the near
+  arc with a size jump 130 to 190, covered by a 0.1 s crossfade; the lean is full strength on the cue, not before.
+- **Mechanics, unchanged:** every non-boss enemy Feared 1 turn, bosses lose 2 places, Shawn Vulnerable 1 turn; sound,
+  Fear badges and the first rim pulse on one frame; Shawn's badge waits 0.18 s (`casterCostSeconds`).
+
+## Beat table
+
+Authored seconds on the release clock; hit cue **0.70 s** (was 0.30; the cast riser is re-cut to 0.70 s,
+`make_spell_cast_cues.py`, `MeleeSoundOverrideTests`). Cue = f41 at 1x (`timing.json`, one frame is the first-drawn
+wait), f27 at 1.5x. "Visible" is the stage-crop check: layer box = size x fit factor, centred on the body.
+Sprite layers a body: 3 (orbit_back, orbit_front, lean) x 3 bodies, plus `price` = 10 of the effects band's 12;
+ground band 0.
+
+| t | Beat | Layer | Must be visible in the stage crop | Easing / feel |
 |---|---|---|---|---|
-| cast start to payoff | 0.30 s (f18) | 0.30 s | 0.20 s (f12) | 0.20 s |
-| payoff to clean | 0.42 s | 0.43 s | 0.30 s | 0.30 s |
-| residue above 25% of peak | 0.37 s | 0.37 s | 0.25 s | 0.25 s |
+| 0.00-0.70 | Stage gloom 0.35 | stage `gloom` | n/a | in 0.4, holds to the cue, out 0.4 after it |
+| 0.00-0.50 | Far arc: a courtier fades in small and dim and drifts left to right across the body | `orbit_back` | yes, 130 box | `fadeIn` 0.18, opacity 0.4, tint `#9A90C0`, drift -0.6 to +0.6 box widths, ease-out; fade 0.1 |
+| 0.30-0.78 | Near arc: the same figure, mirrored, full size, comes back right to left and slows into the lean spot | `orbit_front` | yes, 190 box | `fadeIn` 0.1 (the hand-off), opacity 0.7, runs +0.6 to -0.35 on screen (a reverse layer mirrors its drift), ease-out |
+| 0.58-1.14 | The painted leaning courtier crossfades in over the near arc, full on the cue, closest to the head at 0.78 s, then draws back out | `lean` | yes, 190 box | `fadeIn` 0.12, opacity 0.7, breathe, drift -0.35, -0.30 at 36%, -0.8; fade 0.25 |
+| 0.70 | **Cue.** Impact sound, Fear badges on all enemies, violet rim shiver on every body: 4 pulses 0.07 s apart (f41, f45, f49, f53), the last held and faded 0.16 s | `vfx.bodyRim` (engine) | n/a | `#B58CFF`, peak 0.9; rim only, interior share unchanged |
+| 0.70 | Whisper motes burst | `settle` | emitter | 8 particles |
+| 0.88 | Shawn's price: a small violet wisp flickers on him, his Vulnerable badge shows | `price` | yes, 150 box | `fadeIn` 0.04, 0.35 s, breathe alpha 0.6 rate 2.5, no ring |
+| 0.95-1.30 | The courtier comes apart: smoke curls rise where it stood | `smoke_a` | emitter | 18 a second for 0.35 s, rising, thinning |
+| 1.25-1.55 | Less and smaller | `smoke_b` | emitter | 7 a second for 0.3 s |
+| 1.55-2.65 | The last curl | `curl` | emitter | one particle, scale x1.6, life 1.1 s |
 
-The cue stays at 0.3 s: the cast riser is 0.3 s and `TheSpellCastCuesFitTheirBlows` pins that.
-Reports: `spell_feel_1x/`, `spell_feel_1.5x/`. The report WARNs only on rat 1x: "contact
-desync, biggest rise at f29, cue f18". f29 is the price ring on Shawn, the intended second
-payoff, so the WARN is expected. 1.5x is clean on both targets.
+Visually clean at 1.3-1.4 s on 1x (measured below); `clearedSeconds` is 2.65 because the last curl's life runs on.
 
-## Frame notes
+## Playback, as seen (1x rat and treant, run ids in `r4_*`; contact sheets by the worker; the orchestrator has not yet watched)
 
-- **Fear lands on every enemy at once**, courtiers on all three bodies, badges under every
-  body on the cue frame.
-- **The lean is now the drawing.** On the rats each near courtier's hood sits against the rat's
-  head with the cupped hand at the ear: "bending close to speak" reads without the slide. On
-  the treants the hood meets the treant's face.
-- **Two findings on the way.** `facing: reverse` was parsed but never applied, so the old pass's
-  mirrored copy drew un-mirrored on the same side as the first: three figures stacked on
-  three, not "both sides". Fixed in `SpellLayerInstance.DrawFacing` (pinned by
-  `AReverseLayerDrawsAgainstTheCast`); Thorn Tithe's `back` layer is now actually mirrored as
-  authored. The ground band holds only 2 renderers (`FightHudSpec.SpellGroundRenderers`), so
-  nothing per enemy can go behind the bodies.
-- **Shawn's price is after the payoff.** The ring peaks about f29-34 and his Vulnerable badge
-  is on his plate from f29, 0.18 s after the cue.
-- **Flash guard.** On the 5-cast 1.5x series (851 frames) the largest single-step brightening
-  (more than 0.1 luminance, measured on the GIF at every second frame, so an upper bound)
-  covers 6.4% of the stage crop, nowhere near the 25% "large flash" size. Mean luminance stays
-  within 0.10-0.14. The core is the only bright event; five casts at 1.5x are inside 3 flashes
-  a second.
-- **Readability.** Enemy and party plates, the Fear badges and the log stay uncovered. Under
-  the 0.9 darkness GIF the courtiers (opacity 0.7) and Shawn are the light sources and the
-  Round counter reads. No damage number to cover.
-- **Bodies hidden by the court.** The near courtier covers the front half of its rat for about
-  0.4 s (the rat shows through at 0.7 opacity); on the three-treant rack the courtiers overlap
-  the neighbouring treant's left flank.
-- **Mixed rack (rat, treant, beetle):** the beetle sits behind the treant and its courtier is
-  barely seen, as before; the cause is the formation.
-- **Cost pulse** still faint (opacity 0.6, thin ring), reads as a halo.
-- **Repeat series:** no smear between casts; the plates return to idle.
+- **f0-f20 far arc.** Faint violet ghosts fade in over each body and slide right. On the rats they read as a dark smudge
+  across the torso; on the treants as a faint lattice. It is dim by design and barely carries the "orbit".
+- **f19-f26 hand-off.** The near arc fades in on the right of each body (f20) and is full by f26 at 190 box, mirrored,
+  hood left. There is a size and brightness step at the hand-off, softened by the crossfade; it still reads as a figure
+  appearing at the right more than as one coming round the body.
+- **f26-f41 near arc to the lean.** The figure slides left across the front of each body and slows (f23 right of the
+  body, f38 left). At f35-f41 the painted lean takes over; the drawing changes from a back view to the bent figure
+  while the position matches.
+- **f41 cue.** Badges under every body, violet outline pulses on each body (visible on both rats and treants at
+  f43, f49, f55, f61; the canopy of a treant carries a thick pale-violet rim), the courtier at full strength at each
+  head, the gloom starts to lift.
+- **f41-f65 lean.** Hood at the head, the cupped hand at the hood. On a three-rack the robes (a long ragged train) cover
+  the lower half of its body and reach the next body; the three courtiers read as one purple band from f23 to f58
+  (about 0.6 s).
+- **f65-f85 draw back.** The courtier slides left and fades. Smoke is small wisps above the heads (f85-f130); the curl is
+  a few violet specks. The "comes apart into smoke" beat is weak: the courtier fades more than it dissolves.
+- **Rat 1.5x, treant 1.5x:** the same shape in two thirds of the time, cue f27, clean at 0.85 s (rat), 0.92 s (treant).
 
-## Identity test: "they are whispering to them"
+## Orchestrator's step 3 check (2026-10-07, r4 full GIFs, rat and treant 1x): **fails, not shown to the owner**
 
-Follow-up (2026-10-04): `lean-b` (the mirrored far courtier) is dropped and the ring-and-core
-payoff is demoted (260 box, glow 0.7). It stays on effects: the ground band holds two renderers
-and a rack needs three. Rat and mixed-rack frames (cue f18): one courtier per enemy, hood at the
-head, no neighbour's courtier. The pair of courtiers that read as the neighbour's is gone.
+Frames at 60 fps:
+1. **No figures and no circling.** f26-f68 (~0.7 s): the three courtiers merge into one purple band over the lower
+   half of the whole rack, on both rats and treants. A circling figure does not read at any frame.
+2. **The payoff is missing.** The figures are anchored at the body's base. On the treant they lean in at waist
+   height, about one body-height under the face. Nothing leans "in to the head".
+3. **The ending is disconnected.** The courtiers fade at the feet (f68); grey specks then appear above the heads
+   (f84-f104). This reads as two unrelated events, not as figures dissolving into smoke.
+4. Works: the violet rim shiver on the cue (treant canopies, f56); the gloom; cue timing.
 
-My verdict: **passes.** Hooded figures bend to each head, a violet hush, the figure draws back.
-Remaining weakness: the demoted core is still the brightest frame of the cast (f20-24 on rats
-and the mixed rack, a violet bowl at each body's feet) and still covers the lower half of the
-rat; it is smaller and dimmer but reads as a circle until it fades. Removing it outright
-would drop the only accent that lands exactly on the cue frame beside the sound; I kept it. A
-painted ground mist would replace it (new still).
+Round 3 direction (owner call 3 answered: one per enemy, smaller, at the head): anchor the lean at the head (top of the body), not the base. Make the
+figures small enough that three of them on a rack stay three. The smoke starts where the figure is and rises
+from its body.
 
-## Open (owner)
+## The two-layer orbit hand-off (plan section 2, E6 prototyped without E5): **fails on a full rack**
 
-- A 0.3 s wind-up is short for a 14-mana, tier-3 spell on cooldown 4; the lean has little time to read. Lengthening it needs a recut cast riser. Judged on GIFs only, not in a fight; sound not listened to.
-- Replace the vortex with a ground shadow or mist (needs a new still), or drop it.
+Round 1 authored the far arc as a ground-band layer (behind every figure) and the near arc in the effects band, as
+the plan says. Evidence kept in `round1_ground_orbit/` (rat 1x preview GIF and two contact sheets):
+
+1. **The ground band cannot hold a rack.** `FightHudSpec.SpellGroundRenderers` is 2 and a three-enemy cast needs 3
+   (per-target layer x 3). `SpellPoolCapacityTests.NoSpellAsksForMoreGroundRenderersThanTheBandReserves` fails
+   ("court_of_whispers wants 3") and in play the third enemy gets no far arc: `third_rat_has_no_far_arc_f6-f24.png`,
+   f6-f18, the rightmost rat has nothing behind it while the other two do.
+2. **A figure behind a body is mostly hidden by it.** The far arc is as wide as the body it passes behind, so on the
+   rats only slivers show at the edges (f10-f19); it reads as a smudge at the feet (`first_rat_orbit_f4-f52.png`).
+3. **The hand-off pops.** f19 to f22: a faint 170 box at the right becomes a 230 box at full opacity (f22).
+
+Raising the ground pool to 6 would fix (1) only (the pool is scene-generated and shared with Cinderfault's ownership
+rule, `FightHudSpec` comment) and not (2). This needs E5 body depth bands: cross-layer (Domain tree, Core runtime,
+scene generation), so it is **not built here and goes to a senior with `Escalation: cross-layer`**. The committed
+content moves the far arc to the effects band (over the body, 130 box, opacity 0.4) so the gate passes and the
+motion can be watched; with it the orbit is a dim ghost sliding over the body. To restore the real thing: set
+`orbit_back.sort` to `ground` once the band can hold 3 per cast, and raise its size and brightness (it is occluded).
+
+## Checks
+
+Binding (proposal contract 4):
+
+| Check | Result | Evidence |
+|---|---|---|
+| No transform jump in the spell's own layers | pass with one explained step | drifts are continuous (ease-out, `orbit_back` ends at +0.6 where `orbit_front` begins, `orbit_front` ends at -0.35 where `lean` begins: `CourtOfWhispersTimingTests`). The one step is the size 130 to 190 at the hand-off, an intentional exception, crossfaded over 0.1 s. A reverse layer mirrors its drift: the authored x of `orbit_front` is the mirror of its path on screen |
+| Cue on one frame | pass | `timing.json` `hitFrame` 41 (authored 0.7 s = f42 minus the first-drawn wait) at 1x, 27 at 1.5x; sound, Fear badges, the rim's first pulse on that frame; Shawn's badge at +0.18 s. `spell_feel` peak frame = hit frame (41 and 27) on all four |
+| Nothing marked visible leaves the stage | pass | sizes in the beat table; the largest is 190 x the treant's fit factor on its body; the contact sheets show no clipping; the leftmost courtier at f50-f80 is inside the stage |
+
+`spell_feel` on the `gif.ps1` frames: rat 1x no warnings (clean 1.28 s, residue 0.37 s), rat 1.5x no warnings (clean
+0.85 s, residue 0.25 s). **Treant 1x and 1.5x WARN "contact desync"** (biggest rise after release at f59 vs cue f42; f35
+vs f28). That is the fourth rim pulse (the last, held and faded) landing on a dark, courtier-covered rack: a pulse train
+has several rises and the instrument takes the largest. The recorded hit frame is f41/f27 and the peak activity is on
+it, so cue timing is fine. Explained, not changed.
+
+Advisory:
+
+- **Pop-in:** none on the layers (all fade in); the rim pulses cut in by design.
+- **Frozen holds:** none; the lean breathes, the price breathes, the smoke moves.
+- **Body coverage at the hit:** fails. The lean covers the lower half of each body and its train reaches the neighbour
+  for about 0.6 s on rats and treants (f23-f58). See the rubric.
+- **Flash guard:** four rim pulses in 0.2 s on a body are four flashes in a quarter second on the strict count; the
+  pulses are thin rims at peak 0.9 and the interior share is 0.08, so the lit area is the outline. Not measured with the
+  rendered-frame tool. Say so if the orchestrator wants it measured.
+
+Gates: dotnet slices `CourtOfWhispersTimingTests` (6), `SpellLayerRulesTests` (91), `SpellPresentationCopyTests` (4),
+`MeleeSoundOverrideTests` (18), `SpellPoolCapacityTests` (5), `SpellLayerHandoffTests` (3) green. The commit gate
+(`run_tests_parallel.ps1 -Changed -BuildContent`) result is at the end of this file.
+
+## Rubric (worker's score; the orchestrator's check is still due)
+
+Motion, 1x and 1.5x:
+
+1. Each beat reads, in order: ~. Gloom, near arc, lean, rim shiver and cue, smoke are in order; the far arc is too dim
+   to read as part of a circle and the smoke is weak.
+2. Weight and easing feel physical: ~. The near arc slows into the lean; the rim is a flicker; the drift is ease-out
+   only, so the middle of an arc is slow where an orbit is fast.
+3. One focal point at a time: ✘ at f23-f58 on a three-rack: three courtiers form one mass.
+4. The body stays readable at the hit: ✘. Robes cover about half of each body for about 0.6 s.
+5. The ending decays, not cuts: ~. The courtier fades, smoke thins in three steps; the smoke is too small to carry the
+   ending.
+6. Distinct from and consistent with the approved spells: ~. Not played beside the Censer or Ashen Reckoning. Fear's
+   violet rim is the only rim colour so far and is distinct.
+
+Art, not scored: every piece is a painted stand-in (the rejected style).
+
+## Art record (one row per piece)
+
+| Piece | Accepted prompt | Source file | Recipe | Output | Attempts |
+|---|---|---|---|---|---|
+| Stand-ins, none accepted | n/a | `Art/Sheets/Spells/Court of Whispers/court_of_whispers_courtier-v2.png` (lean), `courtier_back.png` (orbit), `court_of_whispers_atlas_v1.png` cells 13-16 (wisps) | `recipes/court_of_whispers_courtier.json`, `court_of_whispers_courtier_back.json` (new), `court_of_whispers_particles.json` | `Resources/Spells/court_of_whispers_courtier`, `..._courtier_back`, `..._particles` | 0 |
+
+The ring sheet `Resources/Spells/court_price_pulse` and the old atlas frames `court_of_whispers/f0-f11` are no longer
+referenced by the spell (the ring was the rejected payoff and price).
+
+### Art needed for step 4
+
+Prompt-ready per `docs/prompts/TEMPLATE_spell_art.md`; style block and attachments as in its section 1. No green in any
+subject below (they are violet), so the green key `#00FF00` applies.
+
+1. **Leaning courtier** (the payoff drawing; replaces `court_of_whispers_courtier-v2.png`)
+```
+Piece: Court of Whispers: a hooded courtier bent in to whisper
+Beat it serves: payoff and resolution, 0.58-1.4 s (lean)
+Filename: court_of_whispers_courtier_lean.png
+Delivery path: Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whispers_courtier_lean.png
+Canvas: 1024x1024   Grid: one still
+Pivot: the hood's opening at 82% across and 22% down; the hem trails to the lower left
+Size in play: about 0.8 of the target's body width; the figure's height about the target's height
+Drawing: one tall hooded figure in a long violet court robe with wide sleeves, bent forward from the waist to the
+  right, one cupped hand raised beside the hood as if to speak into an ear. The hood is empty and dark: no face, no
+  eyes. The hem breaks into a few ragged tongues that trail left and down. Bold dark outline, flat cel shading in
+  three violet tones plus one pale violet for a sleeve edge.
+Verb: whisper.
+Must read as: a courtier bending close to speak in someone's ear.
+Must NOT read as: a grim reaper, a wraith with a scythe or claws, a mage casting, a ghost drawing life out.
+Not in the picture: the target, a second figure, smoke, glow, floor, any weapon.
+```
+
+2. **Courtier from behind** (the orbit; replaces `courtier_back.png`)
+```
+Piece: Court of Whispers: the same courtier walking away, seen from behind
+Beat it serves: orbit, 0.00-0.72 s (orbit_back and orbit_front, the second mirrored)
+Filename: court_of_whispers_courtier_back.png
+Delivery path: Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whispers_courtier_back.png
+Canvas: 1024x1024   Grid: one still
+Pivot: the hood's centre at 80% across and 12% down; the hem at the bottom
+Size in play: 130 to 190 of the stage reference box; smaller than the target on the far arc, about its height on the
+  near arc
+Drawing: the same figure, same robe and sleeves, standing upright and turned three quarters away, the hood facing
+  right and a little back toward the viewer, arms hanging in the wide sleeves, the hem trailing left in the same
+  ragged tongues. Same outline weight and tones as piece 1: it must be recognisably the same courtier.
+Verb: whisper (the approach to it): processing round someone.
+Must read as: one courtier gliding past; the same person as the leaning one.
+Must NOT read as: a statue, a ghost with a face, a different character.
+Not in the picture: the target, other figures, smoke, glow, floor.
+```
+
+3. **Smoke and wisps** (the ending, the motes and Shawn's price flicker)
+```
+Piece: Court of Whispers: smoke curl, thin wisp, motes, flame lick
+Beat it serves: resolution 0.95-2.65 s (smoke_a, smoke_b, curl), payoff motes 0.70 s (settle), price flicker 0.88 s (price)
+Filename: court_of_whispers_wisps.png
+Delivery path: Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whispers_wisps.png
+Canvas: 1024x256   Grid: 4x1 of 256x256
+Pivot: centre of every cell (50%, 50%); cell 1 and 2 rise from their bottom third
+Size in play: cell 1 about a third of a body's width, cell 2 smaller, cell 3 tiny, cell 4 about Shawn's head
+Drawing: flat cel shapes, bold dark outline, two violet tones and a pale rim. Cell 1 a single thick curl of smoke with
+  one spiral at its head. Cell 2 a thin S-shaped wisp. Cell 3 three small pale teardrop motes, one larger. Cell 4 a
+  small flame-like lick of violet, three points, as a candle flame guttering.
+Verb: come apart into smoke; flicker.
+Must read as: smoke from a snuffed candle; a flicker of cold flame.
+Must NOT read as: a cloud, a fire (orange), a ring or halo, a ghost shape.
+Not in the picture: figures, glow, floor, background texture.
+```
+(Cells 1, 2 and 3 are picked by weight in the emitters; cell 4 is the `price` still. Engine-made on top: the rim
+shiver, glow, breathing, fades.)
+
+## Open owner questions
+
+Each asked once.
+
+| # | Question | Asked in round | Status / answer |
+|---|---|---|---|
+| 1 | The far arc cannot go behind the bodies on a rack without E5 body depth bands (cross-layer, senior). Build E5 now for Court (and Aegis, Shackles later), or accept the far arc as a dim ghost over the body for this spell? | 1 | open |
+| 2 | The violet rim shiver lands on every enemy the court is drawn on, bosses included, though a boss only loses 2 places and is not Feared. Shiver a boss too, or skip bosses? (Assumed: shiver all; the code draws the court on them already.) | 1 | open |
+| 3 | On a tight rack (three treants) three courtiers read as one mass for about 0.6 s. Keep one per enemy (current), or one court for the whole rack that bends to the front enemy? | 1 | owner, 2026-10-07: try one per enemy, smaller, leaning at head height |
+| 4 | Wind-up is now 0.70 s (tier 3, same as Blackglass), cast riser re-cut. At 1.5x it is 0.47 s. Right length? | 1 | open |
+
+## Round log
+
+| Round | What changed | Who caught it (owner / orchestrator / binding check / worker) | Rubric result |
+|---|---|---|---|
+| 0 (pilot pass 2) | One painted courtier per enemy, ring-and-core payoff demoted, cue 0.3 s | worker, owner gates skipped | superseded |
+| 1 | Orbit as two hand-off layers, far arc in the ground band; cue 0.7 s; rim shiver (new `vfx.bodyRim`); smoke steps; price wisp, no ring | worker (frames) and `SpellPoolCapacityTests`: third enemy has no far arc, far arc occluded, hand-off pops | not scored (failed) |
+| 1b | `facing: reverse` mirrors the drift x (frames showed the near arc running the wrong way): authored mirrored | worker (frames) | not scored |
+| 2 | Far arc to the effects band (gate), crossfaded hand-off (0.1 s), lean crossfaded to full on the cue (the treant's visual contact moved from f47 to f59, a later rim pulse, and still WARNs), smaller figures, bigger smoke | worker (frames, `spell_feel`) | worker score above |
+
+## Measures
+
+| Measure | Value |
+|---|---|
+| Owner reviews (target 3) | 0 so far |
+| Internal retries | 3 (round 1, 1b, 2) |
+| Generation attempts per art piece | 0 (stand-ins) |
+| Active work time / waiting time | worker run about 2 h; 11 captures of 30-45 s each, one content build each round |
+| Owner handling time (generate, download, upload art; review) | not started |
+| Owner-found defects the binding checks should have caught (target 0) | 0 so far; `SpellPoolCapacityTests` caught the ground-band overflow before play |
+| Final quality against the reference pack (owner's verdict on the rubric) | not yet |
+
+## Reviewed snapshot
+
+- Commit: see the report (step 2 commit hash).
+- Capture run ids: rat 1x `20261007T104110Z_ecda87db2c60`, treant 1x `20261007T104306Z_83c046e7b27f`, treant 1.5x
+  `20261007T104448Z_efa87f6eb757`, rat 1.5x `20261007T104611Z_a01cb6e54cfb`.
+- Rubric (motion, art): worker's score above; art not scored.
+- Still weak: the far arc is invisible, the near arc and lean overlap neighbours into one mass, the body is covered
+  for 0.6 s, smoke is small, the treant rim WARN.

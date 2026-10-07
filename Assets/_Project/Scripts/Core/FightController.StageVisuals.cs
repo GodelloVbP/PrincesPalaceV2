@@ -1558,9 +1558,27 @@ namespace PrincesPalace
             }
         }
 
+        // THE SPELL'S OWN RIM on every body it lands on (vfx.bodyRim), for a
+        // cast whose damage never arms the hit flash. Goes on to the ordinary
+        // flash below, so a cast that also hurts keeps its typed flash.
+        private void ShiverTargets(CombatBeat beat)
+        {
+            var rim = beat.Vfx?.bodyRim;
+            if (rim == null || !rim.HasRim) return;
+            if (!UnityEngine.ColorUtility.TryParseHtmlString(rim.tint, out var tint)) return;
+
+            var targets = new List<CombatantState> { beat.Target };
+            if (beat.SplashTargets != null) targets.AddRange(beat.SplashTargets);
+            foreach (var target in targets.Where(t => t != null).Distinct())
+            {
+                HitFlashFor(target)?.FlashShiver(tint, rim.pulses, rim.spacing, rim.PeakOrDefault);
+            }
+        }
+
         private void FlashCombatant(CombatBeat beat)
         {
             if (beat == null) return;
+            ShiverTargets(beat);
 
             // EVERY ENEMY A SWEEP LANDED ON, each judged on its OWN amount. The
             // beat-wide Amount holds the largest single hit, so testing it once

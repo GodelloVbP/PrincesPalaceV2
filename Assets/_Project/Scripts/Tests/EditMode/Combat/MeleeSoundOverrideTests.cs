@@ -201,7 +201,7 @@ namespace PrincesPalace.Domain.Tests
                 ("censer_of_embers", "censer_of_embers_cast", 1.00f),
                 ("blackglass_spear", "blackglass_spear_cast", 0.70f),
                 ("death_knell", "death_knell_cast", 0.50f),
-                ("court_of_whispers", "court_of_whispers_cast", 0.30f),
+                ("court_of_whispers", "court_of_whispers_cast", 0.70f),
                 ("palace_passage", "palace_passage_cast", 0.30f),
                 ("thorn_tithe", "thorn_tithe_cast", 0.30f),
                 ("crownfall", "crownfall_cast", 0.34f),

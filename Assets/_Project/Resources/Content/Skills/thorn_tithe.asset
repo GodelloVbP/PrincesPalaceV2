@@ -359,6 +359,11 @@ MonoBehaviour:
         strength: 0
         rise: 0
         fall: 0
+      bodyRim:
+        tint: 
+        pulses: 0
+        spacing: 0
+        peak: 0
       casterCostSeconds: 0
       secondSfxPath: 
       detonationSeconds: 0
@@ -414,6 +419,11 @@ MonoBehaviour:
             strength: 0
             rise: 0
             fall: 0
+          bodyRim:
+            tint: 
+            pulses: 0
+            spacing: 0
+            peak: 0
           casterCostSeconds: 0
           secondSfxPath: 
           detonationSeconds: 0

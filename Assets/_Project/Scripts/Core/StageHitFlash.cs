@@ -164,6 +164,30 @@ namespace PrincesPalace
 
         public void FlashHeal() => Flash(HealOnly);
 
+        // A SPELL'S OWN RIM, as a train of pulses: the hit flash for a cast that
+        // lands no damage (SpellBodyRim). Every pulse but the last is a short
+        // flicker that fades inside its own spacing, so the rim shivers; the
+        // last takes the ordinary hit fade.
+        public void FlashShiver(Color tint, int pulses, float spacing, float peak) =>
+            Flash(ShiverPulses(tint, pulses, spacing, peak));
+
+        public static Pulse[] ShiverPulses(Color tint, int pulses, float spacing, float peak)
+        {
+            int count = Mathf.Max(1, pulses);
+            var train = new Pulse[count];
+            float hold = Mathf.Min(HitHoldSeconds, Mathf.Max(0f, spacing) * 0.5f);
+            float flicker = Mathf.Max(0f, spacing - hold);
+            for (int i = 0; i < count; i++)
+            {
+                bool last = i == count - 1;
+                train[i] = last
+                    ? new Pulse(tint, HitHoldSeconds, HitFadeSeconds * 2f, peak)
+                    : new Pulse(tint, hold, flicker, peak);
+            }
+
+            return train;
+        }
+
         // A SHIELD ATE THE WHOLE BLOW: the barrier is the only news, so it
         // is the only pulse -- there is no hit underneath it to open with.
         public void FlashBarrier() => Flash(BarrierOnly);
