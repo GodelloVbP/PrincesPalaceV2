@@ -285,6 +285,24 @@ fades where the smoke starts). 6. Distinct: ~ (not seen beside the Censer or Ash
 point per actor, as `StanceManifest.HeadFor` already holds for the icon crop) would replace the `height` + `dx`
 pair; not built, it is a contract change.
 
+### Orchestrator's step 3 check of round 3 (2026-10-07, r5 full GIFs, rat and treant 1x; frames at 60 fps)
+
+Shown to the owner. The motion structure is fixed:
+- three separate figures;
+- at the head;
+- the smoke born where the figure stands.
+
+Legibility depends on the art:
+1. Rats, f20-f64: the courtier is dark violet on dark grey fur at the nape, so it reads as fur texture. At f36-f48 it
+   is barely visible. The spell's main figure does not carry on rats with this stand-in.
+2. Treants, f28-f64: three small figures on the canopy beside each face, visible but dark against the green.
+3. The cue, f42-f64: the violet rim shiver round every whole body is now the strongest thing on screen and the
+   courtiers come second. It is a fine payoff, but it outweighs the figures.
+4. The smoke is small and pale yellow (f72-f104), closer to sparks than to dissolving robes.
+5. The far arc (f10-f20) is close to invisible.
+Step 4 art must therefore carry the read: a light outline or rim on the courtier, lighter violet, and smoke in the
+robe's colour.
+
 ## Open owner questions
 
 Each asked once.
