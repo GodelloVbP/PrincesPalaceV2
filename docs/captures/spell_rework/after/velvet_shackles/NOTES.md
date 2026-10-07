@@ -77,6 +77,19 @@ Red on brown bark and the green canopy is the most saturated thing on stage and 
 
 Treant 1.5x: cue f16, clear f36, from `timing.json`; I did not step through its frames (the same layers on a faster clock).
 
+## Orchestrator's step 3 check (2026-10-07, r1 full GIFs, rat and treant 1x; frames at 60 fps)
+
+For the owner's review after the restart. The beats read in order: lash, bands at the feet, cuff on the cue, slack,
+clear. The red and gold read on both bodies, and the face is never covered after the lash. Defects:
+1. The lash (f4-f16) is a flat, straight red bar that crosses the stage. It reads as a stripe or a beam more than a
+   ribbon: no flutter, no curl. On the rat it lands across the snout (f12).
+2. No wrap. The two bands lie flat at the feet (f16-f20) and never go round the body. The plan's "wrap around the
+   target" is not there yet (owner Q1).
+3. The cuff (f24-f40) is a red ring lying on the ground. On the treant it reads as a cushion or a bowl at the roots,
+   not a shackle round the ankles. On the rat it is about half the rat's width.
+Art can fix 1 (a ribbon that ripples) and 3 (a cuff drawn round a leg). 2 needs an owner call: a ribbon that coils
+needs E6 orbit or drawn wrap frames.
+
 ## Checks
 
 Binding (proposal contract 4):
