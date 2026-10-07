@@ -2,8 +2,8 @@
 
 Trial 1 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), step 2 "block with existing assets", round 2.
 Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`.
-**Step 3 passed (owner, 2026-10-07): the round 2 motion is accepted. Next: step 4, the owner generates the pieces
-under "Art needed for step 4".** The untracked `ashen_reckoning_catch.png` (2026-10-04, painted, green key) is the
+**Step 3 passed (owner, 2026-10-07): the round 2 motion is accepted. Steps 4-6 done (art delivered, accepted, wired);
+step 7 closed in `7a3ea8ef`; see "Step 6".** The untracked `ashen_reckoning_catch.png` (2026-10-04, painted, green key) is the
 pre-workflow still, not step 4 art.
 Captures 2026-10-05 with `tools/gif.ps1 spell ashen_reckoning -Vs rat|treant [-Speed 1.5] -PreStatus Poison`.
 Full GIFs sit next to this file, untracked (`ashen_reckoning_trial_*.gif`, 13-23 MB); the phone previews are
@@ -387,6 +387,7 @@ Each asked once.
 
 ## Reviewed snapshot
 
+- Step 6 art integration, gate green (EditMode 6242/6245, 3 skipped; PlayMode 1955/2046, 91 skipped, 0 failed): `7a3ea8ef`.
 - Commit: round 1 `6b5a81fa`, `cdb869ac`; round 2 code, content, audio, flash `9fd78fca` (NOTES in the commit after it).
 - Capture run ids: treant 1x `20261005T125314Z_5888648fb1a9`, rat 1x `20261005T125429Z_cde8c2fab1d8`, treant 1.5x
   `20261005T125534Z_79058fbf7da0` (frames deleted by me to free disk).
