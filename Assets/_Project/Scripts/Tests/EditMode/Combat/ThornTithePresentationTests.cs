@@ -45,7 +45,8 @@ namespace PrincesPalace.Domain.Tests
                 Assert.AreEqual(341f, l.size, 1e-6f, "the dome is 442 of the 520 px canvas; 341 puts it 290 wide, a rat's body");
                 Assert.AreEqual(back.size, l.size, 1e-6f, "one cage: both sets on one canvas and one size");
                 Assert.AreEqual(back.impactY, l.impactY, 1e-6f, "one pivot at the base");
-                Assert.AreEqual(0.7f, l.seconds, 1e-6f, "6 growth frames, the cage held 4, 4 frames of sinking back: 14 at 20 fps");
+                Assert.AreEqual(0.5f, l.seconds, 1e-6f, "6 growth frames, then the dome (f6-f13 are all the dome): 0.5 s plays f0-f9 and the held dome fades after it");
+                Assert.AreEqual(0.28f, l.fade, 1e-6f, "the dome fades out in place, clear at 0.9 s");
             }
         }
 

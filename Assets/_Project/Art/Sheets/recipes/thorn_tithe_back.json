@@ -1,6 +1,6 @@
 {
   "_notes": [
-    "Thorn Tithe, back vines (behind the body): thorn_tithe_back_vines.png, 7x1 of 640 on #FF00FF, keyed on hue (magenta), alpha_floor 40. Cells are three sway pairs of growing canes (f0-f1, f2-f3, f4-f5) then the closed cage (f6), which continues f5. Both sets are drawn on one grid, feet at 25% and 75% across and the base line at row 575, so the same explicit rect on both gives one shared 520x553 canvas with the base 12 px above its bottom and no per-frame crop (E7). Sequence: f0-f5 growth (0.3 s at 20 fps), the cage held 4 frames, then the sway frames played backwards (f3, f2, f1, f0) so the canes sink back into the soil."
+    "Thorn Tithe, back vines (behind the body): thorn_tithe_back_vines.png, 7x1 of 640 on #FF00FF, keyed on hue (magenta), alpha_floor 40. Cells are three sway pairs of growing canes (f0-f1, f2-f3, f4-f5) then the closed cage (f6), which continues f5. Both sets are drawn on one grid, feet at 25% and 75% across and the base line at row 575, so the same explicit rect on both gives one shared 520x553 canvas with the base 12 px above its bottom and no per-frame crop (E7). Sequence: f0-f5 growth (0.3 s at 20 fps), the cage held 8 frames. The sway frames are not played backwards: that popped the closed dome back to tall open canes, so the layer fades the held dome out instead."
   ],
   "sheet": "Spells/Thorn Tithe/thorn_tithe_back_vines.png",
   "rects": [
@@ -85,19 +85,7 @@
     },
     {
       "from": "f6",
-      "hold": 4
-    },
-    {
-      "from": "f3"
-    },
-    {
-      "from": "f2"
-    },
-    {
-      "from": "f1"
-    },
-    {
-      "from": "f0"
+      "hold": 8
     }
   ]
 }

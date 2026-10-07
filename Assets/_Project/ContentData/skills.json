@@ -2953,7 +2953,7 @@
         },
         "layers": [
           {
-            "_comment": "BACK CANES, behind the body: a bunch of canes grows on each foot in three sway pairs (f0-f5, 0.3 s), bends in and closes into a low dome on the cue (f6), is held 0.2 s, then the sway frames play backwards (f10-f13) so the canes sink into the soil on the same base. The dome is as wide as the target (size 341 = canvas 520 over dome 442, scaled to 290) and about as tall as wide. Ground band holds 2 renderers; this is the only ground layer. Recipe thorn_tithe_back.",
+            "_comment": "BACK CANES, behind the body: a bunch of canes grows on each foot in three sway pairs (f0-f5, 0.3 s), bends in and closes into a low dome on the cue (f6), is held (f6-f13 are all the dome); the layer plays 0.5 s (f0-f9) and then fades the dome out in place over 0.28 s, clear at 0.9 s, so the cage never re-opens. The dome is as wide as the target (size 341 = canvas 520 over dome 442, scaled to 290) and about as tall as wide. Ground band holds 2 renderers; this is the only ground layer. Recipe thorn_tithe_back.",
             "id": "back",
             "render": "sprite",
             "place": "target",
@@ -2961,7 +2961,7 @@
             "offset": 0.1,
             "path": "Spells/thorn_tithe_back",
             "fps": 20,
-            "seconds": 0.7,
+            "seconds": 0.5,
             "until": "hold",
             "size": 341,
             "fit": "target",
@@ -2969,10 +2969,10 @@
             "impactY": 0.04,
             "facing": "none",
             "sort": "ground",
-            "fade": 0.1
+            "fade": 0.28
           },
           {
-            "_comment": "FRONT CANES, in front of the body: the same rise in a lighter teal, closing into a low X across the body on the cue; sinks back as `back` does. Same canvas, size and pivot as `back`, so the two register as one cage; the art is symmetric, so it is not mirrored.",
+            "_comment": "FRONT CANES, in front of the body: the same rise in a lighter teal, closing into a low X across the body on the cue; fades out as `back` does. Same canvas, size and pivot as `back`, so the two register as one cage; the art is symmetric, so it is not mirrored.",
             "id": "front",
             "render": "sprite",
             "place": "target",
@@ -2980,7 +2980,7 @@
             "offset": 0.1,
             "path": "Spells/thorn_tithe_front",
             "fps": 20,
-            "seconds": 0.7,
+            "seconds": 0.5,
             "until": "hold",
             "size": 341,
             "fit": "target",
@@ -2988,7 +2988,7 @@
             "impactY": 0.04,
             "facing": "none",
             "sort": "effects",
-            "fade": 0.1
+            "fade": 0.28
           },
           {
             "_comment": "ANTICIPATION: the soil cracks at the feet and throws up dust and clods (recipe thorn_tithe_crack, pivot at the crack's middle). Over by 0.3 s, before the canes are tall.",

@@ -294,6 +294,15 @@ For the owner's review. On the rat it works: the crack shows (f4), canes break o
    options: sink from the dome's own frame with a fade, or draw sink frames.
 3. The dust burst at f8 is large and pale, the loudest thing before the cue.
 
+### Tuning after step 6 (2026-10-07; `thorn_tithe_tune_{rat,treant}_1x.gif`, strips beside it)
+
+Changed: recipes `thorn_tithe_back`/`_front` sequence now f0-f5 then the dome f6 held for f6-f13 (the backwards sway frames f10-f13 are gone; only
+those four PNGs per set changed). Layers `back`/`front`: `seconds` 0.7 to 0.5, `fade` 0.1 to 0.28, so the dome plays to 0.6 s and fades in place,
+clear at 0.9 s (cue 0.40 s unchanged, size unchanged).
+
+2. Cage re-opening at f38: **fixed**. Rat and treant, 0.60-0.90 s: the X and arch hold shape and thin out over the body; no tall open canes return.
+   It leaves by fading, it does not sink into the soil; sinking would need drawn frames. Items 1 and 3 (treant size, dust) not touched.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.
@@ -311,6 +320,7 @@ Each asked once. Status: open, answered (with the answer), or dropped.
 | Pass 1 (2026-10-04) | The 12-frame painted atlas; a sap-burst star accent | worker | not scored |
 | Pass 2 (2026-10-04) | The owner's painted four-frame growth sheet in two layers (`grow`, `back` mirrored at 0.5); cage as f3 of one `grow` layer because an `at: hit` sprite is a tail (`TailScale`, 0.6 of the growth); old accent removed; `back` mirrored (`facing: reverse`); badge lifted with `impactY` 0.36. Found: the cage was bigger than the treant and hid it, and slid down from half size instead of rising | worker; the owner's brief for this trial | not scored |
 | Round 1 (2026-10-07) | New design on the owner's flat-cel strips: recipes `thorn_tithe_back`/`_front` (E7 registration, shared canvas, arch feet registered with the single vines, retract frames baked); layers `back` (ground) and `front`, `dust`, `sap`, `leaves`; cue 0.30 to 0.40 and the cast sound re-cut; `vfx.kick`; no drift, no scale. Tuned within the round: size 330 to 290, sink by drift (-0.25) replaced by baked backward frames (the drift pushed the canes through the floor line in view) | worker (own frame sheets; `spell_feel`) | worker's score above; step 3 pending |
+| Tuning after step 6 (2026-10-07) | Sink frames replaced by the held dome, `seconds` 0.5, `fade` 0.28 | orchestrator's step 6 check | cage fades from the dome on both bodies |
 
 ## Measures
 
