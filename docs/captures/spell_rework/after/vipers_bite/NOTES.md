@@ -341,7 +341,7 @@ lime of the art shows; jaws `fps` 18 to 10 (three forming cells in 0.27 s), `bit
 
 Round log: Step 6 (2026-10-07), art swapped for the delivered sheets, drip top feathered; caught by the worker's frame check; rubric above.
 Measures: owner reviews 0; internal retries 1 (drip top edge); generation attempts per art piece 0 at this step; the step took about 35 min active, captures 5 x 25 s.
-Snapshot id: added at step 7.
+Snapshot id: `79996a9d` (step 6 commit); capture runs `20261007T204449Z_0285f59a157a` (rat, first wiring), `20261007T204808Z_5eea02a58920` (treant), `20261007T204909Z_897db6826a73` (rat), `20261007T204956Z_fd5879453228` (rat, Poison).
 
 ## Open owner questions
 
