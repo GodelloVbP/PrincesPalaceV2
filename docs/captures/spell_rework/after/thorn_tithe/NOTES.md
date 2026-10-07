@@ -282,6 +282,18 @@ Measures: owner reviews 0; internal retries 2 (pink specks, particle size); gene
 two content builds and two captures at 1x.
 Snapshot id: `a68833d8` (step 6 commit); capture runs `20261007T211000Z_7eea78bebcb5` (rat), `20261007T211101Z_e4aca9c0a6d2` (treant).
 
+### Orchestrator's check of step 6 (2026-10-07, step6 full GIFs, rat and treant 1x; frames at 60 fps)
+
+For the owner's review. On the rat it works: the crack shows (f4), canes break out with dust (f8), grow and lean in
+(f12-f22), close into a low dome with the X (f24), and sink (f38-f52). Open:
+1. **Treant: the canes swamp the body.** During growth (f12-f22) the canes are taller than the treant and leave the
+   top of the frame. The dome at f24 covers the trunk and the arms up to the face. Fit-to-target width makes the
+   tall growth frames huge on a big body.
+2. **The cage re-opens before it sinks.** At f38 the dome snaps back to the tall, open canes (the sink plays the
+   growth frames backwards from the tallest pose), which pops on both bodies. The worker flagged the same. Fix
+   options: sink from the dome's own frame with a fade, or draw sink frames.
+3. The dust burst at f8 is large and pale, the loudest thing before the cue.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.
