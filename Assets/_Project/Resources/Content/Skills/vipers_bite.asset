@@ -63,17 +63,17 @@ MonoBehaviour:
       castSfxPath: Audio/Sfx/vipers_bite_cast
       layers:
       - id: eye_a
-        render: still
+        render: sprite
         place: above
         height: 0.17
         follow: 0
         whenConsumed: 
         at: release
         offset: 0.04
-        path: Spells/glow_disc
+        path: Spells/vipers_bite_eyes
         seconds: 0.34
-        fps: 0
-        startFrame: 0
+        fps: 8
+        startFrame: 1
         until: hold
         fade: 0.08
         fadeIn: 0.08
@@ -120,9 +120,9 @@ MonoBehaviour:
         align: 
         punch: 0
         glow: 0.6
-        tint: '#C8FF50'
-        impactX: -1
-        impactY: -1
+        tint: 
+        impactX: 0.5
+        impactY: 0.5
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -159,17 +159,17 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: eye_b
-        render: still
+        render: sprite
         place: above
         height: 0.17
         follow: 0
         whenConsumed: 
         at: release
         offset: 0.1
-        path: Spells/glow_disc
+        path: Spells/vipers_bite_eyes
         seconds: 0.28
-        fps: 0
-        startFrame: 0
+        fps: 8
+        startFrame: 1
         until: hold
         fade: 0.08
         fadeIn: 0.08
@@ -216,9 +216,9 @@ MonoBehaviour:
         align: 
         punch: 0
         glow: 0.6
-        tint: '#C8FF50'
-        impactX: -1
-        impactY: -1
+        tint: 
+        impactX: 0.5
+        impactY: 0.5
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -264,7 +264,7 @@ MonoBehaviour:
         offset: 0.14
         path: Spells/vipers_bite
         seconds: 0.27
-        fps: 18
+        fps: 10
         startFrame: 1
         until: hold
         fade: 0.04
@@ -361,7 +361,7 @@ MonoBehaviour:
         path: Spells/vipers_bite
         seconds: 0.1
         fps: 0
-        startFrame: 6
+        startFrame: 4
         until: hold
         fade: 0.14
         fadeIn: 0
@@ -457,7 +457,7 @@ MonoBehaviour:
         path: Spells/vipers_bite
         seconds: 0.2
         fps: 10
-        startFrame: 7
+        startFrame: 5
         until: hold
         fade: 0.15
         fadeIn: 0
@@ -550,10 +550,10 @@ MonoBehaviour:
         whenConsumed: 
         at: hit
         offset: 0.22
-        path: Spells/vipers_bite
+        path: Spells/vipers_bite_drip
         seconds: 0.42
         fps: 9
-        startFrame: 9
+        startFrame: 1
         until: hold
         fade: 0.2
         fadeIn: 0.06
@@ -602,7 +602,7 @@ MonoBehaviour:
         glow: 0
         tint: 
         impactX: 0.5
-        impactY: 0.5
+        impactY: 1
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -733,7 +733,11 @@ MonoBehaviour:
           fadeFrom: 0.55
           endScale: 0.72
           seed: 1067
-          weights: []
+          weights:
+          - 1
+          - 1
+          - 0
+          - 0
       - id: mist
         render: emitter
         place: above
@@ -894,7 +898,7 @@ MonoBehaviour:
         glow: 0.9
         tint: 
         impactX: 0.5
-        impactY: 0.2
+        impactY: 0.01
         aspect: 0
         travelSeconds: 0
         travelDelay: 0

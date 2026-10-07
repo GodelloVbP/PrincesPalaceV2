@@ -287,6 +287,62 @@ covering moment is f21-f27 (about 0.1 s), then the jaws thin to the dim `closed`
 **Rubric (worker's score, round 2)**: 1 yes, 2 ~ (still four stepped frames, no travel), 3 ~ (the snap is the biggest rise; the 0.7 glow on the forming jaws
 makes the wind-up much stronger than round 1), 4 ~ (the snap covers the body for 0.1 s by the owner's call), 5 yes, 6 ~.
 
+## Step 6: art integrated and compared in context (2026-10-07)
+
+Captures `tools/gif.ps1 spell vipers_bite -Vs rat`, `-Vs treant`, `-Vs rat -PreStatus Poison`, all 1x. Copies beside this file:
+`vipers_bite_step6_{rat,treant,rat_poison}_1x.gif` (untracked), `*_preview.gif` (committed), `step6_*_timing.json` (cue f21, freed f87).
+Round 2 timing (cue 0.40 s), sizes (jaws 230 / bite 200 / closed 190, glints 32 at height 0.17, dx -108/-56) and beat order are kept.
+
+### Art record
+
+| Piece | Source | Recipe | Output | Attempts |
+|---|---|---|---|---|
+| Eyes | `vipers_bite_eyes.png` (2x1 of 256) | `recipes/vipers_bite_eyes.json`: hue key (magenta), `content_crop` (229x119), `alpha_floor` 40 | `Resources/Spells/vipers_bite_eyes` f0-f1 | accepted at step 5, wired first try |
+| Jaws | `vipers_bite_jaws.png` (3x2 of 512) | `recipes/vipers_bite.json` rewritten: hue key, `content_crop` (354x446), `alpha_floor` 40 | `Resources/Spells/vipers_bite` f0-f5 (f0-f2 forming, f3 snap, f4 shut, f5 shut and dripping; f6-f11 removed) | accepted at step 5, wired first try |
+| Drip | `vipers_bite_venom.png` row 1 | `recipes/vipers_bite_drip.json` (new): hue key, `alpha_floor` 40, no crop (pivot at the cell's top), `feather` top 0.1 | `Resources/Spells/vipers_bite_drip` f0-f3 | one revision: the cells are cut flat at the top edge and the cut showed as a straight line on the body, so the top 10% is feathered |
+| Particles | `vipers_bite_venom.png` row 2 | `recipes/vipers_bite_particles.json` rewritten: hue key, `alpha_floor` 40 | `..._particles` f0 drop, f1 small drop, f2-f3 vapour | accepted at step 5, wired first try |
+| Burst | `vipers_bite_burst_flat.png` (1024) | `recipes/vipers_bite_burst.json` rewritten: hue key, `content_crop` (818x875), `alpha_floor` 40 | `..._burst` f0 | accepted at step 5, wired first try |
+
+The stand-ins (`vipers_bite_atlas_v1/v3.png`, `vipers_bite_burst.png`, the `glow_disc` glints) stay on disk, unreferenced. No new tooling.
+Pivots are in the cropped frames: jaws, eyes 0.5/0.5 (the prompts' centres are the crops' centres to 0.01); drip `impactY` 0.5 to 1 (pivot at the top);
+burst `impactY` 0.2 to 0.01 (base of the plume, 85% down the cell, is the bottom of the crop).
+
+**Changes in `skills.json`:** glints `render` still to sprite, `glow_disc` to `vipers_bite_eyes` startFrame 1 fps 8 (half open, then open), tint removed so the
+lime of the art shows; jaws `fps` 18 to 10 (three forming cells in 0.27 s), `bite` startFrame 6 to 4, `closed` startFrame 7 to 5, `drip` to
+`vipers_bite_drip` startFrame 1 `impactY` 1, `settle` weights `[1,1,0,0]` (the drops; mist and detonate already took the vapour cells 2-3), `pop` `impactY` 0.01.
+`VipersBitePresentationTests`: the snap is startFrame 4.
+
+### Playback, as seen (60 fps, my own contact sheets, cue f21)
+
+1. **Eyes as a pair: yes.** Rat f5: two lime slits with dark pupils at the snout, the near one half open; f8 both open. The far one is hidden behind the
+   forming jaws from about f12. Treant f5-f11: the pair sits at the left edge of the face above its orange eyes, clear of the canopy; the second is
+   half behind the plate. They read as eyes, not dots, but at 32 px they are small (about 32x17).
+2. **Jaws clamp the body, fangs read: yes.** Rat f11-f17: teal scales over the whole torso, ivory fangs sharp against the grey fur. Treant f11-f17: the jaws
+   bracket the face and trunk top, the orange eyes show between the halves.
+3. **Snap is the biggest rise: yes.** f21: the starburst cell at 200 with glow 1.25 and the "-3"/"-2"; the forming jaws are 0.7 glow, under it.
+4. **Drip and mist as venom: yes for the drip, weak for the mist.** Rat f33-f46 and treant f35-f47: lime rivulets hang from the jaws and fall,
+   with drops below; this reads as venom, where the stand-in was a smear. The vapour is faint and thin; it adds little.
+5. **Mist residue: kept.** Window 0.35, life 0.4-0.6 unchanged; the body is clear of vapour by f50. The last drip stain fades by f62 (rat) and f58 (treant),
+   the drip layer's own 0.2 s fade, not the mist. `spell_feel` was not run (it pops a window), so the residue number is still open.
+6. **Detonation burst (rat, Poison): yes.** f30-f39: a flat lime plume with thrown droplets rises off the body, "-3" and "-9" side by side; it covers the
+   rat's upper half and rises above its head for about 0.1 s; clear by f46. Same size and hold as round 2.
+
+### Checks
+
+- Content build (`GenerationRun.RunAll`, BelowNormal): BUILD-COMPLETE on all four sentinels.
+- Gate: see the commit.
+- Defect found and fixed in this step: the drip cells' flat top edge (feathered, above).
+
+### Rubric (worker's score, step 6)
+
+1 yes, 2 yes (art; still four stepped frames, no travel), 3 yes, 4 yes (the burst still covers about half the rat for about 0.1 s), 5 yes, 6 yes.
+
+### Round log row and measures
+
+Round log: Step 6 (2026-10-07), art swapped for the delivered sheets, drip top feathered; caught by the worker's frame check; rubric above.
+Measures: owner reviews 0; internal retries 1 (drip top edge); generation attempts per art piece 0 at this step; the step took about 35 min active, captures 5 x 25 s.
+Snapshot id: added at step 7.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.

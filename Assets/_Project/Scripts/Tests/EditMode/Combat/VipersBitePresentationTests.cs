@@ -42,7 +42,7 @@ namespace PrincesPalace.Domain.Tests
             var bite = vfx.layers.Single(l => l.id == "bite");
             Assert.AreEqual("hit", bite.at);
             Assert.AreEqual(0f, bite.offset, 1e-6f);
-            Assert.AreEqual(6, bite.startFrame, "f5, the snap");
+            Assert.AreEqual(4, bite.startFrame, "jaws sheet cell 4, the snap");
             Assert.AreEqual(1.25f, bite.glow, 1e-6f);
             Assert.AreEqual(0.2f, vfx.gloom.strength, 1e-6f, "owner O1");
         }
@@ -64,7 +64,7 @@ namespace PrincesPalace.Domain.Tests
             }
 
             var pop = vfx.layers.Single(l => l.id == "pop");
-            Assert.AreEqual("Spells/vipers_bite_burst", pop.path, "the painted venom burst");
+            Assert.AreEqual("Spells/vipers_bite_burst", pop.path, "the flat venom burst");
             Assert.AreEqual(0.9f, pop.glow, 1e-6f);
             Assert.IsTrue(vfx.layers.Where(l => l.id == "jaws" || l.id == "bite" || l.id == "settle")
                 .All(l => string.IsNullOrEmpty(l.whenConsumed)), "the bite itself always plays");

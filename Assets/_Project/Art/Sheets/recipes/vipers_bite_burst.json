@@ -1,17 +1,30 @@
 {
   "_notes": [
-    "Viper's Bite: the venom burst, the second payoff on a Poison detonation. One painted still (vipers_bite_burst.png, 1254x1254): a thick emerald plume with a crown of droplets round it, on a #00FF00 green screen. Keyed on hue with keyed: \"green-soft\" (the venom is deep emerald-teal and keeps its hue), then cropped to its own ink."
+    "Viper's Bite: the venom burst, the second payoff on a Poison detonation (vipers_bite_burst_flat.png, 1024, step 4 art): a flat lime plume with thrown droplets. Keyed on hue (magenta), alpha_floor 40, cropped to its own ink. The painted vipers_bite_burst.png stays on disk, unreferenced."
   ],
-  "sheet": "Spells/Viper's Bite/vipers_bite_burst.png",
+  "sheet": "Spells/Viper's Bite/vipers_bite_burst_flat.png",
   "rects": [
-    [0, 0, 1254, 1254]
+    [
+      0,
+      0,
+      1024,
+      1024
+    ]
   ],
-  "names": ["f0"],
-  "keyed": "green-soft",
-  "canvas": [1254, 1254],
+  "names": [
+    "f0"
+  ],
+  "keyed": "magenta",
+  "canvas": [
+    1024,
+    1024
+  ],
   "base_align": false,
   "content_crop": true,
+  "alpha_floor": 40,
   "sequence": [
-    { "from": "f0" }
+    {
+      "from": "f0"
+    }
   ]
 }

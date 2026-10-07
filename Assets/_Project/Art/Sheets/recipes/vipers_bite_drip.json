@@ -1,0 +1,49 @@
+{
+  "_notes": [
+    "Viper's Bite: venom running down the body (vipers_bite_venom.png row 1, four cells of 256, thinning). Pivot at the top edge of the cell, so no content crop. Keyed on hue (magenta), alpha_floor 40. The cells are cut flat at the top edge, so the top 10% is feathered to nothing and the drip dissolves in rather than showing a straight line on the body."
+  ],
+  "sheet": "Spells/Viper's Bite/vipers_bite_venom.png",
+  "rects": [
+    [
+      0,
+      0,
+      256,
+      256
+    ],
+    [
+      256,
+      0,
+      256,
+      256
+    ],
+    [
+      512,
+      0,
+      256,
+      256
+    ],
+    [
+      768,
+      0,
+      256,
+      256
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": "magenta",
+  "canvas": [
+    256,
+    256
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "alpha_floor": 40,
+  "feather": {
+    "top": 0.1
+  }
+}

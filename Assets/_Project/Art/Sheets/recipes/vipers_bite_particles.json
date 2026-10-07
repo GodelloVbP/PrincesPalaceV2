@@ -1,33 +1,32 @@
 {
   "_notes": [
-    "Viper's Bite: cells 13-16 are independent reusable particle sprites, never timeline frames.",
-    "The emitter in skills.json samples these stills with deterministic material-specific motion."
+    "Viper's Bite: independent particle sprites, never timeline frames (vipers_bite_venom.png row 2): f0 drop, f1 small drop, f2 and f3 vapour wisps. The settle emitter picks the drops, mist and detonate the wisps, by weight. Keyed on hue (magenta), alpha_floor 40."
   ],
-  "sheet": "Spells/Viper's Bite/vipers_bite_atlas_v1.png",
+  "sheet": "Spells/Viper's Bite/vipers_bite_venom.png",
   "rects": [
     [
       0,
-      940,
-      314,
-      314
+      256,
+      256,
+      256
     ],
     [
-      314,
-      940,
-      313,
-      314
+      256,
+      256,
+      256,
+      256
     ],
     [
-      627,
-      940,
-      313,
-      314
+      512,
+      256,
+      256,
+      256
     ],
     [
-      940,
-      940,
-      314,
-      314
+      768,
+      256,
+      256,
+      256
     ]
   ],
   "names": [
@@ -36,11 +35,12 @@
     "f2",
     "f3"
   ],
-  "keyed": false,
+  "keyed": "magenta",
   "canvas": [
-    314,
-    314
+    256,
+    256
   ],
   "base_align": false,
-  "content_crop": false
+  "content_crop": false,
+  "alpha_floor": 40
 }

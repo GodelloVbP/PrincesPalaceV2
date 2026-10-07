@@ -1,0 +1,22 @@
+{
+  "_notes": [
+    "Viper's Bite: the snake eye opening (vipers_bite_eyes.png, 2x1 of 256): f0 half open, f1 open. Both glints play it. Keyed on hue (magenta), alpha_floor 40, one shared content crop."
+  ],
+  "sheet": "Spells/Viper's Bite/vipers_bite_eyes.png",
+  "grid": [
+    1,
+    2
+  ],
+  "names": [
+    "f0",
+    "f1"
+  ],
+  "keyed": "magenta",
+  "canvas": [
+    256,
+    256
+  ],
+  "base_align": false,
+  "content_crop": true,
+  "alpha_floor": 40
+}
