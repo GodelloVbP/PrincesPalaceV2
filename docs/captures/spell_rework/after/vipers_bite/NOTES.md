@@ -148,6 +148,8 @@ The lunge recipe and its generated folder stay in the tree unreferenced; delete 
 
 ### Art needed for step 4
 
+**Step 3 passed (owner, 2026-10-07): the round 2 motion is approved. Sizes below follow round 2.**
+
 Prompt-ready per `docs/prompts/TEMPLATE_spell_art.md`; the style block and its attachments as in its section 1. **The subjects are green (venom, scales),
 so the backdrop is solid #FF00FF, the recipes are keyed `"keyed": "magenta"`, and "no pink or magenta in the subject" replaces the no-green line.** At play
 size the pieces sit on a dark grey rat and a brown-and-green treant: pale ivory fangs, a light lime fill and a dark outline.
@@ -160,7 +162,7 @@ Filename: vipers_bite_eyes.png
 Delivery path: Assets/_Project/Art/Sheets/Spells/Viper's Bite/vipers_bite_eyes.png
 Canvas: 512x256   Grid: 2x1 of 256x256
 Pivot: the eye's centre at 50% across, 50% down in each cell
-Size in play: small, a 30 px box each, beside the head; it must read at that size
+Size in play: small, a 32 px box each, at face height beside the head; slit pupils and a pale rim so the pair reads as eyes, not two dots, at that size
 Drawing: cell 1 an eye half open (a thin lime lens with a vertical slit), cell 2 the eye fully open (a lime almond with a dark vertical slit pupil
   and a small pale highlight). Bold dark outline, flat cel in two tones of yellow-lime (never near-black fill).
 Verb: watch.
@@ -177,7 +179,7 @@ Filename: vipers_bite_jaws.png
 Delivery path: Assets/_Project/Art/Sheets/Spells/Viper's Bite/vipers_bite_jaws.png
 Canvas: 1536x1024   Grid: 3x2 of 512x512
 Pivot: the middle of the gap between the jaws, 50% across and 50% down, in every cell
-Size in play: about as wide as a rat's torso (a 120-140 px box); it must read at that size
+Size in play: big, a 190-230 px box clamping the whole rat or a treant's face and upper trunk (owner: bigger jaws); the fangs must read on dark fur
 Drawing: one pair of snake jaws seen from the side, an upper and a lower half with a gap between them; no head, no eyes, no neck.
   Cell 1 the halves far apart with two small fang tips; cell 2 closer, fangs longer; cell 3 wide open, two long ivory fangs; cell 4 the jaws
   nearly shut with a flat starburst of short lime rays between the fangs; cell 5 shut, the fangs crossed; cell 6 shut, a drop of venom on each fang
