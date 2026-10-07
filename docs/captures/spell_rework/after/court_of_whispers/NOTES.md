@@ -2,7 +2,7 @@
 
 Trial 2, spell 1 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), step 2 "block with existing assets", round 1.
 Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Target design: `docs/PLAN_SPELL_ANIMATION.md` section 3.
-**Status: step 2 done by the worker (2026-10-07); step 3 (orchestrator's watch and rubric) is next. Nothing here is owner-reviewed.**
+**Status: step 2 round 3 done by the worker (2026-10-07, see "Round 3"); step 3 (orchestrator's watch and rubric) is next. Nothing here is owner-reviewed.**
 The 2026-10-03/04 pilot passes (one painted courtier, ring-and-core payoff) are superseded; their GIFs and reports are in
 `previous_pass/`, untracked.
 
@@ -231,6 +231,60 @@ Not in the picture: figures, glow, floor, background texture.
 (Cells 1, 2 and 3 are picked by weight in the emitters; cell 4 is the `price` still. Engine-made on top: the rim
 shiver, glow, breathing, fades.)
 
+## Round 3 (2026-10-07): courtiers at the head, small, one per enemy
+
+Owner's answer to Q3: one per enemy, smaller, leaning in at head height. Captures `court_of_whispers_r5_*`
+(rat 1x, treant 1x, treant 1.5x; previews committed, full GIFs untracked; timings `r5_*_timing.json`). Cue f41 at 1x.
+
+**What changed (all in `ContentData/skills.json`, no new field, no new art):**
+
+- The six courtier layers (`orbit_back`, `orbit_front`, `lean`, `smoke_a`, `smoke_b`, `curl`) are `place: above`,
+  `height: 0.3`: the existing "straight over the struck body, N body-heights over its middle" placement
+  (`SpellFlight.AbovePoint`, Crownfall's `spike`). It reads the visible body, so it follows a rat and a treant alike;
+  a non-travelling `above` layer hangs and is held under the stage top, as Censer's lantern is. 0.3 is the face on a
+  treant and the neck on a rat (0.45, the top of the body, put the treant's courtier over the canopy and under the
+  enemy plates; it is not kept).
+- Sizes 130/190/190 to 52/70/80 (still `fit: target`).
+- Head offset: `dx` 60 toward the rat's nape on the three sprites (authored sign follows the layer's facing: -60
+  on the unmirrored far arc, +60 on the two reverse layers). `dx` is not fit-scaled. Enemies face left, so the
+  courtier stands behind the head and leans in from the right (`lean` is now `facing: reverse`).
+- Drift in own-box widths: far arc -1.1 to +1.1; near arc -1.5 to -0.8; lean -0.7, via -0.2 at 36%, to -0.3
+  (it stays near the head while it dissolves). Hand-off points match (within 2 units, tested).
+- Smoke emitters have `sourceDx` 15-19 and `sourceDy` -5 to 35 from the same head point, where the lean ends, so the
+  smoke rises from the courtier.
+- Far arc kept (a dim ghost at head height). It reads as a faint smudge at f8-f26 and does not hurt readability.
+
+**Beat table updates:** the table above holds for timings. Sizes: far arc 52, near arc 70, lean 80. Anchors: head.
+
+**Playback, as seen (60 fps, my own contact sheets: rat 1x, treant 1x, cue f41):**
+
+1. **Merging band: fixed.** Three separate figures at every frame on both racks: f16-f40 (small, one at each head),
+   f41-f64 (at the cue and the lean; on the treant rack the robes of two neighbours come within a few pixels at
+   f41-f56 but do not overlap), and in the smoke f72-f120. On rats the figure of one rat sits between its head and
+   the next rat's snout at f41-f56 (touches, no merge).
+2. **Anchored at the base: fixed.** The lean is at the treant's face/upper trunk (f41, f56) and at the rat's
+   head/nape. On rats it covers the neck and ear, not the face. Caveat: the courtier is a painted stand-in, a
+   hooded robe, and on a treant at the cue (f41-f56) it covers the brow and part of the canopy beside the face; the eyes stay visible.
+3. **Disconnected ending: fixed.** The lean fades from f64 where it stands; the smoke is born there at f66
+   (hit +0.25 s) and rises from the same spot, f72-f120. One event, not two. The smoke is small (this art), and one
+   curl hangs to about f130.
+
+**Checks:** `CourtOfWhispersTimingTests` (6, updated to the new anchors and sizes), `SpellLayerRulesTests` (91),
+`SpellPresentationCopyTests` (4), `SpellPoolCapacityTests` (5) pass. `tools/spell_feel.ps1 -Spell court_of_whispers`
+(runtime capture): treant 1x no warnings (contact f41, visual f41, clean); **rat WARN contact desync**: the
+biggest rise is f20 (authored hit cue f42). That is the near arc's dark courtier fading in at head height on the
+light rats (f19-f26) outweighing the rim pulses. Cue timing is unchanged: the recorded hit frame is f41, sound,
+badges and the first rim pulse on it. Explained, not changed. Flash guard not measured (unchanged: rim pulses).
+
+**Rubric (worker's score):** 1. Beats read in order: ✔. 2. Weight and easing: ~ (the arcs are short, ease-out
+only). 3. One focal point at a time: ✔ (three small figures, same beat). 4. Body readable at the hit: ~ (the
+courtier covers the neck on rats and the brow of a treant, never the eyes). 5. Ending decays: ✔ (the figure
+fades where the smoke starts). 6. Distinct: ~ (not seen beside the Censer or Ashen). Art not scored.
+
+**New owner question:** none. Still open: Q1 (E5 depth bands), Q2, Q4. A `place` word for "the head" (an authored head
+point per actor, as `StanceManifest.HeadFor` already holds for the icon crop) would replace the `height` + `dx`
+pair; not built, it is a contract change.
+
 ## Open owner questions
 
 Each asked once.
@@ -250,13 +304,14 @@ Each asked once.
 | 1 | Orbit as two hand-off layers, far arc in the ground band; cue 0.7 s; rim shiver (new `vfx.bodyRim`); smoke steps; price wisp, no ring | worker (frames) and `SpellPoolCapacityTests`: third enemy has no far arc, far arc occluded, hand-off pops | not scored (failed) |
 | 1b | `facing: reverse` mirrors the drift x (frames showed the near arc running the wrong way): authored mirrored | worker (frames) | not scored |
 | 2 | Far arc to the effects band (gate), crossfaded hand-off (0.1 s), lean crossfaded to full on the cue (the treant's visual contact moved from f47 to f59, a later rim pulse, and still WARNs), smaller figures, bigger smoke | worker (frames, `spell_feel`) | worker score above |
+| 3 | Courtiers at the head (`place: above` 0.3, dx, sizes 52/70/80), one per enemy, lean reversed, smoke from the lean spot | worker (own frames), `spell_feel` rat WARN | worker score in Round 3 |
 
 ## Measures
 
 | Measure | Value |
 |---|---|
 | Owner reviews (target 3) | 0 so far |
-| Internal retries | 3 (round 1, 1b, 2) |
+| Internal retries | 4 (round 1, 1b, 2, 3) |
 | Generation attempts per art piece | 0 (stand-ins) |
 | Active work time / waiting time | worker run about 2 h; 11 captures of 30-45 s each, one content build each round |
 | Owner handling time (generate, download, upload art; review) | not started |

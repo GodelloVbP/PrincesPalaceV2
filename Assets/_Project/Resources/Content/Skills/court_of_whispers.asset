@@ -62,8 +62,8 @@ MonoBehaviour:
       layers:
       - id: orbit_back
         render: sprite
-        place: target-centre
-        height: 0
+        place: above
+        height: 0.3
         follow: 0
         whenConsumed: 
         at: release
@@ -76,13 +76,13 @@ MonoBehaviour:
         fade: 0.1
         fadeIn: 0.18
         opacity: 0.4
-        dx: 0
+        dx: -60
         dy: 0
         drift:
-          fromX: -0.6
-          toX: 0.6
-          fromY: 0.1
-          toY: 0.1
+          fromX: -1.1
+          toX: 1.1
+          fromY: 0.15
+          toY: 0.15
           viaX: 0
           viaY: 0
           viaAt: 0
@@ -111,7 +111,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 130
+        size: 52
         fit: target
         facing: none
         sort: effects
@@ -158,8 +158,8 @@ MonoBehaviour:
           weights: []
       - id: orbit_front
         render: sprite
-        place: target-centre
-        height: 0
+        place: above
+        height: 0.3
         follow: 0
         whenConsumed: 
         at: release
@@ -172,11 +172,11 @@ MonoBehaviour:
         fade: 0.06
         fadeIn: 0.1
         opacity: 0.7
-        dx: 0
+        dx: 60
         dy: 0
         drift:
-          fromX: -0.6
-          toX: 0.35
+          fromX: -1.5
+          toX: -0.8
           fromY: 0
           toY: 0
           viaX: 0
@@ -207,7 +207,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 190
+        size: 70
         fit: target
         facing: reverse
         sort: effects
@@ -254,8 +254,8 @@ MonoBehaviour:
           weights: []
       - id: lean
         render: sprite
-        place: target-centre
-        height: 0
+        place: above
+        height: 0.3
         follow: 0
         whenConsumed: 
         at: release
@@ -268,14 +268,14 @@ MonoBehaviour:
         fade: 0.25
         fadeIn: 0.12
         opacity: 0.7
-        dx: 0
+        dx: 60
         dy: 0
         drift:
-          fromX: -0.35
-          toX: -0.8
+          fromX: -0.7
+          toX: -0.3
           fromY: 0
           toY: 0
-          viaX: -0.3
+          viaX: -0.2
           viaY: 0
           viaAt: 0.36
           arcY: 0
@@ -303,9 +303,9 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 190
+        size: 80
         fit: target
-        facing: none
+        facing: reverse
         sort: effects
         align: 
         punch: 0
@@ -450,8 +450,8 @@ MonoBehaviour:
           - 0
       - id: smoke_a
         render: emitter
-        place: target-centre
-        height: 0
+        place: above
+        height: 0.3
         follow: 0
         whenConsumed: 
         at: hit
@@ -521,8 +521,8 @@ MonoBehaviour:
           rate: 18
           burst: 0
           window: 0.35
-          sourceDx: -95
-          sourceDy: 30
+          sourceDx: 15
+          sourceDy: -5
           spreadDegrees: 60
           aimDegrees: 90
           speedMin: 20
@@ -550,8 +550,8 @@ MonoBehaviour:
           - 1
       - id: smoke_b
         render: emitter
-        place: target-centre
-        height: 0
+        place: above
+        height: 0.3
         follow: 0
         whenConsumed: 
         at: hit
@@ -621,8 +621,8 @@ MonoBehaviour:
           rate: 7
           burst: 0
           window: 0.3
-          sourceDx: -120
-          sourceDy: 50
+          sourceDx: 17
+          sourceDy: 15
           spreadDegrees: 50
           aimDegrees: 90
           speedMin: 15
@@ -650,8 +650,8 @@ MonoBehaviour:
           - 1
       - id: curl
         render: emitter
-        place: target-centre
-        height: 0
+        place: above
+        height: 0.3
         follow: 0
         whenConsumed: 
         at: hit
@@ -721,8 +721,8 @@ MonoBehaviour:
           rate: 0
           burst: 1
           window: 0
-          sourceDx: -125
-          sourceDy: 70
+          sourceDx: 19
+          sourceDy: 35
           spreadDegrees: 0
           aimDegrees: 90
           speedMin: 18

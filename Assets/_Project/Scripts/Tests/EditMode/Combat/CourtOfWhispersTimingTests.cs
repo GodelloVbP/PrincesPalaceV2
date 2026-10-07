@@ -39,18 +39,23 @@ namespace PrincesPalace.Domain.Tests
             Assert.Less(back.size, front.size, "the far arc is smaller");
             Assert.Less(back.opacity, front.opacity, "and dimmer");
             Assert.AreEqual(0.36f, back.offset + back.seconds - 0.02f, 0.05f, "the far arc ends where the near one begins");
-            Assert.AreEqual(back.drift.toX, -front.drift.fromX, 1e-6f, "the hand-off happens at the same x: a reverse layer mirrors its drift");
+            // On screen a layer sits at drift * size + dx, and a reverse layer mirrors both.
+            Assert.AreEqual(back.drift.toX * back.size + back.dx, -(front.drift.toX * front.size + front.dx), 2f,
+                "the hand-off happens at the same x (within 2 units)");
             Assert.AreEqual(0.7f, front.offset + front.seconds - 0.02f, 0.05f, "the near arc ends on the cue");
 
             Assert.AreEqual("Spells/court_of_whispers_courtier", lean.path, "the painted leaning courtier, one still");
             Assert.AreEqual(0.58f, lean.offset, 1e-6f, "it crossfades in over the orbit's last 0.12 s and is full on the cue");
             Assert.AreEqual(0.7f, lean.offset + lean.fadeIn, 1e-6f);
-            Assert.AreEqual(-front.drift.toX, lean.drift.fromX, 1e-6f, "the lean starts where the near arc stopped (the near arc is mirrored)");
-            Assert.AreEqual(-0.3f, lean.drift.viaX, 1e-6f, "closest to the body at the waypoint");
-            Assert.AreEqual(-0.8f, lean.drift.toX, 1e-6f, "and back out again");
+            Assert.AreEqual(front.drift.toX * front.size + front.dx, lean.drift.fromX * lean.size + lean.dx, 1f,
+                "the lean starts where the near arc stopped (both mirrored)");
+            Assert.AreEqual("reverse", lean.facing, "it whispers from behind: hood to the head, body trailing away from the snout");
+            Assert.AreEqual(-0.2f, lean.drift.viaX, 1e-6f, "closest to the head at the waypoint");
+            Assert.AreEqual(-0.3f, lean.drift.toX, 1e-6f, "and a little back out, where the smoke starts");
             Assert.IsNull(vfx.layers.FirstOrDefault(l => l.id == "core"), "no ring at the payoff: the rim is the payoff");
-            Assert.AreEqual(3, vfx.layers.Count(l => l.render == "sprite" && l.place == "target-centre"),
-                "three sprite layers a body: the band reserves 12 renderers for a formation of three");
+            Assert.AreEqual(3, vfx.layers.Count(l => l.render == "sprite" && l.place == "above" && l.height == 0.3f),
+                "three sprite layers a body, all at the head (place above, 0.3 body-heights over the middle): the band reserves 12 renderers for a formation of three");
+            Assert.LessOrEqual(lean.size, 80f, "small enough that three courtiers on a rack stay three");
 
             var rim = vfx.bodyRim;
             Assert.IsTrue(rim.HasRim);
@@ -69,6 +74,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(steps[0].emitter.rate, steps[1].emitter.rate, "fewer each step");
             Assert.AreEqual(1, steps[2].emitter.burst, "the last thing on the stage is one curl");
             Assert.Greater(steps[0].emitter.gravity, 0f, "smoke rises");
+            Assert.IsTrue(steps.All(l => l.place == "above" && l.height == 0.3f), "the smoke is anchored where the courtier is: the head");
         }
 
         [Test]
