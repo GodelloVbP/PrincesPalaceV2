@@ -35,8 +35,8 @@ namespace PrincesPalace.Domain.Tests
             var catchLayer = vfx.layers.Single(l => l.id == "catch");
             Assert.AreEqual("release", catchLayer.at, "release clock, because an at: hit still is capped at 0.75 of the body");
             Assert.AreEqual("still", catchLayer.render);
-            Assert.AreEqual("Spells/ashen_reckoning", catchLayer.path, "f6, the swirl on fire, until the owner's cel catch arrives");
-            Assert.AreEqual(7, catchLayer.startFrame);
+            Assert.AreEqual("Spells/ashen_reckoning_catch_cel", catchLayer.path, "the cel catch sheet, cell 1: the core");
+            Assert.AreEqual(1, catchLayer.startFrame);
             Assert.AreEqual(0.6f, catchLayer.offset, 1e-6f, "the Poison packet's number is on the cue");
             Assert.AreEqual(1.4f, catchLayer.glow, 1e-6f);
             Assert.IsTrue(string.IsNullOrEmpty(catchLayer.tint), "no green tint: it pushed the flame salmon");
@@ -44,11 +44,12 @@ namespace PrincesPalace.Domain.Tests
 
             var flare = vfx.layers.Single(l => l.id == "flare");
             Assert.AreEqual("release", flare.at);
-            Assert.AreEqual(catchLayer.path, flare.path, "the same drawing flares; no second drawing");
+            Assert.AreEqual(catchLayer.path, flare.path, "the same sheet flares; no second sheet");
+            Assert.AreEqual(3, flare.startFrame, "the widest ring, hotter");
             Assert.AreEqual(0.65f, flare.offset, 1e-6f, "the cue plus 3 frames at 60 fps, StageHitFlash.StaggerSeconds");
             Assert.AreEqual(1.8f, flare.glow, 1e-6f);
-            Assert.Greater(flare.size, catchLayer.size);
-            Assert.LessOrEqual(vfx.layers.Where(l => l.id.StartsWith("catch") || l.id == "flare").Max(l => l.size), 200f, "no burst larger than the body");
+            Assert.Greater(flare.size, vfx.layers.Single(l => l.id == "catch_c").size);
+            Assert.LessOrEqual(vfx.layers.Where(l => l.id.StartsWith("catch") || l.id == "flare").Max(l => l.size), 280f, "the ring is 0.61 of its box and the box is about 2.4x on a treant: 250 draws about the body's width");
         }
 
         [Test]

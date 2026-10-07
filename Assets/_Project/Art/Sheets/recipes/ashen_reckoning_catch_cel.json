@@ -1,0 +1,42 @@
+{
+  "_notes": [
+    "Ashen Reckoning, the catch: core, spreading ring, widest ring, settled flat ellipse (step 4 art, keyed RGBA). alpha_floor 40 as for the vortex. Cell 1's drawing sits off-centre (solid box x 151-262, y 260-360 of 512), so shift [50, -54] registers it on the cell centre like cells 2-4."
+  ],
+  "sheet": "Spells/Ashen Reckoning/ashen_reckoning_catch_cel.png",
+  "grid": [
+    1,
+    4
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": false,
+  "canvas": [
+    512,
+    512
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "alpha_floor": 40,
+  "sequence": [
+    {
+      "from": "f0",
+      "shift": [
+        50,
+        -54
+      ]
+    },
+    {
+      "from": "f1"
+    },
+    {
+      "from": "f2"
+    },
+    {
+      "from": "f3"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "_notes": [
+    "Ashen Reckoning, the ending's smoke and ash: S-curl, broken curl, three flakes, two flakes and a chip (step 4 art, keyed RGBA). Particle sprites for the curl, smoke and ash emitters, never timeline frames. alpha_floor 40 as for the vortex."
+  ],
+  "sheet": "Spells/Ashen Reckoning/ashen_reckoning_smoke_ash.png",
+  "grid": [
+    1,
+    4
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": false,
+  "canvas": [
+    512,
+    512
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "alpha_floor": 40
+}

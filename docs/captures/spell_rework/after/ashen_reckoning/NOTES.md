@@ -249,6 +249,107 @@ drawing, not key spill (no magenta or green fringe).
 
 Verdict: accepted for wiring; no revision prompt. The catch's hoop-to-ground change (b) is judged in motion at step 6.
 
+## Step 6: art integrated and compared in context (2026-10-07)
+
+Captures `tools/gif.ps1 spell ashen_reckoning -Vs treant -PreStatus Poison` (run `20261007T120009Z_2271e90b1699`), `-Vs rat`
+(`20261007T120220Z_c5443b8abbe4`), `-Vs treant -Speed 1.5` (`20261007T120344Z_b1d8189eba42`). Copies beside this file:
+`ashen_reckoning_step6_{treant_poison_1x,rat_poison_1x,treant_poison_1.5x}.gif` (untracked) and `*_preview.gif` (committed).
+Timing unchanged: cue f35 at 1x, f23 at 1.5x, freed f179 / f119.
+
+### Art record
+
+| Piece | Source | Recipe | Output | Attempts |
+|---|---|---|---|---|
+| Venom vortex | `ashen_reckoning_venom_vortex.png` (step 4, keyed RGBA) | `recipes/ashen_reckoning_venom_vortex.json`: `alpha_floor` 40, cells baked 1.3x/1.18x/1.08x/1.0x/0.9x (the pull inward) | `Resources/Spells/ashen_reckoning_venom_vortex` f0-f4 | accepted at step 5, wired first try |
+| Catch | `ashen_reckoning_catch_cel.png` | `recipes/ashen_reckoning_catch_cel.json`: `alpha_floor` 40, cell 1 `shift` [50, -54] onto the cell centre | `Resources/Spells/ashen_reckoning_catch_cel` f0-f3 | accepted at step 5, wired first try |
+| Smoke and ash | `ashen_reckoning_smoke_ash.png` | `recipes/ashen_reckoning_smoke_ash.json`: `alpha_floor` 40 | `Resources/Spells/ashen_reckoning_smoke_ash` f0-f3 | accepted at step 5, wired first try |
+| Campfire, venom drops | not delivered (optional) | kept: `censer_flame_loop`, `ashen_reckoning_particles` f0 | n/a | n/a |
+
+The atlas folder `Spells/ashen_reckoning` (f0-f11) is no longer played; it stays because its recipe and the drift tests
+still reference it. Tooling added to `tools/slice_spell_sheet.py` (documented in ART_PIPELINE, "Composing frames"):
+recipe `alpha_floor`, sequence-step `shift`. A latent bug fixed in passing: two functions were both named
+`feather_edges`, so any sequence step with a `scale` crashed; the ring one is now `feather_ring`.
+
+### Beat table, as wired
+
+| t | Beat | Layer | Carried by |
+|---|---|---|---|
+| 0.00-0.60 | wind-up | `ritual` | vortex cells 1-5, 460 box, turning, fade-in 0.4 |
+| 0.60 | green gives way | `venom_hold` | vortex cell 5 |
+| 0.60 | catch, core | `catch` | catch cell 1, 280 box, punch |
+| 0.65 | spreads | `catch_b` | catch cell 2, 235 |
+| 0.70 | widest | `catch_c` | catch cell 3, 250 |
+| 0.65 | flare | `flare` | catch cell 3, 270, glow 1.8 |
+| 0.75-1.75 | burst smoke behind the body | `decay` | smoke cells 1-2, 2 fps |
+| 0.65-2.1 | campfire steps | `fire_a`-`fire_d` | censer cel flame loop (unchanged) |
+| ending | embers | `embers_*` | censer particles (unchanged) |
+| 1.0-2.8 | ash | `ash` | smoke cells 3-4, size 0.7-1.1, gravity -220 |
+| 0.9-2.4 | smoke | `smoke` | smoke cells 1-2 |
+| 1.8-3.0 | last curl | `curl` | smoke cell 1 at size 3.5-3.8 |
+
+### Playback, as seen (treant 1x, frames at 1920x1080 around the target)
+
+- **f4-f34 wind-up.** f4 a faint thin ring of ribbons; f10-f16 ribbons sweep round the trunk; f22 a loose green spiral;
+  f28-f34 a dense knot over the torso, turning faster. Reads as venom drawn inward, no pop-in.
+- **f35 cue.** `-3` and the badge; a small flame core opens in the middle of the green knot, the hit flash is a rim.
+- **f36-f37** the core settles; **f38** the ring of flame opens round the knot, flare and `-9` land; **f40-f46** the
+  ring at its widest, about the body's width, the green knot burns out inside it (f44 a few green flecks);
+  campfire up at the feet from f40. **f48-f54** the ring is gone, torso clear.
+- **f60-f100** campfire steps down (f62 full, f76 smaller, f90 low, f100 embers); thin smoke behind the trunk; a few
+  small grey flakes near the head, readable but small.
+- **f110-f160** the grey S-curl rises over the trunk (the treant's own attack move is on screen), thins by f160; clear by f178.
+- **Rat 1x.** Same beats. The vortex covers the whole rat f20-f36; the ring is wider than the rat; the rat fades out
+  from about f125 and the curl is the last thing on the stage at f160.
+- **1.5x treant.** Same shape, cue f23, ring f26-f30, freed f119.
+
+**Catch cell 3 to 4 (hoop to ground ellipse):** not played. In the contact sheet cell 3 is an upright, camera-facing
+ring and cell 4 is a flat ellipse; in sequence that is a view change in one frame. The catch ends on cell 3 and
+hands off to the flame loop at the feet, as the step 5 note allowed. Not filmed with cell 4 in: this is a call from
+the stills, not from motion. The ring's upright tongues reach the treant's head for about 4 frames (f38-f42).
+
+**Vortex scale-down:** `SpellLayer` has no scale-over-life (`endScale` is an emitter field), so the pull is baked into
+the cells by the recipe. No code change.
+
+**Smoke grey:** the cool grey sits fine beside the fire against the brown trunk; the existing warm tints on `smoke` and
+`curl` stay, no new tint.
+
+### Checks
+
+| Check | Result | Evidence |
+|---|---|---|
+| No transform jump | pass | only `ritual` turns, at most 6.5 deg a frame as in round 2; the catch cells share the body centre (cell 1 registered); cell 4 not played |
+| Cue on one frame | pass | `timing.json` hitFrame 35 / 23; `AshenReckoningTests`, `AshenReckoningPresentationTests` green |
+| Nothing marked visible leaves the stage | pass | largest box 460 (the vortex), inside the 1080 crop at the body's middle; frames show no clipping |
+
+`tools/spell_feel.ps1 ashen_reckoning` (reports in `docs/captures/spell_feel/ashen_reckoning_vs_{rat,treant}`), two WARNs:
+
+- **treant, residue tail** (above 25% of peak 0.75 s after contact, limit 0.5 s): the campfire steps down over about
+  1.1 s and the curl is the last thing on stage, by design (round 2 asked for a long ending). Not changed.
+- **rat, contact desync** (biggest rise at f19, cue f36): the activity measure climbs from f11 to f20 (1.4 to 2.6) as
+  the dense vortex fades in, then plateaus (2.6-3.1) to the catch. The vortex is a solid green mass, so the wind-up
+  carries about 85% of the catch's activity and the cue stands out by colour (green to fire) more than by energy.
+  One try, `ritual` opacity 0.85 to 0.7, left every number unchanged, so it was reverted. Open: a lighter vortex
+  (fewer dense cells) would separate the cue; that is new art, not tuning.
+
+### Rubric (worker's score)
+
+1. Each beat reads, in order: ✔. Venom winds in, the core ignites inside it, the ring spreads, the green burns out, the
+   campfire steps down, ash and smoke, the curl. The green is still overrun rather than recoloured, but the ring now
+   reads as the venom catching.
+2. Weight and easing feel physical: ✔. The knot tightens and speeds; core, spread and widest ring take 0.1 s; the
+   flame steps are clear.
+3. One focal point at a time: ~. f35-f46 holds the knot, the ring and two numbers.
+4. The body stays readable at the hit: ~. The knot covers the torso f20-f46; the ring covers torso and part of the
+   head f38-f46 (about 0.15 s); the face is clear in the wind-up.
+5. The ending decays, not cuts: ✔ for the fire steps and the S-curl; ~ the ash is small flakes near the head.
+6. Distinct from and consistent with the Censer of Embers (compared with its 1x treant GIF): ✔. Censer: a hanging
+   brazier, thrown embers, an orange burn tint on the body. Ashen: a green vortex, a ring of flame, no object. They
+   share the cel campfire loop and the ember sprites, and both end on smoke.
+
+What changed: the art swapped in (vortex, catch, smoke, ash, curl); burst smoke moved to the smoke sheet; ring sizes cut
+from 330/290/310/340 to 280/235/250/270 after the first capture (the ring was wider than the treant and hid its face);
+ash flakes spread and reduced after a clump covered the face. Presentation tests updated.
+
 ## Open owner questions
 
 Each asked once.
@@ -269,6 +370,7 @@ Each asked once.
 | Trial 1, block 3 | catch is ashen f6 at body size: it read as an explosion over the whole crop | worker, from the stills | n/a |
 | Trial 1, block 4 (first review) | f6 at 210 box; the ending as a fire, a decay, a curl | worker | worker's score only |
 | Round 2 | orchestrator's playback check failed it: full-opacity pop-in at f0; the catch an explosion and the body filled pale green (the committed material still had the 0.22 interior, and the 2.2% rim); the body hidden for 0.35 s; the ending not the strongest. Changed: 0.6 s wind-up that builds and accelerates, a core that spreads to the body's width, the global hit-flash rim, burst and smoke behind the body, a four-step ending with dimming embers, ash and a large curl | orchestrator | see Rubric |
+| Step 6 | step 4 art wired into recipes and layers; ring sizes cut after the first capture (wider than the body); ash flakes spread | worker (own frames) | see Step 6 |
 
 ## Measures
 
@@ -276,12 +378,12 @@ Each asked once.
 |---|---|
 | Owner reviews (target 3) | 0 so far |
 | Internal retries | round 1: 3 block revisions and one test fix; round 2: 4 captures to settle the flash (material default 0.22, rim 0.022) and the coverage, one test fix (tick 0 of a fade-in) |
-| Generation attempts per art piece | 0 (no art yet) |
+| Generation attempts per art piece | 1 each for the three delivered sheets (accepted at step 5); campfire and drops not made |
 | Active work time / waiting time | round 1 about 80 min active, 20 waiting; round 2 about 70 min active, 35 waiting (captures, two gates, a disk-space crash). Estimates; no clock |
 | Owner handling time | none yet |
 | Owner-found defects the binding checks should have caught (target 0) | none from the owner. The orchestrator's check found the pop-in (a binding check does not test it: advisory) and the filled-silhouette flash (no check) |
 | Final quality against the reference pack | not judged |
-| Captures taken | round 1: 6; round 2: 7 treant 1x (4 while tuning), rat 1x, treant 1.5x, a censer, a melee attack |
+| Captures taken | step 6: 3 filmed, a first treant try, 2 spell_feel runs; round 1: 6; round 2: 7 treant 1x (4 while tuning), rat 1x, treant 1.5x, a censer, a melee attack |
 
 ## Reviewed snapshot
 

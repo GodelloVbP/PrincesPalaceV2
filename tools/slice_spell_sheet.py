@@ -153,7 +153,7 @@ def write_recipe(vfx_id, spec):
     os.makedirs(RECIPE_DIR, exist_ok=True)
     ordered = collections.OrderedDict()
     for key in ("_notes", "sheet", "grid", "rects", "names", "sources", "keyed", "canvas",
-                "base_align", "content_crop", "feather", "cap_green", "sequence"):
+                "base_align", "content_crop", "feather", "cap_green", "alpha_floor", "sequence"):
         if key in spec:
             value = spec[key]
             ordered[key] = list(value) if isinstance(value, tuple) else value
@@ -383,6 +383,12 @@ def compose_sequence(cells, steps):
         if radius:
             cell = discs(cell, pivot, radius)
 
+        # SHIFT registers a cell the artist drew off-centre: the drawing moves
+        # by [dx, dy] pixels (positive is right and down) inside its own cell,
+        # nothing scaled, so a pivot-centred layer plays it on the body.
+        if "shift" in step:
+            cell = shifted(cell, *step["shift"])
+
         for i in range(count):
             angle = (-360.0 * i / count if rotates and count > 1 else 0.0) + step.get("turn", 0.0)
             t = i / (count - 1) if count > 1 else 1.0
@@ -391,6 +397,13 @@ def compose_sequence(cells, steps):
                 frame = clear_resampling_haze(frame)
             out.append(frame)
 
+    return out
+
+
+def shifted(cell, dx, dy):
+    """The cell's drawing moved by (dx, dy) pixels on a canvas of its own size."""
+    out = Image.new("RGBA", cell.size, (0, 0, 0, 0))
+    out.paste(cell, (int(round(dx)), int(round(dy))))
     return out
 
 
@@ -444,7 +457,7 @@ def discs(cell, pivot, radius):
     return out
 
 
-def feather_edges(frame, width=12.0):
+def feather_ring(frame, width=12.0):
     """Fade alpha to 0 within `width` px of the canvas edge.
 
     turned() grows a cell around its own pivot, and an OFF-CENTRE pivot -- the
@@ -563,7 +576,7 @@ def turned(cell, degrees, pivot, scale):
                           Image.LANCZOS)
         frame = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         frame.paste(big, (int(round(cx - cx * scale)), int(round(cy - cy * scale))))
-        frame = feather_edges(frame)
+        frame = feather_ring(frame)
 
     if abs(degrees) < 1e-4:
         return frame
@@ -861,7 +874,8 @@ def pad_to_common_canvas(cells, canvas=None):
 
 def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
                 base_align=False, content_crop=False, preview=False, vfx_id=None,
-                sources=None, rects=None, canvas=None, feather=None, cap_green=None):
+                sources=None, rects=None, canvas=None, feather=None, cap_green=None,
+                alpha_floor=None):
     """Cut a sheet -- or several -- into frames.
 
     `sources`, when given, replaces `sheet_path`/`rows`/`cols`/`names`
@@ -904,6 +918,12 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
         # and a frame that changes size mid-sequence is the tell.
         if rects or canvas is not None:
             cells = pad_to_common_canvas(cells, canvas)
+
+    # BEFORE the sequence, so a shift or a scale never carries the specks along:
+    # an authored-alpha sheet keeps dark outline fringe and stray specks at low
+    # alpha that the artist's own key left behind.
+    if alpha_floor:
+        cells = {name: clear_resampling_haze(cell, alpha_floor) for name, cell in cells.items()}
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -1336,7 +1356,7 @@ def main():
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, sources=spec["sources"],
                         canvas=spec.get("canvas"), feather=spec.get("feather"),
-                        cap_green=spec.get("cap_green"))
+                        cap_green=spec.get("cap_green"), alpha_floor=spec.get("alpha_floor"))
         else:
             rows, cols = spec["grid"] if "grid" in spec else (None, None)
             print(f"[{vfx_id}] {_shape_of(spec)}")
@@ -1347,7 +1367,7 @@ def main():
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, rects=spec.get("rects"),
                         canvas=spec.get("canvas"), feather=spec.get("feather"),
-                        cap_green=spec.get("cap_green"))
+                        cap_green=spec.get("cap_green"), alpha_floor=spec.get("alpha_floor"))
 
 
 if __name__ == "__main__":
