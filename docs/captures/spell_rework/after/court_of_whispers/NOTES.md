@@ -170,6 +170,10 @@ referenced by the spell (the ring was the rejected payoff and price).
 
 ### Art needed for step 4
 
+**Step 3 passed (owner, 2026-10-07): the round 3 motion is approved. Prompts updated for round 3:** the figures play
+small (52-80 px boxes) at the head of dark rats and green treants. Each piece therefore needs a pale outline over
+the dark one and a lighter violet body, with a silhouette that still reads at 60 px.
+
 Prompt-ready per `docs/prompts/TEMPLATE_spell_art.md`; style block and attachments as in its section 1. No green in any
 subject below (they are violet), so the green key `#00FF00` applies.
 
@@ -181,11 +185,13 @@ Filename: court_of_whispers_courtier_lean.png
 Delivery path: Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whispers_courtier_lean.png
 Canvas: 1024x1024   Grid: one still
 Pivot: the hood's opening at 82% across and 22% down; the hem trails to the lower left
-Size in play: about 0.8 of the target's body width; the figure's height about the target's height
+Size in play: small, an 80 px box beside the target's head (about a rat's head and shoulders); it must read at that size
 Drawing: one tall hooded figure in a long violet court robe with wide sleeves, bent forward from the waist to the
   right, one cupped hand raised beside the hood as if to speak into an ear. The hood is empty and dark: no face, no
-  eyes. The hem breaks into a few ragged tongues that trail left and down. Bold dark outline, flat cel shading in
-  three violet tones plus one pale violet for a sleeve edge.
+  eyes. The hem breaks into a few ragged tongues that trail left and down. Bold dark outline with a thin pale lilac
+  outer rim around the whole silhouette, flat cel shading in three LIGHT-to-mid violet tones (lavender to amethyst,
+  never near-black) plus one pale lilac for a sleeve edge. A simple, chunky silhouette: few folds, readable as a
+  thumbnail.
 Verb: whisper.
 Must read as: a courtier bending close to speak in someone's ear.
 Must NOT read as: a grim reaper, a wraith with a scythe or claws, a mage casting, a ghost drawing life out.
@@ -200,11 +206,11 @@ Filename: court_of_whispers_courtier_back.png
 Delivery path: Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whispers_courtier_back.png
 Canvas: 1024x1024   Grid: one still
 Pivot: the hood's centre at 80% across and 12% down; the hem at the bottom
-Size in play: 130 to 190 of the stage reference box; smaller than the target on the far arc, about its height on the
-  near arc
+Size in play: small, 52 px (far arc) to 70 px (near arc) boxes at the target's head; it must read at that size
 Drawing: the same figure, same robe and sleeves, standing upright and turned three quarters away, the hood facing
   right and a little back toward the viewer, arms hanging in the wide sleeves, the hem trailing left in the same
-  ragged tongues. Same outline weight and tones as piece 1: it must be recognisably the same courtier.
+  ragged tongues. Same outline, pale lilac outer rim and light violet tones as piece 1: it must be recognisably the
+  same courtier.
 Verb: whisper (the approach to it): processing round someone.
 Must read as: one courtier gliding past; the same person as the leaning one.
 Must NOT read as: a statue, a ghost with a face, a different character.
@@ -220,7 +226,8 @@ Delivery path: Assets/_Project/Art/Sheets/Spells/Court of Whispers/court_of_whis
 Canvas: 1024x256   Grid: 4x1 of 256x256
 Pivot: centre of every cell (50%, 50%); cell 1 and 2 rise from their bottom third
 Size in play: cell 1 about a third of a body's width, cell 2 smaller, cell 3 tiny, cell 4 about Shawn's head
-Drawing: flat cel shapes, bold dark outline, two violet tones and a pale rim. Cell 1 a single thick curl of smoke with
+Drawing: flat cel shapes, bold dark outline, the courtier's own light violet in two tones and a pale lilac rim, so the
+  smoke reads as the robe coming apart (never grey, yellow or white). Cell 1 a single thick curl of smoke with
   one spiral at its head. Cell 2 a thin S-shaped wisp. Cell 3 three small pale teardrop motes, one larger. Cell 4 a
   small flame-like lick of violet, three points, as a candle flame guttering.
 Verb: come apart into smoke; flicker.

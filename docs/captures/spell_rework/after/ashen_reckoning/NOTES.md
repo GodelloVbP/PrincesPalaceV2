@@ -2,6 +2,7 @@
 
 Trial 1 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), step 2 "block with existing assets", round 2.
 Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`.
+**Closed (owner, 2026-10-07): accepted as is after the kick (`7cc52e64`); no body glow (needs a spell-owned body glow, plan E9, not built).**
 **Step 3 passed (owner, 2026-10-07): the round 2 motion is accepted. Steps 4-6 done (art delivered, accepted, wired);
 step 7 closed in `7a3ea8ef`; see "Step 6".** The untracked `ashen_reckoning_catch.png` (2026-10-04, painted, green key) is the
 pre-workflow still, not step 4 art.
