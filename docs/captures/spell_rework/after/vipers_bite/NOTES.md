@@ -76,6 +76,21 @@ hold in this round; it is the owner's painted piece and the dark teal sits near-
 
 Treant 1.5x: cue f14, the same shape in two thirds of the time; eyes f2-f13 are short but both open by f5; the drip and mist overlap the snap's fade more.
 
+## Orchestrator's step 3 check (2026-10-07, r1 full GIFs, rat, treant, rat with Poison at 1x; frames at 60 fps)
+
+Shown to the owner. All four beats read in order with no head: glints, jaws forming, snap on the cue, drip and mist,
+plus the detonation. Defects:
+1. Treant f2-f20: the glints sit at the top edge of the frame above the canopy, nearly off screen and under the
+   enemy plate. They do not read as eyes beside the target. On the rat they sit above the head and read as two
+   small lights.
+2. Rat f10-f20: the forming jaws are a faint green smear over the torso; the fangs do not read. On the treant
+   (f14-f20) the fangs at the face do read.
+3. Cue f22: the whole body flashes pale (the rat fills beige, the treant gets a thick pale-green rim and a pale
+   canopy). This is the same look as Ashen's reservation 2, now in two spells, so it is the shared spell hit flash,
+   not this spell.
+4. Drip f40: a large bright green V of goo over the chest; it reads as venom, though crude.
+5. Mist: faint until about f68, the spell_feel residue WARN (the cheap fix is in Checks).
+
 ## Checks
 
 Binding (proposal contract 4):
