@@ -223,6 +223,57 @@ Must NOT read as: an oil splash, a fountain, a tree, an explosion with fire.
 Not in the picture: target, jaws, floor, smoke, glow.
 ```
 
+## Round 2 (2026-10-07, owner: "the jaws have to be bigger, definitely")
+
+Captures `vipers_bite_r2_rat_1x`, `_treant_1x`, `_rat_poison_1x` (previews committed, full GIFs untracked, `r2_*_timing.json`; cue f21 at 1x). All edits are in
+`ContentData/skills.json`; no new field, no new art. The owner's call overrides contract 2 (payoff at most a third of the body) for the snap; the fully
+covering moment is f21-f27 (about 0.1 s), then the jaws thin to the dim `closed` layer.
+
+**What changed**
+
+- Sizes: `jaws` 140 to 230, `bite` 120 to 200, `closed` 110 to 190.
+- Forming jaws read on dark fur: `jaws` opacity 0.6 to 0.95 and glow 0 to 0.7 (still under the snap's 1.25); `closed` opacity 0.6 to 0.85.
+- Glints: `place: above`, `height` 0.62 to 0.17 (face height on both bodies; Court's 0.3 put the treant's under its canopy line), `dx` -50/-22 to -108/-56
+  (enemies face left, so negative is toward the face), size 30 to 32. Tried 0.3 and size 40 with dx -88/-52 first: on the treant they sat above the
+  face and the two discs merged into one blob; the final spacing keeps two separate points.
+- Mist: `window` 0.5 to 0.35, `lifeMin/lifeMax` 0.5/0.8 to 0.4/0.6.
+- Burst, hit flash, drip, settle: unchanged. `VipersBitePresentationTests` pinned "jaws glow is 0"; now "jaws glow is under the snap's 1.25".
+
+**Beat table changes** (all else as round 1)
+
+| t | Layer | Now |
+|---|---|---|
+| 0.04-0.38 / 0.10-0.38 | `eye_a`, `eye_b` | 32 box, `above` 0.17, dx -108 / -56 |
+| 0.14-0.41 | `jaws` | 230 box, opacity 0.95, glow 0.7 |
+| 0.40 | `bite` | 200 box, glow 1.25, punch 0.3 |
+| 0.50-0.70 | `closed` | 190 box, opacity 0.85 |
+| 0.55-0.90 | `mist` | window 0.35, life 0.4-0.6 |
+
+**Playback by frame** (my own contact sheets, 60 fps)
+
+- Rat f4-f8: two lime glints open at face height on and in front of the snout; they read as lights beside the head, the second a few frames later.
+  They are small and soft, not slit eyes (art item 1 still stands).
+- Treant f4-f8: the glints sit at the left edge of the face beside the orange eyes, inside the frame and clear of the plate and canopy top.
+- Rat f8-f20: green jaw wisps at f8, from f12 the upper and lower fangs read clearly in ivory on a green mouth over the whole torso; the fur shows through.
+  Treant f12-f20: the same, the jaws bracket the face, its orange eyes stay readable between the halves.
+- f21-f27: the snap fills the body: on the rat the face is covered, on the treant the face and the top of the canopy. Bright starburst, "-3", badge.
+  f28 onward the body is back; the closed jaws thin over f28-f34.
+- Rat f34-f46: drops and drip over the torso, thin mist; clear by about f52.
+- Poison rat: f21 snap; the burst plume at f34-f40 as in round 1, "-3" and "-9" side by side; the body is clear by f46.
+
+**Orchestrator's defects against round 2**
+
+| # | Defect | Fixed | Evidence |
+|---|---|---|---|
+| 1 | Jaws bigger | yes | 230/200/190; f13 jaws span the rat and the treant's whole face and trunk top |
+| 1b | Forming jaws on the rat | yes | f12-f20 fangs read in ivory on dark fur (round 1: a faint smear) |
+| 2 | Glints beside the head | mostly | face height on both; on the rat they sit at the snout, on the treant at the face's left edge; a pair, small and soft |
+| 3 | Mist tail | fixed by config, not measured | window 0.35, life 0.6 max, so the last particle is at about 0.15+0.35+0.6 = 1.1 s from the cue; visually clear by f52. `spell_feel` was not run this round (it pops a window), so the residue number is open |
+| 4 | Burst | unchanged | owner |
+
+**Rubric (worker's score, round 2)**: 1 yes, 2 ~ (still four stepped frames, no travel), 3 ~ (the snap is the biggest rise; the 0.7 glow on the forming jaws
+makes the wind-up much stronger than round 1), 4 ~ (the snap covers the body for 0.1 s by the owner's call), 5 yes, 6 ~.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.
@@ -239,13 +290,14 @@ Each asked once. Status: open, answered (with the answer), or dropped.
 | Pass 1 (2026-10-04) | Old jaws and a splash crown; stage gloom 0.20 (owner O1); the detonation damage was never drawn (the "-3" showed over a bar that fell by 12), so the beat now carries `DetonatedAmount` and the view draws a second Poison number `detonationSeconds` later (pinned in `SpellPresentationMechanismTests`); `secondSfxPath` added for the detonation's own sound | worker (before/after capture) | not scored |
 | Pass 2 (2026-10-04) | Owner's painted snake-head lunge, `feather` recipe key to dissolve its cut neck, painted venom burst | worker | not scored; the owner then rejected the head |
 | Round 1 (2026-10-07) | New design: no head. Eye glints (`glow_disc`), jaws forming (old f0-f4), snap on the cue (f5), closed jaws, venom drip (f8-f11), mist emitter; cue 0.30 to 0.40 and the cast sound re-cut; burst kept and sized 420 to 200, held 0.22 to 0.1 s. Tuned within the round: eyes first sat on the rat's ear (moved to 0.62 above the head), the snap covered about half the rat at 190 (now 120) | worker (own frame sheets), the contract 2 coverage check | worker's score above; step 3 pending |
+| Round 2 (2026-10-07) | Jaws 140/120/110 to 230/200/190, forming jaws opacity 0.95 glow 0.7, glints to face height (0.17, dx -108/-56), mist window 0.35 life 0.4-0.6 | owner (bigger jaws), orchestrator step 3 (glints, rat jaws, mist) | worker score in Round 2 |
 
 ## Measures
 
 | Measure | Value |
 |---|---|
 | Owner reviews (target 3) | 0 so far |
-| Internal retries | 3 (eye position, snap size, burst size and hold) |
+| Internal retries | 3 (eye position, snap size, burst size and hold); round 2: 2 (glint spacing and height, two recaptures) |
 | Generation attempts per art piece | 0 (stand-ins) |
 | Active work time / waiting time | about 1 h 20 min, of which the gate, the content builds and the captures were about 25 min |
 | Owner handling time (generate, download, upload art; review) | none yet |

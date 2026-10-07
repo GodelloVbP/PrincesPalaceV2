@@ -37,7 +37,7 @@ namespace PrincesPalace.Domain.Tests
 
             var jaws = vfx.layers.Single(l => l.id == "jaws");
             Assert.AreEqual(vfx.hitCueSeconds, jaws.offset + jaws.seconds, 0.02f, "the jaws finish drawing together on the cue");
-            Assert.AreEqual(0f, jaws.glow, 1e-6f, "the wind-up is dimmer than the snap");
+            Assert.Less(jaws.glow, 1.25f, "the wind-up is dimmer than the snap");
 
             var bite = vfx.layers.Single(l => l.id == "bite");
             Assert.AreEqual("hit", bite.at);

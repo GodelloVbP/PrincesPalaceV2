@@ -65,7 +65,7 @@ MonoBehaviour:
       - id: eye_a
         render: still
         place: above
-        height: 0.62
+        height: 0.17
         follow: 0
         whenConsumed: 
         at: release
@@ -78,7 +78,7 @@ MonoBehaviour:
         fade: 0.08
         fadeIn: 0.08
         opacity: 0.9
-        dx: -50
+        dx: -108
         dy: 0
         drift:
           fromX: 0
@@ -113,7 +113,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 30
+        size: 32
         fit: target
         facing: none
         sort: effects
@@ -161,7 +161,7 @@ MonoBehaviour:
       - id: eye_b
         render: still
         place: above
-        height: 0.62
+        height: 0.17
         follow: 0
         whenConsumed: 
         at: release
@@ -174,7 +174,7 @@ MonoBehaviour:
         fade: 0.08
         fadeIn: 0.08
         opacity: 0.9
-        dx: -22
+        dx: -56
         dy: 0
         drift:
           fromX: 0
@@ -209,7 +209,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 30
+        size: 32
         fit: target
         facing: none
         sort: effects
@@ -269,7 +269,7 @@ MonoBehaviour:
         until: hold
         fade: 0.04
         fadeIn: 0.06
-        opacity: 0.6
+        opacity: 0.95
         dx: 0
         dy: 0
         drift:
@@ -305,13 +305,13 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 140
+        size: 230
         fit: target
         facing: none
         sort: effects
         align: 
         punch: 0
-        glow: 0
+        glow: 0.7
         tint: 
         impactX: 0.5
         impactY: 0.5
@@ -401,7 +401,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 120
+        size: 200
         fit: target
         facing: none
         sort: effects
@@ -461,7 +461,7 @@ MonoBehaviour:
         until: hold
         fade: 0.15
         fadeIn: 0
-        opacity: 0.6
+        opacity: 0.85
         dx: 0
         dy: 0
         drift:
@@ -497,7 +497,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 110
+        size: 190
         fit: target
         facing: none
         sort: effects
@@ -806,7 +806,7 @@ MonoBehaviour:
           path: Spells/vipers_bite_particles
           rate: 12
           burst: 0
-          window: 0.5
+          window: 0.35
           sourceDx: 0
           sourceDy: 0
           spreadDegrees: 120
@@ -816,8 +816,8 @@ MonoBehaviour:
           inherit: 0
           drag: 1
           gravity: 30
-          lifeMin: 0.5
-          lifeMax: 0.8
+          lifeMin: 0.4
+          lifeMax: 0.6
           sizeMin: 0.3
           sizeMax: 0.5
           spinMin: -60
