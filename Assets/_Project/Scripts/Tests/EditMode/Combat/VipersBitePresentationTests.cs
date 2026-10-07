@@ -7,7 +7,7 @@ using PrincesPalace.Domain.Combat.Session;
 namespace PrincesPalace.Domain.Tests
 {
     // VIPER'S BITE'S BEATS as literal seconds (docs/PLAN_SPELL_REWORK.md 3.6):
-    // jaws drop in for 0.3 s, the bite lands on the cue, and a bite that spent
+    // eyes, then jaws forming over 0.4 s, the bite lands on the cue, and a bite that spent
     // Poison earns a second payoff 0.18 s later with its own number and sound.
     public class VipersBitePresentationTests
     {
@@ -21,21 +21,23 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheSnakeLungesInForTheCueAndTheBiteLandsOnIt()
+        public void TheJawsFormOnTheBodyAndSnapOnTheCueWithNoSnakeHead()
         {
             var vfx = Viper();
-            Assert.AreEqual(0.3f, vfx.hitCueSeconds, 1e-6f);
+            Assert.AreEqual(0.4f, vfx.hitCueSeconds, 1e-6f);
+            Assert.IsFalse(vfx.layers.Any(l => l.path != null && l.path.Contains("lunge")), "owner: the snake head looks bad");
 
-            var lunge = vfx.layers.Single(l => l.id == "lunge");
-            Assert.AreEqual("Spells/vipers_bite_lunge", lunge.path, "the painted head; its cut neck is feathered in the recipe");
-            Assert.AreEqual("release", lunge.at);
-            Assert.AreEqual(0.12f, lunge.offset, 1e-6f);
-            Assert.AreEqual(0.4f, lunge.seconds, 1e-6f);
-            Assert.AreEqual(-1.5f, lunge.drift.fromX, 1e-6f, "starts a box and a half out, between the caster and the body");
-            Assert.AreEqual(0f, lunge.drift.viaX, 1e-6f, "on the body at the waypoint");
-            Assert.AreEqual(-0.6f, lunge.drift.toX, 1e-6f, "and drawn back out");
-            Assert.AreEqual(vfx.hitCueSeconds, lunge.offset + lunge.seconds * lunge.drift.viaAt, 1e-3f, "the head arrives on the cue");
-            Assert.AreEqual(0f, lunge.glow, 1e-6f);
+            foreach (string id in new[] { "eye_a", "eye_b" })
+            {
+                var eye = vfx.layers.Single(l => l.id == id);
+                Assert.AreEqual("release", eye.at, id);
+                Assert.Less(eye.offset, vfx.hitCueSeconds - 0.2f, id + " opens in the dark well before the jaws");
+                Assert.LessOrEqual(eye.glow, 1f, id + " stays under the snap's glow");
+            }
+
+            var jaws = vfx.layers.Single(l => l.id == "jaws");
+            Assert.AreEqual(vfx.hitCueSeconds, jaws.offset + jaws.seconds, 0.02f, "the jaws finish drawing together on the cue");
+            Assert.AreEqual(0f, jaws.glow, 1e-6f, "the wind-up is dimmer than the snap");
 
             var bite = vfx.layers.Single(l => l.id == "bite");
             Assert.AreEqual("hit", bite.at);
@@ -64,7 +66,7 @@ namespace PrincesPalace.Domain.Tests
             var pop = vfx.layers.Single(l => l.id == "pop");
             Assert.AreEqual("Spells/vipers_bite_burst", pop.path, "the painted venom burst");
             Assert.AreEqual(0.9f, pop.glow, 1e-6f);
-            Assert.IsTrue(vfx.layers.Where(l => l.id == "lunge" || l.id == "bite" || l.id == "settle")
+            Assert.IsTrue(vfx.layers.Where(l => l.id == "jaws" || l.id == "bite" || l.id == "settle")
                 .All(l => string.IsNullOrEmpty(l.whenConsumed)), "the bite itself always plays");
         }
     }

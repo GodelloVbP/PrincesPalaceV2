@@ -195,7 +195,7 @@ namespace PrincesPalace.Domain.Tests
             var single = new (string spell, string cue, float seconds)[]
             {
                 ("winters_rebuke", "winters_rebuke_cast", 0.34f),
-                ("vipers_bite", "vipers_bite_cast", 0.30f),
+                ("vipers_bite", "vipers_bite_cast", 0.40f),
                 ("spore_cloud", "spore_cloud_cast", 0.35f),
                 ("ashen_reckoning", "ashen_reckoning_cast", 0.60f),
                 ("censer_of_embers", "censer_of_embers_cast", 1.00f),

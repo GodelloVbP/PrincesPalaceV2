@@ -50,7 +50,7 @@ FADE_OUT = 0.008    # a click guard, not a decay: the source's next sound is cut
 # `after` (default 0) is how many seconds past the build peak the window ends.
 CUES = [
     ("winters_rebuke_cast", "Ice", "Ice_Spell_charge_impact_09.wav", 0.34),
-    ("vipers_bite_cast", "Acid", "acid_spell_cast_charge_splash_impact_03.wav", 0.30),
+    ("vipers_bite_cast", "Acid", "acid_spell_cast_charge_splash_impact_03.wav", 0.40),
     ("spore_cloud_cast", "Acid", "acid_spell_cast_riser_liquid_impact_03.wav", 0.35),
     ("ashen_reckoning_cast", "Acid", "acid_spell_cast_charge_splash_impact_02.wav", 0.60),
     ("censer_of_embers_cast", "Fire", "fire_spell_charge_explosion_wet_06.wav", 1.00),

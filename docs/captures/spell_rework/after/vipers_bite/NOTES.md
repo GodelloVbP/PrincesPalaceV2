@@ -1,77 +1,247 @@
-# Viper's Bite, "after" (plan S3, spell 3.6)
+# Viper's Bite: state record
 
-Pass 1 (2026-10-04) used the old jaws and a splash crown. Pass 2 (2026-10-04) wires the owner's
-painted stills: `vipers_bite_lunge-v2.png` (v1 stays beside it, unused) and `vipers_bite_burst.png`
-(recipes `vipers_bite_lunge`, `vipers_bite_burst`, both keyed `green-soft`: teal scales and
-emerald venom would shift under the plain green clamp). Captured with `tools/gif.ps1 spell
-vipers_bite` (also `-PreStatus Poison`, `-Darkness 0.9`, `-Repeat 5 -Speed 1.5`); GIFs are
-untracked next to this file. Stage gloom 0.20 (owner O1). Owner gates skipped; the calls below
-are mine.
+Trial 2, spell 2 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), steps 1 and 2 "identity sheet, block with existing assets", round 1.
+Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Target design: `docs/PLAN_SPELL_ANIMATION.md` section 3.
+**Status: step 2 round 1 done by the worker (2026-10-07); step 3 (orchestrator's watch and rubric) is next. Nothing here is owner-reviewed.**
+The 2026-10-04 passes (painted snake-head lunge, then the owner's lunge-v2) are superseded: the owner rejected the head. Their GIFs
+(`vipers_bite_rat_1x.gif` etc.) stay untracked beside this file.
 
-## Beats, authored seconds
+Captures 2026-10-07 with `tools/gif.ps1 spell vipers_bite` (`-Vs rat`, `-Vs treant`, `-Vs rat -PreStatus Poison`, `-Vs treant -Speed 1.5`).
+Phone previews are committed (`vipers_bite_r1_*_preview.gif`); the full GIFs (`vipers_bite_r1_*.gif`, 13 MB each) are untracked;
+`r1_*_timing.json` is each capture's `timing.json`. `tools/spell_feel.ps1` was run once, 1x, treant and rat (reports in
+`spell_feel_r1_1x/`).
 
-| t | Beat |
+## Identity sheet
+
+Locked by the orchestrator's plan; the owner confirms or edits it with the first GIF.
+
+- **Verb:** bite.
+- **Signature beat:** a pair of jaws closes on the body and the fangs snap shut on the cue, with the number and the Poison badge.
+- **Must read as:** "a snake bit it": a pair of eyes in the dark, then jaws and fangs on the body.
+- **Must NOT read as:** a snake head or any whole animal (owner: it looks bad); a thrown or flying object; a green blob over the body.
+- **Motion reference per moving element** (a real thing, not invented parameters):
+  - `eye_a`, `eye_b`: a snake's eyes opening in the dark one after the other, then holding; they do not move;
+  - `jaws`: a strike's jaws closing, drawn in four steps (f0-f4 of the old sheet) from faint to full, no travel;
+  - `bite`: the snap, an instant: one frame, a small punch, the brightest thing in the spell;
+  - `drip`: venom running down fur, falling, thinning;
+  - `mist`: the vapour off a bite, rising and thinning.
+- **Intentional exceptions:** the jaws pop in at their first frame (they fade in over 0.06 s, the drawing itself does not move);
+  the snap is one held frame (0.1 s), not an animation; the detonation burst is the owner's painted piece and is the one
+  thing that is a different style from the rest.
+- **Mechanics, unchanged:** 3 Poison damage, detonates the Poison already on the target (second number "-9" and
+  `spore_cloud_impact` 0.18 s after the cue), then applies 3 Poison; cue sound, number and badge on one frame.
+
+## Beat table
+
+Authored seconds on the release clock; hit cue **0.40 s** (was 0.30; the cast sound is re-cut to 0.40 s with
+`make_spell_cast_cues.py`, pinned by `MeleeSoundOverrideTests.TheSpellCastCuesFitTheirBlows`). Cue = f21 at 1x, f14 at 1.5x
+(`timing.json`; authored 0.40 s is f24 minus the 3 first-drawn-wait frames). "Visible" is the stage-crop check: layer box =
+size x fit factor, centred over the body. Sprite layers on a body: up to 5 of the effects band's 12.
+
+| t | Beat | Layer | Must be visible in the stage crop | Easing / feel |
+|---|---|---|---|---|
+| 0.00-0.40 | Stage gloom 0.20 | stage `gloom` | n/a | in 0.15, holds to the cue, out 0.25 |
+| 0.04-0.38 | Left eye glint opens above the head | `eye_a` | yes, 30 box, `above` 0.62, dx -50 | `fadeIn` 0.08, `breathe`, tint `#C8FF50`, glow 0.6, fade 0.08 |
+| 0.10-0.38 | Right eye glint opens | `eye_b` | yes, 30 box, dx -22 | same, 0.06 s later |
+| 0.14-0.41 | Jaws form on the body: halves draw together, fangs show | `jaws` | yes, 140 box over the torso | old sheet f0-f4 at 18 fps, opacity 0.6, no glow, `fadeIn` 0.06 |
+| 0.40 | **Cue.** The snap: jaws shut in a starburst. Sound, "-3", Poison badge on this frame | `bite` | yes, 120 box | old sheet f5, punch 0.3, glow 1.25, held 0.1, fade 0.14 |
+| 0.40 | Drops thrown down from the bite | `settle` | emitter | 12 particles, falling |
+| 0.50-0.70 | Jaws shut, fangs in, fading | `closed` | yes, 110 box | f6-f7 at 10 fps, opacity 0.6, fade 0.15 |
+| 0.55-1.00 | Green mist off the bite, thinning | `mist` | emitter | 12 a second for 0.5 s, rising, opacity 0.5 |
+| 0.62-1.04 | Venom runs down the body | `drip` | yes, 150 box, `above` 0.18 | old sheet f8-f11 at 9 fps, `fadeIn` 0.06, fade 0.2 |
+| 0.58 (Poison only) | Second payoff: painted venom burst, "-9", `spore_cloud_impact` | `pop`, `detonate` | yes, 200 box | held 0.1, fade 0.15, glow 0.9; 16-particle spray |
+
+Visually clean around 0.7-0.8 s after the cue on 1x (see playback); the harness's `clearedSeconds` is 1.85 because the mist's last
+particles live to about 1.45 s.
+
+## Playback, as seen (my own frame contact sheets, 60 fps; the orchestrator has not yet watched)
+
+Rat 1x (frames cut 450x400 round the body):
+- **f0-f4 eyes.** Two lime glints fade in above the rat's head: the left at f2, the right at f6. They read as a pair of eyes in the dark.
+- **f8-f20 jaws.** A faint green mist-jaw draws over the rat's torso at f8; f12-f20 shows the upper and lower fangs, dim, the body
+  readable through it.
+- **f21 cue.** The jaws snap in a bright starburst over the torso, the "-3" appears (f21-f22), the badge is under the body, the typed
+  hit flash outlines the rat in pale green (f21-f23). The eyes are still visible and fade out over f21-f24.
+- **f28-f31.** The closed jaws, a dim green mass over the torso (about a quarter of the body); fangs visible.
+- **f35-f46.** The body is clear; green drops and a vertical drip hang over the torso (f40), then thin mist rises (f46-f60); gone by about f70.
+- **Contract 2:** the snap covers about a quarter of the rat for f21-f31 (0.17 s); not over a third.
+
+Treant 1x: the same beats. The eyes sit above the canopy (f4-f23), clear of the tree but not obviously "beside" it, and the treant's own orange
+eyes compete lower down. The jaws land on the face (f8-f20), the snap covers the face and top of the trunk, about a fifth of the body (f21-f31).
+The drip and mist stay on the face and upper trunk and read against brown bark; against the green canopy at f46 the mist is weaker.
+
+Rat with Poison: f21 is the same snap. At f32 (0.18 s later) the painted burst (a dark teal plume with droplets) rises over the torso, with "-9" beside "-3".
+The burst covers about 40-50% of the rat for f32-f40 (about 0.13 s): **slightly over contract 2**. Reduced from 420 to 200 box and from 0.22 s to 0.1 s
+hold in this round; it is the owner's painted piece and the dark teal sits near-black on a dark rat, so it reads by its shape and the green droplets.
+
+Treant 1.5x: cue f14, the same shape in two thirds of the time; eyes f2-f13 are short but both open by f5; the drip and mist overlap the snap's fade more.
+
+## Checks
+
+Binding (proposal contract 4):
+
+| Check | Result | Evidence |
+|---|---|---|
+| No transform jump in the spell's own layers | pass | no layer moves (no drift or rotate); the only change is the jaws' drawing between f0-f4, and the 0.06 s `fadeIn` |
+| Cue on one frame | pass | `timing.json` `hitFrame` 21 at 1x, 14 at 1.5x; sound, "-3" and badge on it; the snap is `at: hit` offset 0 |
+| Nothing marked visible leaves the stage | pass | sizes in the beat table; the eyes at 0.62 body-heights over a treant are 30 px glints above the canopy, still on the stage |
+
+`spell_feel` (1x, runtime capture, `spell_feel_r1_1x/`):
+- Treant: contact f21 (visual f21); biggest rise after release f21, which is the cue; peak at f21. WARNs: residue tail 1.10 s (limit 0.5) and
+  "contact desync: authored hit cue is frame 24, shows on 21". The 3-frame gap is this capture path's first-drawn wait (`gif.ps1`'s timing.json reports
+  hitFrame 21 for the same authored 0.40 s), so it is a harness offset, not a drift.
+- Rat: contact f21; WARN residue tail 1.28 s; WARN biggest rise after release is f96, which is the rat's own idle pose change after the cast
+  (no spell layer is alive then; the gif at f60-f70 is clean), plus the same 3-frame offset.
+- **The residue WARN is real:** the mist lives to 1.45 s after the cue. Cheap to fix in round 2 (mist window 0.35, life 0.4-0.6 would end near 1.1 s).
+  Not changed, to hold the captures steady for step 3.
+- Cue-is-biggest-rise passes on the treant and on the rat's own frames: the wind-up is dim (jaws opacity 0.6, no glow, eyes glow 0.6) and the snap is glow 1.25 plus punch.
+
+Advisory:
+
+- **Pop-in:** the jaws' first frame is faint (f0) and fades in; the snap and the burst cut in by design.
+- **Frozen holds:** the eyes breathe; the jaws change drawing every 0.055 s; nothing holds still for more than 0.1 s.
+- **Flash guard:** the snap and the burst are two events 0.18 s apart (Poison only), each a green burst plus the typed hit flash; not measured with the rendered-frame tool.
+
+Gates: dotnet slice `VipersBitePresentationTests`, `VipersBiteTests`, `SpellLayerRulesTests`, `SpellPoolCapacityTests`, `SpellBaselineTimingTests`,
+`MeleeSoundOverrideTests` green (128). The commit gate (`run_tests_parallel.ps1 -Changed -BuildContent -Shards 1`, promoted itself to the full run) was
+green on the final content: EditMode 6246 (6243 passed, 3 skipped), PlayMode 2046 (1955 passed, 91 skipped), 0 failed.
+
+## Rubric (worker's score; the orchestrator's check is still due)
+
+Motion, 1x and 1.5x:
+
+1. Each beat reads, in order: ✔. Eyes, jaws, snap, drip and mist are distinct and in order on rat and treant; the eyes are round dots, not slits.
+2. Weight and easing feel physical: ~. The jaws are four stepped frames with no travel, so the closing has no speed; the snap's punch carries the weight.
+3. One focal point at a time: ✔ at the cue (the snap alone); the eyes are still visible for 3 frames after it.
+4. The body stays readable at the hit: ✔ on rat and treant for the bite (a quarter to a fifth); ~ on the detonation (40-50% for 0.13 s).
+5. The ending decays, not cuts: ✔. Drips and mist thin out over about 0.6 s, with one long faint tail.
+6. Distinct from and consistent with the approved spells: ~. Not played beside the Censer or Ashen Reckoning; green venom and a lime glow are shared with Ashen's Poison.
+
+Art, not scored: every piece is an old painted stand-in (jaws sheet, particles) or the owner's painted burst.
+
+## Art record (one row per piece)
+
+| Piece | Accepted prompt | Source file | Recipe | Output | Attempts |
+|---|---|---|---|---|---|
+| Jaws and drainage (stand-in) | n/a | `Art/Sheets/Spells/Viper's Bite/vipers_bite_atlas_v1.png` cells 1-8, `vipers_bite_atlas_v3.png` cells 9-12 | `recipes/vipers_bite.json` (unchanged) | `Resources/Spells/vipers_bite` (f0-f4 jaws, f5 snap, f6-f7 closed, f8-f11 drain) | 0 |
+| Wisps and drops (stand-in) | n/a | `vipers_bite_atlas_v1.png` cells 13-16 | `recipes/vipers_bite_particles.json` (unchanged) | `Resources/Spells/vipers_bite_particles` | 0 |
+| Venom burst (owner's painted still, kept) | n/a | `vipers_bite_burst.png` | `recipes/vipers_bite_burst.json` (unchanged) | `Resources/Spells/vipers_bite_burst` | 0 |
+| Eye glint (stand-in: the round glow disc) | n/a | `Resources/Spells/glow_disc` | n/a | n/a | 0 |
+| Snake-head lunge (rejected, not referenced) | n/a | `vipers_bite_lunge.png`, `vipers_bite_lunge-v2.png` | `recipes/vipers_bite_lunge.json` | `Resources/Spells/vipers_bite_lunge` | the owner's two passes |
+
+The lunge recipe and its generated folder stay in the tree unreferenced; delete both with the sheets when the owner confirms the head is gone for good.
+
+### Art needed for step 4
+
+Prompt-ready per `docs/prompts/TEMPLATE_spell_art.md`; the style block and its attachments as in its section 1. **The subjects are green (venom, scales),
+so the backdrop is solid #FF00FF, the recipes are keyed `"keyed": "magenta"`, and "no pink or magenta in the subject" replaces the no-green line.** At play
+size the pieces sit on a dark grey rat and a brown-and-green treant: pale ivory fangs, a light lime fill and a dark outline.
+
+1. **Snake eyes** (the anticipation)
+```
+Piece: Viper's Bite: a pair of snake eyes
+Beat it serves: anticipation, 0.04-0.38 s (eye_a, eye_b)
+Filename: vipers_bite_eyes.png
+Delivery path: Assets/_Project/Art/Sheets/Spells/Viper's Bite/vipers_bite_eyes.png
+Canvas: 512x256   Grid: 2x1 of 256x256
+Pivot: the eye's centre at 50% across, 50% down in each cell
+Size in play: small, a 30 px box each, beside the head; it must read at that size
+Drawing: cell 1 an eye half open (a thin lime lens with a vertical slit), cell 2 the eye fully open (a lime almond with a dark vertical slit pupil
+  and a small pale highlight). Bold dark outline, flat cel in two tones of yellow-lime (never near-black fill).
+Verb: watch.
+Must read as: a snake's eye opening in the dark.
+Must NOT read as: a cat's or human eye, a lamp, a round dot, a face.
+Not in the picture: head, lid skin, body, glow, floor.
+```
+
+2. **Jaws** (the delivery, the payoff and the settle)
+```
+Piece: Viper's Bite: the jaws closing
+Beat it serves: delivery 0.14-0.40 s (jaws), payoff 0.40 s (bite), settle 0.50-0.70 s (closed)
+Filename: vipers_bite_jaws.png
+Delivery path: Assets/_Project/Art/Sheets/Spells/Viper's Bite/vipers_bite_jaws.png
+Canvas: 1536x1024   Grid: 3x2 of 512x512
+Pivot: the middle of the gap between the jaws, 50% across and 50% down, in every cell
+Size in play: about as wide as a rat's torso (a 120-140 px box); it must read at that size
+Drawing: one pair of snake jaws seen from the side, an upper and a lower half with a gap between them; no head, no eyes, no neck.
+  Cell 1 the halves far apart with two small fang tips; cell 2 closer, fangs longer; cell 3 wide open, two long ivory fangs; cell 4 the jaws
+  nearly shut with a flat starburst of short lime rays between the fangs; cell 5 shut, the fangs crossed; cell 6 shut, a drop of venom on each fang
+  tip. Teal-green scales in two flat tones with a light lime edge, bold dark outline, ivory fangs in two tones.
+Verb: bite.
+Must read as: a mouthful of fangs closing on something.
+Must NOT read as: a snake's head, a cartoon monster, a wolf trap, a flower or butterfly.
+Not in the picture: head, body, eyes, target, floor, smoke.
+```
+
+3. **Venom drip and mist** (the resolution)
+```
+Piece: Viper's Bite: venom drips and mist
+Beat it serves: resolution 0.55-1.45 s (drip, mist, settle drops)
+Filename: vipers_bite_venom.png
+Delivery path: Assets/_Project/Art/Sheets/Spells/Viper's Bite/vipers_bite_venom.png
+Canvas: 1024x512   Grid: 4x2 of 256x256
+Pivot: the top centre of each cell for cells 1-4 (the drip hangs from it); the middle for cells 5-8
+Size in play: cells 1-4 about a rat's torso tall (150 px); cells 5-8 small, 15 to 40 px particles
+Drawing: cells 1-4 a sheet of venom running down fur: a few thick lime rivulets ending in fat drops, the drops falling lower and thinning
+  from cell 1 to cell 4. Cells 5-6 a single round venom drop (big, small). Cells 7-8 a soft curl of green vapour (thick, thin) as flat cel shapes,
+  not airbrush. Light lime fill, mid green shade, dark outline.
+Verb: seep.
+Must read as: venom running off a bitten body, then a little green vapour.
+Must NOT read as: slime, paint, blood, tears, rain.
+Not in the picture: fur, body, jaws, floor, glow.
+```
+
+4. **Venom burst** (the detonation; optional restyle of the owner's painted piece to the flat style)
+```
+Piece: Viper's Bite: the venom burst
+Beat it serves: detonation, 0.58 s (pop)
+Filename: vipers_bite_burst_flat.png
+Delivery path: Assets/_Project/Art/Sheets/Spells/Viper's Bite/vipers_bite_burst_flat.png
+Canvas: 1024x1024   Grid: one still
+Pivot: the base of the plume, 50% across and 85% down
+Size in play: a 200 px box over a rat (the plume is about a rat tall); it must read at that size
+Drawing: a thick plume of venom bursting upward from a point, with a ring of round droplets thrown out around it; flat cel in two or three tones of
+  LIGHT lime and one mid green (never near-black), bold dark outline, a few pale highlight droplets.
+Verb: burst.
+Must read as: venom exploding out of a body.
+Must NOT read as: an oil splash, a fountain, a tree, an explosion with fire.
+Not in the picture: target, jaws, floor, smoke, glow.
+```
+
+## Open owner questions
+
+Each asked once. Status: open, answered (with the answer), or dropped.
+
+| # | Question | Asked in round | Status / answer |
+|---|---|---|---|
+| 1 | The glints are round dots above the head (on a treant they float above the canopy). Fine until the slit-eye art, or should they sit lower, beside the face, even if the treant's own eyes compete? | 1 | open |
+| 2 | The detonation burst still covers about 40-50% of a rat for about 0.13 s (contract 2 is a third). Accept it as the "kept" painted piece, or shrink it further? | 1 | open |
+
+## Round log
+
+| Round | What changed | Who caught it (owner / orchestrator / binding check / worker) | Rubric result |
+|---|---|---|---|
+| Pass 1 (2026-10-04) | Old jaws and a splash crown; stage gloom 0.20 (owner O1); the detonation damage was never drawn (the "-3" showed over a bar that fell by 12), so the beat now carries `DetonatedAmount` and the view draws a second Poison number `detonationSeconds` later (pinned in `SpellPresentationMechanismTests`); `secondSfxPath` added for the detonation's own sound | worker (before/after capture) | not scored |
+| Pass 2 (2026-10-04) | Owner's painted snake-head lunge, `feather` recipe key to dissolve its cut neck, painted venom burst | worker | not scored; the owner then rejected the head |
+| Round 1 (2026-10-07) | New design: no head. Eye glints (`glow_disc`), jaws forming (old f0-f4), snap on the cue (f5), closed jaws, venom drip (f8-f11), mist emitter; cue 0.30 to 0.40 and the cast sound re-cut; burst kept and sized 420 to 200, held 0.22 to 0.1 s. Tuned within the round: eyes first sat on the rat's ear (moved to 0.62 above the head), the snap covered about half the rat at 190 (now 120) | worker (own frame sheets), the contract 2 coverage check | worker's score above; step 3 pending |
+
+## Measures
+
+| Measure | Value |
 |---|---|
-| 0.00-0.12 | Gloom rises to 0.20 over 0.15 s. Nothing yet on the body. |
-| 0.12-0.30 | **Lunge.** The painted head opens a box and a half left of the body (beside Shawn) and travels in, easing out, to bite the body at the cue. Opacity 0.95, no glow. Then it draws back (to -0.6 box) and fades (0.15 s) by 0.67 s. |
-| 0.30 | **First payoff: the bite.** Sound, the "-3" number, the Poison badge, and the old sheet's f5 snap-starburst alone (punch 0.3, glow 1.25, 0.1 s held). 12 drops settle. The old fangs-withdrawing frames are gone. |
-| 0.48 | **Second payoff, only with Poison already on the target.** The painted venom burst (plume and crown of droplets, rising from the body's base, size 420 `at: hit` so tail-scaled, glow 0.9, held 0.22 s then faded 0.2 s), the 16-particle spray, the second number ("-9") and `spore_cloud_impact`, `detonationSeconds` 0.18 after the cue. |
+| Owner reviews (target 3) | 0 so far |
+| Internal retries | 3 (eye position, snap size, burst size and hold) |
+| Generation attempts per art piece | 0 (stand-ins) |
+| Active work time / waiting time | about 1 h 20 min, of which the gate, the content builds and the captures were about 25 min |
+| Owner handling time (generate, download, upload art; review) | none yet |
+| Owner-found defects the binding checks should have caught (target 0) | 0 so far; the lunge's body-sized head was the owner's earlier rejection |
+| Final quality against the reference pack (owner's verdict on the rubric) | not yet |
 
-## The cut neck
+## Reviewed snapshot
 
-The lunge art's neck leaves the canvas at the left edge: 818 px of the left column are opaque, a
-straight vertical cut. It cannot be cropped away (the neck is the snake) so it is dissolved:
-the slicer has a new recipe key `feather` (`{"left": 0.32}`: alpha smoothstepped to 0 over the
-leftmost 32%), applied before the content crop. Result: no straight edge on any frame of the rat,
-treant or darkness clips; the neck reads as a tail fading into the dark. The head also starts a
-box and a half out, so the faded tail is the only thing that enters from the left. One honest
-cost: at the layer's first frame (0.12 s) the head appears at full opacity between Shawn and
-the body (a pop, there is no fade-in field), after which it travels in.
-
-## What changed in the runtime, and a bug found
-
-- **The detonation damage was never shown.** `ResolveDetonation` dealt the Poison's
-  remaining worth through the ledger, but the beat's `Amount` held only the bite's own
-  3, so the stage showed "-3" over a bar that fell by 12 (seen in the "before"
-  capture of this pass). The beat now carries `DetonatedAmount`; the view draws it
-  as a second Poison-coloured number `detonationSeconds` later, beside the first.
-  This holds for every cast that sets off Poison (single target), not only Viper.
-  Pinned in `SpellPresentationMechanismTests`.
-- **A second payoff can have its own sound**: `SpellPresentation.secondSfxPath`,
-  played for the detonation and for each staggered packet after the first (Ashen
-  Reckoning uses it). Pinned in `FightBeatImpactClipTests`.
-- Open: the bar already shows the whole loss on the cue frame, a beat before the
-  "-9" appears. The two hits are one session resolution, so the bar cannot show
-  them apart without staging vitals per packet. Not done.
-
-## Frame notes (pass 1 counts, not re-measured)
-
-- **First payoff on one frame.** On the rat at 1x the snap, the Poison badge and
-  the log line all open on f18 (checked per frame). The number appears one to
-  two frames later: the damage popup fades in by design.
-- **Second payoff on one frame.** On the rat with Poison, f29 (0.18 s later) shows
-  the crown splash, the spray and "-9" together; the second clip is scheduled on
-  that same offset (pinned by test; I did not listen to it).
-- **Flash guard.** Five casts at 1.5x on a treant (563 frames; casts 2-5 detonate
-  the Poison the earlier ones left): one brightening of 4-5% of the frame per
-  payoff, at most two per cast (the bite, then the pop 0.12 s later at 1.5x), at
-  least 41 frames (0.68 s) between the two and more between casts. Nothing near
-  a 25% large flash; at most 2 small flashes in any second.
-- **Readability.** The numbers sit above the body and read on every frame I looked
-  at, including under `-Darkness 0.9` (effect and number are the brightest things;
-  the Round counter reads; the gloom changes nothing there, event darkness wins).
-  The pale blob over the rat on the cue is the typed hit flash (the rat's silhouette
-  in poison-white), which also hides the fangs for 2-3 frames; the Poison badge
-  under the body is clear throughout.
-- **Bug-shaped, fixed:** the missing detonation number above.
-
-## Identity test: "a snake bit it"
-
-My verdict: **passes, clearly.** A snake's head comes out of the dark beside Shawn, strikes the
-enemy and withdraws; the numbers, badge and starburst land on the strike; with Poison the venom
-erupts as a dark plume with a crown of droplets, a second number and a second sound. The old
-version had no snake. What stays weak: the head is body-sized or larger (it covers a rat for
-about 0.25 s on the cue, and the typed hit flash hides the snap itself for 2-3 frames); the
-snap starburst is the old drawing and is a different style from the painted head; the venom burst
-is nearly black on a dark stage and relies on its glints and the number to read; spell_feel was
-not re-run (cue and `seconds` unchanged), and the flash/readability counts below are pass 1's.
+- Commit: see the report (the commit that lands this file).
+- Capture run ids: final runs are `20261007T161203Z_f48609f393b6` (rat), `20261007T161314Z_c30e4bae90ab` (treant),
+  `20261007T162526Z_c11ae7a5ed87` (rat, Poison), `20261007T162633Z_b7e1f08b3294` (treant 1.5x), under `tools/screenshots/gif/runs/`.
+- Rubric (motion, art): 1 ✔, 2 ~, 3 ✔, 4 ✔ bite / ~ burst, 5 ✔, 6 ~. Art: not scored (stand-ins).
+- Still weak: round-dot eyes; the jaws have no travel; the 25% residue tail from the mist; the burst's coverage; the painted old jaws sheet is a different style
+  from the rat.
