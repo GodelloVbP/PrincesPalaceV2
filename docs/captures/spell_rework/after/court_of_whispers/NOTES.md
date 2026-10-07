@@ -382,7 +382,7 @@ per piece: 1 each. One content build, 2 captures, 1 spell_feel run.
 
 ### Step 7
 
-Snapshot id: recorded in the report once committed.
+Snapshot id: `0fe926ca` (step 6 and 7 closed there; gate: full suite green via `-Changed`, 6244 EditMode, 1955 PlayMode).
 
 ## Open owner questions
 
