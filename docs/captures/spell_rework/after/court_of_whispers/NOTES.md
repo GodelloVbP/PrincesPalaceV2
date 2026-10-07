@@ -320,6 +320,70 @@ Legibility depends on the art:
 Step 4 art must therefore carry the read: a light outline or rim on the courtier, lighter violet, and smoke in the
 robe's colour.
 
+## Step 6: art integrated and compared in context (2026-10-07)
+
+Captures `tools/gif.ps1 spell court_of_whispers -Vs rat` (run `20261007T202519Z_65bedc26a0e6`) and `-Vs treant`
+(`20261007T202742Z_8aad1e087641`). Copies beside this file: `court_of_whispers_step6_{rat,treant}_full_1x.gif`
+(untracked) and `*_preview.gif` (committed), `step6_*_timing.json`. Timing unchanged: cue f41, freed f158.
+Round 3 timing, anchors (`place: above`, height 0.3, dx), sizes 52/70/80 and beat order are kept.
+
+### Art record
+
+| Piece | Source | Recipe | Output | Attempts |
+|---|---|---|---|---|
+| Lean | `court_of_whispers_courtier_lean.png` (1024, step 4) | `recipes/court_of_whispers_courtier.json`: hue key, `content_crop` (852x876), `alpha_floor` 40 | `Resources/Spells/court_of_whispers_courtier` f0 | accepted at step 5, wired first try |
+| Orbit | `court_of_whispers_courtier_back.png` (1024) | `recipes/court_of_whispers_courtier_back.json`: same, crop 715x876 | `..._courtier_back` f0 | accepted at step 5, wired first try |
+| Wisps | `court_of_whispers_wisps.png` (4x1 of 256) | `recipes/court_of_whispers_particles.json`: grid 1x4, hue key, `alpha_floor` 40 | `..._particles` f0-f3 (curl, S-wisp, motes, lick) | accepted at step 5, wired first try |
+
+The stand-ins (`court_of_whispers_courtier-v2.png`, `courtier_back.png`, `court_of_whispers_atlas_v1.png`) stay on disk,
+unreferenced. No new tooling: `slice_spell_sheet.py` as it is. The recipes' pivots are in the cropped frame, so
+`impactX`/`impactY` were recomputed from the prompts' pivots: lean 0.84/0.72 to 0.86/0.77 (hood opening 82% across, 22%
+down), orbit 0.83/0.88 to 0.86/0.90 (hood 80%, 12%).
+
+**Changes in `skills.json`:** emitter weights by the new cells (smoke `[0.6, 0.4, 0, 0]` curl and S-wisp, was the old
+cell 1 and 4; last curl `[1, 0, 0, 0]`; motes unchanged on cell 3), `price` `startFrame` 1 to 3 (the lick),
+`bodyRim.peak` 0.9 to 0.7, lean `glow` 0.3 to 0.1 with `glowCurve` `{to 0.2, pulse 0.7, period 2, crest 0.12}` so the
+lean flares on the cue (0.58 + 0.12 = 0.70 s) and settles.
+
+### Playback, as seen (60 fps, my own contact sheets, cue f41)
+
+1. **Courtier on the dark rats: yes.** f20-f38 a lilac robe at each nape (the f8-f14 far arc a pale smudge), f41-f64
+   the lilac robe is the brightest thing on the back of each rat with the rim a thin line round the fur. Caveat: at 80 px
+   on a rat the figure reads as a lilac hooded robe on the neck; the cupped hand and the empty hood are not legible. On
+   the treants (f22-f70) it reads as a hooded figure leaning toward the face.
+2. **Courtiers against the rim: courtiers lead.** With peak 0.7 the rim is a thin violet edge on the rats (f41-f56) and
+   the figures are the focus. On the treants the rim is still a wide violet halo with branches (f41-f56, f64) and the
+   figures sit inside it, readable but not dominant. Not tuned further; 0.6 is the next step if the owner wants it.
+3. **Smoke: violet, reads as the robe coming apart.** f72-f130 thin violet S-curls rise from the nape (rat) and over the
+   canopy (treant). Small. On the treant the curls rise above the stage top and run under the enemy plates at f84-f128 (the
+   hold under the stage top, as in round 3).
+4. **Far arc: kept, visible.** f8-f20 a pale lilac figure at head height before the near arc, faint on the rats and on
+   the treant canopy. Opacity unchanged (0.4, tint `#9A90C0`).
+
+Open: on the treant rack the lean robes of neighbours 1 and 2 touch at f41 (two figures overlapping the shared canopy).
+
+### Checks
+
+`tools/spell_feel.ps1 -Spell court_of_whispers`: rat contact f41, **WARN contact desync stays**: the biggest rise is
+f20 (the near arc fading in at the head, now a brighter lilac against the dark fur), not the cue. As in round 3 it is the
+art entering, not a timing fault; the recorded hit frame is f41 (sound, badges, first rim pulse on it).
+
+### Worker's rubric
+
+1. Beats read in order: yes. 2. Weight and easing: ~ (ease-out arcs, unchanged). 3. One focal point: yes on rats, ~ on
+treants (rim halo). 4. Body readable at the hit: ~ (the robe covers the neck, never the face or eyes). 5. Ending decays:
+yes (violet smoke from where the figure faded). 6. Distinct: not yet seen beside the Censer or Ashen; owner side by
+side still due. Art: reads at 52-80 px as a hooded robe, not as a whispering gesture.
+
+### Round log row, measures
+
+Round 4 (step 6): real art wired; rim peak 0.7; lean glowCurve; caught by the worker's own frames. Generation attempts
+per piece: 1 each. One content build, 2 captures, 1 spell_feel run.
+
+### Step 7
+
+Snapshot id: recorded in the report once committed.
+
 ## Open owner questions
 
 Each asked once.
@@ -340,6 +404,7 @@ Each asked once.
 | 1b | `facing: reverse` mirrors the drift x (frames showed the near arc running the wrong way): authored mirrored | worker (frames) | not scored |
 | 2 | Far arc to the effects band (gate), crossfaded hand-off (0.1 s), lean crossfaded to full on the cue (the treant's visual contact moved from f47 to f59, a later rim pulse, and still WARNs), smaller figures, bigger smoke | worker (frames, `spell_feel`) | worker score above |
 | 3 | Courtiers at the head (`place: above` 0.3, dx, sizes 52/70/80), one per enemy, lean reversed, smoke from the lean spot | worker (own frames), `spell_feel` rat WARN | worker score in Round 3 |
+| 4 (step 6) | Step 4 art wired; rim peak 0.7; lean `glowCurve` | worker (own frames) | worker score in Step 6 |
 
 ## Measures
 

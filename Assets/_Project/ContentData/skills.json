@@ -3128,7 +3128,7 @@
           "tint": "#B58CFF",
           "pulses": 4,
           "spacing": 0.07,
-          "peak": 0.9
+          "peak": 0.7
         },
         "layers": [
           {
@@ -3144,8 +3144,8 @@
             "until": "hold",
             "size": 52,
             "fit": "target",
-            "impactX": 0.83,
-            "impactY": 0.88,
+            "impactX": 0.86,
+            "impactY": 0.9,
             "facing": "none",
             "sort": "effects",
             "opacity": 0.4,
@@ -3168,8 +3168,8 @@
             "until": "hold",
             "size": 70,
             "fit": "target",
-            "impactX": 0.83,
-            "impactY": 0.88,
+            "impactX": 0.86,
+            "impactY": 0.9,
             "facing": "reverse",
             "sort": "effects",
             "opacity": 0.7,
@@ -3191,12 +3191,18 @@
             "until": "hold",
             "size": 80,
             "fit": "target",
-            "impactX": 0.84,
-            "impactY": 0.72,
+            "impactX": 0.86,
+            "impactY": 0.77,
             "facing": "reverse",
             "sort": "effects",
             "opacity": 0.7,
-            "glow": 0.3,
+            "glow": 0.1,
+            "glowCurve": {
+              "to": 0.2,
+              "pulse": 0.7,
+              "period": 2,
+              "crest": 0.12
+            },
             "fadeIn": 0.12,
             "fade": 0.25,
             "breathe": { "alpha": 0.12, "scale": 0.02, "rate": 1 },
@@ -3244,7 +3250,7 @@
             "sort": "effects",
             "emitter": {
               "path": "Spells/court_of_whispers_particles",
-              "weights": [0.4, 0, 0, 1],
+              "weights": [0.6, 0.4, 0, 0],
               "rate": 18,
               "window": 0.35,
               "sourceDx": 15,
@@ -3279,7 +3285,7 @@
             "sort": "effects",
             "emitter": {
               "path": "Spells/court_of_whispers_particles",
-              "weights": [0.4, 0, 0, 1],
+              "weights": [0.6, 0.4, 0, 0],
               "rate": 7,
               "window": 0.3,
               "sourceDx": 17,
@@ -3314,7 +3320,7 @@
             "sort": "effects",
             "emitter": {
               "path": "Spells/court_of_whispers_particles",
-              "weights": [0, 0, 0, 1],
+              "weights": [1, 0, 0, 0],
               "burst": 1,
               "sourceDx": 19,
               "sourceDy": 35,
@@ -3342,7 +3348,7 @@
             "at": "hit",
             "offset": 0.18,
             "path": "Spells/court_of_whispers_particles",
-            "startFrame": 1,
+            "startFrame": 3,
             "seconds": 0.35,
             "until": "hold",
             "dx": -30,

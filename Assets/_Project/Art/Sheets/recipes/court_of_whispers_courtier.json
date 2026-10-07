@@ -1,17 +1,30 @@
 {
   "_notes": [
-    "Court of Whispers: the leaning courtier. One painted still (court_of_whispers_courtier-v2.png, 1254x1254, the owner's second pass; v1 stays beside it, unused), a hooded violet figure bent from the waist toward the right with a cupped hand at the hood, on a #00FF00 green screen. Keyed on hue (keyed: \"green\") so the dark hood stays opaque, then cropped to its own ink. The lean is painted, so the layers only place it and slide it in: one copy as drawn, one mirrored by facing: reverse."
+    "Court of Whispers: the leaning courtier. One still (court_of_whispers_courtier_lean.png, 1024x1024, step 4 art) on solid green, a light violet figure with a pale lilac rim bent right, cupped hand at the empty hood (opening at 82% across, 22% down). Keyed on hue so the dark outline stays opaque, then cropped to its own ink. court_of_whispers_courtier-v2.png is the earlier stand-in, unreferenced."
   ],
-  "sheet": "Spells/Court of Whispers/court_of_whispers_courtier-v2.png",
+  "sheet": "Spells/Court of Whispers/court_of_whispers_courtier_lean.png",
   "rects": [
-    [0, 0, 1254, 1254]
+    [
+      0,
+      0,
+      1024,
+      1024
+    ]
   ],
-  "names": ["f0"],
+  "names": [
+    "f0"
+  ],
   "keyed": "green",
-  "canvas": [1254, 1254],
+  "canvas": [
+    1024,
+    1024
+  ],
   "base_align": false,
   "content_crop": true,
+  "alpha_floor": 40,
   "sequence": [
-    { "from": "f0" }
+    {
+      "from": "f0"
+    }
   ]
 }

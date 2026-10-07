@@ -1,17 +1,30 @@
 {
   "_notes": [
-    "Court of Whispers: the courtier seen from behind, one still (courtier_back.png, 1254x1254, 2026-10-04) on a #00FF00 green screen, hooded and turned a little to the right. It is the orbit's body: drawn small and dim on the far arc and mirrored and full size on the near arc. Stand-in: painted, not the Giant Rat cel style (docs/captures/spell_rework/after/court_of_whispers/NOTES.md, 'Art needed for step 4'). Keyed on hue, cropped to its own ink."
+    "Court of Whispers: the courtier from behind, one still (court_of_whispers_courtier_back.png, 1024x1024, step 4 art) on solid green; the orbit's body, small and dim on the far arc, mirrored and larger on the near arc. Hood centre at 80% across, 12% down. Keyed on hue, cropped to its own ink. courtier_back.png is the earlier stand-in, unreferenced."
   ],
-  "sheet": "Spells/Court of Whispers/courtier_back.png",
+  "sheet": "Spells/Court of Whispers/court_of_whispers_courtier_back.png",
   "rects": [
-    [0, 0, 1254, 1254]
+    [
+      0,
+      0,
+      1024,
+      1024
+    ]
   ],
-  "names": ["f0"],
+  "names": [
+    "f0"
+  ],
   "keyed": "green",
-  "canvas": [1254, 1254],
+  "canvas": [
+    1024,
+    1024
+  ],
   "base_align": false,
   "content_crop": true,
+  "alpha_floor": 40,
   "sequence": [
-    { "from": "f0" }
+    {
+      "from": "f0"
+    }
   ]
 }

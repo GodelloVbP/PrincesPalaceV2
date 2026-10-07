@@ -119,8 +119,8 @@ MonoBehaviour:
         punch: 0
         glow: 0
         tint: '#9A90C0'
-        impactX: 0.83
-        impactY: 0.88
+        impactX: 0.86
+        impactY: 0.9
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -215,8 +215,8 @@ MonoBehaviour:
         punch: 0
         glow: 0
         tint: 
-        impactX: 0.83
-        impactY: 0.88
+        impactX: 0.86
+        impactY: 0.9
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -295,10 +295,10 @@ MonoBehaviour:
           scale: 0.02
           rate: 1
         glowCurve:
-          to: 0
-          pulse: 0
-          period: 0
-          crest: 0
+          to: 0.2
+          pulse: 0.7
+          period: 2
+          crest: 0.12
           knee: 0
         stoke: 0
         unkicked: 0
@@ -309,10 +309,10 @@ MonoBehaviour:
         sort: effects
         align: 
         punch: 0
-        glow: 0.3
+        glow: 0.1
         tint: 
-        impactX: 0.84
-        impactY: 0.72
+        impactX: 0.86
+        impactY: 0.77
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -544,10 +544,10 @@ MonoBehaviour:
           endScale: 1.4
           seed: 2711
           weights:
+          - 0.6
           - 0.4
           - 0
           - 0
-          - 1
       - id: smoke_b
         render: emitter
         place: above
@@ -644,10 +644,10 @@ MonoBehaviour:
           endScale: 1.5
           seed: 3319
           weights:
+          - 0.6
           - 0.4
           - 0
           - 0
-          - 1
       - id: curl
         render: emitter
         place: above
@@ -744,10 +744,10 @@ MonoBehaviour:
           endScale: 1.6
           seed: 4421
           weights:
-          - 0
-          - 0
-          - 0
           - 1
+          - 0
+          - 0
+          - 0
       - id: price
         render: still
         place: caster-centre
@@ -759,7 +759,7 @@ MonoBehaviour:
         path: Spells/court_of_whispers_particles
         seconds: 0.35
         fps: 0
-        startFrame: 1
+        startFrame: 3
         until: hold
         fade: 0.18
         fadeIn: 0.04
@@ -859,7 +859,7 @@ MonoBehaviour:
         tint: '#B58CFF'
         pulses: 4
         spacing: 0.07
-        peak: 0.9
+        peak: 0.7
       casterCostSeconds: 0.18
       secondSfxPath: 
       detonationSeconds: 0

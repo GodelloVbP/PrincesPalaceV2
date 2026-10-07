@@ -1,34 +1,11 @@
 {
   "_notes": [
-    "Court of Whispers: cells 13-16 are independent reusable particle sprites, never timeline frames.",
-    "The emitter in skills.json samples these stills with deterministic material-specific motion."
+    "Court of Whispers: curl, S-wisp, motes and flame lick (court_of_whispers_wisps.png, step 4 art, 4x1 of 256). Independent particle sprites, never timeline frames: the emitters pick cells 0-2 by weight, cell 3 is the price still. Keyed on hue, alpha_floor 40 as for Ashen's smoke."
   ],
-  "sheet": "Spells/Court of Whispers/court_of_whispers_atlas_v1.png",
-  "rects": [
-    [
-      0,
-      940,
-      314,
-      314
-    ],
-    [
-      314,
-      940,
-      313,
-      314
-    ],
-    [
-      627,
-      940,
-      313,
-      314
-    ],
-    [
-      940,
-      940,
-      314,
-      314
-    ]
+  "sheet": "Spells/Court of Whispers/court_of_whispers_wisps.png",
+  "grid": [
+    1,
+    4
   ],
   "names": [
     "f0",
@@ -36,11 +13,12 @@
     "f2",
     "f3"
   ],
-  "keyed": false,
+  "keyed": "green",
   "canvas": [
-    314,
-    314
+    256,
+    256
   ],
   "base_align": false,
-  "content_crop": false
+  "content_crop": false,
+  "alpha_floor": 40
 }
