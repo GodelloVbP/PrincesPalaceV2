@@ -6,9 +6,10 @@ using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // VELVET SHACKLES' BEATS as literal seconds (docs/PLAN_SPELL_REWORK.md 3.5):
-    // ribbons wind round the body for 0.3 s, the cuff snaps tight on the cue with
-    // the sound and the Rooted badge, and the cuff stays held after it.
+    // VELVET SHACKLES' BEATS as literal seconds (docs/PLAN_SPELL_ANIMATION.md 3):
+    // a ribbon is lashed from Shawn's hand, two bands pull tight round the legs,
+    // the cuff closes on the cue with the sound and the Rooted badge, then all
+    // of it goes slack and fades.
     public class VelvetShacklesPresentationTests
     {
         private static SpellPresentation Shackles()
@@ -21,31 +22,45 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheRibbonsWindForTheCueAndAreGoneOnIt()
+        public void TheLashLeavesTheHandAndLandsBeforeTheCue()
         {
             var vfx = Shackles();
-            Assert.AreEqual(0.3f, vfx.hitCueSeconds, 1e-6f, "the cast riser is 0.3 s");
+            Assert.AreEqual(0.4f, vfx.hitCueSeconds, 1e-6f, "the cast riser is cut to 0.40 s");
 
-            var wind = vfx.layers.Single(l => l.id == "wind");
-            Assert.AreEqual("release", wind.at);
-            Assert.AreEqual(0.3f, wind.seconds, 1e-6f, "f0-f4 at 0.06 s each");
-            Assert.AreEqual(0f, wind.fade, 1e-6f, "no fade: the ribbons are gone on the frame the cuff opens");
+            var lash = vfx.layers.Single(l => l.id == "lash");
+            Assert.AreEqual("caster-centre", lash.place);
+            Assert.AreEqual(0.02f, lash.offset, 1e-6f);
+            Assert.AreEqual(0.2f, lash.travelSeconds, 1e-6f);
+            Assert.AreEqual("path", lash.orient);
         }
 
         [Test]
-        public void TheCuffIsPulledTightOverTheTenthBeforeTheCueAndHeldAfterIt()
+        public void TheWrapIsPulledTightOnTheCueFrameAndSlackAfterIt()
         {
             var vfx = Shackles();
-            var cinch = vfx.layers.Single(l => l.id == "cinch");
-            Assert.AreEqual("Spells/velvet_shackles_cinch", cinch.path, "the painted four-frame cinch");
-            Assert.AreEqual("release", cinch.at);
-            Assert.AreEqual(0.2f, cinch.offset, 1e-6f);
-            Assert.AreEqual(20f, cinch.fps, 1e-6f);
-            Assert.AreEqual(vfx.hitCueSeconds, cinch.offset + 2 / cinch.fps, 1e-6f, "f2, closed and creased, opens on the cue");
-            Assert.AreEqual("hold", cinch.until);
-            Assert.AreEqual(0.52f, cinch.seconds, 1e-6f);
-            Assert.AreEqual(0.22f, cinch.fade, 1e-6f);
-            Assert.IsNull(vfx.layers.FirstOrDefault(l => l.id == "accent" || l.id == "held"), "the ring and the held copy are the cuff's own frames now");
+            foreach (var id in new[] { "back", "front" })
+            {
+                var wrap = vfx.layers.Single(l => l.id == id);
+                Assert.AreEqual("Spells/velvet_shackles_ribbon", wrap.path);
+                Assert.AreEqual(20f, wrap.fps, 1e-6f);
+                Assert.AreEqual(vfx.hitCueSeconds, wrap.offset + 4 / wrap.fps, 1e-6f, "f4, the tightest, is on the cue");
+            }
+            Assert.AreEqual("ground", vfx.layers.Single(l => l.id == "back").sort, "single target: the back wrap is the one ground layer");
+            Assert.AreEqual("effects", vfx.layers.Single(l => l.id == "front").sort);
+        }
+
+        [Test]
+        public void TheCuffClosesOnTheCueAndFadesWithinHalfASecond()
+        {
+            var vfx = Shackles();
+            var cuff = vfx.layers.Single(l => l.id == "cuff");
+            Assert.AreEqual("Spells/velvet_shackles_cuff", cuff.path);
+            Assert.AreEqual(vfx.hitCueSeconds, cuff.offset, 1e-6f, "the closed cuff (f2) opens on the cue");
+            Assert.AreEqual(3, cuff.startFrame);
+            Assert.AreEqual(0.3f, cuff.punch, 1e-6f, "it snaps tight from 30% oversized");
+            Assert.AreEqual("hold", cuff.until);
+            Assert.LessOrEqual(cuff.offset + cuff.seconds + cuff.fade - vfx.hitCueSeconds, 0.5f, "residue after the cue");
+            Assert.IsNull(vfx.layers.FirstOrDefault(l => l.id == "wind"), "the old ribbon spiral is gone");
         }
 
         [Test]
@@ -54,7 +69,7 @@ namespace PrincesPalace.Domain.Tests
             var vfx = Shackles();
             Assert.AreEqual(0.2f, vfx.gloom.strength, 1e-6f, "owner O1");
             Assert.AreEqual(SpellGloomEnd.Hit, vfx.gloom.Until);
-            Assert.AreEqual(0.5f, vfx.layers.Single(l => l.id == "settle").emitter.lifeMax, 1e-6f);
+            Assert.AreEqual(0.45f, vfx.layers.Single(l => l.id == "settle").emitter.lifeMax, 1e-6f);
         }
     }
 }

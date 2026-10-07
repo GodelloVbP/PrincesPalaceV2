@@ -1,0 +1,82 @@
+{
+  "_notes": [
+    "Velvet Shackles, the wrap: the owner's flat-cel ribbon strip (shackle_ribbon.png, 1983x793, #00FF00, untracked 2026-10-04) as one drawing on one 2500x440 canvas. The ribbon is registered on the canvas centre and only scaled about it: 1.30 to 1.0 is the pull tight (f0-f4, f4 on the cue), f5 holds tight, f6-f7 the slack (1.12, 1.28). Scale is baked here because SpellLayer has no scale over life. The layers tilt it with `rotate` (back +, front -) so two bands cross over the legs; the ribbon does not bend, which is why it is a band and not a coil (art step 4). keyed green-soft keeps the gold stitching."
+  ],
+  "sheet": "Spells/Velvet Shackles/shackle_ribbon.png",
+  "rects": [
+    [
+      60,
+      215,
+      1865,
+      330
+    ]
+  ],
+  "names": [
+    "f0"
+  ],
+  "keyed": "green-soft",
+  "canvas": [
+    2500,
+    440
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "f0",
+      "scale": [
+        1.3,
+        1.3
+      ]
+    },
+    {
+      "from": "f0",
+      "scale": [
+        1.2,
+        1.2
+      ]
+    },
+    {
+      "from": "f0",
+      "scale": [
+        1.1,
+        1.1
+      ]
+    },
+    {
+      "from": "f0",
+      "scale": [
+        1.04,
+        1.04
+      ]
+    },
+    {
+      "from": "f0",
+      "scale": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "from": "f0",
+      "scale": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "from": "f0",
+      "scale": [
+        1.12,
+        1.12
+      ]
+    },
+    {
+      "from": "f0",
+      "scale": [
+        1.28,
+        1.28
+      ]
+    }
+  ]
+}

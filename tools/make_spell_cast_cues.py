@@ -65,7 +65,7 @@ CUES = [
     # the blow instead of on its last sample.
     ("crownfall_cast", "Lightning", "lighting_spell_electric_impact_thunder_dark_dry_02.wav", 0.34, 0.03),
     ("borrowed_moment_cast", "Wind", "wind_spell_cast_air_short_rise_whoosh_01.wav", 0.30),
-    ("velvet_shackles_cast", "Dark", "dark_spell_cast_energy_riser_metallic_01.wav", 0.30),
+    ("velvet_shackles_cast", "Dark", "dark_spell_cast_energy_riser_metallic_01.wav", 0.40),
     ("gilded_aegis_cast", "Holy", "Holy Spell Wave Cast 04 HQ.wav", 0.30),
     ("prismatic_orb_earth_cast", "Earth", "earth_spell_cast_magic_whoosh_02.wav", 0.3467),
     ("prismatic_orb_fire_cast", "Fire", "fire_spell_charge_explosion_wet_03.wav", 0.4167),

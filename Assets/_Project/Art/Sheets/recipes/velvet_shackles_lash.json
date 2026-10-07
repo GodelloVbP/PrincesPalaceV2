@@ -1,0 +1,25 @@
+{
+  "_notes": [
+    "Velvet Shackles, the lash: one drawing of the same ribbon strip (shackle_ribbon.png), cropped tight, flown from Shawn's hand with orient path (the strip points along +x, artDegrees 0)."
+  ],
+  "sheet": "Spells/Velvet Shackles/shackle_ribbon.png",
+  "rects": [
+    [
+      60,
+      215,
+      1865,
+      330
+    ]
+  ],
+  "names": [
+    "f0"
+  ],
+  "keyed": "green-soft",
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    {
+      "from": "f0"
+    }
+  ]
+}

@@ -206,7 +206,7 @@ namespace PrincesPalace.Domain.Tests
                 ("thorn_tithe", "thorn_tithe_cast", 0.40f),
                 ("crownfall", "crownfall_cast", 0.34f),
                 ("borrowed_moment", "borrowed_moment_cast", 0.30f),
-                ("velvet_shackles", "velvet_shackles_cast", 0.30f),
+                ("velvet_shackles", "velvet_shackles_cast", 0.40f),
                 ("gilded_aegis", "gilded_aegis_cast", 0.30f),
                 ("cinderfault", "cinderfault_startup", 0.2167f),
             };
