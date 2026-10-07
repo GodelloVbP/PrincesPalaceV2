@@ -343,6 +343,16 @@ Round log: Step 6 (2026-10-07), art swapped for the delivered sheets, drip top f
 Measures: owner reviews 0; internal retries 1 (drip top edge); generation attempts per art piece 0 at this step; the step took about 35 min active, captures 5 x 25 s.
 Snapshot id: `79996a9d` (step 6 commit); capture runs `20261007T204449Z_0285f59a157a` (rat, first wiring), `20261007T204808Z_5eea02a58920` (treant), `20261007T204909Z_897db6826a73` (rat), `20261007T204956Z_fd5879453228` (rat, Poison).
 
+### Orchestrator's check of step 6 (2026-10-07, step6 full GIFs; frames at 60 fps)
+
+For the owner's review. The art carries the spell: teal jaws close on the rat and the treant (f12-f20) with the fangs
+sharp on dark fur, the snap lands on the cue (f22), the drips fall from the jaws (f34-f40), and the flat lime burst
+reads on the Poison path (f34-f40). Open:
+1. **Eyes are near invisible.** At 32 px only one small slit shows, at the rat's snout around f22; nothing reads at
+   f6. Grow them (about 56 px) so the anticipation beat exists.
+2. On the treant at the snap (f22) the jaws cover the face and the canopy. This is the owner's bigger-jaws call, so
+   it is not changed.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.
