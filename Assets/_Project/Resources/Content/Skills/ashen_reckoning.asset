@@ -1628,9 +1628,9 @@ MonoBehaviour:
         until: hit
         fadeOut: 0.3
       kick:
-        strength: 0
-        rise: 0
-        fall: 0
+        strength: 0.025
+        rise: 0.03
+        fall: 0.18
       bodyRim:
         tint: 
         pulses: 0

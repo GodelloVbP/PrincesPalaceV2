@@ -271,7 +271,7 @@ most of a pool of 64, effects renderers 5 of 12). Each close updates the menu.
 | Glowing embers | worked | `glow` on the emitter's particles | 0 extra (38 embers + 5 coals) |
 | Smoke from the fire | worked | emitter born below the body's middle, slow rise | not recorded; faint |
 | Ash | worked | emitter with the `glow_disc` sprite, warm grey | 6 particles |
-| Body glow following the fire | worked | `stoke` on the fire layer, with its own `breathe` | 0 |
+| Body glow following the fire | worked | `stoke` on the fire layer, with its own `breathe` | 0; needs the target to carry Burn (stoke lifts StageBurnGlow) |
 | Light gloom | worked | stage `gloom` 0.2 over 0.4 s | 0 |
 | Light pool under the swing | failed: reads as an orange stain on the floor | a `pool` layer | 1 layer |
 | Afterimages of the swing | failed: murky over a green body; additive was still weak | `echo`, `echo.additive` | 3 ghosts |

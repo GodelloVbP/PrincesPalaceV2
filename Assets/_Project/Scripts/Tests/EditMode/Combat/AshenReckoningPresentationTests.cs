@@ -65,6 +65,16 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheCueKicksTheStageAndEveryLayerIsOnTheBody()
+        {
+            var vfx = Ashen();
+            Assert.AreEqual(0.025f, vfx.kick.strength, 1e-6f);
+            Assert.AreEqual(0.03f, vfx.kick.rise, 1e-6f);
+            Assert.AreEqual(0.18f, vfx.kick.fall, 1e-6f);
+            CollectionAssert.IsEmpty(vfx.layers.Where(l => l.unkicked), "nothing hangs in the air: every layer is on the body and kicks with it");
+        }
+
+        [Test]
         public void TheWindUpTurnsFasterToTheCueAndTheEndingDiesInOrder()
         {
             var vfx = Ashen();

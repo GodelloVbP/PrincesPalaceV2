@@ -1108,6 +1108,11 @@
         "castSfxPath": "Audio/Sfx/ashen_reckoning_cast",
         "secondSfxPath": "Audio/Sfx/censer_of_embers_impact",
         "hitCueSeconds": 0.6,
+        "kick": {
+          "strength": 0.025,
+          "rise": 0.03,
+          "fall": 0.18
+        },
         "gloom": {
           "strength": 0.15,
           "fadeIn": 0.4,
