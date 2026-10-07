@@ -353,6 +353,15 @@ reads on the Poison path (f34-f40). Open:
 2. On the treant at the snap (f22) the jaws cover the face and the canopy. This is the owner's bigger-jaws call, so
    it is not changed.
 
+### Tuning after step 6 (2026-10-07; `vipers_bite_tune_{rat,treant}_1x.gif`, strips beside it; values only, `skills.json`)
+
+Changed: `eye_a` and `eye_b` size 32 to 56; `dx` -108/-56 to -134/-96, so the pair sits side by side left of the head, 38 px apart, not on the face.
+(First try, -118/-52, put `eye_b` over the treant's own yellow eyes and only one slit showed.)
+
+1. Eyes: **fixed**. Rat and treant f3-f4 (100-133 ms): two slit eyes read beside the head before the jaws. At f1-f2 only `eye_a` shows, because
+   `eye_b` opens 0.06 s later (its authored offset).
+2. Treant jaws covering the face at the snap: unchanged, the owner's call.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.
@@ -370,6 +379,7 @@ Each asked once. Status: open, answered (with the answer), or dropped.
 | Pass 2 (2026-10-04) | Owner's painted snake-head lunge, `feather` recipe key to dissolve its cut neck, painted venom burst | worker | not scored; the owner then rejected the head |
 | Round 1 (2026-10-07) | New design: no head. Eye glints (`glow_disc`), jaws forming (old f0-f4), snap on the cue (f5), closed jaws, venom drip (f8-f11), mist emitter; cue 0.30 to 0.40 and the cast sound re-cut; burst kept and sized 420 to 200, held 0.22 to 0.1 s. Tuned within the round: eyes first sat on the rat's ear (moved to 0.62 above the head), the snap covered about half the rat at 190 (now 120) | worker (own frame sheets), the contract 2 coverage check | worker's score above; step 3 pending |
 | Round 2 (2026-10-07) | Jaws 140/120/110 to 230/200/190, forming jaws opacity 0.95 glow 0.7, glints to face height (0.17, dx -108/-56), mist window 0.35 life 0.4-0.6 | owner (bigger jaws), orchestrator step 3 (glints, rat jaws, mist) | worker score in Round 2 |
+| Tuning after step 6 (2026-10-07) | Eyes 32 to 56 px, dx -134/-96 | orchestrator's step 6 check | eyes read on rat and treant |
 
 ## Measures
 
