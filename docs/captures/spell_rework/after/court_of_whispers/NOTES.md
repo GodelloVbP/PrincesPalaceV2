@@ -384,6 +384,19 @@ per piece: 1 each. One content build, 2 captures, 1 spell_feel run.
 
 Snapshot id: `0fe926ca` (step 6 and 7 closed there; gate: full suite green via `-Changed`, 6244 EditMode, 1955 PlayMode).
 
+### Orchestrator's check of step 6 (2026-10-07, step6 full GIFs, rat and treant 1x; frames at 60 fps)
+
+For the owner's review. It improves on round 3, but three things are open:
+1. **Colour.** The courtiers read violet only around the cue (f42, f64). Before and after it (f20-f36, f52) they
+   show as pale grey-white ghosts, on the treant most clearly. Opacity 0.7, plus the far arc's grey tint, wash the
+   delivered lilac out. Raise opacity toward 1 and drop the tint on the near arc and the lean.
+2. **Rats.** At 80 px the courtier is a pale patch on the rat's back (f20-f36). It is visible now, but it does not read
+   as a figure. On the treant it reads as a hooded figure at the face.
+3. **Smoke.** The curls at f64-f80 come out pale yellow-green on screen, not violet. That is probably glow or additive
+   shifting the pale lilac. Check the smoke emitters' glow and tint.
+
+The rim (peak 0.7) no longer dominates on rats. On the treant it is still a wide violet halo at f42 and f64.
+
 ## Open owner questions
 
 Each asked once.
