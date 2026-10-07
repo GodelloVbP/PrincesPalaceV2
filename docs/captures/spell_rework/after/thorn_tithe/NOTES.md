@@ -280,7 +280,7 @@ the cue). 4 ~ (a rat's face reads, its body is crossed by canes). 5 yes (the can
 Round log: Step 6 (2026-10-07), art swapped for the delivered sheets, `cap_blue` for the crack, particle sizes raised; caught by the worker's frame check.
 Measures: owner reviews 0; internal retries 2 (pink specks, particle size); generation attempts per art piece 0 at this step; about 45 min active,
 two content builds and two captures at 1x.
-Snapshot id: see Step 7 below.
+Snapshot id: `a68833d8` (step 6 commit); capture runs `20261007T211000Z_7eea78bebcb5` (rat), `20261007T211101Z_e4aca9c0a6d2` (treant).
 
 ## Open owner questions
 
