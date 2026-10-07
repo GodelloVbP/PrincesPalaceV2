@@ -62,114 +62,18 @@ MonoBehaviour:
       layers:
       - id: back
         render: sprite
-        place: target-centre
+        place: target
         height: 0
         follow: 0
         whenConsumed: 
         at: release
-        offset: 0
-        path: Spells/thorn_tithe_growth
-        seconds: 0.72
-        fps: 10
+        offset: 0.1
+        path: Spells/thorn_tithe_back
+        seconds: 0.7
+        fps: 20
         startFrame: 0
         until: hold
-        fade: 0.14
-        fadeIn: 0
-        opacity: 0.5
-        dx: 0
-        dy: 0
-        drift:
-          fromX: 0
-          toX: 0
-          fromY: 0
-          toY: -0.15
-          viaX: 0
-          viaY: 0
-          viaAt: 0.7
-          arcY: 0
-        rotate:
-          degrees: 0
-          spin: 0
-          amplitude: 0
-          period: 0
-          damping: 0
-          phase: 0
-          delay: 0
-          swings: 0
-          pivotX: 0.5
-          pivotY: 0.5
-        breathe:
-          alpha: 0
-          scale: 0
-          rate: 1
-        glowCurve:
-          to: 0
-          pulse: 0
-          period: 0
-          crest: 0
-          knee: 0
-        stoke: 0
-        unkicked: 0
-        scale: 1
-        size: 400
-        fit: target
-        facing: reverse
-        sort: ground
-        align: 
-        punch: 0
-        glow: 0
-        tint: 
-        impactX: 0.5
-        impactY: 0.36
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        overhang: 0
-        orient: 
-        artDegrees: 0
-        through: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          alignFlight: 0
-          lateral: 0
-          burstTimes: []
-          burstEach: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: grow
-        render: sprite
-        place: target-centre
-        height: 0
-        follow: 0
-        whenConsumed: 
-        at: release
-        offset: 0
-        path: Spells/thorn_tithe_growth
-        seconds: 0.72
-        fps: 10
-        startFrame: 0
-        until: hold
-        fade: 0.14
+        fade: 0.1
         fadeIn: 0
         opacity: 1
         dx: 0
@@ -178,10 +82,10 @@ MonoBehaviour:
           fromX: 0
           toX: 0
           fromY: 0
-          toY: -0.15
+          toY: 0
           viaX: 0
           viaY: 0
-          viaAt: 0.7
+          viaAt: 0
           arcY: 0
         rotate:
           degrees: 0
@@ -207,16 +111,16 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 340
+        size: 290
         fit: target
         facing: none
-        sort: effects
+        sort: ground
         align: 
         punch: 0
-        glow: 0.4
+        glow: 0
         tint: 
         impactX: 0.5
-        impactY: 0.36
+        impactY: 0.04
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -252,7 +156,203 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: settle
+      - id: front
+        render: sprite
+        place: target
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.1
+        path: Spells/thorn_tithe_front
+        seconds: 0.7
+        fps: 20
+        startFrame: 0
+        until: hold
+        fade: 0.1
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 290
+        fit: target
+        facing: reverse
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: 0.5
+        impactY: 0.04
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: dust
+        render: emitter
+        place: target
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.02
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/thorn_tithe_particles
+          rate: 0
+          burst: 8
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 150
+          aimDegrees: 90
+          speedMin: 40
+          speedMax: 130
+          inherit: 0
+          drag: 2.4
+          gravity: -320
+          lifeMin: 0.15
+          lifeMax: 0.3
+          sizeMin: 0.1
+          sizeMax: 0.2
+          spinMin: -150
+          spinMax: 150
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.9
+          seed: 2207
+          weights:
+          - 0
+          - 0
+          - 1
+          - 0
+      - id: sap
         render: emitter
         place: target-centre
         height: 0
@@ -323,42 +423,146 @@ MonoBehaviour:
         emitter:
           path: Spells/thorn_tithe_particles
           rate: 0
-          burst: 13
+          burst: 12
           window: 0
           sourceDx: 0
           sourceDy: 0
-          spreadDegrees: 150
-          aimDegrees: 270
-          speedMin: 55
-          speedMax: 185
+          spreadDegrees: 360
+          aimDegrees: 90
+          speedMin: 90
+          speedMax: 260
           inherit: 0
-          drag: 1.8
-          gravity: -600
-          lifeMin: 0.22
-          lifeMax: 0.42
-          sizeMin: 0.11
-          sizeMax: 0.28
-          spinMin: -180
-          spinMax: 180
+          drag: 2
+          gravity: -500
+          lifeMin: 0.2
+          lifeMax: 0.4
+          sizeMin: 0.1
+          sizeMax: 0.2
+          spinMin: -90
+          spinMax: 90
           alignFlight: 0
           lateral: 0
           burstTimes: []
           burstEach: 0
           fadeFrom: 0.55
-          endScale: 0.72
+          endScale: 0.7
           seed: 1067
-          weights: []
+          weights:
+          - 0
+          - 0
+          - 0
+          - 1
+      - id: leaves
+        render: emitter
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/thorn_tithe_particles
+          rate: 0
+          burst: 4
+          window: 0
+          sourceDx: 0
+          sourceDy: 70
+          spreadDegrees: 160
+          aimDegrees: 90
+          speedMin: 20
+          speedMax: 70
+          inherit: 0
+          drag: 1
+          gravity: -160
+          lifeMin: 0.3
+          lifeMax: 0.4
+          sizeMin: 0.16
+          sizeMax: 0.26
+          spinMin: -240
+          spinMax: 240
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.55
+          endScale: 0.8
+          seed: 3119
+          weights:
+          - 0
+          - 1
+          - 0
+          - 0
       layerFormat: 1
-      hitCueSeconds: 0.3
+      hitCueSeconds: 0.4
       gloom:
         strength: 0
         fadeIn: 0
         until: 
         fadeOut: 0
       kick:
-        strength: 0
-        rise: 0
-        fall: 0
+        strength: 0.025
+        rise: 0.03
+        fall: 0.18
       bodyRim:
         tint: 
         pulses: 0

@@ -1,0 +1,142 @@
+{
+  "_notes": [
+    "Thorn Tithe, back vines: the owner's flat-cel stand-in strip (thorn_back_vines.png, 2172x724, untracked 2026-10-04), seven drawings on #00FF00, keyed on hue (teal vines). Cells 1-6 are one vine growing from a mound (rect centred on its mound), cell 7 is the closed arch behind the body between two mounds. The two feet of cell 7 sit 143 px either side of its centre, so cells 1-6 are shifted 143 px left on a shared 490x510 canvas: the growing vine stands on the arch's left foot, and a layer played facing reverse stands it on the right foot. The base line is the same row in every cell, so the pivot is the canvas centre column at the base; content_crop stays off so the two recipes share one canvas and one pivot (E7): the base line is 12 px above the canvas bottom, 492 px down. Sequence: growth f0-f5 (0.3 s at 20 fps), the closed cage held 4 frames, then the vine's own growth frames played backwards (f4, f3, f2, f1) so the thorns sink back into the soil on the same base."
+  ],
+  "sheet": "Spells/Thorn Tithe/thorn_back_vines.png",
+  "rects": [
+    [
+      9,
+      96,
+      240,
+      504
+    ],
+    [
+      296,
+      96,
+      240,
+      504
+    ],
+    [
+      552,
+      96,
+      240,
+      504
+    ],
+    [
+      838,
+      96,
+      240,
+      504
+    ],
+    [
+      1095,
+      96,
+      240,
+      504
+    ],
+    [
+      1382,
+      96,
+      240,
+      504
+    ],
+    [
+      1656,
+      96,
+      490,
+      504
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6"
+  ],
+  "keyed": "green-soft",
+  "canvas": [
+    490,
+    504
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "f0",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f1",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f2",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f3",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f4",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f5",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f6",
+      "hold": 4
+    },
+    {
+      "from": "f4",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f3",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f2",
+      "shift": [
+        -143,
+        0
+      ]
+    },
+    {
+      "from": "f1",
+      "shift": [
+        -143,
+        0
+      ]
+    }
+  ]
+}
