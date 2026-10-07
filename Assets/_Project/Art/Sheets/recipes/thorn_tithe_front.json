@@ -1,50 +1,50 @@
 {
   "_notes": [
-    "Thorn Tithe, front vines: the owner's flat-cel stand-in strip (thorn_front_vines.png, 2172x724, untracked 2026-10-04), seven drawings on #00FF00, keyed on hue (teal vines). Cells 1-6 are one vine growing from a mound (rect centred on its mound), cell 7 is the closed X crossing in front of the body between two mounds. The two feet of cell 7 sit 143 px either side of its centre, so cells 1-6 are shifted 143 px left on a shared 490x510 canvas: the growing vine stands on the arch's left foot, and a layer played facing reverse stands it on the right foot. The base line is the same row in every cell, so the pivot is the canvas centre column at the base; content_crop stays off so the two recipes share one canvas and one pivot (E7): the base line is 12 px above the canvas bottom, 492 px down. Sequence: growth f0-f5 (0.3 s at 20 fps), the closed cage held 4 frames, then the vine's own growth frames played backwards (f4, f3, f2, f1) so the thorns sink back into the soil on the same base."
+    "Thorn Tithe, front vines (across the body): thorn_tithe_front_vines.png, 7x1 of 640 on #FF00FF, keyed on hue (magenta), alpha_floor 40. Cells are three sway pairs of growing canes (f0-f1, f2-f3, f4-f5) then the closed cage (f6), which continues f5. Both sets are drawn on one grid, feet at 25% and 75% across and the base line at row 575, so the same explicit rect on both gives one shared 520x553 canvas with the base 12 px above its bottom and no per-frame crop (E7). Sequence: f0-f5 growth (0.3 s at 20 fps), the cage held 4 frames, then the sway frames played backwards (f3, f2, f1, f0) so the canes sink back into the soil."
   ],
-  "sheet": "Spells/Thorn Tithe/thorn_front_vines.png",
+  "sheet": "Spells/Thorn Tithe/thorn_tithe_front_vines.png",
   "rects": [
     [
-      9,
-      96,
-      240,
-      504
+      60,
+      34,
+      520,
+      553
     ],
     [
-      296,
-      96,
-      240,
-      504
+      700,
+      34,
+      520,
+      553
     ],
     [
-      552,
-      96,
-      240,
-      504
+      1340,
+      34,
+      520,
+      553
     ],
     [
-      838,
-      96,
-      240,
-      504
+      1980,
+      34,
+      520,
+      553
     ],
     [
-      1095,
-      96,
-      240,
-      504
+      2620,
+      34,
+      520,
+      553
     ],
     [
-      1382,
-      96,
-      240,
-      504
+      3260,
+      34,
+      520,
+      553
     ],
     [
-      1656,
-      96,
-      490,
-      504
+      3900,
+      34,
+      520,
+      553
     ]
   ],
   "names": [
@@ -56,87 +56,48 @@
     "f5",
     "f6"
   ],
-  "keyed": "green-soft",
+  "keyed": "magenta",
   "canvas": [
-    490,
-    504
+    520,
+    553
   ],
   "base_align": false,
   "content_crop": false,
+  "alpha_floor": 40,
   "sequence": [
     {
-      "from": "f0",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f0"
     },
     {
-      "from": "f1",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f1"
     },
     {
-      "from": "f2",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f2"
     },
     {
-      "from": "f3",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f3"
     },
     {
-      "from": "f4",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f4"
     },
     {
-      "from": "f5",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f5"
     },
     {
       "from": "f6",
       "hold": 4
     },
     {
-      "from": "f4",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f3"
     },
     {
-      "from": "f3",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f2"
     },
     {
-      "from": "f2",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f1"
     },
     {
-      "from": "f1",
-      "shift": [
-        -143,
-        0
-      ]
+      "from": "f0"
     }
   ]
 }

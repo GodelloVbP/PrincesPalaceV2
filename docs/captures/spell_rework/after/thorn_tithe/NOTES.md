@@ -2,7 +2,7 @@
 
 Trial 3, spell 3 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), steps 1 and 2 "identity sheet, block with existing assets", round 1.
 Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Target design: `docs/PLAN_SPELL_ANIMATION.md` section 3 "Thorn Tithe".
-**Status: step 2 round 1 done by the worker (2026-10-07); step 3 (orchestrator's watch and rubric) is next. Nothing here is owner-reviewed.**
+**Status: step 6 done by the worker (2026-10-07; art wired, see "Step 6"); the orchestrator's check is next. Nothing here is owner-reviewed.**
 The 2026-10-04 passes (12-frame stand-in, then the painted four-frame growth sheet) are superseded; their GIFs
 (`thorn_tithe_rat_1x.gif` etc.) and `spell_feel_1x/`, `spell_feel_1.5x/` stay untracked beside this file.
 
@@ -223,6 +223,64 @@ All four pieces delivered at the right canvas on solid magenta and accepted, wit
   pink specks in the dust, a possible key spill. Check after keying, and drop them with `alpha_floor` or spill
   suppression if they survive.
 - **Particles:** a yellow sap bead (lime was asked; yellow is acceptable), a copper leaf, bark and a clod.
+
+## Step 6: art integrated and compared in context (2026-10-07)
+
+Captures `tools/gif.ps1 spell thorn_tithe -Vs rat` and `-Vs treant`, 1x. Copies beside this file: `thorn_tithe_step6_{rat,treant}_1x.gif` (untracked),
+`*_preview.gif` (committed), `step6_*_timing.json` (cue f24, freed f54: 0.40 s and 0.90 s). Round 1 timing (cue 0.40 s, 20 fps rise), beat order, the
+ground-band back layer, the effects-band front layer and the kick are kept.
+
+### Art record
+
+| Piece | Source | Recipe | Output | Attempts |
+|---|---|---|---|---|
+| Back canes | `thorn_tithe_back_vines.png` (7x1 of 640) | `recipes/thorn_tithe_back.json` rewritten: hue key (magenta), `alpha_floor` 40, explicit rect 520x553 per cell, no crop | `Resources/Spells/thorn_tithe_back` (f0-f5 growth, f6-f9 dome held, f10-f13 sway frames f3-f0 backwards) | accepted at step 5, wired first try |
+| Front canes | `thorn_tithe_front_vines.png` (7x1 of 640) | `recipes/thorn_tithe_front.json` rewritten, same rect and sequence | `Resources/Spells/thorn_tithe_front` (same map; f6 is the X) | accepted at step 5, wired first try |
+| Crack | `thorn_tithe_crack.png` (4x1 of 512) | `recipes/thorn_tithe_crack.json` (new): hue key, `alpha_floor` 40, rect 440x240, `cap_blue` 0.83 | `Resources/Spells/thorn_tithe_crack` f0-f3 | one revision: the pink specks (below) |
+| Sap, leaf, bark, clod | `thorn_tithe_particles_flat.png` (4x1 of 256) | `recipes/thorn_tithe_particles_flat.json` (new): hue key, `alpha_floor` 40, `content_crop` (213x230), `cap_blue` 0.83 | `Resources/Spells/thorn_tithe_particles_flat` f0 sap, f1 leaf, f2 bark, f3 clod | sizes revised once (specks) |
+
+Both vine sets share one rect (x 60-580, y 34-587 of each cell: the union of both sets' content, feet at 25% and 75%, base row 575 so 12 px above the bottom),
+so one canvas, one pivot, no per-frame crop (E7). `thorn_tithe_particles` and the old atlas stay: Spore Cloud and Splinters still use them, so the new
+particles are a new folder. The superseded stand-in strips and the growth and 12-frame recipes stay unreferenced.
+
+**The pink specks were real, not spill.** Crack cells 3-4 hold opaque salmon pixels (250,185,185) on the pale dust: tan with magenta mixed in, which the hue
+key keeps (little magenta dominance) and `alpha_floor` cannot touch (alpha 255). New optional recipe key `cap_blue` (`tools/slice_spell_sheet.py`, documented
+in `docs/ART_PIPELINE.md`) pulls blue down to 0.83 of green on pixels with red well above green and blue at or above green; tan has blue below green,
+dark outline has red near green. After it no pixel in the four crack cells is pink.
+
+**`skills.json`:** `back`/`front` size 290 to 341 (the dome is 442 of the 520 px canvas, so 290 wide on screen), `front` no longer mirrored (the set is symmetric),
+new `crack` layer (offset 0, 0.2 s at 20 fps, size 300, effects band, `impactY` 0.133 = the cell's 70% pivot), `dust` weights bark and clod, `sap` bead and
+`leaves` leaf on the new sheet with sizes about 2.5x (sap 0.3-0.45, leaves 0.4-0.55, clods 0.22-0.34), sap speed 140-340, leaves 60-140, bursts 10 and 5.
+`ThornTithePresentationTests` pins size 341, front not mirrored, the crack at offset 0.
+
+### Playback, as seen (60 fps, my own contact sheets, cue f24)
+
+1. **Canes grow into the cage, no swap: yes.** Rat f6-f22: a bunch of three canes stands on each foot (short f6, tall and parting f12, leaning in at f18,
+   tips meeting at f22), and f24 closes the same canes into the dome with the X across. The dome frame continues the last growth frame; the only step is
+   the tips twisting shut. Back canes are taller than the dome (f4-f5 reach 528 px, the dome 417), so the cage settles down by a fifth on the cue.
+2. **Low dome, about as wide as tall: yes.** Rat f24-f34: the dome is as wide as the rat (290 px) and about 270 px tall, a cane height above the
+   rat's back. The rat's snout, teeth, ear and back read through it; the eye sits behind one cane. Treant f26: dome and X reach the canopy's lower edge,
+   the face and the orange eyes stay readable above the X.
+3. **Back arch behind, X in front: yes.** The dome's top shows above the body and behind the ears; the X crosses chest and flank in front. Treant: the arch
+   mostly hidden behind the trunk, which gives the depth.
+4. **Crack reads, no pink: yes.** Rat f2-f6: hairline cracks at the feet, a lipped crack with clods at f4, a tan dust cloud with clods at f6-f8 as the
+   first canes break through. No pink specks after `cap_blue`. The dust cloud at f6-f8 is large and pale against the dark floor; it is the loudest thing
+   before the cue.
+5. **Sap and leaves read: yes.** f24-f34: a spray of yellow beads from the centre falling past the body, copper leaves at the top of the cage. Both sit
+   behind the X's crossing, so they read as small clusters, not a burst.
+6. **Clear within 0.5 s of the cue: yes.** Cue f24, canes sinking f36-f50, clear at f54 (`clearedSeconds` 0.900 against 0.40 + 0.5).
+
+Weak, not changed: the cage's first sink frame (f36) is the tall sway pose, so the dome opens to tall canes in one step before they sink; the sap and
+leaves overlap the X and are partly hidden by it.
+
+### Worker's rubric (step 6)
+
+1 yes (crack, rise, close, hold, sink, leaves in order). 2 ~ (growth in steps with a sway pair, no ease inside a step). 3 yes (the cage closing on
+the cue). 4 ~ (a rat's face reads, its body is crossed by canes). 5 yes (the canes sink and thin over 0.3 s). 6 yes (teal canes on dark fur and brown bark).
+Round log: Step 6 (2026-10-07), art swapped for the delivered sheets, `cap_blue` for the crack, particle sizes raised; caught by the worker's frame check.
+Measures: owner reviews 0; internal retries 2 (pink specks, particle size); generation attempts per art piece 0 at this step; about 45 min active,
+two content builds and two captures at 1x.
+Snapshot id: see Step 7 below.
 
 ## Open owner questions
 

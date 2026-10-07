@@ -1,0 +1,25 @@
+{
+  "_notes": [
+    "Thorn Tithe: sap bead (f0), copper leaf (f1), bark flake (f2), soil clod (f3) from thorn_tithe_particles_flat.png (4x1 of 256 on #FF00FF). keyed magenta, alpha_floor 40, one shared content crop. thorn_tithe_particles stays for Spore Cloud and Splinters."
+  ],
+  "sheet": "Spells/Thorn Tithe/thorn_tithe_particles_flat.png",
+  "grid": [
+    1,
+    4
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": "magenta",
+  "canvas": [
+    256,
+    256
+  ],
+  "base_align": false,
+  "content_crop": true,
+  "alpha_floor": 40,
+  "cap_blue": 0.83
+}

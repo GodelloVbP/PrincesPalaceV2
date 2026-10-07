@@ -1,0 +1,47 @@
+{
+  "_notes": [
+    "Thorn Tithe: the anticipation crack (thorn_tithe_crack.png, 4x1 of 512 on #FF00FF): hairline, lipped crack, open with dust and clods, thinning. Explicit rect 440x240 round the content (x 41-470, y 156-384 over all four cells), so the cell's 50%/70% pivot lands at x 0.5, 0.133 from the bottom. keyed magenta, alpha_floor 40; cap_blue 0.83 pulls the salmon cast out of the pale dust, which is opaque and keeps magenta mixed in."
+  ],
+  "sheet": "Spells/Thorn Tithe/thorn_tithe_crack.png",
+  "rects": [
+    [
+      36,
+      150,
+      440,
+      240
+    ],
+    [
+      548,
+      150,
+      440,
+      240
+    ],
+    [
+      1060,
+      150,
+      440,
+      240
+    ],
+    [
+      1572,
+      150,
+      440,
+      240
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": "magenta",
+  "canvas": [
+    440,
+    240
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "alpha_floor": 40,
+  "cap_blue": 0.83
+}

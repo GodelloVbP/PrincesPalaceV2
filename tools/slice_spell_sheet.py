@@ -153,7 +153,7 @@ def write_recipe(vfx_id, spec):
     os.makedirs(RECIPE_DIR, exist_ok=True)
     ordered = collections.OrderedDict()
     for key in ("_notes", "sheet", "grid", "rects", "names", "sources", "keyed", "canvas",
-                "base_align", "content_crop", "feather", "cap_green", "alpha_floor", "sequence"):
+                "base_align", "content_crop", "feather", "cap_green", "cap_blue", "alpha_floor", "sequence"):
         if key in spec:
             value = spec[key]
             ordered[key] = list(value) if isinstance(value, tuple) else value
@@ -647,6 +647,21 @@ def cap_green_to_red(frame, ratio):
     return Image.fromarray(a.astype(np.uint8), "RGBA")
 
 
+def cap_blue_to_green(frame, ratio):
+    """Pull blue down to `ratio` * green on pink pixels (red well above green, blue near or above green).
+
+    For warm art (dust, clay) painted on #FF00FF whose soft edges keep a salmon cast: a
+    pale tan pixel with magenta mixed in is opaque and has little magenta dominance, so the
+    keyer leaves it. Tan, brown and orange never have blue at or above green; dark outline
+    pixels (red near green) are not touched.
+    """
+    a = np.array(frame.convert("RGBA"), dtype=np.float32)
+    limit = a[..., 1] * ratio
+    pink = (a[..., 0] > a[..., 1] + 20) & (a[..., 2] > a[..., 1] * 0.95)
+    a[..., 2] = np.where(pink, np.minimum(a[..., 2], limit), a[..., 2])
+    return Image.fromarray(a.astype(np.uint8), "RGBA")
+
+
 def feather_edges(frame, widths):
     """Fade the alpha to nothing at the named edges.
 
@@ -875,7 +890,7 @@ def pad_to_common_canvas(cells, canvas=None):
 def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
                 base_align=False, content_crop=False, preview=False, vfx_id=None,
                 sources=None, rects=None, canvas=None, feather=None, cap_green=None,
-                alpha_floor=None):
+                alpha_floor=None, cap_blue=None):
     """Cut a sheet -- or several -- into frames.
 
     `sources`, when given, replaces `sheet_path`/`rows`/`cols`/`names`
@@ -955,6 +970,9 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
 
     if cap_green:
         frames = [cap_green_to_red(f, cap_green) for f in frames]
+
+    if cap_blue:
+        frames = [cap_blue_to_green(f, cap_blue) for f in frames]
 
     if content_crop:
         frames = crop_to_shared_content(frames)
@@ -1356,7 +1374,8 @@ def main():
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, sources=spec["sources"],
                         canvas=spec.get("canvas"), feather=spec.get("feather"),
-                        cap_green=spec.get("cap_green"), alpha_floor=spec.get("alpha_floor"))
+                        cap_green=spec.get("cap_green"), alpha_floor=spec.get("alpha_floor"),
+                        cap_blue=spec.get("cap_blue"))
         else:
             rows, cols = spec["grid"] if "grid" in spec else (None, None)
             print(f"[{vfx_id}] {_shape_of(spec)}")
@@ -1367,7 +1386,8 @@ def main():
                         content_crop=spec.get("content_crop", False),
                         preview=args.preview, vfx_id=vfx_id, rects=spec.get("rects"),
                         canvas=spec.get("canvas"), feather=spec.get("feather"),
-                        cap_green=spec.get("cap_green"), alpha_floor=spec.get("alpha_floor"))
+                        cap_green=spec.get("cap_green"), alpha_floor=spec.get("alpha_floor"),
+                        cap_blue=spec.get("cap_blue"))
 
 
 if __name__ == "__main__":

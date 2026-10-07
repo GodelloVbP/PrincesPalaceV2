@@ -819,6 +819,8 @@ Left out entirely, the cells **are** the frames one for one.
 
 `"cap_green": 0.75` on a recipe pulls green down to that fraction of red on lime pixels (green near or above red, almost no blue), after the key and before the crop. It is for warm art painted on #00FF00 whose soft glow keeps a lime cast the keyer cannot tell from the glow: the Gilded Aegis's gold halo. Gold and orange never have green above red, so the body is untouched.
 
+`"cap_blue": 0.83` on a recipe pulls blue down to that fraction of green on pink pixels (red well above green, blue near or above green), after the key and before the crop. It is for warm art (dust, clay) painted on #FF00FF whose soft edges keep a salmon cast the keyer leaves because the pixel is opaque with little magenta dominance: Thorn Tithe's crack. Tan and brown never have blue at or above green.
+
 `"alpha_floor": 40` on a recipe zeroes every alpha at or under that value in each cell, before the sequence. It is for authored-alpha sheets (`keyed: false`) whose key left dark outline fringe and stray specks at low alpha: Ashen Reckoning's three step-4 sheets. A sequence step's `"shift": [dx, dy]` moves that cell's drawing by whole pixels (right, down) inside its cell before the step's scale and turn, to register a drawing the artist placed off-centre.
 
 ### Layers: a cast that is more than one drawing

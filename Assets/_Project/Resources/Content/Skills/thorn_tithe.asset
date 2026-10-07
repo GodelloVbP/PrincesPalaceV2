@@ -111,7 +111,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 290
+        size: 341
         fit: target
         facing: none
         sort: ground
@@ -207,9 +207,9 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 290
+        size: 341
         fit: target
-        facing: reverse
+        facing: none
         sort: effects
         align: 
         punch: 0
@@ -217,6 +217,102 @@ MonoBehaviour:
         tint: 
         impactX: 0.5
         impactY: 0.04
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: crack
+        render: sprite
+        place: target
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0
+        path: Spells/thorn_tithe_crack
+        seconds: 0.2
+        fps: 20
+        startFrame: 0
+        until: once
+        fade: 0.1
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 300
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: 0.5
+        impactY: 0.133
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -321,7 +417,7 @@ MonoBehaviour:
         artDegrees: 0
         through: 0
         emitter:
-          path: Spells/thorn_tithe_particles
+          path: Spells/thorn_tithe_particles_flat
           rate: 0
           burst: 8
           window: 0
@@ -336,8 +432,8 @@ MonoBehaviour:
           gravity: -320
           lifeMin: 0.15
           lifeMax: 0.3
-          sizeMin: 0.1
-          sizeMax: 0.2
+          sizeMin: 0.22
+          sizeMax: 0.34
           spinMin: -150
           spinMax: 150
           alignFlight: 0
@@ -351,7 +447,7 @@ MonoBehaviour:
           - 0
           - 0
           - 1
-          - 0
+          - 1.5
       - id: sap
         render: emitter
         place: target-centre
@@ -421,23 +517,23 @@ MonoBehaviour:
         artDegrees: 0
         through: 0
         emitter:
-          path: Spells/thorn_tithe_particles
+          path: Spells/thorn_tithe_particles_flat
           rate: 0
-          burst: 12
+          burst: 10
           window: 0
           sourceDx: 0
           sourceDy: 0
           spreadDegrees: 360
           aimDegrees: 90
-          speedMin: 90
-          speedMax: 260
+          speedMin: 140
+          speedMax: 340
           inherit: 0
           drag: 2
           gravity: -500
           lifeMin: 0.2
           lifeMax: 0.4
-          sizeMin: 0.1
-          sizeMax: 0.2
+          sizeMin: 0.3
+          sizeMax: 0.45
           spinMin: -90
           spinMax: 90
           alignFlight: 0
@@ -448,10 +544,10 @@ MonoBehaviour:
           endScale: 0.7
           seed: 1067
           weights:
-          - 0
-          - 0
-          - 0
           - 1
+          - 0
+          - 0
+          - 0
       - id: leaves
         render: emitter
         place: target-centre
@@ -521,23 +617,23 @@ MonoBehaviour:
         artDegrees: 0
         through: 0
         emitter:
-          path: Spells/thorn_tithe_particles
+          path: Spells/thorn_tithe_particles_flat
           rate: 0
-          burst: 4
+          burst: 5
           window: 0
           sourceDx: 0
           sourceDy: 70
           spreadDegrees: 160
           aimDegrees: 90
-          speedMin: 20
-          speedMax: 70
+          speedMin: 60
+          speedMax: 140
           inherit: 0
           drag: 1
           gravity: -160
           lifeMin: 0.3
           lifeMax: 0.4
-          sizeMin: 0.16
-          sizeMax: 0.26
+          sizeMin: 0.4
+          sizeMax: 0.55
           spinMin: -240
           spinMax: 240
           alignFlight: 0
