@@ -131,6 +131,9 @@ when the owner accepts the new motion.
 
 ### Art needed for step 4
 
+**Step 3 passed (owner, 2026-10-07): round 1 motion approved; cue 0.40 s kept. Owner answers folded in: a bunch of canes per
+side instead of one, the canes grow INTO the cage (no swap on the cue), and a squatter cage, about as tall as it is wide.**
+
 Prompt-ready per `docs/prompts/TEMPLATE_spell_art.md`; the style block and its attachments as in its section 1. **The subjects are blue-green, so the
 backdrop is solid #FF00FF, the recipes are keyed `"keyed": "magenta"`, and "no pink or magenta in the subject" replaces the no-green line.** At play size
 the pieces sit on a dark grey rat and a brown-and-green treant: saturated teal canes with white thorns and a dark outline read on both. The strips
@@ -143,12 +146,13 @@ Piece: Thorn Tithe: back vines rising and closing into an arch
 Beat it serves: delivery 0.10-0.40 s and payoff 0.40 s (back)
 Filename: thorn_tithe_back_vines.png
 Delivery path: Assets/_Project/Art/Sheets/Spells/Thorn Tithe/thorn_tithe_back_vines.png
-Canvas: 3920x1024   Grid: 7x1 of 560x1024 (never touching a cell edge)
+Canvas: 4480x640   Grid: 7x1 of 640x640 (never touching a cell edge)
 Pivot: the base line of the soil mounds, 90% down, in every cell; the left foot at 25% across and the right foot at 75% across in every cell
-Size in play: the cage is as wide as the target (a rat's body, 290 px box) and about as tall as 1.3 of it; it must read at that size
-Drawing: bramble canes with large white thorns, each growing from a small mound of soil. Cells 1-2 one short cane on the LEFT foot (a sway pair,
-  the second leaning the other way); cells 3-4 the same cane taller; cells 5-6 the cane at full height with a curled tip; cell 7 the cage closed:
-  two canes, one on each foot, arching over and twisting together at the top, with a mound on each foot. Dark teal canes in two flat tones, white
+Size in play: the cage is as wide as the target (a rat's body, 290 px box) and about as tall as it is wide, a squat dome, never a tall loop; it must read at that size
+Drawing: a bunch of three bramble canes with large white thorns, growing from a small mound of soil on each foot. Cells 1-2 three short canes
+  on each foot (a sway pair, the second leaning the other way); cells 3-4 the canes taller, already leaning inward; cells 5-6 the canes long and
+  bending over toward the top centre, their tips almost meeting; cell 7 the cage closed: the same canes, now meeting and twisting together at the
+  top into a low dome, a mound on each foot. Cell 7 must be the visible continuation of cell 6 (same canes, same feet), not a new drawing. Dark teal canes in two flat tones, white
   thorns in two tones, soil mounds in two browns, bold dark outline on everything.
 Verb: cage.
 Must read as: thorny canes forcing up out of soil and arching shut.
@@ -162,11 +166,12 @@ Piece: Thorn Tithe: front vines rising and crossing
 Beat it serves: delivery 0.10-0.40 s and payoff 0.40 s (front)
 Filename: thorn_tithe_front_vines.png
 Delivery path: Assets/_Project/Art/Sheets/Spells/Thorn Tithe/thorn_tithe_front_vines.png
-Canvas: 3920x1024   Grid: 7x1 of 560x1024
+Canvas: 4480x640   Grid: 7x1 of 640x640
 Pivot: exactly the same as the back set: base line 90% down, feet at 25% and 75% across, in every cell
 Size in play: the same box as the back set (they are drawn one over the other); shorter than the back arch so the arch's top shows above the crossing
-Drawing: the same canes drawn as the near ones, on the RIGHT foot in cells 1-6 (cells 1-2 a short cane, 3-4 taller, 5-6 full height); cell 7 two canes
-  crossing in an X over the middle, a mound on each foot. Same colours and outline as the back set, a little lighter so the front reads nearer.
+Drawing: the near canes, a bunch of two or three on each foot, growing in the same steps as the back set (cells 1-2 short, 3-4 taller and
+  leaning in, 5-6 long and reaching across); cell 7 the same canes crossed over the middle in a low X, a mound on each foot. Cell 7 continues
+  cell 6; it is not a new drawing. Same colours and outline as the back set, a little lighter so the front reads nearer.
 Verb: cage.
 Must read as: the near canes crossing in front of the target.
 Must NOT read as: a letter X, a fence, scissors, a gate.
