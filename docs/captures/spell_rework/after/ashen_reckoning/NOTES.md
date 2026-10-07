@@ -350,6 +350,18 @@ What changed: the art swapped in (vortex, catch, smoke, ash, curl); burst smoke 
 from 330/290/310/340 to 280/235/250/270 after the first capture (the ring was wider than the treant and hid its face);
 ash flakes spread and reduced after a clump covered the face. Presentation tests updated.
 
+### Orchestrator's check of step 6 (2026-10-07, full 1x GIFs, treant and rat; frames at 60 fps)
+
+Passes to the owner. The art reads as the fight's cel style. The order reads: vortex (f12-f34, tightening), core
+(f36), ring of flame round the green (f38-f46), campfire at the feet (f46-f72), curl (f120-f150).
+Reservations for the owner to weigh:
+1. Treant f38-f46: the flame ring covers the face and the upper torso for about 0.15 s.
+2. Cue, f36-f38: the roots and legs fill pale green. It reads as a fill on the lower body, not the rim contract E10
+   asks for. On the rat it is milder.
+3. Rat: the vortex is fully dense by f20, so the cue reads by colour change more than by energy (spell_feel WARN).
+4. Rat f132-f170: the rat takes its turn and dashes at Shawn while the curl still hangs over the empty spot where it
+   stood. The ~2.4 s ending runs into the next action.
+
 ## Open owner questions
 
 Each asked once.
