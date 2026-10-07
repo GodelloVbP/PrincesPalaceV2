@@ -383,6 +383,7 @@ Each asked once.
 | Trial 1, block 4 (first review) | f6 at 210 box; the ending as a fire, a decay, a curl | worker | worker's score only |
 | Round 2 | orchestrator's playback check failed it: full-opacity pop-in at f0; the catch an explosion and the body filled pale green (the committed material still had the 0.22 interior, and the 2.2% rim); the body hidden for 0.35 s; the ending not the strongest. Changed: 0.6 s wind-up that builds and accelerates, a core that spreads to the body's width, the global hit-flash rim, burst and smoke behind the body, a four-step ending with dimming embers, ash and a large curl | orchestrator | see Rubric |
 | Step 6 | step 4 art wired into recipes and layers; ring sizes cut after the first capture (wider than the body); ash flakes spread | worker (own frames) | see Step 6 |
+| Owner 2026-10-07 | owner 2026-10-07: smoke layers removed (decay, smoke, curl); ash kept. Timings not redistributed. `timing.json` now `clearedSeconds` 2.800 (the ash emitter is the last thing; was 3.0 with the curl); capture `ashen_reckoning_step6b_treant_poison_1x*.gif` | owner | not rescored |
 
 ## Measures
 

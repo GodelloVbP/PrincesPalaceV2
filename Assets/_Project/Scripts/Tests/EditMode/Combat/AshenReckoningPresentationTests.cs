@@ -72,7 +72,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(270f, turn.phase, 1e-6f, "starts at rest, fastest on the cue");
             Assert.AreEqual(2.4f, turn.period, 1e-6f, "a quarter period is the 0.6 s wind-up");
 
-            // Flames step down in size and glow, then the last smoke curl is the final thing.
+            // Flames step down in size and glow, then the falling ash is the final thing.
             var fires = new[] { "fire_a", "fire_b", "fire_c", "fire_d" }.Select(id => vfx.layers.Single(l => l.id == id)).ToArray();
             for (int i = 1; i < fires.Length; i++)
             {
@@ -87,9 +87,11 @@ namespace PrincesPalace.Domain.Tests
             float End(SpellLayer l) => (l.at == "hit" ? vfx.hitCueSeconds : 0f) + l.offset + (l.emitter != null
                 ? (l.emitter.window > 0f ? l.emitter.window : 0f) + l.emitter.lifeMax
                 : l.seconds + l.fade);
-            var curl = vfx.layers.Single(l => l.id == "curl");
-            foreach (var l in vfx.layers.Where(l => l.id != "curl" && l.id != "ritual"))
-                Assert.Less(End(l), End(curl), $"{l.id} ends before the last curl of smoke");
+            CollectionAssert.IsEmpty(vfx.layers.Where(l => l.id == "decay" || l.id == "smoke" || l.id == "curl"),
+                "the burst smoke and the S-curl were removed by the owner: only the ash cells draw from the smoke sheet");
+            var ash = vfx.layers.Single(l => l.id == "ash");
+            foreach (var l in vfx.layers.Where(l => l.id != "ash" && l.id != "ritual"))
+                Assert.Less(End(l), End(ash), $"{l.id} ends before the last of the ash");
         }
 
         [Test]
