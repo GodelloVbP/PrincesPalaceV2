@@ -225,6 +225,17 @@ Must NOT read as: an oil splash, a fountain, a tree, an explosion with fire.
 Not in the picture: target, jaws, floor, smoke, glow.
 ```
 
+### Step 5: art inspection (orchestrator, 2026-10-07)
+
+All four pieces delivered at the right canvas on solid magenta and accepted, no revision:
+- **Eyes:** two cells, lime slit eyes with a dark outline, half-open then open. Use them as an opening pair; the engine
+  places two of them.
+- **Jaws:** 3x2 teal scaled jaws seen from the side (no head): open, closing, closing; then the snap with a lime spark,
+  shut, and shut and dripping. Register them on one pivot.
+- **Venom:** row 1 drips that thin out across the 4 cells, hung from the cell's top edge (pivot at the top); row 2 a
+  drop, a small drop and two mist wisps.
+- **Burst:** a flat lime splash plume.
+
 ## Round 2 (2026-10-07, owner: "the jaws have to be bigger, definitely")
 
 Captures `vipers_bite_r2_rat_1x`, `_treant_1x`, `_rat_poison_1x` (previews committed, full GIFs untracked, `r2_*_timing.json`; cue f21 at 1x). All edits are in

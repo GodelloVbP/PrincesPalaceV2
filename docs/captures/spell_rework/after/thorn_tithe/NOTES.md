@@ -212,6 +212,18 @@ Must NOT read as: a gem, a flower petal, a coin, fruit.
 Not in the picture: vines, hands, glow, sparkle.
 ```
 
+### Step 5: art inspection (orchestrator, 2026-10-07)
+
+All four pieces delivered at the right canvas on solid magenta and accepted, with one watch item:
+- **Back set:** a bunch of three canes per foot, growing taller and leaning in. Cell 7 is a low dome that continues
+  cell 6.
+- **Front set:** lighter teal; cells 5-6 bend across; cell 7 is a low X.
+- Each drawing fills about half its 640 cell. Register the feet across cells in the recipe.
+- **Crack:** hairline crack, then lipped crack, then dust and clods, then thinning. **Watch:** cells 3-4 carry light
+  pink specks in the dust, a possible key spill. Check after keying, and drop them with `alpha_floor` or spill
+  suppression if they survive.
+- **Particles:** a yellow sap bead (lime was asked; yellow is acceptable), a copper leaf, bark and a clod.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.

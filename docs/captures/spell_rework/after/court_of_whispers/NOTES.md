@@ -238,6 +238,16 @@ Not in the picture: figures, glow, floor, background texture.
 (Cells 1, 2 and 3 are picked by weight in the emitters; cell 4 is the `price` still. Engine-made on top: the rim
 shiver, glow, breathing, fades.)
 
+### Step 5: art inspection (orchestrator, 2026-10-07)
+
+All three pieces delivered at the right canvas on solid green and accepted for wiring, no revision:
+- **Lean:** a light violet figure with a pale lilac rim and a dark outline. It reads as whispering: the cupped hand at the
+  empty hood, the other hand on the hip.
+- **Back:** the same figure seen from behind, recognisably the same courtier.
+- **Wisps:** curl, S-wisp, three motes and a guttering lick, in the robe's violet with a pale rim.
+
+At play size these should carry on dark rats where the round 3 stand-in vanished; confirm that at step 6.
+
 ## Round 3 (2026-10-07): courtiers at the head, small, one per enemy
 
 Owner's answer to Q3: one per enemy, smaller, leaning in at head height. Captures `court_of_whispers_r5_*`
