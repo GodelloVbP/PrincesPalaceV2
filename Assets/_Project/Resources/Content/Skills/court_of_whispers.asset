@@ -128,6 +128,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -224,6 +225,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -320,6 +322,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -416,6 +419,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/court_of_whispers_particles
           rate: 0
@@ -516,6 +520,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/court_of_whispers_particles
           rate: 18
@@ -616,6 +621,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/court_of_whispers_particles
           rate: 7
@@ -716,6 +722,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/court_of_whispers_particles
           rate: 0
@@ -816,6 +823,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0

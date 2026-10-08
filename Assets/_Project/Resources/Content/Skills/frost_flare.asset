@@ -132,6 +132,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -228,6 +229,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -324,6 +326,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -420,6 +423,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0

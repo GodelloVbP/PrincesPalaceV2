@@ -128,6 +128,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -224,6 +225,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 10
@@ -324,6 +326,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 0
@@ -425,6 +428,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 0
@@ -526,6 +530,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -622,6 +627,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 0
@@ -722,6 +728,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 0
@@ -822,6 +829,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -918,6 +926,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 10
@@ -1018,6 +1027,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/censer_of_embers_particles
           rate: 5
@@ -1118,6 +1128,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/glow_disc
           rate: 7
