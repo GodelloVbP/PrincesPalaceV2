@@ -58,10 +58,10 @@ carries file:line + excerpt + failure) → `fixer`. Doable as a bounded change
 
 | Type | Model | Use when |
 |---|---|---|
-| `reader` | Sonnet 5.5 | Locate files, extract facts: paths, line numbers, excerpts. Never diagnoses. |
-| `fixer` | Sonnet 5.5 | Pre-diagnosed fix in one file or system with known tests. Stops if unclear, wider than the brief, or architectural. Tests via the dotnet `[D]` loop or `tools/test.ps1 <area>` only. |
+| `reader` | Haiku 5.5 | Locate files, extract facts: paths, line numbers, excerpts. Never diagnoses. |
+| `fixer` | Haiku 5.5 | Pre-diagnosed fix in one file or system with known tests. Stops if unclear, wider than the brief, or architectural. Tests via the dotnet `[D]` loop or `tools/test.ps1 <area>` only. |
 | `implementer` | Sonnet 5.5 | The default implementation owner: diagnose, implement, test, correct. Acts on a reader's excerpts without re-reading the tree. |
-| `verifier` | Sonnet 5.5 | Run one named gate once, report pass/fail. |
+| `verifier` | Haiku 5.5 | Run one named gate once, report pass/fail. |
 | `senior` | Opus 5.5, medium | Very complex architectural work only, gated by the `Escalation:` criteria below. |
 
 `senior`'s brief must carry a line `Escalation: <criterion>` naming one of:
@@ -71,7 +71,7 @@ serialization or lifecycle risk), or `two-failed-cycles` (an implementer
 already failed two correction cycles on this issue). There is no generic
 "difficult" criterion. `claude-code-guide` is also allowed. No other
 `subagent_type`, no per-call model override, no `Workflow` tool, no Fable,
-and no Opus but exactly `claude-opus-5-5`: `tools/githooks/route_agents.py`
+no Opus but exactly `claude-opus-5-5`, and no Haiku but `claude-haiku-5-5`: `tools/githooks/route_agents.py`
 refuses the rest.
 
 ## Verification
