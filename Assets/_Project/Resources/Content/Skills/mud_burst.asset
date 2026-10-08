@@ -446,6 +446,294 @@ MonoBehaviour:
           endScale: 0.9
           seed: 3301
           weights: []
+      - id: drips_a
+        render: emitter
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0.3
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/mud_splat_drops
+          rate: 10
+          burst: 0
+          window: 0.5
+          sourceDx: -34
+          sourceDy: 45
+          spreadDegrees: 24
+          aimDegrees: 270
+          speedMin: 15
+          speedMax: 40
+          inherit: 0
+          drag: 0.6
+          gravity: -150
+          lifeMin: 1
+          lifeMax: 1.3
+          sizeMin: 0.5
+          sizeMax: 0.8
+          spinMin: -30
+          spinMax: 30
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.85
+          seed: 3302
+          weights: []
+      - id: drips_b
+        render: emitter
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0.3
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/mud_splat_drops
+          rate: 10
+          burst: 0
+          window: 0.5
+          sourceDx: 30
+          sourceDy: 45
+          spreadDegrees: 24
+          aimDegrees: 270
+          speedMin: 15
+          speedMax: 40
+          inherit: 0
+          drag: 0.6
+          gravity: -150
+          lifeMin: 1
+          lifeMax: 1.3
+          sizeMin: 0.5
+          sizeMax: 0.8
+          spinMin: -30
+          spinMax: 30
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.85
+          seed: 3303
+          weights: []
+      - id: puddle
+        render: still
+        place: target
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.43
+        path: Spells/mud_splat
+        seconds: 0.25
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.5
+        fadeIn: 0.1
+        opacity: 0.9
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 260
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: 0.5
+        impactY: 0.6
+        aspect: 3.2
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
       layerFormat: 1
       hitCueSeconds: 0.325
       gloom:

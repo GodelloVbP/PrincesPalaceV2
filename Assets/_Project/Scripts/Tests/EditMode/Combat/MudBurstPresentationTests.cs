@@ -63,12 +63,12 @@ namespace PrincesPalace.Domain.Tests
             var vfx = Mud();
             Assert.IsTrue(vfx.layers.All(l => l.glow == 0f), "matte: a hot core is what read as fire");
             Assert.AreEqual("#7A5A40", vfx.layers.Single(l => l.id == "gather").tint, "the old gold sheet reads as fire untinted");
-            foreach (string id in new[] { "glob", "splat" })
+            foreach (string id in new[] { "glob", "splat", "puddle" })
             {
                 Assert.IsTrue(string.IsNullOrEmpty(vfx.layers.Single(l => l.id == id).tint), id + ": painted brown already");
             }
 
-            Assert.AreEqual(4, vfx.layers.Length);
+            Assert.AreEqual(7, vfx.layers.Length, "gather, glob, splat, drops, two drip emitters, puddle");
         }
 
         // THE SLIDE RUNS OVER THE FLIGHT: still in the hand while held, an
