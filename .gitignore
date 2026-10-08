@@ -48,9 +48,9 @@ Assets/_Project/Resources/Rigs/**/wiggle.png.meta
 tools/domain-tests/**/bin/
 tools/domain-tests/**/obj/
 
-# Python bytecode from the tools/ measurement scripts, which import each other
-# rather than each carrying its own copy of the constants they parse.
-tools/__pycache__/
+# Python bytecode from the tools/ scripts and the git hooks, which import each
+# other rather than each carrying its own copy of the constants they parse.
+__pycache__/
 
 # Per-fixture PlayMode wall times from the last gate run, merged from every
 # shard's profile CSV -- run_tests_parallel.ps1 balances the next run's shards
