@@ -4,7 +4,7 @@ Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Plan S3, spell 3.3. P
 
 ## Status
 
-Step 6 art wired, glob flight and its surroundings reworked (r7, r8) in the commit that carries this file; `mud_puddle` and `mud_drips` were accepted at step 5 (`docs/prompts/2026-10-08_gale_mud_art.md`). Captures `mud_burst_r6_{rat,treant}` (1x) and `mud_burst_r6_rat_1.5x`, sheet `mud_r6_sheet.png` (approved frames on top; previews and timing committed, full GIFs and the sheet untracked). Waits on the orchestrator's check, then the owner (step 3).
+**Closed** (step 7, 2026-10-09). The owner approved r9 as it is. Snapshot below is `066462a9`. Open items stay listed as accepted as is: the glob lands high on the rat (the body centre of a sitting rat is at its shoulders), the smear is parallel to the launch-to-aim line, the strand and puddle colours are unchanged.
 
 ## Identity
 
@@ -62,19 +62,34 @@ Release clock; cue **0.325 s** = f20 at 1x, f13 at 1.5x.
 | 2026-10-04 | pass 1 | procedural glob, derived splat, layer field `tint` | worker | n/a |
 | 2026-10-04 | drift | drift runs over a travelling layer's flight; glob arcs | worker | `86aca286` |
 | 2026-10-04 | pass 2 | owner's painted glob and splat replace the procedural lump and derived burst | worker | `1de9f948` |
-| 2026-10-08 | step 2 | `drips_a/b` and `puddle` added; fade capped at 0.5 s; `at: hit` puddle was capped small, moved to `at: release` | orchestrator brief | this commit |
-| 2026-10-08 | step 6 | painted puddle and drip strands replace the splat-still puddle and the drop emitters; strands lowered (drift y -0.15) and puddle 330 to 260 after the first capture (strands hung from the face, puddle wider than a rat) | orchestrator step 6 | this commit |
-| 2026-10-08 | r7 | glob flight: one parabola (engine: arc flights keep constant sideways speed, `Ballistic`), tumble, drip wake, stage kick; strands start at the splat centre | owner: the arc was flat then vertical | this commit |
-| 2026-10-08 | r8 | `shadow` (new layer field `ballistic`), `launch`, `wake`, heavier `glob_trail`, `impact_ring` | owner: still just a rotating blob | this commit |
-| 2026-10-09 | r9 | `mud_glob_flight` sheet replaces the glob still, held and flown; spin and the orb wake removed; `orient: path` | owner: the hairy red still and the stick wake | this commit |
+| 2026-10-08 | step 2 | `drips_a/b` and `puddle` added; fade capped at 0.5 s; `at: hit` puddle was capped small, moved to `at: release` | orchestrator brief | `d061bf56` |
+| 2026-10-08 | step 6 | painted puddle and drip strands replace the splat-still puddle and the drop emitters; strands lowered (drift y -0.15) and puddle 330 to 260 after the first capture (strands hung from the face, puddle wider than a rat) | orchestrator step 6 | `a826b78b` |
+| 2026-10-08 | r7 | glob flight: one parabola (engine: arc flights keep constant sideways speed, `Ballistic`), tumble, drip wake, stage kick; strands start at the splat centre | owner: the arc was flat then vertical | `778db201` |
+| 2026-10-08 | r8 | `shadow` (new layer field `ballistic`), `launch`, `wake`, heavier `glob_trail`, `impact_ring` | owner: still just a rotating blob | `b074199f` |
+| 2026-10-09 | r9 | `mud_glob_flight` sheet replaces the glob still, held and flown; spin and the orb wake removed; `orient: path` | owner: the hairy red still and the stick wake | `066462a9` |
 
 ## Measures
 
-Not recorded (pre-workflow). Timing (`spell_feel`, 60 fps): cast start to payoff 0.33 s (f20) at 1x, 0.22 s (f13) at 1.5x; payoff to clean 0.38 s at 1x, 0.25 s at 1.5x.
+`tools/spell_feel.ps1 -Spell mud_burst -Versus treant,rat` at 1x and `-Speed 1.5`; reports in `spell_feel_close_1x/` and `spell_feel_close_1.5x/` (run 2026-10-09). 60 fps; times in seconds.
+
+| Run | Contact (authored / visual) | Peak (floor), at | Residue after contact | Payoff to clean | Hot peak (flash proxy) | Warnings |
+|---|---|---|---|---|---|---|
+| 1x rat | f20 / f20 | 3.1 (0.4), 0.33 s | 0.55 | 1.00 | 0.00% at f0 | residue tail (limit 0.50), no accent |
+| 1x treant | f20 / f20 | 4.6 (0.8), 0.33 s | 0.92 | 1.07 | 0.00% at f0 | residue tail |
+| 1.5x rat | f13 / f13 | 3.2 (0.4), 0.22 s | 0.53 | 0.87 | 0.00% at f0 | residue tail |
+| 1.5x treant | f13 / f13 | 4.5 (0.2), 0.22 s | 0.83 | 0.85 | 0.01% at f64 | residue tail |
+
+The residue tail is by design: the drips run and the puddle fades on purpose for 0.5-1.0 s after the splat (the aftermath beat), and the rat's own idle settles in the same window. "No accent" on the rat at 1x is the matte identity (peak 3.1 on the cue frame against a typical 2.6). The peak is on the cue in all four runs. The measure's "gather 0.18 s, authored 0" note is the glob held in the hand (the sheet plays from release).
+
+Other measures (owner reviews, retries, attempts per piece, handling time): not recorded.
 
 ## Snapshot
 
-- **Commit:** `1de9f948`.
-- **Capture run id:** not recorded.
-- **Rubric:** not scored; identity test "mud, not fire" passes clearly.
-- **Still weak:** Open items 1-2.
+- **Commit:** `066462a9` (the content at the owner's approval; the closing commit only edits NOTES and adds the reports).
+- **Capture run id:** `20261008T170854Z_9b51d33691a3` (r9 rat 1x); `spell_feel_close_1x` and `spell_feel_close_1.5x` (2026-10-09); GIFs `mud_burst_r9_*`.
+- **Gate:** `tools/run_tests_parallel.ps1 -Changed -BuildContent`: "All tests passed -- a SLICE: 271 EditMode + 144 PlayMode classes, 227s wall" (r9; the r8 run was the full suite, 356s, with `SpellPoolCapacityTests`).
+- **Binding checks:** no transform jump: pass (the glob is one parabola in time, pinned by `MudBurstPresentationTests.TheGlobFliesOneParabolaAtConstantSidewaysSpeed`). Sound, number, badge and accent on one frame: pass (contact authored = visual: f20 at 1x, f13 at 1.5x, all four runs; the peak is on the cue). Beat layers inside the stage crop: pass (the back-rank cast keeps glob, shadow and splat on the stage).
+- **Flash guard:** `spell_feel` hot peak 0.00-0.01% of stage pixels on any frame; a matte spell, no white flash beyond the shared hurt flash.
+- **Rubric (worker scored):** Motion: 1 ✔, 2 ✔ (one parabola, shadow, constant sideways speed), 3 ~ (launch spray, shadow, glob and drips compete before the cue; the splat is the one focal point at it), 4 ✔ (the rat's head and body readable under the splat f20-f30), 5 ~ (decays over 0.9-1.1 s: the residue tail WARN), 6 ~ (not played beside the Censer or Ashen Reckoning). Art: 1 ✔, 2 ~ (glossy caramel strands and the paler puddle are lighter than the flat brown splat), 3 ✔, 4 ~ (the strands read as caramel at 1x), 5 ✔ (not fire, not blood).
+- **Still weak (accepted as is):** the glob lands high on the rat; the smear is parallel to the line, not the arc; strand and puddle colour; no stretch or squash and no shrink of the shadow (no field); the glob passes in front of an uninvolved treant on a back-rank cast.
+
