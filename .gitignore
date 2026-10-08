@@ -62,3 +62,15 @@ tools/.test-timings.csv
 # moved 5 commits or 24h past it (tools/test_select.ps1). Per machine: another
 # checkout's green says nothing about this one's runner copies.
 tools/.last-full-green
+
+# Capture runs are regenerated on demand and run to gigabytes of GIFs and frames.
+# The spell workflow keeps its record here, so the notes, timing JSON and phone
+# previews stay committable; everything else is ignored.
+docs/captures/**
+!docs/captures/**/
+!docs/captures/**/*.md
+!docs/captures/**/*.json
+!docs/captures/**/*_preview.gif
+
+# Scratch art drafts and concept dumps; accepted art moves into Assets/.
+output/

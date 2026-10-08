@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Hush — first-time map interaction</title>
+  <style>
+    :root { color-scheme: dark; font-family: Georgia, serif; background: #101018; color: #f0ede6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 35%,#292736,#101018 70%); }
+    .screen { width: min(96vw, 1460px); aspect-ratio: 16/9; min-height: 610px; position: relative; overflow: hidden; border: 1px solid #756b7c; box-shadow: 0 30px 90px #000b; background: #171923; }
+    .top { height: 15%; padding: 2.2% 4%; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(#1d1b28,#252333); border-bottom: 1px solid #77708277; }
+    .eyebrow { color: #b9adbb; font: 600 12px system-ui,sans-serif; letter-spacing: .22em; text-transform: uppercase; }
+    h1 { font-size: clamp(25px,3vw,42px); font-weight: 400; margin: 2px 0 0; letter-spacing: .04em; }
+    .party { font: 600 14px system-ui,sans-serif; color: #d7c9bf; text-align: right; }
+    .hearts { color: #d8a6a5; font-size: 20px; letter-spacing: .2em; }
+    .map { height: 65%; position: relative; overflow: hidden; background: #605f71; }
+    .art { position: absolute; inset: 0; background-image: linear-gradient(90deg,#10101870,transparent 18%,transparent 80%,#10101875),url('hush-run-map-checkpoint-1.png'); background-size: 100% 100%,100% auto; background-position: center,top center; background-repeat: no-repeat; filter: saturate(.6); transform: scaleY(2.05); transform-origin: top center; }
+    .mist { position: absolute; inset: 0; background: linear-gradient(0deg,#1c1b29bd,transparent 32%,transparent 70%,#1c1b2944); pointer-events: none; }
+    svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .trail { fill: none; stroke: #3b3547; stroke-width: 1.35%; stroke-linecap: round; stroke-dasharray: 1 1.6; filter: drop-shadow(0 1px 1px #111); transition: stroke .25s,opacity .25s; }
+    .trail.ahead { stroke: #bab0bd; opacity: .48; }
+    .trail.open { stroke: #f2dcae; opacity: .95; }
+    .trail.walked { stroke: #e4c391; stroke-dasharray: none; opacity: .8; }
+    .trail.closed { stroke: #2b2833; opacity: .32; }
+    .node { position: absolute; transform: translate(-50%,-50%); width: 72px; height: 72px; border: 0; background: none; color: #f4f1e8; cursor: default; display: grid; place-items: center; z-index: 2; }
+    .node .shape { width: 61px; height: 61px; display: grid; place-items: center; background: linear-gradient(145deg,#555263,#272533); border: 3px solid #aca2ac; box-shadow: inset 0 2px 7px #fff3,0 6px 14px #0009; font: 31px Georgia,serif; transition: transform .18s,box-shadow .18s,border-color .18s; }
+    .node[data-type=Fight] .shape,.node[data-type=Start] .shape { border-radius: 50%; }
+    .node[data-type=Rest] .shape { clip-path: polygon(50% 0%,100% 75%,78% 100%,22% 100%,0% 75%); }
+    .node[data-type=Shop] .shape { border-radius: 7px; }
+    .node[data-type=Event] .shape { border-radius: 22px; }
+    .node[data-type=Elite] .shape { clip-path: polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+    .node[data-type=Boss] { width: 98px; height: 98px; }
+    .node[data-type=Boss] .shape { width: 78px; height: 78px; transform: rotate(45deg) scale(.8); }
+    .node[data-type=Boss] .glyph { transform: rotate(-45deg); }
+    .node.open { cursor: pointer; }
+    .node.open::before { content: ''; position: absolute; inset: -8px; border: 2px solid #f8deaa; border-radius: 50%; box-shadow: 0 0 18px 7px #f5d59175; animation: breathe 2.3s ease-in-out infinite; }
+    .node.open .shape { border-color: #ffe1a8; }
+    .node.open:hover .shape,.node.open:focus-visible .shape { transform: scale(1.16); box-shadow: 0 0 23px 7px #f4d59b9c,inset 0 2px 7px #fff3; }
+    .node.current .shape { border-color: #fff5d2; box-shadow: 0 0 0 5px #eacb8c77,0 0 26px 10px #d9ba8277; }
+    .node.closed { opacity: .28; filter: grayscale(1); }
+    .node.ahead { opacity: .65; }
+    .node:focus-visible { outline: 3px solid white; outline-offset: 7px; }
+    @keyframes breathe { 50% { opacity: .5; transform: scale(1.12); } }
+    .tag { position: absolute; color: #fff7de; background: #181724d9; border: 1px solid #d1ba8a; border-radius: 3px; font: 700 12px system-ui,sans-serif; letter-spacing: .1em; padding: 6px 9px; white-space: nowrap; transform: translate(-50%,-50%); z-index: 3; pointer-events: none; }
+    .tag.you { top: 76%; left: 14%; }
+    .tag.heart { top: 75%; left: 89%; }
+    .preview { position: absolute; right: 3%; top: 4%; width: 260px; min-height: 108px; background: #191823eb; border: 1px solid #b4a6ae; padding: 15px 18px; z-index: 5; box-shadow: 0 9px 25px #0009; font: 14px/1.5 system-ui,sans-serif; }
+    .preview strong { display: block; font: 26px Georgia,serif; margin-bottom: 5px; }
+    .preview small { color: #e7cfa1; font-size: 13px; }
+    .bottom { height: 20%; padding: 2% 4%; display: flex; align-items: center; justify-content: space-between; gap: 25px; background: linear-gradient(#242232,#171620); border-top: 1px solid #94838c88; }
+    .prompt { font-size: clamp(17px,2vw,27px); line-height: 1.2; }
+    .hint { font: 13px/1.4 system-ui,sans-serif; color: #c1b8c3; margin-top: 8px; }
+    button.reset { border: 1px solid #b5a38d; background: transparent; color: #eee4d5; padding: 10px 15px; font: 700 12px system-ui,sans-serif; text-transform: uppercase; letter-spacing: .1em; cursor: pointer; white-space: nowrap; }
+    button.reset:hover { background: #77685855; }
+    @media(max-width:800px) { .screen { min-height: 540px; aspect-ratio: auto; height: 90vh; } .top { height: 16%; } .map { height: 64%; } .bottom { height: 20%; } .node { scale: .8; } .preview { width: 190px; font-size: 12px; } .party { display:none; } }
+  </style>
+</head>
+<body>
+  <main class="screen" aria-label="Interactive first-time player run map mockup">
+    <header class="top"><div><div class="eyebrow">Realm I · The Hush</div><h1>The still wood</h1></div><div class="party">THE PARTY<br><span class="hearts">♥ ♥ ♥</span></div></header>
+    <section class="map" aria-label="Room map">
+      <div class="art"></div><div class="mist"></div>
+      <svg id="trails" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div id="nodes"></div><div id="you" class="tag you">YOU ARE HERE</div><div class="tag heart">THE HEART</div>
+      <div id="preview" class="preview" aria-live="polite"><strong>Choose a room</strong>Only the glowing rooms are connected to you.<br><small>Hover or focus one to see what awaits.</small></div>
+    </section>
+    <footer class="bottom"><div><div id="prompt" class="prompt" aria-live="polite">Choose your next room.</div><div class="hint">Move over a glowing room, then click it. You can also use Tab and Enter.</div></div><button class="reset" id="reset">Start again</button></footer>
+  </main>
+  <script>
+    const rooms = {
+      start:{x:14,y:52,type:'Fight',glyph:'⚔',name:'Fight',detail:'The fight you just won.',reward:'Current room',next:['rest','fight']},
+      rest:{x:37,y:30,type:'Rest',glyph:'♨',name:'Rest',detail:'Recover health before going on.',reward:'No combat',next:['shop','elite']},
+      fight:{x:37,y:69,type:'Fight',glyph:'⚔',name:'Fight',detail:'A familiar battle.',reward:'1 strength · Gold',next:['event','elite']},
+      shop:{x:62,y:25,type:'Shop',glyph:'✦',name:'Shop',detail:'Trade gold for supplies.',reward:'Spend gold',next:['boss']},
+      event:{x:62,y:45,type:'Event',glyph:'✧',name:'Event',detail:'A story encounter.',reward:'Unknown outcome',next:['boss']},
+      elite:{x:62,y:72,type:'Elite',glyph:'♜',name:'Elite',detail:'A dangerous battle.',reward:'3 strength · Rare reward',next:['boss']},
+      boss:{x:88,y:53,type:'Boss',glyph:'◈',name:'The Heart',detail:'The stillness is strongest here.',reward:'Realm boss',next:[]}
+    };
+    let current='start', visited=['start'], closed=new Set();
+    const nodes=document.querySelector('#nodes'), trails=document.querySelector('#trails'), preview=document.querySelector('#preview'), prompt=document.querySelector('#prompt'), you=document.querySelector('#you');
+    function reachable(){ const seen=new Set(), queue=[current]; while(queue.length){const id=queue.shift(); if(seen.has(id)) continue; seen.add(id); queue.push(...rooms[id].next.filter(next=>!closed.has(next)));} return seen; }
+    function status(id) { if(id===current) return 'current'; if(closed.has(id)) return 'closed'; if(rooms[current].next.includes(id)) return 'open'; if(visited.includes(id)) return 'walked'; return reachable().has(id) ? 'ahead' : 'closed'; }
+    function show(id) { const r=rooms[id]; preview.innerHTML=`<strong>${r.name}</strong>${r.detail}<br><small>${r.reward}</small>`; }
+    function render(){
+      const open=rooms[current].next;
+      nodes.innerHTML=''; trails.innerHTML='';
+      for(const [a,from] of Object.entries(rooms)) for(const b of from.next){
+        const to=rooms[b], line=document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1',from.x*10);line.setAttribute('y1',from.y*5);line.setAttribute('x2',to.x*10);line.setAttribute('y2',to.y*5);
+        line.setAttribute('class','trail '+(visited.includes(a)&&visited.includes(b)?'walked':status(a)==='closed'||status(b)==='closed'?'closed':a===current?'open':'ahead'));
+        trails.append(line);
+      }
+      for(const [id,r] of Object.entries(rooms)){
+        const btn=document.createElement('button');btn.className='node '+status(id);btn.dataset.type=r.type;btn.style.left=r.x+'%';btn.style.top=r.y+'%';
+        btn.setAttribute('aria-label',`${r.name}. ${r.detail} ${r.reward}. ${open.includes(id)?'Choose this room.':id===current?'You are here.':'Unavailable.'}`);
+        btn.innerHTML=`<span class="shape"><span class="glyph">${r.glyph}</span></span>`;
+        if(!open.includes(id)){btn.tabIndex=-1;btn.disabled=true;} else {btn.addEventListener('click',()=>choose(id));btn.addEventListener('mouseenter',()=>show(id));btn.addEventListener('focus',()=>show(id));}
+        nodes.append(btn);
+      }
+      you.style.left=rooms[current].x+'%';you.style.top=Math.min(rooms[current].y+22,88)+'%';
+    }
+    function choose(id){
+      for(const option of rooms[current].next) if(option!==id) closed.add(option);
+      current=id;visited.push(id);show(id);render();
+      prompt.textContent=id==='boss'?'You reached the Heart. Face the boss.':`You chose ${rooms[id].name}. The other trail has closed. Choose your next room.`;
+    }
+    document.querySelector('#reset').addEventListener('click',()=>{current='start';visited=['start'];closed=new Set();preview.innerHTML='<strong>Choose a room</strong>Only the glowing rooms are connected to you.<br><small>Hover or focus one to see what awaits.</small>';prompt.textContent='Choose your next room.';render();});
+    render();
+  </script>
+</body>
+</html>
