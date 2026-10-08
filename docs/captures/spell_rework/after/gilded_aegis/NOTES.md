@@ -1,82 +1,72 @@
-# Gilded Aegis, "after" (plan S3, spell 3.8)
+# Gilded Aegis: state record
 
-Captured 2026-10-04 with `tools/gif.ps1 spell gilded_aegis -Party shawn,odette,bjorn -Target <ally>`
-(1x; Bjorn with `-Aspect 4:3`) and one three-cast series at 1.5x (the five-cast series
-fails in the squad's pacing, see below). The lock is the painted `gilded_aegis_lock.png`; the shards
-(f0-f4 of the old sheet), the leaf/glint particles and the procedural mote
-(`tools/make_spell_fx.py aegis_mote`) are unchanged. GIFs are untracked next to this file. Owner gates
-skipped; the calls below are mine.
+Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Plan S3, spell 3.8. Pre-workflow pass; owner gates were skipped, the calls below are the worker's.
 
-## What the runtime and the tools had wrong, fixed here
+## Status
 
-- **The ward was never a real cast in a capture** (commit e4adbb39): the preview stage refuses
-  Ward, so every earlier GIF drew the vfx with no ward bar, badge or log line. A Ward on a chosen
-  ally (or on Shawn) is now a real cast. The ward bar and the ward icon on the ally's plate are
-  on the cue frame in every GIF below.
-- **A series with a squad stalled**: a squadmate's turn between two casts waited for a hand, and
-  the forced press was refused on a kit without the spell. The series now has the squadmate cast
-  their own first enemy-aimed spell, so five casts record in a real fight.
+Dim shards and mote, gold bloom ring on the cue (`11cefd82`), so the lock is the cast's peak and `spell_feel` is clean at 1x and 1.5x; capture runner fixed for the five-cast series (`0de173ac`); hand-off fix `d3c2c3b8`. Captured 2026-10-04 with `tools/gif.ps1 spell gilded_aegis -Party shawn,odette,bjorn -Target <ally>` (1x; Bjorn at `-Aspect 4:3`) and a series at 1.5x. GIFs untracked beside this file. Not yet through the workflow's steps 3-7.
 
-## Beats, authored seconds
+## Identity
 
-| t | Beat |
-|---|---|
-| 0.00-0.20 | **Delivery.** A white-gold mote (procedural, soft comet tail) flies from Shawn's middle to the ally's middle, shedding gilt leaves and glints. |
-| 0.10-0.30 | **Encasing.** The four shards (f0-f4) close around the ally at 25 fps, dim (opacity 0.5, glow 0; the mote's glow is 0.8); the last drawing ends on the cue, no fade. |
-| 0.30 | **Payoff.** The painted lock (a closed ring of gold plates with a crown and a halo, centre open) on the cue with the sound (`gilded_aegis_impact`), the ward bar and the ward icon on the ally's plate, and the log line "Shawn wraps <ally> in the fleece." 440 box, punch 0.3, glow 1.7, with `flash`: a soft gold ring (`aegis_bloom`, `tools/make_spell_fx.py`, clear centre) around the lock, 560 box, glow 3.0, 0.08 s then a 0.12 s fade. The leaf burst opens. |
-| 0.30-0.70 | **Settle.** The lock is held 0.22 s and fades over 0.18 s; the last leaf clears at 0.4 s. |
+- **Verb:** ward.
+- **Signature beat:** a finished gold shield with a crown locks around the ally while their face stays visible; the plate gains the ward.
+- **Must read as:** "a golden shield on my ally"; a closed ward.
+- **Must NOT read as:** a mirror, portal, or plate hiding the body.
 
-## Measured (spell_feel vs rat, presentation-only; 60 fps)
+## Beat table
 
-| | 1x | 1.5x |
-|---|---|---|
-| cast start to payoff | 0.30 s (f18) | 0.20 s (f12) |
-| payoff to clean | 0.38 s | 0.25 s |
+Release clock; cue 0.30 s = f18 at 1x, f12 at 1.5x. Both layers are sized by the struck body (`fit: target`) and centred on the ally on Odette, Bjorn and Shawn.
 
-`spell_feel` at 1x and 1.5x: no warnings, contact f18 / f12 and the visual contact on the same
-frame. The lock frame is the cast's peak (3.07 over a typical 2.02 at 1x; 4.45 over 3.40 at
-1.5x). Before 2026-10-04 the mote arriving as the shards closed (f13, peak 3.0) outshone the
-lock (f18), which is an outline with an open centre. The shards and mote are now dim, so the
-close is a build, and the bloom ring is the one big rise on the cue. The face stays visible
-(the ring is narrow inside). The hold was cut from 0.32 s (the old sheet) to 0.22 s so payoff
-to clean is 0.4 s as before.
+| t | Beat | Layer | Art piece | Box / feel |
+|---|---|---|---|---|
+| 0.00-0.20 | white-gold mote flies from Shawn's middle to the ally's middle, shedding gilt leaves and glints | mote | procedural (`tools/make_spell_fx.py aegis_mote`, soft comet tail); leaf/glint particles unchanged | glow 0.8 |
+| 0.10-0.30 | four shards close around the ally, last drawing ends on the cue, no fade | shards | old sheet f0-f4 | 25 fps, opacity 0.5, glow 0 |
+| 0.30 | **Payoff.** Lock on the cue with sound (`gilded_aegis_impact`), ward bar, ward icon on the ally's plate, log line "Shawn wraps <ally> in the fleece."; leaf burst opens | lock | `gilded_aegis_lock.png` (closed ring of gold plates, crown, halo, centre open) | 440; punch 0.3, glow 1.7 |
+| 0.30 | soft gold ring round the lock, clear centre | `flash` | `aegis_bloom` (`tools/make_spell_fx.py`) | 560; glow 3.0, 0.08 s then fade 0.12 |
+| 0.30-0.70 | lock held 0.22 s, fades 0.18 s; last leaf clears at 0.4 s | lock | | |
 
-## Frame notes
+## Open items
 
-- **Ally anchoring: confirmed.** The shards, the lock and the leaves are centred on the ally on
-  Odette, on Bjorn and on Shawn himself; the mote crosses to them. Both are sized by the struck
-  body (`fit: target`).
-- **The open centre works.** The owl's and the bear's faces are visible through the lock on every
-  held frame (checked on Odette 16:9 and Bjorn 4:3). The shield is a ring sized to the body, so on
-  the owl it sits over the head and chest and the wings stay outside it.
-- **Halo colour.** The painted halo glow came back lime-yellow where it was painted over the green
-  screen. `cap_green` on the recipe (ART_PIPELINE 5b) pulls those pixels to gold.
-- **Hand-off.** The lock opens on the frame after the last shard drawing (the one empty frame
-  between them was a cursor-compare bug, fixed 2026-10-04; see `../../README.md`).
-- **Five-cast series.** Recorded (`gilded_aegis_on_odette_vs_forest_warden_full_x5_1.5x.gif`, 1099
-  frames, `-Party shawn,odette,bjorn -Target odette -Vs forest_warden -Formation full -Repeat 5
-  -Speed 1.5`). It used to die at cast 4: the capture pacing treated Odette as already armed from
-  her previous turn (a stunned teammate's skipped turn sat between) and waited out the stall assert.
-  A press is now per turn (`TurnPress` in `CaptureScenarioRunner`).
-- **Flash guard.** Five casts at 1.5x (1099 frames, 18 s), steps where more than 10% of the frame
-  brightens by 10% luminance (480x270 grey): the lock frame is 1.2% of the frame (the bloom ring is
-  small); the largest steps anywhere are 9.3%, 8.8%, 7.3% (frames 62, 487, 809), all the warden's and
-  the squad's own attacks across the whole stage, never the cast. Steps over 2% of the frame:
-  at most 20 in any one second, mostly sprites moving; none comes from the lock, which adds one
-  1.2% step per cast, five in 18 s. Counted as one small flash per cast, well inside 3 per second.
-- **Readability.** The ward icon and bar are on the cue frame, on the ally's plate. The lock frame
-  covers the ally's upper body for about 0.1 s; no number is under it (a ward has no damage
-  number). Bjorn was recorded at 4:3 only (the 16:9 crop cuts him at the left edge, per the S0 notes); there he is whole.
-- **Self cast.** On Shawn the mote has nowhere to go and shows as a static bright point at his
-  staff side for 0.2 s, then the shards. It reads as a gather, not as a delivery.
-- **Not looked at:** `-Darkness` (the plan asks it only of Shackles and Viper).
+1. The painted lock is a different drawing from the shards that close into it, so the hand-off is a swap, not a close.
+2. The mote is still a glow and a tail. On a self cast (Shawn) it has nowhere to go and shows as a static bright point at his staff side for 0.2 s, reading as a gather.
+3. Lock frame covers the ally's upper body for about 0.1 s; the shield is a ring sized to the body, on the owl over head and chest with the wings outside. Faces visible through the lock on Odette 16:9 and Bjorn 4:3.
+4. Bjorn recorded at 4:3 only (the 16:9 crop cuts him at the left edge, per the S0 notes).
+5. `-Darkness` not looked at (the plan asks it only of Shackles and Viper).
+6. Halo glow came back lime-yellow where painted over the green screen; `cap_green` on the recipe (`docs/ART_PIPELINE.md` 5b) pulls those pixels to gold.
 
-## Identity test: "a golden shield on my ally"
+## Decisions
 
-Verdict: **passes.** A gold mote goes from Shawn to the ally, four shards close, and a finished
-gold shield with a crown locks around the ally while their face stays visible; the plate gains
-the ward. It reads as "closed ward", not as a mirror, portal or plate hiding the body.
+- 2026-10-04 (worker): shards and mote dim (opacity 0.5, glow 0; mote glow 0.8) so the close is a build and the bloom ring is the one big rise on the cue (before: the mote arriving at f13, peak 3.0, outshone the lock at f18). Hold cut from 0.32 s to 0.22 s so payoff to clean stays 0.4 s.
 
-What is weak: the painted shield is a different drawing from the shards that close into it (the
-shards are the old sheet's, the lock is the new art), so the hand-off is a swap, not a close.
-The lock is quieter than the shards at 1x (the WARN above). The mote is still a glow and a tail.
+## Art
+
+| Piece | File | Recipe | Status |
+|---|---|---|---|
+| Lock | `gilded_aegis_lock.png` | `cap_green` on the recipe | accepted (painted) |
+| Shards f0-f4 | old sheet | n/a | stand-in |
+| Mote, bloom ring | procedural, `tools/make_spell_fx.py` | n/a | stand-in |
+| Leaf/glint particles | old sheet | n/a | stand-in |
+
+No step-4 prompts: this pass predates the art workflow.
+
+## Round log
+
+| Date | Round | What changed | Caught by | Commit |
+|---|---|---|---|---|
+| 2026-10-04 | runtime/tools | the ward was never a real cast in a capture (preview stage refused Ward): a Ward on a chosen ally or Shawn is now real, with ward bar, icon and log line on the cue frame | worker | `e4adbb39` |
+| 2026-10-04 | runtime/tools | series with a squad stalled (a squadmate's turn waited for a hand; forced press refused on a kit without the spell): the squadmate casts their own first enemy-aimed spell | worker | n/a |
+| 2026-10-04 | handoff | lock opens on the frame after the last shard drawing (cursor-compare bug left one empty frame; `../../README.md`) | worker | `d3c2c3b8` |
+| 2026-10-04 | tuning | dim shards and mote, bloom ring | worker (`spell_feel`) | `11cefd82` |
+| 2026-10-04 | capture runner | five-cast series died at cast 4: capture pacing treated Odette as armed from her previous turn (a stunned teammate's skipped turn sat between); a press is now per turn (`TurnPress` in `CaptureScenarioRunner`); recorded `gilded_aegis_on_odette_vs_forest_warden_full_x5_1.5x.gif` (1099 frames, `-Party shawn,odette,bjorn -Target odette -Vs forest_warden -Formation full -Repeat 5 -Speed 1.5`) | worker | `0de173ac` |
+
+## Measures
+
+Not recorded (pre-workflow). Timing: cast start to payoff 0.30 s (f18) at 1x, 0.20 s (f12) at 1.5x; payoff to clean 0.38 s at 1x, 0.25 s at 1.5x.
+
+## Snapshot
+
+- **Commit:** `11cefd82`.
+- **Capture run id:** not recorded.
+- **Binding checks:** `spell_feel` at 1x and 1.5x: no warnings, contact f18 / f12 and visual contact on the same frame; the lock frame is the cast's peak (3.07 over typical 2.02 at 1x; 4.45 over 3.40 at 1.5x). Flash guard, five casts at 1.5x (1099 frames, 18 s): the lock frame is a 1.2% step, five in 18 s (well inside 3 per second); largest steps anywhere 9.3%, 8.8%, 7.3% (frames 62, 487, 809) are the warden's and the squad's attacks.
+- **Rubric:** not scored; identity test passes.
+- **Still weak:** Open items 1-2.

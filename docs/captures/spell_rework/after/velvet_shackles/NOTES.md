@@ -1,157 +1,75 @@
 # Velvet Shackles: state record
 
-Trial 5, spell 5 of the spell workflow (`docs/PROPOSAL_SPELL_WORKFLOW.md`), steps 1 and 2 "identity sheet, block with existing assets", round 1.
-Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Target design: `docs/PLAN_SPELL_ANIMATION.md` section 3 "Velvet Shackles".
-**Status: step 2 round 1 done by the worker (2026-10-07); step 3 (orchestrator's watch and rubric) is next. Nothing here is owner-reviewed.**
-The 2026-10-04 passes (painted nine-frame stand-in, then the painted four-frame cinch sheet) are superseded; their GIFs
-(`velvet_shackles_rat_1x.gif` etc.) and `spell_feel_1x/`, `spell_feel_1.5x/` stay untracked beside this file. The old defect (plan section 0): a red
-velvet blob covered the whole rat and read as a flower or a sash, not as shackles.
+Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Workflow: `docs/PROPOSAL_SPELL_WORKFLOW.md`. Target design: `docs/PLAN_SPELL_ANIMATION.md` section 3 "Velvet Shackles".
 
-Captures 2026-10-07 with `tools/gif.ps1 spell velvet_shackles` (`-Vs rat`, `-Vs treant`, `-Vs treant -Speed 1.5`). Phone previews are committed
-(`velvet_shackles_r1_*_preview.gif`); the full GIFs (`velvet_shackles_r1_*.gif`, 5-7 MB) are untracked; `r1_*_timing.json` is each capture's
-`timing.json`. `tools/spell_feel.ps1` was run once, 1x, treant and rat (`spell_feel_r1_1x/`, untracked).
+## Status
 
-## Identity sheet
+Step 3 done by the orchestrator (`9a67d602`, 2026-10-07); step 2 round 1 in `83882f88`. Waits on the owner (Q1 wrap shape, Q2 lash) before the step 4 art goes out. Nothing here is owner-reviewed.
 
-Locked by the orchestrator's plan; the owner confirms or edits it with the first GIF.
+Captures: `tools/gif.ps1 spell velvet_shackles` (`-Vs rat`, `-Vs treant`, `-Vs treant -Speed 1.5`); previews `velvet_shackles_r1_*_preview.gif` committed, full GIFs untracked, `r1_*_timing.json`. The 2026-10-04 passes (painted nine-frame stand-in, painted four-frame cinch) are superseded; their GIFs and `spell_feel_1x/`, `spell_feel_1.5x/` stay untracked. Old defect: a red velvet blob covered the whole rat and read as a flower or sash.
 
-- **Verb:** bind (a ribbon is lashed from Shawn's hand, wraps the legs and a cuff cinches shut).
+## Identity
+
+- **Verb:** bind (a ribbon is lashed from Shawn's hand, wraps the legs, and a cuff cinches shut).
 - **Signature beat:** the small cuff snaps tight at the feet on the cue, gold clasp showing, with the Rooted badge.
 - **Must read as:** "a velvet ribbon whipped out of Shawn's hand and shackled its legs", then went slack and let go.
-- **Must NOT read as:** a velvet blob or sash over the body (the old pass); a flower; a cuff sized to the body that hides it; a glowing ring.
-- **Motion reference per moving element** (a real thing, not invented parameters):
+- **Must NOT read as:** a velvet blob or sash over the body; a flower; a cuff sized to the body that hides it; a glowing ring.
+- **Motion references:**
   - `lash`: a ribbon cracked from the hand like a whip, flying along its own length;
-  - `back`, `front`: ribbon bands pulled tight round the ankles, so the loop shrinks and stops; after the cinch they go slack, loosen and drop;
-  - `cuff`: a padded cuff snapped shut: it arrives oversized and settles onto the legs;
+  - `back`, `front`: ribbon bands pulled tight round the ankles, the loop shrinks and stops; after the cinch they go slack, loosen and drop;
+  - `cuff`: a padded cuff snapped shut, arriving oversized and settling onto the legs;
   - `thread`, `glint`, `settle`: gold thread and velvet scraps, falling.
-- **Intentional exceptions** (so the binding checks do not flag them):
-  - the cuff arrives on the cue frame (pop-in by design; `punch` 0.3 settles it);
-  - the lash hands over to the two wrap layers on a cross-fade at 0.22 s, and lands at the body's middle while the wrap sits at the feet;
-  - the wrap is a straight band, not a coil (the strip does not bend; see art step 4).
-- **Mechanics, unchanged:** Rooted for 2 turns, no damage, cannot be dodged.
+- **Exceptions:** the cuff arrives on the cue frame (pop-in; `punch` 0.3 settles it); the lash hands over to the wrap layers on a cross-fade at 0.22 s and lands at the body's middle while the wrap sits at the feet; the wrap is a straight band, not a coil (see Q1).
+- **Mechanics, unchanged:** Rooted for 2 turns, no damage, cannot be dodged. No stage kick (a root is not a blow).
 
 ## Beat table
 
-Authored seconds on the release clock; hit cue **0.40 s** (was 0.30; the cast sound is re-cut to 0.40 s with `make_spell_cast_cues.py`, pinned by
-`MeleeSoundOverrideTests.TheSpellCastCuesFitTheirBlows`). Cue = f24 at 1x, f16 at 1.5x (`timing.json`). Single target (`SingleEnemy`), so `back` takes
-the one ground renderer (the ground band holds 2); no E5 question. E6 (orbit) is not built: the wrap is two layers, tilted +10 and -10 degrees,
-with baked scale. Sizes: wraps `size 240 x fit`, cuff `size 130 x fit`, both on the target's ground line.
+Release clock; cue **0.40 s** = f24 at 1x, f16 at 1.5x (`timing.json`; cast sound re-cut, `MeleeSoundOverrideTests.TheSpellCastCuesFitTheirBlows`); clear at f54 at 1x, f36 at 1.5x. Single target, so `back` takes the one ground renderer (band holds 2); no E5 question. E6 (orbit) is not built: the wrap is two layers tilted +10 and -10 degrees with baked scale. Wraps `size 240 x fit`, cuff `size 130 x fit`, both on the target's ground line. E9 (a cuff that stays while the status lasts) is future work, not built; the cuff fades.
 
-| t | Beat | Layer | Must be visible in the stage crop | Easing / feel |
+| t | Beat | Layer | Art piece | Box / feel |
 |---|---|---|---|---|
-| 0.00-0.15 | Gloom 0.20 rises; gold thread tufts at Shawn's hand | `thread`, gloom | emitter at the hand | 5 tufts, 0.15-0.25 s |
-| 0.02-0.22 | Ribbon lashed from Shawn's hand to the target | `lash` (travel, `orient: path`) | yes, 170 box, crosses the stage | 0.20 s flight; fades 0.10 s on arrival |
-| 0.20-0.40 | Two bands pull tight round the legs: back band behind (ground band), front band over | `back`, `front` | yes, 240 box at the feet, tilted +10 and -10 | ribbon f0-f4 baked scale 1.30 to 1.0, 20 fps; fade-in 0.12 s |
-| 0.40 | **Cue.** The cuff snaps shut at the feet, gold clasp. Sound, Rooted badge on this frame | `cuff` (f2) | yes, at the feet | opens 30% oversized (`punch` 0.3) and settles; biggest energy rise |
-| 0.40 | Gold glint off the clasp | `glint` | emitter at the feet | 6 specks, glow 0.6, 0.15-0.30 s |
-| 0.40-0.45 | Bands hold tight | `back`, `front` f5 | yes | 1 frame |
-| 0.45-0.65 | Bands go slack (scale 1.12, 1.28) and fade | `back`, `front` f6-f7 | yes | fade 0.12 s |
-| 0.45-0.90 | Velvet scraps and thread settle | `settle` | emitter | 8 pieces, 0.3-0.45 s |
-| 0.40-0.82 | Cuff held, then fades | `cuff` | yes | held to 0.62 s, fade 0.20 s |
+| 0.00-0.15 | gloom 0.20; gold thread tufts at Shawn's hand | `thread`, gloom | particles | emitter at the hand, 5 tufts, 0.15-0.25 s |
+| 0.02-0.22 | ribbon lashed from the hand to the target | `lash` (travel, `orient: path`, `artDegrees` 0, strip points +x, `place: caster-centre`; the Dark Chains pattern) | lash strip | 170; 0.20 s flight, fades 0.10 s on arrival, no `fadeIn` |
+| 0.20-0.40 | two bands pull tight round the legs: back band behind (ground band), front over | `back`, `front` | ribbon f0-f4 | 240 at the feet, tilted +10 and -10; baked scale 1.30 to 1.0, 20 fps, fade-in 0.12 |
+| 0.40 | **Cue.** Cuff snaps shut at the feet, gold clasp. Sound, Rooted badge | `cuff` (f2) | cuff | 130; opens 30% oversized (`punch` 0.3), glow 0.2; biggest energy rise |
+| 0.40 | gold glint off the clasp | `glint` | particles | emitter, 6 specks, glow 0.6, 0.15-0.30 s |
+| 0.40-0.45 | bands hold tight | `back`, `front` f5 | ribbon | 1 frame |
+| 0.45-0.65 | bands go slack (scale 1.12, 1.28) and fade | `back`, `front` f6-f7 | ribbon | fade 0.12 |
+| 0.45-0.90 | velvet scraps and thread settle | `settle` | particles | emitter, 8 pieces, 0.3-0.45 s |
+| 0.40-0.82 | cuff held to 0.62 s, then fades | `cuff` | cuff | fade 0.20; gone 0.42 s after the cue (limit 0.5) |
 
-Everything is gone at 0.82 s authored: 0.42 s after the cue (the residue limit is 0.5). The plan keeps the cuff as the Root status visual (E9); E9 is not
-built, so the cuff fades in the resolution. **E9 (a cuff that stays while the status lasts) is future work and is not built here.**
+## Open items
 
-Travel: reused the Dark Chains pattern (`travelSeconds` 0.20, `orient: path`, `artDegrees` 0, strip painted pointing +x, `place: caster-centre`), no new
-mechanism. The ribbon crosses the whole stage and reads as a thrown ribbon on both bodies; it lands at the body's middle, not at the feet.
+1. Lash f4-f16: a flat straight red bar crossing the stage; reads as a stripe or beam, no flutter or curl. Lands across the rat's snout at f12. Art fixes it (a rippling ribbon, prompt 3).
+2. No wrap: the bands lie flat at the feet f16-f20 and never go round the body. A coiling ribbon needs E6 orbit or drawn wrap frames. **Owner call** Q1.
+3. Cuff f24-f40 is a red ring lying on the ground; on the treant a cushion or bowl at the roots, on the rat about half its width. Art fixes it (a cuff drawn round a leg).
+4. Lash lands on the chest/snout while the wrap sits at the feet, breaking the delivery line. **Owner call** Q2.
+5. `spell_feel` 1x: treant WARN no accent (peak 5.8 vs typical 4.3); rat WARN no accent (5.2 vs 3.8) and **WARN contact desync** (biggest rise f8, the lash's first frames in view; cue f24). Probable fix: a short `fadeIn` on `lash`; not made (needs a re-capture). Travel 0.30-0.38 s measured vs 0.20 s authored; gather 0.10 s vs 0.02 s.
+6. Pop-in: the lash's first frame has no fade-in; the cuff on f24 is by design. Cuff holds 0.22 s with glint and scraps moving.
+7. Glint specks are tiny. Flash guard: cuff glow 0.2, glint 0.6 on 6 small specks; no large area brightens.
+8. Treant cuff is as wide as the trunk base (`fit: target`). **Owner call** Q4.
+9. Treant 1.5x frames not stepped through (same layers on a faster clock).
+10. Cleanup once the owner accepts the motion: delete superseded `velvet_shackles_cinch` and `velvet_shackles` (nine-frame) recipes and folders.
 
-Stage kick: none. A root is not a blow; the cue rests on the cuff's punch, the glint and the sound.
+## Decisions
 
-## Playback, as seen (my own frame contact sheets, 60 fps; the orchestrator has not yet watched)
+- Asked once, unanswered: Q1 the wrap is a straight band, two crossing at the feet, not a coil: accept for blocking, or draw a ribbon that bends into a loop (prompt 1)? Q2 the lash lands on the chest, the wrap starts at the feet: keep, or drop the lash and start the wrap at the target? Q3 cue moved 0.30 to 0.40 s so the wrap can pull tight (cast sound re-cut): keep? Q4 the cuff is `fit: target`, as wide as the trunk base on the treant: fine, or smaller on large bodies?
+- 2026-10-07 (orchestrator): cue 0.40 s, no kick, travel pattern from Dark Chains.
 
-Rat 1x (cue f24):
-- **f0-f7.** The rat idles. Gold tufts at Shawn's hand, then a red ribbon appears at his hand and flies right, level and wavy (f2 at his head, f8-12
-  mid-stage).
-- **f13-f18.** The ribbon reaches the rat's snout and chest and thins out (translucent, fading). From about f15 two thin red bands fade in at the rat's feet,
-  crossing in a shallow X over the front paws and tail base.
-- **f21-23.** Bands full opacity, crossing the legs; the rat is fully readable above them.
-- **f24 cue.** A small red cuff with a gold clasp appears at the feet, about 40% of the rat's width, 30% oversized on its first frame; the two bands cross
-  over it. The Rooted badge `2` is under the body on f24. The gold specks (glint) are tiny.
-- **f25-27.** The cuff settles tight. **f32-f40.** The bands widen and slacken across the cuff; **f37-f45** the cuff turns translucent; **f54** clear.
-- Body: the cuff and bands cover the feet and a strip of the belly line; head, chest and arms are never covered. On the dark rat the saturated red with
-  gold stitching reads clearly against the grey fur and the dark floor; no violet-on-dark loss like Court's.
+## Art
 
-Treant 1x (cue f24; frames viewed at f12-f54): the same beats. The ribbon crosses the face and trunk in flight (translucent, f12-f16), then the bands and cuff
-sit at the root base; the cuff is about the width of the trunk's base (`fit: target` scales it with the body, so it is bigger than a legs-only cuff).
-Red on brown bark and the green canopy is the most saturated thing on stage and reads at once. The face is never covered once the wrap starts. Clear by f54.
+All three strips are `#00FF00`, keyed `green-soft` (the gold must keep its hue). Subjects are red and gold, so the step 4 backdrop is solid `#00FF00` (no green in the subject). Frame registration (E7): the ribbon set shares one 2500x440 canvas, ribbon centred, scaled about the centre; the cuff set shares one 440x300 canvas, explicit rects centred on each drawing's content box and bottomed 10 px under it.
 
-Treant 1.5x: cue f16, clear f36, from `timing.json`; I did not step through its frames (the same layers on a faster clock).
+| Piece | File | Recipe | Status |
+|---|---|---|---|
+| Ribbon wrap | `Art/Sheets/Spells/Velvet Shackles/shackle_ribbon.png` 1983x793, one wavy ribbon | `recipes/velvet_shackles_ribbon.json`; output f0-f4 tighten 1.30 to 1.0, f5 hold, f6-f7 slack | stand-in, flat cel (owner's 2026-10-04 delivery) |
+| Ribbon lash | same strip, tight crop | `recipes/velvet_shackles_lash.json`; f0 | stand-in |
+| Cuff | `shackle_cuff.png` 2172x724, three drawings (open, nearly closed, closed with clasp) | `recipes/velvet_shackles_cuff.json`; f0 and f1 cut not played, f2 played | stand-in |
+| Thread, thorn, scrap, curl | `velvet_shackles_atlas_v1.png` cells 13-16 | `recipes/velvet_shackles_particles.json` | stand-in, painted |
+| Painted cinch | `velvet_shackles_cinch.png` | `recipes/velvet_shackles_cinch.json` | superseded, unreferenced |
+| Painted nine-frame atlas | `velvet_shackles_atlas_v1.png` cells 1-12 | `recipes/velvet_shackles.json` | superseded, unreferenced |
 
-## Orchestrator's step 3 check (2026-10-07, r1 full GIFs, rat and treant 1x; frames at 60 fps)
-
-For the owner's review after the restart. The beats read in order: lash, bands at the feet, cuff on the cue, slack,
-clear. The red and gold read on both bodies, and the face is never covered after the lash. Defects:
-1. The lash (f4-f16) is a flat, straight red bar that crosses the stage. It reads as a stripe or a beam more than a
-   ribbon: no flutter, no curl. On the rat it lands across the snout (f12).
-2. No wrap. The two bands lie flat at the feet (f16-f20) and never go round the body. The plan's "wrap around the
-   target" is not there yet (owner Q1).
-3. The cuff (f24-f40) is a red ring lying on the ground. On the treant it reads as a cushion or a bowl at the roots,
-   not a shackle round the ankles. On the rat it is about half the rat's width.
-Art can fix 1 (a ribbon that ripples) and 3 (a cuff drawn round a leg). 2 needs an owner call: a ribbon that coils
-needs E6 orbit or drawn wrap frames.
-
-## Checks
-
-Binding (proposal contract 4):
-
-| Check | Result | Evidence |
-|---|---|---|
-| No transform jump in the spell's own layers | pass, with intentional exceptions | `back`/`front` only turn by a fixed `rotate` and scale by baked frames; the `cuff` punch is eased; the lash-to-wrap hand-off is a cross-fade over 0.1 s |
-| Cue on one frame | pass | `timing.json` hitFrame 24 at 1x, 16 at 1.5x; cuff, sound and badge on one frame; no layer is an `at: hit` sprite (no tail scale) |
-| Nothing marked visible leaves the stage | pass | the lash enters from the hand and ends on the target; wraps and cuff sit on the ground line |
-| Frame registration (E7) | pass | the ribbon set shares one 2500x440 canvas, ribbon centred, scaled about the centre; the cuff set shares one 440x300 canvas, cut with explicit rects centred on each drawing's own content box and bottomed 10 px under it |
-
-`spell_feel` (1x, runtime capture, `spell_feel_r1_1x/`, run once at the end):
-- Treant: contact f24 (visual f24); peak 5.8 at 0.40 s (the cue); residue 0.37 s after contact, clean at 0.78 s; WARN no accent (peak 5.8 against a typical
-  4.3, the rubric wants 1.5x); NOTE travel 0.38 s measured against 0.20 s authored.
-- Rat: contact f24 (visual f8); peak 5.2 at 0.40 s (the cue); residue 0.37 s, clean at 0.78 s; WARN no accent (5.2 against 3.8); **WARN contact desync**
-  (the biggest rise after release is f8, the lash's first frames in view; the visual contact reads f8 for that reason); NOTE gather 0.10 s measured against 0.02 s
-  authored, travel 0.30 s against 0.20 s.
-- Before the final run I checked the cue against my own GIF frames with a frame-difference script (treant, stage crop): lash peak 4.9 against cue 1.5 at the first
-  tune, then lash 2.6 against cue 4.3. `spell_feel` still reads the lash's entry on the rat as a rise. Probable fix: a short `fadeIn` on `lash` so it does not
-  appear at full alpha; not made, because it needs a re-capture and the one `spell_feel` run was spent.
-
-Advisory:
-
-- **Pop-in:** the cuff on f24 (by design) and the lash on its first frame (no fade-in on the lash).
-- **Frozen holds:** the cuff holds 0.22 s (to 0.62 s) while glint and scraps move; the bands hold one frame.
-- **Flash guard:** cuff glow 0.2, glint glow 0.6 on 6 small specks; no large area brightens.
-
-Gates: dotnet slice `VelvetShacklesPresentationTests` and `VelvetShacklesTests` green (16); the commit gate result is in the report.
-
-## Rubric (worker's score; the orchestrator's check is still due)
-
-Motion, 1x and 1.5x:
-
-1. Each beat reads, in order: ~. Lash, wrap, cinch, slack are in order; the lash lands on the chest while the wraps sit at the feet, which breaks the line of the delivery.
-2. Weight and easing feel physical: ~. The cuff's punch and the baked tightening give a snap; the wrap is a straight band that scales, not a loop that closes.
-3. One focal point at a time: yes at the cue (the cuff); the lash is alone before it.
-4. The body stays readable at the hit: yes. Legs and feet are covered; head and chest are clear.
-5. The ending decays, not cuts: yes. Bands loosen, then cuff and bands fade; clear 0.42 s after the cue.
-6. Distinct from and consistent with the approved spells: yes on identity (red velvet, gold); flat cel strips match the rat sheet's style; the particles (painted) do not.
-
-Art: the ribbon and cuff strips are flat cel with a dark outline, two or three flat tones and gold stitching, in the rat's style; the particles are the old painted
-atlas cells. Not scored.
-
-## Art record (one row per piece)
-
-| Piece | Accepted prompt (path or pasted) | Source file | Recipe | Output (folder) | Attempts |
-|---|---|---|---|---|---|
-| Ribbon wrap (stand-in, flat cel) | not recorded (owner's 2026-10-04 evening delivery) | `Art/Sheets/Spells/Velvet Shackles/shackle_ribbon.png` (1983x793, one wavy ribbon, #00FF00) | `recipes/velvet_shackles_ribbon.json` (new) | `Resources/Spells/velvet_shackles_ribbon` (f0-f4 tighten 1.30 to 1.0, f5 hold, f6-f7 slack) | 0 |
-| Ribbon lash (stand-in, flat cel) | not recorded | same strip, tight crop | `recipes/velvet_shackles_lash.json` (new) | `Resources/Spells/velvet_shackles_lash` (f0) | 0 |
-| Cuff (stand-in, flat cel) | not recorded | `shackle_cuff.png` (2172x724, three drawings: open, nearly closed, closed with clasp, #00FF00) | `recipes/velvet_shackles_cuff.json` (new) | `Resources/Spells/velvet_shackles_cuff` (f0 and f1 cut but not played; f2 played) | 0 |
-| Thread, thorn, scrap, curl (stand-in, painted) | n/a | `velvet_shackles_atlas_v1.png` cells 13-16 | `recipes/velvet_shackles_particles.json` (unchanged) | `Resources/Spells/velvet_shackles_particles` | 0 |
-| Painted cinch (superseded, not referenced) | n/a | `velvet_shackles_cinch.png` | `recipes/velvet_shackles_cinch.json` | `Resources/Spells/velvet_shackles_cinch` | pass 2 |
-| Painted atlas, nine frames (superseded, not referenced) | n/a | `velvet_shackles_atlas_v1.png` cells 1-12 | `recipes/velvet_shackles.json` | `Resources/Spells/velvet_shackles` | pass 1 |
-
-Keys: all three strips are #00FF00, keyed `green-soft` (the gold must keep its hue). The two superseded folders and recipes stay in the tree unreferenced;
-delete them when the owner accepts the new motion.
-
-### Art needed for step 4
-
-Prompt-ready per `docs/prompts/TEMPLATE_spell_art.md`; the style block and its attachments as in its section 1. The subjects are red and gold, so the backdrop is
-solid #00FF00 as the delivered strips (no green in the subject). At play size the pieces sit on a dark grey rat and a brown-and-green treant: saturated
-red with a dark outline and gold stitching reads on both.
+Step-4 prompts, verbatim; not yet commissioned. Style block and attachments as in `docs/prompts/TEMPLATE_spell_art.md` section 1.
 
 1. **Ribbon wrap set** (delivery and payoff: the ribbon coiling round the legs, back and front halves)
 ```
@@ -224,40 +142,31 @@ Must NOT read as: a star, a petal, confetti, a spark.
 Not in the picture: ribbon, cuff, hands, glow, sparkle trails.
 ```
 
-## Open owner questions
-
-Each asked once. Status: open, answered (with the answer), or dropped.
-
-| # | Question | Asked in round | Status / answer |
-|---|---|---|---|
-| 1 | The ribbon is a straight band: two of them crossing at the feet, not a coil. Accept that for blocking, or should the art draw a ribbon that bends into a loop (prompt 1)? | 1 | open |
-| 2 | The lash lands on the chest and the wrap starts at the feet. Keep, or drop the lash and start the wrap at the target? | 1 | open |
-| 3 | The cue moved 0.30 to 0.40 s so the wrap has room to pull tight (the cast sound is re-cut). Keep? | 1 | open |
-| 4 | The cuff is sized by `fit: target`, so on the treant it is as wide as the trunk base. Fine, or smaller on large bodies? | 1 | open |
-
 ## Round log
 
-| Round | What changed | Who caught it (owner / orchestrator / binding check / worker) | Rubric result |
-|---|---|---|---|
-| Pass 1 (2026-10-04) | Nine painted velvet frames, procedural ring | worker | not scored |
-| Pass 2 (2026-10-04) | The owner's painted four-frame cinch sheet as one layer round the body; ring and snap removed; ribbons stay as wind-up. Found: the cuff hid a rat and a treant's trunk, read as a sash | worker | not scored |
-| Round 1 (2026-10-07) | New design on the owner's flat-cel strips: layers `lash` (travel), `back` (ground) and `front` wrap bands, `cuff`, `thread`, `glint`, `settle`; recipes `velvet_shackles_ribbon`, `_lash`, `_cuff`; cue 0.30 to 0.40 and the cast sound re-cut; no kick. Tuned within the round: wrap size 330 to 240, dy 45 to 18 and tilt 16 to 10 (the bands sat on the rat's torso), cuff 170 to 110 to 130 (it covered the legs); the lash was the loudest frame (diff 4.9 against the cue's 1.5), so lash 250 to 170 with a fade, wraps fade in over 0.12 s, and the cuff arrives on the cue with `punch` 0.3 (diff 4.3 against 2.6) | worker (own frame sheets, a frame-difference script, `spell_feel`) | worker's score above; step 3 pending |
+| Date | Round | What changed | Caught by | Commit |
+|---|---|---|---|---|
+| 2026-10-04 | pass 1 | nine painted velvet frames, procedural ring | worker | `42d43291` |
+| 2026-10-04 | pass 2 | painted four-frame cinch as one layer round the body; ring and snap removed. Cuff hid a rat and a treant trunk, read as a sash | worker | `386f640d` |
+| 2026-10-07 | 1 | new design on flat-cel strips: layers `lash`, `back`, `front`, `cuff`, `thread`, `glint`, `settle`; cue 0.30 to 0.40; wrap 330 to 240, dy 45 to 18, tilt 16 to 10 (bands sat on the torso); cuff 170 to 110 to 130; lash was the loudest frame (diff 4.9 vs cue 1.5) so 250 to 170 with a fade, wraps fade in 0.12, cuff `punch` 0.3 (4.3 vs 2.6) | worker frames, frame-difference script, `spell_feel` | `83882f88` |
+| 2026-10-07 | step 3 | lash a flat bar, no wrap, cuff a ring on the ground (Open items 1-3) | orchestrator | `9a67d602` |
 
 ## Measures
 
 | Measure | Value |
 |---|---|
-| Owner reviews (target 3) | 0 so far |
-| Internal retries | 2 (size, height and tilt of the wrap and cuff; the cue energy against the lash) |
-| Generation attempts per art piece | 0 (stand-ins) |
-| Active work time / waiting time | about 1.5 h, of which the content builds, captures, tests and `spell_feel` were about 15 min |
-| Owner handling time (generate, download, upload art; review) | none yet |
-| Owner-found defects the binding checks should have caught (target 0) | 0 so far |
-| Final quality against the reference pack (owner's verdict on the rubric) | not yet |
+| Owner reviews (target 3) | 0 |
+| Internal retries | 2 (wrap/cuff size, height, tilt; cue energy vs lash) |
+| Attempts per art piece | 0 (stand-ins) |
+| Active / waiting time | about 1.5 h (15 min builds, captures, tests, `spell_feel`) |
+| Owner-found defects the checks should have caught | 0 |
+| Quality vs reference pack | not yet |
 
-## Reviewed snapshot
+## Snapshot
 
-- Commit: see the report (the commit that lands this file).
-- Capture run ids (under `tools/screenshots/gif/runs/`): `20261007T200645Z_26f5b5228302` (rat 1x), `20261007T200521Z_9f7c4871068e` (treant 1x), `20261007T200729Z_0e3ce2a6143f` (treant 1.5x).
-- Rubric (motion, art): 1 ~, 2 ~, 3 yes, 4 yes, 5 yes, 6 yes. Art: not scored (stand-ins).
-- Still weak: lash pop-in (`spell_feel` desync WARN on the rat) and the no-accent WARN; the wrap is a straight band; the lash and the wrap do not meet; painted particles beside flat strips; the glint is tiny.
+- **Commit:** `83882f88` (round 1); orchestrator check `9a67d602`.
+- **Capture run ids** (`tools/screenshots/gif/runs/`): rat 1x `20261007T200645Z_26f5b5228302`, treant 1x `20261007T200521Z_9f7c4871068e`, treant 1.5x `20261007T200729Z_0e3ce2a6143f`.
+- **Gate:** `VelvetShacklesPresentationTests` and `VelvetShacklesTests` green (16).
+- **Binding checks:** no transform jump pass with exceptions (`back`/`front` only turn by a fixed `rotate` and baked scale; cuff punch eased; lash-to-wrap cross-fade 0.1 s); cue on one frame pass (`hitFrame` 24 / 16; no `at: hit` sprite); nothing visible leaves the stage pass; frame registration (E7) pass.
+- **Rubric (worker):** 1 beats in order ~ (lash lands on the chest, wrap at the feet); 2 weight and easing ~ (straight band that scales, not a closing loop); 3 one focal point ✔; 4 body readable ✔ (legs and feet covered, head and chest clear); 5 ending decays ✔; 6 distinct ✔ (red velvet, gold; flat strips match the rat sheet; particles painted). Art not scored.
+- **Still weak:** lash pop-in and desync WARN on the rat; wrap is a straight band; lash and wrap do not meet; painted particles beside flat strips; glint tiny.

@@ -1,71 +1,70 @@
-# Borrowed Moment, "after" (plan S3, spell 3.9)
+# Borrowed Moment: state record
 
-Captured 2026-10-04 with `tools/gif.ps1 spell borrowed_moment -Party shawn,odette,bjorn -Target <ally>`
-(1x; Bjorn at `-Aspect 4:3`) and one three-cast series at 1.5x. The payoff is the painted
-`borrowed_moment_quicken-v2.png` (v1 unused); the turning hourglass (f0-f4) and the four particles are the old sheet's. GIFs are untracked next to this file. Owner gates
-skipped; the calls below are mine.
+Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Plan S3, spell 3.9. Pre-workflow pass; owner gates were skipped, the calls below are the worker's.
 
-## What the runtime and the tools had wrong, fixed here
+## Status
 
-- **The tracker moved before the cast.** A beat's `TurnOrder` is taken when it closes, so the
-  ally's new place showed from the first frame of the cast, ahead of the sound, the log line and
-  the starburst. The beat now also records the queue before the move (`CombatBeat.PreTurnOrder`),
-  opens on it and paints the new one on the impact, like a swap's formation. Pinned in
-  `BorrowedMomentPresentationTests` (session) and `PositionCastTrackerTests` (the paint order).
-  In the Odette GIF the chips change on frame 18, the cue; before, they had changed on frame 0.
-- **The cast was never real in a capture** (commit e4adbb39): the "moves 2 places earlier" line
-  and the reorder are now in the GIFs because the cast is real.
-- **A refused ally was recorded as somebody else.** The forced press takes the first eligible ally
-  when the aimed one is refused (a Hasten refuses whoever is already next), so a "Bjorn" GIF
-  showed Odette. The scenario runner now says so and records the presentation only.
+Painted chevrons landed (`a2c9b665`), drift stopped on the ally's own body (`546ebf3c`). Not yet through the workflow's steps 3-7. Captured 2026-10-04 with `tools/gif.ps1 spell borrowed_moment -Party shawn,odette,bjorn -Target <ally>` (1x; Bjorn at `-Aspect 4:3`) and one three-cast series at 1.5x. GIFs untracked beside this file.
 
-## Beats, authored seconds
+## Identity
 
-| t | Beat |
-|---|---|
-| 0.00-0.30 | **Turning.** The hourglass in its ring (f0-f4) spins up on the ally, cyan swirl around it. Dim (opacity 0.85, glow 0.3), no fade. |
-| 0.30 | **Payoff.** The painted chevrons (`quicken`, three nested cyan arcs pointing right, sand streams, a gold clock hand) on the ally with the sound (`borrowed_moment_impact`), the log line and the tracker moving the ally up. 460 box, punch 0.2, glow 1.0, `facing: none` so they point toward the enemy whichever side the ally stands, `drift` from -0.05 to 0.22 box forward over 0.3 s (0.45 landed the chevrons on Odette's wing when cast on Bjorn; rechecked per frame on Bjorn at 4:3 and on Odette, the tip stays on the ally's own body), then a 0.15 s fade. |
-| 0.30-0.45 | **Grains.** 12 grains and glints thrown up with gravity pulling up. The breaking hourglass (f6-f11) and the starburst are gone. |
+- **Verb:** hasten.
+- **Signature beat:** three after-image chevrons point forward on the ally and slide ahead of it while its turn chip jumps up.
+- **Must read as:** "time sped up for my ally".
+- **Must NOT read as:** a dash only; a starburst.
 
-## Measured (spell_feel vs rat, presentation-only; 60 fps)
+## Beat table
 
-| | 1x | 1.5x |
-|---|---|---|
-| cast start to payoff | 0.30 s (f18) | 0.20 s (f12) |
-| payoff to clean | 0.43 s | 0.30 s |
+Release clock. Cue 0.30 s = f18 at 1x, f12 at 1.5x. Payoff to clean 0.43 s at 1x, 0.30 s at 1.5x.
 
-No warnings, but the peak is 1.9 (1.8 at 1.5x) and the tool finds no visual contact frame: the
-chevrons are thin cyan light on a busy body, so the cue is carried by the tracker and the
-log line more than by brightness.
+| t | Beat | Layer | Art piece | Box / feel |
+|---|---|---|---|---|
+| 0.00-0.30 | hourglass in its ring spins up on the ally, cyan swirl | turning | old sheet f0-f4 | opacity 0.85, glow 0.3, no fade |
+| 0.30 | payoff: chevrons with sound (`borrowed_moment_impact`), log line, tracker moving the ally up | `quicken` | `borrowed_moment_quicken-v2.png` (three nested cyan arcs pointing right, sand streams, a gold clock hand) | 460; punch 0.2, glow 1.0, `facing: none`, `drift` -0.05 to 0.22 box forward over 0.3 s, fade 0.15 |
+| 0.30-0.45 | grains and glints thrown up, gravity pulling up | particles | old sheet's four particles | 12 grains |
 
-## Frame notes
+## Open items
 
-- **Visible turn-order change.** Odette on the 1x GIF: the chips read Shawn, Bjorn, rat, Odette
-  until frame 17 and Shawn, Odette, Bjorn, rat on frame 18. The chips are about 40 px at 1080p;
-  the log line ("Odette moves N places earlier in the order.") and the starburst are what the eye
-  is on, and the chips are what proves it.
-- **Ally anchoring: confirmed on Odette**, a real cast. **Bjorn is presentation-only**: with the
-  shipped enemies (all slower than Bjorn's 8) he is already next after Shawn's opening turn, so
-  the session refuses him; the GIF shows the vfx on him, with no log line or reorder. **Shawn is
-  presentation-only**: a Hasten never targets its caster (AllyTargeting), so that GIF only checks
-  where the effect sits. The vfx is centred on the chosen body in all three.
-- **Series.** Five casts in a row are not possible: after three, both allies are already next and
-  the session has no legal target (the fourth stalled in two attempts). Three are recorded at 1.5x;
-  when Odette was already next, the press took the first eligible ally, and the log line in the
-  GIF names who. Largest single-step brightening in the series is 6.2% of the frame, from the
-  squad's and enemies' own attacks; Borrowed's own cue peaks at 0.9%. At most 2 events of 3% or more fall in any
-  second.
-- **Flash guard.** The chevrons are thin and drift; there is no starburst any more. Well inside the limit.
-- **Hand-off.** The chevrons open on the frame after the last hourglass drawing (the one empty frame between them was a cursor-compare bug, fixed 2026-10-04; see `../../README.md`).
-- **Drift.** On Bjorn (leftmost) the chevrons now slide 0.27 box and stop on his own body; the earlier 0.55 box reached Odette's wing.
-- **Readability.** The chevrons cross the ally's chest and sit over the face edge for about 0.3 s, the face stays visible; no number is under it (a
-  Hasten has no damage number); the log line and plates are clear.
+1. Weak read: the chevrons read as "dash" more than "time"; the clock hand is a few pixels at game size and the sand streams vanish; the hourglass beat carries the time half. Identity test passes narrowly.
+2. The art is not an afterimage of the ally's own sprite (the engine feature the prompt prefers is unbuilt).
+3. Brightness: `spell_feel` peak 1.9 (1.8 at 1.5x), no visual contact frame found; the chevrons are thin cyan light on a busy body, so the cue is carried by the tracker and the log line. No warnings.
+4. Bjorn is presentation-only: with shipped enemies (all slower than his 8) he is already next after Shawn's opening turn, so the session refuses him; the GIF shows the vfx with no log line or reorder. Shawn is presentation-only too (a Hasten never targets its caster, AllyTargeting).
+5. A series of five casts is impossible: after three, both allies are next and the session has no legal target. When Odette was already next, the forced press took the first eligible ally; the log line names who.
+6. Readability: chevrons cross the ally's chest and sit over the face edge for about 0.3 s; face stays visible. Turn chips are about 40 px at 1080p.
+7. Flash guard: largest single-step brightening in the series is 6.2% of the frame (squad and enemy attacks); Borrowed's own cue peaks at 0.9%; at most 2 events of 3% or more in any second. Well inside the limit.
 
-## Identity test: "time sped up for my ally"
+## Decisions
 
-Verdict: **passes, narrowly.** The hourglass spins up, and on the cue three after-image
-chevrons point forward on the ally and slide ahead of it while its chip jumps up. That puts
-"faster" on the body, which the old sheet could not. What is weak: the chevrons are legible
-as "dash" more than "time" (the clock hand is a few pixels at game size, and the sand streams
-vanish), so the hourglass beat before it carries the time half; the art is not an afterimage of
-the ally's own sprite (the engine feature the prompt prefers is still unbuilt).
+- 2026-10-04 (worker, owner gates skipped): painted `quicken-v2` is the payoff (v1 unused); the starburst and the breaking hourglass (f6-f11) are gone.
+- 2026-10-04 (worker): `facing: none` so the chevrons point toward the enemy whichever side the ally stands.
+
+## Art
+
+| Piece | File | Recipe | Status |
+|---|---|---|---|
+| Chevrons | `borrowed_moment_quicken-v2.png` | n/a | accepted (painted); v1 unused |
+| Hourglass f0-f4, four particles | old sheet | n/a | stand-in |
+
+No step-4 prompts: this pass predates the art workflow.
+
+## Round log
+
+| Date | Round | What changed | Caught by | Commit |
+|---|---|---|---|---|
+| 2026-10-04 | after pass | turn tracker now records the queue before the move (`CombatBeat.PreTurnOrder`) and paints the new order on the impact; the chips change on f18 (the cue), not f0. Pinned in `BorrowedMomentPresentationTests` and `PositionCastTrackerTests` | worker | n/a |
+| 2026-10-04 | after pass | the cast was never real in a capture; the "moves 2 places earlier" line and reorder now appear | worker | `e4adbb39` |
+| 2026-10-04 | after pass | a refused ally (Hasten refuses whoever is already next) was recorded as somebody else; the scenario runner now says so and records the presentation only | worker | n/a |
+| 2026-10-04 | handoff | chevrons open on the frame after the last hourglass drawing (cursor-compare bug left one empty frame; `../../README.md`) | worker | `d3c2c3b8` |
+| 2026-10-04 | art | painted forward chevrons replace the starburst and breaking hourglass | worker | `a2c9b665` |
+| 2026-10-04 | drift | drift 0.45 to 0.22 box: on Bjorn (leftmost) the chevrons reached Odette's wing; rechecked per frame on Bjorn at 4:3 and Odette, the tip stays on the ally's own body. Two earlier notes disagreed (0.27 / 0.55); the commit's 0.22 / 0.45 wins | worker | `546ebf3c` |
+
+## Measures
+
+Not recorded (pre-workflow). Timing: cast start to payoff 0.30 s (f18) at 1x, 0.20 s (f12) at 1.5x.
+
+## Snapshot
+
+- **Commit:** `546ebf3c`.
+- **Capture run id:** not recorded.
+- **Binding checks / rubric:** not scored.
+- **Still weak:** see Open items 1-3.

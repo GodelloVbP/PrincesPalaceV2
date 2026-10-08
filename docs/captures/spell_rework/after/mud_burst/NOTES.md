@@ -1,65 +1,67 @@
-# Mud Burst, "after" (plan S3, spell 3.3)
+# Mud Burst: state record
 
-Pass 1 (2026-10-04) used a procedural glob, a derived splat and the layer field `tint`. Pass 2
-(2026-10-04) wires the owner's painted stills: `mud_glob.png` and `mud_splat.png` (recipes
-`mud_glob`, `mud_splat`, both keyed `green-soft`; the plain green key clamps green to min(r,b)
-and drags browns toward red). Captured with `tools/gif.ps1 spell mud_burst`; GIFs are untracked
-next to this file. Owner gates skipped; the calls below are mine.
+Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Plan S3, spell 3.3. Pre-workflow pass; owner gates were skipped, the calls below are the worker's.
 
-## What changed
+## Status
 
-- **Glob and splat are painted and untinted.** `tint` stays only on the `gather` layer (the old
-  gold vortex would read as fire without it). The procedural `mud_glob`, the derived
-  `mud_burst_splat` (folder, recipe, generator, tests) are deleted; `mud_splat_drops` stays.
-- Splat: one still, held 0.3 s then faded 0.22 s, punch 0.15, size 480 (`at: hit` sprites are
-  tails, shrunk to a fraction of the body, so it lands rat-sized on a rat).
+Pass 2 (2026-10-04) wired the owner's painted stills (`1de9f948`); the drift-over-flight fix is `86aca286`; the badge lands on the cue frame (rechecked in `2bb3ac09`). Captured with `tools/gif.ps1 spell mud_burst`; GIFs untracked beside this file. Not yet through the workflow's steps 3-7. `spell_feel` was not re-run after pass 2 (cue 0.325 s and splat window unchanged in kind).
 
-## Beats, authored seconds
+## Identity
 
-| t | Beat |
-|---|---|
-| 0.00-0.20 | **Gather.** The old sheet's vortex in Shawn's hand, tinted brown. |
-| 0.17-0.325 | **Lob.** The painted glob leaves the hand and reaches the body in 0.155 s along an arc (`arcY` 0.6), its three drips trailing. |
-| 0.325 | **Payoff cue.** Sound, damage number, Vulnerable badge, the painted splat and 14 clots. Matte, no glow anywhere. |
-| 0.325-0.85 | Splat held then fading; clots land. |
+- **Verb:** lob.
+- **Signature beat:** a thrown handful of wet mud lands as a round core with radial tendrils and flat spatter.
+- **Must read as:** "mud", not "fire"; matte, no gold, no glow.
+- **Must NOT read as:** a soft clod, a spiky burst (the procedural version).
 
-## Measured (spell_feel, 60 fps)
+## Beat table
 
-| | 1x rat | 1x treant | 1.5x rat | 1.5x treant |
+Release clock; cue 0.325 s = f20 at 1x, f13 at 1.5x.
+
+| t | Beat | Layer | Art piece | Box / feel |
 |---|---|---|---|---|
-| cast start to payoff | 0.33 s (f20) | 0.33 s | 0.22 s (f13) | 0.22 s |
-| payoff to clean | 0.38 s | 0.38 s | 0.25 s | 0.25 s |
+| 0.00-0.20 | vortex in Shawn's hand, tinted brown | `gather` | old sheet | `tint` only here (the gold vortex would read as fire) |
+| 0.17-0.325 | glob leaves the hand and reaches the body in 0.155 s along an arc, three drips trailing | glob (travel) | `mud_glob.png` | `arcY` 0.6; flight 0.155 s (was 0.125) so the arc has about 9 frames |
+| 0.325 | **Cue.** Sound, damage number, Vulnerable badge, the splat, 14 clots; matte, no glow | splat | `mud_splat.png` | one still, 480 (an `at: hit` sprite is a tail, shrunk to a fraction of the body: rat-sized on a rat), held 0.3 s, fade 0.22 s, punch 0.15 |
+| 0.325-0.85 | splat held then fading; clots land | `mud_splat_drops` | particles | |
 
-The report WARNs "no accent" on the rat (1x and 1.5x). The effect is matte by
-design; its accent is the splat opening with the target's hurt flash on the cue
-frame, and by eye that frame is the clear peak. The treant's 1.5x "clean at
-0.75 s" is the treant's own idle movement after the cast, not the effect: the
-splat is gone by f27.
+## Open items
 
-## Frame notes (pass 1 figures, the flash and readability counts not re-measured)
+1. Splat is rat-sized on a treant (the tail cap), so a treant reads as "splashed" more than "hit".
+2. Back-rank cast (rat, treant, beetle, slot 3): the glob flies in front of the uninvolved rat/treant and nothing shows the rat is not the target until the splat; the splat is small on the beetle behind the treant. The number (-7) and splat are on the beetle.
+3. `spell_feel` WARN "no accent" on the rat at 1x and 1.5x: the effect is matte by design; the accent is the splat opening with the hurt flash on the cue frame, the clear peak by eye. The treant 1.5x "clean at 0.75 s" is the treant's idle movement; the splat is gone by f27.
+4. The splat covers the rat's torso for about 0.2 s. Damage number sits above and left of the splat and stays legible; badge, number and splat first appear on the cue frame.
+5. Pass 1 figures: the flash and readability counts were not re-measured after pass 2. Five casts at 1.5x on the treant (259 frames): per cast one 7.5% brightening (hurt flash on the cue) and one of about 4% eight GIF frames later, casts at least 1.3 s apart; no 25% flash.
 
-- **Flash guard.** Five casts at 1.5x on the treant (259 GIF frames): per cast
-  one brightening of 7.5% of the frame (the hurt flash on the cue) and one of
-  about 4% eight GIF frames later, casts at least 1.3 s apart; nothing near a
-  25%-area large flash. At most 2 small flashes per cast. A 5.7%/4.9%/4.7%
-  cluster at frames 154-172 is the treant's own turn between casts.
-- **Readability.** The damage number sits above and left of the splat and stays
-  legible on rat and treant (the splat draws under it). The Vulnerable badge, the damage number and the splat
-  all first appear on the cue frame (f20 at 1x). The splat covers the struck body's torso on
-  a rat for about 0.2 s.
-- **Back-rank:** the glob flies in front of the rat and lands on the beetle
-  behind the treant; the number (-7) and splat are on the beetle. The glob
-  passing in front of an uninvolved body is a mild ambiguity: nothing shows
-  that the rat is not the target until the splat.
-- **Arc:** present. `drift` used to run over the layer's whole life, held phase included, so a waypoint lifted the glob in Shawn's hand. `SpellFrameCursor.DriftAt` now runs a travelling layer's drift over its flight (held at its start while it waits at the caster, at its end after arrival), and `SpellDrift.arcY` adds a parabola. On the rat 1x frames the glob sits level in the hand at f12, is clearly above the line at f14-f16, and comes down onto the body by f19-f20. The flight is 0.155 s (was 0.125) so the arc has about 9 frames to read.
-- **Bug-shaped, not fixed:** none found.
+## Decisions
 
-## Identity test: "mud", not "fire"
+- 2026-10-04 (worker): glob and splat painted and untinted; recipes `mud_glob`, `mud_splat` keyed `green-soft` (the plain green key clamps green to min(r,b) and drags browns toward red). The procedural `mud_glob`, the derived `mud_burst_splat` (folder, recipe, generator, tests) are deleted; `mud_splat_drops` stays.
+- 2026-10-04 (worker): `SpellFrameCursor.DriftAt` runs a travelling layer's drift over its flight (held at start while it waits at the caster, at its end after arrival) and `SpellDrift.arcY` adds a parabola; before, `drift` ran over the layer's whole life, so a waypoint lifted the glob in Shawn's hand. Rat 1x: glob level in the hand at f12, clearly above the line f14-f16, down onto the body by f19-f20.
 
-My verdict: **passes, clearly.** The glob has a wet highlight and a stringy tail and lands as a
-round core with radial tendrils and flat spatter: a thrown handful of wet mud, no gold, no glow.
-The weakness the procedural version had (a soft clod, a spiky burst) is gone. What stays weak:
-the splat is rat-sized on a treant (the tail cap), so a treant reads as "splashed" more than
-"hit"; and on a back-rank cast (rat, treant, beetle, slot 3) the glob still flies in front of
-the uninvolved rat/treant and the splat is small on the beetle behind the treant.
-Spell_feel was not re-run: the cue (0.325 s) and the splat window are unchanged in kind.
+## Art
+
+| Piece | File | Recipe | Status |
+|---|---|---|---|
+| Glob | `mud_glob.png` | `mud_glob`, `green-soft` | accepted (owner's painted) |
+| Splat | `mud_splat.png` | `mud_splat`, `green-soft` | accepted (owner's painted) |
+| Vortex, drops | old sheet | n/a | stand-in |
+
+No step-4 prompts: this pass predates the art workflow.
+
+## Round log
+
+| Date | Round | What changed | Caught by | Commit |
+|---|---|---|---|---|
+| 2026-10-04 | pass 1 | procedural glob, derived splat, layer field `tint` | worker | n/a |
+| 2026-10-04 | drift | drift runs over a travelling layer's flight; glob arcs | worker | `86aca286` |
+| 2026-10-04 | pass 2 | owner's painted glob and splat replace the procedural lump and derived burst | worker | `1de9f948` |
+
+## Measures
+
+Not recorded (pre-workflow). Timing (`spell_feel`, 60 fps): cast start to payoff 0.33 s (f20) at 1x, 0.22 s (f13) at 1.5x; payoff to clean 0.38 s at 1x, 0.25 s at 1.5x.
+
+## Snapshot
+
+- **Commit:** `1de9f948`.
+- **Capture run id:** not recorded.
+- **Rubric:** not scored; identity test "mud, not fire" passes clearly.
+- **Still weak:** Open items 1-2.
