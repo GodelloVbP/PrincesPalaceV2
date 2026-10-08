@@ -1,0 +1,25 @@
+{
+  "_notes": [
+    "Gale Scythe: the anticipation spiral (gale_leaf_spiral.png, step 4 art 2026-10-08, 6x1 of 256). Leaves and two white ribbons wound round the cell centre, wide to tight over six cells; the pivot is the exact cell centre, so no crop. Delivered on #FF00FF (green leaves), keyed magenta."
+  ],
+  "sheet": "Spells/Gale Scythe/gale_leaf_spiral.png",
+  "grid": [
+    1,
+    6
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": "magenta",
+  "canvas": [
+    256,
+    256
+  ],
+  "base_align": false,
+  "content_crop": false
+}

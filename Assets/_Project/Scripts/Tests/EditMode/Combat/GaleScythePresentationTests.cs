@@ -57,8 +57,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.12f, cut.seconds, 1e-6f);
             Assert.AreEqual(380f, cut.size, 1e-6f, "a thin stroke at this width does not wall over the numbers");
             Assert.AreEqual(6.3f, cut.aspect, 1e-6f);
-            Assert.AreEqual(0, vfx.layers.Count(l => l.render == "sprite" && l.place == "target-centre"),
-                "no sprite sheet on the bodies any more");
+            var onBodies = vfx.layers.Where(l => l.render == "sprite" && l.place == "target-centre").ToArray();
+            Assert.AreEqual(new[] { "gust" }, onBodies.Select(l => l.id).ToArray(),
+                "no sheet on the bodies at the cue; the gust is the only one, after it");
+            Assert.AreEqual("release", onBodies[0].at);
+            Assert.AreEqual(0.38f, onBodies[0].offset, 1e-6f, "the gust opens after the cut, so it is not a second slash");
             Assert.AreEqual("hit", vfx.layers.Single(l => l.id == "settle").at);
         }
     }

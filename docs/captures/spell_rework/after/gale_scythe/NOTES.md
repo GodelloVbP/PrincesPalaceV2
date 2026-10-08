@@ -4,7 +4,7 @@ Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Plan S3, spell 3.4. P
 
 ## Status
 
-Step 2 (block with existing art) in the commit that carries this file; no new art. Pass 2 `92e06cba` wired the owner's painted blade. Captures `gale_scythe_r3_{rat,treant}_full` (1x) and `gale_scythe_r3_rat_1.5x_full` (`-Out` folder, previews and timing committed, full GIFs untracked), contact sheets `gale_r3_anticipation.png`, `gale_r3_payoff.png` . Waits on the orchestrator's check, then the owner (step 3).
+Step 6 (step-4 art wired) in the commit that carries this file; the owner's pieces `gale_leaf_spiral` and `gale_gust_streaks` were accepted at step 5 (`docs/prompts/2026-10-08_gale_mud_art.md`). Captures `gale_scythe_r4_{rat,treant}_full` (1x) and `gale_scythe_r4_rat_1.5x_full`, sheet `gale_r4_sheet.png` (approved frames on top; previews and timing committed, full GIFs and the sheet untracked). Waits on the orchestrator's check, then the owner (step 3).
 
 ## Identity
 
@@ -21,20 +21,20 @@ Release clock; cue **0.30 s** = f18 at 1x, f12 at 1.5x. One payoff frame for all
 | t | Beat | Layer | Stand-in | Notes |
 |---|---|---|---|---|
 | 0.00-0.20 | anticipation: whirl closes in Shawn's hand | `gather` | wind sheet f1-f4 | kept |
-| 0.00-0.30 | anticipation: leaves pulled in to the sickle | `spiral_a/b/c` | `gale_scythe_particles` leaves, three emitters born round the hand (`sourceDx` 55/165/110, `sourceDy` 75/75/-30), aimed inward (321/219/90 deg), spin +-420, 32/s for 0.2 s | no orbit field: reads as leaves converging, not as a circle |
+| 0.00-0.20 | anticipation: leaves wind into a tight spiral in the hand | `spiral` | `gale_leaf_spiral`, 6 cells wide to tight, `fps` 30 once, size 190, `dx` 70, `dy` -10, opacity 1, untinted | on the whirl's anchor (`gather` keeps its whirl underneath) |
 | 0.13-0.25 | delivery: the sweep across the line | `sweep` | painted blade, `formation`, `align span` | kept unchanged (pinned by `GaleScythePresentationTests`) |
 | 0.30 | **Cue.** Thin bright slash across each body, all numbers, push, hurt flash, 16 leaves, small stage kick | `cut`, `settle`, `vfx.kick` | blade still, size 380, aspect 6.3; leaves burst; kick 0.008 rise 0.05 fall 0.18 | one frame for every enemy |
 | 0.30 | body echo knocked back | none | none | **pending E8** (`PLAN_SPELL_ANIMATION.md` section 2); not built, not faked |
-| 0.36-0.66 | resolution: leaves spiral away off each body; blades fade | `leaves_away` | leaves, 14/s for 0.3 s, aim 30 deg, spin +-320, life 0.5-0.8 | streaks fade with `cut` (fade 0.2) |
+| 0.38-0.70 | resolution: gust passes and breaks up, leaves tumbling | `gust` | `gale_gust_streaks`, 4 cells, `fps` 14 once, size 250 fit target, `dy` 35, drift -0.1 to +0.2, fade 0.1, opacity 1, untinted; `at: release` offset 0.38 (an `at: hit` layer is shrunk) | opens after the cut, above its line; streaks of the cut fade with `cut` |
 
 ## Open items
 
-1. Cue frame f18 (rat and treant): thin bright slash across each body joined into one line, the hurt flash and numbers open on the same frame. Still reads more through the flash and numbers than the stroke (old item 1). **Owner call**: a heavier slash mark needs a second painted piece.
-2. Anticipation f4-f14: leaves are small specks (about 12-25 px, 32/s) converging on the whirl, scattered above and right of it; not a spiral. Needs the leaf-spiral art (Art needed 1) and an orbit.
-3. Three-wide rack: the sweep tip still runs to the right edge of the stage crop at f8 (not changed; `drift.toX` 0.22, `overhang` 0.5).
-4. Treant f18 (cue): a faint grey arc under the third treant, lower right, is the sweep's last fading frame (sweep ends 0.26 s, fade to 0.31 s). Pinned by `GaleScythePresentationTests`; not changed.
-5. `leaves_away` is faint at 1x f24-f34 (small, low-contrast brown leaves on a brown treant).
-6. Not measured with `spell_feel` this round; flash guard unchanged apart from the 0.8% stage kick.
+1. Cue frame f18 (rat and treant): thin bright slash across each body joined into one line, hurt flash and numbers on the same frame. Still reads through the flash and numbers more than the stroke. **Owner call**: a heavier slash mark needs a second piece.
+2. Anticipation f4-f10: the spiral winds wide to tight on the whirl (centred on it from `dy` -10); at f4 it is about 190 px, a little bigger than the hand and staff head. It hides the old whirl for f4-f10; the whirl shows again at f12.
+3. Resolution f24-f36 on three bodies: the gusts overlap into one band across the rack at roughly the cut's height (35 px above it); no frame reads as a second slash, but treant f24 is the closest. Leaves tumble on it.
+4. Three-wide rack: the sweep tip still runs to the right edge of the stage crop at f8.
+5. Treant f18 (cue): faint grey arc under the third treant is the sweep's last fading frame (pinned timings).
+6. Not measured with `spell_feel` this round.
 
 ## Decisions
 
@@ -43,12 +43,14 @@ Release clock; cue **0.30 s** = f18 at 1x, f12 at 1.5x. One payoff frame for all
 
 ## Art
 
-| Piece | File | Status |
-|---|---|---|
-| Blade | `gale_scythe_blade.png` 2172x724 | accepted (owner's painted) |
-| Whirl f0-f3, leaves | old wind sheet, `gale_scythe_particles` | stand-in |
+| Piece | File | Recipe | Status |
+|---|---|---|---|
+| Blade | `gale_scythe_blade.png` 2172x724 | `gale_scythe_blade.json` | accepted (owner's painted) |
+| Leaf spiral | `gale_leaf_spiral.png` 1536x256, 6x1 | `gale_leaf_spiral.json`, `keyed: magenta`, no crop | accepted (step 5); prompt 1 of `docs/prompts/2026-10-08_gale_mud_art.md`, frame `2026-10-08_refs/gale_leaf_spiral_approved.png` |
+| Gust streaks | `gale_gust_streaks.png` 2048x256, 4x1 | `gale_gust_streaks.json`, `keyed: magenta`, no crop | accepted (step 5); prompt 2, frame `gale_gust_streaks_approved.png` |
+| Whirl f0-f3, leaves | old wind sheet | n/a | stand-in (`gather`, `settle`) |
 
-Art needed for step 4 (not prompted yet): 1. a leaf-spiral sheet, 4-6 cells of leaves wound round a point, reading at 150-200 px, for the anticipation; 2. a short heavy slash mark (curved, 2:1) for the per-body payoff; 3. a gust-streak strip for the resolution. Prompts follow `docs/prompts/TEMPLATE_spell_art.md`.
+Art still wanted: a heavy slash mark for the per-body payoff (open item 1). Body echo waits on E8.
 
 ## Round log
 
@@ -57,6 +59,7 @@ Art needed for step 4 (not prompted yet): 1. a leaf-spiral sheet, 4-6 cells of l
 | 2026-10-04 | pass 1 | 12-frame wind sheet only: a rat-sized whirl rolling like a wheel and three tornados | worker | `5915e34f` |
 | 2026-10-04 | pass 2 | painted blade as sweep and per-body cut; `green-soft` key | worker | `92e06cba` |
 | 2026-10-08 | step 2 | leaf-spiral emitters (anticipation), `leaves_away` (resolution), `vfx.kick`; E8 echo marked pending | orchestrator brief | this commit |
+| 2026-10-08 | step 6 | spiral and gust sheets replace the leaf emitters `spiral_a/b/c` and `leaves_away`; spiral `dy` -10, gust `dy` 35 and 0.38 s after the first capture (spiral sat 40 px above the whirl; gust lay on the cut's line) | orchestrator step 6 | this commit |
 
 ## Measures
 

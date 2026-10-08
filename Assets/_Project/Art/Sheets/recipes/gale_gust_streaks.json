@@ -1,0 +1,23 @@
+{
+  "_notes": [
+    "Gale Scythe: the resolution gust (gale_gust_streaks.png, step 4 art 2026-10-08, 4x1 of 512x256). White and pale sea-green wind lines with leaves, full to a few wisps; the pivot is the left end at mid-height, so no crop. Delivered on #FF00FF, keyed magenta."
+  ],
+  "sheet": "Spells/Gale Scythe/gale_gust_streaks.png",
+  "grid": [
+    1,
+    4
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": "magenta",
+  "canvas": [
+    512,
+    256
+  ],
+  "base_align": false,
+  "content_crop": false
+}
