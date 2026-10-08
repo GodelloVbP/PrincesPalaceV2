@@ -1244,6 +1244,21 @@ shake — **burst only, no slash arc**. `slash_arc` is a Slash-family cue; a Blu
 swing should play `impact_burst` alone.
 
 
+### Capture GIFs: `gif.ps1 -Out` and `gif.py sheet`
+
+`tools/gif.ps1 spell <id> -Vs rat|treant [-Speed] [-PreStatus]` records a cast
+(runs live under `tools/screenshots/gif/runs/`, pruned at the 5 GB cap).
+
+- **Keep a capture:** add `-Out <folder> [-Name <prefix>]`. After `finish` it
+  copies `anim.gif`, `anim_preview.gif`, `strip.png` and `timing.json` to
+  `<prefix>_<target>[_<speed>x][_<formation>][_<status>]_{full.gif,preview.gif,strip.png,timing.json}`
+  (prefix defaults to the id). Point it at the spell's NOTES folder.
+- **Compare frames:** `python tools/gif.py sheet --frames 6,12,20,22,26,40 --in rat=<gif|run> --in treant=<gif|run> --out <png> [--crop 0.55,1.0]`
+  writes one PNG, a row per `--in`, tiles labelled `<label> f<N>`. Frames are
+  60 fps capture numbers (the GIF holds every second one); the crop is the
+  x-range as fractions of width, default the enemies' side. A run folder with
+  several scenarios must be narrowed to one scenario folder.
+
 ## 6. Per-kit README index
 
 - `Assets/_Project/Art/UI/Hub/README.md`

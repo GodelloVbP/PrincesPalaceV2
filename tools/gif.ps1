@@ -16,6 +16,8 @@ param(
     [string]$Manifest = "",
     [string[]]$Compare = @(),
     [string]$AllowDiff = "",
+    [string]$Out = "",
+    [string]$Name = "",
     [int]$Prune = -1,
     [switch]$TrimFrames,
     [switch]$KeepFrames,
@@ -47,6 +49,11 @@ param(
 #   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]
 #   tools/gif.ps1 spell crownfall -Determinism      (two boots, then -Compare)
 #   tools/gif.ps1 spell censer_of_embers -Vs treant -Seconds 25   (the fight plays on after the cast until the film is 25 s: a status filmed running out)
+#   tools/gif.ps1 spell vipers_bite -Vs rat -Out docs/captures/spell_rework/after/vipers_bite -Name vipers_bite_eyes2
+#                                  (copies anim.gif, anim_preview.gif, strip.png, timing.json to that folder as
+#                                   <Name>_<vs>[_<speed>x][_<formation>][_<status>]_{full.gif,preview.gif,strip.png,timing.json}
+#                                   so pruning cannot lose them; -Name defaults to the id)
+#   tools/gif.py sheet --frames 6,12,20 --in rat=<gif|run> --in treant=<gif|run> --out <png>   (contact sheet, no Unity)
 #   tools/gif.ps1 -Prune <days>                (deletes whole runs older than that)
 #   tools/gif.ps1 -TrimFrames                  (deletes frames/ of every run but the newest two)
 #
@@ -120,7 +127,7 @@ if ($Prune -ge 0) {
 if (-not $Manifest -and (-not $Kind -or -not $Id)) {
     Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
     Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism] [-KeepFrames] [-NoPreview]"
-    Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>]"
+    Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>] [-Out <folder> [-Name <prefix>]]"
     Write-Host "                     [-Party shawn,odette,bjorn] [-Target <ally|enemy slot>]"
     Write-Host "       tools/gif.ps1 -Manifest <name>   |   tools/gif.ps1 -Compare <runA> <runB> [-AllowDiff <file>]   |   tools/gif.ps1 -Prune <days>   |   tools/gif.ps1 -TrimFrames"
     exit 1
@@ -371,6 +378,8 @@ function Invoke-CaptureRun {
     $finishArgs = @("finish", $runDir)
     if ($KeepFrames) { $finishArgs += "--keep-frames" }
     if ($NoPreview) { $finishArgs += "--no-preview" }
+    if ($Out) { $finishArgs += @("--out", $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Out)) }
+    if ($Name) { $finishArgs += @("--name", $Name) }
     $code = Invoke-Gif -GifArgs $finishArgs
     $timing.totalSeconds = [math]::Round($swAll.Elapsed.TotalSeconds, 1)
     Write-Host ("TIMING " + (($timing.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join " "))

@@ -660,5 +660,74 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(len(receipts), 7, "the P4 capture cases are stills in the baseline")
 
 
+class ExportTests(unittest.TestCase):
+    def scenario(self, **kw):
+        return dict({"id": "vipers_bite", "key": "k1", "vs": "rat", "speed": 1.0, "formation": "lone", "preStatus": ""}, **kw)
+
+    def test_names_carry_target_then_speed_formation_status_only_when_not_default(self):
+        self.assertEqual(gif.export_stem(self.scenario(), "vipers_bite_eyes2"), "vipers_bite_eyes2_rat")
+        self.assertEqual(gif.export_stem(self.scenario(vs="rat,treant", speed=1.5, formation="full", preStatus="Poison")),
+                         "vipers_bite_rat-treant_1.5x_full_poison")
+
+    def test_copies_the_four_files_under_the_stem_and_skips_missing_ones(self):
+        with tempfile.TemporaryDirectory() as root:
+            run, out = os.path.join(root, "run"), os.path.join(root, "notes")
+            sdir = os.path.join(run, "k1")
+            os.makedirs(sdir)
+            gif.write_json_atomic(os.path.join(run, "request.json"), {"scenarios": [self.scenario(speed=1.5)]})
+            for name in ("anim.gif", "anim_preview.gif", "strip.png", "timing.json"):
+                with open(os.path.join(sdir, name), "w") as f:
+                    f.write(name)
+            os.remove(os.path.join(sdir, "timing.json"))
+            gif.export_run(run, out, "vb")
+            self.assertEqual(sorted(os.listdir(out)),
+                             ["vb_rat_1.5x_full.gif", "vb_rat_1.5x_preview.gif", "vb_rat_1.5x_strip.png"])
+            with open(os.path.join(out, "vb_rat_1.5x_preview.gif")) as f:
+                self.assertEqual(f.read(), "anim_preview.gif")
+
+
+class SheetTests60(unittest.TestCase):
+    COLOURS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
+
+    def make_gif(self, path):
+        from PIL import Image
+        frames = []
+        for c in self.COLOURS:
+            im = Image.new("RGB", (100, 40), (10, 10, 10))
+            im.paste(c, (60, 0, 100, 40))  # the right 40% carries the frame colour
+            frames.append(im)
+        frames[0].save(path, save_all=True, append_images=frames[1:], duration=33, loop=0)
+
+    def test_sixty_fps_frames_map_to_every_second_gif_frame(self):
+        self.assertEqual([gif.sheet_gif_index(n) for n in (0, 1, 2, 5, 6)], [0, 0, 1, 2, 3])
+
+    def test_a_row_per_input_a_tile_per_frame_cropped_to_the_right(self):
+        with tempfile.TemporaryDirectory() as root:
+            a = os.path.join(root, "a.gif")
+            self.make_gif(a)
+            sheet = gif.build_sheet([("rat", a), ("treant", a)], [0, 2, 99], crop=(0.55, 1.0), tile_width=50)
+            self.assertEqual(sheet.size[0], 150)
+            row_h = sheet.size[1] // 2
+            # the tile body (below the label strip) is solid frame colour; f99 clamps to the last frame
+            for col, want in enumerate([self.COLOURS[0], self.COLOURS[1], self.COLOURS[3]]):
+                px = sheet.getpixel((col * 50 + 25, row_h - 4))
+                self.assertTrue(all(abs(p - w) < 8 for p, w in zip(px, want)), (col, px, want))
+
+    def test_run_folder_resolves_to_its_single_scenario_and_several_are_refused(self):
+        with tempfile.TemporaryDirectory() as root:
+            for k in ("k1", "k2"):
+                os.makedirs(os.path.join(root, k))
+            open(os.path.join(root, "k1", "anim.gif"), "w").close()
+            self.assertEqual(gif.resolve_sheet_input(root), os.path.join(root, "k1", "anim.gif"))
+            open(os.path.join(root, "k2", "anim.gif"), "w").close()
+            with self.assertRaises(ValueError):
+                gif.resolve_sheet_input(root)
+
+    def test_crop_must_be_an_ordered_fraction_pair(self):
+        self.assertEqual(gif.parse_crop("0.5,1"), (0.5, 1.0))
+        with self.assertRaises(ValueError):
+            gif.parse_crop("0.8,0.2")
+
+
 if __name__ == "__main__":
     unittest.main()

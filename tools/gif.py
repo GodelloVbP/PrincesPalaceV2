@@ -8,6 +8,7 @@ so it can be tested alone (tools/gif_test.py):
               into scenarios, refuse unknown ids, make the immutable run
               directory, write request.json, unity_request.json, identity.json
               and manifest.json into it
+    sheet     contact sheet of chosen frames across GIFs or runs
     finish    turn the frames Unity wrote into anim.gif / strip.png, build the
               stance and sheet GIFs (no Unity), collect the still PNGs, and
               write scenario.json, latest.json and the coverage table, then
@@ -1281,7 +1282,135 @@ def cmd_finish(args):
         print("  TIME %-6s %3d scenario(s) %7.1fs total (run + encode), %6.2fs each" % (kind, count, total, total / count))
     if batch:
         print("  batch ok=%s requestId=%s" % (batch.get("ok"), batch.get("requestId")))
+    if args.out:
+        for path in export_run(run_dir, args.out, args.name):
+            print("exported %s" % path)
     return 0 if outcomes and all(outcomes.values()) else 1
+
+
+# ---- export and contact sheets ----------------------------------------------
+
+EXPORT_FILES = (("anim.gif", "full.gif"), ("anim_preview.gif", "preview.gif"),
+                ("strip.png", "strip.png"), ("timing.json", "timing.json"))
+
+
+def _slug(text):
+    return re.sub(r"[^A-Za-z0-9._]+", "-", str(text)).strip("-").lower()
+
+
+def export_stem(scenario, prefix=""):
+    """<prefix>_<target>[_<speed>][_<formation>][_<status>]: what distinguishes
+    scenarios of one id, so a manifest run exports without collisions."""
+    parts = [_slug(prefix or scenario["id"].replace("/", "_"))]
+    if scenario.get("vs"):
+        parts.append(_slug(scenario["vs"].replace(",", "-")))
+    if scenario.get("speed", 1.0) != 1.0:
+        parts.append("%gx" % scenario["speed"])
+    if scenario.get("formation") not in (None, "", "lone"):
+        parts.append(_slug(scenario["formation"]))
+    if scenario.get("preStatus"):
+        parts.append(_slug(scenario["preStatus"]))
+    return "_".join(p for p in parts if p)
+
+
+def export_run(run_dir, out_dir, prefix=""):
+    """Copies each scenario's GIFs, strip and timing into out_dir under
+    export_stem names, so a capture outlives the runs cap. Returns the paths."""
+    request = read_json(os.path.join(run_dir, "request.json"), {})
+    os.makedirs(out_dir, exist_ok=True)
+    written = []
+    for s in request.get("scenarios", []):
+        sdir = os.path.join(run_dir, s["key"])
+        stem = export_stem(s, prefix)
+        for source, suffix in EXPORT_FILES:
+            src = os.path.join(sdir, source)
+            if os.path.isfile(src):
+                dst = os.path.join(out_dir, "%s_%s" % (stem, suffix))
+                shutil.copyfile(src, dst)
+                written.append(dst)
+    return written
+
+
+def sheet_gif_index(frame60):
+    """A 60 fps capture frame number -> its index in anim.gif (written at GIF_STEP)."""
+    return int(frame60) // GIF_STEP
+
+
+def resolve_sheet_input(path):
+    """A GIF file, or a run/scenario folder holding anim.gif. A run with several
+    scenarios is ambiguous and refused; point at the scenario folder."""
+    if os.path.isfile(path):
+        return path
+    direct = os.path.join(path, "anim.gif")
+    if os.path.isfile(direct):
+        return direct
+    found = [os.path.join(path, d, "anim.gif") for d in sorted(os.listdir(path))
+             if os.path.isfile(os.path.join(path, d, "anim.gif"))] if os.path.isdir(path) else []
+    if len(found) == 1:
+        return found[0]
+    raise ValueError("%s: %s" % (path, "no anim.gif found" if not found
+                                 else "%d scenarios; name one scenario folder" % len(found)))
+
+
+def parse_crop(text):
+    lo, hi = (float(x) for x in text.split(","))
+    if not 0.0 <= lo < hi <= 1.0:
+        raise ValueError("--crop is x0,x1 as fractions of width with 0 <= x0 < x1 <= 1")
+    return lo, hi
+
+
+def build_sheet(inputs, frames60, crop=(0.55, 1.0), tile_width=300):
+    """One row per (label, gif path); one tile per 60 fps frame, cropped to
+    crop's slice of the width and labelled '<label> f<N>'."""
+    from PIL import Image, ImageDraw, ImageSequence
+    import capture_strip
+
+    font = capture_strip.load_font(14)
+    header = 22
+    rows = []
+    for label, path in inputs:
+        with Image.open(path) as gif:
+            shots = [f.convert("RGB") for f in ImageSequence.Iterator(gif)]
+        w, h = shots[0].size
+        box = (int(round(w * crop[0])), 0, int(round(w * crop[1])), h)
+        tiles = []
+        for n in frames60:
+            shot = shots[min(sheet_gif_index(n), len(shots) - 1)].crop(box)
+            th = int(round(shot.size[1] * tile_width / float(shot.size[0])))
+            tiles.append((n, shot.resize((tile_width, th), Image.LANCZOS)))
+        rows.append((label, tiles))
+    tile_h = max(t.size[1] for _, tiles in rows for _, t in tiles)
+    sheet = Image.new("RGB", (tile_width * len(frames60), (tile_h + header) * len(rows)), BACKDROP)
+    draw = ImageDraw.Draw(sheet)
+    for r, (label, tiles) in enumerate(rows):
+        for c, (n, tile) in enumerate(tiles):
+            x, y = c * tile_width, r * (tile_h + header)
+            draw.text((x + 6, y + 3), "%s f%d" % (label, n), fill=(235, 230, 225), font=font)
+            sheet.paste(tile, (x, y + header))
+    return sheet
+
+
+def cmd_sheet(args):
+    try:
+        frames = [int(x) for x in args.frames.split(",") if x.strip()]
+        crop = parse_crop(args.crop)
+        inputs = []
+        for item in args.inputs:
+            label, sep, path = item.partition("=")
+            if not sep or not label:
+                raise ValueError("--in takes label=path, got %r" % item)
+            inputs.append((label, resolve_sheet_input(path)))
+    except (ValueError, OSError) as e:
+        print("REFUSED %s" % e, file=sys.stderr)
+        return 2
+    if not frames:
+        print("REFUSED --frames is empty", file=sys.stderr)
+        return 2
+    sheet = build_sheet(inputs, frames, crop)
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
+    sheet.save(args.out)
+    print("sheet %dx%d -> %s" % (sheet.size[0], sheet.size[1], args.out))
+    return 0
 
 
 def list_frames_or_empty(frames_dir):
@@ -1399,9 +1528,18 @@ def main(argv=None):
     p.add_argument("run_dir")
     p.add_argument("--keep-frames", action="store_true")
     p.add_argument("--no-preview", action="store_true", help="skip anim_preview.gif")
+    p.add_argument("--out", default="", help="also copy GIFs, strip and timing here (see export_stem)")
+    p.add_argument("--name", default="", help="filename prefix for --out (default: the scenario id)")
     p.add_argument("--cap-gb", type=float, default=None,
                    help="size cap for the runs folder in GB (default $GIF_RUNS_CAP_GB, else 5)")
     p.set_defaults(fn=cmd_finish)
+
+    p = sub.add_parser("sheet", help="contact sheet: a row per --in label=gif|run, tiles at 60 fps frame numbers")
+    p.add_argument("--in", dest="inputs", action="append", required=True, metavar="LABEL=PATH")
+    p.add_argument("--frames", required=True, help="comma list of 60 fps frame numbers (anim.gif holds every %dnd)" % GIF_STEP)
+    p.add_argument("--crop", default="0.55,1.0", help="x0,x1 as fractions of width (default: the enemies' side)")
+    p.add_argument("--out", required=True)
+    p.set_defaults(fn=cmd_sheet)
 
     p = sub.add_parser("trim")
     p.add_argument("--keep", type=int, default=FRAME_RUNS_KEPT)
