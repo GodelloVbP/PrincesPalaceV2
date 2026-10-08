@@ -65,7 +65,7 @@ MonoBehaviour:
       - id: eye_a
         render: sprite
         place: above
-        height: 0.17
+        height: 0.12
         follow: 0
         whenConsumed: 
         at: release
@@ -78,7 +78,7 @@ MonoBehaviour:
         fade: 0.08
         fadeIn: 0.08
         opacity: 0.9
-        dx: -134
+        dx: -28
         dy: 0
         drift:
           fromX: 0
@@ -119,11 +119,11 @@ MonoBehaviour:
         sort: effects
         align: 
         punch: 0
-        glow: 0.6
-        tint: 
+        glow: 0.15
+        tint: '#66741a'
         impactX: 0.5
         impactY: 0.5
-        aspect: 0
+        aspect: 2.6
         travelSeconds: 0
         travelDelay: 0
         overhang: 0
@@ -161,7 +161,7 @@ MonoBehaviour:
       - id: eye_b
         render: sprite
         place: above
-        height: 0.17
+        height: 0.12
         follow: 0
         whenConsumed: 
         at: release
@@ -174,7 +174,7 @@ MonoBehaviour:
         fade: 0.08
         fadeIn: 0.08
         opacity: 0.9
-        dx: -96
+        dx: 28
         dy: 0
         drift:
           fromX: 0
@@ -215,11 +215,11 @@ MonoBehaviour:
         sort: effects
         align: 
         punch: 0
-        glow: 0.6
-        tint: 
+        glow: 0.15
+        tint: '#66741a'
         impactX: 0.5
         impactY: 0.5
-        aspect: 0
+        aspect: 2.6
         travelSeconds: 0
         travelDelay: 0
         overhang: 0

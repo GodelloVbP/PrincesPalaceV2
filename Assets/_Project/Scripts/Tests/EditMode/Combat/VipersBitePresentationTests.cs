@@ -36,6 +36,19 @@ namespace PrincesPalace.Domain.Tests
             }
 
             var jaws = vfx.layers.Single(l => l.id == "jaws");
+            var left = vfx.layers.Single(l => l.id == "eye_a");
+            var right = vfx.layers.Single(l => l.id == "eye_b");
+            foreach (var eye in new[] { left, right })
+            {
+                Assert.AreEqual(jaws.place, eye.place, eye.id + " sits where the jaws sit");
+                Assert.AreEqual(jaws.height, eye.height, 1e-6f, eye.id + " shares the jaws' anchor height");
+                Assert.AreEqual(jaws.impactY, eye.impactY, 1e-6f, eye.id + " is centred in the gap between the jaws");
+                Assert.AreEqual("#66741a", eye.tint, eye.id + " is a dark sickly green, not lemon");
+                Assert.AreEqual(0.15f, eye.glow, 1e-6f, eye.id + " smoulders");
+            }
+
+            Assert.AreEqual(-28f, left.dx, 1e-6f);
+            Assert.AreEqual(28f, right.dx, 1e-6f);
             Assert.AreEqual(vfx.hitCueSeconds, jaws.offset + jaws.seconds, 0.02f, "the jaws finish drawing together on the cue");
             Assert.Less(jaws.glow, 1.25f, "the wind-up is dimmer than the snap");
 

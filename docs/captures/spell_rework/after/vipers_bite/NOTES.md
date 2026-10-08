@@ -384,6 +384,17 @@ spell_feel (`spell_feel_r2restore_1x/*/report.json`, treant and rat at 1x): cont
 contact desync (cue f21 vs authored f24: the capture path's first-drawn wait). Rat WARN no accent (peak 6.5 over floor 2.4, under 1.5x the cast's typical 5.1),
 biggest rise f5 (the rat's own pose change / eye glints, not the snap). Not new defects of the jaws; the residue and desync WARNs were already open.
 
+## Round 4: eyes inside the bite, darker and menacing (2026-10-08)
+
+Owner: "Make the eyes in the middle of the jaws bite ... a bit darker; it looks like a cartoon cat and should be a menacing snake." Read as the eyes; jaws, bite, closed, drip, mist, burst and timing are unchanged.
+
+- **Anchor:** `eye_a`/`eye_b` now use the jaws' own `place` above, `height` 0.12 and `impactY` 0.5, `dx` -28/+28 (scaled by `fit` like the jaws), so the pair sits in the gap between the upper and lower jaw on rat and treant. Offsets 0.04/0.10, seconds 0.34/0.28 and `fadeIn`/`fade` stay: they open first, read through the forming jaws, and are gone by the snap (f22 on the rat).
+- **Look:** `tint` #66741a (dark sickly olive-green, was the sheet's lime), `glow` 0.15 (was 0.6), `aspect` 2.6 (flatter almond box over the same art). No new art, no recipe change; the slit pupil of cell 2 is kept (cell 1, half open, still plays first). Stage `gloom` left at 0.2.
+- **Rat 1x (f3-f20):** f3 `eye_a` alone half open on the body, f5 both, f9 inside the forming jaws, f12-f18 a dark olive pair centred between the fang rows with a slit pupil, no merging; f22 the snap alone, eyes out.
+- **Treant 1x:** same frames; the pair sits on the face between the jaws, over its own orange eyes (f12-f18). They are about 60 px each on the treant because `fit target` scales them with the body.
+- **spell_feel 1x** (`spell_feel_eyes2_1x`): same warnings as `spell_feel_r2restore_1x` (rat no accent and desync; treant residue tail and desync), peaks 6.4/8.0 against 6.5/8.0.
+- **Previews:** `vipers_bite_eyes2_rat_preview.gif`, `vipers_bite_eyes2_treant_preview.gif`.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.
@@ -403,6 +414,7 @@ Each asked once. Status: open, answered (with the answer), or dropped.
 | Round 2 (2026-10-07) | Jaws 140/120/110 to 230/200/190, forming jaws opacity 0.95 glow 0.7, glints to face height (0.17, dx -108/-56), mist window 0.35 life 0.4-0.6 | owner (bigger jaws), orchestrator step 3 (glints, rat jaws, mist) | worker score in Round 2 |
 | Tuning after step 6 (2026-10-07) | Eyes 32 to 56 px, dx -134/-96 | orchestrator's step 6 check | eyes read on rat and treant |
 | Round 3 (2026-10-08) | owner 2026-10-08: new side-view jaw art rejected; round 2 frontal ghost jaws restored; new eyes, drip, mist and burst kept | owner | see "Round 3" |
+| Round 4 (2026-10-08) | owner 2026-10-08: eyes inside the bite, darker and menacing | owner | see "Round 4" |
 
 ## Measures
 
