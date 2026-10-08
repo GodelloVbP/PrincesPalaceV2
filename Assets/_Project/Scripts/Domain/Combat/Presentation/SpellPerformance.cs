@@ -369,11 +369,26 @@ namespace PrincesPalace.Domain.Combat.Presentation
         private static float Eased(SpellLayerInstance instance, float seconds)
         {
             float u = Progress(instance, seconds);
+            if (Ballistic(instance))
+            {
+                // A THROWN THING KEEPS ITS SIDEWAYS SPEED: constant along the
+                // line, so with the arc added on top (drift.arcY) the path is
+                // one parabola in time. u*u here left the glob hanging at the
+                // hand and then shooting across level before dropping.
+                return u < instance.FlightReach ? u : instance.FlightReach;
+            }
+
             if (u <= 1f) return u * u;
 
             float f = 1f + 2f * (u - 1f);
             return f < instance.FlightReach ? f : instance.FlightReach;
         }
+
+        // A FLIGHT THAT AUTHORS AN ARC IS A THROW, not a projectile: it flies
+        // at constant speed (Eased) and its derivative is constant (VelocityOf).
+        public static bool Ballistic(SpellLayerInstance instance) =>
+            instance?.Layer != null && instance.Layer.travelSeconds > 0f &&
+            instance.Layer.drift != null && instance.Layer.drift.arcY != 0f;
 
         // The exact derivative of the line above, which is why it is here and
         // not measured by differencing two samples: a difference over a tick
@@ -384,7 +399,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             if (travel <= 0f) return UiVec.Zero;
 
             float u = Progress(instance, seconds);
-            return (instance.To - instance.From) * (2f * (u < 1f ? u : 1f) / travel);
+            return (instance.To - instance.From) * ((Ballistic(instance) ? 1f : 2f * (u < 1f ? u : 1f)) / travel);
         }
 
         // Past 1 only for a `through` flight, which keeps counting travel

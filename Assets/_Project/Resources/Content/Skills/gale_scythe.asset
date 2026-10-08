@@ -561,8 +561,8 @@ MonoBehaviour:
         dx: 0
         dy: 35
         drift:
-          fromX: -0.1
-          toX: 0.2
+          fromX: -0.05
+          toX: 0.1
           fromY: 0
           toY: 0
           viaX: 0
@@ -593,7 +593,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 250
+        size: 170
         fit: target
         facing: auto
         sort: effects

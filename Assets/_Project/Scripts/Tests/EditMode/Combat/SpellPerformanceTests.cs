@@ -692,9 +692,10 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // A follower rides the BODY, and a body that arcs (Mud Burst's glob)
-        // has moved off its undrifted line: 0.2 s into a 0.4 s flight the ease
-        // is 0.25, the line sits at x 25, and an arcY of 0.6 lifts the body
-        // 0.45 box heights (4 * 0.25 * 0.75 * 0.6) = 45 px of a 100 px box.
+        // has moved off its undrifted line: 0.2 s into a 0.4 s flight a throw (it
+        // authors arcY, so it flies at constant speed) is halfway: the line sits at
+        // x 50, and an arcY of 0.6 lifts the body 0.6 box heights (4 * 0.5 * 0.5
+        // * 0.6) = 60 px of a 100 px box.
         [Test]
         public void ABodyPositionIncludesTheRootsDriftSoAFollowerRidesTheArc()
         {
@@ -708,8 +709,8 @@ namespace PrincesPalace.Domain.Tests
             };
 
             var at = SpellPerformance.PositionOf(root, 0.2f);
-            Assert.AreEqual(25f, at.X, 1e-3f);
-            Assert.AreEqual(45f, at.Y, 1e-3f);
+            Assert.AreEqual(50f, at.X, 1e-3f);
+            Assert.AreEqual(60f, at.Y, 1e-3f);
             Assert.AreEqual(0f, SpellPerformance.FlightOf(root, 0.2f).Y, 1e-3f, "the bare line is what a follower used to read");
         }
     }

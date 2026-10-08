@@ -158,6 +158,102 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
+      - id: glob_trail
+        render: emitter
+        place: layer:glob
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.17
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/mud_splat_drops
+          rate: 60
+          burst: 0
+          window: 0.155
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0.04
+          drag: 2
+          gravity: -420
+          lifeMin: 0.2
+          lifeMax: 0.38
+          sizeMin: 0.08
+          sizeMax: 0.16
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 1
+          lateral: 24
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.3
+          endScale: 0.6
+          seed: 3307
+          weights: []
       - id: glob
         render: still
         place: caster-centre
@@ -187,7 +283,7 @@ MonoBehaviour:
           arcY: 0.6
         rotate:
           degrees: 0
-          spin: 0
+          spin: 540
           amplitude: 0
           period: 0
           damping: 0
@@ -462,13 +558,13 @@ MonoBehaviour:
         fade: 0.2
         fadeIn: 0.05
         opacity: 1
-        dx: -40
-        dy: 20
+        dx: 0
+        dy: 0
         drift:
-          fromX: 0
-          toX: 0
-          fromY: -0.15
-          toY: -0.15
+          fromX: -0.9
+          toX: -0.9
+          fromY: 0
+          toY: 0
           viaX: 0
           viaY: 0
           viaAt: 0
@@ -558,13 +654,13 @@ MonoBehaviour:
         fade: 0.2
         fadeIn: 0.05
         opacity: 1
-        dx: 35
-        dy: 5
+        dx: 0
+        dy: 0
         drift:
-          fromX: 0
-          toX: 0
-          fromY: -0.15
-          toY: -0.15
+          fromX: 0.9
+          toX: 0.9
+          fromY: 0
+          toY: 0
           viaX: 0
           viaY: 0
           viaAt: 0
@@ -655,12 +751,12 @@ MonoBehaviour:
         fadeIn: 0.05
         opacity: 1
         dx: 0
-        dy: -25
+        dy: 0
         drift:
-          fromX: 0
-          toX: 0
-          fromY: -0.15
-          toY: -0.15
+          fromX: 0.35
+          toX: 0.35
+          fromY: -0.2
+          toY: -0.2
           viaX: 0
           viaY: 0
           viaAt: 0
@@ -838,9 +934,9 @@ MonoBehaviour:
         until: 
         fadeOut: 0
       kick:
-        strength: 0
-        rise: 0
-        fall: 0
+        strength: 0.012
+        rise: 0.04
+        fall: 0.16
       bodyRim:
         tint: 
         pulses: 0
