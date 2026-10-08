@@ -126,8 +126,11 @@ late. Edit contention did not cost rounds: one spell was in flight at a time.
    file):
    - the identity sheet;
    - the accepted prompt, source image, processing recipe and outputs;
-   - the open owner questions, each asked once;
-   - the round log.
+   - open items and dated decisions, each owner question asked once;
+   - the round log, one row per round, and the step 7 snapshot id.
+
+   The record is rewritten in place, not appended to; its writing rules are
+   at the top of the template.
 
    Ownership across rounds rests on that record, not on one agent's context.
    An agent may be kept alive for speed, and is replaced from the record
@@ -226,7 +229,7 @@ success of goal 2.
    - the rubric.
 
    Built 2026-10-05, as `anim_preview.gif` beside `anim.gif` (`tools/gif.py`,
-   skipped with `gif.ps1 -NoPreview`).
+   skipped with `gif.ps1 -NoPreview`). `gif.ps1 ... -Out <NOTES folder>` copies the capture files there under stable names (`docs/ART_PIPELINE.md`).
 2. **Trial 1, one spell.** Ashen Reckoning: the owner rates it best, and it
    needs an ending. It tests the loop with the least art risk.
 3. **Trial 2, two spells with different needs.** Court of Whispers (motion

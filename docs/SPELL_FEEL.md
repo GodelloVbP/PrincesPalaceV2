@@ -221,7 +221,7 @@ thing to avoid.
 
 Scored by the orchestrator before the owner sees a spell. Each item is ✔, ✘
 (blocks the owner message) or ~ (named to the owner as weak). The score goes in
-the spell's NOTES (`docs/captures/spell_rework/NOTES_TEMPLATE.md`).
+the Snapshot section of the spell's NOTES (`docs/captures/spell_rework/NOTES_TEMPLATE.md`).
 
 **Motion**, played at 1x and 1.5x, then stills at the frame edges, the hit and
 the last frame:
