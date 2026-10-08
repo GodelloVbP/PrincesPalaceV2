@@ -1,0 +1,113 @@
+{
+  "characters": [
+    {
+      "canvas": [
+        1408,
+        1402
+      ],
+      "files": [
+        {
+          "expression": "neutral",
+          "output": "sheep/neutral.png",
+          "outputSha256": "3b624079a65055dbb6385f19767027fbd3c02a3cb000cfb02b4c31d4d554957d",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png",
+          "sourceSha256": "7213ddf997ab89a91881b306c23b1f37ebeb6044377fbcc6b3b770d8524a5128",
+          "sourceSize": [
+            1408,
+            1402
+          ]
+        },
+        {
+          "expression": "happy",
+          "output": "sheep/happy.png",
+          "outputSha256": "664daa1e5abfb430ed7c3d3f5b6b7cddaddc947dc5ae2a2cd91296cfece59715",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_happy.png",
+          "sourceSha256": "1c2a159126105c15aa6b5a9e289c968b9279a5441e9adf410cb5c79201734e60",
+          "sourceSize": [
+            1408,
+            1402
+          ]
+        },
+        {
+          "expression": "annoyed",
+          "output": "sheep/annoyed.png",
+          "outputSha256": "0d7b6245e86c31d5c11937f1735aebb698b1766ddf440d3b71f65e79f0c4a8d0",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_annoyed.png",
+          "sourceSha256": "692599e9d9e9b7f54d187d4a765015abc27460d3197d0b1df80ecf366acb949e",
+          "sourceSize": [
+            1408,
+            1402
+          ]
+        },
+        {
+          "expression": "nervous",
+          "output": "sheep/nervous.png",
+          "outputSha256": "569ea18a6810c12740434e3854f239c2fa0bd39e521a2ae2f0d55a234f9e4cdd",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_nervous.png",
+          "sourceSha256": "1e7794a5e62b9e327b1eef4e8cebc35a5fdcc06b3fe6bfb11512d8ed9eaf54e9",
+          "sourceSize": [
+            1408,
+            1402
+          ]
+        },
+        {
+          "expression": "sad",
+          "output": "sheep/sad.png",
+          "outputSha256": "c5b69ce9ec6300c1ebd27f5c9068fb22aab984d07c93ab1771ab6b559bc43fd0",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_sad.png",
+          "sourceSha256": "b06e7c409bfed9468a1af56c1ca1b0e1ffb9e99330d850007ca81e076b0e8cdb",
+          "sourceSize": [
+            1408,
+            1402
+          ]
+        },
+        {
+          "expression": "surprised",
+          "output": "sheep/surprised.png",
+          "outputSha256": "a4ff36033e67aadf39d9ac3026f7c3b9d759e04afb04d6042d05c5b347254e2b",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_surprised.png",
+          "sourceSha256": "7878b12fe531c733dcc8b1899422d4571b6d2c60e7c817c3ff99ee6825fea2d0",
+          "sourceSize": [
+            1408,
+            1402
+          ]
+        },
+        {
+          "expression": "entranced",
+          "output": "sheep/entranced.png",
+          "outputSha256": "7f84bfc51f6e06810eb93ff4acc7b47123b9e5985226b7d78a602e468d88a697",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_entranced.png",
+          "sourceSha256": "9c0a25c43d1100dc8fa45979aef09d94cb6b2e898f79e40fb8ed045185d9dd17",
+          "sourceSize": [
+            1408,
+            1402
+          ]
+        }
+      ],
+      "id": "sheep",
+      "missingExpressions": [],
+      "namePrefix": "Shawn",
+      "sourceFolder": "Sheep"
+    }
+  ],
+  "expressions": [
+    "neutral",
+    "happy",
+    "annoyed",
+    "nervous",
+    "sad",
+    "surprised",
+    "entranced"
+  ],
+  "params": {
+    "characters": [
+      [
+        "Sheep",
+        "sheep",
+        "Shawn"
+      ]
+    ]
+  },
+  "tool": "tools/normalize_dialogue_busts.py",
+  "version": 1
+}
