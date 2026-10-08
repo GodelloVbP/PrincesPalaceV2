@@ -158,9 +158,9 @@ late. Edit contention did not cost rounds: one spell was in flight at a time.
 | 1 | Lock identity and references | orchestrator, from SPELL_FEEL | identity sheet (contract 1) | the owner confirms or edits it in the same message as step 3's GIF |
 | 2 | Block with existing assets | worker | stand-in motion; beat table; list of art needed | binding checks pass, or each failure is explained |
 | 3 | Watch and approve the motion | orchestrator, then owner | rubric result; phone preview + beat table | owner: ✔ per beat, or ✘ + frame + what they see |
-| 4 | Generate art | owner | images from the prompt template (section 7) | — |
-| 5 | Inspect the art before wiring | orchestrator | usability report; art contact sheet against the art rubric | accepted, or a targeted revision prompt |
-| 6 | Integrate and compare in context | worker, then orchestrator | wired art; polish from the menu (section 8); side-by-side with approved spells | motion rubric and art rubric pass; owner review |
+| 4 | Generate art | owner | images from the prompt template (section 7), with the approved stand-in frame attached | — |
+| 5 | Inspect the art before wiring | orchestrator | usability report; art contact sheet against the art rubric, beside the approved stand-in frame | accepted only if it shows the approved motion (view, pose, verb) as well as passing the rubric; else a targeted revision prompt |
+| 6 | Integrate and compare in context | worker, then orchestrator | wired art at opacity 1, no tint, no extra glow (a dilution is added only to fix a named problem, written in NOTES); polish from the menu (section 8); side-by-side with approved spells | motion rubric and art rubric pass; owner review |
 | 7 | Verify and close | worker | contract 8 | snapshot id recorded |
 
 Art requests are batched only for spells whose motion is approved (step 3):

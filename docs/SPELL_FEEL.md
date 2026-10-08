@@ -262,6 +262,9 @@ Engine-made effects, no new art. Each is a layer or field in `skills.json`
 (fields: `docs/ART_PIPELINE.md` §5b). Cost is what the Censer pilot spent; it
 was not measured per effect, only in total (102 particles thrown, 62 alive at
 most of a pool of 64, effects renderers 5 of 12). Each close updates the menu.
+Before offering an effect, read its code path: a verdict holds only under the
+condition its row names, and a look that seems wrong may be a system working as
+specified (the hit rim on a thin body part reads as a pale fill).
 
 | Effect | Verdict | Layer fields | Cost (pilot) |
 |---|---|---|---|

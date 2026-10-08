@@ -44,6 +44,7 @@ Delivery path: Assets/_Project/Art/Sheets/Spells/<Spell Name>/<filename>
 Canvas: <W>x<H>   Grid: <cols>x<rows> of <cell W>x<cell H>   (or: one still)
 Pivot: <where, in every cell, as a % of the cell: e.g. top edge centre; base line 85% down, centred>
 Size in play: <share of the target's body or stage width, from the beat table>
+Approved frame: <the stand-in still from the approved step 3 GIF, attached; the art keeps its view, pose and silhouette>
 Drawing: <the subject, cell by cell if a sheet; materials in flat tones>
 Verb: <what it does to reality>
 Must read as: <...>
