@@ -38,7 +38,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.155f, glob.travelSeconds, 1e-6f, "nine frames in the air at 60");
             Assert.AreEqual(0.6f, glob.drift.arcY, 1e-6f, "lobbed: one parabola");
             Assert.AreEqual(vfx.hitCueSeconds, glob.travelDelay + glob.travelSeconds, 1e-6f, "arrives on the cue");
-            Assert.AreEqual("Spells/mud_glob", glob.path);
+            Assert.AreEqual("Spells/mud_glob_flight", glob.path, "the painted wobble sheet, held in the hand and flown");
+            Assert.AreEqual("loop", glob.until);
+            Assert.AreEqual(20f, glob.fps, 1e-6f);
         }
 
         [Test]
@@ -69,8 +71,8 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(string.IsNullOrEmpty(vfx.layers.Single(l => l.id == id).tint), id + ": painted brown already");
             }
 
-            Assert.AreEqual(13, vfx.layers.Length,
-                "gather, shadow, launch, wake, glob_trail, glob, splat, drops, impact_ring, three drip strands, puddle");
+            Assert.AreEqual(12, vfx.layers.Length,
+                "gather, shadow, launch, glob_trail, glob, splat, drops, impact_ring, three drip strands, puddle");
         }
 
         // ONE PARABOLA IN TIME. The glob leaves at 0.17 s and lands at 0.325 s;
@@ -112,7 +114,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(early.X, late.X, 1e-3f, "constant speed along the line");
             Assert.AreEqual(310f / 0.155f, early.X, 0.1f);
 
-            Assert.AreEqual(540f, Mud().layers.Single(l => l.id == "glob").rotate.spin, 1e-6f, "it tumbles");
+            Assert.AreEqual(0f, Mud().layers.Single(l => l.id == "glob").rotate.spin, 1e-6f, "no spin: the smear trails behind");
+            Assert.AreEqual("path", Mud().layers.Single(l => l.id == "glob").orient, "turned onto its line");
+            Assert.IsFalse(Mud().layers.Any(l => l.id == "wake"), "the drawn smear replaces the tinted orb wake");
             var trail = Mud().layers.Single(l => l.id == "glob_trail");
             Assert.AreEqual("layer:glob", trail.place, "the drips ride the glob");
             Assert.AreEqual(0.012f, Mud().kick.strength, 1e-6f, "the arrival kicks the stage");

@@ -1,0 +1,25 @@
+{
+  "_notes": [
+    "Mud Burst: the glob in flight (mud_glob_flight.png, step 4 art 2026-10-09, 6x1 of 256x256 on #00FF00). A brown cel mud ball with a short pointed smear trailing left and a few droplets behind it, six frames of wobble in one registration, so no crop. Keyed green-soft (the plain green key clamps browns toward red). Matte: no tint, no glow. Replaces the painted still mud_glob in flight."
+  ],
+  "sheet": "Spells/Mud Burst/mud_glob_flight.png",
+  "grid": [
+    1,
+    6
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": "green-soft",
+  "canvas": [
+    256,
+    256
+  ],
+  "base_align": false,
+  "content_crop": false
+}
