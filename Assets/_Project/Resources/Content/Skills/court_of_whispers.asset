@@ -118,7 +118,7 @@ MonoBehaviour:
         align: 
         punch: 0
         glow: 0
-        tint: '#9A90C0'
+        tint: '#B9A0FF'
         impactX: 0.86
         impactY: 0.9
         aspect: 0
@@ -171,7 +171,7 @@ MonoBehaviour:
         until: hold
         fade: 0.06
         fadeIn: 0.1
-        opacity: 0.7
+        opacity: 1
         dx: 60
         dy: 0
         drift:
@@ -267,7 +267,7 @@ MonoBehaviour:
         until: hold
         fade: 0.25
         fadeIn: 0.12
-        opacity: 0.7
+        opacity: 1
         dx: 60
         dy: 0
         drift:

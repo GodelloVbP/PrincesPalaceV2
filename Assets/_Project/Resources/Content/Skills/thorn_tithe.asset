@@ -69,11 +69,11 @@ MonoBehaviour:
         at: release
         offset: 0.1
         path: Spells/thorn_tithe_back
-        seconds: 0.7
+        seconds: 0.5
         fps: 20
         startFrame: 0
         until: hold
-        fade: 0.1
+        fade: 0.28
         fadeIn: 0
         opacity: 1
         dx: 0
@@ -165,11 +165,11 @@ MonoBehaviour:
         at: release
         offset: 0.1
         path: Spells/thorn_tithe_front
-        seconds: 0.7
+        seconds: 0.5
         fps: 20
         startFrame: 0
         until: hold
-        fade: 0.1
+        fade: 0.28
         fadeIn: 0
         opacity: 1
         dx: 0
