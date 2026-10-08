@@ -5,6 +5,9 @@ one agent's memory, carries the spell across rounds. Rules it records against:
 `docs/SPELL_FEEL.md` (identity, rubric, checks, polish menu). Target: under
 about 120 lines, excluding the art prompt blocks.
 
+Captures land beside this file: `tools/gif.ps1 spell <id> -Vs <target> -Out <this folder> -Name <spell>_<round>`;
+contact sheets from `tools/gif.py sheet` (both in `docs/ART_PIPELINE.md`).
+
 Writing rules:
 
 1. **Replace, don't append.** Edit the section in place; a changed fact
