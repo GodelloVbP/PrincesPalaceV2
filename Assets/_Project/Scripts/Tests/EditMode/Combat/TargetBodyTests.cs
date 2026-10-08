@@ -134,5 +134,67 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(1f, TargetBody.TailScale(320f, default), Tolerance);
         }
+
+        // ---- the head ---------------------------------------------------------
+        //
+        // The rat's authored head (0.83, 0.75, 0.41) on the on-stage rat above:
+        // left 132.8304, right 412.1608 (279.3304 wide), bottom -218, top
+        // -25.112 (192.888 tall).
+
+        private static readonly StageBody RatOnStage = new StageBody(132.8304f, 412.1608f, -218f, -25.112f);
+
+        [Test]
+        public void TheHeadPointIsAFractionOfTheBoxFromItsLeftAndBottom()
+        {
+            // x 132.8304 + 0.83 x 279.3304 = 364.6746; y -218 + 0.75 x 192.888 = -73.334.
+            var head = TargetBody.HeadPoint(RatOnStage, 0.83f, 0.75f, mirrored: false);
+            Assert.AreEqual(364.6746f, head.X, Tolerance);
+            Assert.AreEqual(-73.334f, head.Y, Tolerance);
+        }
+
+        [Test]
+        public void AMirroredSpritesHeadIsMeasuredFromTheBoxsRightEdge()
+        {
+            // x 412.1608 - 0.83 x 279.3304 = 180.3166.
+            var head = TargetBody.HeadPoint(RatOnStage, 0.83f, 0.75f, mirrored: true);
+            Assert.AreEqual(180.3166f, head.X, Tolerance);
+            Assert.AreEqual(-73.334f, head.Y, Tolerance);
+        }
+
+        [Test]
+        public void AnUnauthoredHeadReadsTheFallbackPoint()
+        {
+            // Box 100..300 x 0..400: x 100 + 0.5 x 200 = 200, y 0.8 x 400 = 320.
+            var head = TargetBody.HeadPoint(new StageBody(100f, 300f, 0f, 400f), -1f, -1f, mirrored: false);
+            Assert.AreEqual(200f, head.X, Tolerance);
+            Assert.AreEqual(320f, head.Y, Tolerance);
+        }
+
+        [Test]
+        public void TheRatsOwnHeadFitsAtAboutOne()
+        {
+            // 0.41 x 192.888 = 79.08 over 79.
+            Assert.AreEqual(1.0010f, TargetBody.HeadFitFactor(RatOnStage, 0.41f), 1e-3f);
+        }
+
+        [Test]
+        public void ABiggerHeadScalesByItsHeightOverTheRats()
+        {
+            // 0.25 x 400 = 100 over 79 = 1.26582.
+            Assert.AreEqual(1.26582f, TargetBody.HeadFitFactor(new StageBody(0f, 100f, 0f, 400f), 0.25f), 1e-4f);
+        }
+
+        [Test]
+        public void AnUnauthoredHeadSizeFitsByTheFallbackSize()
+        {
+            // 0.3 x 400 = 120 over 79 = 1.51899.
+            Assert.AreEqual(1.51899f, TargetBody.HeadFitFactor(new StageBody(0f, 100f, 0f, 400f), -1f), 1e-4f);
+        }
+
+        [Test]
+        public void AHeadFitOnABodyWithNoHeightKeepsTheAuthoredSize()
+        {
+            Assert.AreEqual(1f, TargetBody.HeadFitFactor(default, 0.4f), Tolerance);
+        }
     }
 }

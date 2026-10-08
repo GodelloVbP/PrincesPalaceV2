@@ -93,6 +93,12 @@ namespace PrincesPalace.Domain.Content
         public float StageScale = 1f;
         public int SlotSpan = 1;
 
+        // See RawEnemyEntry.headX. -1 is unauthored; read through
+        // TargetBody.HeadOf, which owns the fallback.
+        public float HeadX = -1f;
+        public float HeadY = -1f;
+        public float HeadSize = -1f;
+
         // See RawEnemyEntry.rollable. The initializer is load-bearing: an
         // asset built before this field existed reads TRUE, so no shipped
         // monster silently leaves the room pool.

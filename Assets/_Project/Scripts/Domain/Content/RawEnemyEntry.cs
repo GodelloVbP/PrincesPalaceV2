@@ -273,6 +273,21 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("A multiplier on this monster's stage size, on top of its slot's own depth scale; 0 means unset and reads as 1.")]
         public float stageScale;
 
+        // WHERE THE HEAD IS on the idle drawing, as fractions of its opaque
+        // box, so a spell layer placed `target-head` / sized `fit: head` lands
+        // on a rat's head and a treant's alike. Measured on the sprite as
+        // drawn, before any facing mirror: X from the left edge, Y from the
+        // bottom edge, size = head height over body height. -1 means
+        // unauthored and reads as TargetBody.FallbackHead*.
+        [ContentDoc("Head centre X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn; -1 means unauthored and reads as 0.5.")]
+        public float headX = -1f;
+
+        [ContentDoc("Head centre Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge; -1 means unauthored and reads as 0.8.")]
+        public float headY = -1f;
+
+        [ContentDoc("Head height over the idle drawing's opaque height (above 0, at most 1); -1 means unauthored and reads as 0.3.")]
+        public float headSize = -1f;
+
         // HOW MANY OF THE STAGE'S POSITIONS THIS MONSTER OCCUPIES.
         //
         // 0 means unset and reads as 1. A monster that takes two leaves room

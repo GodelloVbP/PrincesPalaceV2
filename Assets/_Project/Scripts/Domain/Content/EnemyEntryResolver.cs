@@ -300,6 +300,11 @@ namespace PrincesPalace.Domain.Content
             if (!SpellPresentationPaths.Check(label, raw.vfx, out error)) return false;
             if (!SpellLayerRules.TryCheck(label, raw.vfx, out error)) return false;
 
+            // -1 IS THE ONLY UNAUTHORED VALUE; anything else is a fraction of
+            // the opaque box and a typo outside 0..1 would put a layer off
+            // the body with nothing saying why.
+            if (!TryCheckHead(label, raw, out error)) return false;
+
             // BOTH OR NEITHER. Half a rally is a stack that adds nothing or a
             // bonus that never stacks -- authored, read, and inert.
             var rally = raw.rallyPerRound ?? new RawEnemyRally();
@@ -351,6 +356,9 @@ namespace PrincesPalace.Domain.Content
                 attackType: attackType)
             {
                 Rollable = raw.rollable,
+                HeadX = raw.headX,
+                HeadY = raw.headY,
+                HeadSize = raw.headSize,
                 RallyAttackPercentPerStack = rally.attackPercentPerStack,
                 RallyMaxStacks = rally.maxStacks,
                 AttackCrits = raw.attackCrits,
@@ -362,6 +370,25 @@ namespace PrincesPalace.Domain.Content
             };
             error = null;
             return true;
+        }
+
+        private static bool TryCheckHead(string label, RawEnemyEntry raw, out string error)
+        {
+            error = null;
+            if (raw.headX != -1f && (raw.headX < 0f || raw.headX > 1f))
+            {
+                error = $"{label}: headX {raw.headX} must be -1 (unauthored) or between 0 and 1.";
+            }
+            else if (raw.headY != -1f && (raw.headY < 0f || raw.headY > 1f))
+            {
+                error = $"{label}: headY {raw.headY} must be -1 (unauthored) or between 0 and 1.";
+            }
+            else if (raw.headSize != -1f && (raw.headSize <= 0f || raw.headSize > 1f))
+            {
+                error = $"{label}: headSize {raw.headSize} must be -1 (unauthored) or above 0 and at most 1.";
+            }
+
+            return error == null;
         }
 
         // THE SCHEDULE (PLAN_BELLWETHER_KIT 3.7), refused wherever it would be

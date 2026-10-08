@@ -593,5 +593,40 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(ok);
             StringAssert.Contains("rallyPerRound has a negative value", string.Join(" | ", errors));
         }
+
+        // ---- head ----------------------------------------------------------------
+
+        [Test]
+        public void AnUnauthoredHeadResolvesAsMinusOne_AndAnAuthoredOneIsCarried()
+        {
+            var plain = Minimal("plain");
+            var headed = Minimal("headed");
+            headed.headX = 0.83f; headed.headY = 0.75f; headed.headSize = 0.41f;
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { plain, headed }, out var resolved, out _);
+
+            Assert.IsTrue(ok);
+            Assert.AreEqual(-1f, resolved[0].HeadX);
+            Assert.AreEqual(-1f, resolved[0].HeadY);
+            Assert.AreEqual(-1f, resolved[0].HeadSize);
+            Assert.AreEqual(0.83f, resolved[1].HeadX);
+            Assert.AreEqual(0.75f, resolved[1].HeadY);
+            Assert.AreEqual(0.41f, resolved[1].HeadSize);
+        }
+
+        [TestCase(1.2f, 0.5f, 0.3f, "headX")]
+        [TestCase(0.5f, -0.5f, 0.3f, "headY")]
+        [TestCase(0.5f, 0.5f, 0f, "headSize")]
+        [TestCase(0.5f, 0.5f, 1.5f, "headSize")]
+        public void Refuses_AHeadOutsideTheBox(float x, float y, float size, string field)
+        {
+            var raw = Minimal("odd");
+            raw.headX = x; raw.headY = y; raw.headSize = size;
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { raw }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains(field, string.Join(" | ", errors));
+        }
     }
 }

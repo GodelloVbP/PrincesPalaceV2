@@ -38,7 +38,7 @@ namespace PrincesPalace
         {
             float size = (layer.size > 0f ? layer.size : SpellPresentation.DefaultSize)
                          * (layer.scale > 0f ? layer.scale : 1f);
-            if (layer.Fit == SpellFit.Target) size *= fitFactor;
+            if (layer.Fit != SpellFit.None) size *= fitFactor;
             float aspect = layer.aspect;
             return aspect > 0f ? new Vector2(size, size / aspect) : new Vector2(size, size);
         }
@@ -101,6 +101,24 @@ namespace PrincesPalace
             }
 
             return TargetBody.OnStage(local, scale, new UiVec(origin.x, origin.y));
+        }
+
+        // WHETHER THIS COMBATANT'S SPRITE IS FLIPPED on stage -- the same
+        // answer BodyOf mirrors its box by.
+        private bool MirroredOf(CombatantState who)
+        {
+            if (who == null) return false;
+            var side = who.IsPlayerSide ? StageSide.Left : StageSide.Right;
+            return StageFacing.MirrorScaleX(FacingOf(who), side) < 0f;
+        }
+
+        // THE HEAD THIS COMBATANT AUTHORS (RawEnemyEntry.headX), -1 where it
+        // authors none: allies, and any enemy that has not been measured.
+        // TargetBody owns the fallback, so -1 passes straight through.
+        private (float X, float Y, float Size) HeadOf(CombatantState who)
+        {
+            var enemy = who != null ? _session?.SourceFor(who)?.Source : null;
+            return enemy != null ? (enemy.HeadX, enemy.HeadY, enemy.HeadSize) : (-1f, -1f, -1f);
         }
 
         // Public for the PlayMode fixtures, for the reason every seam in this
@@ -418,7 +436,7 @@ namespace PrincesPalace
 
             float thickness = (layer.size > 0f ? layer.size : SpellPresentation.DefaultSize)
                               * (layer.scale > 0f ? layer.scale : 1f)
-                              * (layer.Fit == SpellFit.Target ? source.Fit : 1f);
+                              * (layer.Fit != SpellFit.None ? source.Fit : 1f);
 
             // THE WHOLE LINE, which for a flight that goes on through its target
             // is out to where the projectile leaves the stage.
@@ -506,7 +524,10 @@ namespace PrincesPalace
             // costs a cached lookup and nothing else.
             StageBody? body = targetRect != null ? BodyOf(targetCombatant, targetRect, parent) : (StageBody?)null;
 
-            float fit = layer.Fit == SpellFit.Target && body.HasValue ? TargetBody.FitFactor(body.Value) : 1f;
+            float fit = 1f;
+            if (body.HasValue && layer.Fit == SpellFit.Target) fit = TargetBody.FitFactor(body.Value);
+            else if (body.HasValue && layer.Fit == SpellFit.Head)
+                fit = TargetBody.HeadFitFactor(body.Value, HeadOf(targetCombatant).Size);
             instance.Fit = fit;
 
             var box = BoxForLayer(layer, fit);
@@ -535,6 +556,12 @@ namespace PrincesPalace
             else if (layer.Place == SpellPlace.Sky && !layer.Travels)
             {
                 aim = SkyPointFor(caster, casterRect, parent, body.Value);
+            }
+            else if (layer.Place == SpellPlace.TargetHead)
+            {
+                var head = HeadOf(targetCombatant);
+                var point = TargetBody.HeadPoint(body.Value, head.X, head.Y, MirroredOf(targetCombatant));
+                aim = new Vector2(point.X, point.Y);
             }
             else if (layer.Place == SpellPlace.Above && !layer.Travels)
             {

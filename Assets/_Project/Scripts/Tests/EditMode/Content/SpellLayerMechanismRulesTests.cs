@@ -148,5 +148,54 @@ namespace PrincesPalace.Domain.Tests
             tail.whenConsumed = "poison";
             CollectionAssert.IsEmpty(Problems(gated, tail));
         }
+
+        // ---- target-head / fit: head -----------------------------------------------
+
+        [Test]
+        public void TargetHeadAndFitHeadAreKnownWords()
+        {
+            Assert.IsTrue(SpellPlaceNames.IsKnown("target-head"));
+            Assert.AreEqual(SpellPlace.TargetHead, SpellPlaceNames.Parse("Target-Head"));
+            Assert.IsTrue(SpellPlaceNames.PerTarget(SpellPlace.TargetHead));
+            Assert.IsTrue(SpellPlaceNames.Centred(SpellPlace.TargetHead));
+            Assert.IsTrue(SpellPlaceNames.OnABody(SpellPlace.TargetHead));
+            Assert.IsTrue(SpellFitNames.IsKnown("head"));
+            Assert.AreEqual(SpellFit.Head, SpellFitNames.Parse("head"));
+        }
+
+        [Test]
+        public void TargetHeadTakesFollowAndFitHead()
+        {
+            CollectionAssert.IsEmpty(Problems(Layer("target-head", l => { l.follow = true; l.fit = "head"; })));
+        }
+
+        [Test]
+        public void FitHeadIsLegalWhereFitTargetIsAndRefusedWhereItIsNot()
+        {
+            CollectionAssert.IsEmpty(Problems(Layer("target", l => l.fit = "head")));
+            CollectionAssert.IsEmpty(Problems(Layer("sky", l => l.fit = "head")));
+            CollectionAssert.IsEmpty(Problems(Layer("counterpart-centre", l => l.fit = "head")));
+            CollectionAssert.IsEmpty(Problems(Layer("caster", l => { l.fit = "head"; l.travelSeconds = 0.2f; })));
+            Assert.That(Problems(Layer("caster", l => l.fit = "head")), Has.Some.Contains("fit 'head'"));
+            Assert.That(Problems(Layer("formation", l => l.fit = "head")), Has.Some.Contains("fit 'head'"));
+        }
+
+        [Test]
+        public void FitHeadIsLegalOnAnEmitterRidingAHeadLayer()
+        {
+            var host = Layer("target-head", l => l.id = "eyes");
+            var emitter = Layer("layer:eyes", l =>
+            {
+                l.id = "sparks"; l.render = "emitter"; l.path = ""; l.fit = "head";
+                l.emitter = new SpellEmitter { path = "Spells/x", rate = 10f, window = 0.25f };
+            });
+            Assert.That(Problems(host, emitter), Has.None.Contains("fit 'head'"));
+        }
+
+        [Test]
+        public void HeightIsStillRefusedOnTargetHead()
+        {
+            Assert.That(Problems(Layer("target-head", l => l.height = 1f)), Has.Some.Contains("only place 'above'"));
+        }
     }
 }

@@ -194,6 +194,14 @@ namespace PrincesPalace.Domain.Content
         // PER TARGET, like `sky`, and the launch of a travelling layer by the
         // same rule: it leaves here and arrives on the target's middle.
         Above,
+
+        // CENTRED ON THE STRUCK BODY'S HEAD: the point its enemy authors as
+        // headX/headY on the opaque box (Domain.Stage.TargetBody.HeadPoint),
+        // mirrored with the sprite. Per target and a body placement, so
+        // `follow` rides it; an actor that authors no head reads the
+        // fallback, which is how every ally reads for now. Pair it with
+        // `fit: head` so the layer is as big on a treant's head as on a rat's.
+        TargetHead,
     }
 
     public static class SpellPlaceNames
@@ -235,7 +243,7 @@ namespace PrincesPalace.Domain.Content
         // would be a second, disagreeing home for that rule.
         public static bool PerTarget(SpellPlace place) =>
             place == SpellPlace.Target || place == SpellPlace.TargetCentre || place == SpellPlace.Sky ||
-            place == SpellPlace.Above;
+            place == SpellPlace.Above || place == SpellPlace.TargetHead;
 
         // Whether a travelling layer on this word has somewhere to LEAVE from:
         // the caster's own body, or the air it amassed in. Every other word is
@@ -250,7 +258,7 @@ namespace PrincesPalace.Domain.Content
         // for a standing rule to measure against.
         public static bool Centred(SpellPlace place) =>
             place == SpellPlace.CasterCentre || place == SpellPlace.TargetCentre || place == SpellPlace.Sky ||
-            place == SpellPlace.Above || place == SpellPlace.CounterpartCentre;
+            place == SpellPlace.Above || place == SpellPlace.CounterpartCentre || place == SpellPlace.TargetHead;
 
         // Whether the word is the other end of the beat's placement. Asked for
         // the same reason OnCaster is: two values, several branch sites.
@@ -265,7 +273,7 @@ namespace PrincesPalace.Domain.Content
             place != SpellPlace.Layer;
 
         public static string[] All =>
-            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "sky", "above",
+            new[] { "caster", "caster-centre", "target", "target-centre", "target-head", "formation", "sky", "above",
                     "counterpart", "counterpart-centre", "layer:<id>" };
 
         private static SpellPlace Lookup(string name, SpellPlace fallback)
@@ -282,6 +290,8 @@ namespace PrincesPalace.Domain.Content
 
             if (SpellWord.Is(name, "target-centre") ||
                 SpellWord.Is(name, "target-center")) return SpellPlace.TargetCentre;
+
+            if (SpellWord.Is(name, "target-head")) return SpellPlace.TargetHead;
 
             if (SpellWord.Is(name, "formation")) return SpellPlace.Formation;
 
@@ -513,6 +523,12 @@ namespace PrincesPalace.Domain.Content
         // An emitter fitted this way scales its particles, their speeds and
         // their source offset by the same factor. See FightController.BodyOf.
         Target,
+
+        // `size` is multiplied by the struck body's HEAD over the Giant Rat's
+        // (TargetBody.HeadFitFactor): head height on stage, not body extent,
+        // so eyes authored on a rat stay eye-sized on a body ten times the
+        // rat's. Legal wherever `target` is, and on emitters likewise.
+        Head,
     }
 
     public static class SpellFitNames
@@ -522,7 +538,7 @@ namespace PrincesPalace.Domain.Content
         public static bool IsKnown(string name) =>
             string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellFit)(-1)) != (SpellFit)(-1);
 
-        public static string[] All => new[] { "none", "target" };
+        public static string[] All => new[] { "none", "target", "head" };
 
         private static SpellFit Lookup(string name, SpellFit fallback)
         {
@@ -530,6 +546,7 @@ namespace PrincesPalace.Domain.Content
 
             if (SpellWord.Is(name, "none")) return SpellFit.None;
             if (SpellWord.Is(name, "target")) return SpellFit.Target;
+            if (SpellWord.Is(name, "head")) return SpellFit.Head;
             return fallback;
         }
     }

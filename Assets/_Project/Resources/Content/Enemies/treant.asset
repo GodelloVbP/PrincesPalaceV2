@@ -33,6 +33,9 @@ MonoBehaviour:
     BreakShieldPoints: 32
     StageScale: 1.45
     SlotSpan: 2
+    HeadX: 0.59
+    HeadY: 0.61
+    HeadSize: 0.28
     Rollable: 1
     RallyAttackPercentPerStack: 0
     RallyMaxStacks: 0

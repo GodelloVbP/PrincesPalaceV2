@@ -762,6 +762,7 @@ hits. Two axes — whose body, and where on it — flattened into one word:
 | `target` | on the target's ground line | bolts, impacts, eruptions — almost everything |
 | `caster` | on the caster's ground line | wind-ups, stomps, transformations |
 | `target-centre` | on the target's midpoint | rings, binds, status glints — art drawn around a body |
+| `target-head` | on the struck body's head point (`headX`/`headY` in `enemies.json`, mirrored with the sprite; allies read the fallback 0.5 / 0.8) | eyes, crowns, whispers: art that belongs on a head. Per target; `follow` rides it. |
 | `caster-centre` | on the caster's midpoint | self-buff auras, shield bubbles |
 | `travel` | flies caster → target, arriving at its ground line | a bolt that buries itself in the floor |
 | `travel-centre` | flies caster → target, arriving at its **middle** | anything thrown flat across the stage |
@@ -855,7 +856,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | --- | --- | --- |
 | `id` | — | Name, needed only when another layer rides it through `place: layer:<id>`. |
 | `render` | refused blank | `sprite` (an animated folder), `still` (one frame of a folder, held), `emitter` (ballistic particles). |
-| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, `sky`, `above`, `counterpart`, `counterpart-centre` (the other end of the cast's move, below), or `layer:<id>`. |
+| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `target-head`, `formation`, `sky`, `above`, `counterpart`, `counterpart-centre` (the other end of the cast's move, below), or `layer:<id>`. |
 | `height` | `0` | `place: above` only, and required there: how far over the struck body's middle the layer sits, in body heights (the visible body's height). A travelling layer leaves from there and falls onto the middle. Refused on any other placement. |
 | `at` | `release` | `release` (the beat opens), `arrival` (the cast's projectile lands), `hit` (the authoritative cue). |
 | `offset` | `0` | Seconds added to `at`. |
@@ -875,7 +876,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | `whenConsumed` | blank | Plays only if the cast spent that status on its target: a status name (`Poison`) or `any`. Blank always plays. A layer riding a gated one carries the same gate. |
 | `dx` / `dy` | `0` | Local offset from the anchor, in reference-frame units. `dx` mirrors with the cast. |
 | `size` / `scale` / `aspect` | `380` / `1` / square | The box the art is fitted into. `place: formation` measures its own span and ignores `size`. |
-| `fit` | `none` | `none` (the authored `size`, verbatim) or `target` (multiply by the struck target's visible body over a front-rank Giant Rat's). Legal on `target`, `target-centre`, `sky` and travelling layers -- see below. The single block takes it too. |
+| `fit` | `none` | `none` (the authored `size`, verbatim), `target` (multiply by the struck target's visible body over a front-rank Giant Rat's) or `head` (multiply by the struck head's on-stage height, `headSize` x body height, over the rat's: `TargetBody.ReferenceHeadExtent` = 79, so a layer authored on a rat's head keeps its size there). Legal on `target`, `target-centre`, `target-head`, `sky` and travelling layers -- see below. The single block takes it too. |
 | `impactX` / `impactY` | unset | The same correction the single block's take, per layer. `formation` is exempt from `impactX`. |
 | `sort` | `effects` | `ground` (behind the racks) or `effects` (over the HUD, under the damage numbers). |
 | `facing` | `auto` | `auto` takes the cast's facing, `none` never mirrors, `reverse` flips it. |

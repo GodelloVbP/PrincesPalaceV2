@@ -252,10 +252,10 @@ namespace PrincesPalace.Domain.Content
                 problems.Add($"{label}: vfx authors the single-block fit beside layers. " +
                              "Author fit on each layer instead.");
             }
-            else if (vfx.Fit == SpellFit.Target &&
+            else if (vfx.Fit != SpellFit.None &&
                      (vfx.Anchor == SpellAnchor.Caster || vfx.Anchor == SpellAnchor.CasterCentre))
             {
-                problems.Add($"{label}: vfx authors fit 'target' on anchor '{vfx.anchor.Trim()}', which " +
+                problems.Add($"{label}: vfx authors fit '{vfx.fit.Trim()}' on anchor '{vfx.anchor.Trim()}', which " +
                              "never touches a target's body. Only a target or travelling anchor does.");
             }
 
@@ -932,14 +932,14 @@ namespace PrincesPalace.Domain.Content
             // SO DOES ANY LAYER RIDING ANOTHER (an emitter streaking along a
             // projectile): PlaceOne resolves the target of the instance it
             // rides, and its particles scale by the same factor.
-            if (SpellFitNames.IsKnown(layer.fit) && layer.Fit == SpellFit.Target &&
+            if (SpellFitNames.IsKnown(layer.fit) && layer.Fit != SpellFit.None &&
                 !SpellPlaceNames.PerTarget(layer.Place) && !layer.Travels &&
                 !SpellPlaceNames.OnCounterpart(layer.Place) &&
                 layer.Place != SpellPlace.Layer)
             {
-                problems.Add($"{at} authors fit 'target' but is placed on {layer.place.Trim()}, which " +
+                problems.Add($"{at} authors fit '{layer.fit.Trim()}' but is placed on {layer.place.Trim()}, which " +
                              "resolves no single struck target to read a footprint off. Only target, " +
-                             "target-centre, sky, above, a travelling layer or a layer riding another do.");
+                             "target-centre, target-head, sky, above, a travelling layer or a layer riding another do.");
             }
 
             // AN EMITTER'S FLIGHT SHAPING READS THE LINE OF THE LAYER IT RIDES;

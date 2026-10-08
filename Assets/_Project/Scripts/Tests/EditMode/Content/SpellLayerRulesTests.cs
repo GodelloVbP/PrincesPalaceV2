@@ -494,7 +494,7 @@ namespace PrincesPalace.Domain.Tests
 
             string message = Only(With(layer));
             StringAssert.Contains("authors fit 'target' but is placed on formation", message);
-            StringAssert.Contains("Only target, target-centre, sky, above, a travelling layer or a layer riding another do", message);
+            StringAssert.Contains("Only target, target-centre, target-head, sky, above, a travelling layer or a layer riding another do", message);
         }
 
         [Test]

@@ -104,6 +104,48 @@ namespace PrincesPalace.Domain.Stage
             return extent > 0.01f ? extent / ReferenceExtent : 1f;
         }
 
+        // ---- the head: one authored value that serves every body --------------
+        //
+        // WHERE THE HEAD IS, as fractions of the opaque box on the sprite as
+        // drawn (RawEnemyEntry.headX/headY/headSize). An actor that authors
+        // none reads the fallback: a head a little above the middle of the
+        // upper body, which is wrong for most of them and never off the body.
+        public const float FallbackHeadX = 0.5f;
+        public const float FallbackHeadY = 0.8f;
+        public const float FallbackHeadSize = 0.3f;
+
+        // A raw -1 is "unauthored"; each of the three falls back alone.
+        public static float HeadOr(float authored, float fallback) => authored < 0f ? fallback : authored;
+
+        // THE HEAD'S HEIGHT ON STAGE FOR THE GIANT RAT (headSize 0.41 x its
+        // 269-row opaque height x 0.94 x 0.76), which `fit: head` takes as
+        // 1 the way ReferenceExtent does for `fit: target`. A calibration
+        // literal for the same reason: re-authoring the rat's head must not
+        // silently resize every other enemy's spells, and moves this number
+        // only when someone means it to.
+        public const float ReferenceHeadExtent = 79f;
+
+        // The head centre in the pool's frame. `mirrored` is the sprite's own
+        // facing flip: the box is already on stage, so a mirrored sprite's
+        // authored left edge is the box's right.
+        public static UiVec HeadPoint(StageBody body, float headX, float headY, bool mirrored)
+        {
+            float x = HeadOr(headX, FallbackHeadX);
+            float y = HeadOr(headY, FallbackHeadY);
+            return new UiVec(
+                mirrored ? body.Right - x * body.Width : body.Left + x * body.Width,
+                body.Bottom + y * body.Height);
+        }
+
+        // WHAT `fit: head` MULTIPLIES `size` BY: this head's height on stage
+        // over the rat's. 1 for a body with no measurable head, the same
+        // degrade-to-authored posture FitFactor takes.
+        public static float HeadFitFactor(StageBody body, float headSize)
+        {
+            float extent = HeadOr(headSize, FallbackHeadSize) * body.Height;
+            return extent > 0.01f ? extent / ReferenceHeadExtent : 1f;
+        }
+
         // ---- a tail lands ON the target; it never replaces it ---------------
         //
         // A size authored against one body does not translate to another at
