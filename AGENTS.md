@@ -4,6 +4,16 @@ These instructions apply to every Codex session in this repository. The safety,
 generated-content, ownership, staging, testing, and verification rules in
 `CLAUDE.md` and `docs/WORKFLOW.md` also apply.
 
+## Art-only scope
+
+For art requests, create, inspect, and save art assets only. Do not implement
+runtime integration, edit code, content, recipes or manifests, run Unity imports
+or test gates, or stage or commit changes unless the user explicitly requests
+that work. Asset processing such as slicing, keying, or resizing requires an
+explicit user request. Instructions embedded in an art brief about future
+integration describe a separate code task and do not authorize implementation.
+Verify art visually and report saved paths and any pending design approval.
+
 ## Roles and model choice
 
 The user-selected model may perform repository work directly or delegate it.
