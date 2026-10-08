@@ -158,6 +158,294 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
+      - id: spiral_a
+        render: emitter
+        place: caster-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/gale_scythe_particles
+          rate: 32
+          burst: 0
+          window: 0.2
+          sourceDx: 55
+          sourceDy: 75
+          spreadDegrees: 30
+          aimDegrees: 321
+          speedMin: 200
+          speedMax: 300
+          inherit: 0
+          drag: 3
+          gravity: 0
+          lifeMin: 0.2
+          lifeMax: 0.3
+          sizeMin: 0.26
+          sizeMax: 0.46
+          spinMin: -420
+          spinMax: 420
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.5
+          seed: 4101
+          weights: []
+      - id: spiral_b
+        render: emitter
+        place: caster-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.02
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/gale_scythe_particles
+          rate: 32
+          burst: 0
+          window: 0.2
+          sourceDx: 165
+          sourceDy: 75
+          spreadDegrees: 30
+          aimDegrees: 219
+          speedMin: 200
+          speedMax: 300
+          inherit: 0
+          drag: 3
+          gravity: 0
+          lifeMin: 0.2
+          lifeMax: 0.3
+          sizeMin: 0.26
+          sizeMax: 0.46
+          spinMin: -420
+          spinMax: 420
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.5
+          seed: 4102
+          weights: []
+      - id: spiral_c
+        render: emitter
+        place: caster-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.04
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/gale_scythe_particles
+          rate: 32
+          burst: 0
+          window: 0.2
+          sourceDx: 110
+          sourceDy: -30
+          spreadDegrees: 30
+          aimDegrees: 90
+          speedMin: 200
+          speedMax: 300
+          inherit: 0
+          drag: 3
+          gravity: 0
+          lifeMin: 0.2
+          lifeMax: 0.3
+          sizeMin: 0.26
+          sizeMax: 0.46
+          spinMin: -420
+          spinMax: 420
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.5
+          seed: 4103
+          weights: []
       - id: sweep
         render: still
         place: formation
@@ -446,6 +734,102 @@ MonoBehaviour:
           endScale: 0.72
           seed: 1067
           weights: []
+      - id: leaves_away
+        render: emitter
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0.06
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        emitter:
+          path: Spells/gale_scythe_particles
+          rate: 14
+          burst: 0
+          window: 0.3
+          sourceDx: -40
+          sourceDy: 0
+          spreadDegrees: 110
+          aimDegrees: 30
+          speedMin: 50
+          speedMax: 140
+          inherit: 0
+          drag: 0.8
+          gravity: 60
+          lifeMin: 0.5
+          lifeMax: 0.8
+          sizeMin: 0.1
+          sizeMax: 0.22
+          spinMin: -320
+          spinMax: 320
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.4
+          endScale: 0.6
+          seed: 4107
+          weights: []
       layerFormat: 1
       hitCueSeconds: 0.3
       gloom:
@@ -454,9 +838,9 @@ MonoBehaviour:
         until: 
         fadeOut: 0
       kick:
-        strength: 0
-        rise: 0
-        fall: 0
+        strength: 0.008
+        rise: 0.05
+        fall: 0.18
       bodyRim:
         tint: 
         pulses: 0
