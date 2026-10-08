@@ -2300,7 +2300,7 @@
             "fps": 14,
             "seconds": 0.29,
             "until": "once",
-            "size": 250,
+            "size": 170,
             "fit": "target",
             "impactX": 0.5,
             "impactY": 0.5,
@@ -2310,8 +2310,8 @@
             "opacity": 1,
             "fade": 0.1,
             "drift": {
-              "fromX": -0.1,
-              "toX": 0.2
+              "fromX": -0.05,
+              "toX": 0.1
             }
           }
         ]

@@ -4,7 +4,7 @@ Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Plan S3, spell 3.4. P
 
 ## Status
 
-Step 6 (step-4 art wired) in the commit that carries this file; the owner's pieces `gale_leaf_spiral` and `gale_gust_streaks` were accepted at step 5 (`docs/prompts/2026-10-08_gale_mud_art.md`). Captures `gale_scythe_r4_{rat,treant}_full` (1x) and `gale_scythe_r4_rat_1.5x_full`, sheet `gale_r4_sheet.png` (approved frames on top; previews and timing committed, full GIFs and the sheet untracked). Waits on the orchestrator's check, then the owner (step 3).
+Step 6 (step-4 art wired) in the commit that carries this file; the owner's pieces `gale_leaf_spiral` and `gale_gust_streaks` were accepted at step 5 (`docs/prompts/2026-10-08_gale_mud_art.md`). Captures `gale_scythe_r5_{rat,treant}_full` (1x) and `gale_scythe_r5_rat_1.5x_full`, sheet `gale_r5_sheet.png` (previews and timing committed, full GIFs and the sheet untracked). Waits on the orchestrator's check, then the owner (step 3).
 
 ## Identity
 
@@ -25,13 +25,13 @@ Release clock; cue **0.30 s** = f18 at 1x, f12 at 1.5x. One payoff frame for all
 | 0.13-0.25 | delivery: the sweep across the line | `sweep` | painted blade, `formation`, `align span` | kept unchanged (pinned by `GaleScythePresentationTests`) |
 | 0.30 | **Cue.** Thin bright slash across each body, all numbers, push, hurt flash, 16 leaves, small stage kick | `cut`, `settle`, `vfx.kick` | blade still, size 380, aspect 6.3; leaves burst; kick 0.008 rise 0.05 fall 0.18 | one frame for every enemy |
 | 0.30 | body echo knocked back | none | none | **pending E8** (`PLAN_SPELL_ANIMATION.md` section 2); not built, not faked |
-| 0.38-0.70 | resolution: gust passes and breaks up, leaves tumbling | `gust` | `gale_gust_streaks`, 4 cells, `fps` 14 once, size 250 fit target, `dy` 35, drift -0.1 to +0.2, fade 0.1, opacity 1, untinted; `at: release` offset 0.38 (an `at: hit` layer is shrunk) | opens after the cut, above its line; streaks of the cut fade with `cut` |
+| 0.38-0.70 | resolution: gust passes and breaks up, leaves tumbling | `gust` | `gale_gust_streaks`, 4 cells, `fps` 14 once, size 170 fit target, `dy` 35, drift -0.05 to +0.1, fade 0.1, opacity 1, untinted; `at: release` offset 0.38 (an `at: hit` layer is shrunk) | opens after the cut, above its line; streaks of the cut fade with `cut` |
 
 ## Open items
 
 1. Cue frame f18 (rat and treant): thin bright slash across each body joined into one line, hurt flash and numbers on the same frame. Still reads through the flash and numbers more than the stroke. **Owner call**: a heavier slash mark needs a second piece.
 2. Anticipation f4-f10: the spiral winds wide to tight on the whirl (centred on it from `dy` -10); at f4 it is about 190 px, a little bigger than the hand and staff head. It hides the old whirl for f4-f10; the whirl shows again at f12.
-3. Resolution f24-f36 on three bodies: the gusts overlap into one band across the rack at roughly the cut's height (35 px above it); no frame reads as a second slash, but treant f24 is the closest. Leaves tumble on it.
+3. Resolution f24-f30 (`gale_r5_sheet.png`): one gust per body, about a rat's width. On rats each stands apart. On treants the bodies themselves overlap, so neighbouring gusts still touch at f24; the fit scales the gust with the body.
 4. Three-wide rack: the sweep tip still runs to the right edge of the stage crop at f8.
 5. Treant f18 (cue): faint grey arc under the third treant is the sweep's last fading frame (pinned timings).
 6. Not measured with `spell_feel` this round.
@@ -60,6 +60,7 @@ Art still wanted: a heavy slash mark for the per-body payoff (open item 1). Body
 | 2026-10-04 | pass 2 | painted blade as sweep and per-body cut; `green-soft` key | worker | `92e06cba` |
 | 2026-10-08 | step 2 | leaf-spiral emitters (anticipation), `leaves_away` (resolution), `vfx.kick`; E8 echo marked pending | orchestrator brief | this commit |
 | 2026-10-08 | step 6 | spiral and gust sheets replace the leaf emitters `spiral_a/b/c` and `leaves_away`; spiral `dy` -10, gust `dy` 35 and 0.38 s after the first capture (spiral sat 40 px above the whirl; gust lay on the cut's line) | orchestrator step 6 | this commit |
+| 2026-10-08 | r5 | gust 250 to 170 so each stays one per body | owner: gusts merge across the rack f24-f30 | this commit |
 
 ## Measures
 
