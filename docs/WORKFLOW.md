@@ -13,7 +13,10 @@ Ownership, briefs, parallel sessions and commits. Routing and the
 
 - One owner per issue: diagnosis, implementation, focused tests,
   correction. No duplicate owner; no replacement launch without a stated
-  reason. Reuse an owner while its context on the issue is still relevant.
+  reason. Reuse an owner while its context on the issue is still relevant:
+  a follow-up round on the same issue (the owner's tweak, the next round of a
+  spell) goes to the same agent with SendMessage, not to a fresh launch that
+  re-reads the tree.
 - At most three active agents. Never two owners on one file at once;
   serialize overlapping edits and combine tightly coupled issues.
 - An owner whose context is largely obsolete writes a state record to the
