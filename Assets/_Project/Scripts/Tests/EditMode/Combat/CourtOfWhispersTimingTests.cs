@@ -53,8 +53,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-0.2f, lean.drift.viaX, 1e-6f, "closest to the head at the waypoint");
             Assert.AreEqual(-0.3f, lean.drift.toX, 1e-6f, "and a little back out, where the smoke starts");
             Assert.IsNull(vfx.layers.FirstOrDefault(l => l.id == "core"), "no ring at the payoff: the rim is the payoff");
-            Assert.AreEqual(3, vfx.layers.Count(l => l.render == "sprite" && l.place == "above" && l.height == 0.3f),
-                "three sprite layers a body, all at the head (place above, 0.3 body-heights over the middle): the band reserves 12 renderers for a formation of three");
+            Assert.AreEqual(3, vfx.layers.Count(l => l.render == "sprite" && l.place == "target-head" && l.fit == "head"),
+                "three sprite layers a body, all at the head (place target-head, fit head): the band reserves 12 renderers for a formation of three");
             Assert.LessOrEqual(lean.size, 80f, "small enough that three courtiers on a rack stay three");
 
             var rim = vfx.bodyRim;

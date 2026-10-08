@@ -62,8 +62,8 @@ MonoBehaviour:
       layers:
       - id: orbit_back
         render: sprite
-        place: above
-        height: 0.3
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -76,7 +76,7 @@ MonoBehaviour:
         fade: 0.1
         fadeIn: 0.18
         opacity: 0.4
-        dx: -60
+        dx: 32
         dy: 0
         drift:
           fromX: -1.1
@@ -112,7 +112,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 52
-        fit: target
+        fit: head
         facing: none
         sort: effects
         align: 
@@ -158,8 +158,8 @@ MonoBehaviour:
           weights: []
       - id: orbit_front
         render: sprite
-        place: above
-        height: 0.3
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -172,7 +172,7 @@ MonoBehaviour:
         fade: 0.06
         fadeIn: 0.1
         opacity: 1
-        dx: 60
+        dx: -32
         dy: 0
         drift:
           fromX: -1.5
@@ -208,7 +208,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 70
-        fit: target
+        fit: head
         facing: reverse
         sort: effects
         align: 
@@ -254,8 +254,8 @@ MonoBehaviour:
           weights: []
       - id: lean
         render: sprite
-        place: above
-        height: 0.3
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -268,7 +268,7 @@ MonoBehaviour:
         fade: 0.25
         fadeIn: 0.12
         opacity: 1
-        dx: 60
+        dx: -32
         dy: 0
         drift:
           fromX: -0.7
@@ -304,7 +304,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 80
-        fit: target
+        fit: head
         facing: reverse
         sort: effects
         align: 

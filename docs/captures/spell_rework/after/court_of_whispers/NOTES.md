@@ -4,7 +4,7 @@ Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Workflow: `docs/PROPO
 
 ## Status
 
-Step 6 closed in `0fe926ca` (steps 6 and 7); values-only tuning after the orchestrator's step 6 check in `474747ad` (2026-10-07). Waits on the owner's review of the tuned GIFs (`court_of_whispers_tune_{rat,treant}_1x.gif`, strips beside it). Owner passed step 3 on round 3 motion (2026-10-07).
+Step 6 closed in `0fe926ca` (steps 6 and 7); values-only tuning after the orchestrator's step 6 check in `474747ad` (2026-10-07). Round 6 (this commit): `orbit_back`, `orbit_front`, `lean` moved to `place: target-head`, `fit: head`. Waits on the owner's review of the tuned GIFs (`court_of_whispers_tune_{rat,treant}_1x.gif`, strips beside it). Owner passed step 3 on round 3 motion (2026-10-07).
 
 Captures: `tools/gif.ps1 spell court_of_whispers -Vs rat|treant [-Speed 1.5]`. Previews committed, full GIFs untracked, `timing.json` per capture as `<prefix>_timing.json`. `tools/spell_feel.ps1` pops a Unity window (`screenshot.ps1 -Runtime`); without runtime permission run `tools/spell_feel.py report` on the `gif.ps1` frames. The 2026-10-03/04 pilot (one painted courtier, ring-and-core payoff) is superseded; its files are in `previous_pass/`, untracked.
 
@@ -24,7 +24,7 @@ Captures: `tools/gif.ps1 spell court_of_whispers -Vs rat|treant [-Speed 1.5]`. P
 
 ## Beat table
 
-Release clock; cue **0.70 s** = f41 at 1x, f27 at 1.5x (`timing.json`); cast riser re-cut to 0.70 s (`make_spell_cast_cues.py`, `MeleeSoundOverrideTests`); `clearedSeconds` 2.65, freed f158. Six courtier layers are `place: above`, `height: 0.3` (face on a treant, neck on a rat; 0.45 put the treant's courtier over the canopy), `dx` 60 toward the nape (sign follows facing; not fit-scaled), `fit: target`. Enemies face left, so the courtier stands behind the head and leans in from the right (`lean` is `facing: reverse`; a reverse layer mirrors its drift). Sprite layers a body: 3 x 3 bodies plus `price` = 10 of the effects band's 12.
+Release clock; cue **0.70 s** = f41 at 1x, f27 at 1.5x (`timing.json`); cast riser re-cut to 0.70 s (`make_spell_cast_cues.py`, `MeleeSoundOverrideTests`); `clearedSeconds` 2.65, freed f158. The three courtier sprite layers are `place: target-head`, `fit: head` (rat head = reference size, so the rat is unchanged), `dx` 32 screen px toward the nape (authored +32 on `orbit_back`, -32 on the two `facing: reverse` layers; not fit-scaled). The smoke emitters stay `above`, `height` 0.3. Enemies face left, so the courtier stands behind the head and leans in from the right (`lean` is `facing: reverse`; a reverse layer mirrors its drift). Sprite layers a body: 3 x 3 bodies plus `price` = 10 of the effects band's 12.
 
 | t | Beat | Layer | Art piece | Box / feel |
 |---|---|---|---|---|
@@ -53,7 +53,7 @@ Smoke emitters have `sourceDx` 15-19 and `sourceDy` -5 to 35 from the head point
 8. Flash guard: four rim pulses in 0.2 s per body count as four flashes on the strict count (thin rim, peak 0.7, interior share 0.08); not measured with the rendered-frame tool.
 9. Not yet played beside the Censer or Ashen Reckoning (rubric item 6).
 10. Restoring the real orbit needs E5 body depth bands (cross-layer; senior with `Escalation: cross-layer`): `FightHudSpec.SpellGroundRenderers` is 2, a 3-enemy cast needs 3, and a ground-band figure is mostly hidden by the body. With the band, set `orbit_back.sort` to `ground` and raise its size and brightness. Evidence in `round1_ground_orbit/`. **Owner call** Q1 below.
-11. A `place` word for "the head" (an authored head point per actor, as `StanceManifest.HeadFor` holds for the icon crop) would replace `height` + `dx`; not built, a contract change.
+11. Head anchor built (`594a7b91`), first used here. Rat f14/f28/f41/f50 match the pre-move sheet (`court_head_rat_sheet.png`). Treant f28/f41: hood at cheek height beside the face, below where the old `above` layers sat at brow/canopy; third treant's far-arc figure touches the screen edge f28 (`court_head_treant_zoom.png`). The rack's smoke curls (`smoke_a/b/curl`) still hang on `above` and are not re-anchored.
 12. Owner calls Q2 (shiver bosses too; assumed yes, code draws the court on them) and Q4 (wind-up 0.70 s, 0.47 s at 1.5x) are unanswered.
 
 ## Decisions
@@ -152,6 +152,7 @@ shiver, glow, breathing, fades.)
 | 2026-10-07 | 3 | courtiers at the head (`place: above` 0.3, dx, sizes 52/70/80), one per enemy, lean reversed, smoke from the lean spot; separate figures every frame, smoke born at f66 where the lean fades f64. Orchestrator: rats f36-f48 dark on dark fur, rim outweighs figures | worker frames; orchestrator | n/a |
 | 2026-10-07 | 4, step 6 | real art wired; rim peak 0.9 to 0.7; lean `glowCurve`; smoke weights by new cells; `price` `startFrame` 3 | worker frames | `0fe926ca` |
 | 2026-10-07 | tuning | `orbit_front` and `lean` opacity 0.7 to 1 (grey-white ghosts f20-f36, f52); `orbit_back` tint grey to lilac; violet tint on the three smoke emitters (curls yellow-green f64-f80). Treant f6-f33 solid violet, f36-f48 curls violet; rat still a patch | orchestrator's step 6 check | `474747ad` |
+| 2026-10-08 | 6 | `orbit_back`, `orbit_front`, `lean` on `target-head` + `fit: head`, dx 32 | orchestrator brief (first head-anchor use) | this commit |
 
 ## Measures
 

@@ -64,8 +64,8 @@ MonoBehaviour:
       layers:
       - id: eye_a
         render: sprite
-        place: above
-        height: 0.12
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -83,8 +83,8 @@ MonoBehaviour:
         drift:
           fromX: 0
           toX: 0
-          fromY: 0
-          toY: 0
+          fromY: -0.9
+          toY: -0.9
           viaX: 0
           viaY: 0
           viaAt: 0
@@ -114,7 +114,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 56
-        fit: target
+        fit: head
         facing: none
         sort: effects
         align: 
@@ -160,8 +160,8 @@ MonoBehaviour:
           weights: []
       - id: eye_b
         render: sprite
-        place: above
-        height: 0.12
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -179,8 +179,8 @@ MonoBehaviour:
         drift:
           fromX: 0
           toX: 0
-          fromY: 0
-          toY: 0
+          fromY: -0.9
+          toY: -0.9
           viaX: 0
           viaY: 0
           viaAt: 0
@@ -210,7 +210,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 56
-        fit: target
+        fit: head
         facing: none
         sort: effects
         align: 
@@ -256,8 +256,8 @@ MonoBehaviour:
           weights: []
       - id: jaws
         render: sprite
-        place: above
-        height: 0.12
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: release
@@ -306,7 +306,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 230
-        fit: target
+        fit: head
         facing: none
         sort: effects
         align: 
@@ -352,8 +352,8 @@ MonoBehaviour:
           weights: []
       - id: bite
         render: still
-        place: above
-        height: 0.12
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -402,7 +402,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 200
-        fit: target
+        fit: head
         facing: none
         sort: effects
         align: 
@@ -448,8 +448,8 @@ MonoBehaviour:
           weights: []
       - id: closed
         render: sprite
-        place: above
-        height: 0.12
+        place: target-head
+        height: 0
         follow: 0
         whenConsumed: 
         at: hit
@@ -498,7 +498,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 190
-        fit: target
+        fit: head
         facing: none
         sort: effects
         align: 

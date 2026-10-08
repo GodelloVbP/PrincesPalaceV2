@@ -4,7 +4,7 @@ Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Workflow: `docs/PROPO
 
 ## Status
 
-Round 4 landed in `7f5e1821` (eyes inside the bite, darker); round 3 `95c4fed6` (ghost jaws restored). Waits on the owner's review of the round 4 previews (`vipers_bite_eyes2_{rat,treant}_preview.gif`). Step 7 not recorded since the owner's round 3-4 changes.
+Round 5 (this commit): jaws, bite, closed and both eyes on `target-head`, `fit: head`. Round 4 landed in `7f5e1821` (eyes inside the bite, darker); round 3 `95c4fed6` (ghost jaws restored). Waits on the owner's review of the round 4 previews (`vipers_bite_eyes2_{rat,treant}_preview.gif`). Step 7 not recorded since the owner's round 3-4 changes.
 
 Captures: `tools/gif.ps1 spell vipers_bite` (`-Vs rat`, `-Vs treant`, `-Vs rat -PreStatus Poison`, `-Vs treant -Speed 1.5`); previews committed, full GIFs untracked. The 2026-10-04 snake-head lunges (`vipers_bite_rat_1x.gif` etc.) are rejected by the owner and stay untracked beside this file.
 
@@ -29,9 +29,9 @@ Release clock; cue **0.40 s** = f21 at 1x, f14 at 1.5x (`timing.json`; cast soun
 | t | Beat | Layer | Art piece | Box / feel |
 |---|---|---|---|---|
 | 0.00-0.40 | stage gloom 0.20 | stage `gloom` | n/a | in 0.15, holds to the cue, out 0.25 (owner O1) |
-| 0.04-0.38 | left eye opens inside the jaw gap | `eye_a` | eyes sheet, startFrame 1 fps 8 (half open, then open) | 56; `place: above`, `height` 0.12, `impactY` 0.5, `dx` -28 (fit-scaled, like the jaws), `aspect` 2.6, tint `#66741a`, glow 0.15, `fadeIn` 0.08, `breathe`, fade 0.08 |
+| 0.04-0.38 | left eye opens inside the jaw gap | `eye_a` | eyes sheet, startFrame 1 fps 8 (half open, then open) | 56; `place: target-head`, `fit: head`, `impactY` 0.5, `dx` -28 (screen px, not fit-scaled), `drift` y -0.9 box heights (scales with the fit: sits under the treant's own eyes, in the jaw gap on a rat), `aspect` 2.6, tint `#66741a`, glow 0.15, `fadeIn` 0.08, `breathe`, fade 0.08 |
 | 0.10-0.38 | right eye opens 0.06 s later | `eye_b` | same | 56; `dx` +28, seconds 0.28 |
-| 0.14-0.41 | frontal ghost jaws form, fangs show | `jaws` | `vipers_bite_ghost_jaws` startFrame 1 | 230; 18 fps, opacity 0.95, glow 0.7, `fadeIn` 0.06 |
+| 0.14-0.41 | frontal ghost jaws form, fangs show | `jaws` | `vipers_bite_ghost_jaws` startFrame 1 | 230; `target-head`, `fit: head`; 18 fps, opacity 0.95, glow 0.7, `fadeIn` 0.06 |
 | 0.40 | **Cue.** The snap in a starburst; sound, "-3", Poison badge | `bite` | ghost jaws f5 (startFrame 6) | 200; punch 0.3, glow 1.25, held 0.1, fade 0.14 |
 | 0.40 | drops thrown down | `settle` | particles f0-f1 (weights `[1,1,0,0]`) | emitter, 12 particles |
 | 0.50-0.70 | jaws shut, fangs in, fading | `closed` | ghost jaws f6-f7 (startFrame 7) | 190; 10 fps, opacity 0.85, fade 0.15 |
@@ -44,7 +44,7 @@ Release clock; cue **0.40 s** = f21 at 1x, f14 at 1.5x (`timing.json`; cast soun
 1. Burst coverage: the plume covers about half the rat f30-f39 (about 0.1 s) and rises above its head; contract 2 is a third. **Owner call**: accept or shrink further.
 2. Snap f21-f27 covers the body (rat face; treant face and top of canopy): the owner's bigger-jaws call overrides contract 2 for the snap. Jaws thin to `closed` from f28.
 3. `spell_feel` WARNs, round 4 same as round 3: treant residue tail 1.07 s (mist; limit 0.5) and contact desync (cue f21 vs authored f24, the capture path's first-drawn wait: harness offset); rat no accent (peak 6.5 over floor 2.4) with biggest rise f5 (rat pose change and eye glints, not the snap). Mist window 0.35, life max 0.6 already shortened; clear by f50-f52.
-4. Treant eyes are about 60 px each (`fit target` scales them with the body) and sit over its own orange eyes f12-f18. Check at review.
+4. Head anchor (`vipers_bite_head2_*`, before = `vipers_bite_before_*`). Rat f12-f22: jaws now centre on the head, about 90 px left and 25 px up of the old body-centre position (a `dx` of +90 restores it; **owner call**), eyes in the gap beside its red eye. Treant f12-f22: jaws centre on the face; eyes sit at the mouth line, its orange eyes stay visible. The `drip`, `mist` and `settle` layers still hang on the body centre.
 5. Hit flash at the cue (f22): the shared rim flash (`BodyLight.FlashRimWidth` 0.012) is as wide as thin parts (legs, tail, branches), so they light whole and the body reads pale for about 0.1 s. Works as specified; thinning the rim changes every hit in the game. **Owner call.**
 6. Mist is faint; the drip is a large bright green V over the chest at f40.
 7. Flash guard: snap and burst are two events 0.18 s apart (Poison only), each a green burst plus the typed hit flash; not measured with the rendered-frame tool.
@@ -161,6 +161,7 @@ Not in the picture: target, jaws, floor, smoke, glow.
 | 2026-10-07 | tuning | eyes 32 to 56 px, `dx` -134/-96 (only one slit showed at 32 px) | orchestrator step 6 check | `479e7222` |
 | 2026-10-08 | 3 | side-view jaw art rejected; ghost jaws restored; new eyes, drip, mist and burst kept | owner | `95c4fed6` |
 | 2026-10-08 | 4 | eyes inside the bite, dark olive, flatter; rat f3 `eye_a` alone, f5 both, f12-f18 pair between the fang rows, f22 eyes out | owner | `7f5e1821` |
+| 2026-10-08 | 5 | jaws, bite, closed, eyes on `target-head` + `fit: head`; eyes `drift` y -0.9 so they miss the treant's own eyes | first capture: eyes on the treant's eyes f12-f18 | this commit |
 
 ## Measures
 
