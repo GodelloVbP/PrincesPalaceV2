@@ -598,6 +598,15 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `identityKind` | string | `""` | Which TrackIdentityKind an Identity entry carries, matched case-insensitively; only Identity reads this, empty otherwise. | Title, PlateRim, PortraitFrame, PlateEmboss, VictoryPose, Mastery |
 | `value` | string | `""` | The Identity entry's payload -- a title string for Title, or 'silver'/'gold' for PlateRim/PlateEmboss; unused by PortraitFrame/VictoryPose/Mastery and by every non-Identity reward. |  |
 
+### `SpellBodyRim`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `tint` | string | `""` | #RRGGBB colour of the rim light on every body the cast lands on. Blank means no rim. |  |
+| `pulses` | int | `0` | How many pulses the rim gives at the payoff cue; 1 is a flash, 3 or more a shiver. 0 means no rim. |  |
+| `spacing` | float | `0` | Seconds from the start of one pulse to the start of the next. |  |
+| `peak` | float | `0` | Peak opacity of each pulse, 0-1; 0 means 1. |  |
+
 ### `SpellBreathe`
 
 | Field | Type | Default | Description | Values |
@@ -751,6 +760,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `hitCueSeconds` | float | `0` | Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame. |  |
 | `gloom` | SpellGloom (below) | (zero -- see SpellGloom) | Optional stage darkening during the cast, composed with an event's own darkness by taking the larger; see SpellGloom. |  |
 | `kick` | SpellKick (below) | (zero -- see SpellKick) | Optional nudge of the stage (the figures and this spell's own layers, never the HUD) toward the target on the hit cue, eased back; see SpellKick. Presentation only. |  |
+| `bodyRim` | SpellBodyRim (below) | (zero -- see SpellBodyRim) | Optional rim light in the spell's own colour on every body the cast lands on, as a train of pulses at the hit cue; for a cast that deals no damage and so arms no hit flash. See SpellBodyRim. |  |
 | `casterCostSeconds` | float | `0` | Seconds after the cue before the caster's own newly applied statuses show on its plate, so a price lands after the payoff instead of on it. 0 (the default) shows them on the cue. Author the caster's pulse layer at `at: hit` with the same `offset`. |  |
 | `secondSfxPath` | string | `""` | Resources-relative path to the sound of the cast's second payoff: each staggered packet after the first (at its stagger offset) and a detonation of existing Poison (detonationSeconds after the cue). Empty is silent. |  |
 | `detonationSeconds` | float | `0` | Seconds after the cue that a detonation of Poison the target already carried shows its own number and plays secondSfxPath. 0 means one stagger step (0.05 s). Author the detonation's layers at `at: hit` with the same `offset`. |  |
