@@ -68,7 +68,7 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(string.IsNullOrEmpty(vfx.layers.Single(l => l.id == id).tint), id + ": painted brown already");
             }
 
-            Assert.AreEqual(7, vfx.layers.Length, "gather, glob, splat, drops, two drip emitters, puddle");
+            Assert.AreEqual(8, vfx.layers.Length, "gather, glob, splat, drops, three drip strands, puddle");
         }
 
         // THE SLIDE RUNS OVER THE FLIGHT: still in the hand while held, an

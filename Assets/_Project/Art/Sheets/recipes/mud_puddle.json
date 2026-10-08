@@ -1,0 +1,29 @@
+{
+  "_notes": [
+    "Mud Burst: the puddle (mud_puddle.png, step 4 art 2026-10-08, 1536x512). A flat brown pool with splash fingers and loose clots on #00FF00, keyed green-soft (the plain green key clamps browns toward red) and cropped to its own ink. Matte: no tint, no glow."
+  ],
+  "sheet": "Spells/Mud Burst/mud_puddle.png",
+  "rects": [
+    [
+      0,
+      0,
+      1536,
+      512
+    ]
+  ],
+  "names": [
+    "f0"
+  ],
+  "keyed": "green-soft",
+  "canvas": [
+    1536,
+    512
+  ],
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    {
+      "from": "f0"
+    }
+  ]
+}

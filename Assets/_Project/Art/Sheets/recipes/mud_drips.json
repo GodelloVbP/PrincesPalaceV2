@@ -1,0 +1,23 @@
+{
+  "_notes": [
+    "Mud Burst: one strand of mud running down (mud_drips.png, step 4 art 2026-10-08, 4x1 of 256x512). The top of the strand is the pivot, centred 10% down, so no crop. #00FF00 ground, keyed green-soft. Matte: no tint, no glow."
+  ],
+  "sheet": "Spells/Mud Burst/mud_drips.png",
+  "grid": [
+    1,
+    4
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": "green-soft",
+  "canvas": [
+    256,
+    512
+  ],
+  "base_align": false,
+  "content_crop": false
+}

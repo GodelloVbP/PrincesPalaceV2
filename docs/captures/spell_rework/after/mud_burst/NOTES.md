@@ -4,7 +4,7 @@ Structure: `docs/captures/spell_rework/NOTES_TEMPLATE.md`. Plan S3, spell 3.3. P
 
 ## Status
 
-Step 2 (aftermath with existing art) in the commit that carries this file. Pass 2 `1de9f948` wired the painted glob and splat. Captures `mud_burst_r5_{rat,treant}` (1x) and `mud_burst_r5_rat_1.5x` in this folder (previews, timing and `mud_r5_sheet.png`; full GIFs untracked). Waits on the orchestrator's check, then the owner (step 3).
+Step 6 (step-4 art wired) in the commit that carries this file; `mud_puddle` and `mud_drips` were accepted at step 5 (`docs/prompts/2026-10-08_gale_mud_art.md`). Captures `mud_burst_r6_{rat,treant}` (1x) and `mud_burst_r6_rat_1.5x`, sheet `mud_r6_sheet.png` (approved frames on top; previews and timing committed, full GIFs and the sheet untracked). Waits on the orchestrator's check, then the owner (step 3).
 
 ## Identity
 
@@ -23,16 +23,16 @@ Release clock; cue **0.325 s** = f20 at 1x, f13 at 1.5x.
 | 0.00-0.20 | anticipation: vortex in Shawn's hand, tinted brown | `gather` | old sheet | `tint` only here |
 | 0.17-0.325 | delivery: glob arcs from the hand to the body | `glob` | `mud_glob.png` (painted) | `arcY` 0.6; flight 0.155 s |
 | 0.325 | **Cue.** Sound, number, Vulnerable badge, splat, 14 clots | `splat`, `drops` | `mud_splat.png` (painted); drops sheet | 480, held 0.3 s, fade 0.22 s |
-| 0.65-1.15 | resolution: drips run down the body | `drips_a`, `drips_b` | `mud_splat_drops` cells, 10/s for 0.5 s each, `sourceDy` 45 up the body, `sourceDx` -34 / +30, aim 270, speed 15-40, `gravity` -150, life 1.0-1.3, size 0.5-0.8 | born after the splat has faded (`at: hit`, offset 0.3); no art made for strands, so they are blotches |
-| 0.43-1.0 | resolution: puddle at the feet, then fades | `puddle` | `mud_splat` (square, not flattened), `at: release` offset 0.43 (an `at: hit` layer is capped to 0.75 of the body), size 260 fit target, fadeIn 0.1, hold 0.25, fade 0.5 (the layer maximum) | matte, `sort: effects`, no tint, no glow |
+| 0.52-1.0 | resolution: three strands of mud run down the body below the splat | `drip_a/b/c` | `mud_drips`, 4 cells once over 0.5 s (`fps` 8), size 80 aspect 0.5 fit target, `drift` y -0.15, `at: hit` offsets 0.2 / 0.3 / 0.38, opacity 1, untinted | strand top is the anchor (`impactY` 0.9) |
+| 0.43-1.0 | resolution: puddle lies at the feet, then fades | `puddle` | `mud_puddle` still (1066x366 after crop), size 260 fit target, `sort: ground`, `at: release` offset 0.43 (an `at: hit` layer is shrunk), fadeIn 0.1, hold 0.25, fade 0.5, opacity 1, untinted | the layer-ending maximum is 0.5 s |
 
 ## Open items
 
-1. Puddle is a round star-shaped splat about 100 px on a rat, not a flat pool: `aspect` sets the box and does not squash the art, and no layer field flattens a still. f34-f44 it reads as mud thrown at the feet. Gone by f56 (rat) and f56 (treant). Needs the flat puddle still (Art needed 1).
-2. Drips, rat f50-f80: brown blotches appear on the upper body and slide to the hip by f80; they read as stains, not strands. Treant: low contrast on brown bark, hardly visible at 1x.
-3. The aftermath is faint beside the splat: the splat is gone by f34 (rat) and the drips start at f39. Not played at 1.5x beside the cue frame; capture `mud_burst_r5_rat_1.5x` made, not studied frame by frame.
-4. Puddle fade 0.5 s, not the 0.6 s asked: the layer ending is capped at 0.5 s (content build refuses more).
-5. Old items kept: splat is rat-sized on a treant (the tail cap); back-rank cast shows the glob in front of uninvolved bodies; `spell_feel` not re-run after step 2.
+1. Puddle, rat f36-f44: reads as a flat pool of mud on the ground with splash fingers and clots; its two light tans and the orange make it paler and more orange than the dark chocolate splat above it at f36. Gone by f54. On the treant (size scales with the body) it is about the trunk's width.
+2. Drips, **owner call on look**: the strands are glossy and caramel-orange with a pale stripe. Rat f44-f54: they read as mud on the fur; treant f36-f44: the three strands start directly under the mouth, so at f44 the treant looks to be drooling. At 1x they pass as honey or caramel more than as mud (rat f44, treant f44); untinted per the rule. A flatter, darker strand recolour is a step-4 revision, not a tint.
+3. Aftermath is gone by f54 (rat) and f60 (treant); the last drop falls to the ground f54-f66.
+4. Puddle fade 0.5 s, not 0.6 (layer-ending maximum).
+5. Old items kept: splat is rat-sized on a treant (the tail cap); back-rank cast shows the glob in front of uninvolved bodies; `spell_feel` not re-run.
 
 ## Decisions
 
@@ -41,14 +41,13 @@ Release clock; cue **0.325 s** = f20 at 1x, f13 at 1.5x.
 
 ## Art
 
-| Piece | File | Status |
-|---|---|---|
-| Glob | `mud_glob.png` | accepted (owner's painted) |
-| Splat | `mud_splat.png` | accepted (owner's painted) |
-| Vortex, drops | old sheet | stand-in |
-| Drips, puddle | none | stand-in: drops cells and the splat |
-
-Art needed for step 4 (not prompted yet): 1. a flat puddle still: a wet brown pool seen from a low three-quarter angle, 3:1, soft edge, a few dried flecks, matte, reading at 260-400 px; 2. a drip-strand sheet, 4 cells of a streak of mud running down and thinning (vertical 1:3), brown on a keyable green ground, reading at 60-120 px on bark and fur. Prompts follow `docs/prompts/TEMPLATE_spell_art.md`.
+| Piece | File | Recipe | Status |
+|---|---|---|---|
+| Glob | `mud_glob.png` | `mud_glob.json` | accepted (owner's painted) |
+| Splat | `mud_splat.png` | `mud_splat.json` | accepted (owner's painted) |
+| Puddle | `mud_puddle.png` 1536x512 | `mud_puddle.json`, `green-soft`, content crop | accepted (step 5); prompt 3 of `docs/prompts/2026-10-08_gale_mud_art.md`, frame `2026-10-08_refs/mud_puddle_approved.png` |
+| Drip strand | `mud_drips.png` 1024x512, 4x1 | `mud_drips.json`, `green-soft`, no crop | accepted (step 5); prompt 4, frame `mud_drips_approved.png` |
+| Vortex, drops | old sheet | n/a | stand-in (`gather`, `drops`) |
 
 ## Round log
 
@@ -58,6 +57,7 @@ Art needed for step 4 (not prompted yet): 1. a flat puddle still: a wet brown po
 | 2026-10-04 | drift | drift runs over a travelling layer's flight; glob arcs | worker | `86aca286` |
 | 2026-10-04 | pass 2 | owner's painted glob and splat replace the procedural lump and derived burst | worker | `1de9f948` |
 | 2026-10-08 | step 2 | `drips_a/b` and `puddle` added; fade capped at 0.5 s; `at: hit` puddle was capped small, moved to `at: release` | orchestrator brief | this commit |
+| 2026-10-08 | step 6 | painted puddle and drip strands replace the splat-still puddle and the drop emitters; strands lowered (drift y -0.15) and puddle 330 to 260 after the first capture (strands hung from the face, puddle wider than a rat) | orchestrator step 6 | this commit |
 
 ## Measures
 
