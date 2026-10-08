@@ -130,7 +130,7 @@ The clips were trimmed, faded and resampled to 44.1 kHz 16-bit mono wav.
 | `censer_of_embers_impact.wav` | Fire `fireball_burst_warm_05` |
 | `blackglass_spear_impact.wav` | Dark `raven_metallic_02` |
 | `death_knell_impact.wav` | Dark `charge_impact_03` |
-| `court_of_whispers_impact.wav` | Dark `curse_03` |
+| `court_of_whispers_impact.wav` | Dark `curse_03`; whisper bed from Super Dialogue Audio Pack v1 (Miscellaneous lines, whisperized) |
 | `gale_scythe_cast.wav`, `gale_scythe_impact.wav` | Wind `short_rise_whoosh_02`, `air_sharp_shoot_02` |
 | `thorn_tithe_impact.wav` | Earth `morph_rocks_02` |
 | `crownfall_impact.wav` | Lightning `zap_blast_sparkle_bright_02` |

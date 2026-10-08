@@ -94,7 +94,7 @@ code change. A spell with a wind-up worth hearing names a second path,
 | `censer_of_embers_impact.wav` | 0.90s | Censer of Embers' `sfxPath`. Calvo Fire `fireball_burst_warm_05`, the warm fireball burst; replaced a quiet rubberduck clip. |
 | `blackglass_spear_impact.wav` | 0.90s | Calvo Dark `raven_metallic_02`, a metallic strike for the glass spear. |
 | `death_knell_impact.wav` | 1.40s | Calvo Dark `charge_impact_03`, the heaviest dark hit (rms -17 dB source), held longest with a 150ms fade. |
-| `court_of_whispers_impact.wav` | 1.20s | Calvo Dark `curse_03`, ominous rather than percussive. |
+| `court_of_whispers_impact.wav` | 2.30s | Calvo Dark `curse_03` (ominous rather than percussive) as the dry head, with a reverb and echo tail, two copies detuned about 12 cents, and a bed of whispered lines (Super Dialogue Audio Pack v1, whisperized) so the court keeps murmuring after the blow. Built by `tools/make_court_of_whispers_impact.py` from `tools/audio_sources/court_of_whispers/`. |
 | `gale_scythe_cast.wav` | 0.33s | Gale Scythe's `castSfxPath`. Calvo Wind `short_rise_whoosh_02`, cut at the top of its rise so the swell resolves into the blow at `hitCueSeconds` 0.3. |
 | `gale_scythe_impact.wav` | 0.67s | Calvo Wind `air_sharp_shoot_02`, a sharp cut with the transient at sample 0. |
 | `thorn_tithe_impact.wav` | 0.90s | Calvo Earth `cast_morph_rocks_02`, a rock crackle. Starts 10ms before the source's loudest sample (0.181s in), so the strike lands on the payoff frame; `tools/make_impact_cues.py`. |

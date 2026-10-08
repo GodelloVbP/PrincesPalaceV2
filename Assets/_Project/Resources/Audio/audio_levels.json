@@ -46,10 +46,10 @@
     },
     {
       "path": "Sfx/Events/bell_in_the_fog/flock_charge",
-      "gainDb": -3.0,
-      "gain": 0.7079,
+      "gainDb": -1.2,
+      "gain": 0.871,
       "metric": "rms",
-      "measuredDb": -15.0,
+      "measuredDb": -16.8,
       "peakDb": -0.9
     },
     {
@@ -350,11 +350,11 @@
     },
     {
       "path": "Sfx/court_of_whispers_impact",
-      "gainDb": -2.4,
-      "gain": 0.7586,
+      "gainDb": -2.2,
+      "gain": 0.7762,
       "metric": "rms",
-      "measuredDb": -15.6,
-      "peakDb": -4.3
+      "measuredDb": -15.8,
+      "peakDb": -0.7
     },
     {
       "path": "Sfx/crownfall_cast",
