@@ -964,6 +964,12 @@ namespace PrincesPalace.Domain.Content
                              "it to point along. Give it travelSeconds or remove orient.");
             }
 
+            if (layer.ballistic && !layer.Travels)
+            {
+                problems.Add($"{at} authors ballistic but does not travel, so there is no flight to keep a " +
+                             "constant speed along. Give it travelSeconds or remove ballistic.");
+            }
+
             if (layer.through && !layer.Travels)
             {
                 problems.Add($"{at} authors through but does not travel, so there is no flight to carry past " +

@@ -69,7 +69,8 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(string.IsNullOrEmpty(vfx.layers.Single(l => l.id == id).tint), id + ": painted brown already");
             }
 
-            Assert.AreEqual(9, vfx.layers.Length, "gather, glob_trail, glob, splat, drops, three drip strands, puddle");
+            Assert.AreEqual(13, vfx.layers.Length,
+                "gather, shadow, launch, wake, glob_trail, glob, splat, drops, impact_ring, three drip strands, puddle");
         }
 
         // ONE PARABOLA IN TIME. The glob leaves at 0.17 s and lands at 0.325 s;
@@ -115,6 +116,28 @@ namespace PrincesPalace.Domain.Tests
             var trail = Mud().layers.Single(l => l.id == "glob_trail");
             Assert.AreEqual("layer:glob", trail.place, "the drips ride the glob");
             Assert.AreEqual(0.012f, Mud().kick.strength, 1e-6f, "the arrival kicks the stage");
+        }
+
+        // THE SHADOW KEEPS PACE: it travels the ground line on the glob's own
+        // clock and, being ballistic, at the glob's constant sideways speed.
+        [Test]
+        public void TheGroundShadowTravelsWithTheGlobAtItsSpeed()
+        {
+            var vfx = Mud();
+            var glob = vfx.layers.Single(l => l.id == "glob");
+            var shadow = vfx.layers.Single(l => l.id == "shadow");
+            Assert.AreEqual("caster", shadow.place, "on the ground line, from Shawn's feet");
+            Assert.AreEqual("ground", shadow.sort);
+            Assert.AreEqual(glob.travelDelay, shadow.travelDelay, 1e-6f);
+            Assert.AreEqual(glob.travelSeconds, shadow.travelSeconds, 1e-6f);
+            Assert.IsTrue(shadow.ballistic);
+
+            var performance = SpellPerformance.Resolve(vfx, 1, path => 8);
+            var instance = performance.Instances.Single(i => i.Layer.id == "shadow");
+            Assert.IsTrue(SpellPerformance.Ballistic(instance), "no arc authored: the flag alone makes it constant speed");
+            instance.From = new UiVec(0f, 0f);
+            instance.To = new UiVec(310f, 0f);
+            Assert.AreEqual(155f, SpellPerformance.PositionOf(instance, 0.2475f).X, 0.05f, "halfway at mid-flight, not a quarter");
         }
 
         [Test]

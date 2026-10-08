@@ -736,6 +736,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `orient` | string | `""` | Projectile orientation: none (drawn as painted) or path (turned so artDegrees lies along the flight, with the impact point riding the line from launch to aim). Blank means none. Legal only on a layer that travels. | None, Path |
 | `artDegrees` | float | `0` | The direction the drawing points as painted, in degrees counter-clockwise from +x (right); read only by orient 'path'. |  |
 | `through` | bool | `false` | Fly on through the target instead of stopping at it: after the arrival the layer keeps its arrival speed along the same line until it is fully off the stage, then ends. The hit still lands at the arrival. Legal only on a layer that travels. |  |
+| `ballistic` | bool | `false` | Fly at a constant speed along the line, like a thrown thing, instead of the projectile's accelerating ease. Implied by drift.arcY, so a layer that authors an arc never needs it; set it on a layer that must keep pace with one (a ground shadow under a lob). Legal only on a layer that travels. |  |
 | `emitter` | SpellEmitter (below) | (zero -- see SpellEmitter) | Ballistic particle settings; inert unless render is 'emitter'. |  |
 
 ### `SpellPresentation`

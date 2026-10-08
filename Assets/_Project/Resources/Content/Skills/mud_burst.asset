@@ -130,6 +130,298 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: shadow
+        render: still
+        place: caster
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0
+        path: Spells/mud_puddle
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0.05
+        fadeIn: 0
+        opacity: 0.5
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 130
+        fit: 
+        facing: auto
+        sort: ground
+        align: 
+        punch: 0
+        glow: 0
+        tint: '#000000'
+        impactX: 0.5
+        impactY: 0.5
+        aspect: 0
+        travelSeconds: 0.155
+        travelDelay: 0.17
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        ballistic: 1
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: launch
+        render: emitter
+        place: caster-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.17
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        ballistic: 0
+        emitter:
+          path: Spells/mud_splat_drops
+          rate: 0
+          burst: 10
+          window: 0
+          sourceDx: 70
+          sourceDy: 10
+          spreadDegrees: 50
+          aimDegrees: 25
+          speedMin: 200
+          speedMax: 460
+          inherit: 0
+          drag: 2
+          gravity: -1400
+          lifeMin: 0.15
+          lifeMax: 0.3
+          sizeMin: 0.25
+          sizeMax: 0.5
+          spinMin: -200
+          spinMax: 200
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.7
+          seed: 3311
+          weights: []
+      - id: wake
+        render: still
+        place: layer:glob
+        height: 0
+        follow: 1
+        whenConsumed: 
+        at: release
+        offset: 0.17
+        path: Spells/prismatic_orb_earth_wake
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: hold
+        fade: 0.08
+        fadeIn: 0
+        opacity: 1
+        dx: -130
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 0.8
+        size: 0
+        fit: 
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: '#4A3020'
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -226,9 +518,10 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/mud_splat_drops
-          rate: 60
+          rate: 70
           burst: 0
           window: 0.155
           sourceDx: 0
@@ -239,11 +532,11 @@ MonoBehaviour:
           speedMax: 0
           inherit: 0.04
           drag: 2
-          gravity: -420
+          gravity: -700
           lifeMin: 0.2
-          lifeMax: 0.38
-          sizeMin: 0.08
-          sizeMax: 0.16
+          lifeMax: 0.42
+          sizeMin: 0.45
+          sizeMax: 0.8
           spinMin: 0
           spinMax: 0
           alignFlight: 1
@@ -322,6 +615,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -418,6 +712,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -514,6 +809,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: Spells/mud_splat_drops
           rate: 0
@@ -541,6 +837,103 @@ MonoBehaviour:
           fadeFrom: 0.6
           endScale: 0.9
           seed: 3301
+          weights: []
+      - id: impact_ring
+        render: emitter
+        place: target-centre
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 0
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 0
+        fit: target
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        ballistic: 0
+        emitter:
+          path: Spells/mud_splat_drops
+          rate: 0
+          burst: 22
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 360
+          aimDegrees: 0
+          speedMin: 220
+          speedMax: 520
+          inherit: 0
+          drag: 2.2
+          gravity: -900
+          lifeMin: 0.18
+          lifeMax: 0.34
+          sizeMin: 0.3
+          sizeMax: 0.6
+          spinMin: -240
+          spinMax: 240
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 0.5
+          endScale: 0.7
+          seed: 3313
           weights: []
       - id: drip_a
         render: sprite
@@ -610,6 +1003,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -706,6 +1100,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -802,6 +1197,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0
@@ -898,6 +1294,7 @@ MonoBehaviour:
         orient: 
         artDegrees: 0
         through: 0
+        ballistic: 0
         emitter:
           path: 
           rate: 0

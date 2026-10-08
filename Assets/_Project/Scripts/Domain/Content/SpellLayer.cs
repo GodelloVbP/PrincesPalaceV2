@@ -226,6 +226,9 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Fly on through the target instead of stopping at it: after the arrival the layer keeps its arrival speed along the same line until it is fully off the stage, then ends. The hit still lands at the arrival. Legal only on a layer that travels.")]
         public bool through;
 
+        [ContentDoc("Fly at a constant speed along the line, like a thrown thing, instead of the projectile's accelerating ease. Implied by drift.arcY, so a layer that authors an arc never needs it; set it on a layer that must keep pace with one (a ground shadow under a lob). Legal only on a layer that travels.")]
+        public bool ballistic;
+
         [ContentDoc("Ballistic particle settings; inert unless render is 'emitter'.")]
         public SpellEmitter emitter = new SpellEmitter();
 
@@ -279,6 +282,7 @@ namespace PrincesPalace.Domain.Content
             orient = orient,
             artDegrees = artDegrees,
             through = through,
+            ballistic = ballistic,
             emitter = emitter == null ? new SpellEmitter() : emitter.Copy(),
         };
 

@@ -884,6 +884,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | `artDegrees` | `0` | Which way the drawing points as painted, degrees anticlockwise from +x. Read only by `orient: path`. |
 | `travelDelay` | `0` | The wind-up held at the caster before the motion starts. |
 | `through` | `false` | The projectile flies on through its target instead of stopping: the hit still lands at the arrival, then the layer keeps its arrival speed on the same line until it is fully off the stage, and ends. Travelling layers only. |
+| `ballistic` | `false` | Constant speed along the line, like a thrown thing, instead of the projectile's accelerating ease. Implied by `drift.arcY`; set it on a layer that must keep pace with one, such as a ground shadow under a lob. Travelling layers only. |
 | `follow` | `false` | Ride the anchor body: placed on it when the cast opens, then displaced with it for the layer's whole life (a bind on a figure a pull drags). Body placements only (`caster`, `target`, `counterpart` and their centres), not a projectile; a layer on `layer:<id>` already follows. |
 | `whenConsumed` | blank | Plays only if the cast spent that status on its target: a status name (`Poison`) or `any`. Blank always plays. A layer riding a gated one carries the same gate. |
 | `dx` / `dy` | `0` | Local offset from the anchor, in reference-frame units. `dx` mirrors with the cast. |

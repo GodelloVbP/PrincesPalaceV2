@@ -384,11 +384,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
             return f < instance.FlightReach ? f : instance.FlightReach;
         }
 
-        // A FLIGHT THAT AUTHORS AN ARC IS A THROW, not a projectile: it flies
+        // A FLIGHT THAT AUTHORS AN ARC (OR SAYS `ballistic`) IS A THROW, not a projectile: it flies
         // at constant speed (Eased) and its derivative is constant (VelocityOf).
         public static bool Ballistic(SpellLayerInstance instance) =>
             instance?.Layer != null && instance.Layer.travelSeconds > 0f &&
-            instance.Layer.drift != null && instance.Layer.drift.arcY != 0f;
+            (instance.Layer.ballistic || (instance.Layer.drift != null && instance.Layer.drift.arcY != 0f));
 
         // The exact derivative of the line above, which is why it is here and
         // not measured by differencing two samples: a difference over a tick
