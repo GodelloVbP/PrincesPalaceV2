@@ -1,34 +1,11 @@
 {
   "_notes": [
-    "Velvet Shackles: cells 13-16 are independent reusable particle sprites, never timeline frames.",
-    "The emitter in skills.json samples these stills with deterministic material-specific motion."
+    "Velvet Shackles particles (velvet_shackles_particles_flat.png, step 4 art 2026-10-08, 4x1 of 256, #00FF00): cell 0 a four-point gold glint, 1 a gold thread tuft, 2 a torn velvet scrap, 3 a curled ribbon piece. Independent particle sprites, never timeline frames; the emitters pick cells by weight. Keyed green-soft. Replaces the painted atlas cells 13-16."
   ],
-  "sheet": "Spells/Velvet Shackles/velvet_shackles_atlas_v1.png",
-  "rects": [
-    [
-      0,
-      940,
-      314,
-      314
-    ],
-    [
-      314,
-      940,
-      313,
-      314
-    ],
-    [
-      627,
-      940,
-      313,
-      314
-    ],
-    [
-      940,
-      940,
-      314,
-      314
-    ]
+  "sheet": "Spells/Velvet Shackles/velvet_shackles_particles_flat.png",
+  "grid": [
+    1,
+    4
   ],
   "names": [
     "f0",
@@ -36,10 +13,10 @@
     "f2",
     "f3"
   ],
-  "keyed": false,
+  "keyed": "green-soft",
   "canvas": [
-    314,
-    314
+    256,
+    256
   ],
   "base_align": false,
   "content_crop": false

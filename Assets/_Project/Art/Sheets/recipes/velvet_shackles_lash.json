@@ -1,25 +1,23 @@
 {
   "_notes": [
-    "Velvet Shackles, the lash: one drawing of the same ribbon strip (shackle_ribbon.png), cropped tight, flown from Shawn's hand with orient path (the strip points along +x, artDegrees 0)."
+    "Velvet Shackles, the lash (velvet_shackles_lash.png, step 4 art 2026-10-08, 4x1 of 1024x512, #00FF00): a crimson ribbon with gold stitching cracking like a whip, ripple, wave, curl, flick; the leading tip at 90% across and 50% down in every cell, pointing right, so no crop. Keyed green-soft (the gold keeps its hue). Replaces the tight crop of shackle_ribbon.png."
   ],
-  "sheet": "Spells/Velvet Shackles/shackle_ribbon.png",
-  "rects": [
-    [
-      60,
-      215,
-      1865,
-      330
-    ]
+  "sheet": "Spells/Velvet Shackles/velvet_shackles_lash.png",
+  "grid": [
+    1,
+    4
   ],
   "names": [
-    "f0"
+    "f0",
+    "f1",
+    "f2",
+    "f3"
   ],
   "keyed": "green-soft",
+  "canvas": [
+    1024,
+    512
+  ],
   "base_align": false,
-  "content_crop": true,
-  "sequence": [
-    {
-      "from": "f0"
-    }
-  ]
+  "content_crop": false
 }

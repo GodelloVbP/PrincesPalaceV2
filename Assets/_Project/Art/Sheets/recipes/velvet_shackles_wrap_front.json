@@ -1,0 +1,45 @@
+{
+  "_notes": [
+    "Velvet Shackles, the FRONT half of the wrap loop (bottom row of velvet_shackles_wrap.png): same four moments in the same column as the back half, same pivot, no crop. Played on the effects band, in front of the body. Keyed green-soft."
+  ],
+  "sheet": "Spells/Velvet Shackles/velvet_shackles_wrap.png",
+  "rects": [
+    [
+      0,
+      640,
+      1024,
+      640
+    ],
+    [
+      1024,
+      640,
+      1024,
+      640
+    ],
+    [
+      2048,
+      640,
+      1024,
+      640
+    ],
+    [
+      3072,
+      640,
+      1024,
+      640
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": "green-soft",
+  "canvas": [
+    1024,
+    640
+  ],
+  "base_align": false,
+  "content_crop": false
+}

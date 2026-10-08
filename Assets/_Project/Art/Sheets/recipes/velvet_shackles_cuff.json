@@ -1,49 +1,23 @@
 {
   "_notes": [
-    "Velvet Shackles, the cuff: the owner's flat-cel cuff strip (shackle_cuff.png, 2172x724, #00FF00, untracked 2026-10-04): open, nearly closed, closed with the gold clasp. The three drawings sit at different x and y in their 724 cells, so each is cut with an explicit 440x300 rect centred on its own content box and bottomed 10 px under it; all three share one canvas, no content crop (E7). Hue key keeps the gold clasp."
+    "Velvet Shackles, the cuff (velvet_shackles_cuff_flat.png, step 4 art 2026-10-08, 4x1 of 768x768, #00FF00): open, nearly closed, closed with the clasp, squeezed; the cuff centre at 50% across and 60% down, the same size in every cell, so no crop. Cells 1-3 snap shut into the cue, cell 4 lands on it. Keyed green-soft (the gold clasp keeps its hue). Replaces the delivered shackle_cuff.png cut."
   ],
-  "sheet": "Spells/Velvet Shackles/shackle_cuff.png",
-  "rects": [
-    [
-      190,
-      191,
-      440,
-      300
-    ],
-    [
-      873,
-      178,
-      440,
-      300
-    ],
-    [
-      1577,
-      183,
-      440,
-      300
-    ]
+  "sheet": "Spells/Velvet Shackles/velvet_shackles_cuff_flat.png",
+  "grid": [
+    1,
+    4
   ],
   "names": [
     "f0",
     "f1",
-    "f2"
+    "f2",
+    "f3"
   ],
   "keyed": "green-soft",
   "canvas": [
-    440,
-    300
+    768,
+    768
   ],
   "base_align": false,
-  "content_crop": false,
-  "sequence": [
-    {
-      "from": "f0"
-    },
-    {
-      "from": "f1"
-    },
-    {
-      "from": "f2"
-    }
-  ]
+  "content_crop": false
 }

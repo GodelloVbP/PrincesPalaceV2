@@ -145,8 +145,8 @@ MonoBehaviour:
           gravity: -160
           lifeMin: 0.15
           lifeMax: 0.25
-          sizeMin: 0.1
-          sizeMax: 0.18
+          sizeMin: 0.3
+          sizeMax: 0.5
           spinMin: -180
           spinMax: 180
           alignFlight: 0
@@ -158,12 +158,12 @@ MonoBehaviour:
           seed: 1451
           weights:
           - 0
-          - 0
           - 1
+          - 0
           - 0
       - id: lash
         render: sprite
-        place: caster-centre
+        place: caster
         height: 0
         follow: 0
         whenConsumed: 
@@ -171,14 +171,14 @@ MonoBehaviour:
         offset: 0.02
         path: Spells/velvet_shackles_lash
         seconds: 0.2
-        fps: 0
+        fps: 20
         startFrame: 0
         until: hold
-        fade: 0.1
-        fadeIn: 0
+        fade: 0.06
+        fadeIn: 0.04
         opacity: 1
         dx: 0
-        dy: 0
+        dy: 25
         drift:
           fromX: 0
           toX: 0
@@ -212,8 +212,8 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 170
-        fit: target
+        size: 475
+        fit: 
         facing: auto
         sort: effects
         align: 
@@ -266,16 +266,16 @@ MonoBehaviour:
         whenConsumed: 
         at: release
         offset: 0.2
-        path: Spells/velvet_shackles_ribbon
-        seconds: 0.45
-        fps: 20
+        path: Spells/velvet_shackles_wrap_back
+        seconds: 0.5
+        fps: 10
         startFrame: 0
-        until: once
+        until: hold
         fade: 0.12
-        fadeIn: 0.12
+        fadeIn: 0.06
         opacity: 1
         dx: 0
-        dy: 18
+        dy: 25
         drift:
           fromX: 0
           toX: 0
@@ -286,7 +286,7 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         rotate:
-          degrees: 10
+          degrees: 0
           spin: 0
           amplitude: 0
           period: 0
@@ -309,8 +309,8 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 240
-        fit: target
+        size: 540
+        fit: 
         facing: none
         sort: ground
         align: 
@@ -318,7 +318,7 @@ MonoBehaviour:
         glow: 0
         tint: 
         impactX: 0.5
-        impactY: 0.5
+        impactY: 0.45
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -363,16 +363,16 @@ MonoBehaviour:
         whenConsumed: 
         at: release
         offset: 0.2
-        path: Spells/velvet_shackles_ribbon
-        seconds: 0.45
-        fps: 20
+        path: Spells/velvet_shackles_wrap_front
+        seconds: 0.5
+        fps: 10
         startFrame: 0
-        until: once
+        until: hold
         fade: 0.12
-        fadeIn: 0.12
+        fadeIn: 0.06
         opacity: 1
         dx: 0
-        dy: 18
+        dy: 25
         drift:
           fromX: 0
           toX: 0
@@ -383,7 +383,7 @@ MonoBehaviour:
           viaAt: 0
           arcY: 0
         rotate:
-          degrees: -10
+          degrees: 0
           spin: 0
           amplitude: 0
           period: 0
@@ -406,8 +406,8 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 240
-        fit: target
+        size: 540
+        fit: 
         facing: none
         sort: effects
         align: 
@@ -415,7 +415,104 @@ MonoBehaviour:
         glow: 0
         tint: 
         impactX: 0.5
-        impactY: 0.5
+        impactY: 0.45
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        overhang: 0
+        orient: 
+        artDegrees: 0
+        through: 0
+        ballistic: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          alignFlight: 0
+          lateral: 0
+          burstTimes: []
+          burstEach: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: cuff_close
+        render: sprite
+        place: target
+        height: 0
+        follow: 0
+        whenConsumed: 
+        at: release
+        offset: 0.3
+        path: Spells/velvet_shackles_cuff
+        seconds: 0.1
+        fps: 30
+        startFrame: 0
+        until: once
+        fade: 0
+        fadeIn: 0
+        opacity: 1
+        dx: 0
+        dy: 25
+        drift:
+          fromX: 0
+          toX: 0
+          fromY: 0
+          toY: 0
+          viaX: 0
+          viaY: 0
+          viaAt: 0
+          arcY: 0
+        rotate:
+          degrees: 0
+          spin: 0
+          amplitude: 0
+          period: 0
+          damping: 0
+          phase: 0
+          delay: 0
+          swings: 0
+          pivotX: 0.5
+          pivotY: 0.5
+        breathe:
+          alpha: 0
+          scale: 0
+          rate: 1
+        glowCurve:
+          to: 0
+          pulse: 0
+          period: 0
+          crest: 0
+          knee: 0
+        stoke: 0
+        unkicked: 0
+        scale: 1
+        size: 150
+        fit: 
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        tint: 
+        impactX: 0.5
+        impactY: 0.4
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -453,7 +550,7 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: cuff
-        render: sprite
+        render: still
         place: target
         height: 0
         follow: 0
@@ -461,15 +558,15 @@ MonoBehaviour:
         at: release
         offset: 0.4
         path: Spells/velvet_shackles_cuff
-        seconds: 0.22
-        fps: 20
-        startFrame: 3
+        seconds: 0.3
+        fps: 0
+        startFrame: 4
         until: hold
-        fade: 0.2
+        fade: 0.15
         fadeIn: 0
         opacity: 1
         dx: 0
-        dy: 0
+        dy: 25
         drift:
           fromX: 0
           toX: 0
@@ -503,16 +600,16 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 130
-        fit: target
+        size: 150
+        fit: 
         facing: none
         sort: effects
         align: 
-        punch: 0.3
-        glow: 0.2
+        punch: 0.2
+        glow: 0
         tint: 
         impactX: 0.5
-        impactY: 0.25
+        impactY: 0.4
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -601,7 +698,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 0
-        fit: target
+        fit: 
         facing: 
         sort: effects
         align: 
@@ -621,7 +718,7 @@ MonoBehaviour:
         emitter:
           path: Spells/velvet_shackles_particles
           rate: 0
-          burst: 6
+          burst: 5
           window: 0
           sourceDx: 0
           sourceDy: 30
@@ -634,8 +731,8 @@ MonoBehaviour:
           gravity: -120
           lifeMin: 0.15
           lifeMax: 0.3
-          sizeMin: 0.08
-          sizeMax: 0.16
+          sizeMin: 0.3
+          sizeMax: 0.55
           spinMin: -120
           spinMax: 120
           alignFlight: 0
@@ -646,13 +743,13 @@ MonoBehaviour:
           endScale: 0.6
           seed: 1459
           weights:
-          - 0
-          - 0
           - 1
+          - 0
+          - 0
           - 0
       - id: settle
         render: emitter
-        place: target-centre
+        place: target
         height: 0
         follow: 0
         whenConsumed: 
@@ -702,7 +799,7 @@ MonoBehaviour:
         unkicked: 0
         scale: 1
         size: 0
-        fit: target
+        fit: 
         facing: 
         sort: effects
         align: 
@@ -725,7 +822,7 @@ MonoBehaviour:
           burst: 8
           window: 0
           sourceDx: 0
-          sourceDy: 0
+          sourceDy: 40
           spreadDegrees: 130
           aimDegrees: 90
           speedMin: 45
@@ -735,8 +832,8 @@ MonoBehaviour:
           gravity: -260
           lifeMin: 0.3
           lifeMax: 0.45
-          sizeMin: 0.1
-          sizeMax: 0.22
+          sizeMin: 0.3
+          sizeMax: 0.55
           spinMin: -180
           spinMax: 180
           alignFlight: 0
@@ -747,8 +844,8 @@ MonoBehaviour:
           endScale: 0.72
           seed: 1455
           weights:
-          - 1
           - 0
+          - 1
           - 1
           - 1
       layerFormat: 1

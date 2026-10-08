@@ -1,0 +1,45 @@
+{
+  "_notes": [
+    "Velvet Shackles, the BACK half of the wrap loop (top row of velvet_shackles_wrap.png, 4096x1280, 4x2 of 1024x640, #00FF00): loose, tighter, closed tight with the ends crossed (the cinch on the cue), slack. Pivot 50% across and 55% down in every cell, so no crop. Played on the ground band, behind the body; the front half is velvet_shackles_wrap_front. Keyed green-soft."
+  ],
+  "sheet": "Spells/Velvet Shackles/velvet_shackles_wrap.png",
+  "rects": [
+    [
+      0,
+      0,
+      1024,
+      640
+    ],
+    [
+      1024,
+      0,
+      1024,
+      640
+    ],
+    [
+      2048,
+      0,
+      1024,
+      640
+    ],
+    [
+      3072,
+      0,
+      1024,
+      640
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": "green-soft",
+  "canvas": [
+    1024,
+    640
+  ],
+  "base_align": false,
+  "content_crop": false
+}
