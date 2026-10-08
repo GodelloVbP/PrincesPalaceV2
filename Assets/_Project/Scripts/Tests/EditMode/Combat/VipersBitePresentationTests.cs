@@ -42,7 +42,8 @@ namespace PrincesPalace.Domain.Tests
             var bite = vfx.layers.Single(l => l.id == "bite");
             Assert.AreEqual("hit", bite.at);
             Assert.AreEqual(0f, bite.offset, 1e-6f);
-            Assert.AreEqual(4, bite.startFrame, "jaws sheet cell 4, the snap");
+            Assert.AreEqual("Spells/vipers_bite_ghost_jaws", bite.path, "the frontal ghost jaws, owner 2026-10-08");
+            Assert.AreEqual(6, bite.startFrame, "f5, the snap");
             Assert.AreEqual(1.25f, bite.glow, 1e-6f);
             Assert.AreEqual(0.2f, vfx.gloom.strength, 1e-6f, "owner O1");
         }

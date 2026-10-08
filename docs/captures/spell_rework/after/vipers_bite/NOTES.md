@@ -298,7 +298,7 @@ Round 2 timing (cue 0.40 s), sizes (jaws 230 / bite 200 / closed 190, glints 32 
 | Piece | Source | Recipe | Output | Attempts |
 |---|---|---|---|---|
 | Eyes | `vipers_bite_eyes.png` (2x1 of 256) | `recipes/vipers_bite_eyes.json`: hue key (magenta), `content_crop` (229x119), `alpha_floor` 40 | `Resources/Spells/vipers_bite_eyes` f0-f1 | accepted at step 5, wired first try |
-| Jaws | `vipers_bite_jaws.png` (3x2 of 512) | `recipes/vipers_bite.json` rewritten: hue key, `content_crop` (354x446), `alpha_floor` 40 | `Resources/Spells/vipers_bite` f0-f5 (f0-f2 forming, f3 snap, f4 shut, f5 shut and dripping; f6-f11 removed) | accepted at step 5, wired first try |
+| Jaws | `vipers_bite_jaws.png` (3x2 of 512), **rejected by the owner 2026-10-08, unreferenced, kept on disk** | `recipes/vipers_bite.json` rewritten: hue key, `content_crop` (354x446), `alpha_floor` 40 | `Resources/Spells/vipers_bite` f0-f5 (f0-f2 forming, f3 snap, f4 shut, f5 shut and dripping; f6-f11 removed) | accepted at step 5, wired first try |
 | Drip | `vipers_bite_venom.png` row 1 | `recipes/vipers_bite_drip.json` (new): hue key, `alpha_floor` 40, no crop (pivot at the cell's top), `feather` top 0.1 | `Resources/Spells/vipers_bite_drip` f0-f3 | one revision: the cells are cut flat at the top edge and the cut showed as a straight line on the body, so the top 10% is feathered |
 | Particles | `vipers_bite_venom.png` row 2 | `recipes/vipers_bite_particles.json` rewritten: hue key, `alpha_floor` 40 | `..._particles` f0 drop, f1 small drop, f2-f3 vapour | accepted at step 5, wired first try |
 | Burst | `vipers_bite_burst_flat.png` (1024) | `recipes/vipers_bite_burst.json` rewritten: hue key, `content_crop` (818x875), `alpha_floor` 40 | `..._burst` f0 | accepted at step 5, wired first try |
@@ -362,6 +362,28 @@ Changed: `eye_a` and `eye_b` size 32 to 56; `dx` -108/-56 to -134/-96, so the pa
    `eye_b` opens 0.06 s later (its authored offset).
 2. Treant jaws covering the face at the snap: unchanged, the owner's call.
 
+## Round 3: round 2 ghost jaws restored (2026-10-08)
+
+Owner: "the frontal ghost viper bite is better than this weird-ass jaw". Recipe `recipes/vipers_bite_ghost_jaws.json` is the pre-step-6 `vipers_bite`
+recipe (atlas v1 cells 1-8 + v3 cells 9-12), output `Resources/Spells/vipers_bite_ghost_jaws` f0-f11 (PNGs byte-identical to `475f9849`, fresh GUIDs).
+`jaws`, `bite`, `closed` point there with round 2's values: jaws startFrame 1, fps 18, size 230, opacity 0.95, glow 0.7; bite startFrame 6 (f5), size 200,
+glow 1.25, punch 0.3; closed startFrame 7 (f6-f7), size 190, opacity 0.85. `recipes/vipers_bite.json` and `vipers_bite_jaws.png` stay, unreferenced;
+`Resources/Spells/vipers_bite` still holds the side-view f0-f5 for the same reason. Kept from step 6: eyes (56 px, dx -134/-96), drip sheet (impactY 1), mist
+weights, flat burst, cue 0.40 s, gloom.
+
+Drip hand-off: the drip is hung from its top edge at 0.18 above the target base and starts 0.22 s after the cue, the closed jaws sit at 0.12 and fade by 0.3 s.
+In the frames the drip starts at the jaw line as the closed jaws fade (rat f34-f40, treant f32-f40) and runs down from there. No change needed.
+
+Frame evidence (own contact sheets of 1x captures, 60 fps; copies `vipers_bite_r2restore_{rat,treant,rat_poison}_1x*.gif`, previews committed):
+- rat f14-f20: green ghost jaws seen from the front, upper and lower fangs bracketing the body; yellow slit eyes beside the head.
+- f22-f28: the snap starburst across the body with the "-3", jaws shut with fangs in, eyes fade.
+- f30-f40: jaws fade, the new lime drip runs down from the jaw line; flat lime burst and mist read as step 6.
+- treant: same order; jaws bracket the trunk and face, drip from the jaw line down the trunk.
+
+spell_feel (`spell_feel_r2restore_1x/*/report.json`, treant and rat at 1x): contact f21 both. Treant WARN residue tail 1.07 s (mist, as before),
+contact desync (cue f21 vs authored f24: the capture path's first-drawn wait). Rat WARN no accent (peak 6.5 over floor 2.4, under 1.5x the cast's typical 5.1),
+biggest rise f5 (the rat's own pose change / eye glints, not the snap). Not new defects of the jaws; the residue and desync WARNs were already open.
+
 ## Open owner questions
 
 Each asked once. Status: open, answered (with the answer), or dropped.
@@ -380,6 +402,7 @@ Each asked once. Status: open, answered (with the answer), or dropped.
 | Round 1 (2026-10-07) | New design: no head. Eye glints (`glow_disc`), jaws forming (old f0-f4), snap on the cue (f5), closed jaws, venom drip (f8-f11), mist emitter; cue 0.30 to 0.40 and the cast sound re-cut; burst kept and sized 420 to 200, held 0.22 to 0.1 s. Tuned within the round: eyes first sat on the rat's ear (moved to 0.62 above the head), the snap covered about half the rat at 190 (now 120) | worker (own frame sheets), the contract 2 coverage check | worker's score above; step 3 pending |
 | Round 2 (2026-10-07) | Jaws 140/120/110 to 230/200/190, forming jaws opacity 0.95 glow 0.7, glints to face height (0.17, dx -108/-56), mist window 0.35 life 0.4-0.6 | owner (bigger jaws), orchestrator step 3 (glints, rat jaws, mist) | worker score in Round 2 |
 | Tuning after step 6 (2026-10-07) | Eyes 32 to 56 px, dx -134/-96 | orchestrator's step 6 check | eyes read on rat and treant |
+| Round 3 (2026-10-08) | owner 2026-10-08: new side-view jaw art rejected; round 2 frontal ghost jaws restored; new eyes, drip, mist and burst kept | owner | see "Round 3" |
 
 ## Measures
 

@@ -78,7 +78,7 @@ MonoBehaviour:
         fade: 0.08
         fadeIn: 0.08
         opacity: 0.9
-        dx: -108
+        dx: -134
         dy: 0
         drift:
           fromX: 0
@@ -113,7 +113,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 32
+        size: 56
         fit: target
         facing: none
         sort: effects
@@ -174,7 +174,7 @@ MonoBehaviour:
         fade: 0.08
         fadeIn: 0.08
         opacity: 0.9
-        dx: -56
+        dx: -96
         dy: 0
         drift:
           fromX: 0
@@ -209,7 +209,7 @@ MonoBehaviour:
         stoke: 0
         unkicked: 0
         scale: 1
-        size: 32
+        size: 56
         fit: target
         facing: none
         sort: effects
@@ -262,9 +262,9 @@ MonoBehaviour:
         whenConsumed: 
         at: release
         offset: 0.14
-        path: Spells/vipers_bite
+        path: Spells/vipers_bite_ghost_jaws
         seconds: 0.27
-        fps: 10
+        fps: 18
         startFrame: 1
         until: hold
         fade: 0.04
@@ -358,10 +358,10 @@ MonoBehaviour:
         whenConsumed: 
         at: hit
         offset: 0
-        path: Spells/vipers_bite
+        path: Spells/vipers_bite_ghost_jaws
         seconds: 0.1
         fps: 0
-        startFrame: 4
+        startFrame: 6
         until: hold
         fade: 0.14
         fadeIn: 0
@@ -454,10 +454,10 @@ MonoBehaviour:
         whenConsumed: 
         at: hit
         offset: 0.1
-        path: Spells/vipers_bite
+        path: Spells/vipers_bite_ghost_jaws
         seconds: 0.2
         fps: 10
-        startFrame: 5
+        startFrame: 7
         until: hold
         fade: 0.15
         fadeIn: 0
