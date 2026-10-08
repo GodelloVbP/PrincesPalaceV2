@@ -31,6 +31,17 @@
 
 $UnityLockProjectRoot = Split-Path $PSScriptRoot -Parent
 
+# Unity Hub runs its own Unity.exe (`Unity Hub\resources\unity.exe serve`) with
+# no -projectPath. It is a helper service that holds no project, so it must not
+# read as an Editor whose project is unknown. The install directory is the
+# rule; the `serve` argument covers an unreadable path.
+function Test-UnityHubProcess {
+    param([string]$ExecutablePath, [string]$CommandLine)
+
+    if ($ExecutablePath) { return ($ExecutablePath -match '(?i)[\\/]Unity Hub[\\/]resources[\\/]') }
+    return ($CommandLine -match '(?i)\sserve\s*$')
+}
+
 function Get-UnityLockState {
     param([string]$ProjectRoot = $UnityLockProjectRoot)
 
@@ -49,6 +60,7 @@ function Get-UnityLockState {
     $processes = @(Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" -ErrorAction SilentlyContinue)
     foreach ($p in $processes) {
         $cmd = $p.CommandLine
+        if (Test-UnityHubProcess -ExecutablePath $p.ExecutablePath -CommandLine $cmd) { continue }
         if (-not $cmd) {
             # No command line to read (a permissions quirk, usually). Cannot
             # rule it out, so it counts against us.
