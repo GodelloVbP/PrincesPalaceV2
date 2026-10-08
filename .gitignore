@@ -74,3 +74,7 @@ docs/captures/**
 
 # Scratch art drafts and concept dumps; accepted art moves into Assets/.
 output/
+
+# slice_actor_sheet.py's head-point proof (and the .meta Unity adds under Art/).
+Assets/_Project/Art/Enemies/**/head_check.png
+Assets/_Project/Art/Enemies/**/head_check.png.meta

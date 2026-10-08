@@ -628,5 +628,38 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(ok);
             StringAssert.Contains(field, string.Join(" | ", errors));
         }
+
+        [TestCase(-1f, 0.5f, 0.3f, "headX")]
+        [TestCase(0.5f, -1f, 0.3f, "headY")]
+        [TestCase(0.5f, 0.5f, -1f, "headSize")]
+        [TestCase(-1f, -1f, -1f, "headX, headY, headSize")]
+        public void Refuses_ADrawnMonsterWithAnUnauthoredHead_NamingItAndTheSlicerStep(float x, float y, float size, string missing)
+        {
+            var raw = Minimal("drawn");
+            raw.spritePath = "Enemies/drawn";
+            raw.headX = x; raw.headY = y; raw.headSize = size;
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { raw }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            string joined = string.Join(" | ", errors);
+            StringAssert.Contains("enemy 'drawn'", joined);
+            StringAssert.Contains(missing + " unauthored", joined);
+            StringAssert.Contains("slice_actor_sheet.py", joined);
+        }
+
+        [Test]
+        public void ADrawnMonsterWithAFullHead_AndAPlaceholderWithNone_BothResolve()
+        {
+            var drawn = Minimal("drawn");
+            drawn.spritePath = "Enemies/drawn";
+            drawn.headX = 0.5f; drawn.headY = 0.8f; drawn.headSize = 0.3f;
+            var placeholder = Minimal("placeholder");
+            placeholder.spritePath = "   ";
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { drawn, placeholder }, out _, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+        }
     }
 }

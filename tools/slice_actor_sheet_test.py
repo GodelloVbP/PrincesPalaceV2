@@ -32,6 +32,7 @@ THE THREE CONTRACTS THIS FILE CHECKS, matching the job's own requirements:
 """
 
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -342,6 +343,91 @@ class ReplayOutRootOverrideTests(_FixtureTree):
         self.assertNotIn("sqrt(LCC-mass)", result.stdout,
                           "--quiet given alongside --recipe should still suppress the verbose "
                           "per-stance line")
+
+
+class HeadPointTests(unittest.TestCase):
+    """An Enemies/ actor must have its head authored in enemies.json; the
+    run draws head_check.png from those numbers and refuses otherwise."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.art_dir = os.path.join(self.root, "Assets", "_Project", "Art", "Enemies", "testrat")
+        os.makedirs(self.art_dir, exist_ok=True)
+        self.sheet = os.path.join(self.art_dir, "sheet.png")
+        _blob_sheet(self.sheet, 100, 100, (20, 20, 79, 89))  # 60x70 opaque
+        self.content_dir = os.path.join(self.root, "Assets", "_Project", "ContentData")
+        os.makedirs(self.content_dir, exist_ok=True)
+        self.argv = ["--actor", "Enemies/testrat", "--sheet", self.sheet,
+                     "--grid", "1x1", "--stances", "idle"]
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def write_enemies(self, **entry):
+        entry = dict({"id": "testrat", "spritePath": "Enemies/testrat"}, **entry)
+        with open(os.path.join(self.content_dir, "enemies.json"), "w", encoding="utf-8") as handle:
+            json.dump({"enemies": [entry]}, handle)
+
+    def run_tool(self, argv):
+        return subprocess.run([sys.executable, TOOL] + argv, cwd=self.root,
+                              capture_output=True, text=True)
+
+    def proof(self):
+        return os.path.join(self.art_dir, "head_check.png")
+
+    def test_an_authored_head_writes_head_check_with_a_crosshair(self):
+        self.write_enemies(headX=0.5, headY=0.5, headSize=0.3)
+        result = self.run_tool(self.argv)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        with Image.open(self.proof()) as img:
+            pixels = img.convert("RGBA")
+            # The crosshair is yellow; the blob is brown and the backdrop grey.
+            yellow = [(x, y) for x in range(pixels.width) for y in range(pixels.height)
+                      if pixels.getpixel((x, y)) == (255, 255, 0, 255)]
+        self.assertTrue(yellow, "no crosshair pixels in head_check.png")
+        xs = [x for x, _ in yellow]
+        self.assertAlmostEqual(0.5, (min(xs) + max(xs)) / 2 / pixels.width, delta=0.15)
+
+    def test_a_missing_head_is_a_loud_error_but_the_art_and_recipe_are_kept(self):
+        self.write_enemies()
+        result = self.run_tool(self.argv)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("HEAD POINT MISSING", result.stdout + result.stderr)
+        self.assertIn("testrat", result.stdout + result.stderr)
+        self.assertFalse(os.path.exists(self.proof()))
+        self.assertTrue(os.path.isfile(os.path.join(self.art_dir, "recipe.json")))
+        self.assertTrue(os.path.isfile(os.path.join(
+            self.root, "Assets", "_Project", "Resources", "Enemies", "testrat", "idle.png")))
+
+    def test_a_partly_authored_head_is_refused_too(self):
+        self.write_enemies(headX=0.5, headY=0.5)
+        self.assertNotEqual(0, self.run_tool(self.argv).returncode)
+
+    def test_an_enemy_missing_from_enemies_json_is_refused(self):
+        with open(os.path.join(self.content_dir, "enemies.json"), "w", encoding="utf-8") as handle:
+            json.dump({"enemies": []}, handle)
+        result = self.run_tool(self.argv)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("no enemy", result.stdout + result.stderr)
+
+    def test_no_head_skips_the_check_and_is_recorded_in_the_recipe(self):
+        result = self.run_tool(self.argv + ["--no-head"])
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertFalse(os.path.exists(self.proof()))
+        with open(os.path.join(self.art_dir, "recipe.json"), encoding="utf-8") as handle:
+            self.assertIn("--no-head", json.load(handle)["argv"])
+        replay = self.run_tool(["--recipe", os.path.join(self.art_dir, "recipe.json")])
+        self.assertEqual(0, replay.returncode, replay.stdout + replay.stderr)
+
+    def test_a_character_needs_no_head(self):
+        art = os.path.join(self.root, "Assets", "_Project", "Art", "Characters", "testbear")
+        os.makedirs(art)
+        sheet = os.path.join(art, "sheet.png")
+        _blob_sheet(sheet, 100, 100, (20, 20, 79, 89))
+        result = self.run_tool(["--actor", "Characters/testbear", "--sheet", sheet,
+                                "--grid", "1x1", "--stances", "idle"])
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

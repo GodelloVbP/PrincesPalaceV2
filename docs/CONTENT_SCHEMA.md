@@ -93,9 +93,9 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `attackHoldsPosition` | bool | `false` | Whether this monster's plain-attack art is a stationary pose rather than a forward strike. |  |
 | `attackApproach` | string | `""` | How this monster's plain attack travels when not holding position: close (default), lunge, or charge. | Hold, Lunge, Close, Charge |
 | `stageScale` | float | `0` | A multiplier on this monster's stage size, on top of its slot's own depth scale; 0 means unset and reads as 1. |  |
-| `headX` | float | `-1` | Head centre X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn; -1 means unauthored and reads as 0.5. |  |
-| `headY` | float | `-1` | Head centre Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge; -1 means unauthored and reads as 0.8. |  |
-| `headSize` | float | `-1` | Head height over the idle drawing's opaque height (above 0, at most 1); -1 means unauthored and reads as 0.3. |  |
+| `headX` | float | `-1` | Head centre X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.5. |  |
+| `headY` | float | `-1` | Head centre Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.8. |  |
+| `headSize` | float | `-1` | Head height over the idle drawing's opaque height (above 0, at most 1). Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.3. |  |
 | `slotSpan` | int | `0` | How many of the stage's positions this monster occupies; 0 means unset and reads as 1. |  |
 | `rollable` | bool | `true` | Whether room fights may roll this monster; false keeps it out of the room pool while an event fight can still name it. Distinct from active, which builds no asset at all. |  |
 | `rallyPerRound` | RawEnemyRally (below) | (zero -- see RawEnemyRally) | An attack stack this monster gains as each round starts, for the rest of the fight; see RawEnemyRally. Omitted or all zero means none. |  |

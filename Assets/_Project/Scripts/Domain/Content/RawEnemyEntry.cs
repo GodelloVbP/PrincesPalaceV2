@@ -278,14 +278,15 @@ namespace PrincesPalace.Domain.Content
         // on a rat's head and a treant's alike. Measured on the sprite as
         // drawn, before any facing mirror: X from the left edge, Y from the
         // bottom edge, size = head height over body height. -1 means
-        // unauthored and reads as TargetBody.FallbackHead*.
-        [ContentDoc("Head centre X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn; -1 means unauthored and reads as 0.5.")]
+        // unauthored and reads as TargetBody.FallbackHead*; the resolver
+        // refuses it on any entry with a spritePath.
+        [ContentDoc("Head centre X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.5.")]
         public float headX = -1f;
 
-        [ContentDoc("Head centre Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge; -1 means unauthored and reads as 0.8.")]
+        [ContentDoc("Head centre Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.8.")]
         public float headY = -1f;
 
-        [ContentDoc("Head height over the idle drawing's opaque height (above 0, at most 1); -1 means unauthored and reads as 0.3.")]
+        [ContentDoc("Head height over the idle drawing's opaque height (above 0, at most 1). Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.3.")]
         public float headSize = -1f;
 
         // HOW MANY OF THE STAGE'S POSITIONS THIS MONSTER OCCUPIES.

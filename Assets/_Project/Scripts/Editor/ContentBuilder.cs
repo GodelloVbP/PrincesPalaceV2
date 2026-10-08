@@ -61,6 +61,10 @@ public static class ContentBuilder
         new SortedDictionary<string, List<string>>(System.StringComparer.Ordinal);
     private static readonly List<string> FailedTypes = new List<string>();
 
+    // True during the preflight pass: every resolver runs and logs, nothing is
+    // created. See BuildDefaultContent.
+    private static bool preflight;
+
     [MenuItem("Prince's Palace/Build Default Content")]
     public static void BuildDefaultContent()
     {
@@ -81,6 +85,38 @@ public static class ContentBuilder
             Debug.Log($"[ContentTiming] {what}: {(now - last).TotalSeconds:N1}s (total {now.TotalSeconds:N1}s)");
             last = now;
         }
+
+        // VALIDATE EVERYTHING BEFORE TOUCHING THE TREE. RecreateFolder deletes
+        // Resources/Content, and a build that then failed on one bad entry
+        // left the tree half-written and every surviving .asset.meta
+        // regenerated with a new GUID (63 of them, once), orphaning every
+        // reference to them. So the whole catalogue is resolved first with
+        // writes switched off; any failure stops here with the tree as it was.
+        // The resolvers are pure JSON-to-record, so the second pass resolving
+        // again costs milliseconds, and nothing is restated: the preflight IS
+        // the build with CreateContentAsset muted.
+        preflight = true;
+        try
+        {
+            RunBuilders();
+        }
+        finally
+        {
+            preflight = false;
+        }
+
+        if (FailedTypes.Count > 0)
+        {
+            string failed = string.Join(", ", FailedTypes);
+            WrittenByFolder.Clear();
+            FailedTypes.Clear();
+            throw new System.Exception(
+                $"ContentBuilder refused to build: {failed} failed validation (errors above). " +
+                "Resources/Content was NOT touched. Fix the authoring error and rebuild.");
+        }
+
+        WrittenByFolder.Clear();
+        Mark("preflight");
 
         RecreateFolder(ContentRoot);
         EnsureFolder(CharactersPath);
@@ -123,70 +159,7 @@ public static class ContentBuilder
         AssetDatabase.StartAssetEditing();
         try
         {
-            // POOLS BEFORE CHARACTERS, and the order is load-bearing for the
-            // same reason achievements come before relics below: a
-            // character's primaryPoolId is validated against the pool ids
-            // this returns, so building them the other way round would
-            // validate against nothing and let a typo'd resource through.
-            var pools = BuildPools();
-            var characters = BuildCharacters(pools.Select(p => p.Id).ToList());
-            BuildTalents();
-            BuildUpgrades();
-            var enemySlotSpans = BuildEnemies();
-            var itemIds = BuildItems();
-            BuildSpellTiers();
-            // SKILLS AFTER POOLS AND CHARACTERS, and now for two more
-            // reasons: whether a bookOnly skill is reachable at all, and
-            // whether a free player-selectable one is an authoring slip or
-            // its owner's only opening move, are both facts about the pool
-            // the OWNER carries -- and only the two catalogues above can say.
-            // Bjorn is the whole of both lists today (`fury` authors
-            // allowsSpellBooks false and startRule Zero); both were empty
-            // until his row landed.
-            //
-            // DERIVED IN PoolOwnership, NOT HERE, because two [D] test
-            // classes resolve the same three files under plain `dotnet test`
-            // with no Editor -- see that file's own header.
-            var skills = BuildSkills(
-                PoolOwnership.BookRefusers(pools, characters),
-                PoolOwnership.ZeroStartOwners(pools, characters),
-                PoolOwnership.PrimaryPoolOwners(pools, characters));
-            BuildModifiers();
-
-            // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
-            // are validated against the achievement ids this returns, so building
-            // them the other way round would validate against nothing and let a
-            // typo'd gate through.
-            var achievementIds = BuildAchievements();
-            var relicDisplayNames = BuildRelics(achievementIds, characters.Select(c => c.Id).ToList());
-
-            // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
-            // track's rules 4/5 and its UnlockSkill/signature captions are
-            // validated against what those two already resolved -- see
-            // docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point table. Pools too,
-            // now: rule 6 (FuryStartOfFight) needs the owner's primary pool
-            // StartRule, the same fact PoolOwnership.ZeroStartOwners above
-            // already reads off `pools`.
-            BuildRewardTracks(pools, characters, skills);
-
-            // ---- progression v2 phase 2 ----------------------------------
-            // Depends on nothing else in this method: the cost table is
-            // validated against RewardTrack.MaxLevel, which is code, not
-            // content. Last so the block stays one contiguous addition.
-            BuildLevelCurve();
-
-            // ---- event rooms phase 1: model + content ---------------------
-            // AFTER CHARACTERS AND ITEMS, load-bearing the same way relics
-            // come after achievements: an inParty/memberLevel/ability
-            // requirement is validated against the real character roster
-            // (and its display names, for "Requires Shawn"), and an item
-            // effect against the real item catalogue -- building events any
-            // earlier would validate against nothing and let a typo'd id
-            // through.
-            // And after relics: a `relic` effect names one (PLAN_PETTING_ZOO P1).
-            // And after enemies: a fight's `enemies` names them and counts
-            // their slotSpan (PLAN_EVENTS_BELL_AND_CARAVAN 3.5).
-            BuildEvents(characters, itemIds, relicDisplayNames, enemySlotSpans);
+            RunBuilders();
         }
         finally
         {
@@ -232,6 +205,76 @@ public static class ContentBuilder
         // nothing about it looks wrong and the suite tests it happily. This
         // line is the only evidence that what is on disk came from THIS run.
         Debug.Log("BUILD-COMPLETE: ContentBuilder");
+    }
+
+    // Every Build* call, in the dependency order the comments inside spell
+    // out. Run twice by BuildDefaultContent: muted (preflight), then for real.
+    private static void RunBuilders()
+    {
+        // POOLS BEFORE CHARACTERS, and the order is load-bearing for the
+        // same reason achievements come before relics below: a
+        // character's primaryPoolId is validated against the pool ids
+        // this returns, so building them the other way round would
+        // validate against nothing and let a typo'd resource through.
+        var pools = BuildPools();
+        var characters = BuildCharacters(pools.Select(p => p.Id).ToList());
+        BuildTalents();
+        BuildUpgrades();
+        var enemySlotSpans = BuildEnemies();
+        var itemIds = BuildItems();
+        BuildSpellTiers();
+        // SKILLS AFTER POOLS AND CHARACTERS, and now for two more
+        // reasons: whether a bookOnly skill is reachable at all, and
+        // whether a free player-selectable one is an authoring slip or
+        // its owner's only opening move, are both facts about the pool
+        // the OWNER carries -- and only the two catalogues above can say.
+        // Bjorn is the whole of both lists today (`fury` authors
+        // allowsSpellBooks false and startRule Zero); both were empty
+        // until his row landed.
+        //
+        // DERIVED IN PoolOwnership, NOT HERE, because two [D] test
+        // classes resolve the same three files under plain `dotnet test`
+        // with no Editor -- see that file's own header.
+        var skills = BuildSkills(
+            PoolOwnership.BookRefusers(pools, characters),
+            PoolOwnership.ZeroStartOwners(pools, characters),
+            PoolOwnership.PrimaryPoolOwners(pools, characters));
+        BuildModifiers();
+
+        // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
+        // are validated against the achievement ids this returns, so building
+        // them the other way round would validate against nothing and let a
+        // typo'd gate through.
+        var achievementIds = BuildAchievements();
+        var relicDisplayNames = BuildRelics(achievementIds, characters.Select(c => c.Id).ToList());
+
+        // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
+        // track's rules 4/5 and its UnlockSkill/signature captions are
+        // validated against what those two already resolved -- see
+        // docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point table. Pools too,
+        // now: rule 6 (FuryStartOfFight) needs the owner's primary pool
+        // StartRule, the same fact PoolOwnership.ZeroStartOwners above
+        // already reads off `pools`.
+        BuildRewardTracks(pools, characters, skills);
+
+        // ---- progression v2 phase 2 ----------------------------------
+        // Depends on nothing else in this method: the cost table is
+        // validated against RewardTrack.MaxLevel, which is code, not
+        // content. Last so the block stays one contiguous addition.
+        BuildLevelCurve();
+
+        // ---- event rooms phase 1: model + content ---------------------
+        // AFTER CHARACTERS AND ITEMS, load-bearing the same way relics
+        // come after achievements: an inParty/memberLevel/ability
+        // requirement is validated against the real character roster
+        // (and its display names, for "Requires Shawn"), and an item
+        // effect against the real item catalogue -- building events any
+        // earlier would validate against nothing and let a typo'd id
+        // through.
+        // And after relics: a `relic` effect names one (PLAN_PETTING_ZOO P1).
+        // And after enemies: a fight's `enemies` names them and counts
+        // their slotSpan (PLAN_EVENTS_BELL_AND_CARAVAN 3.5).
+        BuildEvents(characters, itemIds, relicDisplayNames, enemySlotSpans);
     }
 
     // THE SHAPE EIGHT OF THE ELEVEN CONTENT TYPES SHARE, written once.
@@ -917,6 +960,12 @@ public static class ContentBuilder
     // is the only way to make the stamp lie.
     private static void CreateContentAsset(ScriptableObject asset, string assetPath)
     {
+        if (preflight)
+        {
+            Object.DestroyImmediate(asset);
+            return;
+        }
+
         AssetDatabase.CreateAsset(asset, assetPath);
 
         string folder = Path.GetFileName(Path.GetDirectoryName(assetPath));

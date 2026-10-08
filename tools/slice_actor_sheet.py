@@ -22,6 +22,14 @@ every pose the actor has.
         --actor Enemies/beetle \\
         --stances idle,attack,turtle_up,shell_closed,hurt,defeated
 
+Head point (Enemies/ actors): the run ends by reading headX/headY/headSize
+from ContentData/enemies.json (the ONLY home of those numbers), drawing
+head_check.png (the idle still, a crosshair on the head, a box of headSize)
+beside the recipe, and exiting non-zero when the enemy has no head authored.
+The stances and recipe are written first, so for a new monster: slice, read
+the head off idle.png, author it in enemies.json, run again and look at
+head_check.png. `--no-head` is for a prop.
+
 Optional:
     --recipe PATH            replay the recipe.json a previous run wrote --
                              every other cut-affecting argument comes out of
@@ -243,6 +251,7 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from remove_portrait_backgrounds import flood_fill_background_mask
 from key_green_screen import key_out_green, resize_premultiplied
+import head_overlay
 # Cell-cutting geometry, shared with slice_item_sheet.py -- see that
 # module's own header for why it exists.
 from sheet_slicing import (
@@ -651,7 +660,8 @@ def recipe_path(actor_arg):
     return os.path.join(ART_ROOT, parts[0], parts[1], RECIPE_NAME)
 
 
-def canonical_argv(sheet_specs, actor, anchor, max_ground_spread, nudges, drop_far_components_px, prune):
+def canonical_argv(sheet_specs, actor, anchor, max_ground_spread, nudges, drop_far_components_px, prune,
+                   no_head=False):
     """The run, with every default made explicit.
 
     EXPLICIT DEFAULTS ON PURPOSE. A recipe recording only what was typed would
@@ -687,6 +697,8 @@ def canonical_argv(sheet_specs, actor, anchor, max_ground_spread, nudges, drop_f
         argv += ["--drop-far-components-px", str(drop_far_components_px)]
     if prune:
         argv.append("--prune")
+    if no_head:
+        argv.append("--no-head")
     return argv
 
 
@@ -709,7 +721,7 @@ def _versions():
 
 
 def write_recipe(sheet_specs, actor, anchor, max_ground_spread, nudges, drop_far_components_px,
-                  prune, ground_line, out_dir):
+                  prune, ground_line, out_dir, no_head=False):
     """`sheet_specs` is the ordered list built in `main()` -- see its docstring
     there. ONE SHEET keeps the exact old top-level shape (`"sheet"`: a single
     path, next to `"argv"`) so a one-sheet actor's recipe is unchanged from
@@ -745,7 +757,7 @@ def write_recipe(sheet_specs, actor, anchor, max_ground_spread, nudges, drop_far
             for spec in sheet_specs
         ]
     recipe["argv"] = canonical_argv(sheet_specs, actor, anchor, max_ground_spread,
-                                     nudges, drop_far_components_px, prune)
+                                     nudges, drop_far_components_px, prune, no_head)
     recipe["outputFolder"] = out_dir.replace("\\", "/")
     recipe["groundLine"] = ground_line
     recipe["versions"] = _versions()
@@ -793,6 +805,65 @@ def load_recipe(path):
               "A byte-identical result is no longer guaranteed.")
 
     return argv, recipe
+
+
+# ---------------------------------------------------------------------------
+# The head point: enemies.json owns the numbers, this draws them
+# ---------------------------------------------------------------------------
+def head_check(actor_arg, out_root, no_head, enemies_path=head_overlay.ENEMIES_JSON):
+    """Draws head_check.png for an enemy and REFUSES an enemy with no head.
+
+    THE NUMBERS LIVE IN enemies.json ONLY (`headX`/`headY`/`headSize`); this
+    reads them for the crosshair and never stores a second copy, so the
+    picture can not drift from what the game reads. Run after the stances are
+    on disk, which is why a first slice of a new monster exits non-zero with
+    the art written: the head is measured off the idle still this very run
+    produced, then authored, then the same command is run again.
+
+    `--no-head` is for actors with no head to point at (props), and is
+    recorded in the recipe. Characters are exempt: only enemies author a head.
+
+    The picture goes beside the recipe (Art/), not into Resources/, so it is
+    never shipped or mistaken for a stance; with a scratch --out-root it goes
+    under that root instead.
+    """
+    kind, actor_id = actor_arg.replace("\\", "/").strip("/").split("/")
+    if kind != "Enemies":
+        return None
+    if no_head:
+        print("  head: skipped (--no-head)")
+        return None
+
+    label = f"{kind}/{actor_id}"
+    matches = [e for e in head_overlay.load_enemies(enemies_path)
+               if (e.get("spritePath") or "").strip() == label]
+    if not matches:
+        sys.exit(f"[{label}] HEAD POINT MISSING: no enemy in {enemies_path} has spritePath '{label}'. "
+                 "Add the enemy (with headX/headY/headSize), or pass --no-head if this actor is a prop.")
+    entry = matches[0]
+    head = head_overlay.head_of(entry)
+    if head is None:
+        sys.exit(f"[{label}] HEAD POINT MISSING: enemy '{entry['id']}' in {enemies_path} has an unauthored "
+                 "headX/headY/headSize. Open the idle still, read the head centre off it as fractions of "
+                 "its opaque box (X from the left, Y from the bottom, size = head height over box height), "
+                 "write all three into enemies.json, and run this again to get head_check.png. "
+                 "Pass --no-head only for a prop. The content build refuses the enemy until it is set.")
+
+    out_dir, _ = parse_actor(actor_arg, out_root)
+    idle = os.path.join(out_dir, "idle.png")
+    if not os.path.isfile(idle):
+        sys.exit(f"[{label}] HEAD POINT cannot be checked: no idle.png at {idle}. "
+                 "The head is measured on the idle still, so an actor needs one.")
+
+    if os.path.normpath(out_root) == os.path.normpath(DEFAULT_OUT_ROOT):
+        proof_dir = os.path.dirname(recipe_path(actor_arg))
+    else:
+        proof_dir = out_dir
+    os.makedirs(proof_dir, exist_ok=True)
+    proof = os.path.join(proof_dir, "head_check.png")
+    head_overlay.draw_head_check(idle, head, entry["id"]).save(proof)
+    print(f"  head_check: {proof}  (head {head[0]}, {head[1]}, size {head[2]} from enemies.json)")
+    return proof
 
 
 # ---------------------------------------------------------------------------
@@ -1202,6 +1273,9 @@ def main():
                          "one sheet. Once per --sheet, or once for all of them.")
     ap.add_argument("--out-root", default=DEFAULT_OUT_ROOT)
     ap.add_argument("--prune", action="store_true")
+    ap.add_argument("--no-head", action="store_true",
+                    help="Skip the head-point check. For an actor with no head (a prop). Without it an "
+                         "Enemies/ actor whose enemies.json entry has no headX/headY/headSize is an error.")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
@@ -1287,9 +1361,14 @@ def main():
         print("  recipe: unchanged (this was a replay)")
     elif os.path.normpath(args.out_root) == os.path.normpath(DEFAULT_OUT_ROOT):
         write_recipe(sheet_specs, args.actor, args.anchor, args.max_ground_spread,
-                     args.nudge, args.drop_far_components_px, args.prune, ground_line, out_dir)
+                     args.nudge, args.drop_far_components_px, args.prune, ground_line, out_dir,
+                     args.no_head)
     else:
         print(f"  (--out-root is not {DEFAULT_OUT_ROOT}; no recipe written)")
+
+    # LAST, after the art and the recipe are on disk: a missing head fails the
+    # run loudly but never costs the slice.
+    head_check(args.actor, args.out_root, args.no_head)
 
 
 if __name__ == "__main__":

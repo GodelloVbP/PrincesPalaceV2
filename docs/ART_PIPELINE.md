@@ -651,18 +651,30 @@ delivery actually consists of now:
    `Resources/`. If the replay is not byte-identical, the actor is protected
    legacy rather than reproducible — register it in `hand_assembled.json`'s
    `actors` block and pin its bytes in `HandAssembledArtTests`.
-5. **`README.md` records the reasoning** — the accepted prompt, the Detail
+5. **The head point, required.** Read the head centre off `idle.png` as
+   fractions of its opaque box (X from the left as drawn, Y from the bottom,
+   `headSize` = head height over box height) and write `headX`/`headY`/
+   `headSize` into the monster's `enemies.json` entry. That file is their only
+   home: the slicer reads it and draws `head_check.png` (the idle still, a
+   crosshair on the head, a box of `headSize`) beside the recipe in `Art/`
+   (git-ignored). The slice of a new monster therefore exits non-zero with
+   the stances written until the head is authored; run it again and LOOK at
+   `head_check.png`. `--no-head` is for a prop. The content build refuses any
+   enemy with a `spritePath` and an unauthored head, so it cannot ship
+   without. `python tools/head_overlay.py --out <png>` draws every monster's
+   crosshair in one grid for batch review.
+6. **`README.md` records the reasoning** — the accepted prompt, the Detail
    Inventory, the model and date, the accepted metrics, and a provenance line
    pointing at the recipe or the register. Plus, if the ground line is an
    authored override more than 8px off what the art measures, a line saying
    why, naming `groundLine`; the validator greps for exactly that.
-6. **Delete the superseded files with their `.meta`s** — old `<stance>/f0..fN/`
+7. **Delete the superseded files with their `.meta`s** — old `<stance>/f0..fN/`
    frame folders, `NN_<stance>.png` singles, `_*sheet_source*.png`,
    `_contact_sheet_preview.png`, `_base_poses/`. Git history is the archive,
    and a stale off-style sheet is what gets referenced next time.
-7. `run_tests_parallel.ps1 -BuildContent`, then visual QA:
+8. `run_tests_parallel.ps1 -BuildContent`, then visual QA:
    `python tools/actor_stance_qa.py --report Assets/_Project/Resources/Enemies --only <id>`.
-8. Commit assets **and** their `.meta` files together, staged by explicit
+9. Commit assets **and** their `.meta` files together, staged by explicit
    path.
 
 ## 5b. Spell effects (`Resources/Spells/{id}/f0..fN`)

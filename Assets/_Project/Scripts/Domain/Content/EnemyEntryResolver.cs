@@ -388,7 +388,29 @@ namespace PrincesPalace.Domain.Content
                 error = $"{label}: headSize {raw.headSize} must be -1 (unauthored) or above 0 and at most 1.";
             }
 
-            return error == null;
+            if (error != null) return false;
+
+            // A DRAWN MONSTER MUST SAY WHERE ITS HEAD IS. The fallback
+            // (0.5 / 0.8 / 0.3) is only there for a placeholder with no
+            // sprite; on a real drawing it puts a crown or a whisper on the
+            // shoulder and nothing in the build says so. All three or the
+            // build stops -- partial authoring is the same mistake.
+            bool drawn = !string.IsNullOrWhiteSpace(raw.spritePath);
+            if (drawn && (raw.headX == -1f || raw.headY == -1f || raw.headSize == -1f))
+            {
+                var missing = new List<string>();
+                if (raw.headX == -1f) missing.Add("headX");
+                if (raw.headY == -1f) missing.Add("headY");
+                if (raw.headSize == -1f) missing.Add("headSize");
+                error = $"{label}: has a spritePath ('{raw.spritePath.Trim()}') but {string.Join(", ", missing)} " +
+                        "unauthored. Every drawn monster needs its head point: read the head centre off its idle.png as " +
+                        "fractions of the opaque box, write headX/headY/headSize into enemies.json, then run " +
+                        "tools/slice_actor_sheet.py (its --recipe replay) and check head_check.png " +
+                        "(docs/ART_PIPELINE.md 5a, step 5).";
+                return false;
+            }
+
+            return true;
         }
 
         // THE SCHEDULE (PLAN_BELLWETHER_KIT 3.7), refused wherever it would be
