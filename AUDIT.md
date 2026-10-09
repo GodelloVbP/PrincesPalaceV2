@@ -33,8 +33,8 @@ debt), and a struck finding gets its number removed.
 - Events: #233
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
-- Save & run lifecycle: #87, #102, #112, #123, #220, #255
-- Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
+- Save & run lifecycle: #87, #102, #123, #220, #255
+- Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
 - Tooling / tests / workflow: #94, #95, #96, #98, #103, #137, #164, #263, #269
 - Balance / economy: #37, #41, #82, #83, #85
@@ -687,61 +687,7 @@ because content assets are already built once. Needs a schema entry and
 
 ### ~~110. `run_tests_parallel.ps1` reports "All tests passed" off a STALE results file~~ — fixed in `44473ae6`: per-run results file names, a failed delete refuses the run (helpers in `tools/unity_lock.ps1`)
 
-### 111. `absorbsDamage` is authorable on a pools.json row, resolved, copied onto the runtime pool -- and read by nothing
-
-Found 2026-09-10 by the combat/resource-pool bug hunt and confirmed by a run.
-Left as found because the two ways to close it are opposite decisions and both
-are the owner's.
-
-`RawPoolEntry.cs:128-129` documents the field to the schema:
-`[ContentDoc("Whether this pool soaks incoming damage before health, the way a
-signature resource can.")]`. `PoolEntryResolver.cs:213` carries it onto
-`ResolvedPool.AbsorbsDamage` (`ResolvedPool.cs:52`), and `ResourcePool.cs:179`
-copies it onto the runtime pool. Every step works. The last one does not exist:
-`CombatMath.cs:555` is the only `Absorb` caller in the tree and it reads
-`target.SignaturePool` alone --
-
-```
-int absorbed = target.SignaturePool != null ? target.SignaturePool.Absorb(amount) : 0;
-```
-
--- so a PRIMARY pool that authors the switch soaks nothing. Confirmed with a
-`Fixed(100)`, `Full`, `absorbsDamage: true` primary: `pool.AbsorbsDamage` reads
-`True`, and `ApplyDamageDetailed(hero, 100)` returns `absorbed = 0`, health
-`500 -> 400`, pool `100 -> 100`.
-
-The failing test that would pin either fix, and its fixture already exists:
-`Tests/EditMode/Combat/ResourcePoolTests.cs` (the `Row()` helper) --
-`APrimaryPoolThatAuthorsAbsorbsDamageActuallySoaks`, asserting
-`60 == CombatMath.ApplyDamageDetailed(hero, 60).Absorbed` and
-`500 == hero.CurrentHealth` for that row. Today: `0` and `440`.
-
-**Two honest options, and picking is a design call rather than a fixer's.**
-
-1. **Make it real.** `ApplyDamageDetailed` asks both slots, signature first so
-   the shipped Wool ordering is untouched, and `absorbPerPoint` is carried onto
-   `ResolvedPool` so a soaking primary can be tuned the way the signature one
-   already is. This is the reading the `[ContentDoc]` line promises, and it is
-   the shape `ResourcePool.cs:112-117` says the soak machinery was deliberately
-   KEPT for ("the obvious shape for a future resource that IS armour").
-2. **Refuse it.** Delete `absorbsDamage` from `RawPoolEntry`/`ResolvedPool` and
-   have the resolver refuse a row that authors it, leaving the soak
-   signature-only and saying so. Cheaper, and honest in the other direction.
-
-The current state -- an authored switch that validates, resolves, and silently
-does nothing -- is the one shape neither comment claims. Nothing in content
-authors it today (both `pools.json` rows say `false`), so this is an authoring
-trap rather than a live bug.
-
-**One correction to the hunt's own write-up, recorded so it is not carried
-forward.** It reported a second half to this: that the content constructor
-never sets `AbsorbPerPoint`, so a primary pool stays at the compat default `1`
-while "the signature path passes `ContentDatabase.SignatureAbsorbPerPoint` (2,
-`Effective.cs:327`)". The constant is **1**, not 2 -- `Effective.cs:44`, halved
-from 2 in the same pass that halved `CombatMath.DamageScale`, with its own
-comment explaining why. So there is no discrepancy between the two paths today;
-option 1 would still want the field carried, but as tuning headroom rather than
-as a mismatch to repair.
+### ~~111. `absorbsDamage` is authorable on a pools.json row, resolved, copied onto the runtime pool -- and read by nothing~~ - fixed in `5f6f9e63`: deleted
 
 ## Findings from the run-outside-combat bug hunt, 2026-09-10
 
@@ -754,37 +700,8 @@ was appended to the 2026-09-08 layered-spell section above rather than here. Lef
 is — this register does not renumber or relocate — but noted, because a reader looking for
 this hunt's findings under this heading would find half of them.
 
-### 112. `RunSnapshot.shopStockVersion` is written in four places and read in none
+### ~~112. `RunSnapshot.shopStockVersion` is written in four places and read in none~~ - fixed in `5f6f9e63`: deleted
 
-`Data/RunSnapshot.cs` declares it; `Core/Bot/RunOrchestrator.Shop.cs:129` sets it
-to `ShopStock.StockVersion` on a roll and `:154` back to 0 on leaving;
-`Data/SaveData.cs:851,865` zero it on both of `ReconcileShopStock`'s discard
-paths. Nothing anywhere compares it against `ShopStock.StockVersion` (`ShopStock.cs:208`).
-
-Same shape as #50 and #87: a field that is written, persisted and never
-consulted. Ranked low deliberately -- the rule it appears to enforce does hold.
-"An open shop from an older build is left exactly as it was rolled" is true
-because the shelf is STORED and `EnsureShopStock` returns early while
-`ShopIsOpen(run)`, whatever version produced it. The field buys nothing on top
-of that.
-
-The hazard is the header, and that half is fixed rather than filed: the comment
-used to state the rule as though this field were the thing keeping it, which is
-what a future `ReconcileShopStock` deciding to re-roll a stale shelf would read
-as "already handled". It now says record-not-gate, and
-`ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled` pins the
-rule against the storage instead.
-
-What is left for an owner's call is the field itself. Three options, none of
-them a fixer's to pick: read it (compare in `ReconcileShopStock` and re-roll a
-stale shelf, which is the behaviour the old header described and NOT today's);
-delete it and its four writers, as `grantedGold` was deleted in the same pass;
-or keep it as the record it now says it is, on the argument that "which
-generator made this shelf" is worth having on disk the day the shelf format
-changes. Kept, unchanged in behaviour, pending that call.
-
-Test: `ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled`
-(passes today, and pins the rule to something other than an unread field).
 ## Findings from the total bug hunt, 2026-09-11 (stage 3a, the four seams)
 
 Four Opus finders read every call site of the four seams the plan named
