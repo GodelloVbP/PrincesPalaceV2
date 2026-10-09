@@ -149,7 +149,7 @@ namespace PrincesPalace.Domain.Tests
                 10, PoolDecayTrigger.Damage,
                 PoolStartRule.Zero, 0,
                 "#FF8A3A", "#8E3A12", "#FFD2B0",
-                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false,
                 sortOrder: 1);
 
         [Test]
@@ -180,7 +180,7 @@ namespace PrincesPalace.Domain.Tests
                 0, PoolDecayTrigger.Damage,
                 PoolStartRule.Full, 0,
                 "#7EA8E6", "#3A5A9A", "#C4D8F2",
-                pulse: false, allowsSpellBooks: true, restoredByManaEffects: true, absorbsDamage: false,
+                pulse: false, allowsSpellBooks: true, restoredByManaEffects: true,
                 sortOrder: 0);
 
             var capacity = new ModifierEffect(ModifierEffectType.FlatMaxManaBonus, 10);

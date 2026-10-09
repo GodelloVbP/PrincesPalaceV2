@@ -289,16 +289,6 @@ namespace PrincesPalace.Domain.Rewards
             }
         }
 
-        // WHICH GENERATOR PRODUCED A SAVED SHELF.
-        //
-        // An open shop from an older build is NOT rewritten -- it is left
-        // exactly as it was rolled, and the new generator applies at the next
-        // node. A shop that reshuffles itself because the game updated is a
-        // free reroll granted by a patch note (§2e). Bump this when the roll's
-        // SHAPE changes: a section added, a count moved, a candidate filter
-        // changed.
-        public const int StockVersion = 1;
-
         // How many times the affordability floor may re-draw the cheapest
         // gear slot before giving up. Bounded because the guarantee is worth
         // having and a loop that cannot terminate is not: at a depth where

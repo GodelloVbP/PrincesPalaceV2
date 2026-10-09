@@ -25,7 +25,7 @@ namespace PrincesPalace.Domain.Tests
                 0, PoolDecayTrigger.Damage,
                 PoolStartRule.Full, 0,
                 "#FFFFFF", "#000000", "#CCCCCC",
-                false, true, true, false,
+                false, true, true,
                 0);
 
         private static AbilityScoreBlock Wis(int wisdom) =>

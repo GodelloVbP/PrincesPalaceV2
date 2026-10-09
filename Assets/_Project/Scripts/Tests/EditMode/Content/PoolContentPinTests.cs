@@ -97,7 +97,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(fury.Pulse);
             Assert.IsFalse(fury.AllowsSpellBooks);
             Assert.IsFalse(fury.RestoredByManaEffects);
-            Assert.IsFalse(fury.AbsorbsDamage);
         }
 
         [Test]
@@ -161,7 +160,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(mana.Pulse);
             Assert.IsTrue(mana.AllowsSpellBooks);
             Assert.IsTrue(mana.RestoredByManaEffects);
-            Assert.IsFalse(mana.AbsorbsDamage);
         }
 
         [Test]

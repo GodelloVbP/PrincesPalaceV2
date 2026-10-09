@@ -1268,7 +1268,6 @@ namespace PrincesPalace
             {
                 run.shopStock.Clear();
                 run.shopNodeId = -1;
-                run.shopStockVersion = 0;
                 Array.Clear(run.shopRerollsUsed, 0, run.shopRerollsUsed.Length);
                 return;
             }
@@ -1282,7 +1281,6 @@ namespace PrincesPalace
             {
                 run.shopStock.Clear();
                 run.shopNodeId = -1;
-                run.shopStockVersion = 0;
                 Array.Clear(run.shopRerollsUsed, 0, run.shopRerollsUsed.Length);
                 return;
             }

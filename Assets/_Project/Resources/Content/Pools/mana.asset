@@ -31,6 +31,5 @@ MonoBehaviour:
     Pulse: 0
     AllowsSpellBooks: 1
     RestoredByManaEffects: 1
-    AbsorbsDamage: 0
     SortOrder: 0
     EngineFed: 0

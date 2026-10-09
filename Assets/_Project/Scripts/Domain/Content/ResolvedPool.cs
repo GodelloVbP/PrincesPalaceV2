@@ -49,7 +49,6 @@ namespace PrincesPalace.Domain.Content
         public bool Pulse;
         public bool AllowsSpellBooks = true;
         public bool RestoredByManaEffects = true;
-        public bool AbsorbsDamage;
 
         public int SortOrder;
 
@@ -69,7 +68,7 @@ namespace PrincesPalace.Domain.Content
             int decayPerIdleTurn, PoolDecayTrigger decayUnless,
             PoolStartRule startRule, int startValue,
             string brightHex, string deepHex, string textHex,
-            bool pulse, bool allowsSpellBooks, bool restoredByManaEffects, bool absorbsDamage,
+            bool pulse, bool allowsSpellBooks, bool restoredByManaEffects,
             int sortOrder, bool engineFed = false)
         {
             Id = id ?? "";
@@ -90,7 +89,6 @@ namespace PrincesPalace.Domain.Content
             Pulse = pulse;
             AllowsSpellBooks = allowsSpellBooks;
             RestoredByManaEffects = restoredByManaEffects;
-            AbsorbsDamage = absorbsDamage;
             SortOrder = sortOrder;
             EngineFed = engineFed;
         }

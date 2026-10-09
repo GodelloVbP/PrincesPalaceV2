@@ -176,8 +176,6 @@ namespace PrincesPalace.Domain.Combat
             DeepHex = definition.DeepHex;
             TextHex = definition.TextHex;
 
-            AbsorbsDamage = definition.AbsorbsDamage;
-
             Current = StartingValue(definition, Max);
         }
 

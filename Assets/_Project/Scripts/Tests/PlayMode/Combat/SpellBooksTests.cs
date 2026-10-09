@@ -119,7 +119,7 @@ namespace PrincesPalace.PlayModeTests
                 10, PoolDecayTrigger.Damage,
                 PoolStartRule.Zero, 0,
                 "#FF8A3A", "#8E3A12", "#FFD2B0",
-                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false,
                 sortOrder: 99);
 
         [Test]

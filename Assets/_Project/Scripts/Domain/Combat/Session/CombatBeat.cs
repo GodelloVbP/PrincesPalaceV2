@@ -82,7 +82,7 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         //   1. FightSession.Ledger.ApplyAndCountDamage, for the SIGNATURE
         //      POOL's own absorb (ResourcePool.Absorb, currently authored
-        //      absorbsDamage: false on every row in pools.json -- live
+        //      signatureAbsorbsDamage: false on every character -- live
         //      capability, no live content) -- `toHealth = amount -
         //      result.Absorbed`, the ledger's own bookkeeping line.
         //   2. FightSession.Talents.ResolveWard, for a WARD STATUS's absorb

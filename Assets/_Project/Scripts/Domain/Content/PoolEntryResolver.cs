@@ -211,7 +211,6 @@ namespace PrincesPalace.Domain.Content
                 raw.pulse,
                 raw.allowsSpellBooks,
                 raw.restoredByManaEffects,
-                raw.absorbsDamage,
                 sortOrder,
                 raw.engineFed);
             error = null;

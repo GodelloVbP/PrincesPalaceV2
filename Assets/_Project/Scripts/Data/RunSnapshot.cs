@@ -278,30 +278,6 @@ namespace PrincesPalace
         // at -1 rather than 0.
         public int shopNodeId = -1;
 
-        // Which generator produced shopStock (ShopStock.StockVersion).
-        //
-        // A record, not a gate, and the difference matters enough to say. The
-        // rule "an open shop from an older build is left exactly as it was
-        // rolled, and the new generator applies at the next node" does hold,
-        // but nothing reads this field to make it hold: it holds because the
-        // shelf is stored. EnsureShopStock returns early when ShopIsOpen, so
-        // an existing shelf is never re-rolled whatever version produced it.
-        //
-        // Written in three places (EnsureShopStock, LeaveShop, and both of
-        // SaveData.ReconcileShopStock's discard paths) and compared in none.
-        // ReconcileShopStock is the one place that would enforce it, and it
-        // never looks -- worth stating plainly so a future version of that
-        // method does not read this field's presence as "already handled".
-        //
-        // Kept rather than deleted, unlike grantedGold above: this one is
-        // written to every save that has a shop open, a test asserts it after a
-        // roll, and "which generator made this shelf" is a real fact worth
-        // having on disk the day the shelf format changes. Filed as AUDIT #112.
-        //
-        // ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled
-        // pins the rule itself against the storage, rather than against this.
-        public int shopStockVersion;
-
         // ---- learned spells (docs/PLAN_SHOP.md §1b) -------------------------
         //
         // A flat list of {characterId, skillId, slot}, not a dictionary --

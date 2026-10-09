@@ -148,7 +148,6 @@ namespace PrincesPalace
             run.shopStock = new List<ShopStockEntry>();
             run.shopRerollsUsed = new int[ShopStock.SectionCount];
             run.shopNodeId = run.currentNodeId;
-            run.shopStockVersion = ShopStock.StockVersion;
 
             for (int section = 0; section < ShopStock.SectionCount; section++)
             {
@@ -173,7 +172,6 @@ namespace PrincesPalace
             run.shopStock = new List<ShopStockEntry>();
             run.shopRerollsUsed = new int[ShopStock.SectionCount];
             run.shopNodeId = -1;
-            run.shopStockVersion = 0;
 
             RunManager.ClearCurrentRoom();
         }

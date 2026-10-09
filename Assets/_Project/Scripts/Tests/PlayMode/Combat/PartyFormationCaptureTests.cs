@@ -478,7 +478,7 @@ namespace PrincesPalace.PlayModeTests
                 10, PoolDecayTrigger.Damage,
                 PoolStartRule.Zero, 0,
                 FixtureBrightHex, FixtureDeepHex, FixtureTextHex,
-                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false,
                 sortOrder: 99);
 
         private const string FixtureBrightHex = "#FF8A3A";

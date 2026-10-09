@@ -31,7 +31,7 @@ namespace PrincesPalace.Domain.Tests
                 decayPerIdleTurn, decayUnless,
                 startRule, startValue,
                 "#FFFFFF", "#000000", "#CCCCCC",
-                false, true, restoredByManaEffects, false,
+                false, true, restoredByManaEffects,
                 0);
 
         // ---- what a pool opens a fight holding ---------------------------------

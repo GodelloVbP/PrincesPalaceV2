@@ -17,7 +17,7 @@ namespace PrincesPalace.Domain.Tests
                 0, PoolDecayTrigger.Damage,
                 PoolStartRule.Zero, 0,
                 "#FFFFFF", "#000000", "#CCCCCC",
-                false, true, true, false,
+                false, true, true,
                 0, engineFed);
 
         [Test]

@@ -81,7 +81,7 @@ namespace PrincesPalace.Domain.Tests
             decayPerIdleTurn: 10, decayUnless: PoolDecayTrigger.Damage,
             startRule: PoolStartRule.Zero, startValue: 0,
             brightHex: "#FF8A3A", deepHex: "#8E3A12", textHex: "#FFD2B0",
-            pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+            pulse: true, allowsSpellBooks: false, restoredByManaEffects: false,
             sortOrder: 0);
 
         // ---- SpellCostDelta / SkillCostDelta / SkillFlatDelta, applied to a ResolvedSkill ----

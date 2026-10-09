@@ -125,9 +125,6 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Whether mana potions, RestorePartyMana and the bot's mana accounting refill this pool.")]
         public bool restoredByManaEffects = true;
 
-        [ContentDoc("Whether this pool soaks incoming damage before health, the way a signature resource can.")]
-        public bool absorbsDamage;
-
         // A POOL FILLED BY A TALENT'S FURY ENGINE, NOT BY ITS OWN GAINS
         // (Bjorn's Fury: CombatantState.FuryEngine replaces the flat gains for
         // whoever holds a root talent, so the row's three gains are 0). It

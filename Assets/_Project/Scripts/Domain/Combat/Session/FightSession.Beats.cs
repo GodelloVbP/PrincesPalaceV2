@@ -208,8 +208,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // with this SAME `amount` -- the pool's share is never baked
             // INTO `amount` the way a ward's is, so adding it back here
             // would double it in the opposite direction. Not reachable by
-            // any shipped content today: every pools.json row is authored
-            // absorbsDamage: false. The day a pool ships with that flag
+            // any shipped content today: every character authors
+            // signatureAbsorbsDamage: false. The day one ships with that flag
             // true, THIS line is the one a fixer needs to revisit, and the
             // fix is very likely two figures on the beat rather than one.
             _recordingBeat.Amount = amount + _recordingBeat.Absorbed;
