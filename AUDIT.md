@@ -26,13 +26,13 @@ in the same pass that adds or strikes an entry: a new open finding gets its numb
 added to the fitting line (or "Recorded decisions" if it's a RECORDED: entry, not
 debt), and a struck finding gets its number removed.
 
-- Fight screen / HUD: #45, #81, #84, #89, #143, #176, #177, #184, #186, #206, #221, #222, #224, #228, #229, #230, #232, #237, #238, #239, #240, #245, #246, #247, #249, #252
+- Fight screen / HUD: #45, #81, #84, #89, #143, #177, #186, #206, #221, #222, #224, #228, #229, #230, #232, #237, #238, #239, #240, #245, #246, #247, #249, #252
 - Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
 - Map: #226, #254
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214
-- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #173, #174, #175, #179, #180, #190, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
+- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #112, #123, #220, #255
 - Content pipeline & data: #86, #111, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
@@ -1593,90 +1593,13 @@ deleted.
 
 ## Findings from hardware round 2, 2026-09-19
 
-### 173. OWNER'S CALL: Start is absorbed by every modal, so it is not "open the menu from anywhere"
+### ~~173. OWNER'S CALL: Start is absorbed by every modal, so it is not "open the menu from anywhere"~~ - struck 2026-10-09: owner declared obsolete
 
-`NavContext.RaiseSystemMenu` (`Domain/UiKit/NavContext.cs:144-149`) returns false and does nothing
-when the top context declares no `systemMenu` handler, and only four contexts in the tree declare
-one: Hub (`HubController.cs:170`), Map (`MapController.cs:190`), the menu itself
-(`SystemMenuController.cs:243-245`) and Fight (`FightController.Input.cs:1571`, through
-`NavContext.ForFight`). Every other context absorbs the press --
-`GlossaryController.cs:261`, `DebugMenuController.cs:277`, `RelicDraftController.cs:293` and
-`MainMenuController.cs:138` all construct a `NavContext` with `cancel:` and no `systemMenu:`.
+### ~~174. OWNER'S CALL: Start over a Party carry puts the character back down rather than being ignored~~ - struck 2026-10-09: owner declared obsolete
 
-So while a hub-covering modal is up, Start is silently eaten. That is not a bug in any of those
-four files: a context that is top is the thing the player is talking to, and a modal that lets a
-button reach past it is the failure mode contexts exist to prevent.
+### ~~175. OWNER'S CALL: `ThemedMenuState.Primary` now has exactly one production user, and "recommended" may be the wrong word for it~~ - struck 2026-10-09: owner declared obsolete
 
-But it means the shipped behaviour is "Start opens the menu from a ROOT", not "from anywhere",
-which is the plainer reading of the owner's ask. Closing that gap is a real mechanism and not a
-flag: every intervening context would have to be suspended (or popped and restored) while the menu
-is up, and something has to own putting them back in the right order when it closes. That is a
-design with a lifecycle, so it is recorded rather than improvised.
-
-**One member of the list is not the same case and is called out so it is not "fixed" by mistake.**
-The main menu's own modals absorb Start too, but the MainMenu scene carries no system menu at all
--- `ScreenRegistry.WireSystemMenu` is called from three places only (`ScreenRegistry.cs:125`, `:583`,
-`:856`: Fight, Map, Hub). There is nothing there for Start to open, so nothing there is being
-absorbed FROM. The same is true of Shop, Talents and the Reckoning.
-
-**Update (system menu Phase 4):** the glossary is no longer in the list. It is a tab of the menu
-(`GlossaryController` builds no `NavContext` now), so Start over it is the menu's own Start, and the
-hub building, the `G` hotkey and `Open(Glossary, entry)` all reach it. The debug menu, the relic
-draft and the main menu's modals are still absorbing.
-
-### 174. OWNER'S CALL: Start over a Party carry puts the character back down rather than being ignored
-
-`SystemMenuController.cs:245` wires the menu's own context `systemMenu:
-CloseUnlessTheActivePaneClaimsIt`, and that method (`:413-419`) asks
-`ActivePaneCancelClaim()` -- the same `INavCancelClaim` lookup Cancel goes through -- before
-closing. `PartyController` is the only implementor, and it claims while a character is in hand.
-
-So Start pressed over a Party carry spends itself undoing the carry, and a SECOND Start closes the
-menu. The alternative would be for Start to ignore the claim and shut the menu on an open
-transaction, leaving a picked-up character in an ambiguous state.
-
-Recorded because it is a deliberate choice rather than a consequence, and because it is the one
-place Start and Cancel are not independent. Reusing the identical check (rather than writing a
-second one that could answer differently) is the reason this is a two-line method instead of a
-policy.
-
-### 175. OWNER'S CALL: `ThemedMenuState.Primary` now has exactly one production user, and "recommended" may be the wrong word for it
-
-With ATTACK's ring dropped (#171 above), the only production caller passing
-`ThemedMenuState.Primary` is `SaveSlotController.cs:108`:
-`ThemedButtonState.ApplySelection(slotButtons[i], facts.Filled, ThemedMenuState.Primary)` -- so
-EVERY FILLED SAVE SLOT wears the gold ring, up to three at once. Its own comment calls it "the gold
-'recommended action' ring".
-
-Three filled slots cannot all be the recommended action. Either the save screen is using a
-recommended-default treatment to mean "this slot has a run in it" (a different fact, which deserves
-a different visual), or `Primary` is misnamed and is really a generic "this control is live"
-emphasis, in which case the name has been lying at every call site it ever had.
-
-Not changed unasked: the enum value, `PrimaryGlowColor`/`PrimaryGlowAlpha` and
-`ThemedButtonState.cs:285`'s `IsSelectedHalo` arm are all still wired, and picking between "rename
-the state" and "restyle the save screen" is a design call. It is recorded now because a state with
-one user is the moment to ask, not later when there are five again.
-
-### 176. OWNER'S CALL: while the pad is inspecting, Up/Down walk the actor ring, so changing verb costs a press first
-
-`FightController.Input.cs:1317-1333`: the explicit
-`IFightNavigationTarget.MoveFocus` asks `IsInspecting` first and routes to `InspectStep(delta)`,
-so BOTH axes walk the ring while the marker stands on a monster. The verb column is only reachable
-again after a Left at the ring's head (`InspectMove` -> `InspectStep` -> `StepInspectRing` returns
--1 -> `LeaveInspect`, `:1795-1802` and `:1831-1853`) or a B
-(`IFightNavigationTarget.OnBackPressed`, `:1349-1361`, which calls `LeaveInspect` BEFORE
-`_menu.Back()` for exactly this reason).
-
-The argument for it is in the code and is a good one: if the vertical axis quietly moved the verb
-selection while the player was reading a monster, B would return them to a verb they never saw
-themselves choose. The cost is that reading a monster and then picking a different verb is three
-presses (Left/B, then Up or Down, then A) where it could be two.
-
-The alternative is one branch in `MoveFocus`'s inspect arm -- vertical leaves inspect and moves the
-column, horizontal walks the ring -- which is a smaller change than it sounds because both paths
-already exist. It is not taken unasked because it trades the "B returns you where you were"
-guarantee for a press, and which of those the owner wants is the owner's to say.
+### ~~176. OWNER'S CALL: while the pad is inspecting, Up/Down walk the actor ring, so changing verb costs a press first~~ - struck 2026-10-09: owner declared obsolete
 
 ### 177. STATED DEVIATION: `ProcessFight` spends one axis per frame, so no diagonal can step the column and enter inspect in one gesture
 
@@ -1751,29 +1674,7 @@ the character pager does not come back to the arrow at all, going `Down -> inves
 that thing actually sits") and says nothing about the returns, so it is unclear whether the pager's
 is a considered choice or the one that was forgotten.
 
-### 180. OWNER'S CALL: the hub ring is derived from `HubAnchors` x, which reverses the owner's own literal wording
-
-`HubController.cs:252-262` builds `hubRingOrder` by sorting the five staged controls on
-`HubAnchors.PositionFor(...).X` (and `HubAnchors.Gate.X` for the gate, which is not a `Plot`), so
-the ring is Principality (-673), Talents (-349), Gate (0), Relics (295), CharacterSheet (628).
-
-That CONTRADICTS the owner's 2026-09-18 phrasing, which round 1 (`a9f89ebe`) hand-typed verbatim:
-"from the gate, Left goes Principality then Talents". Those words and screen-x do not describe the
-same ring, because Talents physically sits BETWEEN Principality and the gate. Round 1 resolved the
-conflict in favour of the words and recorded the deviation; the owner's 2026-09-19 report -- "press
-left twice you are left middle" -- is what that build actually feels like, which is the hand-typed
-order overshooting the nearer building and landing back on it.
-
-So round 2 reverses the call: the heuristic wins here because the two things the owner said
-disagree with each other, and only one of them is a description of what they saw. The other stated
-expectation ("Right off Relics reaches Character Sheet") was already the x-order answer and is
-unchanged; only the left arm's two buildings swap.
-
-Recorded rather than treated as settled for one reason: it is now possible for a future
-`HubAnchors` `Depth`/`Lateral` edit to reorder the ring silently, which is the price of deriving it.
-`HubRingAdjacencyTests` (EditMode, no scene) pins the resulting adjacency literally so that such a
-move shows up as a failing test naming both buildings rather than as a play-test complaint three
-weeks later.
+### ~~180. OWNER'S CALL: the hub ring is derived from `HubAnchors` x, which reverses the owner's own literal wording~~ - struck 2026-10-09: owner declared obsolete
 
 ## Findings from hardware round 3, 2026-09-19
 
@@ -1819,28 +1720,7 @@ rather than a threshold everything is measured against.
 
 ### ~~183. The reel is four times slower, and the two legs that moved are the two that are motion~~ — recorded, not a defect: landed change, recorded for history
 
-### 184. OWNER'S CALL: the settle gate is narrow (this beat's two figures), and widening it costs about 4.4s a round
-
-`StillReeling` (`FightBeatPlayer.cs:1384`) asks only about `beat.Actor` and
-`beat.Target`, because those two are what `TravelFor` measures. A THIRD figure still
-easing home from its own hit while this blow lands elsewhere is not gated -- that is
-what a reel four times slower than the beat looks like, and it was asked for.
-
-**Measured, not estimated** (`:1368-1372`): a beat's tail after the impact instant is
-about 0.625s (hit-stop + `SettleAfter` + `BeatGapSeconds`), so a 1.505s reel has
-about 0.88s left when the very next beat opens, 0.255s when the one after that does,
-and nothing by the third. The narrow gate therefore pays **up to 0.88s, and only when
-a blow is aimed at a body that was just hit** -- focused fire and sweeps, not every
-beat.
-
-Widening it to the whole stage is the stronger claim and pays that 0.88s on EVERY
-damaging beat after the first: **about 4.4s on a six-beat round**, which more than
-doubles it. `StillReeling` is the one place to change if that is wanted.
-
-The alternative considered and rejected: cutting the spring-back short when the next
-beat needs the mark. That would make the reel's length depend on what happens after
-it, so the same blow would read differently in a duel and in a crowd. Waiting costs
-pacing and says so; it does not cost the reel its shape.
+### ~~184. OWNER'S CALL: the settle gate is narrow (this beat's two figures), and widening it costs about 4.4s a round~~ - struck 2026-10-09: owner declared obsolete
 
 ### ~~185. "Playback finished" no longer implies "the stage is at rest", and five fixtures had to learn it~~ — recorded, not a defect: fixed as fallout in the same pass
 
@@ -1900,33 +1780,7 @@ in the same milestone and is the one `StatusEffectsTests
 
 ### ~~189. `b.Actor != null && !b.Actor.IsPlayerSide` stopped meaning "an enemy turn" the moment ticks became beats~~ — fixed in `559f3069`: `CombatBeat.IsAction` predicate across 13 sites; later refined by `fb0a06ab` (`BeatCause`)
 
-### 190. OWNER'S CALL: on the ally rack, Right means "nearer", and that needs a hand on a pad to confirm
-
-The owner, 2026-09-19: "selecting different mobs with gamepad goes with up down,
-but it should work with left right." `FightController.Input.cs:1926`
-(`InspectMove`) is where the horizontal axis reaches target depth, and `:1951` is
-the whole of the rule:
-
-```
-CycleTargetFromPad(_menu.Side == TargetSide.Allies ? -delta : delta);
-```
-
-**The two racks disagree, and only one of them is flipped.** The enemy rack runs
-outward unmirrored (`FightStageAnchors`, Near.X 300 -> Far.X 660), so Right already
-means "further right on stage, one slot deeper" and needs nothing. The party rack is
-mirrored (`SlotOffset` negates X), so its Near.X 320 -> Far.X 810 becomes on-screen
--320 -> -810: the FARTHER ally sits FURTHER LEFT. For Right to keep pointing
-rightward on screen there, it has to mean "toward the near end" -- a negative step in
-depth ordering.
-
-Vertical is not flipped per side at all, because Y is not mirrored: Up is deeper on
-both racks (`IFightNavigationTarget.MoveFocus`).
-
-So the shipped rule is: **Right = nearer on the party rack, deeper on the enemy
-rack; Up = deeper on both.** That is screen-consistent by construction and is the
-reading of the owner's words this round took. It is recorded as a call rather than as
-settled because "left/right should pick a different ally" could equally have meant
-list order regardless of mirroring, and nobody has held a pad and tried it.
+### ~~190. OWNER'S CALL: on the ally rack, Right means "nearer", and that needs a hand on a pad to confirm~~ - struck 2026-10-09: owner declared obsolete
 
 ### 191. Extends #173: Shop is wired for Start, and its own tree had been drawing OVER the menu
 
