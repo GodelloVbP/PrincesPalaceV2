@@ -33,7 +33,7 @@ debt), and a struck finding gets its number removed.
 - Events: #233
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
-- Save & run lifecycle: #87, #102, #123, #220, #255
+- Save & run lifecycle: #87, #102, #220, #255
 - Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
 - Tooling / tests / workflow: #95, #96, #98, #103, #137, #164, #263, #269
@@ -851,52 +851,7 @@ The source says which it is today (`ShopStock.cs:193-206`), so nothing is
 hiding; this entry exists so the label comes off deliberately rather than by
 being forgotten.
 
-### 123. `Reconcile`'s run-scoped prunes are all unreachable, because a run never survives the process
-
-Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F5). The intent
-evidence CONFLICTS between two comments in the same subsystem, which is what
-makes it the owner's.
-
-`SaveData.cs:586-613` prunes run-scoped lists on every load and explains
-itself: *"a run is not worth discarding over one dangling id"*.
-`RunSnapshot.cs:119-122` says *"a run survives quitting to the main menu and
-coming back"*. And `RunManager.cs:54` says the opposite, in capitals:
-
-> A RUN DOES NOT SURVIVE THE PROCESS ... Deliberately not a resume.
-
-The second is the one the code implements. `SaveSlotManager.EnterSlot` calls
-`SettleOnOpening` (`RunManager.cs:102`) before the slot's first scene; the boot
-check (`:69`) does the same for slot 0; every in-process route back to the main
-menu calls `EndRun`. So the load order is Migrate -> Reconcile -> EndRun, and
-`EndRun` destroys the run that was just reconciled. No run-scoped value
-`Reconcile` prunes is ever read by gameplay.
-
-**The one sharp edge has already been fixed.** `RunSettlement.Settle` reads
-`run.bossesKilled` and `run.ledger` on its way to paying for them, and those
-were the only two run lists `Reconcile` neither null-guarded nor pruned -- so a
-boss id renamed between a crash and the next boot would pay an ember for a dead
-id and append it permanently to `defeatedBossIds`. That landed as `adb2acb4`
-(the guard and the prune, plus `RunSettlementTests` cover). This entry is about
-the other nine prunes and the two comments.
-
-**Two options.**
-
-1. **Build resume.** `Reconcile`'s prunes become live, `RunSnapshot.cs:119-122`
-   becomes true, and `RunManager.cs:54` is rewritten. This is a feature, with a
-   descent-mid-flight save/restore behind it, and the prune plumbing is already
-   in place for it -- `29908245` (the `relicIds` prune) is correct code whose
-   stated repro simply cannot occur yet.
-2. **Correct both comments** to say the prunes are plumbing kept ready rather
-   than a live guard, and leave the code alone. Costs two comment edits, and
-   the reachability guard test below goes in with them so the day resume is
-   built, the comments are forced back into agreement.
-
-Reachability guard, worth adding under either option:
-`RunEndingTests.AnyRunFoundInASlotIsSettledBeforeAnythingCanReadIt` -- a slot
-with a run at `step > 0`, `EnterSlot`, assert `HasRun` false. Green today; red
-the day resume is built, which is exactly when somebody needs to be told.
-
-Decide with #117: both turn on the same invariant.
+### ~~123. `Reconcile`'s run-scoped prunes are all unreachable, because a run never survives the process~~ - fixed in `424b2b84`: comments corrected, reachability guard added
 
 ### 124. Three questions about what the combat ledger's columns actually count
 
