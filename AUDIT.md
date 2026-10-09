@@ -28,7 +28,7 @@ debt), and a struck finding gets its number removed.
 
 - Fight screen / HUD: #45, #81, #84, #89, #143, #177, #186, #206, #221, #222, #224, #228, #229, #230, #232, #237, #238, #239, #240, #245, #246, #247, #249, #252
 - Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
-- Map: #226, #254
+- Map: none open
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
@@ -2014,21 +2014,7 @@ proposed rule is that anything that spends or loses something confirms, and
 anything that only pays out doesn't — needs a decision before #219's fix (or
 any new confirm gesture) is generalized to these.
 
-### 226. The map gives no information to choose a route with
-
-`Core/MapController.cs` `Caption(RoomType)` (723-737) — a node shows only its
-room-type caption and icon, no tooltip or preview of what's inside. Only the
-current leg is visible: the per-tile ground glow and open-room beacon pulse
-were both cut at hand-off ("a lot of wiring for polish"), hover highlighting
-was never ported from v1, and `BeaconPulse` exists in `Core/BeaconPulse.cs`
-unused by the map. The "you are here" marker is a flat 18x18 solid square
-(`Domain/UiKit/Screens/MapScreen.cs:516-519`), a known placeholder. Pressing
-an unreachable node is silently ignored
-(`MapController.cs:747` walk-guard, `752` node-lookup guard, `759` legality
-guard, no feedback on any of the three). Fix: node preview/tooltip, a hover
-cue, and a visible refusal on an illegal press.
-
-Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+### ~~226. The map gives no information to choose a route with~~ — fixed in `e4de0e14`: hover/focus card per room (enemies and base payout for fights, stash for treasure), live hover rim only on offered rooms, refusal text on the caption, "YOU ARE HERE" tag replaces the square
 
 ### 227. No onboarding, and the glossary is reachable only from the Hub
 
@@ -2332,13 +2318,7 @@ The same information appears twice in the same submenu.
 
 Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
 
-### 254. The map's only nudge to assign spell books is a 16px line
-
-`Domain/UiKit/Screens/MapScreen.cs:204-208` — `MapPendingBookLabel` is a
-16px text line and the map's only signal that a spell book is waiting to be
-assigned; easy to miss against the rest of the screen.
-
-Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
+### ~~254. The map's only nudge to assign spell books is a 16px line~~ — fixed in `e4de0e14`: 26pt gold-rimmed badge in the bottom strip beside the room card
 
 ## Cleanup audit, 2026-09-28
 
