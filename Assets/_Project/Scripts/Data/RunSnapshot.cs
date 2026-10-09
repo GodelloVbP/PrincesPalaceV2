@@ -113,8 +113,11 @@ namespace PrincesPalace
         // survive the process -- Boot settles whatever is in slot 0,
         // EnterSlot settles every other slot before its first scene, and
         // every in-process route to the main menu goes through EndRun, so
-        // nothing ever loads a run and plays it; that is the premise every
-        // run-scoped prune in SaveData.Reconcile rests on.
+        // nothing ever loads a run and plays it. The run-scoped prunes in
+        // SaveData.Reconcile are therefore unreachable today; they are kept
+        // for a future resume, and RunManagerTests
+        // .AMidDescentRunOnDiskIsGoneOnceItsSlotIsEntered fails the day that
+        // stops being true.
         //
         // What justifies storing these: the death screen draws after EndRun
         // has already replaced the snapshot, so the totals have to survive

@@ -482,6 +482,35 @@ namespace PrincesPalace.PlayModeTests
                 "the fight they quit");
         }
 
+        // REACHABILITY GUARD for the run-scoped prunes in SaveData.Reconcile
+        // (AUDIT #123). They are kept for a future resume and unreachable
+        // today because EnterSlot settles every run it finds before anything
+        // can read it. This goes red the day a run snapshot becomes loadable
+        // across a restart: that is when each prune needs review and the
+        // "a run does not survive the process" comments in RunManager and
+        // RunSnapshot need rewriting. Do not make it pass by loosening it.
+        [Test]
+        public void AMidDescentRunOnDiskIsGoneOnceItsSlotIsEntered()
+        {
+            SaveSlotManager.CurrentSlot = 2;
+            SaveSlotManager.Forget();
+
+            RunManager.StartRun(Seed);
+            RunManager.MoveTo(RunManager.Choices()[0].Id);
+            SaveSlotManager.SaveCurrent();
+            Assert.AreEqual(1, RunManager.Run.step, "the fixture did not leave a descent past the entry");
+
+            SaveSlotManager.Forget();
+            SaveSlotManager.CurrentSlot = 0;
+            RunManager.ResetForTests();
+
+            SaveSlotManager.EnterSlot(2);
+
+            Assert.IsFalse(RunManager.HasRun,
+                "a run at step 1 was loadable after entering its slot, so SaveData.Reconcile's run-scoped " +
+                "prunes are now reachable: review each one and rewrite the comments in RunManager and RunSnapshot");
+        }
+
         // And settled rather than discarded: opening the slot must still pay
         // out what the descent earned, or a crash silently costs the player
         // every ember its bosses owed them.

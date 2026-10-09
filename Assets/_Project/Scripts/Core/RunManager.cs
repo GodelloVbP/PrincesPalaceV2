@@ -76,7 +76,10 @@ namespace PrincesPalace
         // the embers their bosses paid for even though the descent is gone.
         //
         // Deliberately not a resume. Resuming is the other reading of the same
-        // rule and it is not the one the author asked for.
+        // rule and it is not the one the author asked for. The run-scoped
+        // prunes in SaveData.Reconcile are kept for a future resume and are
+        // unreachable today, because a run is settled before Reconcile's
+        // output can be read.
         //
         // THERE IS NO BOOT CHECK: a [RuntimeInitializeOnLoadMethod
         // (BeforeSceneLoad)] would run before any scene, with
