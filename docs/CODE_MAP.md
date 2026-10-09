@@ -20,7 +20,7 @@ prefix: `Tests/{EditMode,PlayMode}/<area>/<Prefix>*Tests.cs`.
 | Relic draft (in Hub) | `RelicDraftScreen.cs` | `Core/RelicDraftController.cs` | `OfferRowLayout.cs` | `WireRelicDraft` | `RelicDraft` |
 | Debug menu (in Hub) | `DebugMenuScreen.cs` | `Core/DebugMenuController.cs` | — | `WireDebugMenu` | `DebugMenu` |
 | Talents | `TalentScreen.cs` | `Core/TalentController.cs` (+`.Motion`) | `ConstellationLayout.cs` | `Talents()` scene | `Talent` |
-| Run Map | `MapScreen.cs` | `Core/MapController.cs` (+`.Walk`, `.Event`) | `MapLayout.cs`, `MapWalk.cs` | `Map()` scene | `Map` |
+| Run Map | `MapScreen.cs` | `Core/MapController.cs` (+`.Walk`, `.Event`) | `MapLayout.cs`, `MapWalk.cs`, `MapNodeCard.cs` (room words), `Core/MapNodePreview.cs` (decided facts) | `Map()` scene | `Map` |
 | Shop (in Map) | `ShopScreen.cs` | `Core/ShopController.cs` | `ItemComparisonPanel.cs` | `WireShop` | `Shop` |
 | Event room (in Map) | `EventScreen.cs` | `Core/EventController.cs` | `DialogueStageLayout.cs` | `WireEvent` | `Event` |
 | Fight | `FightScreen.cs` | `Core/FightController.cs` (+6 parts, below) | `FightSubmenuLayout.cs`, `FightHudPalette.cs`, `FightRoundPresentation.cs`, `PcPlateArt.cs` | `Fight()` scene | `Fight` |

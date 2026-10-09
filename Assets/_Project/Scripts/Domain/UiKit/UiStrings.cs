@@ -325,6 +325,34 @@ namespace PrincesPalace.Domain.UiKit
         // peek at rooms that do not exist yet.
         public static readonly UiString MapFog = UiString.Define("map.fog", "THE WOOD\nCONTINUES");
 
+        // The "you are here" tag over the party's room, and the same words as
+        // the refusal when that room is pressed.
+        public static readonly UiString MapYouAreHere = UiString.Define("map.here", "YOU ARE HERE");
+
+        // What a room shows when it is hovered or focused (MapNodeCard.Body).
+        // Only what the run has already decided: the enemies and the stash are
+        // fixed by the seed, a shop's stock and an event's page are not.
+        public static readonly UiString MapPreviewEnemies =
+            UiString.Define("map.preview.enemies", "Enemies: {0}", "Enemies: Hollow Treant ×2, Giant Rat ×2");
+        public static readonly UiString MapPreviewReward =
+            UiString.Define("map.preview.reward", "Pays {0} gold · {1} exp", "Pays 99999 gold · 99999 exp");
+        public static readonly UiString MapPreviewTreasure =
+            UiString.Define("map.preview.treasure", "A stash of {0} gold.", "A stash of 999 gold.");
+        public static readonly UiString MapPreviewRest =
+            UiString.Define("map.preview.rest", "The squad rests and recovers to full health.");
+        public static readonly UiString MapPreviewShop =
+            UiString.Define("map.preview.shop", "A trader. The stock is set when you step in.");
+        public static readonly UiString MapPreviewEvent =
+            UiString.Define("map.preview.event", "Something waits here. What, you learn when you step in.");
+        public static readonly UiString MapPreviewStart =
+            UiString.Define("map.preview.start", "Where this stretch of the descent began.");
+
+        // Why a press on a room went nowhere, shown on that room's caption.
+        public static readonly UiString MapRefuseCleared = UiString.Define("map.refuse.cleared", "ALREADY CLEARED");
+        public static readonly UiString MapRefuseAhead = UiString.Define("map.refuse.ahead", "TOO FAR AHEAD");
+        public static readonly UiString MapRefuseClosed = UiString.Define("map.refuse.closed", "NO PATH");
+        public static readonly UiString MapRefuseWalking = UiString.Define("map.refuse.walking", "ON THE MOVE");
+
         // What the room the party just walked into did.
         //
         // Every non-fight room says something, INCLUDING the ones with no

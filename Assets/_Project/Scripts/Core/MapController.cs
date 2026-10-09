@@ -41,6 +41,13 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
         [SerializeField] internal TMP_Text attentionLabel;
+        [SerializeField] internal GameObject attentionBadge;
+
+        // The card for the hovered or focused room (MapNodeCard.Body), shown
+        // through _preview so pad focus outranks the pointer.
+        [SerializeField] internal GameObject previewPanel;
+        [SerializeField] internal TMP_Text previewTitle;
+        [SerializeField] internal TMP_Text previewBody;
 
         // What the room the party just walked into did. Empty between rooms,
         // rather than left showing the last one's result under a new heading.
@@ -75,12 +82,6 @@ namespace PrincesPalace
         [SerializeField] internal Sprite restIcon;
         [SerializeField] internal Sprite eventIcon;
         [SerializeField] internal Sprite treasureIcon;
-
-        // What state a room is in, which is the only thing its tint says. Five
-        // rather than three, so "cleared" and "never reachable" don't render
-        // identically dim, which would make a leg's history unreadable the
-        // moment it had one.
-        private enum TileState { Current, Walked, Open, Ahead, Closed }
 
         // A whole-tile colour MULTIPLY, applied to the painted tree and its icon
         // at once.
@@ -130,6 +131,7 @@ namespace PrincesPalace
             // Refresh with no context yet to reconfigure would silently wire
             // nothing on the very first paint.
             RegisterNavContext();
+            _preview.Attach(NavigationInputModule.Contexts);
 
             if (systemMenu != null) systemMenu.Closed += RefreshAttention;
 
@@ -165,7 +167,20 @@ namespace PrincesPalace
             for (int i = 0; i < nodeButtons.Length; i++)
             {
                 int index = i;
-                nodeButtons[i].onClick.AddListener(() => OnNodePressed(index));
+                var button = nodeButtons[i];
+                var node = button.gameObject;
+                button.onClick.AddListener(() => OnNodePressed(index));
+
+                // The detail card follows pointer and pad focus alike, through
+                // the router that already decides which of the two owns a card.
+                _preview.Register(button, shown => ShowPreview(index, shown));
+                var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
+                hover.Changed = (_, entered) => _preview.Pointer(node, entered);
+
+                // A press on a room the party cannot enter never reaches
+                // onClick, so it is heard here and answered on the caption.
+                var click = node.GetComponent<ClickIndex>() ?? node.AddComponent<ClickIndex>();
+                click.Clicked = _ => RefuseIfNotOffered(index);
             }
 
             // Opens the menu on its Exit tab rather than ending the run: the
@@ -259,6 +274,7 @@ namespace PrincesPalace
 
             _attentionPad = NavigationInputModule.LastInputWasPad;
             attentionLabel.gameObject.SetActive(reasons != AttentionReasons.None);
+            if (attentionBadge != null) attentionBadge.SetActive(reasons != AttentionReasons.None);
             if (reasons != AttentionReasons.None)
             {
                 attentionLabel.Set(UiStrings.MapAttention, AttentionHint.Named(reasons),
@@ -271,6 +287,7 @@ namespace PrincesPalace
         private void OnDestroy()
         {
             if (systemMenu != null) systemMenu.Closed -= RefreshAttention;
+            _preview.Detach();
 
             if (_navContext == null) return;
 
@@ -343,9 +360,14 @@ namespace PrincesPalace
                 fog.gameObject.SetShown(false);
                 walker.gameObject.SetShown(false);
                 if (attentionLabel != null) attentionLabel.gameObject.SetActive(false);
+                if (attentionBadge != null) attentionBadge.SetActive(false);
                 RefreshNavLinks(null, null);
                 return;
             }
+
+            // A repaint can change what the card describes (a room cleared, a
+            // grant from the debug menu), so it closes rather than going stale.
+            _preview.ForceClose();
 
             var reachable = new HashSet<int>(RunManager.Choices().Select(n => n.Id));
             var cleared = new HashSet<int>(RunManager.Run.clearedNodeIds);
@@ -489,13 +511,13 @@ namespace PrincesPalace
         // party is standing in is CURRENT, and a room deeper than the party is
         // AHEAD whether or not a trail to it is open yet, while one at or behind
         // their own depth that was never entered is a road not taken.
-        private static TileState StateOf(DescentNode node, DescentNode current,
+        private static MapTileState StateOf(DescentNode node, DescentNode current,
                                          HashSet<int> reachable, HashSet<int> cleared)
         {
-            if (node.Id == current.Id) return TileState.Current;
-            if (cleared.Contains(node.Id)) return TileState.Walked;
-            if (reachable.Contains(node.Id)) return TileState.Open;
-            return node.Depth > current.Depth ? TileState.Ahead : TileState.Closed;
+            if (node.Id == current.Id) return MapTileState.Current;
+            if (cleared.Contains(node.Id)) return MapTileState.Walked;
+            if (reachable.Contains(node.Id)) return MapTileState.Open;
+            return node.Depth > current.Depth ? MapTileState.Ahead : MapTileState.Closed;
         }
 
         // The wood itself: how much of it exists, how far it repeats, and where
@@ -655,7 +677,7 @@ namespace PrincesPalace
             }
         }
 
-        private void PaintNode(int index, DescentNode node, TileState state, bool isReachable)
+        private void PaintNode(int index, DescentNode node, MapTileState state, bool isReachable)
         {
             var button = nodeButtons[index];
             button.gameObject.SetShown(true);
@@ -680,7 +702,7 @@ namespace PrincesPalace
 
             PaintIcon(index, node.Type, tint, width, height);
 
-            nodeLabels[index].SetContent(Caption(node.Type));
+            PaintCaption(index, node.Type);
 
             // Only what the party can actually walk to. The map is the authority
             // on adjacency and RunManager refuses anything else anyway, but a
@@ -688,7 +710,12 @@ namespace PrincesPalace
             // not offered.
             button.interactable = isReachable;
 
-            nodeMarkers[index].gameObject.SetShown(state == TileState.Current);
+            // The hover/focus rim answers only where a press does something;
+            // the detail card still follows every room (ShowPreview).
+            var rim = button.GetComponent<HoverBox>();
+            if (rim != null) rim.enabled = isReachable;
+
+            nodeMarkers[index].gameObject.SetShown(state == MapTileState.Current);
         }
 
         // The type-specific foreground: what turns a shared tree into "this one
@@ -731,32 +758,112 @@ namespace PrincesPalace
             }
         }
 
-        private static Color TintFor(TileState state)
+        private static Color TintFor(MapTileState state)
         {
             switch (state)
             {
-                case TileState.Current: return CurrentTint;
-                case TileState.Walked: return WalkedTint;
-                case TileState.Open: return OpenTint;
-                case TileState.Ahead: return AheadTint;
+                case MapTileState.Current: return CurrentTint;
+                case MapTileState.Walked: return WalkedTint;
+                case MapTileState.Open: return OpenTint;
+                case MapTileState.Ahead: return AheadTint;
                 default: return ClosedTint;
             }
         }
 
-        private static string Caption(RoomType type)
+        private void PaintCaption(int index, RoomType type)
         {
-            switch (type)
+            var label = nodeLabels[index];
+            label.SetContent(MapNodeCard.Caption(type));
+            label.color = CaptionColour;
+        }
+
+        private DescentNode NodeAt(int index)
+        {
+            var map = RunManager.Map;
+            if (map == null) return null;
+
+            return map.AtDepth(index / MapLayout.Rows).ElementAtOrDefault(index % MapLayout.Rows);
+        }
+
+        // ---- the detail card ------------------------------------------------------
+
+        private readonly TooltipFocusRouter _preview = new TooltipFocusRouter();
+
+        private void ShowPreview(int index, bool shown)
+        {
+            if (previewPanel == null) return;
+
+            var node = shown ? NodeAt(index) : null;
+            if (node == null || RunManager.Run == null)
             {
-                case RoomType.Entry: return "START";
-                case RoomType.Fight: return "FIGHT";
-                case RoomType.EliteFight: return "ELITE";
-                case RoomType.Boss: return "BOSS";
-                case RoomType.Treasure: return "TREASURE";
-                case RoomType.Rest: return "REST";
-                case RoomType.Shop: return "SHOP";
-                case RoomType.Event: return "EVENT";
-                default: return type.ToString().ToUpperInvariant();
+                previewPanel.SetActive(false);
+                return;
             }
+
+            previewTitle.SetContent(MapNodeCard.Caption(node.Type));
+            previewBody.SetContent(MapNodeCard.Body(MapNodePreview.For(RunManager.Run, node)));
+            previewPanel.SetActive(true);
+        }
+
+        // ---- refused presses ------------------------------------------------------
+
+        // How long a refusal stays on the caption before the room's name returns.
+        internal const float RefusalSeconds = 1.2f;
+
+        private static readonly Color CaptionColour = Hex(MapScreen.CaptionHex);
+        private static readonly Color RefusalColour = Hex(MapScreen.RefusalHex);
+
+        private Coroutine _refusal;
+        private int _refusedIndex = -1;
+
+        // The caption says why, in the refusal colour, then goes back. No modal:
+        // the player's eyes are already on the room they pressed.
+        private void Refuse(int index, string reason)
+        {
+            if (index < 0 || index >= nodeLabels.Length) return;
+
+            if (_refusal != null) StopCoroutine(_refusal);
+            RestoreCaption(_refusedIndex);
+
+            _refusedIndex = index;
+            nodeLabels[index].SetContent(reason);
+            nodeLabels[index].color = RefusalColour;
+            _refusal = StartCoroutine(RestoreCaptionAfterRefusal(index));
+        }
+
+        private System.Collections.IEnumerator RestoreCaptionAfterRefusal(int index)
+        {
+            yield return new WaitForSeconds(RefusalSeconds);
+
+            RestoreCaption(index);
+            _refusal = null;
+            _refusedIndex = -1;
+        }
+
+        private void RestoreCaption(int index)
+        {
+            if (index < 0 || index >= nodeLabels.Length) return;
+
+            var node = NodeAt(index);
+            if (node != null) PaintCaption(index, node.Type);
+        }
+
+        // The pointer's half: a click on a room that is not offered.
+        private void RefuseIfNotOffered(int index)
+        {
+            if (!nodeButtons[index].IsInteractable()) RefuseIllegal(index);
+        }
+
+        private void RefuseIllegal(int index)
+        {
+            var node = NodeAt(index);
+            var current = RunManager.CurrentNode;
+            if (node == null || current == null) return;
+
+            var state = StateOf(node, current,
+                new HashSet<int>(RunManager.Choices().Select(n => n.Id)),
+                new HashSet<int>(RunManager.Run.clearedNodeIds));
+            Refuse(index, MapNodeCard.Refusal(state));
         }
 
         private void OnNodePressed(int index)
@@ -766,12 +873,16 @@ namespace PrincesPalace
 
             // One walk at a time. A second click mid-walk would otherwise start
             // a step from a room the party is halfway out of, and the two
-            // coroutines would fight over the same figure.
-            if (IsWalking) return;
+            // coroutines would fight over the same figure. Said on the caption
+            // rather than ignored: the press was on a room that IS offered.
+            if (IsWalking)
+            {
+                Refuse(index, MapNodeCard.Refusal(MapTileState.Open));
+                return;
+            }
 
-            int depth = index / MapLayout.Rows;
-            int slot = index % MapLayout.Rows;
-            var node = map.AtDepth(depth).ElementAtOrDefault(slot);
+            // An empty slot has no visible button to press, so this stays silent.
+            var node = NodeAt(index);
             if (node == null) return;
 
             // Legality is checked BEFORE the walk rather than by MoveTo after
@@ -779,10 +890,13 @@ namespace PrincesPalace
             // checking after the walk would cost a walk to a room the party
             // is not allowed to enter, followed by a silent refusal on
             // arrival.
-            if (!RunManager.Choices().Any(choice => choice.Id == node.Id)) return;
+            if (!RunManager.Choices().Any(choice => choice.Id == node.Id))
+            {
+                RefuseIllegal(index);
+                return;
+            }
 
             _walk = StartCoroutine(WalkAndArrive(node));
         }
-
-            }
+    }
 }

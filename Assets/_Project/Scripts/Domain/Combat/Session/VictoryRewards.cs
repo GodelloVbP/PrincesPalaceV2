@@ -48,7 +48,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // without the depth curve a step-40 fight would cost five times the
         // effort of a step-1 one and pay exactly the same, so the optimal way to
         // play an endless dungeon would be never to descend.
-        public static Payout For(IEnumerable<EnemyKit> defeated, bool isElite, int depthStep)
+        public static Payout For(IEnumerable<EnemyKit> defeated, bool isElite, int depthStep) =>
+            ForEnemies(defeated?.Where(kit => kit != null).Select(kit => kit.Source), isElite, depthStep);
+
+        // The same sum from the enemies themselves, so the map can quote a
+        // fight's base payout before any kit exists. One formula, two callers.
+        public static Payout ForEnemies(IEnumerable<Content.ResolvedEnemy> defeated, bool isElite, int depthStep)
         {
             if (defeated == null) return new Payout(0, 0);
 
@@ -56,11 +61,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
             int rawExp = 0;
             int rawGold = 0;
-            foreach (var kit in defeated)
+            foreach (var enemy in defeated)
             {
-                if (kit == null) continue;
-                rawExp += kit.Source.ExpReward;
-                rawGold += kit.Source.CurrencyReward;
+                if (enemy == null) continue;
+                rawExp += enemy.ExpReward;
+                rawGold += enemy.CurrencyReward;
             }
 
             // TWO CURVES, ONE ROOM. The elite multiplier and the rounding are

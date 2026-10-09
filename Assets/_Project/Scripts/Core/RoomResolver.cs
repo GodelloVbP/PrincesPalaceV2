@@ -31,6 +31,12 @@ namespace PrincesPalace
         // it gets an explicit reset hook rather than relying on a reload.
         public static void Reset() => Last = new RoomResolution.Outcome(RoomResolution.Kind.None);
 
+        // The treasure stream of a node at a step. Resolve opens it for the room
+        // the party stands in; the map's preview opens it for a room not yet
+        // entered, at the step MoveTo will write, so both read the same draw.
+        internal static SeededRandom TreasureStream(RunSnapshot run, int step, int nodeId) =>
+            RngStreams.Open(run.runSeed, RngStreams.Treasure, step, nodeId);
+
         // Returns true when the room resolved here, false when it hands off to
         // a screen instead.
         //
@@ -53,9 +59,7 @@ namespace PrincesPalace
             // A separate stream from the fight's: two rooms at one step must
             // not have their stash and their monsters drawn from the same
             // sequence, or one would predict the other.
-            var rng = run != null
-                ? RngStreams.Open(run.runSeed, RngStreams.Treasure, run.step, run.currentNodeId)
-                : null;
+            var rng = run != null ? TreasureStream(run, run.step, run.currentNodeId) : null;
 
             var outcome = RoomResolution.Resolve(roomType, rng);
             Last = outcome;

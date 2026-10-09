@@ -80,9 +80,7 @@ namespace PrincesPalace
             // Position carries the state, so the same room in the same run
             // fields the same enemies across a quit and reload -- which is what
             // stops a mid-fight quit being a reroll for an easier draw.
-            var rng = run != null
-                ? RngStreams.Open(run.runSeed, RngStreams.Fight, run.step, run.currentNodeId)
-                : null;
+            var rng = run != null ? FightStream(run, run.step, run.currentNodeId) : null;
 
             // An event fight's enemies are authored, not rolled: no draw is
             // taken, so its combat starts on the stream's first value.
@@ -102,8 +100,7 @@ namespace PrincesPalace
             // BANDED BY DEPTH. Without the floor the pool is every non-boss
             // enemy at every depth, so a floor-1 room could field a golem --
             // twelve rounds against a starting party, next to a rat's one.
-            var roll = EncounterRoll.Roll(request.RoomType, Pool(), rng, run?.bossEnemyId,
-                RunDepth.FloorFor(run?.legStartStep ?? 0));
+            var roll = RollRoom(run, request.RoomType, rng);
 
             return new Roster
             {
@@ -114,6 +111,27 @@ namespace PrincesPalace
                 IsElite = roll.IsElite,
                 Rng = rng,
             };
+        }
+
+        // The room's own fight stream: where the fight is, not how many came
+        // before it. For() opens it for the room under the party; Preview opens
+        // it for a room MoveTo has not reached yet, at the step MoveTo will write.
+        private static SeededRandom FightStream(RunSnapshot run, int step, int nodeId) =>
+            RngStreams.Open(run.runSeed, RngStreams.Fight, step, nodeId);
+
+        private static EncounterRoll.Result RollRoom(RunSnapshot run, RoomType roomType, SeededRandom rng) =>
+            EncounterRoll.Roll(roomType, Pool(), rng, run?.bossEnemyId, RunDepth.FloorFor(run?.legStartStep ?? 0));
+
+        // WHAT A ROOM NOT YET ENTERED WILL FIELD, from the same stream and the
+        // same roll For() uses once the party is standing in it: MoveTo writes
+        // step = legStartStep + Depth and currentNodeId = Id, and that pair is
+        // all the stream is keyed on. Draws nothing the real fight will not
+        // draw again, because every call opens a fresh stream.
+        public static EncounterRoll.Result Preview(RunSnapshot run, DescentNode node)
+        {
+            if (run == null || node == null) return new EncounterRoll.Result(new List<string>(), false, false);
+
+            return RollRoom(run, node.Type, FightStream(run, run.legStartStep + node.Depth, node.Id));
         }
 
         // Every authored enemy, projected down to what the roll needs.

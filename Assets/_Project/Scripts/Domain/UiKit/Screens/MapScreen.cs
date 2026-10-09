@@ -145,6 +145,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the map.
         public NodeRef AttentionLabel;
 
+        // The frame the hint sits in. Shown and hidden with the label, which
+        // keeps its own active state so "nothing waits" is still the label's.
+        public NodeRef AttentionBadge;
+
+        // The detail card for the hovered or focused room. Inactive until a
+        // room is pointed at; the controller fills the two labels from
+        // MapNodeCard.
+        public NodeRef PreviewPanel;
+        public NodeRef PreviewTitle;
+        public NodeRef PreviewBody;
+
         // The same overlay the hub and the fight mount. Live here:
         // between rooms is when gear is meant to change.
         public SystemMenuScreen SystemMenu;
@@ -167,6 +178,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // builds only): spell books, relics and every Tools row act on the
         // descent, and the hub has none to act on.
         public DebugMenuScreen Debug;
+
+        // The strip under the lowest row of rooms and their captions (y -418),
+        // shared by the room detail card and the attention badge.
+        private const float BottomStripY = -478f;
+        private static readonly UiVec PreviewSize = new UiVec(700f, 104f);
+        private static readonly UiVec AttentionBadgeSize = new UiVec(760f, 84f);
 
         // Anchored to the content rect's LEFT edge, which is the origin every
         // MapLayout x is measured from. Declared once here so no construction
@@ -195,18 +212,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(320f, 40f), 22, "#F2DB9E",
                 Place.At(690f, 452f)).Styled(TypographyRole.TacticalData);
 
-            // Under the gold chip, one row down (404, matching depth's own
-            // band) -- neither the shop nor the menu is guaranteed to be the
-            // next thing the player opens, so the map is where a pending book,
-            // point or reward has to say so, and the line names them. 640 wide,
-            // right-aligned and ending 30 px inside the screen's edge, holds
-            // all three reasons and the key at Body 20 clear of the depth
-            // line (which stops at x 210).
-            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(640f, 32f), 20,
-                    "#E7B25C", Place.At(610f, 404f))
-                .TextAligned(UiTextAlign.Right)
+            // THE BOOK/POINT/REWARD NUDGE, as a badge and not a line: neither
+            // the shop nor the menu is guaranteed to be the next thing the
+            // player opens, so the map is where a pending book, point or
+            // reward has to say so, and a 16 px line at the top corner was
+            // missed (AUDIT #254). It sits in the bottom strip below the
+            // lowest row of rooms, level with the room detail card, where the
+            // eye is while choosing a route. 720 wide at Body 26 wraps the
+            // three-reason worst case onto two lines inside a 760x84 frame.
+            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(720f, 64f), 26,
+                    FightHudPalette.GoldLight, Place.At(0f, 0f))
+                .TextAligned(UiTextAlign.Centre)
                 .Styled(TypographyRole.Body)
                 .Inactive();
+            var attentionBadge = Ui.OutlineBox("MapAttentionBadge", Place.At(440f, BottomStripY), AttentionBadgeSize,
+                FightHudPalette.PanelPrimary, FightHudPalette.BorderGold, new[] { attention })
+                .Inactive();
+            screen.AttentionBadge = attentionBadge;
             screen.AttentionLabel = attention;
 
             // SILVER: leaving the descent, matching Cancel/Back everywhere
@@ -235,6 +257,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomShop,
                 new UiVec(900f, 32f), 18, "#C8BBE4", Place.At(0f, 364f))
                 .Styled(TypographyRole.Body);
+
+            // The card for whichever room is hovered or focused, in the same
+            // bottom strip. Inspecting never commits: the card shows for any
+            // visible room, reachable or not, so a route can be planned.
+            var previewTitle = Ui.Label("MapPreviewTitle", UiString.Runtime, new UiVec(PreviewSize.X - 40f, 28f), 22,
+                    FightHudPalette.HeadingGold, Place.At(0f, 26f))
+                .TextAligned(UiTextAlign.Left)
+                .Styled(TypographyRole.FunctionalHeading);
+            var previewBody = Ui.Label("MapPreviewBody", UiString.Runtime, new UiVec(PreviewSize.X - 40f, 52f), 19,
+                    FightHudPalette.TextPrimary, Place.At(0f, -16f))
+                .TextAligned(UiTextAlign.Left)
+                .Styled(TypographyRole.Body);
+            var previewPanel = Ui.OutlineBox("MapPreviewPanel", Place.At(-330f, BottomStripY), PreviewSize,
+                FightHudPalette.PanelViolet, FightHudPalette.BorderGold, new[] { previewTitle, previewBody })
+                .Inactive();
+            screen.PreviewPanel = previewPanel;
+            screen.PreviewTitle = previewTitle;
+            screen.PreviewBody = previewBody;
 
             screen.TitleLabel = title;
             screen.DepthLabel = depth;
@@ -321,7 +361,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, attention, abandon, roomMessage, shop.Root, eventRoom.Root, systemMenu.Root,
+                viewport, title, depth, gold, attentionBadge, previewPanel, abandon, roomMessage, shop.Root, eventRoom.Root, systemMenu.Root,
                 debug.Root);
 
             return screen;
@@ -471,6 +511,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // brighter than the sprite's own colour, which a hex string cannot say
         // and a Color above 1.0 can.
 
+        // A room's caption, and the colour it takes while it is explaining a
+        // refused press (MapController.Refuse).
+        public const string CaptionHex = "#EDE6FF";
+        public const string RefusalHex = "#E0786E";
+
+        private const float MarkerWidth = 118f;
+        private const float MarkerHeight = 26f;
+
         private UiNode BuildNode(int index)
         {
             int depth = index / MapLayout.Rows;
@@ -493,7 +541,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // this one and painted it, while every lookup by name silently took
             // the emitter's empty one. UiAudit's A4b is what catches it now.
             var label = Ui.Label($"MapNode{index}Name", UiString.Runtime, new UiVec(MapLayout.MaxTileWidth, 28f), 13,
-                    "#EDE6FF", Place.At(0f, -size.Y * 0.5f - 16f))
+                    CaptionHex, Place.At(0f, -size.Y * 0.5f - 16f))
                 .AllowOverflow("the caption sits BELOW its node deliberately - inside, it would cover the room icon it names");
 
             // The type icon, standing in the clearing under the tree's canopy
@@ -510,14 +558,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .Inactive();
 
-            // The "you are here" pip. Its own node rather than a tint on the
+            // The "you are here" tag. Its own node rather than a tint on the
             // button, so the button keeps saying what KIND of room it is while
-            // this says where the party is -- two facts that have to be readable
-            // at once.
-            var marker = Ui.Solid($"MapNode{index}Marker", "#F2DB9E",
-                    Place.At(0f, size.Y * 0.5f + 14f), UiSize.Fixed(18f, 18f))
-                .AllowOverflow("the you-are-here pip sits ABOVE its node so the node keeps saying what KIND of room it is")
+            // this says where the party is -- two facts that have to be
+            // readable at once. Words in a gold-rimmed plate: the flat 18 px
+            // square it replaced said nothing to a player who had not been
+            // told what it meant.
+            var markerSize = new UiVec(MarkerWidth, MarkerHeight);
+            var marker = Ui.Solid($"MapNode{index}Marker", FightHudPalette.PanelViolet,
+                    Place.At(0f, size.Y * 0.5f + 18f), UiSize.Fixed(markerSize))
+                .AllowOverflow("the you-are-here tag sits ABOVE its node so the node keeps saying what KIND of room it is")
                 .Inactive();
+            foreach (var edge in Ui.Rim($"MapNode{index}Marker", markerSize, FightHudPalette.BorderGold))
+            {
+                marker.Children.Add(edge);
+            }
+            marker.Children.Add(Ui.Label($"MapNode{index}MarkerText", UiStrings.MapYouAreHere, markerSize, 13,
+                FightHudPalette.GoldLight, Place.At(0f, 0f)).Styled(TypographyRole.TacticalData));
 
             var button = Ui.Button($"MapNode{index}", UiString.Runtime, size, 12, place);
 
