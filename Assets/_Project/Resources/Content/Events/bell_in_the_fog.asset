@@ -66,6 +66,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 0
+        HideOutcome: 0
       - Text: Ask the others
         Requires: []
         HiddenUntilMet: 0
@@ -135,6 +136,7 @@ MonoBehaviour:
           Result: 
           GoTo: ask_none
           IsLeave: 0
+        HideOutcome: 0
       - Text: Walk away
         Requires: []
         HiddenUntilMet: 0
@@ -145,6 +147,7 @@ MonoBehaviour:
           Result: Shawn keeps looking back until the fog closes over the clearing. Nothing follows. The bell is patient.
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep
@@ -207,6 +210,7 @@ MonoBehaviour:
           Result: 
           GoTo: bell
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep
@@ -266,6 +270,7 @@ MonoBehaviour:
           Result: 
           GoTo: bell
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep
@@ -309,6 +314,7 @@ MonoBehaviour:
           Result: 
           GoTo: bell
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep
@@ -352,6 +358,7 @@ MonoBehaviour:
           Result: 
           GoTo: bell
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep
@@ -445,6 +452,7 @@ MonoBehaviour:
           Result: 
           GoTo: endure_alone
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep
@@ -500,6 +508,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: bear
@@ -543,6 +552,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: bear
@@ -577,6 +587,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: owl
@@ -611,6 +622,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast: []
       Lines:
@@ -643,6 +655,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/bell_in_the_fog/fog_clearing.png
       Cast:
       - CharacterId: sheep

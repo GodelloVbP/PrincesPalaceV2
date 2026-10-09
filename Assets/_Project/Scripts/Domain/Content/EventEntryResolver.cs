@@ -446,7 +446,16 @@ namespace PrincesPalace.Domain.Content
                 resolvedOutcomes.Add(outcome);
             }
 
-            resolvedChoice = new ResolvedEventChoice(raw.text ?? "", requires, raw.hiddenUntilMet, effects, resolvedOutcomes.ToArray());
+            resolvedChoice = new ResolvedEventChoice(raw.text ?? "", requires, raw.hiddenUntilMet, effects,
+                resolvedOutcomes.ToArray(), raw.hideOutcome);
+
+            string previewProblem = EventChoicePreview.CheckAuthoring(resolvedChoice);
+            if (previewProblem != null)
+            {
+                error = $"{choiceLabel}: {previewProblem}";
+                return false;
+            }
+
             error = null;
             return true;
         }

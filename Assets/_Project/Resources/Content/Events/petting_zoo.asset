@@ -654,6 +654,7 @@ MonoBehaviour:
           Result: 
           GoTo: petter
           IsLeave: 0
+        HideOutcome: 0
       - Text: Strut for the peacock
         Requires:
         - Kind: 2
@@ -956,6 +957,7 @@ MonoBehaviour:
           Result: 
           GoTo: peacock
           IsLeave: 0
+        HideOutcome: 0
       - Text: Feed the fawns
         Requires: []
         HiddenUntilMet: 0
@@ -977,6 +979,7 @@ MonoBehaviour:
           Result: 
           GoTo: fawns
           IsLeave: 0
+        HideOutcome: 0
       - Text: Crack open a cold one
         Requires:
         - Kind: 1
@@ -1009,6 +1012,7 @@ MonoBehaviour:
           Result: 
           GoTo: cold_one
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1070,6 +1074,7 @@ MonoBehaviour:
           Result: Bjorn scratches the sheep behind the ears with one enormous claw. It leans right into it.
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       - Text: Odette pets the sheep
         Requires:
         - Kind: 0
@@ -1102,6 +1107,7 @@ MonoBehaviour:
           Result: Odette preens a tuft of the sheep's wool back into place. The sheep allows this.
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       - Text: Leave the sheep be
         Requires: []
         HiddenUntilMet: 0
@@ -1112,6 +1118,7 @@ MonoBehaviour:
           Result: 
           GoTo: zoo
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1144,6 +1151,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1169,6 +1177,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1194,6 +1203,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1219,6 +1229,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast:
       - CharacterId: sheep
@@ -1283,6 +1294,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast:
       - CharacterId: sheep
@@ -1331,6 +1343,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1356,6 +1369,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1381,6 +1395,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1406,6 +1421,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1431,6 +1447,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1456,6 +1473,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1481,6 +1499,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1506,6 +1525,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1531,6 +1551,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -1563,6 +1584,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:

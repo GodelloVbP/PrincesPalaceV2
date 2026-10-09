@@ -81,6 +81,8 @@ namespace PrincesPalace.Domain.Content
         public RawEventRequirement[] requires = Array.Empty<RawEventRequirement>();
         [ContentDoc("When true, this choice is hidden entirely (not shown locked) until its requirements pass.")]
         public bool hiddenUntilMet;
+        [ContentDoc("When true, the choice's row shows no outcome line. Otherwise the row previews what picking it applies, derived from its effects and the outcome that would win (EventChoicePreview). The build refuses the flag on a choice with nothing to preview, and an unflagged choice whose effects cannot be spelled.")]
+        public bool hideOutcome;
         [ContentDoc("Effects applied immediately when this choice is picked, before an outcome is chosen. A gold spend here implies its own gold requirement -- do not author one by hand.")]
         public RawEventEffect[] effects = Array.Empty<RawEventEffect>();
         [ContentDoc("Ordered outcomes; the first whose requirements pass wins.")]

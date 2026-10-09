@@ -33,6 +33,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       - Text: Toss a coin (5 gold)
         Requires:
         - Kind: 4
@@ -103,6 +104,7 @@ MonoBehaviour:
           Result: The coin sinks without a sound.
           GoTo: well
           IsLeave: 0
+        HideOutcome: 0
       - Text: Call on Shawn's luck
         Requires:
         - Kind: 0
@@ -135,6 +137,7 @@ MonoBehaviour:
           Result: Shawn's luck pays off -- a few coins surface.
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       - Text: Recite a well-worn prayer
         Requires:
         - Kind: 1
@@ -167,6 +170,7 @@ MonoBehaviour:
           Result: The party feels steadier.
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines: []
@@ -185,6 +189,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       - Text: Whisper one more charm
         Requires:
         - Kind: 2
@@ -217,6 +222,7 @@ MonoBehaviour:
           Result: The well obliges one last time.
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines: []

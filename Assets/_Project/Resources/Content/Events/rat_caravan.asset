@@ -44,6 +44,7 @@ MonoBehaviour:
           Result: 
           GoTo: after_browse
           IsLeave: 0
+        HideOutcome: 0
       - Text: Browse with Odette
         Requires:
         - Kind: 0
@@ -76,6 +77,7 @@ MonoBehaviour:
           Result: 
           GoTo: after_odette
           IsLeave: 0
+        HideOutcome: 0
       - Text: Rob him
         Requires: []
         HiddenUntilMet: 0
@@ -97,6 +99,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 0
+        HideOutcome: 0
       - Text: Walk on
         Requires: []
         HiddenUntilMet: 0
@@ -107,6 +110,7 @@ MonoBehaviour:
           Result: 
           GoTo: farewell_walk
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: merchant
@@ -162,6 +166,7 @@ MonoBehaviour:
           Result: 
           GoTo: farewell_browse
           IsLeave: 0
+        HideOutcome: 0
       - Text: Look again
         Requires: []
         HiddenUntilMet: 0
@@ -183,6 +188,7 @@ MonoBehaviour:
           Result: 
           GoTo: after_browse
           IsLeave: 0
+        HideOutcome: 0
       - Text: Rob him
         Requires: []
         HiddenUntilMet: 0
@@ -204,6 +210,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: merchant
@@ -238,6 +245,7 @@ MonoBehaviour:
           Result: 
           GoTo: farewell_odette
           IsLeave: 0
+        HideOutcome: 0
       - Text: Look again
         Requires: []
         HiddenUntilMet: 0
@@ -259,6 +267,7 @@ MonoBehaviour:
           Result: 
           GoTo: after_browse
           IsLeave: 0
+        HideOutcome: 0
       - Text: Rob him
         Requires: []
         HiddenUntilMet: 0
@@ -280,6 +289,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: owl
@@ -330,6 +340,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: merchant
@@ -364,6 +375,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: merchant
@@ -398,6 +410,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: merchant
@@ -432,6 +445,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Events/rat_caravan/road.png
       Cast:
       - CharacterId: merchant

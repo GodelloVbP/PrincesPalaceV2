@@ -412,6 +412,14 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString EventEffectFillSpecialPool =
             UiString.Define("event.effect_fill_special_pool", "Special pools full each turn this leg");
 
+        // A choice row's preview names what the applied line leaves to other
+        // surfaces (EventEffectSummary.DescribePreview).
+        public static readonly UiString EventPreviewRelic =
+            UiString.Define("event.preview_relic", "Relic: {0}", "Relic: Ceremonial Greatsword of Undy");
+        public static readonly UiString EventPreviewFight = UiString.Define("event.preview_fight", "Starts a fight");
+        public static readonly UiString EventPreviewShelf = UiString.Define("event.preview_shelf", "Opens the wares");
+        public static readonly UiString EventPreviewTakeShelf = UiString.Define("event.preview_take_shelf", "Takes the wares");
+
         // A takeShelf's line (the caravan robbed): the one card the scuffle
         // cost, or that there was nothing left on the shelf to lose. The
         // cards handed over each read as an ordinary item line beside it.

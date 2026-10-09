@@ -59,6 +59,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string LockedChoiceTextHex = "#B0A0C6FF";
         public const string LockReasonHex = "#EDC9A2FF";
 
+        // The second line of an open row (EventChoicePreview): the effects
+        // line's gold, so a preview and the result it leads to read alike.
+        public const string PreviewHex = EffectsText;
+
         // ---- geometry (1920x1080 reference) -------------------------------------
         private const float ScreenHalfWidth = 960f;
         private const float ScreenHalfHeight = 540f;

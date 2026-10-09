@@ -66,6 +66,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       - Text: Ask the lantern its name
         Requires:
         - Kind: 1
@@ -87,6 +88,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       - Text: Follow the light
         Requires: []
         HiddenUntilMet: 0
@@ -135,6 +137,7 @@ MonoBehaviour:
           Result: The lantern leads you down a stair of old stone. A few coins glint on the steps.
           GoTo: quiet
           IsLeave: 0
+        HideOutcome: 0
       - Text: Leave
         Requires: []
         HiddenUntilMet: 0
@@ -145,6 +148,7 @@ MonoBehaviour:
           Result: 
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast:
       - CharacterId: sheep
@@ -195,6 +199,7 @@ MonoBehaviour:
           Result: 
           GoTo: farewell
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast:
       - CharacterId: bear
@@ -229,6 +234,7 @@ MonoBehaviour:
           Result: 
           GoTo: farewell
           IsLeave: 0
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:
@@ -254,6 +260,7 @@ MonoBehaviour:
           Result: You leave with the lantern's warmth still in your paws. Prince will call it a detour. It was not.
           GoTo: 
           IsLeave: 1
+        HideOutcome: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
       Lines:

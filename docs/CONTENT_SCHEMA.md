@@ -438,6 +438,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `text` | string | `""` | The choice's own button text; capped at EventEntryResolver.MaxChoiceTextLength characters. |  |
 | `requires` | RawEventRequirement[] (below) | `[]` | Requirements gating this choice; a choice with none is always selectable. |  |
 | `hiddenUntilMet` | bool | `false` | When true, this choice is hidden entirely (not shown locked) until its requirements pass. |  |
+| `hideOutcome` | bool | `false` | When true, the choice's row shows no outcome line. Otherwise the row previews what picking it applies, derived from its effects and the outcome that would win (EventChoicePreview). The build refuses the flag on a choice with nothing to preview, and an unflagged choice whose effects cannot be spelled. |  |
 | `effects` | RawEventEffect[] (below) | `[]` | Effects applied immediately when this choice is picked, before an outcome is chosen. A gold spend here implies its own gold requirement -- do not author one by hand. |  |
 | `outcomes` | RawEventOutcome[] (below) | `[]` | Ordered outcomes; the first whose requirements pass wins. |  |
 

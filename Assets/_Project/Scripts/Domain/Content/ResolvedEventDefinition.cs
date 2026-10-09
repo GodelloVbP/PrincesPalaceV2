@@ -257,13 +257,17 @@ namespace PrincesPalace.Domain.Content
         public EventEffect[] Effects = Array.Empty<EventEffect>();
         public ResolvedEventOutcome[] Outcomes = Array.Empty<ResolvedEventOutcome>();
 
+        // The row shows no outcome line (EventChoicePreview).
+        public bool HideOutcome;
+
         public ResolvedEventChoice()
         {
         }
 
         public ResolvedEventChoice(string text, EventRequirement[] requires, bool hiddenUntilMet,
-            EventEffect[] effects, ResolvedEventOutcome[] outcomes)
+            EventEffect[] effects, ResolvedEventOutcome[] outcomes, bool hideOutcome = false)
         {
+            HideOutcome = hideOutcome;
             Text = text ?? "";
             Requires = requires ?? Array.Empty<EventRequirement>();
             HiddenUntilMet = hiddenUntilMet;

@@ -179,6 +179,8 @@ namespace PrincesPalace
 
         private static readonly Color ChoiceColour = Hex(EventScreen.ChoiceTextHex);
         private static readonly Color LockedColour = Hex(EventScreen.LockedChoiceTextHex);
+        private static readonly Color LockReasonColour = Hex(EventScreen.LockReasonHex);
+        private static readonly Color PreviewColour = Hex(EventScreen.PreviewHex);
 
         private static Color Hex(string hex) =>
             ColorUtility.TryParseHtmlString(hex, out var colour) ? colour : Color.white;
@@ -729,7 +731,7 @@ namespace PrincesPalace
 
             if (view.Concluded)
             {
-                PaintRow(row++, UiStrings.EventLeave.Format(), enabled: true, lockReason: "", action: LeaveRow);
+                PaintRow(row++, UiStrings.EventLeave.Format(), enabled: true, lockReason: "", preview: "", action: LeaveRow);
             }
             else
             {
@@ -737,7 +739,7 @@ namespace PrincesPalace
                 {
                     if (choice == null || !choice.Visible) continue;
                     if (row >= choiceButtons.Length) break;
-                    PaintRow(row++, choice.Text, choice.Enabled, choice.LockReason, choice.Index);
+                    PaintRow(row++, choice.Text, choice.Enabled, choice.LockReason, choice.Preview, choice.Index);
                 }
             }
 
@@ -749,7 +751,9 @@ namespace PrincesPalace
             }
         }
 
-        private void PaintRow(int row, string text, bool enabled, string lockReason, int action)
+        // The row's second line is the lock reason on a locked row and the
+        // pick's preview on an open one, never both: one label, one slot.
+        private void PaintRow(int row, string text, bool enabled, string lockReason, string preview, int action)
         {
             var button = choiceButtons[row];
             button.gameObject.SetActive(true);
@@ -759,9 +763,14 @@ namespace PrincesPalace
             choiceTexts[row].Set(UiStrings.EventChoice, text);
             choiceTexts[row].color = enabled ? ChoiceColour : LockedColour;
 
-            bool showLock = !enabled && !string.IsNullOrEmpty(lockReason);
+            string second = enabled ? preview : lockReason;
+            bool showLock = !string.IsNullOrEmpty(second);
             choiceLocks[row].gameObject.SetActive(showLock);
-            if (showLock) choiceLocks[row].Set(UiStrings.EventChoiceLocked, lockReason);
+            if (showLock)
+            {
+                choiceLocks[row].Set(UiStrings.EventChoiceLocked, second);
+                choiceLocks[row].color = enabled ? PreviewColour : LockReasonColour;
+            }
 
             // Alone, the label is centred in the row; over a reason, the two
             // are centred as a pair (EventScreen.ChoiceTextY).

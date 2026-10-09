@@ -16,8 +16,13 @@ namespace PrincesPalace.Domain.Events
         public readonly bool Enabled;
         public readonly string LockReason;
 
-        public EventChoiceView(int index, string text, EventChoiceState state)
+        // What picking it applies (EventChoicePreview); empty when locked,
+        // hidden by the author, or a pick with nothing to read.
+        public readonly string Preview;
+
+        public EventChoiceView(int index, string text, EventChoiceState state, string preview = "")
         {
+            Preview = preview ?? "";
             Index = index;
             Text = text ?? "";
             Visible = state.Visible;

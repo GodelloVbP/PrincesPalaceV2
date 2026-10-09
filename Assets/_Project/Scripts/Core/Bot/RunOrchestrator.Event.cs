@@ -111,7 +111,8 @@ namespace PrincesPalace
             for (int i = 0; i < (page.Choices?.Length ?? 0); i++)
             {
                 var choice = page.Choices[i];
-                choices.Add(new EventChoiceView(i, choice?.Text, EventChoiceGate.Evaluate(choice, context)));
+                choices.Add(new EventChoiceView(i, choice?.Text, EventChoiceGate.Evaluate(choice, context),
+                    EventChoicePreview.For(page, i, context, ItemDisplayName)));
             }
 
             // The dialogue stage's half (docs/PLAN_DIALOGUE_STAGE.md D2): the

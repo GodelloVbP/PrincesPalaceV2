@@ -231,7 +231,7 @@ namespace PrincesPalace.PlayModeTests
             var reason = RowLock(locked);
             Assert.IsTrue(reason.gameObject.activeSelf, "a locked row shows why");
             Assert.AreEqual("Requires a level 15 party member", reason.text);
-            Assert.IsFalse(RowLock(Row(TossText)).gameObject.activeSelf, "an open row carries no lock caption");
+            Assert.AreNotEqual("Requires 5 gold", RowLock(Row(TossText)).text, "an open row carries no lock caption");
 
             string pageBefore = RunManager.Run.eventPageId;
             string bodyBefore = Text("EventBody").text;
@@ -248,6 +248,27 @@ namespace PrincesPalace.PlayModeTests
                     $"the pad reached the locked row after {step} Down presses");
                 yield return MoveDown();
             }
+        }
+
+        // ---- the outcome line ---------------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator AnOpenRowPreviewsWhatItApplies_ALockedRowShowsItsReason_AndAWayOutShowsNothing()
+        {
+            yield return WalkIntoTheEvent();
+
+            var toss = RowLock(Row(TossText));
+            Assert.IsTrue(toss.gameObject.activeSelf);
+            Assert.AreEqual("-5 gold", toss.text);
+            Assert.AreEqual("#FFD9A2", "#" + ColorUtility.ToHtmlStringRGB(toss.color));
+
+            Assert.AreEqual("+10 gold", RowLock(Row(ShawnText)).text);
+
+            var locked = RowLock(Row(LevelText));
+            Assert.AreEqual("Requires a level 15 party member", locked.text, "a locked row keeps its reason, not a preview");
+            Assert.AreEqual("#EDC9A2", "#" + ColorUtility.ToHtmlStringRGB(locked.color));
+
+            Assert.IsFalse(RowLock(Row("Leave")).gameObject.activeSelf, "a way out changes nothing, so it previews nothing");
         }
 
         // ---- choosing -------------------------------------------------------------------
