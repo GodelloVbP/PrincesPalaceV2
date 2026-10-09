@@ -30,7 +30,7 @@ debt), and a struck finding gets its number removed.
 - Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
 - Map: none open
 - Shop: #122, #191, #196, #197, #212, #244
-- Events: #233
+- Events: none open
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #220, #255
@@ -2101,16 +2101,7 @@ audit exercises this plate so it's caught going forward.
 
 Route: fixer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes.
 
-### 233. Event choices show no per-choice outcome
-
-`Core/EventController.cs` `PaintRows` (656-704) paints each row from
-`choice.Text`, `choice.Enabled` and `choice.LockReason` only — nothing
-previews what picking a choice does. Only the page's one shared effects line
-previews anything, and it isn't per-choice. May need new content fields to
-carry a per-choice preview string.
-
-Route: implementer; gate: tools/run_tests_parallel.ps1 -Changed -BuildScenes;
-content changes may need -BuildContent too.
+### ~~233. Event choices show no per-choice outcome~~ — fixed in `14cf44d2`: each open row previews what a pick applies, derived by `EventChoicePreview` from the effects `EventFlow.Resolve` returns; `hideOutcome` opts out
 
 ### 234. Placeholder text reaches players
 
