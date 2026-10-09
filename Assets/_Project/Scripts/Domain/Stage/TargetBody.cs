@@ -31,17 +31,31 @@ namespace PrincesPalace.Domain.Stage
         public readonly float Bottom;
         public readonly float Top;
 
-        public StageBody(float left, float right, float bottom, float top)
+        // WHERE THE TORSO IS inside the box, as fractions of it on stage (X
+        // from the left edge as seen, Y from the bottom). 0.5 / 0.5 is the
+        // box centre, which is what a body with no authored point means.
+        public readonly float TorsoFx;
+        public readonly float TorsoFy;
+
+        public StageBody(float left, float right, float bottom, float top, float torsoFx = 0.5f, float torsoFy = 0.5f)
         {
             Left = Math.Min(left, right);
             Right = Math.Max(left, right);
             Bottom = Math.Min(bottom, top);
             Top = Math.Max(bottom, top);
+            TorsoFx = torsoFx;
+            TorsoFy = torsoFy;
         }
 
         public float Width => Right - Left;
         public float Height => Top - Bottom;
         public UiVec Centre => new UiVec((Left + Right) * 0.5f, (Bottom + Top) * 0.5f);
+
+        // THE POINT BODY-AIMED EFFECTS LAND ON: the authored torso, which is
+        // the box centre only for a body that never authored one. Centre stays
+        // for geometry (a span's middle, a foot column); anything that means
+        // "hit it" reads this.
+        public UiVec Torso => new UiVec(Left + TorsoFx * Width, Bottom + TorsoFy * Height);
 
         // THE SIDE OF THE SMALLEST SQUARE THE BODY FITS IN. A spell box is
         // square (or fitted into one by preserveAspect) and its art is drawn
@@ -91,7 +105,30 @@ namespace PrincesPalace.Domain.Stage
                 slotOrigin.X + local.Left * scale,
                 slotOrigin.X + local.Right * scale,
                 slotOrigin.Y + local.Bottom * scale,
-                slotOrigin.Y + local.Top * scale);
+                slotOrigin.Y + local.Top * scale,
+                local.TorsoFx, local.TorsoFy);
+        }
+
+        // ---- the body: where body-aimed effects land ------------------------------
+        //
+        // WHERE THE TORSO IS, as fractions of the opaque box on the sprite as
+        // drawn (RawEnemyEntry.bodyX/bodyY). An actor that authors none reads
+        // the box centre, which is what every body-aimed effect used before the
+        // point existed.
+        public const float FallbackBodyX = 0.5f;
+        public const float FallbackBodyY = 0.5f;
+
+        // A raw -1 is "unauthored"; each of the two falls back alone.
+        public static float BodyOr(float authored, float fallback) => authored < 0f ? fallback : authored;
+
+        // The same box with its torso point set. `mirrored` is the sprite's own
+        // facing flip: the box is already on stage, so a mirrored sprite's
+        // authored left edge is the box's right.
+        public static StageBody WithTorso(StageBody body, float bodyX, float bodyY, bool mirrored)
+        {
+            float x = BodyOr(bodyX, FallbackBodyX);
+            float y = BodyOr(bodyY, FallbackBodyY);
+            return new StageBody(body.Left, body.Right, body.Bottom, body.Top, mirrored ? 1f - x : x, y);
         }
 
         // WHAT `fit: target` MULTIPLIES `size` BY. 1 for a body the reference

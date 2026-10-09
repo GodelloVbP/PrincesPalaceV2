@@ -289,6 +289,17 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Head height over the idle drawing's opaque height (above 0, at most 1). Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.3.")]
         public float headSize = -1f;
 
+        // WHERE THE BODY IS, the torso aim point for body-aimed effects
+        // (`target-centre`, `above`, `sky`, the melee contact burst), same
+        // convention as headX/headY. Where the opaque box's middle is wrong for
+        // the animal (a long body, a tall neck) this is the centre of the torso
+        // region instead. See ActorMarks.
+        [ContentDoc("Body (torso aim point) X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.5.")]
+        public float bodyX = -1f;
+
+        [ContentDoc("Body (torso aim point) Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.5.")]
+        public float bodyY = -1f;
+
         // HOW MANY OF THE STAGE'S POSITIONS THIS MONSTER OCCUPIES.
         //
         // 0 means unset and reads as 1. A monster that takes two leaves room

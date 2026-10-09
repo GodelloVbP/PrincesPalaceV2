@@ -101,6 +101,11 @@ MonoBehaviour:
       temporaryHealthPercent: 0
       splashPercent: 0
       spritePath: 
+      headX: -1
+      headY: -1
+      headSize: -1
+      bodyX: -1
+      bodyY: -1
       hit:
         vfx:
           path: 

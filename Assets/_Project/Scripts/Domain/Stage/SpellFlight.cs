@@ -31,8 +31,8 @@ namespace PrincesPalace.Domain.Stage
         public const float SkyCeiling = 240f;
 
         // THE AIR POINT FOR ONE CASTER-TARGET PAIR: horizontally halfway from
-        // where the cast leaves the caster to the middle of the target's
-        // visible body, lifted SkyLift above whichever of the two stands
+        // where the cast leaves the caster to the target's torso point
+        // (TargetBody: the box centre when it authors none), lifted SkyLift above whichever of the two stands
         // taller, never above SkyCeiling.
         //
         // Halfway and not "over the target", because a strike called down
@@ -41,21 +41,21 @@ namespace PrincesPalace.Domain.Stage
         // its angle falls out of the stage rather than being authored.
         public static UiVec SkyPoint(UiVec casterPoint, float casterTop, StageBody target)
         {
-            var aim = target.Centre;
+            var aim = target.Torso;
             float x = (casterPoint.X + aim.X) * 0.5f;
             float y = Math.Min(Math.Max(casterTop, target.Top) + SkyLift, SkyCeiling);
             return new UiVec(x, y);
         }
 
         // THE POINT STRAIGHT ABOVE A TARGET, `heights` body-heights over its
-        // middle, for place: above. The column is the body's own, so a layer
+        // torso point, for place: above. The column is the body's own, so a layer
         // leaving it falls vertically. Held at SkyCeiling like the air point,
         // and never below the middle: against a body already at the ceiling
         // the fall is shorter, never upward. The fall's duration is authored
         // (travelSeconds), so a shorter drop reads as slower, not later.
         public static UiVec AbovePoint(StageBody target, float heights, float hangBoxHeight = -1f)
         {
-            var aim = target.Centre;
+            var aim = target.Torso;
             float ceiling = hangBoxHeight >= 0f ? StageTop - (0.5f - HangOverhang) * hangBoxHeight : SkyCeiling;
             float y = Math.Min(aim.Y + heights * target.Height, ceiling);
             return new UiVec(aim.X, Math.Max(y, aim.Y));

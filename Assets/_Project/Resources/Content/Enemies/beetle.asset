@@ -36,6 +36,8 @@ MonoBehaviour:
     HeadX: 0.77
     HeadY: 0.56
     HeadSize: 0.33
+    BodyX: 0.48
+    BodyY: 0.51
     Rollable: 1
     RallyAttackPercentPerStack: 0
     RallyMaxStacks: 0

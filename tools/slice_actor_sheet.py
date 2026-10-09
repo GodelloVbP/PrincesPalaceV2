@@ -22,13 +22,14 @@ every pose the actor has.
         --actor Enemies/beetle \\
         --stances idle,attack,turtle_up,shell_closed,hurt,defeated
 
-Head point (Enemies/ actors): the run ends by reading headX/headY/headSize
-from ContentData/enemies.json (the ONLY home of those numbers), drawing
-head_check.png (the idle still, a crosshair on the head, a box of headSize)
-beside the recipe, and exiting non-zero when the enemy has no head authored.
-The stances and recipe are written first, so for a new monster: slice, read
-the head off idle.png, author it in enemies.json, run again and look at
-head_check.png. `--no-head` is for a prop.
+Head and body point (Enemies/ actors): the run ends by reading
+headX/headY/headSize/bodyX/bodyY from ContentData/enemies.json (the ONLY home
+of those numbers), drawing head_check.png (the idle still, a crosshair on the
+head, a box of headSize, a green ring on the body) beside the recipe, and
+exiting non-zero when the enemy has either point unauthored. The stances and
+recipe are written first, so for a new monster: slice, read both points off
+idle.png, author them in enemies.json, run again and look at head_check.png.
+`--no-head` is for a prop.
 
 Optional:
     --recipe PATH            replay the recipe.json a previous run wrote --
@@ -811,9 +812,9 @@ def load_recipe(path):
 # The head point: enemies.json owns the numbers, this draws them
 # ---------------------------------------------------------------------------
 def head_check(actor_arg, out_root, no_head, enemies_path=head_overlay.ENEMIES_JSON):
-    """Draws head_check.png for an enemy and REFUSES an enemy with no head.
+    """Draws head_check.png for an enemy and REFUSES an enemy with no head or body point.
 
-    THE NUMBERS LIVE IN enemies.json ONLY (`headX`/`headY`/`headSize`); this
+    THE NUMBERS LIVE IN enemies.json ONLY (`headX`/`headY`/`headSize`/`bodyX`/`bodyY`); this
     reads them for the crosshair and never stores a second copy, so the
     picture can not drift from what the game reads. Run after the stances are
     on disk, which is why a first slice of a new monster exits non-zero with
@@ -821,7 +822,7 @@ def head_check(actor_arg, out_root, no_head, enemies_path=head_overlay.ENEMIES_J
     produced, then authored, then the same command is run again.
 
     `--no-head` is for actors with no head to point at (props), and is
-    recorded in the recipe. Characters are exempt: only enemies author a head.
+    recorded in the recipe. Characters are exempt: only enemies (and transform forms, in skills.json) author marks.
 
     The picture goes beside the recipe (Art/), not into Resources/, so it is
     never shipped or mistaken for a stance; with a scratch --out-root it goes
@@ -839,14 +840,15 @@ def head_check(actor_arg, out_root, no_head, enemies_path=head_overlay.ENEMIES_J
                if (e.get("spritePath") or "").strip() == label]
     if not matches:
         sys.exit(f"[{label}] HEAD POINT MISSING: no enemy in {enemies_path} has spritePath '{label}'. "
-                 "Add the enemy (with headX/headY/headSize), or pass --no-head if this actor is a prop.")
+                 "Add the enemy (with headX/headY/headSize/bodyX/bodyY), or pass --no-head if this actor is a prop.")
     entry = matches[0]
-    head = head_overlay.head_of(entry)
-    if head is None:
+    marks = head_overlay.marks_of(entry)
+    if marks is None:
         sys.exit(f"[{label}] HEAD POINT MISSING: enemy '{entry['id']}' in {enemies_path} has an unauthored "
-                 "headX/headY/headSize. Open the idle still, read the head centre off it as fractions of "
-                 "its opaque box (X from the left, Y from the bottom, size = head height over box height), "
-                 "write all three into enemies.json, and run this again to get head_check.png. "
+                 "headX/headY/headSize/bodyX/bodyY. Open the idle still, read the head centre and the torso "
+                 "centre off it as fractions of its opaque box (X from the left, Y from the bottom, "
+                 "size = head height over box height), write all five into enemies.json, and run this again "
+                 "to get head_check.png. "
                  "Pass --no-head only for a prop. The content build refuses the enemy until it is set.")
 
     out_dir, _ = parse_actor(actor_arg, out_root)
@@ -861,8 +863,9 @@ def head_check(actor_arg, out_root, no_head, enemies_path=head_overlay.ENEMIES_J
         proof_dir = out_dir
     os.makedirs(proof_dir, exist_ok=True)
     proof = os.path.join(proof_dir, "head_check.png")
-    head_overlay.draw_head_check(idle, head, entry["id"]).save(proof)
-    print(f"  head_check: {proof}  (head {head[0]}, {head[1]}, size {head[2]} from enemies.json)")
+    head_overlay.draw_head_check(idle, marks, entry["id"]).save(proof)
+    print(f"  head_check: {proof}  (head {marks[0]}, {marks[1]}, size {marks[2]}; "
+          f"body {marks[3]}, {marks[4]} from enemies.json)")
     return proof
 
 
@@ -1275,7 +1278,7 @@ def main():
     ap.add_argument("--prune", action="store_true")
     ap.add_argument("--no-head", action="store_true",
                     help="Skip the head-point check. For an actor with no head (a prop). Without it an "
-                         "Enemies/ actor whose enemies.json entry has no headX/headY/headSize is an error.")
+                         "Enemies/ actor whose enemies.json entry has no headX/headY/headSize/bodyX/bodyY is an error.")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 

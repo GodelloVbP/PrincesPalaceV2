@@ -31,12 +31,12 @@ debt), and a struck finding gets its number removed.
 - Map: #226, #254
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: #233
-- Dossier / Party / Talents / Reward track / Reckoning: #44, #88, #104, #141, #150, #178, #199, #214
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #123, #220, #255
 - Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
-- Tooling / tests / workflow: #94, #95, #96, #98, #103, #137, #164, #263, #269
+- Tooling / tests / workflow: #95, #96, #98, #103, #137, #164, #263, #269
 - Balance / economy: #37, #41, #82, #83, #85
 - Recorded decisions, not debt: #200, #201, #208, #215, #216, #217, #218
 
@@ -381,7 +381,7 @@ write-nothing-or-read-nothing pattern #50 already named for `SaveData.relicLoado
 write side when it lands) or was dropped (delete both, plus the `EncounterRoll` comment naming
 them) is a roadmap question, not something inferable from the code.
 
-### 88. `RewardTrackDefinition.UnlockedAmount` has no caller
+### ~~88. `RewardTrackDefinition.UnlockedAmount` has no caller~~ - stale 2026-10-09: has live callers
 
 `Domain/Progression/RewardTrackDefinition.cs:277-288`. The method's own comment states its
 purpose precisely — "`SquadTrack.SecondLivesLeft`'s 'how many charges has this squad earned'
@@ -447,7 +447,7 @@ duplicate `spritePath` is ever legitimately authored (two stances sharing art) i
 question this register can't answer from the code alone.
 
 ### ~~93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen~~ — fixed in `82385df6`, answered together with #118: the save carries the hole, and `PartySeatGapRoundTripTests` is un-`[Ignore]`d
-### 94. `unity_lock.ps1`'s `Certain`/`Ambiguous` fields have no reader, so a guess and a real hold look identical
+### ~~94. `unity_lock.ps1`'s `Certain`/`Ambiguous` fields have no reader, so a guess and a real hold look identical~~ - stale 2026-10-09: has live callers
 
 `tools/unity_lock.ps1:78-79` computes `Certain = $held` (a Unity.exe process actually matched to
 this project path) and `Ambiguous = ($ambiguous -and -not $held)` (a Unity.exe process whose command

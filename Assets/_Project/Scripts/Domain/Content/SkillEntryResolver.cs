@@ -1455,6 +1455,15 @@ namespace PrincesPalace.Domain.Content
                 if (!SpellLayerRules.TryCheck($"{label} transform.hit", hit.vfx, out error)) return false;
             }
 
+            // THE FORM'S OWN HEAD AND BODY, refused exactly as a drawn monster's
+            // are: a form with a sprite is a second actor on the same slot.
+            if (!ActorMarksRules.Check($"{label} transform", !string.IsNullOrWhiteSpace(raw.transform.spritePath),
+                    raw.transform.spritePath, raw.transform.headX, raw.transform.headY, raw.transform.headSize,
+                    raw.transform.bodyX, raw.transform.bodyY, out error))
+            {
+                return false;
+            }
+
             if (raw.transform.defenseToAttackPercent < 0 || raw.transform.defenseToAttackPercent > 100
                 || raw.transform.primaryDrainPerTurn < 0)
             {

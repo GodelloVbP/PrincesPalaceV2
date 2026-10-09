@@ -101,6 +101,11 @@ MonoBehaviour:
       temporaryHealthPercent: 25
       splashPercent: 50
       spritePath: Characters/sheep_black_ram
+      headX: 0.55
+      headY: 0.7
+      headSize: 0.42
+      bodyX: 0.58
+      bodyY: 0.4
       hit:
         vfx:
           path: 

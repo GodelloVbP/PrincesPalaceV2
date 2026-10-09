@@ -101,6 +101,11 @@ MonoBehaviour:
       temporaryHealthPercent: 0
       splashPercent: 0
       spritePath: Characters/bear_berserk
+      headX: 0.62
+      headY: 0.84
+      headSize: 0.33
+      bodyX: 0.59
+      bodyY: 0.46
       hit:
         vfx:
           path: 

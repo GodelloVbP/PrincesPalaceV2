@@ -1021,6 +1021,18 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- the transform ------------------------------------------------------
 
+        // THE HEAD AND BODY OF EVERY FORM DRAWN THIS FIGHT, by the folder it is
+        // drawn from. Keyed by folder because the stage knows a worn form only
+        // as a folder (CombatBeat.Forms records one, and the view's worn-form
+        // map holds one): marks belong to the drawing, so the folder is the
+        // key the view already has when it asks where a head is.
+        private readonly Dictionary<string, ActorMarks> _formMarks = new Dictionary<string, ActorMarks>();
+
+        // The marks of the form drawn from `folder`, or Unauthored when no
+        // form of this fight is drawn from it.
+        public ActorMarks FormMarksFor(string folder) =>
+            folder != null && _formMarks.TryGetValue(folder, out var marks) ? marks : ActorMarks.Unauthored;
+
         // Puts the caster under a Transform skill's grant, with Wrath's duration
         // bonus and Charge's party-wide shove folded in.
         private void EnterTransform(CombatantState actor, ResolvedSkill skill)
@@ -1054,6 +1066,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // Black Ram from the beat's first frame -- before the flash that is
             // supposed to hide the change. See CombatBeat.Forms.
             RecordForm(actor, transformation.SpritePath);
+            if (!string.IsNullOrWhiteSpace(transformation.SpritePath))
+            {
+                _formMarks[transformation.SpritePath] = grant.Marks;
+            }
 
             // Speed changed, so the SCHEDULER has to be told. Without this the
             // plate would show the bonus and the turn queue would ignore it -- a

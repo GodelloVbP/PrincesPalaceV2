@@ -651,18 +651,24 @@ delivery actually consists of now:
    `Resources/`. If the replay is not byte-identical, the actor is protected
    legacy rather than reproducible — register it in `hand_assembled.json`'s
    `actors` block and pin its bytes in `HandAssembledArtTests`.
-5. **The head point, required.** Read the head centre off `idle.png` as
-   fractions of its opaque box (X from the left as drawn, Y from the bottom,
-   `headSize` = head height over box height) and write `headX`/`headY`/
-   `headSize` into the monster's `enemies.json` entry. That file is their only
-   home: the slicer reads it and draws `head_check.png` (the idle still, a
-   crosshair on the head, a box of `headSize`) beside the recipe in `Art/`
+5. **The head point AND the body point, both required.** Read the head
+   centre and the torso centre off `idle.png` as fractions of its opaque box
+   (X from the left as drawn, Y from the bottom, `headSize` = head height over
+   box height) and write `headX`/`headY`/`headSize`/`bodyX`/`bodyY` into the
+   monster's `enemies.json` entry. The body point is the centre of the torso
+   region, not the box centre: it is where `target-centre`, `above`, `sky` and
+   the melee contact burst aim, and the box centre is wrong for a long-bodied
+   or tall-necked animal. That file is their only home: the slicer reads it
+   and draws `head_check.png` (the idle still, a crosshair on the head, a box
+   of `headSize`, a green ring on the body) beside the recipe in `Art/`
    (git-ignored). The slice of a new monster therefore exits non-zero with
-   the stances written until the head is authored; run it again and LOOK at
-   `head_check.png`. `--no-head` is for a prop. The content build refuses any
-   enemy with a `spritePath` and an unauthored head, so it cannot ship
-   without. `python tools/head_overlay.py --out <png>` draws every monster's
-   crosshair in one grid for batch review.
+   the stances written until both points are authored; run it again and LOOK
+   at `head_check.png`. `--no-head` is for a prop. The content build refuses
+   any enemy with a `spritePath` and an unauthored head or body, so it cannot
+   ship without. A transform form with its own `spritePath` carries the same
+   five fields in its skill's `transform` block, refused the same way.
+   `python tools/head_overlay.py --out <png>` draws every monster's and form's
+   marks in one grid for batch review.
 6. **`README.md` records the reasoning** — the accepted prompt, the Detail
    Inventory, the model and date, the accepted metrics, and a provenance line
    pointing at the recipe or the register. Plus, if the ground line is an
@@ -773,8 +779,8 @@ hits. Two axes — whose body, and where on it — flattened into one word:
 | --- | --- | --- |
 | `target` | on the target's ground line | bolts, impacts, eruptions — almost everything |
 | `caster` | on the caster's ground line | wind-ups, stomps, transformations |
-| `target-centre` | on the target's midpoint | rings, binds, status glints — art drawn around a body |
-| `target-head` | on the struck body's head point (`headX`/`headY` in `enemies.json`, mirrored with the sprite; allies read the fallback 0.5 / 0.8) | eyes, crowns, whispers: art that belongs on a head. Per target; `follow` rides it. |
+| `target-centre` | on the target's body point (`bodyX`/`bodyY` in `enemies.json`, mirrored with the sprite; allies read the box centre 0.5 / 0.5) | rings, binds, status glints — art drawn around a body |
+| `target-head` | on the struck body's head point (`headX`/`headY` in `enemies.json` or the worn form's `transform` block, mirrored with the sprite; allies read the fallback 0.5 / 0.8) | eyes, crowns, whispers: art that belongs on a head. Per target; `follow` rides it. |
 | `caster-centre` | on the caster's midpoint | self-buff auras, shield bubbles |
 | `travel` | flies caster → target, arriving at its ground line | a bolt that buries itself in the floor |
 | `travel-centre` | flies caster → target, arriving at its **middle** | anything thrown flat across the stage |

@@ -93,6 +93,8 @@ namespace PrincesPalace
                 var box = drawn.Value.Box;
                 local = TargetBody.SlotLocal(box.xMin, box.yMin, box.xMax, box.yMax,
                     drawn.Value.CanvasWidth, StanceManifestLoader.Manifest.GroundLineFor(folder), mirror);
+                var marks = MarksOf(who);
+                local = TargetBody.WithTorso(local, marks.BodyX, marks.BodyY, mirror < 0f);
             }
             else
             {
@@ -112,13 +114,18 @@ namespace PrincesPalace
             return StageFacing.MirrorScaleX(FacingOf(who), side) < 0f;
         }
 
-        // THE HEAD THIS COMBATANT AUTHORS (RawEnemyEntry.headX), -1 where it
-        // authors none: allies, and any enemy that has not been measured.
-        // TargetBody owns the fallback, so -1 passes straight through.
-        private (float X, float Y, float Size) HeadOf(CombatantState who)
+        // THE HEAD AND BODY OF THE DRAWING THIS COMBATANT IS SHOWING RIGHT NOW:
+        // the worn form's when one is on stage (the same _form map that picks
+        // the sprite folder, so the marks cannot disagree with the pixels), the
+        // monster's own otherwise. Unauthored for allies in their own skin and
+        // any actor not yet measured; TargetBody owns the fallbacks.
+        private ActorMarks MarksOf(CombatantState who)
         {
-            var enemy = who != null ? _session?.SourceFor(who)?.Source : null;
-            return enemy != null ? (enemy.HeadX, enemy.HeadY, enemy.HeadSize) : (-1f, -1f, -1f);
+            if (who == null || _session == null) return ActorMarks.Unauthored;
+            if (_form.TryGetValue(who, out var folder)) return _session.FormMarksFor(folder);
+
+            var enemy = _session.SourceFor(who)?.Source;
+            return enemy != null ? enemy.Marks : ActorMarks.Unauthored;
         }
 
         // Public for the PlayMode fixtures, for the reason every seam in this
@@ -527,7 +534,7 @@ namespace PrincesPalace
             float fit = 1f;
             if (body.HasValue && layer.Fit == SpellFit.Target) fit = TargetBody.FitFactor(body.Value);
             else if (body.HasValue && layer.Fit == SpellFit.Head)
-                fit = TargetBody.HeadFitFactor(body.Value, HeadOf(targetCombatant).Size);
+                fit = TargetBody.HeadFitFactor(body.Value, MarksOf(targetCombatant).HeadSize);
             instance.Fit = fit;
 
             var box = BoxForLayer(layer, fit);
@@ -559,8 +566,8 @@ namespace PrincesPalace
             }
             else if (layer.Place == SpellPlace.TargetHead)
             {
-                var head = HeadOf(targetCombatant);
-                var point = TargetBody.HeadPoint(body.Value, head.X, head.Y, MirroredOf(targetCombatant));
+                var head = MarksOf(targetCombatant);
+                var point = TargetBody.HeadPoint(body.Value, head.HeadX, head.HeadY, MirroredOf(targetCombatant));
                 aim = new Vector2(point.X, point.Y);
             }
             else if (layer.Place == SpellPlace.Above && !layer.Travels)
@@ -797,7 +804,7 @@ namespace PrincesPalace
             StageBody target)
         {
             var casterBody = casterRect != null ? BodyOf(caster, casterRect, parent) : target;
-            var middle = casterBody.Centre;
+            var middle = casterBody.Torso;
             var leaves = casterRect != null
                 ? CasterCastPoint(caster, casterRect, parent, new Vector2(middle.X, middle.Y))
                 : new Vector2(middle.X, middle.Y);
@@ -806,13 +813,15 @@ namespace PrincesPalace
             return new Vector2(point.X, point.Y);
         }
 
-        // THE POINT ON A STRUCK BODY an effect is aimed at: the middle of what
-        // is drawn when centred; standing, the same column on the slot's own
-        // ground line -- which is authored (StanceManifest groundLine) and
-        // outranks any measurement of where the lowest pixel happens to be.
+        // THE POINT ON A STRUCK BODY an effect is aimed at: its torso point
+        // (the authored bodyX/bodyY; the box centre when none) when centred;
+        // standing, the same column on the slot's own ground line -- which is
+        // authored (StanceManifest groundLine) and outranks any measurement of
+        // where the lowest pixel happens to be. The one home of "aim at the
+        // body": a melee blow's contact burst goes through it too.
         private static Vector2 AimAtBody(StageBody body, Transform parent, RectTransform slot, bool centred)
         {
-            var middle = body.Centre;
+            var middle = body.Torso;
             if (centred) return new Vector2(middle.X, middle.Y);
 
             float ground = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).y;
@@ -1163,13 +1172,14 @@ namespace PrincesPalace
             var contact = ContactPresentation(beat);
             var performance = SpellPerformance.Resolve(contact, 1, FrameCountOf);
 
-            // THE CONTENT CENTRE, not the ground line. A slash lands on the
-            // body; the standing/letterbox correction is for an effect drawn
-            // erupting from a floor, and neither of these sheets is. Both are
-            // generated with their impact at the exact centre of the frame
-            // (tools/make_contact_fx.py), so the aim point IS the box centre
-            // and there is no offset to cancel.
-            var aim = AimPoint(parent, targetRect, centred: true);
+            // THE TARGET'S TORSO, not the ground line and not the slot's canvas
+            // middle. A slash lands on the body; the standing/letterbox
+            // correction is for an effect drawn erupting from a floor, and
+            // neither of these sheets is. Both are generated with their impact
+            // at the exact centre of the frame (tools/make_contact_fx.py), so
+            // the aim point IS where the box goes and there is no offset to
+            // cancel. Same aim as an authored `target-centre` layer.
+            var aim = AimAtBody(BodyOf(beat.Target, targetRect, parent), parent, targetRect, centred: true);
             var box = ContactBoxFor(targetRect, AnimatorFor(beat.Target));
 
             // MIRRORED FOR A MONSTER: the arc is drawn sweeping left to right,

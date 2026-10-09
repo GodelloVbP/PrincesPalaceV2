@@ -377,7 +377,7 @@ class HeadPointTests(unittest.TestCase):
         return os.path.join(self.art_dir, "head_check.png")
 
     def test_an_authored_head_writes_head_check_with_a_crosshair(self):
-        self.write_enemies(headX=0.5, headY=0.5, headSize=0.3)
+        self.write_enemies(headX=0.5, headY=0.5, headSize=0.3, bodyX=0.5, bodyY=0.5)
         result = self.run_tool(self.argv)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         with Image.open(self.proof()) as img:
@@ -388,6 +388,35 @@ class HeadPointTests(unittest.TestCase):
         self.assertTrue(yellow, "no crosshair pixels in head_check.png")
         xs = [x for x, _ in yellow]
         self.assertAlmostEqual(0.5, (min(xs) + max(xs)) / 2 / pixels.width, delta=0.15)
+
+    def test_the_body_point_is_drawn_as_a_green_ring_where_bodyX_bodyY_say(self):
+        # Expected from the delivered idle.png's own opaque box (the slicer
+        # re-canvases, so the source blob's pixel coordinates do not survive).
+        self.write_enemies(headX=0.5, headY=0.9, headSize=0.2, bodyX=0.25, bodyY=0.25)
+        result = self.run_tool(self.argv)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        idle = os.path.join(self.root, "Assets", "_Project", "Resources", "Enemies", "testrat", "idle.png")
+        with Image.open(idle) as src:
+            left, top, right, bottom = src.convert("RGBA").getchannel("A").point(
+                lambda v: 255 if v > 5 else 0).getbbox()
+        want_x = left + 0.25 * (right - left)
+        want_y = bottom - 0.25 * (bottom - top)
+        with Image.open(self.proof()) as img:
+            pixels = img.convert("RGBA")
+            green = [(x, y) for x in range(pixels.width) for y in range(pixels.height)
+                     if pixels.getpixel((x, y)) == (60, 255, 90, 255)]
+        self.assertTrue(green, "no body ring pixels in head_check.png")
+        xs = [x for x, _ in green]
+        ys = [y for _, y in green]
+        self.assertAlmostEqual(want_x, (min(xs) + max(xs)) / 2, delta=1.5)
+        self.assertAlmostEqual(want_y, (min(ys) + max(ys)) / 2, delta=1.5)
+
+    def test_a_head_without_a_body_is_refused(self):
+        self.write_enemies(headX=0.5, headY=0.5, headSize=0.3)
+        result = self.run_tool(self.argv)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("HEAD POINT MISSING", result.stdout + result.stderr)
+        self.assertFalse(os.path.exists(self.proof()))
 
     def test_a_missing_head_is_a_loud_error_but_the_art_and_recipe_are_kept(self):
         self.write_enemies()

@@ -162,6 +162,58 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheBodyPointMovesTheTorsoOffTheBoxCentre()
+        {
+            // The rat body (0.53, 0.39): x 132.8304 + 0.53 x 279.3304 = 280.8755,
+            // y -218 + 0.39 x 192.888 = -142.7737. The box centre x is 272.4956.
+            var torso = TargetBody.WithTorso(RatOnStage, 0.53f, 0.39f, mirrored: false).Torso;
+            Assert.AreEqual(280.8755f, torso.X, Tolerance);
+            Assert.AreEqual(-142.7737f, torso.Y, Tolerance);
+            Assert.AreEqual(272.4956f, RatOnStage.Centre.X, Tolerance);
+        }
+
+        [Test]
+        public void AMirroredSpritesBodyIsMeasuredFromTheBoxsRightEdge()
+        {
+            // x 412.1608 - 0.53 x 279.3304 = 264.1157.
+            var torso = TargetBody.WithTorso(RatOnStage, 0.53f, 0.39f, mirrored: true).Torso;
+            Assert.AreEqual(264.1157f, torso.X, Tolerance);
+            Assert.AreEqual(-142.7737f, torso.Y, Tolerance);
+        }
+
+        [Test]
+        public void AnUnauthoredBodyReadsTheBoxCentre()
+        {
+            var torso = TargetBody.WithTorso(new StageBody(100f, 300f, 0f, 400f), -1f, -1f, mirrored: false).Torso;
+            Assert.AreEqual(200f, torso.X, Tolerance);
+            Assert.AreEqual(200f, torso.Y, Tolerance);
+        }
+
+        [Test]
+        public void TheTorsoSurvivesTheMoveOntoTheStage()
+        {
+            // Local box -100..100 x 0..200, body (0.75, 0.25) = (50, 50); at scale 2
+            // about origin (10, 20): (110, 120).
+            var local = TargetBody.WithTorso(new StageBody(-100f, 100f, 0f, 200f), 0.75f, 0.25f, mirrored: false);
+            var torso = TargetBody.OnStage(local, 2f, new UiVec(10f, 20f)).Torso;
+            Assert.AreEqual(110f, torso.X, Tolerance);
+            Assert.AreEqual(120f, torso.Y, Tolerance);
+        }
+
+        [Test]
+        public void TheSkyAndAbovePointsAimAtTheTorsoNotTheBoxCentre()
+        {
+            // Box 0..200 x 0..400, body (0.5, 0.25) = (100, 100). AbovePoint with
+            // 0 heights is the aim itself; SkyPoint halves x between caster 0 and aim 100.
+            var body = TargetBody.WithTorso(new StageBody(0f, 200f, 0f, 400f), 0.5f, 0.25f, mirrored: false);
+            var above = SpellFlight.AbovePoint(body, 0f);
+            Assert.AreEqual(100f, above.X, Tolerance);
+            Assert.AreEqual(100f, above.Y, Tolerance);
+            var sky = SpellFlight.SkyPoint(new UiVec(0f, 0f), 0f, body);
+            Assert.AreEqual(50f, sky.X, Tolerance);
+        }
+
+        [Test]
         public void AnUnauthoredHeadReadsTheFallbackPoint()
         {
             // Box 100..300 x 0..400: x 100 + 0.5 x 200 = 200, y 0.8 x 400 = 320.

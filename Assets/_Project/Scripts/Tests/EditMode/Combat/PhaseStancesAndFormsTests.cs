@@ -206,6 +206,55 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreSame(running, holder.Transformation);
         }
 
+        [TestCase("headX")]
+        [TestCase("headY")]
+        [TestCase("headSize")]
+        [TestCase("bodyX")]
+        [TestCase("bodyY")]
+        public void Refuses_ADrawnFormWithAnUnauthoredMark_NamingItAndTheSlicerStep(string field)
+        {
+            var raw = TransformEntry("Characters/owl");
+            switch (field)
+            {
+                case "headX": raw.transform.headX = -1f; break;
+                case "headY": raw.transform.headY = -1f; break;
+                case "headSize": raw.transform.headSize = -1f; break;
+                case "bodyX": raw.transform.bodyX = -1f; break;
+                default: raw.transform.bodyY = -1f; break;
+            }
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { raw }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            string joined = string.Join(" | ", errors);
+            StringAssert.Contains("skill 'become' transform", joined);
+            StringAssert.Contains(field + " unauthored", joined);
+            StringAssert.Contains("slice_actor_sheet.py", joined);
+        }
+
+        [Test]
+        public void AFormWithNoSpriteNeedsNoMarks()
+        {
+            Assert.IsNotNull(Resolve(TransformEntry("")).Transform);
+        }
+
+        [Test]
+        public void TheFormsOwnMarksAreWhatTheSessionAnswersForItsFolder()
+        {
+            var (session, hero, _) = Fight();
+            Assert.AreEqual(-1f, session.FormMarksFor("Characters/owl").HeadX, "no form worn yet");
+
+            Assert.IsTrue(session.CastSkill(Resolve(TransformEntry("Characters/owl")), hero));
+
+            var marks = session.FormMarksFor("Characters/owl");
+            Assert.AreEqual(0.55f, marks.HeadX);
+            Assert.AreEqual(0.7f, marks.HeadY);
+            Assert.AreEqual(0.42f, marks.HeadSize);
+            Assert.AreEqual(0.58f, marks.BodyX);
+            Assert.AreEqual(0.4f, marks.BodyY);
+            Assert.AreEqual(-1f, session.FormMarksFor("Characters/other").HeadX);
+        }
+
         [Test]
         public void ATransformThatNamesNoFolderKeepsItsOwnArt()
         {
@@ -486,6 +535,12 @@ namespace PrincesPalace.Domain.Tests
                     turns = 3,
                     attackPercent = 50,
                     spritePath = spritePath,
+                    // A drawn form must say where its head and body are.
+                    headX = spritePath.Length > 0 ? 0.55f : -1f,
+                    headY = spritePath.Length > 0 ? 0.7f : -1f,
+                    headSize = spritePath.Length > 0 ? 0.42f : -1f,
+                    bodyX = spritePath.Length > 0 ? 0.58f : -1f,
+                    bodyY = spritePath.Length > 0 ? 0.4f : -1f,
                 },
             };
 

@@ -96,6 +96,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `headX` | float | `-1` | Head centre X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.5. |  |
 | `headY` | float | `-1` | Head centre Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.8. |  |
 | `headSize` | float | `-1` | Head height over the idle drawing's opaque height (above 0, at most 1). Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.3. |  |
+| `bodyX` | float | `-1` | Body (torso aim point) X as a fraction (0..1) of the idle drawing's opaque box, from its left edge as drawn. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.5. |  |
+| `bodyY` | float | `-1` | Body (torso aim point) Y as a fraction (0..1) of the idle drawing's opaque box, from its bottom edge. Required when spritePath is set; -1 (placeholder with no sprite only) reads as 0.5. |  |
 | `slotSpan` | int | `0` | How many of the stage's positions this monster occupies; 0 means unset and reads as 1. |  |
 | `rollable` | bool | `true` | Whether room fights may roll this monster; false keeps it out of the room pool while an event fight can still name it. Distinct from active, which builds no asset at all. |  |
 | `rallyPerRound` | RawEnemyRally (below) | (zero -- see RawEnemyRally) | An attack stack this monster gains as each round starts, for the rest of the fight; see RawEnemyRally. Omitted or all zero means none. |  |

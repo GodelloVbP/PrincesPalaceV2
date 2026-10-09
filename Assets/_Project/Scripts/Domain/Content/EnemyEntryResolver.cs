@@ -302,7 +302,7 @@ namespace PrincesPalace.Domain.Content
 
             // -1 IS THE ONLY UNAUTHORED VALUE; anything else is a fraction of
             // the opaque box and a typo outside 0..1 would put a layer off
-            // the body with nothing saying why.
+            // the body with nothing saying why. Head and body together.
             if (!TryCheckHead(label, raw, out error)) return false;
 
             // BOTH OR NEITHER. Half a rally is a stack that adds nothing or a
@@ -359,6 +359,8 @@ namespace PrincesPalace.Domain.Content
                 HeadX = raw.headX,
                 HeadY = raw.headY,
                 HeadSize = raw.headSize,
+                BodyX = raw.bodyX,
+                BodyY = raw.bodyY,
                 RallyAttackPercentPerStack = rally.attackPercentPerStack,
                 RallyMaxStacks = rally.maxStacks,
                 AttackCrits = raw.attackCrits,
@@ -372,46 +374,9 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryCheckHead(string label, RawEnemyEntry raw, out string error)
-        {
-            error = null;
-            if (raw.headX != -1f && (raw.headX < 0f || raw.headX > 1f))
-            {
-                error = $"{label}: headX {raw.headX} must be -1 (unauthored) or between 0 and 1.";
-            }
-            else if (raw.headY != -1f && (raw.headY < 0f || raw.headY > 1f))
-            {
-                error = $"{label}: headY {raw.headY} must be -1 (unauthored) or between 0 and 1.";
-            }
-            else if (raw.headSize != -1f && (raw.headSize <= 0f || raw.headSize > 1f))
-            {
-                error = $"{label}: headSize {raw.headSize} must be -1 (unauthored) or above 0 and at most 1.";
-            }
-
-            if (error != null) return false;
-
-            // A DRAWN MONSTER MUST SAY WHERE ITS HEAD IS. The fallback
-            // (0.5 / 0.8 / 0.3) is only there for a placeholder with no
-            // sprite; on a real drawing it puts a crown or a whisper on the
-            // shoulder and nothing in the build says so. All three or the
-            // build stops -- partial authoring is the same mistake.
-            bool drawn = !string.IsNullOrWhiteSpace(raw.spritePath);
-            if (drawn && (raw.headX == -1f || raw.headY == -1f || raw.headSize == -1f))
-            {
-                var missing = new List<string>();
-                if (raw.headX == -1f) missing.Add("headX");
-                if (raw.headY == -1f) missing.Add("headY");
-                if (raw.headSize == -1f) missing.Add("headSize");
-                error = $"{label}: has a spritePath ('{raw.spritePath.Trim()}') but {string.Join(", ", missing)} " +
-                        "unauthored. Every drawn monster needs its head point: read the head centre off its idle.png as " +
-                        "fractions of the opaque box, write headX/headY/headSize into enemies.json, then run " +
-                        "tools/slice_actor_sheet.py (its --recipe replay) and check head_check.png " +
-                        "(docs/ART_PIPELINE.md 5a, step 5).";
-                return false;
-            }
-
-            return true;
-        }
+        private static bool TryCheckHead(string label, RawEnemyEntry raw, out string error) =>
+            ActorMarksRules.Check(label, !string.IsNullOrWhiteSpace(raw.spritePath), raw.spritePath,
+                raw.headX, raw.headY, raw.headSize, raw.bodyX, raw.bodyY, out error);
 
         // THE SCHEDULE (PLAN_BELLWETHER_KIT 3.7), refused wherever it would be
         // read by nothing or read two ways. A skill id must also be in

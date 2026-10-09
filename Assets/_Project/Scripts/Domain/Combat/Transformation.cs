@@ -117,6 +117,20 @@ namespace PrincesPalace.Domain.Combat
         // FightController.WearForm), the house posture everywhere else.
         public string spritePath = "";
 
+        // WHERE THE FORM'S HEAD AND BODY ARE on its own idle drawing, the same
+        // five fractions and the same -1 = unauthored rule as the monster's
+        // (RawEnemyEntry.headX; ActorMarks has the convention). Required when
+        // spritePath is set: the form is a different drawing with a different
+        // opaque box, so the base's values would land a spell on the wrong
+        // spot. Ignored with no spritePath, where the holder keeps their art.
+        public float headX = -1f;
+        public float headY = -1f;
+        public float headSize = -1f;
+        public float bodyX = -1f;
+        public float bodyY = -1f;
+
+        public ActorMarks Marks => new ActorMarks(headX, headY, headSize, bodyX, bodyY);
+
         // HOW THE HOLDER'S BLOWS LAND WHILE THIS RUNS -- see TransformHitCue.
         // Never null, so a grant that authors nothing still answers
         // IsAuthored rather than needing a guard at every read.

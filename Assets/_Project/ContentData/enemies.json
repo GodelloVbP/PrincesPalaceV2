@@ -1,5 +1,5 @@
 {
-  "_readme": "Every monster in the game. Edit this file, then run Prince's Palace > Build Default Content in the Unity Editor to regenerate. Only id, displayName, and maxHealth are required — everything else auto-derives a reasonable default if left out (see EnemyEntryResolver.cs for the exact formulas). An attack matching any listed weakness deals +50% damage; one matching any listed resistance deals -50%. Matching several weaknesses at once is impossible (an attack carries one type), so listing more elements widens what hurts a monster rather than deepening it, and no element may appear in both lists. minFloor is a MINIMUM, not a band — a floor-5 room still rolls rats, and the difficulty curve is what keeps it dangerous there; see RawEnemyEntry.minFloor's own comment for the room-length measurements that motivated banding the pool at all. Set isBoss to true only for monsters that should appear exclusively in the dungeon's final room; a boss room draws from every boss whose minFloor it has reached, so which bosses a depth can field is decided entirely by this list — there is no separate per-biome boss table. headX, headY and headSize place the head on the idle drawing's opaque box (fractions: X from the left as drawn, Y from the bottom, size = head height over body height). All three are REQUIRED on any monster with a spritePath and the content build refuses it without them (a placeholder with no sprite may omit them and reads as 0.5, 0.8, 0.3); the slicer's head_check.png (docs/ART_PIPELINE.md 5a) proves them. They serve spell layers placed target-head or fit head. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_readme": "Every monster in the game. Edit this file, then run Prince's Palace > Build Default Content in the Unity Editor to regenerate. Only id, displayName, and maxHealth are required — everything else auto-derives a reasonable default if left out (see EnemyEntryResolver.cs for the exact formulas). An attack matching any listed weakness deals +50% damage; one matching any listed resistance deals -50%. Matching several weaknesses at once is impossible (an attack carries one type), so listing more elements widens what hurts a monster rather than deepening it, and no element may appear in both lists. minFloor is a MINIMUM, not a band — a floor-5 room still rolls rats, and the difficulty curve is what keeps it dangerous there; see RawEnemyEntry.minFloor's own comment for the room-length measurements that motivated banding the pool at all. Set isBoss to true only for monsters that should appear exclusively in the dungeon's final room; a boss room draws from every boss whose minFloor it has reached, so which bosses a depth can field is decided entirely by this list — there is no separate per-biome boss table. headX, headY and headSize place the head, and bodyX and bodyY the torso aim point, on the idle drawing's opaque box (fractions: X from the left as drawn, Y from the bottom, size = head height over body height). All five are REQUIRED on any monster with a spritePath and the content build refuses it without them (a placeholder with no sprite may omit them and reads as head 0.5, 0.8, 0.3 and body 0.5, 0.5); the slicer's head_check.png (docs/ART_PIPELINE.md 5a) proves them. The head serves spell layers placed target-head or fit head; the body is where target-centre, above, sky and the melee contact burst aim. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
   "enemies": [
     {
       "id": "rat",
@@ -19,6 +19,8 @@
       "headX": 0.83,
       "headY": 0.75,
       "headSize": 0.41,
+      "bodyX": 0.53,
+      "bodyY": 0.39,
       "avoidsFrontSlot": true,
       "appliesStatus": "Poison",
       "statusMagnitude": 8,
@@ -71,6 +73,8 @@
       "headX": 0.66,
       "headY": 0.83,
       "headSize": 0.27,
+      "bodyX": 0.48,
+      "bodyY": 0.47,
       "active": true,
       "abilities": [
         {
@@ -114,6 +118,8 @@
       "headX": 0.61,
       "headY": 0.69,
       "headSize": 0.41,
+      "bodyX": 0.47,
+      "bodyY": 0.41,
       "active": true,
       "abilities": [
         {
@@ -236,6 +242,8 @@
       "headX": 0.77,
       "headY": 0.56,
       "headSize": 0.33,
+      "bodyX": 0.48,
+      "bodyY": 0.51,
       "facing": "right",
       "attackApproach": "charge",
       "active": true,
@@ -269,6 +277,8 @@
       "headX": 0.59,
       "headY": 0.61,
       "headSize": 0.28,
+      "bodyX": 0.47,
+      "bodyY": 0.44,
       "facing": "right",
       "active": true,
       "abilities": [
@@ -321,6 +331,8 @@
       "headX": 0.83,
       "headY": 0.65,
       "headSize": 0.3,
+      "bodyX": 0.47,
+      "bodyY": 0.41,
       "stageScale": 1.5,
       "active": true,
       "abilities": [
@@ -357,6 +369,8 @@
       "headX": 0.8,
       "headY": 0.87,
       "headSize": 0.22,
+      "bodyX": 0.37,
+      "bodyY": 0.52,
       "active": true,
       "rollable": false,
       "rallyPerRound": {

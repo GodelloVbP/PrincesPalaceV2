@@ -629,15 +629,18 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains(field, string.Join(" | ", errors));
         }
 
-        [TestCase(-1f, 0.5f, 0.3f, "headX")]
-        [TestCase(0.5f, -1f, 0.3f, "headY")]
-        [TestCase(0.5f, 0.5f, -1f, "headSize")]
-        [TestCase(-1f, -1f, -1f, "headX, headY, headSize")]
-        public void Refuses_ADrawnMonsterWithAnUnauthoredHead_NamingItAndTheSlicerStep(float x, float y, float size, string missing)
+        [TestCase(-1f, 0.5f, 0.3f, 0.5f, 0.5f, "headX")]
+        [TestCase(0.5f, -1f, 0.3f, 0.5f, 0.5f, "headY")]
+        [TestCase(0.5f, 0.5f, -1f, 0.5f, 0.5f, "headSize")]
+        [TestCase(0.5f, 0.5f, 0.3f, -1f, 0.5f, "bodyX")]
+        [TestCase(0.5f, 0.5f, 0.3f, 0.5f, -1f, "bodyY")]
+        [TestCase(-1f, -1f, -1f, -1f, -1f, "headX, headY, headSize, bodyX, bodyY")]
+        public void Refuses_ADrawnMonsterWithAnUnauthoredHeadOrBody_NamingItAndTheSlicerStep(
+            float x, float y, float size, float bx, float by, string missing)
         {
             var raw = Minimal("drawn");
             raw.spritePath = "Enemies/drawn";
-            raw.headX = x; raw.headY = y; raw.headSize = size;
+            raw.headX = x; raw.headY = y; raw.headSize = size; raw.bodyX = bx; raw.bodyY = by;
 
             bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { raw }, out _, out var errors);
 
@@ -653,13 +656,42 @@ namespace PrincesPalace.Domain.Tests
         {
             var drawn = Minimal("drawn");
             drawn.spritePath = "Enemies/drawn";
-            drawn.headX = 0.5f; drawn.headY = 0.8f; drawn.headSize = 0.3f;
+            drawn.headX = 0.5f; drawn.headY = 0.8f; drawn.headSize = 0.3f; drawn.bodyX = 0.47f; drawn.bodyY = 0.41f;
             var placeholder = Minimal("placeholder");
             placeholder.spritePath = "   ";
 
             bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { drawn, placeholder }, out _, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+        }
+
+        [Test]
+        public void AnAuthoredBodyIsCarried_AndAnUnauthoredOneResolvesAsMinusOne()
+        {
+            var plain = Minimal("plain");
+            var bodied = Minimal("bodied");
+            bodied.bodyX = 0.53f; bodied.bodyY = 0.39f;
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { plain, bodied }, out var resolved, out _);
+
+            Assert.IsTrue(ok);
+            Assert.AreEqual(-1f, resolved[0].BodyX);
+            Assert.AreEqual(-1f, resolved[0].BodyY);
+            Assert.AreEqual(0.53f, resolved[1].BodyX);
+            Assert.AreEqual(0.39f, resolved[1].BodyY);
+        }
+
+        [TestCase(1.2f, 0.5f, "bodyX")]
+        [TestCase(0.5f, -0.5f, "bodyY")]
+        public void Refuses_ABodyOutsideTheBox(float x, float y, string field)
+        {
+            var raw = Minimal("odd");
+            raw.bodyX = x; raw.bodyY = y;
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { raw }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains(field, string.Join(" | ", errors));
         }
     }
 }

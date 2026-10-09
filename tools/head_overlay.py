@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-"""Head points, drawn: one crosshair per monster, on its idle still.
+"""Head and body points, drawn: one proof per monster, on its idle still.
 
     python tools/head_overlay.py --out scratch/heads.png
 
-Draws every enemy in enemies.json that has a spritePath as a grid cell: its
-idle still, a crosshair on the head point and a box of headSize, and its id.
-For batch review of hundreds of monsters, and for the one-off look at a new
-one (`slice_actor_sheet.py` writes the same picture per actor as
-head_check.png through `draw_head_check` below).
+Draws every enemy in enemies.json that has a spritePath, and every transform
+form in skills.json that has one, as a grid cell: its idle still, a yellow
+crosshair on the head point with a red box of headSize, a green ring on the
+body point, and its id. For batch review of hundreds of monsters, and for the
+one-off look at a new one (`slice_actor_sheet.py` writes the same picture per
+actor as head_check.png through `draw_head_check` below).
 
-ENEMIES.JSON IS THE ONLY HOME of headX/headY/headSize; nothing here or in the
-slicer stores a second copy. The fractions are of the idle drawing's OPAQUE
-box (alpha above the stage's 0.02 floor, the same box Core measures), X from
-its left edge as drawn, Y from its bottom edge, size = head height over box
-height. A placeholder with no spritePath has no drawing and is skipped.
+ENEMIES.JSON (and a skill's `transform` block, for a form) IS THE ONLY HOME of
+headX/headY/headSize/bodyX/bodyY; nothing here or in the slicer stores a
+second copy. The fractions are of the idle drawing's OPAQUE box (alpha above
+the stage's 0.02 floor, the same box Core measures), X from its left edge as
+drawn, Y from its bottom edge, size = head height over box height. The body
+point is the torso aim point body-aimed effects land on. A placeholder with no
+spritePath has no drawing and is skipped.
 """
 
 import argparse
@@ -27,10 +30,11 @@ except ImportError:
     sys.exit("Pillow is required: pip install Pillow")
 
 ENEMIES_JSON = "Assets/_Project/ContentData/enemies.json"
+SKILLS_JSON = "Assets/_Project/ContentData/skills.json"
 RESOURCES = "Assets/_Project/Resources"
 # FightController.StageVisuals.AlphaFloorByte: a pixel counts when alpha is above this.
 ALPHA_FLOOR = 5
-HEAD_KEYS = ("headX", "headY", "headSize")
+MARK_KEYS = ("headX", "headY", "headSize", "bodyX", "bodyY")
 
 
 def load_enemies(path=ENEMIES_JSON):
@@ -38,9 +42,22 @@ def load_enemies(path=ENEMIES_JSON):
         return json.load(handle).get("enemies", [])
 
 
-def head_of(entry):
-    """(x, y, size) or None when any of the three is unauthored (-1/absent)."""
-    values = [entry.get(key, -1) for key in HEAD_KEYS]
+def load_forms(path=SKILLS_JSON):
+    """Every transform form that has its own sprite, shaped like an enemy
+    entry: id, spritePath and the five mark keys read off the `transform` block."""
+    with open(path, encoding="utf-8") as handle:
+        skills = json.load(handle).get("skills", [])
+    forms = []
+    for skill in skills:
+        block = skill.get("transform") or {}
+        if (block.get("spritePath") or "").strip():
+            forms.append(dict(block, id=f"{skill.get('id')} (form)"))
+    return forms
+
+
+def marks_of(entry):
+    """(headX, headY, headSize, bodyX, bodyY) or None when any is unauthored (-1/absent)."""
+    values = [entry.get(key, -1) for key in MARK_KEYS]
     return None if any(v is None or v < 0 for v in values) else tuple(values)
 
 
@@ -50,9 +67,10 @@ def opaque_box(image):
     return alpha.point(lambda v: 255 if v > ALPHA_FLOOR else 0).getbbox()
 
 
-def draw_head_check(idle_path, head, label=None):
-    """The idle still with a crosshair at `head` (x, y, size) and a box of
-    headSize, as an RGBA image. Raises ValueError when the still is empty."""
+def draw_head_check(idle_path, marks, label=None):
+    """The idle still with a crosshair at the head, a box of headSize and a
+    ring at the body, as an RGBA image. `marks` is marks_of()'s tuple. Raises
+    ValueError when the still is empty."""
     with Image.open(idle_path) as src:
         image = src.convert("RGBA")
     box = opaque_box(image)
@@ -60,7 +78,7 @@ def draw_head_check(idle_path, head, label=None):
         raise ValueError(f"{idle_path} has no opaque pixels")
     left, top, right, bottom = box
     width, height = right - left, bottom - top
-    hx, hy, size = head
+    hx, hy, size, bx, by = marks
     cx = left + hx * width
     cy = bottom - hy * height
     half = size * height / 2.0
@@ -73,6 +91,10 @@ def draw_head_check(idle_path, head, label=None):
     arm = max(8, half)
     draw.line((cx - arm, cy, cx + arm, cy), fill=(255, 255, 0, 255), width=2)
     draw.line((cx, cy - arm, cx, cy + arm), fill=(255, 255, 0, 255), width=2)
+    body_x = left + bx * width
+    body_y = bottom - by * height
+    ring = max(6, size * height / 3.0)
+    draw.ellipse((body_x - ring, body_y - ring, body_x + ring, body_y + ring), outline=(60, 255, 90, 255), width=3)
     if label:
         draw.text((4, 4), label, fill=(255, 255, 255, 255))
     return backdrop
@@ -86,27 +108,28 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", required=True, help="PNG to write.")
     ap.add_argument("--enemies", default=ENEMIES_JSON)
+    ap.add_argument("--skills", default=SKILLS_JSON)
     ap.add_argument("--resources", default=RESOURCES)
     ap.add_argument("--columns", type=int, default=4)
     ap.add_argument("--cell", type=int, default=360, help="Cell height in px.")
     args = ap.parse_args()
 
     cells, problems = [], []
-    for entry in load_enemies(args.enemies):
+    for entry in load_enemies(args.enemies) + load_forms(args.skills):
         if not (entry.get("spritePath") or "").strip():
             continue
-        head = head_of(entry)
-        if head is None:
-            problems.append(f"{entry['id']}: head unauthored")
+        marks = marks_of(entry)
+        if marks is None:
+            problems.append(f"{entry['id']}: head/body unauthored")
             continue
         path = idle_path_of(entry, args.resources)
         if not os.path.isfile(path):
             problems.append(f"{entry['id']}: no idle still at {path}")
             continue
-        cells.append(draw_head_check(path, head, entry["id"]))
+        cells.append(draw_head_check(path, marks, entry["id"]))
 
     if not cells:
-        sys.exit("no drawn enemies with a head point to show" + (": " + "; ".join(problems) if problems else ""))
+        sys.exit("no drawn enemies or forms with head and body points to show" + (": " + "; ".join(problems) if problems else ""))
 
     scaled = []
     for img in cells:
@@ -122,7 +145,7 @@ def main():
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     sheet.save(args.out)
-    print(f"wrote {args.out} ({len(cells)} enemies)")
+    print(f"wrote {args.out} ({len(cells)} enemies and forms)")
     for problem in problems:
         print(f"  SKIPPED {problem}")
     if problems:

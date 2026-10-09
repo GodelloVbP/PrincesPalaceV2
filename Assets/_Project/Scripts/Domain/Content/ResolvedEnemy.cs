@@ -99,6 +99,13 @@ namespace PrincesPalace.Domain.Content
         public float HeadY = -1f;
         public float HeadSize = -1f;
 
+        // See RawEnemyEntry.bodyX. -1 is unauthored; read through
+        // TargetBody.BodyOr, which owns the fallback.
+        public float BodyX = -1f;
+        public float BodyY = -1f;
+
+        public ActorMarks Marks => new ActorMarks(HeadX, HeadY, HeadSize, BodyX, BodyY);
+
         // See RawEnemyEntry.rollable. The initializer is load-bearing: an
         // asset built before this field existed reads TRUE, so no shipped
         // monster silently leaves the room pool.
