@@ -15,7 +15,7 @@
     {
       "id": "magical_shield",
       "displayName": "Magical Shield",
-      "description": "After you cast a spell, gain a 20-point **ward** that lasts the rest of the fight.",
+      "description": "After you cast a spell, gain a 20-point **ward** for 1 turn.",
       "effects": [
         { "type": "MagicalShield", "magnitude": 20 }
       ],
