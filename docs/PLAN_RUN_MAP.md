@@ -1,12 +1,13 @@
 # Plan — the run map: "the map builds the boss"
 
-Status: revision 4, ready to execute P0–P3. P4 waits on owner decisions §9.1–2
+Status: revision 5, ready to execute P0–P3. P4 waits on owner decisions §9.1–2
 and P7 on §9.3. Rev 1 was reviewed twice (one reviewer with repo context, one
 blind) and checked against acclaimed games (§10). Revs 2–3 applied the
 owner's feedback. Rev 3 was reviewed by two Sonnet 5.5 reviewers, one with
 repo context checked against `main` at `1914a617` and one blind
 (`docs/handoffs/run_map/REVIEW_*.md`). Rev 4 applies those findings and the
-owner's answers (§11). Citations are to `main` at `1914a617`. Owner rules
+owner's answers (§11). Rev 5 applies the item redesign's amendments
+(`PLAN_ITEMS.md` §5, §11). Citations are to `main` at `1914a617`. Owner rules
 this plan answers to: `DIRECTION_BIBLE.md` §5–7 and
 `RUN_MAP_DECISION_SPEC.md` §2–3. It supersedes `RUN_MAP_ART_BRIEF.md` (§7).
 
@@ -98,9 +99,9 @@ route), not in the picture, so it needs explicit sign-off against that line
   - gold, scaled by strength;
   - a consumable, by count. This is a new payout path:
     `VictoryRewards.RollConsumableDrops` has no live caller today.
-  - Item and spell book are reserved enum values with weight 0. They wait on
-    the owner's item-system redesign, which decides what they pay and how
-    they meet today's item offer and spell drop.
+  - `Item` (shown as "Gear"), `Book` and `Relic` are enum values at weight 0
+    until item phase I3. What each pays, and how a chip meets the item offer
+    and spell drop, lives in `PLAN_ITEMS.md` §1.1 and §1.2.
 - **Strength multipliers:** one literal table per kind, set on the P0 EV sheet,
   steep (each pip worth more than the last).
 
@@ -188,7 +189,11 @@ designed. So the generator takes its shape from a **`RealmProfile`**:
 
 - **Fields:** pocket count, pocket length range, fork count, anchor count,
   shop chance, waypoint weights (fight / event / treasure / rest / cache),
-  prize-kind weights, boss pool, and `restBeforeBoss`.
+  prize-kind weights, anchor prize-kind weights, boss pool, and
+  `restBeforeBoss`.
+- **`anchorPrizeWeights`** is a `{kind, weight}` list like `prizeWeights`. The
+  default is all weight 0: an anchor pays exp and gold only until item phase
+  I3 sets it (`PLAN_ITEMS.md` §1.1).
 - **Designed realms** author their own profile later, as content (P8).
 - **The generator reads no content.** The profile is resolved once when the
   realm opens (`StartRun`, `AdvanceLeg`), from the default table or (after
@@ -285,7 +290,9 @@ the heart. P1 adds the roll; P2 wires it.
   with it.
 - **Rewards:** an anchor pays its elite exp and gold, plus its prize chip, only
   if it dies, on the map or at the heart. Anchors that leave with the boss
-  pay nothing (`FightSession.Outcome.cs:132` pays only the dead).
+  pay nothing (`FightSession.Outcome.cs:132` pays only the dead). Chips of
+  anchors that die at the heart join the boss settlement in map order, before
+  pages merge (`PLAN_ITEMS.md` §1.2).
 - **Tuning:** an anchor joins the boss fight at a fraction of its HP, a literal
   set by the bot (P5). Not shown to the player.
 - **Boss choice:** from the profile's boss pool, written once at realm open
@@ -359,12 +366,12 @@ only through `Domain/UiKit/Screens/MapScreen.cs` and `ScreenRegistry.cs`.
 
 | # | Work | Owner | Gate |
 |---|---|---|---|
-| P0 | EV sheet: `T1`/`T2` for the 40/40/20 mix; strength multipliers per prize kind; pocket value at full HP and 40% HP; skip-heal value; detour exp/gold at floors 1, 10 and 100. Art brief v2. Storyboards redrawn for rev 4, only if the owner asks. | orchestrator | the owner reads the sheet |
+| P0 | EV sheet: `T1`/`T2` for the 40/40/20 mix; strength multipliers per prize kind (gold-chip multipliers and detour gold set against the realm gold target, `PLAN_ITEMS.md` §1.6, and redone once item phase I5 sets `GoldIncomePermille`); pocket value at full HP and 40% HP; skip-heal value; detour exp/gold at floors 1, 10 and 100. Art brief v2. Storyboards redrawn for rev 4, only if the owner asks. | orchestrator | the owner reads the sheet |
 | P1 | `RealmProfile` and the default table, `RealmMap`, `RealmLayout` (orientation constant), `RealmMapRules`, the anchor roll in `EncounterRoll`, and the fuzz test. All pure Domain. | implementer | `tools/test.ps1 run`, then `run_tests_parallel.ps1 -Changed` |
-| P2 | Integration: profile resolved and saved at realm open; step assignment and `roomsWalked`; the skip heal in `RunManager.MoveTo`; strength computed and saved at realm open; the preview on the Fight stream (§5); the consumable and gold prize payout; `restBeforeBoss` and the `_map` cache key (`RunManager.cs:126-127`); debug jump (`DebugMenuController.JumpToBoss`); `MapNodePreview` and `RunEncounter.Preview` moved off `Depth`; SaveData v8→v9 (below); a column projection so the current screen stays playable (below); rewrite every test referencing `DescentMap`, `DescentNode`, `GenerateLegFor`, `ForcedTypeAt` or `Depth` (about 30 files, found by Grep, including the `Journey*` PlayMode set); update `CODE_MAP.md` and `ARCHITECTURE.md`. | senior, `Escalation: architecture` (replaces the map, step and save contracts) | `run_tests_parallel.ps1 -Changed -BuildScenes` |
-| P3 | Bot: `MapView` on `RunView` (route to the heart, pockets, anchors, strength, prizes) and path-aware choices in the four policies (`IRunPolicy.cs:19`). | implementer, then verifier | `-Changed`, plus a bot report at floors 1, 10 and 30: the pocket-take rate and the strength-3 take rate must each differ by HP band (not ~0% or ~100% in every band) |
+| P2 | Integration: profile resolved and saved at realm open; step assignment and `roomsWalked`; the skip heal in `RunManager.MoveTo`; strength computed and saved at realm open; the preview on the Fight stream (§5); the consumable and gold prize payout, with `Item`, `Book` and `Relic` chips handed to the item pipeline (a no-op until item phase I3) and the node card reading the relic and book pools live for "empty pool → gold" (`PLAN_ITEMS.md` §1.1); `restBeforeBoss` and the `_map` cache key (`RunManager.cs:126-127`); debug jump (`DebugMenuController.JumpToBoss`); `MapNodePreview` and `RunEncounter.Preview` moved off `Depth`; SaveData v8→v9 (below); a column projection so the current screen stays playable (below); rewrite every test referencing `DescentMap`, `DescentNode`, `GenerateLegFor`, `ForcedTypeAt` or `Depth` (about 30 files, found by Grep, including the `Journey*` PlayMode set); update `CODE_MAP.md` and `ARCHITECTURE.md`. | senior, `Escalation: architecture` (replaces the map, step and save contracts) | `run_tests_parallel.ps1 -Changed -BuildScenes` |
+| P3 | Bot: `MapView` on `RunView` (route to the heart, pockets, anchors, strength, prizes) and path-aware choices in the four policies (`IRunPolicy.cs:19`). `MapView` includes Gear and Relic chips and anchor prizes. | implementer, then verifier | `-Changed`, plus a bot report at floors 1, 10 and 30: the pocket-take rate and the strength-3 take rate must each differ by HP band (not ~0% or ~100% in every band) |
 | P4 | Screen: the graph, node grammar, the extended detail card and comparison, walk, gamepad, overview. Needs §9.1–2. | implementer | `-Changed -BuildScenes`, diff `Art/`; `-Runtime` captures only if the owner allows them that session |
-| P5 | Anchors at the heart (§6): reseat contract, per-enemy elite flag, formation, reinforcement queue, leader rule, `slainAnchorIds`, anchor HP fraction, heart drawing. Combat tests with zero, one, two and four anchors alive; the boss killed with anchors queued; melee refused on a guarded boss. | senior, `Escalation: architecture` | `-Changed -BuildScenes`, plus the P3 bot report re-run with the boss-fight win rate by anchors left alive |
+| P5 | Anchors at the heart (§6): reseat contract, per-enemy elite flag, formation, reinforcement queue, leader rule, `slainAnchorIds`, anchor HP fraction, heart drawing. Combat tests with zero, one, two and four anchors alive; the boss killed with anchors queued; melee refused on a guarded boss; one test with a heart anchor carrying a Gear chip (`PLAN_ITEMS.md` §5.4). | senior, `Escalation: architecture` | `-Changed -BuildScenes`, plus the P3 bot report re-run with the boss-fight win rate by anchors left alive |
 | P6 | Easing mask: a one-day spike (hand-written UI shader keeping stencil/clip, content-space UVs, rebuilt from `clearedNodeIds` on load), then the build and the art swap. | implementer | headless mask test; `-Runtime` capture if allowed |
 | P7 | Cache, if signed (§9.3): a new `RoomType`, `RoomResolution`, `MapNodeCard.Caption`, medallion, deposit, and the `RunSettlement` exemption. | implementer | `-Changed -BuildScenes` |
 | P8 | Designed realms as content: a `realms` list in `ContentData` (`IOrderedContent`, `ContentBuilder`, `CONTENT_SCHEMA.md` rows) mapping a floor to its profile. It starts with the first designed realm. | implementer | `-Changed -BuildContent` |
@@ -403,6 +410,8 @@ throwaway adapter, deleted in P4.
   `roomsWalked = step`.
 - **New fields:** `realmProfile`, `nodeStrength` (list of `{nodeId, strength}`),
   `roomsWalked`, `slainAnchorIds`.
+- **Merge order:** P2 and item phase I2a both edit `RunSnapshot`; P2 merges
+  first. Item fields need no v9 entry (`PLAN_ITEMS.md` §2.5).
 - **Tests:** v8 saves at offset 5 resolved; offset 5 with an open fight, event
   and shop; offset 8 (the boss room, which must not be skipped); a negative
   offset; offset 0.
@@ -469,3 +478,9 @@ it changed in this plan:
   - the stale §1;
   - moved citations;
   - the save shapes.
+
+**Rev 5,** from the item redesign (`PLAN_ITEMS.md` §5, owner-answered
+2026-10-13): `Relic` prize kind, `anchorPrizeWeights`, item-pipeline payout in
+P2, heart-anchor chips in P5, Gear and Relic chips in the P3 `MapView`, P2
+before I2a on `RunSnapshot`, gold-chip multipliers against the realm gold
+target in P0.
