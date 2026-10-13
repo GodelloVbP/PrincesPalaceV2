@@ -404,8 +404,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- ShopNodePreference ---------------------------------------------
 
-        private static DescentNode Node(int id, RoomType type) =>
-            new DescentNode { Id = id, Depth = 1, Slot = 0, Type = type };
+        private static RealmNode Node(int id, RoomType type) =>
+            new RealmNode { Id = id, Offset = 1, Type = type };
 
         [Test]
         public void WhenOfferedTakesTheShopNode()

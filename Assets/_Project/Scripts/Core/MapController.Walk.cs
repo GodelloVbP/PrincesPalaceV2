@@ -33,7 +33,7 @@ namespace PrincesPalace
         // the party is in.
         private UiVec _standing;
 
-        private void PlaceWalker(DescentNode node)
+        private void PlaceWalker(RealmNode node)
         {
             if (walker == null || node == null) return;
 
@@ -76,17 +76,10 @@ namespace PrincesPalace
                 new Vector2(MapWalk.FigureHeight * aspect, MapWalk.FigureHeight);
         }
 
-        private static UiVec PositionOf(DescentNode node)
-        {
-            var column = RunManager.Map.AtDepth(node.Depth).ToList();
-            int slot = column.FindIndex(n => n.Id == node.Id);
-            if (slot < 0) slot = 0;
-
-            return new UiVec(MapLayout.ColumnX(node.Depth), MapLayout.RowY(slot));
-        }
+        private UiVec PositionOf(RealmNode node) => Columns(RunManager.Map).PositionOf(node.Id);
 
         // One walk, then whatever the room turns out to be.
-        private IEnumerator WalkAndArrive(DescentNode target)
+        private IEnumerator WalkAndArrive(RealmNode target)
         {
             var current = RunManager.CurrentNode;
             var from = PositionOf(current);
@@ -161,7 +154,7 @@ namespace PrincesPalace
         // through the same code a player does -- docs/PLAN_BALANCE_BOT.md F2.
         // What is left here is the two things a bot has no use for: which
         // scene to load, and repainting the map.
-        private void Arrive(DescentNode target)
+        private void Arrive(RealmNode target)
         {
             switch (RunOrchestrator.ArriveAt(target))
             {
@@ -211,7 +204,7 @@ namespace PrincesPalace
         // The trail and the walk MUST agree on this or the figure crosses open
         // canopy beside the path it is supposed to be on: one count feeds both
         // readers rather than each counting links independently.
-        private static Dictionary<long, int> LinkSeeds(DescentMap map)
+        private static Dictionary<long, int> LinkSeeds(RealmMap map)
         {
             var seeds = new Dictionary<long, int>();
             int seed = 0;

@@ -64,13 +64,13 @@ namespace PrincesPalace.Domain.Bot
         // no legal move, which is a hang dressed as a baseline. In that case
         // the shop is taken, and the pairing for that seed is honestly
         // broken rather than silently.
-        public static IReadOnlyList<DescentNode> ChoicesFor(
-            ShopNodeMode mode, IReadOnlyList<DescentNode> choices)
+        public static IReadOnlyList<RealmNode> ChoicesFor(
+            ShopNodeMode mode, IReadOnlyList<RealmNode> choices)
         {
             if (mode != ShopNodeMode.Never || choices == null) return choices;
 
             var withoutShops = choices.Where(n => n != null && n.Type != RoomType.Shop).ToList();
-            return withoutShops.Count > 0 ? (IReadOnlyList<DescentNode>)withoutShops : choices;
+            return withoutShops.Count > 0 ? (IReadOnlyList<RealmNode>)withoutShops : choices;
         }
 
         // The node to take instead of asking, or null for "ask the policy".
@@ -81,8 +81,8 @@ namespace PrincesPalace.Domain.Bot
         // party past the Rest node into a shop would be measuring a shop
         // visit that the archetype would never have made. RandomLegal's
         // threshold is 0 -- it has no rest rule -- so nothing carves out.
-        public static DescentNode PreferredNode(
-            ShopNodeMode mode, IReadOnlyList<DescentNode> choices, RunView view, float restBelowHpFraction)
+        public static RealmNode PreferredNode(
+            ShopNodeMode mode, IReadOnlyList<RealmNode> choices, RunView view, float restBelowHpFraction)
         {
             if (mode != ShopNodeMode.WhenOffered || choices == null) return null;
 

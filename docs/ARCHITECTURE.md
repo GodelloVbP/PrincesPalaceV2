@@ -95,8 +95,16 @@ four kinds:
   ones) holds the active run as `Data/RunSnapshot.cs`. `Core/SaveSystem.cs` is
   the only save path; `Core/SaveSlotManager.cs` owns slots.
 - **A run is not a MonoBehaviour.** `Core/RunManager.cs` is static; the run
-  outlives every scene. The map is regenerated from the run seed
-  (`Domain/Dungeon/DescentMap.cs`), never serialised.
+  outlives every scene. The map is a realm (`Domain/Dungeon/RealmMap.cs`)
+  regenerated from the run seed, `legStartStep` and the profile saved at realm
+  open, never serialised. `Core/RealmOpening.cs` is the one place a realm
+  opens (StartRun, AdvanceLeg, save migration): it resolves the profile and
+  freezes each fight's strength in the run.
+- **The step contract.** `step = legStartStep + node.Offset` (0..8 on the
+  spine; a pocket room takes its rejoin offset), so a detour adds rooms
+  (`roomsWalked`) without moving the difficulty clock; `legStartStep` moves 8
+  per realm. Walking the spine past a pocket heals the living 8%
+  (`RealmMap.PocketSkippedBy`, in `RunManager.MoveTo`).
 - **A fight is a session object.** `Domain/Combat/Session/FightSession` owns
   one fight; `Core/FightController` holds references, paints session queries,
   forwards input. Settlement into the run goes through

@@ -758,7 +758,7 @@ namespace PrincesPalace
             if (contextLine != null)
             {
                 var run = RunManager.Run;
-                if (inRun && run != null) contextLine.Set(UiStrings.SystemFloorRoom, run.floor, run.step);
+                if (inRun && run != null) contextLine.Set(UiStrings.SystemFloorRoom, run.floor, run.roomsWalked);
                 else contextLine.Set(UiStrings.SystemBetweenDescents);
             }
 

@@ -23,9 +23,9 @@ namespace PrincesPalace.Domain.Dungeon
     {
         private const int InteriorOffsets = 7;
 
-        // Opens the leg stream exactly as DescentMapGenerator.GenerateLegFor
-        // does. Both generators draw from their own opened copy, so neither
-        // moves the other.
+        // The production entry point: the realm's own stream, RngStreams.Leg
+        // keyed to legStartStep, so each realm of one run is its own map and
+        // the same realm regenerates identically on load.
         public static RealmMap GenerateFor(ulong runSeed, int legStartStep, RealmProfile profile)
         {
             return Generate(RngStreams.Open(runSeed, RngStreams.Leg, legStartStep), legStartStep, profile);

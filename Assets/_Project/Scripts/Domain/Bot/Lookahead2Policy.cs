@@ -350,7 +350,7 @@ namespace PrincesPalace.Domain.Bot
             return intent.HasValue ? intent.Value.ExpectedDamage : (enemy?.Attack ?? 0);
         }
 
-        public DescentNode ChooseNode(IReadOnlyList<DescentNode> choices, RunView view, SeededRandom rng) =>
+        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng) =>
             _runBrain.ChooseNode(choices, view, rng);
 
         public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng) =>

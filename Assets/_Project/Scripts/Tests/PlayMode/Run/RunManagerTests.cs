@@ -55,7 +55,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(RunManager.HasRun);
             Assert.IsNotNull(RunManager.CurrentNode);
             Assert.AreEqual(RoomType.Entry, RunManager.CurrentNode.Type);
-            Assert.AreEqual(0, RunManager.CurrentNode.Depth);
+            Assert.AreEqual(0, RunManager.CurrentNode.Offset);
         }
 
         [Test]
@@ -65,10 +65,10 @@ namespace PrincesPalace.PlayModeTests
             // a second representation that can drift from the generator that made
             // it. Dropping the cache and asking again has to give the same map.
             RunManager.StartRun(Seed);
-            var first = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Depth)).ToList();
+            var first = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Offset)).ToList();
 
             RunManager.ResetForTests();
-            var second = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Depth)).ToList();
+            var second = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Offset)).ToList();
 
             CollectionAssert.AreEqual(first, second);
         }
@@ -114,7 +114,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(RunManager.MoveTo(choice.Id));
 
             Assert.AreEqual(choice.Id, RunManager.CurrentNode.Id);
-            Assert.AreEqual(choice.Depth, RunManager.Run.step, "the step is the room's own depth");
+            Assert.AreEqual(choice.Offset, RunManager.Run.step, "the step is the room's own offset");
         }
 
         [Test]
@@ -197,57 +197,47 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the map cache holds every input the generator takes -----------
         //
-        // RunManager.Map calls DescentMapGenerator.GenerateLegFor(runSeed,
-        // legStartStep, restBeforeBoss) and keyed its cache on the first two.
-        // Forget()'s own header said "a cache keyed by two fields still has to
-        // be invalidated when either moves" -- there are three.
-        //
-        // Not reachable today: nothing grants restBeforeBoss (RunSnapshot says
-        // so outright). It stops being latent the moment the level-30 track
-        // reward is wired into StartRun the way that same comment invites, and
-        // then the leg on screen keeps its old shape until something unrelated
-        // calls Forget().
+        // RunManager.Map generates from (runSeed, legStartStep, the saved
+        // profile) and keys its cache on all three, the profile by reference.
+        // restBeforeBoss rides inside the profile, resolved when the realm
+        // opens -- so a rest guarantee arriving mid-realm leaves the realm on
+        // screen alone and shapes the next one.
 
         [Test]
-        public void TheMapCacheNoticesARestGuaranteeArriving()
+        public void TheMapCacheNoticesAReplacedProfile()
         {
             RunManager.StartRun(Seed);
+            string before = Shape(RunManager.Map);
 
-            string withoutTheGuarantee = Shape(RunManager.Map);
+            var withRest = RealmProfiles.ForRealm(0, restBeforeBoss: true);
+            string expected = Shape(RealmMapGenerator.GenerateFor(Seed, 0, withRest));
+            Assert.AreNotEqual(before, expected, "fixture: the profile change does not show on this seed");
 
-            // What the generator produces for the run as it is about to be.
-            // Compared against rather than recomputed FROM: the assertion is
-            // that the cache noticed a third input move, and the only honest
-            // expected value for that is the generator's own answer.
-            string withTheGuarantee = Shape(
-                DescentMapGenerator.GenerateLegFor(Seed, 0, restBeforeBoss: true));
+            RunManager.Run.realmProfile = withRest;
 
-            Assert.AreNotEqual(withoutTheGuarantee, withTheGuarantee,
-                "fixture: this seed's leg looks the same either way, so nothing here could fail -- " +
-                "pick a seed whose step-7 column is not already all Rest");
+            Assert.AreEqual(expected, Shape(RunManager.Map), "the cached realm was served for a replaced profile");
+        }
+
+        [Test]
+        public void ARestGuaranteeMidRealmShapesTheNextRealmOnly()
+        {
+            RunManager.StartRun(Seed);
+            string before = Shape(RunManager.Map);
 
             RunManager.Run.restBeforeBoss = true;
+            Assert.AreEqual(before, Shape(RunManager.Map), "the realm on screen reshaped under the player");
 
-            Assert.AreEqual(withTheGuarantee, Shape(RunManager.Map),
-                "the cached leg was served again without its forced rests");
+            RunManager.AdvanceLeg();
+            Assert.IsTrue(RunManager.Run.realmProfile.restBeforeBoss);
+            Assert.AreEqual(RoomType.Rest, RunManager.Map.SpineAt(RealmMap.SpineLength - 1).Single().Type,
+                "the next realm has no rest before its boss");
         }
 
-        // Column widths, room types and forward links -- everything a player
-        // would recognise as "this is the same map". Same shape string
-        // DescentLegSeedingTests uses, which is where this came from.
-        private static string Shape(DescentMap map)
-        {
-            var parts = new System.Collections.Generic.List<string>();
-            for (int d = 0; d < map.DepthCount; d++)
-            {
-                foreach (var node in map.AtDepth(d))
-                {
-                    parts.Add($"{d}.{node.Slot}:{node.Type}->[{string.Join(",", node.Next.OrderBy(n => n))}]");
-                }
-            }
-
-            return string.Join("|", parts);
-        }
+        // Ids, offsets, roles, room types, chips and forward links -- everything
+        // a player would recognise as "this is the same map".
+        private static string Shape(RealmMap map) =>
+            string.Join("|", map.Nodes.Select(n =>
+                $"{n.Id}:{n.Offset}:{n.Role}:{n.Type}:{n.Prize}->[{string.Join(",", n.Next)}]"));
 
         // ---- how deep they got, not how deep they last fought -------------
         //
@@ -383,7 +373,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.AdvanceLeg();
 
             Assert.AreEqual(seed, RunManager.Run.runSeed);
-            Assert.AreEqual(DescentMapGenerator.DefaultLegLength, RunManager.Run.legStartStep);
+            Assert.AreEqual(RealmMap.SpineLength, RunManager.Run.legStartStep);
             Assert.AreEqual(RoomType.Entry, RunManager.CurrentNode.Type, "and it opens at the new leg's entry");
         }
 
@@ -400,10 +390,10 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.IsEmpty(RunManager.Run.clearedNodeIds);
         }
-        // ---- step is absolute, and a node's depth is not -------------------------
+        // ---- step is absolute, and a node's offset is not -------------------------
         //
-        // THE BUG THIS EXISTS FOR: MoveTo wrote `run.step = target.Depth`, and
-        // Depth is a node's column WITHIN ITS LEG. AdvanceLeg writes the
+        // THE BUG THIS EXISTS FOR: MoveTo wrote `run.step = target.Depth`, the
+        // node's column WITHIN ITS LEG (now its Offset). AdvanceLeg writes the
         // absolute legStartStep into the same field, the difficulty curve
         // compounds per step and RunDepth reads it -- so the two disagreed the
         // moment a run left its first leg, and ONLY then, which is why it
@@ -416,7 +406,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.AdvanceLeg();
 
             var run = RunManager.Run;
-            Assert.AreEqual(DescentMapGenerator.DefaultLegLength, run.legStartStep,
+            Assert.AreEqual(RealmMap.SpineLength, run.legStartStep,
                 "the fixture did not actually reach the second leg");
 
             var choices = RunManager.Choices();
@@ -425,9 +415,9 @@ namespace PrincesPalace.PlayModeTests
             var target = choices[0];
             Assert.IsTrue(RunManager.MoveTo(target.Id), "the move was refused");
 
-            Assert.AreEqual(run.legStartStep + target.Depth, run.step,
-                $"the party stands at column {target.Depth} of a leg starting at {run.legStartStep}, " +
-                $"so it is {run.legStartStep + target.Depth} rooms deep - step says {run.step}");
+            Assert.AreEqual(run.legStartStep + target.Offset, run.step,
+                $"the party stands at offset {target.Offset} of a realm starting at {run.legStartStep}, " +
+                $"so it is {run.legStartStep + target.Offset} steps deep - step says {run.step}");
         }
 
         // The premise, pinned: on the FIRST leg the two are identical, which is
@@ -442,7 +432,7 @@ namespace PrincesPalace.PlayModeTests
             var target = RunManager.Choices()[0];
             RunManager.MoveTo(target.Id);
 
-            Assert.AreEqual(target.Depth, RunManager.Run.step,
+            Assert.AreEqual(target.Offset, RunManager.Run.step,
                 "on leg 1 the absolute step and the column are the same number");
         }
 
@@ -649,13 +639,13 @@ namespace PrincesPalace.PlayModeTests
         public void LevellingMidDescentDoesNotReshapeTheLegUnderThePlayer()
         {
             RunManager.StartRun(Seed);
-            var before = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Depth)).ToList();
+            var before = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Offset)).ToList();
 
             LevelTheSquadTo(30);
 
             // Drop the cache and ask again, exactly as a reload does.
             RunManager.ResetForTests();
-            var after = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Depth)).ToList();
+            var after = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Offset)).ToList();
 
             CollectionAssert.AreEqual(before, after,
                 "the map changed shape because a character levelled during the descent");

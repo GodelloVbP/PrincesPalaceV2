@@ -63,7 +63,11 @@ namespace PrincesPalace
         // entry. Additive, so the step is empty; the bump exists so an
         // older build won't treat a caravan fake as a genuine item that
         // never breaks or merge lot copies into ordinary stacks.
-        public const int CurrentVersion = 8;
+        // 8 -> 9: the realm map replaced the nine-column descent map
+        // (docs/PLAN_RUN_MAP.md section 8). A run in flight is moved onto the
+        // realm of its own seed and leg by offset (RealmMigration); its old
+        // node ids name nothing on the new map.
+        public const int CurrentVersion = 9;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
         // raises this. Matches the id ContentBuilder authors it under —
@@ -547,8 +551,14 @@ namespace PrincesPalace
             {
             }
 
+            // 8 -> 9 runs after Reconcile, like the ember move: opening the
+            // realm weighs node strength against the roster Reconcile leaves.
+            bool openRealm = version < 9;
+
             version = CurrentVersion;
             Reconcile();
+
+            if (openRealm) RealmMigration.ToRealmMap(this, activeRun);
 
             // AFTER Reconcile, which is what guarantees a roster to move them
             // onto: it drops members naming content that is gone and adds one

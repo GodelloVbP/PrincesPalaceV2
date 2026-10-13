@@ -199,9 +199,9 @@ namespace PrincesPalace.PlayModeTests
                 "verb disabled -- which is what a player reports as 'the buttons do nothing'");
         }
 
-        // The same door, for the ROOM TYPES a leg can actually put in front of
-        // the party. A room that builds no session is a stage with nothing on
-        // it and no way forward -- the shape of the report.
+        // The same door, for every fight room the second realm holds, pockets
+        // and anchors included. A room that builds no session is a stage with
+        // nothing on it and no way forward -- the shape of the report.
         [UnityTest]
         public IEnumerator EveryRoomTheSecondLegOffersBuildsSomethingToDo()
         {
@@ -213,12 +213,12 @@ namespace PrincesPalace.PlayModeTests
 
             var stalled = new System.Collections.Generic.List<string>();
 
-            foreach (var node in RunManager.Choices().ToList())
+            foreach (var node in RunManager.Map.Nodes.ToList())
             {
                 if (node.Type != RoomType.Fight && node.Type != RoomType.EliteFight) continue;
 
                 RunManager.Run.currentNodeId = node.Id;
-                RunManager.Run.step = RunManager.Run.legStartStep + node.Depth;
+                RunManager.Run.step = RunManager.Run.legStartStep + node.Offset;
 
                 yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
                 yield return null;
@@ -326,15 +326,14 @@ namespace PrincesPalace.PlayModeTests
 
             RunManager.StartRun(639228196442867409UL);
 
-            // Stand the party in leg 1's elite -- step 4, the forced room
-            // mid-leg (D6/Phase 5B: the boss now takes the leg-ending slot
-            // at step 8; the elite moved to the midpoint).
+            // Stand the party in realm 1's anchor, the one-enemy elite every
+            // default realm places at least one of.
             var map = RunManager.Map;
             var elite = map.Nodes.FirstOrDefault(n => n.Type == RoomType.EliteFight);
             Assert.IsNotNull(elite, "leg 1 has no elite, so this test is not testing what it says");
 
             RunManager.Run.currentNodeId = elite.Id;
-            RunManager.Run.step = RunManager.Run.legStartStep + elite.Depth;
+            RunManager.Run.step = RunManager.Run.legStartStep + elite.Offset;
 
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;

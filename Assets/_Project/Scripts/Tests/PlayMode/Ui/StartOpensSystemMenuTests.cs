@@ -231,10 +231,11 @@ namespace PrincesPalace.PlayModeTests
             // MapController.RefreshNavLinks: the map declares a real
             // Graph -- explicit links only, off RunManager.Choices().
             // Seed 4242's entry is its current node's first reachable
-            // choice, MapNode3 (depth 1, slot 0) -- literal, pinned the
-            // same way MapGamepadNavigationTests pins it.
-            var entry = GameObject.Find("MapNode3");
-            Assert.IsNotNull(entry, "seed 4242 should still produce a choice at depth 1, slot 0");
+            // choice, spine room 1 drawn on MapNode6 (column 1, row 0 of
+            // MapColumns' six-row pool) -- literal, pinned the same way
+            // MapGamepadNavigationTests pins it.
+            var entry = GameObject.Find("MapNode6");
+            Assert.IsNotNull(entry, "seed 4242 should still offer spine room 1 at column 1, row 0");
 
             Assert.IsFalse(_menu.IsOpen, "the menu should start closed on the map");
             Assert.AreEqual(entry, EventSystem.current.currentSelectedGameObject,

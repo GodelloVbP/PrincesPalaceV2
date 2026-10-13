@@ -15,13 +15,14 @@ namespace PrincesPalace.Domain.Dungeon
     // that nothing computes it a second way.
     public static class RunDepth
     {
-        // A leg is DescentMapGenerator.DefaultLegLength rooms, and legStartStep
-        // moves by exactly that when the party descends. Floors are 1-based
-        // because they are shown to a player, not used as an index.
+        // A realm's spine is RealmMap.SpineLength steps, and legStartStep
+        // moves by exactly that when the party descends, however many pocket
+        // rooms the route took. Floors are 1-based because they are shown to
+        // a player, not used as an index.
         public static int FloorFor(int legStartStep)
         {
             if (legStartStep <= 0) return 1;
-            return legStartStep / DescentMapGenerator.DefaultLegLength + 1;
+            return legStartStep / RealmMap.SpineLength + 1;
         }
     }
 }

@@ -15,9 +15,9 @@ namespace PrincesPalace.PlayModeTests
 {
     // The descent map, driven through the real scene.
     //
-    // The pool is the interesting part: the tree built every position a leg
-    // COULD use, and the controller has to switch on exactly the ones this leg
-    // actually has -- and re-anchor each column to its real width.
+    // The pool is the interesting part: the tree built every cell a realm
+    // COULD project onto (MapColumns), and the controller has to switch on
+    // exactly the ones this realm has and place each for its column's count.
     public class MapFlowTests
     {
         private string _root;
@@ -53,9 +53,9 @@ namespace PrincesPalace.PlayModeTests
             _map.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
-        private IEnumerator OpenTheMap(bool withRun = true)
+        private IEnumerator OpenTheMap(bool withRun = true, ulong seed = 4242)
         {
-            if (withRun) RunManager.StartRun(4242);
+            if (withRun) RunManager.StartRun(seed);
 
             // THE MAP IS SHARED ACROSS THIS FIXTURE (SharedScene). It reads the
             // run live and has no state of its own that outlives a repaint, so
@@ -145,16 +145,11 @@ namespace PrincesPalace.PlayModeTests
             var reachable = new HashSet<int>(RunManager.Choices().Select(n => n.Id));
             Assert.IsNotEmpty(reachable, "the entry has somewhere to go");
 
-            var descent = RunManager.Map;
-            for (int depth = 0; depth < MapLayout.Columns; depth++)
+            foreach (var node in RunManager.Map.Nodes)
             {
-                var column = descent.AtDepth(depth).ToList();
-                for (int slot = 0; slot < column.Count && slot < MapLayout.Rows; slot++)
-                {
-                    var button = Named($"MapNode{MapLayout.IndexFor(depth, slot)}").GetComponent<Button>();
-                    Assert.AreEqual(reachable.Contains(column[slot].Id), button.interactable,
-                        $"depth {depth} slot {slot} offered the wrong thing");
-                }
+                var button = Named(RealmPaths.ButtonName(node)).GetComponent<Button>();
+                Assert.AreEqual(reachable.Contains(node.Id), button.interactable,
+                    $"room {node.Id} at offset {node.Offset} offered the wrong thing");
             }
         }
 
@@ -166,21 +161,27 @@ namespace PrincesPalace.PlayModeTests
             // centred column of one would stand between two of them.
             yield return OpenTheMap();
 
-            var descent = RunManager.Map;
+            var columns = MapColumns.Of(RunManager.Map);
+            int checkedClearings = 0;
 
-            for (int depth = 0; depth < MapLayout.Columns; depth++)
+            foreach (var node in RunManager.Map.Nodes)
             {
-                var column = descent.AtDepth(depth).ToList();
-                for (int slot = 0; slot < column.Count && slot < MapLayout.Rows; slot++)
-                {
-                    var rect = (RectTransform)Named($"MapNode{MapLayout.IndexFor(depth, slot)}").transform;
+                var rect = (RectTransform)Named(RealmPaths.ButtonName(node)).transform;
+                int column = columns.ColumnOf(node.Id);
+                int row = columns.RowOf(node.Id);
 
-                    Assert.AreEqual(MapLayout.ClearingRowY[slot], rect.anchoredPosition.y, 0.01f,
-                        $"depth {depth} slot {slot} is not standing in its clearing");
-                    Assert.AreEqual(MapLayout.ColumnX(depth), rect.anchoredPosition.x, 0.01f,
-                        $"depth {depth} slot {slot} is not in its column");
-                }
+                Assert.AreEqual(MapLayout.RowY(row, columns.CountIn(column)), rect.anchoredPosition.y, 0.01f,
+                    $"room {node.Id} (column {column} row {row}) is not at its row");
+                Assert.AreEqual(MapLayout.ColumnX(column), rect.anchoredPosition.x, 0.01f,
+                    $"room {node.Id} is not in its column");
+
+                if (columns.CountIn(column) > MapLayout.ClearingRowY.Length) continue;
+                Assert.AreEqual(MapLayout.ClearingRowY[row], rect.anchoredPosition.y, 0.01f,
+                    $"room {node.Id} is not standing in its clearing");
+                checkedClearings++;
             }
+
+            Assert.Greater(checkedClearings, 0, "vacuity: no column was short enough to snap to clearings");
         }
 
         [UnityTest]
@@ -200,7 +201,7 @@ namespace PrincesPalace.PlayModeTests
                 "the leg is meant to be wider than the window, not squeezed into it");
 
             var current = RunManager.CurrentNode;
-            float onScreen = MapLayout.ColumnX(current.Depth) + content.anchoredPosition.x;
+            float onScreen = MapLayout.ColumnX(current.Offset) + content.anchoredPosition.x;
 
             Assert.AreEqual(MapLayout.FollowOffset, onScreen, 0.01f,
                 "the party's own room has to land on the left painted clearing");
@@ -211,11 +212,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheMap();
 
-            var current = RunManager.CurrentNode;
-            var column = RunManager.Map.AtDepth(current.Depth).ToList();
-            int slot = column.FindIndex(n => n.Id == current.Id);
-
-            Assert.IsTrue(Named($"MapNode{MapLayout.IndexFor(current.Depth, slot)}Marker").activeSelf);
+            Assert.IsTrue(Named(RealmPaths.ButtonName(RunManager.CurrentNode) + "Marker").activeSelf);
         }
 
         [UnityTest]
@@ -223,19 +220,15 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheMap();
 
-            var fight = RunManager.Choices().FirstOrDefault(n =>
-                n.Type == RoomType.Fight || n.Type == RoomType.EliteFight || n.Type == RoomType.Boss);
+            // The realm's first plain fight, walked up to through MoveTo and
+            // repainted, so it is one click away. Asserted, not skipped:
+            // OpenTheMap seeds 4242, so the realm is the same every run.
+            var fight = RealmPaths.FirstOfType(RunManager.Map, RoomType.Fight);
+            Assert.IsNotNull(fight, "seed 4242's first realm has no fight room - pick a seed that does");
+            RealmPaths.StandBefore(fight);
+            _map.Refresh();
 
-            // Asserted, not skipped. OpenTheMap seeds the run with 4242, so
-            // the leg is the SAME every run. If a generator change makes
-            // this seed's entry offer no fight, that is a fixture to
-            // re-choose deliberately, not a test to switch off silently.
-            Assert.IsNotNull(fight,
-                "seed 4242's entry offers no fight room, so this test has nothing to enter - pick a seed that does");
-
-            var column = RunManager.Map.AtDepth(fight.Depth).ToList();
-            int slot = column.FindIndex(n => n.Id == fight.Id);
-            Named($"MapNode{MapLayout.IndexFor(fight.Depth, slot)}").GetComponent<Button>().onClick.Invoke();
+            Named(RealmPaths.ButtonName(fight)).GetComponent<Button>().onClick.Invoke();
 
             // The room fires on arrival, not on the click: the party walks
             // there first.
@@ -263,26 +256,20 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TheFigureWalksTheTrailAndArrivesStandingInTheRoom()
         {
-            yield return OpenTheMap();
-
             // A room that leads nowhere else, so the arrival redraws the map
-            // rather than loading a fight scene out from under the assertions.
-            var quiet = RunManager.Choices().FirstOrDefault(n =>
-                n.Type != RoomType.Fight && n.Type != RoomType.EliteFight && n.Type != RoomType.Boss);
-
-            // ASSERTED, for the same reason as EnteringAFightRoomLoadsTheFight:
-            // seed 4242 fixes the leg, so this was a deterministic skip wearing
-            // the clothes of a conditional one.
-            Assert.IsNotNull(quiet,
-                "seed 4242's entry offers only fights, so the walk cannot be watched without a scene load - " +
-                "pick a seed that offers a quiet room");
+            // rather than loading a fight scene out from under the assertions:
+            // a treasure, which resolves on the spot, opening its pocket so the
+            // walk crosses from one column to the next.
+            yield return OpenTheMap(seed: RealmPaths.SeedWhere(
+                m => RealmPaths.PocketHead(m, RoomType.Treasure) != null, "a treasure opening a pocket"));
+            var quiet = RealmPaths.PocketHead(RunManager.Map, RoomType.Treasure);
+            RealmPaths.StandBefore(quiet);
+            _map.Refresh();
 
             var walker = (RectTransform)Named("MapWalker").transform;
             var startedAt = walker.anchoredPosition;
 
-            var column = RunManager.Map.AtDepth(quiet.Depth).ToList();
-            int slot = column.FindIndex(n => n.Id == quiet.Id);
-            Named($"MapNode{MapLayout.IndexFor(quiet.Depth, slot)}").GetComponent<Button>().onClick.Invoke();
+            Named(RealmPaths.ButtonName(quiet)).GetComponent<Button>().onClick.Invoke();
 
             // Mid-walk: off the room it left, and not yet at the one it is
             // going to. Asserted because "moves" is the whole feature and a
@@ -294,7 +281,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return WaitForTheWalk();
 
-            var expected = MapWalk.Standing(new UiVec(MapLayout.ColumnX(quiet.Depth), MapLayout.RowY(slot)));
+            var expected = MapWalk.Standing(MapColumns.Of(RunManager.Map).PositionOf(quiet.Id));
             Assert.AreEqual(expected.X, walker.anchoredPosition.x, 0.01f, "arrived at the wrong room");
             Assert.AreEqual(expected.Y, walker.anchoredPosition.y, 0.01f, "arrived at the wrong height");
             Assert.AreEqual(quiet.Id, RunManager.CurrentNode.Id, "arriving is what moves the party");
@@ -309,11 +296,9 @@ namespace PrincesPalace.PlayModeTests
             var distant = RunManager.Map.Nodes.FirstOrDefault(n =>
                 !reachable.Contains(n.Id) && n.Id != RunManager.CurrentNode.Id);
 
-            Assert.IsNotNull(distant, "a nine-column leg has rooms the entry cannot reach");
+            Assert.IsNotNull(distant, "a realm has rooms the entry cannot reach in one move");
 
-            var column = RunManager.Map.AtDepth(distant.Depth).ToList();
-            int slot = column.FindIndex(n => n.Id == distant.Id);
-            Named($"MapNode{MapLayout.IndexFor(distant.Depth, slot)}").GetComponent<Button>().onClick.Invoke();
+            Named(RealmPaths.ButtonName(distant)).GetComponent<Button>().onClick.Invoke();
 
             yield return null;
 

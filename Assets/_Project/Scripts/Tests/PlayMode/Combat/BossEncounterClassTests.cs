@@ -64,8 +64,8 @@ namespace PrincesPalace.PlayModeTests
                 "a lower tier here means RollOffers read this session as Elite/Normal, not Boss");
         }
 
-        // BotRunDriver's own trace, end to end through a real run: every leg
-        // is forced onto a Boss room every 8th step (DescentMap.StepsPerBoss)
+        // BotRunDriver's own trace, end to end through a real run: every
+        // realm ends on its heart, a Boss room at offset RealmMap.SpineLength,
         // regardless of seed, so any run surviving 8 steps hits one. A
         // handful of seeds covers the (rare, unrelated) chance a run dies
         // first.

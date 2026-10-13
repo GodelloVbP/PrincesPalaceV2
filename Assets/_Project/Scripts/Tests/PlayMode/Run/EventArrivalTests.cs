@@ -54,25 +54,23 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // Found by generating maps directly: the generator is pure, so the
-        // search costs no save writes. Through GenerateLegFor -- the call
-        // RunManager.Map makes -- and not GenerateLeg(new SeededRandom(seed)),
-        // which is a different map for the same seed (GenerateLegFor opens
-        // RngStreams.Leg on the seed first).
+        // search costs no save writes (the realm StartRun opens).
         private static ulong SeedWithAnEventInTheFirstColumn()
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                if (map.AtDepth(1).Any(n => n.Type == RoomType.Event)) return seed;
+                var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
+                if (RealmPaths.FirstOfType(map, RoomType.Event) != null) return seed;
             }
 
             throw new AssertionException("No seed under 4000 generated an event in the first column.");
         }
 
-        private static DescentNode ArriveAtTheFirstEvent()
+        private static RealmNode ArriveAtTheFirstEvent()
         {
             RunManager.StartRun(SeedWithAnEventInTheFirstColumn());
-            var node = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Event);
+            var node = RealmPaths.FirstOfType(RunManager.Map, RoomType.Event);
+            RealmPaths.StandBefore(node);
             RunManager.Run.floor = DemoFloor;
 
             // Every other authored event (petting_zoo, ...) counts as seen
@@ -384,7 +382,8 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.StartRun(SeedWithAnEventInTheFirstColumn());
             foreach (var definition in ContentDatabase.Events) RunManager.Run.eventsSeen.Add(definition.id);
-            var node = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Event);
+            var node = RealmPaths.FirstOfType(RunManager.Map, RoomType.Event);
+            RealmPaths.StandBefore(node);
 
             var arrival = RunOrchestrator.ArriveAt(node);
 
@@ -424,9 +423,8 @@ namespace PrincesPalace.PlayModeTests
 
         // THE BOT'S OWN LOOP, not a seam into it: whole runs, shallow, until
         // one walks into an event. The archetype picks the node, so a map
-        // search alone cannot promise the bot enters the event -- and a map
-        // column is never all one type (DescentMapGenerator rule (c)), so
-        // there is no seed where every choice is an event. The walk is
+        // search alone cannot promise the bot enters the event, since no
+        // realm offers only events. The walk is
         // deterministic per seed, so the first hit is the same seed every
         // run; the bound only exists so content that removed events fails
         // here loudly rather than looping.

@@ -207,7 +207,7 @@ namespace PrincesPalace
 
         // What the room does. Byte for byte what MapController.Walk's Arrive
         // did, minus the navigation and the redraw, which are the screen's.
-        public static Arrival ArriveAt(DescentNode target)
+        public static Arrival ArriveAt(RealmNode target)
         {
             if (target == null || !RunManager.MoveTo(target.Id)) return Arrival.Refused;
 
@@ -595,14 +595,25 @@ namespace PrincesPalace
             if (request.IsEventFight) return SettleEventFight(session, won, request, payout).WithNotices(notices);
 
             CombatReward reward = null;
-            if (payout.HasValue) reward = PayOut(session, run, payout.Value, participants: null);
+            if (payout.HasValue)
+            {
+                // THE CHIP before PayOut, so its gold and potions ride the
+                // write RewardApplier.Apply makes inside it.
+                var room = RunManager.CurrentNode;
+                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, room));
+                reward = PayOut(session, run, payout.Value, participants: null);
+
+                // An anchor beaten on the map no longer waits at the heart.
+                if (room != null && room.IsAnchor && !run.slainAnchorIds.Contains(room.Id))
+                {
+                    run.slainAnchorIds.Add(room.Id);
+                }
+            }
 
             RunManager.ClearCurrentRoom();
 
-            // Out of rooms means the LEG ended, not the run. A leg is eight
-            // steps and finishes on whatever the curve forces -- an elite at
-            // step 8, a boss at 16 -- so ending the run here would stop every
-            // descent at the first elite.
+            // Out of rooms means the REALM ended (its boss is beaten), not the
+            // run.
             //
             // Where to go NEXT is not decided here: the map screen is where the
             // player chooses, and this only opens the next leg when there is

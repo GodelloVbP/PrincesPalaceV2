@@ -44,34 +44,18 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        // The first seed under 4000 whose leg-0 map offers at least two
-        // choices at depth 1 with a plain Fight room at some slot OTHER than
-        // the entry (slot 0) -- the map's own real decision, not the
-        // single-choice shortcut segment 1 uses. Computed live, never pinned
-        // as a magic literal (this project's own established seed-search
-        // idiom, e.g. ShopGamepadNavigationTests' SeedWithAShopInTheFirstColumn).
-        private static (ulong seed, int slot) SeedWithAPlainFightPastTheEntryAtDepth1()
-        {
-            for (ulong seed = 1; seed < 4000UL; seed++)
-            {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                var choices = map.AtDepth(1).ToList();
-                if (choices.Count < 2) continue;
-
-                for (int slot = 1; slot < choices.Count; slot++)
-                {
-                    if (choices[slot].Type == RoomType.Fight) return (seed, slot);
-                }
-            }
-
-            throw new AssertionException(
-                "No seed under 4000 offers a plain Fight room past the map's own entry at depth 1.");
-        }
+        // A realm whose spine carries a plain Fight just past a pocket, so the
+        // party chooses between the pocket (choice 0) and that fight (choice
+        // 1) -- the map's own real decision, not the single-choice shortcut
+        // segment 1 uses. Computed live, never pinned (RealmPaths.SeedWhere).
+        private static (ulong seed, int slot) SeedWithAFightPastAPocket() =>
+            (RealmPaths.SeedWhere(map => RealmPaths.FightPastAPocket(map) != null, "a plain Fight just past a pocket"),
+             1);
 
         [UnityTest]
         public IEnumerator MovingPastTheEntry_ChoosingAFurtherFightRoom_AdvancesTheRun_LoadsTheNextFight()
         {
-            var (seed, targetSlot) = SeedWithAPlainFightPastTheEntryAtDepth1();
+            var (seed, targetSlot) = SeedWithAFightPastAPocket();
 
             SaveSlotManager.EnterSlot(0);
 
@@ -84,6 +68,10 @@ namespace PrincesPalace.PlayModeTests
             AssertSelectedName("StartRunGate", "the gate is the hub's own stated primary action and entry");
 
             RunOrchestrator.StartRun(seed);
+
+            // The choice is the pocket or the fight past it, made from the
+            // spine room the pocket leaves.
+            RealmPaths.StandBefore(RealmPaths.FightPastAPocket(RunManager.Map));
 
             yield return PressSubmit(); // StartOrResumeRun -> BeginDescentTransition -> EnterTheDescent
             yield return WaitUntil(() =>
@@ -102,13 +90,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             TakeOverInput();
 
-            var choices = RunManager.Choices();
-            Assert.GreaterOrEqual(choices.Count, 2, "fixture: this seed should offer a real choice at depth 1");
+            var choices = RunManager.Choices().OrderBy(n => n.Offset).ThenBy(n => n.Id).ToList();
+            Assert.GreaterOrEqual(choices.Count, 2, "fixture: this seed should offer a real choice");
             var target = choices[targetSlot];
             Assert.AreEqual(RoomType.Fight, target.Type,
-                $"fixture: seed {seed} should put a plain Fight room at depth 1, slot {targetSlot}");
+                $"fixture: seed {seed} should put a plain Fight room at choice {targetSlot}");
 
-            string entryName = "MapNode" + MapLayout.IndexFor(1, 0);
+            string entryName = RealmPaths.ButtonName(choices[0]);
             AssertSelectedName(entryName, "the current node's first reachable choice is the declared entry");
 
             // GENUINE AIMING: Down steps choice to choice, ordered by Slot
@@ -117,7 +105,7 @@ namespace PrincesPalace.PlayModeTests
             // exercise at all.
             for (int i = 0; i < targetSlot; i++) yield return MoveDown();
 
-            string targetName = "MapNode" + MapLayout.IndexFor(target.Depth, target.Slot);
+            string targetName = RealmPaths.ButtonName(target);
             AssertSelectedName(targetName, $"Move should have aimed the selection at slot {targetSlot}, not the entry");
 
             int beforeId = RunManager.CurrentNode.Id;

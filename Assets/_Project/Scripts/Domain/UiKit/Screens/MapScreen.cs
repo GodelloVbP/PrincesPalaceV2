@@ -7,11 +7,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // The descent map: where the party is, and where they may go next.
     //
     // The one screen whose contents genuinely are not known at build time -- a
-    // leg is generated from a seed at runtime, so the nodes are a POOL sized
-    // from MapLayout.Capacity, which is (columns x max width) and therefore
-    // every position a leg could possibly use. That is why the pool has real
-    // audited coordinates rather than the kind-based exemption: the positions
-    // ARE computable, only which of them are occupied is not.
+    // realm is generated from a seed at runtime, so the nodes are a POOL sized
+    // from MapLayout.Capacity, which is (columns x rows) and therefore every
+    // cell MapColumns can project a realm onto. The controller places each
+    // used cell for its column's room count.
     //
     // It is also the one screen WIDER THAN THE CANVAS. Nine columns at the
     // background's own clearing pitch is ~7400 units behind a 1920 window, so
@@ -182,7 +181,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The strip under the lowest row of rooms and their captions (y -418),
         // shared by the room detail card and the attention badge.
         private const float BottomStripY = -478f;
-        private static readonly UiVec PreviewSize = new UiVec(700f, 104f);
+
+        // The card is taller than the badge (three body lines: enemies, pay and
+        // prize, the skip heal or the anchor's promise), so it sits a little
+        // higher to keep its foot on screen.
+        private const float PreviewY = -470f;
+        private static readonly UiVec PreviewSize = new UiVec(700f, 136f);
         private static readonly UiVec AttentionBadgeSize = new UiVec(760f, 84f);
 
         // Anchored to the content rect's LEFT edge, which is the origin every
@@ -262,14 +266,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // bottom strip. Inspecting never commits: the card shows for any
             // visible room, reachable or not, so a route can be planned.
             var previewTitle = Ui.Label("MapPreviewTitle", UiString.Runtime, new UiVec(PreviewSize.X - 40f, 28f), 22,
-                    FightHudPalette.HeadingGold, Place.At(0f, 26f))
+                    FightHudPalette.HeadingGold, Place.At(0f, 46f))
                 .TextAligned(UiTextAlign.Left)
                 .Styled(TypographyRole.FunctionalHeading);
-            var previewBody = Ui.Label("MapPreviewBody", UiString.Runtime, new UiVec(PreviewSize.X - 40f, 52f), 19,
+            var previewBody = Ui.Label("MapPreviewBody", UiString.Runtime, new UiVec(PreviewSize.X - 40f, 84f), 19,
                     FightHudPalette.TextPrimary, Place.At(0f, -16f))
                 .TextAligned(UiTextAlign.Left)
                 .Styled(TypographyRole.Body);
-            var previewPanel = Ui.OutlineBox("MapPreviewPanel", Place.At(-330f, BottomStripY), PreviewSize,
+            var previewPanel = Ui.OutlineBox("MapPreviewPanel", Place.At(-330f, PreviewY), PreviewSize,
                 FightHudPalette.PanelViolet, FightHudPalette.BorderGold, new[] { previewTitle, previewBody })
                 .Inactive();
             screen.PreviewPanel = previewPanel;
@@ -403,7 +407,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // actual squad leader turns out to have.
         private UiNode BuildWalker()
         {
-            var entrance = MapWalk.Standing(new UiVec(MapLayout.ColumnX(0), MapLayout.RowY(0)));
+            var entrance = MapWalk.Standing(new UiVec(MapLayout.ColumnX(0), MapLayout.RowY(0, 1)));
 
             var walker = Ui.Sprite("MapWalker", WalkerKey,
                     OnContent(entrance.X, entrance.Y),
@@ -521,14 +525,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private UiNode BuildNode(int index)
         {
-            int depth = index / MapLayout.Rows;
-            int slot = index % MapLayout.Rows;
+            int column = index / MapLayout.Rows;
+            int row = index % MapLayout.Rows;
 
-            // The REAL position, not an approximation the controller corrects.
-            // Rows snap to painted clearings by slot, so a node's coordinates no
-            // longer depend on how many rooms its column turned out to hold and
-            // there is nothing left to re-anchor at runtime.
-            var place = OnContent(MapLayout.ColumnX(depth), MapLayout.RowY(slot));
+            // The cell's place in a FULL column. A column's rows depend on how
+            // many rooms it holds (MapLayout.RowY), which only the realm knows,
+            // so the controller re-places every used node on each refresh.
+            var place = OnContent(MapLayout.ColumnX(column), MapLayout.RowY(row, MapLayout.Rows));
 
             // Declared at the WIDEST a tile can be, because which slot holds the
             // boss is a runtime fact. The controller shrinks it per type; the

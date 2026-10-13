@@ -35,7 +35,7 @@ namespace PrincesPalace.PlayModeTests
         private ScriptedBaseInput _input;
         private MapController _map;
         private EventController _panel;
-        private DescentNode _eventNode;
+        private RealmNode _eventNode;
 
         [SetUp]
         public void UseAThrowawaySaveRoot()
@@ -65,8 +65,8 @@ namespace PrincesPalace.PlayModeTests
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                if (map.AtDepth(1).Any(n => n.Type == RoomType.Event)) return seed;
+                var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
+                if (RealmPaths.FirstOfType(map, RoomType.Event) != null) return seed;
             }
 
             throw new AssertionException("No seed under 4000 generated an event in the first column.");
@@ -84,7 +84,8 @@ namespace PrincesPalace.PlayModeTests
         private IEnumerator LoadTheMap()
         {
             RunManager.StartRun(SeedWithAnEventInTheFirstColumn());
-            _eventNode = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Event);
+            _eventNode = RealmPaths.FirstOfType(RunManager.Map, RoomType.Event);
+            RealmPaths.StandBefore(_eventNode);
             RunManager.Run.gold = 100;
             RunManager.Run.floor = 999; // the fixture event is authored for floor 999 only
 
@@ -147,12 +148,10 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
-        private Button NodeButton(DescentNode node)
+        private Button NodeButton(RealmNode node)
         {
-            var column = RunManager.Map.AtDepth(node.Depth).ToList();
-            int slot = column.FindIndex(n => n.Id == node.Id);
             var go = _map.GetComponentsInChildren<Transform>(includeInactive: true)
-                .FirstOrDefault(t => t.name == $"MapNode{MapLayout.IndexFor(node.Depth, slot)}")?.gameObject;
+                .FirstOrDefault(t => t.name == RealmPaths.ButtonName(node))?.gameObject;
             Assert.IsNotNull(go, $"the map has no node button for room {node.Id}");
             return go.GetComponent<Button>();
         }

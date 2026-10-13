@@ -852,7 +852,7 @@ namespace PrincesPalace
         // CurrentEncounterRequest seam the screen does. Back from it the loop
         // reads the event again, now on the fight's result. Returns false
         // when the run ended in the fight.
-        private static bool VisitEvent(ulong seed, SaveData save, DescentNode node,
+        private static bool VisitEvent(ulong seed, SaveData save, RealmNode node,
             IFightPolicy fightPolicy, IRunPolicy runPolicy, RoomTrace roomTrace, BotRunResult result)
         {
             for (int picks = 0; picks < MaxEventChoices; picks++)
@@ -952,20 +952,20 @@ namespace PrincesPalace
             _probe != null && !string.IsNullOrEmpty(_probe.ForceEventId) && _probe.ForceEventFloor > 0
             && !_forcedEventDone && RunManager.Run.floor == _probe.ForceEventFloor;
 
-        private static bool CanHostForcedEvent(DescentNode node) =>
+        private static bool CanHostForcedEvent(RealmNode node) =>
             node != null && !RunOrchestrator.IsFight(node.Type) && node.Type != RoomType.Shop;
 
         // An Event node first, then any other node that can host the event;
         // null when this column is all fights and shops (the policy chooses,
         // and the next column is asked again).
-        private static DescentNode ForcedEventNode(IReadOnlyList<DescentNode> offered) =>
+        private static RealmNode ForcedEventNode(IReadOnlyList<RealmNode> offered) =>
             offered.FirstOrDefault(n => n.Type == RoomType.Event)
             ?? offered.FirstOrDefault(CanHostForcedEvent);
 
         // ArriveAt's event branch with the forced id in place of the roll, on
         // any non-fight, non-shop node: the room IS the event, so a Rest or a
         // Treasure node pays nothing of its own here.
-        private static RunOrchestrator.Arrival ArriveAtForcedEvent(DescentNode node, RoomTrace roomTrace, BotRunResult result)
+        private static RunOrchestrator.Arrival ArriveAtForcedEvent(RealmNode node, RoomTrace roomTrace, BotRunResult result)
         {
             if (!RunManager.MoveTo(node.Id)) return RunOrchestrator.Arrival.Refused;
 
@@ -1530,7 +1530,7 @@ namespace PrincesPalace
 
         // Returns false when the run ended here.
         private static bool PlayTheFight(
-            ulong seed, SaveData save, DescentNode node,
+            ulong seed, SaveData save, RealmNode node,
             IFightPolicy fightPolicy, IRunPolicy runPolicy,
             RoomTrace roomTrace, BotRunResult result)
         {
@@ -1859,7 +1859,7 @@ namespace PrincesPalace
         // ---- the post-fight offer ------------------------------------------------
 
         private static void Offer(
-            ulong seed, SaveData save, DescentNode node, IRunPolicy runPolicy,
+            ulong seed, SaveData save, RealmNode node, IRunPolicy runPolicy,
             FightSession session, RoomTrace roomTrace, BotRunResult result)
         {
             // The same keyed stream the screen rolls from (RngStreams.Reward),

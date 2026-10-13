@@ -31,16 +31,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void RowsSnapToAClearingBySlotAndAreNotCentred()
         {
-            Assert.AreEqual(322f, MapLayout.RowY(0), 0.01f);
-            Assert.AreEqual(11f, MapLayout.RowY(1), 0.01f);
-            Assert.AreEqual(-302f, MapLayout.RowY(2), 0.01f);
+            Assert.AreEqual(322f, MapLayout.RowY(0, 3), 0.01f);
+            Assert.AreEqual(11f, MapLayout.RowY(1, 3), 0.01f);
+            Assert.AreEqual(-302f, MapLayout.RowY(2, 3), 0.01f);
 
             // The property that matters, stated directly: a column of two rooms
             // uses the top and middle clearings and leaves the bottom one empty.
             // Centring it -- which is what this screen did before the backdrop
             // was tiled -- would put both rooms between painted clearings.
-            Assert.AreEqual(MapLayout.RowY(0), MapLayout.ClearingRowY[0], 0.01f);
-            Assert.AreEqual(MapLayout.RowY(1), MapLayout.ClearingRowY[1], 0.01f);
+            Assert.AreEqual(MapLayout.RowY(0, 3), MapLayout.ClearingRowY[0], 0.01f);
+            Assert.AreEqual(MapLayout.RowY(1, 3), MapLayout.ClearingRowY[1], 0.01f);
         }
 
         [Test]

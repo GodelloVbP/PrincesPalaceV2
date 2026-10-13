@@ -77,25 +77,21 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        // The FIRST seed under 4000 whose leg-0 map puts a plain Fight room
-        // (never Elite/Boss -- this segment wants the ordinary first fight,
-        // not the hardest room the generator could offer) at depth 1's own
-        // entry slot (DescentMap.AtDepth already orders by Slot ascending,
-        // so .First() IS the entry MapGamepadNavigationTests' own comment
-        // names). Computed live rather than pinned as a magic literal --
-        // ShopGamepadNavigationTests' SeedWithAShopInTheFirstColumn is the
-        // precedent for exactly this shape.
+        // The FIRST seed under 4000 whose first realm puts a plain Fight room
+        // (never an anchor or the boss -- this segment wants the ordinary
+        // first fight) first among the entry's choices, the map's pad entry
+        // (RealmPaths.FirstChoice). Computed live rather than pinned.
         private static ulong SeedWithAPlainFightAtDepth1Entry()
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                var entry = map.AtDepth(1).FirstOrDefault();
+                var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
+                var entry = RealmPaths.FirstChoice(map);
                 if (entry != null && entry.Type == RoomType.Fight) return seed;
             }
 
             throw new AssertionException(
-                "No seed under 4000 puts a plain Fight room at the map's own entry (depth 1, slot 0).");
+                "No seed under 4000 puts a plain Fight room first among the entry's choices.");
         }
 
         [UnityTest]
@@ -159,14 +155,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             TakeOverInput();
 
-            var entryNode = RunManager.Map.AtDepth(1).First();
+            var entryNode = RealmPaths.FirstChoice(RunManager.Map);
             Assert.AreEqual(RoomType.Fight, entryNode.Type,
-                $"fixture: seed {seed} should put a plain Fight room at the map's own entry (depth 1, slot 0)");
+                $"fixture: seed {seed} should put a plain Fight room first among the entry's choices");
 
-            // The node's GameObject name is "MapNode" + MapLayout.IndexFor
-            // (depth, slot) -- the screen's own layout index, NOT node.Id
-            // (MapScreen.cs's BuildNode/BuildButton call sites).
-            string entryName = "MapNode" + MapLayout.IndexFor(entryNode.Depth, entryNode.Slot);
+            // The node's GameObject name is the pool slot MapColumns projects
+            // it onto, NOT node.Id (RealmPaths.ButtonName).
+            string entryName = RealmPaths.ButtonName(entryNode);
             AssertSelectedName(entryName,
                 "the current node's first reachable choice is the declared entry");
 

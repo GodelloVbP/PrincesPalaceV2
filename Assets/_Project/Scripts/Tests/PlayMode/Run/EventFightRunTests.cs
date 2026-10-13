@@ -587,21 +587,25 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- 6. save 7, and the 8 above it ------------------------------------------
         //
-        // Stage B's M4 bumped the save to 8 (item provenance). The version pin
-        // and the refusal of the next version up moved to FakeItemTests; what
-        // stays here is Stage A's own step: a v6 save with a pending event
-        // fight still arrives at the current version with the fight kept.
+        // Stage B's M4 bumped the save to 8 (item provenance), and run map P2
+        // to 9. The version pin and the refusal of the next version up live in
+        // FakeItemTests. A v6 save passes 7 (the pending fight's own step) on
+        // its way up, and 8 -> 9 then moves the run onto the realm map, which
+        // closes whatever room was open -- the event and its pending fight
+        // included (docs/PLAN_RUN_MAP.md section 8): their node ids name
+        // nothing on the new map.
 
         [Test]
-        public void AVersionSixSave_MigratesToEight_KeepingAnOpenEventsPendingFight()
+        public void AVersionSixSave_MigratesToTheCurrentVersion_ClosingTheOpenEventsPendingFight()
         {
             OpenFightFixture();
             EventPicks.OnCurrentPage(Brawl);
             Save.version = 6;
 
             Assert.IsTrue(Save.Migrate(), "a version-6 save was refused");
-            Assert.AreEqual(8, Save.version);
-            Assert.AreEqual("brawl", Run.pendingFight);
+            Assert.AreEqual(SaveData.CurrentVersion, Save.version);
+            Assert.AreEqual("", Run.pendingFight);
+            Assert.AreEqual("", Run.eventId);
         }
     }
 }

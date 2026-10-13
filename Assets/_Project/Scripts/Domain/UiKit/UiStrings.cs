@@ -302,8 +302,10 @@ namespace PrincesPalace.Domain.UiKit
         // Worst-case samples, like every other template: without one the label
         // renders its raw "{0}" at rest, which is what the resting screenshot
         // showed -- and E1 has nothing to measure the box against.
+        // Rooms walked this run (RunSnapshot.roomsWalked), not the step: a
+        // pocket adds rooms without moving the difficulty clock.
         public static readonly UiString MapDepth =
-            UiString.Define("map.depth", "STEP {0}  ·  FLOOR {1}", "STEP 999  ·  FLOOR 99");
+            UiString.Define("map.depth", "ROOM {0}  ·  FLOOR {1}", "ROOM 999  ·  FLOOR 99");
         public static readonly UiString MapGold =
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
         public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
@@ -346,6 +348,31 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("map.preview.event", "Something waits here. What, you learn when you step in.");
         public static readonly UiString MapPreviewStart =
             UiString.Define("map.preview.start", "Where this stretch of the descent began.");
+        // The realm's facts on the card (docs/PLAN_RUN_MAP.md sections 2-3).
+        public static readonly UiString MapPreviewStrength =
+            UiString.Define("map.preview.strength", "{0}  ·  STRENGTH {1}", "TREASURE  ·  STRENGTH 3");
+        public static readonly UiString MapPreviewPrizeGold =
+            UiString.Define("map.preview.prize.gold", "Prize: {0} gold", "Prize: 99999 gold");
+        public static readonly UiString MapPreviewPrizePotion =
+            UiString.Define("map.preview.prize.potion", "Prize: a potion");
+        public static readonly UiString MapPreviewPrizePotions =
+            UiString.Define("map.preview.prize.potions", "Prize: {0} potions", "Prize: 9 potions");
+        public static readonly UiString MapPreviewPrizeGear =
+            UiString.Define("map.preview.prize.gear", "Prize: gear");
+        public static readonly UiString MapPreviewPrizeBook =
+            UiString.Define("map.preview.prize.book", "Prize: a spell book");
+        public static readonly UiString MapPreviewPrizeRelic =
+            UiString.Define("map.preview.prize.relic", "Prize: a relic");
+        public static readonly UiString MapPreviewSkipHeal =
+            UiString.Define("map.preview.skip_heal", "Walking past the detour heals the squad {0}%.",
+                "Walking past the detour heals the squad 99%.");
+        public static readonly UiString MapPreviewAnchor =
+            UiString.Define("map.preview.anchor", "Left alive, it guards the boss.");
+        // A chip paid at settlement, on the Reckoning's notices.
+        public static readonly UiString PrizePaidGold =
+            UiString.Define("prize.paid.gold", "Prize: {0} gold.", "Prize: 99999 gold.");
+        public static readonly UiString PrizePaidItem =
+            UiString.Define("prize.paid.item", "Prize: {0}.", "Prize: Health Potion.");
 
         // Why a press on a room went nowhere, shown on that room's caption.
         public static readonly UiString MapRefuseCleared = UiString.Define("map.refuse.cleared", "ALREADY CLEARED");

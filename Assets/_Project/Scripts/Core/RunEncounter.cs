@@ -119,19 +119,26 @@ namespace PrincesPalace
         private static SeededRandom FightStream(RunSnapshot run, int step, int nodeId) =>
             RngStreams.Open(run.runSeed, RngStreams.Fight, step, nodeId);
 
-        private static EncounterRoll.Result RollRoom(RunSnapshot run, RoomType roomType, SeededRandom rng) =>
-            EncounterRoll.Roll(roomType, Pool(), rng, run?.bossEnemyId, RunDepth.FloorFor(run?.legStartStep ?? 0));
+        // An EliteFight on the realm map is an anchor: one elite enemy, the
+        // same one that stands at the heart (docs/PLAN_RUN_MAP.md section 5).
+        private static EncounterRoll.Result RollRoom(RunSnapshot run, RoomType roomType, SeededRandom rng)
+        {
+            int floor = RunDepth.FloorFor(run?.legStartStep ?? 0);
+            return roomType == RoomType.EliteFight
+                ? EncounterRoll.RollAnchor(Pool(), rng, floor)
+                : EncounterRoll.Roll(roomType, Pool(), rng, run?.bossEnemyId, floor);
+        }
 
         // WHAT A ROOM NOT YET ENTERED WILL FIELD, from the same stream and the
         // same roll For() uses once the party is standing in it: MoveTo writes
-        // step = legStartStep + Depth and currentNodeId = Id, and that pair is
+        // step = legStartStep + Offset and currentNodeId = Id, and that pair is
         // all the stream is keyed on. Draws nothing the real fight will not
         // draw again, because every call opens a fresh stream.
-        public static EncounterRoll.Result Preview(RunSnapshot run, DescentNode node)
+        public static EncounterRoll.Result Preview(RunSnapshot run, RealmNode node)
         {
             if (run == null || node == null) return new EncounterRoll.Result(new List<string>(), false, false);
 
-            return RollRoom(run, node.Type, FightStream(run, run.legStartStep + node.Depth, node.Id));
+            return RollRoom(run, node.Type, FightStream(run, run.legStartStep + node.Offset, node.Id));
         }
 
         // Every authored enemy, projected down to what the roll needs.
@@ -276,6 +283,12 @@ namespace PrincesPalace
         // from the maximum before the percentage moves it.
         internal static void HealPartyByPercent(RunSnapshot run, int percent) =>
             ShiftPartyHealth(run, (current, max) => EventHealth.Healed(current, max, percent));
+
+        // The skip heal (RealmMap.SkipHealPercent): every LIVING member, so a
+        // pocket walked past never revives anyone. Does not persist; its one
+        // caller, RunManager.MoveTo, writes once after the move.
+        internal static void HealLivingPartyByPercent(RunSnapshot run, int percent) =>
+            ShiftPartyHealth(run, (current, max) => EventHealth.HealedWithoutRevive(current, max, percent));
 
         internal static void HurtPartyByPercent(RunSnapshot run, int percent) =>
             ShiftPartyHealth(run, (current, max) => EventHealth.Damaged(current, max, percent));

@@ -16,12 +16,14 @@ namespace PrincesPalace.PlayModeTests
     // Refresh() off RunManager.Choices() (`MapController.cs:245`).
     //
     // Pinned against seed 4242 (the same seed CancelOpensSystemMenuTests'
-    // own MapCancel test already uses): a throwaway diagnostic run (deleted
-    // once read, never committed) printed the entry node at depth 0 slot 0
-    // (MapNode0, MapLayout.Rows == 3 so IndexFor(0,0) == 0) with three
-    // choices at depth 1, slots 0/1/2, ids 1/2/3 -- MapNode3/MapNode4/MapNode5.
-    // Literal from here on, never recomputed from RunManager.Choices() in the
-    // assertions themselves (CLAUDE.md gotcha 5's formula-pinning rule).
+    // own MapCancel test already uses). Its first realm, printed once by a
+    // throwaway diagnostic: the entry (id 0), then spine room id 1 at offset 1
+    // with a pocket leaving it. The fixture stands the party on id 1
+    // (MapNode6: column 1, row 0 of MapColumns' six-row pool), so the choices
+    // are the pocket's anchor, id 2 (MapNode12, column 2 row 0), and spine
+    // room id 3 (MapNode13, column 2 row 1). Literal from here on, never
+    // recomputed from RunManager.Choices() in the assertions themselves
+    // (CLAUDE.md gotcha 5's formula-pinning rule).
     public class MapGamepadNavigationTests
     {
         private string _root;
@@ -64,6 +66,8 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.ResetForTests();
             RunManager.StartRun(4242);
+            Assert.IsTrue(RunManager.MoveTo(1), "fixture: seed 4242's spine room 1 follows the entry");
+            RunManager.ClearCurrentRoom();
 
             yield return SharedScene.Ensure("Map");
 
@@ -96,13 +100,13 @@ namespace PrincesPalace.PlayModeTests
         private static GameObject Node(string name) => GameObject.Find(name);
 
         [UnityTest]
-        public IEnumerator EntryIsTheFirstReachableChoice_MapNode3()
+        public IEnumerator EntryIsTheFirstReachableChoice_MapNode12()
         {
             SharedScene.MarkDirty("asserts the entry a freshly loaded map selects, not one a reset put back");
             yield return LoadTheMap();
 
-            Assert.AreEqual(Node("MapNode3"), EventSystem.current.currentSelectedGameObject,
-                "the current node's first reachable choice (depth 1, slot 0) is the declared entry -- " +
+            Assert.AreEqual(Node("MapNode12"), EventSystem.current.currentSelectedGameObject,
+                "the current node's first reachable choice (column 2, row 0) is the declared entry -- " +
                 "current itself is never interactable and would be a dead Submit");
         }
 
@@ -110,12 +114,12 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator Right_FromCurrent_ReachesTheFirstChoice()
         {
             yield return LoadTheMap();
-            EventSystem.current.SetSelectedGameObject(Node("MapNode0"));
+            EventSystem.current.SetSelectedGameObject(Node("MapNode6"));
             yield return null;
 
             yield return Move(1f, 0f);
 
-            Assert.AreEqual(Node("MapNode3"), EventSystem.current.currentSelectedGameObject,
+            Assert.AreEqual(Node("MapNode12"), EventSystem.current.currentSelectedGameObject,
                 "Right from current should reach its first reachable choice");
         }
 
@@ -123,13 +127,13 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator Down_FromTheFirstChoice_ReachesTheSecond()
         {
             yield return LoadTheMap();
-            EventSystem.current.SetSelectedGameObject(Node("MapNode3"));
+            EventSystem.current.SetSelectedGameObject(Node("MapNode12"));
             yield return null;
 
             yield return Move(0f, -1f);
 
-            Assert.AreEqual(Node("MapNode4"), EventSystem.current.currentSelectedGameObject,
-                "Down should step choice to choice, ordered by Slot ascending (top to bottom on screen)");
+            Assert.AreEqual(Node("MapNode13"), EventSystem.current.currentSelectedGameObject,
+                "Down should step choice to choice in screen order (top to bottom)");
         }
 
         // A separate test rather than a third press chained onto the one
@@ -139,12 +143,12 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator Left_FromTheSecondChoice_ReturnsToCurrent()
         {
             yield return LoadTheMap();
-            EventSystem.current.SetSelectedGameObject(Node("MapNode4"));
+            EventSystem.current.SetSelectedGameObject(Node("MapNode13"));
             yield return null;
 
             yield return Move(-1f, 0f);
 
-            Assert.AreEqual(Node("MapNode0"), EventSystem.current.currentSelectedGameObject,
+            Assert.AreEqual(Node("MapNode6"), EventSystem.current.currentSelectedGameObject,
                 "Left from any choice should return to current, the one thing a Graph transition undoes");
         }
 
@@ -157,10 +161,10 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadTheMap();
             SharedScene.MarkDirty("walks the party to another node, which Refresh does not walk back");
-            EventSystem.current.SetSelectedGameObject(Node("MapNode3"));
+            EventSystem.current.SetSelectedGameObject(Node("MapNode12"));
             yield return null;
 
-            Assert.AreEqual(0, RunManager.CurrentNode.Id, "should still be standing at the entry before Submit");
+            Assert.AreEqual(1, RunManager.CurrentNode.Id, "should still be standing on room 1 before Submit");
 
             _input.SubmitDown = true;
             yield return DriveFrame();
@@ -173,8 +177,8 @@ namespace PrincesPalace.PlayModeTests
             }
 
             Assert.IsFalse(_map.IsWalking, "the walk should have finished within 3000 frames");
-            Assert.AreEqual(1, RunManager.CurrentNode.Id,
-                "Submit on MapNode3 (depth 1, slot 0, id 1) should have moved the party there exactly once");
+            Assert.AreEqual(2, RunManager.CurrentNode.Id,
+                "Submit on MapNode12 (column 2, row 0, id 2) should have moved the party there exactly once");
         }
     }
 }

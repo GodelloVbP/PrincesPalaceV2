@@ -54,13 +54,13 @@ namespace PrincesPalace.PlayModeTests
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                var entry = map.AtDepth(1).FirstOrDefault();
+                var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
+                var entry = RealmPaths.FirstChoice(map);
                 if (entry != null && entry.Type == RoomType.Fight) return seed;
             }
 
             throw new AssertionException(
-                "No seed under 4000 puts a plain Fight room at the map's own entry (depth 1, slot 0).");
+                "No seed under 4000 puts a plain Fight room first among the entry's choices.");
         }
 
         [UnityTest]
@@ -123,11 +123,11 @@ namespace PrincesPalace.PlayModeTests
             // first, not just the two engine frames TakeOverInput's own callers
             // already pay.
             yield return new WaitForSecondsRealtime(0.5f);
-            var entryNode = RunManager.Map.AtDepth(1).First();
+            var entryNode = RealmPaths.FirstChoice(RunManager.Map);
             Assert.AreEqual(RoomType.Fight, entryNode.Type,
-                $"fixture: seed {seed} should put a plain Fight room at the map's own entry (depth 1, slot 0)");
+                $"fixture: seed {seed} should put a plain Fight room first among the entry's choices");
 
-            string entryName = "MapNode" + MapLayout.IndexFor(entryNode.Depth, entryNode.Slot);
+            string entryName = RealmPaths.ButtonName(entryNode);
 
             yield return Click(Node(entryName)); // OnNodePressed -> RunOrchestrator.ArriveAt -> Arrival.Fight -> Navigation.Go(Fight)
             yield return WaitForScene("Fight", 10f, "clicking the entry should walk to it and load the Fight scene");

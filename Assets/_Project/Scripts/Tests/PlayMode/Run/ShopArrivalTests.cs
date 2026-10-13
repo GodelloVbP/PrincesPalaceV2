@@ -40,26 +40,18 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        // A seed whose first column offers a shop, found by generating maps
+        // A seed whose first realm holds a shop, found by generating maps
         // directly rather than by starting thousands of runs -- the generator
         // is pure and reads no content, so this costs nothing and needs no
-        // save writes.
-        //
-        // Through GenerateLegFor -- the call RunManager.Map makes -- and not
-        // GenerateLeg(new SeededRandom(seed)), which is a different map for
-        // the same seed (GenerateLegFor opens RngStreams.Leg on the seed
-        // first).
-        //
-        // Shop is 3 of 269 in the middle-room table, so a column of up to
-        // three nodes offers one about 3% of the time; a few hundred seeds is
-        // ample and the search is bounded so a table rebalance that removed
-        // Shop entirely would fail here loudly rather than hang.
+        // save writes. Shops sit only in pockets, so each test walks the
+        // party up to it (RealmPaths.StandBefore). The search is bounded so a
+        // profile that removed shops fails here loudly rather than hangs.
         private static ulong SeedWithAShopInTheFirstColumn()
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                if (map.AtDepth(1).Any(n => n.Type == RoomType.Shop)) return seed;
+                var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
+                if (RealmPaths.FirstOfType(map, RoomType.Shop) != null) return seed;
             }
 
             throw new AssertionException("No seed under 4000 generated a shop in the first column.");
@@ -71,7 +63,8 @@ namespace PrincesPalace.PlayModeTests
             ulong seed = SeedWithAShopInTheFirstColumn();
             RunManager.StartRun(seed);
 
-            var shop = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Shop);
+            var shop = RealmPaths.FirstOfType(RunManager.Map, RoomType.Shop);
+            RealmPaths.StandBefore(shop);
             var arrival = RunOrchestrator.ArriveAt(shop);
 
             Assert.AreEqual(RunOrchestrator.Arrival.Shop, arrival);
@@ -95,7 +88,8 @@ namespace PrincesPalace.PlayModeTests
         {
             ulong seed = SeedWithAShopInTheFirstColumn();
             RunManager.StartRun(seed);
-            var shop = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Shop);
+            var shop = RealmPaths.FirstOfType(RunManager.Map, RoomType.Shop);
+            RealmPaths.StandBefore(shop);
             RunOrchestrator.ArriveAt(shop);
 
             var onDisk = SaveSystem.Load(SaveSlotManager.CurrentSlot);
@@ -111,7 +105,8 @@ namespace PrincesPalace.PlayModeTests
         {
             ulong seed = SeedWithAShopInTheFirstColumn();
             RunManager.StartRun(seed);
-            var shop = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Shop);
+            var shop = RealmPaths.FirstOfType(RunManager.Map, RoomType.Shop);
+            RealmPaths.StandBefore(shop);
             RunOrchestrator.ArriveAt(shop);
 
             RunOrchestrator.LeaveShop();

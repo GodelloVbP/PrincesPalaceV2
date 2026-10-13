@@ -69,5 +69,40 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(MapTileState.Open, "ON THE MOVE")]
         public void EachStateHasItsRefusal(MapTileState state, string expected) =>
             Assert.AreEqual(expected, MapNodeCard.Refusal(state));
+
+        // ---- the realm's facts (run map P2) ---------------------------------
+
+        [Test]
+        public void AFightWithStrengthAndAGoldChip_ShowsBoth()
+        {
+            var facts = new MapNodeFacts(RoomType.Fight, new[] { "Giant Rat" }, experience: 30, gold: 12)
+                .WithRealm(2, new MapNodeChip(PrizeKind.Gold, 15), skipHealPercent: 0, guardsHeart: false);
+
+            Assert.AreEqual("FIGHT  ·  STRENGTH 2", MapNodeCard.Title(facts));
+            Assert.AreEqual("Enemies: Giant Rat\nPays 12 gold · 30 exp  ·  Prize: 15 gold", MapNodeCard.Body(facts));
+        }
+
+        [Test]
+        public void AnAnchorSaysItGuardsTheBoss_AndASpineChoiceNamesTheSkipHeal()
+        {
+            var anchor = new MapNodeFacts(RoomType.EliteFight, new[] { "Hollow Treant" }, experience: 40, gold: 20)
+                .WithRealm(3, default, skipHealPercent: 0, guardsHeart: true);
+            Assert.AreEqual("Enemies: Hollow Treant\nPays 20 gold · 40 exp\nLeft alive, it guards the boss.",
+                MapNodeCard.Body(anchor));
+
+            var rest = new MapNodeFacts(RoomType.Event).WithRealm(0, default, skipHealPercent: 8, guardsHeart: false);
+            Assert.AreEqual("EVENT", MapNodeCard.Title(rest));
+            Assert.AreEqual("Something waits here. What, you learn when you step in.\n" +
+                            "Walking past the detour heals the squad 8%.", MapNodeCard.Body(rest));
+        }
+
+        [TestCase(PrizeKind.Consumable, 1, "Prize: a potion")]
+        [TestCase(PrizeKind.Consumable, 3, "Prize: 3 potions")]
+        [TestCase(PrizeKind.Item, 0, "Prize: gear")]
+        [TestCase(PrizeKind.Book, 0, "Prize: a spell book")]
+        [TestCase(PrizeKind.Relic, 0, "Prize: a relic")]
+        [TestCase(PrizeKind.None, 0, "")]
+        public void EachChipHasItsLine(PrizeKind kind, int amount, string expected) =>
+            Assert.AreEqual(expected, MapNodeCard.ChipLine(new MapNodeChip(kind, amount)));
     }
 }

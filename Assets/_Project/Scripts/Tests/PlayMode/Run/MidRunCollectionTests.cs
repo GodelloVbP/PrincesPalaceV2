@@ -214,7 +214,7 @@ namespace PrincesPalace.PlayModeTests
             found(fight);
         }
 
-        private static DescentNode APlainFightRoom()
+        private static RealmNode APlainFightRoom()
         {
             var choices = RunManager.Choices();
             CollectionAssert.IsNotEmpty(choices, "the leg offered nowhere to go");

@@ -42,28 +42,14 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        private static (ulong seed, int slot) SeedWithAPlainFightPastTheEntryAtDepth1()
-        {
-            for (ulong seed = 1; seed < 4000UL; seed++)
-            {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                var choices = map.AtDepth(1).ToList();
-                if (choices.Count < 2) continue;
-
-                for (int slot = 1; slot < choices.Count; slot++)
-                {
-                    if (choices[slot].Type == RoomType.Fight) return (seed, slot);
-                }
-            }
-
-            throw new AssertionException(
-                "No seed under 4000 offers a plain Fight room past the map's own entry at depth 1.");
-        }
+        private static (ulong seed, int slot) SeedWithAFightPastAPocket() =>
+            (RealmPaths.SeedWhere(map => RealmPaths.FightPastAPocket(map) != null, "a plain Fight just past a pocket"),
+             1);
 
         [UnityTest]
         public IEnumerator ClickingAFurtherFightRoom_AdvancesTheRun_LoadsTheNextFight_MouseOnly()
         {
-            var (seed, targetSlot) = SeedWithAPlainFightPastTheEntryAtDepth1();
+            var (seed, targetSlot) = SeedWithAFightPastAPocket();
 
             SaveSlotManager.EnterSlot(0);
 
@@ -80,6 +66,10 @@ namespace PrincesPalace.PlayModeTests
             // already pay.
             yield return new WaitForSecondsRealtime(0.5f);
             RunOrchestrator.StartRun(seed);
+
+            // The choice is the pocket or the fight past it, made from the
+            // spine room the pocket leaves.
+            RealmPaths.StandBefore(RealmPaths.FightPastAPocket(RunManager.Map));
 
             yield return Click(Node("StartRunGate")); // StartOrResumeRun -> BeginDescentTransition -> EnterTheDescent
             yield return WaitUntil(() =>
@@ -103,16 +93,16 @@ namespace PrincesPalace.PlayModeTests
             // first, not just the two engine frames TakeOverInput's own callers
             // already pay.
             yield return new WaitForSecondsRealtime(0.5f);
-            var choices = RunManager.Choices();
-            Assert.GreaterOrEqual(choices.Count, 2, "fixture: this seed should offer a real choice at depth 1");
+            var choices = RunManager.Choices().OrderBy(n => n.Offset).ThenBy(n => n.Id).ToList();
+            Assert.GreaterOrEqual(choices.Count, 2, "fixture: this seed should offer a real choice");
             var target = choices[targetSlot];
             Assert.AreEqual(RoomType.Fight, target.Type,
-                $"fixture: seed {seed} should put a plain Fight room at depth 1, slot {targetSlot}");
+                $"fixture: seed {seed} should put a plain Fight room at choice {targetSlot}");
 
             int beforeId = RunManager.CurrentNode.Id;
             Assert.AreNotEqual(target.Id, beforeId, "fixture: should not already be standing on the target");
 
-            string targetName = "MapNode" + MapLayout.IndexFor(target.Depth, target.Slot);
+            string targetName = RealmPaths.ButtonName(target);
 
             // THE WHOLE CLAIM: click a node that is NOT the current one and
             // NOT the declared entry -- no Move-driven aiming is involved at

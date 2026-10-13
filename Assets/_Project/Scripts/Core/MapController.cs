@@ -370,9 +370,11 @@ namespace PrincesPalace
             _preview.ForceClose();
 
             var reachable = new HashSet<int>(RunManager.Choices().Select(n => n.Id));
+            var ahead = map.AllReachableFrom(current.Id);
             var cleared = new HashSet<int>(RunManager.Run.clearedNodeIds);
+            var columns = Columns(map);
 
-            depthLabel.Set(UiStrings.MapDepth, RunManager.Run.step, RunManager.Run.floor);
+            depthLabel.Set(UiStrings.MapDepth, RunManager.Run.roomsWalked, RunManager.Run.floor);
             goldLabel.Set(UiStrings.MapGold, RunManager.Run.gold);
 
             RefreshAttention();
@@ -392,25 +394,27 @@ namespace PrincesPalace
                 if (hasMessage) roomMessageLabel.Set(message, args);
             }
 
-            LayoutWood(map.DepthCount);
+            LayoutWood(MapColumns.Count);
+
+            // Graceful rather than silent: a designed profile whose pockets
+            // outgrow the column pool draws what fits and says so.
+            if (columns.Overflow.Count > 0)
+            {
+                Debug.LogWarning($"MapController: {columns.Overflow.Count} room(s) do not fit the column pool " +
+                                 $"({MapLayout.Rows} rows); MapColumns.MaxRows needs raising");
+            }
 
             var occupied = new HashSet<int>();
 
-            for (int depth = 0; depth < MapLayout.Columns; depth++)
+            foreach (var node in map.Nodes)
             {
-                var column = map.AtDepth(depth).ToList();
+                int index = columns.IndexOf(node.Id);
+                if (index < 0 || index >= nodeButtons.Length) continue;
 
-                for (int slot = 0; slot < column.Count && slot < MapLayout.Rows; slot++)
-                {
-                    var node = column[slot];
-                    int index = MapLayout.IndexFor(depth, slot);
-                    if (index >= nodeButtons.Length) continue;
-
-                    occupied.Add(index);
-                    PaintNode(index, node,
-                        StateOf(node, current, reachable, cleared),
-                        isReachable: reachable.Contains(node.Id));
-                }
+                occupied.Add(index);
+                PaintNode(index, node, columns,
+                    StateOf(node, current, reachable, ahead, cleared),
+                    isReachable: reachable.Contains(node.Id));
             }
 
             // Everything the leg did not use. Hidden rather than dimmed: an
@@ -421,7 +425,7 @@ namespace PrincesPalace
                 if (!occupied.Contains(i)) nodeButtons[i].gameObject.SetShown(false);
             }
 
-            PaintTrails(map, current.Id, cleared, reachable);
+            PaintTrails(map, columns, current.Id, cleared, reachable);
 
             // Not while a walk is in flight: the walk owns both the figure and
             // the camera until it arrives, and a refresh from anything else
@@ -429,7 +433,7 @@ namespace PrincesPalace
             if (!IsWalking)
             {
                 PlaceWalker(current);
-                FollowCurrent(MapLayout.ColumnX(current.Depth));
+                FollowCurrent(MapLayout.ColumnX(columns.ColumnOf(current.Id)));
             }
 
             RefreshNavLinks(current, RunManager.Choices());
@@ -449,18 +453,16 @@ namespace PrincesPalace
         // this method already made for `reachable`): current -> its first
         // choice via Right (deeper is rightward, MapLayout's own column
         // convention), each further choice reached by stepping Down from the
-        // one before it (choices at one transition differ only in Slot, which
-        // is vertical -- MapLayout.ClearingRowY's own ordering, ascending
-        // Slot is top-to-bottom on screen), and Left from every choice back
-        // to current. No wrap: "Map follows reachability" -- there is
-        // nothing to wrap TO, since a leg's branching factor is whatever the
-        // generator gave it this transition.
+        // one before it in screen order (MapColumns: column, then row top to
+        // bottom), and Left from every choice back to current. No wrap: "Map
+        // follows reachability" -- there is nothing to wrap TO, since a
+        // realm's branching factor is whatever the generator gave it here.
         //
         // Entry is the current node's first reachable choice, not current
         // itself: current's own button is never interactable (isReachable is
         // false for it, PaintNode's own `button.interactable = isReachable`),
         // so selecting it would land on a Submit that does nothing.
-        private void RefreshNavLinks(DescentNode current, IReadOnlyList<DescentNode> choices)
+        private void RefreshNavLinks(RealmNode current, IReadOnlyList<RealmNode> choices)
         {
             if (_navContext == null) return;
 
@@ -472,7 +474,9 @@ namespace PrincesPalace
                 return;
             }
 
-            var ordered = choices.OrderBy(n => n.Slot).ToList();
+            // Screen order: the nearer column first, then top to bottom.
+            var columns = Columns(RunManager.Map);
+            var ordered = choices.OrderBy(n => columns.ColumnOf(n.Id)).ThenBy(n => columns.RowOf(n.Id)).ToList();
             var currentButton = ButtonFor(current);
             var choiceButtons = ordered.Select(ButtonFor).Where(b => b != null).ToList();
 
@@ -500,24 +504,44 @@ namespace PrincesPalace
             _navContext.Reconfigure(entry: choiceButtons.Count > 0 ? choiceButtons[0].gameObject : null, selectables);
         }
 
-        private Button ButtonFor(DescentNode node)
+        private Button ButtonFor(RealmNode node)
         {
             if (node == null) return null;
-            int index = MapLayout.IndexFor(node.Depth, node.Slot);
+            int index = Columns(RunManager.Map).IndexOf(node.Id);
             return index >= 0 && index < nodeButtons.Length ? nodeButtons[index] : null;
         }
 
+        // The projection for this realm, built once per map rather than per
+        // query: Refresh, the walk and every hover ask it.
+        private MapColumns _columns;
+        private RealmMap _columnsMap;
+
+        // Each caption's place as the tree built it, read before any repaint
+        // moves one.
+        private float[] _captionRestY;
+
+        private MapColumns Columns(RealmMap map)
+        {
+            if (_columns == null || !ReferenceEquals(_columnsMap, map))
+            {
+                _columns = MapColumns.Of(map);
+                _columnsMap = map;
+            }
+
+            return _columns;
+        }
+
         // Which of the five a room is in. Order matters: a cleared room the
-        // party is standing in is CURRENT, and a room deeper than the party is
-        // AHEAD whether or not a trail to it is open yet, while one at or behind
-        // their own depth that was never entered is a road not taken.
-        private static MapTileState StateOf(DescentNode node, DescentNode current,
-                                         HashSet<int> reachable, HashSet<int> cleared)
+        // party is standing in is CURRENT, and a room the party can still
+        // reach by any route is AHEAD whether or not a trail to it is open
+        // yet, while one no route reaches any more is a road not taken.
+        private static MapTileState StateOf(RealmNode node, RealmNode current, HashSet<int> reachable,
+                                            HashSet<int> ahead, HashSet<int> cleared)
         {
             if (node.Id == current.Id) return MapTileState.Current;
             if (cleared.Contains(node.Id)) return MapTileState.Walked;
             if (reachable.Contains(node.Id)) return MapTileState.Open;
-            return node.Depth > current.Depth ? MapTileState.Ahead : MapTileState.Closed;
+            return ahead.Contains(node.Id) ? MapTileState.Ahead : MapTileState.Closed;
         }
 
         // The wood itself: how much of it exists, how far it repeats, and where
@@ -566,11 +590,12 @@ namespace PrincesPalace
         // grid of buttons. Without them nothing on screen says which room leads
         // to which, and a fork is indistinguishable from two unrelated rooms
         // that happen to sit in the same column.
-        private void PaintTrails(DescentMap map, int currentId, HashSet<int> cleared, HashSet<int> reachable)
+        private void PaintTrails(RealmMap map, MapColumns columns, int currentId, HashSet<int> cleared,
+                                 HashSet<int> reachable)
         {
             if (trailSegments == null || trailSegments.Length == 0) return;
 
-            var positions = NodePositions(map);
+            var positions = NodePositions(map, columns);
             var seeds = LinkSeeds(map);
             int segment = 0;
 
@@ -639,21 +664,15 @@ namespace PrincesPalace
             HideTrails(segment);
         }
 
-        // Where every room in this leg actually sits, by the same MapLayout the
-        // nodes were placed with -- so a trail can never land somewhere its
+        // Where every room in this realm actually sits, by the same projection
+        // the nodes are placed with -- so a trail can never land somewhere its
         // room is not.
-        private static Dictionary<int, UiVec> NodePositions(DescentMap map)
+        private static Dictionary<int, UiVec> NodePositions(RealmMap map, MapColumns columns)
         {
             var positions = new Dictionary<int, UiVec>();
-
-            for (int depth = 0; depth < MapLayout.Columns; depth++)
+            foreach (var node in map.Nodes)
             {
-                var column = map.AtDepth(depth).ToList();
-                for (int slot = 0; slot < column.Count && slot < MapLayout.Rows; slot++)
-                {
-                    positions[column[slot].Id] =
-                        new UiVec(MapLayout.ColumnX(depth), MapLayout.RowY(slot));
-                }
+                if (columns.Contains(node.Id)) positions[node.Id] = columns.PositionOf(node.Id);
             }
 
             return positions;
@@ -677,21 +696,34 @@ namespace PrincesPalace
             }
         }
 
-        private void PaintNode(int index, DescentNode node, MapTileState state, bool isReachable)
+        private void PaintNode(int index, RealmNode node, MapColumns columns, MapTileState state, bool isReachable)
         {
             var button = nodeButtons[index];
             button.gameObject.SetShown(true);
 
             // The tile is a BOUNDING BOX, not a stretch target: the tree keeps
             // its own proportions inside an elite's or a boss's bigger box
-            // rather than distorting to fill it.
-            float width = MapScreen.TileWidthFor(node.Type);
-            float height = width + MapLayout.TileHeightBonus;
+            // rather than distorting to fill it. A crowded column shrinks
+            // every tile in it (MapLayout.TileScale).
+            float scale = MapLayout.TileScale(columns.CountIn(columns.ColumnOf(node.Id)));
+            float width = MapScreen.TileWidthFor(node.Type) * scale;
+            float height = width + MapLayout.TileHeightBonus * scale;
 
             var tint = TintFor(state);
 
             var rect = (RectTransform)button.transform;
             rect.sizeDelta = new Vector2(width, height);
+            var at = columns.PositionOf(node.Id);
+            rect.anchoredPosition = new Vector2(at.X, at.Y);
+
+            // The caption hangs below its tile; in a shrunk column it follows
+            // the smaller tile up so it does not sit on the room beneath, and
+            // returns to where the tree put it when the slot is reused in a
+            // roomier column.
+            var caption = nodeLabels[index].rectTransform;
+            _captionRestY ??= nodeLabels.Select(l => l.rectTransform.anchoredPosition.y).ToArray();
+            caption.anchoredPosition = new Vector2(caption.anchoredPosition.x,
+                scale < 1f ? -height * 0.5f - 16f : _captionRestY[index]);
 
             var tree = button.targetGraphic as Image;
             if (tree != null)
@@ -777,12 +809,12 @@ namespace PrincesPalace
             label.color = CaptionColour;
         }
 
-        private DescentNode NodeAt(int index)
+        private RealmNode NodeAt(int index)
         {
             var map = RunManager.Map;
             if (map == null) return null;
 
-            return map.AtDepth(index / MapLayout.Rows).ElementAtOrDefault(index % MapLayout.Rows);
+            return Columns(map).At(index);
         }
 
         // ---- the detail card ------------------------------------------------------
@@ -800,8 +832,9 @@ namespace PrincesPalace
                 return;
             }
 
-            previewTitle.SetContent(MapNodeCard.Caption(node.Type));
-            previewBody.SetContent(MapNodeCard.Body(MapNodePreview.For(RunManager.Run, node)));
+            var facts = MapNodePreview.For(RunManager.Run, node);
+            previewTitle.SetContent(MapNodeCard.Title(facts));
+            previewBody.SetContent(MapNodeCard.Body(facts));
             previewPanel.SetActive(true);
         }
 
@@ -862,6 +895,7 @@ namespace PrincesPalace
 
             var state = StateOf(node, current,
                 new HashSet<int>(RunManager.Choices().Select(n => n.Id)),
+                RunManager.Map.AllReachableFrom(current.Id),
                 new HashSet<int>(RunManager.Run.clearedNodeIds));
             Refuse(index, MapNodeCard.Refusal(state));
         }

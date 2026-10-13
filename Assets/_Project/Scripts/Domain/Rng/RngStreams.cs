@@ -79,6 +79,11 @@ namespace PrincesPalace.Domain.Rng
         // is not part of the simulation, so it must not shift a replay's beats.
         public const uint Reward = 14;
 
+        // Which consumables a fight node's consumable chip pays, keyed
+        // (step, nodeId): a reload mid-settlement pays the same potions. Its
+        // own stream so the chip cannot move the offers or the spell drop.
+        public const uint Prize = 15;
+
         // SplitMix64's finalizer, the same mixing SeededRandom itself uses.
         // Applied to the packed inputs rather than to a running state, so this
         // is a pure hash: same inputs, same answer, forever, with no ordering

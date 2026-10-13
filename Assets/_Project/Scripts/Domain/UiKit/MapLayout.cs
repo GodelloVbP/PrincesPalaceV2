@@ -2,16 +2,16 @@ using PrincesPalace.Domain.Dungeon;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // Where a descent node sits on screen.
+    // Where a realm node sits on screen.
     //
-    // Pure arithmetic over (depth, slot), in Domain for the same reason
-    // FightSubmenuLayout is: the SCREEN TREE places the node pool at build time
+    // Pure arithmetic over (column, row), in Domain for the same reason
+    // FightSubmenuLayout is: the SCREEN TREE sizes the node pool at build time
     // and the CONTROLLER reads the same numbers at runtime, and those two must
-    // be the same function or the map drifts from what it claims.
+    // be the same function or the map drifts from what it claims. Which node
+    // owns which (column, row) is MapColumns' projection.
     //
-    // A leg is DefaultDepth columns of at most MaxColumnWidth rows, so the pool
-    // is that product and every position is computable without a map in hand --
-    // which is what lets the tree be built and audited before any run exists.
+    // A realm is MapColumns.Count columns of at most MapColumns.MaxRows rows, so
+    // the pool is that product, built before any run exists.
     //
     // EVERY x HERE IS CONTENT-LOCAL, measured from the scrolling content rect's
     // own LEFT edge, not from the panel's centre like the rest of the game's
@@ -52,31 +52,51 @@ namespace PrincesPalace.Domain.UiKit
         public const float MaxTileWidth = BossTileWidth;
         public const float MaxTileHeight = BossTileWidth + TileHeightBonus;
 
-        public static int Columns => DescentMapGenerator.DefaultDepth;
-        public static int Rows => DescentMapGenerator.MaxColumnWidth;
+        public static int Columns => MapColumns.Count;
+        public static int Rows => MapColumns.MaxRows;
 
         // The pool's capacity: every slot a leg could possibly use.
         public static int Capacity => Columns * Rows;
 
-        // Which pool entry a (depth, slot) pair owns. Row-major so a column's
-        // entries are contiguous, which makes "hide the rest of this column"
-        // a range rather than a scan.
-        public static int IndexFor(int depth, int slot) => depth * Rows + slot;
+        // Which pool entry a (column, row) pair owns. Row-major so a column's
+        // entries are contiguous.
+        public static int IndexFor(int column, int row) => column * Rows + row;
 
-        public static float ColumnX(int depth) => ClearingColumnX[0] + depth * ColumnGap;
+        public static float ColumnX(int column) => ClearingColumnX[0] + column * ColumnGap;
 
-        // Rows SNAP to a painted clearing by slot index -- they are not spread
-        // evenly, and a short column is not centred. MaxColumnWidth is
-        // exactly 3 and there are exactly 3 clearing rows, so slot 0/1/2 IS
-        // the clearing to stand in. A centred two-room column would sit at
-        // two positions the canopy has no holes at.
+        // A column of up to three SNAPS to the painted clearings by row index
+        // rather than centring, so a two-room column leaves its unused
+        // clearing empty instead of standing between holes in the canopy.
         //
-        // A column of two therefore leaves its unused clearing empty, including
-        // the middle one, with no special case for it.
-        public static float RowY(int slot)
+        // A fuller column (a fork beside a pocket that rejoins there) has more
+        // rooms than the art has clearings, so it spreads evenly between the
+        // outer clearings and its tiles shrink to fit (TileScale). Every room
+        // stays visible and clickable; the canopy match is what gives.
+        public static float RowY(int row, int countInColumn)
         {
-            if (slot < 0) return ClearingRowY[0];
-            return slot < ClearingRowY.Length ? ClearingRowY[slot] : ClearingRowY[ClearingRowY.Length - 1];
+            if (row < 0) row = 0;
+            if (countInColumn <= ClearingRowY.Length)
+            {
+                return row < ClearingRowY.Length ? ClearingRowY[row] : ClearingRowY[ClearingRowY.Length - 1];
+            }
+
+            if (row > countInColumn - 1) row = countInColumn - 1;
+            return ClearingRowY[0] - row * CrowdedPitch(countInColumn);
+        }
+
+        private static float CrowdedPitch(int countInColumn) =>
+            (ClearingRowY[0] - ClearingRowY[ClearingRowY.Length - 1]) / (countInColumn - 1);
+
+        // The breathing room between two stacked tiles in a crowded column.
+        public const float CrowdedTileGap = 10f;
+
+        // How much a column's tiles shrink so the elite tile, the tallest that
+        // can stand in a crowded column, still clears its neighbour.
+        public static float TileScale(int countInColumn)
+        {
+            if (countInColumn <= ClearingRowY.Length) return 1f;
+            float fit = (CrowdedPitch(countInColumn) - CrowdedTileGap) / (EliteTileWidth + TileHeightBonus);
+            return fit < 1f ? fit : 1f;
         }
 
         // ---- the scrolling window ----------------------------------------
@@ -188,9 +208,10 @@ namespace PrincesPalace.Domain.UiKit
         // the whole of its smoothness.
         public const int SegmentsPerLink = 6;
 
-        // The last column has no outgoing trail, and DescentMapGenerator gives
-        // a node one link plus at most one extra -- so this is the real ceiling
-        // rather than a guess with headroom.
+        // Two links a pool slot on average, outside the last column. Fork
+        // siblings carry three (the next level twice and a pocket) and most
+        // rooms one; MapColumnsTests holds every default-profile realm in the
+        // fuzz under this.
         public static int LinkCapacity => (Columns - 1) * Rows * 2;
 
         public static int SegmentCapacity => LinkCapacity * SegmentsPerLink;

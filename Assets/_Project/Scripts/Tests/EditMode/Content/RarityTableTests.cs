@@ -421,9 +421,8 @@ namespace PrincesPalace.Domain.Tests
         //
         // depthStep 23 is the exact step from the report -- floor 3 runs
         // steps 16..23 (RunDepth.FloorFor: floor N starts at
-        // (N-1)*DescentMapGenerator.DefaultLegLength, DefaultLegLength==8),
-        // so 23 is the last step of that floor's leg, right where a boss
-        // room sits. The bug itself was never in these two rolls -- both
+        // (N-1)*RealmMap.SpineLength, SpineLength==8), so 23 is the step
+        // before that floor's heart. The bug itself was never in these two rolls -- both
         // already had the numbers to do this (TierFloorFor(Boss)==3;
         // BossStep beats Normal's) -- it was RunOrchestrator.RollOffers
         // never routing a boss kill to EncounterClass.Boss at all (it read

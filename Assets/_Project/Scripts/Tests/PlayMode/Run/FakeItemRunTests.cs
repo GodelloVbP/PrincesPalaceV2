@@ -79,23 +79,25 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- save 8 --------------------------------------------------------------------
 
+        // Save 8 is the fake bump; 9 (the realm map) sits above it, so a
+        // newer build still reads every fake the way 8 wrote it.
         [Test]
-        public void TheSaveIsVersionEight()
+        public void TheSaveIsVersionNine()
         {
-            Assert.AreEqual(8, SaveData.CurrentVersion);
+            Assert.AreEqual(9, SaveData.CurrentVersion);
         }
 
         [Test]
-        public void ASaveFromVersionNine_IsRefused()
+        public void ASaveFromVersionTen_IsRefused()
         {
             var save = SaveData.CreateNew();
-            save.version = 9;
+            save.version = 10;
 
             Assert.IsFalse(save.Migrate());
         }
 
         [Test]
-        public void AVersionSevenSave_LoadsAsEight_Unchanged()
+        public void AVersionSevenSave_LoadsUnchanged()
         {
             var save = SaveData.CreateNew();
             InventoryOps.Add(save.stockpiledItems, Potion, 2);
@@ -105,14 +107,14 @@ namespace PrincesPalace.PlayModeTests
             // A version-7 file: no `provenance` anywhere, version 7.
             string json = JsonUtility.ToJson(save);
             json = Regex.Replace(json, ",\"provenance\":\\{[^}]*\\}", "");
-            json = json.Replace("\"version\":8", "\"version\":7");
+            json = json.Replace("\"version\":" + SaveData.CurrentVersion, "\"version\":7");
             StringAssert.DoesNotContain("provenance", json, "fixture: the v7 file still names provenance");
 
             var loaded = JsonUtility.FromJson<SaveData>(json);
             Assert.AreEqual(7, loaded.version, "fixture");
 
             Assert.IsTrue(loaded.Migrate(), "a version-7 save was refused");
-            Assert.AreEqual(8, loaded.version);
+            Assert.AreEqual(SaveData.CurrentVersion, loaded.version);
 
             Assert.AreEqual(2, loaded.stockpiledItems.Count);
             Assert.AreEqual(Potion, loaded.stockpiledItems[0].itemId);

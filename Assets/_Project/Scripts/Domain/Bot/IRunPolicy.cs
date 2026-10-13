@@ -16,7 +16,7 @@ namespace PrincesPalace.Domain.Bot
     // fake map rules.
     public interface IRunPolicy
     {
-        DescentNode ChooseNode(IReadOnlyList<DescentNode> choices, RunView view, SeededRandom rng);
+        RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng);
 
         // Index into `offers`. `view.OfferScores` is index-aligned with
         // `offers` and carries what Core's GearEvaluator thinks each one is

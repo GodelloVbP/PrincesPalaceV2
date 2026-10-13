@@ -213,8 +213,8 @@ namespace PrincesPalace.Domain.Tests
 
         // THE MISSING HALF OF THE INVARIANT ABOVE. AGolemTakesAboutTheSame...
         // pins player-attacks-enemy; this pins enemy-attacks-player: the
-        // earliest a boss can appear is step 8 (DescentMapGenerator: boss
-        // forced at step ≡ 0 mod 8), and mitigation is the canonical
+        // earliest a boss can appear is step 8 (the first realm's heart at
+        // offset RealmMap.SpineLength), and mitigation is the canonical
         // percentage equation against PhysicalDefense/MagicalDefense.
         // `bossAttack`/`startingPlayerDefense` are hand-authored magnitude
         // stand-ins (this file has no authority over real enemy or gear

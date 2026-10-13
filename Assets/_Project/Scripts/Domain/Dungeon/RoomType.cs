@@ -2,19 +2,18 @@ namespace PrincesPalace.Domain.Dungeon
 {
     // What a player finds in a room.
     //
-    // Adding one is deliberately cheap: put it here, give it a weight in
-    // DescentMapGenerator.MiddleRooms (if it should generate at all), give it
-    // a glyph/label/colour/description in MapController, and give it a case
-    // in GameplayManager.ResolveRoom, which is where a room's content runs
-    // the moment it is picked on the map.
+    // Adding one: put it here, give it a role in RealmMapGenerator.TypeRooms
+    // and a weight in RealmProfile.waypointWeights (if it should generate at
+    // all), an icon in MapScreen and a caption in MapNodeCard, and a case in
+    // RunOrchestrator.ArriveAt, which is where a room's content runs the
+    // moment the party reaches it.
     //
     // ItemSpawn currently has no weight, so nothing generates it. That is a
     // gap rather than a decision: no sweep asserts every value is reachable.
     public enum RoomType
     {
-        // Column 0 of every floor, and ONLY column 0 — never generated as a
-        // middle room, so an entry room simply cannot show up anywhere but
-        // where it belongs. See DescentMapGenerator.Generate.
+        // Offset 0 of every realm, and only there: RealmMapGenerator places
+        // it and never rolls it.
         Entry,
 
         Fight,
@@ -32,10 +31,8 @@ namespace PrincesPalace.Domain.Dungeon
         ItemSpawn,
 
         // Unscouted: the map shows a "?" and nothing else until the room is
-        // actually entered. Retired from generation (DescentMapGenerator no
-        // longer rolls it — its weight moved to Fight), kept for
-        // compatibility so a saved `currentNodeId` from before that change
-        // still resolves, renders and clears the same as it always did.
+        // actually entered. Never generated (the map shows every room); kept
+        // because RoomResolution and the map icons still handle the value.
         Unknown,
     }
 }

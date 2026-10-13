@@ -102,7 +102,7 @@ namespace PrincesPalace.Domain.Bot
 
         // ---- outside a fight, this IS GreedyAggressive ------------------------
 
-        public DescentNode ChooseNode(IReadOnlyList<DescentNode> choices, RunView view, SeededRandom rng) =>
+        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng) =>
             _greedy.ChooseNode(choices, view, rng);
 
         public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng) =>

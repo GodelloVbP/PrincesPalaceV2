@@ -567,7 +567,7 @@ namespace PrincesPalace
             if (before == null) return;
 
             run.currentNodeId = before.Id;
-            run.step = run.legStartStep + before.Depth;
+            run.step = run.legStartStep + before.Offset;
             if (run.step > run.deepestStep) run.deepestStep = run.step;
             if (!run.clearedNodeIds.Contains(before.Id)) run.clearedNodeIds.Add(before.Id);
         }

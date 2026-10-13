@@ -83,6 +83,12 @@ namespace PrincesPalace.Domain.Dungeon
         public const int MaxDefaultAnchors = 6;
         public const int MaxDefaultPocketLength = 4;
 
+        // The profile a realm opening at `legStartStep` resolves to. Every
+        // floor is the default until designed realms land as content (P8);
+        // RealmOpening calls this once per realm and saves the result.
+        public static RealmProfile ForRealm(int legStartStep, bool restBeforeBoss = false) =>
+            Default(RunDepth.FloorFor(legStartStep), restBeforeBoss);
+
         public static RealmProfile Default(int floor, bool restBeforeBoss = false)
         {
             if (floor < 1) floor = 1;
@@ -99,7 +105,9 @@ namespace PrincesPalace.Domain.Dungeon
             int anchors = 1 + floor / 3;
             if (anchors > MaxDefaultAnchors) anchors = MaxDefaultAnchors;
 
-            // Placeholder literals until the P0 EV sheet sets them.
+            // Prize weights are the P0 EV sheet's sizing assumption (gold 0.5,
+            // consumable 0.5; Gear, Book and Relic wait on item phase I3).
+            // The waypoint weights are P1's and no sheet has set them yet.
             return new RealmProfile
             {
                 pocketCount = pockets,
@@ -117,8 +125,8 @@ namespace PrincesPalace.Domain.Dungeon
                 },
                 prizeWeights = new List<PrizeWeight>
                 {
-                    new PrizeWeight(PrizeKind.Gold, 60),
-                    new PrizeWeight(PrizeKind.Consumable, 40),
+                    new PrizeWeight(PrizeKind.Gold, 50),
+                    new PrizeWeight(PrizeKind.Consumable, 50),
                     new PrizeWeight(PrizeKind.Item, 0),
                     new PrizeWeight(PrizeKind.Book, 0),
                     new PrizeWeight(PrizeKind.Relic, 0),

@@ -76,14 +76,35 @@ namespace PrincesPalace
         // here: its attack rides the health rate (DifficultyCurve.
         // ScaleEnemyAttack), because a fixed-length fight does not grow
         // longer with depth the way a room fight does.
+        // An enemy's stats as this fight fields them, before depth: authored,
+        // elite-scaled when the encounter is an elite.
+        private static StatBlock FieldedStats(ResolvedEnemy enemy, bool isElite) =>
+            isElite
+                ? enemy.BaseStats.ScaledForElite(EliteHealthMultiplier, EliteDefenseMultiplier, EliteAttackMultiplier)
+                : enemy.BaseStats;
+
+        // Max HP and attack exactly as a room fight fields this enemy at this
+        // step: what node strength weighs (RealmOpening), from the same two
+        // lines ToCombatant uses so the threat cannot drift from the fight.
+        public static FighterBody EnemyBody(ResolvedEnemy enemy, int depthStep, bool isElite)
+        {
+            var stats = FieldedStats(enemy, isElite);
+            return new FighterBody(DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
+                DifficultyCurve.ScaleEnemyAttack(stats.attack, depthStep, 0));
+        }
+
+        // A squad member's max HP and attack before relics: the weapon's power
+        // replaces attack when one is worn, as in ToCombatant.
+        public static FighterBody PartyBody(Character character)
+        {
+            var stats = ContentDatabase.EffectiveStats(character);
+            return new FighterBody(stats.maxHealth, ContentDatabase.EquippedWeaponPower(character) ?? stats.attack);
+        }
+
         private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite,
                                                   int roundLimit)
         {
-            var stats = definition.Data.BaseStats;
-            if (isElite)
-            {
-                stats = stats.ScaledForElite(EliteHealthMultiplier, EliteDefenseMultiplier, EliteAttackMultiplier);
-            }
+            var stats = FieldedStats(definition.Data, isElite);
 
             // Mana is NOT part of StatBlock -- it is derived from ability scores
             // for a character, and monsters have none. They get the `mana` row

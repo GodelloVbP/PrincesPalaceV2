@@ -18,7 +18,7 @@ namespace PrincesPalace.Domain.Bot
             return legal[rng.NextInt(0, legal.Count)];
         }
 
-        public DescentNode ChooseNode(IReadOnlyList<DescentNode> choices, RunView view, SeededRandom rng)
+        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng)
         {
             return choices[rng.NextInt(0, choices.Count)];
         }

@@ -64,8 +64,8 @@ namespace PrincesPalace.PlayModeTests
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                if (map.AtDepth(1).Any(n => n.Type == RoomType.Shop)) return seed;
+                var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
+                if (RealmPaths.FirstOfType(map, RoomType.Shop) != null) return seed;
             }
 
             throw new AssertionException("No seed under 4000 generated a shop in the first column.");
@@ -82,7 +82,8 @@ namespace PrincesPalace.PlayModeTests
             ulong seed = SeedWithAShopInTheFirstColumn();
             RunManager.StartRun(seed);
 
-            var node = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Shop);
+            var node = RealmPaths.FirstOfType(RunManager.Map, RoomType.Shop);
+            RealmPaths.StandBefore(node);
             RunOrchestrator.ArriveAt(node);
 
             // A GENEROUS PURSE, so the shot shows the ordinary state of a card
@@ -153,7 +154,8 @@ namespace PrincesPalace.PlayModeTests
             ulong seed = SeedWithAShopInTheFirstColumn();
             RunManager.StartRun(seed);
 
-            var node = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Shop);
+            var node = RealmPaths.FirstOfType(RunManager.Map, RoomType.Shop);
+            RealmPaths.StandBefore(node);
             RunOrchestrator.ArriveAt(node);
 
             // A GENEROUS PURSE, same reason CaptureTheShopAndItsPack's own

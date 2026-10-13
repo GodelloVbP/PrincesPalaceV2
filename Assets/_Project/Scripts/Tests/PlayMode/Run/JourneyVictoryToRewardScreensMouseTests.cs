@@ -67,7 +67,7 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        private static DescentNode APlainFightRoom()
+        private static RealmNode APlainFightRoom()
         {
             var choices = RunManager.Choices();
             Assert.IsNotEmpty(choices, "the leg offered nowhere to go");

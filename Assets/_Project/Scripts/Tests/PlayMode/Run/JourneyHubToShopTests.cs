@@ -58,17 +58,18 @@ namespace PrincesPalace.PlayModeTests
         // already owns proving Move across the gear grid itself. Computed
         // live, never pinned as a magic literal (this project's own
         // established seed-search idiom).
-        private static ulong SeedWithAShopAtDepth1EntryAndAPricedFirstCard()
+        private static ulong SeedWithAPocketHeadShopAndAPricedFirstCard()
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
-                var entry = map.AtDepth(1).FirstOrDefault();
-                if (entry == null || entry.Type != RoomType.Shop) continue;
+                var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
+                if (RealmPaths.PocketHead(map, RoomType.Shop) == null) continue;
 
                 RunManager.ResetForTests();
                 RunManager.StartRun(seed);
-                RunOrchestrator.ArriveAt(RunManager.Map.AtDepth(1).First());
+                var shop = RealmPaths.PocketHead(RunManager.Map, RoomType.Shop);
+                RealmPaths.StandBefore(shop);
+                RunOrchestrator.ArriveAt(shop);
                 var card0 = RunOrchestrator.CurrentShopStock.FirstOrDefault(e =>
                     e != null && e.section == ShopStock.GearSection && e.index == 0
                     && !e.noOffer && !e.sold && e.price > 0);
@@ -76,7 +77,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             throw new AssertionException(
-                "No seed under 4000 puts a priced gear card at the shop's own first slot (depth 1 entry).");
+                "No seed under 4000 puts a priced gear card first in a shop that opens its pocket.");
         }
 
         private static GameObject NamedInScene(string name) =>
@@ -103,6 +104,10 @@ namespace PrincesPalace.PlayModeTests
             // press, and why it happens after EnterSlot rather than before.
             RunOrchestrator.StartRun(seed);
 
+            // Shops sit only inside pockets, so the party is walked to the
+            // spine room the shop's pocket leaves before the map opens.
+            RealmPaths.StandBefore(RealmPaths.PocketHead(RunManager.Map, RoomType.Shop));
+
             yield return PressSubmit(); // StartOrResumeRun -> BeginDescentTransition -> EnterTheDescent
             yield return WaitUntil(() =>
             {
@@ -120,11 +125,11 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             TakeOverInput();
 
-            var entryNode = RunManager.Map.AtDepth(1).First();
+            var entryNode = RealmPaths.FirstChoiceFromHere();
             Assert.AreEqual(RoomType.Shop, entryNode.Type,
-                $"fixture: seed {seed} should put a Shop room at the map's own entry (depth 1, slot 0)");
+                $"fixture: seed {seed} should put the shop first among the party's choices");
 
-            string entryName = "MapNode" + MapLayout.IndexFor(entryNode.Depth, entryNode.Slot);
+            string entryName = RealmPaths.ButtonName(entryNode);
             AssertSelectedName(entryName, "the current node's first reachable choice is the declared entry");
 
             yield return PressSubmit(); // walk to the room -> Arrival.Shop -> OpenShop() in place
@@ -145,7 +150,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator BuyingTheEntryCard_RefusesAGoldShort_ThenBuysExactlyOnceAffordable()
         {
-            ulong seed = SeedWithAShopAtDepth1EntryAndAPricedFirstCard();
+            ulong seed = SeedWithAPocketHeadShopAndAPricedFirstCard();
             yield return ReachTheShop(seed);
 
             var card = RunOrchestrator.CurrentShopStock.First(e =>
@@ -189,7 +194,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator CancelCancel_LeavesTheShop_BackOntoTheSameMap()
         {
-            ulong seed = SeedWithAShopAtDepth1EntryAndAPricedFirstCard();
+            ulong seed = SeedWithAPocketHeadShopAndAPricedFirstCard();
             yield return ReachTheShop(seed);
 
             yield return PressCancel(); // arms leaving, same first press ShopLeaveButton itself needs

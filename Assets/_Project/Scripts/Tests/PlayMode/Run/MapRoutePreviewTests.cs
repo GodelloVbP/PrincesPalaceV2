@@ -61,12 +61,11 @@ namespace PrincesPalace.PlayModeTests
             _map.Refresh();
         }
 
-        private static int IndexOf(DescentNode node) =>
-            MapLayout.IndexFor(node.Depth, RunManager.Map.AtDepth(node.Depth).ToList().FindIndex(n => n.Id == node.Id));
+        private static int IndexOf(RealmNode node) => MapColumns.Of(RunManager.Map).IndexOf(node.Id);
 
-        private GameObject NodeObject(DescentNode node) => Named($"MapNode{IndexOf(node)}");
+        private GameObject NodeObject(RealmNode node) => Named($"MapNode{IndexOf(node)}");
 
-        private TMP_Text CaptionOf(DescentNode node) => Named($"MapNode{IndexOf(node)}Name").GetComponent<TMP_Text>();
+        private TMP_Text CaptionOf(RealmNode node) => Named($"MapNode{IndexOf(node)}Name").GetComponent<TMP_Text>();
 
         private static void Pointer(GameObject go, bool enter)
         {
@@ -119,7 +118,7 @@ namespace PrincesPalace.PlayModeTests
 
                     // What MoveTo writes, then what the fight builds from it.
                     run.currentNodeId = node.Id;
-                    run.step = run.legStartStep + node.Depth;
+                    run.step = run.legStartStep + node.Offset;
                     var roster = RunEncounter.For(save, run, node.Type);
 
                     var names = roster.EnemyIds.Select(id => ContentDatabase.GetEnemy(id).Data.DisplayName).ToList();
@@ -138,8 +137,12 @@ namespace PrincesPalace.PlayModeTests
         {
             int found = 0;
 
-            for (ulong seed = 1; seed <= 40 && found < 3; seed++)
+            // Treasure stands only in pockets, beside the realm's anchor and
+            // shop, so it is rare on floor 1: seeds without one are skipped
+            // before the map is opened.
+            for (ulong seed = 1; seed <= 2000 && found < 3; seed++)
             {
+                if (RealmPaths.FirstOfType(RealmPaths.FirstRealm(seed), RoomType.Treasure) == null) continue;
                 yield return OpenTheMap(seed);
                 var run = RunManager.Run;
 
@@ -148,7 +151,7 @@ namespace PrincesPalace.PlayModeTests
                     var facts = MapNodePreview.For(run, node);
 
                     run.currentNodeId = node.Id;
-                    run.step = run.legStartStep + node.Depth;
+                    run.step = run.legStartStep + node.Offset;
                     RoomResolver.Resolve(run, RoomType.Treasure);
 
                     Assert.AreEqual(RoomResolver.Last.Gold, facts.StashGold, $"seed {seed} node {node.Id}");
@@ -158,7 +161,7 @@ namespace PrincesPalace.PlayModeTests
                 }
             }
 
-            Assert.GreaterOrEqual(found, 1, "forty seeds produced no treasure room to compare");
+            Assert.GreaterOrEqual(found, 1, "no seed produced a treasure room to compare");
         }
 
         // ---- the card ------------------------------------------------------------
@@ -181,7 +184,7 @@ namespace PrincesPalace.PlayModeTests
                     yield return null;
 
                     Assert.IsTrue(panel.activeSelf, $"no card for {node.Type} (seed {seed})");
-                    Assert.AreEqual(TitleByType[node.Type], Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
+                    StringAssert.StartsWith(TitleByType[node.Type], Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
                     StringAssert.StartsWith(BodyStartByType[node.Type],
                         Named("MapPreviewBody").GetComponent<TMP_Text>().text, $"{node.Type} (seed {seed})");
                     seen.Add(node.Type);
@@ -210,7 +213,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(panel.activeSelf, "focusing a room showed no card");
-            Assert.AreEqual(TitleByType[choice.Type], Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
+            StringAssert.StartsWith(TitleByType[choice.Type], Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
 
             ExecuteEvents.Execute(go, new BaseEventData(EventSystem.current), ExecuteEvents.deselectHandler);
             yield return null;
@@ -246,7 +249,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheMap();
 
-            var far = RunManager.Map.Nodes.First(n => n.Depth >= 2);
+            var far = RunManager.Map.Nodes.First(n => n.Offset >= 2);
             var caption = CaptionOf(far);
             string before = caption.text;
             Assert.AreEqual(TitleByType[far.Type], before, "fixture: the caption should be the room's name");
@@ -284,7 +287,7 @@ namespace PrincesPalace.PlayModeTests
             // stray submit would take into the legality guard.
             yield return OpenTheMap();
 
-            var far = RunManager.Map.Nodes.First(n => n.Depth >= 2);
+            var far = RunManager.Map.Nodes.First(n => n.Offset >= 2);
             NodeObject(far).GetComponent<Button>().onClick.Invoke();
             yield return null;
 
@@ -295,10 +298,12 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator ASecondPressMidWalkIsAnsweredOnTheCaption()
         {
-            yield return OpenTheMap();
-
-            var quiet = RunManager.Choices().First(n =>
-                n.Type != RoomType.Fight && n.Type != RoomType.EliteFight && n.Type != RoomType.Boss);
+            // A treasure opening its pocket: quiet, and one column over.
+            yield return OpenTheMap(RealmPaths.SeedWhere(
+                m => RealmPaths.PocketHead(m, RoomType.Treasure) != null, "a treasure opening a pocket"));
+            var quiet = RealmPaths.PocketHead(RunManager.Map, RoomType.Treasure);
+            RealmPaths.StandBefore(quiet);
+            _map.Refresh();
             var button = NodeObject(quiet).GetComponent<Button>();
 
             button.onClick.Invoke();

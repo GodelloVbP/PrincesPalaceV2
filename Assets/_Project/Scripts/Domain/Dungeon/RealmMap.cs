@@ -57,8 +57,7 @@ namespace PrincesPalace.Domain.Dungeon
     }
 
     // One realm as a forward-only DAG: an 8-step spine (entry, 7 rooms, the
-    // heart), forks, and pockets (docs/PLAN_RUN_MAP.md sections 3-4). Keeps the
-    // query surface of the DescentMap it replaces.
+    // heart), forks, and pockets (docs/PLAN_RUN_MAP.md sections 3-4).
     public sealed class RealmMap
     {
         public const int SpineLength = 8;
@@ -96,6 +95,28 @@ namespace PrincesPalace.Domain.Dungeon
         }
 
         public RealmPocket PocketAt(int stretch) => Pockets.FirstOrDefault(p => p.Stretch == stretch);
+
+        // The entry, a spine room, a fork sibling or the heart: every node a
+        // route walks without paying a pocket.
+        public static bool OnSpine(RealmNode node) => node != null && node.Role != RealmNodeRole.Pocket;
+
+        // The skip heal (plan section 3): every living member heals this share
+        // of max HP when the party walks past a pocket. Owner-set, flat.
+        public const int SkipHealPercent = 8;
+
+        // The pocket the move from `fromId` to `toId` walks past, or null.
+        // Stretch k is skipped by stepping along the spine from offset k to
+        // k + 1 while a pocket hangs on k. A forward-only DAG walks each
+        // stretch once, so this fires at most once per pocket per realm
+        // without any state.
+        public RealmPocket PocketSkippedBy(int fromId, int toId)
+        {
+            var from = Node(fromId);
+            var to = Node(toId);
+            if (!OnSpine(from) || !OnSpine(to) || to.Offset != from.Offset + 1) return null;
+            if (!from.Next.Contains(toId)) return null;
+            return PocketAt(from.Offset);
+        }
 
         public IReadOnlyList<int> ReachableFrom(int id)
         {

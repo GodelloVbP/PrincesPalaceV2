@@ -179,7 +179,7 @@ namespace PrincesPalace.Domain.Tests
         // id:offset:role:type:prize>next. A spine Event at offset 1, a pocket of an anchor then a shop,
         // then Fight, Event, Fight, Fight, Event, Fight and the heart.
         private const string Seed42FloorOne =
-            "0:0:0:0:0>1|1:1:1:6:0>2,4|2:2:3:2:0>3|3:2:3:7:0>4|4:2:1:1:1>5|5:3:1:6:0>6|6:4:1:1:1>7|7:5:1:1:1>8|8:6:1:6:0>9|9:7:1:1:1>10|10:8:4:5:0>";
+            "0:0:0:0:0>1|1:1:1:6:0>2,4|2:2:3:2:0>3|3:2:3:7:0>4|4:2:1:1:2>5|5:3:1:6:0>6|6:4:1:1:2>7|7:5:1:1:2>8|8:6:1:6:0>9|9:7:1:1:1>10|10:8:4:5:0>";
 
         // ---- the fuzz ----------------------------------------------------
 

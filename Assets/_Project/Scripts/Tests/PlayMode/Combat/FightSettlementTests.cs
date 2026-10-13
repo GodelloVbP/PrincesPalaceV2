@@ -99,6 +99,15 @@ namespace PrincesPalace.PlayModeTests
             var run = RunManager.Run;
             int goldBefore = run.gold;
             int roomsClearedBefore = run.roomsCleared;
+            int potionsBefore = SaveSlotManager.CurrentSave.stockpiledItems.Sum(e => e.count);
+
+            // The chip the map card quoted for this room (run map P2): what
+            // settlement must pay on top of the enemies' own gold.
+            var chip = RealmPrizes.ChipOf(run, room);
+            Assert.That(chip.Kind, Is.EqualTo(PrizeKind.Gold).Or.EqualTo(PrizeKind.Consumable),
+                "fixture: the default profile gives every plain fight a gold or consumable chip");
+            int chipGold = chip.Kind == PrizeKind.Gold ? chip.Amount : 0;
+            int chipPotions = chip.Kind == PrizeKind.Consumable ? chip.Amount : 0;
 
             FightController fight = null;
             yield return OpenTheRoom(f => fight = f);
@@ -115,14 +124,22 @@ namespace PrincesPalace.PlayModeTests
             // GOLD to the run. Read off the session's own payout rather than
             // recomputed from VictoryRewards -- a test that recomputes the
             // formula proves only that it can call it twice.
-            Assert.AreEqual(goldBefore + payout.Gold, run.gold,
-                "the fight's gold was not banked on the run");
+            Assert.AreEqual(goldBefore + payout.Gold + chipGold, run.gold,
+                "the fight's gold and its gold chip were not banked on the run");
 
             // EXPERIENCE to the characters, through RewardApplier, whose report
             // is what the Reckoning draws.
             var reward = FightBootstrap.LastReward;
             Assert.IsNotNull(reward, "nothing published a CombatReward for the reward screen to read");
             Assert.AreEqual(payout.Gold, reward.GoldGained);
+
+            // The chip is paid and said: potions land in the stash, and the
+            // Reckoning's notices name what the chip gave.
+            Assert.AreEqual(potionsBefore + chipPotions,
+                SaveSlotManager.CurrentSave.stockpiledItems.Sum(e => e.count),
+                "the consumable chip did not reach the stash");
+            Assert.IsTrue(reward.Notices.Any(n => n.StartsWith("Prize: ")),
+                "the Reckoning does not say what the chip paid");
             CollectionAssert.IsNotEmpty(reward.Characters, "the reward names nobody");
 
             if (payout.Experience > 0)
@@ -321,7 +338,7 @@ namespace PrincesPalace.PlayModeTests
             // the run -- ending the run here would stop every descent at its
             // first boss.
             Assert.IsTrue(RunManager.HasRun, "the boss win ended the run");
-            Assert.AreEqual(DescentMapGenerator.DefaultLegLength, run.legStartStep,
+            Assert.AreEqual(RealmMap.SpineLength, run.legStartStep,
                 "the leg did not advance, so the descent has nowhere left to go");
         }
 
@@ -413,7 +430,7 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        private static DescentNode APlainFightRoom()
+        private static RealmNode APlainFightRoom()
         {
             var choices = RunManager.Choices();
             CollectionAssert.IsNotEmpty(choices, "the leg offered nowhere to go");

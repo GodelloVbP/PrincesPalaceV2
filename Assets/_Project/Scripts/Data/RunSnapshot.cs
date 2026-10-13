@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 
@@ -25,12 +26,13 @@ namespace PrincesPalace
     // Flattening at the boundary keeps that true.
     //
     // NOTE WHAT IS ABSENT: the map. It is not stored because it does not need
-    // to be. Given `runSeed` and `legStartStep`, DescentMapGenerator produces
-    // the identical leg again — node ids are assigned in generation order and
-    // generation reads no content, so `currentNodeId` and `clearedNodeIds`
-    // stay meaningful across a regeneration. That is what the seed work was
-    // for, and it means a content update cannot corrupt an in-progress run's
-    // geography.
+    // to be. Given `runSeed`, `legStartStep` and the saved `realmProfile`,
+    // RealmMapGenerator produces the identical realm again — node ids are
+    // assigned in generation order and generation reads no content, so
+    // `currentNodeId` and `clearedNodeIds` stay meaningful across a
+    // regeneration, and a content update cannot corrupt an in-progress run's
+    // geography. The profile is saved because it is data resolved once at
+    // realm open, not content read again.
     [Serializable]
     public class RunSnapshot
     {
@@ -85,6 +87,32 @@ namespace PrincesPalace
         public int currentNodeId = -1;
         public List<int> clearedNodeIds = new List<int>();
         public string bossEnemyId = "";
+
+        // ---- the realm (docs/PLAN_RUN_MAP.md sections 2-4, save v9) ---------
+        //
+        // Resolved once when a realm opens (RealmOpening.Open, from StartRun,
+        // AdvanceLeg and the v8 -> v9 migration) and frozen for the realm.
+        // `realmOpenedAt` is the legStartStep they belong to; any other value
+        // means the realm has not been opened and RunManager.Map opens it. Its
+        // initialiser survives a JsonUtility read of a save without the field,
+        // so a default-constructed profile is never taken for a resolved one.
+        public int realmOpenedAt = -1;
+        public RealmProfile realmProfile;
+
+        // Each fight node's strength 1-3 against the party at realm open
+        // (NodeStrength). Frozen, so levelling mid-realm never re-labels a
+        // node the player already judged.
+        public List<NodeStrengthEntry> nodeStrength = new List<NodeStrengthEntry>();
+
+        // Rooms entered this run, what labels that count rooms show. Not
+        // `step`: a pocket adds rooms at its rejoin step without moving the
+        // difficulty clock.
+        public int roomsWalked;
+
+        // Anchor node ids that can no longer stand at the heart: beaten on the
+        // map, or passed by a migrated save (which pays nothing). Run map P5
+        // fields the rest beside the boss.
+        public List<int> slainAnchorIds = new List<int>();
 
         public int gold;
 
@@ -196,8 +224,9 @@ namespace PrincesPalace
         //
         // Nothing grants this today. RunManager.StartRun leaves this at its
         // default (false) rather than reading the squad. The field and the
-        // generator parameter it feeds both stay, so a future reward can
-        // wire back into StartRun without DescentMap changing at all.
+        // profile flag it feeds (RealmProfile.restBeforeBoss) both stay, so a
+        // future reward can wire back into StartRun without the generator
+        // changing at all.
         //
         // SNAPSHOT AT StartRun RATHER THAN READ LIVE, which is the opposite of
         // how the reroll allowance works, and the difference matters. The map

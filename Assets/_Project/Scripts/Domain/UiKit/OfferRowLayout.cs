@@ -31,8 +31,7 @@ namespace PrincesPalace.Domain.UiKit
         // row is measured to the fraction.
         //
         // MapLayout sets the precedent for reading a constant from the type
-        // that owns it (DescentMapGenerator) rather than keeping a copy in
-        // sync.
+        // that owns it (MapColumns) rather than keeping a copy in sync.
         public const float RowBudget = Screens.ReckoningScreen.ContentHalfWidth * 2f;
 
         public const float CardGap = 30f;

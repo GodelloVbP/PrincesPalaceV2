@@ -7,7 +7,7 @@ namespace PrincesPalace
 {
     // The descent, between scenes.
     //
-    // Everything it holds already existed: DescentMap and its generator are
+    // Everything it holds already existed: RealmMap and its generator are
     // Domain, RunSnapshot is the save shape, DifficultyCurve scales the rooms.
     // What was missing is the thing that DRIVES them -- start a run, know which
     // room you are in, bank what a fight paid, move on.
@@ -21,17 +21,16 @@ namespace PrincesPalace
     {
         // The map is REGENERATED from the seed rather than serialised.
         //
-        // A seed and a generator reproduce a map exactly; a serialised map is a
-        // second representation that can drift from the generator that made it,
-        // and would have to be migrated every time the generator changed. Cached
-        // here because regenerating on every query would be wasteful, keyed by
-        // the seed so a different run cannot read a stale one.
-        private static DescentMap _map;
+        // A seed, a saved profile and a generator reproduce a realm exactly; a
+        // serialised map is a second representation that can drift from the
+        // generator that made it, and would have to be migrated every time the
+        // generator changed. Cached here because regenerating on every query
+        // would be wasteful, keyed by every input the generator takes.
+        private static RealmMap _map;
         private static ulong _mapSeed;
         private static int _mapStartStep = -1;
 
-        // THE FOURTH INPUT the key was missing: which SLOT the seed belongs
-        // to. runSeed/legStartStep/restBeforeBoss alone cannot tell two
+        // WHICH SLOT the seed belongs to. runSeed/legStartStep alone cannot tell two
         // slots apart -- a fresh run in slot B can roll the same seed and
         // step-0 leg a run already cached from slot A, and without this the
         // cache would hand slot B slot A's map. SaveSlotManager.CurrentSlot
@@ -41,15 +40,11 @@ namespace PrincesPalace
         // on the same event.
         private static int _mapSlot = -1;
 
-        // THE THIRD INPUT. GenerateLegFor takes (runSeed, legStartStep,
-        // restBeforeBoss) and the key held the first two, so a run whose
-        // rest guarantee changed while a map was already cached kept serving
-        // the leg without its forced rests until something else called
-        // Forget(). Nothing grants restBeforeBoss today (RunSnapshot says so
-        // outright), which is the only reason this was not a live bug -- and
-        // exactly the shape that stops being latent the moment the level-30
-        // track reward is wired into StartRun the way that comment invites.
-        private static bool _mapRestBeforeBoss;
+        // THE PROFILE the realm was generated from, by reference. A reloaded
+        // save brings a new profile object and so one regeneration; anything
+        // that replaces the saved profile (RealmOpening.Open) does the same.
+        // restBeforeBoss lives inside it (RealmProfile.restBeforeBoss).
+        private static RealmProfile _mapProfile;
 
         public static bool HasRun => Save != null && Save.activeRun != null && Save.activeRun.hasRun;
 
@@ -115,30 +110,40 @@ namespace PrincesPalace
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
 
-        // Regenerates (or returns) the current leg's map.
-        public static DescentMap Map
+        // Regenerates (or returns) the current realm's map. A snapshot whose
+        // realm was never opened (one built in memory rather than through
+        // StartRun) is opened here, unsaved; the next write keeps it.
+        public static RealmMap Map
         {
             get
             {
                 var run = Run;
                 if (run == null || !run.hasRun) return null;
 
-                if (_map == null || _mapSeed != run.runSeed || _mapStartStep != run.legStartStep
-                    || _mapRestBeforeBoss != run.restBeforeBoss || _mapSlot != SaveSlotManager.CurrentSlot)
+                if (run.realmProfile == null || run.realmOpenedAt != run.legStartStep)
                 {
-                    _map = DescentMapGenerator.GenerateLegFor(run.runSeed, run.legStartStep,
-                        restBeforeBoss: run.restBeforeBoss);
-                    _mapSeed = run.runSeed;
-                    _mapStartStep = run.legStartStep;
-                    _mapRestBeforeBoss = run.restBeforeBoss;
-                    _mapSlot = SaveSlotManager.CurrentSlot;
+                    Remember(run, RealmOpening.Open(Save, run));
+                }
+                else if (_map == null || _mapSeed != run.runSeed || _mapStartStep != run.legStartStep
+                         || !ReferenceEquals(_mapProfile, run.realmProfile) || _mapSlot != SaveSlotManager.CurrentSlot)
+                {
+                    Remember(run, RealmOpening.MapOf(run));
                 }
 
                 return _map;
             }
         }
 
-        public static DescentNode CurrentNode
+        private static void Remember(RunSnapshot run, RealmMap map)
+        {
+            _map = map;
+            _mapSeed = run.runSeed;
+            _mapStartStep = run.legStartStep;
+            _mapProfile = run.realmProfile;
+            _mapSlot = SaveSlotManager.CurrentSlot;
+        }
+
+        public static RealmNode CurrentNode
         {
             get
             {
@@ -182,6 +187,7 @@ namespace PrincesPalace
             };
 
             Forget();
+            Remember(save.activeRun, RealmOpening.Open(save, save.activeRun));
 
             // Entry is not a room to fight -- it is where the party is standing
             // before choosing. Set explicitly rather than left at -1 so every
@@ -297,12 +303,12 @@ namespace PrincesPalace
         // ---- moving through it ----------------------------------------------------
 
         // Where the party may go next. Empty at the boss, which is what ends a
-        // leg rather than a special case anywhere else.
-        public static IReadOnlyList<DescentNode> Choices()
+        // realm rather than a special case anywhere else.
+        public static IReadOnlyList<RealmNode> Choices()
         {
             var map = Map;
             var current = CurrentNode;
-            if (map == null || current == null) return new List<DescentNode>();
+            if (map == null || current == null) return new List<RealmNode>();
 
             return map.ReachableFrom(current.Id)
                 .Select(map.Node)
@@ -324,22 +330,26 @@ namespace PrincesPalace
             var target = map.Node(nodeId);
             if (target == null) return false;
 
+            // Read before the party moves: walking past a pocket is a fact of
+            // the edge, not of the node arrived at.
+            bool skipsPocket = map.PocketSkippedBy(current.Id, nodeId) != null;
+
             run.currentNodeId = nodeId;
 
-            // ABSOLUTE, and Depth is not.
-            //
-            // A node's Depth is its column WITHIN ITS LEG, 0..8 -- the
-            // generator says so itself by passing `startStep + d` to
-            // ForcedTypeAt while storing the bare `d`. But `step` is the run's
-            // absolute counter: AdvanceLeg writes legStartStep into it, the
-            // difficulty curve compounds per step, and RunDepth reads it.
-            //
-            // Writing the bare depth here made the two disagree the moment a
-            // run left its first leg, and only then -- on leg 1 legStartStep is
-            // 0 and the two are identical, which is why this survived. On leg 2
-            // a save reads step 1 against legStartStep 8: the party is nine
-            // rooms deep and the curve is scaling them for the second.
-            run.step = run.legStartStep + target.Depth;
+            // ABSOLUTE, and Offset is not. A node's Offset is its place on the
+            // realm's spine, 0..8 (pocket rooms take their rejoin offset), and
+            // `step` is the run's absolute difficulty clock: AdvanceLeg writes
+            // legStartStep into it, the curve compounds per step, and RunDepth
+            // reads it (docs/PLAN_RUN_MAP.md section 3).
+            run.step = run.legStartStep + target.Offset;
+
+            // Rooms, not steps: a pocket's rooms share their rejoin step.
+            run.roomsWalked++;
+
+            // THE SKIP HEAL (plan section 3): every living member, once per
+            // pocket, at the moment of passing it. Before the write below, so
+            // the heal and the move land together.
+            if (skipsPocket) RunEncounter.HealLivingPartyByPercent(run, RealmMap.SkipHealPercent);
 
             // AND THE WATERMARK MOVES WITH IT, here, because this is the one
             // place a step advances.
@@ -381,13 +391,9 @@ namespace PrincesPalace
             Persist();
         }
 
-        // The leg is over when there is nowhere left to go.
-        //
-        // A LEG IS NOT A RUN. A leg is eight steps and ends in whatever the
-        // cadence forces there -- an elite mid-leg (step 4 within it), a boss
-        // at the end (step 8). Running out of choices therefore means "start
-        // the next leg", not "the run is over", and conflating the two would
-        // have ended every descent at the first elite.
+        // The realm is over when there is nowhere left to go: the party stands
+        // on the heart, whose boss is beaten. A REALM IS NOT A RUN -- this
+        // means "open the next realm", never "the run is over".
         public static bool LegIsOver() => Choices().Count == 0;
 
         // Opens the next leg, carrying the run's own seed forward.
@@ -400,7 +406,7 @@ namespace PrincesPalace
             var run = Run;
             if (run == null || !run.hasRun) return;
 
-            run.legStartStep += DescentMapGenerator.DefaultLegLength;
+            run.legStartStep += RealmMap.SpineLength;
             run.step = run.legStartStep;
 
             // The floor field was written once, as 1, when the run began, and
@@ -411,6 +417,8 @@ namespace PrincesPalace
             run.floor = RunDepth.FloorFor(run.legStartStep);
             run.currentNodeId = -1;
             run.clearedNodeIds.Clear();
+            run.slainAnchorIds ??= new List<int>();
+            run.slainAnchorIds.Clear();
 
             // THE PARTY CATCHES ITS BREATH BETWEEN LEGS.
             //
@@ -432,14 +440,16 @@ namespace PrincesPalace
             // be. What comes after the elite is the separate, unrelated
             // problem this heal fixes.
             //
-            // A leg is the natural place: it now always ends on a boss (with a
-            // forced elite mid-leg), so this reads as the beat after a set
-            // piece rather than as a free heal in the middle of one. The
-            // reward track's level 30 is untouched -- it forces a rest on the
-            // step BEFORE a boss, and this fires after.
+            // A realm is the natural place: it always ends on a boss, so this
+            // reads as the beat after a set piece rather than as a free heal in
+            // the middle of one. The reward track's level 30 is untouched -- it
+            // places a rest on the step BEFORE a boss, and this fires after.
             RunEncounter.HealPartyToFull(run);
 
+            // Opened AFTER the heal: strength weighs the party standing at the
+            // door of the new realm.
             Forget();
+            Remember(run, RealmOpening.Open(Save, run));
 
             var entry = Map?.Entry;
             if (entry != null) run.currentNodeId = entry.Id;
@@ -506,22 +516,13 @@ namespace PrincesPalace
         }
 
         // Drops the cached map so the next query rebuilds it. Called whenever
-        // the seed or the leg changes -- a cache keyed by four fields still
-        // has to be invalidated when any of them moves.
-        //
-        // "Four" and not "three": the generator's third input, restBeforeBoss,
-        // was absent from the key and from this reset (see _mapRestBeforeBoss),
-        // and the slot the key is read against was a fourth gap (see
-        // _mapSlot). _map = null alone already forces the next Map get to
-        // regenerate regardless of what _mapSlot holds, so resetting it here
-        // is for the key to read as fully cleared rather than because the
-        // regen depends on it.
+        // the seed or the realm changes.
         private static void Forget()
         {
             _map = null;
             _mapSeed = 0;
             _mapStartStep = -1;
-            _mapRestBeforeBoss = false;
+            _mapProfile = null;
             _mapSlot = -1;
         }
 

@@ -175,7 +175,7 @@ namespace PrincesPalace.Domain.Bot
             }
         }
 
-        public DescentNode ChooseNode(IReadOnlyList<DescentNode> choices, RunView view, SeededRandom rng)
+        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng)
         {
             if (choices.Count == 1) return choices[0];
 

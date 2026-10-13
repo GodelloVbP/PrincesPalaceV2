@@ -62,10 +62,8 @@ namespace PrincesPalace.PlayModeTests
 
             if (quiet != null)
             {
-                var column = RunManager.Map.AtDepth(quiet.Depth).ToList();
-                int slot = column.FindIndex(n => n.Id == quiet.Id);
                 var button = map.GetComponentsInChildren<Transform>(true)
-                    .First(t => t.name == $"MapNode{PrincesPalace.Domain.UiKit.MapLayout.IndexFor(quiet.Depth, slot)}")
+                    .First(t => t.name == RealmPaths.ButtonName(quiet))
                     .GetComponent<UnityEngine.UI.Button>();
 
                 button.onClick.Invoke();
@@ -84,6 +82,66 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.Forget();
             RunManager.ResetForTests();
             Assert.Pass();
+        }
+
+        // The column projection at its fullest (run map P2): a floor-14
+        // realm, the party standing before its most crowded column, so a
+        // fork and a long pocket share the column on screen. Every room in it
+        // must be drawn, and every one the party can walk to clickable.
+        [UnityTest]
+        public IEnumerator CaptureACrowdedRealm()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("Headless: camera.Render() is a no-op.");
+                yield break;
+            }
+
+            var root = Path.Combine(Path.GetTempPath(), "pp-map-shot-crowded");
+            Directory.CreateDirectory(root);
+            SaveSystem.RootOverride = root;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+
+            RunManager.StartRun(4242);
+            var run = RunManager.Run;
+            run.legStartStep = 13 * PrincesPalace.Domain.Dungeon.RealmMap.SpineLength;
+            run.step = run.legStartStep;
+            run.floor = 14;
+            run.clearedNodeIds.Clear();
+            var map = RunManager.Map;
+            run.currentNodeId = map.Entry.Id;
+
+            var columns = PrincesPalace.Domain.UiKit.MapColumns.Of(map);
+            int crowded = Enumerable.Range(1, PrincesPalace.Domain.UiKit.MapColumns.Count - 1)
+                .OrderByDescending(columns.CountIn).First();
+            var first = columns.Column(crowded).First(n => n.Role != PrincesPalace.Domain.Dungeon.RealmNodeRole.Pocket);
+            RealmPaths.StandBefore(first);
+
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var controller = Object.FindAnyObjectByType<MapController>();
+            var reachable = RunManager.Choices().Select(n => n.Id).ToList();
+            foreach (var node in columns.Column(crowded))
+            {
+                var button = controller.GetComponentsInChildren<Transform>(true)
+                    .First(t => t.name == RealmPaths.ButtonName(node)).GetComponent<UnityEngine.UI.Button>();
+                Assert.IsTrue(button.gameObject.activeInHierarchy, $"room {node.Id} is not drawn");
+                Assert.AreEqual(reachable.Contains(node.Id), button.interactable, $"room {node.Id} clickability");
+            }
+
+            var dir = Path.Combine(Application.dataPath, "..", "tools", "screenshots", "runtime");
+            Directory.CreateDirectory(dir);
+            CanvasCapture.RenderToFile(Object.FindAnyObjectByType<Canvas>(),
+                Path.Combine(dir, "MapCrowdedRealm.png"), 1920, 1080);
+
+            SaveSystem.RootOverride = null;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+            Assert.Pass($"column {crowded} holds {columns.CountIn(crowded)} rooms");
         }
     }
 }

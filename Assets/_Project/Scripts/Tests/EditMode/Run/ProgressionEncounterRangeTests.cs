@@ -19,9 +19,9 @@ namespace PrincesPalace.Domain.Tests
     // expectation is an average over six rolled rooms a leg and a player only
     // ever plays one draw of it.
     //
-    // WHAT IS REAL: DescentMapGenerator.GenerateLegFor (so the forced elite at
-    // room 4 and boss at room 8 come from the generator, not from a
-    // restatement of them), EncounterRoll.Roll against the pool enemies.json
+    // WHAT IS REAL: RealmMapGenerator on the default profile (so the anchors,
+    // pockets and the boss at offset 8 come from the generator, not from a
+    // restatement of them), EncounterRoll.RollAnchor for an anchor, EncounterRoll.Roll against the pool enemies.json
     // actually resolves to, banded by RunDepth.FloorFor exactly as
     // RunEncounter does, and VictoryRewards.For at the room's own absolute
     // step. The rng streams are opened the way production opens them:
@@ -30,9 +30,13 @@ namespace PrincesPalace.Domain.Tests
     // came before it.
     //
     // WHAT IS NOT: which branch the player takes. That is a decision a person
-    // makes on the map screen, so it is drawn uniformly from the open
-    // neighbours on its own stream. A policy that preferred fights would push
-    // every figure below up; one that avoided them would push it down. The
+    // makes on the map screen, so it is drawn uniformly from the open spine
+    // neighbours on its own stream. Pockets are never taken: the shortest
+    // route is the old eight-room leg, the one the plan's figures were
+    // calibrated on (docs/PLAN_RUN_MAP.md section 3); a pocket pays extra by
+    // design, and a uniform walk that took them drifted 16-30% above the
+    // plan. A policy that preferred fights would push every figure below up;
+    // one that avoided them would push it down. The
     // spread reported here is the neutral case and should be read as such.
     //
     // ASSERTIONS ARE DELIBERATELY LOOSE -- the median inside 15% of the plan's
@@ -95,25 +99,23 @@ namespace PrincesPalace.Domain.Tests
 
             for (int leg = 0; leg < legs; leg++)
             {
-                int legStartStep = leg * DescentMapGenerator.DefaultLegLength;
+                int legStartStep = leg * RealmMap.SpineLength;
                 int floor = RunDepth.FloorFor(legStartStep);
 
                 // restBeforeBoss false: assumption A1 of the model -- the
                 // forced rest before a boss only exists once the track's
                 // level-30 node is collected, and a run being modelled from
                 // level 1 is below it.
-                var map = DescentMapGenerator.GenerateLegFor(runSeed, legStartStep);
+                var map = RealmMapGenerator.GenerateFor(runSeed, legStartStep, RealmProfiles.ForRealm(legStartStep));
 
                 var node = map.Entry;
-                Assert.IsNotNull(node, $"leg {leg + 1} generated no entry column");
+                Assert.IsNotNull(node, $"leg {leg + 1} generated no entry");
 
-                for (int depth = 1; depth <= DescentMapGenerator.DefaultLegLength; depth++)
+                while (map.ReachableFrom(node.Id).Count > 0)
                 {
-                    var open = map.ReachableFrom(node.Id);
-                    Assert.IsNotEmpty(open, $"leg {leg + 1} column {depth} is unreachable");
-
+                    var open = map.ReachableFrom(node.Id).Where(id => RealmMap.OnSpine(map.Node(id))).ToList();
                     node = map.Node(open[road.NextInt(0, open.Count)]);
-                    int step = legStartStep + depth;
+                    int step = legStartStep + node.Offset;
 
                     if (node.Type != RoomType.Fight && node.Type != RoomType.EliteFight
                         && node.Type != RoomType.Boss)
@@ -122,7 +124,9 @@ namespace PrincesPalace.Domain.Tests
                     }
 
                     var rng = RngStreams.Open(runSeed, RngStreams.Fight, step, node.Id);
-                    var roll = EncounterRoll.Roll(node.Type, pool, rng, declaredBossId: null, floor: floor);
+                    var roll = node.IsAnchor
+                        ? EncounterRoll.RollAnchor(pool, rng, floor)
+                        : EncounterRoll.Roll(node.Type, pool, rng, declaredBossId: null, floor: floor);
 
                     var kits = roll.EnemyIds
                         .Where(byId.ContainsKey)

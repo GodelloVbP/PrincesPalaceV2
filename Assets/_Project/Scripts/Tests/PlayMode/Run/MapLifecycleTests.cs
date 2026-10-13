@@ -78,15 +78,13 @@ namespace PrincesPalace.PlayModeTests
 
             var choices = RunManager.Choices().ToList();
             Assert.GreaterOrEqual(choices.Count, 2,
-                "seed 4242's entry offers fewer than two rooms, so there is no second click to make");
+                "the fixture's room offers fewer than two choices, so there is no second click to make");
 
             // The one that is walked to has to be a room that does NOT load a
             // scene on arrival, or the assertions below run against a map that
             // has been torn down.
             var target = choices.FirstOrDefault(IsQuiet);
-            Assert.IsNotNull(target,
-                "seed 4242's entry offers only fights, so the walk cannot be watched - pick a seed " +
-                "that offers a quiet room");
+            Assert.IsNotNull(target, "the fixture's room offers no quiet choice, so the walk cannot be watched");
 
             var other = choices.First(n => n.Id != target.Id);
             int from = RunManager.CurrentNode.Id;
@@ -135,7 +133,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheMap();
 
             var target = RunManager.Choices().FirstOrDefault(IsQuiet);
-            Assert.IsNotNull(target, "seed 4242's entry offers no quiet room to walk to");
+            Assert.IsNotNull(target, "the fixture's room offers no quiet room to walk to");
 
             int from = RunManager.CurrentNode.Id;
             Assert.AreNotEqual(from, target.Id, "fixture: the walk goes nowhere");
@@ -176,7 +174,7 @@ namespace PrincesPalace.PlayModeTests
 
             var target = RunManager.Choices().FirstOrDefault(IsQuiet)
                          ?? RunManager.Choices().FirstOrDefault();
-            Assert.IsNotNull(target, "seed 4242's entry offers nowhere to go");
+            Assert.IsNotNull(target, "the fixture's room offers nowhere to go");
 
             int from = RunManager.CurrentNode.Id;
 
@@ -202,9 +200,17 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- fixture ------------------------------------------------------------------------
 
+        // Stands the party on the spine room a treasure-headed pocket leaves:
+        // two choices, one of them quiet (a treasure resolves on the spot).
+        // Opening the realm logs its party weight (RealmOpening), expected
+        // here so LogAssert.NoUnexpectedReceived reads only the walk's logs.
         private IEnumerator OpenTheMap()
         {
-            RunManager.StartRun(4242);
+            ulong seed = RealmPaths.SeedWhere(m => RealmPaths.PocketHead(m, RoomType.Treasure) != null,
+                "a treasure opening a pocket");
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[RealmOpening\]"));
+            RunManager.StartRun(seed);
+            RealmPaths.StandBefore(RealmPaths.PocketHead(RunManager.Map, RoomType.Treasure));
 
             yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
             yield return null;
@@ -214,16 +220,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_map, "the Map scene has no MapController");
         }
 
-        private static bool IsQuiet(DescentNode node) =>
+        private static bool IsQuiet(RealmNode node) =>
             node.Type != RoomType.Fight && node.Type != RoomType.EliteFight && node.Type != RoomType.Boss;
 
-        private void ClickRoom(DescentNode node)
+        private void ClickRoom(RealmNode node)
         {
-            var column = RunManager.Map.AtDepth(node.Depth).ToList();
-            int slot = column.FindIndex(n => n.Id == node.Id);
-
             var go = _map.GetComponentsInChildren<Transform>(includeInactive: true)
-                .FirstOrDefault(t => t.name == $"MapNode{MapLayout.IndexFor(node.Depth, slot)}")?.gameObject;
+                .FirstOrDefault(t => t.name == RealmPaths.ButtonName(node))?.gameObject;
 
             Assert.IsNotNull(go, $"the map has no node button for room {node.Id}");
             go.GetComponent<Button>().onClick.Invoke();
