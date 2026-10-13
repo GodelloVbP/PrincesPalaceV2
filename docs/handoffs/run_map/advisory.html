@@ -1,0 +1,246 @@
+<title>Run Map Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the map mock sits beside the summary on wide screens, stacks on phones. */
+:root{
+  --bg:#f3f1f5; --panel:#ffffff; --fg:#26222e; --muted:#6b6478; --line:#d9d4e0;
+  --accent:#6b4fa0; --warm:#c98a3a; --threat:#9c3b3b;
+  --map-bg:#2b2733; --map-ground:#38323f; --map-node:#d8d0e4; --map-trail:#5d556b; --map-walked:#e0a85a; --map-text:#efeaf5; --map-muted:#9a91aa;
+  --display:"Cormorant Garamond", Georgia, serif;
+  --body:"Source Sans 3", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17151c; --panel:#211e28; --fg:#ebe6f2; --muted:#a39bb3; --line:#363140;
+  --accent:#b39ae0; --warm:#e0a85a; --threat:#d07070; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17151c; --panel:#211e28; --fg:#ebe6f2; --muted:#a39bb3; --line:#363140;
+  --accent:#b39ae0; --warm:#e0a85a; --threat:#d07070; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:32px 64px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2rem,5vw,2.9rem);font-weight:700}
+h2{font-size:1.75rem;font-weight:600;margin-top:48px;margin-bottom:12px}
+h3{font-size:1.25rem;font-weight:600;margin-bottom:6px}
+p{margin:0 0 12px;max-width:66ch}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:1.15rem;color:var(--fg);max-width:60ch;margin-top:14px}
+.hero{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:36px;margin-top:28px;align-items:start}
+@media (max-width:820px){.hero{grid-template-columns:minmax(0,1fr)}}
+.mock{background:var(--map-bg);border-radius:10px;padding:10px;max-width:100%}
+.mock svg{display:block;width:100%;height:auto}
+.caption{font-size:.85rem;color:var(--muted);margin-top:8px}
+.pillars{display:grid;gap:18px}
+.pillar{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px}
+.pillar .n{font-family:var(--display);font-size:1.6rem;color:var(--accent);line-height:1}
+.pillar p{margin:0}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+.tbl{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+td code,p code,li code{font-family:var(--mono);font-size:.85em}
+.tag{display:inline-block;font-family:var(--mono);font-size:.72rem;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.new{color:var(--accent);border-color:var(--accent)}
+.decisions{display:grid;gap:10px;padding:0;margin:0;list-style:none;counter-reset:d}
+.decisions li{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px 12px 48px;position:relative;counter-increment:d}
+.decisions li::before{content:counter(d);position:absolute;left:16px;top:10px;font-family:var(--display);font-size:1.4rem;color:var(--accent)}
+.decisions b{font-weight:600}
+.rec{color:var(--muted);font-size:.92rem}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+ul.plain{margin:0;padding-left:18px}
+ul.plain li{margin-bottom:6px}
+.note{border-left:3px solid var(--warm);padding:4px 0 4px 14px;color:var(--fg)}
+a{color:var(--accent)}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Prince's Palace v2 · run map · advisory · 13 Oct 2026</div>
+  <h1>The map builds the boss</h1>
+  <p class="lede">Keep the graph and change what it asks of the player. The spine down to the heart stays today's 8 steps. Optional pockets cost extra rooms and HP and hold prizes the spine doesn't have. Every elite you leave alive stands beside the boss waiting at the bottom.</p>
+
+  <div class="hero">
+    <div>
+      <div class="mock" role="img" aria-label="Mock of a vertical realm map: entry at top, an 8-step spine down to the boss heart, a fork with a shop, two pockets holding elites tethered by roots to the boss, the party standing at step 3, and a detail card comparing two choices.">
+        <svg viewBox="0 0 440 860" xmlns="http://www.w3.org/2000/svg" font-family="Source Sans 3, system-ui, sans-serif">
+          <defs>
+            <radialGradient id="ease" r="0.5"><stop offset="0" stop-color="#e0a85a" stop-opacity=".30"/><stop offset="1" stop-color="#e0a85a" stop-opacity="0"/></radialGradient>
+            <radialGradient id="dark" r="0.5"><stop offset="0" stop-color="#120f17" stop-opacity=".9"/><stop offset="1" stop-color="#120f17" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect width="440" height="860" fill="#2b2733"/>
+          <!-- HUD band -->
+          <rect x="0" y="0" width="440" height="36" fill="#221f29"/>
+          <text x="14" y="23" fill="#efeaf5" font-size="13" font-weight="600">The Hush</text>
+          <text x="90" y="23" fill="#9a91aa" font-size="12">floor 4</text>
+          <text x="426" y="23" fill="#e0a85a" font-size="12" text-anchor="end">142 gold</text>
+          <!-- eased pools around cleared rooms -->
+          <circle cx="220" cy="66" r="60" fill="url(#ease)"/>
+          <circle cx="220" cy="130" r="60" fill="url(#ease)"/>
+          <circle cx="160" cy="194" r="60" fill="url(#ease)"/>
+          <circle cx="220" cy="258" r="60" fill="url(#ease)"/>
+          <circle cx="220" cy="720" r="120" fill="url(#dark)"/>
+          <!-- roots from anchors to the heart -->
+          <path d="M80 330 C 30 500, 120 650, 196 706" stroke="#9c3b3b" stroke-width="2.5" fill="none" stroke-dasharray="2 5" opacity=".9"/>
+          <path d="M360 524 C 400 620, 320 690, 246 708" stroke="#9c3b3b" stroke-width="2.5" fill="none" stroke-dasharray="2 5" opacity=".9"/>
+          <!-- trails: walked -->
+          <g stroke="#e0a85a" stroke-width="5" fill="none" stroke-linecap="round">
+            <path d="M220 66 L220 130"/><path d="M220 130 L160 194"/><path d="M160 194 L220 258"/>
+          </g>
+          <!-- trails: open from current -->
+          <g stroke="#cfc6dc" stroke-width="3.5" fill="none" stroke-linecap="round">
+            <path d="M220 258 L220 322"/><path d="M220 258 C 150 270, 95 290, 80 330"/>
+          </g>
+          <!-- trails: ahead -->
+          <g stroke="#5d556b" stroke-width="2.5" fill="none" stroke-linecap="round">
+            <path d="M220 130 L280 194"/><path d="M280 194 L220 258"/>
+            <path d="M80 330 L80 400"/><path d="M80 400 C 90 440, 150 450, 220 450"/>
+            <path d="M220 322 L220 386"/><path d="M220 386 L220 450"/>
+            <path d="M220 450 L220 514"/><path d="M220 450 C 300 460, 350 480, 360 524"/>
+            <path d="M360 524 L360 590"/><path d="M360 590 C 340 630, 280 640, 220 642"/>
+            <path d="M220 514 L220 578"/><path d="M220 578 L220 642"/><path d="M220 642 L220 690"/>
+          </g>
+          <!-- spine node helper: fight = circle -->
+          <g fill="#d8d0e4" stroke="#1b1821" stroke-width="2">
+            <circle cx="220" cy="66" r="9"/> <!-- entry -->
+            <circle cx="220" cy="130" r="14"/>
+            <circle cx="220" cy="322" r="14"/>
+            <circle cx="220" cy="386" r="14"/>
+            <circle cx="220" cy="514" r="14"/>
+            <circle cx="220" cy="642" r="14"/>
+            <circle cx="80" cy="400" r="14"/>
+            <circle cx="360" cy="590" r="14"/>
+          </g>
+          <!-- fork: shop (square) vs fight -->
+          <rect x="146" y="180" width="28" height="28" fill="#d8d0e4" stroke="#1b1821" stroke-width="2"/>
+          <circle cx="280" cy="194" r="14" fill="#d8d0e4" stroke="#1b1821" stroke-width="2" opacity=".55"/>
+          <!-- event: rounded square -->
+          <rect x="206" y="436" width="28" height="28" rx="8" fill="#d8d0e4" stroke="#1b1821" stroke-width="2"/>
+          <!-- rest: peaked -->
+          <path d="M220 562 L236 592 L204 592 Z" fill="#e8c48f" stroke="#1b1821" stroke-width="2"/>
+          <!-- current room marker -->
+          <circle cx="220" cy="258" r="16" fill="#efe1c6" stroke="#e0a85a" stroke-width="3"/>
+          <circle cx="220" cy="236" r="4" fill="#e0a85a"/>
+          <!-- anchors: hexagons -->
+          <polygon points="80,312 96,321 96,339 80,348 64,339 64,321" fill="#d8b0b0" stroke="#1b1821" stroke-width="2"/>
+          <polygon points="360,506 376,515 376,533 360,542 344,533 344,515" fill="#d8b0b0" stroke="#1b1821" stroke-width="2"/>
+          <!-- strength pips -->
+          <g fill="#e0a85a">
+            <circle cx="236" cy="312" r="2.6"/><circle cx="243" cy="312" r="2.6"/>
+            <circle cx="104" cy="312" r="2.6"/><circle cx="111" cy="312" r="2.6"/><circle cx="118" cy="312" r="2.6"/>
+            <circle cx="236" cy="376" r="2.6"/>
+            <circle cx="384" cy="506" r="2.6"/><circle cx="391" cy="506" r="2.6"/><circle cx="398" cy="506" r="2.6"/>
+          </g>
+          <!-- labels -->
+          <g fill="#9a91aa" font-size="11">
+            <text x="234" y="70">entry</text>
+            <text x="138" y="222" text-anchor="middle">shop</text>
+            <text x="100" y="352">anchor</text>
+            <text x="100" y="404">pocket</text>
+            <text x="248" y="454">event</text>
+            <text x="248" y="590">rest</text>
+            <text x="380" y="546">anchor</text>
+            <text x="380" y="594">pocket</text>
+            <text x="250" y="262" fill="#e0a85a">you</text>
+          </g>
+          <!-- the heart: boss with ward attachments -->
+          <g>
+            <path d="M220 688 C 252 688, 268 712, 266 736 C 264 760, 244 774, 220 774 C 196 774, 176 760, 174 736 C 172 712, 188 688, 220 688 Z" fill="#4a3f57" stroke="#1b1821" stroke-width="2.5"/>
+            <circle cx="208" cy="726" r="4" fill="#e9d8ff"/><circle cx="232" cy="726" r="4" fill="#e9d8ff"/>
+            <!-- Regrowth vines (left) -->
+            <path d="M178 720 C 160 712, 156 696, 164 684 M176 740 C 156 744, 150 760, 160 770" stroke="#7aa070" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <!-- Bark plates (right) -->
+            <path d="M262 712 L278 718 L274 734 L260 730 Z M264 740 L280 746 L274 762 L260 756 Z" fill="#8a6a4a" stroke="#1b1821" stroke-width="1.5"/>
+            <text x="220" y="796" fill="#efeaf5" font-size="13" font-weight="600" text-anchor="middle">the heart · Forest Troll</text>
+          </g>
+          <!-- detail card -->
+          <rect x="10" y="808" width="420" height="44" rx="6" fill="#221f29" stroke="#4a4356"/>
+          <text x="22" y="826" fill="#efeaf5" font-size="11.5" font-weight="600">Spine · Giant Rat ×2</text>
+          <text x="22" y="842" fill="#9a91aa" font-size="11">strength ●● · gold + consumable</text>
+          <line x1="220" y1="816" x2="220" y2="846" stroke="#4a4356"/>
+          <text x="232" y="826" fill="#efeaf5" font-size="11.5" font-weight="600">Pocket · Elder Treant</text>
+          <text x="232" y="842" fill="#d8b0b0" font-size="11">●●● · holds the boss's vines</text>
+        </svg>
+      </div>
+      <div class="caption">Mock, floor 4, the party at step 3. Warm pools: cleared ground easing. Dotted red: roots from each anchor to the boss. (Before the games check, anchors stripped abstract wards from the boss, drawn here as vines and bark plates. They now stand beside the boss instead; see the storyboards.) The card compares the two open choices.</div>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar"><div class="n">1</div><div><h3>Routes of unequal length</h3><p>The spine to the heart is always 8 steps, as today. Pockets branch off and rejoin, costing 1–2 extra rooms, and there are more of them each floor (1 at floor 1, up to 4). HP only refills after the boss, so a pocket is HP you carry into that fight. Each pocket holds something the spine lacks: an anchor, treasure, the cache or a strength-3 fight.</p></div></div>
+      <div class="pillar"><div class="n">2</div><div><h3>You see what you're walking into</h3><p>A fight node shows the enemies it will spawn, strength 1–3 and one reward chip. Strength changes the kind of reward: gold, then gold plus a consumable, then a spell book. The preview uses the same roll as the fight, so it can't lie.</p></div></div>
+      <div class="pillar"><div class="n">3</div><div><h3>Anchors stand with the boss</h3><p>The boss is drawn at the bottom from the start, with up to two anchors beside it. Each anchor is an elite out on the map, tied to the boss by a painted root. Beat it on the map and it's gone; leave it alive and it fights beside the boss. Elites are optional, and the boss drops one more reward for every anchor still standing. No counters, no percentages.</p></div></div>
+      <div class="pillar"><div class="n">4</div><div><h3>The realm eases (polish, last)</h3><p>Found and eased paintings, with the eased one showing through around cleared rooms and around the boss as wards fall. Never labelled. Your decision spec asks for this.</p></div></div>
+      <p class="note">On forks you pick <i>which</i> waypoint (shop or rest). On pockets you pick <i>how much more</i> you take on. On anchors you pick <i>what boss you'll face</i>.</p>
+    </div>
+  </div>
+
+  <h2>Point types</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Type</th><th>Status</th><th>Placement</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Fight</td><td><span class="tag">kept</span></td><td>anywhere</td><td>Strength 1–3; the reward kind follows strength</td></tr>
+      <tr><td>Elite</td><td><span class="tag">kept, reworked</span></td><td>pockets and forks, never the spine</td><td>Anchor: strips one boss ward</td></tr>
+      <tr><td>Event</td><td><span class="tag">kept</span></td><td>anywhere, never two adjacent</td><td>The card shows the event's title, never "?"</td></tr>
+      <tr><td>Shop</td><td><span class="tag">kept</span></td><td>one per realm, on a fork</td><td>Costs the other branch, not extra rooms</td></tr>
+      <tr><td>Rest / Treasure</td><td><span class="tag">kept</span></td><td>rest on a fork; treasure in pockets</td><td>Rest is reachable without paying for a pocket</td></tr>
+      <tr><td>Cache</td><td><span class="tag new">new, optional</span></td><td>at most one per realm, in a pocket</td><td>Banks gold, safe from death (your "banks" ask)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>What you need to decide</h2>
+  <ol class="decisions">
+    <li><b>Accept the presentation.</b> On screen this is still a graph over a painting, which is the "control" option from your decision spec. You ruled out "dens in a painted place". The new part is the decision structure, not the picture. <span class="rec">Recommend: accept, judged on five storyboard frames first.</span></li>
+    <li><b>Top-to-bottom descent</b> (scroll down = deeper) or keep left-to-right. <span class="rec">Recommend: vertical. It needs a new art brief either way.</span></li>
+    <li><b>Elites become optional anchors that join the boss if left alive.</b> This settles your open "forced or avoidable" question. <span class="rec">Recommend: yes.</span></li>
+    <li><b>Build the cache</b> or drop it. <span class="rec">Recommend: build it last, small, one per realm.</span></li>
+    <li><b>Endless descent stays.</b> Pocket growth stops at floor 8; past that, floors differ by difficulty and content only. <span class="rec">Recommend: keep, and revisit realm modifiers if late floors feel samey.</span></li>
+  </ol>
+
+  <h2>How it gets built</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Phase</th><th>Work</th><th>Owner</th></tr></thead>
+    <tbody>
+      <tr><td>P0</td><td>Your sign-off, art brief v2, five storyboard frames, a pocket cost/benefit sheet</td><td>orchestrator + you</td></tr>
+      <tr><td>P1</td><td>New generator (<code>RealmMap</code>), rule validator, 10k-seed fuzz test; pure logic</td><td>implementer</td></tr>
+      <tr><td>P2</td><td>Wire it into the run: step clock, encounter preview, save migration v8→v9, test rewrites; old screen stays playable</td><td>senior (cross-layer)</td></tr>
+      <tr><td>P3</td><td>Balance bot learns the new map. <b>Gate:</b> how often pockets get taken must vary with HP. If it doesn't, tune before any screen work.</td><td>implementer + verifier</td></tr>
+      <tr><td>P4</td><td>The new screen: vertical scroll, node grammar, comparison card, gamepad</td><td>implementer</td></tr>
+      <tr><td>P5</td><td>Living anchors join the boss fight; drawing the heart</td><td>implementer, or senior if the fight roster contract must change</td></tr>
+      <tr><td>P6</td><td>Easing mask (one-day spike first) and the art swap</td><td>implementer</td></tr>
+      <tr><td>P7</td><td>Cache, if you sign it</td><td>implementer</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>What the reviews changed</h2>
+  <div class="two">
+    <div>
+      <h3>Round 1</h3>
+      <ul class="plain">
+        <li>Dropped my partial heal between realms. The full heal is a deliberate fix for a measured attrition complaint.</li>
+        <li>Pinned down what <code>step</code> means. It is the difficulty clock for about 25 systems, so it needs a contract, not an audit.</li>
+        <li>Wards became specific boss abilities instead of a counter.</li>
+        <li>Four map templates cut to one, with parameters.</li>
+        <li>Art brief and your decisions moved to the front.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Round 2</h3>
+      <ul class="plain">
+        <li>The spine is fixed at 8 steps. A 5-room spine would have squeezed 8 steps of difficulty into 5 rooms.</li>
+        <li>The preview reuses the fight's own roll. A new rng stream would have let the preview disagree with the fight.</li>
+        <li>Wards split into their own phase after the bot gate. They need new combat code.</li>
+        <li>Added a reason to leave an anchor alive, plus a fixed node grammar.</li>
+        <li>Rejected one blind finding: the easing mask stays. Your spec asks for the world to respond.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Risks I'd watch</h2>
+  <ul class="plain">
+    <li><b>Pockets become a schedule.</b> "Always when healthy, never when hurt" is a real risk. The P3 bot gate exists to catch it, and pocket prize size is the main lever.</li>
+    <li><b>It still looks like Slay the Spire.</b> Structurally it is a node graph. The difference you'll feel is the boss changing shape because of your route. If the storyboards don't sell that, rethink before P1.</li>
+    <li><b>Boss plus two anchors could be brutal.</b> Anchors join at a fraction of their HP, tuned by the bot.</li>
+  </ul>
+
+  <p class="caption" style="margin-top:32px">Games check and five storyboards: <a href="https://claude.ai/artifact/AWhthzsNhso4dzaEcjBTSx">Run Map Storyboards</a>. Full plan with file:line references: <code>docs/PLAN_RUN_MAP.md</code> on branch <code>claude/sweet-goodall-g4yi0n</code>.</p>
+</div>
