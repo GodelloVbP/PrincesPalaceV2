@@ -1,7 +1,10 @@
 # Item redesign: handoff
 
-Stage 1 (audit) is below, as delivered 2026-10-13. Stage 2 (the design,
-owner questions, phases) is `DESIGN.md` in this folder. Nothing is built.
+The plan is `docs/PLAN_ITEMS.md` rev 3: final for owner review, nothing
+built. It waits on the owner's answers to its section 3. This folder holds
+its inputs: this audit (below), `RESEARCH_THEORY.md`, `RESEARCH_GAMES.md`,
+the superseded orchestrator draft `DESIGN.md`, and two review rounds
+(`REVIEW_R1_*`, `REVIEW_R2_*`, triaged in `TRIAGE_R1.md`, `TRIAGE_R2.md`).
 
 Spot-checked against `main` at `9a39da0f`: the claims hold. Line numbers
 have drifted by up to ~100 in `FightController.Input.cs` (the offer roll is
