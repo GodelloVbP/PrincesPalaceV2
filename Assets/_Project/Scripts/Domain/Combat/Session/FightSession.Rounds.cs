@@ -23,6 +23,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // The party is down.
         Fell,
+
+        // The leader (a boss with anchors) fell with enemies still standing or
+        // queued: a win, and they leave with it (PLAN_RUN_MAP.md 6).
+        LeaderFell,
     }
 
     // ROUNDS, the round limit, the enemy rally and Toll of the Flock
@@ -63,6 +67,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 if (!_encounter.IsOver) return FightEndReason.None;
                 if (_encounter.EndedBySurvival) return FightEndReason.Survived;
+                if (_encounter.EndedByLeaderFalling) return FightEndReason.LeaderFell;
                 return _encounter.PlayerWon ? FightEndReason.Defeated : FightEndReason.Fell;
             }
         }

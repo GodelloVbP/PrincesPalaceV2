@@ -129,10 +129,15 @@ namespace PrincesPalace.Domain.Combat.Session
                 // A SURVIVED fight is a win with enemies still standing (plan
                 // risk R3), and pays for the ones that actually fell. A killed
                 // fight has no standing enemy, so the filter is a no-op there.
-                var earned = VictoryRewards.For(
-                    _enemyKits.Where(pair => !pair.Key.IsAlive).Select(pair => pair.Value),
-                    IsEliteFight, DepthStep);
-                Payout = new VictoryRewards.Payout(earned.Experience, earned.Gold + BountyEarned);
+                // ELITE PAY IS PER ENEMY (EnemyKit.IsElite): a boss fight's
+                // fallen anchors pay as elites beside a boss that is not one.
+                // Two sums, each rounded once; a room whose kits all agree
+                // puts everything in one of them, as before.
+                var fallen = _enemyKits.Where(pair => !pair.Key.IsAlive).Select(pair => pair.Value).ToList();
+                var plain = VictoryRewards.For(fallen.Where(kit => !kit.IsElite), false, DepthStep);
+                var elite = VictoryRewards.For(fallen.Where(kit => kit.IsElite), true, DepthStep);
+                Payout = new VictoryRewards.Payout(plain.Experience + elite.Experience,
+                    plain.Gold + elite.Gold + BountyEarned);
 
                 // NO NUMBERS HERE. The Reckoning expands seconds later saying
                 // exactly this experience and exactly this gold, in larger

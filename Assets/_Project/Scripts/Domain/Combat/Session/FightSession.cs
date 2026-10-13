@@ -306,6 +306,55 @@ namespace PrincesPalace.Domain.Combat.Session
             return position > 1;
         }
 
+        // ---- reinforcements (PLAN_RUN_MAP.md 6) ----------------------------------
+        //
+        // Queues an enemy behind the field with its kit. The kit is registered
+        // now, so a reinforcement is an ordinary enemy from the moment the
+        // encounter seats it: it draws intents, pays when it dies (Outcome
+        // reads _enemyKits) and counts as a kill, never IsSummon. Call before
+        // Begin; refused (false) for anything the encounter refuses.
+        public bool QueueReinforcement(CombatantState enemy, EnemyKit kit)
+        {
+            if (kit == null || !_encounter.QueueReinforcement(enemy)) return false;
+
+            _enemyKits[enemy] = kit;
+            return true;
+        }
+
+        // WHICH ENEMIES ARE MAP ANCHORS, by realm node id: on the field or
+        // queued, a heart anchor is an ordinary elite enemy, and only the
+        // settlement asks which node it came from (FallenAnchorNodeIds).
+        private readonly List<KeyValuePair<CombatantState, int>> _anchors =
+            new List<KeyValuePair<CombatantState, int>>();
+
+        public void MarkAnchor(CombatantState enemy, int nodeId)
+        {
+            if (enemy != null) _anchors.Add(new KeyValuePair<CombatantState, int>(enemy, nodeId));
+        }
+
+        // The anchors that died in this fight, in the order they were marked.
+        // Those still standing or queued when the leader fell are not here:
+        // they left with it and pay nothing.
+        public IReadOnlyList<int> FallenAnchorNodeIds =>
+            _anchors.Where(pair => !pair.Key.IsAlive).Select(pair => pair.Value).ToList();
+
+        // The session's one turn advance: the encounter seats any queued
+        // reinforcement into a fallen slot as it advances, and the log says
+        // who stepped in.
+        private void AdvanceTurnAndSeat()
+        {
+            _encounter.AdvanceTurn();
+
+            foreach (var arrived in _encounter.TakeArrivals())
+            {
+                AppendMessage($"{arrived.Name} steps into the line.");
+            }
+        }
+
+        // Elite stats and elite pay are per enemy: a boss fight fields elite
+        // anchors beside a boss that is not one.
+        public bool IsEliteEnemy(CombatantState combatant) => SourceFor(combatant)?.IsElite ?? false;
+
         public PlayerKit KitFor(CombatantState combatant) =>
             combatant != null && _playerKits.TryGetValue(combatant, out var kit) ? kit : null;
 

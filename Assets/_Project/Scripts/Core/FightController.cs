@@ -525,12 +525,8 @@ namespace PrincesPalace
         private IReadOnlyList<SatchelStack> _satchel = new List<SatchelStack>();
 
         // Bind's own parameter, kept rather than spent on ApplyBackground
-        // alone. An elite room fields a squad drawn entirely from the elite
-        // pool (EncounterRoll.EliteEnemyCount) -- eliteness is a property of
-        // the ENCOUNTER, not of any one monster in it, so every living enemy
-        // plate reads it the same way the background already does. A boss
-        // room fields exactly the one declared boss, so Boss dressing reads
-        // the front slot only -- see RefreshEnemyPlates' own use of this.
+        // alone: it picks the background. Enemy plates are dressed per enemy
+        // instead (RefreshEnemyPlates): an elite kit, or a boss room's boss.
         private EncounterClass _encounterClass = EncounterClass.Normal;
 
         // NO INPUT LOCK. A real 0.6s WaitForSeconds gate was drafted and cut
@@ -546,10 +542,11 @@ namespace PrincesPalace
         {
             if (_encounterClass != EncounterClass.Boss) return;
 
-            // A BOSS ROOM FIELDS EXACTLY THE ONE DECLARED BOSS -- see
-            // _encounterClass's own comment -- so the front slot is always
-            // it.
-            string bossName = _session?.Encounter.FrontEnemy?.Name;
+            // The declared leader is the boss; anchors may stand in front of
+            // it (PLAN_RUN_MAP.md 6). A boss fight built without one falls
+            // back to the front slot.
+            var encounter = _session?.Encounter;
+            string bossName = (encounter?.Leader ?? encounter?.FrontEnemy)?.Name;
             if (!string.IsNullOrEmpty(bossName)) PushLogLine(bossName);
         }
 
@@ -852,6 +849,7 @@ namespace PrincesPalace
         private void BindSlots()
         {
             _slotOf.Clear();
+            _drawnIn.Clear();
             if (_session == null) return;
 
             var party = _session.Encounter.PlayerParty;
@@ -863,13 +861,15 @@ namespace PrincesPalace
 
         // A combatant's own slot index, registering a newcomer on the way.
         //
-        // ONLY THE ENEMY SIDE CAN GROW, and only by appending (a summon;
-        // CombatEncounter.TryAddEnemy refuses past StageSlotsPerSide), so an
-        // unregistered combatant's list index IS its slot -- nothing has
-        // reordered the list it is being read out of. The party is registered
-        // whole at Bind and can never reach this path, which matters: reading
-        // a party member's index back out of the live list is exactly the bug
-        // above.
+        // ONLY THE ENEMY SIDE GAINS NEWCOMERS: a summon appends
+        // (CombatEncounter.TryAddEnemy refuses past StageSlotsPerSide) and a
+        // reinforcement reseats a corpse's index (CombatEncounter.ReseatFallen).
+        // Either way an enemy's list index IS its slot -- the enemy list is
+        // never reordered -- so a newcomer's index is read once and kept. The
+        // corpse it displaced keeps its own entry, the same slot, which is how
+        // that slot's fade still finds it. The party is registered whole at
+        // Bind and can never reach this path, which matters: reading a party
+        // member's index back out of the live list is exactly the bug above.
         private int SlotIndexOf(CombatantState combatant)
         {
             if (_session == null || combatant == null) return -1;

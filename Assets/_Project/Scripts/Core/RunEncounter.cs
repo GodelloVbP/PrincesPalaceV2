@@ -37,6 +37,11 @@ namespace PrincesPalace
             public bool IsBoss { get; set; }
             public bool IsElite { get; set; }
 
+            // A boss room's living anchors in formation order (PLAN_RUN_MAP.md
+            // 6); empty for every other room and for an event fight.
+            public IReadOnlyList<HeartAnchors.Anchor> Anchors { get; set; } =
+                new List<HeartAnchors.Anchor>();
+
             // The SAME stream the roll drew from, handed on to the fight.
             //
             // Not a second stream opened from the same key: that would start
@@ -109,8 +114,42 @@ namespace PrincesPalace
                 StartingHealth = health,
                 IsBoss = roll.IsBoss,
                 IsElite = roll.IsElite,
+                Anchors = roll.IsBoss ? LivingAnchors(run) : new List<HeartAnchors.Anchor>(),
                 Rng = rng,
             };
+        }
+
+        // EVERY ANCHOR STILL ALIVE ON THIS REALM, as it stands at the heart:
+        // the same enemy its map node rolls (Preview, at the node's own step),
+        // weighed as an elite at the boss room's step, in formation order. An
+        // anchor slain on the map, or written off by the v9 migration, is in
+        // slainAnchorIds and stays away. Read from the run's own realm, which
+        // is RunManager.Map whenever the run is the live one.
+        public static List<HeartAnchors.Anchor> LivingAnchors(RunSnapshot run)
+        {
+            var anchors = new List<HeartAnchors.Anchor>();
+            if (run == null) return anchors;
+
+            var map = ReferenceEquals(run, RunManager.Run) ? RunManager.Map : RealmOpening.MapOf(run);
+            if (map == null) return anchors;
+
+            var slain = run.slainAnchorIds ?? new List<int>();
+            foreach (var node in map.Nodes)
+            {
+                if (!node.IsAnchor || slain.Contains(node.Id)) continue;
+
+                string enemyId = Preview(run, node).EnemyIds.FirstOrDefault();
+                var enemy = string.IsNullOrEmpty(enemyId) ? null : ContentDatabase.GetEnemy(enemyId)?.Data;
+                if (enemy == null) continue;
+
+                double threat = NodeStrength.Weight(new[]
+                {
+                    FightEncounterAdapter.EnemyBody(enemy, run.step, isElite: true),
+                });
+                anchors.Add(new HeartAnchors.Anchor(node.Id, node.Offset, enemyId, threat, node.Prize));
+            }
+
+            return HeartAnchors.Formation(anchors);
         }
 
         // The room's own fight stream: where the fight is, not how many came

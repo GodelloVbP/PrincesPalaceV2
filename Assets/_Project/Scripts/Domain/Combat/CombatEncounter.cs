@@ -7,18 +7,32 @@ namespace PrincesPalace.Domain.Combat
     // One fight: a fixed set of combatants on each side, ordered by the
     // existing generic TurnOrder<TActor> (initiative = Speed). Dead
     // combatants are never removed from the order — their turn is simply
-    // skipped — so PlayerParty/Enemies stay stable lists a UI can keep
-    // pointing at for the whole fight, including after it ends.
+    // skipped. PlayerParty is a stable list for the whole fight; Enemies is
+    // stable too except for one change, a reinforcement reseating a corpse's
+    // index (see ReseatFallen).
     public class CombatEncounter
     {
         private readonly TurnOrder<CombatantState> _turnOrder = new TurnOrder<CombatantState>();
 
-        // A LIST, not the IEnumerable it started as, since the roster it
-        // backs (Enemies) can now grow mid-fight — see TryAddEnemy. Never
-        // shrinks: the same "dead combatants stay in the list, only their
-        // turn is skipped" rule this class's own header already states for
-        // the encounter as a whole.
+        // THE ENEMY SIDE'S STAGE SLOTS, by index: index i is stage slot i for
+        // the whole fight (FightController.SlotIndexOf reads it that way), and
+        // list order is rank (LivingRankOf). It grows by appending (a summon,
+        // TryAddEnemy) and never shrinks. The one other write is a reseat: a
+        // queued reinforcement replaces a corpse at the corpse's own index, so
+        // it takes that slot and that place in the line (PLAN_RUN_MAP.md 6).
+        // The displaced corpse moves to _displaced, so nothing that was fielded
+        // is lost to a caller asking "who fell".
         private readonly List<CombatantState> _enemies;
+
+        // Who waits to take a fallen enemy's slot, first in line first. Alive,
+        // not in the turn order and not on the stage until reseated.
+        private readonly Queue<CombatantState> _reinforcements = new Queue<CombatantState>();
+
+        // Corpses a reinforcement displaced from _enemies, in reseat order.
+        private readonly List<CombatantState> _displaced = new List<CombatantState>();
+
+        // Reinforcements seated since the caller last took them (TakeArrivals).
+        private readonly List<CombatantState> _arrivals = new List<CombatantState>();
 
         // A LIST for the same reason _enemies is one, plus a second: the
         // party's list ORDER is its field formation, and a placement reorders
@@ -342,10 +356,99 @@ namespace PrincesPalace.Domain.Combat
             if (enemy == null || _enemies.Count >= maxSlots) return false;
 
             _enemies.Add(enemy);
-            _turnOrder.AddCombatant(enemy, enemy.Speed);
-            _turnOrder.SetSpeed(enemy, enemy.Speed);
+            JoinTurnOrder(enemy);
             return true;
         }
+
+        // The same AddCombatant/SetSpeed pair the constructor runs, for a
+        // combatant joining after Start: TurnOrder seeds its charge from its
+        // initiative, so it slots in by how fast it is.
+        private void JoinTurnOrder(CombatantState combatant)
+        {
+            _turnOrder.AddCombatant(combatant, combatant.Speed);
+            _turnOrder.SetSpeed(combatant, combatant.Speed);
+        }
+
+        // ---- reinforcements and the leader (PLAN_RUN_MAP.md 6) ----------------
+        //
+        // THE RESEAT CONTRACT. A queued enemy enters only into a fallen enemy's
+        // list index, which is its stage slot and its place in the line, so a
+        // queue never needs a slot the stage does not have. It happens at a
+        // turn boundary (AdvanceTurn), never inside an action: an action may
+        // be iterating Enemies, and a death mid-sweep must not swap the list
+        // under it. The newcomer joins the turn order seeded from its own
+        // initiative, as a summon does. Kits, kill credit and intents belong
+        // to FightSession (QueueReinforcement).
+
+        public IReadOnlyCollection<CombatantState> Reinforcements => _reinforcements;
+
+        // Every corpse a reseat took off Enemies. Enemies plus this is every
+        // enemy that was ever on the field.
+        public IReadOnlyList<CombatantState> DisplacedEnemies => _displaced;
+
+        // Queues an enemy behind the field. Refused for null, the dead, a
+        // party member, or a combatant already fielded or queued.
+        public bool QueueReinforcement(CombatantState enemy)
+        {
+            if (enemy == null || !enemy.IsAlive || enemy.IsPlayerSide) return false;
+            if (_enemies.Contains(enemy) || _reinforcements.Contains(enemy)) return false;
+
+            _reinforcements.Enqueue(enemy);
+            return true;
+        }
+
+        // Fills every fallen enemy's index, front to rear, from the queue.
+        // Returns how many were seated. Nothing moves once the fight is over:
+        // the queue leaves with the leader (LeaderFell).
+        public int ReseatFallen()
+        {
+            int seated = 0;
+            for (int i = 0; i < _enemies.Count && _reinforcements.Count > 0; i++)
+            {
+                if (IsOver) break;
+                if (_enemies[i].IsAlive) continue;
+
+                var arriving = _reinforcements.Dequeue();
+                _displaced.Add(_enemies[i]);
+                _enemies[i] = arriving;
+                JoinTurnOrder(arriving);
+                _arrivals.Add(arriving);
+                seated++;
+            }
+
+            return seated;
+        }
+
+        // Who was seated since the last call, in seating order; clears the
+        // list. The session reads it to say so in the log.
+        public IReadOnlyList<CombatantState> TakeArrivals()
+        {
+            var taken = _arrivals.ToList();
+            _arrivals.Clear();
+            return taken;
+        }
+
+        // THE ENEMY WHOSE DEATH ENDS THE FIGHT: a boss with anchors in front
+        // of it. Null in every fight that has none, which ends as it always
+        // did, when the last enemy falls.
+        public CombatantState Leader { get; private set; }
+
+        // Declares the leader. Refused unless it is a living enemy already on
+        // the field, and once a leader is set.
+        public bool DeclareLeader(CombatantState enemy)
+        {
+            if (Leader != null || enemy == null || !enemy.IsAlive || !_enemies.Contains(enemy)) return false;
+
+            Leader = enemy;
+            return true;
+        }
+
+        // Computed, not stored, like rank: a leader is fallen while it is
+        // dead, and nothing has to remember to set it.
+        public bool LeaderFell => Leader != null && !Leader.IsAlive;
+
+        // Whether any enemy is still standing or still waiting to come on.
+        private bool AnyEnemyLeft => LivingEnemies.Any() || _reinforcements.Count > 0;
 
         // WHICH ROUND THE SCHEDULE IS IN, 1 from Start. A round is how long a
         // baseline-speed combatant takes to earn one turn (TurnOrder's own
@@ -372,12 +475,19 @@ namespace PrincesPalace.Domain.Combat
             return true;
         }
 
-        public bool IsOver => EndedBySurvival || !LivingPlayerParty.Any() || !LivingEnemies.Any();
+        // A queued reinforcement keeps the fight going with the field empty:
+        // the next turn boundary seats it.
+        public bool IsOver => EndedBySurvival || LeaderFell || !LivingPlayerParty.Any() || !AnyEnemyLeft;
 
-        // A SURVIVED FIGHT IS A WIN, with a living enemy on the field. Code
-        // downstream that needs "every enemy is dead" must ask LivingEnemies,
-        // not this (risk R3 in that plan).
-        public bool PlayerWon => IsOver && LivingPlayerParty.Any() && (EndedBySurvival || !LivingEnemies.Any());
+        // A SURVIVED FIGHT IS A WIN, with a living enemy on the field, and so
+        // is one whose leader fell. Code downstream that needs "every enemy is
+        // dead" must ask LivingEnemies, not this (risk R3 in that plan).
+        public bool PlayerWon => IsOver && LivingPlayerParty.Any()
+                                 && (EndedBySurvival || LeaderFell || !AnyEnemyLeft);
+
+        // The leader fell with enemies still standing or queued: they leave
+        // with it, and the ending says so rather than "every enemy is down".
+        public bool EndedByLeaderFalling => PlayerWon && !EndedBySurvival && LeaderFell && AnyEnemyLeft;
 
         // The next `count` turns, starting with whoever is acting right now,
         // for the initiative tracker to display.
@@ -569,7 +679,8 @@ namespace PrincesPalace.Domain.Combat
         }
 
         // Moves to the next combatant whose turn it is, skipping anyone
-        // already defeated. Call only when IsOver is false.
+        // already defeated. Call only when IsOver is false. Reseats the fallen
+        // first, so a reinforcement is in the schedule this advance picks from.
         public void AdvanceTurn()
         {
             if (IsOver)
@@ -577,6 +688,7 @@ namespace PrincesPalace.Domain.Combat
                 throw new InvalidOperationException("This encounter is already over.");
             }
 
+            ReseatFallen();
             _turnOrder.Advance();
             SkipToNextLivingTurn();
         }

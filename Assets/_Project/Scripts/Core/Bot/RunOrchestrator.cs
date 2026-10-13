@@ -348,7 +348,8 @@ namespace PrincesPalace
                 // after it: an enemy's attack rides a different depth rate in
                 // a round-limited fight (DifficultyCurve.ScaleEnemyAttack),
                 // and the build sets Session.RoundLimit from the same value.
-                roundLimit: request.RoundLimit);
+                roundLimit: request.RoundLimit,
+                heartAnchors: roster.Anchors);
 
             if (built == null) return null;
 
@@ -601,6 +602,7 @@ namespace PrincesPalace
                 // write RewardApplier.Apply makes inside it.
                 var room = RunManager.CurrentNode;
                 notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, room));
+                notices.AddRange(PayHeartAnchors(session, run));
                 reward = PayOut(session, run, payout.Value, participants: null);
 
                 // An anchor beaten on the map no longer waits at the heart.
@@ -621,6 +623,32 @@ namespace PrincesPalace
             if (RunManager.LegIsOver()) RunManager.AdvanceLeg();
 
             return new FightSettlement(reward, null).WithNotices(notices);
+        }
+
+        // ANCHORS THAT DIED AT THE HEART (PLAN_RUN_MAP.md 6; PLAN_ITEMS.md 5.4):
+        // each one's chip joins the boss settlement in map order, before the
+        // boss's pages merge, and it is slain. Their exp and gold are already
+        // in the session's payout (per-enemy elite pay). Those that left with
+        // the boss are not in FallenAnchorNodeIds and pay nothing.
+        private static List<string> PayHeartAnchors(FightSession session, RunSnapshot run)
+        {
+            var notices = new List<string>();
+            var map = RunManager.Map;
+            if (session == null || run == null || map == null) return notices;
+
+            var fallen = session.FallenAnchorNodeIds
+                .Select(map.Node)
+                .Where(node => node != null)
+                .Select(node => new HeartAnchors.Anchor(node.Id, node.Offset, null, 0, node.Prize));
+
+            run.slainAnchorIds ??= new List<int>();
+            foreach (var anchor in HeartAnchors.SettlementOrder(fallen))
+            {
+                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, map.Node(anchor.NodeId)));
+                if (!run.slainAnchorIds.Contains(anchor.NodeId)) run.slainAnchorIds.Add(anchor.NodeId);
+            }
+
+            return notices;
         }
 
         // One completed fight on every FIELDED member's worn fakes (FakeWear).
@@ -720,7 +748,11 @@ namespace PrincesPalace
             if (!string.IsNullOrEmpty(declared)) return declared;
 
             // A boss fight with no declared id is a content gap, not a reason
-            // to lose the kill: fall back to the enemy that was actually there.
+            // to lose the kill: fall back to the fight's leader, the boss the
+            // adapter declared, else any enemy authored as one.
+            var leader = session.SourceFor(session.Encounter.Leader);
+            if (leader?.Source != null) return leader.Source.Id;
+
             return session.Encounter.Enemies
                 .Select(session.SourceFor)
                 .FirstOrDefault(k => k?.Source != null && k.Source.IsBoss)?.Source.Id;

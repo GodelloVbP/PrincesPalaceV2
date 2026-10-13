@@ -626,7 +626,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // EndTurnStatusesForCurrent.
                 EndTurnStatusesForCurrent();
 
-                _encounter.AdvanceTurn();
+                AdvanceTurnAndSeat();
                 GrantTurnStart();
                 AutoResolveEnemyTurns();
             }

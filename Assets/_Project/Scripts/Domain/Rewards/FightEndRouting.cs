@@ -63,6 +63,7 @@ namespace PrincesPalace.Domain.Rewards
             new Row(FightEndReason.Defeated, over: true, partyDown: false, FightEnding.Victory),
             new Row(FightEndReason.Survived, over: true, partyDown: false, FightEnding.Endured),
             new Row(FightEndReason.Fell, over: true, partyDown: true, FightEnding.Fell),
+            new Row(FightEndReason.LeaderFell, over: true, partyDown: false, FightEnding.Victory),
         };
 
         public static Row RowFor(FightEndReason reason)

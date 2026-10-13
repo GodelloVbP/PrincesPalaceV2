@@ -314,7 +314,7 @@ namespace PrincesPalace
             {
                 if (slots[slot] == null) continue;
 
-                var combatant = _occupants[slot];
+                var combatant = HandOver(slots[slot], _occupants[slot]);
                 slots[slot].gameObject.SetShown(combatant != null);
                 if (combatant == null) continue;
 
@@ -332,6 +332,32 @@ namespace PrincesPalace
                     RefreshNameplate(nameplates[slot], combatant);
                 }
             }
+        }
+
+        // WHO A SLOT DRAWS WHEN IT CHANGES HANDS (a reinforcement reseating a
+        // corpse's index, CombatEncounter.ReseatFallen). The corpse keeps the
+        // slot while its death fade runs, so the kill still reads "it falls,
+        // it fades"; then the newcomer takes it, at full opacity -- the fade
+        // component belongs to the slot, and the corpse left it faded.
+        // Cleared per fight in BindSlots.
+        private readonly Dictionary<RectTransform, CombatantState> _drawnIn =
+            new Dictionary<RectTransform, CombatantState>();
+
+        private CombatantState HandOver(RectTransform slot, CombatantState occupant)
+        {
+            if (occupant == null) return null;
+
+            if (_drawnIn.TryGetValue(slot, out var previous) && previous != null
+                && !ReferenceEquals(previous, occupant))
+            {
+                var fade = DeathFadeFor(previous);
+                if (fade != null && fade.Fading) return previous;
+
+                if (IsStanding(occupant)) fade?.ResetToVisible();
+            }
+
+            _drawnIn[slot] = occupant;
+            return occupant;
         }
 
         // BACK ON ITS FEET AFTER HAVING BEEN SHOWN DOWN -- Second Life, which

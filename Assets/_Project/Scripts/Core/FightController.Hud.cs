@@ -778,11 +778,13 @@ namespace PrincesPalace
             // which is exactly the state `blocked` exists to keep off screen.
             bool picking = _menu.IsPickingEnemy;
 
-            // An elite room fields a squad drawn entirely from the elite pool,
-            // so every living plate reads it; a boss room fields exactly the
-            // one declared boss, so only the front slot does -- see
-            // _encounterClass's own comment.
-            var frontEnemy = _session?.Encounter.FrontEnemy;
+            // Dressed per enemy: an elite kit (every enemy of an elite room,
+            // and a boss room's anchors), or a boss room's boss -- its
+            // declared leader, else the front slot for a boss fight built
+            // without one.
+            var bossEnemy = _encounterClass == EncounterClass.Boss
+                ? _session?.Encounter.Leader ?? _session?.Encounter.FrontEnemy
+                : null;
 
             for (int i = 0; i < enemyPlates.Length; i++)
             {
@@ -806,8 +808,7 @@ namespace PrincesPalace
                     && !_session.CanReachEnemy(_session.Current, targetingReach, enemies[i]);
 
                 bool dressed = present && (
-                    _encounterClass == EncounterClass.Elite
-                    || (_encounterClass == EncounterClass.Boss && ReferenceEquals(enemies[i], frontEnemy)));
+                    (_session != null && _session.IsEliteEnemy(enemies[i])) || ReferenceEquals(enemies[i], bossEnemy));
 
                 if (present)
                 {

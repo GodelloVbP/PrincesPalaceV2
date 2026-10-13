@@ -742,7 +742,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // status -- see EndTurnStatusesForCurrent's own header.
             EndTurnStatusesForCurrent();
 
-            _encounter.AdvanceTurn();
+            AdvanceTurnAndSeat();
             GrantTurnStart();
             return !SettleIfOver();
         }

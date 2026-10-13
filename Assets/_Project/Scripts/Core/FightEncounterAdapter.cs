@@ -101,10 +101,14 @@ namespace PrincesPalace
             return new FighterBody(stats.maxHealth, ContentDatabase.EquippedWeaponPower(character) ?? stats.attack);
         }
 
+        // atHeart: a boss room's anchor, fielded at its heart share of max HP
+        // (HeartAnchors.HealthAtHeart).
         private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite,
-                                                  int roundLimit)
+                                                  int roundLimit, bool atHeart = false)
         {
             var stats = FieldedStats(definition.Data, isElite);
+            int maxHealth = DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep);
+            if (atHeart) maxHealth = HeartAnchors.HealthAtHeart(maxHealth);
 
             // Mana is NOT part of StatBlock -- it is derived from ability scores
             // for a character, and monsters have none. They get the `mana` row
@@ -130,7 +134,7 @@ namespace PrincesPalace
             // stats.manaRegen instead would be a balance change and the
             // owner's call, not a comment's.
             var state = new CombatantState(definition.Data.DisplayName, false,
-                DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
+                maxHealth,
                 ContentDatabase.BuildPrimaryPool(ContentDatabase.ManaPoolId,
                     ScalingProfile.NeutralScores, null, manaRegen: 0),
                 DifficultyCurve.ScaleEnemyAttack(stats.attack, depthStep, roundLimit),
@@ -434,7 +438,14 @@ namespace PrincesPalace
             // every enemy's attack -- summons included -- picks its depth
             // rate by it (DifficultyCurve.ScaleEnemyAttack). 0 on every room
             // fight and the tooling path, which is the attack rate unchanged.
-            int roundLimit = 0)
+            int roundLimit = 0,
+
+            // A BOSS ROOM'S LIVING ANCHORS, in formation order
+            // (HeartAnchors.Formation; PLAN_RUN_MAP.md 6). Each is fielded as
+            // an elite at HeartAnchors.HealthAtHeart of its max HP. The first
+            // HeartAnchors.FrontCount stand in front of the boss, the rest
+            // queue for a fallen slot. Null or empty everywhere else.
+            IReadOnlyList<HeartAnchors.Anchor> heartAnchors = null)
         {
             var party = new List<CombatantState>();
             var kits = new List<PlayerKit>();
@@ -500,7 +511,30 @@ namespace PrincesPalace
 
             if (party.Count == 0 || enemies.Count == 0) return null;
 
+            // THE HEART'S FORMATION: anchors in front of the boss, by rank, the
+            // rest queued. Built before the encounter so rank 0 is the
+            // strongest anchor from the first turn.
+            var anchors = new List<(int NodeId, CombatantState State, EnemyKit Kit)>();
+            foreach (var anchor in heartAnchors ?? new List<HeartAnchors.Anchor>())
+            {
+                var definition = ContentDatabase.Enemies.FirstOrDefault(e => e.id == anchor.EnemyId);
+                if (definition == null) continue;
+
+                anchors.Add((anchor.NodeId,
+                    ToCombatant(definition, depthStep, isElite: true, roundLimit, atHeart: true),
+                    EnemyKitFor(definition, isElite: true)));
+            }
+
+            int front = HeartAnchors.FrontCount(anchors.Count, FightHudSpec.StageSlotsPerSide, enemies.Count);
+            var leader = isBoss ? LeaderOf(enemies, enemyKits) : null;
+            enemies.InsertRange(0, anchors.Take(front).Select(a => a.State));
+            enemyKits.InsertRange(0, anchors.Take(front).Select(a => a.Kit));
+
             var encounter = new CombatEncounter(party, enemies);
+
+            // THE LEADER RULE: in a boss room the boss's death ends the fight,
+            // and whoever still stands or waits leaves with it.
+            if (leader != null) encounter.DeclareLeader(leader);
 
             // A CLOSURE OVER THIS BUILD'S OWN depthStep/isElite, so a rat
             // called in on floor 20 by a Roar scales exactly like one that
@@ -525,6 +559,12 @@ namespace PrincesPalace
             var session = new FightSession(encounter, kits, enemyKits, rng, isBoss, isElite,
                 summonFactory: SummonFactory);
 
+            for (int i = 0; i < anchors.Count; i++)
+            {
+                if (i >= front) session.QueueReinforcement(anchors[i].State, anchors[i].Kit);
+                session.MarkAnchor(anchors[i].State, anchors[i].NodeId);
+            }
+
             // Set before Begin, which every caller runs after this returns:
             // the session checks the limit at each round start from round 1.
             session.RoundLimit = roundLimit;
@@ -546,6 +586,19 @@ namespace PrincesPalace
             {
                 Session = session, Party = party, PartyArt = art, PartyIds = builtPartyIds,
             };
+        }
+
+        // The boss a boss room's leader rule follows: the first enemy authored
+        // as a boss, else the first enemy, so a boss room always has one.
+        private static CombatantState LeaderOf(IReadOnlyList<CombatantState> enemies,
+                                               IReadOnlyList<EnemyKit> enemyKits)
+        {
+            for (int i = 0; i < enemies.Count && i < enemyKits.Count; i++)
+            {
+                if (enemyKits[i]?.Source != null && enemyKits[i].Source.IsBoss) return enemies[i];
+            }
+
+            return enemies.Count > 0 ? enemies[0] : null;
         }
 
         // A MONSTER'S KIT, with its abilities looked up.

@@ -18,7 +18,7 @@ namespace PrincesPalace.Domain.Tests
         public void EveryFightEndReason_HasExactlyOneRow()
         {
             var reasons = (FightEndReason[])Enum.GetValues(typeof(FightEndReason));
-            Assert.AreEqual(4, reasons.Length, "a new ending: give it a row in FightEndRouting.Rows");
+            Assert.AreEqual(5, reasons.Length, "a new ending: give it a row in FightEndRouting.Rows");
 
             foreach (var reason in reasons)
             {
@@ -47,6 +47,8 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(FightEndReason.Fell, true, true, FightEndScreen.Defeat)]
         [TestCase(FightEndReason.Fell, false, true, FightEndScreen.Reckoning)]
         [TestCase(FightEndReason.Fell, false, false, FightEndScreen.Continue)]
+        [TestCase(FightEndReason.LeaderFell, false, true, FightEndScreen.Reckoning)]
+        [TestCase(FightEndReason.LeaderFell, false, false, FightEndScreen.Continue)]
         public void Routes(FightEndReason reason, bool runEnded, bool belongedToRun, FightEndScreen expected)
         {
             Assert.AreEqual(expected, FightEndRouting.Route(reason, runEnded, belongedToRun));
@@ -65,6 +67,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(FightEndReason.Defeated, FightEnding.Victory)]
         [TestCase(FightEndReason.Survived, FightEnding.Endured)]
         [TestCase(FightEndReason.Fell, FightEnding.Fell)]
+        [TestCase(FightEndReason.LeaderFell, FightEnding.Victory)]
         public void TheOutcomeFormNamesTheEnding(FightEndReason reason, FightEnding ending)
         {
             Assert.AreEqual(ending, FightEndRouting.RowFor(reason).Ending);

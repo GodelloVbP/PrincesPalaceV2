@@ -80,7 +80,7 @@ namespace PrincesPalace.Domain.Combat.Session
             new Dictionary<CombatantState, List<ActiveStatus>>();
 
         // A TURN IS OVER, HOWEVER IT ENDED -- the one place the turn-end clock
-        // is wound, sitting immediately before every `_encounter.AdvanceTurn()`
+        // is wound, sitting immediately before every `AdvanceTurnAndSeat()`
         // in the session.
         //
         // IT USED TO LIVE INSIDE AdvanceAfterAction, and that was a hole with
@@ -208,7 +208,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // and every other duration is not.
             EndTurnStatusesForCurrent();
 
-            _encounter.AdvanceTurn();
+            AdvanceTurnAndSeat();
 
             // AUDIT #113: an extra action is the SAME turn, so it re-pays
             // nothing. Read-then-reset here for the same reason
