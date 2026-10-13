@@ -293,55 +293,61 @@ namespace PrincesPalace.Domain.Content
                     continue;
                 }
 
+                int levels = piece.iconLevels > 0 ? piece.iconLevels : DefaultIconLevels;
+                var curve = new GearCurve
+                {
+                    maxTier = maxTier,
+                    statsAtZero = baseStat,
+                    statsAtMax = topStat,
+                    scoresAtZero = baseScore,
+                    scoresAtMax = topScore,
+                    requiresAtZero = reqAtZero,
+                    requiresAtMax = reqAtMax,
+                    baseName = $"{raw.displayName.Trim()} {piece.displayName.Trim()}",
+                    tierAdjectives = raw.tierAdjectives ?? new string[0],
+                    fallbackAdjective = FallbackAdjective,
+                    iconSheet = piece.iconSheet ?? "",
+                    iconLevels = levels,
+                    iconPath = "",
+                };
+
                 for (int tier = 0; tier <= maxTier; tier++)
                 {
-                    resolved.Add(BuildPiece(raw, piece, slot, tier, maxTier,
-                        baseStat, topStat, baseScore, topScore,
+                    resolved.Add(BuildPiece(raw, piece, slot, tier, curve,
                         cost + costPerTier * tier,
-                        setOrder * 10000 + p * 100 + tier,
-                        InterpolateScores(reqAtZero, reqAtMax, tier, maxTier)));
+                        setOrder * 10000 + p * 100 + tier));
                 }
             }
         }
 
+        // Per-tier assets read the base's curve at their tier, so a copy read
+        // through GearCurve.At and the asset generated for that tier cannot
+        // disagree. NO PLUS is baked into the name: honing belongs to the
+        // slot, and the UI appends it at display time (ItemNaming.WithPlus).
         private static ResolvedSetPiece BuildPiece(RawItemSetEntry set, RawSetPiece piece, EquipmentSlot slot,
-            int tier, int maxTier, StatBlock baseStat, StatBlock topStat,
-            AbilityScoreBlock baseScore, AbilityScoreBlock topScore, int cost, int sortOrder,
-            AbilityScoreBlock requirements = default)
+            int tier, GearCurve curve, int cost, int sortOrder)
         {
-            var stat = InterpolateStats(baseStat, topStat, tier, maxTier);
-            var score = InterpolateScores(baseScore, topScore, tier, maxTier);
-
+            var at = curve.At(tier);
             string setId = set.id.Trim();
             string pieceId = piece.id.Trim();
-            int levels = piece.iconLevels > 0 ? piece.iconLevels : DefaultIconLevels;
-
-            // "Hardened Leather Coif". The tier adjective leads, exactly as
-            // it does on a weapon — the two generators share ItemNaming so
-            // armour and weapons cannot drift apart on this again.
-            //
-            // NO PLUS is baked into the name. Plus belongs to the instance,
-            // so a definition that claimed "+3" would be wrong for every
-            // other copy of the same item; the UI appends it at display time
-            // through ItemNaming.WithPlus.
-            string adjective = ItemNaming.AdjectiveAt(set.tierAdjectives, tier, FallbackAdjective);
-            string baseName = $"{set.displayName.Trim()} {piece.displayName.Trim()}";
 
             return new ResolvedSetPiece(
                 $"{setId}_{pieceId}_p{tier}",
-                ItemNaming.Compose(adjective, baseName),
+                at.DisplayName,
                 set.description ?? "",
                 slot,
                 setId,
                 set.displayName.Trim(),
                 pieceId,
                 tier,
-                stat,
-                score,
+                at.StatBonus,
+                at.AbilityScoreBonus,
                 cost,
                 sortOrder,
-                IconPathFor(piece.iconSheet, tier, maxTier, levels),
-                requirements);
+                at.IconPath,
+                at.Requirements,
+                $"{setId}_{pieceId}",
+                curve);
         }
 
         // The interpolation, and the one piece of arithmetic in this file
@@ -355,7 +361,8 @@ namespace PrincesPalace.Domain.Content
         // Both ENDS are untouched by that change — f(0) is 0 and f(maxTier)
         // is 1 — so a set's authored numbers still mean exactly what they say
         // and raising maxTier still stretches the curve rather than inflating
-        // the tiers that already exist.
+        // the tiers that already exist. A tier past maxTier extrapolates on
+        // the same curve (GearCurve, ItemInstance.TierCap).
         //
         // FLOORED, and via Math.Floor rather than integer division. C#
         // integer division truncates toward zero, which would round a
@@ -387,7 +394,7 @@ namespace PrincesPalace.Domain.Content
                 return atZero;
             }
 
-            if (tier >= maxTier)
+            if (tier == maxTier)
             {
                 return atMax;
             }
@@ -445,32 +452,6 @@ namespace PrincesPalace.Domain.Content
                 Value(weights.wisdom),
                 Value(weights.intelligence),
                 Value(weights.charisma));
-        }
-
-        private static StatBlock InterpolateStats(StatBlock atZero, StatBlock atMax, int tier, int maxTier)
-        {
-            var result = StatBlock.Zero;
-            foreach (StatType stat in Enum.GetValues(typeof(StatType)))
-            {
-                result = result + StatBlock.ForStat(stat, ValueAt(atZero[stat], atMax[stat], tier, maxTier));
-            }
-
-            return result;
-        }
-
-        // Internal rather than private: WeaponEntryResolver interpolates its
-        // own requiresAtZero/requiresAtMax through this exact function too,
-        // so a weapon and an armour piece cannot round their requirement
-        // curves two different ways.
-        internal static AbilityScoreBlock InterpolateScores(AbilityScoreBlock atZero, AbilityScoreBlock atMax, int tier, int maxTier)
-        {
-            return new AbilityScoreBlock(
-                ValueAt(atZero.strength, atMax.strength, tier, maxTier),
-                ValueAt(atZero.dexterity, atMax.dexterity, tier, maxTier),
-                ValueAt(atZero.constitution, atMax.constitution, tier, maxTier),
-                ValueAt(atZero.wisdom, atMax.wisdom, tier, maxTier),
-                ValueAt(atZero.intelligence, atMax.intelligence, tier, maxTier),
-                ValueAt(atZero.charisma, atMax.charisma, tier, maxTier));
         }
 
         // One end of a derived piece's combat stats: every budget stat the

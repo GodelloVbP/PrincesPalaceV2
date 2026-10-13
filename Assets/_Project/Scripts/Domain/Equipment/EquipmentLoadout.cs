@@ -14,6 +14,11 @@ namespace PrincesPalace.Domain.Equipment
         public EquipmentSlot slot;
         public string itemId;
 
+        // Which tier of the base this copy is (ItemInstance.Tier). A save
+        // written before the field loads 0; such a run is settled on opening
+        // and never resumed (docs/PLAN_ITEMS.md 2.5), so no migration reads it.
+        public int tier;
+
         // How honed the copy in this slot is. Travels with the item rather
         // than with the definition, so taking a +5 sword off and putting it
         // back on has to preserve the 5 — which is why every equip and
@@ -60,13 +65,14 @@ namespace PrincesPalace.Domain.Equipment
             Write(instance);
         }
 
-        public ItemInstance Instance => new ItemInstance(itemId, plus, modifierIds, riftTier, provenance);
+        public ItemInstance Instance => new ItemInstance(itemId, plus, modifierIds, riftTier, provenance, tier);
 
         // Overwrites every identity field from `instance`, so a slot can never
         // end up holding one copy's plus and another copy's provenance.
         internal void Write(ItemInstance instance)
         {
             itemId = instance?.ItemId ?? "";
+            tier = instance?.Tier ?? 0;
             plus = instance?.Plus ?? 0;
             // Copied, not assigned -- see CollectionOps.CopyOrEmpty for why a
             // shared reference here would be the aliasing bug Clone()'s tests

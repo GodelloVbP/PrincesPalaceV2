@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: steel
   weaponFamilyId: 
   tier: 0
+  baseId: steel_helmet
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 10
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 3
+      magicalDefense: 1
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 93
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 29
+      magicalDefense: 5
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 1
+      dexterity: 0
+      constitution: 2
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 1
+      dexterity: 0
+      constitution: 2
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 9
+      dexterity: 0
+      constitution: 16
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Steel Helmet
+    tierAdjectives:
+    - Pitted
+    - Plain
+    - Forged
+    - Tempered
+    - Polished
+    - Knightly
+    - Runed
+    - Adamant
+    - Radiant
+    - Godsteel
+    - Sovereign
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/helmets_str
+    iconLevels: 10
+    iconPath: 

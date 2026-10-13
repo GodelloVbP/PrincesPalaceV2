@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: wool
   weaponFamilyId: 
   tier: 0
+  baseId: wool_mittens
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 15
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 1
+      magicalDefense: 1
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 142
+      speed: 0
+      attack: 0
+      manaRegen: 1
+      physicalDefense: 5
+      magicalDefense: 9
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 1
+      wisdom: 3
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 1
+      wisdom: 2
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 7
+      wisdom: 19
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Wool Mittens
+    tierAdjectives:
+    - Matted
+    - Carded
+    - Spun
+    - Combed
+    - Lambswool
+    - Fine
+    - Shepherd's
+    - Blessed
+    - Golden
+    - First Fleece
+    - Ram's
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/wool_gloves_sheet
+    iconLevels: 10
+    iconPath: 

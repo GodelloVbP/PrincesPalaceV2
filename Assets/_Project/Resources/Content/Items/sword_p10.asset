@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: 
   weaponFamilyId: sword
   tier: 10
+  baseId: sword
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 10
+    attackAtMax: 202
+    scalingAtZero:
+      strength: 3
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 6
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Sword
+    tierAdjectives:
+    - Worn
+    - Plain
+    - Fine
+    - Keen
+    - Tempered
+    - Masterwork
+    - Runed
+    - Ancient
+    - Radiant
+    - Mythic
+    - Sovereign
+    fallbackAdjective: Plain
+    iconSheet: Assets/_Project/Art/Items/longswords
+    iconLevels: 10
+    iconPath: 

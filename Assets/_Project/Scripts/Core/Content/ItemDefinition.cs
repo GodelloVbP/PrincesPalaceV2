@@ -75,6 +75,12 @@ namespace PrincesPalace.Content
         [Tooltip("Generated items only: which rung of the ladder this is — 0 for the weakest, 10 for the best. Drives the icon, the base stats, the scaling grades, the tier adjective in the name and the rarity colour. NOT the same as an instance's plus, which lives on the InventoryEntry.")]
         public int tier;
 
+        [Tooltip("The base this definition belongs to: '<set>_<piece>' or '<family>' for generated gear, the id itself for a hand-authored item. The id a copy carries once content holds one asset per base (docs/PLAN_ITEMS.md 2.3).")]
+        public string baseId;
+
+        [Tooltip("Equippables: what the base is worth at every tier. ContentDatabase.Effective reads this with a copy's tier and its slot's honing; the per-tier stat fields above are what this curve gave at `tier`.")]
+        public GearCurve curve;
+
         // Whether this came out of itemsets.json rather than items.json.
         // A generated piece is otherwise indistinguishable from a
         // hand-authored item on purpose — equipment, the inventory, the

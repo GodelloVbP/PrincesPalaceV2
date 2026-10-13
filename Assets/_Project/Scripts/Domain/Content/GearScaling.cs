@@ -186,7 +186,9 @@ namespace PrincesPalace.Domain.Content
         }
 
         // Where a tier sits between the two authored ends, 0 at tier 0 and 1
-        // at maxTier.
+        // at maxTier. Past maxTier it keeps climbing on the same shape (above
+        // 1): maxTier is where the art ladder tops out, and a copy's tier runs
+        // on to ItemInstance.TierCap.
         //
         // Expressed as a FRACTION of the span rather than as a multiplier on
         // the value, which is what lets it work for a stat that starts at zero
@@ -212,7 +214,7 @@ namespace PrincesPalace.Domain.Content
         public static double CurveFraction(int tier, int maxTier, double growth)
         {
             if (maxTier <= 0 || tier <= 0) return 0.0;
-            if (tier >= maxTier) return 1.0;
+            if (tier == maxTier) return 1.0;
 
             double top = Math.Pow(growth, maxTier) - 1.0;
             if (top <= 0.0) return 0.0;

@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: regalia
   weaponFamilyId: 
   tier: 8
+  baseId: regalia_gloves
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 5
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 1
+      magicalDefense: 3
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 47
+      speed: 2
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 5
+      magicalDefense: 24
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 2
+      intelligence: 0
+      charisma: 2
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 1
+      intelligence: 0
+      charisma: 2
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 2
+      wisdom: 12
+      intelligence: 0
+      charisma: 14
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Regalia Belled Gloves
+    tierAdjectives:
+    - Borrowed
+    - Painted
+    - Beaded
+    - Gilded
+    - Ceremonial
+    - Anointed
+    - Consecrated
+    - Hierarch's
+    - Choirmaster's
+    - Undeniable
+    - Godcaller
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/regalia_gloves_sheet
+    iconLevels: 10
+    iconPath: 

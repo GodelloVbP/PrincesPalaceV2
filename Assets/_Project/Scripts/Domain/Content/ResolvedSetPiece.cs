@@ -49,10 +49,18 @@ namespace PrincesPalace.Domain.Content
         // RequirementResolver.
         public readonly AbilityScoreBlock Requirements;
 
+        // The base this tier was generated from (docs/PLAN_ITEMS.md 2.3):
+        // the id a copy will carry once content holds one asset per base.
+        public readonly string BaseId;
+
+        // Every tier of the base, as one curve; this record is Curve.At(Tier).
+        public readonly GearCurve Curve;
+
         public ResolvedSetPiece(string id, string displayName, string description, EquipmentSlot slot,
             string setId, string setDisplayName, string pieceId, int tier,
             StatBlock statBonus, AbilityScoreBlock abilityScoreBonus, int cost, int sortOrder,
-            string iconPath = "", AbilityScoreBlock requirements = default)
+            string iconPath = "", AbilityScoreBlock requirements = default,
+            string baseId = "", GearCurve curve = default)
         {
             IconPath = iconPath;
             Id = id;
@@ -68,6 +76,8 @@ namespace PrincesPalace.Domain.Content
             Cost = cost;
             SortOrder = sortOrder;
             Requirements = requirements;
+            BaseId = baseId ?? "";
+            Curve = curve;
         }
     }
 }

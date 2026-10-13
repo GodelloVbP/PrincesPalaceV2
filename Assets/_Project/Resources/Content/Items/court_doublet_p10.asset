@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: court
   weaponFamilyId: 
   tier: 10
+  baseId: court_doublet
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 8
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 3
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 70
+      speed: 4
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 31
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 1
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 5
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 3
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 2
+      wisdom: 0
+      intelligence: 0
+      charisma: 23
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Court Doublet
+    tierAdjectives:
+    - Threadbare
+    - Plain
+    - Tailored
+    - Brocaded
+    - Courtly
+    - Noble
+    - Ducal
+    - Princely
+    - Sovereign's
+    - Peerless
+    - Unquestioned
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/court_doublet_sheet
+    iconLevels: 10
+    iconPath: 

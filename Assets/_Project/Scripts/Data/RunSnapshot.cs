@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 
@@ -209,16 +210,16 @@ namespace PrincesPalace
         // drops the list, which loses a chip and nothing else.
         public List<string> pendingRelicReceipts = new List<string>();
 
-        // How many item-offer rerolls this descent has spent.
+        // How honed each member's slots are (docs/PLAN_ITEMS.md 1.5), read
+        // and written only through Domain.Equipment.SlotHoning. On the run
+        // because honing ends with the run; per slot rather than on the copy
+        // because an emptied slot keeps its honing and the copy it held
+        // does not carry it away.
         //
-        // Dead weight, kept rather than deleted. Nothing sets this above zero
-        // any more, but removing the field would drop the value JsonUtility
-        // already wrote for an in-flight run on an old save, for no gain.
-        //
-        // Purely additive, so CurrentVersion does not move -- an older save's
-        // in-flight run has no such field and JsonUtility leaves it at zero,
-        // which is exactly "has rerolled nothing yet".
-        public int offerRerollsUsed;
+        // No CurrentVersion entry: a run found on disk is settled on opening,
+        // never resumed (plan 2.5), so an older save's missing list (empty)
+        // is never read.
+        public List<SlotHoningEntry> slotHoning = new List<SlotHoningEntry>();
 
         // Whether this descent guarantees a rest on the step before each boss.
         //
@@ -252,9 +253,8 @@ namespace PrincesPalace
         // NO MID-RUN REFRESH: this climbs at most once per descent, with
         // nothing that clears it back to zero before the run ends.
         //
-        // USED rather than remaining, the same shape as offerRerollsUsed and
-        // for the same reason: the allowance stays a pure function of the
-        // track, so a character reaching level 90 mid-descent is owed one from
+        // USED rather than remaining: the allowance stays a pure function of
+        // the track, so a character reaching level 90 mid-descent is owed one from
         // that moment rather than being stuck with a count snapshotted before
         // they earned it. Unlike restBeforeBoss this is safe to read live,
         // because nothing regenerates from it -- it changes what a fight does
@@ -317,7 +317,7 @@ namespace PrincesPalace
         // serializes fields and Dictionary is not one of the shapes it can
         // write. Nothing carries over between runs: StartRun replaces the
         // whole snapshot, the same mechanism that already resets relicIds
-        // and offerRerollsUsed.
+        // and slotHoning.
         //
         // Purely additive. SaveData.CurrentVersion does not move -- an
         // older in-flight run's JsonUtility deserialize leaves this empty,

@@ -25,6 +25,16 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the payout ---------------------------------------------------------
 
+        // The income cut stands at 1000 (no change) until the balance pass
+        // sets it (docs/PLAN_ITEMS.md 1.6). Moving it moves this literal on purpose.
+        [Test]
+        public void GoldIncome_IsUncutUntilTheBalancePass()
+        {
+            Assert.AreEqual(1000, VictoryRewards.GoldIncomePermille);
+            Assert.AreEqual(17, VictoryRewards.Income(17));
+            Assert.AreEqual(0, VictoryRewards.Income(0));
+        }
+
         [Test]
         public void ARoomPaysTheSumOfWhatItHeld()
         {

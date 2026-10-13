@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: 
   weaponFamilyId: staff
   tier: 5
+  baseId: staff
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 9
+    attackAtMax: 181
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 3
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 6
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 5
+      charisma: 0
+    baseName: Staff
+    tierAdjectives:
+    - Crooked
+    - Carved
+    - Bound
+    - Budding
+    - Amber
+    - Gilded
+    - Sapphire
+    - Argent
+    - Reliquary
+    - Starbound
+    - Worldroot
+    fallbackAdjective: Plain
+    iconSheet: Assets/_Project/Art/Items/staff_sheet
+    iconLevels: 10
+    iconPath: 

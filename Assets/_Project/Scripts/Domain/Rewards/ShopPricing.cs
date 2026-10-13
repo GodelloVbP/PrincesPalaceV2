@@ -17,6 +17,17 @@ namespace PrincesPalace.Domain.Rewards
     // gotcha 5).
     public static class ShopPricing
     {
+        // ---- depth ----------------------------------------------------------
+
+        // THE copy-model price curve (docs/PLAN_ITEMS.md 1.6): every price is
+        // authored in step-0 gold and charged through this, on the curve
+        // fight gold rides (DifficultyCurve.ScaleReward), so what a fight pays
+        // and what the shop asks keep today's ratio at every depth. Not yet
+        // called by the prices below; they move onto it with the copy model
+        // (docs/handoffs/item_redesign/I2A_REMAINING.md), and the "never of
+        // depth" rule above goes with them.
+        public static int ScalePrice(int amount, int step) => Dungeon.DifficultyCurve.ScaleReward(amount, step);
+
         // ---- gear ---------------------------------------------------------
 
         // Linear in tier, the SHAPE taken from ItemDefinition.cost and

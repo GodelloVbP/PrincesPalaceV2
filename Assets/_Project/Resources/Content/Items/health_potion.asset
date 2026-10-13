@@ -64,3 +64,81 @@ MonoBehaviour:
   setId: 
   weaponFamilyId: 
   tier: 0
+  baseId: health_potion
+  curve:
+    maxTier: 0
+    statsAtZero:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: 
+    tierAdjectives: []
+    fallbackAdjective: 
+    iconSheet: 
+    iconLevels: 0
+    iconPath: 

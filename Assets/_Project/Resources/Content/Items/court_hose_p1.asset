@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: court
   weaponFamilyId: 
   tier: 1
+  baseId: court_hose
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 6
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 3
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 59
+      speed: 3
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 26
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 4
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 3
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 2
+      wisdom: 0
+      intelligence: 0
+      charisma: 23
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Court Hose
+    tierAdjectives:
+    - Threadbare
+    - Plain
+    - Tailored
+    - Brocaded
+    - Courtly
+    - Noble
+    - Ducal
+    - Princely
+    - Sovereign's
+    - Peerless
+    - Unquestioned
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/court_pantalon_sheets
+    iconLevels: 10
+    iconPath: 

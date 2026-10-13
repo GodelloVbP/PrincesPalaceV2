@@ -53,6 +53,7 @@ namespace PrincesPalace.Domain.Rewards
         public bool noOffer;
 
         // Gear only.
+        public int tier;
         public int plus;
         public List<string> modifiers = new List<string>();
         public int riftTier;
@@ -85,7 +86,7 @@ namespace PrincesPalace.Domain.Rewards
         // one its lot and the wear countdown (FakeWear), a room-shop copy
         // nothing.
         public ItemInstance GearInstance() =>
-            new ItemInstance(contentId, plus, modifiers, riftTier, CardProvenance(wears: true));
+            new ItemInstance(contentId, plus, modifiers, riftTier, CardProvenance(wears: true), tier);
 
         // The consumable half of the same rule. A fake potion has no
         // countdown: it is spent on use, to no effect.

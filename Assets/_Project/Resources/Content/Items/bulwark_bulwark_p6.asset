@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: bulwark
   weaponFamilyId: 
   tier: 6
+  baseId: bulwark_bulwark
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 11
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 3
+      magicalDefense: 2
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 105
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 28
+      magicalDefense: 21
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 1
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 5
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 3
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 23
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Bulwark Cuirass
+    tierAdjectives:
+    - Cracked
+    - Slab
+    - Ironbound
+    - Weighted
+    - Immovable
+    - Anchored
+    - Adamant
+    - Mountain's
+    - Bastion
+    - Unyielding
+    - Worldroot
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/siege_cuirass_sheet
+    iconLevels: 10
+    iconPath: 

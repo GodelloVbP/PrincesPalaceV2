@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: court
   weaponFamilyId: 
   tier: 4
+  baseId: court_gloves
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 5
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 2
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 47
+      speed: 3
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 21
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 3
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 3
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 2
+      wisdom: 0
+      intelligence: 0
+      charisma: 23
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Court Silk Gloves
+    tierAdjectives:
+    - Threadbare
+    - Plain
+    - Tailored
+    - Brocaded
+    - Courtly
+    - Noble
+    - Ducal
+    - Princely
+    - Sovereign's
+    - Peerless
+    - Unquestioned
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/court_gloves_sheet
+    iconLevels: 10
+    iconPath: 

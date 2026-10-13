@@ -776,6 +776,13 @@ public static class ContentBuilder
             asset.statBonus = item.StatBonus;
             asset.abilityScoreBonus = item.AbilityScoreBonus;
             asset.requirements = item.Requirements;
+            asset.baseId = item.Id;
+            if (asset.IsEquippable)
+            {
+                asset.curve = GearCurve.Flat(item.DisplayName, item.StatBonus,
+                    asset.kind == ItemKind.Weapon ? item.AttackBonus : 0,
+                    item.AbilityScoreBonus, item.Requirements, item.IconPath);
+            }
             asset.startingStock = item.StartingStock;
             asset.cost = item.Cost;
             asset.iconPath = item.IconPath;
@@ -846,6 +853,8 @@ public static class ContentBuilder
             asset.cost = weapon.Cost;
             asset.tier = weapon.Tier;
             asset.weaponFamilyId = weapon.FamilyId;
+            asset.baseId = weapon.BaseId;
+            asset.curve = weapon.Curve;
             asset.iconPath = weapon.IconPath;
             asset.sortOrder = WeaponSortOffset + weapon.SortOrder;
             CreateContentAsset(asset, assetPath);
@@ -926,6 +935,8 @@ public static class ContentBuilder
             asset.requirements = piece.Requirements;
             asset.cost = piece.Cost;
             asset.setId = piece.SetId;
+            asset.baseId = piece.BaseId;
+            asset.curve = piece.Curve;
             asset.tier = piece.Tier;
             asset.iconPath = piece.IconPath;
             asset.sortOrder = SetSortOffset + piece.SortOrder;

@@ -5,7 +5,7 @@ namespace PrincesPalace
 {
     // One stack of a held item. Matches ItemDefinition.id.
     //
-    // A stack is keyed by ItemInstance.SameStack -- (itemId, plus,
+    // A stack is keyed by ItemInstance.SameStack -- (itemId, tier, plus,
     // modifierIds, riftTier) for an ordinary copy, the lot alone for a
     // caravan copy -- not by itemId alone: a +3 coif and a +5 coif are the same DEFINITION but not
     // the same object, and stacking them would silently upgrade one of them.
@@ -26,9 +26,13 @@ namespace PrincesPalace
         public string itemId;
         public int count;
 
-        // How honed this stack is. The tier — which item this is — lives on
-        // the definition; this is the other axis, and it is here rather than
-        // baked because otherwise every tier would need eleven assets.
+        // Which tier of the base this copy is (ItemInstance.Tier). A save
+        // written before the field loads 0; such a run is settled on opening
+        // and never resumed (docs/PLAN_ITEMS.md 2.5), so no migration reads it.
+        public int tier;
+
+        // How honed this stack is: the pre-copy-model axis that moves to the
+        // slot (SlotHoning) and leaves this entry with the copy model.
         //
         // JsonUtility deserialises a missing int as 0, so a save written
         // before plus existed loads as all-plus-zero. That is the correct
@@ -67,13 +71,14 @@ namespace PrincesPalace
         {
             itemId = instance?.ItemId ?? "";
             this.count = count;
+            tier = instance?.Tier ?? 0;
             plus = instance?.Plus ?? 0;
             modifierIds = instance?.ModifierList() ?? new List<string>();
             riftTier = instance?.RiftTier ?? 0;
             provenance = instance?.ProvenanceCopy() ?? new Provenance();
         }
 
-        public ItemInstance Instance => new ItemInstance(itemId, plus, modifierIds, riftTier, provenance);
+        public ItemInstance Instance => new ItemInstance(itemId, plus, modifierIds, riftTier, provenance, tier);
 
         public InventoryEntry(string itemId, int count, int plus = 0,
             List<string> modifierIds = null, int riftTier = 0)

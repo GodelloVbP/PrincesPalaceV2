@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: runeplate
   weaponFamilyId: 
   tier: 0
+  baseId: runeplate_runeplate
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 9
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 3
+      magicalDefense: 2
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 87
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 31
+      magicalDefense: 21
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 3
+      dexterity: 0
+      constitution: 1
+      wisdom: 0
+      intelligence: 2
+      charisma: 0
+    requiresAtZero:
+      strength: 2
+      dexterity: 0
+      constitution: 1
+      wisdom: 0
+      intelligence: 1
+      charisma: 0
+    requiresAtMax:
+      strength: 14
+      dexterity: 0
+      constitution: 6
+      wisdom: 0
+      intelligence: 12
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Runeplate Cuirass
+    tierAdjectives:
+    - Chalked
+    - Etched
+    - Inscribed
+    - Runed
+    - Humming
+    - Singing
+    - Resonant
+    - Archmagus's
+    - Starbound
+    - Worldbreaker
+    - Firstword
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/arcane_cuirass_sheet
+    iconLevels: 10
+    iconPath: 

@@ -88,7 +88,15 @@ namespace PrincesPalace.Domain.Tests
             // tiers that already exist.
             Assert.AreEqual(0.0, GearScaling.CurveFraction(0, 10), 0.0001);
             Assert.AreEqual(1.0, GearScaling.CurveFraction(10, 10), 0.0001);
-            Assert.AreEqual(1.0, GearScaling.CurveFraction(99, 10), 0.0001, "past the end is still the end");
+        }
+
+        // A copy's tier runs past the art ladder to ItemInstance.TierCap, and
+        // the curve keeps its shape there: (1.25^t - 1) / (1.25^10 - 1).
+        [TestCase(11, 1.2801)]
+        [TestCase(12, 1.6302)]
+        public void PastMaxTier_TheCurveKeepsClimbing(int tier, double expected)
+        {
+            Assert.AreEqual(expected, GearScaling.CurveFraction(tier, 10), 0.0005);
         }
 
         // ---- the WEAPON tier curve -- balance redesign Phase 3 (D3) ------

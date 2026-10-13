@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: vellum
   weaponFamilyId: 
   tier: 7
+  baseId: vellum_shoes
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 3
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 3
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 25
+      speed: 0
+      attack: 0
+      manaRegen: 2
+      physicalDefense: 0
+      magicalDefense: 28
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 2
+      intelligence: 2
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 1
+      intelligence: 2
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 2
+      wisdom: 12
+      intelligence: 14
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Vellum Scholar's Shoes
+    tierAdjectives:
+    - Blank
+    - Annotated
+    - Margined
+    - Illuminated
+    - Gilded
+    - Canonical
+    - Apocryphal
+    - Oracle's
+    - Prophet's
+    - First Draft
+    - Unwritten
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/vellum_slippers_sheet
+    iconLevels: 10
+    iconPath: 

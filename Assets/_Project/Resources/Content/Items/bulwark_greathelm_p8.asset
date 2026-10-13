@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: bulwark
   weaponFamilyId: 
   tier: 8
+  baseId: bulwark_greathelm
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 9
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 2
+      magicalDefense: 2
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 80
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 21
+      magicalDefense: 16
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 4
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 3
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 23
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Bulwark Great Helm
+    tierAdjectives:
+    - Cracked
+    - Slab
+    - Ironbound
+    - Weighted
+    - Immovable
+    - Anchored
+    - Adamant
+    - Mountain's
+    - Bastion
+    - Unyielding
+    - Worldroot
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/siege_cuirass_helmet
+    iconLevels: 10
+    iconPath: 

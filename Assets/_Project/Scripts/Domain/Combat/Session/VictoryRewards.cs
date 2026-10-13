@@ -26,6 +26,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // different questions that happen to share a number today.
         public const float EliteRewardMultiplier = 1.56f;
 
+        // Every fight's gold, and Treasure's, before ScaleReward, in
+        // thousandths (docs/PLAN_ITEMS.md 1.6). 1000 pays today's figure; the
+        // balance pass sets it against the 120 +/- 20 step-0 gold a realm target.
+        public const int GoldIncomePermille = 1000;
+
+        // `gold` after the income cut, rounded half away from zero like the
+        // elite multiplier before it.
+        public static int Income(int gold) =>
+            Rounding.AwayFromZero(gold * (GoldIncomePermille / 1000f));
+
         // How often an ordinary enemy leaves a consumable behind.
         public const float ItemDropChance = 0.3f;
 
@@ -73,12 +83,12 @@ namespace PrincesPalace.Domain.Combat.Session
             // ScaleExperience (25 permille a step) and gold rides ScaleReward
             // (the health rate, 75) -- see DifficultyCurve's own headers for
             // why the two were separated, and note the ORDER is unchanged:
-            // elite first, then round, then depth, which is what
+            // elite first, then round, then the income cut, then depth, which is what
             // FightRewardsTests.TheEliteMultiplierIsAppliedBeforeTheDepthCurve
             // pins.
             return new Payout(
                 DifficultyCurve.ScaleExperience(Rounding.AwayFromZero(rawExp * multiplier), depthStep),
-                DifficultyCurve.ScaleReward(Rounding.AwayFromZero(rawGold * multiplier), depthStep));
+                DifficultyCurve.ScaleReward(Income(Rounding.AwayFromZero(rawGold * multiplier)), depthStep));
         }
 
         // Which enemies dropped something, and what.

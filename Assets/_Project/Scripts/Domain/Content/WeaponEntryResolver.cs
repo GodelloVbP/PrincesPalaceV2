@@ -94,7 +94,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             // Both are Assets-relative, and BOTH are checked rather than only
-            // whichever IconFor happens to pick: iconSheet wins when it is set,
+            // whichever GearCurve.At happens to pick: iconSheet wins when it is set,
             // so a wrongly-written iconPath sitting behind a working sheet is
             // invisible until the sheet is removed.
             if (!ArtPathConvention.Check(label, "iconSheet", raw.iconSheet, out string sheetError))
@@ -181,20 +181,40 @@ namespace PrincesPalace.Domain.Content
                 return;
             }
 
+            var scalingAtZero = extra.With(primary.Value.Score, primary.Value.AtZero);
+            var scalingAtMax = extra.With(primary.Value.Score, primary.Value.AtMax);
+            if (secondary.HasValue)
+            {
+                scalingAtZero = scalingAtZero.With(secondary.Value.Score, secondary.Value.AtZero);
+                scalingAtMax = scalingAtMax.With(secondary.Value.Score, secondary.Value.AtMax);
+            }
+
+            // Attack climbs on WeaponTierGrowth (GearCurve.At); the grade
+            // ladder and requirements stay on armour's TierGrowth, so how
+            // steeply a weapon's flat Attack climbs never moves its letters.
+            var curve = new GearCurve
+            {
+                maxTier = maxTier,
+                attackAtZero = attackAtZero,
+                attackAtMax = attackAtMax,
+                requiresAtZero = reqAtZero,
+                requiresAtMax = reqAtMax,
+                scalingAtZero = scalingAtZero,
+                scalingAtMax = scalingAtMax,
+                spellScaling = spellScaling,
+                baseName = raw.displayName,
+                tierAdjectives = raw.tierAdjectives ?? new string[0],
+                fallbackAdjective = FallbackAdjective,
+                iconSheet = raw.iconSheet ?? "",
+                iconLevels = iconLevels,
+                iconPath = raw.iconPath ?? "",
+            };
+
             for (int tier = 0; tier <= maxTier; tier++)
             {
-                resolved.Add(BuildWeapon(raw, slot, tier, maxTier, primary.Value, secondary, extra,
-                    // WEAPON GROWTH, not armour's -- balance redesign
-                    // Phase 3 (D3). This is the ONLY interpolation in
-                    // this file that moves off GearScaling.TierGrowth;
-                    // GradeAt below (the scaling letters) deliberately
-                    // stays on the default so a weapon's grade ladder is
-                    // untouched by how steeply its flat Attack climbs.
-                    ItemSetEntryResolver.ValueAt(attackAtZero, attackAtMax, tier, maxTier, GearScaling.WeaponTierGrowth),
+                resolved.Add(BuildWeapon(raw, slot, tier, curve,
                     cost + costPerTier * tier,
-                    familyOrder * 10000 + tier,
-                    iconLevels, spellScaling,
-                    ItemSetEntryResolver.InterpolateScores(reqAtZero, reqAtMax, tier, maxTier)));
+                    familyOrder * 10000 + tier));
             }
         }
 
@@ -239,83 +259,32 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        // The grade a curve sits at for one tier.
-        //
-        // Straight-line between the two authored ends over the enum's own
-        // integer ladder, which is why ScalingGrade's values are consecutive.
-        // Floored the same way stats are, via the shared ValueAt, so a grade
-        // and a stat cannot round in opposite directions at the same tier.
-        private static ScalingGrade GradeAt(ScalingGrade atZero, ScalingGrade atMax, int tier, int maxTier)
-        {
-            return ScalingGrades.FromIndex(ItemSetEntryResolver.ValueAt((int)atZero, (int)atMax, tier, maxTier));
-        }
-
-        // "Keen Sword". The tier adjective leads the family noun; no modifier
-        // segment any more (item-modifier plan Phase B) — a rolled Rift
-        // modifier is what tells one drop apart from another now, and its
-        // name is composed at display time, not baked here.
-        //
-        // The plus is NOT part of this either. It belongs to the instance,
-        // and the UI appends it via ItemNaming.WithPlus at display time.
-        private static string NameFor(RawWeaponEntry family, int tier)
-        {
-            return ItemNaming.Compose(AdjectiveFor(family, tier), family.displayName);
-        }
-
-        // The last adjective covers every tier past the end of a short list,
-        // rather than the list having to be exactly maxTier + 1 long. A
-        // family that authors none at all gets a neutral one, so a missing
-        // list reads as unremarkable rather than as a hole in the name.
-        private static string AdjectiveFor(RawWeaponEntry family, int tier)
-        {
-            return ItemNaming.AdjectiveAt(family.tierAdjectives, tier, FallbackAdjective);
-        }
-
+        // Per-tier assets read the family's curve at their tier, so a copy
+        // read through GearCurve.At and the asset generated for that tier
+        // cannot disagree. The plus is not in the name: honing belongs to the
+        // slot, and the UI appends it via ItemNaming.WithPlus.
         private static ResolvedWeapon BuildWeapon(RawWeaponEntry family, EquipmentSlot slot,
-            int tier, int maxTier,
-            (AbilityScore Score, ScalingGrade AtZero, ScalingGrade AtMax) primary,
-            (AbilityScore Score, ScalingGrade AtZero, ScalingGrade AtMax)? secondary,
-            ScalingProfile extra,
-            int attackBonus, int cost, int sortOrder, int iconLevels, ScalingProfile spellScaling = default,
-            AbilityScoreBlock requirements = default)
+            int tier, GearCurve curve, int cost, int sortOrder)
         {
-            var scaling = extra.With(primary.Score, GradeAt(primary.AtZero, primary.AtMax, tier, maxTier));
-            if (secondary.HasValue)
-            {
-                var s = secondary.Value;
-                scaling = scaling.With(s.Score, GradeAt(s.AtZero, s.AtMax, tier, maxTier));
-            }
-
+            var at = curve.At(tier);
             string familyId = family.id.Trim();
 
             return new ResolvedWeapon(
                 $"{familyId}_p{tier}",
-                NameFor(family, tier),
+                at.DisplayName,
                 family.description ?? "",
                 slot,
                 familyId,
                 tier,
-                attackBonus,
-                scaling,
+                at.AttackBonus,
+                at.Scaling,
                 cost,
                 sortOrder,
-                IconFor(family, tier, maxTier, iconLevels),
-                spellScaling,
-                requirements);
-        }
-
-        // Per-level art if the family has a sheet, one flat image if it only
-        // has the one, and nothing at all otherwise — which is a supported
-        // state rather than a hole, the same as it is for armour.
-        private static string IconFor(RawWeaponEntry family, int tier, int maxTier, int iconLevels)
-        {
-            string fromSheet = ItemSetEntryResolver.IconPathFor(family.iconSheet, tier, maxTier, iconLevels);
-            if (!string.IsNullOrEmpty(fromSheet))
-            {
-                return fromSheet;
-            }
-
-            return string.IsNullOrWhiteSpace(family.iconPath) ? "" : family.iconPath.Trim();
+                at.IconPath,
+                at.SpellScaling,
+                at.Requirements,
+                familyId,
+                curve);
         }
 
         private static bool TryParseSlot(string raw, out EquipmentSlot slot, out string error)

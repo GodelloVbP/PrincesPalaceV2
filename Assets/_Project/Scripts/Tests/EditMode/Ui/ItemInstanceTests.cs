@@ -200,5 +200,41 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, copy.GetInstance(Torso).FightsLeft);
             Assert.AreEqual("lot-7", copy.GetInstance(Torso).Lot);
         }
+
+        // ---- the copy model (docs/PLAN_ITEMS.md 2.3) ----------------------
+
+        [TestCase(-2, 0)]
+        [TestCase(7, 7)]
+        [TestCase(12, 12)]
+        [TestCase(15, 12)]
+        public void Of_ClampsTierToTheCap(int asked, int stored)
+        {
+            Assert.AreEqual(stored, ItemInstance.Of("brigandine_boots", asked).Tier);
+            Assert.AreEqual(12, ItemInstance.TierCap);
+        }
+
+        [Test]
+        public void CopiesOfOneBase_AtDifferentTiers_AreDifferentStacks()
+        {
+            Assert.IsTrue(ItemInstance.SameStack(ItemInstance.Of("sword", 4), ItemInstance.Of("sword", 4)));
+            Assert.IsFalse(ItemInstance.SameStack(ItemInstance.Of("sword", 4), ItemInstance.Of("sword", 5)));
+        }
+
+        [Test]
+        public void TierRoundTrips_ThroughEveryEntryThatHoldsACopy()
+        {
+            var copy = ItemInstance.Of("sword", 9, new[] { "keen" });
+
+            Assert.AreEqual(9, new InventoryEntry(copy, 1).Instance.Tier);
+            Assert.AreEqual(9, new EquipmentSlotEntry(EquipmentSlot.Weapon1, copy).Instance.Tier);
+
+            var loadout = new EquipmentLoadout();
+            loadout.Put(EquipmentSlot.Weapon1, copy);
+            Assert.AreEqual(9, loadout.Clone().GetInstance(EquipmentSlot.Weapon1).Tier);
+            Assert.AreEqual(9, copy.WithProvenance(new Provenance("lot-1")).Tier);
+
+            var card = new PrincesPalace.Domain.Rewards.ShopStockEntry { kind = PrincesPalace.Domain.Rewards.ShopEntryKind.Gear, contentId = "sword", tier = 9 };
+            Assert.AreEqual(9, card.GearInstance().Tier);
+        }
     }
 }

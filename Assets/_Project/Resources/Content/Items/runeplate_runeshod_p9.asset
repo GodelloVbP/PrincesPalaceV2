@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: runeplate
   weaponFamilyId: 
   tier: 9
+  baseId: runeplate_runeshod
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 7
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 2
+      magicalDefense: 2
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 63
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 23
+      magicalDefense: 15
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 2
+      dexterity: 0
+      constitution: 1
+      wisdom: 0
+      intelligence: 2
+      charisma: 0
+    requiresAtZero:
+      strength: 2
+      dexterity: 0
+      constitution: 1
+      wisdom: 0
+      intelligence: 1
+      charisma: 0
+    requiresAtMax:
+      strength: 14
+      dexterity: 0
+      constitution: 6
+      wisdom: 0
+      intelligence: 12
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Runeplate Sabatons
+    tierAdjectives:
+    - Chalked
+    - Etched
+    - Inscribed
+    - Runed
+    - Humming
+    - Singing
+    - Resonant
+    - Archmagus's
+    - Starbound
+    - Worldbreaker
+    - Firstword
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/arcane_boots_sheet
+    iconLevels: 10
+    iconPath: 

@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: brigandine
   weaponFamilyId: 
   tier: 10
+  baseId: brigandine_gloves
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 6
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 2
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 59
+      speed: 2
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 21
+      magicalDefense: 0
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 2
+      dexterity: 2
+      constitution: 1
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 1
+      dexterity: 2
+      constitution: 1
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 12
+      dexterity: 14
+      constitution: 5
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Brigandine Gloves
+    tierAdjectives:
+    - Patched
+    - Riveted
+    - Studded
+    - Fitted
+    - Tempered
+    - Silent
+    - Duellist's
+    - Bladedancer's
+    - Phantom
+    - Peerless
+    - Ghoststep
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/brigandine_gloves_sheet
+    iconLevels: 10
+    iconPath: 

@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: harness
   weaponFamilyId: 
   tier: 3
+  baseId: harness_warskirt
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 6
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 2
+      magicalDefense: 1
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 59
+      speed: 4
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 18
+      magicalDefense: 6
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 4
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 3
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 23
+      dexterity: 0
+      constitution: 2
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Harness War Kilt
+    tierAdjectives:
+    - Scavenged
+    - Bound
+    - Studded
+    - Scarred
+    - Brutal
+    - Savage
+    - Merciless
+    - Warlord's
+    - Butcher's
+    - Titan's
+    - Worldrender
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/harness_kilt_sheet
+    iconLevels: 10
+    iconPath: 

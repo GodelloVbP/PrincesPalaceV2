@@ -100,6 +100,17 @@ namespace PrincesPalace.EditModeTests
         // the game prices below 15 (a health potion), so the degenerate case
         // is unreachable rather than fixed -- and it is pinned below so that
         // "unreachable" stays a statement about content rather than a hope.
+        // ScalePrice rides fight gold's curve (DifficultyCurve.ScaleReward,
+        // the health rate): the same literals ScaleHealth_LandsWhereTheCurveSays
+        // pins, so a price and a fight's gold move together at every depth.
+        [TestCase(21, 0, 21)]
+        [TestCase(100, 8, 178)]
+        [TestCase(350, 80, 113958)]
+        public void ScalePrice_RidesTheFightGoldCurve(int amount, int step, int expected)
+        {
+            Assert.AreEqual(expected, ShopPricing.ScalePrice(amount, step));
+        }
+
         [Test]
         public void SellingIsAlwaysWorseThanBuying()
         {

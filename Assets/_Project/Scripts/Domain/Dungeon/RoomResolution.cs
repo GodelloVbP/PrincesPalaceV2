@@ -79,9 +79,9 @@ namespace PrincesPalace.Domain.Dungeon
                     // scene load. Paying the minimum beats throwing, and beats
                     // paying nothing, which would look exactly like the silence
                     // this whole class exists to remove.
-                    int gold = rng != null
+                    int gold = Combat.Session.VictoryRewards.Income(rng != null
                         ? rng.NextInt(TreasureGoldMin, TreasureGoldMax + 1)
-                        : TreasureGoldMin;
+                        : TreasureGoldMin);
                     return new Outcome(Kind.Treasure, gold: gold);
 
                 case RoomType.Rest:

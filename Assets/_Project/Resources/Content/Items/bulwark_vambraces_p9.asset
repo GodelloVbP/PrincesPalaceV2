@@ -64,3 +64,92 @@ MonoBehaviour:
   setId: bulwark
   weaponFamilyId: 
   tier: 9
+  baseId: bulwark_vambraces
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 8
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 2
+      magicalDefense: 2
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 71
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 19
+      magicalDefense: 14
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 3
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 3
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 23
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Bulwark Vambraces
+    tierAdjectives:
+    - Cracked
+    - Slab
+    - Ironbound
+    - Weighted
+    - Immovable
+    - Anchored
+    - Adamant
+    - Mountain's
+    - Bastion
+    - Unyielding
+    - Worldroot
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/siege_gloves_sheets
+    iconLevels: 10
+    iconPath: 

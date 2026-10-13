@@ -21,7 +21,7 @@ namespace PrincesPalace
     //                  completed fight it was worn in by a fielded member.
     //
     // [Serializable] and nested ONCE on the entries that carry it, so the
-    // flat itemId/plus/modifierIds/riftTier fields every save already has stay
+    // flat identity fields every save already has stay
     // exactly where they are. JsonUtility writes a nested class as an object
     // and, on a save that predates it, leaves the field initializer's plain
     // instance in place -- an ordinary copy, which is what such a save holds.
@@ -52,44 +52,72 @@ namespace PrincesPalace
         public static Provenance CopyOrPlain(Provenance source) => source == null ? new Provenance() : source.Copy();
     }
 
-    // ONE COPY OF AN ITEM, AS A VALUE: which item, how honed, what rolled on
-    // it, and where it came from. Before this, those were four positional
-    // parameters threaded by hand through every bag, slot, equip, shop and
-    // settlement path -- each call site remembering the same four in the same
-    // order, and a fifth (provenance) would have been a fifth to remember in
-    // ~15 files, with InventoryOps.TryRemoveAt still spending the FIRST match
-    // rather than the copy the player picked.
+    // ONE COPY OF AN ITEM, AS A VALUE (docs/PLAN_ITEMS.md 2.3): which base,
+    // at which tier, what rolled on it, and where it came from. Its gear
+    // numbers come from ContentDatabase.Effective, which reads the base's
+    // curve at Tier and the slot's honing; nothing about a copy's power is
+    // baked into the definition it names.
     //
     // Immutable. The entries that hold a copy on disk (InventoryEntry,
-    // EquipmentSlotEntry) keep their flat serialized fields; an instance is
-    // read off one (`.Instance`) and written into another, so a move carries
-    // every axis or none and no caller can forget one.
+    // EquipmentSlotEntry, ShopStockEntry) keep flat serialized fields; an
+    // instance is read off one (`.Instance`) and written into another, so a
+    // move carries every axis or none and no caller can forget one.
     //
     // SameStack is the ONE merge predicate. Whether two copies are "the same
     // object for counting purposes" is decided here and nowhere else.
+    //
+    // Plus and RiftTier, and the constructor that takes them, are the
+    // pre-copy-model shape. They stay only until the callers listed in
+    // docs/handoffs/item_redesign/I2A_REMAINING.md move to Of(); the
+    // compiler's CS0618 list is that worklist.
     public sealed class ItemInstance
     {
         private static readonly IReadOnlyList<string> NoModifiers = new List<string>();
 
+        // The highest tier any copy reaches (docs/PLAN_ITEMS.md 1.6): step
+        // 192, where enemy growth is about to freeze. Above a base's art
+        // ladder (content maxTier) the curve keeps climbing and the icon
+        // stays on the top frame.
+        public const int TierCap = 12;
+
         public readonly string ItemId;
+
+        // 0..TierCap. Clamped on construction, so no reader has to.
+        public readonly int Tier;
+
+        [Obsolete("Honing lives on the slot (RunSnapshot.slotHoning, SlotHoning). See docs/handoffs/item_redesign/I2A_REMAINING.md.")]
         public readonly int Plus;
 
         // Never null; a private copy, so a caller's list cannot alias it.
         public readonly IReadOnlyList<string> ModifierIds;
 
+        [Obsolete("Rift tier is gone; quality derives from ModifierIds (ItemQuality). See docs/handoffs/item_redesign/I2A_REMAINING.md.")]
         public readonly int RiftTier;
 
         private readonly Provenance _provenance;
 
+        // THE constructor of the copy model.
+        public static ItemInstance Of(string baseId, int tier, IEnumerable<string> modifierIds = null,
+            Provenance provenance = null) =>
+#pragma warning disable 618
+            new ItemInstance(baseId, 0, modifierIds, 0, provenance, tier);
+#pragma warning restore 618
+
+        [Obsolete("Use ItemInstance.Of(baseId, tier, modifierIds, provenance). See docs/handoffs/item_redesign/I2A_REMAINING.md.")]
         public ItemInstance(string itemId, int plus = 0, IEnumerable<string> modifierIds = null,
-            int riftTier = 0, Provenance provenance = null)
+            int riftTier = 0, Provenance provenance = null, int tier = 0)
         {
             ItemId = itemId ?? "";
+            Tier = ClampTier(tier);
+#pragma warning disable 618
             Plus = plus;
-            ModifierIds = modifierIds == null ? NoModifiers : new List<string>(modifierIds);
             RiftTier = riftTier;
+#pragma warning restore 618
+            ModifierIds = modifierIds == null ? NoModifiers : new List<string>(modifierIds);
             _provenance = Provenance.CopyOrPlain(provenance);
         }
+
+        public static int ClampTier(int tier) => tier < 0 ? 0 : tier > TierCap ? TierCap : tier;
 
         public string Lot => _provenance.lot ?? "";
         public bool HasLot => _provenance.HasLot;
@@ -105,14 +133,16 @@ namespace PrincesPalace
         // APIs, which take List<string>.
         public List<string> ModifierList() => new List<string>(ModifierIds);
 
+#pragma warning disable 618
         public ItemInstance WithProvenance(Provenance provenance) =>
-            new ItemInstance(ItemId, Plus, ModifierIds, RiftTier, provenance);
+            new ItemInstance(ItemId, Plus, ModifierIds, RiftTier, provenance, Tier);
 
         // THE MERGE PREDICATE.
         //
-        // Ordinary copies: the same (itemId, plus, modifier SET, riftTier), as
-        // InventoryOps always keyed stacks -- the roll that produced
-        // ["fiery","swift"] is the same item as ["swift","fiery"].
+        // Ordinary copies: the same (base id, tier, modifier SET) -- the roll
+        // that produced ["fiery","swift"] is the same item as
+        // ["swift","fiery"]. Plus and RiftTier still key the stack while they
+        // exist, so no two copies that differ today merge before they go.
         //
         // A copy with a lot is only ever the same stack as the SAME lot. Not
         // "same lot and same everything else": a lot names one physical copy,
@@ -123,10 +153,12 @@ namespace PrincesPalace
             if (a.ItemId != b.ItemId) return false;
             if (a.HasLot || b.HasLot) return a.Lot == b.Lot;
 
-            return a.Plus == b.Plus
+            return a.Tier == b.Tier
+                && a.Plus == b.Plus
                 && a.RiftTier == b.RiftTier
                 && ModifiersMatch(a.ModifierIds, b.ModifierIds);
         }
+#pragma warning restore 618
 
         private static bool ModifiersMatch(IReadOnlyList<string> a, IReadOnlyList<string> b)
         {
@@ -139,7 +171,9 @@ namespace PrincesPalace
         {
             string mods = ModifierIds.Count == 0 ? "" : " [" + string.Join(",", ModifierIds.ToArray()) + "]";
             string lot = HasLot ? " lot=" + Lot + (IsFake ? " fake(" + FightsLeft + ")" : "") : "";
-            return ItemId + " +" + Plus + mods + " r" + RiftTier + lot;
+#pragma warning disable 618
+            return ItemId + " t" + Tier + " +" + Plus + mods + " r" + RiftTier + lot;
+#pragma warning restore 618
         }
     }
 }
