@@ -84,7 +84,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.Pass();
         }
 
-        // The column projection at its fullest (run map P2): a floor-14
+        // The column projection at its fullest (PLAN_RUN_MAP section 8): a floor-14
         // realm, the party standing before its most crowded column, so a
         // fork and a long pocket share the column on screen. Every room in it
         // must be drawn, and every one the party can walk to clickable.

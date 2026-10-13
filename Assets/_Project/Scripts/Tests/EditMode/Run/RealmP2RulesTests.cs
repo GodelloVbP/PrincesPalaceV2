@@ -7,7 +7,7 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The rules run map P2 adds on top of the P1 shape (docs/PLAN_RUN_MAP.md
+    // The realm rules layered on the map shape (docs/PLAN_RUN_MAP.md
     // sections 2-3 and 8): strength bands, chip amounts, the skip heal's
     // trigger, and the column projection the current screen draws through.
     public class RealmP2RulesTests

@@ -1,5 +1,5 @@
 """Cuts the run-map's tree backdrop and per-room-type icons to transparent,
-content-cropped sprites, ready for DescentMapView to draw.
+content-cropped sprites, ready for MapController to draw.
 
 Two different background removals, because the two art batches were
 generated two different ways:
@@ -46,7 +46,7 @@ WHITE_BG_SOURCES = ["map_forest_room.png"]
 
 # On flat green -- one icon per room type that has art so far. Room types
 # without an entry here (Shop, Unknown, ItemSpawn, Entry) are simply not
-# processed; DescentMapView falls back to no overlay for those until their
+# processed; MapController falls back to no overlay for those until their
 # art arrives, the same graceful-degradation posture the rest of this
 # project takes toward missing content.
 GREEN_BG_SOURCES = [

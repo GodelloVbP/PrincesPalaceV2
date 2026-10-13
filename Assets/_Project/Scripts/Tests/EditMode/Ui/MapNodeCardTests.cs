@@ -70,7 +70,7 @@ namespace PrincesPalace.Domain.Tests
         public void EachStateHasItsRefusal(MapTileState state, string expected) =>
             Assert.AreEqual(expected, MapNodeCard.Refusal(state));
 
-        // ---- the realm's facts (run map P2) ---------------------------------
+        // ---- the realm's facts (PLAN_RUN_MAP section 3) ---------------------------------
 
         [Test]
         public void AFightWithStrengthAndAGoldChip_ShowsBoth()

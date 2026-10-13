@@ -587,9 +587,9 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- 6. save 7, and the 8 above it ------------------------------------------
         //
-        // Stage B's M4 bumped the save to 8 (item provenance), and run map P2
-        // to 9. The version pin and the refusal of the next version up live in
-        // FakeItemTests. A v6 save passes 7 (the pending fight's own step) on
+        // Save 8 added item provenance and save 9 the realm map. The version pin and the
+        // refusal of the next version up live in FakeItemTests.
+        // A v6 save passes 7 (the pending fight's own step) on
         // its way up, and 8 -> 9 then moves the run onto the realm map, which
         // closes whatever room was open -- the event and its pending fight
         // included (docs/PLAN_RUN_MAP.md section 8): their node ids name

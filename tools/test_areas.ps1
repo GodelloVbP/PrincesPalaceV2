@@ -838,7 +838,7 @@ $PathAreas = @(
     # are in Tests/*/Run, FightSubmenuLayoutTests in Tests/*/Combat. The ui
     # placement rule covers SCREEN-TREE tests; these three cover geometry
     # whose subject owns it, and they stayed where their subject is.
-    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/(MapLayout|RewardTrackLayout)\.cs$'; Areas = @('ui', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/(MapLayout|MapColumns|RewardTrackLayout)\.cs$'; Areas = @('ui', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/FightSubmenuLayout\.cs$'; Areas = @('ui', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/Screens/(HubScreen|HubAmbience|GlossaryScreen|TalentScreen)\.cs$'; Areas = @('hub', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/';     Areas = @('ui') }
@@ -887,7 +887,7 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Stance|StaticSwing|Stage|Sprite|Procedural)'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Music|Sound|Audio)'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Hub|Talent|Store|CharacterSheet|CharacterSelect|CharacterTab)'; Areas = @('hub') }
-    @{ Pattern = '^Assets/_Project/Scripts/Core/(DescentMapView|Map)'; Areas = @('run', 'ui') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(Realm|Map)'; Areas = @('run', 'ui', 'combat') }
     # Core/Bot -- RunOrchestrator (the whole rulebook of a run: arrival, fight
     # build, settlement, offers) plus BotRunDriver/ProfilePresets. Above the
     # Core/ catch-all deliberately: that fallback would claim it as 'ui'

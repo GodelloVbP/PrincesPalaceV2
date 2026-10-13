@@ -9,8 +9,8 @@ using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // Run map P2 (docs/PLAN_RUN_MAP.md section 8): the realm wired into the
-    // run -- the profile and strength frozen at realm open, the step contract,
+    // The realm wired into the run (docs/PLAN_RUN_MAP.md section 8): the
+    // profile and strength frozen at realm open, the step contract,
     // the skip heal, the preview on the Fight stream, chips paid, and the
     // v8 -> v9 save migration. PlayMode only because it reads content and
     // writes saves; no scene is loaded.

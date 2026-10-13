@@ -101,7 +101,7 @@ namespace PrincesPalace.PlayModeTests
             int roomsClearedBefore = run.roomsCleared;
             int potionsBefore = SaveSlotManager.CurrentSave.stockpiledItems.Sum(e => e.count);
 
-            // The chip the map card quoted for this room (run map P2): what
+            // The chip the map card quoted for this room (PLAN_RUN_MAP section 3): what
             // settlement must pay on top of the enemies' own gold.
             var chip = RealmPrizes.ChipOf(run, room);
             Assert.That(chip.Kind, Is.EqualTo(PrizeKind.Gold).Or.EqualTo(PrizeKind.Consumable),
