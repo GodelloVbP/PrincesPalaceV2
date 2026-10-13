@@ -1,297 +1,312 @@
-PLAN_ITEMS.md rev 2, 2026-10-13, nothing built
+PLAN_ITEMS.md rev 3, 2026-10-13, nothing built
 
 # Plan: items and item rewards
 
 Inputs: the audit (`docs/handoffs/item_redesign/README.md`, D1-D10, C1-C7),
-the draft (`DESIGN.md`), the theory tests (`RESEARCH_THEORY.md`, T1-T15), the
-survey (`RESEARCH_GAMES.md`) and both round-1 reviews (`REVIEW_R1_*.md`).
-Coupled to `docs/PLAN_RUN_MAP.md` rev 4 (prize chips :91-102, anchors :213,
-endless descent :215). Paths are under `Assets/_Project/Scripts/` unless they
-start with `docs/` or `ContentData/`. Citations are to `main` at `6ea8abef`.
-"(calc)" marks arithmetic from cited constants.
+`DESIGN.md`, `RESEARCH_THEORY.md` (T1-T15), `RESEARCH_GAMES.md` and the
+round-1 and round-2 reviews (`REVIEW_R*.md`). Coupled to
+`docs/PLAN_RUN_MAP.md` rev 4; the amendments it needs are in section 5.
+Paths are under `Assets/_Project/Scripts/` unless they start with `docs/` or
+`ContentData/`. Citations are to `main` at `6ea8abef`. "(calc)" marks
+arithmetic from cited constants.
+
+Run-map terms used here: a **chip** is the prize a fight node shows before
+you enter; **strength** 1-3 is that node's threat against the party; an
+**anchor** is an optional elite on the map; the **heart** is the boss node,
+where living anchors join the boss fight (run map P5). A realm is 8 steps.
 
 ## 1. Behavioural contracts
 
 ### 1.1 What each reward moment pays
 
-Every fight still pays exp and gold (`VictoryRewards.For`). Everything else a
-fight pays is its map prize chip (run map §2), shown before you enter.
+Every fight still pays exp and gold (`VictoryRewards.For`). Everything else
+is its chip.
 
 | Moment | Pays | Choice |
 |---|---|---|
-| Normal fight won | its chip: gold, consumable, **Gear** or **Book** | Gear: pick 1 or skip; others paid without a choice |
-| Anchor (elite) dies, on the map or at the heart | its chip from the anchor weights: **Gear** or **Relic** | pick 1 or skip |
-| Boss won | **Gear** (tier +1) then **Relic** (Uncommon and up) | each pick 1 or skip |
+| Normal fight won | its chip: gold, consumable, **Gear** or **Book** | Gear: a page (1.2); others paid without a choice |
+| Anchor dies (on the map, or at the heart after run map P5) | its chip from the anchor weights: **Gear** or **Relic** | a page |
+| Boss won | **Gear** (boss class) and **Relic** (Uncommon and up) | a page each |
 | Hub gate, run start | relic draft as today, showing held relics (#241) | 1 of 3 or none |
-| Shop | gear, books, relics, **honing** (1.5) | buy, reroll, sell, hone |
-| Rest | full heal **or** hone one slot +1 | pick one |
+| Shop | gear, books, relics, honing | buy, reroll, sell, hone |
+| Rest | full heal **or** +1 honing on one slot | pick one |
 | Event | as authored, through the same Grant step (2.2) | as authored |
 
-- Gear: a fight is won → its chip is Gear → a gear pick is queued. Chip not
-  Gear → no gear pick. The Reckoning's gear pick after every fight goes.
+- A fight is won → its chip is Gear → a gear page. No Gear chip → no page.
+  The Reckoning's gear pick after every fight goes (in I3).
 - Anchors pay Relic or Gear by weight, never a guaranteed relic: anchors
-  reach 6 a realm (`PLAN_RUN_MAP.md:213`), so relics per realm are one dial,
-  the anchor Relic weight.
-- **Book chip** pays one book from the pool and draw `RollSpellDrop` uses
+  reach 6 a realm (`PLAN_RUN_MAP.md:213`).
+- **Book chip** pays one book from `RollSpellDrop`'s pool and draw
   (`VictoryRewards.cs:144-156`) without its chance gate, into
-  `unassignedSpellBooks`, no recipient. The draw excludes books already
-  unassigned or learned by every fielded member. The hidden per-fight
-  chance goes (Q8).
-- **Empty pool.** The map card reads the relic or book pool live, so a chip
-  whose pool empties mid-realm shows gold from then on. If it empties between
-  entering and settling, the pick pays its skip value (1.2) and says so.
+  `unassignedSpellBooks`, no recipient, excluding books already unassigned or
+  learned by every fielded member. The hidden per-fight chance goes.
+- **Empty pool.** The map card reads the relic and book pools live, so a chip
+  whose pool empties shows gold from then on. Emptied between entering and
+  settling → the page pays gold and says so.
 
-### 1.2 A pick
+### 1.2 A settlement and its pages
 
-**Settlement.** When a fight settles, every pick it pays is rolled at once
-into `RunSnapshot.pendingPicks`, in this order: the boss gear pick, the boss
-relic pick, then each anchor that died in that fight, in map order. The
-Reckoning shows them as pages of one screen ("Pick 2 of 4"), with a "skip
-the rest" control that pays every remaining skip value. Cards are stored, so
-re-entering the screen in the same process shows the same cards whatever
-changed since.
+**Pages.** A settlement merges all its Gear chips into **one gear page** and
+all its Relic chips into **one relic page**: at most two pages. With *k*
+chips of a kind the page shows *k* + 2 cards and grants *k* **choices**.
+Order: gear page, then relic page. The page's class is the highest among its
+chips (boss > anchor > normal).
+
+**A choice on the gear page** is one of:
+- **Take** a card: it is equipped on its recipient (`EquipmentOps.Equip`).
+  The displaced copy goes to the bag and the page lists it.
+- **Hone instead**: +1 honing on the slot that card would fill, for that
+  recipient (1.5), and the card is discarded. Not offered on a slot at
+  `MaxPlus`; if every shown slot is at `MaxPlus`, that choice pays the card's
+  sale price.
+
+Taking cannot produce a hone, and honing cannot produce an item, so neither
+dominates (an always-take player sells displaced copies; an always-hone
+player never gets a new tier or affix). Unused choices on leaving the page
+hone the first card's slot. Confirmation follows #225 once decided.
+
+**A choice on the relic page** takes a relic. Unused choices pay 30% of the
+cheapest shown relic's price (`ShopPricing.cs:80-90,127`), scaled by step
+(Q2). A relic is not shown when every member it reaches already gets its
+mechanic; otherwise the card names who it adds nothing for, including a
+member whose necklace has that trait.
 
 **Randomness.** New stream `RngStreams.Reward` (14), opened with
-`(step, nodeId, pickIndex)` in `RngStreams.Derive`'s `a, b, c`
-(`RngStreams.cs:97`); heart anchors use the heart's `nodeId` and continue
-`pickIndex`. Pity is read once at settlement for all picks in it and
-advances as each pick resolves. The fight stream is untouched, so fight
-replays and bot traces do not shift (why `FightController.Input.cs:1266-1271`
-avoided a seeded stream).
+`(step, nodeId, page)` in `RngStreams.Derive`'s `a, b, c` (`RngStreams.cs:97`):
+`step` is the settlement step (the heart's for a boss), `nodeId` the int
+node id, `page` 0 for gear and 1 for relic. Pages are rolled once at
+settlement and held in memory (`PendingPage`, 2.5). The fight stream is
+untouched, so fight replays and bot traces do not shift.
 
-**Gear pick, card construction, in order:**
+**Gear page, card construction, in order:**
 
-1. **Owners.** The members fielded at settlement, fallen or not, in squad
-   order, one card each. Spare cards (squad under 3) go to the member with
-   the most empty slots; ties go to the lowest summed item tier, then squad
-   order.
-2. **Necklace roll.** One roll per pick, chance = source base (`rewards.json`:
-   normal 0.05, anchor 0.20, boss 0.35) + 0.05 × `necklacePity`. On success
-   one card becomes a necklace, for the first owner without one worn, else
-   the first owner. Its trait is drawn from traits the owner can use
-   (`requires`, 2.4) and does not already get (a relic reaching them, or a
-   worn necklace). No usable trait → no necklace card this pick. Necklaces
-   never enter the slot draw.
-3. **Weapon guarantee** (boss and anchor, `VictoryRewards.GuaranteesWeapon`,
-   `:166`, kept for elites): one non-necklace card becomes a weapon, for the
-   owner whose `Weapon1` is empty, else whose `Weapon1` tier is lowest.
-4. **Slots** for the rest: empty `Weapon1` → weapon; else weights 3 per empty
-   and 1 per filled slot over the owner's non-necklace slots.
-5. **Base.** Uniform over the bases for that slot whose `requirements` the
-   owner meets, distinct across the pick (as `ItemOfferTable.Choose` does).
-   Not biased toward the owner's build: material is the off-build surprise.
-   No base fits → redraw the slot without it; no slot fits → the card passes
-   to the next owner; no card at all → the pick pays its skip value.
-6. **Tier.** One for the pick: `min(step / 16, 10)` (`RarityTable.cs:46`),
-   +1 for a boss (still capped at 10).
-7. **Quality** per card, by `LootLadder.Climb` with step `p`, 3 rungs
-   (P(climb ≥ s) = p^s, `LootLadder.cs`):
+1. **Owners.** Members fielded at settlement, fallen or not, in squad order,
+   cycling until *k* + 2 owners are named. With fewer than 3 members the
+   cycle starts with the member who has the most empty slots (ties: lowest
+   summed item tier, then squad order).
+2. **Necklace.** One roll per page: base chance (normal 0.04, anchor 0.15,
+   boss 0.30) + 0.02 × `necklacePity`. On success one owner's card becomes a
+   necklace: the first owner without one worn, else the first owner. Its
+   trait comes from traits that owner can use (`requires`, 2.4) and does not
+   already get (a relic reaching them, or a worn necklace); none → no
+   necklace this page. Pity: +1 per gear page with no necklace card, reset to
+   0 when one is shown (taken or not), capped at 5. Effective rates under one
+   source alone: normal 10.9%, anchor 20.1%, boss 33.3% of pages (calc,
+   renewal over the counter).
+3. **Weapon guarantee** (boss and anchor pages, `GuaranteesWeapon`,
+   `VictoryRewards.cs:166`, kept for elites): one card not already a necklace
+   becomes a weapon card, for the owner with an empty `Weapon1`, else the
+   lowest-tier weapon among owners.
+4. **Slots** for the rest, over the owner's seven non-necklace slots (Head,
+   Torso, Legs, Shoes, Gloves, Weapon1, Weapon2): empty `Weapon1` → weapon;
+   otherwise weight 3 per empty and 1 per filled slot, with `Weapon2`
+   eligible only once `Weapon1` is filled. A weapon card fills `Weapon1` if
+   empty, else `Weapon2` if empty, else replaces the lower-tier weapon.
+5. **Base.** Uniform over the slot's bases whose requirements hold when worn
+   on the owner's current loadout, checked through the existing fixpoint
+   (`ContentDatabase.Effective.cs:128-148`). None hold → uniform over all of
+   them, shown as "inert until …" (the dossier's existing state). Distinct
+   bases across the page. Requirements rise with tier and refuse a lone
+   piece of an uncommitted material (`GearScaling.cs:273-280`), so deep
+   cards lean toward the owner's material; that is the requirement design
+   working, not a bias added here.
+6. **Tier.** One per page: `FloorTier(step)` (`RarityTable.cs:50`, `step / 16`,
+   uncapped), +1 on a boss page, then capped by Q1.
+7. **Quality** per non-necklace card, by `LootLadder.Climb` with step *p*, 3
+   rungs, P(climb ≥ s) = p^s:
 
-   | Class | p | Common | Uncommon | Rare | Epic |
-   |---|---|---|---|---|---|
-   | Normal | 0.40 | 60% | 24% | 9.6% | 6.4% |
-   | Anchor | 0.50 | 50% | 25% | 12.5% | 12.5% |
-   | Boss (floor Uncommon) | 0.40 | 0 | 60% | 24% | 16% |
+   | Source | p | Favor room to 0.55 | Common | Uncommon | Rare | Epic |
+   |---|---|---|---|---|---|---|
+   | Normal, shop, shelf | 0.35 | 33 pts | 65% | 22.8% | 8.0% | 4.3% |
+   | Anchor | 0.42 | 22 pts | 58% | 24.4% | 10.2% | 7.4% |
+   | Boss (floor Uncommon, 2 rungs) | 0.45 | 17 pts | 0 | 55% | 24.8% | 20.3% |
 
-   (calc). All three cards Common: normal 21.6%, anchor 12.5%, boss 0,
-   against 32% bare today (audit D1). Not-bare per normal card: 40% vs 31%.
-   Squad Favor (`ItemOfferRoll.SquadFavor`, `:140`) raises `p` at the
-   existing per-point rate up to `LootLadder`'s cap 0.55. Pinned by a
-   fixed-seed test.
-8. **Floors**, on the best non-necklace card (highest quality, then first),
-   raising it by adding affixes: chip strength 2 → Uncommon, 3 → Rare; boss
-   weapon card → Rare; a pick following one whose best card was Common →
-   Uncommon. A necklace never satisfies a floor.
+   (calc). Favor adds 0.006 a point (`LootLadder.cs:52-53`, cap 0.55).
+   Today's ladder (`LootLadder.cs:41-43`, 5 rungs, 0.22/0.30/0.38) moves
+   tier and plus; that is gone. All three cards Common on a one-chip normal
+   page: 27.5% (0.65³), against 32% bare today (audit D1).
+8. **Floors** on the best non-necklace card (highest quality, then first),
+   raised by adding affixes: strength 2 → Uncommon, 3 → Rare; the boss weapon
+   card → Rare; the first gear page after one whose best card was Common →
+   Uncommon. A necklace never counts toward a floor.
 9. **Affixes**: that many distinct rows from the slot's pool (`weapon` or
-   `armour`), magnitude `base × 1.25^tier`.
+   `armour`).
 
-**Card face:** name, tier, recipient, colour = quality, the **one** largest
-stat delta against what the recipient wears in that slot, and one line (the
-trait, or the strongest affix). The rest is in the tooltip. If the slot is
-occupied, the card says what it replaces.
-
-**Take** equips the card on its recipient (`EquipmentOps.Equip`). The
-displaced copy goes to the bag and the page lists it. Honing stays with the
-slot (1.5), so a replacement loses nothing honed; a displaced necklace keeps
-its trait and can be worn again. Roster-order auto-equip
-(`RunOrchestrator.cs:794-817`) is deleted.
-
-**Skip** pays the **best** card's sale price (`ShopPricing.SellPrice`,
-30% of `GearPrice`), now, with no shop needed. Contract: skip gold ≥ the
-gold from take, swap back, sell, which needs a shop the realm may not have
-(0.75 chance, in a pocket, `PLAN_RUN_MAP.md:214`). So skip is never
-dominated for gold, and take is the only way to the item. The skip button
-shows its gold. Confirmation follows #225: if adopted, skip confirms, since
-it discards cards.
-
-**Relic pick:** 3 cards from `RelicPool.Available`, weights per source
-(2.4). A relic is excluded when every member it reaches already gets its
-mechanic; otherwise the card names who it adds nothing for. Skip pays 30% of
-the cheapest card's `RelicPrice` (`ShopPricing.cs:80-90`; 18g for Common).
+**Card face:** name, tier, recipient, colour = quality, the one largest stat
+delta against what the recipient wears in that slot, and one line (the
+trait, or the strongest affix). When the slot is occupied, a second line
+names a trait or affix the replaced copy has and the card lacks ("loses:
+Lifesteal"). The rest is in the tooltip.
 
 ### 1.3 Traits
 
-- A trait is a build-changing effect (the kind relics hold) that works only
-  for its wearer, and lives **only on necklaces**, one each. A character
-  wears at most one; relics stay party-wide.
-- Necklaces get a stat budget like other slots, so a deeper one is still an
-  upgrade when its trait is a flag.
-- Necklace quality is shown as its own colour, **"Trait"**, not "Legendary",
-  which the relic ladder keeps.
+A trait is a build-changing effect (the kind relics hold) that works only for
+its wearer, and lives **only on necklaces**, one each. A character wears at
+most one. Necklaces carry a stat budget like other slots. Their colour is
+**"Trait"**, not "Legendary", which the relic ladder keeps.
 
 ### 1.4 Rarity, colour, tier
 
-`Rarity` from tier bands (`RarityBands.For`, `Domain/Content/Rarity.cs:36-56`,
-Mythic at tier 10) is **replaced** by `Quality {Common, Uncommon, Rare, Epic,
-Trait}`, the affix count or necklace. Names keep the tier adjective
-(`itemsets.json` `tierAdjectives`). Consumers that switch: Reckoning,
-shop card and sort, tooltip, bag, dossier, and `FloorTierOf`'s reward
-floors. Mythic goes.
-
-| Axis | Set by | Card |
-|---|---|---|
-| Tier | step (+1 boss) | stated, same across a pick |
-| Quality | ladder + floors + Favor | colour |
-| Trait / affixes | with quality | one line |
-| Honing | the player, per slot | on the slot, not the card |
-| Fit | delta vs recipient | one number |
+`Rarity` from tier bands (`RarityBands.For`, `Domain/Content/Rarity.cs:36-56`)
+is **replaced** by `Quality {Common, Uncommon, Rare, Epic, Trait}`, derived
+from the copy (affix count, or a necklace), never stored. Names keep the tier
+adjective (`itemsets.json` `tierAdjectives`). Consumers that switch:
+Reckoning, shop, tooltip, bag, dossier, `FloorTierOf`. Mythic goes.
 
 ### 1.5 Honing
 
-- Honing belongs to a character's **slot**, not the item:
-  `EquipmentSlotEntry.plus` (`Domain/Equipment/EquipmentLoadout.cs:24`)
-  keeps its value when the item in it changes or the slot is emptied. Drops,
-  stock and bag copies have no plus. It clears with equipment at run end
-  (`RunManager.cs:279`).
-- The plus roll goes (`ItemOfferRoll.cs:233`), with Favor's plus odds,
-  `BossBonusPlusRungs` (`RarityTable.cs:211`) and `PlusFactor` in prices.
-- Where, per realm: the shop (0.75 chance), any number of +1s at
-  `BaseFor(tier of the slot's item) × (1 + 0.35 × current plus)` gold
-  (`ShopPricing.cs:48`, `PlusStep` `:42`); and at most one Rest
-  (`PLAN_RUN_MAP.md:115`), which offers full heal (`RoomResolution.cs:87-88`)
-  or +1. HP refills only after the boss, so Rest costs the missing HP; at
-  full HP the +1 is free, which is intended.
-- `ItemUpgrade.MaxPlus` stays 10, +15% each (`ItemUpgrade.cs:25,41`): ×2.5 on
-  a slot, about four tiers of budget (1.25^4 = 2.44, calc). The glossary
-  entry (`GlossaryEntries.cs:233`) is rewritten for slots.
+- Honing belongs to a character's slot: `RunSnapshot.slotHoning`, a list of
+  `{characterId, slot, plus}`, independent of what the slot holds.
+  `EquipmentLoadout` drops an emptied slot's entry (`EquipmentLoadout.cs:167-181`),
+  so honing cannot live on `EquipmentSlotEntry`; its `plus` field goes.
+  Weapon1 and Weapon2 are separate slots, so a sword moved between hands
+  reads the new hand's honing. A benched member keeps theirs. It ends with
+  the run, since the snapshot does.
+- Drops, stock and bag copies have no plus. The plus roll goes
+  (`ItemOfferRoll.cs:233`), with Favor's plus odds and `BossBonusPlusRungs`
+  (`RarityTable.cs:211`).
+- Sources: **hone instead** on a gear page; the shop, any number of +1s at
+  `21 × (1 + 0.35 × plus)` gold scaled by step (Q2), the same for every slot
+  whether filled or empty, so no cheap item gaming the price; one Rest at
+  most (`PLAN_RUN_MAP.md:115`), full heal (`RoomResolution.cs:87-88`) or +1.
+  At full HP the Rest +1 is free, accepted.
+- `ItemUpgrade.MaxPlus` stays 10, +15% each (`ItemUpgrade.cs:25,41`), so ×2.5
+  on a slot. The glossary entry (`GlossaryEntries.cs:233`) is rewritten for
+  slots.
 
-### 1.6 Deep floors
+### 1.6 Deep floors: what the arithmetic settles
 
-Tier stops at 10 (step 160, realm ~21) and honing at +10. Past that, gear does
-not grow; the descent is built to end runs ("the player's power is capped and
-the dungeon's is not", `Domain/Dungeon/DifficultyCurve.cs:200-205`). Enemy
-scaling is ×1.075 health and ×1.038 attack per step, capped at step 200
-(`:46-47, :206`):
+Per step, enemy health ×1.075 and attack ×1.038, frozen at step 200
+(`DifficultyCurve.cs:46-47, 206`); fight gold rides the health curve
+(`:143`). Gear growth per step is 1.25^(1/16) = 1.4% (armour) and 1.9%
+(weapon, `GearScaling.cs:57,68`) (calc).
 
-| Step | Armour budget 1.25^t | Weapon 1.35^t | Enemy HP | Enemy ATK |
-|---|---|---|---|---|
-| 16 | 1.25 | 1.35 | 3.2 | 1.8 |
-| 80 | 3.05 | 4.48 | 326 | 19.8 |
-| 160 | 9.31 | 20.1 | 1.06e5 | 391 |
-| 320 | 9.31 | 20.1 | 1.91e6 (cap) | 1738 (cap) |
+| Step (realm) | Armour 1.25^t | Weapon 1.35^t | Enemy HP | Enemy ATK | Fight gold |
+|---|---|---|---|---|---|
+| 16 (2) | 1.25 | 1.35 | 3.2 | 1.8 | 3.2 |
+| 80 (10) | 3.05 | 4.48 | 326 | 19.8 | 326 |
+| 160 (20) | 9.31 | 20.1 | 1.06e5 | 391 | 1.06e5 |
+| 200 (25) | 14.6 | 36.6 | 1.91e6 | 1738 | 1.91e6 |
 
-(calc). Gear is a small share of deep power. That contradicts "gear carries
-late power" (`OWNER_DECISIONS_2026-09-26.md:141`); I5 measures it and Q9 asks.
+(calc; the step-200 gear row assumes Q1 (b)). Three conclusions:
+
+- **Gold.** Prices are flat or linear in tier (`ShopPricing.cs:48,80-90`);
+  fight gold is ×18 by step 40 (realm 5), so every gold mechanism fades
+  there. Q2.
+- **The tier cap is content, not code.** `FloorTier` is uncapped; 10 is the
+  items' `maxTier` (`RarityTable.cs:100,142`; `ShopStock.cs:352`). With tier
+  on the copy the cap must be a stated rule. Q1.
+- **Gear's share of deep power is unknown.** `DifficultyCurve.cs:19-31` says
+  gear compounds player power by two orders of magnitude;
+  `GearScaling.cs:36-46` calls its ability share "a minor drip". I5 measures
+  the split (gear, levels, spells, mechanics) through
+  `FightEncounterAdapter.ToCombatant` at steps 40, 80, 160.
+
+Past step 200 enemies stop growing while levels continue to `MaxLevel` 40
+(`Domain/Progression/RewardTrack.cs:293`); whether runs still end there is a
+run-map question (section 7).
 
 ### 1.7 Removed, and unchanged
 
 Removed: the per-fight gear pick; tier ladder and ±1 spread
-(`ItemOffer.cs:79`); plus roll; rift tier; roster-order auto-equip;
-`Fortunate`; the 12 element mirrors become 2 (a damage rider in the
-wearer's `AttackType`, `CombatantKit.cs:47`, Physical if none; a resist with
-a rolled element), so 25 affixes become 14; `offerRerollsUsed`
-(`RunSnapshot.cs:193`).
+(`ItemOffer.cs:79`); plus roll; rift tier; roster-order auto-equip
+(`RunOrchestrator.cs:794-817`); `Fortunate`; the 12 element mirrors become 2
+(a damage rider in the wearer's `AttackType`, `CombatantKit.cs:47`, Physical
+if none; a resist with a rolled element), so 25 affixes become 14;
+`offerRerollsUsed` (`RunSnapshot.cs:193`).
 
-Unchanged: per-run wipe; relics per run, party-wide unless `bearer`; shop
-stock, reroll, sell; `Provenance` (C6 out of scope); item sets have no bonus
-(#125), with a home named in 2.1. Hub draft weights stay (D9); its missing
-context is fixed by #241 in I0, and the boss draws Uncommon and up.
+Unchanged: per-run wipe; relics per run and party-wide unless `bearer`; shop
+reroll and sell; `Provenance` (C6 out of scope); item sets have no bonus
+(#125), with a home in 2.1; hub draft weights (D9), with #241 in I0 and the
+boss page Uncommon and up.
 
 ## 2. The shared structure
 
 ### 2.1 One effect vocabulary
 
-There are four today: `ModifierEffectType`, `RelicEffect`,
-`RelicModifierType` and `TalentEffectType` (`Domain/Combat/TalentEffect.cs:36`).
-They overlap: lifesteal (summed at `FightSession.cs:984`), resistance,
-speed, max mana, kill splash, an extra action on a kill, longer transforms.
+Four today: `ModifierEffectType`, `RelicEffect`, `RelicModifierType`,
+`TalentEffectType` (`Domain/Combat/TalentEffect.cs:36`), overlapping on
+lifesteal (summed at `FightSession.cs:984`), resistance, speed, max mana,
+kill splash, an extra action on a kill and longer transforms.
 
 **Shape:** `Effect { Kind, Magnitude, Threshold, Against, HasAgainst,
-AgainstMagical }`, which is `ModifierEffect` (`ModifierEffect.cs:340`) today.
-
-**Data vs code.** `RelicEffect.cs:3-10` is right that mechanics share no
-numeric shape, so behaviour stays one block of C# per kind at its hook. Data
-chooses kinds and their headline number. Secondary numbers (Charging Crystal's
-period, Phoenix Egg's duration) stay in `FightTuning`.
+AgainstMagical }`, today's `ModifierEffect` (`ModifierEffect.cs:340`).
+Mechanics share no numeric shape (`RelicEffect.cs:3-10`), so behaviour stays
+one C# block per kind at its hook; data picks kinds and headline numbers;
+secondary numbers (Charging Crystal's period) stay in `FightTuning`.
 
 | Shared | Today | After |
 |---|---|---|
 | Kind enum | 4 | `EffectKind`, closed, appended only |
 | Per-kind facts | comments | `EffectCatalog`: hook, stacking, tier-scaled or not, allowed holders, unit, text template |
 | Query | `HasRelic`, `ModifierEffects.Best`, `RelicLifestealPercent`, `TalentEffects.Best` | `CombatantState.Effects`: `Has`, `Magnitude`, `Threshold` |
-| Headline number | `FightTuning` | `Magnitude` in JSON |
+| Headline number | `FightTuning` | `Magnitude` in JSON, unscaled |
 | Rules text | hand-typed | generated (I2c); `description` keeps flavour |
 
-**The seam.** All relic checks go through `FightSession.HasRelic`
-(`FightSession.Riders.cs:358`) → `CombatantKit.HasRelic` (`CombatantKit.cs:162`);
-37 call sites in 11 files become `actor.Effects.Has(kind)`. A source-scan
-test (the shape of the existing lint tests) fails when a non-stat kind has no
-read site.
+**The seam.** Relic checks go through `FightSession.HasRelic`
+(`FightSession.Riders.cs:358`) → `CombatantKit.HasRelic` (`CombatantKit.cs:162`):
+about 36 call sites in 11 files (39 grep hits, less the two definitions and
+the inner call). They become `actor.Effects.Has(kind)`. A source-scan test
+fails when a non-stat kind has no read site.
 
-**Stacking.** Stat kinds sum across holders, percents first
-(`RelicModifier.cs:239-286`); affixes of one kind on one wearer count once,
-at the best copy (`ModifierEffectSet.cs:39`). Mechanic kinds are flags. This
-is today's behaviour as one rule.
+**Stacking, by holder:**
 
-**Holders:** relic (party, or `bearer`, `CombatantKit.cs:148-158`); affix
-(wearer, tier-scaled); trait (wearer); talent (I6); set bonus (wearer with N
-pieces of one `setId`; named, not built, #125). `FightEncounterAdapter`
-builds each `EffectSet` once per fight from relics that reach the member
-(`:485-493`), worn affixes and trait (`:209`); stat kinds fold where
-`RelicModifiers.Apply` runs (`:215-253`).
+| Kinds | Affix + affix (one wearer) | Any other pair (affix, trait, relic, talent) |
+|---|---|---|
+| Stat | best copy only (`ModifierEffectSet.cs:39`) | summed, percents first (`RelicModifier.cs:239-286`) |
+| Mechanic | flag | flag: a second holder adds nothing, so rolls and cards avoid or name it (1.2) |
 
-**What it saves.** A new relic mechanic still costs 3 code files (kind,
-catalog row, hook block). A new affix or trait kind drops from 5 files to 3
-(pool and text move to JSON and the catalog). A new reward source on
-existing kinds is one `rewards.json` row.
+Tier scaling is applied once, when `FightEncounterAdapter` builds the
+`EffectSet` (`:209`, where `ContentDatabase.ModifierEffects` scales today):
+`Magnitude × 1.25^tier` for kinds the catalog marks tier-scaled, from the
+copy's tier.
+
+**Holders:** relic (party, or `bearer`, `CombatantKit.cs:148-158`); affix;
+trait; talent (I6); set bonus (wearer with N pieces of one `setId`; named,
+not built, #125). Stat kinds fold where `RelicModifiers.Apply` runs
+(`FightEncounterAdapter.cs:215-253`).
+
+**What it saves.** A new relic mechanic: still 3 code files. A new affix or
+trait kind: 3 (kind, catalog row, hook), 4 if it has secondary numbers; today
+5. A new reward source on existing kinds: one `rewards.json` row.
 
 ### 2.2 One offer pipeline
 
 ```
-rewards.json source + context (step, node, pickIndex, class, squad, held, pity)
- → candidates → owners → necklace → weapon → slots → base → tier → quality → floors → affixes
- → Offer[] (pure Domain, Func<int,int> rng)  → Grant / Skip (Core)
+rewards.json source + context (step, node, page, class, squad, held, pity)
+ → owners → necklace → weapon → slots → base → tier → quality → floors → affixes
+ → Offer[] (pure Domain, Func<int,int> rng)  → Grant / Hone / Pay (Core)
 ```
 
-- `Offer`: `Kind` (Gear, Relic, Book, Consumable, Gold, Hone, Heal), payload
-  id, gear copy, recipient or none, price or none. `ShopEntryKind`
+- `Offer`: `Kind` (Gear, Relic, Book, Consumable, Gold, Hone, Heal), payload,
+  gear copy, recipient or none, price or none. `ShopEntryKind`
   (`ShopStock.cs:16`) maps onto it; the persisted int stays.
-- One sampler, `SamplingOps`; the five hand-rolled loops go (C3).
-  `ItemOfferRoll.RollOne` (`:230`) stays the one "roll one copy".
-- Shop and shelf share candidates, `RollOne`, prices and Grant, and keep
-  their own section streams, floors and rerolls.
-- Rest is a pick with a Heal and a Hone card on the same screen.
+- One sampler, `SamplingOps` (C3). `ItemOfferRoll.RollOne` (`:230`) stays the
+  one "roll one copy".
+- **Shop and shelf** use steps 5-9 with `recipients: none`: tier
+  `FloorTier(step) + 1` (`ShopStock.cs:317`), *p* 0.35, every card at least
+  Uncommon, except one affordability card at `FloorTier(step)`, Uncommon,
+  which is the cheapest legal piece. That replaces the 28g anchor
+  (`ShopPricing.cs:190`), which assumed a +1 piece the plan deletes
+  (21 × 1.5 = 32 at tier 0, calc). Section streams and rerolls stay. Honing
+  is a service row outside stock, not rerolled.
+- Rest is a page with a Heal and a Hone card.
 
 ### 2.3 Gear copies: base + tier on the copy
 
 - One definition per **base**: material × piece (55), weapon family (3),
   necklace bases. Ids drop the `_pN` suffix of the 638 generated ids
   (`Resources/Content/Items/brigandine_boots_p0.asset`), so none collide.
-- `ItemInstance` = base id + `Tier` + `ModifierIds` (affixes or trait) +
-  `Provenance`. `Plus` and `RiftTier` go. `SameStack` keys on id, tier,
-  modifier set and provenance.
+- `ItemInstance` = base id + `Tier` + `ModifierIds` + `Provenance`. `Plus` and
+  `RiftTier` go. `SameStack` keys on id, tier, modifier set, provenance.
 - Stats: one accessor, `ContentDatabase.Effective`, takes the copy and the
-  slot's plus. Stat fields leave the base definition, so the ~30 readers of
-  tier-baked stats (`ItemDescription`, `ItemComparison`, `EquipmentOps`,
-  `CharacterDossierController.Loadout`, `GearEvaluator`, `ShopPricing`,
-  bag sort, naming) fail to compile until moved.
-- Price: `GearPrice(tier, quality) = BaseFor(tier) × (1 + 0.5 × affixes)`
-  (today's `RiftStep`, `ShopPricing.cs:46`); a necklace prices as 3.
-  `floorNoBare` = at least Uncommon; `floorCheapestAtMost` keeps 28g.
-- C1: removing baked stats deletes most of `ContentBuilder`'s 15-20 hand-
-  copied fields (AUDIT #262). The `ItemKind` union stays: splitting it
-  touches three `ContentDatabase` files and every `GetItem` caller for two
-  potion rows.
+  slot's honing. Stat fields leave the base definition, so the 29 files that
+  read tier-baked stats fail to compile until moved.
+- Price: `BaseFor(tier) × (1 + 0.5 × affixes)` (`RiftStep`, `ShopPricing.cs:46`),
+  necklace as 3, then × the step scale if Q2 (a).
+- C1: removing baked stats deletes most of `ContentBuilder`'s hand-copied
+  fields (AUDIT #262). The `ItemKind` union stays: splitting it touches three
+  `ContentDatabase` files and every `GetItem` caller for two potion rows.
 
 ### 2.4 Content JSON
 
@@ -300,142 +315,159 @@ Fields go in `docs/CONTENT_SCHEMA.md` when built:
 | File | Change |
 |---|---|
 | `relics.json` | `effect` + `modifiers[]` → `effects[]` of `{type, magnitude, threshold, damageType}`; `requiresConvergenceAbility` → `requires[]`; ids unchanged |
-| `modifiers.json` | add `pool` (`weapon`, `armour`, `necklace`), replacing `ModifierTable`'s hard-coded sets; add `requires[]`; `necklace` rows are traits |
-| `itemsets.json`, `weapons.json` | one asset per piece or family; `maxTier` = art frames and cap; one-piece `amulet` set for `Necklace` |
-| `rewards.json` (new, `IOrderedContent`, loaded by `LoadOrdered`) | per source: `id`; `kind`; `count`; `tierOffset`; `ladderStep` (p); `qualityFloor`; `necklaceChance`; `weaponGuarantee`; `recipients` (`perMember`/`none`); `relicWeights` (6 ints by `RelicRarity`); `relicRarityMin`; `skippable`; `skipPays` (`bestSale`/`cheapestSale`/`none`); `floorNoBare`; `floorCheapestAtMost` (gold); `stream` (an `RngStreams` constant name); `sortOrder` |
+| `modifiers.json` | add `pool` (`weapon`, `armour`, `necklace`) replacing `ModifierTable`'s hard-coded sets; add `requires[]`; `necklace` rows are traits |
+| `itemsets.json`, `weapons.json` | one asset per piece or family; `maxTier` = art frames; a one-piece `amulet` set for `Necklace` |
+| `rewards.json` (new, `IOrderedContent`, `LoadOrdered`) | per source: `id`, `kind`, `cardsPerChoice` (2 extra), `tierOffset`, `ladderStep`, `qualityFloor`, `necklaceChance`, `weaponGuarantee`, `recipients` (`perMember`/`none`), `relicWeights` (6 ints by `RelicRarity`), `relicRarityMin`, `unusedPays` (`hone`/`cheapestSale`), `affordabilityCard`, `stream` (an `RngStreams` constant name), `sortOrder` |
 
 `requires` is a closed list (`Convergence`, `Spell`, `Transform`) checked
-against the member's kit; it generalizes the relic convergence gate
+against the member's kit, generalizing the relic convergence gate
 (`ResolvedRelic.cs:33`, `RelicPool.cs:18`).
 
-**Run map coupling.** The prize-kind enum gains `Relic`, and `RealmProfile`
-gains an anchor prize weight list. Both should land in run map P1/P2 with
-weight 0, so I3 changes weights, not shapes. A saved profile without the
-list means anchors pay their exp and gold only.
+### 2.5 State and save data
 
-### 2.5 Save data
-
-- `InventoryEntry`, `ShopStockEntry` (`ShopStock.cs:41-58`, also inside
+- `InventoryEntry`, `ShopStockEntry` (`ShopStock.cs:41-58`, also in
   `MerchantShelfStock.entries`, `RunSnapshot.cs:365,396`): add `tier`; drop
-  `plus`, `riftTier`. `EquipmentSlotEntry.plus` changes meaning to slot
-  honing and must survive an empty slot.
-- `RunSnapshot`: add `necklacePity`, `lastPickBestCommon`, `pendingPicks`
-  (cards stored as `ShopStockEntry`); drop `offerRerollsUsed`.
+  `plus`, `riftTier`. `EquipmentSlotEntry`: drop `plus`.
+- `RunSnapshot`: add `slotHoning`, `necklacePity`, `lastPageBestCommon`; drop
+  `offerRerollsUsed`.
+- `PendingPage { sourceClass, kind, nodeId, page, choices, resolved,
+  cards[] { copy or relicId, recipientId } }`, held in memory on the run,
+  `[NonSerialized]`: a run found on disk is settled, never resumed.
 - **No version bump, on purpose, as a bet on the no-resume rule.**
   `RunManager.SettleOnOpening` (`:109-111`) ends any run found on entering a
   slot, and `EndRun` clears equipment and bag (`:279,289`); unknown ids are
   pruned (`SaveData.cs:753`); removed fields need no bump (`:39-40`). A
-  resume feature must add a bump and a migration. A pre-I2 build opening an
-  I2 save drops `tier` and prunes new ids: dev-only. I2a adds a load test of
-  a snapshot carrying old `_pN` ids and `riftTier`.
+  resume feature must add a bump and a migration. I2a adds a load test of a
+  snapshot carrying old `_pN` ids, `plus` and `riftTier`.
 
 ## 3. Owner questions
 
-Unanswered ones go ahead on the recommendation.
+In order of how much each answer changes the build. Unanswered ones go
+ahead on the recommendation.
 
-1. **Gear only from fights whose map chip says Gear (and anchors, bosses),
-   instead of after every fight?** Rec: yes.
-2. **Per-character or squad-wide fight reward?** (a) one card made for each
-   member, take one; (b) three cards, you choose the wearer; (c) the reward
+1. **Deep gear.** Gear tier now follows depth on every copy, so the cap is a
+   choice. (a) Stop at tier 10 (realm 20) as today's content does, and stop
+   offering Gear chips past it. (b) Keep climbing until step 200 (tier 12,
+   realm 25), where enemies stop, then stop both together, art staying on
+   the top frame. (c) Never stop, with slower growth past 10. Rec: (b); gear
+   and enemies stop at the same step, and it costs no new art.
+2. **Gold that keeps meaning something.** Fight gold grows 7.5% a step, prices
+   do not, so gold stops mattering by realm 5. (a) Every price (gear, relics,
+   books, honing, sale) is set at step 0 and scaled by the same curve as
+   fight gold. (b) Slow fight gold's growth instead (changes the run map's
+   EV sheet). (c) Accept gold as an early-game system. Rec: (a); one rule,
+   and today's ratios (sale 30%, relic vs gear) hold at every depth.
+3. **Per-character or squad-wide reward?** (a) cards made for each member,
+   you choose; (b) three cards, you choose the wearer; (c) the reward
    rotates between members. Rec: (a).
-3. **Build-changing gear only through the necklace (one per character);
-   anchors and bosses also pay relic picks, the boss Uncommon and up?**
-   Rec: yes.
-4. **Honing belongs to the slot, not the item: no random "+" on loot, you
-   raise a slot at the shop or at a Rest instead of healing, max +10, and a
-   new item in that slot keeps it?** Rec: yes.
-5. **Skipping pays the best card's sale price, now?** Rec: yes.
-6. **Same tier for all cards; a boss one tier above with at least Uncommon
-   cards and a Rare weapon, instead of today's floor of tier 3?** Rec: yes.
-7. **Favor stays as the visible luck stat for item quality; drop the
-   `Fortunate` affix?** Rec: yes.
+4. **Gear only from fights whose chip says Gear (and anchors and bosses),
+   instead of after every fight?** Rec: yes.
+5. **Honing belongs to the slot**: no random "+" on loot; you raise a slot by
+   passing on a gear card ("hone instead"), at the shop, or at a Rest instead
+   of healing; max +10. Rec: yes.
+6. **Build-changing gear only through the necklace (one per character, about
+   1 in 9 normal gear pages); anchors and bosses also pay relic pages, the
+   boss's Uncommon and up?** Rec: yes.
+7. **One tier per page, the boss one above with Uncommon-or-better cards and
+   a Rare weapon, instead of today's tier-3 floor?** Rec: yes.
 8. **Spell books only as a visible map prize and in the shop, no hidden
    per-fight chance?** Rec: yes.
-9. **Gear stops growing at tier 10 and +10 (realm ~21), as the code intends
-   today, though that makes gear a small share of deep power?** Rec: yes for
-   now; I5 reports the share before anything changes.
+9. **Favor stays the visible luck stat for item quality; drop the
+   `Fortunate` affix?** Rec: yes.
 10. **Necklace art: placeholders until commissioned?** Rec: yes.
 
 ## 4. Phases
 
-`-Changed` = `tools/run_tests_parallel.ps1 -Changed`. Test areas are the
-folders under `Tests/EditMode` and `Tests/PlayMode`: `art`, `combat`,
-`content`, `hub`, `rng`, `run`, `ui`.
+`-Changed` = `tools/run_tests_parallel.ps1 -Changed`. Test areas: `art`,
+`combat`, `content`, `hub`, `rng`, `run`, `ui`.
 
 | # | Work | Needs | Agent | Gate |
 |---|---|---|---|---|
-| I0 | today's offers on `RngStreams.Reward`; #241; stale text: C5, `RelicEffect.cs:8`, `ModifierEffectSet.cs` header, `DifficultyCurve.cs:203` ("step 80"); dead branch `RunOrchestrator.cs:813-817` | none | implementer | `test.ps1 rng`, `run`; `-Changed -BuildScenes` |
-| I1 | `EffectKind`, `EffectCatalog`, `EffectSet`; relics and affixes onto it; seam swapped; headline numbers to JSON, each pinned as a literal first; no text change | none | senior, `Escalation: architecture` | `test.ps1 combat`, `content`; `-Changed -BuildContent`; bot `RunTrace` byte-identical to pre-I1 on a fixed `-Seed`/`-Runs` |
-| I2a | Copy model: bases, tier on copy, `Quality`, slot honing storage, stat accessor seam, prices, `SameStack`, shop/shelf entries, old-id load test | Q4, Q6 | senior, `Escalation: cross-layer` | `test.ps1 content`, `run`, `hub`, `ui`; `-Changed -BuildContent -BuildScenes`; diff `Art/`; shop stock pinned as new literals: same streams and counts, floors hold |
-| I2b | Pick model: `rewards.json`, pipeline, steps 1-9 minus necklaces, `pendingPicks`, multi-pick Reckoning with relic cards (`OfferRowLayout`), skip, `GearEvaluator` reads quality, affixes and recipient (`GearEvaluator.cs:146`) | Q2, Q5, Q7 | senior, `Escalation: architecture` | `test.ps1 run`, `ui`, `rng`; quality table pinned on fixed seeds; `-Changed -BuildContent -BuildScenes` |
-| I2c | Necklaces: amulet set, trait pool, `requires`, necklace roll and pity, affixes 25 → 14, generated rules text | Q3, Q10 | implementer | `test.ps1 content`, `run`; `-Changed -BuildContent` |
-| I3 | Who pays what: chip and anchor weights, boss picks, book chip, per-fight pick and hidden book roll removed | Q1, Q8; run map P2 | implementer | `-Changed -BuildScenes` |
-| I4 | Honing: shop service, Rest pick, glossary | Q4; run map P2 | implementer | `test.ps1 run`, `ui`; `-Changed -BuildScenes` |
-| I5 | Balance from bot batches: weights, `p`, necklace chance, hone price, `MaxStep` (#85), shop floor (#196); report skip gold as a share of realm gold and gear's share of deep power | I2-I4 | implementer, then verifier | report to the owner; literals pinned |
+| I0 | today's offers on `RngStreams.Reward`; #241; stale text: C5, `RelicEffect.cs:8`, `ModifierEffectSet.cs` header, `DifficultyCurve.cs:203` ("step 80"; it is 160) | none | implementer | `test.ps1 rng`, `run`; `-Changed -BuildScenes` |
+| I1 | `EffectKind`, `EffectCatalog`, `EffectSet`; relics and affixes onto it; seam swapped; headline numbers to JSON; no text change | I0 | senior, `Escalation: architecture` | a literal test per moved number and the stacking test (section 6), written first; `test.ps1 combat`, `content`; `-Changed -BuildContent`; bot `RunTrace` byte-identical to post-I0 on a fixed `-Seed`/`-Runs` |
+| I2a | Copy model: bases, tier on copy, `Quality`, `slotHoning`, stat accessor seam, prices (Q2), `SameStack`, shop and shelf entries and floors; removes plus roll, rift tier, tier ladder and spread, `BossBonusPlusRungs`, Mythic | I1, Q1, Q2; run map P2 merged (both edit `RunSnapshot`) | senior, `Escalation: cross-layer` | `test.ps1 content`, `run`, `hub`, `ui`; old-id load test; `-Changed -BuildContent -BuildScenes`; diff `Art/`; shop stock pinned as new literals |
+| I2b | Pages: `rewards.json`, pipeline steps 1, 3-9, `PendingPage`, take / hone instead, relic page (`OfferRowLayout` relic cards), `GearEvaluator` reads quality, affixes, recipient and hone (`GearEvaluator.cs:146`). Pages fire after every fight until I3. | I2a, Q3, Q5, Q7 | senior, `Escalation: architecture` | quality table pinned on fixed seeds; PlayMode test: boss and two anchors settle, take on page 1, re-enter, leave with unused choices, assert hones, gold and pages; `test.ps1 run`, `ui`, `rng`; `-Changed -BuildContent -BuildScenes` |
+| I2c | Necklaces: amulet set, trait pool, `requires`, necklace roll and pity, affixes 25 → 14, `Fortunate` out, generated rules text | I1, I2b, Q6, Q9, Q10 | implementer | pity rates pinned; `test.ps1 content`, `run`; `-Changed -BuildContent` |
+| I3 | Who pays what: chip and anchor weights, boss pages, book chip; per-fight page and hidden book roll removed | I2b, Q4, Q8; run map P2 with amendments 5.1-5.3 | implementer | test: a Gear chip queues exactly one gear page, a Relic chip one relic page, other chips none; `test.ps1 run`; `-Changed -BuildScenes` |
+| I4 | Honing at the shop and the Rest page; glossary | I2b, Q5; run map P2 | implementer | `test.ps1 run`, `ui`; `-Changed -BuildScenes` |
+| I5 | Balance from bot batches: weights, *p*, necklace chance, hone price, `MaxStep` (#85), shop floor (#196); reports: deep-power split (1.6), necklaces per run, unused-choice rate, relics held at floors 10/20/30 | I2-I4, run map P3 | implementer, then verifier | report to the owner; literals pinned |
 | I6 | Talents onto `EffectKind`, duplicate pairs merged | I1 | implementer | `test.ps1 combat`, `content`; `-Changed -BuildContent` |
 
-**Order against the run map.**
-- I0, I1, I2a can run beside run map P1-P2; none touch the map or step
-  contract. I1 must land **before run map P5**, which reworks the same
-  `FightSession` partials.
-- Run map P1/P2 carry the `Relic` value and anchor weight list (2.4).
-- I2b before I3; I3 and I4 **after run map P2**; I3 **before run map P3**,
-  so its bot report sees the real prize mix. I5 after run map P3.
+**Order.** I0 and I1 run beside run map P1-P2 and land before run map P5,
+which reworks the same `FightSession` partials. I2a follows run map P2's
+merge. Between I2a and I2b drops are +0 with no honing source; bot numbers
+from that window are not balance evidence. I3 follows run map P2 and
+precedes run map P3, so P3's bot report sees the real prize mix; if P2
+slips, I2b's after-every-fight pages stay live. Heart-anchor payment is
+proved only after run map P5 (amendment 5.4).
 
-## 5. Risks
+## 5. Amendments `PLAN_RUN_MAP.md` rev 4 needs
 
-- **I1 breadth.** 37 call sites; numbers moving into JSON can change
-  silently, hence the literal pins and the byte-identical trace.
-- **Stacking.** A test pins a member with two lifesteal affixes and Vampire
-  Dentures against today's total.
+1. **P1, prize kinds** (`:96-102`): add `Relic`. Keep the enum value `Item`
+   (shown as "Gear"); `Item`, `Book` and `Relic` stay at weight 0 until I3.
+2. **P1, `RealmProfile`** (`:189-201`): add `anchorPrizeWeights`, a
+   `{kind, weight}` list like `prizeWeights`; default all weight 0, meaning
+   an anchor pays exp and gold only.
+3. **P2, payout**: settlement hands `Item`, `Book` and `Relic` chips to the
+   item pipeline (a no-op until I3), and the node card reads the relic and
+   book pools live for "empty pool → gold" (1.1).
+4. **P5, heart**: anchors that die at the heart add their chips to the boss
+   settlement, in map order, before pages merge (1.2); its tests include one
+   with a heart anchor carrying a Gear chip.
+5. **P3, bot**: `MapView` includes Gear and Relic chips and anchor prizes.
+6. **P2 and I2a both edit `RunSnapshot`**: P2 merges first; item fields need
+   no v9 entry (2.5).
+
+## 6. Risks and expected score
+
+- **I1 breadth.** About 36 call sites; numbers moving into JSON can change
+  silently, hence literal pins first and the byte-identical trace.
+- **Stacking.** A test pins a member with two lifesteal affixes, a lifesteal
+  trait and Vampire Dentures against the 2.1 table.
 - **Table tests** (C7: `ShopStock` 18 files, `ItemOfferRoll` 9, `RarityTable`
-  9): rewritten with literals (gotcha 5).
-- **Fewer gear picks** under Q1: the Gear chip weight is the dial.
-- **Relic inflation** at 6 anchors a realm: anchor Relic weight and pool
-  exhaustion bound it; I5 reports relics held at floors 10, 20, 30.
-- **Gold.** Fight gold scales ×1.075 a step (`DifficultyCurve.cs:143`) and
-  relic prices are flat, so no per-realm skip budget holds deep; skip stays
-  at 30% of a card's price, the rule that keeps selling below buying
-  (`ShopPricing.cs:123-127`).
-- **Necklace art** does not exist; placeholders first.
-
-### Expected theory-test score
+  9) are rewritten with literals (gotcha 5).
+- **Relic inflation** at 6 anchors a realm: bounded by the anchor Relic
+  weight and pool exhaustion.
+- **Requirements at depth** narrow the base draw (1.2 step 5); I5 reports the
+  inert-card rate.
 
 | # | Now | Plan | Why, or the lever for a 1 |
 |---|---|---|---|
-| T1 | 0 | 2 | skip pays the best sale price now |
-| T2 | 0 | 1 | cards differ by wearer and slot; only a necklace differs in plan. Lever: more trait kinds |
-| T3 | 0 | 2 | taking forgoes the shown skip gold and two members' upgrades |
-| T4 | 0 | 1 | colour ranks quality, but cards are for different slots. Lever: none without one-slot picks |
-| T5 | 0 | 1 | colour, one delta, one line: three. Lever: drop colour from the face |
-| T6 | 2 | 2 | rolled at settlement, stored, shown before choosing |
-| T7 | 1 | 1 | skip payout and slot honing, no reroll. Lever: a capped reroll |
-| T8 | 0 | 2 | necklace pity and the Common-streak floor; quitting cannot reroll, since the run ends |
-| T9 | 0 | 1 | gold and consumables auto-pay, but a Gear chip opens a modal at chip frequency. Lever: Gear weight |
-| T10 | 1 | 2 | relic picks from anchors and bosses; necklace traits |
-| T11 | 0 | 2 | every base at every depth |
+| T1 | 0 | 2 | hone instead is a real alternative to every card |
+| T2 | 0 | 1 | only a necklace differs in plan. Lever: more trait kinds |
+| T3 | 0 | 2 | take forgoes a hone, hone forgoes the item |
+| T4 | 0 | 1 | cards are different slots. Lever: one-slot pages |
+| T5 | 0 | 1 | colour, one delta, one line. Lever: drop colour from the face |
+| T6 | 2 | 2 | rolled at settlement, shown before choosing |
+| T7 | 1 | 1 | no reroll. Lever: a capped reroll |
+| T8 | 0 | 1 | necklace pity, Common-page floor; quit-safe only because a quit ends the run |
+| T9 | 0 | 1 | a Gear chip still opens a modal. Lever: Gear weight |
+| T10 | 1 | 2 | relic pages from anchors and bosses; necklace traits |
+| T11 | 0 | 2 | every base offerable at every depth |
 | T12 | 1 | 2 | per-member cards, requirements checked |
-| T13 | 0 | 2 | recipient on the card, displaced copy shown |
-| T14 | 1 | 2 | skip pays, honing sinks gold, sell stays |
-| T15 | 1 | 2 | ladder by class, weapon on anchor and boss, boss floor and relic |
-| | **11** | **25** | |
+| T13 | 0 | 2 | recipient, displaced copy and lost traits shown |
+| T14 | 1 | 1 | gold sinks fade by realm 5. Lever: Q2 (a) |
+| T15 | 1 | 2 | class *p*, weapon guarantee, boss floor and relic page |
+| | **11** | **23** | 24 with Q2 (a) |
 
-## 6. Rejected alternatives
+## 7. Unresolved
+
+- Past step 200 enemies stop growing and levels do not (1.6); whether a run
+  still ends is a `DifficultyCurve`/run-map decision this plan does not make.
+- Gear's real share of deep power waits on I5's split through `ToCombatant`.
+
+## 8. Rejected alternatives
 
 - **Effects as trigger/condition/outcome JSON, or an event bus:** the
-  mechanics share no shape (`RelicEffect.cs:3-10`); handlers need
-  `FightSession` internals either way.
-- **Traits on top-quality armour too:** uncapped traits per wearer.
-- **Guaranteed relic per elite:** up to 6 a realm.
-- **Necklaces in the slot lottery:** about 36% of picks would carry one
-  (calc, 1 − (6/7)³ with 7 empty slots), so not rare.
-- **Plus on the item:** a replacement throws away honed levels, so honing
-  and taking gear fight each other.
-- **Tiers past 10:** contradicts the capped-power design, and 1.25^t grows
-  without bound.
-- **A modal cap by merging picks:** "skip the rest" caps the time; each pick
-  was earned.
-- **Bag capacity:** skip and sell already handle surplus.
-- **Splitting `ItemKind`:** cost above, for two potion rows.
-- **Merging item and relic rarity ladders:** rolled quality vs authored
-  statement; they share a palette, not an enum.
+  mechanics share no shape (`RelicEffect.cs:3-10`).
+- **Skip for gold:** take, then sell the displaced copy, is never worse,
+  since the bag is unbounded and gold is spent only at a shop.
+- **Honing on the item, or on `EquipmentSlotEntry`:** a replacement throws it
+  away, and an emptied slot drops the entry (`EquipmentLoadout.cs:167-181`).
+- **Hone price from the slot's item tier:** a cheap item in the slot makes
+  honing cheap.
+- **Necklaces in the slot lottery:** 1 − (7/8)³ = 33% of pages (calc).
+- **Guaranteed relic per elite** (6 a realm); **traits on armour** (uncapped
+  per wearer); **one page per chip** (a boss with anchors reaches 8 pages);
+  **bag capacity** (hone instead handles surplus); **one rarity ladder for
+  items and relics** (rolled quality vs authored statement).
