@@ -260,7 +260,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 id = "test_node", displayName = "Test Node", characterId = "sheep", column = 0, row = 1,
                 description = description,
-                effects = new[] { new RawTalentEffect { type = "IgnoreDefensePercent", magnitude = 25 } },
+                effects = new[] { new RawEffect { type = "IgnoreDefensePercent", magnitude = 25 } },
             };
             return TalentEntryResolver.TryResolveAll(new[] { raw }, out _, out var errors)
                 ? null : string.Join("; ", errors);

@@ -116,16 +116,8 @@ namespace PrincesPalace.Domain.Combat
         // this counter exists so inspect/status UI can explain why it changed.
         public int PermanentPhysicalDefenseShred;
 
-        // Every rule this combatant's unlocked talents contribute to the
-        // fight, flattened once at encounter build time — see
-        // TalentEffectSet. Never null: the shared Empty instance is the
-        // normal case (every enemy, and every character whose tree is still
-        // the old stat-bump vocabulary), so no call site has to null-check
-        // before asking a question.
-        public TalentEffectSet Talents = TalentEffectSet.Empty;
-
         // Everything this combatant holds -- the run's relics that reach
-        // them, worn affixes, reward-track terms -- flattened once at
+        // them, worn affixes, reward-track terms, unlocked talents -- flattened once at
         // encounter build time (FightEncounterAdapter); every relic and affix
         // hook asks it through Has / Magnitude / Threshold. Never null: Empty
         // is every enemy's and every bare character's, so no call site

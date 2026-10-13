@@ -360,15 +360,15 @@ namespace PrincesPalace.Domain.Tests
         public void TheWardTalentAddsItsPercentToWhateverTheSkillAuthored()
         {
             var shawn = Hero();
-            shawn.Talents = new TalentEffectSet(new[]
+            shawn.Effects = shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.WardReductionPercent, 40),
+                new Effect(EffectKind.WardReductionPercent, 40),
             });
 
             Assert.AreEqual(70, WardPoints(Authored("fleece_ward"), shawn));
 
             var bjorn = Hero(health: 260);
-            bjorn.Talents = shawn.Talents;
+            bjorn.Effects = shawn.Effects;
             Assert.AreEqual(72, WardPoints(Authored("placeholder_brawler_ward"), bjorn));
         }
 
@@ -593,9 +593,9 @@ namespace PrincesPalace.Domain.Tests
             // authored three has to still be payable on the turn after.
             var shawn = Hero(pool: 0, attack: 40);
             shawn.SignaturePool = Wool(12);
-            shawn.Talents = new TalentEffectSet(new[]
+            shawn.Effects = shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100),
+                new Effect(EffectKind.ShatterDamagePercentOfAttack, 100),
             });
 
             var foe = Foe(health: 100000);
@@ -673,10 +673,10 @@ namespace PrincesPalace.Domain.Tests
 
             var shawn = Hero(pool: 0);
             shawn.SignaturePool = Wool(10);
-            shawn.Talents = new TalentEffectSet(new[]
+            shawn.Effects = shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.WardReductionPercent, 25),
-                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
+                new Effect(EffectKind.WardReductionPercent, 25),
+                new Effect(EffectKind.WardIsFreeAction, 1),
             });
 
             var (session, _) = Fight(new[] { shawn }, new[] { Foe() }, Kit(fleeceWard));

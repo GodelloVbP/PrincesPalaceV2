@@ -166,8 +166,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(shield.ReflectGrantsFury);
             Assert.IsTrue(shield.SlowsAttacker);
             Assert.IsTrue(shield.DisarmsOnBreak);
-            Assert.AreEqual(30, bjorn.Talents.Best(TalentEffectType.IronRetortPercent));
-            Assert.AreEqual(200, bjorn.Talents.Best(TalentEffectType.TargetPreferencePercent));
+            Assert.AreEqual(30, bjorn.Effects.Magnitude(EffectKind.IronRetortPercent));
+            Assert.AreEqual(200, bjorn.Effects.Magnitude(EffectKind.TargetPreferencePercent));
 
             foreach (var skill in new[] { BellowId, "hold_the_line", "plant_the_shield", "shield_bash" })
             {
@@ -191,7 +191,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var (_, bjorn) = Fight("bear_sen_root", "bear_sen_retort_1", "bear_sen_retort_2", "bear_sen_retort_3");
 
-            Assert.AreEqual(30, bjorn.Talents.Best(TalentEffectType.IronRetortPercent));
+            Assert.AreEqual(30, bjorn.Effects.Magnitude(EffectKind.IronRetortPercent));
             Assert.AreEqual(0, CombatMath.IronRetortBonus(bjorn));
         }
 

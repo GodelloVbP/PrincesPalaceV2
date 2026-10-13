@@ -120,7 +120,7 @@ namespace PrincesPalace.Domain.Bot
         // hurt, or when the cast itself pays him Fury.
         private static bool BellowWorthIt(FightSession session, CombatantState actor)
         {
-            if (actor.Talents.Best(TalentEffectType.PrimaryGainPerProvokedEnemy) > 0) return true;
+            if (actor.Effects.Magnitude(EffectKind.PrimaryGainPerProvokedEnemy) > 0) return true;
 
             return session.Encounter.AlliesOf(actor).Any(a => a.IsAlive && !ReferenceEquals(a, actor)
                 && a.MaxHealth > 0 && (float)a.CurrentHealth / a.MaxHealth < BellowAllyBelowHealth);
@@ -165,11 +165,11 @@ namespace PrincesPalace.Domain.Bot
                 if (status.Type == StatusEffectType.Regen && status.Magnitude > 0) perTurn += status.Magnitude;
             }
 
-            int curve = actor.Talents.Best(TalentEffectType.HealthCurveRegen);
+            int curve = actor.Effects.Magnitude(EffectKind.HealthCurveRegen);
             if (curve > 0)
             {
                 perTurn += HealthCurveRegen.AmountFor(actor.CurrentHealth, actor.MaxHealth,
-                    actor.Talents.Threshold(TalentEffectType.HealthCurveRegen), curve);
+                    actor.Effects.Threshold(EffectKind.HealthCurveRegen), curve);
             }
 
             int converted = System.Math.Min(missing, perTurn * CursedBloodWindowTurns);

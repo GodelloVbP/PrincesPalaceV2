@@ -226,7 +226,7 @@ namespace PrincesPalace.Domain.Tests
         public void DelayedDamageCanStillBeCheatedByCheatDeath()
         {
             var (session, hero, foe) = Fight();
-            hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.CheatDeathOncePerFight, 0) });
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[] { new Effect(EffectKind.CheatDeathOncePerFight, 0) });
             hero.DelayedDamage = new DelayedDamagePool(100, 1);
             session.DealDamageForTest(foe, hero, 500, DamageType.Physical);
             Assert.AreEqual(200, hero.CurrentHealth, "fixture: all of it deferred");

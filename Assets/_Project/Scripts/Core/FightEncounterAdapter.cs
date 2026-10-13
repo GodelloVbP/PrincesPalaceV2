@@ -221,14 +221,17 @@ namespace PrincesPalace
             int attack = ContentDatabase.EquippedWeaponPower(character) ?? stats.attack;
 
             // THE ONE EFFECT SET this combatant fights with: their affixes and
-            // track terms, then the run relics that reach them. Built BEFORE
+            // track terms, their unlocked talents, then the run relics that
+            // reach them. Built BEFORE
             // the combatant because the pool needs it -- Max Mana and mana
             // regen terms are in the capacity chain, and a pool that arrives
             // at construction cannot be topped up further down without
             // reopening whether Current followed Max. Every stat below folds
             // from this same set (EffectFold), so a relic's numbers and its
             // mechanics cannot disagree about who holds it.
-            var effects = ContentDatabase.CharacterEffects(character).WithRelics(relics, definition.id);
+            var effects = ContentDatabase.CharacterEffects(character)
+                .With(EffectHolder.Talent, ContentDatabase.TalentEffects(character).All)
+                .WithRelics(relics, definition.id);
 
             var state = new CombatantState(definition.Data.DisplayName, true,
                 EffectFold.Apply(stats.maxHealth, EffectStat.MaxHealth, effects),
@@ -288,21 +291,6 @@ namespace PrincesPalace
             // widened arrives at that width. Its single call site until now was
             // its own definition.
             state.SignaturePool = ContentDatabase.BuildSignatureResource(character);
-
-            // Every TalentEffectType-gated rule a character's unlocked
-            // talents grant -- Sharp Horns' penetration/shred, Last Stand's
-            // below-health bonuses, Provoke's damage reduction, Trample's
-            // execute/splash/extra-attack, every Wool income hook, the whole
-            // Fragile Lamb ward tree -- read this via target.Talents.Best/
-            // BestBelowHealth/Has (CombatMath, FightSession.Talents.cs,
-            // FightSession.Enemies.cs/.Riders.cs/.Skills.cs, StatusEffects).
-            // Until now nothing at this seam ever set it, so every one of
-            // those rules resolved against the shared CombatantState default
-            // (TalentEffectSet.Empty) in every real fight -- a player who
-            // sank Embers into a talent node with a TalentEffectType effect
-            // got exactly nothing from it in play. Only test fixtures ever
-            // assigned .Talents, which is why nothing caught the gap.
-            state.Talents = ContentDatabase.TalentEffects(character);
 
             state.Effects = effects;
 
@@ -398,17 +386,8 @@ namespace PrincesPalace
             // equipment and no track to read.
             state.Effects = effects;
 
-            // No talents either. ContentDatabase.TalentEffects
-            // reads a Character's unlockedTalentIds, and this overload has
-            // no Character -- only a bare CharacterDefinition, which has no
-            // concept of "unlocked" (a definition-only fight has nothing a
-            // player could have invested Embers into). state.Talents is left
-            // explicitly at TalentEffectSet.Empty rather than silently
-            // inheriting the CombatantState default with no comment marking
-            // the decision -- this is the tooling path (no-save fights,
-            // screenshot tooling), so there is no save to derive talents
-            // from, and that is correct, not a gap.
-            state.Talents = TalentEffectSet.Empty;
+            // No talents: this overload has no Character, only a bare
+            // CharacterDefinition, so nothing is unlocked (the tooling path).
 
             return state;
         }

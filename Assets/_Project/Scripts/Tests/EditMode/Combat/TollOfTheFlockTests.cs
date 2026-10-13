@@ -245,7 +245,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero();
             var relics = new List<ResolvedRelic> { Relic(EffectKind.TollOfTheFlock) };
             if (bloodlust) relics.Add(Plain(EffectKind.Bloodlust));
-            else hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.ExtraAttackOnKill, 1) });
+            else hero.Effects = hero.Effects.With(EffectHolder.Talent, new[] { new Effect(EffectKind.ExtraAttackOnKill, 1) });
 
             var tank = Foe("Tank");
             var frail = Foe("Frail", health: 50);
@@ -337,10 +337,10 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero();
             if (wrath > 0)
             {
-                hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.TransformDurationBonus, wrath) });
+                hero.Effects = hero.Effects.With(EffectHolder.Talent, new[] { new Effect(EffectKind.TransformDurationBonus, wrath) });
             }
 
-            var relics = bell ? new[] { Relic(EffectKind.BellwethersBell) } : new ResolvedRelic[0];
+            var relics = bell ? new[] { Relic(EffectKind.TransformDurationBonus) } : new ResolvedRelic[0];
             var session = Solo(hero, relics, new List<ResolvedSkill> { BlackRamMode() }, Foe("A", speed: 1));
             session.DrainBeats();
 
@@ -372,7 +372,7 @@ namespace PrincesPalace.Domain.Tests
                 new[]
                 {
                     new PlayerKit("bear", CharacterRole.Tank, new List<ResolvedSkill> { BlackRamMode() },
-                        new List<ResolvedRelic> { Relic(EffectKind.BellwethersBell) }, null),
+                        new List<ResolvedRelic> { Relic(EffectKind.TransformDurationBonus) }, null),
                 },
                 Foe("A", speed: 1));
             session.DrainBeats();

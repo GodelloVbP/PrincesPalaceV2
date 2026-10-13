@@ -138,7 +138,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // cannot inherit it.
             if (actor.LastHitWasCrit && owed > 0)
             {
-                owed += owed * actor.Talents.Best(TalentEffectType.CritFuryBonusPercent) / 100;
+                owed += owed * actor.Effects.Magnitude(EffectKind.CritFuryBonusPercent) / 100;
             }
 
             actor.LastHitWasCrit = false;
@@ -157,10 +157,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // is FightSession.Sentinel.cs.
         private static void ArmEngineSeams(CombatantState actor)
         {
-            var talents = actor?.Talents;
+            var talents = actor?.Effects;
             if (talents == null || talents.IsEmpty) return;
 
-            if (talents.Has(TalentEffectType.FuryEngineEinherjar))
+            if (talents.Has(EffectKind.FuryEngineEinherjar))
             {
                 actor.FuryEngine.Kind = FuryEngineKind.Einherjar;
             }
@@ -168,7 +168,7 @@ namespace PrincesPalace.Domain.Combat.Session
             ArmJuggernautSeams(actor, talents);
             ArmSentinelSeams(actor, talents);
 
-            int momentum = talents.Best(TalentEffectType.MomentumTier);
+            int momentum = talents.Magnitude(EffectKind.MomentumTier);
             if (momentum >= 1) actor.Momentum.Enabled = true;
             if (momentum >= 2)
             {
@@ -178,7 +178,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (momentum >= 3) actor.Momentum.IgnoresSmallHits = true;
 
-            int trance = talents.Best(TalentEffectType.BattleTranceTier);
+            int trance = talents.Magnitude(EffectKind.BattleTranceTier);
             if (trance >= 1)
             {
                 actor.BattleTrance = new BattleTrance(trance >= 2 ? 30 : 20)
@@ -188,7 +188,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 };
             }
 
-            if (talents.Has(TalentEffectType.TwinRampage) && actor.TwinRampage == null)
+            if (talents.Has(EffectKind.TwinRampage) && actor.TwinRampage == null)
             {
                 actor.TwinRampage = new TwinRampageRule();
             }
@@ -214,7 +214,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // SLAM T1: a crit on the Fury-tier strike restores Fury.
         private void PaySlamCritFury(CombatantState actor, ResolvedSkill skill)
         {
-            int gain = actor.Talents.BestFor(TalentEffectType.SlamCritRestoresFury, skill.Id);
+            int gain = actor.Effects.BestFor(EffectKind.SlamCritRestoresFury, skill.Id);
             if (gain <= 0) return;
 
             GrantPrimary(actor, gain);
@@ -233,7 +233,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 AppendMessage($"{actor.Name} takes back {refund} {actor.PrimaryPool?.DisplayName}.");
             }
 
-            if (actor.Talents.Has(TalentEffectType.KillFillsMomentum) && actor.Momentum.Enabled)
+            if (actor.Effects.Has(EffectKind.KillFillsMomentum) && actor.Momentum.Enabled)
             {
                 actor.Momentum.FillToCap();
                 AppendMessage($"{actor.Name}'s momentum is full ({actor.Momentum.Stacks}).");
@@ -249,9 +249,9 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || !actor.IsPlayerSide || actor.PrimaryPool == null) return;
 
-            var talents = actor.Talents;
-            int gain = talents.Best(TalentEffectType.FuryOnKill);
-            if (actor.Transformation != null) gain += talents.Best(TalentEffectType.FuryOnKillWhileTransformed);
+            var talents = actor.Effects;
+            int gain = talents.Magnitude(EffectKind.FuryOnKill);
+            if (actor.Transformation != null) gain += talents.Magnitude(EffectKind.FuryOnKillWhileTransformed);
             if (gain <= 0) return;
 
             GrantPrimary(actor, gain);
@@ -320,7 +320,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // per-turn drain is the whole upkeep), and BLOODFIRE T2 forgives
             // the first idle drain of the fight.
             bool allowDecay = !engine.SuppressesIdleDecay && !(actor.Transformation?.PrimaryDrainPerTurn > 0);
-            if (allowDecay && !engine.FirstIdleTurnSpent && actor.Talents.Has(TalentEffectType.FirstIdleTurnFree)
+            if (allowDecay && !engine.FirstIdleTurnSpent && actor.Effects.Has(EffectKind.FirstIdleTurnFree)
                 && pool.WouldDecayThisTurn)
             {
                 engine.FirstIdleTurnSpent = true;

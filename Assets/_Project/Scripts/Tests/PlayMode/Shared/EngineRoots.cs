@@ -20,7 +20,7 @@ namespace PrincesPalace.PlayModeTests
 
                 var root = ContentDatabase.TalentsFor(character)
                     .First(t => t.Data.Row == 0
-                                && t.Data.Effects.Any(e => RequiredChoices.IsEngineRoot(e.Type)));
+                                && t.Data.Effects.Any(e => RequiredChoices.IsEngineRoot(e.Kind)));
                 character.unlockedTalentIds.Add(root.id);
             }
         }

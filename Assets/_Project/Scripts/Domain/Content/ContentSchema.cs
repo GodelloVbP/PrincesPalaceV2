@@ -86,7 +86,6 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawRelicEntry), nameof(RawRelicEntry.rarity))] = typeof(RelicRarity),
                 [(typeof(RawEffect), nameof(RawEffect.type))] = typeof(Combat.EffectKind),
                 [(typeof(RawEffect), nameof(RawEffect.damageType))] = typeof(Stats.DamageType),
-                [(typeof(RawTalentEffect), nameof(RawTalentEffect.type))] = typeof(Combat.TalentEffectType),
                 [(typeof(RawAchievementEntry), nameof(RawAchievementEntry.condition))] = typeof(AchievementCondition),
                 [(typeof(RawEventRequirement), nameof(RawEventRequirement.kind))] = typeof(Events.EventRequirementKind),
                 [(typeof(RawEventEffect), nameof(RawEventEffect.kind))] = typeof(Events.EventEffectKind),
@@ -170,7 +169,7 @@ namespace PrincesPalace.Domain.Content
         // BFS outward from the 11 root types over every field whose type (or
         // array element type) is itself a [Serializable] class in this same
         // namespace -- SpellPresentation, RawDamageInstance, RawEnemyAbility,
-        // RawEffect, RawTalentEffect, RawSetPiece
+        // RawEffect, RawSetPiece
         // all get found this way, with nothing here naming them by hand. A
         // shared, general-purpose type from another namespace (StatBlock,
         // AbilityScoreBlock, Combat.TransformGrant) is deliberately NOT

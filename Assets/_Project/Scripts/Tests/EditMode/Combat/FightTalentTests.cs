@@ -12,7 +12,7 @@ namespace PrincesPalace.Domain.Tests
     // The combat-time half of the talent vocabulary: the wool engines, the
     // Fragile Lamb's wards, the Black Ram's transform and splashes, and Provoke.
     //
-    // TalentEffectSet already has thorough tests for how a set answers a query.
+    // EffectSet already has thorough tests for how a set answers a query.
     // This is the other half -- what the fight actually DOES with the answer --
     // and in v1 it existed only inside a MonoBehaviour, so a rule like "a ward
     // pays its caster once per turn" had no cheap way to be pinned at all.
@@ -29,8 +29,8 @@ namespace PrincesPalace.Domain.Tests
         private static CombatantState Foe(string name = "Foe", int health = 1000, int attack = 30, int speed = 1) =>
             new CombatantState(name, false, health, 10, attack, speed);
 
-        private static void Talents(CombatantState actor, params TalentEffect[] effects) =>
-            actor.Talents = new TalentEffectSet(effects);
+        private static void Talents(CombatantState actor, params Effect[] effects) =>
+            actor.Effects = actor.Effects.With(EffectHolder.Talent, effects);
 
         // THROUGH THE RESOLVER'S OWN DefaultTargetingFor rather than a
         // hardcoded Self. A fixture that guesses targeting builds content
@@ -80,7 +80,7 @@ namespace PrincesPalace.Domain.Tests
             // The one test here that needs the monster to actually reply, so
             // this foe is fast enough to take its turn after the cast.
             var lamb = Hero("Lamb");
-            Talents(lamb, new TalentEffect(TalentEffectType.WardReductionPercent, 50));
+            Talents(lamb, new Effect(EffectKind.WardReductionPercent, 50));
 
             var bare = Hero("Bare");
             var (control, controlEncounter) = Fight(new[] { bare }, new[] { Foe(speed: 9) }, Kit());
@@ -106,9 +106,9 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             lamb.SignaturePool = Wool();
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WoolWhenWardedAllyHit, 2),
-                new TalentEffect(TalentEffectType.WardsNeverExpire, 1));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WoolWhenWardedAllyHit, 2),
+                new Effect(EffectKind.WardsNeverExpire, 1));
 
             var (session, encounter) = Fight(new[] { lamb }, new[] { Foe("A"), Foe("B") },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -134,8 +134,8 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WardSpreadsToAllies, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -154,8 +154,8 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WardSpreadsToAllies, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -180,8 +180,8 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 100),
-                new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
+                new Effect(EffectKind.WardReductionPercent, 100),
+                new Effect(EffectKind.WardSpreadsToAllies, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -204,9 +204,9 @@ namespace PrincesPalace.Domain.Tests
             var one = Hero("One");
             var two = Hero("Two");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50),
-                new TalentEffect(TalentEffectType.WardSpreadsToWholeParty, 1));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WardSpreadsToAllies, 50),
+                new Effect(EffectKind.WardSpreadsToWholeParty, 1));
 
             var (session, _) = Fight(new[] { lamb, one, two }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -224,8 +224,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var lamb = Hero("Lamb");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WardAlsoAppliesRegen, 5, threshold: 3));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WardAlsoAppliesRegen, 5, threshold: 3));
 
             var (session, _) = Fight(new[] { lamb }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -243,8 +243,8 @@ namespace PrincesPalace.Domain.Tests
             // it, every ward is a turn not spent doing anything else.
             var lamb = Hero("Lamb");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WardIsFreeAction, 1));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WardIsFreeAction, 1));
 
             var (session, encounter) = Fight(new[] { lamb }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -265,8 +265,8 @@ namespace PrincesPalace.Domain.Tests
             // how a player would actually use the strand.
             var lamb = Hero("Lamb");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.ShatterDamagePercentOfAttack, 100));
 
             var foe = Foe();
             var (session, _) = Fight(new[] { lamb }, new[] { foe },
@@ -287,8 +287,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var plain = Hero("Plain");
             Talents(plain,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.ShatterDamagePercentOfAttack, 100));
             var plainFoe = Foe();
             var (control, _) = Fight(new[] { plain }, new[] { plainFoe },
                 Kit(Skill(SkillEffect.Ward), Skill(SkillEffect.Shatter)));
@@ -298,9 +298,9 @@ namespace PrincesPalace.Domain.Tests
 
             var boosted = Hero("Boosted");
             Talents(boosted,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100),
-                new TalentEffect(TalentEffectType.ShatterSelfWardMultiplier, 300));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.ShatterDamagePercentOfAttack, 100),
+                new Effect(EffectKind.ShatterSelfWardMultiplier, 300));
             var boostedFoe = Foe();
             var (session, _) = Fight(new[] { boosted }, new[] { boostedFoe },
                 Kit(Skill(SkillEffect.Ward), Skill(SkillEffect.Shatter)));
@@ -316,7 +316,7 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
             ally.PrimaryPool.Current = 0;
-            Talents(lamb, new TalentEffect(TalentEffectType.GiftManaPercent, 50));
+            Talents(lamb, new Effect(EffectKind.GiftManaPercent, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
@@ -363,7 +363,7 @@ namespace PrincesPalace.Domain.Tests
             var full = new CombatantState("Nearly Full", true, 500, 60, 40, 8);
             full.PrimaryPool.Current = 55;
 
-            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+            Talents(shawn, new Effect(EffectKind.GiftManaPercent, 40));
 
             var (session, _) = Fight(new[] { shawn, bjorn, odette, full }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
@@ -387,7 +387,7 @@ namespace PrincesPalace.Domain.Tests
             var odette = new CombatantState("Odette", true, 500, 60, 40, 8);
             odette.PrimaryPool.Current = 20;
 
-            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+            Talents(shawn, new Effect(EffectKind.GiftManaPercent, 40));
 
             var (session, _) = Fight(new[] { shawn, bjorn, odette }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
@@ -408,7 +408,7 @@ namespace PrincesPalace.Domain.Tests
             // the one asymmetry AllyTargeting carries.
             var shawn = Hero("Shawn");
             var ally = Hero("Ally", speed: 8);
-            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+            Talents(shawn, new Effect(EffectKind.GiftManaPercent, 40));
             shawn.PrimaryPool.Current = 0;
 
             var (session, _) = Fight(new[] { shawn, ally }, new[] { Foe() },
@@ -425,7 +425,7 @@ namespace PrincesPalace.Domain.Tests
             var ally = Hero("Ally", speed: 8);
             var fallen = Hero("Fallen", speed: 7);
             fallen.CurrentHealth = 0;
-            Talents(shawn, new TalentEffect(TalentEffectType.WardReductionPercent, 50));
+            Talents(shawn, new Effect(EffectKind.WardReductionPercent, 50));
 
             var (session, _) = Fight(new[] { shawn, ally, fallen }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
@@ -461,7 +461,7 @@ namespace PrincesPalace.Domain.Tests
             var bjorn = Hero("Bjorn", speed: 8);
             bjorn.PrimaryPool = Fury();
 
-            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+            Talents(shawn, new Effect(EffectKind.GiftManaPercent, 40));
 
             var (session, _) = Fight(new[] { shawn, bjorn }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
@@ -485,7 +485,7 @@ namespace PrincesPalace.Domain.Tests
             var bjorn = Hero("Bjorn", speed: 8);
             bjorn.PrimaryPool = Fury();
 
-            Talents(shawn, new TalentEffect(TalentEffectType.GiftAttackBonusPercent, 50));
+            Talents(shawn, new Effect(EffectKind.GiftAttackBonusPercent, 50));
 
             var (session, _) = Fight(new[] { shawn, bjorn }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftFury, "Gift: Fury")));
@@ -501,7 +501,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var lamb = Hero("Lamb");
             var ally = Hero("Ally", speed: 8);
-            Talents(lamb, new TalentEffect(TalentEffectType.GiftAttackBonusPercent, 50));
+            Talents(lamb, new Effect(EffectKind.GiftAttackBonusPercent, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftFury, "Gift: Fury")), Kit());
@@ -520,7 +520,7 @@ namespace PrincesPalace.Domain.Tests
         public void SharpHornsLeaveTheGuardPermanentlyThinner()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
+            Talents(ram, new Effect(EffectKind.ShredDefenseOnHit, 3));
             var foe = Foe();
             foe.PhysicalDefense = 10;
             foe.MagicalDefense = 10;
@@ -541,7 +541,7 @@ namespace PrincesPalace.Domain.Tests
         public void SharpHornsDoesNotTriggerFromANonPhysicalSpell()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
+            Talents(ram, new Effect(EffectKind.ShredDefenseOnHit, 3));
             var foe = Foe();
             foe.PhysicalDefense = 10;
 
@@ -558,7 +558,7 @@ namespace PrincesPalace.Domain.Tests
         public void SharpHornsTriggersFromAPhysicalSkill()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
+            Talents(ram, new Effect(EffectKind.ShredDefenseOnHit, 3));
             var foe = Foe();
             foe.PhysicalDefense = 10;
 
@@ -603,7 +603,7 @@ namespace PrincesPalace.Domain.Tests
         public void ShreddingACorpseIsALogLineAboutNothing()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
+            Talents(ram, new Effect(EffectKind.ShredDefenseOnHit, 3));
             var frail = Foe("Frail", health: 1);
             frail.PhysicalDefense = 10;
             frail.MagicalDefense = 10;
@@ -621,7 +621,7 @@ namespace PrincesPalace.Domain.Tests
         public void AKillSpillsOntoWhoeverWasStandingNextToIt()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.KillSplashPercentOfAttack, 100));
+            Talents(ram, new Effect(EffectKind.OnKillSplashPercent, 100));
             var frail = Foe("Frail", health: 1);
             var neighbour = Foe("Neighbour");
 
@@ -639,7 +639,7 @@ namespace PrincesPalace.Domain.Tests
             // Computed from the original hit, never recursively from its own
             // kills, or one blow would cascade down a whole row.
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.KillSplashPercentOfAttack, 500));
+            Talents(ram, new Effect(EffectKind.OnKillSplashPercent, 500));
             var frail = Foe("Frail", health: 1);
             var alsoFrail = Foe("AlsoFrail", health: 1);
             var far = Foe("Far");
@@ -662,7 +662,7 @@ namespace PrincesPalace.Domain.Tests
         public void ACorpseInTheLineDoesNotBlockTheSplash()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.KillSplashPercentOfAttack, 100));
+            Talents(ram, new Effect(EffectKind.OnKillSplashPercent, 100));
             var frail = Foe("Frail", health: 1);
             var corpse = Foe("Corpse");
             var behind = Foe("Behind");
@@ -774,7 +774,7 @@ namespace PrincesPalace.Domain.Tests
         public void WoundedEnoughAndTheTimerSimplyDoesNotRun()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.TransformHoldsBelowHealth, 1, threshold: 50));
+            Talents(ram, new Effect(EffectKind.TransformHoldsBelowHealth, 1, threshold: 50));
             var grant = new TransformGrant { displayName = "Black Ram Mode", turns = 1, attackPercent = 30 };
             var (session, encounter) = Fight(new[] { ram }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Transform, "Black Ram Mode", grant)));
@@ -792,7 +792,7 @@ namespace PrincesPalace.Domain.Tests
         public void AKillDuringTheTransformBuysMoreOfIt()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.TransformExtendOnKill, 1, threshold: 3));
+            Talents(ram, new Effect(EffectKind.TransformExtendOnKill, 1, threshold: 3));
             var grant = new TransformGrant { displayName = "Black Ram Mode", turns = 5, attackPercent = 30 };
             var (session, _) = Fight(new[] { ram }, new[] { Foe("Frail", health: 1), Foe("Tank") },
                 Kit(Skill(SkillEffect.Transform, "Black Ram Mode", grant)));
@@ -812,7 +812,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheExtensionIsCappedByTheTalentsOwnThreshold()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.TransformExtendOnKill, 5, threshold: 2));
+            Talents(ram, new Effect(EffectKind.TransformExtendOnKill, 5, threshold: 2));
             var grant = new TransformGrant { displayName = "Black Ram Mode", turns = 20, attackPercent = 30 };
             var (session, _) = Fight(new[] { ram },
                 new[] { Foe("A", health: 1), Foe("B", health: 1), Foe("Tank") },
@@ -830,7 +830,7 @@ namespace PrincesPalace.Domain.Tests
         public void ChargeT3ScattersTheWholeLineOnEntering()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.TransformPushesEveryEnemy, 1));
+            Talents(ram, new Effect(EffectKind.TransformPushesEveryEnemy, 1));
             var grant = new TransformGrant { displayName = "Black Ram Mode", turns = 3, attackPercent = 30 };
             var (session, _) = Fight(new[] { ram }, new[] { Foe("A"), Foe("B") },
                 Kit(Skill(SkillEffect.Transform, "Black Ram Mode", grant)));
@@ -846,7 +846,7 @@ namespace PrincesPalace.Domain.Tests
         public void ProvokeTauntsTheFrontEnemy()
         {
             var ram = Hero("Ram");
-            Talents(ram, new TalentEffect(TalentEffectType.ProvokedDamageReductionPercent, 30));
+            Talents(ram, new Effect(EffectKind.ProvokedDamageReductionPercent, 30));
             var front = Foe("Front");
             var back = Foe("Back");
 
@@ -865,8 +865,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var ram = Hero("Ram");
             Talents(ram,
-                new TalentEffect(TalentEffectType.ProvokedDamageReductionPercent, 30),
-                new TalentEffect(TalentEffectType.ProvokeHitsEveryEnemy, 1));
+                new Effect(EffectKind.ProvokedDamageReductionPercent, 30),
+                new Effect(EffectKind.ProvokeHitsEveryEnemy, 1));
             var front = Foe("Front");
             var back = Foe("Back");
 
@@ -889,8 +889,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var ram = Hero("Ram");
             Talents(ram,
-                new TalentEffect(TalentEffectType.ProvokedDamageReductionPercent, 30),
-                new TalentEffect(TalentEffectType.ProvokeHitsEveryEnemy, 1));
+                new Effect(EffectKind.ProvokedDamageReductionPercent, 30),
+                new Effect(EffectKind.ProvokeHitsEveryEnemy, 1));
             var corpse = Foe("Corpse");
 
             var (session, _) = Fight(new[] { ram }, new[] { corpse },
@@ -911,7 +911,7 @@ namespace PrincesPalace.Domain.Tests
             // 7-cost transform a two-turn purchase from full health.
             var ram = Hero("Ram");
             ram.SignaturePool = Wool(perTurn: 1);
-            Talents(ram, new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 3, threshold: 50));
+            Talents(ram, new Effect(EffectKind.WoolPerTurnBelowHealth, 3, threshold: 50));
             ram.CurrentHealth = ram.MaxHealth / 4;
 
             var (session, encounter) = Fight(new[] { ram }, new[] { Foe() }, Kit());
@@ -932,7 +932,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var ram = Hero("Ram");
             ram.SignaturePool = Wool();
-            Talents(ram, new TalentEffect(TalentEffectType.WoolOnHitTaken, 1));
+            Talents(ram, new Effect(EffectKind.WoolOnHitTaken, 1));
 
             var foe = Foe("Bog Witch");
             var (session, _) = Fight(new[] { ram }, new[] { foe }, Kit());
@@ -951,9 +951,9 @@ namespace PrincesPalace.Domain.Tests
             var ram = Hero("Ram");
             ram.SignaturePool = Wool(perTurn: 1);
             Talents(ram,
-                new TalentEffect(TalentEffectType.ProvokedDamageReductionPercent, 30),
-                new TalentEffect(TalentEffectType.ProvokeHitsEveryEnemy, 1),
-                new TalentEffect(TalentEffectType.WoolPerProvokedEnemy, 1));
+                new Effect(EffectKind.ProvokedDamageReductionPercent, 30),
+                new Effect(EffectKind.ProvokeHitsEveryEnemy, 1),
+                new Effect(EffectKind.WoolPerProvokedEnemy, 1));
 
             var (session, encounter) = Fight(new[] { ram }, new[] { Foe("A"), Foe("B") },
                 Kit(Skill(SkillEffect.Provoke, "Bellow")));
@@ -977,8 +977,8 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             lamb.SignaturePool = Wool();
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WoolWhenWardedAllyHit, 2));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WoolWhenWardedAllyHit, 2));
             StatusEffects.Apply(lamb.Statuses, StatusEffectType.Poison, 5, 5);
 
             var (session, encounter) = Fight(new[] { lamb }, new[] { Foe() },
@@ -1110,7 +1110,7 @@ namespace PrincesPalace.Domain.Tests
             foreach (var caster in new[] { a, b })
             {
                 caster.SignaturePool = Wool();
-                Talents(caster, new TalentEffect(TalentEffectType.WoolWhenWardedAllyHit, 2));
+                Talents(caster, new Effect(EffectKind.WoolWhenWardedAllyHit, 2));
             }
 
             var (session, _) = Fight(new[] { hero }, new[] { dummy, a, b }, Kit());
@@ -1147,7 +1147,7 @@ namespace PrincesPalace.Domain.Tests
         public void ShatterCountsEachWearersWholeWardAsOne()
         {
             var lamb = Hero("Lamb", speed: 10);
-            Talents(lamb, new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 50));
+            Talents(lamb, new Effect(EffectKind.ShatterDamagePercentOfAttack, 50));
             var foe = Foe(health: 100000);
 
             var (session, _) = Fight(new[] { lamb }, new[] { foe }, Kit(Skill(SkillEffect.Shatter, "Shatter")));

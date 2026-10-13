@@ -134,7 +134,7 @@ namespace PrincesPalace.Domain.Tests
         public void SelfPaymentNeverTriggersCheatDeath_ItStaysLoaded()
         {
             var hero = Bjorn(400, 10, 5);
-            hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.CheatDeathOncePerFight, 0) });
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[] { new Effect(EffectKind.CheatDeathOncePerFight, 0) });
             hero.CurrentHealth = 41; // 40 to pay, leaves exactly 1
             var session = Fight(hero, Skill(furyCost: 30));
 

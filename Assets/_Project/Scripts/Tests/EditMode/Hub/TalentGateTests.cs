@@ -222,7 +222,7 @@ namespace PrincesPalace.Domain.Tests
         // one may ever be lit across all three -- ContentDatabase.
         // AllegianceRootOf's own header calls it "the load-bearing rule of the
         // whole design", talents.json says it to the player's face ("you may
-        // swear to only one path's engine at a time"), and TalentEffect.cs
+        // swear to only one path's engine at a time"), and Effect.cs
         // repeats it. The rule was written in Core, folded into
         // ContentDatabase.MeetsGates, and MeetsGates has never had a caller:
         // TalentPage.Evaluate is the only gate on the live click path and it

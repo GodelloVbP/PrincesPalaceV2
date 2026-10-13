@@ -94,9 +94,9 @@ namespace PrincesPalace.PlayModeTests
             // Fast enough to open, and the monster slow enough that it never
             // replies between the two halves of a test.
             _shawn = new CombatantState("Shawn", true, 300, 30, 40, 30);
-            _shawn.Talents = new TalentEffectSet(new[]
+            _shawn.Effects = _shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new Effect(EffectKind.WardReductionPercent, 50),
             });
             _ally = new CombatantState("Bjorn", true, 300, 30, 40, 8);
             _second = new CombatantState("Odette", true, 300, 30, 40, 7);

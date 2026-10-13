@@ -541,9 +541,9 @@ namespace PrincesPalace.Domain.Tests
             // performing it one turn later.
             var skill = Skill(SkillEffect.DamageSingle, "Headbutt", queuePushSlots: 1);
             var hero = Hero();
-            hero.Talents = new TalentEffectSet(new[]
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.HeadbuttCancelsIntent, 1),
+                new Effect(EffectKind.HeadbuttCancelsIntent, 1),
             });
 
             var foe = Foe();
@@ -570,9 +570,9 @@ namespace PrincesPalace.Domain.Tests
             // cancelled would be claiming credit for interrupting nothing.
             var skill = Skill(SkillEffect.DamageSingle, "Headbutt", queuePushSlots: 1);
             var hero = Hero();
-            hero.Talents = new TalentEffectSet(new[]
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.HeadbuttCancelsIntent, 1),
+                new Effect(EffectKind.HeadbuttCancelsIntent, 1),
             });
 
             var foe = Foe();
@@ -1063,10 +1063,10 @@ namespace PrincesPalace.Domain.Tests
             var hit = PowerRowHit();
 
             var hero = new CombatantState("Shawn", true, 1000, 30, 100, 500);
-            hero.Talents = new TalentEffectSet(new[]
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.WardDamageBonusSelf, 50),
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.WardDamageBonusSelf, 50),
             });
 
             var (session, _, _) = Fight(Kit(skills: new[] { ward, hit }), hero, Foe("Foe", 1000000));

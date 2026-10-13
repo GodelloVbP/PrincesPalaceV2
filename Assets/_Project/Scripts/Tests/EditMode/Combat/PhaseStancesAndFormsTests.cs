@@ -391,9 +391,9 @@ namespace PrincesPalace.Domain.Tests
             // The failure this pins is a flash on a turn where nothing
             // happened, which reads as a bug rather than as emphasis.
             var (session, hero, foe) = Fight();
-            hero.Talents = new TalentEffectSet(new[]
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.TransformPermanentBelowHealth, 1, threshold: 50),
+                new Effect(EffectKind.TransformPermanentBelowHealth, 1, threshold: 50),
             });
             hero.CurrentHealth = hero.MaxHealth / 4;
 

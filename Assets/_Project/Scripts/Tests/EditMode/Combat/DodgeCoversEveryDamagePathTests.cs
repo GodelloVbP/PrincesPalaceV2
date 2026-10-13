@@ -362,10 +362,10 @@ namespace PrincesPalace.Domain.Tests
         public void Shatter_IgnoresTheTargetsDodgeChance()
         {
             var lamb = Hero("Lamb", attack: 40);
-            lamb.Talents = new TalentEffectSet(new[]
+            lamb.Effects = lamb.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100),
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.ShatterDamagePercentOfAttack, 100),
             });
             var foe = Foe(health: 1000);
             Give(foe, AlwaysDodge);

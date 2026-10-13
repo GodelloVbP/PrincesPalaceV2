@@ -352,7 +352,7 @@ namespace PrincesPalace.Domain.Bot
         // Resources-backed lookup is explicitly a Core/Editor concern -- see
         // the plan's F1). A modifier id ("hardened", "bulwark", ...) is a
         // rollable affix name with no textual tell for "defensive" either --
-        // resolving it needs Domain/Content/ModifierEffect data the same way.
+        // resolving it needs Domain/Content/Effect data the same way.
         // So this reads exactly as "the option carries no effect type" in
         // the brief's own words, and falls back to GreedyAggressivePolicy's
         // read of "best": highest tier, then highest plus, ties by rng.

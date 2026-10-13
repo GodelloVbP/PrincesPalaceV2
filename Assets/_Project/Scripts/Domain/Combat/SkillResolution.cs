@@ -136,7 +136,7 @@ namespace PrincesPalace.Domain.Combat
                                    + PercentOfCasterMaxHealth(actor, percentOfCasterMaxHealth);
                     if (authored <= 0) return 0;
 
-                    int bonusPercent = actor.Talents.Best(TalentEffectType.WardReductionPercent);
+                    int bonusPercent = actor.Effects.Magnitude(EffectKind.WardReductionPercent);
                     return Math.Max(1, authored + authored * bonusPercent / 100);
                 }
 
@@ -149,7 +149,7 @@ namespace PrincesPalace.Domain.Combat
                 // signature cannot ask).
                 case SkillEffect.Shatter:
                 {
-                    int percent = actor.Talents.Best(TalentEffectType.ShatterDamagePercentOfAttack);
+                    int percent = actor.Effects.Magnitude(EffectKind.ShatterDamagePercentOfAttack);
                     return CombatMath.Scale(actor.Attack * percent / 100);
                 }
 

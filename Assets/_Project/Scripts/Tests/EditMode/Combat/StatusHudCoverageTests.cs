@@ -210,9 +210,9 @@ namespace PrincesPalace.Domain.Tests
         public void AWardOffTheClockReadsAsTheRestOfTheFight()
         {
             var shawn = new CombatantState("Shawn", true, 200, 30, 10, 8);
-            shawn.Talents = new TalentEffectSet(new[]
+            shawn.Effects = shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.WardsNeverExpire, 0),
+                new Effect(EffectKind.WardsNeverExpire, 0),
             });
 
             var capstone = StatusHud.RowFor(new ActiveStatus(StatusEffectType.Shielded, 50, 1, shawn));

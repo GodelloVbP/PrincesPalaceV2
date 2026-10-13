@@ -17,20 +17,20 @@ namespace PrincesPalace.Domain.Tests
     // call sites.
     public class TalentEffectSetTests
     {
-        private static TalentEffectSet Set(params TalentEffect[] effects)
+        private static EffectSet Set(params Effect[] effects)
         {
-            return new TalentEffectSet(effects);
+            return EffectSet.OfTalents(effects);
         }
 
         [Test]
         public void AnEmptySet_AnswersZeroAndFalseForEverything()
         {
-            var empty = TalentEffectSet.Empty;
+            var empty = EffectSet.Empty;
 
             Assert.IsTrue(empty.IsEmpty);
-            Assert.IsFalse(empty.Has(TalentEffectType.CheatDeathOncePerFight));
-            Assert.AreEqual(0, empty.Best(TalentEffectType.IgnoreDefensePercent));
-            Assert.AreEqual(0, empty.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth,
+            Assert.IsFalse(empty.Has(EffectKind.CheatDeathOncePerFight));
+            Assert.AreEqual(0, empty.Magnitude(EffectKind.IgnoreDefensePercent));
+            Assert.AreEqual(0, empty.BestBelowHealth(EffectKind.WoolPerTurnBelowHealth,
                 new CombatantState("nobody", true, 10, 0, 1, 1)));
         }
 
@@ -43,10 +43,10 @@ namespace PrincesPalace.Domain.Tests
         public void RepeatedRules_TakeTheStrongest_NotTheSum()
         {
             var horns = Set(
-                new TalentEffect(TalentEffectType.IgnoreDefensePercent, 25),
-                new TalentEffect(TalentEffectType.IgnoreDefensePercent, 50));
+                new Effect(EffectKind.IgnoreDefensePercent, 25),
+                new Effect(EffectKind.IgnoreDefensePercent, 50));
 
-            Assert.AreEqual(50, horns.Best(TalentEffectType.IgnoreDefensePercent));
+            Assert.AreEqual(50, horns.Magnitude(EffectKind.IgnoreDefensePercent));
         }
 
         // The handoff (§6.1) asked "do the HP tiers stack, or replace?" and
@@ -58,19 +58,19 @@ namespace PrincesPalace.Domain.Tests
         public void TieredHealthGates_ReplaceRatherThanStack()
         {
             var engine = Set(
-                new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 2, 67),
-                new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 3, 33));
+                new Effect(EffectKind.WoolPerTurnBelowHealth, 2, 67),
+                new Effect(EffectKind.WoolPerTurnBelowHealth, 3, 33));
             var ram = new CombatantState("Shawn", true, 100, 10, 5, 8);
 
-            Assert.AreEqual(0, engine.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth, ram),
+            Assert.AreEqual(0, engine.BestBelowHealth(EffectKind.WoolPerTurnBelowHealth, ram),
                 "At full health neither tier is satisfied, so the baseline stands alone");
 
             ram.CurrentHealth = 50;
-            Assert.AreEqual(2, engine.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth, ram),
+            Assert.AreEqual(2, engine.BestBelowHealth(EffectKind.WoolPerTurnBelowHealth, ram),
                 "Half health satisfies the 67% tier only");
 
             ram.CurrentHealth = 30;
-            Assert.AreEqual(3, engine.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth, ram),
+            Assert.AreEqual(3, engine.BestBelowHealth(EffectKind.WoolPerTurnBelowHealth, ram),
                 "Thirty percent satisfies both tiers, and the answer is the stronger one, not their sum");
         }
 
@@ -83,32 +83,32 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AHealthGate_IsSatisfiedExactlyAtItsThreshold()
         {
-            var engine = Set(new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 2, 67));
+            var engine = Set(new Effect(EffectKind.WoolPerTurnBelowHealth, 2, 67));
             var ram = new CombatantState("Shawn", true, 100, 10, 5, 8) { CurrentHealth = 67 };
 
-            Assert.AreEqual(2, engine.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth, ram),
+            Assert.AreEqual(2, engine.BestBelowHealth(EffectKind.WoolPerTurnBelowHealth, ram),
                 "Exactly at the gate counts — the float form of this comparison used to miss it");
         }
 
         [Test]
         public void FlagRules_AreAskedWithHasRatherThanRead()
         {
-            var lastStand = Set(new TalentEffect(TalentEffectType.CheatDeathOncePerFight, 0));
+            var lastStand = Set(new Effect(EffectKind.CheatDeathOncePerFight, 0));
 
-            Assert.IsTrue(lastStand.Has(TalentEffectType.CheatDeathOncePerFight));
-            Assert.IsFalse(lastStand.Has(TalentEffectType.ProvokeHitsEveryEnemy));
+            Assert.IsTrue(lastStand.Has(EffectKind.CheatDeathOncePerFight));
+            Assert.IsFalse(lastStand.Has(EffectKind.ProvokeHitsEveryEnemy));
         }
 
         [Test]
         public void IsBelowThreshold_ReadsTheHoldersOwnHealth()
         {
-            var wrath = Set(new TalentEffect(TalentEffectType.TransformHoldsBelowHealth, 0, 33));
+            var wrath = Set(new Effect(EffectKind.TransformHoldsBelowHealth, 0, 33));
             var ram = new CombatantState("Shawn", true, 100, 10, 5, 8);
 
-            Assert.IsFalse(wrath.IsBelowThreshold(TalentEffectType.TransformHoldsBelowHealth, ram));
+            Assert.IsFalse(wrath.IsBelowThreshold(EffectKind.TransformHoldsBelowHealth, ram));
 
             ram.CurrentHealth = 33;
-            Assert.IsTrue(wrath.IsBelowThreshold(TalentEffectType.TransformHoldsBelowHealth, ram));
+            Assert.IsTrue(wrath.IsBelowThreshold(EffectKind.TransformHoldsBelowHealth, ram));
         }
     }
 
@@ -122,9 +122,9 @@ namespace PrincesPalace.Domain.Tests
             return fighter;
         }
 
-        private static void Give(CombatantState combatant, params TalentEffect[] effects)
+        private static void Give(CombatantState combatant, params Effect[] effects)
         {
-            combatant.Talents = new TalentEffectSet(effects);
+            combatant.Effects = combatant.Effects.With(EffectHolder.Talent, effects);
         }
 
         // CombatMath.EffectiveDefense is gone -- this now reads
@@ -139,7 +139,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(8, CombatMath.BroadDefense(target, DamageType.Physical, attacker, false), "No talent, no penetration");
 
-            Give(attacker, new TalentEffect(TalentEffectType.IgnoreDefensePercent, 50));
+            Give(attacker, new Effect(EffectKind.IgnoreDefensePercent, 50));
 
             Assert.AreEqual(4, CombatMath.BroadDefense(target, DamageType.Physical, attacker, false));
         }
@@ -152,10 +152,10 @@ namespace PrincesPalace.Domain.Tests
         public void Penetration_AppliesToTheArmourThatIsActuallyThere()
         {
             var attacker = Fighter();
-            Give(attacker, new TalentEffect(TalentEffectType.IgnoreDefensePercent, 50));
+            Give(attacker, new Effect(EffectKind.IgnoreDefensePercent, 50));
 
             var target = Fighter(defense: 10);
-            Give(target, new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 50, 50));
+            Give(target, new Effect(EffectKind.DefenseBonusPercentBelowHealth, 50, 50));
             target.CurrentHealth = 40;
 
             Assert.AreEqual(15, CombatMath.BroadDefense(target, DamageType.Physical, null, false),
@@ -168,7 +168,7 @@ namespace PrincesPalace.Domain.Tests
         public void LastStand_AddsNoArmourWhileTheHolderIsHealthy()
         {
             var target = Fighter(defense: 10);
-            Give(target, new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 25, 50));
+            Give(target, new Effect(EffectKind.DefenseBonusPercentBelowHealth, 25, 50));
 
             Assert.AreEqual(10, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
         }
@@ -177,7 +177,7 @@ namespace PrincesPalace.Domain.Tests
         public void Trample_AddsDamageOnlyAgainstAWeakenedTarget()
         {
             var attacker = Fighter();
-            Give(attacker, new TalentEffect(TalentEffectType.ExecuteDamageBonusPercent, 25, 30));
+            Give(attacker, new Effect(EffectKind.ExecuteDamageBonusPercent, 25, 30));
 
             var healthy = Fighter();
             Assert.AreEqual(100, CombatMath.ApplyExecuteBonus(100, attacker, healthy));
@@ -189,13 +189,13 @@ namespace PrincesPalace.Domain.Tests
 
         // Stands in for the handoff's "cannot be critically hit", which has
         // nothing to hook onto in a game with no crits — see
-        // TalentEffectType.DamageCapPercentBelowHealth. The intent is that
+        // EffectKind.DamageCapPercentBelowHealth. The intent is that
         // the spike which ends the run cannot happen.
         [Test]
         public void Unflinching_CapsASingleHitOnceTheHolderIsBadlyWounded()
         {
             var target = Fighter(maxHealth: 200);
-            Give(target, new TalentEffect(TalentEffectType.DamageCapPercentBelowHealth, 25, 25));
+            Give(target, new Effect(EffectKind.DamageCapPercentBelowHealth, 25, 25));
 
             target.CurrentHealth = 150;
             Assert.AreEqual(180, CombatMath.CapSpikeDamage(180, target), "Above the gate, nothing is capped");
@@ -209,7 +209,7 @@ namespace PrincesPalace.Domain.Tests
         public void NotYet_LeavesTheHolderOnOneHealth_ExactlyOncePerFight()
         {
             var ram = Fighter(maxHealth: 100);
-            Give(ram, new TalentEffect(TalentEffectType.CheatDeathOncePerFight, 0));
+            Give(ram, new Effect(EffectKind.CheatDeathOncePerFight, 0));
             ram.CurrentHealth = 30;
 
             var first = CombatMath.ApplyDamageDetailed(ram, 500);
@@ -232,7 +232,7 @@ namespace PrincesPalace.Domain.Tests
         public void NotYet_IsNotSpentOnASurvivableHit()
         {
             var ram = Fighter(maxHealth: 100);
-            Give(ram, new TalentEffect(TalentEffectType.CheatDeathOncePerFight, 0));
+            Give(ram, new Effect(EffectKind.CheatDeathOncePerFight, 0));
 
             var result = CombatMath.ApplyDamageDetailed(ram, 30);
 
@@ -249,8 +249,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var ram = Fighter(maxHealth: 200);
             Give(ram,
-                new TalentEffect(TalentEffectType.DamageCapPercentBelowHealth, 25, 50),
-                new TalentEffect(TalentEffectType.CheatDeathOncePerFight, 0));
+                new Effect(EffectKind.DamageCapPercentBelowHealth, 25, 50),
+                new Effect(EffectKind.CheatDeathOncePerFight, 0));
             ram.CurrentHealth = 60;
 
             var result = CombatMath.ApplyDamageDetailed(ram, 1000);
@@ -491,7 +491,7 @@ namespace PrincesPalace.Domain.Tests
     // number sitting quietly in an asset doing nothing.
     public class TalentEffectResolverTests
     {
-        private static RawTalentEntry Entry(params RawTalentEffect[] effects)
+        private static RawTalentEntry Entry(params RawEffect[] effects)
         {
             return new RawTalentEntry
             {
@@ -518,56 +518,56 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AnEffectName_IsParsedFromTheEnumMemberName()
         {
-            var entry = Entry(new RawTalentEffect { type = "IgnoreDefensePercent", magnitude = 25 });
+            var entry = Entry(new RawEffect { type = "IgnoreDefensePercent", magnitude = 25 });
 
             Assert.IsTrue(TalentEntryResolver.TryResolveAll(new[] { entry }, out var resolved, out _));
-            Assert.AreEqual(TalentEffectType.IgnoreDefensePercent, resolved[0].Effects[0].Type);
+            Assert.AreEqual(EffectKind.IgnoreDefensePercent, resolved[0].Effects[0].Kind);
             Assert.AreEqual(25, resolved[0].Effects[0].Magnitude);
         }
 
         [Test]
         public void AnUnknownEffectName_IsNamedRatherThanIgnored()
         {
-            StringAssert.Contains("SharpenTheHorns", Error(Entry(new RawTalentEffect { type = "SharpenTheHorns", magnitude = 1 })));
+            StringAssert.Contains("SharpenTheHorns", Error(Entry(new RawEffect { type = "SharpenTheHorns", magnitude = 1 })));
         }
 
         [Test]
         public void NoneIsNotAuthorable()
         {
-            StringAssert.Contains("None", Error(Entry(new RawTalentEffect { type = "None" })));
+            StringAssert.Contains("None", Error(Entry(new RawEffect { type = "None" })));
         }
 
         [Test]
         public void AThresholdOnARuleWithNoHealthGate_IsRejected()
         {
             StringAssert.Contains("threshold",
-                Error(Entry(new RawTalentEffect { type = "IgnoreDefensePercent", magnitude = 25, threshold = 50 })));
+                Error(Entry(new RawEffect { type = "IgnoreDefensePercent", magnitude = 25, threshold = 50 })));
         }
 
         [Test]
         public void AHealthGatedRule_NeedsAThresholdInRange()
         {
             StringAssert.Contains("threshold",
-                Error(Entry(new RawTalentEffect { type = "WoolPerTurnBelowHealth", magnitude = 2 })));
+                Error(Entry(new RawEffect { type = "WoolPerTurnBelowHealth", magnitude = 2 })));
             StringAssert.Contains("threshold",
-                Error(Entry(new RawTalentEffect { type = "WoolPerTurnBelowHealth", magnitude = 2, threshold = 140 })));
+                Error(Entry(new RawEffect { type = "WoolPerTurnBelowHealth", magnitude = 2, threshold = 140 })));
         }
 
         [Test]
         public void AMagnitudeOnAFlagRule_IsRejected()
         {
             StringAssert.Contains("flag",
-                Error(Entry(new RawTalentEffect { type = "CheatDeathOncePerFight", magnitude = 3 })));
+                Error(Entry(new RawEffect { type = "CheatDeathOncePerFight", magnitude = 3 })));
         }
 
         [Test]
         public void ARuleThatReadsAMagnitude_NeedsAPositiveOne()
         {
             StringAssert.Contains("magnitude",
-                Error(Entry(new RawTalentEffect { type = "IgnoreDefensePercent" })));
+                Error(Entry(new RawEffect { type = "IgnoreDefensePercent" })));
         }
 
-        // TalentEffectSet takes the strongest of a type, so a second entry on
+        // EffectSet takes the strongest of a type, so a second entry on
         // ONE node is dead weight — except for the health-gated rules, where
         // two tiers on one node is the whole point (the Black Ram's root
         // carries both its 67% and its 33% wool tiers).
@@ -575,16 +575,16 @@ namespace PrincesPalace.Domain.Tests
         public void TwoEntriesOfOneUngatedRule_AreRejectedAsDeadWeight()
         {
             StringAssert.Contains("listed 2 times", Error(Entry(
-                new RawTalentEffect { type = "IgnoreDefensePercent", magnitude = 25 },
-                new RawTalentEffect { type = "IgnoreDefensePercent", magnitude = 50 })));
+                new RawEffect { type = "IgnoreDefensePercent", magnitude = 25 },
+                new RawEffect { type = "IgnoreDefensePercent", magnitude = 50 })));
         }
 
         [Test]
         public void TwoTiersOfOneHealthGatedRule_AreTheIntendedShape()
         {
             var entry = Entry(
-                new RawTalentEffect { type = "WoolPerTurnBelowHealth", magnitude = 2, threshold = 67 },
-                new RawTalentEffect { type = "WoolPerTurnBelowHealth", magnitude = 3, threshold = 33 });
+                new RawEffect { type = "WoolPerTurnBelowHealth", magnitude = 2, threshold = 67 },
+                new RawEffect { type = "WoolPerTurnBelowHealth", magnitude = 3, threshold = 33 });
 
             Assert.IsTrue(Resolve(entry, out var errors), string.Join(" ", errors));
         }

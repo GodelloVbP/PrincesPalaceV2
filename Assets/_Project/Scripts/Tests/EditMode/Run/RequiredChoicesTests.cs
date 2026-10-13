@@ -23,29 +23,29 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EngineFedPoolWithNoRoot_IsMissing()
         {
-            Assert.IsTrue(RequiredChoices.IsMissingEngineRoot(Pool(true), new TalentEffectType[0]));
+            Assert.IsTrue(RequiredChoices.IsMissingEngineRoot(Pool(true), new EffectKind[0]));
         }
 
         [Test]
         public void EngineFedPoolWithOnlyNonRootTalents_IsMissing()
         {
-            var unlocked = new[] { TalentEffectType.IronRetortPercent, TalentEffectType.PlantedShieldBreakShards };
+            var unlocked = new[] { EffectKind.IronRetortPercent, EffectKind.PlantedShieldBreakShards };
             Assert.IsTrue(RequiredChoices.IsMissingEngineRoot(Pool(true), unlocked));
         }
 
-        [TestCase(TalentEffectType.FuryEngineSentinel)]
-        [TestCase(TalentEffectType.FuryEngineEinherjar)]
-        [TestCase(TalentEffectType.FuryEngineJuggernaut)]
-        public void AnyOfTheThreeRoots_Clears(TalentEffectType root)
+        [TestCase(EffectKind.FuryEngineSentinel)]
+        [TestCase(EffectKind.FuryEngineEinherjar)]
+        [TestCase(EffectKind.FuryEngineJuggernaut)]
+        public void AnyOfTheThreeRoots_Clears(EffectKind root)
         {
-            var unlocked = new[] { TalentEffectType.IronRetortPercent, root };
+            var unlocked = new[] { EffectKind.IronRetortPercent, root };
             Assert.IsFalse(RequiredChoices.IsMissingEngineRoot(Pool(true), unlocked));
         }
 
         [Test]
         public void PoolThatIsNotEngineFed_IsNeverMissing()
         {
-            Assert.IsFalse(RequiredChoices.IsMissingEngineRoot(Pool(false), new TalentEffectType[0]));
+            Assert.IsFalse(RequiredChoices.IsMissingEngineRoot(Pool(false), new EffectKind[0]));
         }
 
         [Test]

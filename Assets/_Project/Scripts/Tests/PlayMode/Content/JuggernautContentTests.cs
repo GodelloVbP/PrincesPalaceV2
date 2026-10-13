@@ -158,8 +158,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(3, bjorn.DelayedDamage.Turns);
             Assert.IsTrue(bjorn.DelayedDamage.HealsReducePool);
             Assert.AreEqual(5, bjorn.ShortfallHealthPermille);
-            Assert.IsTrue(bjorn.Talents.Has(TalentEffectType.CheatDeathOncePerFight));
-            Assert.IsTrue(bjorn.Talents.Has(TalentEffectType.CheatDeathFillsPrimary));
+            Assert.IsTrue(bjorn.Effects.Has(EffectKind.CheatDeathOncePerFight));
+            Assert.IsTrue(bjorn.Effects.Has(EffectKind.CheatDeathFillsPrimary));
             foreach (var skill in new[] { "second_wind", "gorge", "unbroken", "bjorn_cursed_blood" })
             {
                 CollectionAssert.Contains(strip, skill);

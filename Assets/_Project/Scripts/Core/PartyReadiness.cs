@@ -31,14 +31,14 @@ namespace PrincesPalace
             return id == null ? null : squad.FirstOrDefault(c => c.definitionId == id);
         }
 
-        private static IEnumerable<TalentEffectType> UnlockedEffectTypes(Character character)
+        private static IEnumerable<EffectKind> UnlockedEffectTypes(Character character)
         {
             foreach (string talentId in character.unlockedTalentIds ?? new List<string>())
             {
                 var talent = ContentDatabase.GetTalent(talentId);
                 if (talent == null) continue;
 
-                foreach (var effect in talent.Data.Effects) yield return effect.Type;
+                foreach (var effect in talent.Data.Effects) yield return effect.Kind;
             }
         }
     }

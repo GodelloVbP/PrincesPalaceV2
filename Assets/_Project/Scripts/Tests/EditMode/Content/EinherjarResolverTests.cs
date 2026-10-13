@@ -101,7 +101,7 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("'Shout'", Error(raw));
         }
 
-        private static string TalentError(params RawTalentEffect[] effects)
+        private static string TalentError(params RawEffect[] effects)
         {
             var raw = new RawTalentEntry { id = "t", displayName = "T", characterId = "bear", effects = effects };
             TalentEntryResolver.TryResolveAll(new List<RawTalentEntry> { raw }, out _, out var errors);
@@ -111,7 +111,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASlamRule_NeedsTheSkillItUpgrades_AndStampsItOnTheEffect()
         {
-            var effect = new RawTalentEffect { type = "SlamCritChanceAtFury", magnitude = 15 };
+            var effect = new RawEffect { type = "SlamCritChanceAtFury", magnitude = 15 };
             StringAssert.Contains("appliesToSkillId", TalentError(effect));
 
             var raw = new RawTalentEntry
@@ -130,7 +130,7 @@ namespace PrincesPalace.Domain.Tests
             var raw = new RawTalentEntry
             {
                 id = "t", displayName = "T", characterId = "bear", appliesToSkillId = "the_slam",
-                effects = new[] { new RawTalentEffect { type = "FuryEngineEinherjar" } },
+                effects = new[] { new RawEffect { type = "FuryEngineEinherjar" } },
             };
             TalentEntryResolver.TryResolveAll(new List<RawTalentEntry> { raw }, out _, out var errors);
 
@@ -150,23 +150,23 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheFlagEffects_TakeNoMagnitude()
         {
-            Assert.IsNull(TalentError(new RawTalentEffect { type = "FuryEngineEinherjar" }));
-            Assert.IsNull(TalentError(new RawTalentEffect { type = "TwinRampage" }));
-            StringAssert.Contains("flag", TalentError(new RawTalentEffect { type = "FirstIdleTurnFree", magnitude = 1 }));
+            Assert.IsNull(TalentError(new RawEffect { type = "FuryEngineEinherjar" }));
+            Assert.IsNull(TalentError(new RawEffect { type = "TwinRampage" }));
+            StringAssert.Contains("flag", TalentError(new RawEffect { type = "FirstIdleTurnFree", magnitude = 1 }));
         }
 
         [Test]
         public void TheWoundedTargetCritRule_NeedsItsHealthGate()
         {
-            Assert.IsNull(TalentError(new RawTalentEffect { type = "CritChanceBelowTargetHealth", magnitude = 25, threshold = 30 }));
-            StringAssert.Contains("threshold", TalentError(new RawTalentEffect { type = "CritChanceBelowTargetHealth", magnitude = 25 }));
+            Assert.IsNull(TalentError(new RawEffect { type = "CritChanceBelowTargetHealth", magnitude = 25, threshold = 30 }));
+            StringAssert.Contains("threshold", TalentError(new RawEffect { type = "CritChanceBelowTargetHealth", magnitude = 25 }));
         }
 
         [Test]
         public void TheTierEffects_TakeAPositiveMagnitudeAndNoThreshold()
         {
-            Assert.IsNull(TalentError(new RawTalentEffect { type = "MomentumTier", magnitude = 3 }));
-            StringAssert.Contains("magnitude", TalentError(new RawTalentEffect { type = "BattleTranceTier" }));
+            Assert.IsNull(TalentError(new RawEffect { type = "MomentumTier", magnitude = 3 }));
+            StringAssert.Contains("magnitude", TalentError(new RawEffect { type = "BattleTranceTier" }));
         }
     }
 }

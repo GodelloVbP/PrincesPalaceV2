@@ -22,8 +22,10 @@ namespace PrincesPalace.Domain.Combat
             {
                 if (info.Stat != stat) continue;
 
-                if (info.Percent) percent += effects.Magnitude(info.Kind);
-                else flat += effects.Magnitude(info.Kind);
+                // A talent's stat share is already inside EffectiveStats.
+                int magnitude = effects.MagnitudeWithout(info.Kind, EffectHolder.Talent);
+                if (info.Percent) percent += magnitude;
+                else flat += magnitude;
             }
 
             // Percent first against the BASE, then the flat. The other order

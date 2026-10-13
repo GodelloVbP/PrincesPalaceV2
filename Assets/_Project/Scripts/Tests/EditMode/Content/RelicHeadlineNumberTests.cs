@@ -52,7 +52,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase("essence_siphon", EffectKind.EssenceSiphon, 3)]
         [TestCase("berserkers_vest", EffectKind.BerserkersVest, 1)]
         [TestCase("phoenix_egg", EffectKind.PhoenixEgg, 3)]
-        [TestCase("bellwethers_bell", EffectKind.BellwethersBell, 1)]
+        [TestCase("bellwethers_bell", EffectKind.TransformDurationBonus, 1)]
         [TestCase("toll_of_the_flock", EffectKind.TollOfTheFlock, 15)]
         public void ShippedMagnitude(string id, EffectKind kind, int expected)
         {
@@ -78,7 +78,7 @@ namespace PrincesPalace.Domain.Tests
                 foreach (var raw in row.effects ?? new RawEffect[0])
                 {
                     Assert.IsTrue(EffectEntryResolver.TryResolve(raw, EffectHolder.Relic, row.id, out var effect, out string error), error);
-                    if (EffectCatalog.Of(effect.Kind).Stacking != EffectStacking.Flag) continue;
+                    if (!EffectCatalog.Of(effect.Kind).IsMechanic) continue;
 
                     var fixture = TestRelics.Mechanic(effect.Kind);
                     Assert.AreEqual(effect.Magnitude, fixture.Magnitude, $"{row.id} magnitude");
@@ -87,7 +87,7 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
-            Assert.GreaterOrEqual(checkedCount, 34, "every relic mechanic is checked");
+            Assert.GreaterOrEqual(checkedCount, 33, "every relic mechanic is checked");
         }
     }
 }

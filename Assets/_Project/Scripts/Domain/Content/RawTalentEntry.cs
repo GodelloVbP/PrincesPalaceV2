@@ -88,7 +88,7 @@ namespace PrincesPalace.Domain.Content
 
         // Rules this talent grants that are not a number added to a stat —
         // the whole payload vocabulary of the reworked Shawn tree. `type` is
-        // a Domain.Combat.TalentEffectType member name, matched
+        // a Domain.Combat.EffectKind member name, matched
         // case-insensitively; see that enum for what each one means and which
         // of magnitude/threshold it reads.
         //
@@ -96,8 +96,8 @@ namespace PrincesPalace.Domain.Content
         // two rules at once: the Black Ram's root is "+1 wool per hit taken"
         // AND two health-gated per-turn tiers, which is one idea expressed as
         // three entries rather than three nodes.
-        [ContentDoc("Non-numeric rules this talent grants; see RawTalentEffect.")]
-        public RawTalentEffect[] effects = Array.Empty<RawTalentEffect>();
+        [ContentDoc("Non-numeric rules this talent grants; see RawEffect.")]
+        public RawEffect[] effects = Array.Empty<RawEffect>();
 
         // A skills.json id this talent puts on the owner's combat strip —
         // Provoke, Headbutt, Black Ram Mode. Empty for most talents.
@@ -129,26 +129,6 @@ namespace PrincesPalace.Domain.Content
         // rather than each carrying its own.
         [ContentDoc("Editor-time path to this talent's archetype glyph; empty is a supported state, most talents share a small set of archetype icons.")]
         public string iconPath = "";
-    }
-
-    // One rule from a talent's `effects` list, before the enum name has been
-    // parsed. Separate from Domain.Combat.TalentEffect for exactly one
-    // reason: JsonUtility deserialises an enum field from an integer and
-    // nothing else, so the authored file has to carry a string and something
-    // has to turn it into the enum. That something is TalentEntryResolver,
-    // where every other content-shaped judgment in this project already
-    // lives. Authoring the integer instead would be unreadable and, worse,
-    // would silently re-point at a different rule the moment anyone inserted
-    // an enum member.
-    [Serializable]
-    public class RawTalentEffect
-    {
-        [ContentDoc("Which Domain.Combat.TalentEffectType this rule grants, matched case-insensitively.")]
-        public string type = "";
-        [ContentDoc("The rule's magnitude; meaning depends on type.")]
-        public int magnitude;
-        [ContentDoc("The rule's threshold; meaning depends on type.")]
-        public int threshold;
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

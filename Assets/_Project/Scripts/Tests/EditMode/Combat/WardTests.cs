@@ -26,9 +26,9 @@ namespace PrincesPalace.Domain.Tests
             return new CombatantState(name, true, maxHealth, 30, 10, 8);
         }
 
-        private static void Give(CombatantState combatant, params TalentEffect[] effects)
+        private static void Give(CombatantState combatant, params Effect[] effects)
         {
-            combatant.Talents = new TalentEffectSet(effects);
+            combatant.Effects = combatant.Effects.With(EffectHolder.Talent, effects);
         }
 
         private static ActiveStatus Ward(CombatantState caster, CombatantState wearer, int points, int turns = 1) =>
@@ -182,7 +182,7 @@ namespace PrincesPalace.Domain.Tests
         public void APermanentWardIsSpentAfterEveryWardOnAClock()
         {
             var shawn = Fighter();
-            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Give(shawn, new Effect(EffectKind.WardsNeverExpire, 0));
             var owl = Fighter("Odette");
             var tank = Fighter("Turtle");
 
@@ -264,7 +264,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheGoldenFleece_KeepsTheCastersOwnWardStanding()
         {
             var shawn = Fighter();
-            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Give(shawn, new Effect(EffectKind.WardsNeverExpire, 0));
             Ward(shawn, shawn, 60, turns: 1);
 
             for (int turn = 0; turn < 20; turn++)
@@ -279,7 +279,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheGoldenFleece_KeepsAWardHeSpreadOntoSomebodyElseStanding()
         {
             var shawn = Fighter();
-            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Give(shawn, new Effect(EffectKind.WardsNeverExpire, 0));
             var ally = Fighter("Bjorn");
             Ward(shawn, ally, 30, turns: 1);
 
@@ -296,7 +296,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheGoldenFleece_DoesNothingForAWardSomebodyElsePutOnHim()
         {
             var shawn = Fighter();
-            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Give(shawn, new Effect(EffectKind.WardsNeverExpire, 0));
             var odette = Fighter("Odette");
             Ward(odette, shawn, 30, turns: 1);
 
@@ -312,7 +312,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheGoldenFleece_StopsTheClock_NotTheDraining()
         {
             var lamb = Fighter();
-            Give(lamb, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Give(lamb, new Effect(EffectKind.WardsNeverExpire, 0));
             Ward(lamb, lamb, 60);
 
             var outcome = StatusEffects.ConsumeWard(lamb, 100);
@@ -331,7 +331,7 @@ namespace PrincesPalace.Domain.Tests
         public void MendingFleece_HealsTheWearer_WhenThePoolIsEmptied()
         {
             var lamb = Fighter();
-            Give(lamb, new TalentEffect(TalentEffectType.WardHealsWhenSpent, 10));
+            Give(lamb, new Effect(EffectKind.WardHealsWhenSpent, 10));
 
             var tank = Fighter("Turtle", maxHealth: 300);
             tank.CurrentHealth = 100;
@@ -350,7 +350,7 @@ namespace PrincesPalace.Domain.Tests
         public void MendingFleece_PaysNothingForAHitThePoolSurvived()
         {
             var lamb = Fighter();
-            Give(lamb, new TalentEffect(TalentEffectType.WardHealsWhenSpent, 10));
+            Give(lamb, new Effect(EffectKind.WardHealsWhenSpent, 10));
 
             var tank = Fighter("Turtle", maxHealth: 300);
             tank.CurrentHealth = 100;
@@ -367,7 +367,7 @@ namespace PrincesPalace.Domain.Tests
         public void AHitThroughTwoWards_HealsOnlyForTheOneWhoseCasterHasTheNode()
         {
             var lamb = Fighter();
-            Give(lamb, new TalentEffect(TalentEffectType.WardHealsWhenSpent, 10));
+            Give(lamb, new Effect(EffectKind.WardHealsWhenSpent, 10));
 
             var tank = Fighter("Turtle", maxHealth: 300);
             tank.CurrentHealth = 100;
@@ -517,7 +517,7 @@ namespace PrincesPalace.Domain.Tests
         public void SummariseWards_SaysSoWhenNothingIsOnAClock()
         {
             var shawn = Fighter();
-            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Give(shawn, new Effect(EffectKind.WardsNeverExpire, 0));
             Ward(shawn, shawn, 30, turns: 1);
 
             var summary = StatusEffects.SummariseWards(shawn);

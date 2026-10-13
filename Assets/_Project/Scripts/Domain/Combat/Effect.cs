@@ -3,7 +3,7 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat
 {
-    // One thing a holder grants: a relic row, an affix, a reward-track term.
+    // One thing a holder grants: a relic row, an affix, a reward-track term, a talent node.
     // Combat reads these through EffectSet, never one at a time.
     //
     // [Serializable] with public fields because ResolvedRelic and
@@ -36,6 +36,10 @@ namespace PrincesPalace.Domain.Combat
         public bool HasAgainst;
         public bool AgainstMagical;
 
+        // The skills.json id a skill-scoped talent kind upgrades (EffectCatalog
+        // SkillScoped), or empty. Read through EffectSet.BestFor.
+        public string SkillId;
+
         public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
 
         public Effect(EffectKind kind, int magnitude, int threshold = 0,
@@ -47,6 +51,13 @@ namespace PrincesPalace.Domain.Combat
             AgainstType = against ?? default;
             HasAgainst = against.HasValue;
             AgainstMagical = againstMagical;
+            SkillId = "";
+        }
+
+        public Effect(EffectKind kind, int magnitude, int threshold, string skillId)
+            : this(kind, magnitude, threshold)
+        {
+            SkillId = skillId ?? "";
         }
     }
 }

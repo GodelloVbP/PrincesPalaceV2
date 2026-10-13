@@ -28,26 +28,26 @@ namespace PrincesPalace.Domain.Combat.Session
         // Only ever turns seams ON, like ArmEngineSeams. The percent seams take
         // the strongest owned figure (Best), so a tier that restates a number
         // never lowers it.
-        private static void ArmSentinelSeams(CombatantState actor, TalentEffectSet talents)
+        private static void ArmSentinelSeams(CombatantState actor, EffectSet talents)
         {
-            if (talents.Has(TalentEffectType.FuryEngineSentinel))
+            if (talents.Has(EffectKind.FuryEngineSentinel))
             {
                 actor.FuryEngine.Kind = FuryEngineKind.Sentinel;
             }
 
             var shield = actor.PlantedShield;
 
-            if (talents.Has(TalentEffectType.PlantedShieldBreakShards)) shield.BreakShards = true;
-            if (talents.Has(TalentEffectType.ShieldBashShortWait)) shield.ShortWaitAfterBash = true;
-            if (talents.Has(TalentEffectType.ShieldwallCoversParty)) shield.CoversParty = true;
-            if (talents.Has(TalentEffectType.SilenceCasterOnSpellHit)) shield.SilenceCasterOnSpellHit = true;
-            if (talents.Has(TalentEffectType.ReflectGrantsFury)) shield.ReflectGrantsFury = true;
-            if (talents.Has(TalentEffectType.SlowsAttacker)) shield.SlowsAttacker = true;
-            if (talents.Has(TalentEffectType.DisarmsOnBreak)) shield.DisarmsOnBreak = true;
+            if (talents.Has(EffectKind.PlantedShieldBreakShards)) shield.BreakShards = true;
+            if (talents.Has(EffectKind.ShieldBashShortWait)) shield.ShortWaitAfterBash = true;
+            if (talents.Has(EffectKind.ShieldwallCoversParty)) shield.CoversParty = true;
+            if (talents.Has(EffectKind.SilenceCasterOnSpellHit)) shield.SilenceCasterOnSpellHit = true;
+            if (talents.Has(EffectKind.ReflectGrantsFury)) shield.ReflectGrantsFury = true;
+            if (talents.Has(EffectKind.SlowsAttacker)) shield.SlowsAttacker = true;
+            if (talents.Has(EffectKind.DisarmsOnBreak)) shield.DisarmsOnBreak = true;
 
-            shield.ThornsPercent = Math.Max(shield.ThornsPercent, talents.Best(TalentEffectType.ThornsPercent));
+            shield.ThornsPercent = Math.Max(shield.ThornsPercent, talents.Magnitude(EffectKind.ThornsPercent));
             shield.ReflectMagicPercent = Math.Max(shield.ReflectMagicPercent,
-                talents.Best(TalentEffectType.ReflectMagicPercent));
+                talents.Magnitude(EffectKind.ReflectMagicPercent));
         }
 
         // ---- Plant the Shield --------------------------------------------------------
@@ -94,7 +94,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (damage <= 0 || actor == null) return;
 
-            int percent = actor.Talents.BestFor(TalentEffectType.SkillSplashPercent, skill.Id);
+            int percent = actor.Effects.BestFor(EffectKind.SkillSplashPercent, skill.Id);
             if (percent <= 0) return;
 
             SplashOntoNeighbours(actor, target, Math.Max(1, damage * percent / 100),
@@ -110,7 +110,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (caster == null || ally == null || !ally.IsAlive) return;
 
-            int count = caster.Talents.BestFor(TalentEffectType.SkillCleansesDebuffs, skill.Id);
+            int count = caster.Effects.BestFor(EffectKind.SkillCleansesDebuffs, skill.Id);
             for (int i = 0; i < count; i++)
             {
                 var debuff = ally.Statuses.FirstOrDefault(s => StatusEffects.IsDebuff(s.Type));
@@ -147,7 +147,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var holder in holders)
             {
-                int gain = holder.Talents.Best(TalentEffectType.PrimaryGainWhenBuffedAllyHit);
+                int gain = holder.Effects.Magnitude(EffectKind.PrimaryGainWhenBuffedAllyHit);
                 if (gain > 0) GrantPrimary(holder, gain);
             }
         }
@@ -159,7 +159,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || provoked <= 0) return;
 
-            int gain = actor.Talents.Best(TalentEffectType.PrimaryGainPerProvokedEnemy) * provoked;
+            int gain = actor.Effects.Magnitude(EffectKind.PrimaryGainPerProvokedEnemy) * provoked;
             if (gain <= 0) return;
 
             GrantPrimary(actor, gain);
@@ -171,7 +171,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // (200 = counted three times in all). 0 for everyone who has not
         // bought it, so an ordinary party draws exactly as it always did.
         private static int PreferenceExtras(CombatantState member) =>
-            member == null ? 0 : member.Talents.Best(TalentEffectType.TargetPreferencePercent) / 100;
+            member == null ? 0 : member.Effects.Magnitude(EffectKind.TargetPreferencePercent) / 100;
 
         private static int PreferenceExtras(IReadOnlyList<CombatantState> members)
         {

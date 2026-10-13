@@ -128,7 +128,7 @@ namespace PrincesPalace.Domain.Combat
         {
             if (actor == null) return 0;
 
-            int percent = actor.Talents.Best(TalentEffectType.IronRetortPercent);
+            int percent = actor.Effects.Magnitude(EffectKind.IronRetortPercent);
             if (percent <= 0) return 0;
 
             int fortified = StatusEffects.MagnitudeOf(actor, StatusEffectType.Fortified);
@@ -172,8 +172,8 @@ namespace PrincesPalace.Domain.Combat
                         + StatusEffects.MagnitudeOf(target, StatusEffectType.Fortified);
 
             // Last Stand T1: armour that only exists once he is hurt.
-            int bonusPercent = target.Talents.BestBelowHealth(
-                TalentEffectType.DefenseBonusPercentBelowHealth, target);
+            int bonusPercent = target.Effects.BestBelowHealth(
+                EffectKind.DefenseBonusPercentBelowHealth, target);
             if (bonusPercent > 0)
             {
                 broad += broad * bonusPercent / 100;
@@ -191,7 +191,7 @@ namespace PrincesPalace.Domain.Combat
                 // percent, so the two cannot disagree about what "ignores"
                 // means; capped so both together never read past all of it.
                 int ignorePercent = Math.Min(100,
-                    attacker.Talents.Best(TalentEffectType.IgnoreDefensePercent) + attacker.CastIgnoreDefensePercent);
+                    attacker.Effects.Magnitude(EffectKind.IgnoreDefensePercent) + attacker.CastIgnoreDefensePercent);
                 if (ignorePercent > 0)
                 {
                     broad -= broad * ignorePercent / 100;
@@ -243,8 +243,8 @@ namespace PrincesPalace.Domain.Combat
                 return damage;
             }
 
-            int bonusPercent = attacker.Talents.BestBelowHealth(
-                TalentEffectType.ExecuteDamageBonusPercent, target);
+            int bonusPercent = attacker.Effects.BestBelowHealth(
+                EffectKind.ExecuteDamageBonusPercent, target);
 
             return bonusPercent <= 0 ? damage : damage + damage * bonusPercent / 100;
         }
@@ -254,7 +254,7 @@ namespace PrincesPalace.Domain.Combat
         //
         // Stands in for the handoff's "cannot be critically hit". Crits exist
         // now (CritRules), but this node still uses its spike cap rather than
-        // a crit immunity -- see TalentEffectType.DamageCapPercentBelowHealth'
+        // a crit immunity -- see EffectKind.DamageCapPercentBelowHealth'
         // own comment for the full reasoning. The intent survives intact: the
         // spike that ends the run is the thing removed, crit or not.
         public static int CapSpikeDamage(int damage, CombatantState target)
@@ -264,8 +264,8 @@ namespace PrincesPalace.Domain.Combat
                 return damage;
             }
 
-            int capPercent = target.Talents.BestBelowHealth(
-                TalentEffectType.DamageCapPercentBelowHealth, target);
+            int capPercent = target.Effects.BestBelowHealth(
+                EffectKind.DamageCapPercentBelowHealth, target);
             if (capPercent <= 0)
             {
                 return damage;
@@ -629,7 +629,7 @@ namespace PrincesPalace.Domain.Combat
             if (toHealth >= target.CurrentHealth
                 && target.CurrentHealth > 0
                 && !target.CheatDeathSpent
-                && target.Talents.Has(TalentEffectType.CheatDeathOncePerFight))
+                && target.Effects.Has(EffectKind.CheatDeathOncePerFight))
             {
                 target.CheatDeathSpent = true;
                 cheatedDeath = true;
@@ -639,7 +639,7 @@ namespace PrincesPalace.Domain.Combat
                 // pool. Here, in the one branch that decides the save, so a
                 // future path into this funnel cannot fire the save and skip
                 // the Fury.
-                if (target.PrimaryPool != null && target.Talents.Has(TalentEffectType.CheatDeathFillsPrimary))
+                if (target.PrimaryPool != null && target.Effects.Has(EffectKind.CheatDeathFillsPrimary))
                 {
                     target.PrimaryPool.Gain(target.PrimaryPool.Max - target.PrimaryPool.Current);
                 }

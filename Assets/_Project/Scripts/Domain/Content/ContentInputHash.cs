@@ -73,7 +73,6 @@ namespace PrincesPalace.Domain.Content
             ("Assets/_Project/Scripts/Domain/Combat/Session/StageApproach.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/SkillEffect.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/StatusEffect.cs", null, false),
-            ("Assets/_Project/Scripts/Domain/Combat/TalentEffect.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/Transformation.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Equipment/EquipmentSlot.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Events/EventEffect.cs", null, false),

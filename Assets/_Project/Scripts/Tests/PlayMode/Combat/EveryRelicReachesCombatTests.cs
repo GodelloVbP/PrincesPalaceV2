@@ -103,7 +103,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var withModifiers = ContentDatabase.Relics
                 .Where(r => r != null && r.Data.Effects != null
-                            && r.Data.Effects.Any(e => EffectCatalog.Of(e.Kind).Stacking != EffectStacking.Flag))
+                            && r.Data.Effects.Any(e => !EffectCatalog.Of(e.Kind).IsMechanic))
                 .ToList();
 
             Assert.IsNotEmpty(withModifiers, "fixture: content should have at least one modifier relic");

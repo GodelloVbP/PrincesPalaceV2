@@ -155,7 +155,7 @@
       ],
       "effects": [
         {
-          "type": "KillSplashPercentOfAttack",
+          "type": "OnKillSplashPercent",
           "magnitude": 50
         }
       ]

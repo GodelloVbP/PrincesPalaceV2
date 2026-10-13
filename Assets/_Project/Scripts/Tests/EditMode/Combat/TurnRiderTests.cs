@@ -41,8 +41,8 @@ namespace PrincesPalace.Domain.Tests
 
         private static void GiveTrample(CombatantState actor, int cap)
         {
-            actor.Talents = new TalentEffectSet(
-                new[] { new TalentEffect(TalentEffectType.ExtraAttackOnKill, cap) });
+            actor.Effects = actor.Effects.With(EffectHolder.Talent, 
+                new[] { new Effect(EffectKind.ExtraAttackOnKill, cap) });
         }
 
         // A tank at the back keeps the fight alive: every rider bails out

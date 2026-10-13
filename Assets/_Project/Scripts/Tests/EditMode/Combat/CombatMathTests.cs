@@ -125,9 +125,9 @@ namespace PrincesPalace.Domain.Tests
         {
             var target = MakeCombatant(physicalDefense: 40, maxHealth: 100);
             target.CurrentHealth = 20; // 20% -- at or below the 25% threshold below
-            target.Talents = new TalentEffectSet(new[]
+            target.Effects = target.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 50, 25),
+                new Effect(EffectKind.DefenseBonusPercentBelowHealth, 50, 25),
             });
 
             // +50% of 40 = 20, so 40 + 20 = 60.
@@ -139,9 +139,9 @@ namespace PrincesPalace.Domain.Tests
         {
             var target = MakeCombatant(physicalDefense: 40, maxHealth: 100);
             target.CurrentHealth = 20;
-            target.Talents = new TalentEffectSet(new[]
+            target.Effects = target.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 50, 25),
+                new Effect(EffectKind.DefenseBonusPercentBelowHealth, 50, 25),
             });
             target.BreakShield = new BreakShield(3);
             target.BreakShield.Deplete(3);
@@ -154,9 +154,9 @@ namespace PrincesPalace.Domain.Tests
         {
             var target = MakeCombatant(physicalDefense: 40);
             var attacker = MakeCombatant();
-            attacker.Talents = new TalentEffectSet(new[]
+            attacker.Effects = attacker.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.IgnoreDefensePercent, 25),
+                new Effect(EffectKind.IgnoreDefensePercent, 25),
             });
 
             // 40 minus 25% = 30.

@@ -619,8 +619,8 @@ namespace PrincesPalace.Domain.Combat
         {
             if (ward == null || ward.Type != StatusEffectType.Shielded) return false;
 
-            var talents = ward.Source?.Talents;
-            return talents != null && talents.Has(TalentEffectType.WardsNeverExpire);
+            var talents = ward.Source?.Effects;
+            return talents != null && talents.Has(EffectKind.WardsNeverExpire);
         }
 
         // Every live ward on this combatant, in the order damage drains them.
@@ -869,9 +869,9 @@ namespace PrincesPalace.Domain.Combat
         // has no say in it. Null source (the relic wards) reads as absent.
         private static int HealForBrokenWard(CombatantState wearer, CombatantState caster, HealSink heal)
         {
-            var talents = caster?.Talents ?? TalentEffectSet.Empty;
+            var talents = caster?.Effects ?? EffectSet.Empty;
 
-            int healPercent = talents.Best(TalentEffectType.WardHealsWhenSpent);
+            int healPercent = talents.Magnitude(EffectKind.WardHealsWhenSpent);
             if (healPercent <= 0 || wearer.MaxHealth <= 0) return 0;
 
             return (heal ?? MeasuredHeal)(wearer, wearer.MaxHealth * healPercent / 100);

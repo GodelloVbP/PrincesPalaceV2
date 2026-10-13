@@ -70,8 +70,8 @@ namespace PrincesPalace.Domain.Tests
         private static PlayerKit Kit(params ResolvedSkill[] skills) =>
             new PlayerKit("hero", CharacterRole.Tank, skills, null, null);
 
-        private static void Talents(CombatantState actor, params TalentEffect[] effects) =>
-            actor.Talents = new TalentEffectSet(effects);
+        private static void Talents(CombatantState actor, params Effect[] effects) =>
+            actor.Effects = actor.Effects.With(EffectHolder.Talent, effects);
 
         private static ResolvedSkill Skill(
             SkillEffect effect,
@@ -234,7 +234,7 @@ namespace PrincesPalace.Domain.Tests
             new Row(SkillEffect.Ward, "the caster carries a ward he cast on himself", () =>
             {
                 var lamb = Hero("Lamb");
-                Talents(lamb, new TalentEffect(TalentEffectType.WardReductionPercent, 50));
+                Talents(lamb, new Effect(EffectKind.WardReductionPercent, 50));
                 var encounter = new CombatEncounter(new[] { lamb }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.Ward, "Fleece Ward", flatAmount: 40)));
 
@@ -252,9 +252,9 @@ namespace PrincesPalace.Domain.Tests
                 // CastSkill would be resolving against the wrong Current.
                 var lamb = Hero("Lamb");
                 Talents(lamb,
-                    new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                    new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
-                    new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100));
+                    new Effect(EffectKind.WardReductionPercent, 50),
+                    new Effect(EffectKind.WardIsFreeAction, 1),
+                    new Effect(EffectKind.ShatterDamagePercentOfAttack, 100));
 
                 var foe = Foe();
                 var encounter = new CombatEncounter(new[] { lamb }, new[] { foe });
@@ -286,7 +286,7 @@ namespace PrincesPalace.Domain.Tests
             new Row(SkillEffect.GiftMana, "the ally's mana rises from a drained start", () =>
             {
                 var lamb = Hero("Lamb");
-                Talents(lamb, new TalentEffect(TalentEffectType.GiftManaPercent, 50));
+                Talents(lamb, new Effect(EffectKind.GiftManaPercent, 50));
                 var ally = Hero("Ally");
                 ally.PrimaryPool.Current = 0;
                 var encounter = new CombatEncounter(new[] { lamb, ally }, new[] { Foe() });
@@ -299,7 +299,7 @@ namespace PrincesPalace.Domain.Tests
             new Row(SkillEffect.GiftFury, "the ally carries Empowered", () =>
             {
                 var lamb = Hero("Lamb");
-                Talents(lamb, new TalentEffect(TalentEffectType.GiftAttackBonusPercent, 30));
+                Talents(lamb, new Effect(EffectKind.GiftAttackBonusPercent, 30));
                 var ally = Hero("Ally");
                 var encounter = new CombatEncounter(new[] { lamb, ally }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.GiftFury, "Gift: Fury")));
@@ -320,7 +320,7 @@ namespace PrincesPalace.Domain.Tests
                 // against a slow field is a board where a one-point lead is
                 // eaten in a tick and the row would pass for both answers.
                 var lamb = Hero("Lamb", speed: 30);
-                Talents(lamb, new TalentEffect(TalentEffectType.GiftAppliesImmediateTurn, 1));
+                Talents(lamb, new Effect(EffectKind.GiftAppliesImmediateTurn, 1));
                 var ally = Hero("Ally", speed: 8);
                 var foe = new CombatantState("Foe", false, 1000, 10, 5, 12);
                 var encounter = new CombatEncounter(new[] { lamb, ally }, new[] { foe });
@@ -717,7 +717,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- diagnostic ----------------------------------------------------
         //
         // DIAGNOSTIC ONLY, and weaker than everything above on purpose. A
-        // EffectKind or TalentEffectType member has no single observable a
+        // EffectKind or EffectKind member has no single observable a
         // table could assert -- a relic's effect shows up in a damage number,
         // a status, a shop roll or a turn order depending on which one it is,
         // and several are conditional on board state a fixture would have to
@@ -741,7 +741,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void DiagnosticEveryTalentEffectTypeIsNamedOutsideItsOwnEnum()
         {
-            AssertEveryMemberIsNamed(typeof(TalentEffectType), "TalentEffect.cs", exempt: null);
+            AssertEveryMemberIsNamed(typeof(EffectKind), "Effect.cs", exempt: null);
         }
 
         private static void AssertEveryMemberIsNamed(Type enumType, string declaringFileName, string exempt)

@@ -25,7 +25,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Constructing with null must behave exactly like Empty rather than
-        // throwing — TalentEffectSet's constructor makes the same promise,
+        // throwing — EffectSet's constructor makes the same promise,
         // and CombatantState.Effects leans on it never needing a
         // null-check at any call site.
         [Test]

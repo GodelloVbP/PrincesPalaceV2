@@ -66,17 +66,17 @@ namespace PrincesPalace.Domain.Combat
         // within each rule, and the three are different rules, so they add.
         private static int SituationalChance(CombatantState attacker, CombatantState target)
         {
-            var talents = attacker.Talents;
+            var talents = attacker.Effects;
             int bonus = attacker.CastCritChanceBonus;
 
             if (target != null)
             {
-                bonus += talents.BestBelowHealth(TalentEffectType.CritChanceBelowTargetHealth, target);
+                bonus += talents.BestBelowHealth(EffectKind.CritChanceBelowTargetHealth, target);
             }
 
             if (attacker.Transformation != null)
             {
-                bonus += talents.Best(TalentEffectType.CritChanceWhileTransformed);
+                bonus += talents.Magnitude(EffectKind.CritChanceWhileTransformed);
             }
 
             return bonus;

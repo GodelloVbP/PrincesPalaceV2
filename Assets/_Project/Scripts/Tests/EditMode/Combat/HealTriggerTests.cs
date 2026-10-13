@@ -68,7 +68,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheMendingFleeceBreakHealDoesNotFireTheCrown()
         {
             var (session, hero, foe) = Fight();
-            hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.WardHealsWhenSpent, 10) });
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[] { new Effect(EffectKind.WardHealsWhenSpent, 10) });
             StatusEffects.ApplyWard(hero.Statuses, points: 5, turns: 2, source: hero);
 
             session.ResolveWardForTest(hero, 20);

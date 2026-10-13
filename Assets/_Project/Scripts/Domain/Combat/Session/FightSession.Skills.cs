@@ -391,7 +391,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // which one answered.
         private static bool IsFreeAction(CombatantState actor, ResolvedSkill skill) =>
             skill.FreeAction
-            || (skill.Effect == SkillEffect.Ward && actor.Talents.Has(TalentEffectType.WardIsFreeAction));
+            || (skill.Effect == SkillEffect.Ward && actor.Effects.Has(EffectKind.WardIsFreeAction));
 
         // WHICH POOL'S SPEND `power` AND percentOfMaxHealthPerPoint SCALE
         // OFF. A skill scales off the pool it actually empties: the signature
@@ -864,11 +864,11 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (!poolTier.Fired) return;
 
-            var talents = actor.Talents;
-            actor.CastCritChanceBonus = talents.BestFor(TalentEffectType.SlamCritChanceAtFury, skill.Id);
+            var talents = actor.Effects;
+            actor.CastCritChanceBonus = talents.BestFor(EffectKind.SlamCritChanceAtFury, skill.Id);
             if (poolTier.Tier.Spend >= 1f)
             {
-                actor.CastIgnoreDefensePercent = talents.BestFor(TalentEffectType.SlamIgnoresDefenseAtFullFury, skill.Id);
+                actor.CastIgnoreDefensePercent = talents.BestFor(EffectKind.SlamIgnoresDefenseAtFullFury, skill.Id);
             }
         }
 
@@ -1545,8 +1545,8 @@ namespace PrincesPalace.Domain.Combat.Session
             foreach (var enemy in _encounter.OpponentsOf(actor).ToList())
             {
                 // An earlier enemy THIS SAME SWEEP already fell to might have
-                // splashed a kill onto this one (ApplyKillSplash/
-                // ApplyModifierKillSplash, now reachable from an AOE hit --
+                // splashed a kill onto this one (ApplyKillSplash,
+                // now reachable from an AOE hit --
                 // see ApplyFinalDamage below). `enemy` was snapshotted alive
                 // when the loop began; re-check rather than swing again at a
                 // corpse.
@@ -2026,7 +2026,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // -- PrepareEnemyIntents re-rolls one for whoever has none when the
             // player's turn next comes round, so what the enemy was winding up
             // is genuinely gone rather than postponed.
-            if (!actor.Talents.Has(TalentEffectType.HeadbuttCancelsIntent)) return;
+            if (!actor.Effects.Has(EffectKind.HeadbuttCancelsIntent)) return;
 
             // Only says so when there WAS something telegraphed. A plain attack
             // is not shown on the nameplate at all, so announcing that one was
@@ -2115,7 +2115,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // A talent that names this skill can hold its status longer (Hold
             // the Line T2); it never shortens the authored figure.
             int turns = System.Math.Max(skill.StatusDuration,
-                caster?.Talents.BestFor(TalentEffectType.SkillStatusTurns, skill.Id) ?? 0);
+                caster?.Effects.BestFor(EffectKind.SkillStatusTurns, skill.Id) ?? 0);
             if (!ApplyStatusTo(recipient, type, skill.StatusMagnitude, turns, caster)) return;
 
             bool isBeneficial = type == StatusEffectType.Regen || type == StatusEffectType.Protect

@@ -19,12 +19,12 @@ namespace PrincesPalace.Domain.Party
     public static class RequiredChoices
     {
         // The three slot-0 talents of Bjorn's columns carry one of these.
-        public static bool IsEngineRoot(TalentEffectType type) =>
-            type == TalentEffectType.FuryEngineSentinel
-            || type == TalentEffectType.FuryEngineEinherjar
-            || type == TalentEffectType.FuryEngineJuggernaut;
+        public static bool IsEngineRoot(EffectKind type) =>
+            type == EffectKind.FuryEngineSentinel
+            || type == EffectKind.FuryEngineEinherjar
+            || type == EffectKind.FuryEngineJuggernaut;
 
-        public static bool HasEngineRoot(IEnumerable<TalentEffectType> unlockedEffects)
+        public static bool HasEngineRoot(IEnumerable<EffectKind> unlockedEffects)
         {
             if (unlockedEffects == null) return false;
 
@@ -39,7 +39,7 @@ namespace PrincesPalace.Domain.Party
         // Missing when the primary pool is engine-fed and no root is taken.
         // A null pool (a character with no resolvable kit) is never blocked:
         // nothing to choose, and the party must still be able to field them.
-        public static bool IsMissingEngineRoot(ResolvedPool primaryPool, IEnumerable<TalentEffectType> unlockedEffects) =>
+        public static bool IsMissingEngineRoot(ResolvedPool primaryPool, IEnumerable<EffectKind> unlockedEffects) =>
             primaryPool != null && primaryPool.EngineFed && !HasEngineRoot(unlockedEffects);
 
         // The first squad member with a choice outstanding, in seat order,

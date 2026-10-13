@@ -45,9 +45,12 @@ MonoBehaviour:
     IconPath: 
     MinSpent: 0
     Effects:
-    - Type: 38
+    - Kind: 99
       Magnitude: 0
       Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
       SkillId: 
     GrantsSkillId: hack
     AppliesToSkillId: 

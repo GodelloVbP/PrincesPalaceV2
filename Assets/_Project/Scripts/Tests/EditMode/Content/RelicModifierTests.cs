@@ -104,7 +104,7 @@ namespace PrincesPalace.Domain.Tests
             // mechanics are flags, read at their own hooks, not here.
             foreach (var info in EffectCatalog.All)
             {
-                if (!info.Allows(EffectHolder.Relic) || info.Stacking == EffectStacking.Flag) continue;
+                if (!info.Allows(EffectHolder.Relic) || info.IsMechanic) continue;
                 if (NotSingleStat.Contains(info.Kind)) continue;
 
                 Assert.AreNotEqual(EffectStat.None, info.Stat,

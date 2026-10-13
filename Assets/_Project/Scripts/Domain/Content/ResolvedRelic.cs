@@ -53,7 +53,7 @@ namespace PrincesPalace.Domain.Content
                 if (Effects == null) return EffectKind.None;
                 foreach (var effect in Effects)
                 {
-                    if (EffectCatalog.Has(effect.Kind) && EffectCatalog.Of(effect.Kind).Stacking == EffectStacking.Flag)
+                    if (EffectCatalog.Has(effect.Kind) && EffectCatalog.Of(effect.Kind).IsMechanic)
                     {
                         return effect.Kind;
                     }

@@ -62,9 +62,9 @@ namespace PrincesPalace.Domain.Tests
             var shawn = Hero("Shawn", speed: 10);
             var bjorn = Hero("Bjorn");
             var odette = Hero("Odette");
-            shawn.Talents = new TalentEffectSet(new[]
+            shawn.Effects = shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.GiftManaPercent, 40),
+                new Effect(EffectKind.GiftManaPercent, 40),
             });
 
             var session = Fight(new[] { shawn, bjorn, odette }, Skill(SkillEffect.GiftMana, "Gift: Mana"));
@@ -82,9 +82,9 @@ namespace PrincesPalace.Domain.Tests
         {
             var shawn = Hero("Shawn", speed: 10);
             var bjorn = Hero("Bjorn");
-            shawn.Talents = new TalentEffectSet(new[]
+            shawn.Effects = shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new Effect(EffectKind.WardReductionPercent, 50),
             });
 
             var session = Fight(new[] { shawn, bjorn }, Skill(SkillEffect.Ward, "Fleece Ward"));
@@ -186,9 +186,9 @@ namespace PrincesPalace.Domain.Tests
             var odette = Hero("Odette");
             bjorn.PrimaryPool.Current = 10;
             odette.PrimaryPool.Current = 55;
-            shawn.Talents = new TalentEffectSet(new[]
+            shawn.Effects = shawn.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.GiftManaPercent, 40),
+                new Effect(EffectKind.GiftManaPercent, 40),
             });
 
             var session = Fight(new[] { shawn, bjorn, odette }, Skill(SkillEffect.GiftMana, "Gift: Mana"));

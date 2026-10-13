@@ -27,12 +27,14 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      SkillId: 
     - Kind: 5
       Magnitude: -5
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      SkillId: 
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

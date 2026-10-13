@@ -401,7 +401,7 @@
       "displayName": "Bellwether's Bell",
       "description": "Each transformation Shawn enters lasts 1 turn longer.",
       "effects": [
-        { "type": "BellwethersBell", "magnitude": 1 }
+        { "type": "TransformDurationBonus", "magnitude": 1 }
       ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/bellwethers_bell.png",

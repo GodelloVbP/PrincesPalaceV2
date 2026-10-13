@@ -113,7 +113,7 @@ namespace PrincesPalace.Domain.Content
         // A DAMAGE SKILL THAT HEALS ITS CASTER for a share of what it deals
         // (Bjorn's Gorge: 30). Paid through the heal funnel, so Cursed Blood
         // converts it like any other heal. A talent may raise it for its own
-        // skill (TalentEffectType.SkillLifestealPercent). 0 is none.
+        // skill (EffectKind.SkillLifestealPercent). 0 is none.
         [ContentDoc("Percent of the damage this skill deals that is healed back to its caster; 0 means none. Only a DamageSingle skill reads it.")]
         public int lifestealPercent;
 

@@ -839,7 +839,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 // read better as "he went down, and so did the one next to him"
                 // than the reverse.
                 ApplyKillSplash(actor, target);
-                ApplyModifierKillSplash(actor, target);
                 ExtendTransformOnKill(actor);
             }
         }

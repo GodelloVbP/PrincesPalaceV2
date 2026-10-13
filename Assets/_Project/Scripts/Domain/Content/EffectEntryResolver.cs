@@ -105,6 +105,7 @@ namespace PrincesPalace.Domain.Content
             {
                 case EffectHolder.Affix: return "modifier";
                 case EffectHolder.Track: return "reward track";
+                case EffectHolder.Talent: return "talent";
                 default: return "relic";
             }
         }

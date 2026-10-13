@@ -103,7 +103,7 @@ namespace PrincesPalace.Domain.Tests
             return errors == null || errors.Count == 0 ? null : string.Join("; ", errors);
         }
 
-        private static RawTalentEntry Node(string skillId, params RawTalentEffect[] effects) => new RawTalentEntry
+        private static RawTalentEntry Node(string skillId, params RawEffect[] effects) => new RawTalentEntry
         {
             id = "t", displayName = "T", characterId = "bear", effects = effects, appliesToSkillId = skillId ?? "",
         };
@@ -113,12 +113,12 @@ namespace PrincesPalace.Domain.Tests
         {
             foreach (string type in new[] { "SkillCooldownTurns", "SkillLifestealPercent" })
             {
-                var effect = new RawTalentEffect { type = type, magnitude = 4 };
+                var effect = new RawEffect { type = type, magnitude = 4 };
                 StringAssert.Contains("appliesToSkillId", TalentError(Node(null, effect)), type);
                 Assert.IsNull(TalentError(Node("second_wind", effect)), type);
             }
 
-            var gate = new RawTalentEffect { type = "SkillDamageBonusBelowOwnHealth", magnitude = 25, threshold = 50 };
+            var gate = new RawEffect { type = "SkillDamageBonusBelowOwnHealth", magnitude = 25, threshold = 50 };
             Assert.IsTrue(TalentEntryResolver.TryResolveAll(new List<RawTalentEntry> { Node("gorge", gate) },
                 out var resolved, out _));
             Assert.AreEqual("gorge", resolved[0].Effects[0].SkillId);
@@ -129,8 +129,8 @@ namespace PrincesPalace.Domain.Tests
         {
             foreach (string type in new[] { "FuryEngineJuggernaut", "HealReducesDelayedDamage", "CheatDeathFillsPrimary" })
             {
-                Assert.IsNull(TalentError(Node(null, new RawTalentEffect { type = type })), type);
-                StringAssert.Contains("flag", TalentError(Node(null, new RawTalentEffect { type = type, magnitude = 1 })), type);
+                Assert.IsNull(TalentError(Node(null, new RawEffect { type = type })), type);
+                StringAssert.Contains("flag", TalentError(Node(null, new RawEffect { type = type, magnitude = 1 })), type);
             }
         }
 
@@ -138,11 +138,11 @@ namespace PrincesPalace.Domain.Tests
         public void TheThresholdRules_NeedTheirThreshold()
         {
             StringAssert.Contains("threshold",
-                TalentError(Node(null, new RawTalentEffect { type = "HealthCurveRegen", magnitude = 6 })));
+                TalentError(Node(null, new RawEffect { type = "HealthCurveRegen", magnitude = 6 })));
             StringAssert.Contains("threshold",
-                TalentError(Node(null, new RawTalentEffect { type = "DelayedDamagePercent", magnitude = 20 })));
-            Assert.IsNull(TalentError(Node(null, new RawTalentEffect { type = "HealthCurveRegen", magnitude = 6, threshold = 2 })));
-            Assert.IsNull(TalentError(Node(null, new RawTalentEffect { type = "DelayedDamagePercent", magnitude = 20, threshold = 3 })));
+                TalentError(Node(null, new RawEffect { type = "DelayedDamagePercent", magnitude = 20 })));
+            Assert.IsNull(TalentError(Node(null, new RawEffect { type = "HealthCurveRegen", magnitude = 6, threshold = 2 })));
+            Assert.IsNull(TalentError(Node(null, new RawEffect { type = "DelayedDamagePercent", magnitude = 20, threshold = 3 })));
         }
 
         [Test]
@@ -151,9 +151,9 @@ namespace PrincesPalace.Domain.Tests
             foreach (string type in new[] { "MaxHealthPercent", "DamagePerMissingHealth", "UnyieldingTier",
                          "ShortfallPaidInHealthPermille", "BloodPaidDamagePercent" })
             {
-                Assert.IsNull(TalentError(Node(null, new RawTalentEffect { type = type, magnitude = 5 })), type);
+                Assert.IsNull(TalentError(Node(null, new RawEffect { type = type, magnitude = 5 })), type);
                 StringAssert.Contains("threshold",
-                    TalentError(Node(null, new RawTalentEffect { type = type, magnitude = 5, threshold = 3 })), type);
+                    TalentError(Node(null, new RawEffect { type = type, magnitude = 5, threshold = 3 })), type);
             }
         }
     }

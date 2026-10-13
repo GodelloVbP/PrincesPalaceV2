@@ -158,7 +158,7 @@ namespace PrincesPalace.Domain.Content
 
             string appliesToSkillId = (raw.appliesToSkillId ?? "").Trim();
             bool hasScoped = false;
-            foreach (var effect in effects) hasScoped |= TalentEffect.IsSkillScoped(effect.Type);
+            foreach (var effect in effects) hasScoped |= EffectCatalog.Of(effect.Kind).SkillScoped;
             if (hasScoped && appliesToSkillId.Length == 0)
             {
                 error = $"{label}: a skill-scoped effect needs appliesToSkillId naming the skill it upgrades.";
@@ -173,9 +173,9 @@ namespace PrincesPalace.Domain.Content
 
             for (int i = 0; i < effects.Count; i++)
             {
-                if (TalentEffect.IsSkillScoped(effects[i].Type))
+                if (EffectCatalog.Of(effects[i].Kind).SkillScoped)
                 {
-                    effects[i] = new TalentEffect(effects[i].Type, effects[i].Magnitude,
+                    effects[i] = new Effect(effects[i].Kind, effects[i].Magnitude,
                         effects[i].Threshold, appliesToSkillId);
                 }
             }
@@ -215,75 +215,13 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        // Which TalentEffectType members read `threshold` at all. Everything
-        // else must leave it at 0, so an author who puts a threshold on a
-        // rule that cannot use one is told rather than left with a number
-        // that quietly does nothing.
-        //
-        // Two of these read it as something other than percent-of-max-health,
-        // and both say so in their own comments: TransformExtendOnKill (a cap
-        // in turns) and WardAlsoAppliesRegen (a duration in turns). Those are
-        // the only two exceptions, and they are the reason The Flock's spread
-        // was split into a rule plus a flag rather than becoming a third —
-        // see WardSpreadsToWholeParty. The 1-100 range check below is loose
-        // enough to hold for all three readings, which is the one thing
-        // keeping this from needing a per-member unit.
-        private static readonly HashSet<TalentEffectType> UsesThreshold = new HashSet<TalentEffectType>
-        {
-            TalentEffectType.WoolPerTurnBelowHealth,
-            TalentEffectType.ExecuteDamageBonusPercent,
-            TalentEffectType.TransformExtendOnKill,
-            TalentEffectType.TransformHoldsBelowHealth,
-            TalentEffectType.DefenseBonusPercentBelowHealth,
-            TalentEffectType.DamageCapPercentBelowHealth,
-            TalentEffectType.TransformPermanentBelowHealth,
-            TalentEffectType.WardAlsoAppliesRegen,
-            TalentEffectType.CritChanceBelowTargetHealth,
-            // HealthCurveRegen reads it as the regen's floor percent and
-            // DelayedDamagePercent as a count of turns; SkillDamageBonusBelow
-            // OwnHealth is the ordinary percent-of-max-health gate.
-            TalentEffectType.HealthCurveRegen,
-            TalentEffectType.DelayedDamagePercent,
-            TalentEffectType.SkillDamageBonusBelowOwnHealth,
-        };
-
-        // The four rules that are a FLAG: present or absent, with no number
-        // attached. Authoring a magnitude on one of these is the same class
-        // of mistake as authoring a threshold on a rule with no health gate.
-        private static readonly HashSet<TalentEffectType> IgnoresMagnitude = new HashSet<TalentEffectType>
-        {
-            TalentEffectType.ProvokeHitsEveryEnemy,
-            TalentEffectType.CheatDeathOncePerFight,
-            TalentEffectType.HeadbuttCancelsIntent,
-            TalentEffectType.TransformPushesEveryEnemy,
-            TalentEffectType.TransformHoldsBelowHealth,
-            TalentEffectType.TransformPermanentBelowHealth,
-            TalentEffectType.WardIsFreeAction,
-            TalentEffectType.WardSpreadsToWholeParty,
-            TalentEffectType.GiftAppliesImmediateTurn,
-            TalentEffectType.ShatterAppliesVulnerable,
-            TalentEffectType.WardsNeverExpire,
-            TalentEffectType.FuryEngineEinherjar,
-            TalentEffectType.FirstIdleTurnFree,
-            TalentEffectType.KillFillsMomentum,
-            TalentEffectType.TwinRampage,
-            TalentEffectType.FuryEngineJuggernaut,
-            TalentEffectType.HealReducesDelayedDamage,
-            TalentEffectType.CheatDeathFillsPrimary,
-            TalentEffectType.FuryEngineSentinel,
-            TalentEffectType.PlantedShieldBreakShards,
-            TalentEffectType.ShieldBashShortWait,
-            TalentEffectType.ShieldwallCoversParty,
-            TalentEffectType.SilenceCasterOnSpellHit,
-            TalentEffectType.ReflectGrantsFury,
-            TalentEffectType.SlowsAttacker,
-            TalentEffectType.DisarmsOnBreak,
-        };
-
+        // Each authored rule is checked against its kind's EffectCatalog row
+        // (which kinds a talent may hold, which read a threshold or a
+        // magnitude), by the same resolver relics and affixes go through.
         private static bool TryResolveEffects(RawTalentEntry raw, string label,
-            out List<TalentEffect> effects, out string error)
+            out List<Effect> effects, out string error)
         {
-            effects = new List<TalentEffect>();
+            effects = new List<Effect>();
             error = null;
 
             if (raw.effects == null || raw.effects.Length == 0)
@@ -293,60 +231,23 @@ namespace PrincesPalace.Domain.Content
 
             for (int i = 0; i < raw.effects.Length; i++)
             {
-                var authored = raw.effects[i];
-                string where = $"{label}: effect #{i + 1}";
-
-                if (authored == null || string.IsNullOrWhiteSpace(authored.type))
+                if (!EffectEntryResolver.TryResolve(raw.effects[i], EffectHolder.Talent,
+                        $"{label}: effect #{i + 1}", out var effect, out error))
                 {
-                    error = $"{where} has no type.";
                     return false;
                 }
 
-                if (!Enum.TryParse<TalentEffectType>(authored.type.Trim(), ignoreCase: true, out var type)
-                    || type == TalentEffectType.None)
-                {
-                    error = $"{where}: '{authored.type}' isn't a talent effect. Valid options: " +
-                            $"{string.Join(", ", Enum.GetNames(typeof(TalentEffectType)).Where(n => n != nameof(TalentEffectType.None)))}.";
-                    return false;
-                }
-
-                bool wantsThreshold = UsesThreshold.Contains(type);
-                if (!wantsThreshold && authored.threshold != 0)
-                {
-                    error = $"{where} ({type}) has no health gate, so threshold {authored.threshold} would do nothing. Remove it.";
-                    return false;
-                }
-
-                if (wantsThreshold && (authored.threshold <= 0 || authored.threshold > 100))
-                {
-                    error = $"{where} ({type}) needs a threshold between 1 and 100 (percent of max health); got {authored.threshold}.";
-                    return false;
-                }
-
-                bool wantsMagnitude = !IgnoresMagnitude.Contains(type);
-                if (wantsMagnitude && authored.magnitude <= 0)
-                {
-                    error = $"{where} ({type}) needs a positive magnitude; got {authored.magnitude}.";
-                    return false;
-                }
-
-                if (!wantsMagnitude && authored.magnitude != 0)
-                {
-                    error = $"{where} ({type}) is a flag — it reads no magnitude, so {authored.magnitude} would do nothing. Remove it.";
-                    return false;
-                }
-
-                effects.Add(new TalentEffect(type, authored.magnitude, authored.threshold));
+                effects.Add(effect);
             }
 
-            // Two entries of the same type on ONE node are always a mistake:
-            // TalentEffectSet takes the strongest of a type, so the weaker
-            // one is dead weight — except for the health-gated rules, where
-            // two tiers on one node is the whole point (the Black Ram's root
-            // carries both its 67% and its 33% wool tiers).
-            foreach (var clash in effects.GroupBy(e => e.Type).Where(g => g.Count() > 1))
+            // Two entries of the same kind on ONE node are always a mistake:
+            // a talent's kind takes the strongest copy, so the weaker one is
+            // dead weight -- except for the health-gated rules, where two tiers
+            // on one node is the whole point (the Black Ram's root carries both
+            // its 67% and its 33% wool tiers).
+            foreach (var clash in effects.GroupBy(e => e.Kind).Where(g => g.Count() > 1))
             {
-                if (UsesThreshold.Contains(clash.Key))
+                if (EffectCatalog.Of(clash.Key).UsesThreshold)
                 {
                     continue;
                 }

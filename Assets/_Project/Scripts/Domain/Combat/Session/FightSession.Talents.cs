@@ -36,7 +36,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // The Black Ram: the lower he falls, the faster the fleece comes
             // in. BestBelowHealth picks the single strongest SATISFIED tier
             // rather than summing the tiers he has passed.
-            int wounded = actor.Talents.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth, actor);
+            int wounded = actor.Effects.BestBelowHealth(EffectKind.WoolPerTurnBelowHealth, actor);
             if (wounded > perTurn)
             {
                 perTurn = wounded;
@@ -45,7 +45,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Provoke T3: paid for being the one everything is aimed at. Adds
             // on top, because this is income he ARRANGED rather than income his
             // health handed him -- two different engines inside one path.
-            int perProvoked = actor.Talents.Best(TalentEffectType.WoolPerProvokedEnemy);
+            int perProvoked = actor.Effects.Magnitude(EffectKind.WoolPerProvokedEnemy);
             if (perProvoked > 0)
             {
                 perTurn += perProvoked * StatusEffects.CountAfflictedBy(
@@ -55,7 +55,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // The mage path's engine: paid for board state. Same additive
             // reasoning, and mutually exclusive with the Ram's tiers in
             // practice anyway -- you may only ever hold one root.
-            int perStatused = actor.Talents.Best(TalentEffectType.WoolPerStatusedEnemy);
+            int perStatused = actor.Effects.Magnitude(EffectKind.WoolPerStatusedEnemy);
             if (perStatused > 0)
             {
                 perTurn += perStatused * StatusEffects.CountAfflictedBy(_encounter.Enemies, actor);
@@ -225,7 +225,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // it breaking -- which is what lets the capstone's
                 // never-expiring wards keep earning instead of silently ending
                 // his income the moment he finishes his tree.
-                int reward = caster.Talents.Best(TalentEffectType.WoolWhenWardedAllyHit);
+                int reward = caster.Effects.Magnitude(EffectKind.WoolWhenWardedAllyHit);
                 if (reward > 0 && caster.IsAlive && _wardPayoutsThisTurn.Add((caster, target)))
                 {
                     GrantSignature(caster, reward);
@@ -253,7 +253,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (hit.Broke && ReferenceEquals(caster, target)
                     && !StatusEffects.IsWardedBy(target, caster))
                 {
-                    int grace = caster.Talents.Best(TalentEffectType.WardSelfBonusPersistsTurns);
+                    int grace = caster.Effects.Magnitude(EffectKind.WardSelfBonusPersistsTurns);
                     if (grace > 0)
                     {
                         target.SelfWardGraceTurns = grace;
@@ -313,9 +313,9 @@ namespace PrincesPalace.Domain.Combat.Session
             bonus += WrathBonusPercent(actor);
 
             // Blood Price T2: a health-paid cast hits harder.
-            if (bloodPaid) bonus += actor.Talents.Best(TalentEffectType.BloodPaidDamagePercent);
+            if (bloodPaid) bonus += actor.Effects.Magnitude(EffectKind.BloodPaidDamagePercent);
 
-            int perAlly = actor.Talents.Best(TalentEffectType.WardDamageBonusPerAlly);
+            int perAlly = actor.Effects.Magnitude(EffectKind.WardDamageBonusPerAlly);
             if (perAlly > 0)
             {
                 foreach (var ally in _encounter.PlayerParty)
@@ -327,7 +327,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 }
             }
 
-            int self = actor.Talents.Best(TalentEffectType.WardDamageBonusSelf);
+            int self = actor.Effects.Magnitude(EffectKind.WardDamageBonusSelf);
             if (self > 0 && (WardedByThisActor(actor, actor) || actor.SelfWardGraceTurns > 0))
             {
                 bonus += self;
@@ -389,7 +389,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // other decides how far it reaches. Unchanged in form by the
             // shield model: half of 50 points is as sensible as half of 50
             // percent was.
-            int spread = caster.Talents.Best(TalentEffectType.WardSpreadsToAllies);
+            int spread = caster.Effects.Magnitude(EffectKind.WardSpreadsToAllies);
             if (spread <= 0) return landed;
 
             // FlockSpread never yields the wearer, so the share can never
@@ -427,7 +427,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // field, whoever the full ward went to.
         private IEnumerable<CombatantState> FlockSpread(CombatantState caster, CombatantState wearer)
         {
-            if (caster.Talents.Has(TalentEffectType.WardSpreadsToWholeParty))
+            if (caster.Effects.Has(EffectKind.WardSpreadsToWholeParty))
             {
                 return _encounter.PlayerParty.Where(a => a.IsAlive && !ReferenceEquals(a, wearer));
             }
@@ -452,10 +452,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // Mending Fleece. Rides along with the ward rather than being its own
             // cast, so the sustain strand costs no extra action and no extra
             // wool -- it makes the thing he was already doing worth more.
-            int regenPercent = caster.Talents.Best(TalentEffectType.WardAlsoAppliesRegen);
+            int regenPercent = caster.Effects.Magnitude(EffectKind.WardAlsoAppliesRegen);
             if (regenPercent <= 0 || wearer.MaxHealth <= 0) return;
 
-            int regenTurns = caster.Talents.Threshold(TalentEffectType.WardAlsoAppliesRegen);
+            int regenTurns = caster.Effects.Threshold(EffectKind.WardAlsoAppliesRegen);
             ApplyStatusTo(wearer, StatusEffectType.Regen,
                 System.Math.Max(1, wearer.MaxHealth * regenPercent / 100),
                 System.Math.Max(1, regenTurns), caster);
@@ -704,9 +704,9 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ResolveShatter(CombatantState caster)
         {
             var wearers = WardsCastBy(caster);
-            int percent = caster.Talents.Best(TalentEffectType.ShatterDamagePercentOfAttack);
-            int selfMultiplier = caster.Talents.Best(TalentEffectType.ShatterSelfWardMultiplier);
-            bool appliesVulnerable = caster.Talents.Has(TalentEffectType.ShatterAppliesVulnerable);
+            int percent = caster.Effects.Magnitude(EffectKind.ShatterDamagePercentOfAttack);
+            int selfMultiplier = caster.Effects.Magnitude(EffectKind.ShatterSelfWardMultiplier);
+            bool appliesVulnerable = caster.Effects.Has(EffectKind.ShatterAppliesVulnerable);
 
             // COUNTED IN WEARERS, the same unit as the blasts below. Wards
             // stack, so one wearer can carry several of his (a Ward cast on
@@ -799,7 +799,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 case SkillEffect.GiftMana:
                 {
-                    int percent = caster.Talents.Best(TalentEffectType.GiftManaPercent);
+                    int percent = caster.Effects.Magnitude(EffectKind.GiftManaPercent);
                     int amount = System.Math.Max(1, ally.MaxMana * percent / 100);
 
                     // THE RETURN, NOT THE REQUEST. CombatMath.RestoreMana is
@@ -824,7 +824,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.GiftFury:
                 {
-                    int percent = caster.Talents.Best(TalentEffectType.GiftAttackBonusPercent);
+                    int percent = caster.Effects.Magnitude(EffectKind.GiftAttackBonusPercent);
 
                     // Generous duration, spent by the swing rather than by the
                     // clock -- see StatusEffectType.Empowered. It read the
@@ -840,7 +840,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.GiftHaste:
                 {
-                    if (!caster.Talents.Has(TalentEffectType.GiftAppliesImmediateTurn)
+                    if (!caster.Effects.Has(EffectKind.GiftAppliesImmediateTurn)
                         || !_encounter.PullToFront(ally))
                     {
                         return;
@@ -888,7 +888,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // authored.
         private void ApplyDefenseShred(CombatantState actor, CombatantState target, bool physicalMove)
         {
-            int shred = actor?.Talents.Best(TalentEffectType.ShredDefenseOnHit) ?? 0;
+            int shred = actor?.Effects.Magnitude(EffectKind.ShredDefenseOnHit) ?? 0;
             if (!physicalMove || shred <= 0 || target == null || !target.IsAlive) return;
             if (target.PhysicalDefense <= 0) return;
 
@@ -902,29 +902,15 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        // Trample T2: a kill spills onto whoever was standing next to it.
+        // A kill spills onto whoever was standing next to it: Trample T2 and
+        // Explosive are two holders of OnKillSplashPercent and add into one splash.
         private void ApplyKillSplash(CombatantState actor, CombatantState victim)
-        {
-            int percent = actor?.Talents.Best(TalentEffectType.KillSplashPercentOfAttack) ?? 0;
-            if (percent <= 0) return;
-
-            SplashOntoNeighbours(actor, victim, CombatMath.Scale(actor.Attack * percent / 100),
-                $"{victim.Name} goes down hard");
-        }
-
-        // Explosive's on-kill splash -- the identical mechanism as
-        // ApplyKillSplash just above, read from Effects instead of
-        // Talents. A SEPARATE method rather than folding into ApplyKillSplash
-        // -- see EffectKind.OnKillSplashPercent's own comment for why
-        // two independently-magnituded sources stay two calls rather than one
-        // that silently sums them.
-        private void ApplyModifierKillSplash(CombatantState actor, CombatantState victim)
         {
             int percent = actor?.Effects.Magnitude(EffectKind.OnKillSplashPercent) ?? 0;
             if (percent <= 0) return;
 
             SplashOntoNeighbours(actor, victim, CombatMath.Scale(actor.Attack * percent / 100),
-                $"{victim.Name} goes down in a blast");
+                $"{victim.Name} goes down hard");
         }
 
         // Black Ram Mode's own splash: while the transform is running, every
@@ -1053,8 +1039,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // THE ONE LINE THAT SIZES A TRANSFORM. Wrath's talent and the
             // Bellwether's Bell both add here, so each covers any Transform
             // skill, and they add to each other (plan 2.12).
-            int turns = grant.turns + actor.Talents.Best(TalentEffectType.TransformDurationBonus)
-                        + actor.Effects.Magnitude(EffectKind.BellwethersBell);
+            int turns = grant.turns + actor.Effects.Magnitude(EffectKind.TransformDurationBonus);
             var transformation = Transformation.Enter(actor, grant.displayName, turns,
                 grant.attackPercent, grant.speedPercent, grant.temporaryHealthPercent, grant.splashPercent,
                 grant.spritePath, grant.hit, grant.defenseToAttackPercent, grant.primaryDrainPerTurn,
@@ -1083,7 +1068,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // Charge T3. Fires on ENTERING, which is why the rule is worded
             // "entering" rather than "casting".
-            if (actor.Talents.Has(TalentEffectType.TransformPushesEveryEnemy))
+            if (actor.Effects.Has(EffectKind.TransformPushesEveryEnemy))
             {
                 foreach (var enemy in _encounter.LivingEnemies.ToList())
                 {
@@ -1150,7 +1135,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // on the very turn the transform would have run out keeps it rather
             // than losing it by one tick.
             if (!transformation.IsPermanent
-                && actor.Talents.IsBelowThreshold(TalentEffectType.TransformPermanentBelowHealth, actor))
+                && actor.Effects.IsBelowThreshold(EffectKind.TransformPermanentBelowHealth, actor))
             {
                 transformation.IsPermanent = true;
                 AppendMessage($"{actor.Name} stops changing back. This is what he is now.");
@@ -1159,7 +1144,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (transformation.IsPermanent) return;
 
             // Wrath T3: wounded enough, and the timer simply does not run.
-            if (actor.Talents.IsBelowThreshold(TalentEffectType.TransformHoldsBelowHealth, actor)) return;
+            if (actor.Effects.IsBelowThreshold(EffectKind.TransformHoldsBelowHealth, actor)) return;
 
             transformation.TurnsRemaining--;
             if (transformation.TurnsRemaining > 0) return;
@@ -1247,8 +1232,8 @@ namespace PrincesPalace.Domain.Combat.Session
             var transformation = actor?.Transformation;
             if (transformation == null || transformation.IsPermanent) return;
 
-            int perKill = actor.Talents.Best(TalentEffectType.TransformExtendOnKill);
-            int cap = actor.Talents.Threshold(TalentEffectType.TransformExtendOnKill);
+            int perKill = actor.Effects.Magnitude(EffectKind.TransformExtendOnKill);
+            int cap = actor.Effects.Threshold(EffectKind.TransformExtendOnKill);
             if (perKill <= 0 || transformation.ExtensionsGranted >= cap) return;
 
             int granted = System.Math.Min(perKill, cap - transformation.ExtensionsGranted);
@@ -1266,12 +1251,12 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null) return 0;
 
-            bool everyone = actor.Talents.Has(TalentEffectType.ProvokeHitsEveryEnemy);
+            bool everyone = actor.Effects.Has(EffectKind.ProvokeHitsEveryEnemy);
             var victims = everyone
                 ? _encounter.LivingEnemies.ToList()
                 : new List<CombatantState> { target ?? _encounter.FrontEnemy };
 
-            int reduction = actor.Talents.Best(TalentEffectType.ProvokedDamageReductionPercent);
+            int reduction = actor.Effects.Magnitude(EffectKind.ProvokedDamageReductionPercent);
             int count = 0;
 
             foreach (var victim in victims)

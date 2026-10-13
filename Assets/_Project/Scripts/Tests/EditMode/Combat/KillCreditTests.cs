@@ -51,9 +51,9 @@ namespace PrincesPalace.Domain.Tests
         // round (Inconspicuous Key's blow lands on top of the kill that
         // summoned it), and a cap that runs out mid-test would look exactly
         // like a lost flag.
-        private static void GiveTrample(CombatantState actor, params TalentEffect[] extra) =>
-            actor.Talents = new TalentEffectSet(
-                new[] { new TalentEffect(TalentEffectType.ExtraAttackOnKill, 3) }.Concat(extra).ToArray());
+        private static void GiveTrample(CombatantState actor, params Effect[] extra) =>
+            actor.Effects = actor.Effects.With(EffectHolder.Talent, 
+                new[] { new Effect(EffectKind.ExtraAttackOnKill, 3) }.Concat(extra).ToArray());
 
         private static PlayerKit Kit(IReadOnlyList<ResolvedSkill> skills = null, params EffectKind[] relics) =>
             new PlayerKit("hero", CharacterRole.Tank, skills,
@@ -233,15 +233,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Trampled(Drain(session)));
         }
 
-        // ---- site 5: Shatter's chain (was .Talents.cs:332) -------------------
+        // ---- site 5: Shatter's chain (was .Effects.cs:332) -------------------
 
         [Test]
         public void ShattersChainKillingSomeoneRaisesTheFlagAndScoresTheKill()
         {
             var hero = Hero(attack: 40);
             GiveTrample(hero,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
-                new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100));
+                new Effect(EffectKind.WardReductionPercent, 50),
+                new Effect(EffectKind.ShatterDamagePercentOfAttack, 100));
 
             // EVERY foe at 1 HP, so Shatter's own RandomLivingEnemy draw cannot
             // decide whether this test passes: whichever body it picks dies,

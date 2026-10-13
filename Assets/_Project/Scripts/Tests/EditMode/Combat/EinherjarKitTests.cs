@@ -23,16 +23,16 @@ namespace PrincesPalace.Domain.Tests
     // Einherjar engine is floor(hit x 10 / 20), clamped 5-30.
     public class EinherjarKitTests
     {
-        private static TalentEffectSet Talents(params TalentEffect[] effects) => new TalentEffectSet(effects);
+        private static EffectSet Talents(params Effect[] effects) => EffectSet.OfTalents(effects);
 
         // The id every fixture Slam carries; a skill-scoped rule is stamped
         // with it the way the resolver stamps a node's appliesToSkillId.
         private const string SlamId = "slam";
 
-        private static TalentEffect T(TalentEffectType type, int magnitude = 0, int threshold = 0) =>
-            new TalentEffect(type, magnitude, threshold, TalentEffect.IsSkillScoped(type) ? SlamId : "");
+        private static Effect T(EffectKind type, int magnitude = 0, int threshold = 0) =>
+            new Effect(type, magnitude, threshold, EffectCatalog.Of(type).SkillScoped ? SlamId : "");
 
-        private static CombatantState Bjorn(TalentEffectSet talents, int critChance = 0, int fury = 0)
+        private static CombatantState Bjorn(EffectSet talents, int critChance = 0, int fury = 0)
         {
             var pool = new ResourcePool("fury", "Fury", 100, 0, 0, 0);
             pool.Gain(fury);
@@ -41,7 +41,7 @@ namespace PrincesPalace.Domain.Tests
                 CritChancePercent = critChance,
                 PhysicalDefense = 40,
                 MagicalDefense = 12,
-                Talents = talents,
+                Effects = talents,
             };
         }
 
@@ -83,7 +83,7 @@ namespace PrincesPalace.Domain.Tests
         private static List<string> Messages(FightSession session) =>
             session.DrainBeats().SelectMany(b => b.Messages).Concat(session.DrainImmediateMessages()).ToList();
 
-        private static readonly TalentEffect Engine = new TalentEffect(TalentEffectType.FuryEngineEinherjar, 0);
+        private static readonly Effect Engine = new Effect(EffectKind.FuryEngineEinherjar, 0);
 
         // ---- the fight-start pass ------------------------------------------------------
 
@@ -100,7 +100,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NoTalents_LeavesEverySeamOff()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
 
             Fight(bjorn, null, Foe());
 
@@ -113,9 +113,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void MomentumTiers_SwitchOnTheirThreeHalves()
         {
-            var t1 = Bjorn(Talents(T(TalentEffectType.MomentumTier, 1)));
-            var t2 = Bjorn(Talents(T(TalentEffectType.MomentumTier, 1), T(TalentEffectType.MomentumTier, 2)));
-            var t3 = Bjorn(Talents(T(TalentEffectType.MomentumTier, 3)));
+            var t1 = Bjorn(Talents(T(EffectKind.MomentumTier, 1)));
+            var t2 = Bjorn(Talents(T(EffectKind.MomentumTier, 1), T(EffectKind.MomentumTier, 2)));
+            var t3 = Bjorn(Talents(T(EffectKind.MomentumTier, 3)));
             Fight(t1, null, Foe());
             Fight(t2, null, Foe());
             Fight(t3, null, Foe());
@@ -135,9 +135,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BattleTranceTiers_SetPercentDoublingAndProtect()
         {
-            var t1 = Bjorn(Talents(T(TalentEffectType.BattleTranceTier, 1)));
-            var t2 = Bjorn(Talents(T(TalentEffectType.BattleTranceTier, 2)));
-            var t3 = Bjorn(Talents(T(TalentEffectType.BattleTranceTier, 3)));
+            var t1 = Bjorn(Talents(T(EffectKind.BattleTranceTier, 1)));
+            var t2 = Bjorn(Talents(T(EffectKind.BattleTranceTier, 2)));
+            var t3 = Bjorn(Talents(T(EffectKind.BattleTranceTier, 3)));
             Fight(t1, null, Foe());
             Fight(t2, null, Foe());
             Fight(t3, null, Foe());
@@ -156,7 +156,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheCapstone_ArmsTwinRampage()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.TwinRampage)));
+            var bjorn = Bjorn(Talents(T(EffectKind.TwinRampage)));
 
             Fight(bjorn, null, Foe());
 
@@ -224,8 +224,8 @@ namespace PrincesPalace.Domain.Tests
         {
             // 85 base + 15 from the tier = 100: a certain crit.
             var bjorn = Bjorn(Talents(Engine,
-                T(TalentEffectType.SlamCritChanceAtFury, 15),
-                T(TalentEffectType.SlamCritRestoresFury, 10)), critChance: 85, fury: 50);
+                T(EffectKind.SlamCritChanceAtFury, 15),
+                T(EffectKind.SlamCritRestoresFury, 10)), critChance: 85, fury: 50);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike("slam", 10, tiers: SlamTiers) }, foe);
 
@@ -239,7 +239,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Slam_BelowTheFirstTier_GetsNoTierCritChance()
         {
-            var bjorn = Bjorn(Talents(Engine, T(TalentEffectType.SlamCritChanceAtFury, 15)), critChance: 85, fury: 40);
+            var bjorn = Bjorn(Talents(Engine, T(EffectKind.SlamCritChanceAtFury, 15)), critChance: 85, fury: 40);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike("slam", 10, tiers: SlamTiers) }, foe);
 
@@ -254,7 +254,7 @@ namespace PrincesPalace.Domain.Tests
         {
             // Foe defense 100: a hit lands x 100 / 200. Ignoring 50% reads
             // defense 50: x 100 / 150.
-            var talents = Talents(Engine, T(TalentEffectType.SlamIgnoresDefenseAtFullFury, 50));
+            var talents = Talents(Engine, T(EffectKind.SlamIgnoresDefenseAtFullFury, 50));
 
             var full = Bjorn(talents, fury: 100);
             var fullFoe = Foe(physicalDefense: 100);
@@ -273,9 +273,9 @@ namespace PrincesPalace.Domain.Tests
             // Same shape as the Slam (DamageSingle + poolTiers), different id.
             // Every rider is set to certain-crit / big values so a leak shows.
             var bjorn = Bjorn(Talents(Engine,
-                T(TalentEffectType.SlamCritChanceAtFury, 15),
-                T(TalentEffectType.SlamCritRestoresFury, 10),
-                T(TalentEffectType.SlamIgnoresDefenseAtFullFury, 50)), critChance: 0, fury: 100);
+                T(EffectKind.SlamCritChanceAtFury, 15),
+                T(EffectKind.SlamCritRestoresFury, 10),
+                T(EffectKind.SlamIgnoresDefenseAtFullFury, 50)), critChance: 0, fury: 100);
             var foe = Foe(physicalDefense: 100);
             var session = Fight(bjorn, new[] { Strike("other_tier_strike", 10, tiers: SlamTiers) }, foe);
 
@@ -284,8 +284,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(940, foe.CurrentHealth, "(20 + 10) x 4 = 120, x 100 / 200 = 60: no defense ignored");
             Assert.AreEqual(0, bjorn.CastCritChanceBonus);
             Assert.AreEqual(0, bjorn.CastIgnoreDefensePercent);
-            Assert.AreEqual(0, bjorn.Talents.BestFor(TalentEffectType.SlamCritChanceAtFury, "other_tier_strike"));
-            Assert.AreEqual(15, bjorn.Talents.BestFor(TalentEffectType.SlamCritChanceAtFury, "slam"));
+            Assert.AreEqual(0, bjorn.Effects.BestFor(EffectKind.SlamCritChanceAtFury, "other_tier_strike"));
+            Assert.AreEqual(15, bjorn.Effects.BestFor(EffectKind.SlamCritChanceAtFury, "slam"));
         }
 
         // ---- Bloodfire and the crit bonus ------------------------------------------------------
@@ -293,8 +293,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AKill_RefundsFury_AndMoreWhileTransformed()
         {
-            var talents = Talents(Engine, T(TalentEffectType.FuryOnKill, 15),
-                T(TalentEffectType.FuryOnKillWhileTransformed, 20));
+            var talents = Talents(Engine, T(EffectKind.FuryOnKill, 15),
+                T(EffectKind.FuryOnKillWhileTransformed, 20));
 
             var plain = Bjorn(talents);
             var plainFoe = Foe(health: 5);
@@ -313,7 +313,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ACrit_PaysHalfAgainOfTheEngine_WithTheNode()
         {
-            var with = Bjorn(Talents(Engine, T(TalentEffectType.CritFuryBonusPercent, 50)), critChance: 100);
+            var with = Bjorn(Talents(Engine, T(EffectKind.CritFuryBonusPercent, 50)), critChance: 100);
             var withFoe = Foe();
             Fight(with, new[] { Strike("cleave", 10) }, withFoe).CastSkill(0, withFoe);
             Assert.AreEqual(33, with.PrimaryPool.Current, "a 45 crit pays floor(45 x 10 / 20) = 22, +11 (50%)");
@@ -327,7 +327,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BloodfireT2_ForgivesTheFirstIdleDrain_Once()
         {
-            var bjorn = Bjorn(Talents(Engine, T(TalentEffectType.FirstIdleTurnFree)));
+            var bjorn = Bjorn(Talents(Engine, T(EffectKind.FirstIdleTurnFree)));
             bjorn.PrimaryPool.DecayPerIdleTurn = 10;
             var session = Fight(bjorn, null, Foe());
             bjorn.PrimaryPool.Gain(50);
@@ -357,7 +357,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CritChance_AgainstAWoundedTarget_ReadsTheTargetsHealthInclusively()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.CritChanceBelowTargetHealth, 25, 30)));
+            var bjorn = Bjorn(Talents(T(EffectKind.CritChanceBelowTargetHealth, 25, 30)));
             var foe = Foe();
 
             foe.CurrentHealth = 300;
@@ -370,7 +370,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CritChance_WhileTransformed_AddsTheNodesTen()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.CritChanceWhileTransformed, 10)));
+            var bjorn = Bjorn(Talents(T(EffectKind.CritChanceWhileTransformed, 10)));
             Assert.AreEqual(0, CritRules.ChanceFor(bjorn));
 
             Transformation.Enter(bjorn, "Berserk", 3, 0, 0, 0);
@@ -425,7 +425,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Headsplitter_T3_AKillFillsMomentum()
         {
-            var bjorn = Bjorn(Talents(Engine, T(TalentEffectType.MomentumTier, 1), T(TalentEffectType.KillFillsMomentum)),
+            var bjorn = Bjorn(Talents(Engine, T(EffectKind.MomentumTier, 1), T(EffectKind.KillFillsMomentum)),
                 fury: 60);
             var foe = Foe(health: 100);
             var session = Fight(bjorn, new[] { Headsplitter() }, foe, Foe());
@@ -438,7 +438,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Headsplitter_ANonKillFillsNothing()
         {
-            var bjorn = Bjorn(Talents(Engine, T(TalentEffectType.MomentumTier, 1), T(TalentEffectType.KillFillsMomentum)),
+            var bjorn = Bjorn(Talents(Engine, T(EffectKind.MomentumTier, 1), T(EffectKind.KillFillsMomentum)),
                 fury: 60);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Headsplitter() }, foe);
@@ -576,7 +576,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Berserk_BattleTranceDoublesWhileTransformed()
         {
-            var bjorn = Bjorn(Talents(Engine, T(TalentEffectType.BattleTranceTier, 2)), fury: 100);
+            var bjorn = Bjorn(Talents(Engine, T(EffectKind.BattleTranceTier, 2)), fury: 100);
             var session = Fight(bjorn, new[] { Berserk() }, Foe());
 
             Assert.AreEqual(30, bjorn.BattleTrance.PercentFor(bjorn));

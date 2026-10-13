@@ -25,7 +25,7 @@ namespace PrincesPalace.Domain.Combat
         // hung off being the one everything is aimed at.
         //
         // Hits every enemy instead of one when the caster has
-        // TalentEffectType.ProvokeHitsEveryEnemy, which is why the targeting
+        // EffectKind.ProvokeHitsEveryEnemy, which is why the targeting
         // for this effect is decided at cast time rather than authored: the
         // same skill is single-target or party-wide depending on the tree.
         Provoke,

@@ -137,8 +137,7 @@ namespace PrincesPalace.PlayModeTests
                 "adding ModifierEffects wiring changed MaxHealth -- the seam disturbed an unrelated assignment");
             Assert.AreEqual(expectedStats.physicalDefense, state.PhysicalDefense,
                 "adding ModifierEffects wiring changed PhysicalDefense -- the seam disturbed an unrelated assignment");
-            Assert.IsNotNull(state.Talents, "Talents must stay non-null exactly as before this phase");
-            Assert.IsTrue(state.Talents.IsEmpty,
+            Assert.IsTrue(state.Effects.IsEmpty,
                 "Talents IS wired at this adapter seam (ContentDatabase.TalentEffects(character)) as of the " +
                 "talent-wiring fix -- it is empty here only because this fixture Character has no " +
                 "unlockedTalentIds, not because the seam is unwired");

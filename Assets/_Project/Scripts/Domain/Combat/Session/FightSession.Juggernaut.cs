@@ -29,16 +29,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // them is switched on at fight start: their talents are simply looked
         // up where they apply. Only the rules that are state on a Domain seam
         // are armed here, and only ever ON (a seam a test set by hand stays).
-        private static void ArmJuggernautSeams(CombatantState actor, TalentEffectSet talents)
+        private static void ArmJuggernautSeams(CombatantState actor, EffectSet talents)
         {
-            if (talents.Has(TalentEffectType.FuryEngineJuggernaut))
+            if (talents.Has(EffectKind.FuryEngineJuggernaut))
             {
                 actor.FuryEngine.Kind = FuryEngineKind.Juggernaut;
             }
 
             foreach (var effect in talents.All)
             {
-                if (effect.Type != TalentEffectType.SkillCooldownTurns) continue;
+                if (effect.Kind != EffectKind.SkillCooldownTurns) continue;
                 if (string.IsNullOrEmpty(effect.SkillId) || effect.Magnitude <= 0) continue;
 
                 actor.CooldownOverrides[effect.SkillId] = effect.Magnitude;
@@ -47,7 +47,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Unyielding's three nodes nest, so the tier is the whole rule:
             // T1 is the passive on a 4-turn cooldown, T2 shortens it to 3, T3
             // adds 20 Fury to the trigger.
-            int unyielding = talents.Best(TalentEffectType.UnyieldingTier);
+            int unyielding = talents.Magnitude(EffectKind.UnyieldingTier);
             if (unyielding >= 1 && actor.CrowdControl.Unyielding == null)
             {
                 actor.CrowdControl.Unyielding = new UnyieldingRule(
@@ -55,15 +55,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     furyGain: unyielding >= 3 ? 20 : 0);
             }
 
-            int deferred = talents.Best(TalentEffectType.DelayedDamagePercent);
+            int deferred = talents.Magnitude(EffectKind.DelayedDamagePercent);
             if (deferred > 0 && actor.DelayedDamage == null)
             {
                 actor.DelayedDamage = new DelayedDamagePool(deferred,
-                    talents.Threshold(TalentEffectType.DelayedDamagePercent),
-                    healsReducePool: talents.Has(TalentEffectType.HealReducesDelayedDamage));
+                    talents.Threshold(EffectKind.DelayedDamagePercent),
+                    healsReducePool: talents.Has(EffectKind.HealReducesDelayedDamage));
             }
 
-            int price = talents.Best(TalentEffectType.ShortfallPaidInHealthPermille);
+            int price = talents.Magnitude(EffectKind.ShortfallPaidInHealthPermille);
             if (price > 0) actor.ShortfallHealthPermille = price;
         }
 
@@ -79,7 +79,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || actor.MaxHealth <= 0) return 0;
 
-            int rate = actor.Talents.Best(TalentEffectType.DamagePerMissingHealth);
+            int rate = actor.Effects.Magnitude(EffectKind.DamagePerMissingHealth);
             if (rate <= 0) return 0;
 
             long missing = actor.MaxHealth - Math.Max(0, Math.Min(actor.MaxHealth, actor.CurrentHealth));
@@ -98,14 +98,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // reason to draw a beat.
         private void TickHealthCurveRegen(CombatantState actor, Dictionary<CombatantState, Vitals> preTick)
         {
-            var talents = actor?.Talents;
+            var talents = actor?.Effects;
             if (talents == null || !actor.IsAlive || actor.CurrentHealth >= actor.MaxHealth) return;
 
-            int ceiling = talents.Best(TalentEffectType.HealthCurveRegen);
+            int ceiling = talents.Magnitude(EffectKind.HealthCurveRegen);
             if (ceiling <= 0) return;
 
             int amount = HealthCurveRegen.AmountFor(actor.CurrentHealth, actor.MaxHealth,
-                talents.Threshold(TalentEffectType.HealthCurveRegen), ceiling);
+                talents.Threshold(EffectKind.HealthCurveRegen), ceiling);
 
             bool ownsBeat = OpenStatusTickBeat(actor, preTick, StatusEffectType.Regen, isHealing: true);
             int healed = HealWithoutTriggers(actor, amount);
@@ -128,8 +128,8 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (amount <= 0 || skill == null || actor == null) return amount;
 
-            int percent = actor.Talents.BestForBelowHealth(
-                TalentEffectType.SkillDamageBonusBelowOwnHealth, skill.Id, actor);
+            int percent = actor.Effects.BestForBelowHealth(
+                EffectKind.SkillDamageBonusBelowOwnHealth, skill.Id, actor);
             return percent <= 0 ? amount : (int)((long)amount * (100 + percent) / 100);
         }
 
@@ -141,7 +141,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (skill == null || actor == null) return 0;
 
             return Math.Max(skill.LifestealPercent,
-                actor.Talents.BestFor(TalentEffectType.SkillLifestealPercent, skill.Id));
+                actor.Effects.BestFor(EffectKind.SkillLifestealPercent, skill.Id));
         }
 
         // Heals the caster for a share of what the skill just dealt, through the

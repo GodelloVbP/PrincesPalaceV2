@@ -166,7 +166,7 @@ namespace PrincesPalace.Domain.Tests
         public void ATrampleExtraActionDoesNotRefill()
         {
             var hero = Hero();
-            hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.ExtraAttackOnKill, 1) });
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[] { new Effect(EffectKind.ExtraAttackOnKill, 1) });
             var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { Bolt(20) }, null, null);
             var weak = Foe("Weak", 1);
             var session = Session(true, hero, kit, weak, Foe("Tank", 100000));

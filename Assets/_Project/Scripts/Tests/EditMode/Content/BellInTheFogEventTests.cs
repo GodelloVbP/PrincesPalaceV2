@@ -358,7 +358,7 @@ namespace PrincesPalace.Domain.Tests
             var toll = relics.Single(r => r.Id == "toll_of_the_flock");
 
             Assert.AreEqual("Bellwether's Bell", bell.DisplayName);
-            Assert.AreEqual(EffectKind.BellwethersBell, bell.Mechanic);
+            Assert.AreEqual(EffectKind.TransformDurationBonus, bell.Mechanic);
             Assert.AreEqual("sheep", bell.Bearer);
             Assert.IsFalse(bell.Draftable);
             Assert.AreEqual("Each transformation Shawn enters lasts 1 turn longer.", bell.Description);

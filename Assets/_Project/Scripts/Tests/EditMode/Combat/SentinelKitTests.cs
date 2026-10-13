@@ -26,16 +26,16 @@ namespace PrincesPalace.Domain.Tests
         private const string BashId = "shield_bash";
         private const string HoldId = "hold_the_line";
 
-        private static TalentEffectSet Talents(params TalentEffect[] effects) => new TalentEffectSet(effects);
+        private static EffectSet Talents(params Effect[] effects) => EffectSet.OfTalents(effects);
 
-        private static TalentEffect T(TalentEffectType type, int magnitude = 0, string skillId = null) =>
-            new TalentEffect(type, magnitude, 0,
-                skillId ?? (TalentEffect.IsSkillScoped(type) ? SkillFor(type) : ""));
+        private static Effect T(EffectKind type, int magnitude = 0, string skillId = null) =>
+            new Effect(type, magnitude, 0,
+                skillId ?? (EffectCatalog.Of(type).SkillScoped ? SkillFor(type) : ""));
 
-        private static string SkillFor(TalentEffectType type) =>
-            type == TalentEffectType.SkillSplashPercent ? BashId : HoldId;
+        private static string SkillFor(EffectKind type) =>
+            type == EffectKind.SkillSplashPercent ? BashId : HoldId;
 
-        private static CombatantState Bjorn(TalentEffectSet talents, int fury = 0, int physicalDefense = 40)
+        private static CombatantState Bjorn(EffectSet talents, int fury = 0, int physicalDefense = 40)
         {
             var pool = new ResourcePool("fury", "Fury", 100, 0, 0, 0);
             pool.Gain(fury);
@@ -45,7 +45,7 @@ namespace PrincesPalace.Domain.Tests
                 PhysicalDefense = physicalDefense,
                 MagicalDefense = 12,
                 BaseDefenseTotal = 52,
-                Talents = talents,
+                Effects = talents,
             };
         }
 
@@ -104,7 +104,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRoot_SetsTheSentinelEngine()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.FuryEngineSentinel)));
+            var bjorn = Bjorn(Talents(T(EffectKind.FuryEngineSentinel)));
 
             Fight(bjorn, null, null, Foe());
 
@@ -114,7 +114,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NoTalents_LeavesEverySentinelSeamOff()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
 
             Fight(bjorn, null, null, Foe());
 
@@ -135,11 +135,11 @@ namespace PrincesPalace.Domain.Tests
         public void EveryShieldTalent_SwitchesItsOwnSeamOn()
         {
             var bjorn = Bjorn(Talents(
-                T(TalentEffectType.PlantedShieldBreakShards), T(TalentEffectType.ShieldBashShortWait),
-                T(TalentEffectType.ShieldwallCoversParty), T(TalentEffectType.ThornsPercent, 15),
-                T(TalentEffectType.ReflectMagicPercent, 15), T(TalentEffectType.SilenceCasterOnSpellHit),
-                T(TalentEffectType.ReflectGrantsFury), T(TalentEffectType.SlowsAttacker),
-                T(TalentEffectType.DisarmsOnBreak)));
+                T(EffectKind.PlantedShieldBreakShards), T(EffectKind.ShieldBashShortWait),
+                T(EffectKind.ShieldwallCoversParty), T(EffectKind.ThornsPercent, 15),
+                T(EffectKind.ReflectMagicPercent, 15), T(EffectKind.SilenceCasterOnSpellHit),
+                T(EffectKind.ReflectGrantsFury), T(EffectKind.SlowsAttacker),
+                T(EffectKind.DisarmsOnBreak)));
 
             Fight(bjorn, null, null, Foe());
 
@@ -163,7 +163,7 @@ namespace PrincesPalace.Domain.Tests
         public void IronRetort_AddsItsShareOfTheDefenceAboveBase_ToAPhysicalHit(int percent, int bonus, int foeHealth)
         {
             // 60 + 12 against a base of 52 is 20 above; the hit is Attack 20 + 10.
-            var bjorn = Bjorn(Talents(T(TalentEffectType.IronRetortPercent, percent)), physicalDefense: 60);
+            var bjorn = Bjorn(Talents(T(EffectKind.IronRetortPercent, percent)), physicalDefense: 60);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike("cleave", 10) }, null, foe);
 
@@ -176,7 +176,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void IronRetort_AddsNothing_ToAFreshCharacterOnHisBaseStats()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.IronRetortPercent, 30)));
+            var bjorn = Bjorn(Talents(T(EffectKind.IronRetortPercent, 30)));
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike("cleave", 10) }, null, foe);
 
@@ -190,7 +190,7 @@ namespace PrincesPalace.Domain.Tests
         public void IronRetort_CountsAFortifiedStatus_AsDefenceAboveBase()
         {
             // Fortified 10 is +10 to both: 20 above base, so 10% is 2.
-            var bjorn = Bjorn(Talents(T(TalentEffectType.IronRetortPercent, 10)));
+            var bjorn = Bjorn(Talents(T(EffectKind.IronRetortPercent, 10)));
             var session = Fight(bjorn, null, null, Foe());
 
             session.ApplyStatusToForTest(bjorn, StatusEffectType.Fortified, 10, 2, bjorn);
@@ -201,7 +201,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void IronRetort_IsZeroWithoutTheTalent_EvenWithDefenceAboveBase()
         {
-            Assert.AreEqual(0, CombatMath.IronRetortBonus(Bjorn(TalentEffectSet.Empty, physicalDefense: 90)));
+            Assert.AreEqual(0, CombatMath.IronRetortBonus(Bjorn(EffectSet.Empty, physicalDefense: 90)));
         }
 
         // ---- Fortified -----------------------------------------------------------------
@@ -209,7 +209,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Fortified_RaisesBothBroadDefences_AndARecastRefreshesRatherThanDoubles()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var session = Fight(bjorn, null, null, Foe());
 
             session.ApplyStatusToForTest(bjorn, StatusEffectType.Fortified, 15, 2, bjorn);
@@ -225,7 +225,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void HoldTheLine_FortifiesEveryAlly_ForItsAuthoredTurns()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, fury: 0);
+            var bjorn = Bjorn(EffectSet.Empty, fury: 0);
             var shawn = Ally("Shawn");
             var odette = Ally("Odette");
             var session = Fight(bjorn, new[] { HoldTheLine() }, new[] { shawn, odette }, Foe());
@@ -243,7 +243,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void HoldTheLineT2_HoldsItThreeTurns()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.SkillStatusTurns, 3)));
+            var bjorn = Bjorn(Talents(T(EffectKind.SkillStatusTurns, 3)));
             var shawn = Ally("Shawn");
             var session = Fight(bjorn, new[] { HoldTheLine() }, new[] { shawn }, Foe());
 
@@ -255,7 +255,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void HoldTheLineT2_DoesNotLengthenAnotherSkill()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.SkillStatusTurns, 3)));
+            var bjorn = Bjorn(Talents(T(EffectKind.SkillStatusTurns, 3)));
             var shawn = Ally("Shawn");
             var other = new ResolvedSkill("other", "Other", "test fixture", "bjorn", 1, SkillEffect.BuffParty,
                 SkillTargeting.Party, 0, 0, false, 0, 0, false, null, SpellPresentation.None, 0,
@@ -270,7 +270,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void HoldTheLineT3_CleansesOneDebuffFromEachAlly_OldestFirst_AndNeverABuff()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.SkillCleansesDebuffs, 1)));
+            var bjorn = Bjorn(Talents(T(EffectKind.SkillCleansesDebuffs, 1)));
             var shawn = Ally("Shawn");
             var session = Fight(bjorn, new[] { HoldTheLine() }, new[] { shawn }, Foe());
             session.ApplyStatusToForTest(shawn, StatusEffectType.Regen, 5, 2);
@@ -289,7 +289,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void WithoutT3_TheCastCleansesNothing()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var shawn = Ally("Shawn");
             var session = Fight(bjorn, new[] { HoldTheLine() }, new[] { shawn }, Foe());
             session.ApplyStatusToForTest(shawn, StatusEffectType.Poison, 4, 2);
@@ -302,7 +302,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void HoldTheLineT2_PaysFuryWhenABuffedAllyIsHit_NotWhenHeIsHimself()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.PrimaryGainWhenBuffedAllyHit, 5)));
+            var bjorn = Bjorn(Talents(T(EffectKind.PrimaryGainWhenBuffedAllyHit, 5)));
             var shawn = Ally("Shawn");
             var foe = Foe();
             var session = Fight(bjorn, null, new[] { shawn }, foe);
@@ -322,8 +322,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheFuryRider_NeedsTheTalent_AndTheBuff()
         {
-            var noTalent = Bjorn(TalentEffectSet.Empty);
-            var talented = Bjorn(Talents(T(TalentEffectType.PrimaryGainWhenBuffedAllyHit, 5)));
+            var noTalent = Bjorn(EffectSet.Empty);
+            var talented = Bjorn(Talents(T(EffectKind.PrimaryGainWhenBuffedAllyHit, 5)));
             var shawn = Ally("Shawn");
             var foe = Foe();
             var sessionA = Fight(noTalent, null, new[] { shawn }, foe);
@@ -343,7 +343,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BellowT3_PaysTenFuryForTheEnemyItProvoked()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.PrimaryGainPerProvokedEnemy, 10)));
+            var bjorn = Bjorn(Talents(T(EffectKind.PrimaryGainPerProvokedEnemy, 10)));
             var foeA = Foe();
             var foeB = Foe();
             var session = Fight(bjorn, new[] { Bellow() }, null, foeA, foeB);
@@ -356,8 +356,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BellowT3_PaysPerEnemy_WhenTheBellowReachesEveryEnemy()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.PrimaryGainPerProvokedEnemy, 10),
-                T(TalentEffectType.ProvokeHitsEveryEnemy)));
+            var bjorn = Bjorn(Talents(T(EffectKind.PrimaryGainPerProvokedEnemy, 10),
+                T(EffectKind.ProvokeHitsEveryEnemy)));
             var session = Fight(bjorn, new[] { Bellow() }, null, Foe(), Foe(), Foe());
 
             Assert.IsTrue(session.CastSkill(0, session.Encounter.Enemies[0]));
@@ -368,7 +368,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BellowWithoutT3_PaysNoFury()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Bellow() }, null, foe);
 
@@ -380,15 +380,15 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BellowT2_MakesEnemiesPickTheHolderMoreOften_AndOnlyHim()
         {
-            int plain = BjornShareOfPicks(TalentEffectSet.Empty);
-            int taunting = BjornShareOfPicks(Talents(T(TalentEffectType.TargetPreferencePercent, 200)));
+            int plain = BjornShareOfPicks(EffectSet.Empty);
+            int taunting = BjornShareOfPicks(Talents(T(EffectKind.TargetPreferencePercent, 200)));
 
             // A third of the picks without it; three of five (60%) with it.
             Assert.That(plain, Is.InRange(280, 380), "an ordinary party is drawn uniformly, one in three");
             Assert.That(taunting, Is.InRange(540, 660), "counted three times among five draws, 60% of 1000");
         }
 
-        private static int BjornShareOfPicks(TalentEffectSet talents)
+        private static int BjornShareOfPicks(EffectSet talents)
         {
             var bjorn = Bjorn(talents);
             var foe = Foe();
@@ -411,7 +411,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void PlantTheShield_PutsTheShieldDown_AndIsRefusedWhileItStands()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var plant = Plant();
             var session = Fight(bjorn, new[] { plant }, null, Foe());
 
@@ -429,7 +429,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ShieldBash_IsRefusedWithNoShieldDown()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var bash = Strike(BashId, 20, bashPercent: 30);
             var foe = Foe();
             var session = Fight(bjorn, new[] { bash }, null, foe);
@@ -443,7 +443,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ShieldBash_AddsAShareOfWhatTheShieldSoaked_AndConsumesIt()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var bash = Strike(BashId, 20, bashPercent: 30, status: StatusEffectType.Stun, statusTurns: 1);
             var foe = Foe();
             var session = Fight(bjorn, new[] { bash }, null, foe);
@@ -463,7 +463,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheCard_QuotesTheBashBonus_WithoutSpendingTheShield()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var bash = Strike(BashId, 20, bashPercent: 30);
             var foe = Foe();
             var session = Fight(bjorn, new[] { bash }, null, foe);
@@ -477,7 +477,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ShieldBashT2_ShortensTheWaitToOneTurn()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.ShieldBashShortWait)));
+            var bjorn = Bjorn(Talents(T(EffectKind.ShieldBashShortWait)));
             var bash = Strike(BashId, 20, bashPercent: 30);
             var foe = Foe();
             var session = Fight(bjorn, new[] { bash }, null, foe);
@@ -491,7 +491,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ShieldBashT3_SpillsItsDamageOntoTheNeighbours_AndNoFurther()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.SkillSplashPercent, 100, BashId)));
+            var bjorn = Bjorn(Talents(T(EffectKind.SkillSplashPercent, 100, BashId)));
             var bash = Strike(BashId, 20, bashPercent: 30);
             var front = Foe();
             var middle = Foe();
@@ -510,7 +510,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheSplash_IsScopedToItsOwnSkill()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.SkillSplashPercent, 100, BashId)));
+            var bjorn = Bjorn(Talents(T(EffectKind.SkillSplashPercent, 100, BashId)));
             var other = Strike("other", 20);
             var front = Foe();
             var middle = Foe();
@@ -532,7 +532,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheBot_PlantsTheShield_WheneverItIsLegal()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var session = Fight(bjorn, new[] { Plant() }, null, Foe());
 
             var choice = Choose(session, bjorn);
@@ -546,7 +546,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheBot_CastsHoldTheLine_OnlyWhileNobodyIsFortified()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var shawn = Ally("Shawn");
             var session = Fight(bjorn, new[] { HoldTheLine() }, new[] { shawn }, Foe());
 
@@ -560,14 +560,14 @@ namespace PrincesPalace.Domain.Tests
         public void TheBot_Bellows_WhenAnAllyIsHurt_OrWhenItPaysFury()
         {
             var shawn = Ally("Shawn");
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
             var session = Fight(bjorn, new[] { Bellow() }, new[] { shawn }, Foe());
             Assert.IsFalse(Choose(session, bjorn).HasValue, "nobody hurt, and it pays nothing");
 
             shawn.CurrentHealth = 100;
             Assert.IsTrue(Choose(session, bjorn).HasValue, "Shawn at 50%");
 
-            var paid = Bjorn(Talents(T(TalentEffectType.PrimaryGainPerProvokedEnemy, 10)));
+            var paid = Bjorn(Talents(T(EffectKind.PrimaryGainPerProvokedEnemy, 10)));
             var paidSession = Fight(paid, new[] { Bellow() }, new[] { Ally("Odette") }, Foe());
             Assert.IsTrue(Choose(paidSession, paid).HasValue, "T3 makes it a Fury source");
         }

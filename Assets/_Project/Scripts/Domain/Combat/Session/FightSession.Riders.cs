@@ -307,7 +307,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // chain of them with no ceiling is unbounded by construction.
         private bool TryGrantTrample(CombatantState actor)
         {
-            int cap = actor == null ? 0 : actor.Talents.Best(TalentEffectType.ExtraAttackOnKill);
+            int cap = actor == null ? 0 : actor.Effects.Magnitude(EffectKind.ExtraAttackOnKill);
             if (cap <= 0 || !actor.IsPlayerSide || !actor.IsAlive) return false;
 
             int soFar = ReferenceEquals(actor, _trampleChainActor) ? _trampleChainCount : 0;

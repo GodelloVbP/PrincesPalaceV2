@@ -23,14 +23,14 @@ namespace PrincesPalace.Domain.Tests
     {
         private const string GorgeId = "gorge";
 
-        private static TalentEffectSet Talents(params TalentEffect[] effects) => new TalentEffectSet(effects);
+        private static EffectSet Talents(params Effect[] effects) => EffectSet.OfTalents(effects);
 
-        private static TalentEffect T(TalentEffectType type, int magnitude = 0, int threshold = 0,
+        private static Effect T(EffectKind type, int magnitude = 0, int threshold = 0,
             string skillId = null) =>
-            new TalentEffect(type, magnitude, threshold,
-                skillId ?? (TalentEffect.IsSkillScoped(type) ? GorgeId : ""));
+            new Effect(type, magnitude, threshold,
+                skillId ?? (EffectCatalog.Of(type).SkillScoped ? GorgeId : ""));
 
-        private static CombatantState Bjorn(TalentEffectSet talents, int fury = 0, int health = 260)
+        private static CombatantState Bjorn(EffectSet talents, int fury = 0, int health = 260)
         {
             var pool = new ResourcePool("fury", "Fury", 100, 0, 0, 0);
             pool.Gain(fury);
@@ -39,7 +39,7 @@ namespace PrincesPalace.Domain.Tests
                 CritChancePercent = 0,
                 PhysicalDefense = 40,
                 MagicalDefense = 12,
-                Talents = talents,
+                Effects = talents,
                 CurrentHealth = health,
             };
         }
@@ -76,8 +76,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRoot_SetsTheJuggernautEngine_AndSecondWindsCooldown()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.FuryEngineJuggernaut),
-                T(TalentEffectType.SkillCooldownTurns, 4, 0, "second_wind")));
+            var bjorn = Bjorn(Talents(T(EffectKind.FuryEngineJuggernaut),
+                T(EffectKind.SkillCooldownTurns, 4, 0, "second_wind")));
 
             Fight(bjorn, null, Foe());
 
@@ -88,7 +88,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NoTalents_LeavesEveryJuggernautSeamOff()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty);
+            var bjorn = Bjorn(EffectSet.Empty);
 
             Fight(bjorn, null, Foe());
 
@@ -102,9 +102,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void UnyieldingTiers_SetTheCooldownAndTheFury()
         {
-            var t1 = Bjorn(Talents(T(TalentEffectType.UnyieldingTier, 1)));
-            var t2 = Bjorn(Talents(T(TalentEffectType.UnyieldingTier, 1), T(TalentEffectType.UnyieldingTier, 2)));
-            var t3 = Bjorn(Talents(T(TalentEffectType.UnyieldingTier, 3)));
+            var t1 = Bjorn(Talents(T(EffectKind.UnyieldingTier, 1)));
+            var t2 = Bjorn(Talents(T(EffectKind.UnyieldingTier, 1), T(EffectKind.UnyieldingTier, 2)));
+            var t3 = Bjorn(Talents(T(EffectKind.UnyieldingTier, 3)));
             Fight(t1, null, Foe());
             Fight(t2, null, Foe());
             Fight(t3, null, Foe());
@@ -120,10 +120,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void IgnorePain_ArmsThePoolWithItsPercentTurnsAndT3Flag()
         {
-            var t2 = Bjorn(Talents(T(TalentEffectType.DelayedDamagePercent, 20, 3),
-                T(TalentEffectType.DelayedDamagePercent, 30, 3)));
-            var t3 = Bjorn(Talents(T(TalentEffectType.DelayedDamagePercent, 30, 3),
-                T(TalentEffectType.HealReducesDelayedDamage)));
+            var t2 = Bjorn(Talents(T(EffectKind.DelayedDamagePercent, 20, 3),
+                T(EffectKind.DelayedDamagePercent, 30, 3)));
+            var t3 = Bjorn(Talents(T(EffectKind.DelayedDamagePercent, 30, 3),
+                T(EffectKind.HealReducesDelayedDamage)));
             Fight(t2, null, Foe());
             Fight(t3, null, Foe());
 
@@ -136,7 +136,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BloodPrice_SetsTheShortfallPermille()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.ShortfallPaidInHealthPermille, 5)));
+            var bjorn = Bjorn(Talents(T(EffectKind.ShortfallPaidInHealthPermille, 5)));
 
             Fight(bjorn, null, Foe());
 
@@ -171,7 +171,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRegen_HealsAtTurnStart_ThroughTheCurve()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.HealthCurveRegen, 6, 2)));
+            var bjorn = Bjorn(Talents(T(EffectKind.HealthCurveRegen, 6, 2)));
             var session = Fight(bjorn, null, Foe());
             bjorn.CurrentHealth = 65;
 
@@ -183,7 +183,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRegen_DoesNothingAtFullHealth()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.HealthCurveRegen, 6, 2)));
+            var bjorn = Bjorn(Talents(T(EffectKind.HealthCurveRegen, 6, 2)));
             var session = Fight(bjorn, null, Foe());
             session.DrainBeats();
 
@@ -196,7 +196,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRegen_UnderCursedBlood_IsDealtToTheEnemyInstead()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.HealthCurveRegen, 6, 2)));
+            var bjorn = Bjorn(Talents(T(EffectKind.HealthCurveRegen, 6, 2)));
             var foe = Foe();
             var session = Fight(bjorn, null, foe);
             bjorn.CurrentHealth = 65;
@@ -217,7 +217,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(100, 130, 50)]   // half health
         public void Wrath_ScalesWithMissingHealth(int rate, int health, int expectedPercent)
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.DamagePerMissingHealth, rate)), health: health);
+            var bjorn = Bjorn(Talents(T(EffectKind.DamagePerMissingHealth, rate)), health: health);
             var session = Fight(bjorn, null, Foe());
 
             Assert.AreEqual(expectedPercent, session.AttackBonusForTest(bjorn));
@@ -226,7 +226,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Wrath_RaisesTheDamageOfACast()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.DamagePerMissingHealth, 50)), health: 65);
+            var bjorn = Bjorn(Talents(T(EffectKind.DamagePerMissingHealth, 50)), health: 65);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike("cleave", 10) }, foe);
 
@@ -240,8 +240,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BloodPrice_PaysTheShortfallInHealth_AndT2AddsItsDamage()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.ShortfallPaidInHealthPermille, 5),
-                T(TalentEffectType.BloodPaidDamagePercent, 15)));
+            var bjorn = Bjorn(Talents(T(EffectKind.ShortfallPaidInHealthPermille, 5),
+                T(EffectKind.BloodPaidDamagePercent, 15)));
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike("cleave", 10, cost: 30) }, foe);
 
@@ -254,8 +254,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ACastPaidEntirelyInFury_GetsNoBloodPriceBonus()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.ShortfallPaidInHealthPermille, 5),
-                T(TalentEffectType.BloodPaidDamagePercent, 15)), fury: 30);
+            var bjorn = Bjorn(Talents(T(EffectKind.ShortfallPaidInHealthPermille, 5),
+                T(EffectKind.BloodPaidDamagePercent, 15)), fury: 30);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike("cleave", 10, cost: 30) }, foe);
 
@@ -268,9 +268,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheCheatDeathSave_FillsTheFury_OnlyWithItsFlag()
         {
-            var filling = Bjorn(Talents(T(TalentEffectType.CheatDeathOncePerFight),
-                T(TalentEffectType.CheatDeathFillsPrimary)), fury: 20, health: 10);
-            var plain = Bjorn(Talents(T(TalentEffectType.CheatDeathOncePerFight)), fury: 20, health: 10);
+            var filling = Bjorn(Talents(T(EffectKind.CheatDeathOncePerFight),
+                T(EffectKind.CheatDeathFillsPrimary)), fury: 20, health: 10);
+            var plain = Bjorn(Talents(T(EffectKind.CheatDeathOncePerFight)), fury: 20, health: 10);
 
             var saved = CombatMath.ApplyDamageDetailed(filling, 50);
             CombatMath.ApplyDamageDetailed(plain, 50);
@@ -285,8 +285,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheFuryFill_DoesNotFireForAnAlreadySpentSave()
         {
-            var bjorn = Bjorn(Talents(T(TalentEffectType.CheatDeathOncePerFight),
-                T(TalentEffectType.CheatDeathFillsPrimary)), fury: 0, health: 10);
+            var bjorn = Bjorn(Talents(T(EffectKind.CheatDeathOncePerFight),
+                T(EffectKind.CheatDeathFillsPrimary)), fury: 0, health: 10);
 
             CombatMath.ApplyDamageDetailed(bjorn, 50);
             bjorn.PrimaryPool.TrySpend(100);
@@ -302,7 +302,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Gorge_HealsItsAuthoredShareOfTheDamage()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, fury: 30, health: 200);
+            var bjorn = Bjorn(EffectSet.Empty, fury: 30, health: 200);
             var foe = Foe();
             var session = Fight(bjorn, new[] { Strike(GorgeId, 30, cost: 30, lifesteal: 30) }, foe);
 
@@ -315,7 +315,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void GorgeT2_RaisesTheShare_OnlyForItsOwnSkill()
         {
-            var t2 = Talents(T(TalentEffectType.SkillLifestealPercent, 40));
+            var t2 = Talents(T(EffectKind.SkillLifestealPercent, 40));
 
             var named = Bjorn(t2, fury: 30, health: 200);
             var namedFoe = Foe();
@@ -333,7 +333,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void GorgeT3_HitsHarderUnderHalfHealth_AndNotAbove()
         {
-            var t3 = Talents(T(TalentEffectType.SkillDamageBonusBelowOwnHealth, 25, 50));
+            var t3 = Talents(T(EffectKind.SkillDamageBonusBelowOwnHealth, 25, 50));
 
             var hurt = Bjorn(t3, fury: 30, health: 130);
             var hurtFoe = Foe();
@@ -353,7 +353,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Unbroken_OpensARegenAndUnstoppable()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, fury: 50, health: 100);
+            var bjorn = Bjorn(EffectSet.Empty, fury: 50, health: 100);
             var session = Fight(bjorn, new[] { Window("unbroken", SkillEffect.Unbroken, 50, 2, regenPercent: 15) }, Foe());
 
             Assert.IsTrue(session.CastSkill(0, null));
@@ -369,7 +369,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CursedBlood_OpensTheWindow_AndCanBeCastOncePerFight()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, fury: 100, health: 100);
+            var bjorn = Bjorn(EffectSet.Empty, fury: 100, health: 100);
             var session = Fight(bjorn, new[]
             {
                 Window("cursed", SkillEffect.CursedBlood, 50, 2, oncePerFight: true),
@@ -389,7 +389,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CursedBlood_ConvertsUnbrokensRegen()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, fury: 100, health: 100);
+            var bjorn = Bjorn(EffectSet.Empty, fury: 100, health: 100);
             var foe = Foe();
             var session = Fight(bjorn, null, foe);
             session.OpenCursedBlood(bjorn, 2);
@@ -408,7 +408,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(92, false)]
         public void UnbrokenIsWorthCasting_AtOrBelowThirtyFivePercent(int health, bool worth)
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, health: health);
+            var bjorn = Bjorn(EffectSet.Empty, health: health);
 
             Assert.AreEqual(worth, UtilitySkills.UnbrokenWorthIt(bjorn));
         }
@@ -416,7 +416,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void UnbrokenIsNotRecast_WhileUnstoppableRuns()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, health: 50);
+            var bjorn = Bjorn(EffectSet.Empty, health: 50);
             bjorn.CrowdControl.Unstoppable.Open(2, true);
 
             Assert.IsFalse(UtilitySkills.UnbrokenWorthIt(bjorn));
@@ -425,14 +425,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CursedBloodIsWorthCasting_WhenTheRegenAboutToLandIsAShareOfHisHealth()
         {
-            var bare = Bjorn(TalentEffectSet.Empty, health: 65);
+            var bare = Bjorn(EffectSet.Empty, health: 65);
             Assert.IsFalse(UtilitySkills.CursedBloodWorthIt(bare), "no heal source, nothing to convert");
 
-            var regenerating = Bjorn(TalentEffectSet.Empty, health: 65);
+            var regenerating = Bjorn(EffectSet.Empty, health: 65);
             StatusEffects.Apply(regenerating.Statuses, StatusEffectType.Regen, 39, 2);
             Assert.IsTrue(UtilitySkills.CursedBloodWorthIt(regenerating), "2 x 39 = 78 of his 260");
 
-            var trickle = Bjorn(TalentEffectSet.Empty, health: 65);
+            var trickle = Bjorn(EffectSet.Empty, health: 65);
             StatusEffects.Apply(trickle.Statuses, StatusEffectType.Regen, 10, 2);
             Assert.IsFalse(UtilitySkills.CursedBloodWorthIt(trickle), "2 x 10 = 20 is under a fifth of 260 (52)");
         }
@@ -440,13 +440,13 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SecondWindIsWorthCasting_WhenHurt_OrAsANukeUnderCursedBlood()
         {
-            var healthy = Bjorn(TalentEffectSet.Empty, health: 200);
+            var healthy = Bjorn(EffectSet.Empty, health: 200);
             Assert.IsFalse(UtilitySkills.SecondWindWorthIt(healthy));
 
-            var hurt = Bjorn(TalentEffectSet.Empty, health: 90);
+            var hurt = Bjorn(EffectSet.Empty, health: 90);
             Assert.IsTrue(UtilitySkills.SecondWindWorthIt(hurt));
 
-            var cursed = Bjorn(TalentEffectSet.Empty, health: 195);
+            var cursed = Bjorn(EffectSet.Empty, health: 195);
             cursed.HealConversion.Window.Open(2, true);
             Assert.IsTrue(UtilitySkills.SecondWindWorthIt(cursed), "65 missing is a quarter of 260: a real nuke");
         }
@@ -454,7 +454,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRunnerPlaysAReadyUnbroken_WhenHeIsLow()
         {
-            var bjorn = Bjorn(TalentEffectSet.Empty, fury: 50, health: 80);
+            var bjorn = Bjorn(EffectSet.Empty, fury: 50, health: 80);
             var foe = Foe();
             var session = Fight(bjorn, new[]
             {

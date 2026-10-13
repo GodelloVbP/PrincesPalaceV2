@@ -121,7 +121,7 @@ namespace PrincesPalace.Domain.Content
 
             // One mechanic per relic: the draft's one-relic-per-mechanic rule
             // and ResolvedRelic.Mechanic both name a relic by it.
-            int mechanics = effects.Count(e => EffectCatalog.Of(e.Kind).Stacking == EffectStacking.Flag);
+            int mechanics = effects.Count(e => EffectCatalog.Of(e.Kind).IsMechanic);
             if (mechanics > 1)
             {
                 error = $"{label}: authors {mechanics} mechanics; a relic carries at most one.";

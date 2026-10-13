@@ -227,7 +227,7 @@ namespace PrincesPalace.Content
                 // finished figure, so it is read after every flat term above
                 // has landed and floored once. Here rather than at the combat
                 // seam so the hub, the run and the fight all show one bar.
-                int healthPercent = TalentEffects(character).Best(TalentEffectType.MaxHealthPercent);
+                int healthPercent = TalentEffects(character).Magnitude(EffectKind.MaxHealthPercent);
                 if (healthPercent > 0) total.maxHealth += total.maxHealth * healthPercent / 100;
             }
 
@@ -342,20 +342,20 @@ namespace PrincesPalace.Content
         // contribute, flattened into the shape combat reads.
         //
         // Resolved once per fight (FightController.Encounter) rather than
-        // per swing — see TalentEffectSet's own header. Unknown ids are
+        // per swing — see EffectSet's own header. Unknown ids are
         // skipped rather than throwing, the same tolerance every other
         // Effective* method here already has, so a save referencing content
         // that was later removed still loads.
-        public static TalentEffectSet TalentEffects(Character character)
+        public static EffectSet TalentEffects(Character character)
         {
             EnsureLoaded();
 
             if (character == null)
             {
-                return TalentEffectSet.Empty;
+                return EffectSet.Empty;
             }
 
-            List<TalentEffect> found = null;
+            List<Effect> found = null;
             foreach (string talentId in character.unlockedTalentIds)
             {
                 var talent = GetTalent(talentId);
@@ -364,11 +364,11 @@ namespace PrincesPalace.Content
                     continue;
                 }
 
-                found = found ?? new List<TalentEffect>();
+                found = found ?? new List<Effect>();
                 found.AddRange(talent.Data.Effects);
             }
 
-            return found == null ? TalentEffectSet.Empty : new TalentEffectSet(found);
+            return found == null ? EffectSet.Empty : EffectSet.OfTalents(found);
         }
 
         // Every effect this CHARACTER holds -- their live worn items' rolled

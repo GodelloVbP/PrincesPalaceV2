@@ -254,9 +254,9 @@ namespace PrincesPalace.Domain.Tests
         public void AttackerPenetration_ReducesTheBroadTermOnly_TypedResistanceIsUntouched()
         {
             var attacker = Fighter("Attacker", true);
-            attacker.Talents = new TalentEffectSet(new[]
+            attacker.Effects = attacker.Effects.With(EffectHolder.Talent, new[]
             {
-                new TalentEffect(TalentEffectType.IgnoreDefensePercent, 50),
+                new Effect(EffectKind.IgnoreDefensePercent, 50),
             });
             var target = Fighter("Target", false);
             target.MagicalDefense = 40;

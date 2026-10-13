@@ -30,6 +30,9 @@ namespace PrincesPalace.Domain.Combat
 
         // The reward track's elemental terms (ContentDatabase.Effects).
         Track = 4,
+
+        // An unlocked talent node (ContentDatabase.TalentEffects).
+        Talent = 8,
     }
 
     // Exactly one holder per set entry; EffectHolders is the allowed-mask.
@@ -38,6 +41,7 @@ namespace PrincesPalace.Domain.Combat
         Relic,
         Affix,
         Track,
+        Talent,
     }
 
     // Which item an affix of this kind may roll onto (ModifierTable).
@@ -99,9 +103,21 @@ namespace PrincesPalace.Domain.Combat
         public readonly EffectStat Stat;
         public readonly bool Percent;
 
+        // A talent kind that upgrades one named skill: the authoring node must
+        // carry appliesToSkillId and the hook reads EffectSet.BestFor.
+        public readonly bool SkillScoped;
+
+        // A relic mechanic that still sums across holders (relic plus talent):
+        // it names the relic like a Flag kind does but is not a Flag.
+        private readonly bool _summedMechanic;
+
+        // What a relic is named by: one per relic, one per draft.
+        public bool IsMechanic => Stacking == EffectStacking.Flag || _summedMechanic;
+
         public EffectInfo(EffectKind kind, EffectStacking stacking, EffectHolders holders,
             bool tierScaled, AffixPool pool, bool usesMagnitude, bool usesThreshold,
-            EffectTarget target, EffectStat stat, bool percent)
+            EffectTarget target, EffectStat stat, bool percent, bool skillScoped = false,
+            bool summedMechanic = false)
         {
             Kind = kind;
             Stacking = stacking;
@@ -113,6 +129,8 @@ namespace PrincesPalace.Domain.Combat
             Target = target;
             Stat = stat;
             Percent = percent;
+            SkillScoped = skillScoped;
+            _summedMechanic = summedMechanic;
         }
 
         public bool Allows(EffectHolder holder) => (Holders & ToMask(holder)) != 0;
@@ -124,6 +142,7 @@ namespace PrincesPalace.Domain.Combat
                 case EffectHolder.Relic: return EffectHolders.Relic;
                 case EffectHolder.Affix: return EffectHolders.Affix;
                 case EffectHolder.Track: return EffectHolders.Track;
+                case EffectHolder.Talent: return EffectHolders.Talent;
                 default: return EffectHolders.None;
             }
         }
@@ -138,6 +157,7 @@ namespace PrincesPalace.Domain.Combat
         private const EffectHolders AffixOnly = EffectHolders.Affix;
         private const EffectHolders RelicOrAffix = EffectHolders.Relic | EffectHolders.Affix;
         private const EffectHolders AffixOrTrack = EffectHolders.Affix | EffectHolders.Track;
+        private const EffectHolders RelicOrTalent = EffectHolders.Relic | EffectHolders.Talent;
 
         private static readonly Dictionary<EffectKind, EffectInfo> Rows = Build();
 
@@ -180,9 +200,19 @@ namespace PrincesPalace.Domain.Combat
                     AffixPool.None, usesMagnitude, usesThreshold, EffectTarget.None, EffectStat.None, percent: false));
             }
 
+            // A talent-only kind: the strongest owned node wins, because a
+            // strand is one idea developed three times and owning T2 means
+            // owning T1 (EffectSet.Magnitude).
+            void Talent(EffectKind kind, bool usesMagnitude, bool usesThreshold, bool skillScoped)
+            {
+                rows.Add(kind, new EffectInfo(kind, EffectStacking.Flag, EffectHolders.Talent, tierScaled: false,
+                    AffixPool.None, usesMagnitude, usesThreshold, EffectTarget.None, EffectStat.None,
+                    percent: false, skillScoped));
+            }
+
             Stat(EffectKind.AttackPercent, EffectStat.Attack, percent: true);
             Stat(EffectKind.DefensePercent, EffectStat.Defence, percent: true);
-            Stat(EffectKind.MaxHealthPercent, EffectStat.MaxHealth, percent: true);
+            Stat(EffectKind.MaxHealthPercent, EffectStat.MaxHealth, percent: true, RelicOrTalent);
             Stat(EffectKind.MaxManaPercent, EffectStat.MaxMana, percent: true);
             Stat(EffectKind.SpeedPercent, EffectStat.Speed, percent: true);
             Stat(EffectKind.AttackFlat, EffectStat.Attack, percent: false);
@@ -209,7 +239,7 @@ namespace PrincesPalace.Domain.Combat
 
             Rider(EffectKind.FlatPhysicalDamageReduction, AffixPool.Armour);
             Rider(EffectKind.BreakShieldDepletionResistPercent, AffixPool.Armour);
-            Rider(EffectKind.OnKillSplashPercent, AffixPool.Weapon);
+            Rider(EffectKind.OnKillSplashPercent, AffixPool.Weapon, holders: EffectHolders.Affix | EffectHolders.Talent);
             Rider(EffectKind.PushBackOnHitChancePercent, AffixPool.Weapon);
             Rider(EffectKind.FlatManaRegenBonus, AffixPool.Armour);
             Rider(EffectKind.NextSkillManaDiscountPercent, AffixPool.Weapon);
@@ -259,8 +289,92 @@ namespace PrincesPalace.Domain.Combat
             Mechanic(EffectKind.BerserkersVest, usesMagnitude: true);
             Mechanic(EffectKind.PhoenixEgg, usesMagnitude: true);
             Mechanic(EffectKind.Kinship, usesMagnitude: false);
-            Mechanic(EffectKind.BellwethersBell, usesMagnitude: true);
+            // Wrath's talent and the Bellwether's Bell add.
+            rows.Add(EffectKind.TransformDurationBonus, new EffectInfo(EffectKind.TransformDurationBonus,
+                EffectStacking.BestAffixPlusOthers, RelicOrTalent, tierScaled: false, AffixPool.None,
+                usesMagnitude: true, usesThreshold: false, EffectTarget.None, EffectStat.None, percent: false,
+                skillScoped: false, summedMechanic: true));
             Mechanic(EffectKind.TollOfTheFlock, usesMagnitude: true);
+
+
+            Talent(EffectKind.WoolOnHitTaken, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WoolPerTurnBelowHealth, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.WoolWhenWardedAllyHit, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WoolPerStatusedEnemy, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.IgnoreDefensePercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ShredDefenseOnHit, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ProvokedDamageReductionPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ProvokeHitsEveryEnemy, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WoolPerProvokedEnemy, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ExecuteDamageBonusPercent, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.ExtraAttackOnKill, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.TransformExtendOnKill, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.TransformHoldsBelowHealth, usesMagnitude: false, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.DefenseBonusPercentBelowHealth, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.DamageCapPercentBelowHealth, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.CheatDeathOncePerFight, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.HeadbuttCancelsIntent, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.TransformPushesEveryEnemy, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.TransformPermanentBelowHealth, usesMagnitude: false, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.WardReductionPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardIsFreeAction, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardAlsoAppliesRegen, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.WardHealsWhenSpent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardDamageBonusPerAlly, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardDamageBonusSelf, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardSelfBonusPersistsTurns, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardSpreadsToAllies, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardSpreadsToWholeParty, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.GiftManaPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.GiftAttackBonusPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.GiftAppliesImmediateTurn, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ShatterDamagePercentOfAttack, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ShatterSelfWardMultiplier, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ShatterAppliesVulnerable, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.WardsNeverExpire, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.FuryEngineEinherjar, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.SlamCritRestoresFury, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.SlamCritChanceAtFury, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.SlamIgnoresDefenseAtFullFury, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.FuryOnKill, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.FirstIdleTurnFree, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.CritFuryBonusPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.MomentumTier, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.CritChanceBelowTargetHealth, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.KillFillsMomentum, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.CritChanceWhileTransformed, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.FuryOnKillWhileTransformed, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.BattleTranceTier, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.TwinRampage, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.FuryEngineJuggernaut, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.SkillCooldownTurns, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.HealthCurveRegen, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.DamagePerMissingHealth, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.SkillLifestealPercent, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.SkillDamageBonusBelowOwnHealth, usesMagnitude: true, usesThreshold: true, skillScoped: true);
+            Talent(EffectKind.UnyieldingTier, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.DelayedDamagePercent, usesMagnitude: true, usesThreshold: true, skillScoped: false);
+            Talent(EffectKind.HealReducesDelayedDamage, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ShortfallPaidInHealthPermille, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.BloodPaidDamagePercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.CheatDeathFillsPrimary, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.FuryEngineSentinel, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.IronRetortPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.PlantedShieldBreakShards, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ShieldBashShortWait, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ShieldwallCoversParty, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ThornsPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ReflectMagicPercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.SilenceCasterOnSpellHit, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.ReflectGrantsFury, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.SlowsAttacker, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.DisarmsOnBreak, usesMagnitude: false, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.SkillStatusTurns, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.SkillCleansesDebuffs, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.SkillSplashPercent, usesMagnitude: true, usesThreshold: false, skillScoped: true);
+            Talent(EffectKind.PrimaryGainWhenBuffedAllyHit, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.TargetPreferencePercent, usesMagnitude: true, usesThreshold: false, skillScoped: false);
+            Talent(EffectKind.PrimaryGainPerProvokedEnemy, usesMagnitude: true, usesThreshold: false, skillScoped: false);
 
             return rows;
         }

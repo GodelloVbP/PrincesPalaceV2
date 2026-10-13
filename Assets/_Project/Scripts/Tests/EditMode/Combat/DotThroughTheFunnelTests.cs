@@ -203,8 +203,8 @@ namespace PrincesPalace.Domain.Tests
         public void ASpikeCappedTickBooksTheHealthActuallyLost()
         {
             var hero = Hero();
-            hero.Talents = new TalentEffectSet(new[]
-                { new TalentEffect(TalentEffectType.DamageCapPercentBelowHealth, 5, threshold: 50) });
+            hero.Effects = hero.Effects.With(EffectHolder.Talent, new[]
+                { new Effect(EffectKind.DamageCapPercentBelowHealth, 5, threshold: 50) });
             var (session, _) = Fight(hero, "sheep");
             hero.CurrentHealth = 40;
             session.ApplyStatusToForTest(hero, StatusEffectType.Poison, 20, 3);

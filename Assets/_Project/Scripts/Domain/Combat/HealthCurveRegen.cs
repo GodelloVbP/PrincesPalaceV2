@@ -3,7 +3,7 @@ using System;
 namespace PrincesPalace.Domain.Combat
 {
     // THICK BLOOD'S REGEN (docs/PLAN_BJORN_CONSTELLATIONS.md section 4, the
-    // TalentEffectType.HealthCurveRegen rule): a percent of max health healed
+    // EffectKind.HealthCurveRegen rule): a percent of max health healed
     // at the start of the holder's turn, on the same curve the Juggernaut's
     // Fury income rides. `floor` percent at full health, rising to `ceiling`
     // percent once he is at 25% health or lower, and in between

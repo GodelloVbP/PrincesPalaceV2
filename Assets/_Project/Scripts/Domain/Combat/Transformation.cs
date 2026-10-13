@@ -92,7 +92,7 @@ namespace PrincesPalace.Domain.Combat
         // of the target, while the transform is running. 0 for a transform
         // that does not splash.
         //
-        // A property of the TRANSFORM rather than a TalentEffectType,
+        // A property of the TRANSFORM rather than a EffectKind,
         // unlike every other rule the Black Ram grants, because it is not
         // something a node hands you — it is part of what the mode IS
         // (handoff §6.4), and it arrives and leaves with the mode. Putting

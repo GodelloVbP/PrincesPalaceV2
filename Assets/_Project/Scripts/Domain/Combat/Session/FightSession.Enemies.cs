@@ -1376,7 +1376,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             GrantSignature(victim,
                 (victim.SignaturePool?.GainOnDamageTaken ?? 0)
-                + victim.Talents.Best(TalentEffectType.WoolOnHitTaken));
+                + victim.Effects.Magnitude(EffectKind.WoolOnHitTaken));
         }
 
         // Adds to a combatant's signature resource if it has one. A no-op for

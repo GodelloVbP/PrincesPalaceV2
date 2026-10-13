@@ -35,7 +35,7 @@ namespace PrincesPalace.Domain.Tests
             [EffectKind.EssenceSiphon] = 3,
             [EffectKind.BerserkersVest] = 1,
             [EffectKind.PhoenixEgg] = 3,
-            [EffectKind.BellwethersBell] = 1,
+            [EffectKind.TransformDurationBonus] = 1,
             [EffectKind.TollOfTheFlock] = 15,
         };
 

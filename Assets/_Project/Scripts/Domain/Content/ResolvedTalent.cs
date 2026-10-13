@@ -48,7 +48,7 @@ namespace PrincesPalace.Domain.Content
 
         // The triggered/conditional rules this talent grants. Never null;
         // empty for every node still using the old additive vocabulary.
-        public TalentEffect[] Effects = Array.Empty<TalentEffect>();
+        public Effect[] Effects = Array.Empty<Effect>();
 
         // A skills.json id this talent puts on the owner's combat strip, or
         // empty — see RawTalentEntry.grantsSkillId.
@@ -56,7 +56,7 @@ namespace PrincesPalace.Domain.Content
 
         // The skill this node's skill-scoped effects upgrade, or empty --
         // see RawTalentEntry.appliesToSkillId. Each such effect also carries
-        // the id (TalentEffect.SkillId), which is what combat reads.
+        // the id (Effect.SkillId), which is what combat reads.
         public string AppliesToSkillId = "";
 
         // True when this node is available to everyone rather than owned by
@@ -79,7 +79,7 @@ namespace PrincesPalace.Domain.Content
             int column, int row, IReadOnlyList<string> prerequisites, StatBlock statBonus,
             AbilityScoreBlock abilityScoreBonus, int maxManaBonus, int skillManaCostReduction,
             int signatureCapacityBonus, int signaturePerTurnBonus, string grantsStartingItemId, int sortOrder,
-            string iconPath = "", int minSpent = 0, IReadOnlyList<TalentEffect> effects = null,
+            string iconPath = "", int minSpent = 0, IReadOnlyList<Effect> effects = null,
             string grantsSkillId = "", string appliesToSkillId = "")
         {
             Effects = ToArray(effects);

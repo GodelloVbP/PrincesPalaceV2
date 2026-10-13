@@ -139,7 +139,7 @@ namespace PrincesPalace.PlayModeTests
             // ANY of the three, not a particular one.
             //
             // A talent's effects land in three different places -- the stat
-            // block, the ability scores, and the TalentEffectSet combat reads
+            // block, the ability scores, and the EffectSet combat reads
             // per swing -- and which one depends entirely on what was authored.
             // The sheep's own root grants wool on being hit, which is a combat
             // effect and moves no stat at all, so asserting on stats alone
