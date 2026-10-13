@@ -12,15 +12,27 @@ Ownership, briefs, parallel sessions and commits. Routing and the
 ## Ownership
 
 - One owner per issue: diagnosis, implementation, focused tests,
-  correction. No duplicate owner; no replacement launch without a stated
-  reason. Reuse an owner while its context on the issue is still relevant.
+  correction. No duplicate owner.
+- Context reuse is mandatory. An existing agent (running or resumable)
+  that holds overlapping context (same files, same system, or its own
+  earlier output) is continued with SendMessage; launching a context-free
+  agent for that work is not allowed.
+- Launch fresh only when: (a) independence is the purpose (a context-free
+  reviewer or second opinion); (b) the existing agent's context is obsolete
+  or near its limit: it first writes a state record to the scratchpad
+  (findings, decisions, files changed, verification, next step) and the new
+  agent starts from it; (c) the work moves to another agent type or model
+  (e.g. escalation to `senior`): the new brief references the predecessor's
+  report or state record.
+- A fresh agent never sees the conversation. A brief pastes no chat
+  history; context reaches it only by reference (path to a report or state
+  record), and the brief says why it is needed.
 - At most three active agents. Never two owners on one file at once;
   serialize overlapping edits and combine tightly coupled issues.
-- An owner whose context is largely obsolete writes a state record to the
-  scratchpad (findings, decisions, files changed, verification, next step);
-  a fresh owner starts from it.
 - After two failed correction cycles, reassess cause and scope, then allow a
-  third attempt or relaunch as `senior` with the fitting `Escalation:`.
+  third attempt or relaunch as `senior` (reason (c)) with the fitting
+  `Escalation:`. The orchestrator may escalate earlier with
+  `Escalation: judgment - <reason>`.
 - A worker that thinks a rule is wrong says so in its report and follows it;
   the orchestrator raises it with the user.
 - Ask the user only for decisions that are irreversible, preference-only and
@@ -28,29 +40,39 @@ Ownership, briefs, parallel sessions and commits. Routing and the
 
 ## Briefs
 
-Before anything bigger than a one-line fix, state the intent:
-**Change:** / **Don't touch:** / **Done when:** (acceptance evidence).
-Behaviour changes are briefed as trigger → condition → outcome; bugs as the
-symptom, not a theory of the cause.
+A one-line fix needs no brief. Anything bigger uses this template:
 
 ```
-Objective:
-Done when: (test names, screenshot condition, or file state)
+Objective: (behaviour changes as trigger -> condition -> outcome; bugs as the symptom, not a theory of the cause)
+Done when: (acceptance evidence: test names, screenshot condition, or file state)
 Owner: (agent type)
-Edit surface: (paths the owner may change)
+Context: continues <agent> | fresh because (a|b|c): <why>
+Edit surface: (paths the owner may change; empty for read-only work)
+Don't touch: (optional)
 Checked for existing systems: (what was searched, what it hooks into)
 References: (path + section, never pasted text)
 Verification: (exact command)
 Stop conditions: completion, a plan-changing blocker, or a rule that seems wrong.
 ```
 
-Workers start without conversation history unless the work depends on it;
-the brief then says why.
-
 A novel screen or major rework gets a design spec first: layout at
 1920x1080, every interactive state, interaction rules, out-of-scope. A
 prototype outranks any table transcribed from it. Before claiming it built,
 audit the build against the spec section by section.
+
+## Fixer trial
+
+`fixer` runs on Haiku 5.5 as a trial. The orchestrator reviews every fixer
+diff before commit and logs every launch in
+`docs/measurements/fixer_haiku_trial.md`, one row each: date, brief
+one-liner, outcome (done / correctly stopped / wrongly stopped / wrong fix),
+correction cycles, out-of-scope edits (y/n), gate result, which agent caught
+the mistake.
+
+Exit after 10 launches: keep Haiku if no wrong fix reached a commit and
+correction cycles are at most one per three launches; otherwise revert
+`fixer` to Sonnet 5.5 (agent file, `route_agents.py` pin, tests, `CLAUDE.md`
+row).
 
 ## Verification runs
 

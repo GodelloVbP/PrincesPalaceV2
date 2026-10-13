@@ -5,16 +5,16 @@
 
 Each case is a whole hook payload -- tool_name and tool_input in, allow or
 deny out -- run the way the hook itself is invoked: JSON on stdin, a decision
-on stdout. The five routed agents are reader (sonnet), fixer (sonnet),
-implementer (sonnet), verifier (sonnet), and senior (opus); claude-code-guide
+on stdout. The five routed agents are reader (haiku), fixer (haiku, trial),
+implementer (sonnet), verifier (haiku), and senior (opus); claude-code-guide
 (haiku or sonnet) is the one built-in agent this project also allows. Everything else --
 general-purpose, Explore, Plan, claude, a missing subagent_type, a model
 override on a routed agent, a model naming Fable, a bare "opus" alias, an
 Opus id that is not exactly claude-opus-5-5, isolation: "remote", and the
 Workflow tool outright -- must be denied. `senior` additionally requires
-a `prompt` with a line `Escalation: <criterion>` naming one of the three
-criteria in route_agents.ESCALATION_CRITERIA. `unknown-cause` was removed
-2026-09-23 and must be denied like any other made-up criterion.
+a `prompt` with a line `Escalation: <criterion>` naming one of the
+criteria in route_agents.ESCALATION_CRITERIA; `judgment` must also carry a
+reason on the same line. Any other criterion is denied.
 """
 
 import json
@@ -47,14 +47,14 @@ class AllowsEachRoutedAgentTests(unittest.TestCase):
         self.assertAllowed({"subagent_type": "claude-code-guide"})
 
     def test_each_type_with_its_own_pinned_model_named_explicitly(self):
-        self.assertAllowed({"subagent_type": "reader", "model": "sonnet"})
-        self.assertAllowed({"subagent_type": "reader", "model": "claude-sonnet-5-5"})
-        self.assertAllowed({"subagent_type": "fixer", "model": "sonnet"})
-        self.assertAllowed({"subagent_type": "fixer", "model": "claude-sonnet-5-5"})
+        self.assertAllowed({"subagent_type": "reader", "model": "haiku"})
+        self.assertAllowed({"subagent_type": "reader", "model": "claude-haiku-5-5"})
+        self.assertAllowed({"subagent_type": "fixer", "model": "haiku"})
+        self.assertAllowed({"subagent_type": "fixer", "model": "claude-haiku-5-5"})
         self.assertAllowed({"subagent_type": "implementer", "model": "sonnet"})
         self.assertAllowed({"subagent_type": "implementer", "model": "claude-sonnet-5-5"})
-        self.assertAllowed({"subagent_type": "verifier", "model": "sonnet"})
-        self.assertAllowed({"subagent_type": "verifier", "model": "claude-sonnet-5-5"})
+        self.assertAllowed({"subagent_type": "verifier", "model": "haiku"})
+        self.assertAllowed({"subagent_type": "verifier", "model": "claude-haiku-5-5"})
         self.assertAllowed({"subagent_type": "senior", "model": "claude-opus-5-5", "prompt": ESCALATION_PROMPT})
 
     def test_claude_code_guide_allows_either_of_its_two_models(self):
@@ -67,7 +67,8 @@ class AllowsEachRoutedAgentTests(unittest.TestCase):
 
 class SeniorEscalationLineTests(unittest.TestCase):
     """senior additionally requires a prompt line 'Escalation: <criterion>'
-    naming one of the three criteria; anything else is denied."""
+    naming one of the criteria; `judgment` also needs a reason; anything
+    else is denied."""
 
     def assertAllowed(self, tool_input):
         self.assertIsNone(decision("Agent", tool_input), "should have been allowed: " + repr(tool_input))
@@ -75,8 +76,8 @@ class SeniorEscalationLineTests(unittest.TestCase):
     def assertDenied(self, tool_input):
         self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
 
-    def test_each_of_the_three_criteria_is_allowed(self):
-        for criterion in route_agents.ESCALATION_CRITERIA:
+    def test_each_of_the_three_standalone_criteria_is_allowed(self):
+        for criterion in ("two-failed-cycles", "architecture", "cross-layer"):
             self.assertAllowed({
                 "subagent_type": "senior",
                 "prompt": "Some context.\nEscalation: {}\nMore context.".format(criterion),
@@ -87,6 +88,26 @@ class SeniorEscalationLineTests(unittest.TestCase):
             "subagent_type": "senior",
             "prompt": "Escalation: cross-layer -- Domain and Editor must land together.",
         })
+
+    def test_judgment_with_a_reason_is_allowed(self):
+        for sep in (" - ", " \u2014 ", ": ", "-", " -- "):
+            self.assertAllowed({
+                "subagent_type": "senior",
+                "prompt": "Context.\nEscalation: judgment" + sep + "needs a design call across two owners.\nMore.",
+            })
+
+    def test_bare_judgment_is_denied(self):
+        for tail in ("", " ", " -", " - ", " \u2014", ": ", " - -"):
+            self.assertDenied({
+                "subagent_type": "senior",
+                "prompt": "Escalation: judgment" + tail + "\nThe reason is on the next line.",
+            })
+
+    def test_judgment_without_a_separator_is_denied(self):
+        self.assertDenied({"subagent_type": "senior", "prompt": "Escalation: judgment because hard"})
+
+    def test_judgment_is_in_the_criteria_list(self):
+        self.assertIn("judgment", route_agents.ESCALATION_CRITERIA)
 
     def test_missing_prompt_is_denied(self):
         self.assertDenied({"subagent_type": "senior"})
@@ -100,7 +121,7 @@ class SeniorEscalationLineTests(unittest.TestCase):
         self.assertDenied({"subagent_type": "senior", "prompt": "Escalation: difficult"})
         self.assertDenied({"subagent_type": "senior", "prompt": "Escalation: important"})
 
-    def test_unknown_cause_is_removed_and_denied(self):
+    def test_unknown_cause_is_denied(self):
         self.assertDenied({"subagent_type": "senior", "prompt": "Escalation: unknown-cause"})
 
     def test_criterion_must_be_a_whole_word(self):
@@ -122,9 +143,8 @@ class DeniesFableModelTests(unittest.TestCase):
 
 
 class DeniesNonExactOpusModelTests(unittest.TestCase):
-    """Owner decision 2026-09-24: the only Opus this project allows is
-    exactly claude-opus-5-5 ("no Opus 5"). The bare "opus" alias and any
-    other Opus id are refused by name, on implementer and senior alike."""
+    """The only Opus allowed is exactly claude-opus-5-5. The bare "opus"
+    alias and any other Opus id are refused, on implementer and senior alike."""
 
     def assertDenied(self, tool_input):
         self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
@@ -197,20 +217,10 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
     def assertDenied(self, tool_input):
         self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
 
-    def test_reader_may_not_be_moved_to_haiku_or_opus(self):
-        self.assertDenied({"subagent_type": "reader", "model": "haiku"})
-        self.assertDenied({"subagent_type": "reader", "model": "claude-opus-5-5"})
-
-    def test_fixer_may_not_be_moved_to_opus_or_haiku(self):
-        # fixer is the Sonnet lane for easy fixes; a harder fix goes to
-        # implementer by subagent_type, not by overriding fixer's model.
-        self.assertDenied({"subagent_type": "fixer", "model": "claude-opus-5-5"})
-        self.assertDenied({"subagent_type": "fixer", "model": "opus"})
-        self.assertDenied({"subagent_type": "fixer", "model": "haiku"})
-        self.assertDenied({"subagent_type": "fixer", "model": "claude-haiku-4-5"})
-
-    def test_verifier_may_not_be_moved_to_opus(self):
-        self.assertDenied({"subagent_type": "verifier", "model": "claude-opus-5-5"})
+    def test_haiku_agents_are_refused_off_haiku_5_5(self):
+        for subagent_type in ("reader", "verifier", "fixer"):
+            for model in ("sonnet", "claude-sonnet-5-5", "opus", "claude-opus-5-5", "claude-haiku-4-5"):
+                self.assertDenied({"subagent_type": subagent_type, "model": model})
 
     def test_implementer_is_refused_on_opus_and_haiku(self):
         # The Opus lane is senior-only: implementer stays on Sonnet
@@ -229,7 +239,7 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
     def test_plain_sonnet_5_is_no_longer_an_allowed_pin(self):
         # claude-sonnet-5 (plain Sonnet 5) is retired in favour of
         # claude-sonnet-5-5 for every Sonnet-pinned agent.
-        for subagent_type in ("reader", "fixer", "verifier", "implementer"):
+        for subagent_type in ("fixer", "implementer"):
             self.assertDenied({"subagent_type": subagent_type, "model": "claude-sonnet-5"})
 
 

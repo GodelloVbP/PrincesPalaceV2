@@ -19,46 +19,45 @@ succeeds only here. Catan, Godot, or "M137" means another project — stop.
 
 ## How to work
 
-- Read the whole task first, then take the smallest route that fits. The
-  main session may make small, low-risk edits itself (docs, one-liners,
-  roughly under 20 lines; never scene, content or runtime code) and commit
-  them. Anything larger goes through the routing table below.
+- Read the whole task, then take the smallest route that fits. The main
+  session may make small, low-risk edits itself (docs, one-liners, roughly
+  under 20 lines; never scene, content or runtime code) and commit them.
+  Anything larger goes through Agent routing.
 - Before building, search for an existing system to hook into
-  (`docs/CODE_MAP.md`, Grep) and extend it rather than add a parallel one.
-  Say in the brief or commit what you checked.
+  (`docs/CODE_MAP.md`, Grep) and extend it, not a parallel one. Say in the
+  brief or commit what you checked.
 - Build the model, not the patch: no flag, slot or special case where the
   model no longer fits. Fix the class of bug, not the instance.
-- Comments say why the code is this way, in present tense. History, dates,
-  owner quotes, "used to", phase names go in the commit message. Delete a
-  comment the moment it stops being true; fix stale ones in lines you touch.
+- Comments say why, in present tense. History, dates, owner quotes, "used
+  to" and phase names go in the commit message. Delete a comment when it
+  stops being true; fix stale ones in lines you touch.
 - One home per fact: link a rule from another doc, never restate it.
 - Be concise in code, comments, docs and reports.
 - Verify with evidence (the command and its output) before claiming done.
 
 ## Agent routing
 
-Triage every implementation launch. Trivial and already diagnosed (brief
-carries file:line + excerpt + failure) → `fixer`. Doable as a bounded change
-→ `implementer` (Sonnet 5.5) — the default. Very complex work that meets one
-`Escalation:` criterion → `senior` (Opus 5.5).
+Triage every launch. Ownership, briefs and context reuse: `docs/WORKFLOW.md`.
 
 | Type | Model | Use when |
 |---|---|---|
-| `reader` | Sonnet 5.5 | Locate files, extract facts: paths, line numbers, excerpts. Never diagnoses. |
-| `fixer` | Sonnet 5.5 | Pre-diagnosed fix in one file or system with known tests. Stops if unclear, wider than the brief, or architectural. Tests via the dotnet `[D]` loop or `tools/test.ps1 <area>` only. |
-| `implementer` | Sonnet 5.5 | The default implementation owner: diagnose, implement, test, correct. Acts on a reader's excerpts without re-reading the tree. |
-| `verifier` | Sonnet 5.5 | Run one named gate once, report pass/fail. |
-| `senior` | Opus 5.5, medium | Very complex architectural work only, gated by the `Escalation:` criteria below. |
+| `reader` | Haiku 5.5 | Locate files, extract facts: paths, line numbers, excerpts. Never diagnoses. |
+| `fixer` | Haiku 5.5 (trial) | Pre-diagnosed fix (brief has file:line + excerpt + failure) in one file or system with known tests. Stops if unclear, wider than the brief, or architectural. Tests via the dotnet `[D]` loop or `tools/test.ps1 <area>` only. |
+| `implementer` | Sonnet 5.5 | Default owner: diagnose, implement, test, correct. Acts on a reader's excerpts without re-reading the tree. Read-only research, audit or review that needs judgment or the web: empty edit surface, report to the scratchpad. |
+| `verifier` | Haiku 5.5 | Run one named gate once, report pass/fail. |
+| `senior` | Opus 5.5, medium | Brief carries `Escalation: <criterion>`, below. A plan that redesigns a contract is `architecture`. |
 
-`senior`'s brief must carry a line `Escalation: <criterion>` naming one of:
-`architecture` (redesigns a contract or lifecycle), `cross-layer` (must land
-atomically across Domain + Core + Editor/scene generation, with ordering,
-serialization or lifecycle risk), or `two-failed-cycles` (an implementer
-already failed two correction cycles on this issue). There is no generic
-"difficult" criterion. `claude-code-guide` is also allowed. No other
-`subagent_type`, no per-call model override, no `Workflow` tool, no Fable,
-and no Opus but exactly `claude-opus-5-5`: `tools/githooks/route_agents.py`
-refuses the rest.
+| `Escalation:` criterion | When |
+|---|---|
+| `architecture` | Redesigns a contract or lifecycle. The brief names the change, the affected contracts or lifecycles, and the failure risks. |
+| `cross-layer` | Must land atomically across Domain + Core + Editor/scene generation, with ordering, serialization or lifecycle risk. |
+| `two-failed-cycles` | An implementer failed two correction cycles on the issue. The brief names what each attempt did and why it failed. |
+| `judgment - <reason>` | The orchestrator judges Opus is needed for another reason. The reason is on the same line (`-`, `—` or `:`); without one the hook refuses. |
+
+`tools/githooks/route_agents.py` refuses any other `subagent_type`, a
+per-call `model` off the agent's pin, `Workflow`, Fable, any Opus but
+`claude-opus-5-5`, and `senior` without a valid `Escalation:` line.
+`claude-code-guide` is also allowed.
 
 ## Verification
 
@@ -75,9 +74,9 @@ refuses the rest.
   again before committing it; `-BuildContent` likewise for content.
 - Commit only test-passing checkpoints.
 - `.ps1` files are pure ASCII outside comments, no BOM (PS 5.1 misparses
-  UTF-8). Enforced by `tools/githooks/pre-commit`.
-- Staging: explicit paths only, never `git add -A`/`.`/`-u`/a directory or
-  `git commit -a`; sessions share one tree. Enforced by
+  UTF-8); enforced by `tools/githooks/pre-commit`.
+- Stage explicit paths only, never `git add -A`/`.`/`-u`/a directory or
+  `git commit -a` (sessions share one tree); enforced by
   `tools/githooks/deny_broad_staging.py`.
 
 ## Five gotchas
