@@ -23,8 +23,7 @@ Ownership, briefs, parallel sessions and commits. Routing and the
 - Split `senior` work at the design line: `senior` designs the contract and
   lands the core seam with its tests, then hands caller migration, test
   rewrites, JSON number moves and doc rows to `implementer`. A senior run
-  that is mostly mechanical edits costs Opus tokens on Sonnet work (I1 and
-  run map P2: ~600K tokens and ~280 tool calls each, most of it migration).
+  that is mostly mechanical edits spends Opus tokens on Sonnet work.
 - An owner whose context is largely obsolete writes a state record to the
   scratchpad (findings, decisions, files changed, verification, next step);
   a fresh owner starts from it.
