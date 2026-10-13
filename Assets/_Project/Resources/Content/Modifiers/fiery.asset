@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'Burns on every landed hit. Elemental family: Fire, the damage half -- Emberguard is Fire''s separate resistance affix; a Fiery item does not also resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.'
     SortOrder: 0
     Effects:
-    - Type: 1
+    - Kind: 17
       Magnitude: 10
       Threshold: 0
       AgainstType: 1

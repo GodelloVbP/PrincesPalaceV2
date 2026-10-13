@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: bloodlust
     DisplayName: Bloodlust
     Description: The first time you kill an enemy each fight, take another turn.
-    Effect: 3
     SortOrder: 2
     IconPath: Assets/_Project/Art/Items/Relics/Processed/bloodlust.png
     Rarity: 0
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 32
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

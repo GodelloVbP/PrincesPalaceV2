@@ -9,11 +9,11 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // Phase C's scaling seam (ContentDatabase.ModifierEffects x
+    // Phase C's scaling seam (ContentDatabase.Effects x
     // ModifierMagnitude), exercised against REAL, content-authored
     // modifiers.json entries -- not test fixtures. Proves the full chain a
     // dropped item actually walks: equip a real item with a real modifier id
-    // rolled at a known tier/riftTier -> ContentDatabase.ModifierEffects
+    // rolled at a known tier/riftTier -> ContentDatabase.Effects
     // scales the authored base by TierMultiplier x RiftMultiplier ->
     // FightEncounterAdapter reaches CombatantState with the SCALED number.
     //
@@ -51,7 +51,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // POST-AFFIX-SPLIT: Fire's family used to be one bundled "fiery" id
-        // (ElementalDamageOnHitPercent + TypedResistanceFlat at once). A
+        // (ElementalDamageOnHitPercent + ResistanceFlat at once). A
         // designer pass split it into "fiery" (damage) and "emberguard"
         // (resistance) -- see modifiers.json's own entries. The two used to
         // be proven together in one test; now each affix scales on its own.
@@ -66,14 +66,14 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must actually be LIVE (requirement met), or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped modifier must produce real effects");
 
             // fiery's authored base: ElementalDamageOnHitPercent 10 (Fire) -- halved
             // from 20 in the affix-power-down pass (AUDIT-adjacent balance
             // call; see modifiers.json's own header).
             // Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            var onHit = effects.All.Single(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent);
+            var onHit = effects.All.Single(e => e.Kind == EffectKind.ElementalDamageOnHitPercent);
             Assert.AreEqual(DamageType.Fire, onHit.Against);
             Assert.AreEqual(16, onHit.Magnitude, "10 x 1.6 = 16.0 exactly");
         }
@@ -85,12 +85,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearing(item, "emberguard", RiftTier.RiftForged);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped modifier must produce real effects");
 
-            // emberguard's authored base: TypedResistanceFlat 8 (Fire) -- halved from 15.
+            // emberguard's authored base: ResistanceFlat 8 (Fire) -- halved from 15.
             // Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            var resist = effects.All.Single(e => e.Type == ModifierEffectType.TypedResistanceFlat);
+            var resist = effects.All.Single(e => e.Kind == EffectKind.ResistanceFlat);
             Assert.AreEqual(DamageType.Fire, resist.Against);
             Assert.AreEqual(13, resist.Magnitude, "8 x 1.6 = 12.8, away-from-zero rounded");
         }
@@ -106,10 +106,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearing(item, new[] { "fiery", "emberguard" }, RiftTier.RiftForged);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
-            Assert.AreEqual(16, effects.All.Single(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent).Magnitude);
-            Assert.AreEqual(13, effects.All.Single(e => e.Type == ModifierEffectType.TypedResistanceFlat).Magnitude);
+            Assert.AreEqual(16, effects.All.Single(e => e.Kind == EffectKind.ElementalDamageOnHitPercent).Magnitude);
+            Assert.AreEqual(13, effects.All.Single(e => e.Kind == EffectKind.ResistanceFlat).Magnitude);
         }
 
         [Test]
@@ -119,9 +119,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearing(item, "fiery", RiftTier.Ordinary);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
-            var onHit = effects.All.Single(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent);
+            var onHit = effects.All.Single(e => e.Kind == EffectKind.ElementalDamageOnHitPercent);
             Assert.AreEqual(10, onHit.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
@@ -179,7 +179,7 @@ namespace PrincesPalace.PlayModeTests
             var withoutState = builtWithout.Party[0];
 
             // runic's authored base at Ordinary/tier-0 (scale exactly 1.0):
-            // FlatMaxManaBonus 5, FlatManaRegenBonus 1 -- both halved from 10/2.
+            // MaxManaFlat 5, FlatManaRegenBonus 1 -- both halved from 10/2.
             Assert.AreEqual(5, withState.MaxMana - withoutState.MaxMana, "Runic's flat Max Mana bonus must reach MaxMana");
             Assert.AreEqual(5, withState.CurrentMana - withoutState.CurrentMana, "and start the fight already full");
             Assert.AreEqual(1, withState.ManaRegen - withoutState.ManaRegen, "Runic's flat ManaRegen bonus must reach ManaRegen");

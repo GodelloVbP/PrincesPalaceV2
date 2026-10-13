@@ -64,6 +64,7 @@ screenshots all read it.
 | Non-fight rooms | `Domain/Dungeon/RoomResolution.cs` → `Core/RoomResolver.cs` | Every room that does nothing says so. |
 | Events | `Core/Bot/RunOrchestrator.Event.cs`, `Domain/Events/`, `Core/RunEventContext.cs` | Authoring: `docs/EVENTS.md`. |
 | Shop stock/pricing | `Core/Bot/RunOrchestrator.Shop.cs`, `Domain/Rewards/ShopStock.cs`, `ShopPricing.cs` | |
+| Effects: what relics, affixes and track terms do in a fight | `Domain/Combat/EffectKind.cs`, `EffectCatalog.cs` (per-kind facts), `Effect.cs`, `EffectSet.cs` (held, stacked; `CombatantState.Effects`), `EffectFold.cs` (stats); `Domain/Content/EffectEntryResolver.cs`; built in `Core/FightEncounterAdapter.cs` | Hooks ask `actor.Effects.Has/Magnitude`; headline numbers in `relics.json`, secondary ones in `FightTuning`. Talents not yet on it. |
 | Equip / talents / item preview | `Core/EquipmentOps.cs`, `Core/TalentOps.cs`, `Core/ItemDescription.cs` | One rule each, shared by screens and bot. |
 | Menu permissions (a fight is read-only) | `Domain/UiKit/MenuContext.cs`, `MenuAction.cs`, `MenuPermissions.cs`, `Domain/Party/PartyModes.cs` | One table (`docs/PLAN_SYSTEM_MENU.md` C3). Controls and the Core ops (`EquipmentOps`, `TalentOps`, `RunOrchestrator.Spells`, `RewardTracks.Claim`) both ask it. |
 | Progression | `Domain/Progression/`, `Core/RewardTracks.cs`, `Core/CharacterIdentity.cs`, `Core/Achievements.cs` | |

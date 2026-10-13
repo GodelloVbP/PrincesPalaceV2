@@ -22,22 +22,22 @@ namespace PrincesPalace.Domain.Tests
     // question, not which file the mechanic's code happens to live in:
     // Monkey King's Scepter is one line in FightSession.cs's CanReachEnemy,
     // Berserker's Vest lives in FightSession.Ledger.cs, and Jo-Sun's Book
-    // of Anatomy / Vampire Dentures are pure numeric RelicModifier stats
+    // of Anatomy / Vampire Dentures are pure numeric Effect stats
     // with no relic hook at all. Pointy Nail on the End of a Stick has no
     // combat-level test here either, for the same reason -- see
     // RelicModifierTests.ArmorPenetrationFlatAppliesToTheArmorPenetrationStat
     // and CombatMath.BroadDefense's own ArmorPenetrationTests.
     public class RelicMechanicsTests
     {
-        private static ResolvedRelic Relic(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
+        private static ResolvedRelic Relic(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0);
 
         private static EnemyKit Foe(string name = "dummy") =>
             new EnemyKit(new ResolvedEnemy(name, name, new StatBlock(), 0, 0, false,
                 DamageType.Physical, DamageType.Physical, 0), false);
 
         private static (FightSession session, CombatantState hero, CombatantState foe1, CombatantState foe2) Fight(
-            RelicEffect relic, int heroMaxHealth = 100, int heroMaxMana = 100,
+            EffectKind relic, int heroMaxHealth = 100, int heroMaxMana = 100,
             IReadOnlyList<ResolvedSkill> skills = null)
         {
             var hero = new CombatantState("Shawn", true, heroMaxHealth, heroMaxMana, 20, 20);
@@ -51,6 +51,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<PlayerKit> { kit },
                 new List<EnemyKit> { Foe("Foe1"), Foe("Foe2") },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, foe1, foe2);
         }
@@ -60,7 +61,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void MagicMarkerMarksASpellTarget()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker,
+            var (session, hero, foe1, _) = Fight(EffectKind.MagicMarker,
                 skills: new List<ResolvedSkill> { TestSkills.CastableSkill() });
 
             session.CastSkill(0, foe1);
@@ -71,7 +72,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void MagicMarkerConsumesTheMarkAndRestoresTwentyPercentOfMissingMana()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100,
+            var (session, hero, foe1, _) = Fight(EffectKind.MagicMarker, heroMaxMana: 100,
                 skills: new List<ResolvedSkill> { TestSkills.CastableSkill() });
             hero.PrimaryPool.Current = 50; // 50 missing
 
@@ -98,7 +99,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheMarkRefundsShawnsManaBeforeHisWool()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100,
+            var (session, hero, foe1, _) = Fight(EffectKind.MagicMarker, heroMaxMana: 100,
                 skills: new List<ResolvedSkill> { TestSkills.CastableSkill() });
             hero.PrimaryPool.Current = 80;                             // 20 missing
             hero.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, 0, 0);
@@ -114,7 +115,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AnAttackWithNoMarkRestoresNothing()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100);
+            var (session, hero, foe1, _) = Fight(EffectKind.MagicMarker, heroMaxMana: 100);
             hero.PrimaryPool.Current = 50;
 
             session.ExecuteAttack(foe1); // no spell was cast first -- nothing marked
@@ -127,7 +128,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void JarOfBearUrineMarksEveryEnemyAtCombatStart()
         {
-            var (_, _, foe1, foe2) = Fight(RelicEffect.JarOfBearUrine);
+            var (_, _, foe1, foe2) = Fight(EffectKind.JarOfBearUrine);
 
             Assert.IsTrue(Marks.IsMarked(foe1));
             Assert.IsTrue(Marks.IsMarked(foe2));
@@ -138,7 +139,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CrossingBelowThirtyPercentFearsEveryEnemy()
         {
-            var (session, hero, foe1, foe2) = Fight(RelicEffect.WorldEndersCrown);
+            var (session, hero, foe1, foe2) = Fight(EffectKind.WorldEndersCrown);
 
             // 100 -> 25, which is 25% -- below the 30% line.
             session.DealDamageForTest(foe1, hero, 75, DamageType.Physical);
@@ -150,7 +151,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ItDoesNotFireAgainWhileStillBelowTheLine()
         {
-            var (session, hero, foe1, foe2) = Fight(RelicEffect.WorldEndersCrown);
+            var (session, hero, foe1, foe2) = Fight(EffectKind.WorldEndersCrown);
 
             session.DealDamageForTest(foe1, hero, 75, DamageType.Physical); // 100 -> 25, fires
             // Fear's 1-turn duration is spent by the turn it skips, not by
@@ -169,7 +170,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void GoingBackAboveThirtyPercentReArmsIt()
         {
-            var (session, hero, foe1, foe2) = Fight(RelicEffect.WorldEndersCrown);
+            var (session, hero, foe1, foe2) = Fight(EffectKind.WorldEndersCrown);
 
             session.DealDamageForTest(foe1, hero, 75, DamageType.Physical); // 100 -> 25, fires
             StatusEffects.Tick(foe1);
@@ -187,7 +188,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EachHitStacksAThreePercentResistanceShred()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.CursedIdol);
+            var (session, hero, foe1, _) = Fight(EffectKind.CursedIdol);
 
             int before = foe1.CurrentHealth;
             session.DealDamageForTest(hero, foe1, 100, DamageType.Physical); // 0 existing stacks -> +0%
@@ -210,7 +211,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void StacksCapAtFifteenPercent()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.CursedIdol);
+            var (session, hero, foe1, _) = Fight(EffectKind.CursedIdol);
 
             for (int i = 0; i < 7; i++)
             {
@@ -226,7 +227,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ARealKillGrantsTwoPercentRunWideDamage()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.AmassingStar);
+            var (session, hero, foe1, _) = Fight(EffectKind.AmassingStar);
             foe1.CurrentHealth = 1;
 
             // A REAL kill, through ExecuteAttack -- RelicsOnEachKill (and so
@@ -242,7 +243,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void KillingASummonGrantsNothing()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.AmassingStar);
+            var (session, hero, foe1, _) = Fight(EffectKind.AmassingStar);
             foe1.CurrentHealth = 1;
             foe1.IsSummon = true;
 
@@ -254,7 +255,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void RunWideBonusDamagePercentIncreasesActualDamageDealt()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.DualWield); // a relic irrelevant to this mechanic
+            var (session, hero, foe1, _) = Fight(EffectKind.DualWield); // a relic irrelevant to this mechanic
 
             session.ExecuteAttack(foe1);
             int withoutBonus = 999999 - foe1.CurrentHealth;
@@ -278,7 +279,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CastingAConvergenceAbilityGrantsFiftyPercentReduction()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.RampagingBullsHorn,
+            var (session, hero, foe1, _) = Fight(EffectKind.RampagingBullsHorn,
                 skills: new List<ResolvedSkill> { TransformSkill() });
 
             session.CastSkill(0, hero);
@@ -294,7 +295,7 @@ namespace PrincesPalace.Domain.Tests
                 SkillEffect.HealSelf, SkillTargeting.Self, 0, 0, false, 0, 1, false,
                 null, SpellPresentation.None, 0);
 
-            var (session, hero, _, _) = Fight(RelicEffect.RampagingBullsHorn,
+            var (session, hero, _, _) = Fight(EffectKind.RampagingBullsHorn,
                 skills: new List<ResolvedSkill> { noop });
 
             session.CastSkill(0, hero);
@@ -307,10 +308,10 @@ namespace PrincesPalace.Domain.Tests
         //
         // A second Fight overload set, kept distinct from the one above
         // (FightWithSpeed rather than a second Fight overload) because both
-        // would otherwise apply to a bare `Fight(RelicEffect.X)` call and
+        // would otherwise apply to a bare `Fight(EffectKind.X)` call and
         // the compiler would refuse to pick one.
         private static (FightSession session, CombatantState hero, CombatantState foe1, CombatantState foe2) FightWithSpeed(
-            IReadOnlyList<RelicEffect> relics, int heroSpeed = 20, int foeSpeed = 1, int foeAttack = 1,
+            IReadOnlyList<EffectKind> relics, int heroSpeed = 20, int foeSpeed = 1, int foeAttack = 1,
             IReadOnlyList<ResolvedSkill> skills = null)
         {
             var hero = new CombatantState("Shawn", true, 100, 100, 20, heroSpeed);
@@ -326,12 +327,13 @@ namespace PrincesPalace.Domain.Tests
                 new List<PlayerKit> { kit },
                 new List<EnemyKit> { Foe("Foe1"), Foe("Foe2") },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, foe1, foe2);
         }
 
         private static (FightSession session, CombatantState hero, CombatantState foe1, CombatantState foe2) FightWithSpeed(
-            RelicEffect relic, int heroSpeed = 20, int foeSpeed = 1, int foeAttack = 1,
+            EffectKind relic, int heroSpeed = 20, int foeSpeed = 1, int foeAttack = 1,
             IReadOnlyList<ResolvedSkill> skills = null) =>
             FightWithSpeed(new[] { relic }, heroSpeed, foeSpeed, foeAttack, skills);
 
@@ -343,26 +345,26 @@ namespace PrincesPalace.Domain.Tests
             // Equal speed keeps the turn order a clean 1:1 alternation, so
             // the malus math below is exact rather than fighting whichever
             // side charges faster.
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.IceFingernail, heroSpeed: 100, foeSpeed: 100);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.IceFingernail, heroSpeed: 100, foeSpeed: 100);
 
             session.ExecuteAttack(foe1);
-            Assert.AreEqual(-10, session.SpeedBonusFrom(foe1, RelicEffect.IceFingernail), "1 stack of 10% off a 100 base");
+            Assert.AreEqual(-10, session.SpeedBonusFrom(foe1, EffectKind.IceFingernail), "1 stack of 10% off a 100 base");
             Assert.AreEqual(90, foe1.Speed);
 
             session.ExecuteAttack(foe1);
-            Assert.AreEqual(-20, session.SpeedBonusFrom(foe1, RelicEffect.IceFingernail), "2 stacks = 20%");
+            Assert.AreEqual(-20, session.SpeedBonusFrom(foe1, EffectKind.IceFingernail), "2 stacks = 20%");
             Assert.AreEqual(80, foe1.Speed);
         }
 
         [Test]
         public void TheSlowCapsAtFortyPercentAcrossFourStacks()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.IceFingernail, heroSpeed: 100, foeSpeed: 100);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.IceFingernail, heroSpeed: 100, foeSpeed: 100);
 
             for (int i = 0; i < 4; i++) session.ExecuteAttack(foe1);
 
             Assert.AreEqual(4, FallingOffStacks.Count(foe1, FightTuning.IceFingernailStackKey), "capped at 4 stacks");
-            Assert.AreEqual(-40, session.SpeedBonusFrom(foe1, RelicEffect.IceFingernail));
+            Assert.AreEqual(-40, session.SpeedBonusFrom(foe1, EffectKind.IceFingernail));
             Assert.AreEqual(60, foe1.Speed);
         }
 
@@ -371,7 +373,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ExactlyOneEnemyIsStunnedAtCombatStart()
         {
-            var (_, _, foe1, foe2) = FightWithSpeed(RelicEffect.LoadedDice);
+            var (_, _, foe1, foe2) = FightWithSpeed(EffectKind.LoadedDice);
 
             bool foe1Stunned = StatusEffects.HasStun(foe1.Statuses);
             bool foe2Stunned = StatusEffects.HasStun(foe2.Statuses);
@@ -384,7 +386,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void MeleeReachesAnyEnemyRegardlessOfTheFrontRank()
         {
-            var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.MonkeyKingsScepter);
+            var (session, hero, _, foe2) = FightWithSpeed(EffectKind.MonkeyKingsScepter);
 
             Assert.IsTrue(session.CanReachEnemy(hero, Reach.Melee, foe2),
                 "foe2 stands behind the living front rank, foe1");
@@ -393,7 +395,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void WithoutTheScepterTheFrontRankRuleStillApplies()
         {
-            var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.DualWield); // a relic irrelevant to reach
+            var (session, hero, _, foe2) = FightWithSpeed(EffectKind.DualWield); // a relic irrelevant to reach
 
             Assert.IsFalse(session.CanReachEnemy(hero, Reach.Melee, foe2),
                 "foe1 is alive and blocks foe2 without the scepter");
@@ -407,7 +409,7 @@ namespace PrincesPalace.Domain.Tests
             // carry the identical mask {rank 0}, and the scepter lifts
             // exactly one of them: its promise is about striking past a
             // bodyguard, not about ignoring where a spell may be aimed.
-            var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.MonkeyKingsScepter);
+            var (session, hero, _, foe2) = FightWithSpeed(EffectKind.MonkeyKingsScepter);
 
             Assert.IsTrue(session.CanReachEnemy(hero, Reach.Melee, foe2));
             Assert.IsFalse(session.CanReachEnemy(hero, Reach.FromContent(new[] { 1 }), foe2),
@@ -443,22 +445,22 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AlteringYourOwnPositionGrantsThirtyPercentSpeedForOneTurn()
         {
-            var (session, hero, _, _) = FightWithSpeed(RelicEffect.SparringSaber, heroSpeed: 100, foeSpeed: 100);
+            var (session, hero, _, _) = FightWithSpeed(EffectKind.SparringSaber, heroSpeed: 100, foeSpeed: 100);
 
             session.NoteDeliberateMoveForTest(hero, hero);
 
-            Assert.AreEqual(30, session.SpeedBonusFrom(hero, RelicEffect.SparringSaber), "30% of a 100 base");
+            Assert.AreEqual(30, session.SpeedBonusFrom(hero, EffectKind.SparringSaber), "30% of a 100 base");
             Assert.AreEqual(130, hero.Speed);
         }
 
         [Test]
         public void SomeoneElseMovingDoesNotGrantSparringSaberAnything()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.SparringSaber, heroSpeed: 100);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.SparringSaber, heroSpeed: 100);
 
             session.NoteDeliberateMoveForTest(foe1, hero); // hero's ACTION moved someone else
 
-            Assert.AreEqual(0, session.SpeedBonusFrom(hero, RelicEffect.SparringSaber), "only your OWN position counts");
+            Assert.AreEqual(0, session.SpeedBonusFrom(hero, EffectKind.SparringSaber), "only your OWN position counts");
         }
 
         // ---- sparring buckler ----------------------------------------------------------
@@ -466,7 +468,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CastingAnAbilityThatAltersAnyPositionGrantsAWard()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.SparringBuckler);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.SparringBuckler);
 
             session.NoteDeliberateMoveForTest(foe1, hero); // hero's cast moved foe1
 
@@ -481,7 +483,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheWardIsOncePerTurn()
         {
-            var (session, hero, foe1, foe2) = FightWithSpeed(RelicEffect.SparringBuckler);
+            var (session, hero, foe1, foe2) = FightWithSpeed(EffectKind.SparringBuckler);
 
             session.NoteDeliberateMoveForTest(foe1, hero);
             StatusEffects.ConsumeWard(hero, 999); // spend it
@@ -496,7 +498,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void KillingANonSummonEnemyHealsThreePercentMaxHealth()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.EssenceSiphon, heroSpeed: 100, foeSpeed: 1);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.EssenceSiphon, heroSpeed: 100, foeSpeed: 1);
             hero.CurrentHealth = 50;
             foe1.CurrentHealth = 1;
 
@@ -511,7 +513,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AFullHealthHolderIsNotToldItDrewAnything()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.EssenceSiphon, heroSpeed: 100, foeSpeed: 1);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.EssenceSiphon, heroSpeed: 100, foeSpeed: 1);
             foe1.CurrentHealth = 1;
 
             Assert.AreEqual(hero.MaxHealth, hero.CurrentHealth, "fixture: the holder starts full");
@@ -526,7 +528,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void KillingASummonHealsNothing()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.EssenceSiphon, heroSpeed: 100, foeSpeed: 1);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.EssenceSiphon, heroSpeed: 100, foeSpeed: 1);
             hero.CurrentHealth = 50;
             foe1.CurrentHealth = 1;
             foe1.IsSummon = true;
@@ -548,7 +550,7 @@ namespace PrincesPalace.Domain.Tests
                 return true;
             }
 
-            var session = SessionWithSummonFactory(RelicEffect.DisgruntledLackey, SummonFactory,
+            var session = SessionWithSummonFactory(EffectKind.DisgruntledLackey, SummonFactory,
                 out var hero, out var summoner);
 
             var summonSkill = new ResolvedSkill("roar", "Roar", "", "boss", 1, SkillEffect.Summon,
@@ -572,7 +574,7 @@ namespace PrincesPalace.Domain.Tests
                 return true;
             }
 
-            var session = SessionWithSummonFactory(RelicEffect.DualWield, SummonFactory,
+            var session = SessionWithSummonFactory(EffectKind.DualWield, SummonFactory,
                 out _, out var summoner);
             int before = summoner.CurrentHealth;
 
@@ -586,7 +588,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         private static FightSession SessionWithSummonFactory(
-            RelicEffect relic, FightSession.SummonFactory factory,
+            EffectKind relic, FightSession.SummonFactory factory,
             out CombatantState hero, out CombatantState summoner)
         {
             hero = new CombatantState("Shawn", true, 100, 0, 20, 100) { };
@@ -598,6 +600,7 @@ namespace PrincesPalace.Domain.Tests
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { summoner }),
                 new List<PlayerKit> { kit }, new List<EnemyKit> { Foe("Boss") },
                 new SeededRandom(5), summonFactory: factory) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return session;
         }
@@ -607,7 +610,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void OncePerCombatAFallenEnemyStrikesOneLastBlow()
         {
-            var (session, hero, foe1, foe2) = FightWithSpeed(RelicEffect.InconspicuousKey, heroSpeed: 100, foeSpeed: 1, foeAttack: 7);
+            var (session, hero, foe1, foe2) = FightWithSpeed(EffectKind.InconspicuousKey, heroSpeed: 100, foeSpeed: 1, foeAttack: 7);
             hero.CurrentHealth = 100;
             foe1.CurrentHealth = 1;
             int foe2Before = foe2.CurrentHealth;
@@ -620,7 +623,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ItOnlyFiresOncePerCombat()
         {
-            var (session, hero, foe1, foe2) = FightWithSpeed(RelicEffect.InconspicuousKey, heroSpeed: 100, foeSpeed: 1, foeAttack: 7);
+            var (session, hero, foe1, foe2) = FightWithSpeed(EffectKind.InconspicuousKey, heroSpeed: 100, foeSpeed: 1, foeAttack: 7);
             hero.CurrentHealth = 100;
             foe1.CurrentHealth = 1;
 
@@ -654,7 +657,7 @@ namespace PrincesPalace.Domain.Tests
             // (see FightSession.SpeedBuffs' own header), while Buckler's ward
             // rides Shielded's 99-turn duration and survives it.
             var (session, hero, foe1, _) = FightWithSpeed(
-                new[] { RelicEffect.DancersAnklet, RelicEffect.SparringBuckler }, heroSpeed: 100, foeSpeed: 100);
+                new[] { EffectKind.DancersAnklet, EffectKind.SparringBuckler }, heroSpeed: 100, foeSpeed: 100);
 
             session.ExecuteAttack(foe1);
 
@@ -681,7 +684,7 @@ namespace PrincesPalace.Domain.Tests
             var skill = new ResolvedSkill("s", "S", "", "hero", 1, SkillEffect.HealSelf, SkillTargeting.Self,
                 0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
 
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
                 skills: new List<ResolvedSkill> { skill });
 
             session.CastSkill(0, hero);
@@ -728,14 +731,14 @@ namespace PrincesPalace.Domain.Tests
 
             // One live attacker: foe2 is killed off before it can act, so
             // only foe1 lands a hit this round.
-            var (soloSession, soloHero, _, soloFoe2) = FightWithSpeed(RelicEffect.BerserkersVest,
+            var (soloSession, soloHero, _, soloFoe2) = FightWithSpeed(EffectKind.BerserkersVest,
                 heroSpeed: 100, foeSpeed: 1, foeAttack: 5, skills: new List<ResolvedSkill> { Skill() });
             soloFoe2.CurrentHealth = 0;
             soloSession.CastSkill(0, soloHero);
             int soloCooldown = soloSession.CooldownRemaining(soloHero, "s");
 
             // Two live attackers: foe1 AND foe2 both land a hit this round.
-            var (duoSession, duoHero, _, _) = FightWithSpeed(RelicEffect.BerserkersVest,
+            var (duoSession, duoHero, _, _) = FightWithSpeed(EffectKind.BerserkersVest,
                 heroSpeed: 100, foeSpeed: 1, foeAttack: 5, skills: new List<ResolvedSkill> { Skill() });
             duoSession.CastSkill(0, duoHero);
             int duoCooldown = duoSession.CooldownRemaining(duoHero, "s");
@@ -755,7 +758,7 @@ namespace PrincesPalace.Domain.Tests
             var skill = new ResolvedSkill("s", "S", "", "hero", 1, SkillEffect.HealSelf, SkillTargeting.Self,
                 0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
 
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
                 skills: new List<ResolvedSkill> { skill });
 
             session.CastSkill(0, hero);
@@ -782,7 +785,7 @@ namespace PrincesPalace.Domain.Tests
             var skill = new ResolvedSkill("s", "S", "", "hero", 1, SkillEffect.HealSelf, SkillTargeting.Self,
                 0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
 
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
                 skills: new List<ResolvedSkill> { skill });
 
             session.CastSkill(0, hero);
@@ -807,13 +810,13 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void FatalDamageHatchesAnEggInsteadOfKilling()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.PhoenixEgg);
 
             session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // would otherwise be fatal
 
             Assert.IsTrue(hero.IsPhoenixEgg);
             Assert.AreEqual(hero.MaxHealth, hero.EggHealth);
-            Assert.AreEqual(FightTuning.PhoenixEggDurationTurns, hero.EggTurnsRemaining);
+            Assert.AreEqual(3, hero.EggTurnsRemaining, "the shipped Phoenix Egg lasts three turns");
             Assert.AreEqual(1, hero.CurrentHealth, "pinned at 1 while the shell stands");
             Assert.IsTrue(hero.IsAlive);
         }
@@ -821,7 +824,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void FurtherHitsEatTheEggsOwnPoolNotRealHealth()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.PhoenixEgg);
             session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // hatch, EggHealth = 100
 
             session.DealDamageForTest(foe1, hero, 40, DamageType.Physical);
@@ -840,7 +843,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheBlowThatHatchesTheEggStillFeedsTheWearersPrimaryPool()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.PhoenixEgg);
             hero.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0,
                 gainOnAttack: 0, gainOnDamageTaken: 10);
 
@@ -853,7 +856,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AHitOnTheShellStillFeedsTheWearersPrimaryPool()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.PhoenixEgg);
             session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // hatch, EggHealth = 100
 
             // Set AFTER the hatch so the number below counts one blow, not two.
@@ -868,7 +871,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheEggBreakingKillsTheWearerOutright()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.PhoenixEgg);
             session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // hatch, EggHealth = 100
 
             session.DealDamageForTest(foe1, hero, 100, DamageType.Physical); // the shell's own pool reaches 0
@@ -881,7 +884,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SurvivingThreeTurnsRevivesWithTheEggsSurvivingFraction()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.PhoenixEgg);
             session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // hatch, EggHealth = 100
             session.DealDamageForTest(foe1, hero, 50, DamageType.Physical); // EggHealth = 50 (50% survives)
 
@@ -898,7 +901,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ItOnlyHatchesOncePerCombat()
         {
-            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            var (session, hero, foe1, _) = FightWithSpeed(EffectKind.PhoenixEgg);
             session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // hatch #1
             session.TickPhoenixEggForTest(hero);
             session.TickPhoenixEggForTest(hero);
@@ -910,14 +913,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, hero.CurrentHealth);
         }
 
-        // ---- vampire dentures (pure RelicModifier stat, no RelicEffect) -----------------
+        // ---- vampire dentures (pure Effect stat, no EffectKind) -----------------
 
         [Test]
         public void VampireDenturesHealsTenPercentOfLandedDamage()
         {
             var hero = new CombatantState("Shawn", true, 100, 0, 20, 20)
             {
-                RelicLifestealPercent = 10,
+                Effects = EffectSet.Of(EffectHolder.Relic, new[] { new Effect(EffectKind.LifestealPercent, 10) }),
                 CurrentHealth = 50,
             };
             var foe = new CombatantState("Foe", false, 999999, 0, 1, 1);
@@ -928,6 +931,7 @@ namespace PrincesPalace.Domain.Tests
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 new List<PlayerKit> { kit }, new List<EnemyKit> { Foe("Foe") },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
             session.ExecuteAttack(foe);

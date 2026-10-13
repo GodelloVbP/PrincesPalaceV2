@@ -300,8 +300,8 @@ namespace PrincesPalace.Domain.Tests
             // seed/rating pair -- this test is about Rooted/Chilled
             // coexistence, not about pinning the dodge curve itself (that
             // lives in CombatMathTests).
-            monster.ModifierEffects = new ModifierEffectSet(
-                new[] { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
+            monster.Effects = EffectSet.Of(EffectHolder.Affix, 
+                new[] { new Effect(EffectKind.DodgeRating, 100_000) });
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { monster });
             var session = Session(encounter,
@@ -359,8 +359,8 @@ namespace PrincesPalace.Domain.Tests
             // hero remains Current after this one swing and nothing ticks
             // the freshly-applied Rooted down before this test reads it.
             var hero = Hero(speed: 200);
-            hero.ModifierEffects = new ModifierEffectSet(
-                new[] { new ModifierEffect(ModifierEffectType.RootChancePercent, 100) });
+            hero.Effects = EffectSet.Of(EffectHolder.Affix, 
+                new[] { new Effect(EffectKind.RootChancePercent, 100) });
             var monster = Monster(speed: 1);
             var session = Session(new CombatEncounter(new[] { hero }, new[] { monster }),
                 new List<EnemyKit> { new EnemyKit(Source("monster"), false) });

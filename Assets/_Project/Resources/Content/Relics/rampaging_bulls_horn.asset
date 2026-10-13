@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: rampaging_bulls_horn
     DisplayName: Rampaging Bull's Horn
     Description: After you cast a convergence ability, take 50% less damage for 1 turn.
-    Effect: 20
     SortOrder: 24
     IconPath: Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png
     Rarity: 2
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 49
+      Magnitude: 50
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 1
     Bearer: 
     Draftable: 1

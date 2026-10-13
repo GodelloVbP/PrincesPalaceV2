@@ -94,7 +94,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // the tick is not a swing the target is reacting to, it is the
     // continuing cost of a status that was already applied (and that
     // application, if it rode in on a landed hit, was already dodgeable at
-    // THAT hit). See ModifierEffectType.DodgeRating's own comment
+    // THAT hit). See EffectKind.DodgeRating's own comment
     // for the fuller argument for why this split is correct rather than
     // arbitrary.
     //
@@ -159,7 +159,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // this outcome should not have to know that floor exists, or
             // rely on it staying true, to tell "armour reduced this to
             // nearly nothing" apart from "nothing happened at all" — see
-            // this file's own header, and ModifierEffectType.
+            // this file's own header, and EffectKind.
             // DodgeRating's comment, for why those two have to read
             // as different information to the player.
             public readonly bool IsMiss;
@@ -186,7 +186,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // header for the full argument on why it lives here instead of at
         // each call site. `attacker` is accepted (matching the plan's own
         // named signature) but UNUSED today: nothing in this codebase's
-        // ModifierEffectType vocabulary grants an attacker "anti-dodge" or
+        // EffectKind vocabulary grants an attacker "anti-dodge" or
         // accuracy rule yet, so this is a future-proofing parameter rather
         // than dead weight to be trimmed — the day an accuracy-style effect
         // exists, this is the one place it has to read from both sides
@@ -199,13 +199,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // dodge is exactly as much a "spends a roll" rule as variance is.
         public static bool RollDodge(CombatantState target, CombatantState attacker, SeededRandom rng)
         {
-            if (rng == null || target?.ModifierEffects == null)
+            if (rng == null || target?.Effects == null)
             {
                 return false;
             }
 
             // DodgeRating is a RATING through CombatMath's dodge curve, NOT
-            // a direct percent -- see ModifierEffectType.DodgeRating's own
+            // a direct percent -- see EffectKind.DodgeRating's own
             // header for the full "why" and CombatMath.DodgePercentFrom's
             // own header for the formula (100 * R / (R + 100), the
             // designer's spec: "100 dodge = 50% chance to dodge"). This
@@ -215,7 +215,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // unavoidable dodge, flagged as a real balance problem and
             // fixed by inserting this curve conversion right here, between
             // reading the raw rating and rolling against it.
-            int dodgeRating = target.ModifierEffects.Best(ModifierEffectType.DodgeRating);
+            int dodgeRating = target.Effects.Magnitude(EffectKind.DodgeRating);
             int dodgeChance = CombatMath.DodgePercentFrom(dodgeRating);
 
             // Delegates to the same RandomOps.RollPercent every other chance
@@ -494,12 +494,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // `max(1, ...)`) — Stalwart softens a hit, it does not stop one.
         private static int ApplyFlatPhysicalReduction(int damage, CombatantState target, DamageType type)
         {
-            if (type != DamageType.Physical || target?.ModifierEffects == null)
+            if (type != DamageType.Physical || target?.Effects == null)
             {
                 return damage;
             }
 
-            int reduction = target.ModifierEffects.Best(ModifierEffectType.FlatPhysicalDamageReduction);
+            int reduction = target.Effects.Magnitude(EffectKind.FlatPhysicalDamageReduction);
             if (reduction <= 0)
             {
                 return damage;

@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.Equipment
     // half of what ItemStatLines already does for flat stats. Same split as
     // that file (see its own header): this takes ALREADY-RESOLVED plain
     // data -- a modifier's id, its display name, and its already-scaled
-    // ModifierEffect(s) -- and returns the GAIN/LOSS/unchanged classified,
+    // Effect(s) -- and returns the GAIN/LOSS/unchanged classified,
     // formatted lines. No ContentDatabase call and no ModifierDefinition
     // reference anywhere in here.
     //
@@ -29,13 +29,13 @@ namespace PrincesPalace.Domain.Equipment
         // sharing the same Id/DisplayName -- LinePairs' GroupBy(Id) re-merges
         // them onto one line, the same job Core.ItemDescription's own
         // GroupBy(ModifierDefinition) did before this moved.
-        public readonly struct Effect
+        public readonly struct AffixEffect
         {
             public readonly string Id;
             public readonly string DisplayName;
-            public readonly ModifierEffect Value;
+            public readonly Effect Value;
 
-            public Effect(string id, string displayName, ModifierEffect value)
+            public AffixEffect(string id, string displayName, Effect value)
             {
                 Id = id;
                 DisplayName = displayName;
@@ -76,7 +76,7 @@ namespace PrincesPalace.Domain.Equipment
         // to the character it would do nothing for. Optional and
         // null-means-mana: a listing with no viewer (the shop's plain card)
         // reads exactly as it always has.
-        public static List<(string Id, string Line)> LinePairs(IReadOnlyList<Effect> effects,
+        public static List<(string Id, string Line)> LinePairs(IReadOnlyList<AffixEffect> effects,
             ResolvedPool primaryPool = null)
         {
             if (effects == null || effects.Count == 0)
@@ -122,7 +122,7 @@ namespace PrincesPalace.Domain.Equipment
         //
         // Runs even when `candidateEffects` itself is null: an item with
         // zero affixes replacing one that had some is still a real loss.
-        public static IReadOnlyList<string> ComparisonLines(IReadOnlyList<Effect> candidateEffects,
+        public static IReadOnlyList<string> ComparisonLines(IReadOnlyList<AffixEffect> candidateEffects,
             IReadOnlyList<EquippedModifier> equipped, ResolvedPool primaryPool = null)
         {
             var pairs = LinePairs(candidateEffects, primaryPool);

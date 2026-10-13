@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: A plain swing buys a cheaper follow-up cast. Runic's old bundle split four ways -- see Runic, Manaflow and Wardrune's own descriptions for the rest of the family.
     SortOrder: 22
     Effects:
-    - Type: 13
+    - Kind: 24
       Magnitude: 13
       Threshold: 0
       AgainstType: 0

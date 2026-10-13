@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (target == null || amount <= 0 || !target.IsPlayerSide || !target.IsAlive) return false;
             if (target.IsPhoenixEgg) return false;
-            if (_kinshipSpent.Contains(target) || !HasRelic(target, RelicEffect.Kinship)) return false;
+            if (_kinshipSpent.Contains(target) || !target.Effects.Has(EffectKind.Kinship)) return false;
 
             _kinshipSpent.Add(target);
             AppendMessage("Kinship turns the blow aside.");

@@ -32,6 +32,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 DamageVarianceRange = 0f,
             };
+            TestRelics.Hold(session);
             session.Begin();
             return session;
         }
@@ -367,6 +368,7 @@ namespace PrincesPalace.Domain.Tests
             var back = new CombatantState("Back", false, 2000, 0, 0, 1);
             var session = new FightSession(
                 new CombatEncounter(new[] { Member("Shawn") }, new[] { front, back }), null, null, new SeededRandom(1));
+            TestRelics.Hold(session);
             session.Begin();
             var knell = MonsterSkill(SkillEffect.DamageSingle, bySeat: KnellFixture);
 
@@ -466,7 +468,7 @@ namespace PrincesPalace.Domain.Tests
             var shawn = Member("Shawn");
             var buckler = new List<ResolvedRelic>
             {
-                new ResolvedRelic("buckler", "Sparring Buckler", "", RelicEffect.SparringBuckler, 0),
+                new ResolvedRelic("buckler", "Sparring Buckler", "", new[] { TestRelics.Mechanic(EffectKind.SparringBuckler) }, 0),
             };
             var kits = new List<PlayerKit> { new PlayerKit("shawn", CharacterRole.Tank, null, buckler, DamageType.Physical) };
             var bell = Bellwether();

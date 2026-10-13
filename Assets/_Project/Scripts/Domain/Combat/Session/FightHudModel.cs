@@ -1223,7 +1223,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // "Speed 10 -> 13 (source)".
         public static string SpeedSourceName(PlayerKit kit, object source)
         {
-            if (kit != null && source is RelicEffect relicSource)
+            if (kit != null && source is EffectKind relicSource)
             {
                 foreach (var relic in kit.Relics)
                 {
@@ -1231,7 +1231,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // FightSession.SpeedBuffs.ActiveSpeedBuffs' own comment on
                     // why `==` between a boxed enum and `object` would compare
                     // by reference instead of by value.
-                    if (relic.Effect == relicSource) return relic.DisplayName;
+                    if (relic.Mechanic == relicSource) return relic.DisplayName;
                 }
             }
 

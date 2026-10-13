@@ -2,7 +2,7 @@ namespace PrincesPalace.Domain.Content
 {
     // How an achievement is earned.
     //
-    // UNLIKE RelicEffect, this genuinely generalises, and that is why it is a
+    // UNLIKE a relic mechanic, this genuinely generalises, and that is why it is a
     // data-driven table rather than a switch full of special cases. Every
     // achievement worth having is some variant of "count a thing, compare it to
     // a threshold" -- bosses put down, levels reached, rooms cleared, damage
@@ -16,7 +16,7 @@ namespace PrincesPalace.Domain.Content
     {
         // Never satisfiable. The default, so an achievement authored without a
         // condition is inert rather than accidentally earned on the first
-        // frame -- the same reasoning as RelicEffect.None sitting at zero.
+        // frame -- the same reasoning as EffectKind.None sitting at zero.
         Never = 0,
 
         // A specific boss has been put down at least once, ever. `parameter`

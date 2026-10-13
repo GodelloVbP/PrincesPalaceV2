@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Events;
 
@@ -357,7 +358,7 @@ namespace PrincesPalace.Domain.Tests
             var toll = relics.Single(r => r.Id == "toll_of_the_flock");
 
             Assert.AreEqual("Bellwether's Bell", bell.DisplayName);
-            Assert.AreEqual(RelicEffect.BellwethersBell, bell.Effect);
+            Assert.AreEqual(EffectKind.BellwethersBell, bell.Mechanic);
             Assert.AreEqual("sheep", bell.Bearer);
             Assert.IsFalse(bell.Draftable);
             Assert.AreEqual("Each transformation Shawn enters lasts 1 turn longer.", bell.Description);
@@ -367,7 +368,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Assets/_Project/Art/Items/Relics/Processed/bellwethers_bell.png", bell.IconPath);
 
             Assert.AreEqual("Toll of the Flock", toll.DisplayName);
-            Assert.AreEqual(RelicEffect.TollOfTheFlock, toll.Effect);
+            Assert.AreEqual(EffectKind.TollOfTheFlock, toll.Mechanic);
             Assert.AreEqual("sheep", toll.Bearer);
             Assert.IsFalse(toll.Draftable);
             Assert.AreEqual(

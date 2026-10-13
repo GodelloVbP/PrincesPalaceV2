@@ -395,7 +395,7 @@ namespace PrincesPalace.Domain.Bot
 
         // Same non-identifiability as ChooseOffer: RelicOption
         // (Domain/Relics/RelicPool.cs) carries only Id, Rarity and
-        // UnlockedBy -- no RelicEffect, which lives on the Core-resolved
+        // UnlockedBy -- no EffectKind, which lives on the Core-resolved
         // content and is exactly the "effect type" the brief says to key
         // off when it is there to read. It is not, so this falls back to
         // GreedyAggressivePolicy's pool-order read: rarest by

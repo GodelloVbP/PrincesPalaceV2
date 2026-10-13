@@ -12,7 +12,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // ITEM-MODIFIER PLAN PHASE E: the UI layer's own display pipeline,
     // exercised end to end against the REAL "fiery"/"emberguard"
-    // modifiers.json entries -- never a hand-built ModifierEffect fixture,
+    // modifiers.json entries -- never a hand-built Effect fixture,
     // the same posture FrostyModifierReachesCombatTests/
     // ItemModifierScalingReachesCombatTests already take for Phase C/D's
     // combat hooks.
@@ -64,7 +64,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(scaled.Count > 0, "the real fiery modifier must resolve to real effects");
 
-            var damageRider = scaled.Single(pair => pair.Effect.Type == ModifierEffectType.ElementalDamageOnHitPercent);
+            var damageRider = scaled.Single(pair => pair.Effect.Kind == EffectKind.ElementalDamageOnHitPercent);
             Assert.AreEqual("fiery", damageRider.Modifier.id);
             Assert.AreEqual(expectedDamage, damageRider.Effect.Magnitude,
                 "the UI-facing ModifierEffectsForItem must scale identically to the combat-facing ModifierEffects seam");
@@ -76,7 +76,7 @@ namespace PrincesPalace.PlayModeTests
             var scaled = ContentDatabase.ModifierEffectsForItem(0, RiftTier.Ordinary,
                 new System.Collections.Generic.List<string> { "fiery" });
 
-            var damageRider = scaled.Single(pair => pair.Effect.Type == ModifierEffectType.ElementalDamageOnHitPercent);
+            var damageRider = scaled.Single(pair => pair.Effect.Kind == EffectKind.ElementalDamageOnHitPercent);
             Assert.AreEqual(10, damageRider.Effect.Magnitude, "tier 0, Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 

@@ -1,4 +1,4 @@
-using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.Combat;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,22 +41,17 @@ namespace PrincesPalace.Domain.Content
                 errors.Add($"Duplicate relic id '{duplicateId}' — every id must be unique.");
             }
 
-            // Two relics doing the same thing would make one of them a dead
-            // choice in a draft — every relic on offer needs to be its own
-            // reason to pick it.
-            //
-            // None IS EXEMPT, and the exemption is the point: None means "no
-            // mechanic yet", and the whole reason it exists is so that a pool
-            // of authored-but-unimplemented relics can be drafted against.
-            // Applying uniqueness to it would allow exactly one placeholder in
-            // the entire game.
-            foreach (var duplicateEffect in resolved
-                         .Where(r => r.Effect != RelicEffect.None)
-                         .GroupBy(r => r.Effect)
+            // Two relics with the same mechanic would make one of them a dead
+            // choice in a draft -- every relic on offer needs to be its own
+            // reason to pick it. Stat-only and empty relics are exempt: a
+            // pool of named-but-unimplemented relics must be draftable.
+            foreach (var duplicate in resolved
+                         .Where(r => r.Mechanic != EffectKind.None)
+                         .GroupBy(r => r.Mechanic)
                          .Where(g => g.Count() > 1))
             {
-                errors.Add($"Relics {string.Join(", ", duplicateEffect.Select(r => r.Id))} all resolve to " +
-                           $"{duplicateEffect.Key} — one relic per effect.");
+                errors.Add($"Relics {string.Join(", ", duplicate.Select(r => r.Id))} all resolve to " +
+                           $"{duplicate.Key} -- one relic per mechanic.");
             }
 
             if (errors.Count > 0)
@@ -87,16 +82,6 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // An omitted effect is None, not an error. That is what lets a
-            // relic be authored as a name and a rarity before anybody has
-            // decided what it does.
-            string rawEffect = string.IsNullOrWhiteSpace(raw.effect) ? nameof(RelicEffect.None) : raw.effect;
-            if (!System.Enum.TryParse<RelicEffect>(rawEffect, ignoreCase: true, out var effect))
-            {
-                error = $"{label}: effect '{raw.effect}' is not a known RelicEffect.";
-                return false;
-            }
-
             // An omitted rarity is Common -- the band a relic belongs to unless
             // somebody says otherwise, and the one the starting pool is made of.
             string rawRarity = string.IsNullOrWhiteSpace(raw.rarity) ? nameof(RelicRarity.Common) : raw.rarity;
@@ -120,81 +105,30 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // Numeric modifiers. An unknown type is a build failure for the
-            // same reason an unknown effect is: it produces a relic that is
-            // authored, offered, and quietly does nothing.
-            var modifiers = new List<RelicModifier>();
-            if (raw.modifiers != null)
+            // An unknown or disallowed kind is a build failure: it would be a
+            // relic that is authored, offered, and quietly does nothing.
+            var effects = new List<Effect>();
+            for (int i = 0; raw.effects != null && i < raw.effects.Length; i++)
             {
-                foreach (var rawModifier in raw.modifiers)
+                if (!EffectEntryResolver.TryResolve(raw.effects[i], EffectHolder.Relic,
+                        $"{label}: effect #{i + 1}", out var effect, out error))
                 {
-                    if (rawModifier == null) continue;
-
-                    if (!System.Enum.TryParse<RelicModifierType>(rawModifier.type, ignoreCase: true, out var type)
-                        || type == RelicModifierType.None)
-                    {
-                        error = $"{label}: modifier type '{rawModifier.type}' is not a known RelicModifierType.";
-                        return false;
-                    }
-
-                    // A modifier of zero is a line of content that changes
-                    // nothing, which is indistinguishable from a typo'd amount.
-                    if (rawModifier.amount == 0)
-                    {
-                        error = $"{label}: modifier '{rawModifier.type}' has an amount of 0 and would do nothing.";
-                        return false;
-                    }
-
-                    // TYPED RESISTANCE HAS TO SAY WHAT IT RESISTS. Unnamed, it
-                    // is a number protecting against nothing, sitting in a
-                    // relic's description promising otherwise.
-                    DamageType? against = null;
-                    bool againstMagical = false;
-
-                    if (type == RelicModifierType.ResistanceFlat)
-                    {
-                        string named = (rawModifier.damageType ?? "").Trim();
-
-                        if (string.Equals(named, "magical", StringComparison.OrdinalIgnoreCase))
-                        {
-                            againstMagical = true;
-                        }
-                        else if (Enum.TryParse<DamageType>(named, ignoreCase: true, out var parsed))
-                        {
-                            against = parsed;
-                        }
-                        else
-                        {
-                            error = $"{label}: modifier 'ResistanceFlat' names damageType " +
-                                    $"'{rawModifier.damageType}', which is neither a damage type " +
-                                    "nor 'magical'.";
-                            return false;
-                        }
-                    }
-                    else if (!string.IsNullOrWhiteSpace(rawModifier.damageType))
-                    {
-                        error = $"{label}: modifier '{rawModifier.type}' names a damageType, " +
-                                "which only ResistanceFlat reads.";
-                        return false;
-                    }
-
-                    modifiers.Add(new RelicModifier(type, rawModifier.amount, against, againstMagical));
+                    return false;
                 }
+
+                effects.Add(effect);
             }
 
-            // A BEARER COVERS THE EFFECT ONLY. FightEncounterAdapter folds
-            // every run relic's modifiers onto every party member before any
-            // kit exists, so a bearer on a relic with modifiers would give
-            // the numbers to the whole party while the text says one
-            // character. Refused here rather than half-honoured there.
-            string bearer = (raw.bearer ?? "").Trim();
-            if (bearer.Length > 0 && modifiers.Count > 0)
+            // One mechanic per relic: the draft's one-relic-per-mechanic rule
+            // and ResolvedRelic.Mechanic both name a relic by it.
+            int mechanics = effects.Count(e => EffectCatalog.Of(e.Kind).Stacking == EffectStacking.Flag);
+            if (mechanics > 1)
             {
-                error = $"{label}: bearer '{bearer}' is set on a relic with modifiers. A bearer limits the " +
-                        "relic's effect only; FightEncounterAdapter applies relic modifiers to every party " +
-                        "member, so they would not be limited to the bearer. Drop the bearer or the modifiers.";
+                error = $"{label}: authors {mechanics} mechanics; a relic carries at most one.";
                 return false;
             }
+
+            string bearer = (raw.bearer ?? "").Trim();
 
             // A misspelled bearer is a relic whose effect reaches NOBODY, and
             // that fails silently -- the same reason unlockedBy is checked
@@ -216,8 +150,8 @@ namespace PrincesPalace.Domain.Content
             if (!SpellPresentationPaths.Check(label, vfx, out error)) return false;
             if (!SpellLayerRules.TryCheck(label, vfx, out error)) return false;
 
-            resolvedRelic = new ResolvedRelic(raw.id, raw.displayName, raw.description ?? "", effect, sortOrder,
-                raw.iconPath ?? "", rarity, unlockedBy, modifiers, raw.requiresConvergenceAbility,
+            resolvedRelic = new ResolvedRelic(raw.id, raw.displayName, raw.description ?? "", effects, sortOrder,
+                raw.iconPath ?? "", rarity, unlockedBy, raw.requiresConvergenceAbility,
                 bearer, raw.draftable)
             {
                 Vfx = vfx.Copy(),

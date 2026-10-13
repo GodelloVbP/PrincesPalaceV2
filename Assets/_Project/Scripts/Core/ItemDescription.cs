@@ -70,7 +70,7 @@ namespace PrincesPalace
         // downstream (grouping by id, formatting fragments, gain/loss/
         // unchanged classification) is Domain.ModifierAffixLines' job, so a
         // Domain-only EditMode suite can exercise it directly.
-        private static IReadOnlyList<ModifierAffixLines.Effect> ResolvedModifierEffects(ItemDefinition item,
+        private static IReadOnlyList<ModifierAffixLines.AffixEffect> ResolvedModifierEffects(ItemDefinition item,
             RiftTier riftTier, IReadOnlyList<string> modifierIds)
         {
             if (item == null || modifierIds == null || modifierIds.Count == 0)
@@ -85,7 +85,7 @@ namespace PrincesPalace
             }
 
             return scaled
-                .Select(pair => new ModifierAffixLines.Effect(pair.Modifier.id, pair.Modifier.Data.DisplayName, pair.Effect))
+                .Select(pair => new ModifierAffixLines.AffixEffect(pair.Modifier.id, pair.Modifier.Data.DisplayName, pair.Effect))
                 .ToList();
         }
 

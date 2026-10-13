@@ -16,19 +16,20 @@ MonoBehaviour:
     Id: whetstone_heart
     DisplayName: Whetstone Heart
     Description: +20% attack, -10% defense.
-    Effect: 0
     SortOrder: 11
     IconPath: Assets/_Project/Art/Items/Relics/Processed/whetstone_heart.png
     Rarity: 1
     UnlockedBy: 
-    Modifiers:
-    - Type: 1
-      Amount: 20
+    Effects:
+    - Kind: 1
+      Magnitude: 20
+      Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
-    - Type: 2
-      Amount: -10
+    - Kind: 2
+      Magnitude: -10
+      Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0

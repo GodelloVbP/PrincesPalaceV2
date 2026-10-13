@@ -10,9 +10,9 @@ namespace PrincesPalace.Content
     // build.
     //
     // A WRAPPER ROUND ONE VALUE. This restated ResolvedRelic's fields and
-    // carried a RelicModifierEntry mirror of RelicModifier beside them, with a
+    // carried a RelicModifierEntry mirror of Effect beside them, with a
     // hand-written conversion in each direction (ToModifiers here, a Select in
-    // ContentBuilder). RelicModifier is [Serializable] itself now, so the asset
+    // ContentBuilder). Effect is [Serializable] itself now, so the asset
     // STORES the resolved value and both conversions are gone.
     public class RelicDefinition : ScriptableObject, IOrderedContent
     {

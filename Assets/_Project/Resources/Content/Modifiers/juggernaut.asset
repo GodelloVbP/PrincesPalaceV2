@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'Enough weight behind the swing to stagger whatever it lands on. Elemental family: Physical, the stagger-proc half -- Hardened carries the on-hit damage and Ironclad carries the resistance; this used to ride along with both on one bundled Hardened roll, now it is its own affix.'
     SortOrder: 14
     Effects:
-    - Type: 10
+    - Kind: 22
       Magnitude: 8
       Threshold: 0
       AgainstType: 0

@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: dual_wield
     DisplayName: Dual Wield
     Description: Each attack you make strikes the same target a second time.
-    Effect: 1
     SortOrder: 0
     IconPath: Assets/_Project/Art/Items/Relics/Processed/dual_wield.png
     Rarity: 0
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 30
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

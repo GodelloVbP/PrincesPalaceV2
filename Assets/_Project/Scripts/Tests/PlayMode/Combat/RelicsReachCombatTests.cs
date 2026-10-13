@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.PlayModeTests
@@ -59,7 +60,7 @@ namespace PrincesPalace.PlayModeTests
         // A relic that actually carries a mechanic, whatever the content is
         // called today.
         private static RelicDefinition AnEffectRelic() =>
-            ContentDatabase.Relics.FirstOrDefault(r => r != null && r.Data.Effect != RelicEffect.None);
+            ContentDatabase.Relics.FirstOrDefault(r => r != null && r.Data.Mechanic != EffectKind.None);
 
         [Test]
         public void ADraftedRelicArrivesOnTheKit()
@@ -72,7 +73,7 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.IsNotEmpty(kit.Relics.ToList(),
                 "the relic never reached the fight -- KitFor is passing null again");
-            Assert.AreEqual(relic.Data.Effect, kit.Relics[0].Effect);
+            Assert.AreEqual(relic.Data.Mechanic, kit.Relics[0].Mechanic);
         }
 
         [Test]
@@ -133,17 +134,17 @@ namespace PrincesPalace.PlayModeTests
         public void ANumericRelicChangesTheStatItNames()
         {
             // Picked BY THE STAT IT TOUCHES, and asserted rather than
-            // skipped: a silent skip is exactly how RelicModifiers.Apply,
+            // skipped: a silent skip is exactly how EffectFold.Apply,
             // an entire data-driven table, could drift back to zero
             // callers, which is the one thing this test exists to prevent.
             // Two relics carry modifiers and only one of them is an attack
             // relic.
             var withAttack = ContentDatabase.Relics.FirstOrDefault(r =>
-                r != null && r.Data.Modifiers != null &&
-                r.Data.Modifiers.Any(m => m.Stat == RelicStat.Attack));
+                r != null && r.Data.Effects != null &&
+                r.Data.Effects.Any(e => EffectCatalog.Of(e.Kind).Stat == EffectStat.Attack));
 
             Assert.IsNotNull(withAttack,
-                "no relic in content carries an Attack modifier - RelicModifiers.Apply is unreachable again, " +
+                "no relic in content carries an Attack modifier - EffectFold.Apply is unreachable again, " +
                 "which is the state this test was written to prevent");
 
             int baseAttack = Build().Party[0].Attack;
@@ -158,10 +159,10 @@ namespace PrincesPalace.PlayModeTests
             // A percent relic is a percent of what the character actually
             // swings with. Applying it to the raw StatBlock would make the
             // number the player checks against their own sheet wrong.
-            var modifiers = new List<RelicModifier> { new RelicModifier(RelicModifierType.AttackPercent, 100) };
+            var modifiers = EffectSet.Of(EffectHolder.Relic, new[] { new Effect(EffectKind.AttackPercent, 100) });
 
             int derived = Build().Party[0].Attack;
-            int doubled = RelicModifiers.Apply(derived, RelicStat.Attack, modifiers);
+            int doubled = EffectFold.Apply(derived, EffectStat.Attack, modifiers);
 
             Assert.AreEqual(derived * 2, doubled);
         }

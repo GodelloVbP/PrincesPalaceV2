@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: monkey_kings_scepter
     DisplayName: Monkey King's Scepter
     Description: Your melee attacks can reach any enemy, whatever its position.
-    Effect: 23
     SortOrder: 27
     IconPath: Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png
     Rarity: 3
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 52
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

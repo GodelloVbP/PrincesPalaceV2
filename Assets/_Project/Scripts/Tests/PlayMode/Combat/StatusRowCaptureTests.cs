@@ -130,7 +130,7 @@ namespace PrincesPalace.PlayModeTests
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Regen, 5, 3);
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Protect, 20, 2);
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Vulnerable, 15, 2);
-            session.GrantSpeedPercentForTest(actor, RelicEffect.SparringSaber, 30, 1);
+            session.GrantSpeedPercentForTest(actor, EffectKind.SparringSaber, 30, 1);
 
             // ---- one OFF-TURN party member carries three statuses, so the
             // PC plate's own row (PcStatusBadges, 20px, no

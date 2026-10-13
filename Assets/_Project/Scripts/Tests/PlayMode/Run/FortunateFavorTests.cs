@@ -135,10 +135,10 @@ namespace PrincesPalace.PlayModeTests
             riftForged.equipment.Set(item.equipSlot, item.id,
                 modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.RiftForged);
 
-            int ordinaryBonus = ContentDatabase.ModifierEffects(ordinary)
-                .Best(ModifierEffectType.FortunateFavorBonusFlat);
-            int riftForgedBonus = ContentDatabase.ModifierEffects(riftForged)
-                .Best(ModifierEffectType.FortunateFavorBonusFlat);
+            int ordinaryBonus = ContentDatabase.CharacterEffects(ordinary)
+                .Magnitude(EffectKind.FortunateFavorBonusFlat);
+            int riftForgedBonus = ContentDatabase.CharacterEffects(riftForged)
+                .Magnitude(EffectKind.FortunateFavorBonusFlat);
 
             // base 2 (halved from 3): Ordinary scale is exactly 1.0 (unscaled base survives), RiftForged is 2 x 1.6 = 3.2 -> 3.
             Assert.AreEqual(2, ordinaryBonus, "tier 0, RiftTier Ordinary: scale is exactly 1.0");
@@ -166,10 +166,10 @@ namespace PrincesPalace.PlayModeTests
             highTierCharacter.equipment.Set(higherTier.equipSlot, higherTier.id,
                 modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.Ordinary);
 
-            int lowTierBonus = ContentDatabase.ModifierEffects(lowTierCharacter)
-                .Best(ModifierEffectType.FortunateFavorBonusFlat);
-            int highTierBonus = ContentDatabase.ModifierEffects(highTierCharacter)
-                .Best(ModifierEffectType.FortunateFavorBonusFlat);
+            int lowTierBonus = ContentDatabase.CharacterEffects(lowTierCharacter)
+                .Magnitude(EffectKind.FortunateFavorBonusFlat);
+            int highTierBonus = ContentDatabase.CharacterEffects(highTierCharacter)
+                .Magnitude(EffectKind.FortunateFavorBonusFlat);
 
             Assert.Greater(highTierBonus, lowTierBonus,
                 "a higher item tier must scale Fortunate's bonus up, the same TierMultiplier curve every other modifier reads");

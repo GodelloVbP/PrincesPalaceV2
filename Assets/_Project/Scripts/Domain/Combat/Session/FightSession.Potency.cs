@@ -58,14 +58,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // single cast can produce.
         private void BeginSpellPotency(CombatantState actor)
         {
-            _potencyPercent = PotencyFor(actor, _spellsCast, RelicEffect.ChargingCrystal,
-                FightTuning.ChargingCrystalEvery, FightTuning.ChargingCrystalPercent);
+            _potencyPercent = PotencyFor(actor, _spellsCast, EffectKind.ChargingCrystal,
+                FightTuning.ChargingCrystalEvery);
         }
 
         private void BeginAttackPotency(CombatantState actor)
         {
-            _potencyPercent = PotencyFor(actor, _attacksMade, RelicEffect.LongCount,
-                FightTuning.LongCountEvery, FightTuning.LongCountPercent);
+            _potencyPercent = PotencyFor(actor, _attacksMade, EffectKind.LongCount,
+                FightTuning.LongCountEvery);
         }
 
         // THE COUNTER ADVANCES WHETHER OR NOT THE RELIC IS HELD.
@@ -76,8 +76,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // be, so the relic's first charged cast would arrive after a number of
         // casts the player has no way to know. Counting always means "every
         // fourth cast OF THIS FIGHT" is true from the moment it is equipped.
+        // The percent is the relic's own Magnitude; 0 when it is not held.
         private int PotencyFor(CombatantState actor, Dictionary<CombatantState, int> tally,
-                               RelicEffect effect, int every, int percent)
+                               EffectKind effect, int every)
         {
             if (actor == null) return 0;
 
@@ -87,7 +88,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (every <= 0 || count % every != 0) return 0;
 
-            return HasRelic(actor, effect) ? percent : 0;
+            return actor.Effects.Magnitude(effect);
         }
 
         // Closes an action. Called on every path out, so a cast that resolves

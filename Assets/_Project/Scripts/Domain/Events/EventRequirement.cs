@@ -39,10 +39,10 @@ namespace PrincesPalace.Domain.Events
     // can never mismatch its own Kind against the fields it carries.
     //
     // [Serializable] WITH PUBLIC FIELDS AND NO Nullable<T>, the same reason
-    // RelicModifier gives: this is what ResolvedEventChoice/ResolvedEventOutcome
+    // Effect gives: this is what ResolvedEventChoice/ResolvedEventOutcome
     // store on the EventDefinition ScriptableObject, and Nullable<T> does not
     // survive Unity's serializer. Counter's optional min/max use the
-    // HasMin/HasMax flag pattern RelicModifier.HasAgainst already established
+    // HasMin/HasMax flag pattern Effect.HasAgainst already established
     // rather than a second, unserializable nullable field.
     [Serializable]
     public sealed class EventRequirement

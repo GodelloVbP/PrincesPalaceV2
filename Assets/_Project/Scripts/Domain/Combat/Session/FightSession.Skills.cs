@@ -1730,21 +1730,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // dodge -- the caller must check `dodged` rather than infer a miss
         // from `total == 0`, the identical discipline
         // DamagePipeline.Outcome.IsMiss already enforces one level down.
-        // Sums ModifierEffectType.ElementalDamagePercent across every source
-        // that grants it for this element, rather than ModifierEffectSet.
-        // Best()'s max-not-sum default -- see FightEncounterAdapter.cs'
-        // TypedResistanceFlat precedent ("the two sources stack, same as
-        // PhysicalDefense/MagicalDefense already do for relics vs gear
-        // stats"): a typed rider meant to combine across sources, not a
-        // repeated copy of one rule that Best() would collapse. Reads
-        // actor.ModifierEffects directly (an instance member), so this does
-        // not need `this` despite living on FightSession.
+        // Sums EffectKind.ElementalDamagePercent across every source that
+        // grants it for this element (EffectStacking.Summed): a typed rider
+        // meant to combine across sources, folded per element.
         private int ElementalDamagePercentFor(CombatantState actor, DamageType type)
         {
             int total = 0;
-            foreach (var effect in actor.ModifierEffects.All)
+            foreach (var effect in actor.Effects.All)
             {
-                if (effect.Type == ModifierEffectType.ElementalDamagePercent && effect.Against == type)
+                if (effect.Kind == EffectKind.ElementalDamagePercent && effect.Against == type)
                 {
                     total += effect.Magnitude;
                 }
@@ -2133,13 +2127,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private void RaiseMagicalShield(CombatantState actor)
         {
-            if (!HasRelic(actor, RelicEffect.MagicalShield)) return;
+            if (!actor.Effects.Has(EffectKind.MagicalShield)) return;
 
             // ANOTHER ENTRY, never a replacement: wards stack, so a relic
             // shield raised over a Bulwark adds to it rather than arguing with
             // it. It dissipates like any skill's ward: the one-turn default,
             // not the whole-fight duration the standing relic wards carry.
-            RaiseWard(actor, FightTuning.MagicalShieldPoints, FightTuning.DefaultWardTurns, actor);
+            RaiseWard(actor, actor.Effects.Magnitude(EffectKind.MagicalShield), FightTuning.DefaultWardTurns, actor);
             AppendMessage($"{actor.Name}'s Magical Shield rises!");
         }
 

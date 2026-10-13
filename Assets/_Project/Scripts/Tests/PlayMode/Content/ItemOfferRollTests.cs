@@ -294,7 +294,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var effectById = Content.ContentDatabase.Modifiers
                 .Where(m => m != null && !string.IsNullOrEmpty(m.id) && m.Data.Effects != null && m.Data.Effects.Length > 0)
-                .ToDictionary(m => m.id, m => m.Data.Effects[0].Type);
+                .ToDictionary(m => m.id, m => m.Data.Effects[0].Kind);
             var kindById = Content.ContentDatabase.Items
                 .Where(i => i != null && !string.IsNullOrEmpty(i.id))
                 .ToDictionary(i => i.id, i => i.kind);

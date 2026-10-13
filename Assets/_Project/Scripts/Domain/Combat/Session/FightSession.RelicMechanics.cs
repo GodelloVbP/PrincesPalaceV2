@@ -3,7 +3,7 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
-    // Relic mechanics that don't reduce to a RelicModifier/ModifierEffectSet
+    // Relic mechanics that don't reduce to a Effect/EffectSet
     // numeric bonus -- each one is a genuinely unrelated piece of behavior,
     // wired through this session's own hooks (RelicsOnCombatBegin,
     // RelicsAfterSwing, RelicsOnEachKill, DealDamage) rather than any shared
@@ -21,7 +21,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // here). Monkey King's Scepter's one line lives in FightSession.cs's
     // CanReachEnemy, next to the rule it bypasses. Pointy Nail on the End
     // of a Stick, Jo-Sun's Book of Anatomy, and Vampire Dentures have no
-    // code here at all -- each is a pure RelicModifier relic, applied at
+    // code here at all -- each is a pure Effect relic, applied at
     // kit-build time exactly like every other numeric-only relic.
     //
     // Each mechanic here that has a reusable shape rides its own Domain
@@ -42,7 +42,7 @@ namespace PrincesPalace.Domain.Combat.Session
             foreach (var kit in _playerKits)
             {
                 var actor = kit.Key;
-                if (!HasRelic(actor, RelicEffect.JarOfBearUrine)) continue;
+                if (!actor.Effects.Has(EffectKind.JarOfBearUrine)) continue;
 
                 foreach (var enemy in _encounter.LivingEnemies)
                 {
@@ -66,7 +66,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void MagicMarkerApplyMark(CombatantState actor, CombatantState target)
         {
             if (actor == null || target == null || !target.IsAlive) return;
-            if (!HasRelic(actor, RelicEffect.MagicMarker)) return;
+            if (!actor.Effects.Has(EffectKind.MagicMarker)) return;
 
             Marks.Apply(target, actor);
         }
@@ -82,10 +82,10 @@ namespace PrincesPalace.Domain.Combat.Session
         private void MagicMarkerConsumeOnAttack(CombatantState actor, CombatantState target)
         {
             if (actor == null || target == null) return;
-            if (!HasRelic(actor, RelicEffect.MagicMarker)) return;
+            if (!actor.Effects.Has(EffectKind.MagicMarker)) return;
             if (!Marks.ConsumeMark(target)) return;
 
-            int restored = RestorePrimaryResource(actor, FightTuning.MagicMarkerRestorePercent);
+            int restored = RestorePrimaryResource(actor, actor.Effects.Magnitude(EffectKind.MagicMarker));
             if (restored > 0)
             {
                 AppendMessage($"{actor.Name}'s mark ignites - {restored} restored!");
@@ -166,11 +166,11 @@ namespace PrincesPalace.Domain.Combat.Session
         private void WorldEndersCrownCheck(CombatantState target)
         {
             if (target == null || !target.IsPlayerSide || target.MaxHealth <= 0) return;
-            if (!HasRelic(target, RelicEffect.WorldEndersCrown)) return;
+            if (!target.Effects.Has(EffectKind.WorldEndersCrown)) return;
 
             float fraction = (float)target.CurrentHealth / target.MaxHealth;
 
-            if (fraction >= FightTuning.WorldEndersCrownHealthFraction)
+            if (fraction >= target.Effects.Threshold(EffectKind.WorldEndersCrown) / 100f)
             {
                 // Back above the line -- re-arm for the next crossing.
                 _crownFired.Remove(target);
@@ -195,7 +195,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void CursedIdolOnHit(CombatantState actor, CombatantState target)
         {
             if (actor == null || target == null || target.IsPlayerSide) return;
-            if (!HasRelic(actor, RelicEffect.CursedIdol)) return;
+            if (!actor.Effects.Has(EffectKind.CursedIdol)) return;
 
             FallingOffStacks.AddStack(target, FightTuning.CursedIdolStackKey,
                 FightTuning.CursedIdolStackTurns, FightTuning.CursedIdolMaxStacks);
@@ -211,11 +211,11 @@ namespace PrincesPalace.Domain.Combat.Session
         private int CursedIdolBonus(CombatantState actor, CombatantState target, int outcomeDamage)
         {
             if (actor == null || target == null || outcomeDamage <= 0) return 0;
-            if (!HasRelic(actor, RelicEffect.CursedIdol)) return 0;
+            if (!actor.Effects.Has(EffectKind.CursedIdol)) return 0;
 
+            int perStack = actor.Effects.Magnitude(EffectKind.CursedIdol);
             int percent = FallingOffStacks.Magnitude(target, FightTuning.CursedIdolStackKey,
-                FightTuning.CursedIdolPercentPerStack,
-                FightTuning.CursedIdolPercentPerStack * FightTuning.CursedIdolMaxStacks);
+                perStack, perStack * FightTuning.CursedIdolMaxStacks);
 
             return percent <= 0 ? 0 : outcomeDamage * percent / 100;
         }
@@ -232,9 +232,9 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || victim == null || !actor.IsPlayerSide) return;
             if (victim.IsSummon) return;
-            if (!HasRelic(actor, RelicEffect.AmassingStar)) return;
+            if (!actor.Effects.Has(EffectKind.AmassingStar)) return;
 
-            BonusDamagePercentEarned += FightTuning.AmassingStarPercentPerKill;
+            BonusDamagePercentEarned += actor.Effects.Magnitude(EffectKind.AmassingStar);
             AppendMessage($"{actor.Name}'s star grows brighter - the run itself hits harder now.");
         }
 
@@ -246,7 +246,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void RampagingBullsHornOnConvergence(CombatantState actor, ResolvedSkill skill)
         {
             if (actor == null || skill.Effect != SkillEffect.Transform) return;
-            if (!HasRelic(actor, RelicEffect.RampagingBullsHorn)) return;
+            if (!actor.Effects.Has(EffectKind.RampagingBullsHorn)) return;
 
             // Protect is the existing "incoming damage reduced by Magnitude
             // percent" status -- exactly this relic's shape, so it needs no
@@ -262,7 +262,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // uncapped deliberately -- a cap is a balance decision and it is
             // the owner's.
             ApplyStatusTo(actor, StatusEffectType.Protect,
-                FightTuning.BullsHornReductionPercent, FightTuning.BullsHornDurationTurns, actor);
+                actor.Effects.Magnitude(EffectKind.RampagingBullsHorn), FightTuning.BullsHornDurationTurns, actor);
 
             AppendMessage($"{actor.Name}'s horn lowers - the next blows land softer.");
         }
@@ -276,7 +276,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void IceFingernailOnAttack(CombatantState actor, CombatantState target)
         {
             if (actor == null || target == null || !target.IsAlive) return;
-            if (!HasRelic(actor, RelicEffect.IceFingernail)) return;
+            if (!actor.Effects.Has(EffectKind.IceFingernail)) return;
 
             FallingOffStacks.AddStack(target, FightTuning.IceFingernailStackKey,
                 FightTuning.IceFingernailStackTurns, FightTuning.IceFingernailMaxStacks);
@@ -295,7 +295,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (target == null) return;
 
-            RevokeSpeedBuff(target, RelicEffect.IceFingernail);
+            RevokeSpeedBuff(target, EffectKind.IceFingernail);
 
             int percent = FallingOffStacks.Magnitude(target, FightTuning.IceFingernailStackKey,
                 FightTuning.IceFingernailPercentPerStack,
@@ -303,7 +303,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (percent > 0)
             {
-                GrantSpeedMalusPercent(target, RelicEffect.IceFingernail, percent, turns: 0);
+                GrantSpeedMalusPercent(target, EffectKind.IceFingernail, percent, turns: 0);
             }
         }
 
@@ -322,7 +322,7 @@ namespace PrincesPalace.Domain.Combat.Session
             foreach (var kit in _playerKits)
             {
                 var actor = kit.Key;
-                if (!HasRelic(actor, RelicEffect.LoadedDice)) continue;
+                if (!actor.Effects.Has(EffectKind.LoadedDice)) continue;
 
                 int livingCount = 0;
                 foreach (var e in _encounter.LivingEnemies) livingCount++;
@@ -370,10 +370,10 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             // Sparring Saber: altering YOUR OWN position.
             if (actingCharacter != null && ReferenceEquals(mover, actingCharacter)
-                && HasRelic(actingCharacter, RelicEffect.SparringSaber))
+                && actingCharacter.Effects.Has(EffectKind.SparringSaber))
             {
-                int gained = GrantSpeedPercent(actingCharacter, RelicEffect.SparringSaber,
-                    FightTuning.SparringSaberSpeedPercent, FightTuning.SparringSaberSpeedTurns);
+                int gained = GrantSpeedPercent(actingCharacter, EffectKind.SparringSaber,
+                    actingCharacter.Effects.Magnitude(EffectKind.SparringSaber), FightTuning.SparringSaberSpeedTurns);
 
                 if (gained > 0)
                 {
@@ -391,10 +391,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // -- and on the relic's own whole-fight duration rather than the
             // skills' one-turn default, because footwork armour is a standing
             // property of the kit and not a window somebody opened.
-            if (actingCharacter != null && HasRelic(actingCharacter, RelicEffect.SparringBuckler)
+            if (actingCharacter != null && actingCharacter.Effects.Has(EffectKind.SparringBuckler)
                 && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey))
             {
-                RaiseWard(actingCharacter, FightTuning.SparringBucklerWardPoints,
+                RaiseWard(actingCharacter, actingCharacter.Effects.Magnitude(EffectKind.SparringBuckler),
                     FightTuning.RelicWardDurationTurns, actingCharacter);
                 AppendMessage($"{actingCharacter.Name}'s buckler comes up - a ward from the footwork.");
             }
@@ -414,7 +414,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // moves nobody on the field.
         private void DancersAnkletReposition(CombatantState actor)
         {
-            if (actor == null || !HasRelic(actor, RelicEffect.DancersAnklet)) return;
+            if (actor == null || !actor.Effects.Has(EffectKind.DancersAnklet)) return;
             if (!_locks.OncePerTurn(actor, FightTuning.DancersAnkletLockKey)) return;
             if (!_encounter.PullToFront(actor)) return;
 
@@ -429,9 +429,9 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || victim == null || !actor.IsPlayerSide) return;
             if (victim.IsSummon) return;
-            if (!HasRelic(actor, RelicEffect.EssenceSiphon)) return;
+            if (!actor.Effects.Has(EffectKind.EssenceSiphon)) return;
 
-            int amount = actor.MaxHealth * FightTuning.EssenceSiphonHealPercent / 100;
+            int amount = actor.MaxHealth * actor.Effects.Magnitude(EffectKind.EssenceSiphon) / 100;
             if (amount <= 0) return;
 
             // The return, not the request: the siphon fires on a kill, which
@@ -460,7 +460,7 @@ namespace PrincesPalace.Domain.Combat.Session
             CombatantState holder = null;
             foreach (var p in _encounter.LivingPlayerParty)
             {
-                if (!HasRelic(p, RelicEffect.DisgruntledLackey)) continue;
+                if (!p.Effects.Has(EffectKind.DisgruntledLackey)) continue;
                 holder = p;
                 break;
             }
@@ -500,7 +500,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void InconspicuousKeyOnKill(CombatantState actor, CombatantState victim)
         {
             if (actor == null || victim == null || !actor.IsPlayerSide || victim.IsSummon) return;
-            if (!HasRelic(actor, RelicEffect.InconspicuousKey)) return;
+            if (!actor.Effects.Has(EffectKind.InconspicuousKey)) return;
             if (!_locks.OncePerCombat(actor, FightTuning.InconspicuousKeyLockKey)) return;
 
             var target = RandomLivingEnemy();
@@ -532,7 +532,7 @@ namespace PrincesPalace.Domain.Combat.Session
             target.CurrentHealth = 1;
             target.IsPhoenixEgg = true;
             target.EggHealth = target.MaxHealth;
-            target.EggTurnsRemaining = FightTuning.PhoenixEggDurationTurns;
+            target.EggTurnsRemaining = target.Effects.Magnitude(EffectKind.PhoenixEgg);
 
             Ledger.Dealt(LedgerIdOf(actor), type, amount);
             Ledger.Took(LedgerIdOf(target), 0, 0);

@@ -36,11 +36,11 @@ namespace PrincesPalace.Domain.Tests
                 appliesStatus: StatusEffectType.Poison, statusMagnitude: 3, statusDuration: 3);
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            CombatantState foe = null, params ModifierEffect[] foeEffects)
+            CombatantState foe = null, params Effect[] foeEffects)
         {
             var hero = Hero();
             foe = foe ?? Foe();
-            if (foeEffects.Length > 0) foe.ModifierEffects = new ModifierEffectSet(foeEffects);
+            if (foeEffects.Length > 0) foe.Effects = EffectSet.Of(EffectHolder.Affix, foeEffects);
 
             var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { Bite() }, null, null);
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
@@ -137,7 +137,7 @@ namespace PrincesPalace.Domain.Tests
             // No finite dodge rating is a guarantee (CombatMath.DodgePercentFrom),
             // so this is the same absurd figure DodgeCoversEveryDamagePathTests
             // uses to make the roll certain for this seed.
-            var (session, _, foe) = Fight(null, new ModifierEffect(ModifierEffectType.DodgeRating, 100_000));
+            var (session, _, foe) = Fight(null, new Effect(EffectKind.DodgeRating, 100_000));
             foe.Statuses.Add(new ActiveStatus(StatusEffectType.Poison, 4, 5));
             int before = foe.CurrentHealth;
 

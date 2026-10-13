@@ -16,12 +16,11 @@ MonoBehaviour:
     Id: forest_wardens_tooth
     DisplayName: The Warden's Tooth
     Description: Taken from the thing that guards the first wood. It has no power yet.
-    Effect: 0
     SortOrder: 10
     IconPath: Assets/_Project/Art/Items/Relics/Processed/forest_wardens_tooth.png
     Rarity: 1
     UnlockedBy: first_forest_boss
-    Modifiers: []
+    Effects: []
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

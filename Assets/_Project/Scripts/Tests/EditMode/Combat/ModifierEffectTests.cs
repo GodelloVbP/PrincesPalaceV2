@@ -5,43 +5,37 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The item-modifier effect vocabulary, at the Domain layer — the gear
-    // half of TalentEffectTests, mirroring its structure exactly (see that
-    // file's own header for why this layer is tested away from
-    // FightController: engine-free and reusable from EditMode).
-    //
-    // Phase A2 only: nothing here is read by a real combat hook yet (that is
-    // Phase C's job) — these tests cover the BAG's own behaviour, the same
-    // scope TalentEffectTests covers for TalentEffectSet.
+    // EffectSet's own behaviour for affix entries, engine-free; the
+    // cross-holder stacking table is EffectStackingTests'.
     public class ModifierEffectTests
     {
-        private static ModifierEffectSet Set(params ModifierEffect[] effects)
+        private static EffectSet Set(params Effect[] effects)
         {
-            return new ModifierEffectSet(effects);
+            return EffectSet.Of(EffectHolder.Affix, effects);
         }
 
         [Test]
         public void AnEmptySet_AnswersZeroAndFalseForEverything()
         {
-            var empty = ModifierEffectSet.Empty;
+            var empty = EffectSet.Empty;
 
             Assert.IsTrue(empty.IsEmpty);
-            Assert.IsFalse(empty.Has(ModifierEffectType.GuaranteedFirstAction));
-            Assert.AreEqual(0, empty.Best(ModifierEffectType.FlatSpeedBonus));
+            Assert.IsFalse(empty.Has(EffectKind.ManaToWardOnTurnStartPercent));
+            Assert.AreEqual(0, empty.Magnitude(EffectKind.DodgeRating));
         }
 
         // Constructing with null must behave exactly like Empty rather than
         // throwing — TalentEffectSet's constructor makes the same promise,
-        // and CombatantState.ModifierEffects leans on it never needing a
+        // and CombatantState.Effects leans on it never needing a
         // null-check at any call site.
         [Test]
         public void ConstructedWithNull_BehavesLikeEmpty_NotNullReferenceError()
         {
-            var set = new ModifierEffectSet(null);
+            var set = EffectSet.Of(EffectHolder.Affix, null);
 
             Assert.IsTrue(set.IsEmpty);
-            Assert.IsFalse(set.Has(ModifierEffectType.LifestealPercent));
-            Assert.AreEqual(0, set.Best(ModifierEffectType.LifestealPercent));
+            Assert.IsFalse(set.Has(EffectKind.LifestealPercent));
+            Assert.AreEqual(0, set.Magnitude(EffectKind.LifestealPercent));
         }
 
         // Empty really is ONE shared instance, not a fresh empty list built
@@ -50,67 +44,61 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EmptyIsTheSameSharedInstanceEveryTime()
         {
-            Assert.AreSame(ModifierEffectSet.Empty, ModifierEffectSet.Empty);
+            Assert.AreSame(EffectSet.Empty, EffectSet.Empty);
         }
 
-        // MAX, NOT SUM — the single most load-bearing rule this class
-        // borrows from TalentEffectSet. Two Swift-shaped modifiers on the
-        // same combatant (a plausible drop even before Phase A3's roll
-        // exists to make it real) must not add up.
+        // MAX, NOT SUM, between two affix copies: two Swift rolls on one
+        // combatant must not add up.
         [Test]
         public void RepeatedRules_TakeTheStrongest_NotTheSum()
         {
             var set = Set(
-                new ModifierEffect(ModifierEffectType.FlatSpeedBonus, 5),
-                new ModifierEffect(ModifierEffectType.FlatSpeedBonus, 8));
+                new Effect(EffectKind.DodgeRating, 5),
+                new Effect(EffectKind.DodgeRating, 8));
 
-            Assert.AreEqual(8, set.Best(ModifierEffectType.FlatSpeedBonus));
+            Assert.AreEqual(8, set.Magnitude(EffectKind.DodgeRating));
         }
 
         [Test]
         public void Has_IsTrueRegardlessOfMagnitude_ForAFlagShapedMember()
         {
-            var set = Set(new ModifierEffect(ModifierEffectType.GuaranteedFirstAction, 0));
+            var set = Set(new Effect(EffectKind.ManaToWardOnTurnStartPercent, 0));
 
-            Assert.IsTrue(set.Has(ModifierEffectType.GuaranteedFirstAction));
+            Assert.IsTrue(set.Has(EffectKind.ManaToWardOnTurnStartPercent));
         }
 
         [Test]
         public void UnrelatedTypesDoNotAnswerForEachOther()
         {
-            var set = Set(new ModifierEffect(ModifierEffectType.LifestealPercent, 10));
+            var set = Set(new Effect(EffectKind.LifestealPercent, 10));
 
-            Assert.IsFalse(set.Has(ModifierEffectType.ElementalDamageOnHitPercent));
-            Assert.AreEqual(0, set.Best(ModifierEffectType.ElementalDamageOnHitPercent));
+            Assert.IsFalse(set.Has(EffectKind.ElementalDamageOnHitPercent));
+            Assert.AreEqual(0, set.Magnitude(EffectKind.ElementalDamageOnHitPercent));
         }
 
-        // TypedResistanceFlat's Against/AgainstMagical side-channel survives
-        // the round trip through the set and stays queryable via .All — the
-        // escape hatch ModifierEffectSet's own header points a future
-        // resistance consumer at instead of Best(), which collapses every
-        // element into one number.
+        // ResistanceFlat's Against/AgainstMagical selector survives the round
+        // trip through the set and stays queryable via .All, which is what
+        // EffectFold.ApplyResistance folds per element.
         [Test]
         public void TypedResistance_CarriesItsElementThroughAll()
         {
             var set = Set(
-                new ModifierEffect(ModifierEffectType.TypedResistanceFlat, 10, against: DamageType.Fire),
-                new ModifierEffect(ModifierEffectType.TypedResistanceFlat, 15, against: DamageType.Ice));
+                new Effect(EffectKind.ResistanceFlat, 10, against: DamageType.Fire),
+                new Effect(EffectKind.ResistanceFlat, 15, against: DamageType.Ice));
 
-            Assert.AreEqual(2, set.All.Count(e => e.Type == ModifierEffectType.TypedResistanceFlat));
+            Assert.AreEqual(2, set.All.Count(e => e.Kind == EffectKind.ResistanceFlat));
             Assert.AreEqual(10, set.All.Single(e => e.Against == DamageType.Fire).Magnitude);
             Assert.AreEqual(15, set.All.Single(e => e.Against == DamageType.Ice).Magnitude);
 
-            // Best() DELIBERATELY collapses across elements — documented
-            // behaviour, not a gap: it answers "the strongest resistance to
-            // ANY element", which is why a real consumer must read .All
-            // instead (see ModifierEffectSet.Best's own comment).
-            Assert.AreEqual(15, set.Best(ModifierEffectType.TypedResistanceFlat));
+            // Magnitude sums every copy across elements (EffectStacking.Summed),
+            // which is why the real consumer folds .All per element instead.
+            Assert.AreEqual(25, set.Magnitude(EffectKind.ResistanceFlat));
         }
 
         [Test]
         public void AgainstMagical_IsAValidTargetDistinctFromAnySpecificElement()
         {
-            var effect = new ModifierEffect(ModifierEffectType.TypedResistanceFlat, 12, againstMagical: true);
+            var effect = new Effect(EffectKind.ResistanceFlat, 12, againstMagical: true);
 
             Assert.IsTrue(effect.AgainstMagical);
             Assert.IsFalse(effect.Against.HasValue);

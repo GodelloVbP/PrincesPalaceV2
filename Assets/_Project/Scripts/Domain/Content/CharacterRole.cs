@@ -1,7 +1,7 @@
 namespace PrincesPalace.Domain.Content
 {
     // Lives in Domain, not Core, alongside the other content enums
-    // (RelicEffect, DamageType, SpriteFacing). It was the odd one out in
+    // (EffectKind, DamageType, SpriteFacing). It was the odd one out in
     // PrincesPalace.Content, which became a problem the moment characters
     // moved to characters.json: a Domain-layer resolver cannot reference
     // Core (the reference direction only ever points Editor/Tests -> Core

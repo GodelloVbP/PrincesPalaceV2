@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Tests
             new CombatantState(name, false, health, 10, 5, FoeSpeed);
 
         private static readonly ResolvedRelic BloodlustRelic =
-            new ResolvedRelic("bloodlust", "Bloodlust", "One more turn.", RelicEffect.Bloodlust, 0);
+            new ResolvedRelic("bloodlust", "Bloodlust", "One more turn.", new[] { TestRelics.Mechanic(EffectKind.Bloodlust) }, 0);
 
         private static PlayerKit KitWith(params ResolvedRelic[] relics) =>
             new PlayerKit("hero", CharacterRole.Tank, null, relics.ToList(), null);
@@ -57,6 +57,7 @@ namespace PrincesPalace.Domain.Tests
                 kit == null ? null : new List<PlayerKit> { kit },
                 null,
                 new SeededRandom(1)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             return (session, hero, encounter);
         }
 
@@ -156,6 +157,7 @@ namespace PrincesPalace.Domain.Tests
 
             var foe = new CombatantState("Tank", false, 100000, 10, 5, 1);
             var (session, _, _) = Fight(hero, null, foe);
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero);
         }
@@ -482,6 +484,7 @@ namespace PrincesPalace.Domain.Tests
             var session = new FightSession(
                 encounter, new List<PlayerKit> { KitWith() }, null,
                 new SeededRandom(1)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
             session.ExecuteAttack(tank);      // kills nothing; the monster replies

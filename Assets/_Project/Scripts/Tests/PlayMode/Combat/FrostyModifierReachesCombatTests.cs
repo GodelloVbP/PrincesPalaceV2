@@ -14,7 +14,7 @@ namespace PrincesPalace.PlayModeTests
     // End to end: the real "frostbite" modifiers.json entry's
     // ChilledOnHitChancePercent rider reaches a real fight and actually
     // chills a real target -- not just a number sitting unread on
-    // ModifierEffectSet.
+    // EffectSet.
     //
     // Ice's family is three single-effect ids -- "frosty" (damage),
     // "permafrost" (resistance), "frostbite" (this file's chill proc) --
@@ -23,7 +23,7 @@ namespace PrincesPalace.PlayModeTests
     //
     // Mirrors SwiftModifierReachesCombatTests/ItemModifierScalingReachesCombatTests'
     // own real-content pattern: equip a REAL item with a REAL id at a known
-    // tier/riftTier, never a hand-built ModifierEffect fixture. The hand-
+    // tier/riftTier, never a hand-built Effect fixture. The hand-
     // built-fixture half of this rider (exact arithmetic, refresh-not-stack,
     // composition with the Necklace ramp) lives in ChilledStatusTests
     // (EditMode).
@@ -91,12 +91,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped frostbite modifier must produce a real effect");
 
             // frostbite's authored base: ChilledOnHitChancePercent 10 (halved
             // from 20). Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            var chill = effects.All.Single(e => e.Type == ModifierEffectType.ChilledOnHitChancePercent);
+            var chill = effects.All.Single(e => e.Kind == EffectKind.ChilledOnHitChancePercent);
             Assert.AreEqual(16, chill.Magnitude, "10 x 1.6 = 16.0 exactly");
         }
 
@@ -107,9 +107,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearing(item, RiftTier.Ordinary);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
-            var chill = effects.All.Single(e => e.Type == ModifierEffectType.ChilledOnHitChancePercent);
+            var chill = effects.All.Single(e => e.Kind == EffectKind.ChilledOnHitChancePercent);
             Assert.AreEqual(10, chill.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
@@ -129,7 +129,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(16, state.ModifierEffects.Best(ModifierEffectType.ChilledOnHitChancePercent),
+            Assert.AreEqual(16, state.Effects.Magnitude(EffectKind.ChilledOnHitChancePercent),
                 "the real, scaled frostbite chill chance must reach the combatant the fight actually runs on");
         }
 
@@ -146,13 +146,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearingWholeIceFamily(item, RiftTier.Ordinary);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
-            Assert.Greater(effects.Best(ModifierEffectType.ElementalDamageOnHitPercent), 0,
+            Assert.Greater(effects.Magnitude(EffectKind.ElementalDamageOnHitPercent), 0,
                 "frosty's own damage-on-hit must still apply when equipped alongside its siblings");
-            Assert.IsTrue(effects.All.Any(e => e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Ice),
+            Assert.IsTrue(effects.All.Any(e => e.Kind == EffectKind.ResistanceFlat && e.Against == DamageType.Ice),
                 "permafrost's own Ice resistance must still apply when equipped alongside its siblings");
-            Assert.Greater(effects.Best(ModifierEffectType.ChilledOnHitChancePercent), 0,
+            Assert.Greater(effects.Magnitude(EffectKind.ChilledOnHitChancePercent), 0,
                 "frostbite's own chill chance must still apply when equipped alongside its siblings");
         }
 
@@ -160,7 +160,7 @@ namespace PrincesPalace.PlayModeTests
         // equippable item content has, at Convergent RiftTier (the richest
         // combination the roll can ever produce), and prove a real
         // FightSession actually chills a real enemy off it -- not a
-        // synthetic ModifierEffect fixture, the genuine content -> roll ->
+        // synthetic Effect fixture, the genuine content -> roll ->
         // equip -> combat chain this whole phase exists to protect.
         //
         // A high enough tier pushes frostbite's scaled chill chance to (or
@@ -179,8 +179,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
-            int scaledChance = effects.Best(ModifierEffectType.ChilledOnHitChancePercent);
+            var effects = ContentDatabase.CharacterEffects(character);
+            int scaledChance = effects.Magnitude(EffectKind.ChilledOnHitChancePercent);
 
             // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46): an
             // Inconclusive here read as green and quietly retired the end-to-end claim.

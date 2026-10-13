@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'The wearer''s own hide grows thicker against green and growing things. Elemental family: Nature, the resistance half -- Sylvan is Nature''s separate on-hit-thorn affix and Entangling carries the old bundle''s root proc.'
     SortOrder: 6
     Effects:
-    - Type: 3
+    - Kind: 6
       Magnitude: 8
       Threshold: 0
       AgainstType: 3

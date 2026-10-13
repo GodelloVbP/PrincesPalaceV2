@@ -8,21 +8,20 @@ namespace PrincesPalace.Domain.Content
     //
     //     Magnitude = base x TierMultiplier(itemTier) x RiftMultiplier(riftTier)
     //
-    // Applied ONCE, at ContentDatabase.ModifierEffects — the one assembly
-    // point that has both the modifier's raw ModifierEffect (from
+    // Applied ONCE, at ContentDatabase.Effects — the one assembly
+    // point that has both the modifier's raw Effect (from
     // ModifierDefinition.ResolvedEffects) and the ONE equipped item instance
     // it rolled onto (ItemDefinition.tier, EquipmentSlotEntry.riftTier).
     // Every combat hook downstream (FightSession's on-hit riders,
     // DamagePipeline, FightEncounterAdapter's mana wiring, ...) reads an
-    // already-scaled ModifierEffect.Magnitude and never has to know this
+    // already-scaled Effect.Magnitude and never has to know this
     // formula exists — the same reasoning GearScaling centralises armour's
     // own budget math in one place rather than trusting every reader to
     // reapply it identically.
     //
-    // Binary/flag-shaped members (GuaranteedFirstAction, ManaToWardOnTurnStartPercent)
-    // carry Magnitude 0 and scaling 0 is still 0, so nothing here needs a
-    // special case for them — see ModifierEffect's own header on why a flag's
-    // "power" is being rare rather than a bigger number.
+    // A flag-shaped kind (ManaToWardOnTurnStartPercent) carries Magnitude 0
+    // and scaling 0 is still 0, so nothing here needs a special case for
+    // it.
     public static class ModifierMagnitude
     {
         // REUSES GearScaling's OWN per-tier growth rate rather than inventing

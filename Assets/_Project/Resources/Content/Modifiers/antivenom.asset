@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'The wearer has long since built up a tolerance. Elemental family: Poison, the resistance half -- Venomous is Poison''s separate on-hit-sting affix. Split off Venomous''s old bundle so a roll grants one or the other, never both.'
     SortOrder: 9
     Effects:
-    - Type: 3
+    - Kind: 6
       Magnitude: 8
       Threshold: 0
       AgainstType: 4

@@ -14,7 +14,7 @@
       "displayName": "Emberguard",
       "description": "Fire glances off the wearer rather than catching. Elemental family: Fire, the resistance half -- Fiery is Fire's separate on-hit-burn affix. Split off Fiery's old bundle so a roll grants one or the other, never both from a single slot.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Fire" }
+        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Fire" }
       ]
     },
     {
@@ -30,7 +30,7 @@
       "displayName": "Permafrost",
       "description": "Frost does not bite the wearer back. Elemental family: Ice, the resistance half -- Frosty is Ice's separate on-hit-frost affix and Frostbite carries the old bundle's chill proc. Split off so each rule rolls on its own.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Ice" }
+        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Ice" }
       ]
     },
     {
@@ -54,7 +54,7 @@
       "displayName": "Thornhide",
       "description": "The wearer's own hide grows thicker against green and growing things. Elemental family: Nature, the resistance half -- Sylvan is Nature's separate on-hit-thorn affix and Entangling carries the old bundle's root proc.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Nature" }
+        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Nature" }
       ]
     },
     {
@@ -78,7 +78,7 @@
       "displayName": "Antivenom",
       "description": "The wearer has long since built up a tolerance. Elemental family: Poison, the resistance half -- Venomous is Poison's separate on-hit-sting affix. Split off Venomous's old bundle so a roll grants one or the other, never both.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Poison" }
+        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Poison" }
       ]
     },
     {
@@ -94,7 +94,7 @@
       "displayName": "Moonveil",
       "description": "A veil of the same Rift-sliver turns arcane harm aside. Elemental family: Arcane, the resistance half -- Astral is Arcane's separate on-hit affix. Split off Astral's old bundle so a roll grants one or the other, never both.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Arcane" }
+        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Arcane" }
       ]
     },
     {
@@ -110,7 +110,7 @@
       "displayName": "Ironclad",
       "description": "Plating enough to turn aside a plain blow. Elemental family: Physical, the resistance half -- Hardened carries the on-hit damage and Juggernaut carries the old bundle's stagger proc; this used to ride along with both on one bundled Hardened roll, now it is its own affix.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Physical" }
+        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Physical" }
       ]
     },
     {
@@ -166,7 +166,7 @@
       "displayName": "Runic",
       "description": "A deeper well of mana. Manaflow is this family's regen affix, Quickcast its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four used to roll together as one bundled Runic modifier; split so each rolls on its own like every other affix.",
       "effects": [
-        { "type": "FlatMaxManaBonus", "magnitude": 5 }
+        { "type": "MaxManaFlat", "magnitude": 5 }
       ]
     },
     {

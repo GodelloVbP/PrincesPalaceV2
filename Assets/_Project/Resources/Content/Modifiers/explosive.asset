@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: Whatever the wearer finishes off does not go quietly -- the kill splashes onto whoever was standing next to it. The exact mechanism Trample already uses, so a Black Ram wearing this alongside his own talent gets two independent splashes off one kill rather than one doubled splash -- see OnKillSplashPercent's own comment on why that is deliberate, not a bug to fix later. Already single-effect since Phase C; untouched by the affix split.
     SortOrder: 18
     Effects:
-    - Type: 9
+    - Kind: 21
       Magnitude: 15
       Threshold: 0
       AgainstType: 0

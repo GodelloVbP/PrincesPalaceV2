@@ -170,8 +170,8 @@ namespace PrincesPalace.Domain.Tests
             // stream ever stops co-operating: it then fails as a fixture
             // problem by name rather than passing for the wrong reason.
             var (session, _, foes) = Sweep(Scythe());
-            foes[1].ModifierEffects = new ModifierEffectSet(
-                new[] { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
+            foes[1].Effects = EffectSet.Of(EffectHolder.Affix, 
+                new[] { new Effect(EffectKind.DodgeRating, 100_000) });
 
             Assert.IsTrue(session.CastSkill(0, foes[0]), "the cast was refused");
 

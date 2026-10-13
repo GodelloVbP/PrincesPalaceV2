@@ -58,7 +58,7 @@ namespace PrincesPalace.Domain.Tests
 
             // FIXED IS THE HALF THAT MAKES "0..100, ALWAYS" TRUE. Every Max
             // Mana source in the game -- the Wisdom bonus, talents, relics,
-            // the reward track, FlatMaxManaBonus -- adds to a WisdomDerived
+            // the reward track, MaxManaFlat -- adds to a WisdomDerived
             // pool and to nothing else, so 100 is the whole number from every
             // source and stays 100 for a Bjorn wearing every relic in the
             // game. The consequence, accepted rather than hidden: a Max Mana
@@ -128,7 +128,7 @@ namespace PrincesPalace.Domain.Tests
 
             // WisdomDerived is mana as it has always worked: this capacity is
             // a BASE that AbilityDerivation's Wisdom bonus, talents, relics,
-            // the reward track and FlatMaxManaBonus all add to.
+            // the reward track and MaxManaFlat all add to.
             Assert.AreEqual(PoolCapacityRule.WisdomDerived, mana.CapacityRule);
 
             // 30 IS NOW THE ONLY COPY. It used to duplicate

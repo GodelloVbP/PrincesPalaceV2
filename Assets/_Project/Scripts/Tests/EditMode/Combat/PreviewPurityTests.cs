@@ -56,10 +56,10 @@ namespace PrincesPalace.Domain.Tests
         };
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            IReadOnlyList<ResolvedSkill> skills, params ModifierEffect[] heroEffects)
+            IReadOnlyList<ResolvedSkill> skills, params Effect[] heroEffects)
         {
             var hero = Hero();
-            if (heroEffects.Length > 0) hero.ModifierEffects = new ModifierEffectSet(heroEffects);
+            if (heroEffects.Length > 0) hero.Effects = EffectSet.Of(EffectHolder.Affix, heroEffects);
 
             var foe = Foe();
             var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, null);
@@ -80,7 +80,7 @@ namespace PrincesPalace.Domain.Tests
         public void APacketPreviewQuotesTheSameFigureResolutionProduces_WithAnElementalRider()
         {
             var skill = Packet("winters_rebuke", DamageType.Ice, 6);
-            var rider = new ModifierEffect(ModifierEffectType.ElementalDamagePercent, 50, against: DamageType.Ice);
+            var rider = new Effect(EffectKind.ElementalDamagePercent, 50, against: DamageType.Ice);
 
             var (session, hero, foe) = Fight(new[] { skill }, rider);
 
@@ -110,7 +110,7 @@ namespace PrincesPalace.Domain.Tests
 
             var (bare, bareHero, _) = Fight(new[] { skill });
             var (riderSession, riderHero, _) = Fight(new[] { skill },
-                new ModifierEffect(ModifierEffectType.ElementalDamagePercent, 50, against: DamageType.Ice));
+                new Effect(EffectKind.ElementalDamagePercent, 50, against: DamageType.Ice));
 
             Assert.Greater(riderSession.PreviewSkillPower(riderHero, skill),
                 bare.PreviewSkillPower(bareHero, skill),
@@ -128,7 +128,7 @@ namespace PrincesPalace.Domain.Tests
 
             var (bare, bareHero, _) = Fight(new[] { skill });
             var (wrongElement, wrongHero, _) = Fight(new[] { skill },
-                new ModifierEffect(ModifierEffectType.ElementalDamagePercent, 50, against: DamageType.Fire));
+                new Effect(EffectKind.ElementalDamagePercent, 50, against: DamageType.Fire));
 
             Assert.AreEqual(bare.PreviewSkillPower(bareHero, skill),
                 wrongElement.PreviewSkillPower(wrongHero, skill));

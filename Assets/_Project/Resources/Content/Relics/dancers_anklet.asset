@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: dancers_anklet
     DisplayName: Dancer's Anklet
     Description: After you attack, cast a spell or use an ability, move one position forward in the turn order.
-    Effect: 29
     SortOrder: 34
     IconPath: Assets/_Project/Art/Generated/disc_metal.png
     Rarity: 3
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 58
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

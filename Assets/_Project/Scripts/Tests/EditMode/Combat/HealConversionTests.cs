@@ -162,7 +162,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, foe1, _) = Fight(heroHealth: 100);
             hero.CurrentHealth = 50;
-            hero.RelicLifestealPercent = 50;
+            hero.Effects = hero.Effects.With(EffectHolder.Relic, new[] { new Effect(EffectKind.LifestealPercent, 50) });
             session.OpenCursedBlood(hero, 2);
 
             session.ExecuteAttack(foe1);

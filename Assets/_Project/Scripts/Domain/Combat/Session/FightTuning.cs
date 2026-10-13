@@ -4,6 +4,8 @@ namespace PrincesPalace.Domain.Combat.Session
     //
     // In Domain because they are combat rules, not presentation. How often a
     // relic fires is the same kind of fact as how much armour softens a hit.
+    // A relic's HEADLINE number is its Magnitude in relics.json
+    // (EffectKind); what stays here is the secondary shape around it.
     public static class FightTuning
     {
         // ---- counting relics -----------------------------------------------------
@@ -13,31 +15,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // arbitrarily lucky depending on how the last one ended, which is not a
         // thing a player can plan around.
         //
-        // The percentages are of the action's OWN BASE. See FightSession.Potency.
+        // The percentages (the relics' Magnitude) are of the action's OWN
+        // BASE. See FightSession.Potency.
         public const int ChargingCrystalEvery = 4;
-        public const int ChargingCrystalPercent = 50;
-
-        // How many turns a swing takes off, for the Salt Ledger. One, and it
-        // is a constant rather than a literal because the relic's whole value
-        // is a ratio against the cooldowns it shortens -- retuning either
-        // without seeing the other is how a relic becomes mandatory.
-        public const int SaltLedgerTurns = 1;
 
         // ---- Bell in the Fog (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.4) ----------
         //
         // Toll of the Flock: every TollOfTheFlockEvery-th turn the bearer OPENS
-        // in a fight, a packet of TollOfTheFlockAttackPercent % of their current
+        // in a fight, a packet of the relic's Magnitude % of their current
         // attack to every living enemy, times the multiplier while transformed.
         // Owner's contract: a small bonus, under ~5% of the bearer's damage
         // untransformed and ~10% on a Black Ram build (measured by the bot, M8a;
-        // these two numbers are what moves).
+        // the magnitude and this multiplier are what moves).
         public const int TollOfTheFlockEvery = 3;
-        public const int TollOfTheFlockAttackPercent = 15;
         public const float TollOfTheFlockTransformMultiplier = 1.5f;
-
-        // Bellwether's Bell: turns added to every Transform the bearer enters,
-        // on top of Wrath's TransformDurationBonus.
-        public const int BellwethersBellTransformTurns = 1;
 
         // An enemy's per-round rally (RawEnemyEntry.rallyPerRound) is a
         // FallingOffStacks list under this key whose stacks never fall off
@@ -49,23 +40,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // The Slippers accumulate and the Pipe does not, which is the whole
         // difference between them: one rewards a long fight of swinging, the
         // other rewards casting at the right moment. Same stat, opposite shape.
-        public const int SlippersPercentPerSwing = 10;
         public const int SlippersCapPercent = 40;
 
-        public const int PipePercent = 20;
         public const int PipeTurns = 1;
 
         // ---- the necklace --------------------------------------------------------
         //
         // Full value at a quarter health, nothing at full, and a straight ramp
         // between. The floor is a QUARTER rather than zero because a bonus that
-        // only pays at 1hp pays on the turn you die.
-        public const int NecklaceMaxDamagePercent = 30;
+        // only pays at 1hp pays on the turn you die. The damage half's ceiling
+        // is the relic's Magnitude.
         public const int NecklaceMaxSpeedPercent = 20;
         public const int NecklaceFloorHealthPercent = 25;
-
-        // What a kill pays, per level of whatever died.
-        public const int BountyPerLevel = 3;
 
         // ---- lucky deck ------------------------------------------------------------
         //
@@ -77,14 +63,7 @@ namespace PrincesPalace.Domain.Combat.Session
         public const int LuckyDeckSlowPercent = 30;
         public const int LuckyDeckSlowTurns = 1;
 
-        // ---- the drowned lantern's mark ---------------------------------------------
-        //
-        // Half the swing's own base again -- a meaningful payoff, because it
-        // costs a whole cast to set up before an attack can cash it in.
-        public const int MarkBonusPercent = 50;
-
         public const int LongCountEvery = 3;
-        public const int LongCountPercent = 40;
 
         // ---- relics ----------------------------------------------------------
 
@@ -127,14 +106,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // that used to sit here still described the percentage ward it
         // replaced.
         public const int RelicWardDurationTurns = 99;
-
-        // MAGICAL SHIELD'S OWN POOL, in shield points. Roughly one leg-two
-        // enemy hit (those measured at 19-23 in phase 1's bot run) -- it is a
-        // relic that raises itself for free on a cast, so it buys a blow, not
-        // a plan. It read 50 while a ward was a PERCENTAGE off one hit, which
-        // is the same "half of whatever lands" promise expressed in the unit
-        // the model no longer uses.
-        public const int MagicalShieldPoints = 20;
 
         // ---- item modifiers (Rift affixes, Phase C) ---------------------------
 
@@ -195,7 +166,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // split as ChilledOnHitSpeedPercent/ChilledOnHitTurns just above:
         // the CHANCE is the one number modifiers.json tunes, this stays a
         // fixed constant. No sibling "strength" constant -- Rooted has no
-        // Magnitude of its own to author (ModifierEffectType.RootChancePercent's
+        // Magnitude of its own to author (EffectKind.RootChancePercent's
         // own comment), only a duration.
         // ONE affected turn -- see ChilledOnHitTurns just above for why this
         // read 2 before plan D1 and means the same thing now that it reads 1.
@@ -203,32 +174,19 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- the balance pass -- mechanics a-g, and the relics built on them ----
 
-        // Magic Marker: consuming a mark restores this percent of the
-        // actor's own MISSING primary resource.
-        public const int MagicMarkerRestorePercent = 20;
-
-        // World Ender's Crown: crossing below this fraction of health fears
-        // every enemy for FEARED turns.
-        public const float WorldEndersCrownHealthFraction = 0.3f;
+        // World Ender's Crown: crossing below the relic's Threshold fears
+        // every enemy for this many turns.
         public const int WorldEndersCrownFearTurns = 1;
 
-        // Cursed Idol: each landed hit on an enemy stacks a resistance
-        // shred, 3% per stack, up to 5 stacks (15%), each stack falling off
-        // 3 turns after it was added.
-        public const int CursedIdolPercentPerStack = 3;
+        // Cursed Idol: each landed hit on an enemy stacks a resistance shred
+        // of the relic's Magnitude, up to this many stacks, each falling off
+        // CursedIdolStackTurns after it was added.
         public const int CursedIdolMaxStacks = 5;
         public const int CursedIdolStackTurns = 3;
         public const string CursedIdolStackKey = "cursed_idol";
 
-        // Amassing Star: percent damage added to the WHOLE REST OF THE RUN
-        // per non-summon kill.
-        public const int AmassingStarPercentPerKill = 2;
-
-        // Rampaging Bull's Horn: damage reduction after casting a
-        // convergence/ultimate ability, and how long it lasts.
-        public const int BullsHornReductionPercent = 50;
-
-        // ONE affected turn -- see ChilledOnHitTurns for why this read 2 before
+        // Rampaging Bull's Horn: how long its damage reduction lasts. ONE
+        // affected turn -- see ChilledOnHitTurns for why this read 2 before
         // plan D1 and means the same thing now that it reads 1.
         public const int BullsHornDurationTurns = 1;
 
@@ -248,28 +206,8 @@ namespace PrincesPalace.Domain.Combat.Session
         public const int IceFingernailStackTurns = 5;
         public const string IceFingernailStackKey = "ice_fingernail";
 
-        // Sparring Saber: choosing to Move grants this much Speed for one
-        // turn.
-        public const int SparringSaberSpeedPercent = 30;
+        // Sparring Saber: how long the Move's Speed lasts.
         public const int SparringSaberSpeedTurns = 1;
-
-        // Sparring Buckler: the ward's own pool, in shield points. Half a
-        // leg-two enemy hit -- it is granted free by moving, once a turn, and
-        // a relic that paid for a whole blow every turn for nothing would be
-        // the best defensive item in the game. It read 15 as a PERCENT before
-        // the shield model landed, which was the same "a sliver off whatever
-        // lands" intent in the old unit.
-        public const int SparringBucklerWardPoints = 10;
-
-        // Essence Siphon: percent of max health healed per non-summon kill.
-        public const int EssenceSiphonHealPercent = 3;
-
-        // Berserker's Vest: cooldown turns shaved off per hit taken, once
-        // per turn.
-        public const int BerserkersVestCooldownReduction = 1;
-
-        // Phoenix Egg: how many of the wearer's own turns the shell lasts.
-        public const int PhoenixEggDurationTurns = 3;
 
         // ---- combat-lock keys (mechanic f) --------------------------------------
         //

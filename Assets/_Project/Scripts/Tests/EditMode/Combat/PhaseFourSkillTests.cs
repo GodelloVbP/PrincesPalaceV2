@@ -531,7 +531,7 @@ namespace PrincesPalace.Domain.Tests
 
             // A standing relic ward (Sparring Buckler's shape): the whole-fight
             // duration, sourced by nobody.
-            StatusEffects.ApplyWard(shawn.Statuses, FightTuning.MagicalShieldPoints,
+            StatusEffects.ApplyWard(shawn.Statuses, 20,
                 FightTuning.RelicWardDurationTurns);
 
             var (session, _) = Fight(new[] { shawn }, new[] { Foe() }, Kit(tuckIn));

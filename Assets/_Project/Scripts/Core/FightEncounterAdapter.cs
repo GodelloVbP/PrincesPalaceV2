@@ -185,7 +185,7 @@ namespace PrincesPalace
         // would silently double a character's health and attack.
         private static CombatantState ToCombatant(Character character,
                                                   CharacterDefinition definition,
-                                                  IReadOnlyList<RelicModifier> modifiers = null)
+                                                  IReadOnlyList<ResolvedRelic> relics)
         {
             var stats = ContentDatabase.EffectiveStats(character);
             var scores = ContentDatabase.EffectiveAbilityScores(character);
@@ -199,36 +199,36 @@ namespace PrincesPalace
             // is the one place the two are chosen between.
             int attack = ContentDatabase.EquippedWeaponPower(character) ?? stats.attack;
 
-            // RESOLVED BEFORE THE COMBATANT, not after it, because the pool
-            // needs them: FlatMaxManaBonus and FlatManaRegenBonus are gear
-            // terms in the capacity chain, and a pool that arrives at
-            // construction cannot be topped up by a line further down without
-            // reopening the question of whether Current followed Max. Nothing
-            // else about this moved -- ModifierEffects is a pure function of
-            // the character's loadout and was always computable here.
-            var modifierEffects = ContentDatabase.ModifierEffects(character);
+            // THE ONE EFFECT SET this combatant fights with: their affixes and
+            // track terms, then the run relics that reach them. Built BEFORE
+            // the combatant because the pool needs it -- Max Mana and mana
+            // regen terms are in the capacity chain, and a pool that arrives
+            // at construction cannot be topped up further down without
+            // reopening whether Current followed Max. Every stat below folds
+            // from this same set (EffectFold), so a relic's numbers and its
+            // mechanics cannot disagree about who holds it.
+            var effects = ContentDatabase.CharacterEffects(character).WithRelics(relics, definition.id);
 
             var state = new CombatantState(definition.Data.DisplayName, true,
-                RelicModifiers.Apply(stats.maxHealth, RelicStat.MaxHealth, modifiers),
-                ContentDatabase.BuildPrimaryPool(character, modifiers, modifierEffects, stats.manaRegen),
-                RelicModifiers.Apply(attack, RelicStat.Attack, modifiers),
-                RelicModifiers.Apply(stats.speed, RelicStat.Speed, modifiers));
+                EffectFold.Apply(stats.maxHealth, EffectStat.MaxHealth, effects),
+                ContentDatabase.BuildPrimaryPool(character, effects, stats.manaRegen),
+                EffectFold.Apply(attack, EffectStat.Attack, effects),
+                EffectFold.Apply(stats.speed, EffectStat.Speed, effects));
 
-            state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
+            state.ArmorPenetration = EffectFold.Apply(0, EffectStat.ArmorPenetration, effects);
 
             // Crit bonuses ride the effective stats, so an item's or talent's
             // critChance / critDamage counts, plus a relic's flat bonus; an
             // unauthored block is the CritRules baseline.
             state.CritChancePercent = CritRules.PartyChancePercent(stats,
-                RelicModifiers.Apply(0, RelicStat.CritChance, modifiers));
+                EffectFold.Apply(0, EffectStat.CritChance, effects));
             state.CritDamagePercent = CritRules.PartyDamagePercent(stats,
-                RelicModifiers.Apply(0, RelicStat.CritDamage, modifiers));
+                EffectFold.Apply(0, EffectStat.CritDamage, effects));
 
-            // Balance pass 2: Jo-Sun's Book of Anatomy and Vampire Dentures,
-            // the same "flat stat set once at kit-build time from a
-            // RelicModifier" shape ArmorPenetration just above already uses.
-            state.WeaknessMultiplierBonusPercent = RelicModifiers.Apply(0, RelicStat.WeaknessBonus, modifiers);
-            state.RelicLifestealPercent = RelicModifiers.Apply(0, RelicStat.Lifesteal, modifiers);
+            // Jo-Sun's Book of Anatomy, set once at kit-build time the way
+            // ArmorPenetration is. Lifesteal is not folded: the on-hit rider
+            // reads it off Effects.
+            state.WeaknessMultiplierBonusPercent = EffectFold.Apply(0, EffectStat.WeaknessBonus, effects);
 
             state.AbilityScores = scores;
 
@@ -245,13 +245,13 @@ namespace PrincesPalace
             // into EffectiveStats -- and then dropped on the way into the one
             // system it exists for.
             //
-            // RelicStat.Defence APPLIES TO BOTH broad Defenses now -- there is
+            // EffectStat.Defence APPLIES TO BOTH broad Defenses now -- there is
             // no longer one generic Defense stat for a relic modifier to name,
             // so "Defence" reads as "both of them", exactly the reading
             // whetstone_heart's -10% needs to keep meaning what it always
             // meant.
-            state.PhysicalDefense = RelicModifiers.Apply(stats.physicalDefense, RelicStat.Defence, modifiers);
-            state.MagicalDefense = RelicModifiers.Apply(stats.magicalDefense, RelicStat.Defence, modifiers);
+            state.PhysicalDefense = EffectFold.Apply(stats.physicalDefense, EffectStat.Defence, effects);
+            state.MagicalDefense = EffectFold.Apply(stats.magicalDefense, EffectStat.Defence, effects);
 
             // Where the Iron Retort measures "above his base" from: the
             // authored base stats and what the authored ability scores derive,
@@ -259,8 +259,9 @@ namespace PrincesPalace
             // sits exactly on the line.
             state.BaseDefenseTotal = BaseDefenseTotalOf(definition);
 
-            // And whatever a relic adds against ONE element, on top of those.
-            state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
+            // And whatever a relic or an affix adds against ONE element, on
+            // top of those; every copy counts.
+            state.TypedResistance = EffectFold.ApplyResistance(state.TypedResistance, effects);
 
             // Built from the CHARACTER, so a signature whose capacity a talent
             // widened arrives at that width. Its single call site until now was
@@ -282,39 +283,7 @@ namespace PrincesPalace
             // assigned .Talents, which is why nothing caught the gap.
             state.Talents = ContentDatabase.TalentEffects(character);
 
-            // Real, droppable content as of Phase C — every equipped item's
-            // rolled modifiers, already scaled by tier/riftTier (see
-            // ContentDatabase.ModifierEffects' own header).
-            state.ModifierEffects = modifierEffects;
-
-            // RUNIC'S MANA POOL IS BUILT INTO THE CHAIN: FlatMaxManaBonus and
-            // FlatManaRegenBonus are folded into the pool at construction
-            // rather than added to the CombatantState afterward, so Max and
-            // Current cannot come out of step -- the pool is built at its
-            // final capacity and its startRule fills it (see
-            // ContentDatabase.BuildPrimaryPool), with no second number to
-            // keep in step.
-
-            // The elemental family's typed-resistance half -- the SAME seam
-            // relic-granted typed resistance already reaches state.TypedResistance
-            // through, just walked over ModifierEffects.All (see
-            // ModifierEffectSet.Best's own header on why a resistance
-            // consumer must read .All rather than Best, which would collapse
-            // every element down to whichever one is strongest) instead of
-            // RelicModifiers.ApplyResistance, which only ever reads
-            // RelicModifier. Summed ON TOP of whatever a relic already
-            // granted -- the two sources stack, same as PhysicalDefense/
-            // MagicalDefense already do for relics vs gear stats.
-            foreach (var effect in state.ModifierEffects.All)
-            {
-                if (effect.Type != ModifierEffectType.TypedResistanceFlat) continue;
-
-                state.TypedResistance = effect.AgainstMagical
-                    ? state.TypedResistance.WithMagical(effect.Magnitude)
-                    : effect.Against.HasValue
-                        ? state.TypedResistance.With(effect.Against.Value, effect.Magnitude)
-                        : state.TypedResistance;
-            }
+            state.Effects = effects;
 
             return state;
         }
@@ -325,7 +294,7 @@ namespace PrincesPalace
         // loadout from, and screenshot comparison depends on that path
         // producing the same stage every time.
         private static CombatantState ToCombatant(CharacterDefinition definition,
-                                                  IReadOnlyList<RelicModifier> modifiers = null)
+                                                  IReadOnlyList<ResolvedRelic> relics)
         {
             var stats = definition.Data.BaseStats;
             var scores = definition.Data.AbilityScores;
@@ -338,6 +307,9 @@ namespace PrincesPalace
             // and only when the row says WisdomDerived.
             int maxHealth = stats.maxHealth + AbilityDerivation.MaxHealthBonus(scores);
 
+            // No gear and no track here, so the run relics are the whole set.
+            var effects = EffectSet.Empty.WithRelics(relics, definition.id);
+
             // Relic modifiers land on the FINAL figures, after the ability
             // scores have contributed -- a +15% attack relic is 15% of what the
             // character actually swings with, not of a base nobody sees.
@@ -348,25 +320,23 @@ namespace PrincesPalace
             // path swings for, same as the save-backed overload's `total`
             // already reflects via DerivedStats.
             var state = new CombatantState(definition.Data.DisplayName, true,
-                RelicModifiers.Apply(maxHealth, RelicStat.MaxHealth, modifiers),
-                ContentDatabase.BuildPrimaryPool(definition.Data.PrimaryPoolId, scores, modifiers, stats.manaRegen),
-                RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
-                RelicModifiers.Apply(AbilityDerivation.BaseSpeed(stats, scores), RelicStat.Speed, modifiers));
+                EffectFold.Apply(maxHealth, EffectStat.MaxHealth, effects),
+                ContentDatabase.BuildPrimaryPool(definition.Data.PrimaryPoolId, scores, effects, stats.manaRegen),
+                EffectFold.Apply(stats.attack, EffectStat.Attack, effects),
+                EffectFold.Apply(AbilityDerivation.BaseSpeed(stats, scores), EffectStat.Speed, effects));
 
-            state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
+            state.ArmorPenetration = EffectFold.Apply(0, EffectStat.ArmorPenetration, effects);
 
             // Crit bonuses ride the effective stats, so an item's or talent's
             // critChance / critDamage counts, plus a relic's flat bonus; an
             // unauthored block is the CritRules baseline.
             state.CritChancePercent = CritRules.PartyChancePercent(stats,
-                RelicModifiers.Apply(0, RelicStat.CritChance, modifiers));
+                EffectFold.Apply(0, EffectStat.CritChance, effects));
             state.CritDamagePercent = CritRules.PartyDamagePercent(stats,
-                RelicModifiers.Apply(0, RelicStat.CritDamage, modifiers));
+                EffectFold.Apply(0, EffectStat.CritDamage, effects));
 
-            // Balance pass 2 -- same reasoning as the save-backed overload
-            // above.
-            state.WeaknessMultiplierBonusPercent = RelicModifiers.Apply(0, RelicStat.WeaknessBonus, modifiers);
-            state.RelicLifestealPercent = RelicModifiers.Apply(0, RelicStat.Lifesteal, modifiers);
+            // Same reasoning as the save-backed overload above.
+            state.WeaknessMultiplierBonusPercent = EffectFold.Apply(0, EffectStat.WeaknessBonus, effects);
 
             state.AbilityScores = scores;
 
@@ -378,10 +348,10 @@ namespace PrincesPalace
             // CombatantState by hand instead of through a summed StatBlock, so
             // it has to add the same two terms explicitly or a tooling-only
             // fight would under-mitigate relative to a real one.
-            state.PhysicalDefense = RelicModifiers.Apply(
-                stats.physicalDefense + AbilityDerivation.PhysicalDefenseBonus(scores), RelicStat.Defence, modifiers);
-            state.MagicalDefense = RelicModifiers.Apply(
-                stats.magicalDefense + AbilityDerivation.MagicalDefenseBonus(scores), RelicStat.Defence, modifiers);
+            state.PhysicalDefense = EffectFold.Apply(
+                stats.physicalDefense + AbilityDerivation.PhysicalDefenseBonus(scores), EffectStat.Defence, effects);
+            state.MagicalDefense = EffectFold.Apply(
+                stats.magicalDefense + AbilityDerivation.MagicalDefenseBonus(scores), EffectStat.Defence, effects);
             state.BaseDefenseTotal = BaseDefenseTotalOf(definition);
 
             // The same relic-typed-resistance line the save-backed overload
@@ -392,7 +362,7 @@ namespace PrincesPalace
             // fight where a party member has no matching save Character --
             // silently did nothing. Found by EveryRelicReachesCombatTests,
             // which drafts every relic alone and checks every stat moved.
-            state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
+            state.TypedResistance = EffectFold.ApplyResistance(state.TypedResistance, effects);
 
             if (definition.Data.HasSignatureResource)
             {
@@ -403,21 +373,11 @@ namespace PrincesPalace
                     absorbsDamage: definition.Data.SignatureAbsorbsDamage);
             }
 
-            // NO EQUIVALENT ModifierEffects LINE HERE, EXPLICITLY. This
-            // overload has no Character — only a CharacterDefinition — and
-            // ContentDatabase.ModifierEffects reads a character's live
-            // equipment loadout (modifierIds on each worn EquipmentSlotEntry)
-            // to build the set. There is no equipment to read here, so
-            // state.ModifierEffects is left at its CombatantState default,
-            // ModifierEffectSet.Empty, which is the correct answer rather
-            // than an omission — the tooling party never had gear-derived
-            // effects to represent. Recorded explicitly (rather than left
-            // silent) per the plan's own note that a prior redesign phase
-            // found and fixed exactly this class of bug — the save-backed
-            // and tooling-only overloads quietly disagreeing about what a
-            // seam applies — for TypedResistance and EffectiveWeaponScaling.
+            // The relics only: this overload has no Character, so no worn
+            // equipment and no track to read.
+            state.Effects = effects;
 
-            // SAME REASONING, for Talents. ContentDatabase.TalentEffects
+            // No talents either. ContentDatabase.TalentEffects
             // reads a Character's unlockedTalentIds, and this overload has
             // no Character -- only a bare CharacterDefinition, which has no
             // concept of "unlocked" (a definition-only fight has nothing a
@@ -490,7 +450,6 @@ namespace PrincesPalace
             // FightSession, covered by Domain tests that hand-build their own
             // kits, and unreachable from play.
             var relics = ResolveRelics(relicIds);
-            var modifiers = relics.SelectMany(r => r.Modifiers).ToList();
 
             foreach (string id in partyIds ?? new List<string>())
             {
@@ -505,12 +464,12 @@ namespace PrincesPalace
 
                 if (character != null)
                 {
-                    party.Add(ToCombatant(character, definition, modifiers));
+                    party.Add(ToCombatant(character, definition, relics));
                     kits.Add(KitFor(character, definition, relics));
                 }
                 else
                 {
-                    party.Add(ToCombatant(definition, modifiers));
+                    party.Add(ToCombatant(definition, relics));
                     kits.Add(KitFor(definition, relics));
                 }
 

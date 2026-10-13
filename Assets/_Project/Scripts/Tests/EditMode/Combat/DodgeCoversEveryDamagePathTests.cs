@@ -41,8 +41,8 @@ namespace PrincesPalace.Domain.Tests
         private static CombatantState Foe(string name = "Foe", int health = 1000, int attack = 10, int speed = 1) =>
             new CombatantState(name, false, health, 10, attack, speed);
 
-        private static void Give(CombatantState combatant, params ModifierEffect[] effects) =>
-            combatant.ModifierEffects = new ModifierEffectSet(effects);
+        private static void Give(CombatantState combatant, params Effect[] effects) =>
+            combatant.Effects = EffectSet.Of(EffectHolder.Affix, effects);
 
         // No finite DodgeRating is a TRUE guarantee any more -- see
         // CombatMath.DodgePercentFrom's own header for why (100 * R /
@@ -55,7 +55,7 @@ namespace PrincesPalace.Domain.Tests
         // stream) to dodge on every path exercised here. Named "Always" for
         // what it does across this file's own fixtures, not as a claim
         // about the curve.
-        private static ModifierEffect AlwaysDodge => new ModifierEffect(ModifierEffectType.DodgeRating, 100_000);
+        private static Effect AlwaysDodge => new Effect(EffectKind.DodgeRating, 100_000);
 
         private static ResolvedSkill Skill(
             SkillEffect effect,
@@ -89,8 +89,8 @@ namespace PrincesPalace.Domain.Tests
             hero.CurrentHealth = 400; // room to prove lifesteal did not heal it back up
             var foe = Foe();
             Give(hero,
-                new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 50, against: DamageType.Fire),
-                new ModifierEffect(ModifierEffectType.LifestealPercent, 50));
+                new Effect(EffectKind.ElementalDamageOnHitPercent, 50, against: DamageType.Fire),
+                new Effect(EffectKind.LifestealPercent, 50));
             Give(foe, AlwaysDodge);
             foe.BreakShield = new BreakShield(10);
 
@@ -227,7 +227,7 @@ namespace PrincesPalace.Domain.Tests
             // result exactly once, not twice.
             var hero = Hero(attack: 20);
             var foe = Foe(health: 2000);
-            Give(foe, new ModifierEffect(ModifierEffectType.DodgeRating, 50));
+            Give(foe, new Effect(EffectKind.DodgeRating, 50));
             var skill = Skill(SkillEffect.DamageSingle, "Prismatic Bolt", damageInstances: new[]
             {
                 new DamageInstance(DamageType.Fire, 30),
@@ -291,7 +291,7 @@ namespace PrincesPalace.Domain.Tests
             // so RollDodge is naturally symmetric-but-inert for the enemy side
             // without any special case in DamagePipeline itself.
             var monster = new CombatantState("Golem", false, 1000, 10, 30, 1);
-            Assert.IsTrue(monster.ModifierEffects.IsEmpty, "an enemy's ModifierEffects must default to Empty");
+            Assert.IsTrue(monster.Effects.IsEmpty, "an enemy's ModifierEffects must default to Empty");
             Assert.IsFalse(DamagePipeline.RollDodge(monster, null, new SeededRandom(1)),
                 "with Empty ModifierEffects, an enemy can never roll a dodge -- the check is symmetric, the DATA is not");
         }
@@ -303,12 +303,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var heroA = Hero(attack: 20, speed: 50);
             var foeA = Foe(speed: 1);
-            Give(foeA, new ModifierEffect(ModifierEffectType.DodgeRating, 40));
+            Give(foeA, new Effect(EffectKind.DodgeRating, 40));
             var sessionA = Session(new CombatEncounter(new[] { heroA }, new[] { foeA }));
 
             var heroB = Hero(attack: 20, speed: 50);
             var foeB = Foe(speed: 1);
-            Give(foeB, new ModifierEffect(ModifierEffectType.DodgeRating, 40));
+            Give(foeB, new Effect(EffectKind.DodgeRating, 40));
             var sessionB = Session(new CombatEncounter(new[] { heroB }, new[] { foeB }));
 
             var missSequenceA = new List<bool>();
@@ -336,7 +336,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- design decision 2: splash/AoE/DoT stay UNDODGEABLE ---------------
         //
         // None of the three below call DamagePipeline.AfterDefences at all --
-        // see DamagePipeline's own header and ModifierEffectType.
+        // see DamagePipeline's own header and EffectKind.
         // DodgeRating's comment for the reasoning. These tests prove
         // the CONSEQUENCE of that design (a very-high-dodge target still
         // takes the hit) rather than merely re-asserting the comment.
@@ -347,7 +347,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero(attack: 20, speed: 10);
             var victim = Foe("Victim", health: 5, speed: 1);
             var neighbour = Foe("Neighbour", health: 100, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.OnKillSplashPercent, 30));
+            Give(hero, new Effect(EffectKind.OnKillSplashPercent, 30));
             Give(neighbour, AlwaysDodge);
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { victim, neighbour }));

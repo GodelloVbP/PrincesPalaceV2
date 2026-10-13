@@ -24,7 +24,7 @@ namespace PrincesPalace.Domain.Content
         // effects the same way ItemEntryResolver rejects an item that
         // grants nothing. An ARRAY rather than IReadOnlyList because that is
         // what serializes, and every consumer reads it as the interface.
-        public ModifierEffect[] Effects = Array.Empty<ModifierEffect>();
+        public Effect[] Effects = Array.Empty<Effect>();
 
         // For the serializer only.
         public ResolvedModifier()
@@ -32,7 +32,7 @@ namespace PrincesPalace.Domain.Content
         }
 
         public ResolvedModifier(string id, string displayName, string description, int sortOrder,
-            IReadOnlyList<ModifierEffect> effects)
+            IReadOnlyList<Effect> effects)
         {
             Id = id ?? "";
             DisplayName = displayName ?? "";
@@ -40,11 +40,11 @@ namespace PrincesPalace.Domain.Content
             SortOrder = sortOrder;
             if (effects == null || effects.Count == 0)
             {
-                Effects = Array.Empty<ModifierEffect>();
+                Effects = Array.Empty<Effect>();
             }
             else
             {
-                Effects = new ModifierEffect[effects.Count];
+                Effects = new Effect[effects.Count];
                 for (int i = 0; i < effects.Count; i++) Effects[i] = effects[i];
             }
         }

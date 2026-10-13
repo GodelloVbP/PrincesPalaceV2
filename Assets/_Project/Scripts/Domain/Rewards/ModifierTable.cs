@@ -135,73 +135,19 @@ namespace PrincesPalace.Domain.Rewards
             return (RiftTier)rungs;
         }
 
-        // WHICH SLOT AN EFFECT IS ALLOWED TO ROLL ON, closed over
-        // ModifierEffectType exactly the way ModifierEntryResolver's own
-        // UsesThreshold/IgnoresMagnitude/UsesDamageType sets are -- one line
-        // per member here rather than a second field authored into
-        // modifiers.json, because the split is a property of what the RULE
-        // DOES (an on-hit rider only a swing can trigger vs. a passive worn
-        // while standing there to take a hit), not a tag a content author
-        // could get out of sync with the effect itself.
+        // WHICH ITEM AN AFFIX MAY ROLL ON: EffectCatalog's Pool for its kind.
+        // A property of what the rule DOES (an on-hit rider only a swing can
+        // trigger, against a passive worn to take a hit), so it sits with the
+        // kind rather than as a tag an author could get out of step with it.
+        // Weapons (staves included) draw only Weapon kinds; everything else
+        // equippable draws only Armour kinds, so a staff never rolls
+        // Emberguard.
         //
-        // A STAFF ROLLED WITH DEFENSIVE AFFIXES is the bug this exists to
-        // close: before this split, ItemOfferRoll.ModifierPool() was ONE
-        // flat list built from every modifiers.json entry, handed to
-        // PickModifiers for every equippable alike -- so a caster weapon
-        // could land Emberguard (fire resistance) or Wardrune (mana-to-Ward
-        // on the wearer's own turn start), rules that read as armour doing
-        // its job on a thing meant to deal damage. Weapons (kind ==
-        // ItemKind.Weapon, staves included -- see RawWeaponEntry's own
-        // header: "Sword->STR, Staff->INT, Dagger->DEX" are three families
-        // of the SAME kind, not three different slot types) now draw only
-        // from the OFFENSIVE half; everything else equippable (kind ==
-        // ItemKind.Equipment) draws only from the DEFENSIVE half.
-        //
-        // OFFENSIVE reads "something a landed hit, a cast, or the wielder's
-        // own aggression triggers": the elemental on-hit riders, the
-        // on-hit status chances, lifesteal, kill-splash, the tempo/mana
-        // rider that only arms off a swing, and the two flag members ready
-        // for a future modifier of the same shape (GuaranteedFirstAction --
-        // acting first is what the WIELDER of the weapon does; FlatSpeedBonus
-        // -- speed is the brief's own "speed" example for the weapon list).
-        //
-        // Everything else is DEFENSIVE: every resistance and damage-taken
-        // reduction, the two passive mana-pool members (a pool you carry,
-        // not a rider a hit triggers), the mana->Ward conversion (a
-        // protection effect, gated on the WEARER's own turn start rather
-        // than on landing a hit), Fortunate's Favor bonus (a passive worn
-        // charm, not an attack rider), and DodgeRating (Swift is read by the
-        // wearer as the TARGET of an incoming swing -- see
-        // ModifierEffectType.DodgeRating's own header -- so it is armour's
-        // job, not a weapon's, however much "speed" it sounds like).
-        private static readonly HashSet<ModifierEffectType> OffensiveEffects = new HashSet<ModifierEffectType>
-        {
-            ModifierEffectType.ElementalDamageOnHitPercent,
-            // Never actually authored via modifiers.json -- only the reward
-            // track appends it, so
-            // IsOffensiveModifier is never called on it in production today.
-            // Classified anyway so the vocabulary stays honest if a future
-            // modifier ever wants the same combat hook, and because
-            // ModifierTableTests' exhaustiveness guard requires SOME answer
-            // for every member of the closed enum.
-            ModifierEffectType.ElementalDamagePercent,
-            ModifierEffectType.FlatSpeedBonus,
-            ModifierEffectType.LifestealPercent,
-            ModifierEffectType.GuaranteedFirstAction,
-            ModifierEffectType.OnKillSplashPercent,
-            ModifierEffectType.PushBackOnHitChancePercent,
-            ModifierEffectType.NextSkillManaDiscountPercent,
-            ModifierEffectType.ChilledOnHitChancePercent,
-            ModifierEffectType.RootChancePercent,
-        };
-
-        // True for a rule a WEAPON (staves included) may roll; false means
-        // it belongs to the defensive/armour half instead. A modifier with
-        // no resolved effect at all (content mid-edit, or a resolver that
-        // rejected it) is treated as defensive rather than thrown -- the
-        // same "degrade gracefully" posture PickModifiers itself already
-        // takes on a thin pool.
-        public static bool IsOffensiveModifier(ModifierEffectType type) => OffensiveEffects.Contains(type);
+        // A kind with no row, or no pool (a relic kind, a modifier the
+        // resolver refused), reads as armour rather than throwing -- the same
+        // degrade-gracefully posture PickModifiers takes on a thin pool.
+        public static bool IsOffensiveModifier(EffectKind kind) =>
+            EffectCatalog.Has(kind) && EffectCatalog.Of(kind).Pool == AffixPool.Weapon;
 
         // Picks `slotCount` DISTINCT ids out of `pool`, in the order rolled.
         // Removal-based, same technique ItemOfferTable.Choose already uses

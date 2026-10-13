@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'A lucky strike leaves the target chilled to the bone. Elemental family: Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost carries the resistance; this used to ride along with both on one bundled Frosty roll, now it is its own affix.'
     SortOrder: 4
     Effects:
-    - Type: 17
+    - Kind: 28
       Magnitude: 10
       Threshold: 0
       AgainstType: 0

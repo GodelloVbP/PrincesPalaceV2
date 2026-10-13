@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: amassing_star
     DisplayName: Amassing Star
     Description: Each enemy you kill (summons excluded) gives +2% damage for the rest of the run.
-    Effect: 19
     SortOrder: 22
     IconPath: Assets/_Project/Art/Items/Relics/Processed/amassing_star.png
     Rarity: 2
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 48
+      Magnitude: 2
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

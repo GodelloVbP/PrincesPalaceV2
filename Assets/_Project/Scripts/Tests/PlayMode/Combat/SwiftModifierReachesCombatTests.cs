@@ -14,11 +14,11 @@ namespace PrincesPalace.PlayModeTests
     // for this phase (Phase C stopped at 11 families and never authored a
     // dodge-family modifier -- see modifiers.json's own "swift" entry
     // comment) reaches a real fight and actually causes misses, not just a
-    // number sitting unread on ModifierEffectSet.
+    // number sitting unread on EffectSet.
     //
     // Mirrors ItemModifierScalingReachesCombatTests/FortunateFavorTests'
     // own real-content pattern: equip a REAL item with the REAL "swift" id
-    // at a known tier/riftTier, never a hand-built ModifierEffect fixture.
+    // at a known tier/riftTier, never a hand-built Effect fixture.
     public class SwiftModifierReachesCombatTests
     {
         private string _root;
@@ -64,12 +64,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped swift modifier must produce a real effect");
 
             // swift's authored base: DodgeRating 6 (halved from 12). Scale =
             // TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeRating);
+            var dodge = effects.All.Single(e => e.Kind == EffectKind.DodgeRating);
             Assert.AreEqual(10, dodge.Magnitude, "6 x 1.6 = 9.6, away-from-zero rounded");
         }
 
@@ -80,9 +80,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearing(item, RiftTier.Ordinary);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
-            var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeRating);
+            var dodge = effects.All.Single(e => e.Kind == EffectKind.DodgeRating);
             Assert.AreEqual(6, dodge.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
@@ -102,7 +102,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(10, state.ModifierEffects.Best(ModifierEffectType.DodgeRating),
+            Assert.AreEqual(10, state.Effects.Magnitude(EffectKind.DodgeRating),
                 "the real, scaled swift dodge chance must reach the combatant the fight actually runs on");
         }
 
@@ -110,7 +110,7 @@ namespace PrincesPalace.PlayModeTests
         // equippable item content has, at Convergent RiftTier (the richest
         // combination the roll can ever produce), and prove a real
         // FightSession actually reads it into fewer landed hits -- not a
-        // synthetic ModifierEffect fixture, the genuine content -> roll ->
+        // synthetic Effect fixture, the genuine content -> roll ->
         // equip -> combat chain this whole phase exists to protect.
         //
         // Swift protects its WEARER as the TARGET of an incoming swing, so

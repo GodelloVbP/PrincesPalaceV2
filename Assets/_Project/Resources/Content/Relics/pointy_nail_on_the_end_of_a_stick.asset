@@ -16,14 +16,14 @@ MonoBehaviour:
     Id: pointy_nail_on_the_end_of_a_stick
     DisplayName: Pointy Nail on the End of a Stick
     Description: '{physical} damage gains 35 flat armor penetration.'
-    Effect: 0
     SortOrder: 23
     IconPath: Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png
     Rarity: 0
     UnlockedBy: 
-    Modifiers:
-    - Type: 12
-      Amount: 35
+    Effects:
+    - Kind: 12
+      Magnitude: 35
+      Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0

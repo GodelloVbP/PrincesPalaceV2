@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Combat;
-using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Content
 {
@@ -14,57 +13,10 @@ namespace PrincesPalace.Domain.Content
     // dead-weight duplicates. It does not decide how many slots an item can
     // roll or how RiftTier interacts with the roll (ModifierTable's job) or
     // how a resolved effect's magnitude gets scaled by tier/rift
-    // (ModifierMagnitude's job, at the ContentDatabase.ModifierEffects seam)
+    // (ModifierMagnitude's job, at the ContentDatabase.Effects seam)
     // -- this is purely "is this one authored entry well-formed".
     public static class ModifierEntryResolver
     {
-        // Which ModifierEffectType members read `threshold` at all. Empty
-        // today — see ModifierEffect.cs' own header — but kept as a real
-        // set rather than an inline `false` so a future health-gated member
-        // (the plan's Phase C "retaliate below X% health" candidate) is one
-        // line here plus one line in ModifierEffectSet, matching
-        // TalentEntryResolver.UsesThreshold's own shape exactly.
-        private static readonly HashSet<ModifierEffectType> UsesThreshold = new HashSet<ModifierEffectType>
-        {
-        };
-
-        // The one rule that is a FLAG: present or absent, with no number
-        // attached. Authoring a magnitude on it is the same class of mistake
-        // as authoring a threshold on a rule with no health gate — see
-        // TalentEntryResolver.IgnoresMagnitude for the identical check.
-        private static readonly HashSet<ModifierEffectType> IgnoresMagnitude = new HashSet<ModifierEffectType>
-        {
-            ModifierEffectType.GuaranteedFirstAction,
-
-            // Runic's mana->Ward conversion: a FLAG, not a number — see that
-            // member's own comment on ModifierEffectType. The conversion
-            // RATE is a fixed code constant (FightTuning.RunicWardConversionRate),
-            // deliberately not author-tunable per modifier.
-            ModifierEffectType.ManaToWardOnTurnStartPercent,
-        };
-
-        // Which ModifierEffectType members read `damageType` at all — the
-        // same two-member set TypedResistanceFlat used to have alone.
-        // ElementalDamageOnHitPercent joined it in Phase C: it needs the
-        // identical selector (which of six DamageTypes), just for an on-hit
-        // rider instead of a resistance.
-        private static readonly HashSet<ModifierEffectType> UsesDamageType = new HashSet<ModifierEffectType>
-        {
-            ModifierEffectType.TypedResistanceFlat,
-            ModifierEffectType.ElementalDamageOnHitPercent,
-        };
-
-        // Which of UsesDamageType also accepts the "magical" shorthand for
-        // "every type that is not Physical". TypedResistanceFlat does —
-        // resistance is naturally a blanket "protects against magic" idea.
-        // ElementalDamageOnHitPercent does NOT: a hit is dealt AS one
-        // specific element, and "magical" names five different elements at
-        // once, which is not a coherent single damage instance.
-        private static readonly HashSet<ModifierEffectType> AcceptsMagicalShorthand = new HashSet<ModifierEffectType>
-        {
-            ModifierEffectType.TypedResistanceFlat,
-        };
-
         public static bool TryResolveAll(IReadOnlyList<RawModifierEntry> entries, out List<ResolvedModifier> resolved, out List<string> errors)
         {
             resolved = new List<ResolvedModifier>();
@@ -150,9 +102,9 @@ namespace PrincesPalace.Domain.Content
         }
 
         private static bool TryResolveEffects(RawModifierEntry raw, string label,
-            out List<ModifierEffect> effects, out string error)
+            out List<Effect> effects, out string error)
         {
-            effects = new List<ModifierEffect>();
+            effects = new List<Effect>();
             error = null;
 
             if (raw.effects == null || raw.effects.Length == 0)
@@ -162,122 +114,28 @@ namespace PrincesPalace.Domain.Content
 
             for (int i = 0; i < raw.effects.Length; i++)
             {
-                var authored = raw.effects[i];
-                string where = $"{label}: effect #{i + 1}";
-
-                if (authored == null || string.IsNullOrWhiteSpace(authored.type))
+                if (!EffectEntryResolver.TryResolve(raw.effects[i], EffectHolder.Affix,
+                        $"{label}: effect #{i + 1}", out var effect, out error))
                 {
-                    error = $"{where} has no type.";
                     return false;
                 }
 
-                if (!Enum.TryParse<ModifierEffectType>(authored.type.Trim(), ignoreCase: true, out var type)
-                    || type == ModifierEffectType.None)
-                {
-                    error = $"{where}: '{authored.type}' isn't a modifier effect. Valid options: " +
-                            $"{string.Join(", ", Enum.GetNames(typeof(ModifierEffectType)).Where(n => n != nameof(ModifierEffectType.None)))}.";
-                    return false;
-                }
-
-                bool wantsThreshold = UsesThreshold.Contains(type);
-                if (!wantsThreshold && authored.threshold != 0)
-                {
-                    error = $"{where} ({type}) has no health gate, so threshold {authored.threshold} would do nothing. Remove it.";
-                    return false;
-                }
-
-                if (wantsThreshold && (authored.threshold <= 0 || authored.threshold > 100))
-                {
-                    error = $"{where} ({type}) needs a threshold between 1 and 100 (percent of max health); got {authored.threshold}.";
-                    return false;
-                }
-
-                bool wantsMagnitude = !IgnoresMagnitude.Contains(type);
-                if (wantsMagnitude && authored.magnitude <= 0)
-                {
-                    error = $"{where} ({type}) needs a positive magnitude; got {authored.magnitude}.";
-                    return false;
-                }
-
-                if (!wantsMagnitude && authored.magnitude != 0)
-                {
-                    error = $"{where} ({type}) is a flag — it reads no magnitude, so {authored.magnitude} would do nothing. Remove it.";
-                    return false;
-                }
-
-                // A TARGETED EFFECT HAS TO SAY WHAT IT TARGETS — same rule
-                // and the same reasoning as RelicEntryResolver's
-                // ResistanceFlat handling (RelicEntryResolver.cs): unnamed,
-                // it is a number protecting (or hitting) nothing.
-                DamageType? against = null;
-                bool againstMagical = false;
-
-                if (UsesDamageType.Contains(type))
-                {
-                    string named = (authored.damageType ?? "").Trim();
-
-                    if (AcceptsMagicalShorthand.Contains(type) &&
-                        string.Equals(named, "magical", StringComparison.OrdinalIgnoreCase))
-                    {
-                        againstMagical = true;
-                    }
-                    else if (Enum.TryParse<DamageType>(named, ignoreCase: true, out var parsed))
-                    {
-                        against = parsed;
-                    }
-                    else
-                    {
-                        string allowed = AcceptsMagicalShorthand.Contains(type)
-                            ? "a damage type or 'magical'"
-                            : "a damage type";
-                        error = $"{where}: '{type}' names damageType " +
-                                $"'{authored.damageType}', which isn't {allowed}.";
-                        return false;
-                    }
-                }
-                else if (!string.IsNullOrWhiteSpace(authored.damageType))
-                {
-                    error = $"{where} ({type}) names a damageType, which only " +
-                            $"{string.Join("/", UsesDamageType)} read.";
-                    return false;
-                }
-
-                effects.Add(new ModifierEffect(type, authored.magnitude, authored.threshold, against, againstMagical));
+                effects.Add(effect);
             }
 
-            // Two entries of the same (type, target) on ONE modifier are
-            // always a mistake: ModifierEffectSet takes the strongest of a
-            // type, so a duplicate is dead weight. Grouping by (type,
-            // against, againstMagical) rather than plain type is what lets a
-            // TRUE duplicate (the same element twice) share this check with
-            // a same-type-different-target case -- every non-resistance
-            // member always carries the same (null, false) target, so the
-            // grouping key degrades to plain type equality for them.
-            //
-            // TWO DIFFERENT elements on one TypedResistanceFlat modifier (a
-            // Hardened-style modifier resisting both Fire and Ice) used to
-            // be this grouping's deliberate exception — see git history and
-            // ModifierEntryResolverTests' own
-            // TwoDifferentResistanceElementsOnOneModifier_IsRejectedByTheOne
-            // EffectRule. The "exactly one effect" rule below (checked one
-            // level up, in TryResolveOne, once this function returns) now
-            // rejects THAT case too, on authoring more than one effect at
-            // all — so there is no longer any multi-effect entry this loop
-            // actually lets through. It still runs and still earns its
-            // keep: for a genuine duplicate (the same type AND target twice)
-            // it reports the sharper "only the strongest would ever apply"
-            // here, before the generic "may grant exactly one" ever gets a
-            // chance to fire — the more useful diagnosis for what is usually
-            // a copy-paste mistake rather than an attempted bundle.
-            foreach (var clash in effects.GroupBy(e => (e.Type, e.Against, e.AgainstMagical)).Where(g => g.Count() > 1))
+            // The same (kind, target) twice on ONE modifier is a copy-paste
+            // mistake: affix copies stack best-of, so the duplicate is dead
+            // weight. Reported here, before TryResolveOne's generic "exactly
+            // one effect", because it is the sharper diagnosis.
+            foreach (var clash in effects.GroupBy(e => (e.Kind, e.Against, e.AgainstMagical)).Where(g => g.Count() > 1))
             {
-                if (UsesThreshold.Contains(clash.Key.Item1))
+                if (EffectCatalog.Of(clash.Key.Item1).UsesThreshold)
                 {
                     continue;
                 }
 
                 error = $"{label}: {clash.Key.Item1} is listed {clash.Count()} times" +
-                        (UsesDamageType.Contains(clash.Key.Item1) ? " against the same target" : "") +
+                        (EffectCatalog.Of(clash.Key.Item1).Target != EffectTarget.None ? " against the same target" : "") +
                         " — only the strongest would ever apply. Merge them into one entry.";
                 return false;
             }

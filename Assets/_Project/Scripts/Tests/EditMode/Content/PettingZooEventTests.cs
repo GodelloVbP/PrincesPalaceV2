@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Stats;
@@ -108,10 +109,10 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual("Kinship", kinship.DisplayName);
             Assert.AreEqual("The first hit Shawn takes each fight is negated.", kinship.Description);
-            Assert.AreEqual(RelicEffect.Kinship, kinship.Effect);
+            Assert.AreEqual(EffectKind.Kinship, kinship.Mechanic);
             Assert.AreEqual("sheep", kinship.Bearer);
             Assert.IsFalse(kinship.Draftable);
-            Assert.AreEqual(0, kinship.Modifiers.Length);
+            Assert.AreEqual(1, kinship.Effects.Length, "its one mechanic and no stats");
             Assert.AreEqual(RelicRarity.Rare, kinship.Rarity);
         }
 

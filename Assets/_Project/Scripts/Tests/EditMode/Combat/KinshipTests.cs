@@ -20,10 +20,10 @@ namespace PrincesPalace.Domain.Tests
         private const string KinshipLine = "Kinship turns the blow aside.";
 
         private static ResolvedRelic Kinship() =>
-            new ResolvedRelic("kinship", "Kinship", "", RelicEffect.Kinship, 0, bearer: Bearer, draftable: false);
+            new ResolvedRelic("kinship", "Kinship", "", new[] { TestRelics.Mechanic(EffectKind.Kinship) }, 0, bearer: Bearer, draftable: false);
 
-        private static ResolvedRelic Plain(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
+        private static ResolvedRelic Plain(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0);
 
         private static EnemyKit Dummy(string name) =>
             new EnemyKit(new ResolvedEnemy(name, name, new StatBlock(), 0, 0, false,
@@ -47,6 +47,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<PlayerKit> { kit },
                 new List<EnemyKit> { Dummy("Foe1"), Dummy("Foe2") },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, foe1);
         }
@@ -68,6 +69,7 @@ namespace PrincesPalace.Domain.Tests
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { monster }),
                 new List<PlayerKit> { kit }, new List<EnemyKit> { new EnemyKit(source, false) },
                 new SeededRandom(3)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, monster);
         }
@@ -167,7 +169,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ALethalFirstPacketIsCancelledAndTheEggStaysUnhatchedAndUnlocked()
         {
-            var (session, hero, foe) = Fight(extra: new[] { Plain(RelicEffect.PhoenixEgg) });
+            var (session, hero, foe) = Fight(extra: new[] { Plain(EffectKind.PhoenixEgg) });
 
             session.DealDamageForTest(foe, hero, 999, DamageType.Physical);
             Assert.AreEqual(100, hero.CurrentHealth);
@@ -204,7 +206,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var skill = new ResolvedSkill("s", "S", "", "hero", 1, SkillEffect.HealSelf, SkillTargeting.Self,
                 0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
-            var (session, hero, foe) = Fight(extra: new[] { Plain(RelicEffect.BerserkersVest) },
+            var (session, hero, foe) = Fight(extra: new[] { Plain(EffectKind.BerserkersVest) },
                 skills: new List<ResolvedSkill> { skill }, heroSpeed: 100);
 
             session.CastSkill(0, hero);
@@ -227,8 +229,8 @@ namespace PrincesPalace.Domain.Tests
         public void ADodgedSwingDoesNotSpendIt()
         {
             var (session, hero, monster) = Duel();
-            hero.ModifierEffects = new ModifierEffectSet(new[]
-                { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
+            hero.Effects = hero.Effects.With(EffectHolder.Affix, new[]
+                { new Effect(EffectKind.DodgeRating, 100_000) });
 
             session.ExecuteAttack(monster);
             Assert.IsTrue(session.DrainBeats().First(b => b.Actor == monster).Missed, "fixture: the swing was dodged");
@@ -262,7 +264,7 @@ namespace PrincesPalace.Domain.Tests
             session.DealDamageForTest(foe, bear, 10, DamageType.Physical);
 
             Assert.AreEqual(90, bear.CurrentHealth);
-            Assert.IsFalse(session.KitFor(bear).HasRelic(RelicEffect.Kinship));
+            Assert.IsFalse(bear.Effects.Has(EffectKind.Kinship));
             Assert.AreEqual(1, session.KitFor(bear).Relics.Count, "carried, just inert");
         }
     }

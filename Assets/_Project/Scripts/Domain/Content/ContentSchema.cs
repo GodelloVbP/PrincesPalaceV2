@@ -83,12 +83,9 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawPoolEntry), nameof(RawPoolEntry.decayUnless))] = typeof(PoolDecayTrigger),
                 [(typeof(RawItemEntry), nameof(RawItemEntry.kind))] = typeof(ResolvedItemKind),
                 [(typeof(RawItemEntry), nameof(RawItemEntry.effect))] = typeof(ResolvedItemEffect),
-                [(typeof(RawRelicEntry), nameof(RawRelicEntry.effect))] = typeof(RelicEffect),
                 [(typeof(RawRelicEntry), nameof(RawRelicEntry.rarity))] = typeof(RelicRarity),
-                [(typeof(RawRelicModifier), nameof(RawRelicModifier.type))] = typeof(RelicModifierType),
-                [(typeof(RawRelicModifier), nameof(RawRelicModifier.damageType))] = typeof(Stats.DamageType),
-                [(typeof(RawModifierEffect), nameof(RawModifierEffect.type))] = typeof(Combat.ModifierEffectType),
-                [(typeof(RawModifierEffect), nameof(RawModifierEffect.damageType))] = typeof(Stats.DamageType),
+                [(typeof(RawEffect), nameof(RawEffect.type))] = typeof(Combat.EffectKind),
+                [(typeof(RawEffect), nameof(RawEffect.damageType))] = typeof(Stats.DamageType),
                 [(typeof(RawTalentEffect), nameof(RawTalentEffect.type))] = typeof(Combat.TalentEffectType),
                 [(typeof(RawAchievementEntry), nameof(RawAchievementEntry.condition))] = typeof(AchievementCondition),
                 [(typeof(RawEventRequirement), nameof(RawEventRequirement.kind))] = typeof(Events.EventRequirementKind),
@@ -173,7 +170,7 @@ namespace PrincesPalace.Domain.Content
         // BFS outward from the 11 root types over every field whose type (or
         // array element type) is itself a [Serializable] class in this same
         // namespace -- SpellPresentation, RawDamageInstance, RawEnemyAbility,
-        // RawRelicModifier, RawTalentEffect, RawModifierEffect, RawSetPiece
+        // RawEffect, RawTalentEffect, RawSetPiece
         // all get found this way, with nothing here naming them by hand. A
         // shared, general-purpose type from another namespace (StatBlock,
         // AbilityScoreBlock, Combat.TransformGrant) is deliberately NOT

@@ -85,8 +85,8 @@ namespace PrincesPalace
                 {
                     var effects = m.Data.Effects;
                     var type = effects != null && effects.Length > 0
-                        ? effects[0].Type
-                        : ModifierEffectType.None;
+                        ? effects[0].Kind
+                        : EffectKind.None;
                     return ModifierTable.IsOffensiveModifier(type) == weaponPool;
                 })
                 .Select(m => m.id)
@@ -100,7 +100,7 @@ namespace PrincesPalace
         // The authored part is content, rebuilt from characters.json by
         // ContentBuilder and the same for every save. The live part is never
         // stored anywhere -- it is read fresh off
-        // ContentDatabase.ModifierEffects(character) every time this is
+        // ContentDatabase.CharacterEffects(character) every time this is
         // called, which already reflects only the character's currently
         // equipped, currently LIVE loadout (ActiveLoadout). Unequip
         // Fortunate and the very next call to this method already sees it
@@ -118,7 +118,7 @@ namespace PrincesPalace
             int authored = definition == null ? 0 : definition.Data.PrincesFavor;
             int liveBonus = character == null
                 ? 0
-                : ContentDatabase.ModifierEffects(character).Best(ModifierEffectType.FortunateFavorBonusFlat);
+                : ContentDatabase.CharacterEffects(character).Magnitude(EffectKind.FortunateFavorBonusFlat);
 
             int total = authored + liveBonus;
             return total < 0 ? 0 : total;

@@ -166,7 +166,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `id` | string | (none -- required) | Stable identifier; written into save data on a rolled item instance. |  |
 | `displayName` | string | (none -- required) | The name shown for this modifier ('Rift affix'). |  |
 | `description` | string | `""` | Flavor/rules text shown to the player. |  |
-| `effects` | RawModifierEffect[] (below) | `[]` | The single rule this modifier grants; more than one entry is rejected. |  |
+| `effects` | RawEffect[] (below) | `[]` | The single rule this modifier grants; more than one entry is rejected. |  |
 
 ## pools.json -- `RawPoolEntry`
 
@@ -199,13 +199,12 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `id` | string | (none -- required) | Stable identifier; written into save data via unlock/achievement references. |  |
 | `displayName` | string | (none -- required) | The name shown for this relic when offered. |  |
 | `description` | string | `""` | Flavor/rules text shown to the player. May use **bold** and {icon} tokens (see Description markup at the end of this file). |  |
-| `effect` | string | `""` | Which RelicEffect this grants, matched case-insensitively; empty resolves to None. | None, DualWield, MagicalShield, Bloodlust, ChargingCrystal, BallerinasSlippers, TinFoilPipe, ToothedNecklace, BountyHunterContract, SwordInABox, LuckyDeck, DrownedLantern, FirstRune, SaltLedger, LongCount, MagicMarker, JarOfBearUrine, WorldEndersCrown, CursedIdol, AmassingStar, RampagingBullsHorn, IceFingernail, LoadedDice, MonkeyKingsScepter, SparringSaber, SparringBuckler, EssenceSiphon, DisgruntledLackey, InconspicuousKey, DancersAnklet, BerserkersVest, PhoenixEgg, Kinship, BellwethersBell, TollOfTheFlock |
+| `effects` | RawEffect[] (below) | `[]` | What this relic does: stat effects and at most one mechanic; see RawEffect. Empty for a relic with no behaviour yet. |  |
 | `iconPath` | string | `""` | Editor-time path to this relic's icon under Assets/_Project/Art/Items/Relics/Processed/; empty falls back to a flat accent-coloured circle. |  |
 | `rarity` | string | `""` | How rare the offer is, one of RelicRarity's names; empty means Common. | Common, Uncommon, Rare, UltraRare, Mythic, Godlike |
 | `unlockedBy` | string | `""` | The achievement id that must be earned before this relic can be offered; empty means available from the first run. |  |
-| `modifiers` | RawRelicModifier[] (below) | `[]` | Numeric stat changes this relic grants; see RawRelicModifier. |  |
 | `requiresConvergenceAbility` | bool | `false` | Whether this relic is only ever offered to a party that already has a convergence/ultimate ability. |  |
-| `bearer` | string | `""` | Optional character id; when set, only that character gets this relic's effect. Refused together with modifiers, which apply party-wide. |  |
+| `bearer` | string | `""` | Optional character id; when set, only that character gets this relic's effects. |  |
 | `draftable` | bool | `true` | Whether this relic can be offered in a relic draft or the shop's relic shelf; false for relics granted another way, such as by an event. |  |
 | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | Optional presentation played when this relic's effect fires on its own beat; see SpellPresentation. Omitted plays nothing. |  |
 
@@ -393,6 +392,15 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `type` | string | `""` | A DamageType name this packet is typed as, matched case-insensitively ('Frost' is accepted for Ice). | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
 | `amount` | int | `0` | The flat amount this packet deals, on the same x10 scale as every other damage number. |  |
 
+### `RawEffect`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `type` | string | `""` | Which Domain.Combat.EffectKind this grants, matched case-insensitively; the holder must be allowed it (EffectCatalog). | None, AttackPercent, DefensePercent, MaxHealthPercent, MaxManaPercent, SpeedPercent, ResistanceFlat, AttackFlat, DefenseFlat, MaxHealthFlat, MaxManaFlat, SpeedFlat, ArmorPenetrationFlat, WeaknessDamageBonusPercent, LifestealPercent, CritChanceFlat, CritDamageFlat, ElementalDamageOnHitPercent, ElementalDamagePercent, FlatPhysicalDamageReduction, BreakShieldDepletionResistPercent, OnKillSplashPercent, PushBackOnHitChancePercent, FlatManaRegenBonus, NextSkillManaDiscountPercent, ManaToWardOnTurnStartPercent, FortunateFavorBonusFlat, DodgeRating, ChilledOnHitChancePercent, RootChancePercent, DualWield, MagicalShield, Bloodlust, ChargingCrystal, BallerinasSlippers, TinFoilPipe, ToothedNecklace, BountyHunterContract, SwordInABox, LuckyDeck, DrownedLantern, FirstRune, SaltLedger, LongCount, MagicMarker, JarOfBearUrine, WorldEndersCrown, CursedIdol, AmassingStar, RampagingBullsHorn, IceFingernail, LoadedDice, MonkeyKingsScepter, SparringSaber, SparringBuckler, EssenceSiphon, DisgruntledLackey, InconspicuousKey, DancersAnklet, BerserkersVest, PhoenixEgg, Kinship, BellwethersBell, TollOfTheFlock |
+| `magnitude` | int | `0` | How much: percent, points or rating as the kind says. An affix's is the UNSCALED base (the fight reads base x TierMultiplier x RiftMultiplier). Omitted for a flag kind; may be negative only on a relic stat. |  |
+| `threshold` | int | `0` | Percent of max health for a health-gated kind (WorldEndersCrown); omitted otherwise. |  |
+| `damageType` | string | `""` | A DamageType name the kind targets, or 'magical' for every non-Physical type where the kind accepts it; required by ResistanceFlat and ElementalDamageOnHitPercent only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
+
 ### `RawElementChoice`
 
 | Field | Type | Default | Description | Values |
@@ -542,15 +550,6 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `bustPath` | string | `""` | Resources-relative folder of this speaker's busts, one PNG per declared expression (<bustPath>/<expression>), the same shape as a character's dialogueBustPath. Empty shows the name plate and text with no bust. |  |
 | `expressions` | string[] | `[]` | The expressions this speaker has, lowercase letters, digits and underscores (they are bust file names). A line naming one not listed is refused; a line with none takes the first. Empty declares just 'neutral'. |  |
 
-### `RawModifierEffect`
-
-| Field | Type | Default | Description | Values |
-|---|---|---|---|---|
-| `type` | string | `""` | Which Domain.Combat.ModifierEffectType this rule grants, matched case-insensitively. | None, ElementalDamageOnHitPercent, ElementalDamagePercent, TypedResistanceFlat, FlatSpeedBonus, LifestealPercent, GuaranteedFirstAction, FlatPhysicalDamageReduction, BreakShieldDepletionResistPercent, OnKillSplashPercent, PushBackOnHitChancePercent, FlatMaxManaBonus, FlatManaRegenBonus, NextSkillManaDiscountPercent, ManaToWardOnTurnStartPercent, FortunateFavorBonusFlat, DodgeRating, ChilledOnHitChancePercent, RootChancePercent |
-| `magnitude` | int | `0` | The rule's UNSCALED base magnitude; the fight reads base x TierMultiplier x RiftMultiplier. |  |
-| `threshold` | int | `0` | The rule's threshold; meaning depends on type. |  |
-| `damageType` | string | `""` | A DamageType name (or 'magical') this rule targets; required by TypedResistanceFlat only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
-
 ### `RawPoolTier`
 
 | Field | Type | Default | Description | Values |
@@ -559,14 +558,6 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `damageMultiplier` | float | `0` | How much this tier multiplies the skill's own computed damage by; must be 1 or higher. |  |
 | `shake` | float | `0` | A floor on how hard this tier's blow kicks the stage, 0..1, on top of the skill's own shake; 0 means no extra floor. |  |
 | `hitStopSeconds` | float | `0` | A floor on this tier's hit-stop, in seconds, clamped to HitStop.MaxSeconds; 0 means no extra floor. |  |
-
-### `RawRelicModifier`
-
-| Field | Type | Default | Description | Values |
-|---|---|---|---|---|
-| `type` | string | `""` | Which RelicModifierType this changes, matched case-insensitively. | None, AttackPercent, DefensePercent, MaxHealthPercent, MaxManaPercent, SpeedPercent, ResistanceFlat, AttackFlat, DefenseFlat, MaxHealthFlat, MaxManaFlat, SpeedFlat, ArmorPenetrationFlat, WeaknessDamageBonusPercent, LifestealPercent, CritChanceFlat, CritDamageFlat |
-| `amount` | int | `0` | How much this modifier changes the stat, percent or flat depending on type. |  |
-| `damageType` | string | `""` | A DamageType name (or 'magical' for every non-Physical type), required by ResistanceFlat only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
 
 ### `RawSetPiece`
 

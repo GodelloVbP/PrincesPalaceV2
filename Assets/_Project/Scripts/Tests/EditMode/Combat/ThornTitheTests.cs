@@ -60,8 +60,8 @@ namespace PrincesPalace.Domain.Tests
             beats.SelectMany(b => b.Messages);
 
         private static void GuaranteeDodge(CombatantState target) =>
-            target.ModifierEffects = new ModifierEffectSet(
-                new[] { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
+            target.Effects = EffectSet.Of(EffectHolder.Affix, 
+                new[] { new Effect(EffectKind.DodgeRating, 100_000) });
 
         // ---- 1.11: a miss still triggers retaliation (dispatcher) --------------
 

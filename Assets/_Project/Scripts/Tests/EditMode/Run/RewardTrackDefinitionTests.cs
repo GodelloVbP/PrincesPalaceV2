@@ -114,7 +114,7 @@ namespace PrincesPalace.Domain.Tests
                 "level 25's second life was not collected once it was reached");
         }
 
-        // CollectedElementalTotals is ContentDatabase.Effective.ModifierEffects'
+        // CollectedElementalTotals is ContentDatabase.Effective.Effects'
         // single-pass replacement for calling CollectedTotal(reward, against,
         // level) once per DamageType member -- pinned against a fixture built
         // the same way CollectedTotalSumsRatherThanReplacing is, three

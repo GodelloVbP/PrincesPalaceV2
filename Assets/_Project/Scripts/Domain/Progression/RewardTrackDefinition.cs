@@ -207,7 +207,7 @@ namespace PrincesPalace.Domain.Progression
             SumOver(reward, RewardTrack.StartingLevel - 1, claimedLevel);
 
         // The same, narrowed to entries authored against a specific element --
-        // ElementalDamagePercent's read site, ContentDatabase.ModifierEffects,
+        // ElementalDamagePercent's read site, ContentDatabase.Effects,
         // asks this once per DamageType so a Fire node and an Ice node on the
         // same track never bleed into each other's total.
         public int CollectedTotal(TrackReward reward, DamageType against, int claimedLevel)

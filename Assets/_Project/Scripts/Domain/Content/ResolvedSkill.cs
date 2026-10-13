@@ -627,7 +627,7 @@ namespace PrincesPalace.Domain.Content
     // A CLASS BESIDE ResolvedSkill RATHER THAN A CONTENT-SIDE MIRROR. It is
     // [Serializable] for the same reason ResolvedSkill is -- SkillDefinition
     // stores the resolved record itself, so a mirror carrier here would be the
-    // exact restatement AUDIT #60 deleted from TalentEffect and RelicModifier.
+    // exact restatement AUDIT #60 deleted from TalentEffect and Effect.
     // System.Serializable is BCL, so Domain stays engine-free.
     [Serializable]
     public sealed class ElementChoice

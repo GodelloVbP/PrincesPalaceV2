@@ -38,6 +38,7 @@ namespace PrincesPalace.Domain.Tests
                 DamageVarianceRange = 0f,
                 FillsSpecialPoolAtTurnStart = buffed,
             };
+            TestRelics.Hold(session);
             session.Begin();
             return session;
         }
@@ -112,8 +113,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Hero();
             hero.PrimaryPool.Current = 40;
-            hero.ModifierEffects = new ModifierEffectSet(new[]
-                { new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0) });
+            hero.Effects = EffectSet.Of(EffectHolder.Affix, new[]
+                { new Effect(EffectKind.ManaToWardOnTurnStartPercent, 0) });
 
             Session(buffed, hero, null, Foe("Foe", 100000));
 
@@ -147,7 +148,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Hero();
             var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { Bolt(20) },
-                new List<ResolvedRelic> { new ResolvedRelic("bloodlust", "Bloodlust", "", RelicEffect.Bloodlust, 0) },
+                new List<ResolvedRelic> { new ResolvedRelic("bloodlust", "Bloodlust", "", new[] { TestRelics.Mechanic(EffectKind.Bloodlust) }, 0) },
                 null);
             var weak = Foe("Weak", 1);
             var session = Session(true, hero, kit, weak, Foe("Tank", 100000));
@@ -190,10 +191,10 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Hero();
             hero.PrimaryPool.Current = 40;
-            hero.ModifierEffects = new ModifierEffectSet(new[]
-                { new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0) });
+            hero.Effects = EffectSet.Of(EffectHolder.Affix, new[]
+                { new Effect(EffectKind.ManaToWardOnTurnStartPercent, 0) });
             var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { Bolt(20) },
-                new List<ResolvedRelic> { new ResolvedRelic("bloodlust", "Bloodlust", "", RelicEffect.Bloodlust, 0) },
+                new List<ResolvedRelic> { new ResolvedRelic("bloodlust", "Bloodlust", "", new[] { TestRelics.Mechanic(EffectKind.Bloodlust) }, 0) },
                 null);
             var weak = Foe("Weak", 1);
             var session = Session(buffed, hero, kit, weak, Foe("Tank", 100000));

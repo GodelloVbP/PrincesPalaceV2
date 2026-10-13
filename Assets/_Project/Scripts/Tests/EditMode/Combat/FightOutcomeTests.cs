@@ -398,7 +398,7 @@ namespace PrincesPalace.Domain.Tests
             // NOT REACHABLE ON TODAY'S CONTENT and said so plainly: nothing in
             // the game damages both sides in one pass. The retaliate/thorns
             // affix that would (ModifierEntryResolver names it as a Phase C
-            // candidate) is not authored, and no ModifierEffect member exists
+            // candidate) is not authored, and no Effect member exists
             // for it. This pins the settlement ordering so the affix landing
             // cannot land this with it.
             var (session, hero, foe) = Fight();

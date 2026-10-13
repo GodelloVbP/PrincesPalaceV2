@@ -913,14 +913,14 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // Explosive's on-kill splash -- the identical mechanism as
-        // ApplyKillSplash just above, read from ModifierEffects instead of
+        // ApplyKillSplash just above, read from Effects instead of
         // Talents. A SEPARATE method rather than folding into ApplyKillSplash
-        // -- see ModifierEffectType.OnKillSplashPercent's own comment for why
+        // -- see EffectKind.OnKillSplashPercent's own comment for why
         // two independently-magnituded sources stay two calls rather than one
         // that silently sums them.
         private void ApplyModifierKillSplash(CombatantState actor, CombatantState victim)
         {
-            int percent = actor?.ModifierEffects.Best(ModifierEffectType.OnKillSplashPercent) ?? 0;
+            int percent = actor?.Effects.Magnitude(EffectKind.OnKillSplashPercent) ?? 0;
             if (percent <= 0) return;
 
             SplashOntoNeighbours(actor, victim, CombatMath.Scale(actor.Attack * percent / 100),
@@ -1054,7 +1054,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Bellwether's Bell both add here, so each covers any Transform
             // skill, and they add to each other (plan 2.12).
             int turns = grant.turns + actor.Talents.Best(TalentEffectType.TransformDurationBonus)
-                        + (HasRelic(actor, RelicEffect.BellwethersBell) ? FightTuning.BellwethersBellTransformTurns : 0);
+                        + actor.Effects.Magnitude(EffectKind.BellwethersBell);
             var transformation = Transformation.Enter(actor, grant.displayName, turns,
                 grant.attackPercent, grant.speedPercent, grant.temporaryHealthPercent, grant.splashPercent,
                 grant.spritePath, grant.hit, grant.defenseToAttackPercent, grant.primaryDrainPerTurn,

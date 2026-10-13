@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: phoenix_egg
     DisplayName: Phoenix Egg
     Description: Fatal damage turns you into an egg for 3 turns with HP equal to your max HP. Revive with the fraction that survives, or die if it breaks. Once per combat.
-    Effect: 31
     SortOrder: 37
     IconPath: Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png
     Rarity: 3
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 60
+      Magnitude: 3
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

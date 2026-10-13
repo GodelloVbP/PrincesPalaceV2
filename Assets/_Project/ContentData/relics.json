@@ -1,12 +1,14 @@
 {
-  "_readme": "Every relic in the game. Edit this file, then run Prince's Palace > Build Default Content. RELICS ARE DRAFTED PER RUN: three are offered at the start of a descent, the player keeps one for that run only, and it is gone when the run ends — nothing here is permanent progression. The exception is a relic with draftable: false (kinship), which is never offered in a draft or the shop and only arrives through an event's relic effect, still for that run only; its rarity sets only its colour band. rarity is an AUTHORED statement about how often the relic should be offered — unlike item rarity it is not derived from a tier, because a relic has no numbers to derive it from; changing a relic's band is this one word and nothing else. OMIT effect for a relic that has no mechanic yet — it resolves to None, which is exempt from the one-relic-per-effect rule precisely so a pool of named-but-unimplemented relics can exist. Every other effect must still be unique: two relics doing the same thing makes one of them a dead choice in a draft. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
-  "_placeholders": "forest_wardens_tooth is DELIBERATELY MECHANIC-LESS -- it exists so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what it does. It is the only one left; every other relic that used to sit in this state (seven_teeth through drowned_lantern) has since earned an `effect`. Give it one when it earns one; until then it is honest about being furniture. Of the 20 relics from balance pass 2 (magic_marker through phoenix_egg), loaded_dice and dancers_anklet still point iconPath at Assets/_Project/Art/Generated/disc_metal.png -- a baked metallic-coin placeholder (see ProceduralSpriteBaker) -- until each earns real art from Art/Items/Relics/Processed/; the other eighteen already have it. None of the 20 are mechanic-less, only unillustrated.",
+  "_readme": "Every relic in the game. Edit this file, then run Prince's Palace > Build Default Content. RELICS ARE DRAFTED PER RUN: three are offered at the start of a descent, the player keeps one for that run only, and it is gone when the run ends — nothing here is permanent progression. The exception is a relic with draftable: false (kinship), which is never offered in a draft or the shop and only arrives through an event's relic effect, still for that run only; its rarity sets only its colour band. rarity is an AUTHORED statement about how often the relic should be offered — unlike item rarity it is not derived from a tier, because a relic has no numbers to derive it from; changing a relic's band is this one word and nothing else. effects lists what a relic does: stat kinds and at most one mechanic, each an EffectKind name with its headline magnitude (a flag mechanic authors none). OMIT effects for a relic that has no behaviour yet. A mechanic must be unique across relics: two relics doing the same thing makes one of them a dead choice in a draft; stat-only and empty relics are exempt. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_placeholders": "forest_wardens_tooth is DELIBERATELY MECHANIC-LESS -- it exists so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what it does. It is the only one left; every other relic that used to sit in this state (seven_teeth through drowned_lantern) has since earned `effects`. Give it some when it earns one; until then it is honest about being furniture. Of the 20 relics from balance pass 2 (magic_marker through phoenix_egg), loaded_dice and dancers_anklet still point iconPath at Assets/_Project/Art/Generated/disc_metal.png -- a baked metallic-coin placeholder (see ProceduralSpriteBaker) -- until each earns real art from Art/Items/Relics/Processed/; the other eighteen already have it. None of the 20 are mechanic-less, only unillustrated.",
   "relics": [
     {
       "id": "dual_wield",
       "displayName": "Dual Wield",
       "description": "Each attack you make strikes the same target a second time.",
-      "effect": "DualWield",
+      "effects": [
+        { "type": "DualWield" }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/dual_wield.png"
     },
@@ -14,7 +16,9 @@
       "id": "magical_shield",
       "displayName": "Magical Shield",
       "description": "After you cast a spell, gain a 20-point **ward** that lasts the rest of the fight.",
-      "effect": "MagicalShield",
+      "effects": [
+        { "type": "MagicalShield", "magnitude": 20 }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magical_shield.png"
     },
@@ -22,7 +26,9 @@
       "id": "bloodlust",
       "displayName": "Bloodlust",
       "description": "The first time you kill an enemy each fight, take another turn.",
-      "effect": "Bloodlust",
+      "effects": [
+        { "type": "Bloodlust" }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/bloodlust.png"
     },
@@ -31,7 +37,9 @@
       "displayName": "Bounty Hunter Contract",
       "description": "Each kill pays gold equal to 30% of its XP (minimum 1).",
       "rarity": "uncommon",
-      "effect": "BountyHunterContract",
+      "effects": [
+        { "type": "BountyHunterContract", "magnitude": 3 }
+      ],
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/seven_teeth.png"
     },
     {
@@ -39,7 +47,9 @@
       "displayName": "The Salt Ledger",
       "description": "Each attack you land reduces all your cooldowns by 1.",
       "rarity": "ultrarare",
-      "effect": "SaltLedger",
+      "effects": [
+        { "type": "SaltLedger", "magnitude": 1 }
+      ],
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/salt_ledger.png"
     },
     {
@@ -47,7 +57,9 @@
       "displayName": "Toothed Necklace",
       "description": "Gain up to +30% damage and +20% speed. Maximum bonus reached at 25% HP or below.",
       "rarity": "common",
-      "effect": "ToothedNecklace",
+      "effects": [
+        { "type": "ToothedNecklace", "magnitude": 30 }
+      ],
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/toothed_necklace.png"
     },
     {
@@ -55,7 +67,9 @@
       "displayName": "Tin-Foil Pipe of Magic",
       "description": "Casting a spell gives +20% speed for your next turn.",
       "rarity": "rare",
-      "effect": "TinFoilPipe",
+      "effects": [
+        { "type": "TinFoilPipe", "magnitude": 20 }
+      ],
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/tinfoil_pipe.png"
     },
     {
@@ -63,7 +77,9 @@
       "displayName": "Ballerina's Slippers",
       "description": "Each attack you land gives +10% speed for the rest of the fight. Maximum +40%.",
       "rarity": "common",
-      "effect": "BallerinasSlippers",
+      "effects": [
+        { "type": "BallerinasSlippers", "magnitude": 10 }
+      ],
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/ballerinas_slippers.png"
     },
     {
@@ -71,7 +87,9 @@
       "displayName": "The Long Count",
       "description": "Every third attack you land each fight deals 40% more damage.",
       "rarity": "common",
-      "effect": "LongCount",
+      "effects": [
+        { "type": "LongCount", "magnitude": 40 }
+      ],
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/long_count.png"
     },
     {
@@ -79,7 +97,9 @@
       "displayName": "Drowned Lantern",
       "description": "A spell that lands **Marks** its target. Your next attack on a Marked target deals 50% more damage.",
       "rarity": "ultrarare",
-      "effect": "DrownedLantern",
+      "effects": [
+        { "type": "DrownedLantern", "magnitude": 50 }
+      ],
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/drowned_lantern.png"
     },
     {
@@ -96,15 +116,9 @@
       "description": "+20% attack, -10% defense.",
       "rarity": "uncommon",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/whetstone_heart.png",
-      "modifiers": [
-        {
-          "type": "AttackPercent",
-          "amount": 20
-        },
-        {
-          "type": "DefensePercent",
-          "amount": -10
-        }
+      "effects": [
+        { "type": "AttackPercent", "magnitude": 20 },
+        { "type": "DefensePercent", "magnitude": -10 }
       ]
     },
     {
@@ -113,22 +127,18 @@
       "description": "+40 max HP, -5% speed.",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/thick_hide.png",
-      "modifiers": [
-        {
-          "type": "MaxHealthFlat",
-          "amount": 40
-        },
-        {
-          "type": "SpeedPercent",
-          "amount": -5
-        }
+      "effects": [
+        { "type": "MaxHealthFlat", "magnitude": 40 },
+        { "type": "SpeedPercent", "magnitude": -5 }
       ]
     },
     {
       "id": "charging_crystal",
       "displayName": "Charging Crystal",
       "description": "Every fourth spell you cast each fight deals 50% more damage.",
-      "effect": "ChargingCrystal",
+      "effects": [
+        { "type": "ChargingCrystal", "magnitude": 50 }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/charging_crystal.png"
     },
@@ -138,24 +148,18 @@
       "description": "+25 physical resistance and +25 magical resistance.",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/darrows_buckler.png",
-      "modifiers": [
-        {
-          "type": "ResistanceFlat",
-          "amount": 25,
-          "damageType": "physical"
-        },
-        {
-          "type": "ResistanceFlat",
-          "amount": 25,
-          "damageType": "magical"
-        }
+      "effects": [
+        { "type": "ResistanceFlat", "magnitude": 25, "damageType": "physical" },
+        { "type": "ResistanceFlat", "magnitude": 25, "damageType": "magical" }
       ]
     },
     {
       "id": "sword_in_a_box",
       "displayName": "Sword in a Box",
       "description": "Each spell that lands on an enemy is followed by a free basic attack on it.",
-      "effect": "SwordInABox",
+      "effects": [
+        { "type": "SwordInABox" }
+      ],
       "rarity": "ultrarare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sword_in_a_box.png"
     },
@@ -163,7 +167,9 @@
       "id": "lucky_deck",
       "displayName": "Lucky Deck",
       "description": "Each attack you land rolls at random: heal 5% HP and 10% mana, deal 25% of the damage to every other enemy, or slow the target by 30% for 1 turn.",
-      "effect": "LuckyDeck",
+      "effects": [
+        { "type": "LuckyDeck" }
+      ],
       "rarity": "ultrarare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/lucky_deck.png"
     },
@@ -171,7 +177,9 @@
       "id": "first_rune",
       "displayName": "The First Rune",
       "description": "Each single-target damaging spell you cast repeats once on the same target, free.",
-      "effect": "FirstRune",
+      "effects": [
+        { "type": "FirstRune" }
+      ],
       "rarity": "godlike",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/first_rune.png"
     },
@@ -179,7 +187,9 @@
       "id": "magic_marker",
       "displayName": "Magic Marker",
       "description": "Your spells **Mark** the enemy they hit. Attacking a Marked enemy consumes the Mark and restores 20% of your missing mana (or signature resource).",
-      "effect": "MagicMarker",
+      "effects": [
+        { "type": "MagicMarker", "magnitude": 20 }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magic_marker.png"
     },
@@ -187,7 +197,9 @@
       "id": "jar_of_bear_urine",
       "displayName": "Jar of Bear Urine",
       "description": "**Marks** every enemy when combat begins.",
-      "effect": "JarOfBearUrine",
+      "effects": [
+        { "type": "JarOfBearUrine" }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jar_of_bear_urine.png"
     },
@@ -195,7 +207,9 @@
       "id": "world_enders_crown",
       "displayName": "World Ender's Crown",
       "description": "When you drop below 30% HP, every enemy is **Feared** for 1 turn. Re-arms when you climb back above 30%.",
-      "effect": "WorldEndersCrown",
+      "effects": [
+        { "type": "WorldEndersCrown", "threshold": 30 }
+      ],
       "rarity": "mythic",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/world_enders_crown.png"
     },
@@ -203,7 +217,9 @@
       "id": "cursed_idol",
       "displayName": "Cursed Idol",
       "description": "Damaging an enemy lowers its resistances by 3% for 3 turns. Stacks up to 15%.",
-      "effect": "CursedIdol",
+      "effects": [
+        { "type": "CursedIdol", "magnitude": 3 }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/cursed_idol.png"
     },
@@ -211,7 +227,9 @@
       "id": "amassing_star",
       "displayName": "Amassing Star",
       "description": "Each enemy you kill (summons excluded) gives +2% damage for the rest of the run.",
-      "effect": "AmassingStar",
+      "effects": [
+        { "type": "AmassingStar", "magnitude": 2 }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/amassing_star.png"
     },
@@ -221,18 +239,17 @@
       "description": "{physical} damage gains 35 flat armor penetration.",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png",
-      "modifiers": [
-        {
-          "type": "ArmorPenetrationFlat",
-          "amount": 35
-        }
+      "effects": [
+        { "type": "ArmorPenetrationFlat", "magnitude": 35 }
       ]
     },
     {
       "id": "rampaging_bulls_horn",
       "displayName": "Rampaging Bull's Horn",
       "description": "After you cast a convergence ability, take 50% less damage for 1 turn.",
-      "effect": "RampagingBullsHorn",
+      "effects": [
+        { "type": "RampagingBullsHorn", "magnitude": 50 }
+      ],
       "rarity": "rare",
       "requiresConvergenceAbility": true,
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png"
@@ -241,7 +258,9 @@
       "id": "ice_fingernail",
       "displayName": "Ice Fingernail",
       "description": "Each attack slows the target by 10%. Stacks up to 40%. Each stack lasts 5 turns.",
-      "effect": "IceFingernail",
+      "effects": [
+        { "type": "IceFingernail" }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/ice_fingernail.png"
     },
@@ -249,7 +268,9 @@
       "id": "loaded_dice",
       "displayName": "Loaded Dice",
       "description": "At the start of the fight, **stun** one random enemy for 1 turn.",
-      "effect": "LoadedDice",
+      "effects": [
+        { "type": "LoadedDice" }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
@@ -257,7 +278,9 @@
       "id": "monkey_kings_scepter",
       "displayName": "Monkey King's Scepter",
       "description": "Your melee attacks can reach any enemy, whatever its position.",
-      "effect": "MonkeyKingsScepter",
+      "effects": [
+        { "type": "MonkeyKingsScepter" }
+      ],
       "rarity": "ultrarare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png"
     },
@@ -267,18 +290,17 @@
       "description": "Super-effective hits deal an extra 20% damage.",
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jo_suns_book_of_anatomy.png",
-      "modifiers": [
-        {
-          "type": "WeaknessDamageBonusPercent",
-          "amount": 20
-        }
+      "effects": [
+        { "type": "WeaknessDamageBonusPercent", "magnitude": 20 }
       ]
     },
     {
       "id": "sparring_saber",
       "displayName": "Sparring Saber",
       "description": "Moving gives +30% speed for 1 turn.",
-      "effect": "SparringSaber",
+      "effects": [
+        { "type": "SparringSaber", "magnitude": 30 }
+      ],
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png"
     },
@@ -286,7 +308,9 @@
       "id": "sparring_buckler",
       "displayName": "Sparring Buckler",
       "description": "Any action of yours that changes a position on the field gives a 10-point **ward**, once per turn.",
-      "effect": "SparringBuckler",
+      "effects": [
+        { "type": "SparringBuckler", "magnitude": 10 }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png"
     },
@@ -294,7 +318,9 @@
       "id": "essence_siphon",
       "displayName": "Essence Siphon",
       "description": "When an enemy dies (summons excluded), heal 3% of your max HP.",
-      "effect": "EssenceSiphon",
+      "effects": [
+        { "type": "EssenceSiphon", "magnitude": 3 }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/essence_siphon.png"
     },
@@ -302,7 +328,9 @@
       "id": "disgruntled_lackey",
       "displayName": "Disgruntled Lackey",
       "description": "Whenever an enemy summons a unit, the summoner takes damage equal to the max HP of the first living party member carrying this relic.",
-      "effect": "DisgruntledLackey",
+      "effects": [
+        { "type": "DisgruntledLackey" }
+      ],
       "rarity": "mythic",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/disgruntled_lackey.png"
     },
@@ -310,7 +338,9 @@
       "id": "inconspicuous_key",
       "displayName": "Inconspicuous Key",
       "description": "Once per combat, an enemy you kill strikes one of its former allies once before it is gone.",
-      "effect": "InconspicuousKey",
+      "effects": [
+        { "type": "InconspicuousKey" }
+      ],
       "rarity": "mythic",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/inconspicuous_key.png"
     },
@@ -318,7 +348,9 @@
       "id": "dancers_anklet",
       "displayName": "Dancer's Anklet",
       "description": "After you attack, cast a spell or use an ability, move one position forward in the turn order.",
-      "effect": "DancersAnklet",
+      "effects": [
+        { "type": "DancersAnklet" }
+      ],
       "rarity": "ultrarare",
       "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
@@ -326,7 +358,9 @@
       "id": "berserkers_vest",
       "displayName": "Berserker's Vest",
       "description": "Getting hit reduces all your cooldowns by 1, once per turn.",
-      "effect": "BerserkersVest",
+      "effects": [
+        { "type": "BerserkersVest", "magnitude": 1 }
+      ],
       "rarity": "ultrarare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/berserkers_vest.png"
     },
@@ -336,18 +370,17 @@
       "description": "Heal for 10% of the damage your attacks deal.",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/vampire_dentures.png",
-      "modifiers": [
-        {
-          "type": "LifestealPercent",
-          "amount": 10
-        }
+      "effects": [
+        { "type": "LifestealPercent", "magnitude": 10 }
       ]
     },
     {
       "id": "phoenix_egg",
       "displayName": "Phoenix Egg",
       "description": "Fatal damage turns you into an egg for 3 turns with HP equal to your max HP. Revive with the fraction that survives, or die if it breaks. Once per combat.",
-      "effect": "PhoenixEgg",
+      "effects": [
+        { "type": "PhoenixEgg", "magnitude": 3 }
+      ],
       "rarity": "ultrarare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png"
     },
@@ -355,7 +388,9 @@
       "id": "kinship",
       "displayName": "Kinship",
       "description": "The first hit Shawn takes each fight is negated.",
-      "effect": "Kinship",
+      "effects": [
+        { "type": "Kinship" }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/kinship.png",
       "bearer": "sheep",
@@ -365,7 +400,9 @@
       "id": "bellwethers_bell",
       "displayName": "Bellwether's Bell",
       "description": "Each transformation Shawn enters lasts 1 turn longer.",
-      "effect": "BellwethersBell",
+      "effects": [
+        { "type": "BellwethersBell", "magnitude": 1 }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/bellwethers_bell.png",
       "bearer": "sheep",
@@ -375,7 +412,9 @@
       "id": "toll_of_the_flock",
       "displayName": "Toll of the Flock",
       "description": "Every third turn Shawn takes, every enemy takes damage equal to 15% of his attack, x1.5 while he is transformed.",
-      "effect": "TollOfTheFlock",
+      "effects": [
+        { "type": "TollOfTheFlock", "magnitude": 15 }
+      ],
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/toll_of_the_flock.png",
       "bearer": "sheep",

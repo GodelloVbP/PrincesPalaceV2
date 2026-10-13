@@ -274,7 +274,7 @@ namespace PrincesPalace.PlayModeTests
         // ---- what a collected node actually pays ---------------------------------
         //
         // Everything below reads the PRODUCTION seam the reward is spent
-        // through -- ContentDatabase.BuildSignatureResource, .ModifierEffects,
+        // through -- ContentDatabase.BuildSignatureResource, .Effects,
         // .AvailableSkillsFor, SquadTrack.SecondLivesLeft -- rather than
         // asking the definition what it holds. Asking the definition would
         // pass just as happily if no read site had ever been wired, which is
@@ -339,8 +339,8 @@ namespace PrincesPalace.PlayModeTests
             odette.level = 20;
 
             odette.claimedTrackLevel = 7;
-            var lightning = ContentDatabase.ModifierEffects(odette).All
-                .Where(e => e.Type == ModifierEffectType.ElementalDamagePercent
+            var lightning = ContentDatabase.CharacterEffects(odette).All
+                .Where(e => e.Kind == EffectKind.ElementalDamagePercent
                             && e.Against == DamageType.Lightning)
                 .ToList();
 
@@ -349,7 +349,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(5, lightning[0].Magnitude);
 
             odette.claimedTrackLevel = 6;
-            Assert.IsFalse(ContentDatabase.ModifierEffects(odette).All
+            Assert.IsFalse(ContentDatabase.CharacterEffects(odette).All
                     .Any(e => e.Against == DamageType.Lightning),
                 "an uncollected spell-damage node was paid anyway");
         }
@@ -371,15 +371,15 @@ namespace PrincesPalace.PlayModeTests
             shawn.level = RewardTrack.MaxLevel;
             shawn.claimedTrackLevel = 28;
 
-            var shawnEffects = ContentDatabase.ModifierEffects(shawn).All;
+            var shawnEffects = ContentDatabase.CharacterEffects(shawn).All;
             var nature = shawnEffects
-                .Where(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent)
+                .Where(e => e.Kind == EffectKind.ElementalDamageOnHitPercent)
                 .ToList();
 
             Assert.AreEqual(1, nature.Count, "Shawn's Nature line is not one on-hit effect");
             Assert.AreEqual(DamageType.Nature, nature[0].Against);
             Assert.AreEqual(15, nature[0].Magnitude);
-            Assert.IsFalse(shawnEffects.Any(e => e.Type == ModifierEffectType.ElementalDamagePercent),
+            Assert.IsFalse(shawnEffects.Any(e => e.Kind == EffectKind.ElementalDamagePercent),
                 "Shawn's own element was ALSO routed through the packet hook, which would pay it twice");
 
             // Odette's attackType is Arcane, and her three spell-damage nodes
@@ -391,16 +391,16 @@ namespace PrincesPalace.PlayModeTests
             odette.level = RewardTrack.MaxLevel;
             odette.claimedTrackLevel = 28;
 
-            var odetteEffects = ContentDatabase.ModifierEffects(odette).All;
+            var odetteEffects = ContentDatabase.CharacterEffects(odette).All;
             var arcane = odetteEffects
-                .Where(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent)
+                .Where(e => e.Kind == EffectKind.ElementalDamageOnHitPercent)
                 .ToList();
 
             Assert.AreEqual(1, arcane.Count, "Odette's Arcane line is not one on-hit effect");
             Assert.AreEqual(DamageType.Arcane, arcane[0].Against);
             Assert.AreEqual(15, arcane[0].Magnitude);
 
-            Assert.IsTrue(odetteEffects.Any(e => e.Type == ModifierEffectType.ElementalDamagePercent
+            Assert.IsTrue(odetteEffects.Any(e => e.Kind == EffectKind.ElementalDamagePercent
                                                  && e.Against == DamageType.Fire),
                 "Odette's Fire line did not take the packet hook, which is the only seam that can " +
                 "pay an element her attackType is not");

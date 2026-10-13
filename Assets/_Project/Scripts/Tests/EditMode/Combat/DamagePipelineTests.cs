@@ -351,9 +351,9 @@ namespace PrincesPalace.Domain.Tests
         // half: the roll itself, and that AfterDefences honours it correctly
         // in both overloads before anything else runs.
 
-        private static void Give(CombatantState combatant, params ModifierEffect[] effects)
+        private static void Give(CombatantState combatant, params Effect[] effects)
         {
-            combatant.ModifierEffects = new ModifierEffectSet(effects);
+            combatant.Effects = EffectSet.Of(EffectHolder.Affix, effects);
         }
 
         [Test]
@@ -377,7 +377,7 @@ namespace PrincesPalace.Domain.Tests
             // below for why the >=100 side of that same short-circuit is
             // now unreachable by any finite DodgeRating.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 0));
+            Give(target, new Effect(EffectKind.DodgeRating, 0));
 
             var rng = new PrincesPalace.Domain.Rng.SeededRandom(1);
             ulong stateBefore = rng.State;
@@ -405,7 +405,7 @@ namespace PrincesPalace.Domain.Tests
             // proving the roll is genuinely being consulted rather than
             // short-circuited.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 1_000_000));
+            Give(target, new Effect(EffectKind.DodgeRating, 1_000_000));
             var rng = new PrincesPalace.Domain.Rng.SeededRandom(2024);
 
             int dodged = 0, landed = 0;
@@ -428,7 +428,7 @@ namespace PrincesPalace.Domain.Tests
             // does at the other end of the scale: a genuine roll, not a
             // short-circuit.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 50));
+            Give(target, new Effect(EffectKind.DodgeRating, 50));
             var rng = new PrincesPalace.Domain.Rng.SeededRandom(2024);
 
             int dodged = 0, hit = 0;
@@ -453,11 +453,11 @@ namespace PrincesPalace.Domain.Tests
             // and toward variance, and does not attempt to represent a
             // probabilistic miss.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 99));
+            Give(target, new Effect(EffectKind.DodgeRating, 99));
             Assert.IsFalse(DamagePipeline.RollDodge(target, null, null),
                 "a low-ish rating with no rng stream must never dodge");
 
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 1_000_000));
+            Give(target, new Effect(EffectKind.DodgeRating, 1_000_000));
             Assert.IsFalse(DamagePipeline.RollDodge(target, null, null),
                 "even an extreme rating must not fire with no rng stream -- preview mode never dodges");
         }
@@ -484,7 +484,7 @@ namespace PrincesPalace.Domain.Tests
             // dodge any more (see CombatMath.DodgePercentFrom's own
             // header) -- this pins ONE concrete outcome of that roll, the
             // same way every other seeded-rng test in this file does.
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 100_000));
+            Give(target, new Effect(EffectKind.DodgeRating, 100_000));
             StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 20, 3);
 
             bool wardWasAsked = false;
@@ -514,7 +514,7 @@ namespace PrincesPalace.Domain.Tests
             // parallel stream that only ever calls RollDodge once per swing.
             var actor = Fighter("Actor", true);
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 50));
+            Give(target, new Effect(EffectKind.DodgeRating, 50));
 
             var rngA = new PrincesPalace.Domain.Rng.SeededRandom(777);
             var rngB = new PrincesPalace.Domain.Rng.SeededRandom(777);
@@ -542,7 +542,7 @@ namespace PrincesPalace.Domain.Tests
             // below 66 -- a deterministic dodge for this specific
             // seed/rating pair (no finite rating short-circuits any more,
             // see CombatMath.DodgePercentFrom's own header).
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 200));
+            Give(target, new Effect(EffectKind.DodgeRating, 200));
 
             var outcome = DamagePipeline.AfterDefences(
                 50, actor, target, attackType: null,
@@ -563,7 +563,7 @@ namespace PrincesPalace.Domain.Tests
             // as "hit". The rating's exact value is irrelevant -- the roll
             // never runs at all with dodgeAlreadyResolved: true.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 100_000));
+            Give(target, new Effect(EffectKind.DodgeRating, 100_000));
 
             var outcome = DamagePipeline.AfterDefences(
                 30, DamageType.Fire, target, ElementalAffinity.Neutral,
@@ -579,8 +579,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var targetA = Fighter("TargetA", false);
             var targetB = Fighter("TargetB", false);
-            Give(targetA, new ModifierEffect(ModifierEffectType.DodgeRating, 35));
-            Give(targetB, new ModifierEffect(ModifierEffectType.DodgeRating, 35));
+            Give(targetA, new Effect(EffectKind.DodgeRating, 35));
+            Give(targetB, new Effect(EffectKind.DodgeRating, 35));
 
             var rngA = new PrincesPalace.Domain.Rng.SeededRandom(9001);
             var rngB = new PrincesPalace.Domain.Rng.SeededRandom(9001);
@@ -614,7 +614,7 @@ namespace PrincesPalace.Domain.Tests
             // it would consume a draw regardless of what dodge would have
             // done, and the two streams would diverge.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 200));
+            Give(target, new Effect(EffectKind.DodgeRating, 200));
 
             var rngA = new PrincesPalace.Domain.Rng.SeededRandom(55);
             var outcome = DamagePipeline.AfterDefences(

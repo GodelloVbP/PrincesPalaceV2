@@ -35,12 +35,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // otherwise change the plate before the beat that earned it played.
         public readonly int Level;
         public readonly IReadOnlyList<ResolvedSkill> Skills;
-        public readonly IReadOnlyList<ResolvedRelic> Relics;
 
-        // Which effects this kit's Relics carry, resolved once here rather
-        // than rescanned on every HasRelic call -- DealDamage and the
-        // after-swing/cast hooks ask up to ~10 times per hit.
-        private readonly HashSet<RelicEffect> _relicEffects;
+        // The run relics this kit carries, for the HUD and a relic's own beat.
+        // What they DO reaches the combatant as CombatantState.Effects.
+        public readonly IReadOnlyList<ResolvedRelic> Relics;
 
         // Only player characters carry an attack type; only enemies carry an
         // elemental affinity. A rudimentary, one-directional system by design.
@@ -144,22 +142,7 @@ namespace PrincesPalace.Domain.Combat.Session
             PlateTheme = plateTheme;
             PlateArt = plateArt ?? "";
             Facing = facing;
-
-            // A BEARER'S RELIC GIVES NOBODY ELSE ITS EFFECT. Run relics reach
-            // every fielded kit (FightEncounterAdapter), so this is the one
-            // place a `bearer` can be honoured for every effect check at
-            // once: FightSession.HasRelic asks this set and nothing else.
-            // Relics stays the full list -- it is what the kit CARRIES, and
-            // the bearer rule is about what it does, not what is held.
-            _relicEffects = new HashSet<RelicEffect>();
-            for (int i = 0; i < Relics.Count; i++)
-            {
-                if (Relics[i] == null || !Relics[i].ReachesCharacter(Id)) continue;
-                _relicEffects.Add(Relics[i].Effect);
-            }
         }
-
-        public bool HasRelic(RelicEffect effect) => _relicEffects.Contains(effect);
     }
 
     public sealed class EnemyKit

@@ -272,7 +272,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void TollOfTheFlock(CombatantState bearer)
         {
             if (bearer == null || !bearer.IsAlive) return;
-            if (!HasRelic(bearer, RelicEffect.TollOfTheFlock)) return;
+            if (!bearer.Effects.Has(EffectKind.TollOfTheFlock)) return;
 
             int opened = OpenedTurnsOf(bearer);
             if (opened <= 0 || opened % FightTuning.TollOfTheFlockEvery != 0) return;
@@ -289,7 +289,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (ownBeat)
             {
                 NewBeat(BeatCause.RelicTrigger, bearer, struck[0], StageApproach.Hold);
-                RecordSpellPresentation(RelicPresentation(bearer, RelicEffect.TollOfTheFlock));
+                RecordSpellPresentation(RelicPresentation(bearer, EffectKind.TollOfTheFlock));
                 RecordSplashTargets(struck.Skip(1));
             }
 
@@ -325,26 +325,26 @@ namespace PrincesPalace.Domain.Combat.Session
             if (ownBeat) CommitBeat();
         }
 
-        // The packet before defences: TollOfTheFlockAttackPercent % of the
+        // The packet before defences: the relic's Magnitude % of the
         // bearer's CURRENT Attack -- a transform's own attack bonus (Black Ram's
         // +50%) is already in it -- times the transform multiplier while a form
         // is worn at this instant. Floored at 1.
         private static int TollOfTheFlockPacket(CombatantState bearer)
         {
             float multiplier = bearer.Transformation != null ? FightTuning.TollOfTheFlockTransformMultiplier : 1f;
-            float raw = bearer.Attack * FightTuning.TollOfTheFlockAttackPercent / 100f * multiplier;
+            float raw = bearer.Attack * bearer.Effects.Magnitude(EffectKind.TollOfTheFlock) / 100f * multiplier;
             return Math.Max(1, Rounding.AwayFromZero(raw));
         }
 
         // The bearer's own copy of a relic's authored presentation, or None.
-        private SpellPresentation RelicPresentation(CombatantState bearer, RelicEffect effect)
+        private SpellPresentation RelicPresentation(CombatantState bearer, EffectKind effect)
         {
             var kit = KitFor(bearer);
             if (kit == null) return SpellPresentation.None;
 
             foreach (var relic in kit.Relics)
             {
-                if (relic != null && relic.Effect == effect && relic.ReachesCharacter(kit.Id))
+                if (relic != null && relic.Mechanic == effect && relic.ReachesCharacter(kit.Id))
                 {
                     return relic.Vfx ?? SpellPresentation.None;
                 }

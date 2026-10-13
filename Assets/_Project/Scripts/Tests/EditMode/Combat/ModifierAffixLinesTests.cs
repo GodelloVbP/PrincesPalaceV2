@@ -21,16 +21,16 @@ namespace PrincesPalace.Domain.Tests
         private const string LossHex = ItemStatLines.LossHex;
         private const string KeywordHex = ModifierEffectText.KeywordHex;
 
-        private static ModifierAffixLines.Effect Fiery(int magnitude = 20)
+        private static ModifierAffixLines.AffixEffect Fiery(int magnitude = 20)
         {
-            return new ModifierAffixLines.Effect("fiery", "Fiery",
-                new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, magnitude, against: DamageType.Fire));
+            return new ModifierAffixLines.AffixEffect("fiery", "Fiery",
+                new Effect(EffectKind.ElementalDamageOnHitPercent, magnitude, against: DamageType.Fire));
         }
 
-        private static ModifierAffixLines.Effect Swift(int magnitude = 12)
+        private static ModifierAffixLines.AffixEffect Swift(int magnitude = 12)
         {
-            return new ModifierAffixLines.Effect("swift", "Swift",
-                new ModifierEffect(ModifierEffectType.DodgeRating, magnitude));
+            return new ModifierAffixLines.AffixEffect("swift", "Swift",
+                new Effect(EffectKind.DodgeRating, magnitude));
         }
 
         // ---- LinePairs -------------------------------------------------
@@ -39,7 +39,7 @@ namespace PrincesPalace.Domain.Tests
         public void NullOrEmptyInputReturnsNull()
         {
             Assert.IsNull(ModifierAffixLines.LinePairs(null));
-            Assert.IsNull(ModifierAffixLines.LinePairs(new List<ModifierAffixLines.Effect>()));
+            Assert.IsNull(ModifierAffixLines.LinePairs(new List<ModifierAffixLines.AffixEffect>()));
         }
 
         [Test]
@@ -60,10 +60,10 @@ namespace PrincesPalace.Domain.Tests
             // rather than printing the display name twice.
             var effects = new[]
             {
-                new ModifierAffixLines.Effect("runic", "Runic",
-                    new ModifierEffect(ModifierEffectType.FlatMaxManaBonus, 10)),
-                new ModifierAffixLines.Effect("runic", "Runic",
-                    new ModifierEffect(ModifierEffectType.FlatManaRegenBonus, 3)),
+                new ModifierAffixLines.AffixEffect("runic", "Runic",
+                    new Effect(EffectKind.MaxManaFlat, 10)),
+                new ModifierAffixLines.AffixEffect("runic", "Runic",
+                    new Effect(EffectKind.FlatManaRegenBonus, 3)),
             };
 
             var pairs = ModifierAffixLines.LinePairs(effects);

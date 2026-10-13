@@ -16,14 +16,14 @@ MonoBehaviour:
     Id: vampire_dentures
     DisplayName: Vampire Dentures
     Description: Heal for 10% of the damage your attacks deal.
-    Effect: 0
     SortOrder: 36
     IconPath: Assets/_Project/Art/Items/Relics/Processed/vampire_dentures.png
     Rarity: 0
     UnlockedBy: 
-    Modifiers:
-    - Type: 14
-      Amount: 10
+    Effects:
+    - Kind: 14
+      Magnitude: 10
+      Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0

@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: kinship
     DisplayName: Kinship
     Description: The first hit Shawn takes each fight is negated.
-    Effect: 32
     SortOrder: 38
     IconPath: Assets/_Project/Art/Items/Relics/Processed/kinship.png
     Rarity: 2
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 61
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: sheep
     Draftable: 0

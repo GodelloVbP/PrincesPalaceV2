@@ -9,12 +9,12 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Phase C: every new ModifierEffectType member, exercised end to end
+    // Phase C: every new EffectKind member, exercised end to end
     // through a REAL FightSession (no scene, no ContentDatabase -- see
     // FightSessionTests' own header for why that is still "a real fight" in
     // this codebase's own vocabulary) with a hand-built CombatantState
-    // carrying the exact ModifierEffect a real modifiers.json entry would
-    // resolve to after ContentDatabase.ModifierEffects' tier/rift scaling.
+    // carrying the exact Effect a real modifiers.json entry would
+    // resolve to after ContentDatabase.Effects' tier/rift scaling.
     // The scaling seam itself (base -> final Magnitude) is pinned separately
     // in ModifierMagnitudeTests; these tests start from an already-scaled
     // Magnitude, the same number a combat hook actually reads.
@@ -39,9 +39,9 @@ namespace PrincesPalace.Domain.Tests
         private static FightSession Session(CombatEncounter encounter) =>
             new FightSession(encounter, null, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
 
-        private static void Give(CombatantState combatant, params ModifierEffect[] effects)
+        private static void Give(CombatantState combatant, params Effect[] effects)
         {
-            combatant.ModifierEffects = new ModifierEffectSet(effects);
+            combatant.Effects = EffectSet.Of(EffectHolder.Affix, effects);
         }
 
         // ---- ElementalDamageOnHitPercent ---------------------------------------
@@ -51,7 +51,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var foe = Fighter("Foe", false, maxHealth: 100, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
+            Give(hero, new Effect(EffectKind.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
@@ -92,13 +92,13 @@ namespace PrincesPalace.Domain.Tests
             var resisted = Fighter("Resisted", false, maxHealth: 1000, speed: 1);
             resisted.TypedResistance = resisted.TypedResistance.With(DamageType.Fire, 100);
             var bare = Fighter("Bare", false, maxHealth: 1000, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
+            Give(hero, new Effect(EffectKind.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
 
             var resistedSession = Session(new CombatEncounter(new[] { hero }, new[] { resisted }));
             resistedSession.ExecuteAttack(resisted);
 
             var bareHero = Fighter("Hero2", true, attack: 20, speed: 10);
-            Give(bareHero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
+            Give(bareHero, new Effect(EffectKind.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
             var bareSession = Session(new CombatEncounter(new[] { bareHero }, new[] { bare }));
             bareSession.ExecuteAttack(bare);
 
@@ -135,7 +135,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Fighter("Hero", true, attack: 117, speed: 10);
             var foe = Fighter("Foe", false, maxHealth: 1000, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 41, against: DamageType.Physical));
+            Give(hero, new Effect(EffectKind.ElementalDamageOnHitPercent, 41, against: DamageType.Physical));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
@@ -178,7 +178,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- ElementalDamagePercent (P4b's packet hook -- reads the SPELL's
         // own instance.type inside ResolveDamageInstances, not the caster's
         // attackType the way the rider above does; see that member's own
-        // header, ModifierEffect.cs) ---------------------------------------
+        // header, Effect.cs) ---------------------------------------
 
         private static ResolvedSkill FireBolt() =>
             new ResolvedSkill("firebolt_fixture", "Firebolt", "", "hero", 1, SkillEffect.DamageSingle,
@@ -191,7 +191,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var foe = Fighter("Foe", false, maxHealth: 100, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamagePercent, 10, against: DamageType.Fire));
+            Give(hero, new Effect(EffectKind.ElementalDamagePercent, 10, against: DamageType.Fire));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             Assert.IsTrue(session.CastSkill(FireBolt(), foe));
@@ -207,7 +207,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var foe = Fighter("Foe", false, maxHealth: 100, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamagePercent, 10, against: DamageType.Ice));
+            Give(hero, new Effect(EffectKind.ElementalDamagePercent, 10, against: DamageType.Ice));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             Assert.IsTrue(session.CastSkill(FireBolt(), foe));
@@ -216,13 +216,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(100 - 20, foe.CurrentHealth);
         }
 
-        // ---- TypedResistanceFlat (read directly through DamagePipeline, the
+        // ---- ResistanceFlat (read directly through DamagePipeline, the
         // one hook every source -- relic or modifier -- shares) -----------------
 
-        // TypedResistanceFlat's own combat hook is CombatantState.TypedResistance
+        // ResistanceFlat's own combat hook is CombatantState.TypedResistance
         // (a field DamagePipeline already reads for every source, relic or
         // modifier) -- ContentDatabase/FightEncounterAdapter is the seam that
-        // FOLDS a modifier's TypedResistanceFlat effect into that field (see
+        // FOLDS a modifier's ResistanceFlat effect into that field (see
         // FightEncounterAdapter.cs's own comment beside its TypedResistance
         // assignment), pinned separately with a REAL content-authored
         // modifier in ItemModifierScalingReachesCombatTests
@@ -257,7 +257,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Fighter("Hero", true, maxHealth: 100, attack: 20, speed: 10);
             hero.CurrentHealth = 50;
             var foe = Fighter("Foe", false, maxHealth: 200, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.LifestealPercent, 15));
+            Give(hero, new Effect(EffectKind.LifestealPercent, 15));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
@@ -279,7 +279,7 @@ namespace PrincesPalace.Domain.Tests
             // landing under it unclamped.
             hero.CurrentHealth = 98;
             var foe = Fighter("Foe", false, maxHealth: 200, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.LifestealPercent, 15));
+            Give(hero, new Effect(EffectKind.LifestealPercent, 15));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
@@ -293,7 +293,7 @@ namespace PrincesPalace.Domain.Tests
         public void FlatPhysicalReduction_SubtractsAfterTheMitigationCurve_PhysicalOnly()
         {
             var target = Fighter("Target", false, maxHealth: 200, speed: 1);
-            Give(target, new ModifierEffect(ModifierEffectType.FlatPhysicalDamageReduction, 5));
+            Give(target, new Effect(EffectKind.FlatPhysicalDamageReduction, 5));
 
             var physical = DamagePipeline.AfterDefences(20, DamageType.Physical, target,
                 affinity: ElementalAffinity.Neutral, varianceRange: 0f, rng: null, resolveWard: null);
@@ -308,7 +308,7 @@ namespace PrincesPalace.Domain.Tests
         public void FlatPhysicalReduction_NeverDropsBelowTheDamageFloorOfOne()
         {
             var target = Fighter("Target", false, maxHealth: 200, speed: 1);
-            Give(target, new ModifierEffect(ModifierEffectType.FlatPhysicalDamageReduction, 50));
+            Give(target, new Effect(EffectKind.FlatPhysicalDamageReduction, 50));
 
             var outcome = DamagePipeline.AfterDefences(3, DamageType.Physical, target,
                 affinity: ElementalAffinity.Neutral, varianceRange: 0f, rng: null, resolveWard: null);
@@ -323,7 +323,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var foeWithResist = Fighter("ResistedFoe", false, maxHealth: 1000, speed: 1);
             foeWithResist.BreakShield = new BreakShield(10);
-            Give(foeWithResist, new ModifierEffect(ModifierEffectType.BreakShieldDepletionResistPercent, 100));
+            Give(foeWithResist, new Effect(EffectKind.BreakShieldDepletionResistPercent, 100));
 
             var resistedSession = Session(new CombatEncounter(new[] { hero }, new[] { foeWithResist }));
             resistedSession.ExecuteAttack(foeWithResist);
@@ -350,7 +350,7 @@ namespace PrincesPalace.Domain.Tests
             var victim = Fighter("Victim", false, maxHealth: 5, speed: 1);
             var neighbour = Fighter("Neighbour", false, maxHealth: 100, speed: 1);
             var faraway = Fighter("Faraway", false, maxHealth: 100, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.OnKillSplashPercent, 30));
+            Give(hero, new Effect(EffectKind.OnKillSplashPercent, 30));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { victim, neighbour, faraway }));
             session.ExecuteAttack(victim);
@@ -368,7 +368,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var victim = Fighter("Victim", false, maxHealth: 1000, speed: 1);
             var neighbour = Fighter("Neighbour", false, maxHealth: 100, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.OnKillSplashPercent, 30));
+            Give(hero, new Effect(EffectKind.OnKillSplashPercent, 30));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { victim, neighbour }));
             session.ExecuteAttack(victim);
@@ -404,7 +404,7 @@ namespace PrincesPalace.Domain.Tests
             var heroPush = Fighter("Hero", true, attack: 20, speed: 50);
             var foeA2 = Fighter("FoeA", false, maxHealth: 1000, speed: 5);
             var foeB2 = Fighter("FoeB", false, maxHealth: 1000, speed: 5);
-            Give(heroPush, new ModifierEffect(ModifierEffectType.PushBackOnHitChancePercent, 100));
+            Give(heroPush, new Effect(EffectKind.PushBackOnHitChancePercent, 100));
             var sessionPush = Session(new CombatEncounter(new[] { heroPush }, new[] { foeA2, foeB2 }));
             sessionPush.ExecuteAttack(foeA2);
             Assert.IsTrue(sessionPush.IsPlayerTurn, "fixture check: same as above, for the push run");
@@ -445,7 +445,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var foeA = Fighter("FoeA", false, maxHealth: 1000, speed: 1);
             var foeB = Fighter("FoeB", false, maxHealth: 1000, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
+            Give(hero, new Effect(EffectKind.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
 
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foeA, foeB }),
                 new List<PlayerKit> { AllEnemiesSkillKit() }, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
@@ -476,7 +476,7 @@ namespace PrincesPalace.Domain.Tests
             hero.CurrentHealth = 50;
             var foeA = Fighter("FoeA", false, maxHealth: 1000, speed: 1);
             var foeB = Fighter("FoeB", false, maxHealth: 1000, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.LifestealPercent, 15));
+            Give(hero, new Effect(EffectKind.LifestealPercent, 15));
 
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foeA, foeB }),
                 new List<PlayerKit> { AllEnemiesSkillKit() }, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
@@ -503,7 +503,7 @@ namespace PrincesPalace.Domain.Tests
             // takes exactly the base sweep damage plus the rider, no more.
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var foe = Fighter("Foe", false, maxHealth: 1000, speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
+            Give(hero, new Effect(EffectKind.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
 
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 new List<PlayerKit> { AllEnemiesSkillKit() }, null, new SeededRandom(1)) { DamageVarianceRange = 0f };

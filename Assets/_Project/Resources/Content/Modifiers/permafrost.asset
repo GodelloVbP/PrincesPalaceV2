@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'Frost does not bite the wearer back. Elemental family: Ice, the resistance half -- Frosty is Ice''s separate on-hit-frost affix and Frostbite carries the old bundle''s chill proc. Split off so each rule rolls on its own.'
     SortOrder: 3
     Effects:
-    - Type: 3
+    - Kind: 6
       Magnitude: 8
       Threshold: 0
       AgainstType: 2

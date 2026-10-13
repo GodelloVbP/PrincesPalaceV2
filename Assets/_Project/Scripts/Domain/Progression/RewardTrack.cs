@@ -133,8 +133,8 @@ namespace PrincesPalace.Domain.Progression
         // EVERY NON-PHYSICAL DAMAGE TYPE, by Amount percent -- Odette's
         // "+5% spell damage" at 7, 19 and 28 (§4). SUMMED like
         // ElementalDamagePercent, which is what it hangs off: the read site
-        // (ContentDatabase.Effective.ModifierEffects) expands one of these
-        // into the same per-element ModifierEffect rows an
+        // (ContentDatabase.Effective.Effects) expands one of these
+        // into the same per-element Effect rows an
         // ElementalDamagePercent entry produces, one per non-Physical
         // DamageType, so there is no second combat hook and no second rule
         // about how a percentage applies.

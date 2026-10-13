@@ -13,10 +13,10 @@ namespace PrincesPalace.PlayModeTests
 {
     // PHASE D3, end to end: the real "entangling" modifiers.json entry's
     // RootChancePercent rider reaches a real fight and actually roots a real
-    // enemy -- not just a number sitting unread on ModifierEffectSet.
+    // enemy -- not just a number sitting unread on EffectSet.
     //
     // POST-AFFIX-SPLIT: Nature's family used to be one bundled "sylvan" id
-    // (ElementalDamageOnHitPercent + TypedResistanceFlat + RootChancePercent,
+    // (ElementalDamageOnHitPercent + ResistanceFlat + RootChancePercent,
     // all three at once). A designer pass split it into three single-effect
     // ids -- "sylvan" (damage), "thornhide" (resistance), "entangling" (this
     // file's root proc) -- so this file's own equip helper now reaches for
@@ -25,9 +25,9 @@ namespace PrincesPalace.PlayModeTests
     //
     // Mirrors FrostyModifierReachesCombatTests' own real-content pattern:
     // equip a REAL item with a REAL id at a known tier/riftTier, never a
-    // hand-built ModifierEffect fixture. Sylvan's family is PLAYER-worn
+    // hand-built Effect fixture. Sylvan's family is PLAYER-worn
     // weapon gear, so this always roots an ENEMY the wearer hits -- never
-    // the reverse (see ModifierEffectType.RootChancePercent's own comment on
+    // the reverse (see EffectKind.RootChancePercent's own comment on
     // why the direction is one-way by construction). The hand-built-fixture
     // half of this rider (exact mechanism: the plain-attack gate, the
     // no-legal-skill forfeit, coexistence with Chilled/Dodge) lives in
@@ -97,12 +97,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped entangling modifier must produce a real effect");
 
             // entangling's authored base: RootChancePercent 10 (halved from 20).
             // Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            var root = effects.All.Single(e => e.Type == ModifierEffectType.RootChancePercent);
+            var root = effects.All.Single(e => e.Kind == EffectKind.RootChancePercent);
             Assert.AreEqual(16, root.Magnitude, "10 x 1.6 = 16.0 exactly");
         }
 
@@ -113,9 +113,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearing(item, RiftTier.Ordinary);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
-            var root = effects.All.Single(e => e.Type == ModifierEffectType.RootChancePercent);
+            var root = effects.All.Single(e => e.Kind == EffectKind.RootChancePercent);
             Assert.AreEqual(10, root.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
@@ -135,7 +135,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(16, state.ModifierEffects.Best(ModifierEffectType.RootChancePercent),
+            Assert.AreEqual(16, state.Effects.Magnitude(EffectKind.RootChancePercent),
                 "the real, scaled entangling root chance must reach the combatant the fight actually runs on");
         }
 
@@ -152,13 +152,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
             var character = FreshCharacterWearingWholeNatureFamily(item, RiftTier.Ordinary);
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
-            Assert.Greater(effects.Best(ModifierEffectType.ElementalDamageOnHitPercent), 0,
+            Assert.Greater(effects.Magnitude(EffectKind.ElementalDamageOnHitPercent), 0,
                 "sylvan's own damage-on-hit must still apply when equipped alongside its siblings");
-            Assert.IsTrue(effects.All.Any(e => e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Nature),
+            Assert.IsTrue(effects.All.Any(e => e.Kind == EffectKind.ResistanceFlat && e.Against == DamageType.Nature),
                 "thornhide's own Nature resistance must still apply when equipped alongside its siblings");
-            Assert.Greater(effects.Best(ModifierEffectType.RootChancePercent), 0,
+            Assert.Greater(effects.Magnitude(EffectKind.RootChancePercent), 0,
                 "entangling's own root chance must still apply when equipped alongside its siblings");
         }
 
@@ -166,7 +166,7 @@ namespace PrincesPalace.PlayModeTests
         // equippable item content has, at Convergent RiftTier (the richest
         // combination the roll can ever produce), and prove a real
         // FightSession actually roots a real enemy off it -- not a
-        // synthetic ModifierEffect fixture, the genuine content -> roll ->
+        // synthetic Effect fixture, the genuine content -> roll ->
         // equip -> combat chain this whole phase exists to protect. Also the
         // one place this file checks the ROOTED TARGET'S OWN NEXT ACTION:
         // the enemy's reply this same round must never resolve as a plain
@@ -186,8 +186,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
-            int scaledChance = effects.Best(ModifierEffectType.RootChancePercent);
+            var effects = ContentDatabase.CharacterEffects(character);
+            int scaledChance = effects.Magnitude(EffectKind.RootChancePercent);
 
             // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46): an
             // Inconclusive here read as green and quietly retired the end-to-end claim.

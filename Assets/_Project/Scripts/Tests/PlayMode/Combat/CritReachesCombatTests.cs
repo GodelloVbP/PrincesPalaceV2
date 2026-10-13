@@ -6,6 +6,7 @@ using UnityEngine;
 using PrincesPalace;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rng;
 
@@ -83,10 +84,10 @@ namespace PrincesPalace.PlayModeTests
             SetData(_relic, new ResolvedRelic
             {
                 Id = "crit_test_relic",
-                Modifiers = new[]
+                Effects = new[]
                 {
-                    new RelicModifier(RelicModifierType.CritChanceFlat, 10),
-                    new RelicModifier(RelicModifierType.CritDamageFlat, 25),
+                    new Effect(EffectKind.CritChanceFlat, 10),
+                    new Effect(EffectKind.CritDamageFlat, 25),
                 },
             });
             ((List<RelicDefinition>)ContentDatabase.Relics).Add(_relic);

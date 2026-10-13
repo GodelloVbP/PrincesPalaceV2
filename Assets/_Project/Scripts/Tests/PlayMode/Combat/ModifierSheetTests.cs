@@ -18,7 +18,7 @@ namespace PrincesPalace.PlayModeTests
     // system composes, not just each phase's own piece in isolation.
     //
     // Every other modifier test in this suite covers exactly one seam: an
-    // EditMode file hand-builds a ModifierEffect fixture and exercises one
+    // EditMode file hand-builds a Effect fixture and exercises one
     // combat hook (ItemModifierCombatHookTests, ChilledStatusTests,
     // RootedStatusTests); a "*ModifierReachesCombatTests" PlayMode file
     // equips exactly ONE real modifier on a fresh, save-less Character and
@@ -95,21 +95,21 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(weapon.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a Convergent roll with three real modifiers must produce real effects");
 
             // Scale = 1.0 x 2.0 = 2.0. Bases (10/8/8) are fiery/ironclad/
             // vampiric's CURRENT authored magnitudes -- halved from 20/15/15
             // in the affix-power-down pass; see modifiers.json's own entries.
             var fireOnHit = effects.All.Single(e =>
-                e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
+                e.Kind == EffectKind.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
             Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 2.0");
 
             var physicalResist = effects.All.Single(e =>
-                e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Physical);
+                e.Kind == EffectKind.ResistanceFlat && e.Against == DamageType.Physical);
             Assert.AreEqual(16, physicalResist.Magnitude, "ironclad: 8 x 2.0");
 
-            Assert.AreEqual(16, effects.Best(ModifierEffectType.LifestealPercent), "vampiric: 8 x 2.0");
+            Assert.AreEqual(16, effects.Magnitude(EffectKind.LifestealPercent), "vampiric: 8 x 2.0");
         }
 
         // POST-AFFIX-SPLIT: "stalwart" used to carry both
@@ -128,15 +128,15 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(armor.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a RiftTouched roll with two real modifiers must produce real effects");
 
             // Scale = 1.0 x 1.3 = 1.3. Bases (2, 15) are stalwart/bulwark's
             // CURRENT authored magnitudes -- halved from 3/30. 2 x 1.3 = 2.6,
             // away-from-zero -> 3; 15 x 1.3 = 19.5, away-from-zero -> 20.
-            Assert.AreEqual(3, effects.Best(ModifierEffectType.FlatPhysicalDamageReduction),
+            Assert.AreEqual(3, effects.Magnitude(EffectKind.FlatPhysicalDamageReduction),
                 "stalwart: 2 x 1.3 = 2.6, rounded away from zero");
-            Assert.AreEqual(20, effects.Best(ModifierEffectType.BreakShieldDepletionResistPercent),
+            Assert.AreEqual(20, effects.Magnitude(EffectKind.BreakShieldDepletionResistPercent),
                 "bulwark: 15 x 1.3 = 19.5, rounded away from zero");
         }
 
@@ -150,7 +150,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE");
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsTrue(effects.IsEmpty, "zero rolled modifiers must resolve to zero effects, not a default set");
 
             CollectionAssert.IsEmpty(character.equipment.GetModifierIds(item.equipSlot));
@@ -195,7 +195,7 @@ namespace PrincesPalace.PlayModeTests
             var resistedState = builtResisted.Party[0];
             var bareState = builtBare.Party[0];
 
-            // emberguard's own scaled TypedResistanceFlat (Fire): 8 x 1.0 x
+            // emberguard's own scaled ResistanceFlat (Fire): 8 x 1.0 x
             // 1.6 = 12.8 -> 13, away-from-zero -- already pinned in
             // ItemModifierScalingReachesCombatTests, reused here rather than
             // recomputed.
@@ -314,13 +314,13 @@ namespace PrincesPalace.PlayModeTests
             // TierMultiplier(0) x RiftMultiplier(Convergent) = 1.0 x 2.0,
             // both already-pinned literals (ModifierMagnitudeTests), never
             // recomputed here.
-            var fireOnHit = hero.ModifierEffects.All.Single(e =>
-                e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
+            var fireOnHit = hero.Effects.All.Single(e =>
+                e.Kind == EffectKind.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
             Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 2.0, reached through the real roll/claim/equip chain");
-            var arcaneOnHit = hero.ModifierEffects.All.Single(e =>
-                e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Arcane);
+            var arcaneOnHit = hero.Effects.All.Single(e =>
+                e.Kind == EffectKind.ElementalDamageOnHitPercent && e.Against == DamageType.Arcane);
             Assert.AreEqual(20, arcaneOnHit.Magnitude, "astral: 10 x 2.0, reached through the same chain");
-            Assert.AreEqual(16, hero.ModifierEffects.Best(ModifierEffectType.LifestealPercent), "vampiric: 8 x 2.0");
+            Assert.AreEqual(16, hero.Effects.Magnitude(EffectKind.LifestealPercent), "vampiric: 8 x 2.0");
 
             // A known, round Attack so the elemental on-hit damage is a
             // hand-computed literal rather than a figure that depends on the
@@ -406,11 +406,11 @@ namespace PrincesPalace.PlayModeTests
             // to the IDENTICAL scaled effects, proving persistence carries
             // the roll rather than a pre-baked number that happened to match
             // once.
-            var reloadedEffects = ContentDatabase.ModifierEffects(reloadedCharacter);
-            Assert.AreEqual(16, reloadedEffects.Best(ModifierEffectType.LifestealPercent),
+            var reloadedEffects = ContentDatabase.CharacterEffects(reloadedCharacter);
+            Assert.AreEqual(16, reloadedEffects.Magnitude(EffectKind.LifestealPercent),
                 "a reloaded save must resolve the identical scaled magnitude, not merely the identical ids");
             Assert.AreEqual(20, reloadedEffects.All.Single(e =>
-                    e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire).Magnitude,
+                    e.Kind == EffectKind.ElementalDamageOnHitPercent && e.Against == DamageType.Fire).Magnitude,
                 "the reloaded fiery rider must still scale to 20 after the round trip");
         }
     }

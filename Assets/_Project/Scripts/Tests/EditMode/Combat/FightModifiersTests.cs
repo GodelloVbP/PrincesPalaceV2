@@ -26,6 +26,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("dummy", "Dummy", new StatBlock(),
                     0, 0, false, DamageType.Physical, DamageType.Physical, 0), false) },
                 new SeededRandom(5));
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero);
         }
@@ -41,10 +42,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ARelicSpeedBuffIsNamedForTheRelic()
         {
-            var pipe = new ResolvedRelic("tin_foil_pipe", "Tin-Foil Pipe", "", RelicEffect.TinFoilPipe, 0);
+            var pipe = new ResolvedRelic("tin_foil_pipe", "Tin-Foil Pipe", "", new[] { TestRelics.Mechanic(EffectKind.TinFoilPipe) }, 0);
             var (session, hero) = Fight(pipe);
 
-            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe, 20, 3);
+            session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe, 20, 3);
 
             var modifiers = FightModifiers.For(session, hero);
             Assert.AreEqual(1, modifiers.Count);

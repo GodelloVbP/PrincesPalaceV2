@@ -22,13 +22,13 @@ namespace PrincesPalace.Domain.Tests
             TestSkills.Bolt(flat: 20, cooldown: cooldown);
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            ResolvedSkill skill, RelicEffect? relic = null)
+            ResolvedSkill skill, EffectKind? relic = null)
         {
             var hero = new CombatantState("Shawn", true, 999999, 999, 20, 10);
             var foe = new CombatantState("Dummy", false, 999999, 0, 1, 1);
 
             var relics = relic.HasValue
-                ? new List<ResolvedRelic> { new ResolvedRelic("r", "r", "", relic.Value, 0) }
+                ? new List<ResolvedRelic> { new ResolvedRelic("r", "r", "", new[] { TestRelics.Mechanic(relic.Value) }, 0) }
                 : new List<ResolvedRelic>();
 
             var kit = new PlayerKit("hero", CharacterRole.Tank,
@@ -39,6 +39,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("dummy", "Dummy", new StatBlock(),
                     0, 0, false, DamageType.Physical, DamageType.Physical, 0), false) },
                 new SeededRandom(3)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, foe);
         }
@@ -159,7 +160,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheSaltLedgerTakesATurnOffEverySwing()
         {
             var bolt = Bolt(3);
-            var (session, _, foe) = Fight(bolt, RelicEffect.SaltLedger);
+            var (session, _, foe) = Fight(bolt, EffectKind.SaltLedger);
 
             Assert.IsTrue(session.CastSkill(bolt, foe), "turn 1");
 

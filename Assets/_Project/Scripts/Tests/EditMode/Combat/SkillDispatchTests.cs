@@ -67,6 +67,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 DamageVarianceRange = 0f,
             };
+            TestRelics.Hold(session);
             return (session, hero, encounter);
         }
 
@@ -598,7 +599,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void MagicalShieldRisesOnACastAndNotOnASwing()
         {
-            var relic = new ResolvedRelic("shield", "Magical Shield", "", RelicEffect.MagicalShield, 0);
+            var relic = new ResolvedRelic("shield", "Magical Shield", "", new[] { TestRelics.Mechanic(EffectKind.MagicalShield) }, 0);
 
             var swinger = Hero();
             var (swing, _, swingFoes) = Fight(Kit(relics: new[] { relic }), swinger);
@@ -621,7 +622,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ACastThatRaisesAWardRecordsItInTheBeatsSnapshotAndNotInItsPreSnapshot()
         {
-            var relic = new ResolvedRelic("shield", "Magical Shield", "", RelicEffect.MagicalShield, 0);
+            var relic = new ResolvedRelic("shield", "Magical Shield", "", new[] { TestRelics.Mechanic(EffectKind.MagicalShield) }, 0);
             var caster = Hero();
             var (cast, _, foes) = Fight(Kit(relics: new[] { relic }, skills: new[] { Skill(SkillEffect.DamageSingle) }), caster);
 
@@ -629,7 +630,7 @@ namespace PrincesPalace.Domain.Tests
             var beat = cast.DrainBeats().First(b => b.IsAction && b.Actor == caster);
 
             Assert.AreEqual(0, beat.PreSnapshot[caster].Ward);
-            Assert.AreEqual(FightTuning.MagicalShieldPoints, beat.Snapshot[caster].Ward);
+            Assert.AreEqual(20, beat.Snapshot[caster].Ward);
         }
 
         [Test]
@@ -639,7 +640,7 @@ namespace PrincesPalace.Domain.Tests
             // lunge/hit/recoil cycle no matter what happens inside it, so two
             // swings sharing a beat would render as one action with the second
             // number silently overwriting the first.
-            var relic = new ResolvedRelic("dual", "Dual Wield", "", RelicEffect.DualWield, 0);
+            var relic = new ResolvedRelic("dual", "Dual Wield", "", new[] { TestRelics.Mechanic(EffectKind.DualWield) }, 0);
             var (session, _, encounter) = Fight(Kit(relics: new[] { relic }));
 
             session.ExecuteAttack(encounter.Enemies[0]);
@@ -652,7 +653,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void DualWieldDoesNotSwingAtACorpse()
         {
-            var relic = new ResolvedRelic("dual", "Dual Wield", "", RelicEffect.DualWield, 0);
+            var relic = new ResolvedRelic("dual", "Dual Wield", "", new[] { TestRelics.Mechanic(EffectKind.DualWield) }, 0);
             var frail = Foe("Frail", health: 1);
             var tank = Foe("Tank");
             var (session, _, _) = Fight(Kit(relics: new[] { relic }), null, frail, tank);
@@ -686,7 +687,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void DualWieldsSecondSwingDoesNotGrantTheResourceAgain()
         {
-            var relic = new ResolvedRelic("dual", "Dual Wield", "", RelicEffect.DualWield, 0);
+            var relic = new ResolvedRelic("dual", "Dual Wield", "", new[] { TestRelics.Mechanic(EffectKind.DualWield) }, 0);
             var hero = Hero();
             hero.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
             var (session, _, encounter) = Fight(Kit(relics: new[] { relic }), hero);
@@ -726,8 +727,8 @@ namespace PrincesPalace.Domain.Tests
         // SeededRandom(3) on an otherwise-empty fixture, dodges -- the same
         // device DodgeCoversEveryDamagePathTests uses, for the same reason.
         private static void MakeUnhittable(CombatantState target) =>
-            target.ModifierEffects = new ModifierEffectSet(
-                new[] { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
+            target.Effects = EffectSet.Of(EffectHolder.Affix, 
+                new[] { new Effect(EffectKind.DodgeRating, 100_000) });
 
         [Test]
         public void APlainAttackThatLandsFeedsThePrimaryPool()
@@ -803,7 +804,7 @@ namespace PrincesPalace.Domain.Tests
             // One action, one grant -- the same answer the signature pool
             // gives two tests up, arrived at by a different route (a
             // per-action lock rather than a single call site).
-            var relic = new ResolvedRelic("dual", "Dual Wield", "", RelicEffect.DualWield, 0);
+            var relic = new ResolvedRelic("dual", "Dual Wield", "", new[] { TestRelics.Mechanic(EffectKind.DualWield) }, 0);
             var bjorn = Brawler();
             var (session, _, encounter) = Fight(Kit(relics: new[] { relic }), bjorn);
 
@@ -874,6 +875,7 @@ namespace PrincesPalace.Domain.Tests
             // arrives at ResolveEnemyAction with nothing telegraphed and falls
             // back to a plain swing, which would make both tests below the
             // same test.
+            TestRelics.Hold(session);
             session.Begin();
             return (session, bjorn, monster);
         }
@@ -949,6 +951,7 @@ namespace PrincesPalace.Domain.Tests
 
             // Begin() is the turn boundary: it runs GrantTurnStart for whoever
             // opens the fight, which is Bjorn.
+            TestRelics.Hold(session);
             session.Begin();
             return (session, bjorn);
         }

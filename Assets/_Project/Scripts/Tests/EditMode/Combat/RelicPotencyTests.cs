@@ -28,15 +28,15 @@ namespace PrincesPalace.Domain.Tests
     // numbers are retuned -- which they will be.
     public class RelicPotencyTests
     {
-        private static ResolvedRelic Relic(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
+        private static ResolvedRelic Relic(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0);
 
         // ignoresDefense so armour cannot move the figures between the two
         // worlds these tests compare. The base is still the caster's scaled
         // attack PLUS the flat amount, not the flat amount alone -- which is
         // why nothing here asserts an absolute number.
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            RelicEffect? relic, ResolvedSkill skill = null)
+            EffectKind? relic, ResolvedSkill skill = null)
         {
             var hero = new CombatantState("Shawn", true, 999999, 300, 20, 10);
             // BIG ENOUGH TO SURVIVE EVERY BLOW THE TEST LANDS. A dummy that
@@ -56,6 +56,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("dummy", "Dummy", new StatBlock(),
                     0, 0, false, DamageType.Physical, DamageType.Physical, 0), false) },
                 new SeededRandom(11)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, foe);
         }
@@ -74,7 +75,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheFourthCastIsTheOneThatIsCharged()
         {
             var bolt = TestSkills.Bolt(flat: 50);
-            var (session, hero, foe) = Fight(RelicEffect.ChargingCrystal, bolt);
+            var (session, hero, foe) = Fight(EffectKind.ChargingCrystal, bolt);
 
             var dealt = Enumerable.Range(0, 8)
                 .Select(_ => CastOnce(session, hero, foe, bolt))
@@ -129,7 +130,7 @@ namespace PrincesPalace.Domain.Tests
         private static int ChargeBonus(bool vulnerable, int flat = 50)
         {
             var bolt = TestSkills.Bolt(flat: flat);
-            var (session, hero, foe) = Fight(RelicEffect.ChargingCrystal, bolt);
+            var (session, hero, foe) = Fight(EffectKind.ChargingCrystal, bolt);
 
             if (vulnerable)
             {
@@ -174,7 +175,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EveryThirdSwingCarriesTheTally()
         {
-            var (session, hero, foe) = Fight(RelicEffect.LongCount);
+            var (session, hero, foe) = Fight(EffectKind.LongCount);
 
             var dealt = Enumerable.Range(0, 6)
                 .Select(_ =>
@@ -202,7 +203,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheTwoCountersDoNotFeedEachOther()
         {
             var bolt = TestSkills.Bolt(flat: 50);
-            var (session, hero, foe) = Fight(RelicEffect.ChargingCrystal, bolt);
+            var (session, hero, foe) = Fight(EffectKind.ChargingCrystal, bolt);
 
             // Three swings first. If they advanced the spell tally, the very
             // first cast would come out charged.

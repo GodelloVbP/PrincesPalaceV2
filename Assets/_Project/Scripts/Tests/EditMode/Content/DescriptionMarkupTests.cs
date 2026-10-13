@@ -268,7 +268,7 @@ namespace PrincesPalace.Domain.Tests
 
         private static string RelicError(string description)
         {
-            var raw = new RawRelicEntry { id = "dual_wield", displayName = "Dual Wield", effect = "DualWield", description = description };
+            var raw = new RawRelicEntry { id = "dual_wield", displayName = "Dual Wield", effects = new[] { new RawEffect { type = "DualWield" } }, description = description };
             return RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters, out _, out var errors)
                 ? null : string.Join("; ", errors);
         }

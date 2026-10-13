@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: inconspicuous_key
     DisplayName: Inconspicuous Key
     Description: Once per combat, an enemy you kill strikes one of its former allies once before it is gone.
-    Effect: 28
     SortOrder: 33
     IconPath: Assets/_Project/Art/Items/Relics/Processed/inconspicuous_key.png
     Rarity: 4
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 57
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

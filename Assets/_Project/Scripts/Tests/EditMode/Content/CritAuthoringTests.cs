@@ -130,10 +130,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRelicCritModifiersMapToTheirOwnStats()
         {
-            Assert.AreEqual(RelicStat.CritChance, new RelicModifier(RelicModifierType.CritChanceFlat, 5).Stat);
-            Assert.AreEqual(RelicStat.CritDamage, new RelicModifier(RelicModifierType.CritDamageFlat, 5).Stat);
-            Assert.AreEqual(12, RelicModifiers.Apply(0, RelicStat.CritChance,
-                new[] { new RelicModifier(RelicModifierType.CritChanceFlat, 5), new RelicModifier(RelicModifierType.CritChanceFlat, 7) }));
+            Assert.AreEqual(EffectStat.CritChance, EffectCatalog.Of(EffectKind.CritChanceFlat).Stat);
+            Assert.AreEqual(EffectStat.CritDamage, EffectCatalog.Of(EffectKind.CritDamageFlat).Stat);
+            Assert.AreEqual(12, EffectFold.Apply(0, EffectStat.CritChance,
+                EffectSet.Of(EffectHolder.Relic, new[] { new Effect(EffectKind.CritChanceFlat, 5), new Effect(EffectKind.CritChanceFlat, 7) })));
         }
 
         [Test]

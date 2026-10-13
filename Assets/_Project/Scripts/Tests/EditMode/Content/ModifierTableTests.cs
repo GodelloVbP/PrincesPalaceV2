@@ -313,15 +313,13 @@ namespace PrincesPalace.Domain.Tests
         {
             var offensive = new[]
             {
-                ModifierEffectType.ElementalDamageOnHitPercent,
-                ModifierEffectType.FlatSpeedBonus,
-                ModifierEffectType.LifestealPercent,
-                ModifierEffectType.GuaranteedFirstAction,
-                ModifierEffectType.OnKillSplashPercent,
-                ModifierEffectType.PushBackOnHitChancePercent,
-                ModifierEffectType.NextSkillManaDiscountPercent,
-                ModifierEffectType.ChilledOnHitChancePercent,
-                ModifierEffectType.RootChancePercent,
+                EffectKind.ElementalDamageOnHitPercent,
+                EffectKind.LifestealPercent,
+                EffectKind.OnKillSplashPercent,
+                EffectKind.PushBackOnHitChancePercent,
+                EffectKind.NextSkillManaDiscountPercent,
+                EffectKind.ChilledOnHitChancePercent,
+                EffectKind.RootChancePercent,
             };
 
             foreach (var type in offensive)
@@ -335,14 +333,14 @@ namespace PrincesPalace.Domain.Tests
         {
             var defensive = new[]
             {
-                ModifierEffectType.TypedResistanceFlat,
-                ModifierEffectType.FlatPhysicalDamageReduction,
-                ModifierEffectType.BreakShieldDepletionResistPercent,
-                ModifierEffectType.FlatMaxManaBonus,
-                ModifierEffectType.FlatManaRegenBonus,
-                ModifierEffectType.ManaToWardOnTurnStartPercent,
-                ModifierEffectType.FortunateFavorBonusFlat,
-                ModifierEffectType.DodgeRating,
+                EffectKind.ResistanceFlat,
+                EffectKind.FlatPhysicalDamageReduction,
+                EffectKind.BreakShieldDepletionResistPercent,
+                EffectKind.MaxManaFlat,
+                EffectKind.FlatManaRegenBonus,
+                EffectKind.ManaToWardOnTurnStartPercent,
+                EffectKind.FortunateFavorBonusFlat,
+                EffectKind.DodgeRating,
             };
 
             foreach (var type in defensive)
@@ -352,41 +350,39 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryModifierEffectTypeIsClassifiedOneWayOrTheOther()
+        public void EveryAffixKindIsClassifiedOneWayOrTheOther()
         {
-            // Closed enum, closed classification: a future member (None
-            // excepted -- never authored) must be sorted into one bucket or
-            // the other by hand, not fall through to a silent default that
-            // could land a new offensive rider on armour or vice versa.
-            var covered = new HashSet<ModifierEffectType>
+            // Closed vocabulary, closed classification: a future affix kind
+            // must be sorted into one bucket or the other by hand, not fall
+            // through to a silent default that could land a new offensive
+            // rider on armour or vice versa.
+            var covered = new HashSet<EffectKind>
             {
-                ModifierEffectType.ElementalDamageOnHitPercent,
-                ModifierEffectType.ElementalDamagePercent,
-                ModifierEffectType.FlatSpeedBonus,
-                ModifierEffectType.LifestealPercent,
-                ModifierEffectType.GuaranteedFirstAction,
-                ModifierEffectType.OnKillSplashPercent,
-                ModifierEffectType.PushBackOnHitChancePercent,
-                ModifierEffectType.NextSkillManaDiscountPercent,
-                ModifierEffectType.ChilledOnHitChancePercent,
-                ModifierEffectType.RootChancePercent,
-                ModifierEffectType.TypedResistanceFlat,
-                ModifierEffectType.FlatPhysicalDamageReduction,
-                ModifierEffectType.BreakShieldDepletionResistPercent,
-                ModifierEffectType.FlatMaxManaBonus,
-                ModifierEffectType.FlatManaRegenBonus,
-                ModifierEffectType.ManaToWardOnTurnStartPercent,
-                ModifierEffectType.FortunateFavorBonusFlat,
-                ModifierEffectType.DodgeRating,
+                EffectKind.ElementalDamageOnHitPercent,
+                EffectKind.ElementalDamagePercent,
+                EffectKind.LifestealPercent,
+                EffectKind.OnKillSplashPercent,
+                EffectKind.PushBackOnHitChancePercent,
+                EffectKind.NextSkillManaDiscountPercent,
+                EffectKind.ChilledOnHitChancePercent,
+                EffectKind.RootChancePercent,
+                EffectKind.ResistanceFlat,
+                EffectKind.FlatPhysicalDamageReduction,
+                EffectKind.BreakShieldDepletionResistPercent,
+                EffectKind.MaxManaFlat,
+                EffectKind.FlatManaRegenBonus,
+                EffectKind.ManaToWardOnTurnStartPercent,
+                EffectKind.FortunateFavorBonusFlat,
+                EffectKind.DodgeRating,
             };
 
-            foreach (ModifierEffectType type in Enum.GetValues(typeof(ModifierEffectType)))
+            foreach (var info in EffectCatalog.All)
             {
-                if (type == ModifierEffectType.None) continue;
+                if (!info.Allows(EffectHolder.Affix)) continue;
 
-                Assert.IsTrue(covered.Contains(type),
-                    $"{type} is a new modifier effect with no offensive/defensive classification -- " +
-                    "add it to ModifierTable.OffensiveEffects or leave it out deliberately, and to this test.");
+                Assert.IsTrue(covered.Contains(info.Kind),
+                    $"{info.Kind} is a new affix kind with no offensive/defensive classification -- " +
+                    "give it an EffectCatalog pool, and add it to this test.");
             }
         }
     }

@@ -13,11 +13,11 @@ namespace PrincesPalace.Domain.Tests
     // Rune -- the last four relics.
     public class FourthEpicRelicsTests
     {
-        private static ResolvedRelic Relic(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
+        private static ResolvedRelic Relic(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0);
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            RelicEffect relic, ResolvedSkill skill = null, int foeCount = 1, int heroSpeed = 10)
+            EffectKind relic, ResolvedSkill skill = null, int foeCount = 1, int heroSpeed = 10)
         {
             var hero = new CombatantState("Shawn", true, 999999, 999, 20, heroSpeed);
             var foes = Enumerable.Range(0, foeCount)
@@ -36,6 +36,7 @@ namespace PrincesPalace.Domain.Tests
             var session = new FightSession(new CombatEncounter(new[] { hero }, foes),
                 new List<PlayerKit> { kit }, enemyKits,
                 new SeededRandom(9)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, foes[0]);
         }
@@ -50,12 +51,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var bolt = TestSkills.Bolt(flat: 50);
 
-            var (withRelic, heroA, foeA) = Fight(RelicEffect.SwordInABox, bolt);
+            var (withRelic, heroA, foeA) = Fight(EffectKind.SwordInABox, bolt);
             int beforeA = foeA.CurrentHealth;
             withRelic.CastSkill(bolt, foeA);
             int dealtWithRelic = beforeA - foeA.CurrentHealth;
 
-            var (withoutRelic, heroB, foeB) = Fight(RelicEffect.None, bolt);
+            var (withoutRelic, heroB, foeB) = Fight(EffectKind.None, bolt);
             int beforeB = foeB.CurrentHealth;
             withoutRelic.CastSkill(bolt, foeB);
             int dealtWithout = beforeB - foeB.CurrentHealth;
@@ -73,7 +74,7 @@ namespace PrincesPalace.Domain.Tests
                 SkillTargeting.Self, 0, 0, false, 0, 40, false,
                 null, SpellPresentation.None, 0);
 
-            var (session, hero, foe) = Fight(RelicEffect.SwordInABox, heal);
+            var (session, hero, foe) = Fight(EffectKind.SwordInABox, heal);
             int foeHealthBefore = foe.CurrentHealth;
 
             session.CastSkill(heal, hero);
@@ -88,7 +89,7 @@ namespace PrincesPalace.Domain.Tests
         public void ASpellMarksItsTargetAndAnAttackConsumesItForBonusDamage()
         {
             var bolt = TestSkills.Bolt(flat: 50);
-            var (session, hero, foe) = Fight(RelicEffect.DrownedLantern, bolt);
+            var (session, hero, foe) = Fight(EffectKind.DrownedLantern, bolt);
 
             session.CastSkill(bolt, foe);
             Assert.IsTrue(session.IsMarked(foe), "the spell should have marked its target");
@@ -112,7 +113,7 @@ namespace PrincesPalace.Domain.Tests
         public void AMarkIsOnlySpentOnce()
         {
             var bolt = TestSkills.Bolt(flat: 50);
-            var (session, hero, foe) = Fight(RelicEffect.DrownedLantern, bolt);
+            var (session, hero, foe) = Fight(EffectKind.DrownedLantern, bolt);
 
             session.CastSkill(bolt, foe);
             session.ExecuteAttack(foe);
@@ -136,12 +137,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var bolt = TestSkills.Bolt(flat: 50);
 
-            var (withRelic, heroA, foeA) = Fight(RelicEffect.FirstRune, bolt);
+            var (withRelic, heroA, foeA) = Fight(EffectKind.FirstRune, bolt);
             int beforeA = foeA.CurrentHealth;
             withRelic.CastSkill(bolt, foeA);
             int dealtWithRelic = beforeA - foeA.CurrentHealth;
 
-            var (withoutRelic, heroB, foeB) = Fight(RelicEffect.None, bolt);
+            var (withoutRelic, heroB, foeB) = Fight(EffectKind.None, bolt);
             int beforeB = foeB.CurrentHealth;
             withoutRelic.CastSkill(bolt, foeB);
             int dealtWithout = beforeB - foeB.CurrentHealth;
@@ -164,7 +165,7 @@ namespace PrincesPalace.Domain.Tests
                 SkillTargeting.SingleEnemy, manaCost: 30, resourceCost: 0, false, 0, 50, true,
                 null, SpellPresentation.None, 0);
 
-            var (session, hero, foe) = Fight(RelicEffect.FirstRune, bolt);
+            var (session, hero, foe) = Fight(EffectKind.FirstRune, bolt);
             int manaBefore = hero.CurrentMana;
 
             session.CastSkill(bolt, foe);
@@ -181,12 +182,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var sweep = TestSkills.Bolt(flat: 50, effect: SkillEffect.DamageAll);
 
-            var (withRelic, heroA, foeA) = Fight(RelicEffect.FirstRune, sweep, foeCount: 2);
+            var (withRelic, heroA, foeA) = Fight(EffectKind.FirstRune, sweep, foeCount: 2);
             int beforeA = foeA.CurrentHealth;
             withRelic.CastSkill(sweep, foeA);
             int dealtWithRelic = beforeA - foeA.CurrentHealth;
 
-            var (withoutRelic, heroB, foeB) = Fight(RelicEffect.None, sweep, foeCount: 2);
+            var (withoutRelic, heroB, foeB) = Fight(EffectKind.None, sweep, foeCount: 2);
             int beforeB = foeB.CurrentHealth;
             withoutRelic.CastSkill(sweep, foeB);
             int dealtWithout = beforeB - foeB.CurrentHealth;
@@ -203,7 +204,7 @@ namespace PrincesPalace.Domain.Tests
         public void CastingTwiceInARowNeverCascades()
         {
             var bolt = TestSkills.Bolt(flat: 999999);
-            var (session, hero, foe) = Fight(RelicEffect.FirstRune, bolt);
+            var (session, hero, foe) = Fight(EffectKind.FirstRune, bolt);
 
             Assert.IsTrue(session.CastSkill(bolt, foe), "the cast should have been accepted");
             Assert.IsFalse(foe.IsAlive, "a single overwhelming cast plus its free copy should have finished it");
@@ -214,7 +215,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheHealBranchRestoresHealthAndMana()
         {
-            var (session, hero, _) = Fight(RelicEffect.LuckyDeck);
+            var (session, hero, _) = Fight(EffectKind.LuckyDeck);
             hero.CurrentHealth = 1;
             hero.PrimaryPool.Current = 0;
 
@@ -227,7 +228,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheSplashBranchHitsEveryOtherEnemyForAFractionOfTheBlow()
         {
-            var (session, hero, foeA) = Fight(RelicEffect.LuckyDeck, foeCount: 3);
+            var (session, hero, foeA) = Fight(EffectKind.LuckyDeck, foeCount: 3);
             var others = session.Encounter.Enemies.Where(e => !ReferenceEquals(e, foeA)).ToList();
             Assert.AreEqual(2, others.Count);
 
@@ -246,7 +247,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheSplashBranchNeverTouchesThePrimaryTarget()
         {
-            var (session, hero, foeA) = Fight(RelicEffect.LuckyDeck, foeCount: 2);
+            var (session, hero, foeA) = Fight(EffectKind.LuckyDeck, foeCount: 2);
             int before = foeA.CurrentHealth;
 
             session.LuckyDeckSplashForTest(hero, foeA, damage: 100);
@@ -261,7 +262,7 @@ namespace PrincesPalace.Domain.Tests
             // at the floor cannot be slowed further -- RevokeSpeedBuff clamps
             // at a minimum of 1 -- and testing the malus on one would be
             // testing the floor instead of the malus.
-            var (session, hero, foe) = Fight(RelicEffect.LuckyDeck);
+            var (session, hero, foe) = Fight(EffectKind.LuckyDeck);
             foe.Speed = 10;
             int before = foe.Speed;
 
@@ -269,7 +270,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.Less(foe.Speed, before, "the slow should reduce the real Speed stat, not a cosmetic copy");
 
-            // Tracked under StatusEffectType.Chilled, not RelicEffect.LuckyDeck,
+            // Tracked under StatusEffectType.Chilled, not EffectKind.LuckyDeck,
             // since Phase D2 (item-modifier plan) migrated this slow onto the
             // unified Chilled status -- see FightSession.Relics.LuckyDeckSlow's
             // own comment. The net Speed change this test already asserted
@@ -296,7 +297,7 @@ namespace PrincesPalace.Domain.Tests
                 var foeB = new CombatantState("B", false, 999999, 0, 1, 1);
 
                 var kit = new PlayerKit("hero", CharacterRole.Tank, null,
-                    new List<ResolvedRelic> { Relic(RelicEffect.LuckyDeck) }, null);
+                    new List<ResolvedRelic> { Relic(EffectKind.LuckyDeck) }, null);
 
                 var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foeA, foeB }),
                     new List<PlayerKit> { kit },
@@ -308,6 +309,7 @@ namespace PrincesPalace.Domain.Tests
                             DamageType.Physical, DamageType.Physical, 0), false),
                     },
                     new SeededRandom((ulong)seed)) { DamageVarianceRange = 0f };
+                TestRelics.Hold(session);
                 session.Begin();
 
                 hero.CurrentHealth = hero.MaxHealth / 2;
@@ -321,7 +323,7 @@ namespace PrincesPalace.Domain.Tests
                             || hero.CurrentMana > 0
                             || foeB.CurrentHealth < foeBHealthBefore
                             || hero.Speed != heroSpeedBefore
-                            || session.SpeedBonusFrom(foeA, RelicEffect.LuckyDeck) < 0;
+                            || session.SpeedBonusFrom(foeA, EffectKind.LuckyDeck) < 0;
             }
 
             Assert.IsTrue(anyEffect, "across 30 seeds, not one swing showed any sign of Lucky Deck firing");

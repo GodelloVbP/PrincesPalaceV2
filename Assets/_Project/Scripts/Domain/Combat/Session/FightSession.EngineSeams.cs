@@ -28,7 +28,7 @@ namespace PrincesPalace.Domain.Combat.Session
     public sealed partial class FightSession
     {
         // The SpeedBuffs key Unyielding's surge is granted and revoked under.
-        // A string rather than a RelicEffect/StatusEffectType, so the HUD's
+        // A string rather than a EffectKind/StatusEffectType, so the HUD's
         // generic speed row (FightHudModel.BuffBadgesFor) names it by itself.
         public const string UnyieldingSpeedSource = "Unyielding";
 

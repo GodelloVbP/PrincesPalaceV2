@@ -13,11 +13,11 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Flavor/rules text shown to the player. May use **bold** and {icon} tokens (see Description markup at the end of this file).")]
         public string description = "";
 
-        // Parsed against RelicEffect by name (case-insensitive) — a typo here
-        // is a content-build failure via RelicEntryResolver, not a silently
-        // inert relic.
-        [ContentDoc("Which RelicEffect this grants, matched case-insensitively; empty resolves to None.")]
-        public string effect = "";
+        // What the relic does: stat effects and at most one mechanic, each an
+        // EffectKind a relic may hold, checked by RelicEntryResolver. Empty
+        // for a relic with no behaviour yet.
+        [ContentDoc("What this relic does: stat effects and at most one mechanic; see RawEffect. Empty for a relic with no behaviour yet.")]
+        public RawEffect[] effects = Array.Empty<RawEffect>();
 
         // Optional. Points at the keyed icon under Assets/_Project/Art/Items/
         // Relics/Processed/ — empty until the art lands, in which case
@@ -44,12 +44,6 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The achievement id that must be earned before this relic can be offered; empty means available from the first run.")]
         public string unlockedBy = "";
 
-        // Numeric changes this relic makes. Empty for a relic whose whole
-        // behaviour is a RelicEffect, and populated for one that is just a
-        // number -- which is most of them, and none of which should cost C#.
-        [ContentDoc("Numeric stat changes this relic grants; see RawRelicModifier.")]
-        public RawRelicModifier[] modifiers = System.Array.Empty<RawRelicModifier>();
-
         // Mechanic (g), ACQUISITION GATE: true means this relic is only
         // ever offered to a party that has a convergence/ultimate ability
         // (ConvergenceGate.HasConvergenceAbility) -- false (the default)
@@ -59,14 +53,10 @@ namespace PrincesPalace.Domain.Content
         public bool requiresConvergenceAbility;
 
         // A relic the run holds but only ONE character acts on. Run relics
-        // reach every fielded kit, so without this an event reward meant for
-        // Shawn would work for whoever else was carrying the run.
-        //
-        // EFFECT ONLY. FightEncounterAdapter flattens relic modifiers onto
-        // every party member regardless, so RelicEntryResolver refuses a
-        // bearer on a relic that also has modifiers rather than let the
-        // field promise something the adapter does not keep.
-        [ContentDoc("Optional character id; when set, only that character gets this relic's effect. Refused together with modifiers, which apply party-wide.")]
+        // reach every fielded member, so without this an event reward meant
+        // for Shawn would work for whoever else was carrying the run. Covers
+        // every effect the relic has (EffectSet.WithRelics).
+        [ContentDoc("Optional character id; when set, only that character gets this relic's effects.")]
         public string bearer = "";
 
         // False keeps a relic out of every offer -- the draft and the shop's

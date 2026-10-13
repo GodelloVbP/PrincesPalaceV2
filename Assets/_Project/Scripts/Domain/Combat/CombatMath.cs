@@ -521,8 +521,8 @@ namespace PrincesPalace.Domain.Combat
         public const int DodgeSoftener = 100;
 
         // Applies the dodge curve to a raw dodge rating (Swift's own scaled
-        // ModifierEffect.Magnitude, NOT a direct percent — see
-        // ModifierEffectType.DodgeRating's own header), returning the
+        // Effect.Magnitude, NOT a direct percent — see
+        // EffectKind.DodgeRating's own header), returning the
         // percent chance DamagePipeline.RollDodge actually rolls against.
         //
         // Integer division, floored — matching AfterResistance's own

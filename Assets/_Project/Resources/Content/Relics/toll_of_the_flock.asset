@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: toll_of_the_flock
     DisplayName: Toll of the Flock
     Description: Every third turn Shawn takes, every enemy takes damage equal to 15% of his attack, x1.5 while he is transformed.
-    Effect: 34
     SortOrder: 40
     IconPath: Assets/_Project/Art/Items/Relics/Processed/toll_of_the_flock.png
     Rarity: 2
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 63
+      Magnitude: 15
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: sheep
     Draftable: 0

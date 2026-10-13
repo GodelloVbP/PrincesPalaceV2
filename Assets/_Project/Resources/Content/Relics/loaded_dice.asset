@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: loaded_dice
     DisplayName: Loaded Dice
     Description: At the start of the fight, **stun** one random enemy for 1 turn.
-    Effect: 22
     SortOrder: 26
     IconPath: Assets/_Project/Art/Generated/disc_metal.png
     Rarity: 2
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 51
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

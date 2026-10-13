@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: seven_teeth
     DisplayName: Bounty Hunter Contract
     Description: Each kill pays gold equal to 30% of its XP (minimum 1).
-    Effect: 8
     SortOrder: 3
     IconPath: Assets/_Project/Art/Items/Relics/Processed/seven_teeth.png
     Rarity: 1
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 37
+      Magnitude: 3
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

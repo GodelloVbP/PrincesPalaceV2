@@ -3,27 +3,28 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The numeric half of a relic.
-    //
-    // RelicEffect keeps the mechanics that are real special cases; this covers
-    // the ones that are a number on a stat, which is most of them and none of
-    // which should cost a line of C#. The rules worth pinning are the two that
+    // The numeric half of a relic: the stat kinds EffectFold applies, which
+    // are most relics and none of which should cost a line of C#. The rules worth pinning are the two that
     // decide whether a stack of individually reasonable relics stays playable:
     // percents SUM rather than compound, and flats land after them.
     public class RelicModifierTests
     {
-        private static RelicModifier Mod(RelicModifierType type, int amount) =>
-            new RelicModifier(type, amount);
+        private static Effect Mod(EffectKind type, int amount) =>
+            new Effect(type, amount);
+
+        // Held as relics, so every copy sums (EffectStacking).
+        private static EffectSet Held(params Effect[] effects) => EffectSet.Of(EffectHolder.Relic, effects);
 
         [Test]
         public void APercentAppliesToTheBase()
         {
-            int result = RelicModifiers.Apply(100, RelicStat.Attack,
-                new[] { Mod(RelicModifierType.AttackPercent, 20) });
+            int result = EffectFold.Apply(100, EffectStat.Attack,
+                Held(Mod(EffectKind.AttackPercent, 20)));
 
             Assert.AreEqual(120, result);
         }
@@ -34,11 +35,7 @@ namespace PrincesPalace.Domain.Tests
             // Two +50% relics give +100%, not +125%. Summing is arithmetic the
             // player can do; compounding is how a stack of reasonable relics
             // becomes an unplayable number nobody authored.
-            int result = RelicModifiers.Apply(100, RelicStat.Attack, new[]
-            {
-                Mod(RelicModifierType.AttackPercent, 50),
-                Mod(RelicModifierType.AttackPercent, 50),
-            });
+            int result = EffectFold.Apply(100, EffectStat.Attack, Held(Mod(EffectKind.AttackPercent, 50), Mod(EffectKind.AttackPercent, 50)));
 
             Assert.AreEqual(200, result);
         }
@@ -49,11 +46,7 @@ namespace PrincesPalace.Domain.Tests
             // 100 base, +100%, +10 flat = 210. The other order would give 220
             // and make every flat bonus quietly scale with every percent relic
             // in the run -- which reads as a bug the first time anyone checks.
-            int result = RelicModifiers.Apply(100, RelicStat.Attack, new[]
-            {
-                Mod(RelicModifierType.AttackPercent, 100),
-                Mod(RelicModifierType.AttackFlat, 10),
-            });
+            int result = EffectFold.Apply(100, EffectStat.Attack, Held(Mod(EffectKind.AttackPercent, 100), Mod(EffectKind.AttackFlat, 10)));
 
             Assert.AreEqual(210, result);
         }
@@ -61,8 +54,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AModifierForAnotherStatIsIgnored()
         {
-            int result = RelicModifiers.Apply(100, RelicStat.Attack,
-                new[] { Mod(RelicModifierType.DefensePercent, 500) });
+            int result = EffectFold.Apply(100, EffectStat.Attack,
+                Held(Mod(EffectKind.DefensePercent, 500)));
 
             Assert.AreEqual(100, result);
         }
@@ -73,53 +66,49 @@ namespace PrincesPalace.Domain.Tests
             // A relic with a real downside is the interesting kind. A stack of
             // them producing a negative max health would take the fight down
             // rather than make the character weak.
-            Assert.AreEqual(80, RelicModifiers.Apply(100, RelicStat.Attack,
-                new[] { Mod(RelicModifierType.AttackPercent, -20) }));
+            Assert.AreEqual(80, EffectFold.Apply(100, EffectStat.Attack,
+                Held(Mod(EffectKind.AttackPercent, -20))));
 
-            Assert.AreEqual(0, RelicModifiers.Apply(100, RelicStat.Attack, new[]
-            {
-                Mod(RelicModifierType.AttackPercent, -90),
-                Mod(RelicModifierType.AttackPercent, -90),
-            }));
+            Assert.AreEqual(0, EffectFold.Apply(100, EffectStat.Attack, Held(Mod(EffectKind.AttackPercent, -90), Mod(EffectKind.AttackPercent, -90))));
         }
 
         [Test]
         public void NoModifiersLeavesTheValueAlone()
         {
-            Assert.AreEqual(100, RelicModifiers.Apply(100, RelicStat.Attack, null));
-            Assert.AreEqual(100, RelicModifiers.Apply(100, RelicStat.Attack, new RelicModifier[0]));
+            Assert.AreEqual(100, EffectFold.Apply(100, EffectStat.Attack, null));
+            Assert.AreEqual(100, EffectFold.Apply(100, EffectStat.Attack, EffectSet.Empty));
         }
 
         [Test]
         public void NoneIsNeverAStatSoItCanNeverChangeAnything()
         {
-            Assert.AreEqual(RelicStat.None, Mod(RelicModifierType.None, 999).Stat);
-            Assert.AreEqual(100, RelicModifiers.Apply(100, RelicStat.None,
-                new[] { Mod(RelicModifierType.None, 999) }));
+            Assert.IsFalse(EffectCatalog.Has(EffectKind.None), "None has no catalog row, so no stat");
+            Assert.AreEqual(100, EffectFold.Apply(100, EffectStat.None, Held(Mod(EffectKind.AttackFlat, 999))));
         }
 
         // Modifier types that deliberately do NOT map to a single stat, and
         // are applied by their own path instead. Named here rather than
         // skipped by a condition, so adding one is a decision somebody makes
         // in this file rather than a hole that opens quietly.
-        private static readonly RelicModifierType[] NotSingleStat =
+        private static readonly EffectKind[] NotSingleStat =
         {
-            // Five numbers, not one -- see RelicModifiers.ApplyResistance.
-            RelicModifierType.ResistanceFlat,
+            // Five numbers, not one -- see EffectFold.ApplyResistance.
+            EffectKind.ResistanceFlat,
         };
 
         [Test]
         public void EveryModifierTypeExceptNoneMapsToARealStat()
         {
-            // Walked from the enum: a type added without a case in Stat would
-            // resolve to None and silently do nothing forever.
-            foreach (RelicModifierType type in Enum.GetValues(typeof(RelicModifierType)))
+            // Walked from the catalog: a relic stat kind added without a Stat
+            // would fold into nothing and silently do nothing forever. Relic
+            // mechanics are flags, read at their own hooks, not here.
+            foreach (var info in EffectCatalog.All)
             {
-                if (type == RelicModifierType.None) continue;
-                if (NotSingleStat.Contains(type)) continue;
+                if (!info.Allows(EffectHolder.Relic) || info.Stacking == EffectStacking.Flag) continue;
+                if (NotSingleStat.Contains(info.Kind)) continue;
 
-                Assert.AreNotEqual(RelicStat.None, Mod(type, 1).Stat,
-                    $"{type} has no case in RelicModifier.Stat, so it can never apply");
+                Assert.AreNotEqual(EffectStat.None, info.Stat,
+                    $"{info.Kind} has no EffectStat in its catalog row, so it can never apply");
             }
         }
 
@@ -131,11 +120,9 @@ namespace PrincesPalace.Domain.Tests
         {
             var before = new ResistanceByType();
 
-            var after = RelicModifiers.ApplyResistance(before, new[]
-            {
-                new RelicModifier(RelicModifierType.ResistanceFlat, 15, DamageType.Fire),
-                new RelicModifier(RelicModifierType.ResistanceFlat, 10, againstMagical: true),
-            });
+            var after = EffectFold.ApplyResistance(before, Held(
+                new Effect(EffectKind.ResistanceFlat, 15, against: DamageType.Fire),
+                new Effect(EffectKind.ResistanceFlat, 10, againstMagical: true)));
 
             Assert.AreEqual(25, after.Fire, "fire takes both the specific 15 and the magical 10");
             Assert.AreEqual(10, after.Ice, "ice takes the magical 10 alone");
@@ -147,19 +134,18 @@ namespace PrincesPalace.Domain.Tests
         {
             // The pairing is the promise the enum makes. A stat with only one
             // half is a gap an author will hit and not understand.
-            foreach (RelicStat stat in Enum.GetValues(typeof(RelicStat)))
+            foreach (EffectStat stat in Enum.GetValues(typeof(EffectStat)))
             {
-                if (stat == RelicStat.None) continue;
+                if (stat == EffectStat.None) continue;
 
                 // ArmorPenetration is FLAT ONLY, on purpose -- see
-                // RelicModifierType.ArmorPenetrationFlat's own comment: it
+                // EffectKind.ArmorPenetrationFlat's own comment: it
                 // already lands against a stat (broad Defense) that is
                 // itself already a percentage-shaped mitigation curve, the
                 // same reasoning ResistanceFlat gives for staying flat-only
                 // (ResistanceFlat is exempt from this canary entirely by
-                // never mapping to a RelicStat at all -- see RelicModifier.
-                // Stat's own switch).
-                if (stat == RelicStat.ArmorPenetration) continue;
+                // never mapping to an EffectStat at all).
+                if (stat == EffectStat.ArmorPenetration) continue;
 
                 // Balance pass 2: WeaknessDamageBonusPercent and
                 // LifestealPercent are flat-only for the identical reason --
@@ -167,33 +153,28 @@ namespace PrincesPalace.Domain.Tests
                 // multiplier, a percent-of-damage heal), so a percent-of-a-
                 // percent twin would be exactly as unreadable as it would be
                 // for ArmorPenetration or Resistance.
-                if (stat == RelicStat.WeaknessBonus || stat == RelicStat.Lifesteal) continue;
+                if (stat == EffectStat.WeaknessBonus || stat == EffectStat.Lifesteal) continue;
 
                 // The crit stats are flat points added to the party baseline
                 // (CritRules), so a percent-of-a-percent twin would read the
                 // same way as it would for Lifesteal.
-                if (stat == RelicStat.CritChance || stat == RelicStat.CritDamage) continue;
+                if (stat == EffectStat.CritChance || stat == EffectStat.CritDamage) continue;
 
-                var types = Enum.GetValues(typeof(RelicModifierType))
-                    .Cast<RelicModifierType>()
-                    .Where(t => t != RelicModifierType.None)
-                    .Select(t => Mod(t, 1))
-                    .Where(m => m.Stat == stat)
-                    .ToList();
+                var kinds = EffectCatalog.All.Where(i => i.Stat == stat).ToList();
 
-                Assert.IsTrue(types.Any(m => m.IsPercent), $"{stat} has no percent modifier");
-                Assert.IsTrue(types.Any(m => !m.IsPercent), $"{stat} has no flat modifier");
+                Assert.IsTrue(kinds.Any(i => i.Percent), $"{stat} has no percent kind");
+                Assert.IsTrue(kinds.Any(i => !i.Percent), $"{stat} has no flat kind");
             }
         }
 
         [Test]
         public void AHugeStackSaturatesRatherThanOverflowing()
         {
-            var huge = Enumerable.Range(0, 50)
-                .Select(_ => Mod(RelicModifierType.AttackFlat, int.MaxValue / 10))
-                .ToList();
+            var huge = Held(Enumerable.Range(0, 50)
+                .Select(_ => Mod(EffectKind.AttackFlat, int.MaxValue / 10))
+                .ToArray());
 
-            int result = RelicModifiers.Apply(1000, RelicStat.Attack, huge);
+            int result = EffectFold.Apply(1000, EffectStat.Attack, huge);
 
             Assert.AreEqual(int.MaxValue, result, "an int wrap would turn a stack of buffs into a negative stat");
         }
@@ -203,18 +184,18 @@ namespace PrincesPalace.Domain.Tests
         private static readonly string[] Known = { "first_forest_boss" };
         private static readonly string[] KnownCharacters = { "sheep" };
 
-        private static RawRelicEntry Relic(RawRelicModifier[] modifiers) =>
-            new RawRelicEntry { id = "x", displayName = "X", effect = "None", modifiers = modifiers };
+        private static RawRelicEntry Relic(RawEffect[] effects) =>
+            new RawRelicEntry { id = "x", displayName = "X", effects = effects };
 
         [Test]
         public void AnUnknownModifierTypeIsAContentBuildFailure()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(new[] { new RawRelicModifier { type = "Wingspan", amount = 5 } }) },
+                new List<RawRelicEntry> { Relic(new[] { new RawEffect { type = "Wingspan", magnitude = 5 } }) },
                 Known, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("not a known RelicModifierType", errors[0]);
+            StringAssert.Contains("isn't an effect a relic can grant", errors[0]);
         }
 
         [Test]
@@ -223,7 +204,7 @@ namespace PrincesPalace.Domain.Tests
             // A modifier of zero is a line of content that changes nothing,
             // which is indistinguishable from a mistyped amount.
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(new[] { new RawRelicModifier { type = "AttackPercent", amount = 0 } }) },
+                new List<RawRelicEntry> { Relic(new[] { new RawEffect { type = "AttackPercent", magnitude = 0 } }) },
                 Known, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
@@ -237,16 +218,20 @@ namespace PrincesPalace.Domain.Tests
             // one relic, one modifier, one effect.
             var raw = new RawRelicEntry
             {
-                id = "x", displayName = "X", effect = "DualWield",
-                modifiers = new[] { new RawRelicModifier { type = "AttackPercent", amount = 15 } },
+                id = "x", displayName = "X",
+                effects = new[]
+                {
+                    new RawEffect { type = "DualWield" },
+                    new RawEffect { type = "AttackPercent", magnitude = 15 },
+                },
             };
 
             bool ok = RelicEntryResolver.TryResolveAll(
                 new List<RawRelicEntry> { raw }, Known, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
-            Assert.AreEqual(RelicEffect.DualWield, resolved[0].Effect);
-            Assert.AreEqual(1, resolved[0].Modifiers.Length);
+            Assert.AreEqual(EffectKind.DualWield, resolved[0].Mechanic);
+            Assert.AreEqual(2, resolved[0].Effects.Length);
             Assert.IsTrue(resolved[0].HasBehaviour);
         }
 
@@ -254,7 +239,7 @@ namespace PrincesPalace.Domain.Tests
         public void APlaceholderHasNoBehaviourAndSaysSo()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(new RawRelicModifier[0]) }, Known, KnownCharacters, out var resolved, out _);
+                new List<RawRelicEntry> { Relic(new RawEffect[0]) }, Known, KnownCharacters, out var resolved, out _);
 
             Assert.IsTrue(ok, "a mechanic-less relic is still valid content");
             Assert.IsFalse(resolved[0].HasBehaviour);
@@ -265,8 +250,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ArmorPenetrationFlatAppliesToTheArmorPenetrationStat()
         {
-            int result = RelicModifiers.Apply(0, RelicStat.ArmorPenetration,
-                new[] { Mod(RelicModifierType.ArmorPenetrationFlat, 35) });
+            int result = EffectFold.Apply(0, EffectStat.ArmorPenetration,
+                Held(Mod(EffectKind.ArmorPenetrationFlat, 35)));
 
             Assert.AreEqual(35, result, "Pointy Nail's own number, applied as a flat addition to a base of 0");
         }
@@ -274,8 +259,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ArmorPenetrationDoesNotLeakOntoOtherStats()
         {
-            int attack = RelicModifiers.Apply(100, RelicStat.Attack,
-                new[] { Mod(RelicModifierType.ArmorPenetrationFlat, 35) });
+            int attack = EffectFold.Apply(100, EffectStat.Attack,
+                Held(Mod(EffectKind.ArmorPenetrationFlat, 35)));
 
             Assert.AreEqual(100, attack, "an armour-penetration modifier must not touch Attack");
         }

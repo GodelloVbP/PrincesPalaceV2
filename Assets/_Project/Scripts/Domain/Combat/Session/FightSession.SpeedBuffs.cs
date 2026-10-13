@@ -27,7 +27,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // SO FAR, not against the combatant's current speed, or a character who is
     // fast for some other reason would hit the cap having gained nothing.
     //
-    // KEYED BY `object`, NOT JUST RelicEffect, since Phase D2 (item-modifier
+    // KEYED BY `object`, NOT JUST EffectKind, since Phase D2 (item-modifier
     // plan). Every source here used to be a relic; Chilled is the first
     // that is not one — it is a STATUS (StatusEffectType.Chilled), and its
     // malus has to compose against the exact same TrueBaseSpeed every relic
@@ -41,7 +41,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // change here (and a boxed-enum-equality fix at the one display call
     // site that compared sources with `==` — see FightHudModel.
     // BuffBadgesFor) and touches no other call site's source code: every
-    // existing caller passes a RelicEffect literal, which boxes to `object`
+    // existing caller passes a EffectKind literal, which boxes to `object`
     // implicitly, so GrantSpeedPercent/GrantSpeedMalusPercent's own
     // arithmetic and every relic that already uses them are unchanged.
     // Chilled needs no per-source sub-keying of its own even so — see
@@ -276,7 +276,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // What a relic (or, since Phase D2, Chilled) has given this combatant
         // so far, for tests and for the cap. Zero for everyone carrying
-        // nothing. `object` so a RelicEffect literal keeps compiling
+        // nothing. `object` so a EffectKind literal keeps compiling
         // unchanged at every existing call site (an implicit boxing
         // conversion, not a source change) while StatusEffectType.Chilled
         // can key the same dictionary -- see this file's own header.
@@ -293,9 +293,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // nothing, so a caller never needs its own null check on top of the
         // empty-collection one.
         //
-        // Source is `object`, not RelicEffect, as of Phase D2 -- see this
+        // Source is `object`, not EffectKind, as of Phase D2 -- see this
         // file's own header. FightHudModel.BuffBadgesFor is the one caller
-        // that used to compare Source with `==` against a RelicEffect; that
+        // that used to compare Source with `==` against a EffectKind; that
         // comparison had to move to Equals(...) because `==` between a
         // boxed value type and `object` is REFERENCE equality, not the
         // value equality two separately-boxed equal enums need -- a real

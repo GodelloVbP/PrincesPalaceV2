@@ -19,11 +19,11 @@ namespace PrincesPalace.Domain.Tests
     // be indistinguishable if only one of them were tested.
     public class SpeedAndBountyRelicTests
     {
-        private static ResolvedRelic Relic(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
+        private static ResolvedRelic Relic(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0);
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            RelicEffect relic, int heroSpeed = 20, int heroHealth = 200)
+            EffectKind relic, int heroSpeed = 20, int heroHealth = 200)
         {
             var hero = new CombatantState("Shawn", true, heroHealth, 999, 20, heroSpeed);
             var foe = new CombatantState("Dummy", false, 999999, 0, 1, 1);
@@ -36,6 +36,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("dummy", "Dummy", new StatBlock(),
                     0, 0, false, DamageType.Physical, DamageType.Physical, 0), false) },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             return (session, hero, foe);
         }
@@ -45,7 +46,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EachSwingMakesTheWearerFaster()
         {
-            var (session, hero, foe) = Fight(RelicEffect.BallerinasSlippers, heroSpeed: 20);
+            var (session, hero, foe) = Fight(EffectKind.BallerinasSlippers, heroSpeed: 20);
 
             session.ExecuteAttack(foe);
 
@@ -59,7 +60,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheSlippersCapAtFortyPercent()
         {
-            var (session, hero, foe) = Fight(RelicEffect.BallerinasSlippers, heroSpeed: 20);
+            var (session, hero, foe) = Fight(EffectKind.BallerinasSlippers, heroSpeed: 20);
 
             for (int i = 0; i < 8; i++) session.ExecuteAttack(foe);
 
@@ -72,7 +73,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheSlippersSurviveATurnWithNoSwing()
         {
-            var (session, hero, foe) = Fight(RelicEffect.BallerinasSlippers, heroSpeed: 20);
+            var (session, hero, foe) = Fight(EffectKind.BallerinasSlippers, heroSpeed: 20);
 
             session.ExecuteAttack(foe);
             int afterSwing = hero.Speed;
@@ -98,10 +99,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ACastMakesTheWearerFasterByTwentyPercent()
         {
-            var (session, hero, _) = Fight(RelicEffect.TinFoilPipe, heroSpeed: 20);
+            var (session, hero, _) = Fight(EffectKind.TinFoilPipe, heroSpeed: 20);
 
-            bool granted = session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
-                FightTuning.PipePercent, FightTuning.PipeTurns);
+            bool granted = session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe,
+                20, FightTuning.PipeTurns);
 
             Assert.IsTrue(granted, "the pipe granted nothing");
             Assert.AreEqual(24, hero.Speed, "20 base + 20% = 24");
@@ -113,10 +114,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ThePipeFadesAfterOneTurn()
         {
-            var (session, hero, _) = Fight(RelicEffect.TinFoilPipe, heroSpeed: 20);
+            var (session, hero, _) = Fight(EffectKind.TinFoilPipe, heroSpeed: 20);
 
-            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
-                FightTuning.PipePercent, FightTuning.PipeTurns);
+            session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe,
+                20, FightTuning.PipeTurns);
             Assert.AreEqual(24, hero.Speed, "the grant should have applied");
 
             session.TickSpeedBuffsForTest(hero);
@@ -143,16 +144,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASecondPipeGrantInTheSameTurnRefreshesRatherThanStacking()
         {
-            var (session, hero, _) = Fight(RelicEffect.TinFoilPipe, heroSpeed: 20);
+            var (session, hero, _) = Fight(EffectKind.TinFoilPipe, heroSpeed: 20);
 
-            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
-                FightTuning.PipePercent, FightTuning.PipeTurns);
-            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
-                FightTuning.PipePercent, FightTuning.PipeTurns);
+            session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe,
+                20, FightTuning.PipeTurns);
+            session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe,
+                20, FightTuning.PipeTurns);
 
             Assert.AreEqual(24, hero.Speed,
                 "20 base + one 20% grant = 24; the second cast refreshed the clock, it did not stack the speed");
-            Assert.AreEqual(4, session.SpeedBonusFrom(hero, RelicEffect.TinFoilPipe),
+            Assert.AreEqual(4, session.SpeedBonusFrom(hero, EffectKind.TinFoilPipe),
                 "the pipe should be recorded as owing back one grant, not two");
         }
 
@@ -163,17 +164,17 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void APipeRefreshedTwiceStillFadesAllTheWayBack()
         {
-            var (session, hero, _) = Fight(RelicEffect.TinFoilPipe, heroSpeed: 20);
+            var (session, hero, _) = Fight(EffectKind.TinFoilPipe, heroSpeed: 20);
 
-            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
-                FightTuning.PipePercent, FightTuning.PipeTurns);
-            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
-                FightTuning.PipePercent, FightTuning.PipeTurns);
+            session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe,
+                20, FightTuning.PipeTurns);
+            session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe,
+                20, FightTuning.PipeTurns);
 
             session.TickSpeedBuffsForTest(hero);
 
             Assert.AreEqual(20, hero.Speed, "a refreshed pipe left speed behind when it expired");
-            Assert.AreEqual(0, session.SpeedBonusFrom(hero, RelicEffect.TinFoilPipe));
+            Assert.AreEqual(0, session.SpeedBonusFrom(hero, EffectKind.TinFoilPipe));
         }
 
         // THE WIRING, not just the arithmetic: casting with the Pipe equipped
@@ -188,7 +189,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheWiringActuallyReachesTheGrantWhenCasting()
         {
-            int EnemyActionsOver(RelicEffect? relic, int rounds)
+            int EnemyActionsOver(EffectKind? relic, int rounds)
             {
                 var hero = new CombatantState("Shawn", true, 999999, 999, 5, 10);
                 var foe = new CombatantState("Dummy", false, 999999, 0, 10, 11);
@@ -207,6 +208,7 @@ namespace PrincesPalace.Domain.Tests
                     new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("dummy", "Dummy", new StatBlock(),
                         0, 0, false, DamageType.Physical, DamageType.Physical, 0), false) },
                     new SeededRandom(5)) { DamageVarianceRange = 0f };
+                TestRelics.Hold(session);
                 session.Begin();
 
                 int hits = 0;
@@ -224,7 +226,7 @@ namespace PrincesPalace.Domain.Tests
             }
 
             int without = EnemyActionsOver(null, 12);
-            int with = EnemyActionsOver(RelicEffect.TinFoilPipe, 12);
+            int with = EnemyActionsOver(EffectKind.TinFoilPipe, 12);
 
             Assert.Less(with, without,
                 "casting with the Tin-Foil Pipe should win hero more of the immediate follow-up " +
@@ -239,7 +241,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AtFullHealthTheNecklaceGrantsNothing()
         {
-            var (session, hero, foe) = Fight(RelicEffect.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
+            var (session, hero, foe) = Fight(EffectKind.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
 
             session.ExecuteAttack(foe);
 
@@ -252,7 +254,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AtAQuarterHealthTheNecklaceReachesItsCeiling()
         {
-            var (session, hero, foe) = Fight(RelicEffect.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
+            var (session, hero, foe) = Fight(EffectKind.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
             hero.CurrentHealth = 50; // exactly 25%
 
             session.ExecuteAttack(foe);
@@ -266,7 +268,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BelowAQuarterHealthTheNecklaceDoesNotExceedItsCeiling()
         {
-            var (session, hero, foe) = Fight(RelicEffect.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
+            var (session, hero, foe) = Fight(EffectKind.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
             hero.CurrentHealth = 5;
 
             session.ExecuteAttack(foe);
@@ -280,7 +282,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void HealingBackUpGivesTheSpeedBonusBack()
         {
-            var (session, hero, foe) = Fight(RelicEffect.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
+            var (session, hero, foe) = Fight(EffectKind.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
             hero.CurrentHealth = 50;
             session.ExecuteAttack(foe);
             Assert.AreEqual(24, hero.Speed, "the bonus should have applied while hurt");
@@ -297,13 +299,13 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheNecklaceHitsHarderTheMoreHurtTheWearerIs()
         {
-            var (withRelic, heroA, foeA) = Fight(RelicEffect.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
+            var (withRelic, heroA, foeA) = Fight(EffectKind.ToothedNecklace, heroSpeed: 20, heroHealth: 200);
             heroA.CurrentHealth = 50;
             int beforeA = foeA.CurrentHealth;
             withRelic.ExecuteAttack(foeA);
             int dealtWithRelic = beforeA - foeA.CurrentHealth;
 
-            var (withoutRelic, heroB, foeB) = Fight(RelicEffect.None, heroSpeed: 20, heroHealth: 200);
+            var (withoutRelic, heroB, foeB) = Fight(EffectKind.None, heroSpeed: 20, heroHealth: 200);
             heroB.CurrentHealth = 50;
             int beforeB = foeB.CurrentHealth;
             withoutRelic.ExecuteAttack(foeB);
@@ -337,8 +339,8 @@ namespace PrincesPalace.Domain.Tests
 
             var relics = new List<ResolvedRelic>
             {
-                Relic(RelicEffect.BallerinasSlippers),
-                Relic(RelicEffect.TinFoilPipe),
+                Relic(EffectKind.BallerinasSlippers),
+                Relic(EffectKind.TinFoilPipe),
             };
             var kit = new PlayerKit("hero", CharacterRole.Tank, null, relics, null);
 
@@ -347,12 +349,13 @@ namespace PrincesPalace.Domain.Tests
                 new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("dummy", "Dummy", new StatBlock(),
                     0, 0, false, DamageType.Physical, DamageType.Physical, 0), false) },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
-            session.GrantSpeedPercentForTest(hero, RelicEffect.BallerinasSlippers, 10, turns: 0);
+            session.GrantSpeedPercentForTest(hero, EffectKind.BallerinasSlippers, 10, turns: 0);
             Assert.AreEqual(110, hero.Speed, "10% of the true base 100 is +10");
 
-            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe, 20, turns: 1);
+            session.GrantSpeedPercentForTest(hero, EffectKind.TinFoilPipe, 20, turns: 1);
 
             Assert.AreEqual(130, hero.Speed,
                 "the Pipe's 20% must read the TRUE base (100 -> +20), not the Slippers-inflated " +
@@ -371,12 +374,13 @@ namespace PrincesPalace.Domain.Tests
                 DamageType.Physical, DamageType.Physical, 0);
 
             var kit = new PlayerKit("hero", CharacterRole.Tank, null,
-                new List<ResolvedRelic> { Relic(RelicEffect.BountyHunterContract) }, null);
+                new List<ResolvedRelic> { Relic(EffectKind.BountyHunterContract) }, null);
 
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 new List<PlayerKit> { kit },
                 new List<EnemyKit> { new EnemyKit(enemy, false) },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
             Assert.AreEqual(0, session.BountyEarned, "nothing should be owed before anything has died");
@@ -407,7 +411,7 @@ namespace PrincesPalace.Domain.Tests
                     DamageType.Physical, DamageType.Fire, 0);
 
                 var relics = wearingTheContract
-                    ? new List<ResolvedRelic> { Relic(RelicEffect.BountyHunterContract) }
+                    ? new List<ResolvedRelic> { Relic(EffectKind.BountyHunterContract) }
                     : new List<ResolvedRelic>();
 
                 var kit = new PlayerKit("hero", CharacterRole.Tank, null, relics, null);
@@ -416,6 +420,7 @@ namespace PrincesPalace.Domain.Tests
                     new List<PlayerKit> { kit },
                     new List<EnemyKit> { new EnemyKit(enemy, false) },
                     new SeededRandom(5)) { DamageVarianceRange = 0f };
+                TestRelics.Hold(session);
                 session.Begin();
                 session.ExecuteAttack(foe);
 
@@ -443,12 +448,13 @@ namespace PrincesPalace.Domain.Tests
                     DamageType.Physical, DamageType.Physical, 0);
 
                 var kit = new PlayerKit("hero", CharacterRole.Tank, null,
-                    new List<ResolvedRelic> { Relic(RelicEffect.BountyHunterContract) }, null);
+                    new List<ResolvedRelic> { Relic(EffectKind.BountyHunterContract) }, null);
 
                 var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                     new List<PlayerKit> { kit },
                     new List<EnemyKit> { new EnemyKit(enemy, false) },
                     new SeededRandom(5)) { DamageVarianceRange = 0f };
+                TestRelics.Hold(session);
                 session.Begin();
                 session.ExecuteAttack(foe);
 
@@ -477,7 +483,7 @@ namespace PrincesPalace.Domain.Tests
 
             var kit = new PlayerKit("hero", CharacterRole.Tank,
                 new List<ResolvedSkill> { sweep },
-                new List<ResolvedRelic> { Relic(RelicEffect.ChargingCrystal) }, null);
+                new List<ResolvedRelic> { Relic(EffectKind.ChargingCrystal) }, null);
 
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foeA, foeB }),
                 new List<PlayerKit> { kit },
@@ -489,6 +495,7 @@ namespace PrincesPalace.Domain.Tests
                         DamageType.Physical, DamageType.Physical, 0), false),
                 },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
             int Sweep()

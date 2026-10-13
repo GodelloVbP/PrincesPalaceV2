@@ -211,7 +211,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // softening it. Once per combat (CombatLocks).
             if (target != null && target.IsPlayerSide && amount > 0 && target.CurrentHealth > 0
                 && amount >= target.CurrentHealth
-                && HasRelic(target, RelicEffect.PhoenixEgg)
+                && target.Effects.Has(EffectKind.PhoenixEgg)
                 && _locks.OncePerCombat(target, FightTuning.PhoenixEggLockKey))
             {
                 return new LandedPacket(PhoenixEggHatch(actor, target, amount, type));
@@ -264,10 +264,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // the Fragile Lamb. Without this a poisoned wearer would shave a
             // cooldown at every turn start. No hit path passes a null actor.
             if (actor != null && target != null && target.IsPlayerSide && toHealth > 0
-                && HasRelic(target, RelicEffect.BerserkersVest)
+                && target.Effects.Has(EffectKind.BerserkersVest)
                 && _locks.OncePerTurn(target, FightTuning.BerserkersVestLockKey))
             {
-                int shortened = ReduceCooldowns(target, FightTuning.BerserkersVestCooldownReduction);
+                int shortened = ReduceCooldowns(target, target.Effects.Magnitude(EffectKind.BerserkersVest));
                 if (shortened > 0)
                 {
                     AppendMessage($"{target.Name}'s vest bristles at the blow - cooldowns tick down.");

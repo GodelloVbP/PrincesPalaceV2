@@ -371,19 +371,14 @@ namespace PrincesPalace.Content
             return found == null ? TalentEffectSet.Empty : new TalentEffectSet(found);
         }
 
-        // Every rule this character's equipped items' ROLLED MODIFIERS
-        // contribute — AND the elemental damage their reward track has paid —
-        // flattened into the shape combat reads. The gear-side mirror of
+        // Every effect this CHARACTER holds -- their live worn items' rolled
+        // affixes (EffectHolder.Affix), then the elemental terms their reward
+        // track has paid (EffectHolder.Track) -- flattened into the shape
+        // combat reads. The run's relics are not the character's, so the
+        // adapter adds them (EffectSet.WithRelics). The gear-side mirror of
         // TalentEffects just above, same "resolved once per fight, unknown ids
-        // skipped" reasoning.
-        //
-        // THE TRACK TERM IS NOT GEAR, and this method is where it lands anyway
-        // rather than getting a seam of its own: ModifierEffectSet is the
-        // shape combat already reads elemental percentages out of, and a
-        // second set threaded to the same place would be two mechanisms for
-        // one thing. Its other production caller, ItemOfferRoll, asks only
-        // .Best(FortunateFavorBonusFlat) and cannot be disturbed by an
-        // appended elemental effect.
+        // skipped" reasoning. Its other production caller, ItemOfferRoll,
+        // asks only Magnitude(FortunateFavorBonusFlat).
         //
         // Empty for a character whose worn pieces rolled no affixes and who has
         // no track term; ItemOfferRoll populates modifierIds on drops, and
@@ -396,22 +391,21 @@ namespace PrincesPalace.Content
         // riding an inert item granting its effect anyway would be exactly
         // the class of bug that comment was written to prevent, so this
         // reads LiveEntries specifically rather than EquippedEntries().
-        public static ModifierEffectSet ModifierEffects(Character character)
+        public static EffectSet CharacterEffects(Character character)
         {
             EnsureLoaded();
 
             if (character == null)
             {
-                return ModifierEffectSet.Empty;
+                return EffectSet.Empty;
             }
 
-            List<ModifierEffect> found = null;
+            var affixes = new List<Effect>();
             foreach (var (entry, item) in ActiveLoadout(character).LiveEntries)
             {
                 foreach (var scaled in ScaledModifierEffectsForItem(item.tier, (RiftTier)entry.riftTier, entry.modifierIds))
                 {
-                    found = found ?? new List<ModifierEffect>();
-                    found.Add(scaled.Effect);
+                    affixes.Add(scaled.Effect);
                 }
             }
 
@@ -451,7 +445,7 @@ namespace PrincesPalace.Content
             // after it, so a character who somehow held both an all-spell
             // node and a per-element one on the same element gets one row
             // for that element at their combined value, not two rows that
-            // ModifierEffectSet.Best() would collapse to the larger.
+            // affix best-of stacking would collapse to the larger.
             //
             // PHYSICAL IS THE ONE EXCLUSION, and it is the whole definition
             // of "spell" this reward has: every other DamageType in the game
@@ -473,21 +467,21 @@ namespace PrincesPalace.Content
                 }
             }
 
+            var trackTerms = new List<Effect>();
             foreach (var elemental in elementalTotals)
             {
                 DamageType type = elemental.Key;
                 int n = elemental.Value;
                 if (n <= 0) continue;
 
-                found = found ?? new List<ModifierEffect>();
-                found.Add(new ModifierEffect(
+                trackTerms.Add(new Effect(
                     own == type
-                        ? ModifierEffectType.ElementalDamageOnHitPercent
-                        : ModifierEffectType.ElementalDamagePercent,
+                        ? EffectKind.ElementalDamageOnHitPercent
+                        : EffectKind.ElementalDamagePercent,
                     n, against: type));
             }
 
-            return found == null ? ModifierEffectSet.Empty : new ModifierEffectSet(found);
+            return EffectSet.Of(EffectHolder.Affix, affixes).With(EffectHolder.Track, trackTerms);
         }
 
         // ONE ITEM INSTANCE's rolled modifiers, scaled -- the shared seam
@@ -496,17 +490,17 @@ namespace PrincesPalace.Content
         // exactly one place `base x TierMultiplier(itemTier) x
         // RiftMultiplier(riftTier)` is ever computed (see ModifierMagnitude's
         // own header). A character-wide caller sums this across every worn
-        // slot into one flattened ModifierEffectSet; a UI caller wants each
+        // slot into one flattened EffectSet; a UI caller wants each
         // effect kept beside the MODIFIER it came from (which ModifierEffects'
         // flattened bag deliberately does not preserve — see
-        // ModifierEffectSet's own "MAX, NOT SUM" header), which is why this
+        // EffectSet's own "MAX, NOT SUM" header), which is why this
         // yields the pair rather than the bare effect.
         //
         // PUBLIC as ModifierEffectsForItem below, for exactly one item at a
         // time with no CombatantState/Character in scope at all — a Reckoning
         // offer or an unequipped bag stack has never been "worn" and has no
         // ActiveLoadout entry to walk.
-        private static IEnumerable<(ModifierDefinition Modifier, ModifierEffect Effect)> ScaledModifierEffectsForItem(
+        private static IEnumerable<(ModifierDefinition Modifier, Effect Effect)> ScaledModifierEffectsForItem(
             int itemTier, RiftTier riftTier, IReadOnlyList<string> modifierIds)
         {
             if (modifierIds == null || modifierIds.Count == 0)
@@ -531,8 +525,10 @@ namespace PrincesPalace.Content
                     // number, and Against/AgainstMagical are selectors, not
                     // magnitudes. Only Magnitude itself rides the tier/rift
                     // curve.
-                    int scaledMagnitude = Rounding.AwayFromZero((float)(raw.Magnitude * scale));
-                    yield return (modifier, new ModifierEffect(raw.Type, scaledMagnitude, raw.Threshold, raw.Against, raw.AgainstMagical));
+                    int scaledMagnitude = EffectCatalog.Of(raw.Kind).TierScaled
+                        ? Rounding.AwayFromZero((float)(raw.Magnitude * scale))
+                        : raw.Magnitude;
+                    yield return (modifier, new Effect(raw.Kind, scaledMagnitude, raw.Threshold, raw.Against, raw.AgainstMagical));
                 }
             }
         }
@@ -545,7 +541,7 @@ namespace PrincesPalace.Content
         // Never recomputes the tier/rift formula itself — see this method's
         // private helper for why that would be the one thing never allowed to
         // have two copies.
-        public static IReadOnlyList<(ModifierDefinition Modifier, ModifierEffect Effect)> ModifierEffectsForItem(
+        public static IReadOnlyList<(ModifierDefinition Modifier, Effect Effect)> ModifierEffectsForItem(
             int itemTier, RiftTier riftTier, IReadOnlyList<string> modifierIds)
         {
             EnsureLoaded();
@@ -738,10 +734,10 @@ namespace PrincesPalace.Content
         // Wisdom link (SheetStats.FedBy).
         //
         // NO RELICS AND NO GEAR HERE -- both need the drafted relic list and
-        // the resolved modifier set, which only the encounter adapter holds.
+        // the resolved effect set, which only the encounter adapter holds.
         // This is the sheet's number and the base BuildPrimaryPool finishes;
-        // passing a null modifier list is the identity case of
-        // RelicModifiers.Apply, so the two share one rule rather than two.
+        // an empty set is the identity case of EffectFold.Apply, so the two
+        // share one rule rather than two.
         public static int EffectiveMaxMana(Character character)
         {
             EnsureLoaded();
@@ -750,7 +746,7 @@ namespace PrincesPalace.Content
             var pool = PrimaryPoolFor(definition?.Data?.PrimaryPoolId);
             if (pool?.Data == null) return 0;
 
-            return PoolPrecedence.Capacity(pool.Data, MaxManaBonuses(character), null, 0);
+            return PoolPrecedence.Capacity(pool.Data, MaxManaBonuses(character), EffectSet.Empty);
         }
 
         // EVERY ADDITIVE Max Mana TERM A CHARACTER CARRIES, summed. Whether
@@ -786,14 +782,11 @@ namespace PrincesPalace.Content
         //
         //   1. the row's authored capacity           (always)
         //   2. talents, Wisdom, the reward track     (WisdomDerived only)
-        //   3. RelicStat.MaxMana                     (WisdomDerived only)
-        //   4. ModifierEffectType.FlatMaxManaBonus   (WisdomDerived only)
+        //   3. EffectStat.MaxMana: relic percent, then relic and Runic flats
+        //                                            (WisdomDerived only)
         //
-        // Steps 1-2 are EffectiveMaxMana; 3 and 4 are here because they need
-        // the drafted relics and the resolved gear the adapter holds. The
-        // arithmetic is unchanged from what FightEncounterAdapter did inline
-        // before this phase -- relic percent/flat first, then the gear
-        // modifier on top -- so a Runic wearer's number is the same number.
+        // Steps 1-2 are EffectiveMaxMana; 3 is here because it needs the
+        // drafted relics and the resolved gear the adapter holds.
         //
         // GAIN PER TURN TAKES THE SAME SHAPE as capacity, and for the same
         // reason: the row's authored gainPerTurn is a BASE, and for a
@@ -804,10 +797,7 @@ namespace PrincesPalace.Content
         // reading 0 does NOT mean mana stopped regenerating. manaRegen is
         // passed in rather than re-derived because the adapter has already
         // resolved the stat block.
-        public static ResourcePool BuildPrimaryPool(Character character,
-                                                    IReadOnlyList<RelicModifier> modifiers,
-                                                    ModifierEffectSet modifierEffects,
-                                                    int manaRegen)
+        public static ResourcePool BuildPrimaryPool(Character character, EffectSet effects, int manaRegen)
         {
             EnsureLoaded();
 
@@ -815,12 +805,11 @@ namespace PrincesPalace.Content
             var pool = PrimaryPoolFor(definition?.Data?.PrimaryPoolId);
             if (pool?.Data == null) return null;
 
-            var effects = modifierEffects ?? ModifierEffectSet.Empty;
+            effects = effects ?? EffectSet.Empty;
 
-            int capacity = PoolPrecedence.Capacity(pool.Data, MaxManaBonuses(character), modifiers,
-                effects.Best(ModifierEffectType.FlatMaxManaBonus));
+            int capacity = PoolPrecedence.Capacity(pool.Data, MaxManaBonuses(character), effects);
             int gainPerTurn = PoolPrecedence.GainPerTurn(pool.Data,
-                manaRegen + effects.Best(ModifierEffectType.FlatManaRegenBonus));
+                manaRegen + effects.Magnitude(EffectKind.FlatManaRegenBonus));
 
             var built = new ResourcePool(pool.Data, capacity, gainPerTurn);
 
@@ -847,13 +836,12 @@ namespace PrincesPalace.Content
         // The same chain for the two paths that have a DEFINITION and no
         // save: the tooling party (opening the Fight scene directly) and
         // every enemy. Neither has talents, a reward track or gear, so only
-        // the ability-score term and the relic modifiers survive -- and an
-        // enemy has neither of those either, which is why it passes neutral
-        // scores and a null modifier list and gets exactly the row's
-        // authored capacity, as it always did.
+        // the ability-score term and the relics survive -- and an enemy has
+        // neither of those either, which is why it passes neutral scores and
+        // an empty set and gets exactly the row's authored capacity.
         public static ResourcePool BuildPrimaryPool(string primaryPoolId,
                                                     AbilityScoreBlock scores,
-                                                    IReadOnlyList<RelicModifier> modifiers,
+                                                    EffectSet effects,
                                                     int manaRegen)
         {
             EnsureLoaded();
@@ -862,7 +850,7 @@ namespace PrincesPalace.Content
             if (pool?.Data == null) return null;
 
             return new ResourcePool(pool.Data,
-                PoolPrecedence.Capacity(pool.Data, AbilityDerivation.MaxManaBonus(scores), modifiers, 0),
+                PoolPrecedence.Capacity(pool.Data, AbilityDerivation.MaxManaBonus(scores), effects ?? EffectSet.Empty),
                 PoolPrecedence.GainPerTurn(pool.Data, manaRegen));
         }
 

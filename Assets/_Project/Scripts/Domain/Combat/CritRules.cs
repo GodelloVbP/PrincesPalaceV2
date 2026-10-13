@@ -37,7 +37,7 @@ namespace PrincesPalace.Domain.Combat
         // on the baselines above, so an unauthored block means the baseline.
         // These turn a party member's effective stats into the two
         // CombatantState fields at kit-build time.
-        // `relicBonus` is a relic's flat contribution (RelicStat.CritChance /
+        // `relicBonus` is a relic's flat contribution (EffectStat.CritChance /
         // CritDamage), summed before the clamp so a relic and gear cannot
         // together push the total past it.
         public static int PartyChancePercent(StatBlock stats, int relicBonus = 0) =>

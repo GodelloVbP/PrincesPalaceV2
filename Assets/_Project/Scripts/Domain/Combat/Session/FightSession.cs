@@ -220,7 +220,7 @@ namespace PrincesPalace.Domain.Combat.Session
             //     about striking past a bodyguard, not about ignoring what a
             //     skill says about where it may be aimed. See Reach's header.
             if (reach.Kind == ReachKind.Melee && actor.IsPlayerSide
-                && HasRelic(actor, RelicEffect.MonkeyKingsScepter))
+                && actor.Effects.Has(EffectKind.MonkeyKingsScepter))
             {
                 return true;
             }
@@ -572,7 +572,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // activity happens inside it, so two swings sharing a beat rendered
             // as one action with the second swing's number silently overwriting
             // the first's (RecordBeatAmount assigns, it does not accumulate).
-            if (target.IsAlive && HasRelic(actor, RelicEffect.DualWield))
+            if (target.IsAlive && actor.Effects.Has(EffectKind.DualWield))
             {
                 CommitBeat();
                 BeginBeat(actor, target);
@@ -792,7 +792,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ArmRunicManaDiscount(CombatantState actor)
         {
             if (actor == null) return;
-            actor.PendingManaDiscountPercent = actor.ModifierEffects.Best(ModifierEffectType.NextSkillManaDiscountPercent);
+            actor.PendingManaDiscountPercent = actor.Effects.Magnitude(EffectKind.NextSkillManaDiscountPercent);
         }
 
         // The part that never differs once a damage figure and its own message
@@ -853,7 +853,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // for, both read defensively inside the damage pipeline instead).
         //
         // ONE METHOD for three riders rather than three, because all three
-        // read the same actor.ModifierEffects bag off the same landed hit and
+        // read the same actor.Effects bag off the same landed hit and
         // none of them can fail the others -- a target already reduced to 0
         // HP by the elemental tick still gets lifestolen-from and can still be
         // pushed (harmlessly; PushBack on a combatant about to be removed
@@ -862,16 +862,8 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || target == null || damage <= 0) return;
 
-            var effects = actor.ModifierEffects;
-
-            // Vampire Dentures' own lifesteal (RelicLifestealPercent) is a
-            // SEPARATE field from gear's ModifierEffects -- see
-            // CombatantState.RelicLifestealPercent's own comment -- so an
-            // actor carrying no gear-derived on-hit rider at all (the
-            // common case for a fresh relic with no equipment involved)
-            // must not short-circuit out of this method before the
-            // lifesteal block below ever reads it.
-            if (effects.IsEmpty && actor.RelicLifestealPercent <= 0) return;
+            var effects = actor.Effects;
+            if (effects.IsEmpty) return;
 
             // Elemental on-hit damage -- the player-side mirror of the
             // Poison-on-hit template at FightSession.Enemies.cs:548. One
@@ -880,7 +872,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // funnel every other hit uses so it counts on the ledger.
             foreach (var effect in effects.All)
             {
-                if (effect.Type != ModifierEffectType.ElementalDamageOnHitPercent || !effect.Against.HasValue)
+                if (effect.Kind != EffectKind.ElementalDamageOnHitPercent || !effect.Against.HasValue)
                 {
                     continue;
                 }
@@ -979,9 +971,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // figure -- NOT CombatMath.Scale, same reasoning and the same
             // Rounding.AwayFromZero(value * pct / 100f) convention as the
             // elemental rider just above.
-            // Vampire Dentures' own half summed on top of gear's --
-            // see CombatantState.RelicLifestealPercent's own comment.
-            int lifestealPercent = effects.Best(ModifierEffectType.LifestealPercent) + actor.RelicLifestealPercent;
+            // The best affix copy plus Vampire Dentures (EffectStacking).
+            int lifestealPercent = effects.Magnitude(EffectKind.LifestealPercent);
             if (lifestealPercent > 0)
             {
                 int healed = Rounding.AwayFromZero(damage * lifestealPercent / 100f);
@@ -1001,7 +992,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Hardened's push: a CHANCE, not a guarantee, to knock the target
             // back in turn order -- reuses CombatEncounter.PushBack, the same
             // pass-through the Black Ram's Headbutt already drives.
-            int pushChance = effects.Best(ModifierEffectType.PushBackOnHitChancePercent);
+            int pushChance = effects.Magnitude(EffectKind.PushBackOnHitChancePercent);
             if (pushChance > 0 && target.IsAlive && RollPercent(pushChance))
             {
                 if (_encounter.PushBack(target, FightTuning.ModifierPushBackSlots))
@@ -1013,10 +1004,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // Frosty's chill: a CHANCE, on this landed hit, to slow the
             // target -- reuses ApplyChilled (FightSession.SpeedBuffs.cs),
             // the exact call Lucky Deck's own migrated slow now goes
-            // through. See ModifierEffectType.ChilledOnHitChancePercent for
+            // through. See EffectKind.ChilledOnHitChancePercent for
             // why the chance is authored per-modifier but the chill's own
             // speed-reduction magnitude and duration are fixed constants.
-            int chillChance = effects.Best(ModifierEffectType.ChilledOnHitChancePercent);
+            int chillChance = effects.Magnitude(EffectKind.ChilledOnHitChancePercent);
             if (chillChance > 0 && target.IsAlive && RollPercent(chillChance))
             {
                 int lost = ApplyChilled(target, FightTuning.ChilledOnHitSpeedPercent,
@@ -1034,7 +1025,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // so a rooted enemy's forfeited-turn message and any future "who
             // rooted you" query can attribute it, matching Poison/Provoked/
             // every other sourced status in this file.
-            int rootChance = effects.Best(ModifierEffectType.RootChancePercent);
+            int rootChance = effects.Magnitude(EffectKind.RootChancePercent);
             if (rootChance > 0 && target.IsAlive && RollPercent(rootChance))
             {
                 if (ApplyStatusTo(target, StatusEffectType.Rooted,
@@ -1100,7 +1091,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // own return -- Deplete's bool answers "did THIS hit break it",
             // and shrinking the input is what actually changes that answer
             // rather than merely lying about it after the fact.
-            int resistPercent = target.ModifierEffects.Best(ModifierEffectType.BreakShieldDepletionResistPercent);
+            int resistPercent = target.Effects.Magnitude(EffectKind.BreakShieldDepletionResistPercent);
             if (resistPercent > 0)
             {
                 amount = Rounding.AwayFromZero(amount * (100 - Math.Min(100, resistPercent)) / 100f);

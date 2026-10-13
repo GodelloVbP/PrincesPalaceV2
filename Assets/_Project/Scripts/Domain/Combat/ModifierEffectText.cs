@@ -14,8 +14,8 @@ namespace PrincesPalace.Domain.Combat
     //
     // TAKES AN ALREADY-SCALED EFFECT. Every Magnitude here is read as the
     // final number a combat hook would see -- base x TierMultiplier x
-    // RiftMultiplier already applied (see ModifierEffect's own header on
-    // where that happens: ContentDatabase.ModifierEffects /
+    // RiftMultiplier already applied (see Effect's own header on
+    // where that happens: ContentDatabase.CharacterEffects /
     // ModifierEffectsForItem, never here). This class only maps a TYPE to a
     // sentence FRAGMENT; it holds no scaling logic of its own to keep in sync
     // with ModifierMagnitude, and never will.
@@ -48,7 +48,7 @@ namespace PrincesPalace.Domain.Combat
     // scaled Magnitude (Chilled's own speed/duration, Root's own duration,
     // Hardened's push distance, Runic's ward conversion rate) -- those
     // constants are not per-modifier authored numbers (see each
-    // ModifierEffectType member's own comment), so there is nothing to scale
+    // EffectKind member's own comment), so there is nothing to scale
     // and nothing wrong with reading FightTuning directly for display, the
     // exact posture FightSession's own on-hit riders already take.
     public static class ModifierEffectText
@@ -82,46 +82,40 @@ namespace PrincesPalace.Domain.Combat
         // from a Fixed pool's owner, so it is still a dead pick they can
         // make. Saying so is cheap; filtering the trees is a change to what
         // the game OFFERS and is the owner's call, noted rather than built.
-        public static string Describe(ModifierEffect effect, ResolvedPool primaryPool = null)
+        public static string Describe(Effect effect, ResolvedPool primaryPool = null)
         {
             bool poolIgnoresManaSources =
                 primaryPool != null && primaryPool.CapacityRule != PoolCapacityRule.WisdomDerived;
 
-            switch (effect.Type)
+            switch (effect.Kind)
             {
-                case ModifierEffectType.ElementalDamageOnHitPercent:
+                case EffectKind.ElementalDamageOnHitPercent:
                     return $"{Keyword($"+{effect.Magnitude}%")} {ElementName(effect)} dmg on hit";
 
-                case ModifierEffectType.TypedResistanceFlat:
+                case EffectKind.ResistanceFlat:
                     return $"{Keyword($"-{ItemStatLines.DamageReductionPercent(effect.Magnitude)}%")} {ElementName(effect)} dmg taken";
 
-                case ModifierEffectType.FlatSpeedBonus:
-                    return $"{Keyword($"+{effect.Magnitude}")} Speed";
-
-                case ModifierEffectType.LifestealPercent:
+                case EffectKind.LifestealPercent:
                     return $"{Keyword($"+{effect.Magnitude}%")} lifesteal";
 
-                case ModifierEffectType.GuaranteedFirstAction:
-                    return Keyword("always acts first");
-
-                case ModifierEffectType.FlatPhysicalDamageReduction:
+                case EffectKind.FlatPhysicalDamageReduction:
                     return $"{Keyword($"-{effect.Magnitude}")} Physical dmg taken";
 
-                case ModifierEffectType.BreakShieldDepletionResistPercent:
+                case EffectKind.BreakShieldDepletionResistPercent:
                     return $"{Keyword($"-{effect.Magnitude}%")} Break Shield depletion taken";
 
-                case ModifierEffectType.OnKillSplashPercent:
+                case EffectKind.OnKillSplashPercent:
                     return $"{Keyword($"+{effect.Magnitude}%")} ATK splash on kill";
 
-                case ModifierEffectType.PushBackOnHitChancePercent:
+                case EffectKind.PushBackOnHitChancePercent:
                     return $"{Keyword($"{effect.Magnitude}%")} on hit: push back {FightTuning.ModifierPushBackSlots} in turn order";
 
-                case ModifierEffectType.FlatMaxManaBonus:
+                case EffectKind.MaxManaFlat:
                     return poolIgnoresManaSources
                         ? $"no effect on {PoolName(primaryPool)}"
                         : $"{Keyword($"+{effect.Magnitude}")} Max Mana";
 
-                case ModifierEffectType.FlatManaRegenBonus:
+                case EffectKind.FlatManaRegenBonus:
                     // "MP/turn", not "Mana Regen" -- matching the exact
                     // abbreviation ItemStatLines.BonusParts already prints
                     // one line above this in the same card for the flat stat
@@ -141,32 +135,32 @@ namespace PrincesPalace.Domain.Combat
                         ? $"no effect on {PoolName(primaryPool)}"
                         : $"{Keyword($"+{effect.Magnitude}")} MP/turn";
 
-                case ModifierEffectType.NextSkillManaDiscountPercent:
+                case EffectKind.NextSkillManaDiscountPercent:
                     return $"{Keyword($"-{effect.Magnitude}%")} next skill cost after a hit";
 
-                case ModifierEffectType.ManaToWardOnTurnStartPercent:
+                case EffectKind.ManaToWardOnTurnStartPercent:
                     return $"{Keyword($"{RatePercent(FightTuning.RunicWardConversionRate)}%")} of unspent mana as shield each turn";
 
-                case ModifierEffectType.FortunateFavorBonusFlat:
+                case EffectKind.FortunateFavorBonusFlat:
                     return $"{Keyword($"+{effect.Magnitude}")} Favor";
 
-                case ModifierEffectType.DodgeRating:
+                case EffectKind.DodgeRating:
                     // Magnitude is a RATING, not a direct percent -- see
-                    // ModifierEffectType.DodgeRating's own header. The
+                    // EffectKind.DodgeRating's own header. The
                     // player-facing line names the actual chance the curve
                     // produces (CombatMath.DodgePercentFrom), the same
-                    // posture TypedResistanceFlat above already takes
+                    // posture ResistanceFlat above already takes
                     // toward ItemStatLines.DamageReductionPercent for the
                     // identical reason: showing the raw authored number
                     // here would just be a different way of restating the
                     // exact misreading this rename exists to prevent.
                     return $"{Keyword($"+{CombatMath.DodgePercentFrom(effect.Magnitude)}%")} dodge chance";
 
-                case ModifierEffectType.ChilledOnHitChancePercent:
+                case EffectKind.ChilledOnHitChancePercent:
                     return $"{Keyword($"{effect.Magnitude}%")} on hit: Chill " +
                            $"(-{FightTuning.ChilledOnHitSpeedPercent}% Speed, {FightTuning.ChilledOnHitTurns} turns)";
 
-                case ModifierEffectType.RootChancePercent:
+                case EffectKind.RootChancePercent:
                     return $"{Keyword($"{effect.Magnitude}%")} on hit: Root ({FightTuning.RootOnHitTurns} turns)";
 
                 // None, and any future member this formatter has not caught up
@@ -198,12 +192,12 @@ namespace PrincesPalace.Domain.Combat
         // that fraction represents.
         private static int RatePercent(float rate) => Rounding.AwayFromZero(rate * 100f);
 
-        // TypedResistanceFlat's and ElementalDamageOnHitPercent's target,
+        // ResistanceFlat's and ElementalDamageOnHitPercent's target,
         // read the same way both members carry it -- AgainstMagical's
-        // "magical" shorthand only ever reaches TypedResistanceFlat (see
-        // ModifierEntryResolver.AcceptsMagicalShorthand), but this reads both
+        // "magical" shorthand only ever reaches ResistanceFlat (see
+        // EffectCatalog, EffectTarget.ElementOrMagical), but this reads both
         // fields defensively rather than assuming Against is always set.
-        private static string ElementName(ModifierEffect effect)
+        private static string ElementName(Effect effect)
         {
             if (effect.AgainstMagical)
             {

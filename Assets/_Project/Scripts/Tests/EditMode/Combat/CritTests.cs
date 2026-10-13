@@ -203,7 +203,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero();
             hero.CritChancePercent = 100;
             var foe = Foe();
-            foe.ModifierEffects = new ModifierEffectSet(new[] { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
+            foe.Effects = EffectSet.Of(EffectHolder.Affix, new[] { new Effect(EffectKind.DodgeRating, 100_000) });
 
             var outcome = Swing(40, hero, foe, new SeededRandom(3));
 

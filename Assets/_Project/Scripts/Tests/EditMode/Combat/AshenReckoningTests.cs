@@ -26,11 +26,11 @@ namespace PrincesPalace.Domain.Tests
                 detonationSplit: new[] { DamageType.Poison, DamageType.Fire });
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            CombatantState foe = null, params ModifierEffect[] foeEffects)
+            CombatantState foe = null, params Effect[] foeEffects)
         {
             var hero = new CombatantState("Hero", true, 500, 50, 40, 10);
             foe = foe ?? new CombatantState("Foe", false, 1000, 10, 5, 1);
-            if (foeEffects.Length > 0) foe.ModifierEffects = new ModifierEffectSet(foeEffects);
+            if (foeEffects.Length > 0) foe.Effects = EffectSet.Of(EffectHolder.Affix, foeEffects);
 
             var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { Reckoning() }, null, null);
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
@@ -140,7 +140,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ADodgedReckoning_ConsumesNothing()
         {
-            var (session, _, foe) = Fight(null, new ModifierEffect(ModifierEffectType.DodgeRating, 100_000));
+            var (session, _, foe) = Fight(null, new Effect(EffectKind.DodgeRating, 100_000));
             foe.Statuses.Add(new ActiveStatus(StatusEffectType.Poison, 10, 2));
             int before = foe.CurrentHealth;
 

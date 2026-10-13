@@ -105,7 +105,7 @@ namespace PrincesPalace.Domain.Stats
         // non-Physical field, so a 12th DamageType member is "magical" the
         // moment it exists instead of silently getting nothing until someone
         // remembers to add a line here. Both call sites (FightEncounterAdapter's
-        // elemental-family resistance, RelicModifiers.ApplyResistance) run once
+        // elemental-family resistance, EffectFold.ApplyResistance) run once
         // per combatant setup, not per frame or per hit, so the enum walk costs
         // nothing that matters. DamageTypeCompletenessTests.
         // WithMagicalTouchesEveryNonPhysicalMember pins this.

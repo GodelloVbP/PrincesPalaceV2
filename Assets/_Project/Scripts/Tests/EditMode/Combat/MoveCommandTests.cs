@@ -30,6 +30,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 DamageVarianceRange = 0f,
             };
+            TestRelics.Hold(session);
             session.Begin();
             return session;
         }
@@ -166,7 +167,7 @@ namespace PrincesPalace.Domain.Tests
             var partner = new CombatantState("Partner", true, 200, 10, 20, 1);
             var buckler = new List<ResolvedRelic>
             {
-                new ResolvedRelic("buckler", "Sparring Buckler", "", RelicEffect.SparringBuckler, 0),
+                new ResolvedRelic("buckler", "Sparring Buckler", "", new[] { TestRelics.Mechanic(EffectKind.SparringBuckler) }, 0),
             };
             var kits = new List<PlayerKit>
             {
@@ -177,6 +178,7 @@ namespace PrincesPalace.Domain.Tests
             var session = new FightSession(
                 new CombatEncounter(new[] { mover, partner }, new[] { Foe() }),
                 kits, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
             Assert.IsTrue(session.Move(MoveDirection.Back));

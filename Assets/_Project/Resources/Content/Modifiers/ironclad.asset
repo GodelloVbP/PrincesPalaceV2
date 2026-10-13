@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'Plating enough to turn aside a plain blow. Elemental family: Physical, the resistance half -- Hardened carries the on-hit damage and Juggernaut carries the old bundle''s stagger proc; this used to ride along with both on one bundled Hardened roll, now it is its own affix.'
     SortOrder: 13
     Effects:
-    - Type: 3
+    - Kind: 6
       Magnitude: 8
       Threshold: 0
       AgainstType: 0

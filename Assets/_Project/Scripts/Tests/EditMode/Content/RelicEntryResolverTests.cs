@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Tests
@@ -18,7 +19,7 @@ namespace PrincesPalace.Domain.Tests
 
         private static RawRelicEntry Relic(string id = "dual_wield", string effect = "DualWield")
         {
-            return new RawRelicEntry { id = id, displayName = "Dual Wield", effect = effect };
+            return new RawRelicEntry { id = id, displayName = "Dual Wield", effects = new[] { new RawEffect { type = effect } } };
         }
 
         [Test]
@@ -28,7 +29,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("dual_wield", resolved[0].Id);
-            Assert.AreEqual(RelicEffect.DualWield, resolved[0].Effect);
+            Assert.AreEqual(EffectKind.DualWield, resolved[0].Mechanic);
         }
 
         [Test]
@@ -59,7 +60,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<RawRelicEntry> { Relic(effect: "dualwield") }, KnownAchievements, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
-            Assert.AreEqual(RelicEffect.DualWield, resolved[0].Effect);
+            Assert.AreEqual(EffectKind.DualWield, resolved[0].Mechanic);
         }
 
         [Test]
@@ -91,7 +92,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<RawRelicEntry> { Relic(effect: "NotARealEffect") }, KnownAchievements, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("not a known RelicEffect", errors[0]);
+            StringAssert.Contains("isn't an effect a relic can grant", errors[0]);
         }
 
         [Test]
@@ -114,7 +115,7 @@ namespace PrincesPalace.Domain.Tests
                 new List<RawRelicEntry> { Relic(id: "a"), Relic(id: "b") }, KnownAchievements, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("one relic per effect", errors[0]);
+            StringAssert.Contains("one relic per mechanic", errors[0]);
         }
 
         // The three relics this system launches with, pinned so a rename or
@@ -125,9 +126,10 @@ namespace PrincesPalace.Domain.Tests
         {
             var entries = new List<RawRelicEntry>
             {
-                new RawRelicEntry { id = "dual_wield", displayName = "Dual Wield", effect = "DualWield" },
-                new RawRelicEntry { id = "magical_shield", displayName = "Magical Shield", effect = "MagicalShield" },
-                new RawRelicEntry { id = "bloodlust", displayName = "Bloodlust", effect = "Bloodlust" },
+                Relic("dual_wield", "DualWield"),
+                new RawRelicEntry { id = "magical_shield", displayName = "Magical Shield",
+                    effects = new[] { new RawEffect { type = "MagicalShield", magnitude = 20 } } },
+                Relic("bloodlust", "Bloodlust"),
             };
 
             bool ok = RelicEntryResolver.TryResolveAll(entries, KnownAchievements, KnownCharacters, out var resolved, out var errors);
@@ -135,8 +137,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(3, resolved.Count);
             CollectionAssert.AreEquivalent(
-                new[] { RelicEffect.DualWield, RelicEffect.MagicalShield, RelicEffect.Bloodlust },
-                resolved.ConvertAll(r => r.Effect));
+                new[] { EffectKind.DualWield, EffectKind.MagicalShield, EffectKind.Bloodlust },
+                resolved.ConvertAll(r => r.Mechanic));
         }
 
         // ---- bearer and draftable (Kinship, docs/PLAN_PETTING_ZOO.md) ------------
@@ -181,24 +183,35 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("sheep, owl, bear", errors[0]);
         }
 
-        // The adapter flattens relic modifiers onto every party member, so a
-        // bearer could not keep them to one character. Refused, not half-kept.
+        // A bearer covers every effect a relic has: its stats reach the bearer
+        // alone, the same as its mechanic (EffectSet.WithRelics).
         [Test]
-        public void ABearerOnARelicWithModifiers_IsRefused()
+        public void ABearersStats_ReachOnlyTheBearer()
         {
-            var raw = Relic("kinship", "Kinship");
+            var raw = Relic();
             raw.bearer = "sheep";
-            raw.modifiers = new[] { new RawRelicModifier { type = "AttackPercent", amount = 10 } };
+            raw.effects = new[] { new RawEffect { type = "AttackPercent", magnitude = 10 } };
 
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters, out _, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters,
+                out var resolved, out var errors);
 
-            Assert.IsFalse(ok);
-            Assert.AreEqual(1, errors.Count);
-            StringAssert.Contains("bearer 'sheep'", errors[0]);
-            StringAssert.Contains("every party member", errors[0]);
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(10, EffectSet.Empty.WithRelics(resolved, "sheep").Magnitude(EffectKind.AttackPercent));
+            Assert.AreEqual(0, EffectSet.Empty.WithRelics(resolved, "owl").Magnitude(EffectKind.AttackPercent));
         }
 
-        // ---- optional vfx (PLAN_EVENTS_BELL_AND_CARAVAN 3.5) ----------------
+        [Test]
+        public void TwoMechanicsOnOneRelic_AreRefused()
+        {
+            var raw = Relic();
+            raw.effects = new[] { new RawEffect { type = "DualWield" }, new RawEffect { type = "Bloodlust" } };
+
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters,
+                out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("a relic carries at most one", errors[0]);
+        }
 
         [Test]
         public void Vfx_IsOptionalAndDefaultsToNothing()

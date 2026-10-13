@@ -55,9 +55,9 @@ namespace PrincesPalace.Domain.Tests
             actor.Talents = new TalentEffectSet(
                 new[] { new TalentEffect(TalentEffectType.ExtraAttackOnKill, 3) }.Concat(extra).ToArray());
 
-        private static PlayerKit Kit(IReadOnlyList<ResolvedSkill> skills = null, params RelicEffect[] relics) =>
+        private static PlayerKit Kit(IReadOnlyList<ResolvedSkill> skills = null, params EffectKind[] relics) =>
             new PlayerKit("hero", CharacterRole.Tank, skills,
-                relics.Select(r => new ResolvedRelic(r.ToString(), r.ToString(), "", r, 0)).ToList(), null);
+                relics.Select(r => new ResolvedRelic(r.ToString(), r.ToString(), "", new[] { TestRelics.Mechanic(r) }, 0)).ToList(), null);
 
         // No EnemyKits, so LedgerIdOf falls through to a combatant's own Name
         // and a ledger assertion can name the body it means.
@@ -70,6 +70,7 @@ namespace PrincesPalace.Domain.Tests
                 kit == null ? null : new List<PlayerKit> { kit },
                 null,
                 new SeededRandom(1)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             return (session, encounter);
         }
 
@@ -141,9 +142,10 @@ namespace PrincesPalace.Domain.Tests
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { summoner });
             var session = new FightSession(encounter,
-                new List<PlayerKit> { Kit(null, RelicEffect.DisgruntledLackey) },
+                new List<PlayerKit> { Kit(null, EffectKind.DisgruntledLackey) },
                 new List<EnemyKit> { EnemyKitNamed("Boss") }, new SeededRandom(5),
                 summonFactory: SummonFactory) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
             var roar = new ResolvedSkill("roar", "Roar", "", "boss", 1, SkillEffect.Summon,
@@ -189,7 +191,7 @@ namespace PrincesPalace.Domain.Tests
             // three draws is a flaky test wearing a seed. Three of them, so
             // two are still standing afterwards and the fight is not over --
             // every rider bails out early on IsOver.
-            var (session, encounter) = Fight(hero, Kit(null, RelicEffect.InconspicuousKey),
+            var (session, encounter) = Fight(hero, Kit(null, EffectKind.InconspicuousKey),
                 struck, Foe("BystanderA", 1), Foe("BystanderB", 1), Foe("BystanderC", 1));
 
             session.ExecuteAttack(struck);

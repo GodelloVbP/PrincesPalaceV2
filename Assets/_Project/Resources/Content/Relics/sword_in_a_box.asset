@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: sword_in_a_box
     DisplayName: Sword in a Box
     Description: Each spell that lands on an enemy is followed by a free basic attack on it.
-    Effect: 9
     SortOrder: 15
     IconPath: Assets/_Project/Art/Items/Relics/Processed/sword_in_a_box.png
     Rarity: 3
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 38
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

@@ -327,7 +327,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private bool TryGrantBloodlust(CombatantState actor)
         {
             if (actor == null || !actor.IsPlayerSide || !actor.IsAlive
-                || !HasRelic(actor, RelicEffect.Bloodlust)
+                || !actor.Effects.Has(EffectKind.Bloodlust)
                 || _bloodlustSpent.Contains(actor))
             {
                 return false;
@@ -339,26 +339,6 @@ namespace PrincesPalace.Domain.Combat.Session
             _grantedExtraTurnTo = actor;
             AppendMessage($"{actor.Name}'s Bloodlust surges - one more turn!");
             return true;
-        }
-
-        // From the kit, not from a save-file lookup. v1 read the relic loadout
-        // out of GameplayManager.Instance.Save here, which is a large part of
-        // why this logic could not leave the controller.
-        // EVERY RELIC THEY ARE CARRYING, not just the first one.
-        //
-        // This read Relics[0] and answered "what is this character's relic
-        // effect", which was a fair question while three effects existed and a
-        // draft handed out one relic. It silently disabled the second: a character holding Bloodlust and Dual Wield
-        // gets whichever the list happens to open with, and nothing anywhere
-        // says the other one is inert.
-        //
-        // Asked as "do they have THIS" rather than "what do they have",
-        // because that is the question every call site actually has and it is
-        // the only spelling that stays correct as the list grows.
-        private bool HasRelic(CombatantState actor, RelicEffect effect)
-        {
-            var kit = KitFor(actor);
-            return kit != null && kit.HasRelic(effect);
         }
 
         // Hands the turn to whoever is Current and OPENS it. The entry every
@@ -546,7 +526,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // before this turn began") becomes a Shielded status. See
         // FightTuning.RunicWardConversionRate's own comment for why the rate
         // is a fixed, deliberately weak constant rather than an authored
-        // number, and ModifierEffectType.ManaToWardOnTurnStartPercent's own
+        // number, and EffectKind.ManaToWardOnTurnStartPercent's own
         // comment for why this is gated on Has() (a flag) rather than a
         // magnitude.
         //
@@ -577,7 +557,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // second mana-shaped row would be mana to Runic too.
             if (actor.PrimaryPool == null || !actor.PrimaryPool.RestoredByManaEffects) return;
 
-            if (!actor.ModifierEffects.Has(ModifierEffectType.ManaToWardOnTurnStartPercent)) return;
+            if (!actor.Effects.Has(EffectKind.ManaToWardOnTurnStartPercent)) return;
 
             // NO CEILING, owner 2026-09-16 (AUDIT #154). It used to be capped
             // at RunicWardPointsCap, and the cap made sense while a new ward

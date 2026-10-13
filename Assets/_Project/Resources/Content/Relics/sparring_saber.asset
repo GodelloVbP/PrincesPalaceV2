@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: sparring_saber
     DisplayName: Sparring Saber
     Description: Moving gives +30% speed for 1 turn.
-    Effect: 24
     SortOrder: 29
     IconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png
     Rarity: 0
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 53
+      Magnitude: 30
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

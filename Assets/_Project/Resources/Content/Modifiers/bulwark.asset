@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: A guard that gives less ground under pressure. BreakShieldDepletionResistPercent (15) is forward-looking infrastructure -- no player combatant carries a BreakShield today, only some bosses/elites do, so this is inert on the wearer until a future fight puts one on the player's own side. Split off Stalwart's old bundle so a roll grants the flat mitigation or the shield-resist, never both.
     SortOrder: 17
     Effects:
-    - Type: 8
+    - Kind: 20
       Magnitude: 15
       Threshold: 0
       AgainstType: 0

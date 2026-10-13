@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: magical_shield
     DisplayName: Magical Shield
     Description: After you cast a spell, gain a 20-point **ward** that lasts the rest of the fight.
-    Effect: 2
     SortOrder: 1
     IconPath: Assets/_Project/Art/Items/Relics/Processed/magical_shield.png
     Rarity: 0
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 31
+      Magnitude: 20
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

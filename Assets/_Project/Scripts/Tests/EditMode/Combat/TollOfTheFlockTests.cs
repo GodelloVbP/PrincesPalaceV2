@@ -19,11 +19,11 @@ namespace PrincesPalace.Domain.Tests
     {
         private const string Shawn = "sheep";
 
-        private static ResolvedRelic Relic(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0, bearer: Shawn, draftable: false);
+        private static ResolvedRelic Relic(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0, bearer: Shawn, draftable: false);
 
-        private static ResolvedRelic Plain(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
+        private static ResolvedRelic Plain(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0);
 
         private static ResolvedEnemy Source(string id) =>
             new ResolvedEnemy(id, id, new StatBlock(), 0, 0, false, ElementalAffinity.Neutral, 0);
@@ -43,6 +43,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 DamageVarianceRange = 0f,
             };
+            TestRelics.Hold(session);
             session.Begin();
             return session;
         }
@@ -69,7 +70,7 @@ namespace PrincesPalace.Domain.Tests
         public void ItChargesOnTheThirdSixthAndNinthOpenedTurn()
         {
             var hero = Hero();
-            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, Foe("A"), Foe("B"));
+            var session = Solo(hero, new[] { Relic(EffectKind.TollOfTheFlock) }, null, Foe("A"), Foe("B"));
             session.DrainBeats();
             Assert.AreEqual(1, session.OpenedTurnsOf(hero), "fixture: Begin opened turn 1");
 
@@ -89,7 +90,7 @@ namespace PrincesPalace.Domain.Tests
             var a = Foe("A");
             var b = Foe("B");
             var dead = Foe("Dead");
-            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, a, b, dead);
+            var session = Solo(hero, new[] { Relic(EffectKind.TollOfTheFlock) }, null, a, b, dead);
             dead.CurrentHealth = 0;
 
             Swing(session);
@@ -127,7 +128,7 @@ namespace PrincesPalace.Domain.Tests
                 PhysicalDefense = 0, MagicalDefense = 0,
             };
 
-            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, Foe("A"));
+            var session = Solo(hero, new[] { Relic(EffectKind.TollOfTheFlock) }, null, Foe("A"));
             session.DrainBeats();
             Assert.AreEqual(0, hero.PrimaryPool.Current, "fixture: the pool opens empty");
 
@@ -149,7 +150,7 @@ namespace PrincesPalace.Domain.Tests
             Transformation.Enter(hero, "a form", 99, 0, 0, 0);
             Assert.AreEqual(400, hero.Attack, "fixture: this form adds no attack");
 
-            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, Foe("A"));
+            var session = Solo(hero, new[] { Relic(EffectKind.TollOfTheFlock) }, null, Foe("A"));
             Swing(session);
             var beat = Swing(session).Single(IsFlock);
 
@@ -163,7 +164,7 @@ namespace PrincesPalace.Domain.Tests
             Transformation.Enter(hero, "the Black Ram", 99, 50, 0, 0);
             Assert.AreEqual(600, hero.Attack, "fixture: Black Ram's +50% attack");
 
-            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, Foe("A"));
+            var session = Solo(hero, new[] { Relic(EffectKind.TollOfTheFlock) }, null, Foe("A"));
             Swing(session);
             var beat = Swing(session).Single(IsFlock);
 
@@ -176,7 +177,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero();
             var frail = Foe("Frail", health: 1);
             var session = Solo(hero,
-                new[] { Relic(RelicEffect.TollOfTheFlock), Plain(RelicEffect.Bloodlust) }, null, frail, Foe("Tank"));
+                new[] { Relic(EffectKind.TollOfTheFlock), Plain(EffectKind.Bloodlust) }, null, frail, Foe("Tank"));
             session.DrainBeats();
 
             var first = Swing(session);
@@ -197,7 +198,7 @@ namespace PrincesPalace.Domain.Tests
         public void TwiceTheRateChargesTwiceAsOften(int speed, int charges)
         {
             var hero = Hero(speed: speed);
-            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, Foe("A"));
+            var session = Solo(hero, new[] { Relic(EffectKind.TollOfTheFlock) }, null, Foe("A"));
 
             int fired = 0;
             while (session.Round < 13)
@@ -216,7 +217,7 @@ namespace PrincesPalace.Domain.Tests
             var session = Fight(new[] { hero, mate },
                 new[]
                 {
-                    new PlayerKit(Shawn, CharacterRole.Tank, null, new List<ResolvedRelic> { Relic(RelicEffect.TollOfTheFlock) }, null),
+                    new PlayerKit(Shawn, CharacterRole.Tank, null, new List<ResolvedRelic> { Relic(EffectKind.TollOfTheFlock) }, null),
                     new PlayerKit("bear", CharacterRole.Tank, null, null, null),
                 },
                 Foe("A"));
@@ -242,8 +243,8 @@ namespace PrincesPalace.Domain.Tests
         public void AFlockKillArmsNoExtraActionAndScoresNoKill(bool bloodlust)
         {
             var hero = Hero();
-            var relics = new List<ResolvedRelic> { Relic(RelicEffect.TollOfTheFlock) };
-            if (bloodlust) relics.Add(Plain(RelicEffect.Bloodlust));
+            var relics = new List<ResolvedRelic> { Relic(EffectKind.TollOfTheFlock) };
+            if (bloodlust) relics.Add(Plain(EffectKind.Bloodlust));
             else hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.ExtraAttackOnKill, 1) });
 
             var tank = Foe("Tank");
@@ -278,7 +279,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero();
             var tank = Foe("Tank");
             var frail = Foe("Frail");
-            var session = Solo(hero, new[] { Relic(RelicEffect.TollOfTheFlock) }, null, tank, frail);
+            var session = Solo(hero, new[] { Relic(EffectKind.TollOfTheFlock) }, null, tank, frail);
 
             Swing(session);
             Assert.AreEqual(2, session.OpenedTurnsOf(hero));
@@ -300,7 +301,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var bear = Hero(name: "Bjorn");
             var session = Fight(new[] { bear },
-                new[] { new PlayerKit("bear", CharacterRole.Tank, null, new List<ResolvedRelic> { Relic(RelicEffect.TollOfTheFlock) }, null) },
+                new[] { new PlayerKit("bear", CharacterRole.Tank, null, new List<ResolvedRelic> { Relic(EffectKind.TollOfTheFlock) }, null) },
                 Foe("A"));
 
             var beats = new List<CombatBeat>();
@@ -312,7 +313,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheRelicsAuthoredPresentationRidesTheBeat()
         {
-            var relic = Relic(RelicEffect.TollOfTheFlock);
+            var relic = Relic(EffectKind.TollOfTheFlock);
             relic.Vfx = new SpellPresentation { path = "Vfx/ghost_flock", sfxPath = "Audio/Sfx/toll" };
             var session = Solo(Hero(), new[] { relic }, null, Foe("A"));
 
@@ -339,7 +340,7 @@ namespace PrincesPalace.Domain.Tests
                 hero.Talents = new TalentEffectSet(new[] { new TalentEffect(TalentEffectType.TransformDurationBonus, wrath) });
             }
 
-            var relics = bell ? new[] { Relic(RelicEffect.BellwethersBell) } : new ResolvedRelic[0];
+            var relics = bell ? new[] { Relic(EffectKind.BellwethersBell) } : new ResolvedRelic[0];
             var session = Solo(hero, relics, new List<ResolvedSkill> { BlackRamMode() }, Foe("A", speed: 1));
             session.DrainBeats();
 
@@ -371,7 +372,7 @@ namespace PrincesPalace.Domain.Tests
                 new[]
                 {
                     new PlayerKit("bear", CharacterRole.Tank, new List<ResolvedSkill> { BlackRamMode() },
-                        new List<ResolvedRelic> { Relic(RelicEffect.BellwethersBell) }, null),
+                        new List<ResolvedRelic> { Relic(EffectKind.BellwethersBell) }, null),
                 },
                 Foe("A", speed: 1));
             session.DrainBeats();

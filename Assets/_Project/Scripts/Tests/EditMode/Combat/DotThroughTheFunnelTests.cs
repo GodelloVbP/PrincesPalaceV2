@@ -20,8 +20,8 @@ namespace PrincesPalace.Domain.Tests
     {
         private const string KinshipLine = "Kinship turns the blow aside.";
 
-        private static ResolvedRelic Relic(RelicEffect effect, string bearer = null) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0, bearer: bearer);
+        private static ResolvedRelic Relic(EffectKind effect, string bearer = null) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0, bearer: bearer);
 
         private static (FightSession session, CombatantState foe) Fight(
             CombatantState hero, string kitId = "sheep", IReadOnlyList<ResolvedSkill> skills = null,
@@ -31,6 +31,7 @@ namespace PrincesPalace.Domain.Tests
             var kit = new PlayerKit(kitId, CharacterRole.Tank, skills, relics.ToList(), null);
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 new List<PlayerKit> { kit }, null, new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             session.DrainBeats();
             session.DrainImmediateMessages();
@@ -52,7 +53,7 @@ namespace PrincesPalace.Domain.Tests
         public void ADotTickSpendsKinship_TheFirstTickIsCancelledAndTheSecondLands()
         {
             var hero = Hero();
-            var (session, _) = Fight(hero, "sheep", null, Relic(RelicEffect.Kinship, bearer: "sheep"));
+            var (session, _) = Fight(hero, "sheep", null, Relic(EffectKind.Kinship, bearer: "sheep"));
             session.ApplyStatusToForTest(hero, StatusEffectType.Poison, 10, 3);
 
             session.TickStatusesForTest(hero);
@@ -78,7 +79,7 @@ namespace PrincesPalace.Domain.Tests
         public void ACancelledTickStillFeedsThePoolsOnce()
         {
             var hero = new CombatantState("Shawn", true, 100, Fury(0, 10), 20, 20);
-            var (session, _) = Fight(hero, "sheep", null, Relic(RelicEffect.Kinship, bearer: "sheep"));
+            var (session, _) = Fight(hero, "sheep", null, Relic(EffectKind.Kinship, bearer: "sheep"));
             session.ApplyStatusToForTest(hero, StatusEffectType.Poison, 10, 3);
 
             session.TickStatusesForTest(hero);
@@ -93,7 +94,7 @@ namespace PrincesPalace.Domain.Tests
         public void ALethalDotTickHatchesThePhoenixEgg()
         {
             var hero = Hero();
-            var (session, _) = Fight(hero, "sheep", null, Relic(RelicEffect.PhoenixEgg));
+            var (session, _) = Fight(hero, "sheep", null, Relic(EffectKind.PhoenixEgg));
             hero.CurrentHealth = 5;
             session.ApplyStatusToForTest(hero, StatusEffectType.Poison, 10, 3);
 
@@ -112,7 +113,7 @@ namespace PrincesPalace.Domain.Tests
         public void ADotTickOnAHatchedShellEatsTheShell()
         {
             var hero = Hero();
-            var (session, foe) = Fight(hero, "sheep", null, Relic(RelicEffect.PhoenixEgg));
+            var (session, foe) = Fight(hero, "sheep", null, Relic(EffectKind.PhoenixEgg));
             session.DealDamageForTest(foe, hero, 999, DamageType.Physical); // hatch, EggHealth = 100
             session.ApplyStatusToForTest(hero, StatusEffectType.Poison, 10, 3);
 
@@ -128,7 +129,7 @@ namespace PrincesPalace.Domain.Tests
         public void ADotTickCrossingThirtyPercentFiresTheCrown()
         {
             var hero = Hero();
-            var (session, foe) = Fight(hero, "sheep", null, Relic(RelicEffect.WorldEndersCrown));
+            var (session, foe) = Fight(hero, "sheep", null, Relic(EffectKind.WorldEndersCrown));
             hero.CurrentHealth = 35;
             session.ApplyStatusToForTest(hero, StatusEffectType.Poison, 10, 3);
 
@@ -150,7 +151,7 @@ namespace PrincesPalace.Domain.Tests
                 0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
             var hero = Hero(speed: 100);
             var (session, foe) = Fight(hero, "sheep", new List<ResolvedSkill> { skill },
-                Relic(RelicEffect.BerserkersVest));
+                Relic(EffectKind.BerserkersVest));
 
             session.CastSkill(0, hero);
             int before = session.CooldownRemaining(hero, "s");
@@ -181,6 +182,7 @@ namespace PrincesPalace.Domain.Tests
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { rat, tank }),
                 new List<PlayerKit> { new PlayerKit("hero", CharacterRole.Tank, null, null, null) },
                 null, new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             session.ApplyStatusToForTest(rat, StatusEffectType.Poison, 10, 3, source: hero);
 

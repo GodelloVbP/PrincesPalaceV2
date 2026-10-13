@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'A veil of the same Rift-sliver turns arcane harm aside. Elemental family: Arcane, the resistance half -- Astral is Arcane''s separate on-hit affix. Split off Astral''s old bundle so a roll grants one or the other, never both.'
     SortOrder: 11
     Effects:
-    - Type: 3
+    - Kind: 6
       Magnitude: 8
       Threshold: 0
       AgainstType: 5

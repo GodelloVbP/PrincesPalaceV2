@@ -717,7 +717,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- diagnostic ----------------------------------------------------
         //
         // DIAGNOSTIC ONLY, and weaker than everything above on purpose. A
-        // RelicEffect or TalentEffectType member has no single observable a
+        // EffectKind or TalentEffectType member has no single observable a
         // table could assert -- a relic's effect shows up in a damage number,
         // a status, a shop roll or a turn order depending on which one it is,
         // and several are conditional on board state a fixture would have to
@@ -734,8 +734,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void DiagnosticEveryRelicEffectIsNamedOutsideItsOwnEnum()
         {
-            AssertEveryMemberIsNamed(typeof(RelicEffect), "RelicEffect.cs",
-                exempt: RelicEffect.None.ToString());
+            AssertEveryMemberIsNamed(typeof(EffectKind), "EffectKind.cs",
+                exempt: EffectKind.None.ToString());
         }
 
         [Test]

@@ -17,7 +17,7 @@ namespace PrincesPalace.Domain.Content
     // more is worth having in front of whoever next reaches to widen it.
     //
     // The original argument was that a content record references enums from
-    // all over Domain -- DamageType, SkillEffect, RelicModifier,
+    // all over Domain -- DamageType, SkillEffect, Effect,
     // EquipmentSlot -- so enumerating the reachable set by hand would drift,
     // and a freshness check that misses an input is worse than none. Both
     // halves of that are true. What it left out is the price: 267 files in the
@@ -66,7 +66,8 @@ namespace PrincesPalace.Domain.Content
             // ContentInputCoverageTests derives it and prints the missing
             // lines verbatim in its failure message.
             ("Assets/_Project/Scripts/Domain/Combat/DamageInstance.cs", null, false),
-            ("Assets/_Project/Scripts/Domain/Combat/ModifierEffect.cs", null, false),
+            ("Assets/_Project/Scripts/Domain/Combat/Effect.cs", null, false),
+            ("Assets/_Project/Scripts/Domain/Combat/EffectKind.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/Reach.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/ScalingAxis.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/Session/StageApproach.cs", null, false),

@@ -117,8 +117,8 @@ namespace PrincesPalace.Domain.Combat
         // Protect/Vulnerable/Chilled -- a standing malus, not a spent-on-one-
         // occurrence status like Stun/Shielded/Empowered. Magnitude is
         // ignored, the same "present or absent" shape Protect/Vulnerable's
-        // own Magnitude is NOT (those read it) but GuaranteedFirstAction/
-        // ManaToWardOnTurnStartPercent (ModifierEffectType) already are.
+        // own Magnitude is NOT (those read it) but EffectKind.
+        // ManaToWardOnTurnStartPercent already is.
         //
         // THE TENTH, item-modifier plan Phase D3, and the one enemy-only by
         // construction rather than by convention: it builds on

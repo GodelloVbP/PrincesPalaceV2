@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // relic needs it to, which costs one method and one call -- far less than
     // the confidence lost by a surface that is half real.
     //
-    // WHAT THIS IS NOT is a data-driven relic language. RelicEffect's own header
+    // WHAT THIS IS NOT is a data-driven relic language. EffectKind's own header
     // makes that argument and it is right: "strike twice", "halve the next hit"
     // and "take another turn" have no shared shape, and a JSON grammar able to
     // express all three would be a programming language with worse tooling. The
@@ -42,7 +42,7 @@ namespace PrincesPalace.Domain.Combat.Session
     //
     // Numeric relics do not appear here at all -- a relic that is a number
     // applied to a stat is authored entirely in relics.json through
-    // RelicModifier, and always was.
+    // Effect, and always was.
     public partial class FightSession
     {
         // ---- the swing -----------------------------------------------------------
@@ -64,8 +64,8 @@ namespace PrincesPalace.Domain.Combat.Session
             EndPotency();
 
             // The Salt Ledger: a swing pays down what is owed.
-            if (HasRelic(actor, RelicEffect.SaltLedger)
-                && ReduceCooldowns(actor, FightTuning.SaltLedgerTurns) > 0)
+            if (actor.Effects.Has(EffectKind.SaltLedger)
+                && ReduceCooldowns(actor, actor.Effects.Magnitude(EffectKind.SaltLedger)) > 0)
             {
                 AppendMessage($"{actor.Name}'s Salt Ledger settles a debt - cooldowns tick down.");
             }
@@ -73,10 +73,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // Ballerina's Slippers: warming up, to a ceiling, for the rest of
             // the fight. Silent once the cap is reached rather than repeating
             // a line every swing about a bonus that is no longer growing.
-            if (HasRelic(actor, RelicEffect.BallerinasSlippers))
+            if (actor.Effects.Has(EffectKind.BallerinasSlippers))
             {
-                int gained = GrantSpeedPercent(actor, RelicEffect.BallerinasSlippers,
-                    FightTuning.SlippersPercentPerSwing, turns: 0,
+                int gained = GrantSpeedPercent(actor, EffectKind.BallerinasSlippers,
+                    actor.Effects.Magnitude(EffectKind.BallerinasSlippers), turns: 0,
                     capPercent: FightTuning.SlippersCapPercent);
 
                 if (gained > 0) AppendMessage($"{actor.Name} finds their footing - faster.");
@@ -116,14 +116,14 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             EndPotency();
 
-            // Magical Shield: the next hit taken is halved.
+            // Magical Shield: a ward rises after the cast.
             RaiseMagicalShield(actor);
 
             // Tin-Foil Pipe: quick until their next turn. Refreshes rather
             // than stacks -- see GrantSpeedPercent.
-            if (HasRelic(actor, RelicEffect.TinFoilPipe)
-                && GrantSpeedPercent(actor, RelicEffect.TinFoilPipe,
-                    FightTuning.PipePercent, FightTuning.PipeTurns) > 0)
+            if (actor.Effects.Has(EffectKind.TinFoilPipe)
+                && GrantSpeedPercent(actor, EffectKind.TinFoilPipe,
+                    actor.Effects.Magnitude(EffectKind.TinFoilPipe), FightTuning.PipeTurns) > 0)
             {
                 AppendMessage($"{actor.Name}'s pipe crackles - everything speeds up for a moment.");
             }
@@ -163,7 +163,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || target == null || !target.IsAlive) return;
             if (target.IsPlayerSide == actor.IsPlayerSide) return;
-            if (!HasRelic(actor, RelicEffect.SwordInABox)) return;
+            if (!actor.Effects.Has(EffectKind.SwordInABox)) return;
 
             CommitBeat();
             BeginBeat(actor, target);
@@ -207,7 +207,7 @@ namespace PrincesPalace.Domain.Combat.Session
                                   int resourceSpent, PoolTierResolution.Result poolTier = default)
         {
             if (actor == null || target == null || !target.IsAlive) return;
-            if (!HasRelic(actor, RelicEffect.FirstRune)) return;
+            if (!actor.Effects.Has(EffectKind.FirstRune)) return;
             if (skill.Effect != SkillEffect.DamageSingle) return;
 
             CommitBeat();
@@ -236,22 +236,22 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ApplyMark(CombatantState actor, CombatantState target)
         {
             if (actor == null || target == null || !target.IsAlive) return;
-            if (!HasRelic(actor, RelicEffect.DrownedLantern)) return;
+            if (!actor.Effects.Has(EffectKind.DrownedLantern)) return;
 
             _marked.Add(target);
         }
 
-        // Consumed by an ATTACK specifically -- see FightTuning.MarkBonusPercent
+        // Consumed by an ATTACK specifically -- see EffectKind.DrownedLantern
         // for why this lives beside PotencyBonus/NecklaceDamageBonus rather than
         // inside TotalDamage itself: TotalDamage is every path a hit can land
         // through, and this is deliberately only one of them.
         private int MarkBonus(CombatantState actor, CombatantState target, int baseAmount)
         {
             if (actor == null || target == null || baseAmount <= 0) return 0;
-            if (!HasRelic(actor, RelicEffect.DrownedLantern)) return 0;
+            if (!actor.Effects.Has(EffectKind.DrownedLantern)) return 0;
             if (!_marked.Remove(target)) return 0;
 
-            int bonus = baseAmount * FightTuning.MarkBonusPercent / 100;
+            int bonus = baseAmount * actor.Effects.Magnitude(EffectKind.DrownedLantern) / 100;
             if (bonus > 0) AppendMessage($"{target.Name}'s mark ignites - bonus damage!");
             return bonus;
         }
@@ -268,7 +268,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void RollLuckyDeck(CombatantState actor, CombatantState target, int damage)
         {
             if (actor == null || target == null || damage <= 0) return;
-            if (!HasRelic(actor, RelicEffect.LuckyDeck)) return;
+            if (!actor.Effects.Has(EffectKind.LuckyDeck)) return;
 
             float roll = _rng?.NextFloat() ?? 0f;
 
@@ -352,7 +352,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // STILL SHOWN via SpeedBonusFrom -- see TagLineFor in
         // FightController.Hud.cs, which reads
         // SpeedBonusFrom(target, StatusEffectType.Chilled) < 0 to print
-        // "SLOWED" on the enemy plate now that Chilled, not RelicEffect.LuckyDeck,
+        // "SLOWED" on the enemy plate now that Chilled, not EffectKind.LuckyDeck,
         // is the dictionary key the malus actually lands under.
         private void LuckyDeckSlow(CombatantState actor, CombatantState target)
         {
@@ -455,7 +455,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private int NecklaceRampPercent(CombatantState actor, int maxPercent)
         {
             if (actor == null || actor.MaxHealth <= 0) return 0;
-            if (!HasRelic(actor, RelicEffect.ToothedNecklace)) return 0;
+            if (!actor.Effects.Has(EffectKind.ToothedNecklace)) return 0;
 
             int healthPercent = actor.CurrentHealth * 100 / actor.MaxHealth;
             int floor = FightTuning.NecklaceFloorHealthPercent;
@@ -475,7 +475,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (baseAmount <= 0) return 0;
 
-            int percent = NecklaceRampPercent(actor, FightTuning.NecklaceMaxDamagePercent);
+            int percent = NecklaceRampPercent(actor, actor?.Effects.Magnitude(EffectKind.ToothedNecklace) ?? 0);
             return percent <= 0 ? 0 : baseAmount * percent / 100;
         }
 
@@ -487,16 +487,16 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null) return;
 
             int percent = NecklaceRampPercent(actor, FightTuning.NecklaceMaxSpeedPercent);
-            int already = SpeedBonusFrom(actor, RelicEffect.ToothedNecklace);
+            int already = SpeedBonusFrom(actor, EffectKind.ToothedNecklace);
 
             if (percent <= 0)
             {
-                if (already > 0) RevokeSpeedBuff(actor, RelicEffect.ToothedNecklace);
+                if (already > 0) RevokeSpeedBuff(actor, EffectKind.ToothedNecklace);
                 return;
             }
 
-            RevokeSpeedBuff(actor, RelicEffect.ToothedNecklace);
-            GrantSpeedPercent(actor, RelicEffect.ToothedNecklace, percent, turns: 0);
+            RevokeSpeedBuff(actor, EffectKind.ToothedNecklace);
+            GrantSpeedPercent(actor, EffectKind.ToothedNecklace, percent, turns: 0);
         }
 
         // ---- the kill ------------------------------------------------------------
@@ -512,10 +512,10 @@ namespace PrincesPalace.Domain.Combat.Session
         private void PayBounty(CombatantState actor, CombatantState victim)
         {
             if (actor == null || victim == null || !actor.IsPlayerSide) return;
-            if (!HasRelic(actor, RelicEffect.BountyHunterContract)) return;
+            if (!actor.Effects.Has(EffectKind.BountyHunterContract)) return;
 
             int worth = SourceFor(victim)?.Source?.ExpReward ?? 0;
-            int paid = worth * FightTuning.BountyPerLevel / 10;
+            int paid = worth * actor.Effects.Magnitude(EffectKind.BountyHunterContract) / 10;
             if (paid <= 0) paid = 1;
 
             BountyEarned += paid;

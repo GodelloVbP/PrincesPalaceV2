@@ -16,19 +16,20 @@ MonoBehaviour:
     Id: thick_hide
     DisplayName: Thick Hide
     Description: +40 max HP, -5% speed.
-    Effect: 0
     SortOrder: 12
     IconPath: Assets/_Project/Art/Items/Relics/Processed/thick_hide.png
     Rarity: 0
     UnlockedBy: 
-    Modifiers:
-    - Type: 9
-      Amount: 40
+    Effects:
+    - Kind: 9
+      Magnitude: 40
+      Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
-    - Type: 5
-      Amount: -5
+    - Kind: 5
+      Magnitude: -5
+      Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0

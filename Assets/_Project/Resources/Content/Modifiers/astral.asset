@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: 'A sliver of the Rift rides every hit home. Elemental family: Arcane, the damage half -- Moonveil is Arcane''s separate resistance affix, split off this modifier''s old two-effect bundle.'
     SortOrder: 10
     Effects:
-    - Type: 1
+    - Kind: 17
       Magnitude: 10
       Threshold: 0
       AgainstType: 5

@@ -18,7 +18,7 @@ namespace PrincesPalace.Domain.Content
     //
     // WisdomDerived is mana as it has always worked: the authored number is a
     // BASE, and every Max Mana source in the game (AbilityDerivation's Wisdom
-    // bonus, talents, relics, the reward track, FlatMaxManaBonus) adds to it.
+    // bonus, talents, relics, the reward track, MaxManaFlat) adds to it.
     // Fixed is the opposite promise, and it is the whole reason this is an
     // enum rather than a bool on a number: a Fixed pool is EXACTLY its
     // authored capacity from every source, which is what lets a resource say

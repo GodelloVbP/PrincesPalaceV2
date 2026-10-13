@@ -14,7 +14,7 @@ namespace PrincesPalace.Domain.Tests
     // RefreshChilledSpeed), Lucky Deck's migration onto it, its composition
     // with the Toothed Necklace's speed ramp (a buff, deliberately left
     // untouched by this phase), and the new Frosty on-hit rider
-    // (ModifierEffectType.ChilledOnHitChancePercent). The real-content,
+    // (EffectKind.ChilledOnHitChancePercent). The real-content,
     // scaled-through-a-real-fight half of Frosty lives in
     // FrostyModifierReachesCombatTests (PlayMode, needs Resources).
     //
@@ -31,8 +31,8 @@ namespace PrincesPalace.Domain.Tests
         private static FightSession Session(CombatEncounter encounter) =>
             new FightSession(encounter, null, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
 
-        private static void Give(CombatantState combatant, params ModifierEffect[] effects) =>
-            combatant.ModifierEffects = new ModifierEffectSet(effects);
+        private static void Give(CombatantState combatant, params Effect[] effects) =>
+            combatant.Effects = EffectSet.Of(EffectHolder.Affix, effects);
 
         // ---- the read hook itself ----------------------------------------------
 
@@ -274,7 +274,7 @@ namespace PrincesPalace.Domain.Tests
             session.LuckyDeckSlowForTest(actor, target);
 
             // -(20 * 30 / 100) = -6 -- the exact figure the pre-migration
-            // GrantSpeedMalusPercent(target, RelicEffect.LuckyDeck, 30, 1)
+            // GrantSpeedMalusPercent(target, EffectKind.LuckyDeck, 30, 1)
             // call always produced.
             Assert.AreEqual(14, target.Speed, "Lucky Deck's own balance must not silently move just because the plumbing did");
         }
@@ -318,10 +318,10 @@ namespace PrincesPalace.Domain.Tests
             var target = Fighter("Foe", false, speed: 100);
             var session = Session(new CombatEncounter(new[] { actor }, new[] { target }));
 
-            session.GrantSpeedMalusPercentForTest(target, RelicEffect.LuckyDeck, 30, turns: 1);
+            session.GrantSpeedMalusPercentForTest(target, EffectKind.LuckyDeck, 30, turns: 1);
             Assert.AreEqual(70, target.Speed, "fixture: one slow takes 30 off the true base");
 
-            session.GrantSpeedMalusPercentForTest(target, RelicEffect.LuckyDeck, 30, turns: 1);
+            session.GrantSpeedMalusPercentForTest(target, EffectKind.LuckyDeck, 30, turns: 1);
 
             Assert.AreEqual(70, target.Speed,
                 "a second slow from the same source resets the clock, it does not deepen the malus");
@@ -329,8 +329,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- composing with the necklace ramp (a BUFF, untouched by this phase) ----
 
-        private static ResolvedRelic Relic(RelicEffect effect) =>
-            new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
+        private static ResolvedRelic Relic(EffectKind effect) =>
+            new ResolvedRelic(effect.ToString(), effect.ToString(), "", new[] { TestRelics.Mechanic(effect) }, 0);
 
         // THE INTERACTION TEST. A combatant carrying BOTH the Necklace's
         // low-health speed ramp (a buff) AND Chilled (a debuff) at once must
@@ -350,7 +350,7 @@ namespace PrincesPalace.Domain.Tests
             hero.CurrentHealth = 50; // exactly 25% -- the necklace's ramp ceiling
 
             var kit = new PlayerKit("hero", CharacterRole.Tank, null,
-                new List<ResolvedRelic> { Relic(RelicEffect.ToothedNecklace) }, null);
+                new List<ResolvedRelic> { Relic(EffectKind.ToothedNecklace) }, null);
 
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 new List<PlayerKit> { kit },
@@ -360,6 +360,7 @@ namespace PrincesPalace.Domain.Tests
                         DamageType.Physical, DamageType.Physical, 0), false),
                 },
                 new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
 
             // One swing is enough for AutoResolveEnemyTurns to hand hero its
@@ -392,7 +393,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNotNull(chilled, "Chilled must still be an active status after the necklace's ramp cleared");
         }
 
-        // ---- frosty's on-hit rider (ModifierEffectType.ChilledOnHitChancePercent) ----
+        // ---- frosty's on-hit rider (EffectKind.ChilledOnHitChancePercent) ----
 
         [Test]
         public void ChilledOnHit_LandsTheStatus_WhenTheChanceRollSucceeds()
@@ -405,7 +406,7 @@ namespace PrincesPalace.Domain.Tests
             // (and Chilled ticking once) inside this same ExecuteAttack call.
             var hero = Fighter("Hero", true, attack: 20, speed: 200);
             var foe = Fighter("Foe", false, maxHealth: 1000, speed: 20);
-            Give(hero, new ModifierEffect(ModifierEffectType.ChilledOnHitChancePercent, 100));
+            Give(hero, new Effect(EffectKind.ChilledOnHitChancePercent, 100));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
@@ -440,7 +441,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Fighter("Hero", true, attack: 20, speed: 10);
             var foe = Fighter("Foe", false, maxHealth: 1000, speed: 5);
-            Give(hero, new ModifierEffect(ModifierEffectType.ChilledOnHitChancePercent, 0));
+            Give(hero, new Effect(EffectKind.ChilledOnHitChancePercent, 0));
 
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);

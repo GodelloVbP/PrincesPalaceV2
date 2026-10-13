@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: disgruntled_lackey
     DisplayName: Disgruntled Lackey
     Description: Whenever an enemy summons a unit, the summoner takes damage equal to the max HP of the first living party member carrying this relic.
-    Effect: 27
     SortOrder: 32
     IconPath: Assets/_Project/Art/Items/Relics/Processed/disgruntled_lackey.png
     Rarity: 4
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 56
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

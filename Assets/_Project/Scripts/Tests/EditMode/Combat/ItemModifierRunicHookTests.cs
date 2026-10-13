@@ -37,9 +37,9 @@ namespace PrincesPalace.Domain.Tests
                 new List<PlayerKit> { Kit() }, null, new SeededRandom(3))
             { DamageVarianceRange = 0f };
 
-        private static void Give(CombatantState combatant, params ModifierEffect[] effects)
+        private static void Give(CombatantState combatant, params Effect[] effects)
         {
-            combatant.ModifierEffects = new ModifierEffectSet(effects);
+            combatant.Effects = EffectSet.Of(EffectHolder.Affix, effects);
         }
 
         // ---- NextSkillManaDiscountPercent ---------------------------------------
@@ -49,7 +49,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Hero();
             var foe = Foe();
-            Give(hero, new ModifierEffect(ModifierEffectType.NextSkillManaDiscountPercent, 25));
+            Give(hero, new Effect(EffectKind.NextSkillManaDiscountPercent, 25));
 
             Assert.AreEqual(0, hero.PendingManaDiscountPercent, "fixture check: nothing armed before any swing");
 
@@ -65,7 +65,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Hero(mana: 100);
             var foe = Foe();
-            Give(hero, new ModifierEffect(ModifierEffectType.NextSkillManaDiscountPercent, 25));
+            Give(hero, new Effect(EffectKind.NextSkillManaDiscountPercent, 25));
 
             var session = Session(hero, foe);
             session.ExecuteAttack(foe); // arms the discount
@@ -88,7 +88,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = Hero(mana: 100);
             var foe = Foe();
-            Give(hero, new ModifierEffect(ModifierEffectType.NextSkillManaDiscountPercent, 25));
+            Give(hero, new Effect(EffectKind.NextSkillManaDiscountPercent, 25));
 
             var session = Session(hero, foe);
             var skill = Skill(20);
@@ -111,7 +111,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero(mana: 100, speed: 50);
             hero.PrimaryPool.Current = 40;
             var foe = Foe(speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
+            Give(hero, new Effect(EffectKind.ManaToWardOnTurnStartPercent, 0));
 
             var session = Session(hero, foe);
             session.ExecuteAttack(foe);
@@ -137,7 +137,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero(mana: 100, speed: 50);
             hero.PrimaryPool.Current = 40;
             var foe = Foe(speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
+            Give(hero, new Effect(EffectKind.ManaToWardOnTurnStartPercent, 0));
 
             var session = Session(hero, foe);
             session.ExecuteAttack(foe);
@@ -179,7 +179,7 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero(mana: 1000, speed: 50);
             hero.PrimaryPool.Current = 1000;
             var foe = Foe(speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
+            Give(hero, new Effect(EffectKind.ManaToWardOnTurnStartPercent, 0));
 
             var session = Session(hero, foe);
             session.ExecuteAttack(foe);
@@ -210,7 +210,7 @@ namespace PrincesPalace.Domain.Tests
                 Current = 60,
             };
             var foe = Foe(speed: 1);
-            Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
+            Give(hero, new Effect(EffectKind.ManaToWardOnTurnStartPercent, 0));
 
             var session = Session(hero, foe);
             session.ExecuteAttack(foe);

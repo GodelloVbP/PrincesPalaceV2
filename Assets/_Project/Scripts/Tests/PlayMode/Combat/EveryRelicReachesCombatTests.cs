@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEngine;
 using PrincesPalace;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.PlayModeTests
@@ -58,7 +59,7 @@ namespace PrincesPalace.PlayModeTests
         public void EveryRelicWithAnEffectResolvesToThatExactEffectOnTheKit()
         {
             var withEffect = ContentDatabase.Relics
-                .Where(r => r != null && r.Data.Effect != RelicEffect.None)
+                .Where(r => r != null && r.Data.Mechanic != EffectKind.None)
                 .ToList();
 
             Assert.IsNotEmpty(withEffect, "fixture: content should have at least one effect relic");
@@ -72,10 +73,19 @@ namespace PrincesPalace.PlayModeTests
 
                 var kitRelics = built.Session.KitFor(built.Party[0]).Relics.ToList();
 
-                if (kitRelics.Count != 1 || kitRelics[0].Effect != relic.Data.Effect)
+                if (kitRelics.Count != 1 || kitRelics[0].Mechanic != relic.Data.Mechanic)
                 {
-                    wrong.Add($"{relic.id} authored as {relic.Data.Effect} but the kit carried " +
-                              (kitRelics.Count == 0 ? "nothing" : string.Join(",", kitRelics.Select(r => r.Effect))));
+                    wrong.Add($"{relic.id} authored as {relic.Data.Mechanic} but the kit carried " +
+                              (kitRelics.Count == 0 ? "nothing" : string.Join(",", kitRelics.Select(r => r.Mechanic))));
+                }
+
+                // And the combatant HOLDS it, which is what every hook asks
+                // (CombatantState.Effects) -- unless a bearer keeps it from
+                // this member.
+                bool reaches = relic.Data.ReachesCharacter(OneParty()[0]);
+                if (built.Party[0].Effects.Has(relic.Data.Mechanic) != reaches)
+                {
+                    wrong.Add($"{relic.id}: the combatant's effects {(reaches ? "lack" : "carry")} {relic.Data.Mechanic}");
                 }
             }
 
@@ -85,14 +95,15 @@ namespace PrincesPalace.PlayModeTests
 
         // Every relic with a NUMERIC modifier, checked the same exhaustive
         // way: drafted alone, and its stat must actually have moved. Catches
-        // a modifier authored with the wrong RelicModifierType string, or a
+        // a modifier authored with the wrong EffectKind string, or a
         // damageType typo that made a ResistanceFlat modifier resolve to
         // nothing.
         [Test]
         public void EveryRelicWithModifiersActuallyChangesAStat()
         {
             var withModifiers = ContentDatabase.Relics
-                .Where(r => r != null && r.Data.Modifiers != null && r.Data.Modifiers.Length > 0)
+                .Where(r => r != null && r.Data.Effects != null
+                            && r.Data.Effects.Any(e => EffectCatalog.Of(e.Kind).Stacking != EffectStacking.Flag))
                 .ToList();
 
             Assert.IsNotEmpty(withModifiers, "fixture: content should have at least one modifier relic");
@@ -122,7 +133,7 @@ namespace PrincesPalace.PlayModeTests
             int baseWeaknessBonus = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
                 new Domain.Rng.SeededRandom(11)).Party[0].WeaknessMultiplierBonusPercent;
             int baseRelicLifesteal = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
-                new Domain.Rng.SeededRandom(11)).Party[0].RelicLifestealPercent;
+                new Domain.Rng.SeededRandom(11)).Party[0].Effects.Magnitude(EffectKind.LifestealPercent);
 
             var inert = new List<string>();
 
@@ -138,7 +149,7 @@ namespace PrincesPalace.PlayModeTests
                              || actor.MaxHealth != baseHealth || actor.Speed != baseSpeed
                              || actor.ArmorPenetration != baseArmorPenetration
                              || actor.WeaknessMultiplierBonusPercent != baseWeaknessBonus
-                             || actor.RelicLifestealPercent != baseRelicLifesteal
+                             || actor.Effects.Magnitude(EffectKind.LifestealPercent) != baseRelicLifesteal
                              || !actor.TypedResistance.IsEmpty;
 
                 if (!moved) inert.Add(relic.id);

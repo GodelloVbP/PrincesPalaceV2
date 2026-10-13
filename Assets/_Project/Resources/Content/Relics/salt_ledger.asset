@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: salt_ledger
     DisplayName: The Salt Ledger
     Description: Each attack you land reduces all your cooldowns by 1.
-    Effect: 13
     SortOrder: 4
     IconPath: Assets/_Project/Art/Items/Relics/Processed/salt_ledger.png
     Rarity: 3
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 42
+      Magnitude: 1
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

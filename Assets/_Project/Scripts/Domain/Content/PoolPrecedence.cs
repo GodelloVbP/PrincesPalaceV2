@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using PrincesPalace.Domain.Combat;
 
 namespace PrincesPalace.Domain.Content
 {
@@ -30,13 +30,9 @@ namespace PrincesPalace.Domain.Content
     public static class PoolPrecedence
     {
         // `derivedBonuses` is every additive Max Mana term the caller has
-        // already summed; `flatBonus` is the gear modifier applied AFTER
-        // relics, because RelicModifiers.Apply reads RelicModifier and never
-        // ModifierEffect, so the two cannot be summed before the multiply.
-        // That ordering is not new -- it is what FightEncounterAdapter did
-        // inline before the pool model, preserved here rather than tidied.
-        public static int Capacity(ResolvedPool definition, int derivedBonuses,
-                                   IReadOnlyList<RelicModifier> modifiers, int flatBonus)
+        // already summed; `effects` carries the held Max Mana terms (relic
+        // percent and flat, a Runic affix's flat), folded percent-first.
+        public static int Capacity(ResolvedPool definition, int derivedBonuses, EffectSet effects)
         {
             if (definition == null) return 0;
 
@@ -46,8 +42,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             int total = Math.Max(0, definition.Capacity + derivedBonuses);
-            total = RelicModifiers.Apply(total, RelicStat.MaxMana, modifiers);
-            return Math.Max(0, total + flatBonus);
+            return EffectFold.Apply(total, EffectStat.MaxMana, effects);
         }
 
         // THE SAME SHAPE FOR INCOME, deliberately: a pool whose capacity

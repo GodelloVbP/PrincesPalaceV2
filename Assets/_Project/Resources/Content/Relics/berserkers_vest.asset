@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: berserkers_vest
     DisplayName: Berserker's Vest
     Description: Getting hit reduces all your cooldowns by 1, once per turn.
-    Effect: 30
     SortOrder: 35
     IconPath: Assets/_Project/Art/Items/Relics/Processed/berserkers_vest.png
     Rarity: 3
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 59
+      Magnitude: 1
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

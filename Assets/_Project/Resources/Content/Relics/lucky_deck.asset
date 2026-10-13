@@ -16,12 +16,17 @@ MonoBehaviour:
     Id: lucky_deck
     DisplayName: Lucky Deck
     Description: 'Each attack you land rolls at random: heal 5% HP and 10% mana, deal 25% of the damage to every other enemy, or slow the target by 30% for 1 turn.'
-    Effect: 10
     SortOrder: 16
     IconPath: Assets/_Project/Art/Items/Relics/Processed/lucky_deck.png
     Rarity: 3
     UnlockedBy: 
-    Modifiers: []
+    Effects:
+    - Kind: 39
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
     RequiresConvergenceAbility: 0
     Bearer: 
     Draftable: 1

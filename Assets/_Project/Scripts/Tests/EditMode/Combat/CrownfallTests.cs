@@ -26,14 +26,14 @@ namespace PrincesPalace.Domain.Tests
                 damageInstancesIfConsumed: new[] { new DamageInstance(DamageType.Arcane, 12) });
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            bool giveDrownedLantern = false, params ModifierEffect[] foeEffects)
+            bool giveDrownedLantern = false, params Effect[] foeEffects)
         {
             var hero = new CombatantState("Hero", true, 500, 50, 40, 10);
             var foe = new CombatantState("Foe", false, 1000, 10, 5, 1);
-            if (foeEffects.Length > 0) foe.ModifierEffects = new ModifierEffectSet(foeEffects);
+            if (foeEffects.Length > 0) foe.Effects = EffectSet.Of(EffectHolder.Affix, foeEffects);
 
             var relics = giveDrownedLantern
-                ? new List<ResolvedRelic> { new ResolvedRelic("lantern", "Drowned Lantern", "", RelicEffect.DrownedLantern, 0) }
+                ? new List<ResolvedRelic> { new ResolvedRelic("lantern", "Drowned Lantern", "", new[] { TestRelics.Mechanic(EffectKind.DrownedLantern) }, 0) }
                 : null;
 
             var skills = new List<ResolvedSkill> { TestSkills.Bolt(flat: 1), Crownfall() };
@@ -48,6 +48,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 DamageVarianceRange = 0f,
             };
+            TestRelics.Hold(session);
             return (session, hero, foe);
         }
 
@@ -100,7 +101,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ADodgedCrownfall_LeavesTheMarkOnTheTarget()
         {
-            var (session, hero, foe) = Fight(false, new ModifierEffect(ModifierEffectType.DodgeRating, 100_000));
+            var (session, hero, foe) = Fight(false, new Effect(EffectKind.DodgeRating, 100_000));
             Marks.Apply(foe, hero);
             int before = foe.CurrentHealth;
 

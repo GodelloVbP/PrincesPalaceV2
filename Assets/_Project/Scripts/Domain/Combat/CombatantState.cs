@@ -52,7 +52,7 @@ namespace PrincesPalace.Domain.Combat
         // BroadDefense) before mitigation, floored at 0 there. A derived
         // stat on the ATTACKER, set once at kit-build time and never
         // recomputed -- gear/relics add to it via
-        // RelicModifiers.Apply(RelicStat.ArmorPenetration, ...), same as
+        // EffectFold.Apply(EffectStat.ArmorPenetration, ...), same as
         // every other flat/percent stat on this class.
         //
         // Set after construction rather than taken as a constructor
@@ -124,21 +124,17 @@ namespace PrincesPalace.Domain.Combat
         // before asking a question.
         public TalentEffectSet Talents = TalentEffectSet.Empty;
 
-        // Every rule this combatant's worn items' ROLLED MODIFIERS
-        // contribute to the fight, flattened once at encounter build time —
-        // see ModifierEffectSet, which mirrors Talents just above field for
-        // field and reasoning for reasoning. Never null: the shared Empty
-        // instance is the normal case for literally every combatant today,
-        // more so than Talents — Phase A1 (EquipmentSlotEntry/InventoryEntry
-        // modifierIds) landed the storage, but Phase A3 has not wired the
-        // roll yet, so no equipped item's modifierIds is ever non-empty in a
-        // real save. No call site has to null-check before asking a
-        // question either way.
-        public ModifierEffectSet ModifierEffects = ModifierEffectSet.Empty;
+        // Everything this combatant holds -- the run's relics that reach
+        // them, worn affixes, reward-track terms -- flattened once at
+        // encounter build time (FightEncounterAdapter); every relic and affix
+        // hook asks it through Has / Magnitude / Threshold. Never null: Empty
+        // is every enemy's and every bare character's, so no call site
+        // null-checks.
+        public EffectSet Effects = EffectSet.Empty;
 
         // Runic's one-shot tempo rider: armed (to the discount PERCENT, not
         // just a bool -- the consuming call site needs the number, and
-        // reading it back off ModifierEffects a second time would mean
+        // reading it back off Effects a second time would mean
         // re-deriving "which swing armed this" logic there too) the moment a
         // plain swing lands for a wearer of NextSkillManaDiscountPercent,
         // consumed and zeroed the next time mana is charged for ANY skill
@@ -275,18 +271,9 @@ namespace PrincesPalace.Domain.Combat
         // Balance pass 2. Jo-Sun's Book of Anatomy: a flat percent added
         // MULTIPLICATIVELY to the super-effective (weakness) multiplier
         // only -- see CombatMath.EffectivenessMultiplier's own header.
-        // Same "set once at kit-build time from a RelicModifier" shape
+        // Same "set once at kit-build time from the effect set" shape
         // ArmorPenetration already uses.
         public int WeaknessMultiplierBonusPercent;
-
-        // Vampire Dentures: the RELIC half of lifesteal, summed alongside
-        // ModifierEffectType.LifestealPercent (gear's own half) inside
-        // ApplyModifierOnHitRiders -- see that method's own comment. A
-        // separate field rather than folded into ModifierEffects because
-        // RelicModifiers.Apply only ever reads RelicModifier, the same
-        // reason ArmorPenetration and WeaknessMultiplierBonusPercent are
-        // each their own field rather than routed through ModifierEffects.
-        public int RelicLifestealPercent;
 
         // Phoenix Egg. IsPhoenixEgg is false for literally everyone who has
         // not just cheated a fatal blow this way -- EggHealth/

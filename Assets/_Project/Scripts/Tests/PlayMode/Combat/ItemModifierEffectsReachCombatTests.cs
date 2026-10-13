@@ -4,11 +4,12 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // The Phase A2 seam: CombatantState.ModifierEffects gets built and
+    // The Phase A2 seam: CombatantState.Effects gets built and
     // attached at the same place Talents/relics/WeaponScaling already are.
     //
     // STILL SCOPED TO "the wire exists and answers Empty for gear with no
@@ -54,7 +55,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // THE HEADLINE PHASE A2 CLAIM: every real character today resolves
-        // to ModifierEffectSet.Empty, because Phase A1 gave modifierIds a
+        // to EffectSet.Empty, because Phase A1 gave modifierIds a
         // real field but nothing populates it yet (Phase A3's roll). Walks
         // every character in content rather than picking one, since the
         // claim is about ALL of them, and a fresh Character() starts with
@@ -68,10 +69,10 @@ namespace PrincesPalace.PlayModeTests
             foreach (var definition in characters)
             {
                 var character = new Character(definition.id);
-                var effects = ContentDatabase.ModifierEffects(character);
+                var effects = ContentDatabase.CharacterEffects(character);
 
                 Assert.IsTrue(effects.IsEmpty,
-                    $"'{definition.id}' resolved a non-empty ModifierEffectSet, but nothing in the game " +
+                    $"'{definition.id}' resolved a non-empty EffectSet, but nothing in the game " +
                     "populates modifierIds yet (Phase A3 wires the roll) -- this should be unreachable today.");
             }
         }
@@ -91,15 +92,15 @@ namespace PrincesPalace.PlayModeTests
             var character = new Character(definition.id);
             character.equipment.Set(item.equipSlot, item.id);
 
-            var effects = ContentDatabase.ModifierEffects(character);
+            var effects = ContentDatabase.CharacterEffects(character);
 
             Assert.IsTrue(effects.IsEmpty,
                 "equipping an item with no rolled modifierIds must not produce any modifier effects");
         }
 
-        // THE WIRE ITSELF: a real fight build reaches CombatantState.ModifierEffects
+        // THE WIRE ITSELF: a real fight build reaches CombatantState.Effects
         // without throwing, and it is never null -- CombatantState's own
-        // default (ModifierEffectSet.Empty) covers every combatant the
+        // default (EffectSet.Empty) covers every combatant the
         // adapter did not explicitly set it for (every enemy, and the
         // tooling-only party path -- see FightEncounterAdapter's own
         // comment on why that overload has no Character to read equipment
@@ -114,7 +115,7 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var combatant in built.Party)
             {
-                Assert.IsNotNull(combatant.ModifierEffects, $"'{combatant.Name}' has a null ModifierEffects");
+                Assert.IsNotNull(combatant.Effects, $"'{combatant.Name}' has a null ModifierEffects");
             }
         }
 
@@ -157,7 +158,7 @@ namespace PrincesPalace.PlayModeTests
                 new Domain.Rng.SeededRandom(11));
 
             Assert.IsNotNull(built);
-            Assert.IsTrue(built.Party[0].ModifierEffects.IsEmpty);
+            Assert.IsTrue(built.Party[0].Effects.IsEmpty);
         }
     }
 }

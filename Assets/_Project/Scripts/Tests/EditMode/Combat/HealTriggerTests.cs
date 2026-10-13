@@ -23,10 +23,11 @@ namespace PrincesPalace.Domain.Tests
         {
             var hero = new CombatantState("Bjorn", true, 100, 0, 20, 20) { CritChancePercent = 0 };
             var foe = new CombatantState("Foe", false, 1000, 0, 1, 1);
-            var crown = new ResolvedRelic("crown", "crown", "", RelicEffect.WorldEndersCrown, 0);
+            var crown = new ResolvedRelic("crown", "crown", "", new[] { TestRelics.Mechanic(EffectKind.WorldEndersCrown) }, 0);
             var kit = new PlayerKit("bjorn", CharacterRole.Tank, null, new List<ResolvedRelic> { crown }, null);
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 new List<PlayerKit> { kit }, null, new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
             session.Begin();
             session.DrainBeats();
             session.DrainImmediateMessages();
@@ -54,7 +55,7 @@ namespace PrincesPalace.Domain.Tests
         public void LifestealDoesNotFireTheCrown()
         {
             var (session, hero, foe) = Fight();
-            hero.RelicLifestealPercent = 50;
+            hero.Effects = hero.Effects.With(EffectHolder.Relic, new[] { new Effect(EffectKind.LifestealPercent, 50) });
 
             session.ExecuteAttack(foe);
 
