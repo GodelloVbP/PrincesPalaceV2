@@ -340,12 +340,9 @@ namespace PrincesPalace.Domain.Content
                 set.displayName.Trim(),
                 pieceId,
                 tier,
-                at.StatBonus,
-                at.AbilityScoreBonus,
                 cost,
                 sortOrder,
                 at.IconPath,
-                at.Requirements,
                 $"{setId}_{pieceId}",
                 curve);
         }

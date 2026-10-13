@@ -63,15 +63,19 @@ namespace PrincesPalace.PlayModeTests
         // moves nothing and would make this helper pick a no-op fixture. A
         // live main-hand WEAPON still moves Attack, via WeaponPower, so it
         // still qualifies.
+        // What the item grants at its own tier, un-honed.
+        private static GearStats Gear(ItemDefinition item) =>
+            ContentDatabase.Effective(ItemInstance.Of(item.id, 0)).Value;
+
         private static ItemDefinition AStatItem()
         {
             return ContentDatabase.Items.FirstOrDefault(i =>
                 i != null
                 && i.kind != ItemKind.Consumable
-                && ((i.kind == ItemKind.Weapon && i.StatBonusAt(0).attack != 0)
-                    || i.StatBonusAt(0).physicalDefense != 0
-                    || i.StatBonusAt(0).magicalDefense != 0
-                    || i.StatBonusAt(0).maxHealth != 0));
+                && ((i.kind == ItemKind.Weapon && Gear(i).StatBonus.attack != 0)
+                    || Gear(i).StatBonus.physicalDefense != 0
+                    || Gear(i).StatBonus.magicalDefense != 0
+                    || Gear(i).StatBonus.maxHealth != 0));
         }
 
         private static FightEncounterAdapter.BuiltFight BuildFor(Character character)
@@ -99,7 +103,7 @@ namespace PrincesPalace.PlayModeTests
             var bareState = BuildFor(bare).Party[0];
             var gearedState = BuildFor(geared).Party[0];
 
-            var bonus = item.StatBonusAt(0);
+            var bonus = Gear(item).StatBonus;
             // A weapon still moves Attack (via WeaponPower); a non-weapon
             // item's attack bonus does not -- see AStatItem's own header.
             bool attackShouldMove = item.kind == ItemKind.Weapon && bonus.attack != 0;
@@ -127,9 +131,9 @@ namespace PrincesPalace.PlayModeTests
             return ContentDatabase.Items.FirstOrDefault(i =>
                 i != null
                 && i.kind == ItemKind.Equipment
-                && (i.StatBonusAt(0).physicalDefense != 0
-                    || i.StatBonusAt(0).magicalDefense != 0
-                    || i.StatBonusAt(0).maxHealth != 0));
+                && (Gear(i).StatBonus.physicalDefense != 0
+                    || Gear(i).StatBonus.magicalDefense != 0
+                    || Gear(i).StatBonus.maxHealth != 0));
         }
 
         // The stat path must agree with the sheet's. If these two ever diverge

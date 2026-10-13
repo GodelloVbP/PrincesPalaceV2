@@ -18,45 +18,7 @@ MonoBehaviour:
   kind: 2
   effect: 0
   amount: 20
-  attackBonus: 0
   equipSlot: 5
-  statBonus:
-    maxHealth: 30
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 10
-    magicalDefense: 7
-    critChance: 0
-    critDamage: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  requirements:
-    strength: 7
-    dexterity: 0
-    constitution: 3
-    wisdom: 0
-    intelligence: 5
-    charisma: 0
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  spellScaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
   startingStock: 0
   iconPath: Assets/_Project/Art/Items/arcane_gauntlets_sheet/level_7.png
   cost: 425

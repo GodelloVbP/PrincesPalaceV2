@@ -865,7 +865,7 @@ namespace PrincesPalace
 
                 // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, a SEPARATE
                 // colour from the rarity-toned halo/burst above -- offer.
-                // RiftTier and item.Rarity are two independent axes (see
+                // RiftTier and the item's tier are two independent axes (see
                 // RiftTierColors' own header). Fully transparent at
                 // RiftTier.Ordinary rather than gameObject-deactivated,
                 // matching how the halo/burst pair themselves stay always-

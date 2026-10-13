@@ -301,9 +301,9 @@ namespace PrincesPalace.Domain.Tests
 
             var top = Resolve(set).First(p => p.Tier == 10);
 
-            Assert.AreEqual(3, top.AbilityScoreBonus.constitution);
-            Assert.AreEqual(30, top.StatBonus.physicalDefense);
-            Assert.AreEqual(3, top.StatBonus.manaRegen);
+            Assert.AreEqual(3, top.At.AbilityScoreBonus.constitution);
+            Assert.AreEqual(30, top.At.StatBonus.physicalDefense);
+            Assert.AreEqual(3, top.At.StatBonus.manaRegen);
         }
 
         // ---- Phase 4 (D4): the budget derivation, pinned literals ---------
@@ -333,17 +333,17 @@ namespace PrincesPalace.Domain.Tests
 
             var byTier = Resolve(set).ToDictionary(p => p.Tier);
 
-            Assert.AreEqual(11, byTier[0].StatBonus.maxHealth);
-            Assert.AreEqual(3, byTier[0].StatBonus.physicalDefense);
-            Assert.AreEqual(2, byTier[0].StatBonus.magicalDefense);
+            Assert.AreEqual(11, byTier[0].At.StatBonus.maxHealth);
+            Assert.AreEqual(3, byTier[0].At.StatBonus.physicalDefense);
+            Assert.AreEqual(2, byTier[0].At.StatBonus.magicalDefense);
 
-            Assert.AreEqual(34, byTier[5].StatBonus.maxHealth);
-            Assert.AreEqual(9, byTier[5].StatBonus.physicalDefense);
-            Assert.AreEqual(6, byTier[5].StatBonus.magicalDefense);
+            Assert.AreEqual(34, byTier[5].At.StatBonus.maxHealth);
+            Assert.AreEqual(9, byTier[5].At.StatBonus.physicalDefense);
+            Assert.AreEqual(6, byTier[5].At.StatBonus.magicalDefense);
 
-            Assert.AreEqual(105, byTier[10].StatBonus.maxHealth);
-            Assert.AreEqual(28, byTier[10].StatBonus.physicalDefense);
-            Assert.AreEqual(21, byTier[10].StatBonus.magicalDefense);
+            Assert.AreEqual(105, byTier[10].At.StatBonus.maxHealth);
+            Assert.AreEqual(28, byTier[10].At.StatBonus.physicalDefense);
+            Assert.AreEqual(21, byTier[10].At.StatBonus.magicalDefense);
         }
 
         // A stat with no weight in the profile stays zero at every tier --
@@ -358,8 +358,8 @@ namespace PrincesPalace.Domain.Tests
 
             var byTier = Resolve(set).ToDictionary(p => p.Tier);
 
-            Assert.AreEqual(0, byTier[0].StatBonus.magicalDefense);
-            Assert.AreEqual(0, byTier[10].StatBonus.magicalDefense);
+            Assert.AreEqual(0, byTier[0].At.StatBonus.magicalDefense);
+            Assert.AreEqual(0, byTier[10].At.StatBonus.magicalDefense);
         }
 
         // ---- rejections --------------------------------------------------

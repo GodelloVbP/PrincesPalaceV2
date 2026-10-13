@@ -768,14 +768,10 @@ public static class ContentBuilder
             asset.kind = KindOf(item.Kind);
             asset.effect = item.Effect == ResolvedItemEffect.RestoreMana ? ItemEffect.RestoreMana : ItemEffect.Heal;
             asset.amount = item.Amount;
-            asset.attackBonus = item.AttackBonus;
             // EquipmentSlot needs no name-mapping the way ItemKind does — it
             // lives in Domain and both sides use it directly, same as
             // DamageType on EnemyDefinition.
             asset.equipSlot = item.Slot;
-            asset.statBonus = item.StatBonus;
-            asset.abilityScoreBonus = item.AbilityScoreBonus;
-            asset.requirements = item.Requirements;
             asset.baseId = item.Id;
             if (asset.IsEquippable)
             {
@@ -843,13 +839,6 @@ public static class ContentBuilder
             asset.description = weapon.Description;
             asset.kind = ItemKind.Weapon;
             asset.equipSlot = weapon.Slot;
-            // A Weapon's flat power rides attackBonus rather than
-            // statBonus.attack, because that is the field
-            // FightController.RollWeaponDrop tiers the loot table on.
-            asset.attackBonus = weapon.AttackBonus;
-            asset.scaling = weapon.Scaling;
-            asset.spellScaling = weapon.SpellScaling;
-            asset.requirements = weapon.Requirements;
             asset.cost = weapon.Cost;
             asset.tier = weapon.Tier;
             asset.weaponFamilyId = weapon.FamilyId;
@@ -930,9 +919,6 @@ public static class ContentBuilder
             asset.description = piece.Description;
             asset.kind = ItemKind.Equipment;
             asset.equipSlot = piece.Slot;
-            asset.statBonus = piece.StatBonus;
-            asset.abilityScoreBonus = piece.AbilityScoreBonus;
-            asset.requirements = piece.Requirements;
             asset.cost = piece.Cost;
             asset.setId = piece.SetId;
             asset.baseId = piece.BaseId;

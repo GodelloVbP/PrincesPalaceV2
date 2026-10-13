@@ -18,45 +18,7 @@ MonoBehaviour:
   kind: 2
   effect: 0
   amount: 20
-  attackBonus: 0
   equipSlot: 2
-  statBonus:
-    maxHealth: 35
-    speed: 1
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 12
-    magicalDefense: 0
-    critChance: 0
-    critDamage: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 1
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  requirements:
-    strength: 4
-    dexterity: 6
-    constitution: 2
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  spellScaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
   startingStock: 0
   iconPath: Assets/_Project/Art/Items/brigandine_body_sheet/level_6.png
   cost: 260

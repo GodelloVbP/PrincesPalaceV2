@@ -467,7 +467,7 @@ namespace PrincesPalace.PlayModeTests
 
             bool ok = ItemSetEntryResolver.TryResolveAll(new[] { set }, out var resolved, out var errors);
             Assert.IsTrue(ok, string.Join("; ", errors));
-            return resolved.Where(p => p.Tier == tier).Sum(p => p.AbilityScoreBonus.wisdom);
+            return resolved.Where(p => p.Tier == tier).Sum(p => p.At.AbilityScoreBonus.wisdom);
         }
 
         [Test]

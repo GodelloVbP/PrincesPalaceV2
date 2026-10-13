@@ -276,13 +276,9 @@ namespace PrincesPalace.Domain.Content
                 slot,
                 familyId,
                 tier,
-                at.AttackBonus,
-                at.Scaling,
                 cost,
                 sortOrder,
                 at.IconPath,
-                at.SpellScaling,
-                at.Requirements,
                 familyId,
                 curve);
         }

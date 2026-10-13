@@ -18,45 +18,7 @@ MonoBehaviour:
   kind: 2
   effect: 0
   amount: 20
-  attackBonus: 0
   equipSlot: 5
-  statBonus:
-    maxHealth: 15
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 6
-    critChance: 0
-    critDamage: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 7
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  spellScaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
   startingStock: 0
   iconPath: Assets/_Project/Art/Items/court_gloves_sheet/level_6.png
   cost: 330

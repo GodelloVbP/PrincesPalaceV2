@@ -5,8 +5,8 @@ namespace PrincesPalace.Domain.Stats
     //     WP = round(attackAtTier x (1 + 0.15 x plus))
     //
     // Pure Domain arithmetic, kept OFF ItemDefinition (a ScriptableObject,
-    // Core-layer only) even though it has exactly one production caller
-    // there (WeaponPowerAt) -- every other piece of this game's hone math
+    // Core-layer only) even though its one production caller is
+    // GearStats.WeaponPower -- every other piece of this game's hone math
     // (ItemUpgrade) and its rounding convention (Rounding) already lives
     // here engine-free, and putting the formula itself in Core would make
     // it untestable from the EditMode assembly, which references Domain

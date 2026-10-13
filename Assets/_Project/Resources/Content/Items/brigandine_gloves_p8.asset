@@ -18,45 +18,7 @@ MonoBehaviour:
   kind: 2
   effect: 0
   amount: 20
-  attackBonus: 0
   equipSlot: 5
-  statBonus:
-    maxHealth: 37
-    speed: 1
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 13
-    magicalDefense: 0
-    critChance: 0
-    critDamage: 0
-  abilityScoreBonus:
-    strength: 1
-    dexterity: 1
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  requirements:
-    strength: 7
-    dexterity: 9
-    constitution: 3
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  spellScaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
   startingStock: 0
   iconPath: Assets/_Project/Art/Items/brigandine_gloves_sheet/level_8.png
   cost: 330

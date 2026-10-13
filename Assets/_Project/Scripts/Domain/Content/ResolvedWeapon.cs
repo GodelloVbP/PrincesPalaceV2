@@ -28,33 +28,23 @@ namespace PrincesPalace.Domain.Content
         public readonly string FamilyId;
         public readonly int Tier;
 
-        public readonly int AttackBonus;
-        public readonly ScalingProfile Scaling;
         public readonly int Cost;
         public readonly int SortOrder;
         public readonly string IconPath;
-
-        // What this weapon contributes to SPELL power, separate from Scaling
-        // above (which is the plain-Attack axis) -- see ItemDefinition.
-        // spellScaling's own comment.
-        public readonly ScalingProfile SpellScaling;
-
-        // What a character needs, from everything ELSE worn plus base scores
-        // and talents, before this weapon counts as worn — see
-        // RequirementResolver.
-        public readonly AbilityScoreBlock Requirements;
 
         // The base this tier was generated from (docs/PLAN_ITEMS.md 2.3):
         // the id a copy will carry once content holds one asset per base.
         public readonly string BaseId;
 
-        // Every tier of the base, as one curve; this record is Curve.At(Tier).
+        // Every tier of the base, as one curve; what this tier grants is Curve.At(Tier).
         public readonly GearCurve Curve;
 
+        // What this tier grants, read off the curve: the one source.
+        public GearStats At => Curve.At(Tier);
+
         public ResolvedWeapon(string id, string displayName, string description, EquipmentSlot slot,
-            string familyId, int tier, int attackBonus, ScalingProfile scaling,
-            int cost, int sortOrder, string iconPath, ScalingProfile spellScaling = default,
-            AbilityScoreBlock requirements = default,
+            string familyId, int tier,
+            int cost, int sortOrder, string iconPath,
             string baseId = "", GearCurve curve = default)
         {
             Id = id;
@@ -63,13 +53,9 @@ namespace PrincesPalace.Domain.Content
             Slot = slot;
             FamilyId = familyId;
             Tier = tier;
-            AttackBonus = attackBonus;
-            Scaling = scaling;
             Cost = cost;
             SortOrder = sortOrder;
             IconPath = iconPath;
-            SpellScaling = spellScaling;
-            Requirements = requirements;
             BaseId = baseId ?? "";
             Curve = curve;
         }

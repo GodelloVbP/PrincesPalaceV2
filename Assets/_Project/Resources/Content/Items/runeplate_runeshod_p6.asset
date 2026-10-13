@@ -18,45 +18,7 @@ MonoBehaviour:
   kind: 2
   effect: 0
   amount: 20
-  attackBonus: 0
   equipSlot: 4
-  statBonus:
-    maxHealth: 25
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 9
-    magicalDefense: 6
-    critChance: 0
-    critDamage: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  requirements:
-    strength: 6
-    dexterity: 0
-    constitution: 2
-    wisdom: 0
-    intelligence: 4
-    charisma: 0
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  spellScaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
   startingStock: 0
   iconPath: Assets/_Project/Art/Items/arcane_boots_sheet/level_6.png
   cost: 375

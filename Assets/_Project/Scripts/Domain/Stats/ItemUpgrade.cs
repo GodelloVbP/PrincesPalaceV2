@@ -14,7 +14,7 @@ namespace PrincesPalace.Domain.Stats
     // moment something rarer falls out of a chest.
     //
     // ONE function owns the curve. Every consumer that applies plus goes
-    // through MultiplierFor — ItemDefinition.StatBonusAt for worn stats,
+    // through MultiplierFor — GearStats.StatBonus for worn stats,
     // the weapon path for attack — so there is no second place where the
     // rate could quietly disagree.
     public static class ItemUpgrade

@@ -93,7 +93,9 @@ namespace PrincesPalace
             if (weapon == null) return stats.attack;
 
             return WeaponPower.DisplayDamage(
-                power.Value, weapon.scaling, ContentDatabase.EffectiveAbilityScores(character));
+                power.Value,
+                ContentDatabase.Effective(character.equipment.GetInstance(EquipmentSlot.Weapon1)).Value.Scaling,
+                ContentDatabase.EffectiveAbilityScores(character));
         }
 
         private static StatDeltas Difference(StatDeltas after, StatDeltas before) =>

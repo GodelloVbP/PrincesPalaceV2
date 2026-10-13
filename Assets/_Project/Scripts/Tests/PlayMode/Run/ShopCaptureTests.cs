@@ -191,7 +191,7 @@ namespace PrincesPalace.PlayModeTests
             var offered = ContentDatabase.GetItem(card.contentId);
             var worn = offered == null ? null : ContentDatabase.Items
                 .Where(i => i != null && i.IsEquippable && i.equipSlot == offered.equipSlot && i.id != offered.id)
-                .OrderBy(i => default(AbilityScoreBlock).Meets(i.requirements) ? 0 : 1)
+                .OrderBy(i => default(AbilityScoreBlock).Meets(ContentDatabase.Effective(ItemInstance.Of(i.id, 0)).Value.Requirements) ? 0 : 1)
                 .FirstOrDefault();
             if (worn != null)
             {

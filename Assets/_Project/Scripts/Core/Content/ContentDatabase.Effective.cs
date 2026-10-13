@@ -186,10 +186,9 @@ namespace PrincesPalace.Content
                 // WeaponPower, at the FightEncounterAdapter seam, computed
                 // from the weapon's own attackAtTier and hone alone -- never
                 // summed with a character's base Attack or with anything
-                // else worn. Zeroed HERE rather than at the source (item.
-                // StatBonusAt/attackBonus) so a weapon's DEFINITION still
-                // honestly reports what it grants -- the store and the
-                // tooltip still want that number -- while EffectiveStats,
+                // else worn. Zeroed HERE rather than in GearStats so a
+                // weapon's copy still honestly reports what it grants -- the
+                // store and the tooltip still want that number -- while EffectiveStats,
                 // the one place real combat actually reads, stops treating
                 // it as a swing contribution. This
                 // also quietly retires the handful of hand-authored
@@ -623,7 +622,7 @@ namespace PrincesPalace.Content
         // WeaponPower of whatever is LIVE in the main hand right now, or
         // null when the hand is empty / inert / holds something that is not
         // a Weapon -- see EquippedWeapon's own header for why "live" matters
-        // here, and ItemDefinition.WeaponPowerAt for the formula itself.
+        // here, and GearStats.WeaponPower for the formula itself.
         //
         // Null, not zero, on purpose: FightEncounterAdapter reads null as
         // "fall back to the character's own authored Attack, unmultiplied"

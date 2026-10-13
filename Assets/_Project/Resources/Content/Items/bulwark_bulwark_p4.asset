@@ -18,45 +18,7 @@ MonoBehaviour:
   kind: 2
   effect: 0
   amount: 20
-  attackBonus: 0
   equipSlot: 2
-  statBonus:
-    maxHealth: 27
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 7
-    magicalDefense: 5
-    critChance: 0
-    critDamage: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 1
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 6
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  spellScaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
   startingStock: 0
   iconPath: Assets/_Project/Art/Items/siege_cuirass_sheet/level_5.png
   cost: 250

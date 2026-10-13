@@ -100,7 +100,7 @@ namespace PrincesPalace.PlayModeTests
             var sameSlot = ContentDatabase.Items
                 .Where(i => i != null && i.IsEquippable && i.equipSlot == offered.equipSlot && i.id != offered.id)
                 .ToList();
-            var worn = sameSlot.FirstOrDefault(i => default(AbilityScoreBlock).Meets(i.requirements))
+            var worn = sameSlot.FirstOrDefault(i => default(AbilityScoreBlock).Meets(ContentDatabase.Effective(ItemInstance.Of(i.id, 0)).Value.Requirements))
                        ?? sameSlot.FirstOrDefault();
             Assert.IsNotNull(worn, $"no second item for slot {offered.equipSlot} to wear against '{offered.id}'");
 

@@ -33,8 +33,6 @@ namespace PrincesPalace.Domain.Content
         public readonly string PieceId;
         public readonly int Tier;
 
-        public readonly StatBlock StatBonus;
-        public readonly AbilityScoreBlock AbilityScoreBonus;
         public readonly int Cost;
         public readonly int SortOrder;
 
@@ -44,22 +42,19 @@ namespace PrincesPalace.Domain.Content
         // than an expression buried in ContentBuilder.
         public readonly string IconPath;
 
-        // What a character needs, from everything ELSE worn plus base scores
-        // and talents, before this piece counts as worn — see
-        // RequirementResolver.
-        public readonly AbilityScoreBlock Requirements;
-
         // The base this tier was generated from (docs/PLAN_ITEMS.md 2.3):
         // the id a copy will carry once content holds one asset per base.
         public readonly string BaseId;
 
-        // Every tier of the base, as one curve; this record is Curve.At(Tier).
+        // Every tier of the base, as one curve; what this tier grants is Curve.At(Tier).
         public readonly GearCurve Curve;
+
+        // What this tier grants, read off the curve: the one source.
+        public GearStats At => Curve.At(Tier);
 
         public ResolvedSetPiece(string id, string displayName, string description, EquipmentSlot slot,
             string setId, string setDisplayName, string pieceId, int tier,
-            StatBlock statBonus, AbilityScoreBlock abilityScoreBonus, int cost, int sortOrder,
-            string iconPath = "", AbilityScoreBlock requirements = default,
+            int cost, int sortOrder, string iconPath = "",
             string baseId = "", GearCurve curve = default)
         {
             IconPath = iconPath;
@@ -71,11 +66,8 @@ namespace PrincesPalace.Domain.Content
             SetDisplayName = setDisplayName;
             PieceId = pieceId;
             Tier = tier;
-            StatBonus = statBonus;
-            AbilityScoreBonus = abilityScoreBonus;
             Cost = cost;
             SortOrder = sortOrder;
-            Requirements = requirements;
             BaseId = baseId ?? "";
             Curve = curve;
         }

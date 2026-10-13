@@ -18,45 +18,7 @@ MonoBehaviour:
   kind: 2
   effect: 0
   amount: 20
-  attackBonus: 0
   equipSlot: 2
-  statBonus:
-    maxHealth: 56
-    speed: 3
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 24
-    critChance: 0
-    critDamage: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 4
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 1
-    wisdom: 0
-    intelligence: 0
-    charisma: 18
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  spellScaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
   startingStock: 0
   iconPath: Assets/_Project/Art/Items/court_doublet_sheet/level_9.png
   cost: 530

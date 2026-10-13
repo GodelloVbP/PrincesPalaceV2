@@ -105,11 +105,12 @@ namespace PrincesPalace.PlayModeTests
         public void ItemTooltip_ScalingLine_DrawsEveryGradeLetterInTheGradeFace()
         {
             var item = ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable
-                && i.scaling.Describe().Length > 0);
+                && ContentDatabase.Effective(ItemInstance.Of(i.id, 0)).Value.Scaling.Describe().Length > 0);
             Assert.IsNotNull(item, "fixture: content has an equippable item that scales on something");
 
-            int grades = AbilityScores.All.Count(s => item.scaling[s] != ScalingGrade.None)
-                       + AbilityScores.All.Count(s => item.spellScaling[s] != ScalingGrade.None);
+            var gear = ContentDatabase.Effective(ItemInstance.Of(item.id, 0)).Value;
+            int grades = AbilityScores.All.Count(s => gear.Scaling[s] != ScalingGrade.None)
+                       + AbilityScores.All.Count(s => gear.SpellScaling[s] != ScalingGrade.None);
 
             var text = Render(ItemDescription.CardSummary(ItemInstance.Of(item.id, item.tier)));
 
