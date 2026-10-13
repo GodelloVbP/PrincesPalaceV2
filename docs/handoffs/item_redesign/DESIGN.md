@@ -17,6 +17,24 @@ the owner decides; sections 3-4 are order and gates.
    prizes instead of a pick that follows every fight. That one move answers
    D1 (forced, repeated, junk) and the [You] rule at `DIRECTION_BIBLE.md:53`.
 
+## 0b. How other roguelikes pay out (and what this plan takes)
+
+From general knowledge of the games, not a measured survey.
+
+| Game | Pattern | Taken here |
+|---|---|---|
+| Hades | Each door shows its reward before you enter (boon, Pom, Hammer, gold). Boons are 1 of 3, colour = rarity of the same boon. Poms are a separate "level it up" reward. | Gear as a map prize shown in advance (1.1); colour = quality of this copy (1.2) |
+| Slay the Spire | Normal fight: 1 of 3 cards, **always skippable**. Elites guarantee a relic; bosses offer 1 of 3 boss relics. Rarity has a pity offset that climbs each time you see commons. Upgrading is a campfire choice that **competes with healing**. | Skip (1.2); elite/boss relic picks (1.1); pity on Legendary (1.2); hone at Rest as an alternative to the heal (1.4) |
+| Darkest Dungeon, Wildfrost | Trinkets and charms go on **one named hero**; some are class-locked. | One card per party member, made for them (1.2) |
+| Risk of Rain 2, Balatro | Surplus converts into something useful (scrap → printers); skipping a blind pays a tag, so passing is a real option. | Skip pays (1.2); open question whether gold is enough (Q6) |
+| Diablo-likes | Many power axes (item level, rarity, affixes, sockets), saved by upgrade arrows and loot filters. | One visible rank plus the recipient's delta on the card face (1.2) |
+| Dead Cells | Item level follows the biome; raw power lives on a separate axis (scrolls); items carry identity. | Tier from depth only (1.2); identity from traits (1.3) |
+
+Where the plan departs from them: Slay the Spire pays a pick after every
+fight. This plan pays gear only where the map promised it (Hades). The
+reason is that our picks are heavier (slot, recipient, comparison), and
+the run map already turns rewards into a routing choice.
+
 ## 1. Behavioural contracts (proposed)
 
 ### 1.1 What a fight pays
@@ -54,6 +72,11 @@ the owner decides; sections 3-4 are order and gates.
   shows:** Common = no affix; Uncommon = 1; Rare = 2; Epic = 3; Legendary =
   carries a trait (1.3). The `LootLadder` that rolls it is kept. Since the
   tier is shared, colour alone ranks the three cards (D4).
+- **The card face shows the recipient's change**, as the one or two largest
+  stat deltas against what they wear now. The tooltip keeps the full list.
+- **Pity:** each gear pick with no Legendary card raises the next pick's
+  Legendary chance by a step, and a Legendary card resets it. The counter
+  is saved per run.
 - Rolled on a keyed stream per (step, node), like the spell drop. Quitting
   does not reroll (C4).
 
@@ -74,10 +97,13 @@ the owner decides; sections 3-4 are order and gates.
 ### 1.4 Plus becomes a verb
 
 - Drops are always +0. The plus roll goes, and so do Favor's plus odds.
-- **Honing** at the shop (the verb the glossary already promises,
-  `GlossaryEntries.cs:223`): pay gold to raise a carried copy by +1, the
-  price rising per plus. Max +5 (today +10, never reached by a choice).
-  This gives surplus gold a use (D5).
+- **Honing** (the verb the glossary already promises,
+  `GlossaryEntries.cs:223`) happens in two places:
+  - at the shop, paying gold, with the price rising per plus;
+  - at a Rest node, **instead of** its heal. One copy gets +1 for free.
+    This is Slay the Spire's campfire choice.
+- Max +5 (today +10, never reached by a choice). This gives surplus gold
+  a use (D5).
 - Selling at 30% stays.
 
 ### 1.5 Removed or cut back
@@ -113,8 +139,8 @@ go ahead on the recommendation.
    legendary gear and necklaces; elites and bosses give a relic pick. Risk:
    relics feel less rare, and effects get two homes to balance.
 4. **Necklace: the trait slot, or delete the slot?** Rec: trait slot.
-5. **No random "+" on loot; you raise it by honing at the shop for gold?**
-   Rec: yes, max +5.
+5. **No random "+" on loot; you raise it by honing at the shop for gold,
+   or at a Rest instead of healing?** Rec: yes, max +5.
 6. **Skipping a gear pick pays: gold, a potion, or nothing?** Rec: gold.
 7. **All three cards the same tier, with luck going into affixes and traits
    instead of a lucky higher tier?** Rec: yes. Cost: the "jackpot tier"
