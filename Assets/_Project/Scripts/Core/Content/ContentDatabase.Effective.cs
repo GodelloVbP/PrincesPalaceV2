@@ -137,11 +137,12 @@ namespace PrincesPalace.Content
                     }
 
                     bySlot[entry.slot] = (entry, item);
-                    // Ability scores are not scaled by plus (see
-                    // AbilityScoreBonusAt's own comment); the requirement IS
+                    // Ability scores are not scaled by plus (a score
+                    // is never honed, see GearStats); the requirement IS
                     // scaled, by the global tuning knob, at this exact read
                     // point — RequirementCurve's whole reason for existing.
-                    candidates.Add(new RequirementCandidate(entry.slot, item.AbilityScoreBonusAt(entry.plus), RequirementCurve.ApplyGear(item.requirements)));
+                    var gear = Effective(entry.Instance, entry.plus).Value;
+                    candidates.Add(new RequirementCandidate(entry.slot, gear.AbilityScoreBonus, RequirementCurve.ApplyGear(gear.Requirements)));
                 }
             }
 
@@ -178,7 +179,7 @@ namespace PrincesPalace.Content
             var loadout = ActiveLoadout(character);
             foreach (var (entry, item) in loadout.LiveEntries)
             {
-                var bonus = item.StatBonusAt(entry.plus);
+                var bonus = Effective(entry.Instance, entry.plus).Value.StatBonus;
 
                 // PHASE 3 of the balance redesign (D3): gear no longer grants
                 // flat Attack. A weapon's own Attack now enters combat as
@@ -403,7 +404,7 @@ namespace PrincesPalace.Content
             var affixes = new List<Effect>();
             foreach (var (entry, item) in ActiveLoadout(character).LiveEntries)
             {
-                foreach (var scaled in ScaledModifierEffectsForItem(item.tier, (RiftTier)entry.riftTier, entry.modifierIds))
+                foreach (var scaled in ScaledModifierEffectsForItem(Effective(entry.Instance).Value.Tier, (RiftTier)entry.riftTier, entry.modifierIds))
                 {
                     affixes.Add(scaled.Effect);
                 }
@@ -646,7 +647,7 @@ namespace PrincesPalace.Content
             {
                 if (entry.slot == EquipmentSlot.Weapon1 && item.kind == ItemKind.Weapon)
                 {
-                    return item.WeaponPowerAt(entry.plus);
+                    return Effective(entry.Instance, entry.plus).Value.WeaponPower;
                 }
             }
 
@@ -962,7 +963,7 @@ namespace PrincesPalace.Content
             {
                 if (entry.slot == EquipmentSlot.Weapon1)
                 {
-                    mainHand = item.scaling;
+                    mainHand = Effective(entry.Instance).Value.Scaling;
                     break;
                 }
             }
@@ -999,11 +1000,11 @@ namespace PrincesPalace.Content
             {
                 if (entry.slot == EquipmentSlot.Weapon1)
                 {
-                    mainHand = item.spellScaling;
+                    mainHand = Effective(entry.Instance).Value.SpellScaling;
                 }
                 else if (entry.slot == EquipmentSlot.Weapon2)
                 {
-                    offHand = item.spellScaling;
+                    offHand = Effective(entry.Instance).Value.SpellScaling;
                 }
             }
 

@@ -31,12 +31,18 @@ namespace PrincesPalace
             return index >= 0 && index < Cache.Length ? Cache[index] : Color.white;
         }
 
-        public static Color For(ItemDefinition item)
+        public static Color For(ItemInstance copy)
         {
-            // A null item is drawn in the neutral colour rather than skipped
-            // — same graceful-degradation posture the rest of the content
-            // layer takes on missing ids.
-            return item == null ? Color.white : ForTier(item.tier);
+            // A copy content cannot resolve is drawn in the neutral colour
+            // rather than skipped — same graceful-degradation posture the
+            // rest of the content layer takes on missing ids.
+            if (ContentDatabase.DefinitionOf(copy) == null)
+            {
+                return Color.white;
+            }
+
+            // A consumable has no tier and reads as the bottom band.
+            return ForTier(ContentDatabase.Effective(copy)?.Tier ?? 0);
         }
 
         // RelicRarity reuses the item Rarity table by ordinal rather than
@@ -55,27 +61,29 @@ namespace PrincesPalace
         // The name a player should see for one particular copy: the tier's
         // adjective (already baked into displayName) with this instance's
         // plus appended.
-        public static string NameOf(ItemDefinition item, int plus = 0)
+        public static string NameOf(ItemInstance copy, int plus = 0)
         {
-            if (item == null)
+            var gear = ContentDatabase.Effective(copy);
+            if (!gear.HasValue)
             {
-                return "";
+                return ContentDatabase.DefinitionOf(copy)?.displayName is string raw ? ItemNaming.WithPlus(raw, plus) : "";
             }
 
-            return ItemNaming.WithPlus(item.displayName, plus);
+            return ItemNaming.WithPlus(gear.Value.DisplayName, plus);
         }
 
         // The same name, wrapped in a uGUI rich-text colour tag — for names
         // embedded in a longer string, where setting Text.color would tint
         // the whole line.
-        public static string Wrap(ItemDefinition item, int plus = 0)
+        public static string Wrap(ItemInstance copy, int plus = 0)
         {
-            if (item == null)
+            if (ContentDatabase.DefinitionOf(copy) == null)
             {
                 return "";
             }
 
-            return $"<color={RarityBands.HexColorForTier(item.tier)}>{NameOf(item, plus)}</color>";
+            int tier = ContentDatabase.Effective(copy)?.Tier ?? 0;
+            return $"<color={RarityBands.HexColorForTier(tier)}>{NameOf(copy, plus)}</color>";
         }
 
         private static void EnsureParsed()

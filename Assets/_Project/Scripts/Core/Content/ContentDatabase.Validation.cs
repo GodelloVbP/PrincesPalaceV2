@@ -375,11 +375,12 @@ namespace PrincesPalace.Content
                         continue;
                     }
 
+                    var candidateScores = candidate.curve.At(candidate.tier).AbilityScoreBonus;
                     foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                     {
-                        if (candidate.abilityScoreBonus[score] > best[score])
+                        if (candidateScores[score] > best[score])
                         {
-                            best = best.With(score, candidate.abilityScoreBonus[score]);
+                            best = best.With(score, candidateScores[score]);
                         }
                     }
                 }
@@ -412,9 +413,14 @@ namespace PrincesPalace.Content
                 // already rejects this at authoring time; asserting it here
                 // too is what makes it hold for an asset created any other
                 // way (the [CreateAssetMenu] hazard in CLAUDE.md).
+                // The numbers a worn copy grants come from the curve, read
+                // at the asset's own tier.
+                var gear = item.IsEquippable ? item.curve.At(item.tier) : (GearStats?)null;
+                var gearScores = gear?.AbilityScoreBonus ?? AbilityScoreBlock.Zero;
+                var gearRequirements = gear?.Requirements ?? AbilityScoreBlock.Zero;
                 if (item.IsEquippable
-                    && item.TotalStatBonus.Equals(StatBlock.Zero)
-                    && item.abilityScoreBonus.Equals(AbilityScoreBlock.Zero))
+                    && gear.Value.StatBonus.Equals(StatBlock.Zero)
+                    && gearScores.Equals(AbilityScoreBlock.Zero))
                 {
                     errors.Add($"Item '{item.id}' is equippable but grants no stats at all.");
                 }
@@ -427,12 +433,12 @@ namespace PrincesPalace.Content
                 foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                 {
                     // Same non-negative-bonus rule as talents, above.
-                    if (item.abilityScoreBonus[score] < 0)
+                    if (gearScores[score] < 0)
                     {
-                        errors.Add($"Item '{item.id}' has a negative {score} bonus ({item.abilityScoreBonus[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
+                        errors.Add($"Item '{item.id}' has a negative {score} bonus ({gearScores[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
                     }
 
-                    int required = item.requirements[score];
+                    int required = gearRequirements[score];
                     if (required <= 0)
                     {
                         continue;

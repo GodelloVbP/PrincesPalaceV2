@@ -1,6 +1,8 @@
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.PlayModeTests
@@ -51,7 +53,7 @@ namespace PrincesPalace.PlayModeTests
         {
             // Reachable: a save naming an id that content no longer has. Black
             // would read as a real rarity; white reads as "no information".
-            Assert.AreEqual(Color.white, RarityColors.For((Content.ItemDefinition)null));
+            Assert.AreEqual(Color.white, RarityColors.For((ItemInstance)null));
             Assert.AreEqual("", RarityColors.NameOf(null));
             Assert.AreEqual("", RarityColors.Wrap(null));
         }
@@ -69,17 +71,14 @@ namespace PrincesPalace.PlayModeTests
         {
             // Used where the name sits inside a longer line, so tinting the
             // whole label would colour the sentence too.
-            var item = ScriptableObject.CreateInstance<Content.ItemDefinition>();
-            item.displayName = "Cuirass";
-            item.tier = 0;
+            var item = ContentDatabase.Items.First(i => i.IsEquippable && i.tier == 0);
+            var copy = ItemInstance.Of(item.id, item.tier);
 
-            string wrapped = RarityColors.Wrap(item);
+            string wrapped = RarityColors.Wrap(copy);
 
             StringAssert.StartsWith("<color=" + RarityBands.HexColorForTier(0) + ">", wrapped);
             StringAssert.EndsWith("</color>", wrapped);
-            StringAssert.Contains("Cuirass", wrapped);
-
-            Object.DestroyImmediate(item);
+            StringAssert.Contains(item.displayName, wrapped);
         }
 
         [Test]
@@ -87,16 +86,13 @@ namespace PrincesPalace.PlayModeTests
         {
             // The plus is an instance fact; the colour is the item's tier. They
             // are separate axes and the name is where they meet.
-            var item = ScriptableObject.CreateInstance<Content.ItemDefinition>();
-            item.displayName = "Cuirass";
-            item.tier = 4;
+            var item = ContentDatabase.Items.First(i => i.IsEquippable && i.tier == 4);
+            var copy = ItemInstance.Of(item.id, item.tier);
 
-            Assert.AreEqual("Cuirass", RarityColors.NameOf(item, 0), "a plain copy carries no suffix");
-            StringAssert.Contains("+5", RarityColors.NameOf(item, 5));
-            Assert.AreEqual(RarityColors.For(item), RarityColors.For(Rarity.Rare),
+            Assert.AreEqual(item.displayName, RarityColors.NameOf(copy, 0), "a plain copy carries no suffix");
+            StringAssert.Contains("+5", RarityColors.NameOf(copy, 5));
+            Assert.AreEqual(RarityColors.For(copy), RarityColors.For(Rarity.Rare),
                 "tier 4 is Rare whatever the plus");
-
-            Object.DestroyImmediate(item);
         }
     }
 }

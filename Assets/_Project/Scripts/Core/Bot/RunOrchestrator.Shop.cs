@@ -115,7 +115,7 @@ namespace PrincesPalace
             if (definition == null) return 0;
 
             return definition.IsEquippable
-                ? ShopPricing.GearPrice(definition.tier, entry.plus, entry.riftTier)
+                ? ShopPricing.GearPrice(ContentDatabase.Effective(entry.Instance).Value.Tier, entry.plus, entry.riftTier)
                 : definition.cost;
         }
 

@@ -836,7 +836,7 @@ namespace PrincesPalace
             if (detailTitle != null) detailTitle.SetContent(item.displayName ?? entry.contentId);
 
             var riftTier = (RiftTier)entry.riftTier;
-            detailBody.SetContent(ItemDescription.ComparisonBody(character, item, entry.plus,
+            detailBody.SetContent(ItemDescription.ComparisonBody(character, entry.GearInstance(), entry.plus,
                 riftTier, entry.modifiers));
         }
 

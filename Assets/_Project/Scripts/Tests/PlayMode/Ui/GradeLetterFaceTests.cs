@@ -111,7 +111,7 @@ namespace PrincesPalace.PlayModeTests
             int grades = AbilityScores.All.Count(s => item.scaling[s] != ScalingGrade.None)
                        + AbilityScores.All.Count(s => item.spellScaling[s] != ScalingGrade.None);
 
-            var text = Render(ItemDescription.CardSummary(item));
+            var text = Render(ItemDescription.CardSummary(ItemInstance.Of(item.id, item.tier)));
 
             var info = text.textInfo;
             string rendered = new string(Enumerable.Range(0, info.characterCount)

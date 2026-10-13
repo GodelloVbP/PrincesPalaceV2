@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
@@ -487,7 +488,7 @@ namespace PrincesPalace
             // the hover has real data to show for all three unclaimed cards.
             var offer = _offers[index];
             string body = ItemDescription.SquadComparisonBody(
-                save.ActiveSquad(), item, offer.Plus, offer.RiftTier, offer.Modifiers);
+                save.ActiveSquad(), offer.Instance, offer.Plus, offer.RiftTier, offer.Modifiers);
             if (string.IsNullOrEmpty(body))
             {
                 offerTooltip.SetShown(false);
@@ -828,9 +829,9 @@ namespace PrincesPalace
                 // exists shows its id rather than taking the screen down.
                 offerNames[i].SetContent(item == null
                     ? offer.ItemId
-                    : RarityColors.NameOf(item, offer.Plus));
+                    : RarityColors.NameOf(offer.Instance, offer.Plus));
                 offerMetas[i].Set(UiStrings.ReckoningOfferMeta,
-                    item == null ? "?" : item.Rarity.ToString(), offer.Tier);
+                    item == null ? "?" : RarityBands.For(offer.Tier).ToString(), offer.Tier);
 
                 ItemIcons.Apply(offerIcons[i], icons, item?.id);
 
@@ -839,7 +840,7 @@ namespace PrincesPalace
                 // Held well under full alpha: it is a glow behind an object, and
                 // at full strength it competes with the object it exists to
                 // frame.
-                var glow = item == null ? Color.white : RarityColors.For(item);
+                var glow = item == null ? Color.white : RarityColors.For(offer.Instance);
                 glow.a = _taken ? 0.18f : 0.42f;
                 offerBursts[i].color = glow;
 
@@ -912,7 +913,7 @@ namespace PrincesPalace
             {
                 var item = ContentDatabase.GetItem(offer.ItemId);
                 _reward.ChosenItemId = offer.ItemId;
-                _reward.ChosenItemName = item == null ? offer.ItemId : RarityColors.NameOf(item, offer.Plus);
+                _reward.ChosenItemName = item == null ? offer.ItemId : RarityColors.NameOf(offer.Instance, offer.Plus);
             }
 
             offerNames[index].Set(UiStrings.ReckoningTaken);

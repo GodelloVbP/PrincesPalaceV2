@@ -55,7 +55,7 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            var comparison = ItemDescription.Compare(hero, item);
+            var comparison = ItemDescription.Compare(hero, ItemInstance.Of(item.id, item.tier));
 
             Assert.IsTrue(comparison.CandidateIsLive,
                 $"a level {hero.level} character cannot equip '{item.displayName}' (tier {item.tier}), the " +
@@ -69,8 +69,7 @@ namespace PrincesPalace.PlayModeTests
             var hero = SaveSlotManager.CurrentSave.ActiveSquad().First();
             var item = EasiestItem();
 
-            string body = ItemDescription.SquadComparisonBody(
-                SaveSlotManager.CurrentSave.ActiveSquad(), item, 0);
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, item.tier), 0);
 
             Assert.IsNotEmpty(body, "the squad comparison produced no text at all");
             StringAssert.DoesNotContain("cannot equip yet", body,
@@ -91,8 +90,7 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            string body = ItemDescription.SquadComparisonBody(
-                SaveSlotManager.CurrentSave.ActiveSquad(), item, candidatePlus: 0,
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, item.tier), candidatePlus: 0,
                 riftTier: RiftTier.RiftForged,
                 modifierIds: new System.Collections.Generic.List<string> { "fiery" });
 
@@ -106,7 +104,7 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), item);
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, item.tier));
 
             StringAssert.DoesNotContain("AFFIXES", body);
         }
@@ -146,7 +144,7 @@ namespace PrincesPalace.PlayModeTests
 
             var squad = new System.Collections.Generic.List<Character> { wearsFrosty, wearsNothing };
 
-            string body = ItemDescription.SquadComparisonBody(squad, item, candidatePlus: 0,
+            string body = ItemDescription.SquadComparisonBody(squad, ItemInstance.Of(item.id, item.tier), candidatePlus: 0,
                 riftTier: RiftTier.Ordinary,
                 modifierIds: new System.Collections.Generic.List<string> { "fiery" });
 

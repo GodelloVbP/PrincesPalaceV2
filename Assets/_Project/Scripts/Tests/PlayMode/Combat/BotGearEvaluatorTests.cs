@@ -82,7 +82,7 @@ namespace PrincesPalace.PlayModeTests
             // brings rather than the difference between two swords.
             character.equipment.Clear();
 
-            var delta = GearEvaluator.DeltaFor(character, weapon, 0, EquipmentSlot.Weapon1);
+            var delta = GearEvaluator.DeltaFor(character, ItemInstance.Of(weapon.id, weapon.tier), 0, EquipmentSlot.Weapon1);
             Assert.IsTrue(delta.HasValue, $"'{weapon.id}' was refused from an empty main hand");
             Assert.Greater(delta.Value.Offence, 0,
                 $"'{weapon.id}' scored no offence -- the evaluator is reading StatBlock.attack, " +
@@ -97,7 +97,7 @@ namespace PrincesPalace.PlayModeTests
                 i => i != null && i.kind == ItemKind.Weapon && i.IsEquippable);
             Assert.IsNotNull(weapon);
 
-            Assert.IsNull(GearEvaluator.DeltaFor(character, weapon, 0, EquipmentSlot.Head),
+            Assert.IsNull(GearEvaluator.DeltaFor(character, ItemInstance.Of(weapon.id, weapon.tier), 0, EquipmentSlot.Head),
                 "a sword was scored as a hat");
         }
 
@@ -176,7 +176,7 @@ namespace PrincesPalace.PlayModeTests
 
                 foreach (var item in weapons)
                 {
-                    var delta = GearEvaluator.DeltaFor(character, item, 0, EquipmentSlot.Weapon1);
+                    var delta = GearEvaluator.DeltaFor(character, ItemInstance.Of(item.id, item.tier), 0, EquipmentSlot.Weapon1);
                     if (!delta.HasValue) continue;
 
                     float score = weights.Score(delta.Value);

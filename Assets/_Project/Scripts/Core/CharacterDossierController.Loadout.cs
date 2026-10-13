@@ -192,7 +192,7 @@ namespace PrincesPalace
                 if (Has(slotRarityTicks, i))
                 {
                     slotRarityTicks[i].gameObject.SetShown(item != null);
-                    if (item != null) slotRarityTicks[i].color = TierColour(item.tier);
+                    if (item != null) slotRarityTicks[i].color = TierColour(ContentDatabase.Effective(character.equipment.GetInstance(slot))?.Tier ?? 0);
                 }
 
                 // The RiftTier ring, hidden at Ordinary so an item that rolled
@@ -507,8 +507,9 @@ namespace PrincesPalace
                     0, entry.plus, entry.count, "", false, instance: entry.Instance);
             }
 
-            return new BagItem(item.id, RarityColors.NameOf(item, entry.plus), (int)item.kind,
-                item.equipSlot, item.tier, entry.plus, entry.count, item.iconPath, item.IsEquippable,
+            var gear = ContentDatabase.Effective(entry.Instance);
+            return new BagItem(item.id, RarityColors.NameOf(entry.Instance, entry.plus), (int)item.kind,
+                item.equipSlot, gear?.Tier ?? 0, entry.plus, entry.count, gear?.IconPath ?? item.iconPath, item.IsEquippable,
                 entry.modifierIds, entry.riftTier, entry.Instance);
         }
 
@@ -876,8 +877,9 @@ namespace PrincesPalace
             var riftTier = (RiftTier)character.equipment.GetRiftTier(slot);
             var modifierIds = character.equipment.GetModifierIds(slot);
 
-            SetCompareHead(RarityColors.Wrap(item, plus), KindLine(item),
-                ItemDescription.CardSummary(item, plus, character, riftTier, modifierIds));
+            var copy = character.equipment.GetInstance(slot);
+            SetCompareHead(RarityColors.Wrap(copy, plus), KindLine(copy),
+                ItemDescription.CardSummary(copy, plus, character, riftTier, modifierIds));
             PaintCurrentStatRows(character);
         }
 
@@ -934,27 +936,27 @@ namespace PrincesPalace
                 return;
             }
 
-            string description = ItemDescription.CardSummary(item, e.Item.Plus,
+            string description = ItemDescription.CardSummary(e.Item.Instance, e.Item.Plus,
                 riftTier: e.Item.RiftTier, modifierIds: e.Item.ModifierIds);
 
             if (e.Kind == PackEntryKind.Salve)
             {
-                SetCompareBody(RarityColors.Wrap(item, e.Item.Plus), UiStrings.CompareKindSalve.Format(), description);
+                SetCompareBody(RarityColors.Wrap(e.Item.Instance, e.Item.Plus), UiStrings.CompareKindSalve.Format(), description);
                 return;
             }
 
             // Gear: what each stat would become, "280 → 338 (+58)", for the
             // stats that move -- by the same hypothetical-equip pass the rest
             // of the game compares with (ItemDescription.Compare).
-            int shown = PaintDeltaRows(character, item, e.Item.Plus);
+            int shown = PaintDeltaRows(character, e.Item.Instance, e.Item.Plus);
             if (shown == 0) description = $"{description}\n{UiStrings.CompareNoChange.Format()}";
 
-            SetCompareHead(RarityColors.Wrap(item, e.Item.Plus), KindLine(item), description);
+            SetCompareHead(RarityColors.Wrap(e.Item.Instance, e.Item.Plus), KindLine(e.Item.Instance), description);
         }
 
-        private int PaintDeltaRows(Character character, ItemDefinition item, int plus)
+        private int PaintDeltaRows(Character character, ItemInstance copy, int plus)
         {
-            var comparison = ItemDescription.Compare(character, item, plus);
+            var comparison = ItemDescription.Compare(character, copy, plus);
             var previewScores = _scores + comparison.ScoreDelta;
             var stats = ContentDatabase.EffectiveStats(character);
 
@@ -1055,12 +1057,13 @@ namespace PrincesPalace
             }
         }
 
-        private static string KindLine(ItemDefinition item)
+        private static string KindLine(ItemInstance copy)
         {
+            var item = ContentDatabase.DefinitionOf(copy);
             var kind = item.kind == ItemKind.Weapon ? UiStrings.CompareKindWeapon
                 : item.kind == ItemKind.Consumable ? UiStrings.CompareKindSalve
                 : UiStrings.CompareKindArmour;
-            return UiStrings.CompareKindTier.Format(kind.Format(), item.tier);
+            return UiStrings.CompareKindTier.Format(kind.Format(), ContentDatabase.Effective(copy)?.Tier ?? 0);
         }
 
         // ---- the pad's map (spec section 9, LOADOUT) ------------------------------------------

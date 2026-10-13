@@ -19,6 +19,11 @@ namespace PrincesPalace.Content
             return _items.FirstOrDefault(i => i.baseId == baseId);
         }
 
+        // The definition a copy names, whether its id is a base id or a
+        // per-tier id. Null for an id content does not know.
+        public static ItemDefinition DefinitionOf(ItemInstance copy) =>
+            copy == null ? null : (GetItem(copy.ItemId) ?? GetBase(copy.ItemId));
+
         // What `copy` grants while worn in a slot honed to `honing`. Null for
         // an id content does not know, and for anything that is not gear.
         //
