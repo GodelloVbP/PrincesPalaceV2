@@ -33,12 +33,23 @@ def decision(tool_name, tool_input):
     return route_agents.check(tool_name, tool_input)
 
 
+CONTEXT_LINE = "Context: fresh because (a): independent review\n"
 ESCALATION_PROMPT = "Fix the thing.\nEscalation: architecture\nMore detail.\n"
+
+
+def launch(tool_input):
+    """tool_input with a valid Context line prepended to its string prompt, so
+    a test about one rule is not denied by another."""
+    out = dict(tool_input)
+    prompt = out.get("prompt", "")
+    if isinstance(prompt, str):
+        out["prompt"] = CONTEXT_LINE + prompt
+    return out
 
 
 class AllowsEachRoutedAgentTests(unittest.TestCase):
     def assertAllowed(self, tool_input):
-        self.assertIsNone(decision("Agent", tool_input), "should have been allowed: " + repr(tool_input))
+        self.assertIsNone(decision("Agent", launch(tool_input)), "should have been allowed: " + repr(tool_input))
 
     def test_each_type_with_no_model_given(self):
         for subagent_type in ("reader", "fixer", "implementer", "verifier"):
@@ -71,10 +82,10 @@ class SeniorEscalationLineTests(unittest.TestCase):
     else is denied."""
 
     def assertAllowed(self, tool_input):
-        self.assertIsNone(decision("Agent", tool_input), "should have been allowed: " + repr(tool_input))
+        self.assertIsNone(decision("Agent", launch(tool_input)), "should have been allowed: " + repr(tool_input))
 
     def assertDenied(self, tool_input):
-        self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
+        self.assertIsNotNone(decision("Agent", launch(tool_input)), "should have been denied: " + repr(tool_input))
 
     def test_each_of_the_three_standalone_criteria_is_allowed(self):
         for criterion in ("two-failed-cycles", "architecture", "cross-layer"):
@@ -128,9 +139,59 @@ class SeniorEscalationLineTests(unittest.TestCase):
         self.assertDenied({"subagent_type": "senior", "prompt": "Escalation: architectureish"})
 
 
+class ContextLineTests(unittest.TestCase):
+    """Every Agent launch carries `Context: continues <agent>` or
+    `Context: fresh because (a|b|c): <why>`."""
+
+    ROUTED = ("reader", "fixer", "implementer", "verifier", "claude-code-guide")
+
+    def allowed(self, prompt):
+        for subagent_type in self.ROUTED:
+            self.assertIsNone(
+                decision("Agent", {"subagent_type": subagent_type, "prompt": prompt}),
+                repr(prompt),
+            )
+
+    def denied(self, tool_input):
+        self.assertIsNotNone(decision("Agent", tool_input), repr(tool_input))
+
+    def test_continues_and_fresh_forms_are_allowed(self):
+        self.allowed("Context: continues implementer-1\nDo it.")
+        self.allowed("Do it.\nContext: fresh because (a): independent review")
+        self.allowed("Context: fresh because (b) - state record at /x\n")
+        self.allowed("Context: fresh because c: moves to senior\n")
+        self.allowed("Context: fresh because (c) \u2014 escalation")
+
+    def test_missing_line_is_denied_for_every_type(self):
+        for subagent_type in self.ROUTED:
+            self.denied({"subagent_type": subagent_type})
+            self.denied({"subagent_type": subagent_type, "prompt": "Do it."})
+            self.denied({"subagent_type": subagent_type, "prompt": 7})
+
+    def test_malformed_lines_are_denied(self):
+        for prompt in (
+            "Context: fresh",
+            "Context: fresh because it is new",
+            "Context: fresh because (d): why",
+            "Context: fresh because (a)",
+            "Context: continues",
+            "Context:\ncontinues x",
+            "  Context: continues x",
+        ):
+            self.denied({"subagent_type": "reader", "prompt": prompt})
+
+    def test_senior_needs_both_lines(self):
+        self.denied({"subagent_type": "senior", "prompt": "Escalation: architecture"})
+        self.denied({"subagent_type": "senior", "prompt": "Context: continues x"})
+        self.assertIsNone(decision("Agent", {
+            "subagent_type": "senior",
+            "prompt": "Context: continues x\nEscalation: architecture",
+        }))
+
+
 class DeniesFableModelTests(unittest.TestCase):
     def assertDenied(self, tool_input):
-        self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
+        self.assertIsNotNone(decision("Agent", launch(tool_input)), "should have been denied: " + repr(tool_input))
 
     def test_fable_model_denied_on_any_routed_agent(self):
         self.assertDenied({"subagent_type": "implementer", "model": "fable"})
@@ -147,7 +208,7 @@ class DeniesNonExactOpusModelTests(unittest.TestCase):
     alias and any other Opus id are refused, on implementer and senior alike."""
 
     def assertDenied(self, tool_input):
-        self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
+        self.assertIsNotNone(decision("Agent", launch(tool_input)), "should have been denied: " + repr(tool_input))
 
     def test_bare_opus_alias_denied(self):
         self.assertDenied({"subagent_type": "implementer", "model": "opus"})
@@ -161,7 +222,7 @@ class DeniesNonExactOpusModelTests(unittest.TestCase):
 
 class DeniesUnroutedSubagentTypesTests(unittest.TestCase):
     def assertDenied(self, tool_input):
-        self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
+        self.assertIsNotNone(decision("Agent", launch(tool_input)), "should have been denied: " + repr(tool_input))
 
     def test_general_purpose_and_built_in_planning_agents(self):
         self.assertDenied({"subagent_type": "general-purpose"})
@@ -215,7 +276,7 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
     agent uses -- is refused, not just an override to something exotic."""
 
     def assertDenied(self, tool_input):
-        self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
+        self.assertIsNotNone(decision("Agent", launch(tool_input)), "should have been denied: " + repr(tool_input))
 
     def test_haiku_agents_are_refused_off_haiku_5_5(self):
         for subagent_type in ("reader", "verifier", "fixer"):
@@ -245,7 +306,7 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
 
 class DeniesRemoteIsolationTests(unittest.TestCase):
     def assertDenied(self, tool_input):
-        self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
+        self.assertIsNotNone(decision("Agent", launch(tool_input)), "should have been denied: " + repr(tool_input))
 
     def test_remote_isolation_on_an_otherwise_valid_call(self):
         self.assertDenied({"subagent_type": "reader", "isolation": "remote"})
@@ -303,7 +364,10 @@ class PayloadHandlingTests(unittest.TestCase):
 
     def test_silence_for_a_routed_agent_call(self):
         code, out = self.run_main(
-            json.dumps({"tool_name": "Agent", "tool_input": {"subagent_type": "reader"}})
+            json.dumps({
+                "tool_name": "Agent",
+                "tool_input": {"subagent_type": "reader", "prompt": CONTEXT_LINE},
+            })
         )
 
         self.assertEqual(0, code)

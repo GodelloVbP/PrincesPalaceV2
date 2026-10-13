@@ -126,6 +126,43 @@ def cost_proxy(family, input_tok, cache_write_tok, cache_read_tok, output_tok):
     ) / 1_000_000.0
 
 
+ESCALATION_RE = re.compile(r"^Escalation:[ \t]*(\S+?)(?:[ \t]*[-\u2014:]+[ \t]*(.*))?$", re.MULTILINE)
+
+
+def parse_escalation(prompt):
+    """Return (criterion, reason) from a senior brief's Escalation line, or
+    ("(none)", "") when absent. reason is the text after the separator."""
+    m = ESCALATION_RE.search(prompt or "")
+    if not m:
+        return "(none)", ""
+    return m.group(1), (m.group(2) or "").strip()
+
+
+def senior_escalation_lines(launches):
+    """Markdown for senior launches [(day, prompt)], grouped by criterion,
+    with every judgment reason verbatim."""
+    by_crit = Counter()
+    judgments = []
+    for day, prompt in launches:
+        crit, reason = parse_escalation(prompt)
+        by_crit[crit] += 1
+        if crit == "judgment":
+            judgments.append((day, reason))
+    lines = ["### `senior` launches by Escalation criterion", ""]
+    if not by_crit:
+        return lines + ["_No `senior` launches in window._", ""]
+    lines += ["| Criterion | Launches |", "|---|---:|"]
+    for crit, n in by_crit.most_common():
+        lines.append(f"| {crit} | {n} |")
+    lines += ["", "### `judgment` reasons (verbatim)", ""]
+    if judgments:
+        lines += [f"- {day or '(no date)'}: {reason or '(EMPTY REASON)'}" for day, reason in judgments]
+    else:
+        lines.append("_None._")
+    lines.append("")
+    return lines
+
+
 def parse_ts(ts):
     if not ts:
         return None
@@ -258,6 +295,7 @@ class Stats:
         self.agent_tool_subagent_type_counts = Counter()
         self.agent_tool_prompt_lens = []  # all prompt char lengths
         self.agent_tool_prompt_lens_by_type = defaultdict(list)
+        self.senior_launches = []  # (day, prompt) for each senior Agent call in main sessions
         self.subagent_launches_per_day = Counter()  # date -> count, from Agent tool_use blocks in main sessions
 
         # item 4 (original): per main-session-file stats, keyed by session uuid
@@ -489,6 +527,8 @@ def process_file(path, scope, stats: Stats, window_start):
                             day = ts.date().isoformat() if ts else None
                             if day:
                                 stats.subagent_launches_per_day[day] += 1
+                            if subtype == "senior":
+                                stats.senior_launches.append((day, prompt))
 
     if scope == "main":
         stats.mismatched_sidechain_main += sidechain_true
@@ -709,6 +749,8 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
                       f"{statistics.mean(stats.agent_tool_prompt_lens):,.0f} | "
                       f"{statistics.median(stats.agent_tool_prompt_lens):,.0f} |")
     lines.append("")
+
+    lines.extend(senior_escalation_lines(stats.senior_launches))
 
     lines.append("### Subagent launches per day (Agent tool_use blocks in main sessions, by record timestamp)")
     lines.append("")

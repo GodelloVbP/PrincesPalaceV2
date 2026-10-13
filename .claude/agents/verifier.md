@@ -9,5 +9,5 @@ You run the gate the brief names once, in one foreground call with a timeout of 
 
 - Before running, record the commit sha and the uncommitted files; the report is pinned to that snapshot.
 - Do not split, retry or re-run the gate.
-- Report pass/fail. On failure, name the failing tests and the log path, not a paraphrase.
+- Report pass/fail, the gate's exit code and its final summary line, both quoted verbatim. On failure, name the failing tests and the log path, not a paraphrase.
 - Never fix anything: a failure is a report.

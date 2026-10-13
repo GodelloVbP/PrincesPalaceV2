@@ -19,11 +19,16 @@ Ownership, briefs, parallel sessions and commits. Routing and the
   agent for that work is not allowed.
 - Launch fresh only when: (a) independence is the purpose (a context-free
   reviewer or second opinion); (b) the existing agent's context is obsolete
-  or near its limit: it first writes a state record to the scratchpad
-  (findings, decisions, files changed, verification, next step) and the new
-  agent starts from it; (c) the work moves to another agent type or model
-  (e.g. escalation to `senior`): the new brief references the predecessor's
-  report or state record.
+  or near its limit: it first writes a state record (findings, decisions,
+  files changed, verification, next step) and the new agent starts from it;
+  (c) the work moves to another agent type or model (e.g. escalation to
+  `senior`): the new brief references the predecessor's report or state
+  record.
+- A state record goes to the scratchpad if its reader runs in this session;
+  one that must outlive the session is committed under
+  `docs/handoffs/<topic>/` (snake_case folder, `README.md` first).
+- Review is never done by the agent that produced the work: the reviewer
+  launches fresh under (a).
 - A fresh agent never sees the conversation. A brief pastes no chat
   history; context reaches it only by reference (path to a report or state
   record), and the brief says why it is needed.
@@ -60,26 +65,55 @@ A novel screen or major rework gets a design spec first: layout at
 prototype outranks any table transcribed from it. Before claiming it built,
 audit the build against the spec section by section.
 
-## Fixer trial
+## Plans
 
-`fixer` runs on Haiku 5.5 as a trial. The orchestrator reviews every fixer
-diff before commit and logs every launch in
-`docs/measurements/fixer_haiku_trial.md`, one row each: date, brief
-one-liner, outcome (done / correctly stopped / wrongly stopped / wrong fix),
-correction cycles, out-of-scope edits (y/n), gate result, which agent caught
-the mistake.
+A `docs/PLAN_*.md` is final after two review rounds: v1, review, v2, review,
+v3.
 
-Exit after 10 launches: keep Haiku if no wrong fix reached a commit and
-correction cycles are at most one per three launches; otherwise revert
-`fixer` to Sonnet 5.5 (agent file, `route_agents.py` pin, tests, `CLAUDE.md`
-row).
+- Each round has two reviewers launched in parallel, both `implementer` with
+  an empty edit surface: one with context (the research or audit inputs and
+  the previous round's reviews), one without (plan and repo only, reason (a)).
+- The author is continued, not relaunched, and revises after each round. The
+  final plan carries a short review-disposition table: finding, accepted or
+  rejected, why.
+- A plan that redesigns a contract is authored by `senior` (`architecture`);
+  any other plan by `implementer`.
+
+## Haiku lanes
+
+`reader`, `verifier` and `fixer` run on Haiku 5.5; `fixer` is a trial. The
+orchestrator logs in `docs/measurements/haiku_lanes.md`:
+
+- Fixer trial: every launch, one row: date, brief one-liner, served model
+  (launches before a session restart still run the old frontmatter model),
+  outcome (done / correctly stopped / wrongly stopped / wrong fix),
+  correction cycles, out-of-scope edits (y/n), gate result, which agent
+  caught the mistake. The orchestrator reviews every fixer diff before
+  commit.
+- Reader/verifier incidents: date, agent, what went wrong, caught by, cost.
+
+Exit and rollback:
+
+- `fixer`, after 10 launches: keep Haiku if no wrong fix reached a commit
+  and correction cycles are at most one per three launches; otherwise revert
+  to Sonnet 5.5.
+- `verifier`: revert to Sonnet on the first false PASS that reaches a commit.
+- `reader`: revert to Sonnet after two misses that caused rework.
+
+A revert changes the agent file, the `route_agents.py` pin, its tests and
+the `CLAUDE.md` row.
 
 ## Verification runs
 
 One verifier runs the selected gate once, in one foreground call, and
-reports the state it verified (HEAD sha + uncommitted files). Rerun only
+reports the state it verified (HEAD sha + uncommitted files), the gate's
+exit code and its final summary line, quoted verbatim; the orchestrator
+checks that quote before committing. Rerun only
 when gate-relevant files changed, a failure was fixed, or the result was
 invalid. No progress polling.
+
+The owner reviews the `judgment` escalation list in `tools/usage_baseline.py`
+output with each usage report.
 
 Shell searches name a root (`Assets/_Project`, `docs`, `tools`) and exclude
 `Library`, `Temp`, `.claude/worktrees`, `reports`, `tools/screenshots`.
@@ -88,8 +122,9 @@ Shell searches name a root (`Assets/_Project`, `docs`, `tools`) and exclude
 
 Two sessions can share one working tree and the TestRunner copies.
 
-- One branch per session. Nothing uncommitted at session end: a WIP commit
-  costs nothing, an untracked file is unrecoverable.
+- One branch per session. Nothing uncommitted at session end (except a file
+  an active agent is still editing, see Commits): a WIP commit costs
+  nothing, an untracked file is unrecoverable.
 - Runner copies are claimed by the tools themselves; `waiting for <runner>
   -- held by <tool>` is another session, not a hang.
 - Freeze protocol: announce a multi-hundred-line refactor first; others
@@ -99,6 +134,7 @@ Two sessions can share one working tree and the TestRunner copies.
 
 ## Commits
 
+- Never commit a file an active agent is editing; commit once it reports.
 - Messages give the reasoning and tradeoffs; the git log is the history.
 - An asset and its `.meta` commit together; regenerated scenes commit with
   the change that caused them. New file: create it, run

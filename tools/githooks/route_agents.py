@@ -1,13 +1,14 @@
 """PreToolUse hook (.claude/settings.json) that denies unrouted delegation.
 
 Routing is a fact about the tool call, not a line of prose. Routing and
-escalation rules: CLAUDE.md "Agent routing". Fixer trial: docs/WORKFLOW.md.
+escalation rules: CLAUDE.md "Agent routing". Haiku lanes: docs/WORKFLOW.md.
 
 Denies an Agent call when:
 - subagent_type is not one of PINNED_MODELS;
 - `model` is set to anything outside that agent's pin;
 - `model` names Fable, or an Opus other than exactly claude-opus-5-5;
 - isolation is "remote";
+- the prompt lacks a valid `Context:` line (docs/WORKFLOW.md Ownership);
 - subagent_type is `senior` and the prompt lacks a valid `Escalation:` line.
 
 Denies the Workflow tool outright. Allows everything else, including
@@ -48,6 +49,13 @@ ESCALATION_LINE_RE = re.compile(
     re.MULTILINE,
 )
 
+# `Context: continues <agent>` or `Context: fresh because (a|b|c): <why>`.
+CONTEXT_LINE_RE = re.compile(
+    r"^Context:[ \t]*(?:continues[ \t]+\S+"
+    r"|fresh because (?:\([abc]\)|[abc]\b)[ \t]*[:\-\u2014]?[ \t]*\S)",
+    re.MULTILINE,
+)
+
 ROUTING_ADVICE = (
     "Use the Agent tool with subagent_type set to one of: "
     + ", ".join(sorted(PINNED_MODELS))
@@ -72,6 +80,13 @@ def check_agent(tool_input):
         seen = subagent_type if isinstance(subagent_type, str) and subagent_type else "(none given)"
         return "subagent_type '{}' is not routed. {}".format(seen, ROUTING_ADVICE)
 
+    prompt = tool_input.get("prompt")
+    if not isinstance(prompt, str) or not CONTEXT_LINE_RE.search(prompt):
+        return (
+            "Brief needs 'Context: continues <agent>' or 'Context: fresh "
+            "because (a|b|c): <why>'. See docs/WORKFLOW.md Ownership."
+        )
+
     model = tool_input.get("model")
     if model is not None and model != "":
         if "fable" in model.lower():
@@ -95,8 +110,7 @@ def check_agent(tool_input):
         )
 
     if subagent_type == "senior":
-        prompt = tool_input.get("prompt")
-        if not isinstance(prompt, str) or not ESCALATION_LINE_RE.search(prompt):
+        if not ESCALATION_LINE_RE.search(prompt):
             return (
                 "'senior' needs a line 'Escalation: <criterion>', one of: "
                 + ", ".join(ESCALATION_CRITERIA)
