@@ -37,7 +37,11 @@ result is void once a file relevant to it changes.
 - Selection rules are pinned by `powershell -File tools/test_select_test.ps1`
   (pure PowerShell, no Unity); run it after touching `tools/test_select.ps1`.
 - `-Changed -DryRun` prints the selection and stops; `-ChangedPaths a,b`
-  resolves given paths (for checking, not gating).
+  resolves given paths instead of the working tree.
+- In a tree shared with other sessions' uncommitted work, gate with
+  `-Changed -ChangedPaths <every path the commit contains>`: plain
+  `-Changed` reads `git diff HEAD` plus untracked files, so another
+  session's stray scene promotes the run to the full suite.
 - The full run (`run_tests_parallel.ps1`, ~3 min, ~6 GB RAM) splits PlayMode
   into `-Shards <n>` (default 3) runner copies. It refuses to start on a
   test file outside an area folder, nested deeper than one folder, a

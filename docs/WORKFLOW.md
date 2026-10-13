@@ -17,8 +17,14 @@ Ownership, briefs, parallel sessions and commits. Routing and the
   a follow-up round on the same issue (the owner's tweak, the next round of a
   spell) goes to the same agent with SendMessage, not to a fresh launch that
   re-reads the tree.
-- At most three active agents. Never two owners on one file at once;
-  serialize overlapping edits and combine tightly coupled issues.
+- At most six active agents; several may run Unity jobs at once. Never two
+  owners on one file at once; serialize overlapping edits and combine
+  tightly coupled issues.
+- Split `senior` work at the design line: `senior` designs the contract and
+  lands the core seam with its tests, then hands caller migration, test
+  rewrites, JSON number moves and doc rows to `implementer`. A senior run
+  that is mostly mechanical edits costs Opus tokens on Sonnet work (I1 and
+  run map P2: ~600K tokens and ~280 tool calls each, most of it migration).
 - An owner whose context is largely obsolete writes a state record to the
   scratchpad (findings, decisions, files changed, verification, next step);
   a fresh owner starts from it.
