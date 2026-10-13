@@ -34,6 +34,14 @@ namespace PrincesPalace.EditModeTests
                 "A change here renumbers all of them.");
         }
 
+        [TestCase(RngStreams.Reward, 7, 3, 0, 13932235381651596102UL)]
+        [TestCase(RngStreams.Reward, 7, 3, 1, 12743798925920895799UL)]
+        public void Derive_RewardStreamPinnedValue(uint stream, int step, int nodeId, int pickIndex, ulong expected)
+        {
+            Assert.AreEqual(14u, RngStreams.Reward);
+            Assert.AreEqual(expected, RngStreams.Derive(12345UL, stream, step, nodeId, pickIndex));
+        }
+
         [Test]
         public void Derive_IsPure()
         {

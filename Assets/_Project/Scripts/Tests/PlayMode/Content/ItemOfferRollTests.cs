@@ -264,6 +264,28 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // ---- the keyed offer stream (RngStreams.Reward) ----------------------
+
+        private static string[] OfferIds(ulong seed, int step, int node, int pick) =>
+            RunOrchestrator.RollOffers(BossSession(), seed, step, node, pick)
+                .Select(o => $"{o.ItemId}@{o.Tier}+{o.Plus}").ToArray();
+
+        [Test]
+        public void RollOffers_SameKeyGivesSameOffers_DifferentPickRollsApart()
+        {
+            var first = OfferIds(12345UL, 23, 5, 0);
+            CollectionAssert.AreEqual(first, OfferIds(12345UL, 23, 5, 0),
+                "the same (seed, step, node, pick) must show the same offers");
+            CollectionAssert.AreEqual(
+                new[] { "court_gloves_p2@2+3", "regalia_gloves_p2@2+3", "runeplate_runeplate_p2@2+3" }, first);
+            CollectionAssert.AreEqual(
+                new[] { "wool_leggings_p4@4+3", "brigandine_brigandine_p4@4+5", "brigandine_gloves_p2@2+3" },
+                OfferIds(12345UL, 23, 5, 1));
+            CollectionAssert.AreEqual(
+                new[] { "harness_warskirt_p3@3+3", "wool_mittens_p4@4+4", "bulwark_vambraces_p4@4+3" },
+                OfferIds(12345UL, 23, 6, 0));
+        }
+
         // ---- weapon/armour affix-pool split: a staff must never roll a
         // defensive affix, and armour must never roll an offensive-only one.
 

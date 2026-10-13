@@ -1862,19 +1862,12 @@ namespace PrincesPalace
             ulong seed, SaveData save, DescentNode node, IRunPolicy runPolicy,
             FightSession session, RoomTrace roomTrace, BotRunResult result)
         {
-            // SEEDED, where the screen's is not. FightController.Input rolls
-            // this from UnityEngine.Random on purpose, so a reroll cannot shift
-            // the fight a replay would produce -- and RunOrchestrator.RollOffers
-            // takes the randomness as a parameter precisely so the bot can hand
-            // in a reproducible stream instead. Derived from (seed, step, node)
-            // per plan §5; the bot never rerolls in v1, so there is no reroll
-            // index in the key.
-            var offerRng = StreamFor(seed, OfferStream, roomTrace.Step, node.Id);
-
+            // The same keyed stream the screen rolls from (RngStreams.Reward),
+            // so a bot run and a played run see the same offers at a position.
             List<ItemOffer> offers;
             try
             {
-                offers = RunOrchestrator.RollOffers(session, bound => offerRng.NextInt(0, bound));
+                offers = RunOrchestrator.RollOffers(session, seed, roomTrace.Step, node.Id);
             }
             catch (Exception e)
             {
@@ -1920,6 +1913,9 @@ namespace PrincesPalace
             // already wearing a better helm.
             var scores = GearEvaluator.ScoreOffers(save, offers, runPolicy.Gear);
 
+            // The policy's pick draws from its own stream; the offers themselves
+            // came from RngStreams.Reward above.
+            var offerRng = StreamFor(seed, OfferStream, roomTrace.Step, node.Id);
             int index = runPolicy.ChooseOffer(offers, ViewOf(save).WithOfferScores(scores), offerRng);
             if (index < 0 || index >= offers.Count) return;
 

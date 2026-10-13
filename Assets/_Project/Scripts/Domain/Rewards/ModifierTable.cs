@@ -135,17 +135,6 @@ namespace PrincesPalace.Domain.Rewards
             return (RiftTier)rungs;
         }
 
-        // Picks `slotCount` DISTINCT ids out of `pool`, in the order rolled.
-        // Removal-based, same technique ItemOfferTable.Choose already uses
-        // for "no repeats" -- draw an index into what remains, take it out,
-        // shrink the pool -- rather than a reject-and-retry loop, which would
-        // make the number of draws (and so a seeded run's reproducibility)
-        // depend on how often the loop got unlucky.
-        //
-        // Returns fewer than `slotCount` only when the pool itself is that
-        // thin -- degrading gracefully rather than repeating an id, the same
-        // posture ItemOfferTable.Choose takes when the candidate pool runs
-        // out.
         // WHICH SLOT AN EFFECT IS ALLOWED TO ROLL ON, closed over
         // ModifierEffectType exactly the way ModifierEntryResolver's own
         // UsesThreshold/IgnoresMagnitude/UsesDamageType sets are -- one line
@@ -214,6 +203,17 @@ namespace PrincesPalace.Domain.Rewards
         // takes on a thin pool.
         public static bool IsOffensiveModifier(ModifierEffectType type) => OffensiveEffects.Contains(type);
 
+        // Picks `slotCount` DISTINCT ids out of `pool`, in the order rolled.
+        // Removal-based, same technique ItemOfferTable.Choose already uses
+        // for "no repeats" -- draw an index into what remains, take it out,
+        // shrink the pool -- rather than a reject-and-retry loop, which would
+        // make the number of draws (and so a seeded run's reproducibility)
+        // depend on how often the loop got unlucky.
+        //
+        // Returns fewer than `slotCount` only when the pool itself is that
+        // thin -- degrading gracefully rather than repeating an id, the same
+        // posture ItemOfferTable.Choose takes when the candidate pool runs
+        // out.
         public static List<string> PickModifiers(IReadOnlyList<string> pool, int slotCount, Func<int, int> nextIndex)
         {
             if (pool == null)

@@ -1254,21 +1254,13 @@ namespace PrincesPalace
         }
 
         // The loot on offer, rolled against how deep the run is and what class
-        // of thing was just killed.
-        //
-        // The roll itself is RunOrchestrator.RollOffers now, so the bot rolls
-        // its offers from the same table (docs/PLAN_BALANCE_BOT.md F2). What
-        // stays HERE is the choice of randomness, which is the part that is
-        // genuinely the screen's: UnityEngine.Random rather than the session's
-        // seeded stream, and deliberately -- the offer is not part of the
-        // fight's simulation and must not shift the beats a replay would
-        // produce. The bot hands in a seeded one for the opposite reason.
+        // of thing was just killed. Keyed to the run position, not drawn from
+        // UnityEngine.Random: the same settlement shows the same three, and the
+        // offer still cannot shift the fight's own beats (separate stream).
         private System.Collections.Generic.List<Domain.Rewards.ItemOffer> RollOffers()
         {
-            // A lambda, not the method group: Random.Range is overloaded on
-            // (int,int) and (float,float), and the int overload is the
-            // upper-bound-EXCLUSIVE one both Domain tables expect.
-            return RunOrchestrator.RollOffers(_session, n => UnityEngine.Random.Range(0, n));
+            var run = RunManager.Run;
+            return RunOrchestrator.RollOffers(_session, run?.runSeed ?? 0UL, run?.step ?? 0, run?.currentNodeId ?? 0);
         }
 
         private void UseSatchelItem(int index)

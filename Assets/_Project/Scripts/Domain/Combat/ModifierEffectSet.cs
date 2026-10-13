@@ -10,19 +10,16 @@ namespace PrincesPalace.Domain.Combat
     // equipment through ContentDatabase on every hit. See TalentEffectSet's
     // own header for the full argument; this repeats only what differs.
     //
-    // EMPTY IS THE NORMAL CASE, more emphatically than for TalentEffectSet.
-    // Phase A1 gave EquipmentSlotEntry/InventoryEntry a real modifierIds
-    // field, but nothing in the game populates it yet — rolling modifiers
-    // onto a drop is Phase A3. Every combatant in every real fight today
-    // carries Empty, and ContentDatabase.ModifierEffects proves that with a
-    // real test rather than an assertion (ModifierEffectsAreEmptyForRealCharactersTests).
+    // EMPTY IS THE COMMON CASE, more emphatically than for TalentEffectSet:
+    // only a worn piece that rolled affixes (ItemOfferRoll, via
+    // ModifierTable.PickModifiers) or a reward-track elemental term
+    // contributes anything, so a combatant in plain gear carries Empty.
     //
-    // MAX, NOT SUM, for repeated types — the identical rule TalentEffectSet
+    // MAX, NOT SUM, for repeated types -- the identical rule TalentEffectSet
     // uses and the identical reasoning: two copies of the same modifier
-    // effect stacking additively is not a decision this phase makes (nor
-    // could it be, since nothing rolls modifiers yet), so Best() answers
-    // "the strongest present", not "the total", until a real design calls
-    // for summing.
+    // effect do not stack additively, so Best() answers "the strongest
+    // present", not "the total". A consumer that wants a total folds .All
+    // itself.
     //
     // NO BestBelowHealth YET, unlike TalentEffectSet. None of Phase A2's
     // five stub ModifierEffectType members are health-gated (see that
@@ -38,9 +35,7 @@ namespace PrincesPalace.Domain.Combat
     // will drop in unchanged when that day comes.
     public sealed class ModifierEffectSet
     {
-        // Shared, never mutated. Handed to every combatant today — see this
-        // class' own header — so the common (currently universal) case
-        // allocates nothing.
+        // Shared, never mutated, so the common empty case allocates nothing.
         public static readonly ModifierEffectSet Empty = new ModifierEffectSet(new List<ModifierEffect>());
 
         private readonly List<ModifierEffect> _effects;

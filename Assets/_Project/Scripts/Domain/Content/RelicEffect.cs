@@ -5,9 +5,8 @@ namespace PrincesPalace.Domain.Content
     // (a second attack, a consumed damage shield, an extra turn on a kill)
     // have nothing numeric in common to generalize over, and pretending
     // otherwise would be a fake abstraction over three special cases. Each
-    // value is handled by its own block in FightController, the same
-    // "content concepts belong in Core, not Domain" reasoning CLAUDE.md
-    // already gives for role-based Skill effects.
+    // value is handled by its own block in FightSession (its partials, e.g.
+    // FightSession.Ledger.cs), keyed off HasRelic.
     //
     // No mirror enum on the Content side (contrast ItemKind/ResolvedItemKind,
     // which mirror each other only because Domain cannot see the

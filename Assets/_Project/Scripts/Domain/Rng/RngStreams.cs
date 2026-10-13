@@ -72,6 +72,13 @@ namespace PrincesPalace.Domain.Rng
         public const uint ShelfFakes = 12;
         public const uint ShelfScuffle = 13;
 
+        // The three item offers a settled fight shows, keyed (step, nodeId,
+        // pickIndex): the same fight settling again -- a reload mid-reckoning
+        // -- shows the same three, and a later pick at the same position
+        // (pickIndex 1, 2, ...) rolls apart. Not the Fight stream: the offer
+        // is not part of the simulation, so it must not shift a replay's beats.
+        public const uint Reward = 14;
+
         // SplitMix64's finalizer, the same mixing SeededRandom itself uses.
         // Applied to the packed inputs rather than to a running state, so this
         // is a pure hash: same inputs, same answer, forever, with no ordering

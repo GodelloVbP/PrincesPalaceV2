@@ -97,10 +97,9 @@ namespace PrincesPalace.Domain.Rewards
         // genuinely smaller. Callers must handle that rather than assuming a
         // full row, since a set could be removed from content at any time.
         //
-        // `count` defaults to OfferCount so every existing caller and test
-        // reads the same as before. It is a parameter at all because the
-        // reward track widens the offer at level 50, and the width is a
-        // property of who is playing rather than of this table.
+        // `count` defaults to OfferCount; no caller widens it today. It is a
+        // parameter because the width is a property of who is playing rather
+        // than of this table.
         public static List<ItemOffer> Choose(
             IReadOnlyList<ItemOffer> candidates, int targetTier, int maxTier, Func<int, int> nextIndex,
             int count = OfferCount)

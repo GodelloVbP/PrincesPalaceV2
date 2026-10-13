@@ -200,8 +200,8 @@ namespace PrincesPalace.Domain.Dungeon
         // 200: at 7.5% compounding, step 200 is
         // already ~1.9 million times a step-0 enemy, and the descent stops
         // getting meaningfully harder well before that because the player's
-        // own gear ladder ends at tier 10, which is step 80. Everything past
-        // there is the endless descent doing what it is for -- the player's
+        // own gear ladder ends at tier 10, which is step 160 (16 steps a
+        // tier). Everything past there is the endless descent doing what it is for -- the player's
         // power is capped and the dungeon's is not, so a run ends.
         public const int MaxScaledStep = 200;
 

@@ -741,12 +741,18 @@ namespace PrincesPalace
         // Rolled against how deep the run is and what class of thing was just
         // killed.
         //
-        // THE RANDOMNESS COMES IN FROM OUTSIDE, and that is the whole point of
-        // the parameter: the screen hands in UnityEngine.Random because the
-        // offer is not part of the fight's simulation and must not shift the
-        // beats a replay would produce, while the bot hands in a seeded stream
-        // so a batch is reproducible. Domain has always taken it as a Func;
-        // this only keeps the choice at the caller.
+        // THE RANDOMNESS COMES IN FROM OUTSIDE so a test can hand in a fixed
+        // sequence. Production callers go through the keyed overload below.
+        // The screen's and the bot's roll: one keyed stream per
+        // (run seed, step, node, pickIndex), so the same position always
+        // shows the same offers (RngStreams.Reward).
+        public static List<ItemOffer> RollOffers(
+            FightSession session, ulong runSeed, int step, int nodeId, int pickIndex = 0)
+        {
+            var rng = RngStreams.Open(runSeed, RngStreams.Reward, step, nodeId, pickIndex);
+            return RollOffers(session, bound => rng.NextInt(0, bound));
+        }
+
         public static List<ItemOffer> RollOffers(FightSession session, Func<int, int> nextIndex)
         {
             // BOSS CHECKED FIRST -- via FightSession.EncounterClass, the one
@@ -810,12 +816,8 @@ namespace PrincesPalace
                 // rescale carried health after" pair; TakeOffer still owns
                 // the SaveCurrent below it. Taking an offer is a descent act,
                 // not a menu press, so it names Descent whatever scene it runs in.
-                if (!EquipmentOps.Equip(MenuContext.Descent, save, character, offer.Instance, itemDef.equipSlot,
-                                        itemDef.IsEquippable))
-                {
-                    return;
-                }
-
+                EquipmentOps.Equip(MenuContext.Descent, save, character, offer.Instance, itemDef.equipSlot,
+                                   itemDef.IsEquippable);
                 return;
             }
         }

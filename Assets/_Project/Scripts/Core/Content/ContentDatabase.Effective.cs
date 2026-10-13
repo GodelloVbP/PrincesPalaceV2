@@ -385,13 +385,9 @@ namespace PrincesPalace.Content
         // .Best(FortunateFavorBonusFlat) and cannot be disturbed by an
         // appended elemental effect.
         //
-        // PHASE A2: real working code, not a stub, even though it returns
-        // ModifierEffectSet.Empty for every character in every real save
-        // today — see ModifierEffectSetAlwaysEmptyForRealCharactersTests.
-        // Phase A1 already gave EquipmentSlotEntry.modifierIds a real (if
-        // always-empty-today) list to walk, and Phase A3's roll has nothing
-        // to change here when it lands: it only starts populating
-        // modifierIds with real ids, which this method already reads.
+        // Empty for a character whose worn pieces rolled no affixes and who has
+        // no track term; ItemOfferRoll populates modifierIds on drops, and
+        // this method reads them.
         //
         // READS ActiveLoadout, NOT the raw equipment walk TalentEffects has
         // no equivalent of. A worn item whose ability-score requirement is
