@@ -23,7 +23,7 @@ Launch `senior` to write `docs/PLAN_ITEMS.md` v1:
 - Plan contents:
   1. Diagnosis scored against the theory checklist.
   2. Target design: taxonomy, reward moments and choice structure, rarity, party fit, inventory pressure, power curve, economy.
-  3. Architecture (the owner's core requirement: simplest structure, no duplicate code, shared structures every reward source calls, easy to add items and effects):
+  3. Architecture, meeting the structure requirement in `docs/WORKFLOW.md` Plans:
      - one item definition model;
      - one trigger→condition→effect vocabulary;
      - one offer pipeline (pool → filter → weighted sample with pity → present → resolve) for fights, shop, relic draft, events and reward tracks;

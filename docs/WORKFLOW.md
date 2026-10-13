@@ -78,6 +78,27 @@ v3.
   rejected, why.
 - A plan that redesigns a contract is authored by `senior` (`architecture`);
   any other plan by `implementer`.
+- Every plan meets the structure requirement below; both reviewers check it.
+
+Structure requirement: the final plan specifies the simplest structure that
+delivers the design, and shows it:
+
+1. One home per behaviour: every rule, formula, data shape and pipeline
+   exists once. Name each shared entry point and every caller.
+2. Extend before adding: name the existing system each piece extends
+   (path); a new system states why extending fails.
+3. Delete what it replaces: list the classes, files, branches and tests
+   removed. No old and new path coexist after the phase that replaces them.
+4. Data over code: content and tuning live in data. Show the path for the
+   most common future additions as files touched, before vs after; the
+   target is data only.
+5. No speculative structure: share an abstraction only when it has two or
+   more callers today; no hooks or options for features nobody has asked
+   for. Where the model doesn't fit a case, change the model; no flags or
+   special cases.
+6. Efficient: fewest moving parts and least code for the same behaviour.
+   State runtime cost only for per-turn or per-frame paths.
+7. Shippable phases: every phase leaves the game working and tests green.
 
 ## Haiku lanes
 
