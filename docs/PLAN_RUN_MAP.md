@@ -2,7 +2,8 @@
 
 Status: proposal, awaiting owner sign-off (§9). Written against `2565b5a`.
 Reviewed in two rounds, each by one reviewer with repo context and one blind
-reviewer; every file:line below was read, not remembered. Owner rules this
+reviewer, then challenged against acclaimed games (§10); every file:line
+below was read, not remembered. Owner rules this
 plan answers to: `DIRECTION_BIBLE.md` §5–7, `RUN_MAP_DECISION_SPEC.md` §2–3.
 It supersedes `RUN_MAP_ART_BRIEF.md` once signed (§7).
 
@@ -32,24 +33,24 @@ decision instead of a path-pick:
    number with depth. HP carries from room to room and refills only after the
    boss (the full heal at `RunManager.cs:412-437` stays: it fixes a measured
    attrition complaint). Every pocket is therefore HP you carry into the boss
-   fight, paid for a prize the spine doesn't have.
+   fight, paid for a prize the spine doesn't have. Restraint pays too: walking
+   the spine past a pocket's mouth lets the party catch its breath (+8% HP),
+   so bypassing is a choice with its own reward, not only an absence.
 2. **Visible encounters.** A fight node shows the enemies it will spawn, a
    strength from 1 to 3, and one reward chip. Strength changes the *kind* of
    reward, not only its size: 1 pays gold, 2 pays gold and a consumable, 3 pays
    a spell book. Inspecting never commits.
-3. **Anchors and wards.** The heart is drawn as the boss itself, carrying 1–3
-   wards: named abilities from content (for example *Regrowth*, heals each
-   turn; *Brood*, summons on turn 3; *Bark*, extra armour). Each elite is an
-   anchor bound to one ward, with a painted root running from it to the heart.
-   Beat the anchor and that ward is gone. Elites are optional. The dangerous
-   ward sits behind the harder elite, and the boss's drop grows with each ward
-   still standing, so leaving an anchor alive is a bet, not only a mistake.
-   No count or percentage is ever shown: you see a boss with fewer things on
-   it.
+3. **Anchors stand with the heart.** The heart is drawn as the boss itself,
+   with its anchors standing at its side. Each elite on the map is an anchor,
+   joined to the heart by a painted root. Beat it on the map and it is gone;
+   leave it alive and it fights beside the boss. Elites are optional, and the
+   boss's drop grows by one reward per anchor still standing, so leaving one
+   alive is a bet, not only a mistake. No count or percentage is ever shown:
+   you see who will be standing there.
 
 Then, as polish (P6): **the realm eases where you've been.** Two aligned
 paintings, and a mask reveals the eased one around cleared nodes and around
-the heart as wards fall. It is never labelled. The spec asks for exactly this
+the heart as anchors fall. It is never labelled. The spec asks for exactly this
 response (`RUN_MAP_DECISION_SPEC.md` §3).
 
 **Honest framing for the owner.** On screen this is the spec's "control"
@@ -64,7 +65,7 @@ line, with storyboard frames as the evidence (P0).
 | Type | Status | Where it may sit | Role |
 |---|---|---|---|
 | Fight | kept | anywhere | strength 1–3, reward kind by strength |
-| Elite (anchor) | kept, reworked | pockets and forks, never the spine | strips one ward |
+| Elite (anchor) | kept, reworked | pockets and forks, never the spine | beaten on the map, or it joins the boss fight |
 | Event | kept | anywhere but next to another event | the card shows the event's title, never "?" |
 | Shop | kept | one per realm, on a fork branch | costs the other branch, not extra rooms |
 | Rest | kept | at most one per realm, on a fork branch; offset 7 on the spine when `restBeforeBoss` | reachable without paying a pocket |
@@ -127,7 +128,8 @@ tests call them.
     stretch it bypasses, and none bypasses offset 0 or 8.
   - Forks: 1–2 equal-length branches.
   - Positions come from `RealmLayout` (Domain, normalised 0..1).
-- **Anchors:** `min(1 + floor/3, 3)` elites, on pockets and forks, at most one
+- **Anchors:** `min(1 + floor/3, 2)` elites (the enemy stage has 3 slots,
+  `FightHudSpec.cs:51`: the boss plus two anchors), on pockets and forks, at most one
   behind any single choice. At least one is reachable on every floor.
   `ForcedTypeAt`'s forced elite is removed.
 - **Rolled types:** fights about 50%, using the waypoint rules in §2's table.
@@ -155,28 +157,27 @@ so bot determinism holds. Strength is derived from the rolled enemies' scaled
 stats against the party. Test: for every node on 200 seeds, the preview's enemy
 ids equal those from `RunEncounter.For(...)`.
 
-## 6. Wards (their own phase)
+## 6. Anchors in the boss fight (their own phase)
 
-Wards are new combat code, not content alone. The enemy schema has
-`abilities`, a scripted `skills` sequence and `summonEnemyId`/`summonCap`
-(`CONTENT_SCHEMA.md:79-80, 260-261, 409`), but no boss modifier, passive or
-per-turn heal. `FightEncounterAdapter` only scales stats for elites
-(`FightEncounterAdapter.cs:85`).
+A living anchor joins the boss fight as an extra enemy. That reuses what combat
+already does (multi-enemy fights, elite scaling via
+`FightEncounterAdapter.cs:85`), so it needs no new ability system. Bespoke
+boss modifiers would need passive and per-turn hooks the enemy schema lacks
+(`CONTENT_SCHEMA.md:79-80, 260-261, 409`).
 
 - **Boss choice:** written once when the realm opens (`StartRun`,
   `AdvanceLeg`), from the unused `RngStreams.Boss` stream, into the existing
   `RunSnapshot.bossEnemyId`. That field has readers but no writer today.
-- **Ward set:** comes from the boss's content entry (new `wards` field). Wards
-  are assigned to anchors at display and fight time, in anchor order, so the
-  generator stays content-free.
 - **Saved:** `RunSnapshot.slainAnchorIds`.
-- **Fight hook:** the adapter adds each live ward's effect to the boss.
-  - Brood rides the existing `skills` + `summonCap`.
-  - Regrowth and Bark need a passive or status-on-spawn hook. Confirm that
-    `FightSession` has one before the phase is sized. If it doesn't, building
-    one is `Escalation: architecture`.
+- **Fight build:** the boss roster appends each living anchor's rolled enemy
+  (the same `EncounterRoll` call as its map preview, §5). Check before sizing:
+  - whether `IsElite` scaling is per roster or per enemy;
+  - whether a boss roster accepts extra enemies.
+  If either needs a contract change, that is `Escalation: architecture`.
+- **Tuning:** an anchor joining at full elite stats may be too much next to a
+  boss. It joins at a fraction of its HP, set by the bot (P5).
 - **Until P5:** anchors are plain optional elites with a visible reward. The
-  pocket decision is proven first. Wards land only after it passes the P3 gate.
+  pocket decision is proven first.
 
 ## 7. Screen
 
@@ -186,15 +187,17 @@ hand-edit the scene.
 
 - **Top band:** realm name, floor, gold, and the cache balance once P7 lands.
 - **Bottom detail card:** for the focused node, its type, enemies, reward and
-  (for an anchor) the ward it holds. When two choices are open, the card
+  (for an anchor) that it will stand with the boss if left alive. When two choices are open, the card
   compares them side by side.
 - **Fixed node grammar:** medallion = type, pips = strength, at most one
   reward chip. A node looks the same no matter what else is on screen.
 - **Closed-off routes:** focusing a choice veils, under painted fog, the routes
   it would close off, and only when something does close.
-- **Heart:** the boss sprite with ward attachments (vines, a brood sac, bark
-  plates). Painted roots run to the living anchors and wither when an anchor
-  falls.
+- **Heart:** the boss sprite with its living anchors beside it. Painted roots
+  run from the heart to each anchor on the map and wither when it falls.
+- **Opening:** on entering a realm the camera starts on the heart and rises
+  to the party (2.5 s at most, skippable). After that the map stays out of the
+  way, with walks capped as today.
 - **Gamepad:** Left and Right step through the current choices in screen
   order, and Submit walks. Y toggles a zoomed-out overview where the d-pad
   inspects every node read-only. Mouse hover is focus. There is no free
@@ -206,7 +209,7 @@ hand-edit the scene.
   - vertical found/eased paintings with the same safe-area method;
   - medallions, adding shop, cache and anchor;
   - one chip per reward kind and the strength pip;
-  - ward attachments per boss and the root/tether stroke;
+  - the root stroke, living and withered;
   - a vertical trail.
   Greyboxes stand in until the art arrives.
 
@@ -219,7 +222,7 @@ hand-edit the scene.
 | P2 | Integration: step assignment and `roomsWalked`; the preview (§5); `restBeforeBoss` input and `_map` cache key (`RunManager.cs:123-124`); debug jump; SaveData v8→v9 (below); a column projection so the current screen stays playable; rewrite the broken tests (`DescentLeg*`, `DescentRoadVariation`, `RunManagerTests`, `FightAfterTheElite`, `EventRunBuff`, `RunEnding`, `RarityTableTests` and `EnemyBandTests` if touched); update `CODE_MAP.md` and `ARCHITECTURE.md`. | senior, `Escalation: cross-layer` (Domain generator + Core RunManager/RunEncounter + SaveData ladder land atomically) | `-Changed -BuildScenes` |
 | P3 | Bot: `MapView` on `RunView` (path to heart, pockets, anchors) and path-aware choices in the four policies (`IRunPolicy.cs:19`). **Gate:** the pocket-take rate must differ by HP band (it can't be ~0% or ~100% in every band), and anchors taken by strength band must be reported. | implementer, then verifier | bot report |
 | P4 | Screen: the graph, node grammar, detail card and comparison, walk, gamepad, overview. | implementer | `-Changed -BuildScenes`, diff `Art/` |
-| P5 | Wards (§6): schema, `ContentBuilder`, adapter hook, `slainAnchorIds`, heart attachments, one combat test per ward. The bot re-runs the P3 gate with wards. | implementer, or senior with `Escalation: architecture` if `FightSession` has no passive hook | `-Changed -BuildContent -BuildScenes` |
+| P5 | Anchors in the boss fight (§6): `slainAnchorIds`, boss roster build, anchor HP fraction, heart drawing, combat tests (one and two anchors alive). The bot re-runs the P3 gate. | implementer, or senior with `Escalation: architecture` if the roster contract must change | `-Changed -BuildScenes` |
 | P6 | Easing mask: a one-day spike (hand-written UI shader keeping stencil/clip, content-space UVs, rebuilt from `clearedNodeIds` on load), then the build and the art swap. | implementer | headless mask test + screenshot |
 | P7 | Cache waypoint, if signed: deposit, `RunSettlement` exemption, at most one per realm. | implementer | `-Changed` |
 
@@ -249,8 +252,23 @@ mix.
 1. **The screen:** accept the "graph in a painted place" presentation against
    `DIRECTION_BIBLE.md:57`, on the strength of the storyboard.
 2. **Orientation:** top to bottom (recommended) or keep left to right.
-3. **Elites:** anchors and wards resolve the open "forced or avoidable"
+3. **Elites:** optional anchors that join the boss when left alive resolve the open "forced or avoidable"
    (`DIRECTION_BIBLE.md:56`) as avoidable.
 4. **Cache:** build it (G2) or drop it.
 5. **Endless descent:** it stays. Pocket growth stops at floor 8; past that,
    floors differ by difficulty and content only.
+
+## 10. Checked against acclaimed games
+
+The comparison and the five P0 storyboard frames:
+https://claude.ai/artifact/AWhthzsNhso4dzaEcjBTSx (advisory summary:
+https://claude.ai/artifact/Fe1AMzHFEjmjSmYYjPKgvL). What it changed in this
+plan:
+
+- Anchors join the boss instead of granting abstract wards (Shadow of
+  Mordor's bodyguards). It is easier to read and needs no new combat system.
+- Bypassing a pocket heals a little (Balatro pays for skipping a blind), so
+  restraint has a reward of its own.
+- The visible boss is not sold as new: Slay the Spire and Balatro already show
+  it. What is new is that the boss you face is the one your route left.
+- A time budget for the map (Darkest Dungeon II's slow travel is the warning).
