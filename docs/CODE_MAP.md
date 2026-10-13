@@ -60,6 +60,7 @@ screenshots all read it.
 | Contact FX | `Core/ContactCues.cs`, `Core/StaticSwing.cs` | Melee arc/burst/thud asset paths and timings. |
 | Run rules | `Core/Bot/RunOrchestrator.cs` (+ parts below) | The one rulebook for a descent; screens and the bot both call it. |
 | Run lifecycle | `Core/RunManager.cs`, `Data/RunSnapshot.cs`, `Domain/Dungeon/DescentMap.cs` | Static accessor over the save; map regenerated from seed. |
+| Realm map (run map P1; not wired into Core until P2) | `Domain/Dungeon/RealmMap.cs`, `RealmMapGenerator.cs`, `RealmMapRules.cs`, `RealmLayout.cs`, `RealmProfile.cs`, `PrizeKind.cs`; anchor roll `EncounterRoll.RollAnchor` | Plan: `docs/PLAN_RUN_MAP.md`. Sits beside `DescentMap` until P2 removes it. |
 | Non-fight rooms | `Domain/Dungeon/RoomResolution.cs` → `Core/RoomResolver.cs` | Every room that does nothing says so. |
 | Events | `Core/Bot/RunOrchestrator.Event.cs`, `Domain/Events/`, `Core/RunEventContext.cs` | Authoring: `docs/EVENTS.md`. |
 | Shop stock/pricing | `Core/Bot/RunOrchestrator.Shop.cs`, `Domain/Rewards/ShopStock.cs`, `ShopPricing.cs` | |

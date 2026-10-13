@@ -208,6 +208,55 @@ namespace PrincesPalace.Domain.Dungeon
             return new Result(ids, isBoss: false, isElite: isElite);
         }
 
+        // An ANCHOR is one elite enemy (docs/PLAN_RUN_MAP.md section 5), where an
+        // EliteFight fields EliteEnemyCount. The same enemy is fought on the map
+        // and stands at the heart, so the roll is keyed like any fight, on
+        // (step, nodeId) of the Fight stream.
+        //
+        // One slot only: an anchor beside a boss must leave the stage room for
+        // the others, and a SlotSpan 2 creature already reads as an elite on
+        // its own. Same depth band and the same regulars as Roll; with nothing
+        // of span 1 in band it falls back to any regular rather than field an
+        // empty stage.
+        public static Result RollAnchor(
+            IReadOnlyList<EnemyCandidate> pool,
+            SeededRandom rng,
+            int floor = int.MaxValue)
+        {
+            if (pool == null || pool.Count == 0 || rng == null)
+            {
+                return new Result(new List<string>(), isBoss: false, isElite: true);
+            }
+
+            var narrow = new List<EnemyCandidate>();
+            var regulars = new List<EnemyCandidate>();
+            foreach (var candidate in pool)
+            {
+                if (string.IsNullOrEmpty(candidate.Id) || candidate.IsBoss || candidate.MinFloor > floor) continue;
+                regulars.Add(candidate);
+                if (candidate.SlotSpan == 1) narrow.Add(candidate);
+            }
+
+            if (regulars.Count == 0)
+            {
+                foreach (var candidate in pool)
+                {
+                    if (string.IsNullOrEmpty(candidate.Id) || candidate.IsBoss) continue;
+                    regulars.Add(candidate);
+                    if (candidate.SlotSpan == 1) narrow.Add(candidate);
+                }
+            }
+
+            var drawFrom = narrow.Count > 0 ? narrow : regulars;
+            if (drawFrom.Count == 0)
+            {
+                return new Result(new List<string>(), isBoss: false, isElite: true);
+            }
+
+            var pick = drawFrom[rng.NextInt(0, drawFrom.Count)];
+            return new Result(new List<string> { pick.Id }, isBoss: false, isElite: true);
+        }
+
         // The run's declared boss if it is actually in the pool, else a roll.
         //
         // A declared id that no longer resolves is a content gap, not a reason
