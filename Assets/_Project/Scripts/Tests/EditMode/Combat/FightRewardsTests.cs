@@ -25,13 +25,15 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the payout ---------------------------------------------------------
 
-        // The income cut stands at 1000 (no change) until the balance pass
-        // sets it (docs/PLAN_ITEMS.md 1.6). Moving it moves this literal on purpose.
+        // The income cut (docs/PLAN_ITEMS.md 1.6), set by the I5 bot batches so
+        // the pooled median realm over floors 1-10 pays 120 +/- 20 step-0 gold
+        // (docs/handoffs/item_redesign/I5_BALANCE_REPORT.md).
         [Test]
-        public void GoldIncome_IsUncutUntilTheBalancePass()
+        public void GoldIncome_IsCutToFifteenPercent()
         {
-            Assert.AreEqual(1000, VictoryRewards.GoldIncomePermille);
-            Assert.AreEqual(17, VictoryRewards.Income(17));
+            Assert.AreEqual(150, VictoryRewards.GoldIncomePermille);
+            Assert.AreEqual(15, VictoryRewards.Income(100));
+            Assert.AreEqual(3, VictoryRewards.Income(17));
             Assert.AreEqual(0, VictoryRewards.Income(0));
         }
 

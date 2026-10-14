@@ -27,9 +27,9 @@ namespace PrincesPalace.Domain.Combat.Session
         public const float EliteRewardMultiplier = 1.56f;
 
         // Every fight's gold, and Treasure's, before ScaleReward, in
-        // thousandths (docs/PLAN_ITEMS.md 1.6). 1000 pays today's figure; the
+        // thousandths (docs/PLAN_ITEMS.md 1.6). 1000 would pay the uncut figure; the
         // balance pass sets it against the 120 +/- 20 step-0 gold a realm target.
-        public const int GoldIncomePermille = 1000;
+        public const int GoldIncomePermille = 150;
 
         // `gold` after the income cut, rounded half away from zero like the
         // elite multiplier before it.
