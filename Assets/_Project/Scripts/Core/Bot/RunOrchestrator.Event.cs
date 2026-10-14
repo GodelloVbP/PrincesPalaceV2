@@ -173,7 +173,7 @@ namespace PrincesPalace
         // every later call returns the stored id, even if the seen list or the
         // event requirements have moved since, so the card's promise holds.
         // A save with no stored id for the room rolls as it always did.
-        internal static string DecideEvent(SaveData save, RunSnapshot run, int step, int nodeId)
+        public static string DecideEvent(SaveData save, RunSnapshot run, int step, int nodeId)
         {
             run.nodeEvents ??= new List<NodeEventEntry>();
             foreach (var entry in run.nodeEvents)
@@ -190,8 +190,9 @@ namespace PrincesPalace
         }
 
         // The roll itself: pure over (seed, step, node, the run's seen list and
-        // the event requirements). Only DecideEvent calls it.
-        private static string RollEvent(SaveData save, RunSnapshot run, int step, int nodeId)
+        // the event requirements, minus events promised to other rooms). Public
+        // for the test that hunts a colliding seed (tests cannot see internals); production calls DecideEvent.
+        public static string RollEvent(SaveData save, RunSnapshot run, int step, int nodeId)
         {
             var pool = ContentDatabase.Events
                 .Where(e => e != null && e.Data != null)
@@ -199,7 +200,11 @@ namespace PrincesPalace
                 .ToList();
 
             var rng = RngStreams.Open(run.runSeed, RngStreams.Event, step, nodeId);
-            return EventRoll.Pick(pool, run.floor, run.eventsSeen, new RunEventContext(save, run), rng);
+            // Events promised to other rooms are as unavailable as seen ones: one
+            // realm never shows the same event twice.
+            var taken = new List<string>(run.eventsSeen ?? new List<string>());
+            if (run.nodeEvents != null) taken.AddRange(run.nodeEvents.Where(e => e != null && !string.IsNullOrEmpty(e.eventId)).Select(e => e.eventId));
+            return EventRoll.Pick(pool, run.floor, taken, new RunEventContext(save, run), rng);
         }
 
         // The title the event page at a room will open with, "" when the pool

@@ -240,6 +240,33 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(promisedId, run.eventId, "arrival opened a different event than the card promised");
         }
 
+        // Two event rooms previewed back-to-back never promise the same event,
+        // on a seed where the bare roll gives both the same one.
+        [Test]
+        public void TwoEventRoomsAreNeverPromisedTheSameEvent()
+        {
+            int checkedSeeds = 0;
+            for (ulong seed = 1; seed <= 4000 && checkedSeeds < 1; seed++)
+            {
+                if (RealmPaths.FirstRealm(seed).Nodes.Count(n => n.Type == RoomType.Event) < 2) continue;
+                RunManager.StartRun(seed);
+                var run = RunManager.Run;
+                var save = SaveSlotManager.CurrentSave;
+                var rooms = RunManager.Map.Nodes.Where(n => n.Type == RoomType.Event).Take(2).ToArray();
+                string x = RunOrchestrator.RollEvent(save, run, run.legStartStep + rooms[0].Offset, rooms[0].Id);
+                string y = RunOrchestrator.RollEvent(save, run, run.legStartStep + rooms[1].Offset, rooms[1].Id);
+                if (string.IsNullOrEmpty(x) || x != y) continue;
+
+                string first = RunOrchestrator.DecideEvent(save, run, run.legStartStep + rooms[0].Offset, rooms[0].Id);
+                string second = RunOrchestrator.DecideEvent(save, run, run.legStartStep + rooms[1].Offset, rooms[1].Id);
+                Assert.AreEqual(x, first);
+                Assert.AreNotEqual(first, second, $"seed {seed}: both rooms promised the same event");
+                checkedSeeds++;
+            }
+
+            Assert.AreEqual(1, checkedSeeds, "no seed under 4000 rolls the same event for two rooms");
+        }
+
         // ---- the card ------------------------------------------------------------
 
         [UnityTest]
