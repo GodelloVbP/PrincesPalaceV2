@@ -39,13 +39,6 @@ namespace PrincesPalace.EditModeTests
             return bound => rng.NextInt(0, bound);
         }
 
-        // A stand-in for ItemOfferRoll.RollOne: honed by a fixed amount, so a
-        // shelf's prices are predictable without asserting on a distribution.
-        private static Func<ItemOffer, ItemOffer> Hone(int plus, RiftTier rift = RiftTier.Ordinary)
-        {
-            return offer => offer.WithPlus(plus).WithModifiers(rift, new List<string>());
-        }
-
         [Test]
         public void TheSectionsAreTheCountsTheScreenWillBuildFor()
         {
@@ -69,7 +62,7 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void AGearShelfIsAlwaysFullWidthAndIndexedInOrder()
         {
-            var shelf = ShopStock.RollGear(Pool(30), depthStep: 8, maxTier: 10, Hone(0), Stream(1));
+            var shelf = ShopStock.RollGear(Pool(30), depthStep: 8, maxTier: 10, Stream(1));
 
             Assert.AreEqual(ShopStock.GearCount, shelf.Count);
             CollectionAssert.AreEqual(Enumerable.Range(0, ShopStock.GearCount), shelf.Select(e => e.index));
@@ -82,7 +75,7 @@ namespace PrincesPalace.EditModeTests
         {
             for (ulong seed = 0; seed < 40; seed++)
             {
-                var gear = ShopStock.RollGear(Pool(30), 8, 10, Hone(0), Stream(seed));
+                var gear = ShopStock.RollGear(Pool(30), 8, 10, Stream(seed));
                 CollectionAssert.AllItemsAreUnique(gear.Select(e => e.contentId),
                     "The same card twice at the same price is not variety; it reads as a broken roll.");
 
@@ -113,7 +106,7 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void AnEmptyGearPoolStillFillsTheRowWithPlaceholders()
         {
-            var shelf = ShopStock.RollGear(new List<ItemOffer>(), 8, 10, Hone(0), Stream(3));
+            var shelf = ShopStock.RollGear(new List<ItemOffer>(), 8, 10, Stream(3));
 
             Assert.AreEqual(ShopStock.GearCount, shelf.Count);
             Assert.IsTrue(shelf.All(e => e.noOffer && e.section == ShopStock.GearSection));
@@ -188,29 +181,27 @@ namespace PrincesPalace.EditModeTests
         }
 
         [Test]
-        public void AGearCardIsPricedByTierPlusAndRift()
+        public void AGearCardIsPricedByItsTier()
         {
-            var shelf = ShopStock.RollGear(Pool(30, tier: 2), 8, 10, Hone(2, RiftTier.RiftTouched), Stream(5));
+            var shelf = ShopStock.RollGear(Pool(30, tier: 2), 8, 10, Stream(5));
 
             foreach (var entry in shelf)
             {
                 // Pinned against ShopPricingTests' own literal (GearBase/
-                // GearPerTier 21/5), not against a
-                // recomputed formula: a tier-2, +2, one-affix piece is 79
-                // gold. The candidate pool is all tier 2, so the tier-boosted
-                // TARGET this rolls against (RollGear's own concern) cannot
-                // move which tier actually prices here.
-                Assert.AreEqual(79, entry.price);
-                Assert.AreEqual(2, entry.plus);
-                Assert.AreEqual((int)RiftTier.RiftTouched, entry.riftTier);
+                // GearPerTier 21/5), not against a recomputed formula: a
+                // tier-2 piece with no affix is 31 gold. The candidate pool
+                // is all tier 2, so the tier-boosted TARGET this rolls
+                // against cannot move which tier actually prices here.
+                Assert.AreEqual(31, entry.price);
+                Assert.AreEqual(2, entry.tier, "the card carries the tier of the copy it sells");
+                Assert.IsEmpty(entry.modifiers);
             }
         }
 
         // "GEAR ROLLS ONE TIER ABOVE THE MAP'S FLOOR TIER". A pool spanning
-        // tiers 0-4 at a depth whose floor tier
-        // is 0 (depthStep 8) should draw from AROUND tier 1, not tier 0 --
-        // proven by asserting NONE of the drawn candidates undercut the old,
-        // un-boosted target.
+        // tiers 0-4 at a depth whose floor tier is 0 (depthStep 8) draws at
+        // tier 1 exactly: the target is the floor tier plus the boost, and
+        // there is no spread around it.
         [Test]
         public void GearTargetsOneTierAboveTheFloorTier()
         {
@@ -218,69 +209,21 @@ namespace PrincesPalace.EditModeTests
                 .SelectMany(tier => Enumerable.Range(0, 6).Select(i => new ItemOffer($"item_{tier}_{i}", tier)))
                 .ToList();
 
-            var tiersSeen = new HashSet<int>();
             for (ulong seed = 0; seed < 20; seed++)
             {
-                var shelf = ShopStock.RollGear(pool, depthStep: 8, maxTier: 10, Hone(1), Stream(seed));
+                var shelf = ShopStock.RollGear(pool, depthStep: 8, maxTier: 10, Stream(seed));
                 foreach (var entry in shelf.Where(e => !e.noOffer))
                 {
-                    tiersSeen.Add(int.Parse(entry.contentId.Split('_')[1]));
+                    Assert.AreEqual(1, entry.tier, $"seed {seed}: {entry.contentId}");
                 }
             }
-
-            // FloorTier(8) is 0. Un-boosted, ItemOfferTable.Choose's own
-            // TierSpread (1) can never reach past tier 1 from a target of 0.
-            // Boosted to target 1 (ShopStock.GearTierBoost), the band opens
-            // up to tier 2 on its very first (unwidened) pass -- so a tier-2
-            // card turning up anywhere across 20 seeds is something the
-            // UN-boosted code could not have produced at all, not merely a
-            // sample that happens to be consistent with the boost.
-            Assert.IsTrue(tiersSeen.Contains(2),
-                "20 seeds never once reached tier 2 -- the shelf is still targeting the un-boosted floor tier.");
-
-            // And the boost is capped, not unbounded: TierSpread (1) around
-            // a boosted target of 1 cannot reach tier 3.
-            Assert.IsFalse(tiersSeen.Contains(3),
-                "the shelf reached a tier the boosted band should not cover.");
-        }
-
-        // "EVERY GEAR ENTRY CARRIES AT LEAST A +1 OR ONE MODIFIER".
-        // `Hone(0)` is the stand-in every OTHER test in
-        // this file uses for "nothing rolled" -- proving the shelf refuses
-        // to ship it bare is the point of THIS test, not a reason to avoid
-        // the stand-in the others already share.
-        [Test]
-        public void NoGearEntryIsABareCommon()
-        {
-            var shelf = ShopStock.RollGear(Pool(30), 8, 10, Hone(0), Stream(2));
-
-            foreach (var entry in shelf.Where(e => !e.noOffer))
-            {
-                Assert.IsTrue(entry.plus >= 1 || entry.modifiers.Count > 0,
-                    $"{entry.contentId} rolled +{entry.plus} with {entry.modifiers.Count} affixes -- a bare common.");
-            }
-        }
-
-        // The quality floor's forced fallback (+1) must never fight the
-        // affordability floor's own guarantee -- both have to hold on the
-        // SAME final card. `Hone(0)` never rolls a plus or a modifier on its
-        // own, so the quality floor's forced +1 is the only thing standing
-        // between this shelf and a bare common, and the price it produces is
-        // exactly what NormalFightPayoutAnchor was raised to cover.
-        [Test]
-        public void TheForcedQualityFloorNeverBreaksTheAffordabilityGuarantee()
-        {
-            var shelf = ShopStock.RollGear(Pool(30), 8, 10, Hone(0), Stream(6));
-
-            Assert.LessOrEqual(shelf.Where(e => !e.noOffer).Min(e => e.price),
-                ShopPricing.NormalFightPayoutAnchor);
         }
 
         [Test]
         public void ModifiersAreOrdinalSortedOnTheCard()
         {
             var entry = ShopStockEntry.Gear(0, "sword", 1,
-                new[] { "zeal", "aegis", "Brutal", "" }, 2, 100);
+                new[] { "zeal", "aegis", "Brutal", "" }, 100);
 
             CollectionAssert.AreEqual(new[] { "Brutal", "aegis", "zeal" }, entry.modifiers,
                 "Ordinal, so two cards that rolled the same affixes in a different order read as the same card.");
@@ -294,79 +237,13 @@ namespace PrincesPalace.EditModeTests
             Assert.IsTrue(shelf.All(e => e.price == 190));
         }
 
-        // ASSUMPTION 11. A shelf whose cheapest card costs more than a normal
-        // fight pays is a room that charged a fight and returned a reroll
-        // button.
-        //
-        // The roll here hands back an expensive copy the first several times
-        // and a cheap one afterwards, which is exactly the shape the bounded
-        // re-draw is for.
-        [Test]
-        public void TheCheapestGearCardIsRedrawnUntilItIsAffordable()
-        {
-            int calls = 0;
-            Func<ItemOffer, ItemOffer> stubborn = offer =>
-            {
-                calls++;
-                return calls <= ShopStock.GearCount + 2
-                    ? offer.WithPlus(4).WithModifiers(RiftTier.RiftForged, new List<string>())
-                    : offer.WithPlus(0).WithModifiers(RiftTier.Ordinary, new List<string>());
-            };
-
-            var shelf = ShopStock.RollGear(Pool(30), 8, 10, stubborn, Stream(2));
-
-            Assert.LessOrEqual(shelf.Min(e => e.price), ShopPricing.NormalFightPayoutAnchor,
-                "Nothing on this shelf could be bought with a normal fight's payout.");
-        }
-
-        // Bounded, because the guarantee is worth having and a loop that
-        // cannot terminate is not: at a depth where nothing prices under the
-        // anchor, the honest answer is an expensive shelf.
-        [Test]
-        public void TheRedrawIsBoundedWhenNothingCanEverBeCheapEnough()
-        {
-            int calls = 0;
-            Func<ItemOffer, ItemOffer> alwaysExpensive = offer =>
-            {
-                calls++;
-                return offer.WithPlus(5).WithModifiers(RiftTier.Convergent, new List<string>());
-            };
-
-            var shelf = ShopStock.RollGear(Pool(30, tier: 5), 80, 10, alwaysExpensive, Stream(4));
-
-            Assert.AreEqual(ShopStock.GearCount, shelf.Count);
-            Assert.LessOrEqual(calls, ShopStock.GearCount + ShopStock.AffordabilityRedraws);
-            Assert.Greater(shelf.Min(e => e.price), ShopPricing.NormalFightPayoutAnchor);
-        }
-
-        // A re-draw can only improve the shelf. Keeping a worse copy would
-        // make the floor actively harmful on the rolls where it fires and
-        // fails.
-        [Test]
-        public void ARedrawNeverMakesTheCheapestCardMoreExpensive()
-        {
-            int calls = 0;
-            Func<ItemOffer, ItemOffer> worseEachTime = offer =>
-            {
-                calls++;
-                int plus = Math.Min(5, calls);
-                return offer.WithPlus(plus).WithModifiers(RiftTier.Convergent, new List<string>());
-            };
-
-            var shelf = ShopStock.RollGear(Pool(30, tier: 4), 64, 10, worseEachTime, Stream(6));
-
-            // The first pass's cheapest was +1; nothing the re-draw produced
-            // afterwards was cheaper, so it must still be on the shelf.
-            Assert.AreEqual(ShopPricing.GearPrice(4, 1, (int)RiftTier.Convergent), shelf.Min(e => e.price));
-        }
-
         // Same position, same shelf, forever -- otherwise quitting inside a
         // shop is a free reroll.
         [Test]
         public void TheSamePositionRollsTheSameShelf()
         {
             List<ShopStockEntry> Roll() =>
-                ShopStock.RollGear(Pool(30), 24, 10, Hone(1), Stream(RngStreams.Derive(77UL, RngStreams.ShopGear, 24, 3)));
+                ShopStock.RollGear(Pool(30), 24, 10, Stream(RngStreams.Derive(77UL, RngStreams.ShopGear, 24, 3)));
 
             CollectionAssert.AreEqual(
                 Roll().Select(e => e.contentId + ":" + e.price).ToList(),
@@ -383,7 +260,7 @@ namespace PrincesPalace.EditModeTests
             for (int node = 0; node < 20; node++)
             {
                 string Shelf(int rerolls) => string.Join(",", ShopStock
-                    .RollGear(Pool(30), 24, 10, Hone(1),
+                    .RollGear(Pool(30), 24, 10,
                         Stream(RngStreams.Derive(77UL, RngStreams.ShopGear, 24, node, rerolls)))
                     .Select(e => e.contentId));
 
@@ -398,9 +275,9 @@ namespace PrincesPalace.EditModeTests
         public void RollSectionDispatchesToTheRightShelf()
         {
             var books6 = new List<ShopStock.BookCandidate> { new ShopStock.BookCandidate("mud_burst", 1) };
-            var gear = ShopStock.RollSection(ShopStock.GearSection, Pool(30), 8, 10, Hone(0), Relics(6), books6, Stream(1));
-            var books = ShopStock.RollSection(ShopStock.BookSection, Pool(30), 8, 10, Hone(0), Relics(6), books6, Stream(1));
-            var relics = ShopStock.RollSection(ShopStock.RelicSection, Pool(30), 8, 10, Hone(0), Relics(6), books6, Stream(1));
+            var gear = ShopStock.RollSection(ShopStock.GearSection, Pool(30), 8, 10, Relics(6), books6, Stream(1));
+            var books = ShopStock.RollSection(ShopStock.BookSection, Pool(30), 8, 10, Relics(6), books6, Stream(1));
+            var relics = ShopStock.RollSection(ShopStock.RelicSection, Pool(30), 8, 10, Relics(6), books6, Stream(1));
 
             Assert.IsTrue(gear.All(e => e.kind == ShopEntryKind.Gear));
             Assert.IsTrue(books.All(e => e.kind == ShopEntryKind.Book));

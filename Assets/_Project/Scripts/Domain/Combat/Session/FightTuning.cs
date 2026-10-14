@@ -147,7 +147,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // Deliberately its OWN numbers rather than reusing
         // LuckyDeckSlowPercent/LuckyDeckSlowTurns even though both procs
         // now land through the identical ApplyChilled call -- Frosty is a
-        // droppable item modifier balanced against RiftTier/item tier the
+        // droppable item modifier balanced against the item tier the
         // way every other on-hit rider in this table is (Vampiric's
         // LifestealPercent, Hardened's push chance), Lucky Deck is a fixed
         // relic with its own long-shipped balance; tying the two together

@@ -22,10 +22,9 @@ namespace PrincesPalace
     // thing that will ever want to ask.
     public static class ItemOfferRoll
     {
-        // The ceiling the tier roll clamps against, taken from content rather
-        // than declared: the highest art tier any offerable base authors.
-        public static int MaxTier =>
-            ContentDatabase.Offerable.Count == 0 ? 0 : ContentDatabase.Offerable.Max(i => i.curve.maxTier);
+        // The ceiling the tier roll clamps against: the highest tier any copy
+        // reaches (docs/PLAN_ITEMS.md 1.6), not the art ladder of a base.
+        public const int MaxTier = ItemInstance.TierCap;
 
         // WHAT THE GAME OFFERS AS A REWARD, and that is not the same set as
         // "everything wearable".
@@ -55,51 +54,15 @@ namespace PrincesPalace
             {
                 if (item == null || string.IsNullOrEmpty(item.id)) continue;
 
-                // A base offers one candidate per tier of its art ladder, base
-                // by base and tier ascending.
-                for (int tier = 0; tier <= item.curve.maxTier; tier++)
+                // A base offers one candidate per tier, base by base and tier
+                // ascending.
+                for (int tier = 0; tier <= MaxTier; tier++)
                 {
                     candidates.Add(new ItemOffer(item.id, tier));
                 }
             }
 
             return candidates;
-        }
-
-        // Every modifier id in the pool that reads as OFFENSIVE (weaponPool
-        // true, staves included -- see ModifierTable.IsOffensiveModifier's
-        // own header) or DEFENSIVE (weaponPool false), authored order. The
-        // Core-side bridge ModifierTable.PickModifiers needs -- Domain
-        // cannot see ContentDatabase or ModifierDefinition, the same reason
-        // Candidates() exists above for items rather than ItemOfferTable
-        // reading ContentDatabase itself.
-        //
-        // TWO POOLS, NOT ONE FILTERED PER-DRAW: a staff rolling out of the
-        // same flat list as a breastplate is the bug this split closes (see
-        // ModifierTable's own header) -- picking the RIGHT list once per
-        // offer, before PickModifiers ever draws, is what keeps a weapon's
-        // three rolled slots from ever seeing a defensive id at all, rather
-        // than merely making one less likely.
-        //
-        // A modifier with no resolved effect (a raw entry the resolver
-        // rejected, or content mid-edit) reads as defensive by
-        // IsOffensiveModifier's own tolerant default, so it never appears in
-        // the weapon pool -- the safer direction for a still-forming id to
-        // fail into.
-        private static IReadOnlyList<string> ModifierPool(bool weaponPool)
-        {
-            return ContentDatabase.Modifiers
-                .Where(m => m != null && !string.IsNullOrEmpty(m.id))
-                .Where(m =>
-                {
-                    var effects = m.Data.Effects;
-                    var type = effects != null && effects.Length > 0
-                        ? effects[0].Kind
-                        : EffectKind.None;
-                    return ModifierTable.IsOffensiveModifier(type) == weaponPool;
-                })
-                .Select(m => m.id)
-                .ToList();
         }
 
         // What one character's Favor is worth: what they were AUTHORED with,
@@ -189,69 +152,8 @@ namespace PrincesPalace
             return squad + fromEvents;
         }
 
-        // WHAT "ONE ROLLED COPY" MEANS, WITH TWO CALLERS.
-        //
-        // The reward path (Roll, below) and the shop's gear shelf
-        // (ShopStock.RollGear) must not drift on this: a shop card and a
-        // fight reward are the same object rolled the same way, and a second
-        // copy of the three axes would be a second rulebook (docs/PLAN_SHOP.md
-        // §2d). Extracted rather than reimplemented, so the extraction is a
-        // pure move -- the draw ORDER inside it (plus, then rift tier, then
-        // which modifiers) is what a seeded stream reproduces, and reordering
-        // it would renumber every reward every existing seed has ever rolled.
-        //
-        // The pools come in as a Context rather than being looked up per
-        // item: they are read once per offer set, ContentDatabase does not
-        // change mid-roll, and building them per item would be the same
-        // answer computed N times.
-        public readonly struct RollContext
-        {
-            public readonly IReadOnlyList<string> WeaponModifiers;
-            public readonly IReadOnlyList<string> ArmorModifiers;
-            public readonly IReadOnlyDictionary<string, ItemKind> KindById;
-
-            public RollContext(IReadOnlyList<string> weaponModifiers, IReadOnlyList<string> armorModifiers,
-                IReadOnlyDictionary<string, ItemKind> kindById)
-            {
-                WeaponModifiers = weaponModifiers;
-                ArmorModifiers = armorModifiers;
-                KindById = kindById;
-            }
-        }
-
-        public static RollContext BuildRollContext()
-        {
-            return new RollContext(
-                ModifierPool(weaponPool: true),
-                ModifierPool(weaponPool: false),
-                ContentDatabase.Items
-                    .Where(i => i != null && !string.IsNullOrEmpty(i.id))
-                    .ToDictionary(i => i.id, i => i.kind));
-        }
-
-        // One candidate, honed. WHICH POOL, not whether to roll at all -- a
-        // staff (kind == ItemKind.Weapon) draws only offensive ids,
-        // everything else equippable only defensive ones. An id this roll
-        // cannot find in ContentDatabase.Items (should not happen -- every
-        // candidate came from ContentDatabase.Items itself) defaults to the
-        // defensive pool, the same "unknown reads as armour" posture
-        // ModifierPool's own tolerant default takes.
-        public static ItemOffer RollOne(ItemOffer offer, RollContext context, EncounterClass encounter,
-            int favor, Func<int, int> nextIndex)
-        {
-            int plus = RarityTable.RollPlus(encounter, favor, nextIndex);
-            var riftTier = ModifierTable.RollRiftTier(encounter, favor, nextIndex);
-
-            bool isWeapon = context.KindById != null
-                && context.KindById.TryGetValue(offer.ItemId, out var kind)
-                && kind == ItemKind.Weapon;
-            var modifierPool = isWeapon ? context.WeaponModifiers : context.ArmorModifiers;
-            var modifiers = ModifierTable.PickModifiers(modifierPool, (int)riftTier, nextIndex);
-
-            return offer.WithPlus(plus).WithModifiers(riftTier, modifiers);
-        }
-
-        // The offers, each with its own independently rolled plus.
+        // The offers: one tier is rolled for the set, then the copies are
+        // drawn at it.
         //
         // `nextIndex` is upper-bound-exclusive and injected, matching the shape
         // both Domain tables already take -- so a caller under test can hand in
@@ -269,29 +171,8 @@ namespace PrincesPalace
             var candidates = Candidates();
             if (candidates.Count == 0) return offers;
 
-            int maxTier = MaxTier;
-            int targetTier = RarityTable.RollTier(encounter, depthStep, maxTier, favor, nextIndex);
-
-            // Built once per offer set rather than per item -- same reason
-            // ModifierPool() itself is a Select().ToList() rather than a
-            // live query: it is read once per offer below, not once per
-            // effect, and ContentDatabase.Items/Modifiers do not change
-            // mid-roll.
-            var context = BuildRollContext();
-
-            // Tier is rolled ONCE for the offer set and plus/RiftTier/which-
-            // modifiers are rolled PER ITEM. Rolling tier per item would
-            // quietly widen the spread ItemOfferTable.TierSpread already
-            // controls, and make the three offers three separate difficulty
-            // statements rather than one; RiftTier is a property of the one
-            // copy on the card, exactly like plus, so it belongs at the same
-            // granularity as plus rather than tier's.
-            foreach (var offer in ItemOfferTable.Choose(candidates, targetTier, maxTier, nextIndex, count))
-            {
-                offers.Add(RollOne(offer, context, encounter, favor, nextIndex));
-            }
-
-            return offers;
+            int targetTier = RarityTable.RollTier(encounter, depthStep, MaxTier, favor, nextIndex);
+            return ItemOfferTable.Choose(candidates, targetTier, MaxTier, nextIndex, count);
         }
     }
 }

@@ -21,14 +21,9 @@ namespace PrincesPalace.Domain.Rewards
     // cannot see UnityEngine.Random at all. That is also what makes every
     // distribution below testable rather than eyeballed.
     //
-    // The two axes are rolled SEPARATELY and on purpose. Tier is the
-    // progression: it climbs with depth, it is what the rarity bands read,
-    // and a deeper run should visibly hand out better objects. Plus is the
-    // long tail: it rolls low almost always, it does not climb with depth,
-    // and it is what makes one particular copy of an ordinary item worth
-    // keeping. Rolling them together would average into "everything is
-    // slightly better than last floor", which is the outcome this is meant
-    // to avoid.
+    // Tier is the progression: it climbs with depth, and a deeper run should
+    // visibly hand out better objects. What else a copy carries is not rolled
+    // here.
     public static class RarityTable
     {
         // How many steps of descent buy one tier.
@@ -88,12 +83,8 @@ namespace PrincesPalace.Domain.Rewards
         // maxTier is passed rather than assumed so a thin or re-authored
         // catalogue cannot be asked for a tier that does not exist — the same
         // reason ItemOfferTable takes it.
-        // Favor's effect on the TIER roll -- deliberately SMALL. The tier
-        // rebalance pass's own instruction: "Favor shifts the plus curve
-        // mostly and the tier curve a little." A fifth of RollPlus's
-        // PlusFavorPerPoint below, and a lower cap, so a Favor stack that
-        // meaningfully fattens the plus tail barely moves how often the
-        // tier ladder climbs an extra rung.
+        // Favor's effect on the TIER roll -- deliberately SMALL, so a Favor
+        // stack barely moves how often the tier ladder climbs an extra rung.
         public const float TierFavorPerPoint = 0.002f;
         public const float TierMaxStep = 0.45f;
 
@@ -113,11 +104,8 @@ namespace PrincesPalace.Domain.Rewards
             // floor-1 fight can still hand over something that changes the run.
             //
             // TierFavorPerPoint/TierMaxStep, not LootLadder.Climb's own
-            // (encounter, favor) convenience overload -- that overload reads
-            // LootLadder.FavorPerPoint/MaxStep, which RollPlus below now
-            // tunes much higher for the plus roll specifically. Calling the
-            // full StepChanceFor overload with the tier's OWN small favor
-            // dial is what keeps the two curves independently tunable.
+            // (encounter, favor) convenience overload: the tier's OWN small
+            // favor dial.
             int centre = FloorTier(depthStep);
             float tierStep = LootLadder.StepChanceFor(encounter, favor,
                 LootLadder.NormalStep, LootLadder.EliteStep, LootLadder.BossStep,
@@ -141,103 +129,5 @@ namespace PrincesPalace.Domain.Rewards
 
             return tier > maxTier ? maxTier : tier;
         }
-
-        // Plus climbs its OWN ladder, and deliberately never sees the depth.
-        //
-        // That independence is the point and it predates this change: a +3 is
-        // exciting at step 4 and still exciting at step 40, because it never
-        // became the expectation.
-        //
-        // FIVE TIMES TierFavorPerPoint, and its own higher cap -- "Favor
-        // shifts the plus curve mostly", the other half of the same
-        // instruction TierFavorPerPoint's header quotes. A Favor stack that
-        // barely nudges the tier ladder meaningfully fattens this one.
-        public const float PlusFavorPerPoint = 0.010f;
-        public const float PlusMaxStep = 0.55f;
-
-        // The ladder's REACHABLE LENGTH, not just its per-rung odds, is what
-        // Favor buys here -- structurally, not just probabilistically.
-        //
-        // At zero Favor the ladder is exactly PlusBaseMaxRungs (5) long, the
-        // same ceiling this roll always had, so +10 is not merely rare with
-        // no Favor invested, it is IMPOSSIBLE: LootLadder.Climb cannot return
-        // more than the maxRungs it is handed, whatever the step chance
-        // rolls. Every PlusFavorPerRung points of Favor unlocks one more
-        // rung, capped at PlusMaxRungs (10) -- "a +10 tier-0 item on floor 1
-        // must be possible but rare, only with high favor". A high Favor
-        // character (75+, roughly double Shawn's own authored 4 plus a
-        // couple of rolled Fortunate affixes) reaches the full 10-rung
-        // ladder; the per-rung climb chance above still has to succeed ten
-        // consecutive times to actually land there.
-        public const int PlusBaseMaxRungs = 5;
-        public const int PlusMaxRungs = 10;
-        public const int PlusFavorPerRung = 15;
-
-        public static int PlusMaxRungsFor(int favor)
-        {
-            if (favor <= 0) return PlusBaseMaxRungs;
-
-            int bonusRungs = favor / PlusFavorPerRung;
-            int uncapped = PlusBaseMaxRungs + bonusRungs;
-            return uncapped > PlusMaxRungs ? PlusMaxRungs : uncapped;
-        }
-
-        // A BOSS-ONLY FLAT ADD, on top of the climb, not a second draw --
-        // RollPlus still calls LootLadder.Climb exactly once whatever the
-        // encounter class, so a seeded run's draw count (and therefore its
-        // reproducibility) does not change with this constant.
-        //
-        // Needed because BossStep alone (0.38 vs Normal's 0.22) is not
-        // enough to make a boss's PLUS read as special: LootLadder.Climb's
-        // own shape means the single most likely outcome is STILL +0 for
-        // every encounter class -- at favor 0, P(rolled=0) is 62% even at
-        // Boss's step chance, so an un-boosted boss median plus is 0, same
-        // as a normal fight's. TIER already has an absolute, structural
-        // floor for this (TierFloorFor(Boss) == 3); PLUS had no equivalent,
-        // which is why a floor-3 boss could still hand over a +1 -- entirely
-        // ordinary for the roll, but not what "a boss should be worth more"
-        // is supposed to mean for the axis players actually feel first.
-        //
-        // 3, not 1 or 2: with P(rolled=0)=62% the dominant case, anything
-        // less than +3 still lands the boss's plus MEDIAN at 0 or 1 once the
-        // rolled-0 mass is shifted -- +3 is the smallest add that puts the
-        // boosted floor (rolled 0 -> final 3) AT the median, matching the
-        // brief's designer-legible target ("plus should be in the upper
-        // rungs") rather than merely nudging the average up.
-        //
-        // Clamped by RollPlus below to PlusMaxRungsFor(favor), the same
-        // ceiling every other plus roll respects -- this is a bonus on the
-        // SAME ladder, not a second one that can bypass its cap.
-        public const int BossBonusPlusRungs = 3;
-
-        public static int RollPlus(EncounterClass encounter, int favor, Func<int, int> nextIndex)
-        {
-            float plusStep = LootLadder.StepChanceFor(encounter, favor,
-                LootLadder.NormalStep, LootLadder.EliteStep, LootLadder.BossStep,
-                PlusFavorPerPoint, PlusMaxStep);
-            int maxRungs = PlusMaxRungsFor(favor);
-            int rolled = LootLadder.Climb(plusStep, maxRungs, nextIndex);
-
-            if (encounter != EncounterClass.Boss)
-            {
-                return rolled;
-            }
-
-            int boosted = rolled + BossBonusPlusRungs;
-            return boosted > maxRungs ? maxRungs : boosted;
-        }
-
-
-        // The rarity band a class is guaranteed never to fall below. Stated
-        // in the player's vocabulary rather than in tiers, since that is how
-        // the guarantee is worth describing.
-        public static Rarity MinimumRarityFor(EncounterClass encounter)
-        {
-            return RarityBands.For(TierFloorFor(encounter));
-        }
-
-
-
-
     }
 }

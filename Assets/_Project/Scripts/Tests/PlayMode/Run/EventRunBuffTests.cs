@@ -259,31 +259,32 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.IsEmpty(Run.eventBuffs);
         }
 
-        // A roll whose every draw is 0 climbs every rung it is allowed, so the
-        // plus IS the rung ceiling: 5 below 15 favor, 6 from 15 (RarityTable
-        // PlusBaseMaxRungs / PlusFavorPerRung). Two feeds take 4 to 24.
+        // A constant roll of 250 sits between the tier ladder's step threshold
+        // at favor 4 (0.22 + 4 x 0.002 = 0.228, threshold 228) and at favor 24
+        // (0.268, threshold 268): it fails the first rung before the grant and
+        // clears all five after it. Two feeds take 4 to 24.
         [Test]
         public void AnActualOfferRollReadsTheBoostedFavor()
         {
             StartRunAndOpen(GatedEvent);
 
-            var before = RunOrchestrator.RollOffers(null, _ => 0);
+            var before = RunOrchestrator.RollOffers(null, _ => 250);
             EventPicks.OnCurrentPage(Feed);
             EventPicks.OnCurrentPage(Feed);
-            var after = RunOrchestrator.RollOffers(null, _ => 0);
+            var after = RunOrchestrator.RollOffers(null, _ => 250);
 
             Assert.AreEqual(24, ItemOfferRoll.CurrentSquadFavor());
             CollectionAssert.IsNotEmpty(before);
-            CollectionAssert.AreEqual(Enumerable.Repeat(5, before.Count).ToArray(), before.Select(o => o.Plus).ToArray());
-            CollectionAssert.AreEqual(Enumerable.Repeat(6, after.Count).ToArray(), after.Select(o => o.Plus).ToArray());
+            CollectionAssert.AreEqual(Enumerable.Repeat(0, before.Count).ToArray(), before.Select(o => o.Tier).ToArray());
+            CollectionAssert.AreEqual(Enumerable.Repeat(5, after.Count).ToArray(), after.Select(o => o.Tier).ToArray());
         }
 
         private static string Shelf(IEnumerable<ShopStockEntry> stock) =>
             string.Join("|", stock.Where(e => e.section == ShopStock.GearSection)
-                .Select(e => $"{e.contentId}+{e.plus}/r{e.riftTier}/{string.Join(",", e.modifiers)}"));
+                .Select(e => $"{e.contentId}@{e.tier}/{string.Join(",", e.modifiers)}"));
 
         [Test]
-        public void AnActualShopShelfReadsTheBoostedFavor_ButAnExistingShelfIsNotRerolled()
+        public void TheShopShelfDoesNotReadFavorYet_AndAnExistingShelfIsNotRerolled()
         {
             StartRunAndOpen(GatedEvent);
             RunOrchestrator.EnsureShopStock();
@@ -296,7 +297,8 @@ namespace PrincesPalace.PlayModeTests
             RunOrchestrator.EnsureShopStock();
             Assert.AreEqual(Shelf(unboosted), Shelf(Run.shopStock), "fixture: a shelf is a pure function of its position");
 
-            // A large grant so the plus ladder's step chance reaches its cap.
+            // A large grant: it moves the fight reward's tier ladder (above),
+            // and the shop's shelf has no favor input until the page roll.
             for (int i = 0; i < 50; i++) EventPicks.OnCurrentPage(Feed);
             Assert.AreEqual(504, ItemOfferRoll.CurrentSquadFavor());
 
@@ -304,10 +306,11 @@ namespace PrincesPalace.PlayModeTests
             RunOrchestrator.EnsureShopStock();
             Assert.AreEqual(Shelf(unboosted), Shelf(Run.shopStock));
 
-            // The same node and reroll count, rolled fresh: only favor moved.
+            // The same node and reroll count, rolled fresh: favor is not an
+            // input to the shelf, so it is the same shelf.
             Run.shopStock = new List<ShopStockEntry>();
             RunOrchestrator.EnsureShopStock();
-            Assert.AreNotEqual(Shelf(unboosted), Shelf(Run.shopStock));
+            Assert.AreEqual(Shelf(unboosted), Shelf(Run.shopStock));
         }
 
         // ---- fillSpecialPool (leg scope) ------------------------------------------------

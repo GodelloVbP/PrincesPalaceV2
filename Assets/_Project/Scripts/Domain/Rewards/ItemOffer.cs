@@ -7,18 +7,12 @@ namespace PrincesPalace.Domain.Rewards
 {
     // One item on the end-of-combat "choose one of three" screen.
     //
-    // Carries three axes. TIER is which item is being offered and is the one
-    // this table scales by depth; PLUS is how honed that particular copy is,
-    // rolled separately and independently (see RarityTable.RollPlus) because
-    // it is the long-tail excitement rather than the progression; RIFTTIER
-    // and MODIFIERS are the third axis (see ModifierTable), rolled per item
-    // exactly like Plus.
+    // A base item, the tier of the copy on offer, and any affixes rolled on
+    // it. TIER is the one this table scales by depth.
     public readonly struct ItemOffer
     {
         public readonly string ItemId;
         public readonly int Tier;
-        public readonly int Plus;
-        public readonly RiftTier RiftTier;
 
         // Never null -- an offer with nothing rolled carries the same empty
         // list the "absent and empty read the same way" convention uses
@@ -27,37 +21,22 @@ namespace PrincesPalace.Domain.Rewards
         // without a null guard.
         public readonly IReadOnlyList<string> Modifiers;
 
-        public ItemOffer(string itemId, int tier, int plus = 0,
-            RiftTier riftTier = RiftTier.Ordinary, IReadOnlyList<string> modifiers = null)
+        public ItemOffer(string itemId, int tier, IReadOnlyList<string> modifiers = null)
         {
             ItemId = itemId;
             Tier = tier;
-            Plus = plus;
-            RiftTier = riftTier;
             Modifiers = modifiers ?? new List<string>();
         }
 
         // The copy taking this offer puts in the bag. An offer is always an
         // ordinary copy -- no lot, no provenance -- so this is the whole
         // conversion.
-        public ItemInstance Instance => new ItemInstance(ItemId, Plus, Modifiers, (int)RiftTier, null, Tier);
+        public ItemInstance Instance => ItemInstance.Of(ItemId, Tier, Modifiers);
 
-        // The same offer at a different plus. Used by the reward roll, which
-        // picks WHICH item from the candidate pool and HOW HONED it is in two
-        // separate steps. Preserves whatever RiftTier/Modifiers this offer
-        // already carried -- With* methods each move ONE axis, never the
-        // others, which is what lets ItemOfferRoll chain WithPlus and
-        // WithModifiers on the same offer without one clobbering the other.
-        public ItemOffer WithPlus(int plus)
+        // The same offer with its rolled affixes filled in.
+        public ItemOffer WithModifiers(IReadOnlyList<string> modifiers)
         {
-            return new ItemOffer(ItemId, Tier, plus, RiftTier, Modifiers);
-        }
-
-        // The same offer with its rolled affix slots filled in. See WithPlus
-        // above for why this preserves Plus rather than resetting it.
-        public ItemOffer WithModifiers(RiftTier riftTier, IReadOnlyList<string> modifiers)
-        {
-            return new ItemOffer(ItemId, Tier, Plus, riftTier, modifiers);
+            return new ItemOffer(ItemId, Tier, modifiers);
         }
     }
 
@@ -72,11 +51,6 @@ namespace PrincesPalace.Domain.Rewards
         // because the offer screen builds exactly this many slots and the two
         // must agree.
         public const int OfferCount = 3;
-
-        // How far either side of the target tier an offer may sit. A little
-        // spread stops every choice at a given depth being three variants of
-        // the same power, which is a choice in name only.
-        public const int TierSpread = 1;
 
         // Chooses the offers.
         //
@@ -116,7 +90,7 @@ namespace PrincesPalace.Domain.Rewards
             // narrow band at an awkward depth would otherwise return one
             // offer and silently make the screen a non-choice; widening
             // degrades the scaling gently instead of the offer count.
-            for (int spread = TierSpread; chosen.Count < count; spread++)
+            for (int spread = 0; chosen.Count < count; spread++)
             {
                 var pool = candidates
                     .Where(c => Math.Abs(c.Tier - target) <= spread)

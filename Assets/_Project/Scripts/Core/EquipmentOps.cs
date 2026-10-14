@@ -81,12 +81,11 @@ namespace PrincesPalace
             string itemId,
             EquipmentSlot itemSlot,
             bool isEquippable,
-            int plus = 0,
             List<string> modifierIds = null,
-            int riftTier = 0,
-            EquipmentSlot? preferredSlot = null)
+            EquipmentSlot? preferredSlot = null,
+            int tier = 0)
         {
-            return Equip(context, save, character, new ItemInstance(itemId, plus, modifierIds, riftTier),
+            return Equip(context, save, character, ItemInstance.Of(itemId, tier, modifierIds),
                 itemSlot, isEquippable, preferredSlot);
         }
 

@@ -14,24 +14,24 @@ namespace PrincesPalace.Domain.Tests
     {
         private const EquipmentSlot Torso = EquipmentSlot.Torso;
 
-        private static ItemInstance Plain(string id, int plus = 0) => new ItemInstance(id, plus);
+        private static ItemInstance Plain(string id, int tier = 0) => ItemInstance.Of(id, tier);
 
         private static ItemInstance Lot(string id, string lot, bool fake = false, int fightsLeft = 0) =>
-            new ItemInstance(id, provenance: new Provenance(lot, fake, fightsLeft));
+            ItemInstance.Of(id, provenance: new Provenance(lot, fake, fightsLeft));
 
         // ---- the predicate ----------------------------------------------------------
 
         [Test]
         public void OrdinaryCopies_StackOnTheModifierSet_NotItsOrder()
         {
-            var a = new ItemInstance("coif", 3, new List<string> { "fiery", "swift" }, 2);
-            var b = new ItemInstance("coif", 3, new List<string> { "swift", "fiery" }, 2);
+            var a = ItemInstance.Of("coif", 3, new List<string> { "fiery", "swift" });
+            var b = ItemInstance.Of("coif", 3, new List<string> { "swift", "fiery" });
 
             Assert.IsTrue(ItemInstance.SameStack(a, b));
         }
 
         [Test]
-        public void OrdinaryCopies_AtADifferentPlus_AreDifferentStacks()
+        public void OrdinaryCopies_AtADifferentTier_AreDifferentStacks()
         {
             Assert.IsFalse(ItemInstance.SameStack(Plain("coif", 3), Plain("coif", 5)));
         }

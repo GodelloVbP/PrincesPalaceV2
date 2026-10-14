@@ -21,9 +21,9 @@ namespace PrincesPalace.Domain.Tests
         private const int Weapon = 1;
         private const int Equipment = 2;
 
-        private static BagItem Item(string id, int kind = Equipment, int tier = 0, int plus = 0,
+        private static BagItem Item(string id, int kind = Equipment, int tier = 0,
                                     int count = 1, string name = null, bool equippable = true) =>
-            new BagItem(id, name ?? id, kind, EquipmentSlot.Torso, tier, plus, count, "", equippable);
+            new BagItem(id, name ?? id, kind, EquipmentSlot.Torso, tier, count, "", equippable);
 
         private static string[] Ids(IEnumerable<BagItem> items) => items.Select(i => i.Id).ToArray();
 
@@ -57,20 +57,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheHonedCopyLeadsThePlainOne()
-        {
-            // Same id, same tier, different plus -- the case generated gear
-            // produces constantly.
-            var sorted = BagView.Sorted(new[]
-            {
-                Item("sword", Weapon, tier: 3, plus: 0),
-                Item("sword", Weapon, tier: 3, plus: 5),
-            });
-
-            CollectionAssert.AreEqual(new[] { 5, 0 }, sorted.Select(i => i.Plus).ToArray());
-        }
-
-        [Test]
         public void TheOrderIsTotal_SoTheGridNeverReshufflesUnderTheCursor()
         {
             // The rule this whole comparator exists for. Two items that compare
@@ -78,9 +64,9 @@ namespace PrincesPalace.Domain.Tests
             // cell out from under the player mid-click.
             var items = new[]
             {
-                Item("b", Weapon, tier: 3, plus: 1),
-                Item("a", Weapon, tier: 3, plus: 1),
-                Item("c", Weapon, tier: 3, plus: 1),
+                Item("b", Weapon, tier: 3),
+                Item("a", Weapon, tier: 3),
+                Item("c", Weapon, tier: 3),
             };
 
             var forwards = Ids(BagView.Sorted(items));
@@ -97,29 +83,12 @@ namespace PrincesPalace.Domain.Tests
         }
         // ---- the player's chosen order -------------------------------------------
         //
-        // THREE KEYS, NOT THE FOUR THAT WERE ASKED FOR. "tier / rarity / +'s /
-        // name" reads as four, and rarity is not a fourth axis: RarityBands
-        // derives the band FROM the tier, so a rarity ordering is the tier
-        // ordering with its precision thrown away. Two buttons drawing the same
-        // list is the same failure as a control that stores nothing.
+        // TWO KEYS. Quality derives from what rolled on a copy and honing
+        // belongs to the slot, so neither is a bag ordering of its own.
         [Test]
-        public void RarityIsNotAFourthOrdering()
+        public void TheBagHasTwoOrderings()
         {
-            Assert.AreEqual(3, BagSort.All.Length,
-                "a fourth sort key appeared - if it is rarity, it draws the tier list");
-        }
-
-        [Test]
-        public void SortingByPlusPutsTheMostHonedFirst()
-        {
-            var sorted = BagSort.By(new[]
-            {
-                Item("plain", plus: 0),
-                Item("honed", plus: 3),
-                Item("middling", plus: 1),
-            }, BagSortKey.Plus);
-
-            CollectionAssert.AreEqual(new[] { "honed", "middling", "plain" }, Ids(sorted));
+            Assert.AreEqual(2, BagSort.All.Length, "a third sort key appeared");
         }
 
         [Test]
@@ -152,19 +121,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // DETERMINISTIC TO THE LAST TIE-BREAK, whichever key is live. Generated
-        // gear means dozens of stacks that differ only by plus, and any pair
+        // gear means dozens of stacks that differ only by tier, and any pair
         // left unordered would swap places between refreshes -- a list that
         // reshuffles under the cursor as things are equipped.
         [TestCase(BagSortKey.Tier)]
-        [TestCase(BagSortKey.Plus)]
         [TestCase(BagSortKey.Name)]
         public void EveryOrderingIsStableAcrossRepeatedSorts(BagSortKey key)
         {
             var items = new[]
             {
-                Item("a", name: "Same", tier: 3, plus: 1),
-                Item("b", name: "Same", tier: 3, plus: 1),
-                Item("c", name: "Same", tier: 3, plus: 1),
+                Item("a", name: "Same", tier: 3),
+                Item("b", name: "Same", tier: 3),
+                Item("c", name: "Same", tier: 3),
             };
 
             CollectionAssert.AreEqual(Ids(BagSort.By(items, key)), Ids(BagSort.By(items, key)),

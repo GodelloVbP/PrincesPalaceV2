@@ -21,29 +21,22 @@ namespace PrincesPalace.EditModeTests
     // and pinned fresh, per this file's own header rule.
     public class ShopPricingTests
     {
-        // tier, plus, riftTier, price
-        [TestCase(0, 0, 0, 21)]
-        [TestCase(0, 1, 0, 28)]
-        [TestCase(0, 2, 0, 36)]
-        [TestCase(1, 0, 0, 26)]
-        [TestCase(1, 1, 0, 35)]
-        [TestCase(1, 2, 0, 44)]
-        [TestCase(2, 0, 0, 31)]
-        [TestCase(2, 1, 0, 42)]
-        [TestCase(2, 2, 0, 53)]
-
-        // "Rare": tier-matched, +2, one affix slot.
-        [TestCase(0, 2, 1, 54)]
-        [TestCase(1, 2, 1, 66)]
-        [TestCase(2, 2, 1, 79)]
-
-        // "Very rare": +3, two affix slots.
-        [TestCase(0, 3, 2, 86)]
-        [TestCase(1, 3, 2, 107)]
-        [TestCase(2, 3, 2, 127)]
-        public void GearPrice_IsItsPinnedValue(int tier, int plus, int riftTier, int expected)
+        // tier, affixes, price. Hand-computed from GearBase 21, GearPerTier 5
+        // and AffixStep 0.5, rounded to even: 21 x 1.5 = 31.5 reads 32 and
+        // 31 x 1.5 = 46.5 reads 46.
+        [TestCase(0, 0, 21)]
+        [TestCase(1, 0, 26)]
+        [TestCase(2, 0, 31)]
+        [TestCase(12, 0, 81)]
+        [TestCase(0, 1, 32)]
+        [TestCase(1, 1, 39)]
+        [TestCase(2, 1, 46)]
+        [TestCase(0, 2, 42)]
+        [TestCase(1, 2, 52)]
+        [TestCase(2, 2, 62)]
+        public void GearPrice_IsItsPinnedValue(int tier, int affixes, int expected)
         {
-            Assert.AreEqual(expected, ShopPricing.GearPrice(tier, plus, riftTier));
+            Assert.AreEqual(expected, ShopPricing.GearPrice(tier, affixes));
         }
 
         [TestCase(RelicRarity.Common, 60)]
@@ -167,60 +160,18 @@ namespace PrincesPalace.EditModeTests
             }
         }
 
-        // Assumption 11's anchor has to be reachable, or the floor it
-        // guarantees is a guarantee that never fires. A tier-0, +0, no-affix
-        // piece is not a legal roll at all
-        // (ShopStock.ApplyQualityFloor, "no bare commons") -- the cheapest
-        // gear that CAN exist is a tier-0, +1 piece, and the anchor sits
-        // exactly on that floor (see
-        // ShopPricing.NormalFightPayoutAnchor's own comment).
-        [Test]
-        public void TheAffordabilityAnchorIsAboveTheCheapestGearThatCanExist()
-        {
-            Assert.GreaterOrEqual(ShopPricing.NormalFightPayoutAnchor, ShopPricing.GearPrice(0, 1, 0));
-        }
-
-        // THE BEFORE/AFTER TABLE, pinned. depthStep 8/24/40 are this file's
-        // own tier-0/1/2 shop steps (see header); ShopStock.GearTierBoost is
-        // what a live shop actually rolls at each of them, and plus 1 is the
-        // cheapest a card can now be (ShopStock's "no bare commons" floor --
-        // a point of plus is the CHEAPEST way to clear that bar, PlusStep <
-        // RiftStep). BEFORE is a literal from the retired §2c table (a bare
-        // tier-N common under the OLD GearBase/GearPerTier, 20/4) and is not
-        // recomputable from this file's own formula any more -- the whole
-        // point of pinning it here is that the code that produced it is
-        // gone. Only AFTER is asserted against live code.
-        [TestCase(0, 20, 35)]
-        [TestCase(1, 24, 42)]
-        [TestCase(2, 28, 49)]
-        public void TheShelfFloorAtEachTierIsItsPinnedBeforeAndAfterPrice(
-            int unboostedTier, int beforePriceForTheRecord, int afterPrice)
-        {
-            int boostedTier = unboostedTier + ShopStock.GearTierBoost;
-            Assert.AreEqual(afterPrice, ShopPricing.GearPrice(boostedTier, 1, 0),
-                "the NEW floor: one tier up, +1 minimum. beforePriceForTheRecord " +
-                $"({beforePriceForTheRecord}) is the retired formula's own value, kept here as documentation.");
-        }
-
-        // Price is a function of tier, plus and rift and nothing else -- no
+        // Price is a function of tier and affixes and nothing else -- no
         // depth term, ever. Stated as monotonicity in each axis, which is the
         // observable half of that rule.
         [Test]
         public void EveryAxisMakesAThingMoreExpensive()
         {
-            foreach (int tier in Enumerable.Range(0, 11))
+            foreach (int tier in Enumerable.Range(0, 13))
             {
-                for (int plus = 0; plus < 5; plus++)
+                for (int affixes = 0; affixes < 3; affixes++)
                 {
-                    for (int rift = 0; rift < 3; rift++)
-                    {
-                        Assert.Less(ShopPricing.GearPrice(tier, plus, rift),
-                            ShopPricing.GearPrice(tier, plus + 1, rift), "plus");
-                        Assert.Less(ShopPricing.GearPrice(tier, plus, rift),
-                            ShopPricing.GearPrice(tier, plus, rift + 1), "rift");
-                        Assert.Less(ShopPricing.GearPrice(tier, plus, rift),
-                            ShopPricing.GearPrice(tier + 1, plus, rift), "tier");
-                    }
+                    Assert.Less(ShopPricing.GearPrice(tier, affixes), ShopPricing.GearPrice(tier, affixes + 1), "affixes");
+                    Assert.Less(ShopPricing.GearPrice(tier, affixes), ShopPricing.GearPrice(tier + 1, affixes), "tier");
                 }
             }
         }

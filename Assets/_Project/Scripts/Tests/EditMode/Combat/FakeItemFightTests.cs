@@ -38,7 +38,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         private static ItemInstance Lot(string id, string lot, bool fake) =>
-            new ItemInstance(id, provenance: new Provenance(lot, fake));
+            ItemInstance.Of(id, provenance: new Provenance(lot, fake));
 
         // ---- the fake consumable --------------------------------------------------------
 
@@ -127,7 +127,7 @@ namespace PrincesPalace.Domain.Tests
         public void AWornFake_BreaksOnItsThirdCompletedFight_NotItsSecond()
         {
             var worn = new EquipmentLoadout();
-            worn.Put(EquipmentSlot.Torso, new ItemInstance("leather_torso_p0", provenance: FakeWear.NewFakeGear("lot-a")));
+            worn.Put(EquipmentSlot.Torso, ItemInstance.Of("leather_torso_p0", provenance: FakeWear.NewFakeGear("lot-a")));
 
             Assert.IsEmpty(FakeWear.WearOneFight(worn));
             Assert.AreEqual(2, worn.GetInstance(EquipmentSlot.Torso).FightsLeft);
@@ -148,14 +148,13 @@ namespace PrincesPalace.Domain.Tests
         public void WearingOut_LeavesGenuineGearAlone()
         {
             var worn = new EquipmentLoadout();
-            worn.Put(EquipmentSlot.Torso, new ItemInstance("leather_torso_p0", provenance: new Provenance("lot-b")));
-            worn.Set(EquipmentSlot.Head, "leather_coif_p0", plus: 2);
+            worn.Put(EquipmentSlot.Torso, ItemInstance.Of("leather_torso_p0", provenance: new Provenance("lot-b")));
+            worn.Set(EquipmentSlot.Head, "leather_coif_p0");
 
             for (int i = 0; i < 5; i++) Assert.IsEmpty(FakeWear.WearOneFight(worn));
 
             Assert.AreEqual("leather_torso_p0", worn.Get(EquipmentSlot.Torso));
             Assert.AreEqual(0, worn.GetInstance(EquipmentSlot.Torso).FightsLeft);
-            Assert.AreEqual(2, worn.GetPlus(EquipmentSlot.Head));
         }
 
         [Test]

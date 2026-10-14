@@ -58,58 +58,58 @@ namespace PrincesPalace.PlayModeTests
         private static ItemDefinition TierZeroItemInSlot(EquipmentSlot slot) =>
             ContentDatabase.Equippables.FirstOrDefault(i => i != null && i.equipSlot == slot);
 
-        private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier, List<string> modifierIds)
+        private static Character FreshCharacterWearing(ItemDefinition item, int tier, List<string> modifierIds)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
-            character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, riftTier: (int)riftTier);
+            character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, tier: tier);
             return character;
         }
 
         // ---- A: three representative rolled items, through the real content pipeline ----
         //
-        // Every number below is TierMultiplier(0) x RiftMultiplier(riftTier)
-        // (1.0 and 1.3/1.6/2.0 respectively, all already pinned as literals in
-        // ModifierMagnitudeTests) times modifiers.json's own authored base --
-        // never ModifierMagnitude.Scale called from inside this test.
+        // Every number below is TierMultiplier(tier) (1.25 at tier 1, 1.5625 at
+        // tier 2 and 1.953125 at tier 3, all hand-derived from 1.25^n) times
+        // modifiers.json's own authored base -- never ModifierMagnitude.Scale
+        // called from inside this test.
 
         // POST-AFFIX-SPLIT: this used to roll "fiery"+"vampiric"+"hardened"
         // (2+1+3 = 6 effects off 3 ids). Every modifier now grants exactly
         // one effect (ModifierEntryResolver rejects anything else -- see its
-        // own comment), so a 3-id roll -- the real game's own cap, RiftTier
-        // Convergent's 3 rungs -- now carries 3 effects, not 6. Chosen to
+        // own comment), so a 3-id roll now carries 3 effects, not 6. Chosen to
         // still span three genuinely different effect TYPES (an on-hit
         // proc, a resistance, a percent-of-damage heal) rather than three
         // of the same shape, which is what "none of the three silently
         // overrides another" actually needs to prove.
         [Test]
-        public void AConvergentThreeModifierWeapon_ResolvesAllThreeModifiersAtTheirCorrectlyScaledMagnitudes()
+        public void ATierThreeThreeModifierWeapon_ResolvesAllThreeModifiersAtTheirCorrectlyScaledMagnitudes()
         {
             var weapon = TierZeroItemInSlot(EquipmentSlot.Weapon1);
             Assert.IsNotNull(weapon, "fixture: content has a tier-0 weapon");
 
-            var character = FreshCharacterWearing(weapon, RiftTier.Convergent,
+            var character = FreshCharacterWearing(weapon, 3,
                 new List<string> { "fiery", "ironclad", "vampiric" });
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(weapon.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
             var effects = ContentDatabase.CharacterEffects(character);
-            Assert.IsFalse(effects.IsEmpty, "a Convergent roll with three real modifiers must produce real effects");
+            Assert.IsFalse(effects.IsEmpty, "a tier-3 roll with three real modifiers must produce real effects");
 
-            // Scale = 1.0 x 2.0 = 2.0. Bases (10/8/8) are fiery/ironclad/
+            // Scale = 1.25^3 = 1.953125. Bases (10/8/8) are fiery/ironclad/
             // vampiric's CURRENT authored magnitudes -- halved from 20/15/15
             // in the affix-power-down pass; see modifiers.json's own entries.
+            // 10 x 1.953125 = 19.53 -> 20; 8 x 1.953125 = 15.63 -> 16.
             var fireOnHit = effects.All.Single(e =>
                 e.Kind == EffectKind.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
-            Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 2.0");
+            Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 1.953125");
 
             var physicalResist = effects.All.Single(e =>
                 e.Kind == EffectKind.ResistanceFlat && e.Against == DamageType.Physical);
-            Assert.AreEqual(16, physicalResist.Magnitude, "ironclad: 8 x 2.0");
+            Assert.AreEqual(16, physicalResist.Magnitude, "ironclad: 8 x 1.953125");
 
-            Assert.AreEqual(16, effects.Magnitude(EffectKind.LifestealPercent), "vampiric: 8 x 2.0");
+            Assert.AreEqual(16, effects.Magnitude(EffectKind.LifestealPercent), "vampiric: 8 x 1.953125");
         }
 
         // POST-AFFIX-SPLIT: "stalwart" used to carry both
@@ -119,25 +119,25 @@ namespace PrincesPalace.PlayModeTests
         // the old bundled "stalwart" made on its own, now via two affix
         // slots instead of one.
         [Test]
-        public void ARiftTouchedTwoModifierArmorPiece_ResolvesBothModifiersAtTheRiftTouchedScale()
+        public void ATierOneTwoModifierArmorPiece_ResolvesBothModifiersAtTheTierOneScale()
         {
-            var armor = TierZeroItemInSlot(EquipmentSlot.Torso);
-            Assert.IsNotNull(armor, "fixture: content has a tier-0 torso piece");
+            var armor = GearFixtures.WearableAt(1, EquipmentSlot.Torso);
+            Assert.IsNotNull(armor, "fixture: content has a torso piece the first character can wear at tier 1");
 
-            var character = FreshCharacterWearing(armor, RiftTier.RiftTouched, new List<string> { "stalwart", "bulwark" });
+            var character = FreshCharacterWearing(armor, 1, new List<string> { "stalwart", "bulwark" });
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(armor.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
             var effects = ContentDatabase.CharacterEffects(character);
-            Assert.IsFalse(effects.IsEmpty, "a RiftTouched roll with two real modifiers must produce real effects");
+            Assert.IsFalse(effects.IsEmpty, "a tier-1 roll with two real modifiers must produce real effects");
 
-            // Scale = 1.0 x 1.3 = 1.3. Bases (2, 15) are stalwart/bulwark's
-            // CURRENT authored magnitudes -- halved from 3/30. 2 x 1.3 = 2.6,
-            // away-from-zero -> 3; 15 x 1.3 = 19.5, away-from-zero -> 20.
+            // Scale = 1.25. Bases (2, 15) are stalwart/bulwark's CURRENT
+            // authored magnitudes -- halved from 3/30. 2 x 1.25 = 2.5,
+            // away-from-zero -> 3; 15 x 1.25 = 18.75, away-from-zero -> 19.
             Assert.AreEqual(3, effects.Magnitude(EffectKind.FlatPhysicalDamageReduction),
-                "stalwart: 2 x 1.3 = 2.6, rounded away from zero");
-            Assert.AreEqual(20, effects.Magnitude(EffectKind.BreakShieldDepletionResistPercent),
-                "bulwark: 15 x 1.3 = 19.5, rounded away from zero");
+                "stalwart: 2 x 1.25 = 2.5, rounded away from zero");
+            Assert.AreEqual(19, effects.Magnitude(EffectKind.BreakShieldDepletionResistPercent),
+                "bulwark: 15 x 1.25 = 18.75, rounded away from zero");
         }
 
         [Test]
@@ -146,7 +146,7 @@ namespace PrincesPalace.PlayModeTests
             var item = TierZeroItemInSlot(EquipmentSlot.Weapon1);
             Assert.IsNotNull(item, "fixture: content has a tier-0 weapon");
 
-            var character = FreshCharacterWearing(item, RiftTier.Ordinary, new List<string>());
+            var character = FreshCharacterWearing(item, 0, new List<string>());
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE");
 
@@ -154,7 +154,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(effects.IsEmpty, "zero rolled modifiers must resolve to zero effects, not a default set");
 
             CollectionAssert.IsEmpty(character.equipment.GetModifierIds(item.equipSlot));
-            Assert.AreEqual(0, character.equipment.GetRiftTier(item.equipSlot));
         }
 
         // ---- B: the resistance half, measurably reducing the right damage type ----
@@ -178,7 +177,7 @@ namespace PrincesPalace.PlayModeTests
             var weapon = TierZeroItemInSlot(EquipmentSlot.Weapon1);
             Assert.IsNotNull(weapon, "fixture: content has a tier-0 weapon");
 
-            var resisted = FreshCharacterWearing(weapon, RiftTier.RiftForged, new List<string> { "emberguard" });
+            var resisted = FreshCharacterWearing(weapon, 2, new List<string> { "emberguard" });
             var bare = new Character(resisted.definitionId);
 
             var enemyId = ContentDatabase.Enemies.Select(e => e.id).FirstOrDefault();
@@ -195,10 +194,8 @@ namespace PrincesPalace.PlayModeTests
             var resistedState = builtResisted.Party[0];
             var bareState = builtBare.Party[0];
 
-            // emberguard's own scaled ResistanceFlat (Fire): 8 x 1.0 x
-            // 1.6 = 12.8 -> 13, away-from-zero -- already pinned in
-            // ItemModifierScalingReachesCombatTests, reused here rather than
-            // recomputed.
+            // emberguard's own scaled ResistanceFlat (Fire) at tier 2:
+            // 8 x 1.5625 = 12.5 -> 13, away-from-zero.
             Assert.AreEqual(13, resistedState.TypedResistance.Fire);
             Assert.AreEqual(0, bareState.TypedResistance.Fire, "fixture check: the bare control wears nothing");
 
@@ -223,10 +220,10 @@ namespace PrincesPalace.PlayModeTests
         // rolled copy of ONE item, through the SAME production calls the game
         // itself makes at every step (never a hand-built fixture standing in
         // for one of them):
-        //   roll:   ItemOfferRoll.Candidates() + ItemOffer.WithPlus/WithModifiers
-        //           (forced to Convergent for a deterministic assertion -- the
-        //           pure RNG SHAPE of a roll is ItemOfferRollTests' job, not
-        //           this file's)
+        //   roll:   ItemOfferRoll.Candidates() + ItemOffer.WithModifiers
+        //           (forced to a tier-3 copy with three modifiers for a
+        //           deterministic assertion -- the pure RNG SHAPE of a roll is
+        //           ItemOfferRollTests' job, not this file's)
         //   claim:  InventoryOps.Add, the exact call ReckoningController.Take makes
         //   equip:  EquipMove.TryEquip, the exact call RunOrchestrator.AutoEquipIntoAnEmptySlot makes
         //   fight:  FightEncounterAdapter.Build + a real FightSession swing
@@ -240,8 +237,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(character, "fixture: a fresh save fields at least one character");
 
             var weaponCandidate = ItemOfferRoll.Candidates()
-                .FirstOrDefault(c => c.Tier == 0 && ContentDatabase.GetItem(c.ItemId)?.equipSlot == EquipmentSlot.Weapon1);
-            Assert.IsNotNull(weaponCandidate.ItemId, "fixture: content has a tier-0 weapon to roll");
+                .FirstOrDefault(c => c.Tier == 3 && ContentDatabase.GetItem(c.ItemId)?.equipSlot == EquipmentSlot.Weapon1);
+            Assert.IsNotNull(weaponCandidate.ItemId, "fixture: content has a tier-3 weapon to roll");
             var itemDef = ContentDatabase.GetItem(weaponCandidate.ItemId);
 
             // ---- ROLL ----
@@ -253,30 +250,28 @@ namespace PrincesPalace.PlayModeTests
             // now via three single-effect ids rather than fiery's/hardened's
             // old two/three-effect bundles.
             var rolledModifierIds = new List<string> { "fiery", "vampiric", "astral" };
-            var offer = weaponCandidate.WithPlus(2).WithModifiers(RiftTier.Convergent, rolledModifierIds);
+            var offer = weaponCandidate.WithModifiers(rolledModifierIds);
 
             // ---- CLAIM ----
-            InventoryOps.Add(save.stockpiledItems, offer.ItemId, 1, offer.Plus, offer.Modifiers.ToList(), (int)offer.RiftTier);
+            InventoryOps.Add(save.stockpiledItems, offer.Instance, 1);
 
             var claimed = save.stockpiledItems.FirstOrDefault(e =>
-                e.itemId == offer.ItemId && e.plus == 2 && e.riftTier == (int)RiftTier.Convergent);
+                e.itemId == offer.ItemId && e.tier == 3);
             Assert.IsNotNull(claimed, "the claim must land in the stockpile with its full rolled identity");
             CollectionAssert.AreEquivalent(rolledModifierIds, claimed.modifierIds,
                 "the claimed stack must carry exactly the rolled modifiers");
 
             // ---- EQUIP ----
-            bool equipped = EquipMove.TryEquip(character.equipment, save.stockpiledItems, offer.ItemId,
-                itemDef.equipSlot, itemDef.IsEquippable, plus: offer.Plus,
-                modifierIds: offer.Modifiers.ToList(), riftTier: (int)offer.RiftTier);
+            bool equipped = EquipMove.TryEquip(character.equipment, save.stockpiledItems, offer.Instance,
+                itemDef.equipSlot, itemDef.IsEquippable);
             Assert.IsTrue(equipped, "the rolled stack must be findable and equippable through the real EquipMove seam");
 
             var wornSlot = EquipmentSlots.All.FirstOrDefault(slot =>
-                character.equipment.Get(slot) == offer.ItemId && character.equipment.GetPlus(slot) == 2
-                && character.equipment.GetRiftTier(slot) == (int)RiftTier.Convergent);
+                character.equipment.Get(slot) == offer.ItemId && character.equipment.GetInstance(slot).Tier == 3);
             Assert.AreNotEqual(default(EquipmentSlot), wornSlot, "fixture check for slots that default to Head");
             Assert.AreEqual(offer.ItemId, character.equipment.Get(wornSlot));
             CollectionAssert.AreEquivalent(rolledModifierIds, character.equipment.GetModifierIds(wornSlot));
-            Assert.IsFalse(save.stockpiledItems.Any(e => e.itemId == offer.ItemId && e.riftTier == (int)RiftTier.Convergent),
+            Assert.IsFalse(save.stockpiledItems.Any(e => e.itemId == offer.ItemId && e.tier == 3),
                 "the equipped copy must have LEFT the stockpile, not been duplicated");
 
             // ---- FIGHT ----
@@ -309,18 +304,17 @@ namespace PrincesPalace.PlayModeTests
             var foe = session.Encounter.Enemies.FirstOrDefault();
             Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
 
-            // The 3-modifier Convergent roll, reaching the combatant the
-            // fight actually runs on, at the correctly SCALED magnitude --
-            // TierMultiplier(0) x RiftMultiplier(Convergent) = 1.0 x 2.0,
-            // both already-pinned literals (ModifierMagnitudeTests), never
-            // recomputed here.
+            // The 3-modifier tier-3 roll, reaching the combatant the fight
+            // actually runs on, at the correctly SCALED magnitude --
+            // TierMultiplier(3) = 1.953125, hand-derived from 1.25^3 and
+            // never recomputed here.
             var fireOnHit = hero.Effects.All.Single(e =>
                 e.Kind == EffectKind.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
-            Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 2.0, reached through the real roll/claim/equip chain");
+            Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 1.953125, reached through the real roll/claim/equip chain");
             var arcaneOnHit = hero.Effects.All.Single(e =>
                 e.Kind == EffectKind.ElementalDamageOnHitPercent && e.Against == DamageType.Arcane);
-            Assert.AreEqual(20, arcaneOnHit.Magnitude, "astral: 10 x 2.0, reached through the same chain");
-            Assert.AreEqual(16, hero.Effects.Magnitude(EffectKind.LifestealPercent), "vampiric: 8 x 2.0");
+            Assert.AreEqual(20, arcaneOnHit.Magnitude, "astral: 10 x 1.953125, reached through the same chain");
+            Assert.AreEqual(16, hero.Effects.Magnitude(EffectKind.LifestealPercent), "vampiric: 8 x 1.953125");
 
             // A known, round Attack so the elemental on-hit damage is a
             // hand-computed literal rather than a figure that depends on the
@@ -397,8 +391,7 @@ namespace PrincesPalace.PlayModeTests
             var reloadedCharacter = reloaded.roster.First(c => c.definitionId == character.definitionId);
 
             Assert.AreEqual(offer.ItemId, reloadedCharacter.equipment.Get(wornSlot), "the rolled item id must survive a save/reload");
-            Assert.AreEqual(2, reloadedCharacter.equipment.GetPlus(wornSlot), "the plus must survive");
-            Assert.AreEqual((int)RiftTier.Convergent, reloadedCharacter.equipment.GetRiftTier(wornSlot), "the RiftTier must survive");
+            Assert.AreEqual(3, reloadedCharacter.equipment.GetInstance(wornSlot).Tier, "the tier must survive");
             CollectionAssert.AreEquivalent(rolledModifierIds, reloadedCharacter.equipment.GetModifierIds(wornSlot),
                 "the exact rolled modifier set must survive");
 

@@ -25,7 +25,7 @@ namespace PrincesPalace.Domain.Rewards
         NotEnoughGold,
 
         // Sell only: the bag does not hold that many of exactly that copy
-        // (itemId, plus, modifierIds, riftTier).
+        // (itemId, tier, modifierIds).
         NotInBag,
 
         // LearnSpell/ReplaceSpell only: the character already has this

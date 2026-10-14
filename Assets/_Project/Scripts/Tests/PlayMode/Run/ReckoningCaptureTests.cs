@@ -80,9 +80,9 @@ namespace PrincesPalace.PlayModeTests
             // so the "+N" suffix is in the shot too.
             return new List<ItemOffer>
             {
-                new ItemOffer(picks[0].id, 0, 0),
-                new ItemOffer(picks[1].id, 6, 1),
-                new ItemOffer(picks[2].id, 10, 3),
+                new ItemOffer(picks[0].id, 0),
+                new ItemOffer(picks[1].id, 6),
+                new ItemOffer(picks[2].id, 10),
             };
         }
 

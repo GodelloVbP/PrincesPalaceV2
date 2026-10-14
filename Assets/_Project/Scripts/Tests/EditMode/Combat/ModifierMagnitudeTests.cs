@@ -44,60 +44,32 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(9.313225746, ModifierMagnitude.TierMultiplier(10), 1e-6);
         }
 
-        // ---- RiftMultiplier: the plan's own named step ------------------------
+        // ---- Scale: the tier curve ---------------------------------------------
 
         [Test]
-        public void Ordinary_IsExactlyOne()
+        public void Scale_AtTierZero_IsExactlyOne()
         {
-            Assert.AreEqual(1.0, ModifierMagnitude.RiftMultiplier(RiftTier.Ordinary), 1e-9);
+            Assert.AreEqual(1.0, ModifierMagnitude.Scale(0), 1e-9);
         }
 
         [Test]
-        public void RiftTouched_Is1Point3()
+        public void Scale_IsTheTierMultiplier()
         {
-            Assert.AreEqual(1.3, ModifierMagnitude.RiftMultiplier(RiftTier.RiftTouched), 1e-9);
+            // 1.25^5 = 3.0517578125
+            Assert.AreEqual(3.0517578125, ModifierMagnitude.Scale(5), 1e-9);
         }
 
         [Test]
-        public void RiftForged_Is1Point6()
+        public void Scale_AtTierTen_IsTheTopOfTheArtLadder()
         {
-            Assert.AreEqual(1.6, ModifierMagnitude.RiftMultiplier(RiftTier.RiftForged), 1e-9);
+            Assert.AreEqual(9.313225746, ModifierMagnitude.Scale(10), 1e-6);
         }
 
         [Test]
-        public void Convergent_Is2Point0()
+        public void Scale_KeepsClimbingToTheCopyCap()
         {
-            Assert.AreEqual(2.0, ModifierMagnitude.RiftMultiplier(RiftTier.Convergent), 1e-9);
-        }
-
-        [Test]
-        public void AnOutOfRangeRiftTierValue_FallsBackToOrdinary()
-        {
-            // Defensive against a corrupted/hand-edited save -- see
-            // ModifierMagnitude.RiftMultiplier's own comment.
-            Assert.AreEqual(1.0, ModifierMagnitude.RiftMultiplier((RiftTier)99), 1e-9);
-        }
-
-        // ---- Scale: the combined formula ---------------------------------------
-
-        [Test]
-        public void Scale_AtOrdinaryTierZero_IsExactlyOne()
-        {
-            Assert.AreEqual(1.0, ModifierMagnitude.Scale(0, RiftTier.Ordinary), 1e-9);
-        }
-
-        [Test]
-        public void Scale_MultipliesBothAxesTogether()
-        {
-            // TierMultiplier(5) x RiftMultiplier(Convergent) = 3.0517578125 x 2.0
-            Assert.AreEqual(6.103515625, ModifierMagnitude.Scale(5, RiftTier.Convergent), 1e-9);
-        }
-
-        [Test]
-        public void Scale_AtTierTenConvergent_IsTheTopOfTheCurve()
-        {
-            // 9.313225746 x 2.0 = 18.626451492
-            Assert.AreEqual(18.626451492, ModifierMagnitude.Scale(10, RiftTier.Convergent), 1e-6);
+            // 1.25^12 = 14.5519152283...
+            Assert.AreEqual(14.551915228, ModifierMagnitude.Scale(12), 1e-6);
         }
     }
 }

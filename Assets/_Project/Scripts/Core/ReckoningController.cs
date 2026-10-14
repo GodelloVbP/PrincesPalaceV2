@@ -53,11 +53,6 @@ namespace PrincesPalace
         [SerializeField] internal Image[] offerBursts;
         [SerializeField] internal Image[] offerIcons;
 
-        // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, distinct from the
-        // rarity-coloured halo/burst pair above. See RiftTierColors' own
-        // header for why this reads a separate table, and PaintOffers for
-        // why it stays hidden at RiftTier.Ordinary.
-        [SerializeField] internal Image[] offerRiftGlows;
         [SerializeField] internal RectTransform[] offerBurstRects;
 
         // The offer CARDS' own rects, so a row with fewer offers than the
@@ -482,13 +477,13 @@ namespace PrincesPalace
             }
 
             // ITEM-MODIFIER PLAN PHASE E: read straight off the OFFER, not
-            // off anything claimed -- an offer's Modifiers/RiftTier are set
+            // off anything claimed -- an offer's Modifiers are set
             // the moment ItemOfferRoll rolls it (see ItemOffer's own
             // header), well before Take() ever writes an InventoryEntry, so
             // the hover has real data to show for all three unclaimed cards.
             var offer = _offers[index];
             string body = ItemDescription.SquadComparisonBody(
-                save.ActiveSquad(), offer.Instance, offer.Plus, offer.RiftTier, offer.Modifiers);
+                save.ActiveSquad(), offer.Instance);
             if (string.IsNullOrEmpty(body))
             {
                 offerTooltip.SetShown(false);
@@ -829,9 +824,9 @@ namespace PrincesPalace
                 // exists shows its id rather than taking the screen down.
                 offerNames[i].SetContent(item == null
                     ? offer.ItemId
-                    : RarityColors.NameOf(offer.Instance, offer.Plus));
+                    : RarityColors.NameOf(offer.Instance));
                 offerMetas[i].Set(UiStrings.ReckoningOfferMeta,
-                    item == null ? "?" : RarityBands.For(offer.Tier).ToString(), offer.Tier);
+                    item == null ? "?" : ItemQuality.DisplayName(ContentDatabase.QualityOf(offer.Instance)), offer.Tier);
 
                 ItemIcons.Apply(offerIcons[i], icons, ItemIcons.KeyOf(offer.Instance));
 
@@ -861,25 +856,6 @@ namespace PrincesPalace
                     soft.a = _taken ? 0.12f : 0.30f;
                     offerHalos[i].color = soft;
                     offerHalos[i].rectTransform.localScale = Vector3.one;
-                }
-
-                // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, a SEPARATE
-                // colour from the rarity-toned halo/burst above -- offer.
-                // RiftTier and the item's tier are two independent axes (see
-                // RiftTierColors' own header). Fully transparent at
-                // RiftTier.Ordinary rather than gameObject-deactivated,
-                // matching how the halo/burst pair themselves stay always-
-                // active and alpha-only in this screen (unlike the dossier's
-                // Inactive()+SetShown() pattern) -- the offer is offered
-                // regardless of whether it rolled anything, alpha zero is
-                // "no visual change" here.
-                if (offerRiftGlows != null && i < offerRiftGlows.Length && offerRiftGlows[i] != null)
-                {
-                    var ring = RiftTierColors.ShouldGlow(offer.RiftTier)
-                        ? RiftTierColors.For(offer.RiftTier)
-                        : Color.clear;
-                    ring.a *= _taken ? 0.4f : 1f;
-                    offerRiftGlows[i].color = ring;
                 }
 
                 // Every offer stays visible after one is taken, and all of them
@@ -913,7 +889,7 @@ namespace PrincesPalace
             {
                 var item = ContentDatabase.GetItem(offer.ItemId);
                 _reward.ChosenItemId = offer.ItemId;
-                _reward.ChosenItemName = item == null ? offer.ItemId : RarityColors.NameOf(offer.Instance, offer.Plus);
+                _reward.ChosenItemName = item == null ? offer.ItemId : RarityColors.NameOf(offer.Instance);
             }
 
             offerNames[index].Set(UiStrings.ReckoningTaken);

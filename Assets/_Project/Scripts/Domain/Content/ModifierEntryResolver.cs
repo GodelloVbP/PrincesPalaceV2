@@ -11,8 +11,7 @@ namespace PrincesPalace.Domain.Content
     // Validates ONE modifier entry's internal consistency -- correct type
     // names, correct threshold/magnitude/damageType shape for that type, no
     // dead-weight duplicates. It does not decide how many slots an item can
-    // roll or how RiftTier interacts with the roll (ModifierTable's job) or
-    // how a resolved effect's magnitude gets scaled by tier/rift
+    // roll or how a resolved effect's magnitude gets scaled by tier
     // (ModifierMagnitude's job, at the ContentDatabase.Effects seam)
     // -- this is purely "is this one authored entry well-formed".
     public static class ModifierEntryResolver

@@ -6,12 +6,12 @@ namespace PrincesPalace.Domain.Content
     // combat hook actually reads — the item-modifier plan's own formula, from
     // "the model at a glance":
     //
-    //     Magnitude = base x TierMultiplier(itemTier) x RiftMultiplier(riftTier)
+    //     Magnitude = base x TierMultiplier(itemTier)
     //
     // Applied ONCE, at ContentDatabase.Effects — the one assembly
     // point that has both the modifier's raw Effect (from
     // ModifierDefinition.ResolvedEffects) and the ONE equipped item instance
-    // it rolled onto (ItemDefinition.tier, EquipmentSlotEntry.riftTier).
+    // it rolled onto (its tier, EquipmentSlotEntry.tier).
     // Every combat hook downstream (FightSession's on-hit riders,
     // DamagePipeline, FightEncounterAdapter's mana wiring, ...) reads an
     // already-scaled Effect.Magnitude and never has to know this
@@ -35,41 +35,12 @@ namespace PrincesPalace.Domain.Content
             return itemTier <= 0 ? 1.0 : Math.Pow(GearScaling.TierGrowth, itemTier);
         }
 
-        // A MILD, NAMED step per RiftTier rather than a geometric curve —
-        // RiftTier only spans four rungs (0-3), and a steep curve over four
-        // rungs reads as a cliff rather than a climb. These are tuning
-        // knobs a designer will retune once real drops are played, not
-        // derived truths — named individually (rather than folded into an
-        // array literal) so each one can be retuned without hunting for
-        // which index means what.
-        public const double RiftMultiplierOrdinary = 1.0;
-        public const double RiftMultiplierRiftTouched = 1.3;
-        public const double RiftMultiplierRiftForged = 1.6;
-        public const double RiftMultiplierConvergent = 2.0;
-
-        public static double RiftMultiplier(RiftTier riftTier)
+        // The scale ONE item instance's rolled modifiers read at — the tier
+        // of the one item this copy actually is, never a character-wide
+        // average.
+        public static double Scale(int itemTier)
         {
-            switch (riftTier)
-            {
-                case RiftTier.RiftTouched: return RiftMultiplierRiftTouched;
-                case RiftTier.RiftForged: return RiftMultiplierRiftForged;
-                case RiftTier.Convergent: return RiftMultiplierConvergent;
-
-                // Ordinary, AND any out-of-range value a corrupted or
-                // hand-edited save could carry — the same defensive "unknown
-                // reads as the weakest real answer" posture RiftTier's own
-                // int storage already assumes (see EquipmentSlotEntry.riftTier's
-                // header: 0 is always a safe, correct reading of "nothing rolled").
-                default: return RiftMultiplierOrdinary;
-            }
-        }
-
-        // The combined scale ONE item instance's rolled modifiers read at —
-        // both axes of the one item this copy actually is, never a
-        // character-wide average.
-        public static double Scale(int itemTier, RiftTier riftTier)
-        {
-            return TierMultiplier(itemTier) * RiftMultiplier(riftTier);
+            return TierMultiplier(itemTier);
         }
     }
 }

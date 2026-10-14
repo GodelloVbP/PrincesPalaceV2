@@ -83,7 +83,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(3, picks.Count, "need three equippable items with art to offer");
 
-            return picks.Select(i => new ItemOffer(i.id, i.curve.maxTier, 0)).ToList();
+            return picks.Select(i => new ItemOffer(i.id, i.curve.maxTier)).ToList();
         }
 
         // Every test leaves the Reckoning up, so it is put away the way the

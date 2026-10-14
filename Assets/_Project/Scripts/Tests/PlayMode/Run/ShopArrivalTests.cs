@@ -117,24 +117,15 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the extracted roll -------------------------------------------------
 
-        // THE REWARD PATH ROLLS BYTE-IDENTICALLY BEFORE AND AFTER RollOne WAS
-        // EXTRACTED OUT OF IT.
+        // THE REWARD ROLL IS EXACTLY THE TIER ROLL, THEN THE CHOICE.
         //
-        // Rebuilt here from the public pieces rather than compared against
-        // values copied out of a run: RarityTable.RollTier, ItemOfferTable.
-        // Choose, RarityTable.RollPlus, ModifierTable.RollRiftTier and
-        // ModifierTable.PickModifiers, drawn in that ORDER off a stream
-        // opened at the same seed. The order is the whole content of the
-        // extraction -- every draw shifts every draw after it, so a reordered
-        // or duplicated call inside RollOne shows up as different items, not
-        // just different affixes.
-        //
-        // The two modifier pools are rebuilt the same way ItemOfferRoll's own
-        // private ModifierPool does, from ContentDatabase.Modifiers and
-        // ModifierTable.IsOffensiveModifier -- both public, so this is a
-        // reimplementation of the rule rather than a call into it.
+        // Rebuilt here from the public pieces: RarityTable.RollTier then
+        // ItemOfferTable.Choose, drawn in that ORDER off a stream opened at
+        // the same seed. Every draw shifts every draw after it, so a reordered
+        // or duplicated call inside ItemOfferRoll.Roll shows up as different
+        // items.
         [Test]
-        public void TheRewardRollIsExactlyChooseThenRollOnePerOffer()
+        public void TheRewardRollIsExactlyTheTierRollThenChoose()
         {
             const ulong Seed = 987654321UL;
             const int Depth = 24;
@@ -144,54 +135,30 @@ namespace PrincesPalace.PlayModeTests
             var rolled = ItemOfferRoll.Roll(EncounterClass.Normal, Depth, Favor, Draw(Seed), Count);
 
             var next = Draw(Seed);
-            var candidates = ItemOfferRoll.Candidates();
             int maxTier = ItemOfferRoll.MaxTier;
             int target = RarityTable.RollTier(EncounterClass.Normal, Depth, maxTier, Favor, next);
+            var expected = ItemOfferTable.Choose(ItemOfferRoll.Candidates(), target, maxTier, next, Count);
 
-            var weaponPool = ModifierPool(weapons: true);
-            var armorPool = ModifierPool(weapons: false);
-            var kindById = ContentDatabase.Items
-                .Where(i => i != null && !string.IsNullOrEmpty(i.id))
-                .ToDictionary(i => i.id, i => i.kind);
-
-            var expected = new List<string>();
-            foreach (var offer in ItemOfferTable.Choose(candidates, target, maxTier, next, Count))
-            {
-                int plus = RarityTable.RollPlus(EncounterClass.Normal, Favor, next);
-                var rift = ModifierTable.RollRiftTier(EncounterClass.Normal, Favor, next);
-                bool isWeapon = kindById.TryGetValue(offer.ItemId, out var kind) && kind == ItemKind.Weapon;
-                var modifiers = ModifierTable.PickModifiers(isWeapon ? weaponPool : armorPool, (int)rift, next);
-
-                expected.Add(Describe(offer.ItemId, plus, (int)rift, modifiers));
-            }
-
-            CollectionAssert.AreEqual(expected,
-                rolled.Select(o => Describe(o.ItemId, o.Plus, (int)o.RiftTier, o.Modifiers)).ToList(),
-                "The reward roll no longer draws in the order it drew before RollOne was extracted, " +
-                "which renumbers every reward every existing seed has ever produced.");
+            CollectionAssert.AreEqual(
+                expected.Select(o => $"{o.ItemId}@{o.Tier}").ToList(),
+                rolled.Select(o => $"{o.ItemId}@{o.Tier}").ToList(),
+                "The reward roll no longer draws in the order the tier roll and the choice define.");
         }
 
-        // The shop's gear shelf goes through the same seam, so a card and a
-        // reward are the same object rolled the same way.
+        // The shop's gear shelf is the same tier-targeted choice, so one
+        // seed rolls one shelf.
         [Test]
-        public void TheShopGearShelfUsesTheSameRollAsTheRewardPath()
+        public void TheShopGearShelfIsAPureFunctionOfItsStream()
         {
             const ulong Seed = 13579UL;
             const int Depth = 24;
 
-            var next = Draw(Seed);
-            var context = ItemOfferRoll.BuildRollContext();
-            var shelf = ShopStock.RollGear(ItemOfferRoll.Candidates(), Depth, ItemOfferRoll.MaxTier,
-                offer => ItemOfferRoll.RollOne(offer, context, EncounterClass.Normal, 0, next), next);
-
-            var again = Draw(Seed);
-            var context2 = ItemOfferRoll.BuildRollContext();
-            var repeat = ShopStock.RollGear(ItemOfferRoll.Candidates(), Depth, ItemOfferRoll.MaxTier,
-                offer => ItemOfferRoll.RollOne(offer, context2, EncounterClass.Normal, 0, again), again);
+            var shelf = ShopStock.RollGear(ItemOfferRoll.Candidates(), Depth, ItemOfferRoll.MaxTier, Draw(Seed));
+            var repeat = ShopStock.RollGear(ItemOfferRoll.Candidates(), Depth, ItemOfferRoll.MaxTier, Draw(Seed));
 
             CollectionAssert.AreEqual(
-                shelf.Select(e => e.contentId + ":" + e.price + ":" + string.Join("|", e.modifiers)).ToList(),
-                repeat.Select(e => e.contentId + ":" + e.price + ":" + string.Join("|", e.modifiers)).ToList());
+                shelf.Select(e => e.contentId + "@" + e.tier + ":" + e.price).ToList(),
+                repeat.Select(e => e.contentId + "@" + e.tier + ":" + e.price).ToList());
 
             Assert.IsTrue(shelf.All(e => e.noOffer || e.price > 0));
         }
@@ -200,23 +167,6 @@ namespace PrincesPalace.PlayModeTests
         {
             var rng = new SeededRandom(seed);
             return bound => rng.NextInt(0, bound);
-        }
-
-        private static string Describe(string itemId, int plus, int rift, IReadOnlyList<string> modifiers) =>
-            $"{itemId}+{plus}r{rift}[{string.Join("|", modifiers ?? new List<string>())}]";
-
-        private static List<string> ModifierPool(bool weapons)
-        {
-            return ContentDatabase.Modifiers
-                .Where(m => m != null && !string.IsNullOrEmpty(m.id))
-                .Where(m =>
-                {
-                    var effects = m.Data.Effects;
-                    var type = effects != null && effects.Length > 0 ? effects[0].Kind : EffectKind.None;
-                    return ModifierTable.IsOffensiveModifier(type) == weapons;
-                })
-                .Select(m => m.id)
-                .ToList();
         }
     }
 }

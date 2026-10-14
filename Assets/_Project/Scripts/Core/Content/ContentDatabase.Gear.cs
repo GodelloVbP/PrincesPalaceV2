@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Equipment;
 
 namespace PrincesPalace.Content
 {
@@ -22,6 +23,23 @@ namespace PrincesPalace.Content
             if (definition == null || !definition.IsEquippable) return null;
 
             return definition.curve.At(copy.Tier).WithHoning(honing);
+        }
+
+        // How honed `slot` is for `character`: the run's slotHoning, which ends
+        // with the run. Honing belongs to the slot, not to what it holds.
+        // Outside a run (a profile screen, a character built by a test) there
+        // is none, and every slot reads +0.
+        public static int HoningOf(Character character, EquipmentSlot slot) =>
+            character == null ? 0 : SlotHoning.PlusOf(RunManager.Run?.slotHoning, character.definitionId, slot);
+
+        // The honing a candidate would wear at: its target slot's, since
+        // honing belongs to the slot and not to what it holds.
+        public static int HoningFor(Character character, ItemInstance candidate)
+        {
+            var definition = DefinitionOf(candidate);
+            if (character?.equipment == null || definition == null) return 0;
+
+            return HoningOf(character, character.equipment.ResolveTargetSlot(definition.equipSlot));
         }
 
         // What a copy is called: the tier adjective and base name for gear,

@@ -233,25 +233,25 @@ namespace PrincesPalace.PlayModeTests
 
             // Three different bases: the second press is checked by id.
             return candidates.GroupBy(c => c.ItemId).Select(g => g.First()).Take(3)
-                .Select(c => c.WithPlus(2)).ToList();
+                .Select(c => new ItemOffer(c.ItemId, 2)).ToList();
         }
 
-        // Whether `itemId` at `plus` ended up ANYWHERE this save can hold it --
+        // Whether `itemId` at `tier` ended up ANYWHERE this save can hold it --
         // the bag, or auto-equipped into a squad member's slot. Auto-equip
         // (RunOrchestrator.AutoEquipIntoAnEmptySlot) moves a picked item
         // straight into an empty slot instead of leaving it in the bag, so
         // "the pick reached the save" can no longer be read off bag count
         // alone -- only one of these two places will have gained it.
-        private static bool ItemLandedSomewhere(string itemId, int plus)
+        private static bool ItemLandedSomewhere(string itemId, int tier)
         {
-            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.plus == plus)) return true;
+            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.tier == tier)) return true;
 
             foreach (var character in Save.ActiveSquad())
             {
                 if (character?.equipment == null) continue;
                 foreach (var slot in Domain.Equipment.EquipmentSlots.All)
                 {
-                    if (character.equipment.Get(slot) == itemId && character.equipment.GetPlus(slot) == plus)
+                    if (character.equipment.Get(slot) == itemId && character.equipment.GetInstance(slot).Tier == tier)
                     {
                         return true;
                     }
@@ -262,7 +262,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator TakingAnOfferPutsItInTheSaveAtItsPlusAndSavesIt()
+        public IEnumerator TakingAnOfferPutsItInTheSaveAtItsTierAndSavesIt()
         {
             // NOT necessarily the bag any more -- every offer is an equippable
             // item (ThreeOffers' own fixture guard), so a fresh Shawn with an
@@ -279,16 +279,16 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2),
-                "the plus the offer was rolled at did not survive into the save, wherever it landed");
+                "the tier the offer was rolled at did not survive into the save, wherever it landed");
 
             SaveSlotManager.Forget();
             Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2),
                 "the pick never reached the file");
         }
 
-        // Three offers, each also carrying a real rolled RiftTier/Modifiers
-        // set -- ThreeOffers() above stays plus-only so every OTHER test in
-        // this file is unaffected by this axis existing.
+        // Three offers, each also carrying a real rolled Modifiers set --
+        // ThreeOffers() above stays modifier-free so every OTHER test in this
+        // file is unaffected by this axis existing.
         private static List<ItemOffer> ThreeOffersWithRolls()
         {
             var pool = Content.ContentDatabase.Modifiers.Select(m => m.id).ToList();
@@ -298,23 +298,22 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotEmpty(candidates, "fixture: content has equippable items");
 
             return candidates.GroupBy(c => c.ItemId).Select(g => g.First()).Take(3)
-                .Select(c => c.WithPlus(2)
-                    .WithModifiers(Domain.Content.RiftTier.Convergent, pool.Take(System.Math.Min(3, pool.Count)).ToList()))
+                .Select(c => new ItemOffer(c.ItemId, 2)
+                    .WithModifiers(pool.Take(System.Math.Min(3, pool.Count)).ToList()))
                 .ToList();
         }
 
-        // Whether `itemId` at `plus` with EXACTLY this modifier roll ended up
+        // Whether `itemId` at `tier` with EXACTLY this modifier roll ended up
         // anywhere the save can hold it -- the bag, or auto-equipped into a
         // squad member's slot. Mirrors ItemLandedSomewhere, extended to the
-        // full stacking key rather than just (itemId, plus): a claim that
-        // dropped the roll on the floor would still pass the plus-only check,
+        // full stacking key rather than just (itemId, tier): a claim that
+        // dropped the roll on the floor would still pass the tier-only check,
         // which is exactly the gap this test closes.
-        private static bool RolledItemLandedSomewhere(string itemId, int plus, List<string> modifierIds, int riftTier)
+        private static bool RolledItemLandedSomewhere(string itemId, int tier, List<string> modifierIds)
         {
             bool SameRoll(List<string> a) => new HashSet<string>(a ?? new List<string>()).SetEquals(modifierIds);
 
-            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.plus == plus
-                    && e.riftTier == riftTier && SameRoll(e.modifierIds)))
+            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.tier == tier && SameRoll(e.modifierIds)))
             {
                 return true;
             }
@@ -324,8 +323,7 @@ namespace PrincesPalace.PlayModeTests
                 if (character?.equipment == null) continue;
                 foreach (var slot in Domain.Equipment.EquipmentSlots.All)
                 {
-                    if (character.equipment.Get(slot) == itemId && character.equipment.GetPlus(slot) == plus
-                        && character.equipment.GetRiftTier(slot) == riftTier
+                    if (character.equipment.Get(slot) == itemId && character.equipment.GetInstance(slot).Tier == tier
                         && SameRoll(character.equipment.GetModifierIds(slot)))
                     {
                         return true;
@@ -345,20 +343,20 @@ namespace PrincesPalace.PlayModeTests
             var taken = offers[0];
             var modifierIds = taken.Modifiers.ToList();
 
-            Assert.IsFalse(RolledItemLandedSomewhere(taken.ItemId, taken.Plus, modifierIds, (int)taken.RiftTier),
+            Assert.IsFalse(RolledItemLandedSomewhere(taken.ItemId, taken.Tier, modifierIds),
                 "fixture: should not exist anywhere in a fresh save before it is taken");
 
             Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.IsTrue(RolledItemLandedSomewhere(taken.ItemId, taken.Plus, modifierIds, (int)taken.RiftTier),
-                "the offer's rolled modifiers/riftTier did not survive into the save, wherever it landed");
+            Assert.IsTrue(RolledItemLandedSomewhere(taken.ItemId, taken.Tier, modifierIds),
+                "the offer's rolled modifiers did not survive into the save, wherever it landed");
         }
 
         // AutoEquipIntoAnEmptySlot moves the item out of the bag via
         // EquipMove.TryEquip, which keys its removal on the FULL
-        // (itemId, plus, modifierIds, riftTier) stack now that modifiers
-        // exist. Passing only `plus` there would look for the wrong stack
+        // (itemId, tier, modifierIds) stack now that modifiers
+        // exist. Passing only the tier there would look for the wrong stack
         // and silently leave a rolled item stuck in the bag on a fresh
         // character who should have auto-equipped it -- this pins that the
         // roll specifically does not break auto-equip.
@@ -373,18 +371,17 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             // Same fixture guarantee ThreeOffers()/TakingAnOfferPutsItInThe-
-            // SaveAtItsPlusAndSavesIt already relies on: a fresh Shawn has an
+            // SaveAtItsTierAndSavesIt already relies on: a fresh Shawn has an
             // empty slot for every offer, so this always auto-equips rather
             // than sitting in the bag.
             bool equipped = Save.ActiveSquad().Any(character =>
                 character?.equipment != null && Domain.Equipment.EquipmentSlots.All.Any(slot =>
                     character.equipment.Get(slot) == taken.ItemId
-                    && character.equipment.GetPlus(slot) == taken.Plus
-                    && character.equipment.GetRiftTier(slot) == (int)taken.RiftTier));
+                    && character.equipment.GetInstance(slot).Tier == taken.Tier));
 
             Assert.IsTrue(equipped,
                 "a rolled item did not auto-equip -- TryEquip likely could not find its stack in the bag " +
-                "because its modifierIds/riftTier were not passed through to the removal key");
+                "because its modifierIds were not passed through to the removal key");
         }
 
         [UnityTest]
@@ -392,7 +389,7 @@ namespace PrincesPalace.PlayModeTests
         {
             // It is a CHOICE. Two presses handing over two items would make the
             // decision decorative. Counts bag PLUS equipped for the same reason
-            // TakingAnOfferPutsItInTheSaveAtItsPlusAndSavesIt does -- a taken
+            // TakingAnOfferPutsItInTheSaveAtItsTierAndSavesIt does -- a taken
             // offer may auto-equip rather than sit in the bag, so "exactly one
             // item arrived" has to be read off both.
             var offers = ThreeOffers();

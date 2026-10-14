@@ -14,9 +14,9 @@ namespace PrincesPalace
     // (rolled affixes), where a test can reach it.
     public static class ItemDescription
     {
-        public static string CompactSummary(ItemInstance copy, int plus = 0)
+        public static string CompactSummary(ItemInstance copy, int honing = 0)
         {
-            var gear = ContentDatabase.Effective(copy, plus);
+            var gear = ContentDatabase.Effective(copy, honing);
             if (!gear.HasValue) return "";
             return ItemStatLines.Compact(gear.Value.StatBonus, gear.Value.AbilityScoreBonus, ScalingDescription(gear.Value));
         }
@@ -28,18 +28,16 @@ namespace PrincesPalace
         // and defaulted to null so every existing caller with no viewer in
         // scope keeps compiling and simply loses the DMG line, same as
         // before this phase.
-        // ITEM-MODIFIER PLAN PHASE E: `riftTier`/`modifierIds` name WHICH
-        // ROLL this particular copy carries -- optional and defaulted to
-        // Ordinary/null so every existing caller with no roll in scope keeps
-        // compiling and simply shows no AFFIXES section, same as before this
-        // phase (the overwhelming majority of items).
-        public static string CardSummary(ItemInstance copy, int plus = 0, Character viewer = null,
-            RiftTier riftTier = RiftTier.Ordinary, IReadOnlyList<string> modifierIds = null)
+        // `honing` is the honing the numbers are shown at: the slot's own for
+        // a worn copy, and for one that is not worn the honing of the slot it
+        // would take (ContentDatabase.HoningFor). The rolled affixes are the
+        // copy's own.
+        public static string CardSummary(ItemInstance copy, int honing = 0, Character viewer = null)
         {
-            var gear = ContentDatabase.Effective(copy, plus);
+            var gear = ContentDatabase.Effective(copy, honing);
             if (!gear.HasValue) return "";
             return ItemStatLines.Card(gear.Value.StatBonus, gear.Value.AbilityScoreBonus, ScalingDescription(gear.Value),
-                WeaponDamageLine(copy, plus, viewer), ModifierLines(gear.Value, riftTier, modifierIds, viewer));
+                WeaponDamageLine(copy, honing, viewer), ModifierLines(gear.Value, copy.ModifierIds, viewer));
         }
 
         // "Fiery -- <Keyword>+20%</Keyword> Fire dmg on hit", one line per
@@ -47,10 +45,10 @@ namespace PrincesPalace
         // -- the plain, no-comparison listing CardSummary still wants, and
         // the case ModifierComparisonLines itself degrades to when there is
         // nothing currently equipped to diff against.
-        private static IReadOnlyList<string> ModifierLines(GearStats gear, RiftTier riftTier,
+        private static IReadOnlyList<string> ModifierLines(GearStats gear,
             IReadOnlyList<string> modifierIds, Character viewer)
         {
-            return ModifierAffixLines.LinePairs(ResolvedModifierEffects(gear, riftTier, modifierIds),
+            return ModifierAffixLines.LinePairs(ResolvedModifierEffects(gear, modifierIds),
                     PrimaryPoolOf(viewer))
                 ?.Select(pair => pair.Line).ToList();
         }
@@ -73,14 +71,14 @@ namespace PrincesPalace
         // unchanged classification) is Domain.ModifierAffixLines' job, so a
         // Domain-only EditMode suite can exercise it directly.
         private static IReadOnlyList<ModifierAffixLines.AffixEffect> ResolvedModifierEffects(GearStats? gear,
-            RiftTier riftTier, IReadOnlyList<string> modifierIds)
+            IReadOnlyList<string> modifierIds)
         {
             if (!gear.HasValue || modifierIds == null || modifierIds.Count == 0)
             {
                 return null;
             }
 
-            var scaled = ContentDatabase.ModifierEffectsForItem(gear.Value.Tier, riftTier, modifierIds);
+            var scaled = ContentDatabase.ModifierEffectsForItem(gear.Value.Tier, modifierIds);
             if (scaled.Count == 0)
             {
                 return null;
@@ -121,11 +119,11 @@ namespace PrincesPalace
         // Domain.ModifierAffixLines.ComparisonLines, which owns the actual
         // gain/loss/unchanged classification -- see that method's own header
         // for the full rule.
-        private static IReadOnlyList<string> ModifierComparisonLines(ItemInstance copy, int plus, RiftTier riftTier,
-            IReadOnlyList<string> modifierIds, IReadOnlyList<string> equippedModifierIds, Character viewer)
+        private static IReadOnlyList<string> ModifierComparisonLines(ItemInstance copy,
+            IReadOnlyList<string> equippedModifierIds, Character viewer)
         {
             return ModifierAffixLines.ComparisonLines(
-                ResolvedModifierEffects(ContentDatabase.Effective(copy, plus), riftTier, modifierIds),
+                ResolvedModifierEffects(ContentDatabase.Effective(copy), copy.ModifierIds),
                 ResolvedEquippedModifiers(equippedModifierIds),
                 PrimaryPoolOf(viewer));
         }
@@ -156,7 +154,7 @@ namespace PrincesPalace
         // weapon's plus by hand -- see ContentDatabase.EquippedWeaponPower's
         // own header for why null there means "empty hand", not "hits for
         // nothing".
-        private static string WeaponDamageLine(ItemInstance copy, int plus, Character viewer)
+        private static string WeaponDamageLine(ItemInstance copy, int honing, Character viewer)
         {
             var item = ContentDatabase.DefinitionOf(copy);
             if (item == null || item.kind != ItemKind.Weapon || viewer == null)
@@ -164,20 +162,21 @@ namespace PrincesPalace
                 return null;
             }
 
-            var gear = ContentDatabase.Effective(copy, plus).Value;
+            var gear = ContentDatabase.Effective(copy, honing).Value;
 
             var viewerScores = ContentDatabase.EffectiveAbilityScores(viewer);
             int damage = WeaponPower.DisplayDamage(gear.WeaponPower, gear.Scaling, viewerScores);
 
             int? equippedDamage = null;
             var equipped = ContentDatabase.EquippedWeapon(viewer);
-            if (equipped != null && equipped.id != item.id)
+            var equippedCopy = viewer.equipment.GetInstance(EquipmentSlot.Weapon1);
+            if (equipped != null && (equippedCopy.ItemId != copy.ItemId || equippedCopy.Tier != copy.Tier))
             {
                 int? equippedPower = ContentDatabase.EquippedWeaponPower(viewer);
                 if (equippedPower.HasValue)
                 {
                     equippedDamage = WeaponPower.DisplayDamage(equippedPower.Value,
-                        ContentDatabase.Effective(viewer.equipment.GetInstance(EquipmentSlot.Weapon1)).Value.Scaling, viewerScores);
+                        ContentDatabase.Effective(equippedCopy).Value.Scaling, viewerScores);
                 }
             }
 
@@ -210,7 +209,7 @@ namespace PrincesPalace
         // or that wakes a piece already worn but dormant -- comes back through
         // the same resolver every other read goes through, with no hand-written
         // "what depends on what" anywhere.
-        public static ItemComparison Compare(Character character, ItemInstance candidate, int candidatePlus = 0)
+        public static ItemComparison Compare(Character character, ItemInstance candidate)
         {
             if (character?.equipment == null || candidate == null)
             {
@@ -222,7 +221,7 @@ namespace PrincesPalace
             var beforeLive = LiveSlots(character);
 
             var targetSlot = character.equipment.ResolveTargetSlot(ContentDatabase.DefinitionOf(candidate).equipSlot);
-            var clone = SimulateEquip(character, candidate, candidatePlus);
+            var clone = SimulateEquip(character, candidate);
 
             var afterStats = ContentDatabase.EffectiveStats(clone);
             var afterScores = ContentDatabase.EffectiveAbilityScores(clone);
@@ -265,7 +264,7 @@ namespace PrincesPalace
         // refused here the way EquipMove refuses it, rather than silently
         // simulating a helm on somebody's feet.
         public static Character SimulateEquip(Character character, ItemInstance candidate,
-            int candidatePlus = 0, EquipmentSlot? preferredSlot = null)
+            EquipmentSlot? preferredSlot = null)
         {
             if (character?.equipment == null || candidate == null) return character;
             var definition = ContentDatabase.DefinitionOf(candidate);
@@ -276,7 +275,7 @@ namespace PrincesPalace
 
             var clone = CloneForSimulation(character);
             var targetSlot = preferredSlot ?? clone.equipment.ResolveTargetSlot(definition.equipSlot);
-            clone.equipment.Put(targetSlot, new ItemInstance(candidate.ItemId, candidatePlus, null, 0, null, candidate.Tier));
+            clone.equipment.Put(targetSlot, candidate);
             return clone;
         }
 
@@ -322,10 +321,7 @@ namespace PrincesPalace
         // path, not a shortcut -- so a swap that would knock another slot inert
         // is accounted for per character, which is exactly the case a
         // "best candidate only" summary would hide.
-        public static string SquadComparisonBody(IReadOnlyList<Character> squad,
-                                                 ItemInstance candidate, int candidatePlus = 0,
-                                                 RiftTier riftTier = RiftTier.Ordinary,
-                                                 IReadOnlyList<string> modifierIds = null)
+        public static string SquadComparisonBody(IReadOnlyList<Character> squad, ItemInstance candidate)
         {
             if (squad == null || candidate == null) return "";
 
@@ -338,23 +334,22 @@ namespace PrincesPalace
                     ? member.definitionId
                     : definition.Data.DisplayName;
                 var equippedModifierIds = EquippedModifierIds(member, candidate);
-                rows.Add((name, Compare(member, candidate, candidatePlus),
-                    ModifierComparisonLines(candidate, candidatePlus, riftTier, modifierIds, equippedModifierIds, member)));
+                rows.Add((name, Compare(member, candidate),
+                    ModifierComparisonLines(candidate, equippedModifierIds, member)));
             }
 
             return ItemStatLines.SquadBody(rows);
         }
 
-        public static string ComparisonBody(Character character, ItemInstance candidate, int candidatePlus = 0,
-                                            RiftTier riftTier = RiftTier.Ordinary,
-                                            IReadOnlyList<string> modifierIds = null)
+        public static string ComparisonBody(Character character, ItemInstance candidate)
         {
             if (character == null || candidate == null) return "";
 
-            var comparison = Compare(character, candidate, candidatePlus);
+            var comparison = Compare(character, candidate);
             var equippedModifierIds = EquippedModifierIds(character, candidate);
 
-            var gear = ContentDatabase.Effective(candidate, candidatePlus).Value;
+            int honing = ContentDatabase.HoningFor(character, candidate);
+            var gear = ContentDatabase.Effective(candidate, honing).Value;
             return ItemStatLines.Body(
                 gear.StatBonus,
                 gear.AbilityScoreBonus,
@@ -367,8 +362,8 @@ namespace PrincesPalace
                 RequirementCurve.ApplyGear(gear.Requirements),
                 ContentDatabase.EffectiveAbilityScores(character),
                 comparison,
-                WeaponDamageLine(candidate, candidatePlus, character),
-                ModifierComparisonLines(candidate, candidatePlus, riftTier, modifierIds, equippedModifierIds, character));
+                WeaponDamageLine(candidate, honing, character),
+                ModifierComparisonLines(candidate, equippedModifierIds, character));
         }
     }
 }

@@ -377,7 +377,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.Forget();
             var save = SaveSlotManager.CurrentSave;
             save.roster.FirstOrDefault()?.equipment
-                .Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 2);
+                .Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", tier: 2);
             SaveSlotManager.SaveCurrent();
             Assert.IsTrue(SaveSystem.SlotExists(Slot), "fixture check: the slot should exist before deletion");
 

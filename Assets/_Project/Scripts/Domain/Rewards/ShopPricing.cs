@@ -5,7 +5,7 @@ namespace PrincesPalace.Domain.Rewards
 {
     // WHAT THE SHOP CHARGES. One table, pure, engine-free.
     //
-    // PRICE IS A FUNCTION OF TIER, PLUS AND RIFT -- NEVER OF DEPTH.
+    // PRICE IS A FUNCTION OF TIER AND AFFIXES -- NEVER OF DEPTH.
     // docs/PLAN_SHOP.md §2a/assumption 2: depth already enters the shop on
     // the STOCK side, through RarityTable.FloorTier deciding which tiers get
     // offered at all. A depth term here would count the same climb twice, and
@@ -36,46 +36,30 @@ namespace PrincesPalace.Domain.Rewards
         // measured run income (docs/PLAN_SHOP.md F6). Left alone rather than
         // rewritten across 646 assets.
         //
-        // ShopStock.RollGear targets one tier above the map's floor tier and
-        // refuses to hand back a bare common (ShopStock.ApplyQualityFloor),
-        // so the cheapest gear a floor-1 shop can ever show is already a
-        // tier-1, +1 piece rather than a tier-0, +0 one -- these two
-        // constants combine with that to push a floor-1 shelf's floor to 28
-        // (see GearPrice(0, 1, 0) below and NormalFightPayoutAnchor's own
-        // comment). Pinned as literals in ShopPricingTests; see that file for
-        // the full before/after table.
+        // ShopStock.RollGear targets one tier above the map's floor tier.
+        // Pinned as literals in ShopPricingTests.
         public const int GearBase = 21;
         public const int GearPerTier = 5;
 
-        // How much one point of +N is worth, as a multiplier. Plus is the
-        // long tail rather than the progression (RarityTable's own header),
-        // so it multiplies rather than adding a flat band.
+        // How much one point of honing is worth, as a multiplier.
         public const double PlusStep = 0.35;
 
-        // And one filled affix slot. Steeper than a plus because a rift tier
-        // carries a whole rolled modifier, not a stat nudge.
-        public const double RiftStep = 0.50;
+        // And one affix on a copy.
+        public const double AffixStep = 0.50;
 
         public static int BaseFor(int tier) => GearBase + GearPerTier * (tier < 0 ? 0 : tier);
 
-        public static double PlusFactor(int plus) => 1.00 + PlusStep * (plus < 0 ? 0 : plus);
-
-        public static double RiftFactor(int riftTier) => 1.00 + RiftStep * (riftTier < 0 ? 0 : riftTier);
-
-        public static double RiftFactor(RiftTier riftTier) => RiftFactor((int)riftTier);
+        public static double AffixFactor(int affixes) => 1.00 + AffixStep * (affixes < 0 ? 0 : affixes);
 
         // Rounded with Math.Round's DEFAULT midpoint rule (to-even), stated
         // rather than assumed: the one price in §2c's table that lands on an
         // exact .5 is a sell price (see SellPrice), and to-even takes it
         // down. Nothing here picks a rounding mode for a reason -- what
         // matters is that the choice is pinned, not which one it is.
-        public static int GearPrice(int tier, int plus, int riftTier)
+        public static int GearPrice(int tier, int affixes = 0)
         {
-            return (int)Math.Round(BaseFor(tier) * PlusFactor(plus) * RiftFactor(riftTier));
+            return (int)Math.Round(BaseFor(tier) * AffixFactor(affixes));
         }
-
-        public static int GearPrice(int tier, int plus, RiftTier riftTier) =>
-            GearPrice(tier, plus, (int)riftTier);
 
         // ---- relics -------------------------------------------------------
 
@@ -170,34 +154,5 @@ namespace PrincesPalace.Domain.Rewards
             long price = (long)RerollBase << rerollsUsed;
             return price >= RerollCeiling ? RerollCeiling : (int)price;
         }
-
-        // ---- the affordability floor ---------------------------------------
-
-        // WHAT "AT LEAST ONE CARD THEY CAN AFFORD" MEANS, IN GOLD.
-        //
-        // Assumption 11: a shop that presents nothing a player has a chance
-        // of buying is a room that cost them a fight and returned a reroll
-        // button. §2a measures a normal fight's payout at 16-24 across every
-        // profile and depth, and the anchor is the TOP of that band, not the
-        // bottom: the cheapest gear that exists at all is a tier-0 +0 with no
-        // affixes at 20, so a 16 anchor could not be satisfied at any depth
-        // and the bounded re-draw would exhaust every time -- a guarantee
-        // that never fires reads as one that does.
-        //
-        // Enforced by re-drawing the cheapest slot (ShopStock.RollGear), not
-        // by discounting, so the price stays a pure function of tier/plus/
-        // rift.
-        //
-        // 28, not lower, as a consequence of the "no bare commons" rule
-        // (ShopStock.ApplyQualityFloor): a tier-0/+0/no-affix piece is not a
-        // legal roll, so GearPrice(0, 0, 0) is not the cheapest gear that can
-        // exist -- GearPrice(0, 1, 0) = 28 is, and an anchor below that would
-        // be a guarantee
-        // (TheAffordabilityAnchorIsAboveTheCheapestGearThatCanExist) that
-        // could never fire. Left at the floor exactly rather than padded
-        // above it, so a normal fight's own measured payout (16-24, see the
-        // header above) still buys nothing outright at floor 1 -- that is
-        // the price increase working as intended, not a bug to paper over.
-        public const int NormalFightPayoutAnchor = 28;
     }
 }

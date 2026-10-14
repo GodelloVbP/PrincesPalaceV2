@@ -4,7 +4,8 @@ using UnityEngine;
 
 namespace PrincesPalace
 {
-    // The Unity-side face of RarityBands.
+    // The Unity-side face of the two rarity ladders: a gear copy's Quality
+    // and a relic's RelicRarity.
     //
     // Domain is engine-free, so it hands out hex strings; this is the one
     // place they become a UnityEngine.Color, and the one place an item's
@@ -16,51 +17,38 @@ namespace PrincesPalace
     // free and the inventory redraws every one of its rows on each Refresh.
     public static class RarityColors
     {
-        private static readonly Color[] Cache = new Color[6];
+        private static readonly Color[] QualityCache = new Color[4];
+        private static readonly Color[] RelicCache = new Color[6];
         private static bool _parsed;
 
-        private static Color ForTier(int tier)
+        public static Color For(Quality quality)
         {
-            return For(RarityBands.For(tier));
+            EnsureParsed();
+            int index = (int)quality;
+            return index >= 0 && index < QualityCache.Length ? QualityCache[index] : Color.white;
         }
 
-        public static Color For(Rarity rarity)
+        // A copy content cannot resolve is drawn in the neutral colour rather
+        // than skipped — same graceful-degradation posture the rest of the
+        // content layer takes on missing ids.
+        public static Color For(ItemInstance copy)
+        {
+            return ContentDatabase.DefinitionOf(copy) == null ? Color.white : For(ContentDatabase.QualityOf(copy));
+        }
+
+        public static Color For(RelicRarity rarity)
         {
             EnsureParsed();
             int index = (int)rarity;
-            return index >= 0 && index < Cache.Length ? Cache[index] : Color.white;
+            return index >= 0 && index < RelicCache.Length ? RelicCache[index] : Color.white;
         }
 
-        public static Color For(ItemInstance copy)
-        {
-            // A copy content cannot resolve is drawn in the neutral colour
-            // rather than skipped — same graceful-degradation posture the
-            // rest of the content layer takes on missing ids.
-            if (ContentDatabase.DefinitionOf(copy) == null)
-            {
-                return Color.white;
-            }
-
-            // A consumable has no tier and reads as the bottom band.
-            return ForTier(ContentDatabase.Effective(copy)?.Tier ?? 0);
-        }
-
-        // RelicRarity reuses the item Rarity table by ordinal rather than
-        // carrying its own hex strings — an easy-paste stand-in for the relic
-        // draft's card colour, not a statement that the two rarity ladders
-        // are the same thing (RelicRarity's own doc comment says they are
-        // not). Godlike, the one band Rarity has no slot for, falls through
-        // to Mythic's colour rather than the neutral default, since a relic
-        // that rare reading as an ordinary item would undersell it.
-        public static Color For(RelicRarity rarity)
-        {
-            int index = (int)rarity;
-            return For((Rarity)System.Math.Min(index, (int)Rarity.Mythic));
-        }
+        // The ring behind a copy that rolled anything: Common draws none, so
+        // an ordinary item looks exactly as it did before affixes existed.
+        public static bool ShouldGlow(Quality quality) => quality > Quality.Common;
 
         // The name a player should see for one particular copy: the tier's
-        // adjective (already baked into displayName) with this instance's
-        // plus appended.
+        // adjective with the slot's honing appended.
         public static string NameOf(ItemInstance copy, int plus = 0)
         {
             return copy == null ? "" : ItemNaming.WithPlus(ContentDatabase.NameOf(copy), plus);
@@ -76,8 +64,8 @@ namespace PrincesPalace
                 return "";
             }
 
-            int tier = ContentDatabase.Effective(copy)?.Tier ?? 0;
-            return $"<color={RarityBands.HexColorForTier(tier)}>{NameOf(copy, plus)}</color>";
+            string hex = ItemQuality.HexColor(ContentDatabase.QualityOf(copy));
+            return $"<color={hex}>{NameOf(copy, plus)}</color>";
         }
 
         private static void EnsureParsed()
@@ -87,13 +75,18 @@ namespace PrincesPalace
                 return;
             }
 
-            for (int i = 0; i < Cache.Length; i++)
+            // A malformed hex leaves the colour white rather than black,
+            // which would read as real, wrong information.
+            for (int i = 0; i < QualityCache.Length; i++)
             {
-                // A malformed hex leaves the colour black rather than
-                // throwing, which would be an invisible label. White is the
-                // safer failure, and RarityBandsTests pins the strings so
-                // this branch should be unreachable.
-                Cache[i] = ColorUtility.TryParseHtmlString(RarityBands.HexColor((Rarity)i), out var parsed)
+                QualityCache[i] = ColorUtility.TryParseHtmlString(ItemQuality.HexColor((Quality)i), out var parsed)
+                    ? parsed
+                    : Color.white;
+            }
+
+            for (int i = 0; i < RelicCache.Length; i++)
+            {
+                RelicCache[i] = ColorUtility.TryParseHtmlString(RelicRarityNames.HexColor((RelicRarity)i), out var parsed)
                     ? parsed
                     : Color.white;
             }

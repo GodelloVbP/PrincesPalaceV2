@@ -80,7 +80,7 @@ namespace PrincesPalace.PlayModeTests
             ContentDatabase.Equippables
                 .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
                 .Take(3)
-                .Select(i => new ItemOffer(i.id, i.curve.maxTier, 0))
+                .Select(i => new ItemOffer(i.id, i.curve.maxTier))
                 .ToList();
 
         // ---- the Reckoning ----------------------------------------------------------------

@@ -248,7 +248,7 @@ namespace PrincesPalace.PlayModeTests
                 .Select(i => i.id)
                 .ToList();
 
-            return ids.Select(id => new ItemOffer(id, 1, 0)).ToList();
+            return ids.Select(id => new ItemOffer(id, 1)).ToList();
         }
 
         private IEnumerator OpenIt()

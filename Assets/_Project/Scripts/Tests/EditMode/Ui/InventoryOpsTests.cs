@@ -17,8 +17,8 @@ namespace PrincesPalace.Domain.Tests
         private static List<InventoryEntry> Bag(params InventoryEntry[] entries) =>
             new List<InventoryEntry>(entries);
 
-        private static InventoryEntry Entry(string id, int count, int plus = 0) =>
-            new InventoryEntry(id, count, plus);
+        private static InventoryEntry Entry(string id, int count, int tier = 0) =>
+            new InventoryEntry(id, count, tier: tier);
 
         // ---- stacking ---------------------------------------------------------
 
@@ -34,18 +34,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TwoPlusLevelsAreTwoStacks()
+        public void TwoTiersAreTwoStacks()
         {
-            // THE load-bearing rule. A +5 sword and a +0 sword are the same
-            // item id and different objects -- merging them would silently
+            // THE load-bearing rule. A tier-5 sword and a tier-0 sword are the
+            // same item id and different objects -- merging them would silently
             // upgrade one and destroy the other.
             var bag = Bag();
 
-            InventoryOps.Add(bag, "sword", 1, plus: 0);
-            InventoryOps.Add(bag, "sword", 1, plus: 5);
+            InventoryOps.Add(bag, "sword", 1, tier: 0);
+            InventoryOps.Add(bag, "sword", 1, tier: 5);
 
             Assert.AreEqual(2, bag.Count);
-            CollectionAssert.AreEquivalent(new[] { 0, 5 }, bag.Select(e => e.plus).ToArray());
+            CollectionAssert.AreEquivalent(new[] { 0, 5 }, bag.Select(e => e.tier).ToArray());
         }
 
         // ---- rolled modifiers (Phase A1: storage only) -------------------------
@@ -54,62 +54,51 @@ namespace PrincesPalace.Domain.Tests
         public void TwoEntriesWithIdenticalRolledModifiers_MergeIntoOneStack()
         {
             // Structural-equality stacking: two drops that happened to roll
-            // the EXACT same affixes at the EXACT same rift tier are
-            // functionally identical, so merging them is correct -- the same
-            // reasoning that already lets two +5 plain swords stack.
+            // the EXACT same affixes at the same tier are functionally
+            // identical, so merging them is correct -- the same reasoning that
+            // already lets two plain swords stack.
             var bag = Bag();
 
-            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery", "swift" }, riftTier: 2);
-            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "swift", "fiery" }, riftTier: 2);
+            InventoryOps.Add(bag, "sword", 1, tier: 0, modifierIds: new List<string> { "fiery", "swift" });
+            InventoryOps.Add(bag, "sword", 1, tier: 0, modifierIds: new List<string> { "swift", "fiery" });
 
             Assert.AreEqual(1, bag.Count, "same roll, order-independent -- one stack");
             Assert.AreEqual(2, bag[0].count);
         }
 
         [Test]
-        public void ADifferentRoll_NeverMergesEvenAtTheSamePlus()
+        public void ADifferentRoll_NeverMergesEvenAtTheSameTier()
         {
             var bag = Bag();
 
-            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery" }, riftTier: 1);
-            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "swift" }, riftTier: 1);
+            InventoryOps.Add(bag, "sword", 1, tier: 0, modifierIds: new List<string> { "fiery" });
+            InventoryOps.Add(bag, "sword", 1, tier: 0, modifierIds: new List<string> { "swift" });
 
             Assert.AreEqual(2, bag.Count, "different affixes -- must not merge");
         }
 
         [Test]
-        public void ADifferentRiftTier_NeverMergesEvenWithTheSameModifiers()
+        public void APlainItem_NeverMergesWithAModifiedOneAtTheSameTier()
         {
             var bag = Bag();
 
-            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery" }, riftTier: 1);
-            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery" }, riftTier: 2);
-
-            Assert.AreEqual(2, bag.Count, "same affixes, different rift tier -- must not merge");
-        }
-
-        [Test]
-        public void APlainItem_NeverMergesWithAModifiedOneAtTheSamePlus()
-        {
-            var bag = Bag();
-
-            InventoryOps.Add(bag, "sword", 1, plus: 3);
-            InventoryOps.Add(bag, "sword", 1, plus: 3, modifierIds: new List<string> { "fiery" }, riftTier: 1);
+            InventoryOps.Add(bag, "sword", 1, tier: 3);
+            InventoryOps.Add(bag, "sword", 1, tier: 3, modifierIds: new List<string> { "fiery" });
 
             Assert.AreEqual(2, bag.Count, "an empty modifierIds list is its own key, not a wildcard");
         }
 
         [Test]
-        public void CountSumsEveryPlusLevel()
+        public void CountSumsEveryTier()
         {
             // "How many swords do I own" is a different question from "how many
-            // +3 swords", and both have callers.
+            // tier-3 swords", and both have callers.
             var bag = Bag(Entry("sword", 2, 0), Entry("sword", 1, 3));
 
             Assert.AreEqual(3, InventoryOps.Count(bag, "sword"));
             Assert.AreEqual(2, InventoryOps.CountAt(bag, "sword", 0));
             Assert.AreEqual(1, InventoryOps.CountAt(bag, "sword", 3));
-            Assert.AreEqual(0, InventoryOps.CountAt(bag, "sword", 9), "a plus nobody holds");
+            Assert.AreEqual(0, InventoryOps.CountAt(bag, "sword", 9), "a tier nobody holds");
         }
 
         // ---- removal ----------------------------------------------------------
@@ -127,16 +116,16 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void RemovingTakesTheLowestPlusHeld()
+        public void RemovingTakesTheLowestTierHeld()
         {
             // Spend the worst copy first. The alternative -- taking whatever is
-            // first in the list -- would consume a +5 to pay a cost a +0 could
-            // have covered.
+            // first in the list -- would consume a tier 5 to pay a cost a tier 0
+            // could have covered.
             var bag = Bag(Entry("sword", 1, 5), Entry("sword", 1, 0), Entry("sword", 1, 3));
 
             Assert.IsTrue(InventoryOps.TryRemove(bag, "sword"));
 
-            CollectionAssert.AreEquivalent(new[] { 3, 5 }, bag.Select(e => e.plus).ToArray());
+            CollectionAssert.AreEquivalent(new[] { 3, 5 }, bag.Select(e => e.tier).ToArray());
         }
 
         [Test]
@@ -147,7 +136,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(InventoryOps.TryRemoveAt(bag, "sword", 5));
 
             Assert.AreEqual(1, bag.Count);
-            Assert.AreEqual(0, bag[0].plus, "the plain one survives");
+            Assert.AreEqual(0, bag[0].tier, "the plain one survives");
         }
 
         [Test]
@@ -156,7 +145,7 @@ namespace PrincesPalace.Domain.Tests
             var bag = Bag(Entry("potion", 2));
 
             Assert.IsFalse(InventoryOps.TryRemove(bag, "elixir"));
-            Assert.IsFalse(InventoryOps.TryRemoveAt(bag, "potion", 4), "held, but not at that plus");
+            Assert.IsFalse(InventoryOps.TryRemoveAt(bag, "potion", 4), "held, but not at that tier");
 
             Assert.AreEqual(1, bag.Count);
             Assert.AreEqual(2, bag[0].count);
@@ -195,7 +184,7 @@ namespace PrincesPalace.Domain.Tests
             // these two are inverses.
             var bag = Bag();
 
-            InventoryOps.Add(bag, "potion", 3, plus: 2);
+            InventoryOps.Add(bag, "potion", 3, tier: 2);
             for (int i = 0; i < 3; i++) Assert.IsTrue(InventoryOps.TryRemoveAt(bag, "potion", 2));
 
             CollectionAssert.IsEmpty(bag);

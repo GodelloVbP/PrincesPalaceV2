@@ -345,7 +345,7 @@ namespace PrincesPalace.Domain.Bot
 
         // Slot/health-bearing identification off an ItemOffer -- NOT
         // possible from Domain. ItemOffer (Domain/Rewards/ItemOffer.cs)
-        // carries only ItemId, Tier, Plus, RiftTier and a list of modifier
+        // carries only ItemId, Tier and a list of modifier
         // ids; it names no EquipmentSlot and no stat block, both of which
         // exist only after ContentDatabase (Core) resolves the id, which
         // Domain is not allowed to reach (noEngineReferences, and the
@@ -371,7 +371,7 @@ namespace PrincesPalace.Domain.Bot
             }
 
             return BestIndexTiedByRng(offers.Count,
-                i => (offers[i].Tier, offers[i].Plus),
+                i => offers[i].Tier,
                 rng);
         }
 

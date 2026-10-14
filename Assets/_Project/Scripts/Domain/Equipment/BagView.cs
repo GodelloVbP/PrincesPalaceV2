@@ -22,17 +22,14 @@ namespace PrincesPalace.Domain.Equipment
 
         public readonly EquipmentSlot Slot;
         public readonly int Tier;
-        public readonly int Plus;
         public readonly int Count;
         public readonly string IconPath;
         public readonly bool IsEquippable;
 
-        // The rolled affix ids and glow tier this STACK carries (item-modifier
-        // plan Phase E). Never null -- same "empty and absent read the same
-        // way" convention InventoryEntry.modifierIds itself uses, so a caller
-        // can foreach ModifierIds without a guard.
+        // The rolled affix ids this STACK carries. Never null -- same "empty
+        // and absent read the same way" convention InventoryEntry.modifierIds
+        // itself uses, so a caller can foreach ModifierIds without a guard.
         public readonly IReadOnlyList<string> ModifierIds;
-        public readonly RiftTier RiftTier;
 
         // WHICH COPY this row is, whole. What an equip from the grid hands to
         // EquipMove, so the row's provenance goes onto the body with it rather
@@ -42,8 +39,8 @@ namespace PrincesPalace.Domain.Equipment
         public readonly ItemInstance Instance;
 
         public BagItem(string id, string name, int kind, EquipmentSlot slot,
-                       int tier, int plus, int count, string iconPath, bool isEquippable,
-                       IReadOnlyList<string> modifierIds = null, int riftTier = 0,
+                       int tier, int count, string iconPath, bool isEquippable,
+                       IReadOnlyList<string> modifierIds = null,
                        ItemInstance instance = null)
         {
             Id = id;
@@ -51,13 +48,11 @@ namespace PrincesPalace.Domain.Equipment
             Kind = kind;
             Slot = slot;
             Tier = tier;
-            Plus = plus;
             Count = count;
             IconPath = iconPath;
             IsEquippable = isEquippable;
             ModifierIds = modifierIds ?? new List<string>();
-            RiftTier = (RiftTier)riftTier;
-            Instance = instance ?? new ItemInstance(id, plus, modifierIds, riftTier);
+            Instance = instance ?? ItemInstance.Of(id, tier, modifierIds);
         }
     }
 
@@ -83,7 +78,6 @@ namespace PrincesPalace.Domain.Equipment
                 .ThenBy(i => i.Kind)                      // then grouped by kind
                 .ThenByDescending(i => i.Tier)            // best first within a kind
                 .ThenBy(i => i.Name, System.StringComparer.Ordinal)
-                .ThenByDescending(i => i.Plus)            // the honed copy leads
                 .ThenBy(i => i.Id, System.StringComparer.Ordinal)
                 .ToList();
         }

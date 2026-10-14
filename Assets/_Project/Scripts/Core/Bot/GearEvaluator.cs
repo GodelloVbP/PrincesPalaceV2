@@ -51,7 +51,7 @@ namespace PrincesPalace
             public string CharacterId;
             public string ItemId;
             public string Slot;
-            public int Plus;
+            public int Tier;
         }
 
         // ---- measuring one character ---------------------------------------------
@@ -121,13 +121,13 @@ namespace PrincesPalace
         // delta. Same for the other direction. This is exactly the property
         // ItemDescription.Compare's own header claims for the sheet.
         public static StatDeltas? DeltaFor(
-            Character character, ItemInstance copy, int plus, EquipmentSlot slot)
+            Character character, ItemInstance copy, EquipmentSlot slot)
         {
             var item = ContentDatabase.DefinitionOf(copy);
             if (character?.equipment == null || item == null || !item.IsEquippable) return null;
             if (!EquipmentSlots.Accepts(slot, item.equipSlot)) return null;
 
-            var after = ItemDescription.SimulateEquip(character, copy, plus, slot);
+            var after = ItemDescription.SimulateEquip(character, copy, slot);
             if (after == null) return null;
             if (!ContentDatabase.ActiveLoadout(after).IsLive(slot)) return null;
 
@@ -146,9 +146,9 @@ namespace PrincesPalace
         //
         // Scored against the BEST SLOT the piece could go in, since that is
         // where the equip pass would actually put it.
-        public static float ScoreOffer(SaveData save, string itemId, int plus, GearWeights weights, int tier = 0)
+        public static float ScoreOffer(SaveData save, string itemId, GearWeights weights, int tier = 0)
         {
-            var copy = new ItemInstance(itemId, plus, null, 0, null, tier);
+            var copy = ItemInstance.Of(itemId, tier);
             var item = ContentDatabase.DefinitionOf(copy);
             if (save == null || item == null || !item.IsEquippable) return 0f;
 
@@ -161,7 +161,7 @@ namespace PrincesPalace
 
                 foreach (var slot in EquipmentSlots.All)
                 {
-                    var delta = DeltaFor(character, copy, plus, slot);
+                    var delta = DeltaFor(character, copy, slot);
                     if (!delta.HasValue) continue;
 
                     float score = weights.Score(delta.Value);
@@ -185,7 +185,7 @@ namespace PrincesPalace
             var scores = new float[offers.Count];
             for (int i = 0; i < offers.Count; i++)
             {
-                scores[i] = ScoreOffer(save, offers[i].ItemId, offers[i].Plus, weights, offers[i].Tier);
+                scores[i] = ScoreOffer(save, offers[i].ItemId, weights, offers[i].Tier);
             }
 
             return scores;
@@ -247,7 +247,7 @@ namespace PrincesPalace
                         CharacterId = character.definitionId,
                         ItemId = pick.itemId,
                         Slot = slot.ToString(),
-                        Plus = pick.plus,
+                        Tier = pick.tier,
                     });
                 }
             }
@@ -280,7 +280,7 @@ namespace PrincesPalace
                 var item = ContentDatabase.GetItem(entry.itemId);
                 if (item == null || !item.IsEquippable) continue;
 
-                var delta = DeltaFor(character, entry.Instance, entry.plus, slot);
+                var delta = DeltaFor(character, entry.Instance, slot);
                 if (!delta.HasValue) continue;
 
                 candidates.Add(entry);

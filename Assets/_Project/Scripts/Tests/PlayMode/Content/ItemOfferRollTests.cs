@@ -80,11 +80,9 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void MaxTierComesFromContentRatherThanAConstant()
+        public void MaxTierIsTheCopyCap()
         {
-            // A content pass that adds a tier 11 set should widen the roll
-            // without anyone remembering to edit a number here.
-            Assert.AreEqual(Content.ContentDatabase.Offerable.Max(i => i.curve.maxTier), ItemOfferRoll.MaxTier);
+            Assert.AreEqual(ItemInstance.TierCap, ItemOfferRoll.MaxTier);
         }
 
         [Test]
@@ -152,78 +150,6 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.IsEmpty(ItemOfferRoll.Roll(EncounterClass.Normal, 4, 0, null));
         }
 
-        // ---- RiftTier / modifiers -------------------------------------------
-
-        [Test]
-        public void EveryOfferCarriesAtMostThreeDistinctModifiers()
-        {
-            for (int depth = 0; depth < 40; depth += 7)
-            {
-                foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, depth, 500, n => 0))
-                {
-                    Assert.LessOrEqual(offer.Modifiers.Count, 3, $"at depth {depth}");
-                    CollectionAssert.AllItemsAreUnique(offer.Modifiers.ToList(), $"at depth {depth}");
-                    Assert.AreEqual(offer.Modifiers.Count, (int)offer.RiftTier,
-                        "the number of rolled modifiers should equal the rift tier that was rolled");
-                }
-            }
-        }
-
-        [Test]
-        public void AnOrdinaryOfferCarriesNoModifiers()
-        {
-            // A source that never succeeds a climb (out-of-range roll clamps
-            // to the top of [0, Resolution), which is always >= threshold)
-            // never leaves RiftTier.Ordinary.
-            foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Normal, 0, 0, n => n - 1))
-            {
-                Assert.AreEqual(Domain.Content.RiftTier.Ordinary, offer.RiftTier);
-                Assert.IsEmpty(offer.Modifiers);
-            }
-        }
-
-        [Test]
-        public void RiftTierAndModifiersAreRolledPerItemRatherThanOncePerSet()
-        {
-            // Same shape as PlusIsRolledPerItemRatherThanOncePerSet: walking
-            // the randomness source rather than handing back a constant, so a
-            // per-item roll and a per-set roll produce visibly different data.
-            var seen = new List<Domain.Content.RiftTier>();
-            int calls = 0;
-            System.Func<int, int> walking = bound => (calls++) % System.Math.Max(1, bound);
-
-            foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, 30, 0, walking))
-            {
-                seen.Add(offer.RiftTier);
-            }
-
-            Assert.AreEqual(ItemOfferTable.OfferCount, seen.Count);
-        }
-
-        [Test]
-        public void PlusIsRolledPerItemRatherThanOncePerSet()
-        {
-            // Tier is the set's statement about the fight; plus is the long
-            // tail on one particular copy. Rolling plus once would make all
-            // three offers identically honed, which is not what RarityTable's
-            // two-axis design says.
-            var seen = new List<int>();
-            int calls = 0;
-
-            // Walks the sequence rather than returning a constant, so a
-            // per-item roll and a per-set roll produce visibly different data.
-            System.Func<int, int> walking = bound => (calls++) % System.Math.Max(1, bound);
-
-            foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, 30, 0, walking))
-            {
-                seen.Add(offer.Plus);
-            }
-
-            Assert.AreEqual(ItemOfferTable.OfferCount, seen.Count);
-            Assert.Greater(calls, ItemOfferTable.OfferCount,
-                "the randomness source was consulted too few times for a per-item plus roll");
-        }
-
         // ---- RunOrchestrator.RollOffers: the reported floor-3-boss bug -----
         //
         // A floor-3 boss offering tier 1 / +1 items traced back to
@@ -259,7 +185,7 @@ namespace PrincesPalace.PlayModeTests
                 var rng = new SeededRandom((ulong)(seed + 1));
                 foreach (var offer in RunOrchestrator.RollOffers(session, n => rng.NextInt(0, n)))
                 {
-                    Assert.GreaterOrEqual(offer.Tier, floor - ItemOfferTable.TierSpread,
+                    Assert.GreaterOrEqual(offer.Tier, floor,
                         $"seed {seed}: a boss fight (IsBossFight=true) must roll the Boss reward band, " +
                         "not fall through to Normal's");
                 }
@@ -270,7 +196,7 @@ namespace PrincesPalace.PlayModeTests
 
         private static string[] OfferIds(ulong seed, int step, int node, int pick) =>
             RunOrchestrator.RollOffers(BossSession(), seed, step, node, pick)
-                .Select(o => $"{o.ItemId}@{o.Tier}+{o.Plus}").ToArray();
+                .Select(o => $"{o.ItemId}@{o.Tier}").ToArray();
 
         [Test]
         public void RollOffers_SameKeyGivesSameOffers_DifferentPickRollsApart()
@@ -279,73 +205,17 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(first, OfferIds(12345UL, 23, 5, 0),
                 "the same (seed, step, node, pick) must show the same offers");
             CollectionAssert.AreEqual(
-                new[] { "court_gloves@2+3", "regalia_gloves@2+3", "runeplate_runeplate@2+3" }, first);
+                new[] { "brigandine_gloves@3", "brigandine_boots@3", "silk_gloves@3" }, first);
             CollectionAssert.AreEqual(
-                new[] { "wool_leggings@4+3", "brigandine_brigandine@4+5", "brigandine_gloves@2+3" },
+                new[] { "court_coronet@3", "vellum_hood@3", "regalia_slippers@3" },
                 OfferIds(12345UL, 23, 5, 1));
             CollectionAssert.AreEqual(
-                new[] { "harness_warskirt@3+3", "wool_mittens@4+4", "bulwark_vambraces@4+3" },
+                new[] { "wool_jumper@3", "bulwark_tassets@3", "wool_hood@3" },
                 OfferIds(12345UL, 23, 6, 0));
         }
 
         // ---- weapon/armour affix-pool split: a staff must never roll a
         // defensive affix, and armour must never roll an offensive-only one.
-
-        [Test]
-        public void SeededStaffAndWeaponRolls_NeverCarryADefensiveAffix()
-        {
-            var effectById = Content.ContentDatabase.Modifiers
-                .Where(m => m != null && !string.IsNullOrEmpty(m.id) && m.Data.Effects != null && m.Data.Effects.Length > 0)
-                .ToDictionary(m => m.id, m => m.Data.Effects[0].Kind);
-            var kindById = Content.ContentDatabase.Items
-                .Where(i => i != null && !string.IsNullOrEmpty(i.id))
-                .ToDictionary(i => i.id, i => i.kind);
-
-            int weaponOffersChecked = 0;
-            int armorOffersChecked = 0;
-
-            for (int seed = 0; seed < 200; seed++)
-            {
-                // A real seeded stream, not a constant -- "200 seeded rolls"
-                // per the brief. favor: 1000 pushes RiftTier's own step
-                // chance to its cap (ModifierTable.MaxStep), so most of the
-                // 200 rolls actually carry affixes to check rather than
-                // mostly landing on RiftTier.Ordinary (zero modifiers).
-                var rng = new SeededRandom((ulong)(seed + 1));
-                var offers = ItemOfferRoll.Roll(EncounterClass.Boss, 40, 1000, n => rng.NextInt(0, n));
-
-                foreach (var offer in offers)
-                {
-                    if (!kindById.TryGetValue(offer.ItemId, out var kind)) continue;
-
-                    bool isWeapon = kind == Content.ItemKind.Weapon;
-                    if (isWeapon) weaponOffersChecked++; else armorOffersChecked++;
-
-                    foreach (var modifierId in offer.Modifiers)
-                    {
-                        if (!effectById.TryGetValue(modifierId, out var type)) continue;
-
-                        bool offensive = ModifierTable.IsOffensiveModifier(type);
-                        if (isWeapon)
-                        {
-                            Assert.IsTrue(offensive,
-                                $"seed {seed}: weapon '{offer.ItemId}' rolled '{modifierId}' ({type}), a defensive affix");
-                        }
-                        else
-                        {
-                            Assert.IsFalse(offensive,
-                                $"seed {seed}: armour '{offer.ItemId}' rolled '{modifierId}' ({type}), an offensive-only affix");
-                        }
-                    }
-                }
-            }
-
-            // The fixture assertion the rest is vacuous without: content
-            // must actually offer both kinds for this to have tested
-            // anything.
-            Assert.Greater(weaponOffersChecked, 0, "no weapon offers were sampled -- widen the roll");
-            Assert.Greater(armorOffersChecked, 0, "no armour offers were sampled -- widen the roll");
-        }
 
         [Test]
         public void RollOffers_ABossFightNeverReadsAsPlainNormal()

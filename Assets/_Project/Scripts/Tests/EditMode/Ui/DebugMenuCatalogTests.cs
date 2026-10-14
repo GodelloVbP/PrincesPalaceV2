@@ -237,17 +237,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ThePlusStepperClampsAtZeroAndTen()
-        {
-            // 10 is ItemUpgrade.MaxPlus, pinned as a literal so a change to
-            // the cap is a decision this test sees rather than follows.
-            Assert.AreEqual(0, DebugMenuCatalog.StepPlus(0, -1));
-            Assert.AreEqual(1, DebugMenuCatalog.StepPlus(0, 1));
-            Assert.AreEqual(10, DebugMenuCatalog.StepPlus(10, 1));
-            Assert.AreEqual(9, DebugMenuCatalog.StepPlus(10, -1));
-        }
-
-        [Test]
         public void OnlyResourcesAndToolsAreActionTabs()
         {
             var actions = System.Enum.GetValues(typeof(DebugCategory)).Cast<DebugCategory>()

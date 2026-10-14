@@ -139,7 +139,7 @@ namespace PrincesPalace.Domain.Bot
 
                 if (action.Kind == FightActionKind.Item)
                 {
-                    var used = action.ItemInstance ?? new ItemInstance(action.ItemId);
+                    var used = action.ItemInstance ?? ItemInstance.Of(action.ItemId);
                     DecrementSatchel(localSatchel, used);
                     onItemUsed?.Invoke(used);
                 }

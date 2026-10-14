@@ -48,7 +48,7 @@ namespace PrincesPalace.Content
         // RequirementResolver. Entries rather than bare ids or
         // ItemDefinitions alone, because a caller (the equipment screen's
         // greyed-out inert slots, a future hover panel) needs both the
-        // instance's own plus and the item it resolves to.
+        // slot's own entry and the item it resolves to.
         public readonly struct ActiveLoadoutResult
         {
             public readonly AbilityScoreBlock Scores;
@@ -141,7 +141,7 @@ namespace PrincesPalace.Content
                     // is never honed, see GearStats); the requirement IS
                     // scaled, by the global tuning knob, at this exact read
                     // point — RequirementCurve's whole reason for existing.
-                    var gear = Effective(entry.Instance, entry.plus).Value;
+                    var gear = Effective(entry.Instance, HoningOf(character, entry.slot)).Value;
                     candidates.Add(new RequirementCandidate(entry.slot, gear.AbilityScoreBonus, RequirementCurve.ApplyGear(gear.Requirements)));
                 }
             }
@@ -175,11 +175,11 @@ namespace PrincesPalace.Content
             // Everything worn, on top of talents — but only what ActiveLoadout
             // settled as LIVE. An inert item occupies its slot and shows on
             // the paperdoll, but contributes nothing, same as if it were not
-            // worn at all. This is the one place plus reaches combat stats.
+            // worn at all. This is the one place honing reaches combat stats.
             var loadout = ActiveLoadout(character);
             foreach (var (entry, item) in loadout.LiveEntries)
             {
-                var bonus = Effective(entry.Instance, entry.plus).Value.StatBonus;
+                var bonus = Effective(entry.Instance, HoningOf(character, entry.slot)).Value.StatBonus;
 
                 // PHASE 3 of the balance redesign (D3): gear no longer grants
                 // flat Attack. A weapon's own Attack now enters combat as
@@ -403,7 +403,7 @@ namespace PrincesPalace.Content
             var affixes = new List<Effect>();
             foreach (var (entry, item) in ActiveLoadout(character).LiveEntries)
             {
-                foreach (var scaled in ScaledModifierEffectsForItem(Effective(entry.Instance).Value.Tier, (RiftTier)entry.riftTier, entry.modifierIds))
+                foreach (var scaled in ScaledModifierEffectsForItem(Effective(entry.Instance).Value.Tier, entry.modifierIds))
                 {
                     affixes.Add(scaled.Effect);
                 }
@@ -487,9 +487,8 @@ namespace PrincesPalace.Content
         // ONE ITEM INSTANCE's rolled modifiers, scaled -- the shared seam
         // ModifierEffects(character) above and the UI layer's tooltip text
         // (Core.ItemDescription.ModifierLines) both walk through, so there is
-        // exactly one place `base x TierMultiplier(itemTier) x
-        // RiftMultiplier(riftTier)` is ever computed (see ModifierMagnitude's
-        // own header). A character-wide caller sums this across every worn
+        // exactly one place `base x TierMultiplier(itemTier)` is ever computed
+        // (see ModifierMagnitude's own header). A character-wide caller sums this across every worn
         // slot into one flattened EffectSet; a UI caller wants each
         // effect kept beside the MODIFIER it came from (which ModifierEffects'
         // flattened bag deliberately does not preserve — see
@@ -501,14 +500,14 @@ namespace PrincesPalace.Content
         // offer or an unequipped bag stack has never been "worn" and has no
         // ActiveLoadout entry to walk.
         private static IEnumerable<(ModifierDefinition Modifier, Effect Effect)> ScaledModifierEffectsForItem(
-            int itemTier, RiftTier riftTier, IReadOnlyList<string> modifierIds)
+            int itemTier, IReadOnlyList<string> modifierIds)
         {
             if (modifierIds == null || modifierIds.Count == 0)
             {
                 yield break;
             }
 
-            double scale = ModifierMagnitude.Scale(itemTier, riftTier);
+            double scale = ModifierMagnitude.Scale(itemTier);
 
             foreach (string modifierId in modifierIds)
             {
@@ -535,17 +534,17 @@ namespace PrincesPalace.Content
 
         // The UI-facing door into ScaledModifierEffectsForItem above — every
         // rolled modifier ONE item copy carries, each already scaled to that
-        // copy's own tier and rolled RiftTier, kept paired with the
+        // copy's own tier, kept paired with the
         // ModifierDefinition it came from so a caller can group by
         // displayName (Core.ItemDescription.ModifierLines does exactly this).
-        // Never recomputes the tier/rift formula itself — see this method's
+        // Never recomputes the tier formula itself — see this method's
         // private helper for why that would be the one thing never allowed to
         // have two copies.
         public static IReadOnlyList<(ModifierDefinition Modifier, Effect Effect)> ModifierEffectsForItem(
-            int itemTier, RiftTier riftTier, IReadOnlyList<string> modifierIds)
+            int itemTier, IReadOnlyList<string> modifierIds)
         {
             EnsureLoaded();
-            return ScaledModifierEffectsForItem(itemTier, riftTier, modifierIds).ToList();
+            return ScaledModifierEffectsForItem(itemTier, modifierIds).ToList();
         }
 
         // The skills a character's unlocked talents have put on their combat
@@ -646,7 +645,7 @@ namespace PrincesPalace.Content
             {
                 if (entry.slot == EquipmentSlot.Weapon1 && item.kind == ItemKind.Weapon)
                 {
-                    return Effective(entry.Instance, entry.plus).Value.WeaponPower;
+                    return Effective(entry.Instance, HoningOf(character, entry.slot)).Value.WeaponPower;
                 }
             }
 

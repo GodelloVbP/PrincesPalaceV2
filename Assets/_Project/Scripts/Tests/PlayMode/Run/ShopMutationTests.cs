@@ -162,8 +162,8 @@ namespace PrincesPalace.PlayModeTests
 
             var wornAfter = save.ActiveSquad().SelectMany(c => c.equipment.EquippedItemIds()).ToList();
             CollectionAssert.AreEqual(wornBefore, wornAfter);
-            Assert.AreEqual(1, InventoryOps.CountAt(save.stockpiledItems, card.contentId, card.plus,
-                card.modifiers, card.riftTier));
+            Assert.AreEqual(1, InventoryOps.CountAt(save.stockpiledItems, card.contentId, card.tier,
+                card.modifiers));
         }
 
         [Test]
@@ -270,9 +270,9 @@ namespace PrincesPalace.PlayModeTests
             save.stockpiledItems.Clear();
 
             var sellable = Content.ContentDatabase.Offerable.First();
-            InventoryOps.Add(save.stockpiledItems, sellable.id, 3, plus: 1);
+            InventoryOps.Add(save.stockpiledItems, sellable.id, 3, tier: 1);
 
-            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(0, 1, 0));
+            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(1));
             int goldBefore = RunManager.Run.gold;
 
             var result = RunOrchestrator.Sell(0, 2);
@@ -297,9 +297,9 @@ namespace PrincesPalace.PlayModeTests
             save.stockpiledItems.Clear();
 
             var sellable = Content.ContentDatabase.Offerable.First();
-            InventoryOps.Add(save.stockpiledItems, sellable.id, 1, plus: 1);
+            InventoryOps.Add(save.stockpiledItems, sellable.id, 1, tier: 1);
 
-            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(0, 1, 0));
+            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(1));
             Assert.Greater(expected, 0, "fixture: the item has to be worth something to sell");
 
             int heldBefore = RunManager.Run.gold;
@@ -337,19 +337,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, InventoryOps.Count(save.stockpiledItems, sellable.id));
         }
 
-        // Two copies at different plus are different objects and must be
+        // Two copies at different tiers are different objects and must be
         // priced separately -- InventoryOps stacks on the full
-        // (itemId, plus, modifierIds, riftTier) key, and so does the sell.
+        // (itemId, tier, modifierIds) key, and so does the sell.
         [Test]
-        public void TwoCopiesAtDifferentPlusSellForDifferentMoney()
+        public void TwoCopiesAtDifferentTiersSellForDifferentMoney()
         {
             OpenAShop();
             var save = SaveSlotManager.CurrentSave;
             save.stockpiledItems.Clear();
 
             var sellable = Content.ContentDatabase.Offerable.First();
-            InventoryOps.Add(save.stockpiledItems, sellable.id, 1, plus: 0);
-            InventoryOps.Add(save.stockpiledItems, sellable.id, 1, plus: 4);
+            InventoryOps.Add(save.stockpiledItems, sellable.id, 1, tier: 0);
+            InventoryOps.Add(save.stockpiledItems, sellable.id, 1, tier: 4);
 
             int plain = RunOrchestrator.SellPriceOf(save.stockpiledItems[0]);
             int honed = RunOrchestrator.SellPriceOf(save.stockpiledItems[1]);
@@ -487,7 +487,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(goldBefore - card.price, RunManager.Run.gold, "The mutation must be whole in memory.");
             Assert.IsTrue(card.sold);
             Assert.AreEqual(1, InventoryOps.CountAt(SaveSlotManager.CurrentSave.stockpiledItems,
-                card.contentId, card.plus, card.modifiers, card.riftTier));
+                card.contentId, card.tier, card.modifiers));
 
             SaveSystem.RootOverride = _root;
         }
@@ -627,14 +627,11 @@ namespace PrincesPalace.PlayModeTests
             {
                 for (int tier = 0; tier <= item.curve.maxTier; tier++)
                 {
-                    for (int plus = 0; plus <= 5; plus++)
+                    for (int affixes = 0; affixes <= 3; affixes++)
                     {
-                        for (int rift = 0; rift <= 3; rift++)
-                        {
-                            int buy = ShopPricing.GearPrice(tier, plus, rift);
-                            Assert.Less(ShopPricing.SellPrice(buy), buy,
-                                $"{item.id} at tier {tier}, +{plus}, rift {rift} sold for at least its price.");
-                        }
+                        int buy = ShopPricing.GearPrice(tier, affixes);
+                        Assert.Less(ShopPricing.SellPrice(buy), buy,
+                            $"{item.id} at tier {tier} with {affixes} affixes sold for at least its price.");
                     }
                 }
             }

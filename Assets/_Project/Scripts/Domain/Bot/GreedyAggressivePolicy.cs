@@ -226,7 +226,7 @@ namespace PrincesPalace.Domain.Bot
             }
 
             return BestIndexTiedByRng(offers.Count,
-                i => (offers[i].Tier, offers[i].Plus),
+                i => offers[i].Tier,
                 rng);
         }
 

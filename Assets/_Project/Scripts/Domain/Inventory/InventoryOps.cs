@@ -15,21 +15,20 @@ namespace PrincesPalace
     // removed, never left behind. "Absent" and "count 0" must not both be
     // reachable, or the inventory grid would show empty stacks.
     //
-    // STACKS ARE KEYED ON (itemId, plus, modifierIds, riftTier). Two coifs of
-    // the same tier but different plus are different objects and must not
-    // merge — merging them would either promote the worse one or demote the
-    // better one, and both are the sort of quiet item-destroying bug the
-    // "every method does both halves of the move or neither" rule in
-    // EquipmentService exists to prevent. modifierIds/riftTier extend the
-    // SAME rule rather than a new one: two entries with IDENTICAL rolled
-    // affixes at the same rift tier are functionally the same object and
-    // merging them is correct, exactly like two +5 swords today — it is only
-    // a DIFFERENT roll that must never merge. modifierIds compares as an
-    // unordered SET (roll order carries no meaning), not a sequence.
+    // STACKS ARE KEYED ON (itemId, tier, modifierIds). Two coifs of different
+    // tiers are different objects and must not merge — merging them would
+    // either promote the worse one or demote the better one, and both are the
+    // sort of quiet item-destroying bug the "every method does both halves of
+    // the move or neither" rule in EquipmentService exists to prevent.
+    // modifierIds extends the SAME rule rather than a new one: two entries
+    // with IDENTICAL rolled affixes at the same tier are functionally the same
+    // object and merging them is correct — it is only a DIFFERENT roll that
+    // must never merge. modifierIds compares as an unordered SET (roll order
+    // carries no meaning), not a sequence.
     //
     // The key itself now lives in ONE place, ItemInstance.SameStack, and every
     // method below that means "this copy" takes an ItemInstance. The
-    // positional overloads (itemId, plus, modifierIds, riftTier) remain for
+    // positional overloads (itemId, tier, modifierIds) remain for
     // callers that only ever hold an ordinary copy; each is a one-line wrapper
     // that builds the plain instance, so there is no second predicate to drift.
     public static class InventoryOps
@@ -58,16 +57,16 @@ namespace PrincesPalace
             entry.count += count;
         }
 
-        public static void Add(List<InventoryEntry> inventory, string itemId, int count = 1, int plus = 0,
-            List<string> modifierIds = null, int riftTier = 0, int tier = 0)
+        public static void Add(List<InventoryEntry> inventory, string itemId, int count = 1,
+            List<string> modifierIds = null, int tier = 0)
         {
-            Add(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier, null, tier), count);
+            Add(inventory, ItemInstance.Of(itemId, tier, modifierIds), count);
         }
 
-        // How many of this item are held AT ANY PLUS.
+        // How many of this item are held AT ANY TIER.
         //
-        // Summed rather than "the first stack's count", because with plus on
-        // the instance one item id can legitimately occupy several stacks —
+        // Summed rather than "the first stack's count", because with the tier
+        // on the instance one item id can legitimately occupy several stacks —
         // and every caller of this ("do I have a potion", "did equipping take
         // it out of the bag") is asking about the item, not about one
         // particular copy of it.
@@ -87,29 +86,26 @@ namespace PrincesPalace
             return Find(inventory, instance)?.count ?? 0;
         }
 
-        // The positional form. modifierIds/riftTier default to "no
-        // modifiers", so an unmodified copy is still found by its plus alone,
-        // same as before this axis existed.
-        public static int CountAt(List<InventoryEntry> inventory, string itemId, int plus,
-            List<string> modifierIds = null, int riftTier = 0)
+        // The positional form. modifierIds defaults to "no modifiers", so an
+        // unmodified copy is found by its tier alone.
+        public static int CountAt(List<InventoryEntry> inventory, string itemId, int tier = 0,
+            List<string> modifierIds = null)
         {
-            return CountAt(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier));
+            return CountAt(inventory, ItemInstance.Of(itemId, tier, modifierIds));
         }
 
         // Removes one of the item and returns whether there was one to
-        // remove. Takes the LOWEST plus held, so spending a consumable or
+        // remove. Takes the LOWEST tier held, so spending a consumable or
         // handing one over never quietly consumes the best copy the player
         // owns. Callers that mean a specific copy pass its instance.
         //
-        // NOT modifier-aware: this picks the lowest plus regardless of what
-        // rolled on it. Nothing in Phase A ever populates modifierIds on a
-        // real entry, so there is nothing yet for "worst copy" to weigh a
-        // roll against — revisit when Phase A3 content exists.
+        // NOT modifier-aware: this picks the lowest tier regardless of what
+        // rolled on it.
         public static bool TryRemove(List<InventoryEntry> inventory, string itemId)
         {
             var entry = inventory?
                 .Where(e => e != null && e.itemId == itemId && e.count > 0)
-                .OrderBy(e => e.plus)
+                .OrderBy(e => e.tier)
                 .FirstOrDefault();
 
             return RemoveOne(inventory, entry);
@@ -121,10 +117,10 @@ namespace PrincesPalace
             return RemoveOne(inventory, Find(inventory, instance));
         }
 
-        public static bool TryRemoveAt(List<InventoryEntry> inventory, string itemId, int plus,
-            List<string> modifierIds = null, int riftTier = 0)
+        public static bool TryRemoveAt(List<InventoryEntry> inventory, string itemId, int tier = 0,
+            List<string> modifierIds = null)
         {
-            return TryRemoveAt(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier));
+            return TryRemoveAt(inventory, ItemInstance.Of(itemId, tier, modifierIds));
         }
 
         private static bool RemoveOne(List<InventoryEntry> inventory, InventoryEntry entry)

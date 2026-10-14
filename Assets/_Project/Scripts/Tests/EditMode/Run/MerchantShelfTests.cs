@@ -54,10 +54,10 @@ namespace PrincesPalace.EditModeTests
 
         private static List<ShopStockEntry> FourGear() => new List<ShopStockEntry>
         {
-            ShopStockEntry.Gear(0, "gear_a", 1, null, 0, 28),
-            ShopStockEntry.Gear(1, "gear_b", 0, new[] { "fiery" }, 0, 35),
-            ShopStockEntry.Gear(2, "gear_c", 2, null, 1, 40),
-            ShopStockEntry.Gear(3, "gear_d", 1, null, 0, 21),
+            ShopStockEntry.Gear(0, "gear_a", 1, null, 28),
+            ShopStockEntry.Gear(1, "gear_b", 0, new[] { "fiery" }, 35),
+            ShopStockEntry.Gear(2, "gear_c", 2, null, 40),
+            ShopStockEntry.Gear(3, "gear_d", 1, null, 21),
         };
 
         private static readonly MerchantShelf.ConsumableCandidate[] TwoPotions =
@@ -184,7 +184,7 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void AFakeGearCard_StampsTheWearCountdown_AFakePotionNone()
         {
-            var gear = ShopStockEntry.Gear(0, "gear_a", 1, null, 0, 20);
+            var gear = ShopStockEntry.Gear(0, "gear_a", 1, null, 20);
             gear.lot = "l0";
             gear.fake = true;
             var potion = ShopStockEntry.Consumable(0, "health_potion", 11);
@@ -200,7 +200,7 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void ARoomShopCard_StampsAnOrdinaryCopy_ThatStacks()
         {
-            var card = ShopStockEntry.Gear(0, "gear_a", 1, null, 0, 28);
+            var card = ShopStockEntry.Gear(0, "gear_a", 1, null, 28);
 
             var bag = new List<InventoryEntry>();
             InventoryOps.Add(bag, card.GearInstance(), 1);

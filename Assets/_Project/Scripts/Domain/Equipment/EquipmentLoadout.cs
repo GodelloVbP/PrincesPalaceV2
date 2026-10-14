@@ -19,15 +19,6 @@ namespace PrincesPalace.Domain.Equipment
         // and never resumed (docs/PLAN_ITEMS.md 2.5), so no migration reads it.
         public int tier;
 
-        // How honed the copy in this slot is. Travels with the item rather
-        // than with the definition, so taking a +5 sword off and putting it
-        // back on has to preserve the 5 — which is why every equip and
-        // unequip path moves this alongside the id.
-        //
-        // A save written before plus existed deserialises this as 0, which is
-        // the correct reading of it and is why no migration step exists.
-        public int plus;
-
         // The rolled affix ids on THIS copy — "Fiery", "Swift", and so on
         // (Phase A of the item-modifier plan; nothing populates this list
         // yet). Same additive-JsonUtility posture as plus: a save written
@@ -40,14 +31,6 @@ namespace PrincesPalace.Domain.Equipment
         // must read the same way here for the same reason Get() never
         // returns null for an empty slot.
         public List<string> modifierIds = new List<string>();
-
-        // How many modifier slots this copy rolled, 0-3. Decoupled from item
-        // tier (which weapon/armour asset this is) on purpose — a common-tier
-        // sword can roll Convergent and a rare one can roll Ordinary, and the
-        // glow is meant to read the ROLL, not the base item. Zero on a save
-        // written before this field existed, same reasoning as plus and
-        // modifierIds above.
-        public int riftTier;
 
         // Where this copy came from -- see Provenance. Travels with the item
         // through every equip and unequip exactly as plus does, because the
@@ -65,7 +48,7 @@ namespace PrincesPalace.Domain.Equipment
             Write(instance);
         }
 
-        public ItemInstance Instance => new ItemInstance(itemId, plus, modifierIds, riftTier, provenance, tier);
+        public ItemInstance Instance => ItemInstance.Of(itemId, tier, modifierIds, provenance);
 
         // Overwrites every identity field from `instance`, so a slot can never
         // end up holding one copy's plus and another copy's provenance.
@@ -73,23 +56,19 @@ namespace PrincesPalace.Domain.Equipment
         {
             itemId = instance?.ItemId ?? "";
             tier = instance?.Tier ?? 0;
-            plus = instance?.Plus ?? 0;
             // Copied, not assigned -- see CollectionOps.CopyOrEmpty for why a
             // shared reference here would be the aliasing bug Clone()'s tests
             // exist to catch.
             modifierIds = instance?.ModifierList() ?? new List<string>();
-            riftTier = instance?.RiftTier ?? 0;
             provenance = instance?.ProvenanceCopy() ?? new Provenance();
         }
 
-        public EquipmentSlotEntry(EquipmentSlot slot, string itemId, int plus = 0,
-            List<string> modifierIds = null, int riftTier = 0)
+        public EquipmentSlotEntry(EquipmentSlot slot, string itemId, List<string> modifierIds = null, int tier = 0)
         {
             this.slot = slot;
             this.itemId = itemId;
-            this.plus = plus;
+            this.tier = tier;
             this.modifierIds = CollectionOps.CopyOrEmpty(modifierIds);
-            this.riftTier = riftTier;
         }
     }
 
@@ -124,17 +103,6 @@ namespace PrincesPalace.Domain.Equipment
             return Get(slot).Length == 0;
         }
 
-        // How honed the item in `slot` is, or 0 when the slot is empty.
-        //
-        // Read BEFORE Set displaces anything: an equip that swaps one sword
-        // for another has to put the old one back in the bag at its own plus,
-        // and by the time Set has returned, that number is gone.
-        public int GetPlus(EquipmentSlot slot)
-        {
-            var entry = Find(slot);
-            return entry == null || string.IsNullOrEmpty(entry.itemId) ? 0 : entry.plus;
-        }
-
         // The rolled modifier ids worn in `slot`, or a fresh empty list when
         // the slot is empty. Always a NEW list — the caller can hold onto or
         // mutate what comes back without reaching into the entry's own
@@ -149,14 +117,6 @@ namespace PrincesPalace.Domain.Equipment
             return entry == null || string.IsNullOrEmpty(entry.itemId)
                 ? new List<string>()
                 : new List<string>(entry.modifierIds ?? new List<string>());
-        }
-
-        // How many modifier slots the copy in `slot` rolled, or 0 when the
-        // slot is empty.
-        public int GetRiftTier(EquipmentSlot slot)
-        {
-            var entry = Find(slot);
-            return entry == null || string.IsNullOrEmpty(entry.itemId) ? 0 : entry.riftTier;
         }
 
         // The whole copy worn in `slot`, or null when it is empty. What every
@@ -206,18 +166,17 @@ namespace PrincesPalace.Domain.Equipment
         // A null/empty itemId clears the slot, so Set and Clear are the same
         // operation and cannot disagree.
         //
-        // `modifierIds`/`riftTier` name WHICH ROLL is being worn, the same
-        // way `plus` names which honing level is — every caller that reads
-        // GetModifierIds/GetRiftTier before displacing has to pass them back
-        // in here or the roll is lost the moment the item changes slots.
+        // `modifierIds`/`tier` name WHICH COPY is being worn — every caller
+        // that reads GetInstance/GetModifierIds before displacing has to pass
+        // them back in here or the roll is lost the moment the item changes
+        // slots.
         //
         // The positional form of Put, for callers holding an ordinary copy:
         // it writes a plain provenance.
-        public string Set(EquipmentSlot slot, string itemId, int plus = 0,
-            List<string> modifierIds = null, int riftTier = 0, int tier = 0)
+        public string Set(EquipmentSlot slot, string itemId, List<string> modifierIds = null, int tier = 0)
         {
             string previous = Get(slot);
-            Put(slot, string.IsNullOrEmpty(itemId) ? null : new ItemInstance(itemId, plus, modifierIds, riftTier, null, tier));
+            Put(slot, string.IsNullOrEmpty(itemId) ? null : ItemInstance.Of(itemId, tier, modifierIds));
             return previous;
         }
 
@@ -343,12 +302,11 @@ namespace PrincesPalace.Domain.Equipment
         public void Clear() => slots.Clear();
 
         // Drops every worn id the caller rejects and returns the WHOLE ENTRY --
-        // id, plus, and (once anything populates them) the rolled modifierIds
-        // and riftTier together.
+        // id, tier and the rolled modifierIds together.
         //
         // The ids-only overload below loses all of that, and SaveData.Reconcile
-        // used it: a +5 orphan came back to the stash as a +0. Exactly the
-        // item-destroying bug class EquipMove reads the displaced plus to
+        // used it: a tier-5 orphan came back to the stash as a tier-0. Exactly
+        // the item-destroying bug class EquipMove reads the displaced tier to
         // avoid, sitting in the one path nobody looks at because it only fires
         // when content has been renamed.
         public List<EquipmentSlotEntry> RemoveEntriesWhere(Func<string, bool> shouldRemove)

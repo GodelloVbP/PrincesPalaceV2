@@ -54,9 +54,7 @@ namespace PrincesPalace.Domain.Rewards
 
         // Gear only.
         public int tier;
-        public int plus;
         public List<string> modifiers = new List<string>();
-        public int riftTier;
 
         public int price;
         public bool sold;
@@ -86,12 +84,12 @@ namespace PrincesPalace.Domain.Rewards
         // one its lot and the wear countdown (FakeWear), a room-shop copy
         // nothing.
         public ItemInstance GearInstance() =>
-            new ItemInstance(contentId, plus, modifiers, riftTier, CardProvenance(wears: true), tier);
+            ItemInstance.Of(contentId, tier, modifiers, CardProvenance(wears: true));
 
         // The consumable half of the same rule. A fake potion has no
         // countdown: it is spent on use, to no effect.
         public ItemInstance ConsumableInstance() =>
-            new ItemInstance(contentId, 0, null, 0, CardProvenance(wears: false));
+            ItemInstance.Of(contentId, 0, null, CardProvenance(wears: false));
 
         // Whichever of the two this card is.
         public ItemInstance Instance() => kind == ShopEntryKind.Consumable ? ConsumableInstance() : GearInstance();
@@ -103,14 +101,14 @@ namespace PrincesPalace.Domain.Rewards
             return wears ? FakeWear.NewFakeGear(lot) : new Provenance(lot, fake: true);
         }
 
-        public static ShopStockEntry Gear(int index, string itemId, int plus, IEnumerable<string> modifiers,
-            int riftTier, int price)
+        public static ShopStockEntry Gear(int index, string itemId, int tier, IEnumerable<string> modifiers,
+            int price)
         {
             return new ShopStockEntry
             {
                 kind = ShopEntryKind.Gear,
                 contentId = itemId ?? "",
-                plus = plus,
+                tier = tier,
                 // ORDINAL-SORTED at build, so two cards that rolled the same
                 // affixes in a different order compare and read as the same
                 // card. InventoryOps already treats modifierIds as an
@@ -120,7 +118,6 @@ namespace PrincesPalace.Domain.Rewards
                     .Where(m => !string.IsNullOrEmpty(m))
                     .OrderBy(m => m, StringComparer.Ordinal)
                     .ToList(),
-                riftTier = riftTier,
                 price = price,
                 section = ShopStock.GearSection,
                 index = index,
@@ -290,13 +287,6 @@ namespace PrincesPalace.Domain.Rewards
             }
         }
 
-        // How many times the affordability floor may re-draw the cheapest
-        // gear slot before giving up. Bounded because the guarantee is worth
-        // having and a loop that cannot terminate is not: at a depth where
-        // every candidate prices above the anchor, the honest answer is an
-        // expensive shelf, not a hang (assumption 11).
-        public const int AffordabilityRedraws = 8;
-
         // Better-quality, more expensive stock: the gear shelf targets one
         // tier above the map's own floor tier,
         // capped at whatever content actually goes up to -- a shop is a
@@ -307,127 +297,40 @@ namespace PrincesPalace.Domain.Rewards
         // higher on that same table than a fight reward would.
         public const int GearTierBoost = 1;
 
-        // No bare commons: every gear entry on the shelf carries at least a
-        // +1 or one rolled affix. Enforced the same way the affordability
-        // floor is -- a bounded re-draw of the one axis that changed, never
-        // a second roll shape -- so `rollOne` stays the single seam the shop
-        // and the fight reward share (see RollGear's own header). Small
-        // relative to AffordabilityRedraws: a "was this bare" check is a
-        // near coin-flip against RarityTable's own plus/rift curves at any
-        // depth that ships real modifiers, so it rarely needs more than one
-        // or two attempts, and the FORCED +1 fallback below exists precisely
-        // so the loop can still be bounded when it does not.
-        public const int QualityRedraws = 4;
-
         public static int PriceOf(ItemOffer offer) =>
-            ShopPricing.GearPrice(offer.Tier, offer.Plus, (int)offer.RiftTier);
+            ShopPricing.GearPrice(offer.Tier, offer.Modifiers.Count);
 
         // ---- the gear shelf --------------------------------------------------
 
-        // `rollOne` is the per-item three-axis roll (plus, rift tier, which
-        // modifiers), handed in rather than reimplemented: it is the SAME
-        // seam ItemOfferRoll.Roll uses for the reward path, so the shop and
-        // the fight reward cannot drift on what "one rolled copy" means
-        // (§2d). Domain cannot build it -- the modifier pools come from
-        // ContentDatabase -- which is why it arrives as a delegate.
-        //
-        // Duplicate contentId is impossible within the section rather than
-        // filtered afterwards: ItemOfferTable.Choose draws without
-        // replacement by item id.
+        // Duplicate (contentId, tier) is impossible within the section rather
+        // than filtered afterwards: ItemOfferTable.Choose draws without
+        // replacement by copy.
         public static List<ShopStockEntry> RollGear(
-            IReadOnlyList<ItemOffer> candidates, int depthStep, int maxTier,
-            Func<ItemOffer, ItemOffer> rollOne, Func<int, int> nextIndex)
+            IReadOnlyList<ItemOffer> candidates, int depthStep, int maxTier, Func<int, int> nextIndex)
         {
             var entries = new List<ShopStockEntry>();
-            if (candidates == null || rollOne == null || nextIndex == null)
+            if (candidates == null || nextIndex == null)
             {
                 return PadTo(entries, GearSection, GearCount, ShopEntryKind.Gear);
             }
 
             // EncounterClass.Normal is the caller's business (a shop is not a
-            // fight and browsing must not beat winning, assumption 7) and it
-            // is already baked into `rollOne`; what this needs from depth is
-            // only which tier band to stock -- one rung above a fight's own
-            // floor tier (GearTierBoost), capped at
-            // whatever content actually goes up to.
+            // fight and browsing must not beat winning, assumption 7); what
+            // this needs from depth is only which tier band to stock -- one
+            // rung above a fight's own floor tier (GearTierBoost), capped at
+            // the tier cap.
             int targetTier = Math.Min(RarityTable.FloorTier(depthStep) + GearTierBoost, maxTier);
             var chosen = ItemOfferTable.Choose(
                 candidates, targetTier, maxTier, nextIndex, GearCount);
 
-            var rolled = chosen.Select(offer => ApplyQualityFloor(rollOne(offer), rollOne)).ToList();
-
-            ApplyAffordabilityFloor(chosen, rolled, rollOne);
-
-            for (int i = 0; i < rolled.Count; i++)
+            for (int i = 0; i < chosen.Count; i++)
             {
-                var offer = rolled[i];
-                entries.Add(ShopStockEntry.Gear(i, offer.ItemId, offer.Plus, offer.Modifiers,
-                    (int)offer.RiftTier, PriceOf(offer)));
+                var offer = chosen[i];
+                entries.Add(ShopStockEntry.Gear(i, offer.ItemId, offer.Tier, offer.Modifiers, PriceOf(offer)));
             }
 
             return PadTo(entries, GearSection, GearCount, ShopEntryKind.Gear);
         }
-
-        // ASSUMPTION 11, as a re-draw rather than a discount.
-        //
-        // A shelf whose cheapest card costs more than a normal fight pays is
-        // a room that charged a fight and returned a reroll button. The fix
-        // re-rolls the cheapest slot's plus/rift -- never its tier, never its
-        // price -- so the price stays a pure function of tier/plus/rift and
-        // the only thing the floor changes is WHICH copy is on the card.
-        //
-        // Keeps the cheaper of the two every time, so a re-draw can only
-        // improve the shelf; and stops the moment the anchor is met.
-        private static void ApplyAffordabilityFloor(
-            List<ItemOffer> chosen, List<ItemOffer> rolled, Func<ItemOffer, ItemOffer> rollOne)
-        {
-            if (rolled.Count == 0) return;
-
-            int cheapest = 0;
-            for (int i = 1; i < rolled.Count; i++)
-            {
-                if (PriceOf(rolled[i]) < PriceOf(rolled[cheapest])) cheapest = i;
-            }
-
-            for (int attempt = 0; attempt < AffordabilityRedraws; attempt++)
-            {
-                if (PriceOf(rolled[cheapest]) <= ShopPricing.NormalFightPayoutAnchor) return;
-
-                // Through the SAME quality floor the first pass used, so a
-                // redraw can never hand back a bare common the first pass
-                // would have refused -- the two guarantees (affordable,
-                // never bare) have to hold on the SAME final card, not one
-                // each on two different drafts of it.
-                var redrawn = ApplyQualityFloor(rollOne(chosen[cheapest]), rollOne);
-                if (PriceOf(redrawn) < PriceOf(rolled[cheapest])) rolled[cheapest] = redrawn;
-            }
-        }
-
-        // No bare commons: a +0, no-affix copy is never handed back.
-        // Re-draws the same candidate through the same `rollOne` seam up to
-        // QualityRedraws times -- never a special "just add a modifier"
-        // path, which would be a second way to build an ItemOffer that the
-        // fight reward's own draw does not share.
-        //
-        // Forced, not left expensive, when the redraws run out: unlike the
-        // affordability floor (which accepts an expensive shelf as the
-        // honest answer when nothing prices low enough), a shop that ships a
-        // bare common because the RNG happened to whiff four times in a row
-        // is exactly the bug this rule exists to close, so the fallback is a
-        // flat +1 -- the CHEAPEST way to stop being bare (PlusStep 0.35 <
-        // RiftStep 0.50, so a point of plus is always the less expensive of
-        // the two ways to clear this bar).
-        private static ItemOffer ApplyQualityFloor(ItemOffer offer, Func<ItemOffer, ItemOffer> rollOne)
-        {
-            for (int attempt = 0; attempt < QualityRedraws && IsBareCommon(offer); attempt++)
-            {
-                offer = rollOne(offer);
-            }
-
-            return IsBareCommon(offer) ? offer.WithPlus(1) : offer;
-        }
-
-        private static bool IsBareCommon(ItemOffer offer) => offer.Plus <= 0 && offer.Modifiers.Count == 0;
 
         // ---- the relic shelf --------------------------------------------------
 
@@ -519,7 +422,6 @@ namespace PrincesPalace.Domain.Rewards
         public static List<ShopStockEntry> RollSection(
             int section,
             IReadOnlyList<ItemOffer> gearCandidates, int depthStep, int maxTier,
-            Func<ItemOffer, ItemOffer> rollOne,
             IReadOnlyList<RelicOption> availableRelics,
             IReadOnlyList<BookCandidate> availableBooks,
             Func<int, int> nextIndex)
@@ -527,7 +429,7 @@ namespace PrincesPalace.Domain.Rewards
             switch (section)
             {
                 case GearSection:
-                    return RollGear(gearCandidates, depthStep, maxTier, rollOne, nextIndex);
+                    return RollGear(gearCandidates, depthStep, maxTier, nextIndex);
                 case BookSection:
                     return RollBooks(availableBooks, nextIndex);
                 case RelicSection:

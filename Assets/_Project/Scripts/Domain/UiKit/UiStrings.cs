@@ -759,17 +759,12 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DebugPage =
             UiString.Define("debug.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
 
-        // --- the grant bar: plus stepper, quantity, toast ------------------------
-        public static readonly UiString DebugPlusMinus = UiString.Define("debug.plus_minus", "-");
-        public static readonly UiString DebugPlusPlus = UiString.Define("debug.plus_plus", "+");
-        public static readonly UiString DebugPlusValue = UiString.Define("debug.plus_value", "+{0}", "+10");
+        // --- the grant bar: quantity, toast --------------------------------------
         public static readonly UiString DebugQty1 = UiString.Define("debug.qty1", "x1");
         public static readonly UiString DebugQty5 = UiString.Define("debug.qty5", "x5");
         public static readonly UiString DebugQty10 = UiString.Define("debug.qty10", "x10");
         public static readonly UiString DebugToastGranted =
-            UiString.Define("debug.toast_granted", "Granted {0} x {1} +{2}", "Granted 5 x Ember Blade +7");
-        public static readonly UiString DebugToastGrantedNoPlus =
-            UiString.Define("debug.toast_granted_no_plus", "Granted {0} x {1}", "Granted 5 x Minor Potion");
+            UiString.Define("debug.toast_granted", "Granted {0} x {1}", "Granted 5 x Minor Potion");
 
         // --- the relic draft ---------------------------------------------------
         public static readonly UiString DraftTitle = UiString.Define("draft.title", "TAKE ONE INTO THE DARK");
@@ -861,7 +856,7 @@ namespace PrincesPalace.Domain.UiKit
         // shop sells none).
         public static readonly UiString ShopConsumableMeta = UiString.Define("shop.consumable_meta", "CONSUMABLE");
 
-        // VISIBLE AFFIXES: {2} is the affix NAMES themselves, comma-joined
+        // VISIBLE AFFIXES: {1} is the affix NAMES themselves, comma-joined
         // (ShopController.DescribeEntry), not a bare COUNT, or
         // ShopGearMetaNoAffix below when the roll carries none. Runtime-only
         // content
@@ -871,7 +866,7 @@ namespace PrincesPalace.Domain.UiKit
         // tradeoff, not a fit-audit regression -- the full lines with their
         // numbers live in the selected card's comparison panel regardless.
         public static readonly UiString ShopGearMeta =
-            UiString.Define("shop.gear_meta", "TIER {0} · +{1} · {2}", "TIER 10 · +5 · Fiery, Swift");
+            UiString.Define("shop.gear_meta", "TIER {0} · {1}", "TIER 10 · Fiery, Swift");
         public static readonly UiString ShopGearMetaNoAffix =
             UiString.Define("shop.gear_meta_no_affix", "NO AFFIX");
 

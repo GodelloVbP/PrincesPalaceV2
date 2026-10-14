@@ -30,8 +30,8 @@ namespace PrincesPalace
     // where a category, a sub-filter and a pager are cheap, and the bag only
     // ever holds what was deliberately asked for.
     //
-    // A category rail over a two-column list, a grant bar with sticky
-    // plus/quantity, spell books, relics, and Resources/Tools tabs. Mounted
+    // A category rail over a two-column list, a grant bar with a sticky
+    // quantity, spell books, relics, and Resources/Tools tabs. Mounted
     // in the hub AND on the map, because books, relics and every Tools row
     // live on the descent and the hub has none.
     public class DebugMenuController : MonoBehaviour
@@ -48,9 +48,6 @@ namespace PrincesPalace
         [SerializeField] internal Button prevPageButton;
         [SerializeField] internal Button nextPageButton;
 
-        [SerializeField] internal Button plusMinusButton;
-        [SerializeField] internal Button plusPlusButton;
-        [SerializeField] internal TMP_Text plusLabel;
         [SerializeField] internal Button[] qtyButtons;
         [SerializeField] internal TMP_Text toastLabel;
 
@@ -104,10 +101,8 @@ namespace PrincesPalace
 
         private int _page;
 
-        // PLUS and QUANTITY are sticky across rows, categories and pages --
-        // they live here, not per-row, and only the scene reloading resets
-        // them.
-        private int _plus;
+        // QUANTITY is sticky across rows, categories and pages -- it lives
+        // here, not per-row, and only the scene reloading resets it.
         private int _qtyIndex;
 
         private bool _wired;
@@ -174,8 +169,6 @@ namespace PrincesPalace
             prevPageButton.onClick.AddListener(() => StepPage(-1));
             nextPageButton.onClick.AddListener(() => StepPage(1));
 
-            plusMinusButton.onClick.AddListener(() => StepPlus(-1));
-            plusPlusButton.onClick.AddListener(() => StepPlus(1));
 
             for (int i = 0; i < qtyButtons.Length; i++)
             {
@@ -227,24 +220,21 @@ namespace PrincesPalace
             }
         }
 
-        // Plus is ignored for consumables -- a potion has no honing axis,
-        // InventoryOps keys stacks on plus among other things, and a debug
-        // potion minted at +7 would silently split from every other stack of
-        // the same potion.
+        // A gear row is one tier of one base; a consumable has no tier.
         private void GrantItem(DebugItem item, int qty)
         {
             var save = Save;
             if (save == null) return;
 
-            int plus = item.Kind == (int)ItemKind.Consumable ? 0 : _plus;
-            InventoryOps.Add(save.stockpiledItems, item.Id, qty, plus, tier: item.Tier);
+            int tier = item.Kind == (int)ItemKind.Consumable ? 0 : item.Tier;
+            InventoryOps.Add(save.stockpiledItems, item.Id, qty, tier: tier);
 
             Wrote();
-            ToastGranted(qty, item.Name, plus);
+            ToastGranted(qty, item.Name);
         }
 
         // ONE ROW GRANTS THE WHOLE SET: every ItemDefinition whose setId
-        // matches, each at the grant bar's quantity and plus. Read fresh from
+        // matches, each at the grant bar's quantity. Read fresh from
         // ContentDatabase rather than trusted from the row, for the same
         // staleness reason Catalogue() is read fresh every Refresh.
         private void GrantSet(DebugItem row, int qty)
@@ -258,15 +248,14 @@ namespace PrincesPalace
             // Every tier of every piece, as the set's rows always granted.
             foreach (var piece in pieces)
             {
-                int plus = piece.kind == ItemKind.Consumable ? 0 : _plus;
                 for (int tier = 0; tier <= piece.curve.maxTier; tier++)
                 {
-                    InventoryOps.Add(save.stockpiledItems, piece.id, qty, plus, tier: tier);
+                    InventoryOps.Add(save.stockpiledItems, piece.id, qty, tier: tier);
                 }
             }
 
             Wrote();
-            ToastGranted(qty, row.Name, _plus);
+            ToastGranted(qty, row.Name);
         }
 
         // Into the UNASSIGNED pile, never a slot. Placing a book is the
@@ -286,7 +275,7 @@ namespace PrincesPalace
             for (int i = 0; i < qty; i++) run.unassignedSpellBooks.Add(item.Id);
 
             Wrote();
-            ToastGranted(qty, item.Name, 0);
+            ToastGranted(qty, item.Name);
         }
 
         // One copy, whatever the quantity: a relic is a thing a character
@@ -306,7 +295,7 @@ namespace PrincesPalace
             if (!run.relicIds.Contains(item.Id)) run.relicIds.Add(item.Id);
 
             Wrote();
-            ToastGranted(1, item.Name, 0);
+            ToastGranted(1, item.Name);
         }
 
         private void RunAction(DebugItem row)
@@ -328,10 +317,9 @@ namespace PrincesPalace
             toastLabel.Set(UiStrings.DebugToastDone, label);
         }
 
-        private void ToastGranted(int qty, string name, int plus)
+        private void ToastGranted(int qty, string name)
         {
-            if (plus > 0) toastLabel.Set(UiStrings.DebugToastGranted, qty, name, plus);
-            else toastLabel.Set(UiStrings.DebugToastGrantedNoPlus, qty, name);
+            toastLabel.Set(UiStrings.DebugToastGranted, qty, name);
         }
 
         // Every write persists, repaints this menu, and tells the host.
@@ -603,12 +591,6 @@ namespace PrincesPalace
             Refresh();
         }
 
-        private void StepPlus(int direction)
-        {
-            _plus = DebugMenuCatalog.StepPlus(_plus, direction);
-            Refresh();
-        }
-
         private void SetQty(int index)
         {
             _qtyIndex = index < 0 || index >= QtyValues.Length ? 0 : index;
@@ -644,7 +626,6 @@ namespace PrincesPalace
             _page = DebugMenuCatalog.ClampPage(_page, _filtered.Count);
 
             pageLabel.Set(UiStrings.DebugPage, _page + 1, DebugMenuCatalog.PageCount(_filtered.Count));
-            plusLabel.Set(UiStrings.DebugPlusValue, _plus);
 
             for (int i = 0; i < categoryButtons.Length; i++)
             {
@@ -713,8 +694,7 @@ namespace PrincesPalace
             var activeRows = rowButtons?.Where(r => r != null && r.gameObject.activeSelf).ToList()
                              ?? new List<Button>();
 
-            var grantBar = new[] { plusMinusButton, plusPlusButton }
-                .Concat(qtyButtons ?? Array.Empty<Button>())
+            var grantBar = (qtyButtons ?? Array.Empty<Button>())
                 .Where(b => b != null)
                 .ToArray();
 

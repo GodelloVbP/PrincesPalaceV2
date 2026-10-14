@@ -18,7 +18,7 @@ namespace PrincesPalace.PlayModeTests
     //
     // Mirrors ItemModifierScalingReachesCombatTests/FortunateFavorTests'
     // own real-content pattern: equip a REAL item with the REAL "swift" id
-    // at a known tier/riftTier, never a hand-built Effect fixture.
+    // at a known tier, never a hand-built Effect fixture.
     public class SwiftModifierReachesCombatTests
     {
         private string _root;
@@ -44,23 +44,23 @@ namespace PrincesPalace.PlayModeTests
         private static ItemDefinition TierZeroEquippable() =>
             ContentDatabase.Equippables.FirstOrDefault(i => i != null);
 
-        private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier)
+        private static Character FreshCharacterWearing(ItemDefinition item, int tier = 0)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
-            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "swift" }, riftTier: (int)riftTier);
+            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "swift" }, tier: tier);
             return character;
         }
 
         [Test]
-        public void SwiftModifier_ScalesItsDodgeChanceByTierAndRiftTier()
+        public void SwiftModifier_ScalesItsDodgeChanceByTier()
         {
-            var item = TierZeroEquippable();
-            Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
+            var item = GearFixtures.WearableAt(5);
+            Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, RiftTier.RiftForged);
+            var character = FreshCharacterWearing(item, tier: 5);
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
@@ -68,31 +68,32 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped swift modifier must produce a real effect");
 
             // swift's authored base: DodgeRating 6 (halved from 12). Scale =
-            // TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
+            // TierMultiplier(5) = 1.25^5 = 3.0517578125, so 6 x 3.0517578125 =
+            // 18.31, away-from-zero rounded to 18.
             var dodge = effects.All.Single(e => e.Kind == EffectKind.DodgeRating);
-            Assert.AreEqual(10, dodge.Magnitude, "6 x 1.6 = 9.6, away-from-zero rounded");
+            Assert.AreEqual(18, dodge.Magnitude);
         }
 
         [Test]
-        public void SwiftModifier_AtOrdinaryRiftTier_ScalesByExactlyOne()
+        public void SwiftModifier_AtTierZero_ScalesByExactlyOne()
         {
             var item = TierZeroEquippable();
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
-            var character = FreshCharacterWearing(item, RiftTier.Ordinary);
+            var character = FreshCharacterWearing(item);
             var effects = ContentDatabase.CharacterEffects(character);
 
             var dodge = effects.All.Single(e => e.Kind == EffectKind.DodgeRating);
-            Assert.AreEqual(6, dodge.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
+            Assert.AreEqual(6, dodge.Magnitude, "tier 0: scale is exactly 1.0, unscaled base survives untouched");
         }
 
         [Test]
         public void SwiftModifier_ReachesCombatantStateModifierEffects_ThroughARealFight()
         {
-            var item = TierZeroEquippable();
-            Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
+            var item = GearFixtures.WearableAt(5);
+            Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, RiftTier.RiftForged);
+            var character = FreshCharacterWearing(item, tier: 5);
             var built = FightEncounterAdapter.Build(
                 new List<string> { character.definitionId },
                 ContentDatabase.Enemies.Take(1).Select(e => e.id).ToList(),
@@ -102,13 +103,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(10, state.Effects.Magnitude(EffectKind.DodgeRating),
+            Assert.AreEqual(18, state.Effects.Magnitude(EffectKind.DodgeRating),
                 "the real, scaled swift dodge chance must reach the combatant the fight actually runs on");
         }
 
         // THE REAL END-TO-END CLAIM: equip swift on the highest-tier real
-        // equippable item content has, at Convergent RiftTier (the richest
-        // combination the roll can ever produce), and prove a real
+        // equippable item content has, at the tier cap (the richest tier a
+        // copy can reach), and prove a real
         // FightSession actually reads it into fewer landed hits -- not a
         // synthetic Effect fixture, the genuine content -> roll ->
         // equip -> combat chain this whole phase exists to protect.
@@ -140,7 +141,7 @@ namespace PrincesPalace.PlayModeTests
         // SUMMED ACROSS SEVERAL SEEDS, not one. A single 40-round seed is a
         // small enough sample that a probabilistic dodge (halved from the
         // affix-power-down pass: base DodgeRating 12 -> 6, which at this
-        // item's own tier/RiftTier still curves to a real ~53% dodge chance
+        // item's own tier still curves to a real ~46% dodge chance
         // -- see CombatMath.DodgePercentFrom, not negligible) can tie or
         // even lose to the no-dodge control by chance alone on any ONE
         // seed; SeededRandom(11) did exactly that after the halving. Eight
@@ -151,16 +152,14 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void SwiftModifier_OnAHighTierItem_MeaningfullyReducesRealDamageTaken_InARealFight()
         {
-            var item = ContentDatabase.Equippables
-                .OrderByDescending(i => i.curve.maxTier)
-                .FirstOrDefault();
-            Assert.IsNotNull(item, "fixture: content has at least one equippable item");
+            var item = GearFixtures.WearableAt(ItemInstance.TierCap);
+            Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at the tier cap");
 
             int TotalDamageTakenOverRounds(List<string> modifierIds, int rounds, ulong seed)
             {
                 var definition = ContentDatabase.Characters.FirstOrDefault();
                 var character = new Character(definition.id);
-                character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, riftTier: (int)RiftTier.Convergent, tier: item.curve.maxTier);
+                character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, tier: ItemInstance.TierCap);
                 Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                     "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 

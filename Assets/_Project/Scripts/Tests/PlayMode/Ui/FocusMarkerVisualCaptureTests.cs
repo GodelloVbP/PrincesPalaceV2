@@ -247,7 +247,7 @@ namespace PrincesPalace.PlayModeTests
             var offers = ContentDatabase.Equippables
                 .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
                 .Take(3)
-                .Select(i => new ItemOffer(i.id, i.curve.maxTier, 0))
+                .Select(i => new ItemOffer(i.id, i.curve.maxTier))
                 .ToList();
             Assert.AreEqual(3, offers.Count, "need three equippable items with art to offer");
 

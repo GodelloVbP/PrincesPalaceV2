@@ -74,12 +74,11 @@ namespace PrincesPalace.Domain.Equipment
             EquipmentSlot itemSlot,
             bool isEquippable,
             EquipmentSlot? preferredSlot = null,
-            int plus = 0,
             List<string> modifierIds = null,
-            int riftTier = 0)
+            int tier = 0)
         {
             if (string.IsNullOrEmpty(itemId)) return false;
-            return TryEquip(loadout, bag, new ItemInstance(itemId, plus, modifierIds, riftTier),
+            return TryEquip(loadout, bag, ItemInstance.Of(itemId, tier, modifierIds),
                 itemSlot, isEquippable, preferredSlot);
         }
 

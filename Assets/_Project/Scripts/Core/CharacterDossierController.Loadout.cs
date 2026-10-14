@@ -29,7 +29,6 @@ namespace PrincesPalace
         [SerializeField] internal Button[] slotCells;
         [SerializeField] internal Image[] slotIcons;
         [SerializeField] internal Image[] slotRarityTicks;
-        [SerializeField] internal Image[] slotRiftGlows;
         [SerializeField] internal TMP_Text[] slotCaptions;
         [SerializeField] internal TMP_Text[] slotNames;
         [SerializeField] internal GameObject[] slotArmedRims;
@@ -49,7 +48,6 @@ namespace PrincesPalace
         [SerializeField] internal Button[] packCells;
         [SerializeField] internal Image[] packIcons;
         [SerializeField] internal Image[] packRarityTicks;
-        [SerializeField] internal Image[] packRiftGlows;
         [SerializeField] internal TMP_Text[] packCounts;
         [SerializeField] internal TMP_Text[] packNames;
         [SerializeField] internal GameObject[] packArmedRims;
@@ -193,17 +191,7 @@ namespace PrincesPalace
                 if (Has(slotRarityTicks, i))
                 {
                     slotRarityTicks[i].gameObject.SetShown(item != null);
-                    if (item != null) slotRarityTicks[i].color = TierColour(ContentDatabase.Effective(character.equipment.GetInstance(slot))?.Tier ?? 0);
-                }
-
-                // The RiftTier ring, hidden at Ordinary so an item that rolled
-                // nothing draws exactly as it always did (RiftTierColors.ShouldGlow).
-                if (Has(slotRiftGlows, i))
-                {
-                    var riftTier = (RiftTier)(character.equipment?.GetRiftTier(slot) ?? 0);
-                    bool glows = item != null && RiftTierColors.ShouldGlow(riftTier);
-                    slotRiftGlows[i].gameObject.SetShown(glows);
-                    if (glows) slotRiftGlows[i].color = RiftTierColors.For(riftTier);
+                    if (item != null) slotRarityTicks[i].color = QualityColour(worn);
                 }
 
                 // A slot a two-hander has taken is INERT, not empty: the
@@ -365,14 +353,7 @@ namespace PrincesPalace
                 if (Has(packRarityTicks, i))
                 {
                     packRarityTicks[i].gameObject.SetShown(item);
-                    if (item) packRarityTicks[i].color = TierColour(e.Item.Tier);
-                }
-
-                if (Has(packRiftGlows, i))
-                {
-                    bool glows = item && RiftTierColors.ShouldGlow(e.Item.RiftTier);
-                    packRiftGlows[i].gameObject.SetShown(glows);
-                    if (glows) packRiftGlows[i].color = RiftTierColors.For(e.Item.RiftTier);
+                    if (item) packRarityTicks[i].color = QualityColour(e.Item.Instance);
                 }
 
                 // A count only where there is more than one.
@@ -505,16 +486,17 @@ namespace PrincesPalace
                 // A save naming content that no longer exists is shown as
                 // itself rather than dropped.
                 return new BagItem(entry.itemId, entry.itemId, 0, EquipmentSlot.Weapon1,
-                    0, entry.plus, entry.count, "", false, instance: entry.Instance);
+                    0, entry.count, "", false, instance: entry.Instance);
             }
 
             var gear = ContentDatabase.Effective(entry.Instance);
-            return new BagItem(item.id, RarityColors.NameOf(entry.Instance, entry.plus), (int)item.kind,
-                item.equipSlot, gear?.Tier ?? 0, entry.plus, entry.count, gear?.IconPath ?? item.iconPath, item.IsEquippable,
-                entry.modifierIds, entry.riftTier, entry.Instance);
+            return new BagItem(item.id, RarityColors.NameOf(entry.Instance), (int)item.kind,
+                item.equipSlot, gear?.Tier ?? 0, entry.count, gear?.IconPath ?? item.iconPath, item.IsEquippable,
+                entry.modifierIds, entry.Instance);
         }
 
-        private static Color TierColour(int tier) => Hex(RarityBands.HexColorForTier(tier));
+        private static Color QualityColour(ItemInstance copy) =>
+            Hex(ItemQuality.HexColor(ContentDatabase.QualityOf(copy)));
 
         // ---- presses --------------------------------------------------------------------------
 
@@ -874,13 +856,10 @@ namespace PrincesPalace
                 return;
             }
 
-            int plus = character.equipment.GetPlus(slot);
-            var riftTier = (RiftTier)character.equipment.GetRiftTier(slot);
-            var modifierIds = character.equipment.GetModifierIds(slot);
-
+            int honing = ContentDatabase.HoningOf(character, slot);
             var copy = character.equipment.GetInstance(slot);
-            SetCompareHead(RarityColors.Wrap(copy, plus), KindLine(copy),
-                ItemDescription.CardSummary(copy, plus, character, riftTier, modifierIds));
+            SetCompareHead(RarityColors.Wrap(copy, honing), KindLine(copy),
+                ItemDescription.CardSummary(copy, honing, character));
             PaintCurrentStatRows(character);
         }
 
@@ -937,27 +916,29 @@ namespace PrincesPalace
                 return;
             }
 
-            string description = ItemDescription.CardSummary(e.Item.Instance, e.Item.Plus,
-                riftTier: e.Item.RiftTier, modifierIds: e.Item.ModifierIds);
+            // No viewer: a pack card lists the item's own lines, and the DMG
+            // line that needs a wielder would be a fifth line in a box of four.
+            string description = ItemDescription.CardSummary(e.Item.Instance,
+                ContentDatabase.HoningFor(character, e.Item.Instance));
 
             if (e.Kind == PackEntryKind.Salve)
             {
-                SetCompareBody(RarityColors.Wrap(e.Item.Instance, e.Item.Plus), UiStrings.CompareKindSalve.Format(), description);
+                SetCompareBody(RarityColors.Wrap(e.Item.Instance), UiStrings.CompareKindSalve.Format(), description);
                 return;
             }
 
             // Gear: what each stat would become, "280 → 338 (+58)", for the
             // stats that move -- by the same hypothetical-equip pass the rest
             // of the game compares with (ItemDescription.Compare).
-            int shown = PaintDeltaRows(character, e.Item.Instance, e.Item.Plus);
+            int shown = PaintDeltaRows(character, e.Item.Instance);
             if (shown == 0) description = $"{description}\n{UiStrings.CompareNoChange.Format()}";
 
-            SetCompareHead(RarityColors.Wrap(e.Item.Instance, e.Item.Plus), KindLine(e.Item.Instance), description);
+            SetCompareHead(RarityColors.Wrap(e.Item.Instance), KindLine(e.Item.Instance), description);
         }
 
-        private int PaintDeltaRows(Character character, ItemInstance copy, int plus)
+        private int PaintDeltaRows(Character character, ItemInstance copy)
         {
-            var comparison = ItemDescription.Compare(character, copy, plus);
+            var comparison = ItemDescription.Compare(character, copy);
             var previewScores = _scores + comparison.ScoreDelta;
             var stats = ContentDatabase.EffectiveStats(character);
 

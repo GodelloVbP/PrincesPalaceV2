@@ -160,7 +160,7 @@ namespace PrincesPalace.Domain.Bot
         // Another row earlier in the bag holds the same itemId. The cheap
         // read of "I already have one of these", which is the only kind of
         // duplicate a bag can show: two stacks exist precisely because their
-        // (plus, modifiers, riftTier) differ.
+        // (tier, modifiers) differ.
         public readonly bool Duplicate;
 
         // Not equippable, so Score says nothing about it. Held separately

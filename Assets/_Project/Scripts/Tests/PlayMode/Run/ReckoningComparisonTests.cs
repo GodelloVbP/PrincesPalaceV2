@@ -69,7 +69,7 @@ namespace PrincesPalace.PlayModeTests
             var hero = SaveSlotManager.CurrentSave.ActiveSquad().First();
             var item = EasiestItem();
 
-            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0), 0);
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0));
 
             Assert.IsNotEmpty(body, "the squad comparison produced no text at all");
             StringAssert.DoesNotContain("cannot equip yet", body,
@@ -78,7 +78,7 @@ namespace PrincesPalace.PlayModeTests
 
         // ITEM-MODIFIER PLAN PHASE E: an offer's rolled modifiers must show
         // on the hover BEFORE the player takes it -- ItemOffer.Modifiers/
-        // RiftTier are set the moment ItemOfferRoll rolls the offer (see
+        // are set the moment ItemOfferRoll rolls the offer (see
         // ItemOffer's own header), well before Take() ever writes an
         // InventoryEntry, and ReckoningController.OnOfferHover reads
         // straight off the offer rather than off anything claimed. This
@@ -90,9 +90,7 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0), candidatePlus: 0,
-                riftTier: RiftTier.RiftForged,
-                modifierIds: new System.Collections.Generic.List<string> { "fiery" });
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0, new[] { "fiery" }));
 
             StringAssert.Contains("AFFIXES", body, "an unclaimed offer's rolled modifiers must already show on the hover");
             StringAssert.Contains("Fiery", body);
@@ -144,9 +142,7 @@ namespace PrincesPalace.PlayModeTests
 
             var squad = new System.Collections.Generic.List<Character> { wearsFrosty, wearsNothing };
 
-            string body = ItemDescription.SquadComparisonBody(squad, ItemInstance.Of(item.id, 0), candidatePlus: 0,
-                riftTier: RiftTier.Ordinary,
-                modifierIds: new System.Collections.Generic.List<string> { "fiery" });
+            string body = ItemDescription.SquadComparisonBody(squad, ItemInstance.Of(item.id, 0, new[] { "fiery" }));
 
             StringAssert.Contains($"<color={ItemStatLines.GainHex}>Fiery", body,
                 "the candidate's own affix is a gain for the member with nothing worn there yet, and for the " +

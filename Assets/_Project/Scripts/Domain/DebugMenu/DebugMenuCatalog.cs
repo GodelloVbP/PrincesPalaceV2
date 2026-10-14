@@ -112,15 +112,9 @@ namespace PrincesPalace.Domain.DebugMenu
         // tier, so the tier-first sort above lays actions out in the order
         // the controller declared them -- "+100, +1000, +10000" rather than
         // whatever an ordinal name sort makes of those -- and the grant bar's
-        // plus/quantity are not applied.
+        // quantity is not applied.
         public static bool IsAction(DebugCategory category) =>
             category == DebugCategory.Resources || category == DebugCategory.Tools;
-
-        // The grant bar's plus stepper. Clamped at both ends rather than
-        // wrapping: stepping past +10 landing on +0 would silently undo the
-        // thing the last nine presses were for.
-        public static int StepPlus(int plus, int direction) =>
-            System.Math.Max(0, System.Math.Min(Stats.ItemUpgrade.MaxPlus, plus + direction));
 
         // Delegated to Paging -- see GlossaryCatalog for why this stopped
         // being written out three times.

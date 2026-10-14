@@ -1409,7 +1409,7 @@ namespace PrincesPalace
                 // and paying that for a NO OFFER placeholder or a card
                 // already bought buys nothing.
                 float score = entry.kind == ShopEntryKind.Gear && !entry.noOffer && !entry.sold
-                    ? ScoreCached(save, entry.contentId, entry.plus, entry.tier, weights, scoreCache)
+                    ? ScoreCached(save, entry.contentId, entry.tier, weights, scoreCache)
                     : 0f;
 
                 cards.Add(new ShopCardView(entry.section, entry.index, entry.kind, entry.contentId,
@@ -1436,18 +1436,18 @@ namespace PrincesPalace
             return new ShopView(cards, rerollPrices, rerollsUsed, bag, run.gold);
         }
 
-        // itemId+tier+plus is the whole of what GearEvaluator.ScoreOffer reads
+        // itemId+tier is the whole of what GearEvaluator.ScoreOffer reads
         // besides `save` (worn gear, constant across a visit) and `weights`
         // (the archetype, constant for the run) -- see the cache's own note
         // at its one call site in VisitShop.
         private static float ScoreCached(
-            SaveData save, string itemId, int plus, int tier, GearWeights weights,
+            SaveData save, string itemId, int tier, GearWeights weights,
             Dictionary<(string, int), float> cache)
         {
-            var key = ($"{itemId}@{tier}", plus);
+            var key = (itemId, tier);
             if (cache.TryGetValue(key, out float cached)) return cached;
 
-            float score = GearEvaluator.ScoreOffer(save, itemId, plus, weights, tier);
+            float score = GearEvaluator.ScoreOffer(save, itemId, weights, tier);
             cache[key] = score;
             return score;
         }
@@ -1471,13 +1471,13 @@ namespace PrincesPalace
 
                 // DUPLICATE MEANS "an earlier row already holds this id and tier",
                 // which is the only duplicate a bag can show: two stacks of
-                // the same item exist precisely because their plus, affixes
-                // or rift tier differ, so the ids match and the copies do not.
+                // the same item exist precisely because their tier or affixes
+                // differ, so the ids match and the copies do not.
                 bool duplicate = !seenIds.Add($"{entry.itemId}@{entry.tier}");
 
                 float score = consumable
                     ? 0f
-                    : ScoreCached(save, entry.itemId, entry.plus, entry.tier, weights, scoreCache);
+                    : ScoreCached(save, entry.itemId, entry.tier, weights, scoreCache);
 
                 rows.Add(new ShopBagRow(i, entry.itemId, entry.count,
                     RunOrchestrator.SellPriceOf(entry), score, duplicate, consumable));
@@ -1759,7 +1759,7 @@ namespace PrincesPalace
                     CharacterId = e.CharacterId,
                     ItemId = e.ItemId,
                     Slot = e.Slot,
-                    Plus = e.Plus,
+                    Tier = e.Tier,
                 })
                 .ToList();
         }
@@ -1900,8 +1900,6 @@ namespace PrincesPalace
             {
                 ItemId = o.ItemId,
                 Tier = o.Tier,
-                Plus = o.Plus,
-                RiftTier = (int)o.RiftTier,
                 ModifierCount = o.Modifiers?.Count ?? 0,
             }));
 

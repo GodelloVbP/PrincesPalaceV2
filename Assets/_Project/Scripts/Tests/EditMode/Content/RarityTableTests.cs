@@ -43,18 +43,6 @@ namespace PrincesPalace.Domain.Tests
             return seen;
         }
 
-        private static List<int> SamplePluses(EncounterClass encounter, int favor = 0)
-        {
-            var rng = new PrincesPalace.Domain.Rng.SeededRandom(20260818);
-            var seen = new List<int>(Samples);
-            for (int i = 0; i < Samples; i++)
-            {
-                seen.Add(RarityTable.RollPlus(encounter, favor, n => rng.NextInt(0, n)));
-            }
-
-            return seen;
-        }
-
         private static double Share(List<int> values, Func<int, bool> predicate) =>
             values.Count(predicate) / (double)values.Count;
 
@@ -121,24 +109,16 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ABoss_NeverDropsCommon()
+        public void ABoss_NeverDropsBelowTheBossFloor_InAnyBand()
         {
             foreach (int step in new[] { 0, 4, 12, 60 })
             {
                 foreach (int tier in SampleTiers(EncounterClass.Boss, step, maxTier: 10))
                 {
-                    Assert.AreNotEqual(Rarity.Common, RarityBands.For(tier),
-                        $"a boss at step {step} rolled a Common (tier {tier})");
+                    Assert.GreaterOrEqual(tier, 3,
+                        $"a boss at step {step} rolled below the boss floor (tier {tier})");
                 }
             }
-        }
-
-        [Test]
-        public void MinimumRarityFor_StatesTheSameGuaranteeInBands()
-        {
-            Assert.AreEqual(Rarity.Common, RarityTable.MinimumRarityFor(EncounterClass.Normal));
-            Assert.AreEqual(Rarity.Common, RarityTable.MinimumRarityFor(EncounterClass.Elite));
-            Assert.AreEqual(Rarity.Uncommon, RarityTable.MinimumRarityFor(EncounterClass.Boss));
         }
 
         [Test]
@@ -258,8 +238,6 @@ namespace PrincesPalace.Domain.Tests
             {
                 Assert.DoesNotThrow(() => RarityTable.RollTier(encounter, 10, 10, 0, _ => 99999));
                 Assert.DoesNotThrow(() => RarityTable.RollTier(encounter, 10, 10, 0, _ => -7));
-                Assert.DoesNotThrow(() => RarityTable.RollPlus(encounter, 0, _ => 99999));
-                Assert.DoesNotThrow(() => RarityTable.RollPlus(encounter, 0, _ => -7));
             }
         }
 
@@ -267,104 +245,7 @@ namespace PrincesPalace.Domain.Tests
         public void MissingRandomness_IsHandledRatherThanThrowing()
         {
             Assert.DoesNotThrow(() => RarityTable.RollTier(EncounterClass.Boss, 10, 10, 0, null));
-            Assert.DoesNotThrow(() => RarityTable.RollPlus(EncounterClass.Boss, 0, null));
         }
-
-        // ---- plus ---------------------------------------------------------
-
-        // Plus is the long tail: most drops are +0, and that is what keeps a
-        // +3 exciting at step 40 as well as at step 4.
-        [Test]
-        public void MostDropsAreUnhoned()
-        {
-            var pluses = SamplePluses(EncounterClass.Normal);
-
-            Assert.GreaterOrEqual(Share(pluses, p => p == 0), 0.70,
-                "most normal drops should be +0 - that is what keeps a +3 exciting at step 40");
-            Assert.LessOrEqual(Share(pluses, p => p == 0), 0.85,
-                "if nearly everything is +0 the long tail has stopped existing");
-        }
-
-        // AT ZERO FAVOR specifically -- RarityTable.PlusMaxRungsFor(0) ==
-        // PlusBaseMaxRungs (5), the same ceiling this roll always had. See
-        // HighFavor_CanReachTheFullTenRungLadder_ButRarely below for the
-        // Favor-unlocked half of the ladder this test deliberately does not
-        // reach.
-        [Test]
-        public void PlusNeverGoesNegativeAndStaysModest_AtZeroFavor()
-        {
-            foreach (EncounterClass encounter in Enum.GetValues(typeof(EncounterClass)))
-            {
-                var pluses = SamplePluses(encounter);
-                Assert.GreaterOrEqual(pluses.Min(), 0);
-                Assert.LessOrEqual(pluses.Max(), 5, $"{encounter} rolled an implausibly honed drop");
-            }
-        }
-
-        // TIER REBALANCE: "plus values go higher... up to +10... only with
-        // high favor". PlusMaxRungsFor is a STRUCTURAL gate, not a
-        // probabilistic one -- LootLadder.Climb cannot return more than the
-        // maxRungs it is handed, so +10 is IMPOSSIBLE below the Favor
-        // threshold that unlocks the tenth rung, and merely RARE above it.
-        [Test]
-        public void PlusMaxRungsFor_NeverUnlocksThePlusTenRungWithoutFavor()
-        {
-            foreach (int favor in new[] { 0, -5, 10, 14 })
-            {
-                Assert.LessOrEqual(RarityTable.PlusMaxRungsFor(favor), RarityTable.PlusBaseMaxRungs,
-                    $"favor {favor} must not reach past the base ladder");
-            }
-        }
-
-        [Test]
-        public void PlusMaxRungsFor_ClimbsWithFavor_CappedAtTen()
-        {
-            Assert.AreEqual(RarityTable.PlusBaseMaxRungs + 1, RarityTable.PlusMaxRungsFor(RarityTable.PlusFavorPerRung));
-            Assert.AreEqual(RarityTable.PlusMaxRungs, RarityTable.PlusMaxRungsFor(1000),
-                "the ladder is capped at PlusMaxRungs regardless of how much Favor is stacked");
-        }
-
-        [Test]
-        public void NeverPlusTen_AtZeroFavor_HoweverManySamples()
-        {
-            var pluses = SamplePluses(EncounterClass.Boss, favor: 0);
-            Assert.IsFalse(pluses.Any(p => p >= 10), "structurally impossible below the Favor threshold");
-        }
-
-        // "...must be possible but rare" -- possible: a real, nonzero share
-        // of a large sample; rare: comfortably under 1%. High Favor here
-        // means the ladder's full 10 rungs are reachable (PlusMaxRungsFor
-        // saturates at PlusMaxRungs beyond a modest Favor stack — see
-        // PlusMaxRungsFor_ClimbsWithFavor_CappedAtTen), not that every climb
-        // succeeds; ten consecutive successes at any per-rung chance still
-        // decays geometrically.
-        [Test]
-        public void HighFavor_CanReachThePlusTenRung_ButRarely()
-        {
-            var pluses = SamplePluses(EncounterClass.Normal, favor: 100);
-
-            double topRung = Share(pluses, p => p == 10);
-            Assert.Greater(topRung, 0.0, "a +10 tier-0 item must be POSSIBLE at high favor");
-            Assert.Less(topRung, 0.01, "...but RARE -- under 1%, or the ladder has saturated again");
-        }
-
-        [Test]
-        public void BetterFightsRollHonedGearMoreOften()
-        {
-            double normal = SamplePluses(EncounterClass.Normal).Average();
-            double elite = SamplePluses(EncounterClass.Elite).Average();
-            double boss = SamplePluses(EncounterClass.Boss).Average();
-
-            Assert.Less(normal, elite);
-            Assert.Less(elite, boss);
-        }
-
-        // Plus deliberately does not climb with depth — RollPlus takes no
-        // depth argument at all. That is enforced by the signature rather
-        // than by a test, and is recorded here so that adding one later is a
-        // deliberate act: plus becoming depth-sensitive would turn it into a
-        // second progression axis competing with tier, and the rarity bands
-        // would stop meaning anything.
 
         // ---- the anti-saturation guarantee ---------------------------------
 
@@ -390,34 +271,7 @@ namespace PrincesPalace.Domain.Tests
                 "which is the exact fault the ladder replaced");
         }
 
-        [Test]
-        public void FavorFattensTheTailWithoutCollapsingIt()
-        {
-            var none = SamplePluses(EncounterClass.Normal, favor: 0);
-            var lots = SamplePluses(EncounterClass.Normal, favor: 20);
-
-            Assert.Less(Share(none, p => p >= 3), Share(lots, p => p >= 3),
-                "Prince's Favor must make a run-changing find more likely");
-            Assert.Less(Share(lots, p => p >= 3), 0.15,
-                "...but never routine - Favor fattens the tail, it does not guarantee it");
-        }
-
-        // Favor is the SQUAD'S HIGHEST, never the sum -- otherwise the stat
-        // would scale with squad size and the real decision would become
-        // "bring more bodies" rather than "bring this character".
-        [Test]
-        public void FavorIsMonotonic_MoreIsNeverWorse()
-        {
-            double previous = -1;
-            foreach (int favor in new[] { 0, 5, 10, 20, 40 })
-            {
-                double share = Share(SamplePluses(EncounterClass.Elite, favor), p => p >= 2);
-                Assert.GreaterOrEqual(share, previous, $"favor {favor} paid out worse than less favor");
-                previous = share;
-            }
-        }
-
-        // ---- the reported bug: a floor-3 boss paying out tier 1 / +1 --------
+        // ---- the reported bug: a floor-3 boss paying out tier 1 --------------
         //
         // depthStep 23 is the exact step from the report -- floor 3 runs
         // steps 16..23 (RunDepth.FloorFor: floor N starts at
@@ -431,49 +285,15 @@ namespace PrincesPalace.Domain.Tests
         // Core-side and untestable from Domain; this pins what Domain now
         // guarantees ONCE the caller passes EncounterClass.Boss correctly.
         [Test]
-        public void AFloorThreeBoss_PaysAboveTheCommonBand_MedianPlusThreeOrBetter()
+        public void AFloorThreeBoss_PaysAboveTheLowTiers()
         {
             const int Step = 23;
             var tiers = SampleTiers(EncounterClass.Boss, Step, maxTier: 10);
-            var pluses = SamplePluses(EncounterClass.Boss);
 
             Assert.GreaterOrEqual(Share(tiers, t => t >= 2), 0.80,
                 "a floor-3 boss should clear the common band (tier 1-2) at least 4 times in 5");
             Assert.AreEqual(3, RarityTable.TierFloorFor(EncounterClass.Boss),
                 "the absolute boss floor is what actually guarantees the line above");
-
-            double medianPlus = Median(pluses);
-            Assert.GreaterOrEqual(medianPlus, 3,
-                $"a boss's plus should sit in the upper rungs, not the modal +0 every other class rolls; got median {medianPlus}");
-        }
-
-        [Test]
-        public void BossBonusPlusRungs_NeverPushesPlusPastTheFavorCeiling()
-        {
-            foreach (int favor in new[] { 0, 15, 30, 150 })
-            {
-                var pluses = SamplePluses(EncounterClass.Boss, favor);
-                Assert.LessOrEqual(pluses.Max(), RarityTable.PlusMaxRungsFor(favor),
-                    $"favor {favor}: the boss bonus must clamp to the same ceiling every other roll respects");
-            }
-        }
-
-        [Test]
-        public void BossBonusPlusRungs_OnlyAppliesToBossEncounters()
-        {
-            // A rolled-0 climb (a source that never succeeds) makes the
-            // bonus visible directly: Normal/Elite stay at 0, Boss reads
-            // exactly the bonus constant.
-            Assert.AreEqual(0, RarityTable.RollPlus(EncounterClass.Normal, 0, _ => 999));
-            Assert.AreEqual(0, RarityTable.RollPlus(EncounterClass.Elite, 0, _ => 999));
-            Assert.AreEqual(RarityTable.BossBonusPlusRungs, RarityTable.RollPlus(EncounterClass.Boss, 0, _ => 999));
-        }
-
-        private static double Median(List<int> values)
-        {
-            var sorted = values.OrderBy(v => v).ToList();
-            int mid = sorted.Count / 2;
-            return sorted.Count % 2 == 0 ? (sorted[mid - 1] + sorted[mid]) / 2.0 : sorted[mid];
         }
     }
 }

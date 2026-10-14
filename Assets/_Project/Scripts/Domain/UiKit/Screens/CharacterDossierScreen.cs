@@ -77,7 +77,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SlotCells = new List<NodeRef>();
         public List<NodeRef> SlotIcons = new List<NodeRef>();
         public List<NodeRef> SlotRarityTicks = new List<NodeRef>();
-        public List<NodeRef> SlotRiftGlows = new List<NodeRef>();
         public List<NodeRef> SlotCaptions = new List<NodeRef>();
         public List<NodeRef> SlotNames = new List<NodeRef>();
         public List<NodeRef> SlotArmedRims = new List<NodeRef>();
@@ -98,7 +97,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PackCells = new List<NodeRef>();
         public List<NodeRef> PackIcons = new List<NodeRef>();
         public List<NodeRef> PackRarityTicks = new List<NodeRef>();
-        public List<NodeRef> PackRiftGlows = new List<NodeRef>();
         public List<NodeRef> PackCounts = new List<NodeRef>();
         public List<NodeRef> PackNames = new List<NodeRef>();
         public List<NodeRef> PackArmedRims = new List<NodeRef>();
@@ -487,9 +485,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var icon = Ui.Sprite($"DossierSlotIcon{key}", null, new UiVec(iconSize, iconSize), Place.At(0f, 0f))
                 .Inactive().AsDecor();
-            var glow = Ui.Sprite($"DossierSlotRiftGlow{key}", "proc:ring_hairline", new UiVec(iconSize, iconSize),
-                    Place.At(0f, 0f))
-                .Inactive().AsDecor();
             var tick = Ui.Solid($"DossierSlotTick{key}", "#7F8EA3", new UiVec(12f, 12f),
                     Place.At(-size.X * 0.5f + 9f, size.Y * 0.5f - 9f))
                 .Inactive().AsDecor();
@@ -502,7 +497,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             foreach (var edge in Ui.Rim($"DossierSlot{key}", size, SocketRim)) cell.Children.Add(edge);
             cell.Children.Add(icon);
             cell.Children.Add(worn);
-            cell.Children.Add(glow);
             cell.Children.Add(tick);
             cell.Children.Add(armed);
 
@@ -514,7 +508,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             SlotCells.Add(cell);
             SlotIcons.Add(icon);
-            SlotRiftGlows.Add(glow);
             SlotRarityTicks.Add(tick);
             SlotArmedRims.Add(armed);
             SlotCaptions.Add(caption);
@@ -596,9 +589,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var iconSize = new UiVec(DossierLayout.PackIconSize, DossierLayout.PackIconSize);
 
                 var icon = Ui.Sprite($"DossierPackIcon{i}", null, iconSize, Place.At(0f, 4f)).Inactive().AsDecor();
-                var glow = Ui.Sprite($"DossierPackRiftGlow{i}", "proc:ring_hairline",
-                        new UiVec(DossierLayout.PackIconSize + 12f, DossierLayout.PackIconSize + 12f), Place.At(0f, 4f))
-                    .Inactive().AsDecor();
                 var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(12f, 12f),
                         Place.At(-size.X * 0.5f + 10f, size.Y * 0.5f - 10f))
                     .Inactive().AsDecor();
@@ -612,7 +602,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var cell = Cell($"DossierPackCell{i}", size, Place.At(at.X, at.Y)).Inactive();
                 cell.Children.Add(Ui.Solid($"DossierPackCell{i}Fill", SocketFill, size, Place.At(0f, 0f)).AsDecor());
                 foreach (var edge in Ui.Rim($"DossierPackCell{i}", size, SocketRim)) cell.Children.Add(edge);
-                cell.Children.Add(glow);
                 cell.Children.Add(icon);
                 cell.Children.Add(named);
                 cell.Children.Add(tick);
@@ -621,7 +610,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 PackCells.Add(cell);
                 PackIcons.Add(icon);
-                PackRiftGlows.Add(glow);
                 PackRarityTicks.Add(tick);
                 PackCounts.Add(count);
                 PackNames.Add(named);

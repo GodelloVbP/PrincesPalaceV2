@@ -83,7 +83,7 @@ namespace PrincesPalace.Domain.Combat.Session
             DisplayName = displayName;
             Count = count;
             RestoresMana = restoresMana;
-            Instance = instance ?? new ItemInstance(itemId);
+            Instance = instance ?? ItemInstance.Of(itemId);
         }
 
         public bool IsFake => Instance?.IsFake == true;

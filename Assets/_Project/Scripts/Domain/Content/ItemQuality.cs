@@ -23,8 +23,7 @@ namespace PrincesPalace.Domain.Content
             return affixes == 1 ? Quality.Uncommon : Quality.Common;
         }
 
-        // The palette RarityBands used for the same four names, so a name
-        // keeps its colour when its reader switches from Rarity to Quality.
+        // Hex strings because Domain is engine-free; RarityColors parses them.
         public static string HexColor(Quality quality)
         {
             switch (quality)

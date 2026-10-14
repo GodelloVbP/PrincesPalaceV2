@@ -225,13 +225,13 @@ namespace PrincesPalace.Domain.Tests
         public void Clone_CopiesEverySlot_AsIndependentEntries()
         {
             var original = new EquipmentLoadout();
-            original.Set(EquipmentSlot.Weapon1, "sword_p0", plus: 3);
+            original.Set(EquipmentSlot.Weapon1, "sword_p0", tier: 3);
             original.Set(EquipmentSlot.Head, "iron_helm");
 
             var clone = original.Clone();
 
             Assert.AreEqual("sword_p0", clone.Get(EquipmentSlot.Weapon1));
-            Assert.AreEqual(3, clone.GetPlus(EquipmentSlot.Weapon1));
+            Assert.AreEqual(3, clone.GetInstance(EquipmentSlot.Weapon1).Tier);
             Assert.AreEqual("iron_helm", clone.Get(EquipmentSlot.Head));
         }
 
@@ -260,7 +260,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var original = new EquipmentLoadout();
             original.Set(EquipmentSlot.Weapon1, "sword_p0",
-                modifierIds: new List<string> { "fiery" }, riftTier: 1);
+                modifierIds: new List<string> { "fiery" });
 
             var clone = original.Clone();
 
@@ -274,31 +274,29 @@ namespace PrincesPalace.Domain.Tests
             var originalEntry = original.slots.Find(e => e.slot == EquipmentSlot.Weapon1);
             CollectionAssert.AreEquivalent(new[] { "fiery" }, originalEntry.modifierIds,
                 "Clone() must give each entry its own modifierIds list, not share the original's");
-            Assert.AreEqual(1, original.GetRiftTier(EquipmentSlot.Weapon1));
         }
 
         // ---- rolled modifiers (Phase A1: storage only) -------------------------
 
         [Test]
-        public void Set_ThenGet_RoundTripsModifierIdsAndRiftTier()
+        public void Set_ThenGet_RoundTripsModifierIdsAndTier()
         {
             var loadout = new EquipmentLoadout();
 
-            loadout.Set(EquipmentSlot.Weapon1, "sword_p0", plus: 2,
-                modifierIds: new List<string> { "fiery", "swift" }, riftTier: 2);
+            loadout.Set(EquipmentSlot.Weapon1, "sword_p0", tier: 2,
+                modifierIds: new List<string> { "fiery", "swift" });
 
             CollectionAssert.AreEquivalent(new[] { "fiery", "swift" },
                 loadout.GetModifierIds(EquipmentSlot.Weapon1));
-            Assert.AreEqual(2, loadout.GetRiftTier(EquipmentSlot.Weapon1));
+            Assert.AreEqual(2, loadout.GetInstance(EquipmentSlot.Weapon1).Tier);
         }
 
         [Test]
-        public void AnEmptySlot_ReportsNoModifiersAndZeroRiftTier()
+        public void AnEmptySlot_ReportsNoModifiers()
         {
             var loadout = new EquipmentLoadout();
 
             CollectionAssert.IsEmpty(loadout.GetModifierIds(EquipmentSlot.Weapon1));
-            Assert.AreEqual(0, loadout.GetRiftTier(EquipmentSlot.Weapon1));
         }
 
         // THE aliasing bug this whole axis is at risk of: GetModifierIds must
@@ -318,40 +316,39 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void RemoveEntriesWhere_HandsBackThePlusAsWellAsTheId()
+        public void RemoveEntriesWhere_HandsBackTheTierAsWellAsTheId()
         {
             // SaveData.Reconcile used the ids-only overload and re-added every
-            // orphan at the default plus, so a renamed content id quietly
-            // turned a +5 heirloom into a plain one -- with the item count
+            // orphan at the default tier, so a renamed content id quietly
+            // turned a tier-5 heirloom into a tier-0 one -- with the item count
             // still correct, which is why nothing ever caught it.
             var loadout = new EquipmentLoadout();
-            loadout.Set(EquipmentSlot.Torso, "cuirass", 5);
-            loadout.Set(EquipmentSlot.Head, "helm", 0);
+            loadout.Set(EquipmentSlot.Torso, "cuirass", tier: 5);
+            loadout.Set(EquipmentSlot.Head, "helm");
 
             var removed = loadout.RemoveEntriesWhere(id => id == "cuirass");
 
             Assert.AreEqual(1, removed.Count);
             Assert.AreEqual("cuirass", removed[0].itemId);
-            Assert.AreEqual(5, removed[0].plus, "the honing has to survive being handed back");
+            Assert.AreEqual(5, removed[0].tier, "the tier has to survive being handed back");
             Assert.AreEqual("helm", loadout.Get(EquipmentSlot.Head), "and nothing else moved");
         }
 
         [Test]
-        public void RemoveEntriesWhere_HandsBackModifierIdsAndRiftTierToo()
+        public void RemoveEntriesWhere_HandsBackModifierIdsToo()
         {
-            // Same rule as the plus test above, extended to the two fields
+            // Same rule as the tier test above, extended to the field
             // this phase adds: an orphan's roll must survive being handed
             // back, or a renamed content id would quietly strip a
             // Convergent item's affixes on the way to the stash.
             var loadout = new EquipmentLoadout();
-            loadout.Set(EquipmentSlot.Torso, "cuirass", 5,
-                modifierIds: new List<string> { "fiery", "swift" }, riftTier: 2);
+            loadout.Set(EquipmentSlot.Torso, "cuirass",
+                modifierIds: new List<string> { "fiery", "swift" }, tier: 5);
 
             var removed = loadout.RemoveEntriesWhere(id => id == "cuirass");
 
             Assert.AreEqual(1, removed.Count);
             CollectionAssert.AreEquivalent(new[] { "fiery", "swift" }, removed[0].modifierIds);
-            Assert.AreEqual(2, removed[0].riftTier);
         }
 
         [Test]
@@ -360,7 +357,7 @@ namespace PrincesPalace.Domain.Tests
             // Same tolerant posture as the ids-only overload it sits beside.
             var loadout = new EquipmentLoadout();
             loadout.Set(EquipmentSlot.Torso, "cuirass");
-            loadout.slots.Add(new EquipmentSlotEntry(EquipmentSlot.Head, "", 0));
+            loadout.slots.Add(new EquipmentSlotEntry(EquipmentSlot.Head, ""));
 
             loadout.RemoveEntriesWhere(id => false);
 

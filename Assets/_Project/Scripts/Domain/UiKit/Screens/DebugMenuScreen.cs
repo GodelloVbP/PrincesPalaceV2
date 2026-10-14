@@ -68,9 +68,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The grant bar: PLUS and QUANTITY are sticky modifiers (contract 3),
         // not per-row -- one stepper and one x1/x5/x10 selector serve every
         // row on every page until the menu closes.
-        public NodeRef PlusMinusButton;
-        public NodeRef PlusPlusButton;
-        public NodeRef PlusLabel;
         public List<NodeRef> QtyButtons = new List<NodeRef>();
         public NodeRef ToastLabel;
 
@@ -208,30 +205,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             chrome.Add(pager.Prev);
             chrome.Add(pager.Next);
 
-            // --- grant bar: plus stepper, quantity selector, toast -------------------
+            // --- grant bar: quantity selector, toast ---------------------------------
             const float GrantBarY = -330f;
-
-            // NoChrome, same as the pager arrows -- every plate shape the kit
-            // has is a wide rectangle (3:1 at the narrowest, ButtonPlateArt's
-            // own header), and a "-"/"+" stepper is the one control on this
-            // screen that is honestly square. Forcing it onto a 3:1 plate is
-            // what PagerPrev/PagerNext already refuse to do.
-            var minus = Ui.Button("DebugPlusMinusButton", UiStrings.DebugPlusMinus, new UiVec(50f, 50f), 24,
-                    Place.At(-160f, GrantBarY))
-                .NoChrome();
-            var plusLabel = Ui.Label("DebugPlusLabel", UiStrings.DebugPlusValue, new UiVec(140f, 44f), 20,
-                    "#EDE6FF", Place.At(-60f, GrantBarY))
-                .AsDecor();
-            var plus = Ui.Button("DebugPlusPlusButton", UiStrings.DebugPlusPlus, new UiVec(50f, 50f), 24,
-                    Place.At(40f, GrantBarY))
-                .NoChrome();
-
-            screen.PlusMinusButton = minus;
-            screen.PlusLabel = plusLabel;
-            screen.PlusPlusButton = plus;
-            chrome.Add(minus);
-            chrome.Add(plusLabel);
-            chrome.Add(plus);
 
             var qtyTexts = new[] { UiStrings.DebugQty1, UiStrings.DebugQty5, UiStrings.DebugQty10 };
             for (int i = 0; i < qtyTexts.Length; i++)

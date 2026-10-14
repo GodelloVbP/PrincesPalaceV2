@@ -5,24 +5,14 @@ namespace PrincesPalace.Domain.Equipment
 {
     // Which way the pack is ordered, chosen by the player.
     //
-    // THREE KEYS, NOT FOUR. The ask was "tier / rarity / +'s / name", and
-    // rarity is not a fourth axis in this game: RarityBands.For(tier) derives
-    // the band FROM the tier, so ordering by rarity is ordering by tier with
-    // the precision thrown away. Two buttons producing the same list is the
-    // same failure as a control that stores nothing -- the player presses it,
-    // believes something changed, and is wrong -- so rarity folds into Tier
-    // and the tick on each row keeps showing the band.
+    // TWO KEYS. Quality is derived from what rolled on a copy and tier is its
+    // own number; honing belongs to the slot, so no bag copy has a plus to
+    // order by.
     public enum BagSortKey
     {
         // The default, and the one the pack has always used: wearable things
         // first, grouped by kind, best first within a kind.
         Tier,
-
-        // Most honed first. The reason this is worth its own key is generated
-        // gear: a pack full of one-count stacks that differ only by plus is
-        // exactly the case where "which of these is the good one" is hard to
-        // see under any other ordering.
-        Plus,
 
         // Alphabetical, for finding a thing you already know the name of.
         Name,
@@ -35,7 +25,6 @@ namespace PrincesPalace.Domain.Equipment
         public static readonly BagSortKey[] All =
         {
             BagSortKey.Tier,
-            BagSortKey.Plus,
             BagSortKey.Name,
         };
 
@@ -51,27 +40,20 @@ namespace PrincesPalace.Domain.Equipment
 
         // DETERMINISTIC TO THE LAST TIE-BREAK, whichever key is chosen, and for
         // the reason BagView.Sorted already states: generated gear means dozens
-        // of stacks that differ only by plus, and any pair left unordered would
-        // swap places between refreshes -- a list that reshuffles under the
-        // cursor as you equip things. Every branch below therefore ends on Id.
+        // of stacks that differ only by tier or roll, and any pair left
+        // unordered would swap places between refreshes -- a list that
+        // reshuffles under the cursor as you equip things. Every branch below
+        // therefore ends on Id.
         public static IReadOnlyList<BagItem> By(IEnumerable<BagItem> items, BagSortKey key)
         {
             if (items == null) return new List<BagItem>();
 
             switch (key)
             {
-                case BagSortKey.Plus:
-                    return items
-                        .OrderByDescending(i => i.Plus)
-                        .ThenByDescending(i => i.Tier)
-                        .ThenBy(i => i.Name, System.StringComparer.Ordinal)
-                        .ThenBy(i => i.Id, System.StringComparer.Ordinal)
-                        .ToList();
-
                 case BagSortKey.Name:
                     return items
                         .OrderBy(i => i.Name, System.StringComparer.Ordinal)
-                        .ThenByDescending(i => i.Plus)
+                        .ThenByDescending(i => i.Tier)
                         .ThenBy(i => i.Id, System.StringComparer.Ordinal)
                         .ToList();
 

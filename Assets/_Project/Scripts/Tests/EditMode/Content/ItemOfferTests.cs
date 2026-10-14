@@ -57,8 +57,7 @@ namespace PrincesPalace.Domain.Tests
             var offers = ItemOfferTable.Choose(Pool(), targetTier: 0, maxTier: 10, AlwaysFirst);
 
             Assert.IsNotEmpty(offers);
-            Assert.LessOrEqual(offers.Max(o => o.Tier), ItemOfferTable.TierSpread,
-                "A target of 0 should not be offering upgraded gear");
+            Assert.AreEqual(0, offers.Max(o => o.Tier), "A target of 0 should not be offering upgraded gear");
         }
 
         [Test]
@@ -67,19 +66,17 @@ namespace PrincesPalace.Domain.Tests
             var offers = ItemOfferTable.Choose(Pool(), targetTier: 10, maxTier: 10, AlwaysFirst);
 
             Assert.IsNotEmpty(offers);
-            Assert.GreaterOrEqual(offers.Min(o => o.Tier), 10 - ItemOfferTable.TierSpread,
-                "A deep target should not be offering starter gear");
+            Assert.AreEqual(10, offers.Min(o => o.Tier), "A deep target should not be offering starter gear");
         }
 
         [Test]
-        public void EveryOffer_SitsWithinTheSpreadOfItsTarget()
+        public void EveryOffer_SitsAtItsTarget_WhenThePoolHasEnoughThere()
         {
             for (int target = 0; target <= 10; target++)
             {
                 foreach (var offer in ItemOfferTable.Choose(Pool(), target, maxTier: 10, AlwaysFirst))
                 {
-                    Assert.LessOrEqual(System.Math.Abs(offer.Tier - target), ItemOfferTable.TierSpread,
-                        $"target {target} offered tier {offer.Tier}");
+                    Assert.AreEqual(target, offer.Tier, $"target {target} offered tier {offer.Tier}");
                 }
             }
         }
@@ -90,7 +87,7 @@ namespace PrincesPalace.Domain.Tests
             var offers = ItemOfferTable.Choose(Pool(), targetTier: -4, maxTier: 10, AlwaysFirst);
 
             Assert.IsNotEmpty(offers);
-            Assert.LessOrEqual(offers.Max(o => o.Tier), ItemOfferTable.TierSpread);
+            Assert.AreEqual(0, offers.Max(o => o.Tier));
         }
 
         // A pool too thin at the target depth must still fill three slots by
@@ -141,53 +138,39 @@ namespace PrincesPalace.Domain.Tests
             Assert.DoesNotThrow(() => ItemOfferTable.Choose(Pool(), 2, 10, _ => -5));
         }
 
-        // The offer carries the copy's plus alongside its tier, so what the
-        // card shows and what the bag receives are the same object.
+        // The offer names the base and the tier of the copy, so what the card
+        // shows and what the bag receives are the same object.
         [Test]
-        public void AnOfferCarriesItsPlusSeparatelyFromItsTier()
+        public void AnOfferCarriesItsBaseAndItsTier()
         {
-            var offer = new ItemOffer("leather_coif_p4", 4).WithPlus(3);
+            var offer = new ItemOffer("leather_coif", 4);
 
-            Assert.AreEqual("leather_coif_p4", offer.ItemId);
+            Assert.AreEqual("leather_coif", offer.ItemId);
             Assert.AreEqual(4, offer.Tier);
-            Assert.AreEqual(3, offer.Plus);
-            Assert.AreEqual(0, new ItemOffer("leather_coif_p4", 4).Plus, "An offer is unhoned unless said otherwise");
+            Assert.AreEqual("leather_coif", offer.Instance.ItemId);
+            Assert.AreEqual(4, offer.Instance.Tier);
         }
 
-        // A fresh offer is Ordinary with no modifiers -- the same "unrolled
-        // by default" posture Plus already has.
         [Test]
-        public void AFreshOfferIsOrdinaryWithNoModifiers()
+        public void AFreshOfferHasNoModifiers()
         {
-            var offer = new ItemOffer("leather_coif_p4", 4);
+            var offer = new ItemOffer("leather_coif", 4);
 
-            Assert.AreEqual(RiftTier.Ordinary, offer.RiftTier);
             Assert.IsNotNull(offer.Modifiers, "absent modifiers should read as an empty list, never null");
             Assert.IsEmpty(offer.Modifiers);
         }
 
-        // WithPlus and WithModifiers each move ONE axis. Chaining them must
-        // not let the second call clobber the first -- that was the actual
-        // bug shape this pins against (an early WithPlus implementation that
-        // rebuilt the struct from only ItemId/Tier would have silently
-        // dropped whatever WithModifiers had just set).
+        // WithModifiers moves ONE axis: the base and the tier stay.
         [Test]
-        public void WithPlusAndWithModifiersComposeWithoutClobberingEachOther()
+        public void WithModifiersKeepsTheBaseAndTheTier()
         {
-            var offer = new ItemOffer("leather_coif_p4", 4)
-                .WithModifiers(RiftTier.Convergent, new List<string> { "fiery_test", "swift_test" })
-                .WithPlus(3);
+            var offer = new ItemOffer("leather_coif", 4)
+                .WithModifiers(new List<string> { "fiery_test", "swift_test" });
 
-            Assert.AreEqual(3, offer.Plus, "WithPlus after WithModifiers must not lose the plus");
-            Assert.AreEqual(RiftTier.Convergent, offer.RiftTier, "WithPlus must not reset the rift tier");
+            Assert.AreEqual("leather_coif", offer.ItemId);
+            Assert.AreEqual(4, offer.Tier);
             CollectionAssert.AreEqual(new[] { "fiery_test", "swift_test" }, offer.Modifiers);
-
-            var reordered = new ItemOffer("leather_coif_p4", 4)
-                .WithPlus(3)
-                .WithModifiers(RiftTier.Convergent, new List<string> { "fiery_test", "swift_test" });
-
-            Assert.AreEqual(3, reordered.Plus, "WithModifiers after WithPlus must not lose the plus");
-            Assert.AreEqual(RiftTier.Convergent, reordered.RiftTier);
+            CollectionAssert.AreEqual(new[] { "fiery_test", "swift_test" }, offer.Instance.ModifierIds);
         }
     }
 

@@ -59,10 +59,10 @@ namespace PrincesPalace.PlayModeTests
         private static Character Member(string id) => Save.roster.First(c => c.definitionId == id);
 
         private static ItemInstance FakeTorso(string lot = "lot-a") =>
-            new ItemInstance(Torso, provenance: FakeWear.NewFakeGear(lot));
+            ItemInstance.Of(Torso, provenance: FakeWear.NewFakeGear(lot));
 
         private static ItemInstance LotPotion(string lot, bool fake) =>
-            new ItemInstance(Potion, provenance: new Provenance(lot, fake));
+            ItemInstance.Of(Potion, provenance: new Provenance(lot, fake));
 
         private static RunOrchestrator.FightSettlement SettleARoomFight()
         {
@@ -101,8 +101,8 @@ namespace PrincesPalace.PlayModeTests
         {
             var save = SaveData.CreateNew();
             InventoryOps.Add(save.stockpiledItems, Potion, 2);
-            InventoryOps.Add(save.stockpiledItems, Torso, 1, plus: 3);
-            save.roster.First(c => c.definitionId == "sheep").equipment.Set(EquipmentSlot.Head, "leather_coif", plus: 1);
+            InventoryOps.Add(save.stockpiledItems, Torso, 1, tier: 3);
+            save.roster.First(c => c.definitionId == "sheep").equipment.Set(EquipmentSlot.Head, "leather_coif", tier: 1);
 
             // A version-7 file: no `provenance` anywhere, version 7.
             string json = JsonUtility.ToJson(save);
@@ -120,12 +120,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(Potion, loaded.stockpiledItems[0].itemId);
             Assert.AreEqual(2, loaded.stockpiledItems[0].count);
             Assert.AreEqual(Torso, loaded.stockpiledItems[1].itemId);
-            Assert.AreEqual(3, loaded.stockpiledItems[1].plus);
+            Assert.AreEqual(3, loaded.stockpiledItems[1].tier);
             Assert.IsFalse(loaded.stockpiledItems.Any(e => e.provenance.HasLot || e.provenance.fake));
 
             var head = loaded.roster.First(c => c.definitionId == "sheep").equipment.GetInstance(EquipmentSlot.Head);
             Assert.AreEqual("leather_coif", head.ItemId);
-            Assert.AreEqual(1, head.Plus);
+            Assert.AreEqual(1, head.Tier);
             Assert.IsFalse(head.HasLot);
         }
 
@@ -152,11 +152,11 @@ namespace PrincesPalace.PlayModeTests
         public void Reconcile_RemovesAWornOutFake_FromTheBagAndTheBody_AndNothingElse()
         {
             var save = SaveData.CreateNew();
-            InventoryOps.Add(save.stockpiledItems, new ItemInstance(Torso, provenance: new Provenance("lot-0", true, 0)));
-            InventoryOps.Add(save.stockpiledItems, new ItemInstance(Torso, provenance: new Provenance("lot-1", true, 1)));
+            InventoryOps.Add(save.stockpiledItems, ItemInstance.Of(Torso, provenance: new Provenance("lot-0", true, 0)));
+            InventoryOps.Add(save.stockpiledItems, ItemInstance.Of(Torso, provenance: new Provenance("lot-1", true, 1)));
             InventoryOps.Add(save.stockpiledItems, LotPotion("lot-p", fake: true));
             var body = save.roster.First(c => c.definitionId == "sheep").equipment;
-            body.Put(EquipmentSlot.Torso, new ItemInstance(Torso, provenance: new Provenance("lot-w", true, 0)));
+            body.Put(EquipmentSlot.Torso, ItemInstance.Of(Torso, provenance: new Provenance("lot-w", true, 0)));
 
             save.Reconcile();
 
@@ -184,7 +184,7 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.AreEqual(new[] { "", "lot-g" }, Save.stockpiledItems.Select(e => e.provenance.lot).ToArray());
 
-            RunOrchestrator.SpendConsumable(new ItemInstance(Potion));
+            RunOrchestrator.SpendConsumable(ItemInstance.Of(Potion));
 
             CollectionAssert.AreEqual(new[] { "lot-g" }, Save.stockpiledItems.Select(e => e.provenance.lot).ToArray(),
                 "spending the ordinary potion never takes the genuine lot in its place");
@@ -282,7 +282,7 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.StartRun(71UL);
             Member("sheep").equipment.Put(EquipmentSlot.Torso,
-                new ItemInstance(Torso, provenance: new Provenance("lot-g")));
+                ItemInstance.Of(Torso, provenance: new Provenance("lot-g")));
 
             for (int i = 0; i < 4; i++) Assert.IsEmpty(SettleARoomFight().Notices);
 

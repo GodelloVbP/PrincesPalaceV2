@@ -66,10 +66,6 @@ namespace PrincesPalace
     // SameStack is the ONE merge predicate. Whether two copies are "the same
     // object for counting purposes" is decided here and nowhere else.
     //
-    // Plus and RiftTier, and the constructor that takes them, are the
-    // pre-copy-model shape. They stay only until the callers listed in
-    // docs/handoffs/item_redesign/I2A_REMAINING.md move to Of(); the
-    // compiler's CS0618 list is that worklist.
     public sealed class ItemInstance
     {
         private static readonly IReadOnlyList<string> NoModifiers = new List<string>();
@@ -85,34 +81,20 @@ namespace PrincesPalace
         // 0..TierCap. Clamped on construction, so no reader has to.
         public readonly int Tier;
 
-        [Obsolete("Honing lives on the slot (RunSnapshot.slotHoning, SlotHoning). See docs/handoffs/item_redesign/I2A_REMAINING.md.")]
-        public readonly int Plus;
-
         // Never null; a private copy, so a caller's list cannot alias it.
         public readonly IReadOnlyList<string> ModifierIds;
-
-        [Obsolete("Rift tier is gone; quality derives from ModifierIds (ItemQuality). See docs/handoffs/item_redesign/I2A_REMAINING.md.")]
-        public readonly int RiftTier;
 
         private readonly Provenance _provenance;
 
         // THE constructor of the copy model.
-        public static ItemInstance Of(string baseId, int tier, IEnumerable<string> modifierIds = null,
+        public static ItemInstance Of(string baseId, int tier = 0, IEnumerable<string> modifierIds = null,
             Provenance provenance = null) =>
-#pragma warning disable 618
-            new ItemInstance(baseId, 0, modifierIds, 0, provenance, tier);
-#pragma warning restore 618
+            new ItemInstance(baseId, tier, modifierIds, provenance);
 
-        [Obsolete("Use ItemInstance.Of(baseId, tier, modifierIds, provenance). See docs/handoffs/item_redesign/I2A_REMAINING.md.")]
-        public ItemInstance(string itemId, int plus = 0, IEnumerable<string> modifierIds = null,
-            int riftTier = 0, Provenance provenance = null, int tier = 0)
+        private ItemInstance(string itemId, int tier, IEnumerable<string> modifierIds, Provenance provenance)
         {
             ItemId = itemId ?? "";
             Tier = ClampTier(tier);
-#pragma warning disable 618
-            Plus = plus;
-            RiftTier = riftTier;
-#pragma warning restore 618
             ModifierIds = modifierIds == null ? NoModifiers : new List<string>(modifierIds);
             _provenance = Provenance.CopyOrPlain(provenance);
         }
@@ -133,16 +115,14 @@ namespace PrincesPalace
         // APIs, which take List<string>.
         public List<string> ModifierList() => new List<string>(ModifierIds);
 
-#pragma warning disable 618
         public ItemInstance WithProvenance(Provenance provenance) =>
-            new ItemInstance(ItemId, Plus, ModifierIds, RiftTier, provenance, Tier);
+            new ItemInstance(ItemId, Tier, ModifierIds, provenance);
 
         // THE MERGE PREDICATE.
         //
         // Ordinary copies: the same (base id, tier, modifier SET) -- the roll
         // that produced ["fiery","swift"] is the same item as
-        // ["swift","fiery"]. Plus and RiftTier still key the stack while they
-        // exist, so no two copies that differ today merge before they go.
+        // ["swift","fiery"].
         //
         // A copy with a lot is only ever the same stack as the SAME lot. Not
         // "same lot and same everything else": a lot names one physical copy,
@@ -153,12 +133,8 @@ namespace PrincesPalace
             if (a.ItemId != b.ItemId) return false;
             if (a.HasLot || b.HasLot) return a.Lot == b.Lot;
 
-            return a.Tier == b.Tier
-                && a.Plus == b.Plus
-                && a.RiftTier == b.RiftTier
-                && ModifiersMatch(a.ModifierIds, b.ModifierIds);
+            return a.Tier == b.Tier && ModifiersMatch(a.ModifierIds, b.ModifierIds);
         }
-#pragma warning restore 618
 
         private static bool ModifiersMatch(IReadOnlyList<string> a, IReadOnlyList<string> b)
         {
@@ -171,9 +147,7 @@ namespace PrincesPalace
         {
             string mods = ModifierIds.Count == 0 ? "" : " [" + string.Join(",", ModifierIds.ToArray()) + "]";
             string lot = HasLot ? " lot=" + Lot + (IsFake ? " fake(" + FightsLeft + ")" : "") : "";
-#pragma warning disable 618
-            return ItemId + " t" + Tier + " +" + Plus + mods + " r" + RiftTier + lot;
-#pragma warning restore 618
+            return ItemId + " t" + Tier + mods + lot;
         }
     }
 }

@@ -8,6 +8,21 @@ namespace PrincesPalace.Domain.Content
     // adapter -- which is two places for the same six strings to drift.
     public static class RelicRarityNames
     {
+        // The hex a relic's rarity is drawn in. Engine-free: the Unity side
+        // parses it once (RarityColors).
+        public static string HexColor(RelicRarity rarity)
+        {
+            switch (rarity)
+            {
+                case RelicRarity.Common: return "#9A93A8";
+                case RelicRarity.Uncommon: return "#6FBF73";
+                case RelicRarity.Rare: return "#5AA6E8";
+                case RelicRarity.UltraRare: return "#B48CFF";
+                case RelicRarity.Mythic: return "#F0913D";
+                default: return "#FFD76B";
+            }
+        }
+
         public static string Of(RelicRarity rarity)
         {
             switch (rarity)

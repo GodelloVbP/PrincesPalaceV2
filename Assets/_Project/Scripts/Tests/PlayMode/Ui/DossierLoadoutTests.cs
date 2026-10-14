@@ -243,10 +243,14 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenOnTheMap(Odette);
 
-            var longest = ContentDatabase.Equippables
-                .OrderByDescending(i => ItemDescription.CardSummary(ItemInstance.Of(i.id, 0), 0).Length)
+            // Longest over every item at every tier of its art ladder: the
+            // numbers (and so the text) grow with the tier.
+            var (longest, longestTier) = ContentDatabase.Equippables
+                .SelectMany(i => Enumerable.Range(0, i.curve.maxTier + 1).Select(t => (Item: i, Tier: t)))
+                .OrderByDescending(x => ItemDescription.CardSummary(ItemInstance.Of(x.Item.id, x.Tier), 0).Length)
                 .First();
-            Pack(longest.id);
+            InventoryOps.Add(SaveSlotManager.CurrentSave.stockpiledItems, longest.id, 1, tier: longestTier);
+            _dossier.Refresh();
 
             DossierPane.Select(DossierPane.PackItemCell(_dossier, longest.id));
             yield return null;
@@ -667,7 +671,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenOnTheMap(Shawn);
             var character = Of(Shawn);
             var item = ContentDatabase.Equippables.FirstOrDefault(i =>
-                ItemDescription.Compare(character, ItemInstance.Of(i.id, 0), 0).StatDelta.maxHealth > 0);
+                ItemDescription.Compare(character, ItemInstance.Of(i.id, 0)).StatDelta.maxHealth > 0);
             Assert.IsNotNull(item, "fixture: no item in the catalogue raises health");
             Pack(item.id);
 

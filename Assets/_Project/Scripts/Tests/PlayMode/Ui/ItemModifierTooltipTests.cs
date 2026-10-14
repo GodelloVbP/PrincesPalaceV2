@@ -41,25 +41,25 @@ namespace PrincesPalace.PlayModeTests
         // Bases here (10, 8) are fiery/emberguard's CURRENT authored
         // magnitudes -- halved from 20/15 in the affix-power-down pass; see
         // modifiers.json's own entries.
-        private static int FieryExpectedDamage(int itemTier, RiftTier riftTier)
+        private static int FieryExpectedDamage(int itemTier)
         {
-            double scale = ModifierMagnitude.Scale(itemTier, riftTier);
+            double scale = ModifierMagnitude.Scale(itemTier);
             return Rounding.AwayFromZero((float)(10 * scale));
         }
 
-        private static int EmberguardExpectedResistPercent(int itemTier, RiftTier riftTier)
+        private static int EmberguardExpectedResistPercent(int itemTier)
         {
-            double scale = ModifierMagnitude.Scale(itemTier, riftTier);
+            double scale = ModifierMagnitude.Scale(itemTier);
             int resistanceFlat = Rounding.AwayFromZero((float)(8 * scale));
             return ItemStatLines.DamageReductionPercent(resistanceFlat);
         }
 
         [Test]
-        public void ModifierEffectsForItem_ScalesTheRealFieryEntry_ByTierAndRiftTier()
+        public void ModifierEffectsForItem_ScalesTheRealFieryEntry_ByTier()
         {
-            int expectedDamage = FieryExpectedDamage(itemTier: 3, RiftTier.RiftForged);
+            int expectedDamage = FieryExpectedDamage(itemTier: 3);
 
-            var scaled = ContentDatabase.ModifierEffectsForItem(3, RiftTier.RiftForged,
+            var scaled = ContentDatabase.ModifierEffectsForItem(3,
                 new System.Collections.Generic.List<string> { "fiery" });
 
             Assert.IsTrue(scaled.Count > 0, "the real fiery modifier must resolve to real effects");
@@ -71,13 +71,13 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void ModifierEffectsForItem_AtOrdinary_ScalesByExactlyOne()
+        public void ModifierEffectsForItem_AtTierZero_ScalesByExactlyOne()
         {
-            var scaled = ContentDatabase.ModifierEffectsForItem(0, RiftTier.Ordinary,
+            var scaled = ContentDatabase.ModifierEffectsForItem(0,
                 new System.Collections.Generic.List<string> { "fiery" });
 
             var damageRider = scaled.Single(pair => pair.Effect.Kind == EffectKind.ElementalDamageOnHitPercent);
-            Assert.AreEqual(10, damageRider.Effect.Magnitude, "tier 0, Ordinary: scale is exactly 1.0, unscaled base survives untouched");
+            Assert.AreEqual(10, damageRider.Effect.Magnitude, "tier 0: scale is exactly 1.0, unscaled base survives untouched");
         }
 
         [Test]
@@ -86,11 +86,9 @@ namespace PrincesPalace.PlayModeTests
             var item = AnyEquippable();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            int expectedDamage = FieryExpectedDamage(4, RiftTier.RiftForged);
+            int expectedDamage = FieryExpectedDamage(4);
 
-            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4), plus: 0, viewer: null,
-                riftTier: RiftTier.RiftForged,
-                modifierIds: new System.Collections.Generic.List<string> { "fiery" });
+            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4, new[] { "fiery" }));
 
             StringAssert.Contains("AFFIXES", card);
             StringAssert.Contains($"Fiery -- <color={ModifierEffectText.KeywordHex}>+{expectedDamage}%</color> Fire dmg on hit", card);
@@ -102,11 +100,9 @@ namespace PrincesPalace.PlayModeTests
             var item = AnyEquippable();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            int expectedResistPercent = EmberguardExpectedResistPercent(4, RiftTier.RiftForged);
+            int expectedResistPercent = EmberguardExpectedResistPercent(4);
 
-            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4), plus: 0, viewer: null,
-                riftTier: RiftTier.RiftForged,
-                modifierIds: new System.Collections.Generic.List<string> { "emberguard" });
+            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4, new[] { "emberguard" }));
 
             StringAssert.Contains("AFFIXES", card);
             StringAssert.Contains($"Emberguard -- <color={ModifierEffectText.KeywordHex}>-{expectedResistPercent}%</color> Fire dmg taken", card);
@@ -122,12 +118,10 @@ namespace PrincesPalace.PlayModeTests
             var item = AnyEquippable();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            int expectedDamage = FieryExpectedDamage(4, RiftTier.RiftForged);
-            int expectedResistPercent = EmberguardExpectedResistPercent(4, RiftTier.RiftForged);
+            int expectedDamage = FieryExpectedDamage(4);
+            int expectedResistPercent = EmberguardExpectedResistPercent(4);
 
-            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4), plus: 0, viewer: null,
-                riftTier: RiftTier.RiftForged,
-                modifierIds: new System.Collections.Generic.List<string> { "fiery", "emberguard" });
+            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4, new[] { "fiery", "emberguard" }));
 
             StringAssert.Contains($"Fiery -- <color={ModifierEffectText.KeywordHex}>+{expectedDamage}%</color> Fire dmg on hit", card);
             StringAssert.Contains($"Emberguard -- <color={ModifierEffectText.KeywordHex}>-{expectedResistPercent}%</color> Fire dmg taken", card);
@@ -155,13 +149,13 @@ namespace PrincesPalace.PlayModeTests
         private static ItemDefinition EquippableInSlot(EquipmentSlot slot) =>
             ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.equipSlot == slot);
 
-        private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier, System.Collections.Generic.List<string> modifierIds)
+        private static Character FreshCharacterWearing(ItemDefinition item, System.Collections.Generic.List<string> modifierIds)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
-            character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, riftTier: (int)riftTier);
+            character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds);
             return character;
         }
 
@@ -175,10 +169,9 @@ namespace PrincesPalace.PlayModeTests
             // Compare's own header notes hovering a candidate already worn
             // is safe (a zero stat delta, but a real affix diff), which is
             // exactly what this test needs: one item definition, two rolls.
-            var character = FreshCharacterWearing(item, RiftTier.Ordinary, new List<string> { "frosty" });
+            var character = FreshCharacterWearing(item, new List<string> { "frosty" });
 
-            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4), candidatePlus: 0,
-                riftTier: RiftTier.Ordinary, modifierIds: new List<string> { "fiery" });
+            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4, new[] { "fiery" }));
 
             StringAssert.Contains($"<color={ItemStatLines.GainHex}>Fiery", body,
                 "an affix the candidate rolls that the equipped copy does not have is a gain");
@@ -192,10 +185,9 @@ namespace PrincesPalace.PlayModeTests
             var item = EquippableInSlot(EquipmentSlot.Head);
             Assert.IsNotNull(item, "fixture: content has a Head-slot equippable");
 
-            var character = FreshCharacterWearing(item, RiftTier.Ordinary, new List<string> { "fiery" });
+            var character = FreshCharacterWearing(item, new List<string> { "fiery" });
 
-            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4), candidatePlus: 0,
-                riftTier: RiftTier.Ordinary, modifierIds: new List<string> { "fiery" });
+            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4, new[] { "fiery" }));
 
             StringAssert.Contains("Fiery --", body, "the shared affix still lists");
             StringAssert.DoesNotContain($"<color={ItemStatLines.GainHex}>Fiery", body,
@@ -217,8 +209,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(definition, "fixture: content has at least one character");
             var character = new Character(definition.id);
 
-            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4), candidatePlus: 0,
-                riftTier: RiftTier.Ordinary, modifierIds: new List<string> { "fiery" });
+            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4, new[] { "fiery" }));
 
             StringAssert.Contains("AFFIXES", body);
             StringAssert.Contains("Fiery --", body);

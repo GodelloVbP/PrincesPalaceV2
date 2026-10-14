@@ -96,14 +96,14 @@ namespace PrincesPalace.Domain.Tests
         // would do. When they are there they must WIN over tier/plus, or the
         // whole evaluator is decoration.
         [Test]
-        public void ScoredOffersOutrankTierAndPlus()
+        public void ScoredOffersOutrankTier()
         {
             var offers = new List<Rewards.ItemOffer>
             {
                 // The biggest number on the table, and worthless: tier 5,
                 // scored at nothing.
-                new Rewards.ItemOffer("gilded_helm", tier: 5, plus: 3),
-                new Rewards.ItemOffer("plain_sword", tier: 1, plus: 0),
+                new Rewards.ItemOffer("gilded_helm", tier: 5),
+                new Rewards.ItemOffer("plain_sword", tier: 1),
             };
 
             var view = new RunView(1f, 0, 1, 0, null).WithOfferScores(new[] { 0f, 250f });
@@ -117,12 +117,12 @@ namespace PrincesPalace.Domain.Tests
         // would mean the two lists had drifted -- both have to land back on
         // a tier/plus read.
         [Test]
-        public void AnUnscoredOfferFallsBackToTierThenPlus()
+        public void AnUnscoredOfferFallsBackToTier()
         {
             var offers = new List<Rewards.ItemOffer>
             {
-                new Rewards.ItemOffer("plain_sword", tier: 1, plus: 0),
-                new Rewards.ItemOffer("gilded_helm", tier: 5, plus: 3),
+                new Rewards.ItemOffer("plain_sword", tier: 1),
+                new Rewards.ItemOffer("gilded_helm", tier: 5),
             };
 
             var noScores = new RunView(1f, 0, 1, 0, null);

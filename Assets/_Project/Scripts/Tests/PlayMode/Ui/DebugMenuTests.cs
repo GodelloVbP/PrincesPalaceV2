@@ -88,8 +88,8 @@ namespace PrincesPalace.PlayModeTests
         // fresh root and the menu reads SaveSlotManager.CurrentSave live.
         //
         // What does need it is the menu's own view state, which by design
-        // only a scene reload resets (DebugMenuController: plus and quantity
-        // are sticky, category and page persist), plus the toast, whose text
+        // only a scene reload resets (DebugMenuController: quantity
+        // is sticky, category and page persist), plus the toast, whose text
         // outlives the grant that wrote it -- a refusal test would otherwise
         // pass on the previous test's refusal.
         private IEnumerator TheHub()
@@ -107,8 +107,6 @@ namespace PrincesPalace.PlayModeTests
             // opening ones.
             Click("DebugCategory0");
             Click("DebugQty0");
-            // 10 is ItemUpgrade.MaxPlus; PlusClampsAtTen pins it.
-            for (int i = 0; i < 10; i++) Click("DebugPlusMinusButton");
             Named("DebugToastLabel").GetComponent<TMP_Text>().text = "";
         }
 
@@ -477,17 +475,16 @@ namespace PrincesPalace.PlayModeTests
             Assert.LessOrEqual(shown, DebugMenuCatalog.RowsPerPage);
         }
 
-        // ---- the grant bar: plus stepper and quantity selector -------------------------
+        // ---- the grant bar: quantity selector -------------------------------------------
 
         [UnityTest]
-        public IEnumerator PlusAndQuantityAreStickyAndBothReachTheGrant()
+        public IEnumerator QuantityIsStickyAndReachesTheGrant()
         {
-            // Contract 3: plus and quantity are STICKY modifiers, set once on
-            // the grant bar and applied to whichever row is next clicked --
-            // not per-row, and not reset by paging or filtering.
+            // Contract 3: quantity is a STICKY modifier, set once on the grant
+            // bar and applied to whichever row is next clicked -- not per-row,
+            // and not reset by paging or filtering.
             yield return OpenTheMenu();
 
-            for (int i = 0; i < 7; i++) Click("DebugPlusPlusButton");
             Click("DebugQty1"); // x5
             yield return null;
 
@@ -499,57 +496,6 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual(5, Save.stockpiledItems.Sum(e => e.count), "x5 must grant five, not one");
-            Assert.IsTrue(Save.stockpiledItems.All(e => e.plus == 7),
-                "the plus stepper's value must reach the grant");
-        }
-
-        [UnityTest]
-        public IEnumerator PlusClampsAtTen()
-        {
-            // ItemUpgrade.MaxPlus, pinned as a literal per this repo's own
-            // rule against a test recomputing a production formula for its
-            // own expected value.
-            yield return OpenTheMenu();
-
-            for (int i = 0; i < 15; i++) Click("DebugPlusPlusButton");
-            yield return null;
-
-            StringAssert.Contains("+10", Named("DebugPlusLabel").GetComponent<TMP_Text>().text);
-        }
-
-        [UnityTest]
-        public IEnumerator PlusCannotGoBelowZero()
-        {
-            yield return OpenTheMenu();
-
-            Click("DebugPlusMinusButton");
-            Click("DebugPlusMinusButton");
-            yield return null;
-
-            StringAssert.Contains("+0", Named("DebugPlusLabel").GetComponent<TMP_Text>().text);
-        }
-
-        [UnityTest]
-        public IEnumerator PlusIsIgnoredWhenGrantingAConsumable()
-        {
-            yield return OpenTheMenu();
-
-            Select(DebugCategory.Consumables);
-            for (int i = 0; i < 5; i++) Click("DebugPlusPlusButton");
-            yield return null;
-
-            Assert.IsTrue(Named("DebugRow0").activeSelf,
-                "content has no consumables, so the Consumables page has no row to grant -- this test has " +
-                "stopped covering the plus-stepper rule (AUDIT #46: fail loudly rather than skip)");
-
-            Save.stockpiledItems.Clear();
-
-            Click("DebugRow0");
-            yield return null;
-
-            Assert.IsNotEmpty(Save.stockpiledItems);
-            Assert.IsTrue(Save.stockpiledItems.All(e => e.plus == 0),
-                "a consumable grant must ignore the sticky plus stepper");
         }
 
         // ---- sets: one row grants every piece --------------------------------------

@@ -69,8 +69,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(screen.RowButtons[0].Node.Chromeless, "20.5:1 fits no plate shape -- hairline row instead");
             Assert.IsTrue(screen.PrevPageButton.Node.Chromeless, "an icon arrow, not a plate button");
             Assert.IsTrue(screen.NextPageButton.Node.Chromeless, "an icon arrow, not a plate button");
-            Assert.IsTrue(screen.PlusMinusButton.Node.Chromeless, "a square stepper fits no plate shape");
-            Assert.IsTrue(screen.PlusPlusButton.Node.Chromeless, "a square stepper fits no plate shape");
         }
 
         [Test]

@@ -167,7 +167,7 @@ namespace PrincesPalace.PlayModeTests
         // whether it is fake, which physical copy, and whether it sold.
         private static List<string> Snapshot() =>
             RunOrchestrator.CurrentShopStock
-                .Select(e => $"{e.section}/{e.index} {e.kind} {e.contentId} +{e.plus} r{e.riftTier} " +
+                .Select(e => $"{e.section}/{e.index} {e.kind} {e.contentId} t{e.tier} " +
                              $"[{string.Join(",", e.modifiers)}] {e.price}g fake={e.fake} lot={e.lot} sold={e.sold} " +
                              $"none={e.noOffer}")
                 .ToList();

@@ -88,7 +88,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- the pack (C16) -------------------------------------------------------------
 
         private static BagItem Item(string id, EquipmentSlot slot, bool equippable, int tier = 1, int count = 1) =>
-            new BagItem(id, id, equippable ? 2 : 0, slot, tier, 0, count, "", equippable);
+            new BagItem(id, id, equippable ? 2 : 0, slot, tier, count, "", equippable);
 
         private static IReadOnlyList<PackEntry> Pack() => LoadoutPack.Build(
             new[]

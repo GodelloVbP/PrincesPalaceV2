@@ -125,7 +125,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = save.roster.FirstOrDefault();
             Assert.IsNotNull(character, "fixture: the save has no roster");
-            character.equipment.Set(EquipmentSlot.Weapon1, "health_potion", plus: 3);
+            character.equipment.Set(EquipmentSlot.Weapon1, "health_potion", tier: 3);
 
             save.stockpiledItems.Clear();
             save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));

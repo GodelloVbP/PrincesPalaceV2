@@ -52,7 +52,7 @@ namespace PrincesPalace.PlayModeTests
             var character = Save.roster.FirstOrDefault();
             Assert.IsNotNull(character, "fixture: the save has nobody to equip");
 
-            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", tier: 3);
             Assert.IsFalse(character.equipment.IsEmpty(Domain.Equipment.EquipmentSlot.Weapon1),
                 "fixture check: the item should be worn before the run ends");
 
@@ -307,7 +307,7 @@ namespace PrincesPalace.PlayModeTests
             var character = Save.roster.FirstOrDefault();
             Assert.IsNotNull(character, "fixture: the save has nobody to equip");
 
-            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", tier: 3);
 
             Save.stockpiledItems.Clear();
             Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));
@@ -349,7 +349,7 @@ namespace PrincesPalace.PlayModeTests
             var character = Save.roster.FirstOrDefault();
             Assert.IsNotNull(character, "fixture: the save has nobody to equip");
 
-            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", tier: 3);
 
             Save.stockpiledItems.Clear();
             Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));
@@ -384,7 +384,7 @@ namespace PrincesPalace.PlayModeTests
             var character = Save.roster.FirstOrDefault();
             Assert.IsNotNull(character, "fixture: the save has nobody to equip");
 
-            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", tier: 3);
 
             Save.stockpiledItems.Clear();
             Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));

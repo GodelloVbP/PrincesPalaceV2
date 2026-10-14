@@ -734,7 +734,7 @@ namespace PrincesPalace
                     string affixNames = entry.modifiers != null && entry.modifiers.Count > 0
                         ? string.Join(", ", entry.modifiers.Select(AffixDisplayName))
                         : UiStrings.ShopGearMetaNoAffix.Format();
-                    string meta = UiStrings.ShopGearMeta.Format(entry.tier, entry.plus, affixNames);
+                    string meta = UiStrings.ShopGearMeta.Format(entry.tier, affixNames);
                     return (name, meta);
                 }
                 case ShopEntryKind.Relic:
@@ -835,9 +835,7 @@ namespace PrincesPalace
 
             if (detailTitle != null) detailTitle.SetContent(ContentDatabase.NameOf(entry.GearInstance()));
 
-            var riftTier = (RiftTier)entry.riftTier;
-            detailBody.SetContent(ItemDescription.ComparisonBody(character, entry.GearInstance(), entry.plus,
-                riftTier, entry.modifiers));
+            detailBody.SetContent(ItemDescription.ComparisonBody(character, entry.GearInstance()));
         }
 
         private void SetDetailPanelActive(bool active)
@@ -890,7 +888,7 @@ namespace PrincesPalace
                     packNames[i].SetContent(ContentDatabase.NameOf(entry.Instance));
 
                 if (packMetas != null && i < packMetas.Length)
-                    packMetas[i].Set(UiStrings.ShopGearMeta, entry.tier, entry.plus,
+                    packMetas[i].Set(UiStrings.ShopGearMeta, entry.tier,
                         entry.modifierIds?.Count ?? 0);
 
                 int sellPrice = RunOrchestrator.SellPriceOf(entry);

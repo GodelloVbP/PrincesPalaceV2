@@ -64,15 +64,14 @@ namespace PrincesPalace.PlayModeTests
             int bare = ItemOfferRoll.FavorOf(character, definition);
 
             character.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.RiftForged);
+                modifierIds: new List<string> { "fortunate" });
 
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            // fortunate's authored base is 2 (halved from 3); TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            // 2 x 1.6 = 3.2, away-from-zero rounded to 3.
+            // fortunate's authored base is 2 (halved from 3); TierMultiplier(0) is exactly 1.0.
             int wearing = ItemOfferRoll.FavorOf(character, definition);
-            Assert.AreEqual(bare + 3, wearing,
+            Assert.AreEqual(bare + 2, wearing,
                 "a live-equipped Fortunate must add its scaled bonus straight into FavorOf");
         }
 
@@ -87,7 +86,7 @@ namespace PrincesPalace.PlayModeTests
             int bare = ItemOfferRoll.FavorOf(character, definition);
 
             character.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.RiftForged);
+                modifierIds: new List<string> { "fortunate" });
             int wearing = ItemOfferRoll.FavorOf(character, definition);
             Assert.Greater(wearing, bare, "fixture check: equipping Fortunate must raise FavorOf first");
 
@@ -110,40 +109,15 @@ namespace PrincesPalace.PlayModeTests
             var definition = DefinitionFor(character);
 
             character.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.RiftForged);
+                modifierIds: new List<string> { "fortunate" });
             int firstWearing = ItemOfferRoll.FavorOf(character, definition);
 
             character.equipment.Set(item.equipSlot, "");
             character.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.RiftForged);
+                modifierIds: new List<string> { "fortunate" });
 
             Assert.AreEqual(firstWearing, ItemOfferRoll.FavorOf(character, definition),
                 "re-equipping the identical roll must reproduce the identical bonus, not a stale or doubled one");
-        }
-
-        [Test]
-        public void FortunateBonus_ScalesByRiftTier_LikeEveryOtherModifierEffect()
-        {
-            var item = TierZeroEquippable();
-            Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
-
-            var ordinary = FreshCharacter();
-            ordinary.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.Ordinary);
-
-            var riftForged = FreshCharacter();
-            riftForged.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.RiftForged);
-
-            int ordinaryBonus = ContentDatabase.CharacterEffects(ordinary)
-                .Magnitude(EffectKind.FortunateFavorBonusFlat);
-            int riftForgedBonus = ContentDatabase.CharacterEffects(riftForged)
-                .Magnitude(EffectKind.FortunateFavorBonusFlat);
-
-            // base 2 (halved from 3): Ordinary scale is exactly 1.0 (unscaled base survives), RiftForged is 2 x 1.6 = 3.2 -> 3.
-            Assert.AreEqual(2, ordinaryBonus, "tier 0, RiftTier Ordinary: scale is exactly 1.0");
-            Assert.AreEqual(3, riftForgedBonus, "2 x 1.6 = 3.2, away-from-zero rounded");
-            Assert.Greater(riftForgedBonus, ordinaryBonus, "a higher RiftTier must scale the bonus up");
         }
 
         [Test]
@@ -156,11 +130,11 @@ namespace PrincesPalace.PlayModeTests
 
             var lowTierCharacter = FreshCharacter();
             lowTierCharacter.equipment.Set(tierZero.equipSlot, tierZero.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.Ordinary);
+                modifierIds: new List<string> { "fortunate" });
 
             var highTierCharacter = FreshCharacter();
             highTierCharacter.equipment.Set(tierZero.equipSlot, tierZero.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.Ordinary,
+                modifierIds: new List<string> { "fortunate" },
                 tier: higherTierNumber);
 
             int lowTierBonus = ContentDatabase.CharacterEffects(lowTierCharacter)
@@ -168,7 +142,10 @@ namespace PrincesPalace.PlayModeTests
             int highTierBonus = ContentDatabase.CharacterEffects(highTierCharacter)
                 .Magnitude(EffectKind.FortunateFavorBonusFlat);
 
-            Assert.Greater(highTierBonus, lowTierBonus,
+            // base 2: tier 0 is exactly 1.0 and tier 5 is 1.25^5 = 3.0517578125,
+            // so 2 x that = 6.10, away-from-zero rounded to 6.
+            Assert.AreEqual(2, lowTierBonus);
+            Assert.AreEqual(6, highTierBonus,
                 "a higher item tier must scale Fortunate's bonus up, the same TierMultiplier curve every other modifier reads");
         }
 
@@ -182,7 +159,7 @@ namespace PrincesPalace.PlayModeTests
 
             var wearer = SaveSlotManager.CurrentSave.ActiveSquad().First();
             wearer.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.RiftForged);
+                modifierIds: new List<string> { "fortunate" });
 
             Assert.Greater(ItemOfferRoll.CurrentSquadFavor(), before,
                 "equipping Fortunate on a fielded squad member must raise the squad's live Favor");

@@ -87,15 +87,13 @@ namespace PrincesPalace.Domain.Rewards
         // than stopping at the first failure. Distributionally identical, and
         // it costs the same number of draws whatever the outcome -- which is
         // what keeps a seeded run reproducible when these odds are retuned.
-        // RarityTable.RollTier and RollPlus route through this same Climb
-        // rather than drawing once themselves; the fixed-count discipline is
-        // the point, not a comparison to some other single-draw method.
+        // RarityTable.RollTier routes through this same Climb rather than
+        // drawing once itself; the fixed-count discipline is the point, not a
+        // comparison to some other single-draw method.
         //
         // maxRungs is a PARAMETER rather than always MaxRungs so a shorter
-        // ladder (ModifierTable's 3-rung RiftTier climb) can reuse this exact
-        // draw-and-count rule instead of duplicating it -- the shorter ladder
-        // still draws its OWN fixed count, which is what keeps it reproducible
-        // too, just at 3 draws instead of 5 rather than wasting two.
+        // ladder can reuse this exact draw-and-count rule instead of
+        // duplicating it.
         public static int Climb(float stepChance, int maxRungs, Func<int, int> nextIndex)
         {
             if (nextIndex == null || stepChance <= 0f || maxRungs <= 0) return 0;

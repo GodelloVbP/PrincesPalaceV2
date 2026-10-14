@@ -24,7 +24,7 @@ namespace PrincesPalace.PlayModeTests
     // RootChancePercent today.
     //
     // Mirrors FrostyModifierReachesCombatTests' own real-content pattern:
-    // equip a REAL item with a REAL id at a known tier/riftTier, never a
+    // equip a REAL item with a REAL id at a known tier, never a
     // hand-built Effect fixture. Sylvan's family is PLAYER-worn
     // weapon gear, so this always roots an ENEMY the wearer hits -- never
     // the reverse (see EffectKind.RootChancePercent's own comment on
@@ -63,37 +63,37 @@ namespace PrincesPalace.PlayModeTests
 
         // "entangling" -- the split-off id that carries Nature's root proc;
         // see this file's own header for why it is no longer "sylvan" itself.
-        private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier, int tier = 0)
+        private static Character FreshCharacterWearing(ItemDefinition item, int tier = 0)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
-            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "entangling" }, riftTier: (int)riftTier, tier: tier);
+            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "entangling" }, tier: tier);
             return character;
         }
 
         // All three of Nature's split affixes at once -- for the one test
         // below that proves they can still coexist on one character, the way
         // one bundled "sylvan" roll used to grant all three at once.
-        private static Character FreshCharacterWearingWholeNatureFamily(ItemDefinition item, RiftTier riftTier)
+        private static Character FreshCharacterWearingWholeNatureFamily(ItemDefinition item)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
             character.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "sylvan", "thornhide", "entangling" }, riftTier: (int)riftTier);
+                modifierIds: new List<string> { "sylvan", "thornhide", "entangling" });
             return character;
         }
 
         [Test]
-        public void SylvanModifier_ScalesItsRootChanceByTierAndRiftTier()
+        public void SylvanModifier_ScalesItsRootChanceByTier()
         {
-            var item = TierZeroEquippable();
-            Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
+            var item = GearFixtures.WearableAt(5);
+            Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, RiftTier.RiftForged);
+            var character = FreshCharacterWearing(item, tier: 5);
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
@@ -101,31 +101,32 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped entangling modifier must produce a real effect");
 
             // entangling's authored base: RootChancePercent 10 (halved from 20).
-            // Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
+            // Scale = TierMultiplier(5) = 1.25^5 = 3.0517578125, so
+            // 10 x 3.0517578125 = 30.52, away-from-zero rounded to 31.
             var root = effects.All.Single(e => e.Kind == EffectKind.RootChancePercent);
-            Assert.AreEqual(16, root.Magnitude, "10 x 1.6 = 16.0 exactly");
+            Assert.AreEqual(31, root.Magnitude);
         }
 
         [Test]
-        public void SylvanModifier_AtOrdinaryRiftTier_ScalesByExactlyOne()
+        public void SylvanModifier_AtTierZero_ScalesByExactlyOne()
         {
             var item = TierZeroEquippable();
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
-            var character = FreshCharacterWearing(item, RiftTier.Ordinary);
+            var character = FreshCharacterWearing(item);
             var effects = ContentDatabase.CharacterEffects(character);
 
             var root = effects.All.Single(e => e.Kind == EffectKind.RootChancePercent);
-            Assert.AreEqual(10, root.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
+            Assert.AreEqual(10, root.Magnitude, "tier 0: scale is exactly 1.0, unscaled base survives untouched");
         }
 
         [Test]
         public void SylvanModifier_ReachesCombatantStateModifierEffects_ThroughARealFight()
         {
-            var item = TierZeroEquippable();
-            Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
+            var item = GearFixtures.WearableAt(5);
+            Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, RiftTier.RiftForged);
+            var character = FreshCharacterWearing(item, tier: 5);
             var built = FightEncounterAdapter.Build(
                 new List<string> { character.definitionId },
                 ContentDatabase.Enemies.Take(1).Select(e => e.id).ToList(),
@@ -135,7 +136,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(16, state.Effects.Magnitude(EffectKind.RootChancePercent),
+            Assert.AreEqual(31, state.Effects.Magnitude(EffectKind.RootChancePercent),
                 "the real, scaled entangling root chance must reach the combatant the fight actually runs on");
         }
 
@@ -151,7 +152,7 @@ namespace PrincesPalace.PlayModeTests
             var item = TierZeroEquippable();
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
-            var character = FreshCharacterWearingWholeNatureFamily(item, RiftTier.Ordinary);
+            var character = FreshCharacterWearingWholeNatureFamily(item);
             var effects = ContentDatabase.CharacterEffects(character);
 
             Assert.Greater(effects.Magnitude(EffectKind.ElementalDamageOnHitPercent), 0,
@@ -163,7 +164,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // THE REAL END-TO-END CLAIM: equip entangling on the highest-tier real
-        // equippable item content has, at Convergent RiftTier (the richest
+        // equippable item content has, at the tier cap (the richest
         // combination the roll can ever produce), and prove a real
         // FightSession actually roots a real enemy off it -- not a
         // synthetic Effect fixture, the genuine content -> roll ->
@@ -176,12 +177,10 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void SylvanModifier_OnAHighTierItem_ActuallyRootsTheTarget_InARealFight()
         {
-            var item = ContentDatabase.Equippables
-                .OrderByDescending(i => i.curve.maxTier)
-                .FirstOrDefault();
-            Assert.IsNotNull(item, "fixture: content has at least one equippable item");
+            var item = GearFixtures.WearableAt(ItemInstance.TierCap);
+            Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at the tier cap");
 
-            var character = FreshCharacterWearing(item, RiftTier.Convergent, item.curve.maxTier);
+            var character = FreshCharacterWearing(item, ItemInstance.TierCap);
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
@@ -191,9 +190,9 @@ namespace PrincesPalace.PlayModeTests
             // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46): an
             // Inconclusive here read as green and quietly retired the end-to-end claim.
             Assert.GreaterOrEqual(scaledChance, 100,
-                $"content's highest equippable item tier ({item.curve.maxTier}) only scales entangling's root " +
+                $"the tier cap ({ItemInstance.TierCap}) only scales entangling's root " +
                 $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
-                "deterministic assertion -- SylvanModifier_ScalesItsRootChanceByTierAndRiftTier already " +
+                "deterministic assertion -- SylvanModifier_ScalesItsRootChanceByTier already " +
                 "pins the scaling formula itself at a lower tier." +
                 " This end-to-end test has stopped covering the root proc; give it a fixture item that guarantees it.");
 

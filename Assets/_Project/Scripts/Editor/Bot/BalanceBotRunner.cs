@@ -620,7 +620,7 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append("{\"CharacterId\":").Append(Str(e.CharacterId));
                 sb.Append(",\"ItemId\":").Append(Str(e.ItemId));
                 sb.Append(",\"Slot\":").Append(Str(e.Slot));
-                sb.Append(",\"Plus\":").Append(e.Plus).Append('}');
+                sb.Append(",\"Tier\":").Append(e.Tier).Append('}');
             }
             sb.Append(']');
             return sb.ToString();
@@ -829,8 +829,6 @@ namespace PrincesPalace.Editor.Bot
                     var off = r.Offers[k];
                     sb.Append("{\"itemId\":").Append(Str(off.ItemId));
                     sb.Append(",\"tier\":").Append(off.Tier);
-                    sb.Append(",\"plus\":").Append(off.Plus);
-                    sb.Append(",\"riftTier\":").Append(off.RiftTier);
                     sb.Append(",\"modifierCount\":").Append(off.ModifierCount).Append('}');
                 }
                 sb.Append(']');

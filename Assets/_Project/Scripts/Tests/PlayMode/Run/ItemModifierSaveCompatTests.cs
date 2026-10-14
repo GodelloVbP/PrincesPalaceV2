@@ -12,22 +12,22 @@ namespace PrincesPalace.PlayModeTests
     // SaveData.Migrate()/Reconcile(), not just the DTOs in isolation
     // (ItemModifierStorageTests covers those in EditMode).
     //
-    // A REAL pre-A1 save simply has no "modifierIds"/"riftTier" keys inside
-    // its InventoryEntry/EquipmentSlotEntry objects. This builds a save the
-    // normal way, then strips exactly those keys back out of the JSON to
+    // A REAL pre-A1 save simply has no "modifierIds" key inside its
+    // InventoryEntry/EquipmentSlotEntry objects. This builds a save the
+    // normal way, then strips exactly that key back out of the JSON to
     // reproduce that old shape byte-for-byte, rather than hand-authoring an
     // entire SaveData literal (which would drift from the real schema the
     // moment an unrelated field changed).
     public class ItemModifierSaveCompatTests
     {
-        // Only these two tokens exist anywhere in a fresh SaveData's JSON --
-        // both fields are new in this phase, so stripping them by literal
-        // text is unambiguous and cannot eat an unrelated field.
+        // The empty modifierIds list is the only such token in a fresh
+        // SaveData's JSON, so stripping it by literal text is unambiguous and
+        // cannot eat an unrelated field.
         private static string StripToOldShape(string json) =>
-            json.Replace(",\"modifierIds\":[]", "").Replace(",\"riftTier\":0", "");
+            json.Replace(",\"modifierIds\":[]", "");
 
         [Test]
-        public void AnOldShapedSave_LoadsWithEmptyModifiersAndZeroRiftTier_AndNoDataLoss()
+        public void AnOldShapedSave_LoadsWithEmptyModifiers_AndNoDataLoss()
         {
             var save = SaveData.CreateNew();
             var character = save.roster.FirstOrDefault();
@@ -36,13 +36,12 @@ namespace PrincesPalace.PlayModeTests
             var item = ContentDatabase.Equippables.FirstOrDefault();
             Assert.IsNotNull(item, "fixture: content has no equippable item to test with");
 
-            character.equipment.Set(item.equipSlot, item.id, plus: 5);
-            InventoryOps.Add(save.stockpiledItems, item.id, 3, plus: 2);
+            character.equipment.Set(item.equipSlot, item.id, tier: 5);
+            InventoryOps.Add(save.stockpiledItems, item.id, 3, tier: 2);
             save.Gold = 777;
 
             string oldJson = StripToOldShape(JsonUtility.ToJson(save));
             StringAssert.DoesNotContain("modifierIds", oldJson, "fixture: the stripped JSON must actually be the old shape");
-            StringAssert.DoesNotContain("riftTier", oldJson, "fixture: the stripped JSON must actually be the old shape");
 
             SaveData loaded = null;
             Assert.DoesNotThrow(() => loaded = JsonUtility.FromJson<SaveData>(oldJson));
@@ -52,15 +51,13 @@ namespace PrincesPalace.PlayModeTests
 
             var loadedCharacter = loaded.roster.First(c => c.definitionId == character.definitionId);
             Assert.AreEqual(item.id, loadedCharacter.equipment.Get(item.equipSlot), "the worn item id must survive");
-            Assert.AreEqual(5, loadedCharacter.equipment.GetPlus(item.equipSlot), "the honing must survive");
+            Assert.AreEqual(5, loadedCharacter.equipment.GetInstance(item.equipSlot).Tier, "the tier must survive");
             CollectionAssert.IsEmpty(loadedCharacter.equipment.GetModifierIds(item.equipSlot));
-            Assert.AreEqual(0, loadedCharacter.equipment.GetRiftTier(item.equipSlot));
 
-            var stockEntry = loaded.stockpiledItems.First(e => e.itemId == item.id && e.plus == 2);
+            var stockEntry = loaded.stockpiledItems.First(e => e.itemId == item.id && e.tier == 2);
             Assert.AreEqual(3, stockEntry.count, "the stack count must survive");
             Assert.IsNotNull(stockEntry.modifierIds, "must be a real empty list, not null");
             Assert.AreEqual(0, stockEntry.modifierIds.Count);
-            Assert.AreEqual(0, stockEntry.riftTier);
         }
 
         // The weapon-family modifier axis is gone (sturdy/nimble/hallowed/
@@ -92,7 +89,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNull(ContentDatabase.GetItem(collapsedWeaponId),
                 "fixture: this id must not resolve, or the test proves nothing about degradation");
 
-            character.equipment.Set(EquipmentSlot.Weapon1, collapsedWeaponId, plus: 5);
+            character.equipment.Set(EquipmentSlot.Weapon1, collapsedWeaponId, tier: 5);
 
             Assert.DoesNotThrow(() => save.Reconcile());
 

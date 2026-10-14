@@ -36,14 +36,19 @@ namespace PrincesPalace.PlayModeTests
             save.Gold = 555;
             save.activeRun.hasRun = true;
             save.activeRun.gold = 41;
-            InventoryOps.Add(save.activeRun.inventory, OldBootsId, 1, plus: 2, riftTier: 1);
-            character.equipment.Set(EquipmentSlot.Weapon1, OldSwordId, plus: 3);
+            InventoryOps.Add(save.activeRun.inventory, OldBootsId, 1);
+            character.equipment.Set(EquipmentSlot.Weapon1, OldSwordId);
             save.activeRun.shopStock.Add(new ShopStockEntry
             {
-                kind = ShopEntryKind.Gear, contentId = "sword_p7", plus = 1, riftTier = 1, price = 60,
+                kind = ShopEntryKind.Gear, contentId = "sword_p7", price = 60,
             });
 
-            string oldJson = StripToOldShape(JsonUtility.ToJson(save));
+            // The removed fields no longer exist on the types, so the old keys
+            // are written into the JSON by hand next to each id.
+            string oldJson = StripToOldShape(JsonUtility.ToJson(save))
+                .Replace("\"itemId\":\"" + OldBootsId + "\"", "\"itemId\":\"" + OldBootsId + "\",\"plus\":2,\"riftTier\":1")
+                .Replace("\"itemId\":\"" + OldSwordId + "\"", "\"itemId\":\"" + OldSwordId + "\",\"plus\":3")
+                .Replace("\"contentId\":\"sword_p7\"", "\"contentId\":\"sword_p7\",\"plus\":1,\"riftTier\":1");
             StringAssert.DoesNotContain("\"tier\"", oldJson, "fixture: the JSON must be the pre-copy-model shape");
             StringAssert.DoesNotContain("slotHoning", oldJson, "fixture: the JSON must be the pre-copy-model shape");
             StringAssert.Contains("\"riftTier\":1", oldJson, "fixture: the removed fields must be present to be ignored");

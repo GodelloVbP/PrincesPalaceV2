@@ -115,7 +115,7 @@ namespace PrincesPalace
             if (definition == null) return 0;
 
             return definition.IsEquippable
-                ? ShopPricing.GearPrice(ContentDatabase.Effective(entry.Instance).Value.Tier, entry.plus, entry.riftTier)
+                ? ShopPricing.GearPrice(ContentDatabase.Effective(entry.Instance).Value.Tier, entry.modifierIds.Count)
                 : definition.cost;
         }
 
@@ -430,21 +430,15 @@ namespace PrincesPalace
         // THE GEAR ROLL, on whichever stream the caller opened: the room
         // shop's (ShopGear) or a merchant shelf's (ShelfGear). One body, so
         // "the caravan stocks the room shop's gear roll" is true by
-        // construction -- same candidates, tier band, affixes, quality and
-        // affordability floors.
+        // construction -- same candidates and tier band.
         //
         // EncounterClass.Normal: a shop is not a fight, and rolling it as
         // Elite or Boss would make browsing better than winning (assumption
         // 7).
         private static List<ShopStockEntry> RollGearWith(RunSnapshot run, Func<int, int> next)
         {
-            var context = ItemOfferRoll.BuildRollContext();
-            int favor = ItemOfferRoll.CurrentSquadFavor();
-
             return ShopStock.RollGear(
-                ItemOfferRoll.Candidates(), run.step, ItemOfferRoll.MaxTier,
-                offer => ItemOfferRoll.RollOne(offer, context, EncounterClass.Normal, favor, next),
-                next);
+                ItemOfferRoll.Candidates(), run.step, ItemOfferRoll.MaxTier, next);
         }
 
         // THE BOOK POOL THIS SHOP CAN OFFER: every bookTier > 0 skill, minus

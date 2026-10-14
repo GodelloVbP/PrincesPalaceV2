@@ -138,24 +138,18 @@ namespace PrincesPalace.Domain.Bot
         public string CharacterId;
         public string ItemId;
         public string Slot;
-        public int Plus;
+        public int Tier;
     }
 
     // One item on the end-of-fight reward screen, with the axes that decide
     // it rather than just the id -- the shop-balance batch (plan §7 extension)
-    // cares whether tier/plus/rift-tier/modifier-count are climbing the way
+    // cares whether tier/modifier-count are climbing the way
     // RarityTable/LootLadder intend, not which flavor of sword landed.
     // Fields-only, same reasoning as TurnTrace/EquipTrace above.
     public sealed class OfferEntry
     {
         public string ItemId;
         public int Tier;
-        public int Plus;
-
-        // (int)Domain.Content.RiftTier, 0..3. Stored as a plain int for the
-        // same reason EquipmentSlotEntry.riftTier is: a JSON number needs no
-        // enum on the reading side.
-        public int RiftTier;
         public int ModifierCount;
     }
 
@@ -169,7 +163,7 @@ namespace PrincesPalace.Domain.Bot
         public List<string> OfferItemIds = new List<string>();
         public int PickedIndex;
 
-        // Per-offer tier/plus/riftTier/modifierCount, index-aligned with
+        // Per-offer tier/modifierCount, index-aligned with
         // OfferItemIds. OfferItemIds stays rather than being replaced --
         // existing readers (bot_merge.py's itemPickRate/itemEquipRate) key
         // off it by id alone and do not need the extra axes.
@@ -363,7 +357,7 @@ namespace PrincesPalace.Domain.Bot
             foreach (var worn in EquippedAtStart)
             {
                 sb.Append(worn.CharacterId).Append('/').Append(worn.ItemId).Append('/')
-                  .Append(worn.Slot).Append('/').Append(worn.Plus).Append('|');
+                  .Append(worn.Slot).Append('/').Append(worn.Tier).Append('|');
             }
             sb.Append(';');
 
@@ -393,14 +387,14 @@ namespace PrincesPalace.Domain.Bot
                 sb.Append(room.Favor).Append(',').Append(room.EncounterClass).Append(',');
                 foreach (var offer in room.Offers)
                 {
-                    sb.Append(offer.ItemId).Append('/').Append(offer.Tier).Append('/').Append(offer.Plus)
-                      .Append('/').Append(offer.RiftTier).Append('/').Append(offer.ModifierCount).Append('|');
+                    sb.Append(offer.ItemId).Append('/').Append(offer.Tier)
+                      .Append('/').Append(offer.ModifierCount).Append('|');
                 }
                 sb.Append(',');
                 foreach (var worn in room.Equipped)
                 {
                     sb.Append(worn.CharacterId).Append('/').Append(worn.ItemId).Append('/')
-                      .Append(worn.Slot).Append('/').Append(worn.Plus).Append('|');
+                      .Append(worn.Slot).Append('/').Append(worn.Tier).Append('|');
                 }
                 sb.Append(',');
 
